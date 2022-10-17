@@ -22,7 +22,7 @@ Use `COPY` to add relatively small sets of data, for example dimension tables wi
 
 Use `COPY` when scripting a process that loads small amounts of data, less than 10 thousand rows.
 
-Since COPY is a single command, there is no need to disable autocommit when you use this method to populate a table.
+Since COPY is a single command, there is no need to deactivate autocommit when you use this method to populate a table.
 
 You can run multiple concurrent `COPY` commands to improve performance.
 
@@ -65,7 +65,7 @@ Segment 12 - gpfdist 4
 
 Drop indexes before loading into existing tables and re-create the index after loading. Creating an index on pre-existing data is faster than updating it incrementally as each row is loaded.
 
-Run `ANALYZE` on the table after loading. Disable automatic statistics collection during loading by setting `gp_autostats_mode` to `NONE`. Run `VACUUM` after load errors to recover space.
+Run `ANALYZE` on the table after loading. Deactivate automatic statistics collection during loading by setting `gp_autostats_mode` to `NONE`. Run `VACUUM` after load errors to recover space.
 
 Performing small, high frequency data loads into heavily partitioned column-oriented tables can have a high impact on the system because of the number of physical files accessed per time interval.
 
@@ -88,7 +88,7 @@ The load is accomplished in a single transaction.
 ## Best Practices 
 
 -   Drop any indexes on an existing table before loading data and recreate the indexes after loading. Newly creating an index is faster than updating an index incrementally as each row is loaded.
--   Disable automatic statistics collection during loading by setting the `gp_autostats_mode` configuration parameter to `NONE`.
+-   Deactivate automatic statistics collection during loading by setting the `gp_autostats_mode` configuration parameter to `NONE`.
 -   External tables are not intended for frequent or ad hoc access.
 -   External tables have no statistics to inform the optimizer. You can set rough estimates for the number of rows and disk pages for the external table in the `pg_class` system catalog with a statement like the following:
 

@@ -1,6 +1,6 @@
 # Query Plan Operator Control Parameters 
 
-The following parameters control the types of plan operations the legacy query optimizer can use. Enable or disable plan operations to force the legacy query optimizer to choose a different plan. This is useful for testing and comparing query performance using different plan types.
+The following parameters control the types of plan operations the legacy query optimizer can use. Activate or deactivate plan operations to force the legacy query optimizer to choose a different plan. This is useful for testing and comparing query performance using different plan types.
 
 - `enable_bitmapscan`
 

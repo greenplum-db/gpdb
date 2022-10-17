@@ -26,7 +26,7 @@ In Greenplum Database 5, the `pg_stat_*_tables` views display access statistics 
 |`last_analyze`|timestamp with time zone|Last time this table was manually analyzed|
 |`last_autoanalyze`|timestamp with time zone|Last time this table was analyzed by the autovacuum daemon<sup>1</sup>. **Note:**  Greenplum Database 5.x does not populate this column value.|
 
-**Note:** <sup>1</sup>In Greenplum Database, the autovacuum daemon is disabled and not supported for user defined databases.
+**Note:** <sup>1</sup>In Greenplum Database, the autovacuum daemon is deactivated and not supported for user defined databases.
 
 ## Table Access Statistics from the Master and Segment Instances 
 

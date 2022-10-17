@@ -125,7 +125,7 @@ listen\_port
     Default: 6432
 
 unix\_socket\_dir
-:   Specifies the location for the Unix sockets. Applies to both listening socket and server connections. If set to an empty string, Unix sockets are disabled. Required for online restart \(`-R` option\) to work.
+:   Specifies the location for the Unix sockets. Applies to both listening socket and server connections. If set to an empty string, Unix sockets are deactivated. Required for online restart \(`-R` option\) to work.
 
     Default: `/tmp`
 
@@ -227,15 +227,15 @@ default\_pool\_size
 min\_pool\_size
 :   Add more server connections to the pool when it is lower than this number. This improves behavior when the usual load drops and then returns suddenly after a period of total inactivity.
 
-    Default: 0 \(disabled\)
+    Default: 0 \(deactivated\)
 
 reserve\_pool\_size
-:   The number of additional connections to allow for a pool. 0 disables.
+:   The number of additional connections to allow for a pool. 0 deactivates.
 
-    Default: 0 \(disabled\)
+    Default: 0 \(deactivated\)
 
 reserve\_pool\_timeout
-:   If a client has not been serviced in this many seconds, PgBouncer enables use of additional connections from the reserve pool. 0 disables.
+:   If a client has not been serviced in this many seconds, PgBouncer enables use of additional connections from the reserve pool. 0 deactivates.
 
     Default: 5.0
 
@@ -260,7 +260,7 @@ ignore\_startup\_parameters
     Default: empty
 
 disable\_pqexec
-:   Disable Simple Query protocol \(PQexec\). Unlike Extended Query protocol, Simple Query protocol allows multiple queries in one packet, which allows some classes of SQL-injection attacks. Disabling it can improve security. This means that only clients that exclusively use Extended Query protocol will work.
+:   Deactivate Simple Query protocol \(PQexec\). Unlike Extended Query protocol, Simple Query protocol allows multiple queries in one packet, which allows some classes of SQL-injection attacks. Deactivating it can improve security. This means that only clients that exclusively use Extended Query protocol will work.
 
     Default: 0
 
@@ -331,7 +331,7 @@ stats\_users
 
     Default: empty
 
-### Connection Sanity Checks, Timeouts 
+### Connection Checks, Timeouts 
 
 server\_reset\_query
 :   Query sent to server on connection release, before making it available to other clients. At that moment no transaction is in progress so it should not include `ABORT` or `ROLLBACK`.
@@ -352,14 +352,14 @@ server\_reset\_query\_always
     Default: 0
 
 server\_check\_delay
-:   How long to keep released connections available for re-use without running sanity-check queries on it. If 0, then the query is run always.
+:   How long to keep released connections available for re-use without running confidence-check queries on it. If 0, then the query is run always.
 
     Default: 30.0
 
 server\_check\_query
 :   A simple do-nothing query to test the server connection.
 
-    If an empty string, then sanity checking is disabled.
+    If an empty string, then confidence checking is deactivated.
 
     Default: SELECT 1;
 
@@ -369,7 +369,7 @@ server\_lifetime
     Default: 3600.0
 
 server\_idle\_timeout
-:   If a server connection has been idle more than this many seconds it is dropped. If this parameter is set to 0, timeout is disabled. \[seconds\]
+:   If a server connection has been idle more than this many seconds it is dropped. If this parameter is set to 0, timeout is deactivated. \[seconds\]
 
     Default: 600.0
 
@@ -410,12 +410,12 @@ dns\_zone\_check\_period
 
     Works only with UDNS and c-ares backend \(`--with-udns` or `--with-cares` to configure\).
 
-    Default: 0.0 \(disabled\)
+    Default: 0.0 \(deactivated\)
 
 ### TLS settings 
 
 client\_tls\_sslmode
-:   TLS mode to use for connections from clients. TLS connections are disabled by default. When enabled, `client_tls_key_file` and `client_tls_cert_file` must be also configured to set up the key and certificate PgBouncer uses to accept client connections.
+:   TLS mode to use for connections from clients. TLS connections are deactivated by default. When enabled, `client_tls_key_file` and `client_tls_cert_file` must be also configured to set up the key and certificate PgBouncer uses to accept client connections.
 
     -   `disable`: Plain TCP. If client requests TLS, it’s ignored. Default.
     -   `allow`: If client requests TLS, it is used. If not, plain TCP is used. If client uses client-certificate, it is not validated.
@@ -454,21 +454,21 @@ client\_tls\_ciphers
 client\_tls\_ecdhcurve
 :   Elliptic Curve name to use for ECDH key exchanges.
 
-:   Allowed values: `none` \(DH is disabled\), `auto` \(256-bit ECDH\), curve name.
+:   Allowed values: `none` \(DH is deactivated\), `auto` \(256-bit ECDH\), curve name.
 
 :   Default: `auto`
 
 client\_tls\_dheparams
 :   DHE key exchange type.
 
-:   Allowed values: `none` \(DH is disabled\), `auto` \(2048-bit DH\), `legacy` \(1024-bit DH\).
+:   Allowed values: `none` \(DH is deactivated\), `auto` \(2048-bit DH\), `legacy` \(1024-bit DH\).
 
 :   Default: `auto`
 
 server\_tls\_sslmode
-:   TLS mode to use for connections to Greenplum Database and PostgreSQL servers. TLS connections are disabled by default.
+:   TLS mode to use for connections to Greenplum Database and PostgreSQL servers. TLS connections are deactivated by default.
 
-    -   `disabled`: Plain TCP. TLS is not requested from the server. Default.
+    -   `deactivated`: Plain TCP. TLS is not requested from the server. Default.
     -   `allow`: If server rejects plain, try TLS. \(*PgBouncer Documentation is speculative on this..*\)
     -   `prefer`: TLS connection is always requested first. When connection is refused, plain TPC is used. Server certificate is not validated.
     -   `require`: Connection must use TLS. If server rejects it, plain TCP is not attempted. Server certificate is not validated.
@@ -509,7 +509,7 @@ Setting the following timeouts can cause unexpected errors.
 query\_timeout
 :   Queries running longer than this \(seconds\) are canceled. This parameter should be used only with a slightly smaller server-side `statement_timeout`, to trap queries with network problems. \[seconds\]
 
-    Default: 0.0 \(disabled\)
+    Default: 0.0 \(deactivated\)
 
 query\_wait\_timeout
 :   The maximum time, in seconds, queries are allowed to wait for execution. If the query is not assigned a connection during that time, the client is disconnected. This is used to prevent unresponsive servers from grabbing up connections.
@@ -519,12 +519,12 @@ query\_wait\_timeout
 client\_idle\_timeout
 :   Client connections idling longer than this many seconds are closed. This should be larger than the client-side connection lifetime settings, and only used for network problems.
 
-    Default: 0.0 \(disabled\)
+    Default: 0.0 \(deactivated\)
 
 idle\_transaction\_timeout
 :   If client has been in "idle in transaction" state longer than this \(seconds\), it is disconnected.
 
-    Default: 0.0 \(disabled\)
+    Default: 0.0 \(deactivated\)
 
 ### Low-level Network Settings 
 

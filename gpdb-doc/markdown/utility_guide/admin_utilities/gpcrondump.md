@@ -307,8 +307,8 @@ gpcrondump --ddboost-host 192.0.2.230 --ddboost-user ddboostusername --ddboost-b
 
 :   This option will be deprecated in a future release.
 
--H \(disable recording dump details\)
-:   Disable recording details of database dump in database table `public.gpcrondump_history` in the database supplied via -x option. If not specified, the utility will create/update the history table. The `-H` option cannot be selected with the `-h` option.
+-H \(deactivate recording dump details\)
+:   Deactivate recording details of database dump in database table `public.gpcrondump_history` in the database supplied via -x option. If not specified, the utility will create/update the history table. The `-H` option cannot be selected with the `-h` option.
 
     **Note:** The `gpcrondump` utility creates the `public.gpcrondump_history` table by default. If the `public` schema has been deleted from the database, you must specify the `-H` option to prevent `gpcrondump` from returning an error when it attempts to create the table.
 

@@ -214,7 +214,7 @@ These parameters control aspects of SQL query processing such as query operators
 
 ### Legacy Query Optimizer Operator Control Parameters 
 
-The following parameters control the types of plan operations the Postgres Planner can use. Enable or disable plan operations to force the Postgres Planner to choose a different plan. This is useful for testing and comparing query performance using different plan types.
+The following parameters control the types of plan operations the Postgres Planner can use. Activate or deactivate plan operations to force the Postgres Planner to choose a different plan. This is useful for testing and comparing query performance using different plan types.
 
 |[enable\_bitmapscan](guc-list.html)
 

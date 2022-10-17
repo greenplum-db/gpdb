@@ -95,7 +95,7 @@ To help optimize database design, review the maximum limits that Greenplum Datab
 |Table-level Constraints per Table|Unlimited|
 |Table Name Length|63 Bytes \(Limited by *name* data type\)|
 
-Dimensions listed as unlimited are not intrinsically limited by Greenplum Database. However, they are limited in practice to available disk space and memory/swap space. Performance may suffer when these values are unusually large.
+Dimensions listed as unlimited are not intrinsically limited by Greenplum Database. However, they are limited in practice to available disk space and memory/swap space. Performance may decrease when these values are unusually large.
 
 **Note:**
 

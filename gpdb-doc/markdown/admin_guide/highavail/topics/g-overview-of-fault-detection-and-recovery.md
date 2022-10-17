@@ -8,7 +8,7 @@ With mirroring enabled, Greenplum Database automatically fails over to a mirror 
 
 To recover failed segments, an administrator runs the `gprecoverseg` recovery utility. This utility locates the failed segments, verifies they are valid, and compares the transactional state with the currently active segment to determine changes made while the segment was offline. `gprecoverseg` synchronizes the changed database files with the active segment and brings the segment back online. Administrators perform the recovery while Greenplum Database is up and running.
 
-With mirroring disabled, the system automatically shuts down if a segment instance fails. Administrators manually recover all failed segments before operations resume.
+With mirroring deactivated, the system automatically shuts down if a segment instance fails. Administrators manually recover all failed segments before operations resume.
 
 See [Detecting a Failed Segment](g-detecting-a-failed-segment.html) for a more detailed description of the fault detection and recovery process and configuration options.
 

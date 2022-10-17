@@ -58,7 +58,7 @@ options
     :   During a backup operation, the plugin creates the directory location if it does not exist in the storage unit and stores the backup in this directory `/<data-domain-dir>/YYYYMMDD/YYYYMMDDHHMMSS/`.
 
     replication
-    :   Optional. Enables or disables backup replication with DD Boost managed file replication when `gpbackup` performs a backup operation. Value is either `on` or `off`. Default value is `off`, backup replication is disabled. When the value is `on`, the DD Boost plugin replicates the backup on the Data Domain system that you specify with the `remote_*` options.
+    :   Optional. Activates or deactivates backup replication with DD Boost managed file replication when `gpbackup` performs a backup operation. Value is either `on` or `off`. Default value is `off`, backup replication is deactivated. When the value is `on`, the DD Boost plugin replicates the backup on the Data Domain system that you specify with the `remote_*` options.
 
     :   The `replication` option and `remote_*` options are ignored when performing a restore operation with `gprestore`. The `remote_*` options are ignored if `replication` is `off`.
 

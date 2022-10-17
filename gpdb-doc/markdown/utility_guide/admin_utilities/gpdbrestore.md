@@ -47,7 +47,7 @@ The `gpdbrestore` utility provides the following functionality:
 -   Identifies the database name automatically from the backup set.
 -   Allows you to restore particular tables only \(`-T` option\) instead of the entire database. Note that single tables are not automatically dropped or truncated prior to restore.
 
-    Performs an `ANALYZE` operation on the tables that are restored. You can disable the `ANALYZE` operation by specifying the option `--noanalyze`.
+    Performs an `ANALYZE` operation on the tables that are restored. You can deactivate the `ANALYZE` operation by specifying the option `--noanalyze`.
 
 -   Can restore global objects such as roles and tablespaces \(`-G` option\).
 -   Detects if the backup set is primary segments only or primary and mirror segments and performs the appropriate restore operation.

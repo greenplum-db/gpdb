@@ -90,7 +90,7 @@ dbname
 :   Dump only the object definitions \(schema\), not data.
 
 -S username \| --superuser=username
-:   Specify the superuser user name to use when disabling triggers. This is only relevant if `--disable-triggers` is used. It is better to leave this out, and instead start the resulting script as a superuser.
+:   Specify the superuser user name to use when deactivating triggers. This is only relevant if `--disable-triggers` is used. It is better to leave this out, and instead start the resulting script as a superuser.
 
     **Note:** Greenplum Database does not support user-defined triggers.
 
@@ -113,7 +113,7 @@ dbname
 :   Prevent dumping of access privileges \(`GRANT/REVOKE` commands\).
 
 --disable-dollar-quoting
-:   This option disables the use of dollar quoting for function bodies, and forces them to be quoted using SQL standard string syntax.
+:   This option deactivates the use of dollar quoting for function bodies, and forces them to be quoted using SQL standard string syntax.
 
 --disable-triggers
 :   This option is only relevant when creating a data-only dump. It instructs `pg_dump` to include commands to temporarily disable triggers on the target tables while the data is reloaded. Use this if you have triggers on the tables that you do not want to invoke during data reload. The commands emitted for `--disable-triggers` must be done as superuser. So, you should also specify a superuser name with `-S`, or preferably be careful to start the resulting script as a superuser. This option is only meaningful for the plain-text format. For the archive formats, you may specify the option when you call [pg\_restore](pg_restore.html).

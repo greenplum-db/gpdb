@@ -326,7 +326,7 @@ export GP_JAVA_OPT=-Xmx1000m
 
 Review the /etc/krb5.conf file:
 
--   If AES256 encryption is not disabled, ensure that all cluster hosts have the JCE Unlimited Strength Jurisdiction Policy Files installed.
+-   If AES256 encryption is not deactivated, ensure that all cluster hosts have the JCE Unlimited Strength Jurisdiction Policy Files installed.
 -   Ensure all encryption types in the Kerberos keytab file match definitions in the krb5.conf file.
 
     ```

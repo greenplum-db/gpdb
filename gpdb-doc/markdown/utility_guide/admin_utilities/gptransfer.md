@@ -114,7 +114,7 @@ If an error occurs when during the process of copying a table, or table validati
 
 The name of the file that contains the list of tables where errors occurred is `failed_migrated_tables_`yyyymmdd\_hhmmss`.txt`. The yyyymmdd\_hhmmss is a time stamp when the `gptransfer` process was started. The file is created in the directory were `gptransfer` is executed.
 
-After `gptransfer` completes copying database objects, the utility compares the row count of each table copied to the destination databases with the table in the source database. The utility returns the validation results for each table. You can disable the table row count validation by specifying the `--no-final-count` option.
+After `gptransfer` completes copying database objects, the utility compares the row count of each table copied to the destination databases with the table in the source database. The utility returns the validation results for each table. You can deactivate the table row count validation by specifying the `--no-final-count` option.
 
 **Note:** If the number of rows do not match, the table is not added to the file that lists the tables where transfer errors occurred.
 
@@ -330,7 +330,7 @@ You can specify the `-x` option to acquire exclusive locks on the tables during 
 :   Should be used when user data includes very wide rows \(or when `line too long` error message occurs\). Should not be used otherwise as it increases resource allocation.
 
 --no-final-count
-:   Disable table row count validation that is performed after `gptransfer` completes copying database objects to the target database. The default is to compare the row count of tables copied to the destination databases with the tables in the source database.
+:   Deactivate table row count validation that is performed after `gptransfer` completes copying database objects to the target database. The default is to compare the row count of tables copied to the destination databases with the tables in the source database.
 
 -q \| --quiet
 :   If specified, suppress status messages. Messages are only sent to the log file.

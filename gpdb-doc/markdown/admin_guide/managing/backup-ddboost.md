@@ -134,7 +134,7 @@ Configure the distributed segment processing option on the Data Domain system. T
 # ddboost option show
 ```
 
-To enable or disable distributed segment processing:
+To activate or deactivate distributed segment processing:
 
 ```
 # ddboost option set distributed-segment-processing 

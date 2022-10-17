@@ -831,7 +831,7 @@ This external table runs the `df` \(disk free\) command on the active segment ho
 
 ## Checking for Uneven Data Distribution 
 
-All tables in Greenplum Database are distributed, meaning their data is divided across all of the segments in the system. If the data is not distributed evenly, then query processing performance may suffer. The following views can help diagnose if a table has uneven data distribution:
+All tables in Greenplum Database are distributed, meaning their data is divided across all of the segments in the system. If the data is not distributed evenly, then query processing performance may decrease. The following views can help diagnose if a table has uneven data distribution:
 
 -   [gp\_skew\_coefficients](#topic50)
 -   [gp\_skew\_idle\_fractions](#topic51)

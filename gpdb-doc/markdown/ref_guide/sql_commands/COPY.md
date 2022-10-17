@@ -123,7 +123,7 @@ ON SEGMENT
 
 :   When the `PROGRAM command` clause is specified, the `<SEGID>` string literal is required in the command, the `<SEG_DATA_DIR>` string literal is optional. See [Examples](#section11).
 
-:   For a `COPY FROM...ON SEGMENT` command, the table distribution policy is checked when data is copied into the table. By default, an error is returned if a data row violates the table distribution policy. You can disable the distribution policy check with the server configuration parameter `gp_enable_segment_copy_checking`. See [Notes](#section6).
+:   For a `COPY FROM...ON SEGMENT` command, the table distribution policy is checked when data is copied into the table. By default, an error is returned if a data row violates the table distribution policy. You can deactivate the distribution policy check with the server configuration parameter `gp_enable_segment_copy_checking`. See [Notes](#section6).
 
 BINARY
 :   Causes all data to be stored or read in binary format rather than as text. You cannot specify the `DELIMITER`, `NULL`, or `CSV` options in binary mode. See [Binary Format](#section10).
@@ -140,7 +140,7 @@ null string
 :   The string that represents a null value. The default is `\N` \(backslash-N\) in text mode, and a empty value with no quotes in `CSV` mode. You might prefer an empty string even in text mode for cases where you don't want to distinguish nulls from empty strings. When using `COPY FROM`, any data item that matches this string will be stored as a null value, so you should make sure that you use the same string as you used with `COPY TO`.
 
 escape
-:   Specifies the single character that is used for C escape sequences \(such as `\n`,`\t`,`\100`, and so on\) and for quoting data characters that might otherwise be taken as row or column delimiters. Make sure to choose an escape character that is not used anywhere in your actual column data. The default escape character is `\` \(backslash\) for text files or `"` \(double quote\) for CSV files, however it is possible to specify any other character to represent an escape. It is also possible to disable escaping on text-formatted files by specifying the value '`OFF'` as the escape value. This is very useful for data such as web log data that has many embedded backslashes that are not intended to be escapes.
+:   Specifies the single character that is used for C escape sequences \(such as `\n`,`\t`,`\100`, and so on\) and for quoting data characters that might otherwise be taken as row or column delimiters. Make sure to choose an escape character that is not used anywhere in your actual column data. The default escape character is `\` \(backslash\) for text files or `"` \(double quote\) for CSV files, however it is possible to specify any other character to represent an escape. It is also possible to deactivate escaping on text-formatted files by specifying the value '`OFF'` as the escape value. This is very useful for data such as web log data that has many embedded backslashes that are not intended to be escapes.
 
 NEWLINE
 :   Specifies the newline used in your data files — `LF` \(Line feed, 0x0A\), `CR` \(Carriage return, 0x0D\), or `CRLF` \(Carriage return plus line feed, 0x0D 0x0A\). If not specified, a Greenplum Database segment will detect the newline type by looking at the first row of data it receives and using the first newline type encountered.
@@ -266,7 +266,7 @@ The data file has two reserved characters that have special meaning to `COPY`:
 
 If your data contains either of these characters, you must escape the character so `COPY` treats it as data and not as a field separator or new row.
 
-By default, the escape character is a \\ \(backslash\) for text-formatted files and a `"` \(double quote\) for csv-formatted files. If you want to use a different escape character, you can do so using the `ESCAPE AS`clause. Make sure to choose an escape character that is not used anywhere in your data file as an actual data value. You can also disable escaping in text-formatted files by using `ESCAPE 'OFF'`.
+By default, the escape character is a \\ \(backslash\) for text-formatted files and a `"` \(double quote\) for csv-formatted files. If you want to use a different escape character, you can do so using the `ESCAPE AS`clause. Make sure to choose an escape character that is not used anywhere in your data file as an actual data value. You can also deactivate escaping in text-formatted files by using `ESCAPE 'OFF'`.
 
 For example, suppose you have a table with three columns and you want to load the following three fields using `COPY`.
 

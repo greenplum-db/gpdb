@@ -59,7 +59,7 @@ options
     :   Required. The S3 location for backups. During a backup operation, the plugin creates the S3 location if it does not exist in the S3 bucket.
 
     encryption
-    :   Optional. Enable or disable use of Secure Sockets Layer \(SSL\) when connecting to an S3 location. Default value is `on`, use connections that are secured with SSL. Set this option to `off` to connect to an S3 compatible service that is not configured to use SSL.
+    :   Optional. Activate or deactivate use of Secure Sockets Layer \(SSL\) when connecting to an S3 location. Default value is `on`, use connections that are secured with SSL. Set this option to `off` to connect to an S3 compatible service that is not configured to use SSL.
 
     :   Any value other than `off` is treated as `on`.
 

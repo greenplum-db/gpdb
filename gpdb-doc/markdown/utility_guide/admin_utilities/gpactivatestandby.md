@@ -19,7 +19,7 @@ The `gpactivatestandby` utility activates a backup, standby master host and brin
 
 When you initialize a standby master, the default is to use the same port as the active master. For information about the master port for the standby master, see [gpinitstandby](gpinitstandby.html).
 
-You must run this utility from the master host you are activating, not the failed master host you are disabling. Running this utility assumes you have a standby master host configured for the system \(see [gpinitstandby](gpinitstandby.html)\).
+You must run this utility from the master host you are activating, not the failed master host you are deactivating. Running this utility assumes you have a standby master host configured for the system \(see [gpinitstandby](gpinitstandby.html)\).
 
 The utility will perform the following steps:
 
@@ -32,7 +32,7 @@ A backup, standby Greenplum master host serves as a 'warm standby' in the event 
 
 If the primary master fails, the log replication process is shutdown, and the standby master can be activated in its place by using the `gpactivatestandby` utility. Upon activation of the standby master, the replicated logs are used to reconstruct the state of the Greenplum master host at the time of the last successfully committed transaction.
 
-In order to use `gpactivatestandby` to activate a new primary master host, the master host that was previously serving as the primary master cannot be running. The utility checks for a `postmaster.pid` file in the data directory of the disabled master host, and if it finds it there, it will assume the old master host is still active. In some cases, you may need to remove the `postmaster.pid` file from the disabled master host data directory before running `gpactivatestandby` \(for example, if the disabled master host process was terminated unexpectedly\).
+In order to use `gpactivatestandby` to activate a new primary master host, the master host that was previously serving as the primary master cannot be running. The utility checks for a `postmaster.pid` file in the data directory of the deactivated master host, and if it finds it there, it will assume the old master host is still active. In some cases, you may need to remove the `postmaster.pid` file from the deactivated master host data directory before running `gpactivatestandby` \(for example, if the deactivated master host process was terminated unexpectedly\).
 
 After activating a standby master, run `ANALYZE` to update the database query statistics. For example:
 

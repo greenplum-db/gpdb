@@ -286,9 +286,9 @@ WITH \( storage\_option=value \)
 
 :   **ORIENTATION** — Set to `column` for column-oriented storage, or `row` \(the default\) for row-oriented storage. This option is only valid if `APPENDONLY=TRUE`. Heap-storage tables can only be row-oriented.
 
-:   **CHECKSUM** — This option is valid only for append-optimized tables \(`APPENDONLY=TRUE`\). The value `TRUE` is the default and enables CRC checksum validation for append-optimized tables. The checksum is calculated during block creation and is stored on disk. Checksum validation is performed during block reads. If the checksum calculated during the read does not match the stored checksum, the transaction is aborted. If you set the value to `FALSE` to disable checksum validation, checking the table data for on-disk corruption will not be performed.
+:   **CHECKSUM** — This option is valid only for append-optimized tables \(`APPENDONLY=TRUE`\). The value `TRUE` is the default and enables CRC checksum validation for append-optimized tables. The checksum is calculated during block creation and is stored on disk. Checksum validation is performed during block reads. If the checksum calculated during the read does not match the stored checksum, the transaction is aborted. If you set the value to `FALSE` to deactivate checksum validation, checking the table data for on-disk corruption will not be performed.
 
-:   **COMPRESSTYPE** — Set to `ZLIB` \(the default\), `RLE-TYPE`, or `QUICKLZ`<sup>1</sup> to specify the type of compression used. The value `NONE`disables compression. QuickLZ uses less CPU power and compresses data faster at a lower compression ratio than zlib. Conversely, zlib provides more compact compression ratios at lower speeds. This option is only valid if `APPENDONLY=TRUE`.
+:   **COMPRESSTYPE** — Set to `ZLIB` \(the default\), `RLE-TYPE`, or `QUICKLZ`<sup>1</sup> to specify the type of compression used. The value `NONE`deactivates compression. QuickLZ uses less CPU power and compresses data faster at a lower compression ratio than zlib. Conversely, zlib provides more compact compression ratios at lower speeds. This option is only valid if `APPENDONLY=TRUE`.
 
     **Note:** <sup>1</sup>QuickLZ compression is available only in the commercial release of Tanzu Greenplum.
 

@@ -113,12 +113,12 @@ Most likely, you will want to run `gpfdist` on your ETL machines rather than the
 
 ## Notes 
 
-The server configuration parameter [verify\_gpfdists\_cert](../../ref_guide/config_params/guc-list.html) controls whether SSL certificate authentication is enabled when Greenplum Database communicates with the `gpfdist` utility to either read data from or write data to an external data source. You can set the parameter value to `false` to disable authentication when testing the communication between the Greenplum Database external table and the `gpfdist` utility that is serving the external data. If the value is `false`, these SSL exceptions are ignored:
+The server configuration parameter [verify\_gpfdists\_cert](../../ref_guide/config_params/guc-list.html) controls whether SSL certificate authentication is enabled when Greenplum Database communicates with the `gpfdist` utility to either read data from or write data to an external data source. You can set the parameter value to `false` to deactivate authentication when testing the communication between the Greenplum Database external table and the `gpfdist` utility that is serving the external data. If the value is `false`, these SSL exceptions are ignored:
 
 -   The self-signed SSL certificate that is used by `gpfdist` is not trusted by Greenplum Database.
 -   The host name contained in the SSL certificate does not match the host name that is running `gpfdist`.
 
-**Warning:** Disabling SSL certificate authentication exposes a security risk by not validating the `gpfdists` SSL certificate.
+**Warning:** Deactivating SSL certificate authentication exposes a security risk by not validating the `gpfdists` SSL certificate.
 
 If the `gpfdist` utility hangs with no read or write activity occurring, you can generate a core dump the next time a hang occurs to help debug the issue. Set the environment variable `GPFDIST_WATCHDOG_TIMER` to the number of seconds of no activity to wait before `gpfdist` is forced to exit. When the environment variable is set and `gpfdist` hangs, the utility aborts after the specified number of seconds, creates a core dump, and sends abort information to the log file.
 
@@ -150,7 +150,7 @@ To stop `gpfdist` when it is running in the background:
 ps ax | grep gpfdist
 ```
 
---Then kill the process, for example:
+--Then terminate the process, for example:
 
 ```
 kill 3456

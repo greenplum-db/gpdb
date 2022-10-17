@@ -129,7 +129,7 @@ When you assign CPU cores to `CPUSET` groups, consider the following:
 
 Resource groups that you configure with `CPUSET` have a higher priority on CPU resources. The maximum CPU resource usage percentage for all resource groups configured with `CPUSET` on a segment host is the number of CPU cores reserved divided by the number of all CPU cores, multiplied by 100.
 
-When you configure `CPUSET` for a resource group, Greenplum Database disables `CPU_RATE_LIMIT` for the group and sets the value to -1.
+When you configure `CPUSET` for a resource group, Greenplum Database deactivates `CPU_RATE_LIMIT` for the group and sets the value to -1.
 
 **Note:** You must configure `CPUSET` for a resource group *after* you have enabled resource group-based resource management for your Greenplum Database cluster.
 
@@ -148,7 +148,7 @@ The maximum CPU resource usage for all resource groups configured with a `CPU_RA
 
 CPU resource assignment for resource groups configured with a `CPU_RATE_LIMIT` is elastic in that Greenplum Database may allocate the CPU resources of an idle resource group to a busier one\(s\). In such situations, CPU resources are re-allocated to the previously idle resource group when that resource group next becomes active. If multiple resource groups are busy, they are allocated the CPU resources of any idle resource groups based on the ratio of their `CPU_RATE_LIMIT`s. For example, a resource group created with a `CPU_RATE_LIMIT` of 40 will be allocated twice as much extra CPU resource as a resource group that you create with a `CPU_RATE_LIMIT` of 20.
 
-When you configure `CPU_RATE_LIMIT` for a resource group, Greenplum Database disables `CPUSET` for the group and sets the value to -1.
+When you configure `CPU_RATE_LIMIT` for a resource group, Greenplum Database deactivates `CPUSET` for the group and sets the value to -1.
 
 ## Memory Limits 
 
@@ -241,7 +241,7 @@ Using Tanzu Greenplum Command Center, an administrator can create and manage res
 
 Workload management rules are defined in Command Center and stored in Greenplum Database. When a transaction is submitted, Greenplum Database calls the workload management database extension to evaluate and apply the rules.
 
-Workload management assignment rules assign transactions to different resource groups based on user-defined criteria. If no assignment rule is matched, Greenplum Database assigns the transaction to the role's default resource group. Workload management idle session kill rules set the maximum number of seconds that sessions managed by a resource group can remain idle before they are terminated.
+Workload management assignment rules assign transactions to different resource groups based on user-defined criteria. If no assignment rule is matched, Greenplum Database assigns the transaction to the role's default resource group. Workload management idle session termination rules set the maximum number of seconds that sessions managed by a resource group can remain idle before they are terminated.
 
 Refer to the [Greenplum Command Center documentation](http://docs.vmware.com/en/VMware-Tanzu-Greenplum-Command-Center/index.html) for more information about creating and managing resource groups and workload management rules.
 

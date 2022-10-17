@@ -612,7 +612,7 @@ $endif
 ## Environment 
 
 PAGER
-:   If the query results do not fit on the screen, they are piped through this command. Typical values are `more` or `less`. The default is platform-dependent. The use of the pager can be disabled by using the `\pset` command.
+:   If the query results do not fit on the screen, they are piped through this command. Typical values are `more` or `less`. The default is platform-dependent. The use of the pager can be deactivated by using the `\pset` command.
 
 PGDATABASE
 PGHOST

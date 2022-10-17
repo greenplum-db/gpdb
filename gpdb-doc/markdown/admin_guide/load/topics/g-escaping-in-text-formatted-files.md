@@ -19,7 +19,7 @@ Notice how the backslash character that is part of the data is escaped with anot
 
 You can use the escape character to escape octal and hexidecimal sequences. The escaped value is converted to the equivalent character when loaded into Greenplum Database. For example, to load the ampersand character \(`&`\), use the escape character to escape its equivalent hexidecimal \(`\0x26`\) or octal \(`\046`\) representation.
 
-You can disable escaping in `TEXT`-formatted files using the `ESCAPE` clause of `COPY`, `CREATE EXTERNAL TABLE`or `gpload` as follows:
+You can deactivate escaping in `TEXT`-formatted files using the `ESCAPE` clause of `COPY`, `CREATE EXTERNAL TABLE`or `gpload` as follows:
 
 ```
 ESCAPE 'OFF'

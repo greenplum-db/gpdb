@@ -180,7 +180,7 @@ See [Updating Statistics with ANALYZE](analyze.html).
 -   Run `VACUUM` after large `UPDATE` and `DELETE` operations.
 -   Do not run `VACUUM FULL`. Instead run a `CREATE TABLE...AS` operation, then rename and drop the original table.
 -   Frequently run `VACUUM` on the system catalogs to avoid catalog bloat and the need to run `VACUUM FULL` on catalog tables.
--   Never kill `VACUUM` on catalog tables.
+-   Never terminate `VACUUM` on catalog tables.
 
 See [Managing Bloat in the Database](bloat.html).
 

@@ -138,7 +138,7 @@ where storage\_parameter is:
 -   **SET STATISTICS** — Sets the per-column statistics-gathering target for subsequent `ANALYZE` operations. The target can be set in the range 1 to 1000, or set to -1 to revert to using the system default statistics target \(`default_statistics_target`\).
 -   **ADD table\_constraint** — Adds a new constraint to a table \(not just a partition\) using the same syntax as `CREATE TABLE`.
 -   **DROP CONSTRAINT** — Drops the specified constraint on a table.
--   **DISABLE/ENABLE TRIGGER** — Disables or enables trigger\(s\) belonging to the table. A disabled trigger is still known to the system, but is not executed when its triggering event occurs. For a deferred trigger, the enable status is checked when the event occurs, not when the trigger function is actually executed. One may disable or enable a single trigger specified by name, or all triggers on the table, or only user-created triggers. Disabling or enabling constraint triggers requires superuser privileges.
+-   **DISABLE/ENABLE TRIGGER** — Deactivates or enables trigger\(s\) belonging to the table. A deactivated trigger is still known to the system, but is not executed when its triggering event occurs. For a deferred trigger, the enable status is checked when the event occurs, not when the trigger function is actually executed. One may deactivate or activate a single trigger specified by name, or all triggers on the table, or only user-created triggers. Deactivating or enabling constraint triggers requires superuser privileges.
 
     **Note:** triggers are not supported in Greenplum Database. Triggers in general have very limited functionality due to the parallelism of Greenplum Database.
 
@@ -197,13 +197,13 @@ RESTRICT
 :   Refuse to drop the column or constraint if there are any dependent objects. This is the default behavior.
 
 trigger\_name
-:   Name of a single trigger to disable or enable. Note that Greenplum Database does not support triggers.
+:   Name of a single trigger to deactivate or activate. Note that Greenplum Database does not support triggers.
 
 ALL
-:   Disable or enable all triggers belonging to the table including constraint related triggers. This requires superuser privilege.
+:   Deactivate or activate all triggers belonging to the table including constraint related triggers. This requires superuser privilege.
 
 USER
-:   Disable or enable all user-created triggers belonging to the table.
+:   Deactivate or activate all user-created triggers belonging to the table.
 
 index\_name
 :   The index name on which the table should be marked for clustering. Note that `CLUSTER` is not the recommended way to physically reorder a table in Greenplum Database because it takes so long. It is better to recreate the table with [CREATE TABLE AS](CREATE_TABLE_AS.html) and order it by the index column\(s\).

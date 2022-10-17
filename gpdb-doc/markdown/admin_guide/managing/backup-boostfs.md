@@ -73,7 +73,7 @@ You can now run `gpbackup` and `gprestore` with the `--backup-dir` option to bac
 These are required `gpbackup` options when backing up data to a Data Domain system with BoostFS.
 
 -   `--backup-dir` - Specify the mounted Data Domain storage unit.
--   `--no-compression` - Disable compression. Data compression interferes with DD Boost data de-duplication.
+-   `--no-compression` - Deactivate compression. Data compression interferes with DD Boost data de-duplication.
 -   `--single-data-file` - Create a single data file on each segment host. A single data file avoids a BoostFS stream limitation.
 
 When you use `gprestore` to restore a backup from a Data Domain system with BoostFS, you must specify the mounted Data Domain storage unit with the option `--backup-dir`.

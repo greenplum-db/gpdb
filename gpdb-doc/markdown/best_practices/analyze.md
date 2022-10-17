@@ -40,7 +40,7 @@ By default, `gp_autostats_mode` is `on_no_stats`, which triggers statistics coll
 
 Setting `gp_autostats_mode` to `on_change` triggers statistics collection only when the number of rows affected exceeds the threshold defined by `gp_autostats_on_change_threshold`, which has a default value of 2147483647. Operations that can trigger automatic statistics collection with `on_change` are: `CREATE TABLE AS SELECT`, `UPDATE`, `DELETE`, `INSERT`, and `COPY`.
 
-Setting `gp_autostats_mode` to `none` disables automatics statistics collection.
+Setting `gp_autostats_mode` to `none` deactivates automatics statistics collection.
 
 For partitioned tables, automatic statistics collection is not triggered if data is inserted from the top-level parent table of a partitioned table. But automatic statistics collection *is* triggered if data is inserted directly in a leaf table \(where the data is stored\) of the partitioned table.
 

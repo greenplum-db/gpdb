@@ -24,7 +24,7 @@ gprecoverseg --version
 
 In a system with mirrors enabled, the `gprecoverseg` utility reactivates a failed segment instance and identifies the changed database files that require resynchronization. Once `gprecoverseg` completes this process, the system goes into *resynchronizing* mode until the recovered segment is brought up to date. The system is online and fully operational during resynchronization.
 
-During an incremental recovery \(the `-F` option is not specified\), if `gprecoverseg` detects a segment instance with mirroring disabled in a system with mirrors enabled, the utility reports that mirroring is disabled for the segment, does not attempt to recover that segment instance, and continues the recovery process.
+During an incremental recovery \(the `-F` option is not specified\), if `gprecoverseg` detects a segment instance with mirroring deactivated in a system with mirrors enabled, the utility reports that mirroring is deactivated for the segment, does not attempt to recover that segment instance, and continues the recovery process.
 
 A segment instance can fail for several reasons, such as a host failure, network failure, or disk failure. When a segment instance fails, its status is marked as *down* in the Greenplum Database system catalog, and its mirror is activated in *change tracking* mode. In order to bring the failed segment instance back into operation again, you must first correct the problem that made it fail in the first place, and then recover the segment instance in Greenplum Database using `gprecoverseg`.
 

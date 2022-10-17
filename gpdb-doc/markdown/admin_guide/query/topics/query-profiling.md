@@ -180,7 +180,7 @@ explain select count(*) from part;
 
 If a query performs poorly, examine its query plan and ask the following questions:
 
--   **Do operations in the plan take an exceptionally long time?** Look for an operation consumes the majority of query processing time. For example, if an index scan takes longer than expected, the index could be out-of-date and need to be reindexed. Or, adjust `enable_<operator>`parameters to see if you can force the legacy query optimizer \(planner\) to choose a different plan by disabling a particular query plan operator for that query.
+-   **Do operations in the plan take an exceptionally long time?** Look for an operation consumes the majority of query processing time. For example, if an index scan takes longer than expected, the index could be out-of-date and need to be reindexed. Or, adjust `enable_<operator>`parameters to see if you can force the legacy query optimizer \(planner\) to choose a different plan by deactivating a particular query plan operator for that query.
 -   **Are the optimizer's estimates close to reality?** Run `EXPLAIN ANALYZE` and see if the number of rows the optimizer estimates is close to the number of rows the query operation actually returns. If there is a large discrepancy, collect more statistics on the relevant columns.
 
     See the *Greenplum Database Reference Guide* for more information on the `EXPLAIN ANALYZE` and `ANALYZE` commands.

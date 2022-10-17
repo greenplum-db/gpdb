@@ -18,7 +18,7 @@ You can use the `__gp_aovisimap_compaction_info()` function in the the *gp\_tool
 
 For information about the `__gp_aovisimap_compaction_info()` function see, "Checking Append-Optimized Tables" in the *Greenplum Database Reference Guide*.
 
-`VACUUM` can be disabled for append-optimized tables using the `gp_appendonly_compaction` server configuration parameter.
+`VACUUM` can be deactivated for append-optimized tables using the `gp_appendonly_compaction` server configuration parameter.
 
 For details about vacuuming a database, see [Vacuuming the Database](../dml.html).
 

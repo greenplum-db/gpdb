@@ -6,8 +6,8 @@ These sections describe GPORCA functionality and usage:
 
 -   **[Overview of GPORCA](../../query/topics/query-piv-opt-overview.html)**  
 GPORCA extends the planning and optimization capabilities of the Greenplum Database legacy optimizer.
--   **[Enabling and Disabling GPORCA](../../query/topics/query-piv-opt-enable.html)**  
-By default, Greenplum Database uses GPORCA instead of the legacy query planner. Server configuration parameters enable or disable GPORCA.
+-   **[Enabling and Deactivating GPORCA](../../query/topics/query-piv-opt-enable.html)**  
+By default, Greenplum Database uses GPORCA instead of the legacy query planner. Server configuration parameters activate or deactivate GPORCA.
 -   **[Collecting Root Partition Statistics](../../query/topics/query-piv-opt-root-partition.html)**  
 For a partitioned table, GPORCA uses statistics of the table root partition to generate query plans. These statistics are used for determining the join order, for splitting and joining aggregate nodes, and for costing the query steps. In contrast, the legacy planner uses the statistics of each leaf partition.
 -   **[Considerations when Using GPORCA](../../query/topics/query-piv-opt-notes.html)**  

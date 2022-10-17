@@ -177,7 +177,7 @@ List of current PgBouncer parameter settings
 |max\_connections|Maximum number of connections for all pools for this database.|
 |current\_connections|The total count of connections for all pools for this database.|
 |paused|Paused/unpaused state of the database.|
-|disabled|Enabled/disabled state of the database.|
+|deactivated|Enabled/deactivated state of the database.|
 
 ### DNS\_HOSTS 
 

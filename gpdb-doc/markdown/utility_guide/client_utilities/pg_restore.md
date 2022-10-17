@@ -73,7 +73,7 @@ filename
 :   Restore only the schema \(data definitions\), not the data \(table contents\). Sequence current values will not be restored, either. \(Do not confuse this with the `--schema` option, which uses the word schema in a different meaning.\)
 
 -S username \| --superuser=username
-:   Specify the superuser user name to use when disabling triggers. This is only relevant if `--disable-triggers` is used.
+:   Specify the superuser user name to use when deactivating triggers. This is only relevant if `--disable-triggers` is used.
 
     **Note:** Greenplum Database does not support user-defined triggers.
 

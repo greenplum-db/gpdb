@@ -87,7 +87,7 @@ Prior releases of Greenplum Database also had an R-tree index method. This metho
 
 For more information on the GiST index type, refer to the [PostgreSQL documentation](https://www.postgresql.org/docs/8.3/static/indexes-types.html).
 
-The use of hash and GIN indexes has been disabled in Greenplum Database.
+The use of hash and GIN indexes has been deactivated in Greenplum Database.
 
 ## Examples 
 

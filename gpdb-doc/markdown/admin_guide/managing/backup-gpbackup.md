@@ -521,6 +521,6 @@ Each data file uses the file name format gpbackup\_<content\_id\>\_<YYYYMMDDHHMM
 -   <YYYYMMDDHHMMSS\> is the timestamp of the `gpbackup` operation.
 -   <oid\> is the object ID of the table. The metadata file gpbackup\_<YYYYMMDDHHMMSS\>\_toc.yaml references this <oid\> to locate the data for a specific table in a schema.
 
-You can optionally specify the gzip compression level \(from 1-9\) using the `--compression-level` option, or disable compression entirely with `--no-compression`. If you do not specify a compression level, `gpbackup` uses compression level 1 by default.
+You can optionally specify the gzip compression level \(from 1-9\) using the `--compression-level` option, or deactivate compression entirely with `--no-compression`. If you do not specify a compression level, `gpbackup` uses compression level 1 by default.
 
 **Parent topic:** [Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
