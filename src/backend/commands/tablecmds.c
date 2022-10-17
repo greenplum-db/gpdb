@@ -521,7 +521,7 @@ static void inherit_parent(Relation parent_rel, Relation child_rel,
 						   bool is_partition, List *inhAttrNameList);
 static inline void SetConstraints(TupleDesc tupleDesc, char *relName, List **constraints, AttrNumber *attnos);
 static inline void SetSchema(TupleDesc tuple_desc, List **schema, AttrNumber **attnos);
-
+static inline void ErrorOnInvalidDefaultPartition(Relation *rel, AlterPartitionId *id);
 
 
 /* ----------------------------------------------------------------
@@ -17977,6 +17977,19 @@ make_orientation_options(Relation rel)
 	return l;
 }
 
+static inline void 
+ErrorOnInvalidDefaultPartition(Relation *rel, AlterPartitionId *id)
+{
+	if (id->idtype == AT_AP_IDDefault)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				errmsg("relation \"%s\" does not have a "
+						"default partition",
+						RelationGetRelationName(*rel))));
+	}
+}
+
 static void
 ATPExecPartSplit(Relation *rel,
                  AlterPartitionCmd *pc)
@@ -18085,12 +18098,7 @@ ATPExecPartSplit(Relation *rel,
 					ListCell *rc;
 					AlterPartitionId *id = (AlterPartitionId *)pc2->partid;
 
-					if (id->idtype == AT_AP_IDDefault)
-						ereport(ERROR,
-								(errcode(ERRCODE_UNDEFINED_OBJECT),
-								 errmsg("relation \"%s\" does not have a "
-										"default partition",
-										RelationGetRelationName(*rel))));
+					ErrorOnInvalidDefaultPartition(rel, id);
 
 					foreach(rc, prule->pNode->rules)
 					{
@@ -18170,12 +18178,7 @@ ATPExecPartSplit(Relation *rel,
 					ListCell *rc;
 					AlterPartitionId *id = (AlterPartitionId *)pc2->arg1;
 
-					if (id->idtype == AT_AP_IDDefault)
-						ereport(ERROR,
-								(errcode(ERRCODE_UNDEFINED_OBJECT),
-								 errmsg("relation \"%s\" does not have a "
-										"default partition",
-										RelationGetRelationName(*rel))));
+					ErrorOnInvalidDefaultPartition(rel, id);
 
 					foreach(rc, prule->pNode->rules)
 					{
@@ -18474,8 +18477,10 @@ ATPExecPartSplit(Relation *rel,
 
 			mypc->partid = (Node *)mypid;
 
-			if (intopid)
+			if (intopid && intopid->partiddef)
 				parname = strVal(intopid->partiddef);
+			else if (intopid)
+				ErrorOnInvalidDefaultPartition(rel, intopid);
 
 			if (prule->topRule->parisdefault && i == into_exists)
 			{

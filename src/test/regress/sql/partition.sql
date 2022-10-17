@@ -1397,6 +1397,18 @@ default partition mydef);
 alter table k split default partition start(10) end(20);
 drop table k;
 
+-- Test default partiton check inside split into cause
+-- See: https://github.com/greenplum-db/gpdb/issues/14186
+DROP TABLE IF EXISTS issue_14186;
+CREATE TABLE issue_14186 (id int, date date, name_ text)
+WITH (appendonly=true, compresstype=zlib, compresslevel=5)
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (date)
+( START (date '2021-03-01') INCLUSIVE
+   END (date '2021-04-01') EXCLUSIVE
+   EVERY (INTERVAL '7 day') );
+ALTER TABLE issue_14186 SPLIT PARTITION FOR ('2021-03-01') AT ('2021-03-02') INTO (PARTITION prt_20210301, DEFAULT PARTITION);
+
 -- Check that we support int2
 CREATE TABLE myINT2_TBL(q1 int2)
  partition by range (q1)

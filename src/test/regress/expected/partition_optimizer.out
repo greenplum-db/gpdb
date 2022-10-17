@@ -2734,6 +2734,25 @@ alter table k split default partition start(10) end(20);
 ERROR:  cannot SPLIT DEFAULT PARTITION with LIST
 HINT:  Use SPLIT with the AT clause instead.
 drop table k;
+-- Test default partiton check inside split into cause
+-- See: https://github.com/greenplum-db/gpdb/issues/14186
+DROP TABLE IF EXISTS issue_14186;
+NOTICE:  table "issue_14186" does not exist, skipping
+CREATE TABLE issue_14186 (id int, date date, name_ text)
+WITH (appendonly=true, compresstype=zlib, compresslevel=5)
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (date)
+( START (date '2021-03-01') INCLUSIVE
+   END (date '2021-04-01') EXCLUSIVE
+   EVERY (INTERVAL '7 day') );
+NOTICE:  CREATE TABLE will create partition "issue_14186_1_prt_1" for table "issue_14186"
+NOTICE:  CREATE TABLE will create partition "issue_14186_1_prt_2" for table "issue_14186"
+NOTICE:  CREATE TABLE will create partition "issue_14186_1_prt_3" for table "issue_14186"
+NOTICE:  CREATE TABLE will create partition "issue_14186_1_prt_4" for table "issue_14186"
+NOTICE:  CREATE TABLE will create partition "issue_14186_1_prt_5" for table "issue_14186"
+ALTER TABLE issue_14186 SPLIT PARTITION FOR ('2021-03-01') AT ('2021-03-02') INTO (PARTITION prt_20210301, DEFAULT PARTITION);
+NOTICE:  CREATE TABLE will create partition "issue_14186_1_prt_prt_20210301" for table "issue_14186"
+ERROR:  relation "issue_14186" does not have a default partition
 -- Check that we support int2
 CREATE TABLE myINT2_TBL(q1 int2)
  partition by range (q1)
