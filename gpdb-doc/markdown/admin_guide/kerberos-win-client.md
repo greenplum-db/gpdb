@@ -263,11 +263,11 @@ The fully qualified domain name for the Greenplum Database master host is `prod1
 
 We will add the SPN `postgres/prod1.example.local` to this account. Service accounts for other Greenplum Database systems will all be in the form `postgres/fully.qualified.hostname`.
 
-![](graphics/kerb-ms-ad-new-object.png)
+![Kerberos non expiring password](graphics/kerb-ms-ad-new-object.png)
 
 In this example, the AD password is set to never expire and cannot be changed by the user. The AD account password is only used when creating the Kerberos keytab file. There is no requirement to provide it to a database administrator.
 
-![](graphics/kerb-ms-ad-new-object-2.png)
+![Kerberos add service principal name](graphics/kerb-ms-ad-new-object-2.png)
 
 An AD administrator must add the Service Principal Name attribute to the account from the command line with the Windows `setspn` command. This example command set the SPN attribute value to `postgres/prod1.example.local` for the AD user `svcPostgresProd1`:
 
@@ -277,7 +277,7 @@ setspn -A postgres/prod1.example.local svcPostgresProd1
 
 You can see the SPN if Advanced Features are set in the Active Directory Users and Computers view. Find `servicePrincipalName` in the Attribute Editor tab and edit it if necessary.
 
-![](graphics/kerb-ms-ad-attribute-editor.png)
+![serviceprincipalname in the attribute editor](graphics/kerb-ms-ad-attribute-editor.png)
 
 The next step is to create a Kerberos keytab file.
 
@@ -405,11 +405,11 @@ These single sign-on examples that use AD and Kerberos assume that the AD user `
 
 This example configures Aginity Workbench for Greenplum Database. When using single sign-on, you enable Use Integrated Security.
 
-![](graphics/kerb-aginity-config.png)
+![Using integrated security with Aginity Workbench](graphics/kerb-aginity-config.png)
 
 This example configures an ODBC source. When setting up the ODBC source, do not enter a User Name or Password. This DSN can then be used by applications as an ODBC data source.
 
-![](graphics/kerb-odbc-config.png)
+![Configuring an ODBC source](graphics/kerb-odbc-config.png)
 
 You can use the DSN `testdata` with an R client. This example configures R to access the DSN.
 

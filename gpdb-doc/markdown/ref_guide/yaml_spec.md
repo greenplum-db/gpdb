@@ -637,5 +637,5 @@ TARGET:STDOUT
 
 The following diagram shows the job flow of the MapReduce job defined in the example:
 
-![](graphics/mapreducejob.jpg)
+![Job flow for MapReduce job](graphics/mapreducejob.jpg)
 

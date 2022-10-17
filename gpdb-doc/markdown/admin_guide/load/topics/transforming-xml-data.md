@@ -171,7 +171,7 @@ java \
 
 The `input_transform.sh` file uses the Joost STX engine with the AWK interpreter. The following diagram shows the process flow as gpfdist runs the transformation.
 
-![](../../graphics/02-pipeline.png)
+![Process flow for gpfdist transformation](../../graphics/02-pipeline.png)
 
 ## Transfer the Data 
 
@@ -228,7 +228,7 @@ In the `gpload` control file, the optional parameter `MAX_LINE_LENGTH` specifies
 
 The following diagram shows the relationships between the `gpload` control file, the gpfdist configuration file, and the XML data file.
 
-![](../../graphics/03-gpload-files.jpg)
+![Relationship between gpfdist configuration file and data file](../../graphics/03-gpload-files.jpg)
 
 ### Transforming with gpfdist and INSERT INTO SELECT FROM 
 
