@@ -2614,9 +2614,11 @@ CExpressionPreprocessor::PexprExistWithPredFromINSubq(CMemoryPool *mp,
 }
 
 // Collapse a select over a project and update column reference.
-static CExpression *
-CollapseSelectAndReplaceColref(CMemoryPool *mp, CExpression *pexpr,
-							   CColRef *pcolref, CExpression *pprojExpr)
+CExpression *
+CExpressionPreprocessor::CollapseSelectAndReplaceColref(CMemoryPool *mp,
+														CExpression *pexpr,
+														CColRef *pcolref,
+														CExpression *pprojExpr)
 {
 	// remove the logical project
 	//
@@ -2632,10 +2634,15 @@ CollapseSelectAndReplaceColref(CMemoryPool *mp, CExpression *pexpr,
 		(*(*pexpr)[0])[0]->Pop()->Eopid() == COperator::EopLogicalNAryJoin)
 	{
 		(*(*pexpr)[0])[0]->AddRef();
-		return GPOS_NEW(mp)
+		CExpression *pexprCollapsedSelect = GPOS_NEW(mp)
 			CExpression(mp, GPOS_NEW(mp) CLogicalSelect(mp), (*(*pexpr)[0])[0],
 						CollapseSelectAndReplaceColref(mp, (*pexpr)[1], pcolref,
 													   pprojExpr));
+
+		CExpression *pexprTransposed =
+			PexprTransposeSelectAndProject(mp, pexprCollapsedSelect);
+		pexprCollapsedSelect->Release();
+		return pexprTransposed;
 	}
 
 	// replace reference
@@ -2774,9 +2781,15 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
 			//       parts.
 			//
 			//       NB: JoinOnViewWithMixOfPushableAndNonpushablePredicates.mdp
+			CExpression *prevpselectNew = pselectNew;
 			pselectNew = CollapseSelectAndReplaceColref(
-				mp, pselectNew, CUtils::PNthProjectElement(pproject, ul)->Pcr(),
+				mp, prevpselectNew,
+				CUtils::PNthProjectElement(pproject, ul)->Pcr(),
 				CUtils::PNthProjectElementExpr(pproject, ul));
+			if (pexpr != prevpselectNew)
+			{
+				prevpselectNew->Release();
+			}
 		}
 		pdrgpexpr->Append(pselectNew);
 
