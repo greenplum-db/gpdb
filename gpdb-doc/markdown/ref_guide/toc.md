@@ -42,6 +42,7 @@ Doc Index
         - [ALTER VIEW](./sql_commands/ALTER_VIEW.md)
         - [ANALYZE](./sql_commands/ANALYZE.md)
         - [BEGIN](./sql_commands/BEGIN.md)
+        - [CALL](./sql_commands/CALL.md)
         - [CHECKPOINT](./sql_commands/CHECKPOINT.md)
         - [CLOSE](./sql_commands/CLOSE.md)
         - [CLUSTER](./sql_commands/CLUSTER.md)

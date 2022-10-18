@@ -43,6 +43,7 @@ The following SQL commands are available in Greenplum Database:
 -   [ALTER VIEW](ALTER_VIEW.html#am137232)
 -   [ANALYZE](ANALYZE.html)
 -   [BEGIN](BEGIN.html)
+-   [CALL](CALL.html)
 -   [CHECKPOINT](CHECKPOINT.html)
 -   [CLOSE](CLOSE.html)
 -   [CLUSTER](CLUSTER.html)
