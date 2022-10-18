@@ -3172,19 +3172,29 @@ ContainsSetReturningScalarOp(const CDXLNode *scalar_op_expr_dxlnode)
 		if (EdxlopScalarFuncExpr == dxlopid)
 		{
 			if (CDXLScalarFuncExpr::Cast(op)->ReturnsSet())
+			{
 				return true;
+			}
 			else
+			{
 				continue;
+			}
 		}
 		else if (EdxlopScalarOpExpr == dxlopid)
 		{
 			if (ContainsSetReturningScalarOp(expr_dxlnode))
+			{
 				return true;
+			}
 			else
+			{
 				continue;
+			}
 		}
 		else
+		{
 			continue;
+		}
 	}
 	return false;
 }
@@ -3467,7 +3477,7 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 		   (iterator->lefttree->type == T_Result ||
 			iterator->lefttree->type == T_ProjectSet))
 	{
-		set_upper_references(NULL, iterator, 0);
+		set_upper_references(nullptr, iterator, 0);
 		iterator->plan_node_id = planIdNew;
 		planIdNew++;
 		iterator = iterator->lefttree;
@@ -3711,7 +3721,7 @@ CTranslatorDXLToPlStmt::TranslateDXLAppend(
 			CDXLScalarIdent::Cast(expr_dxlnode->GetOperator());
 
 		Index idxVarno = OUTER_VAR;
-		AttrNumber attno = (AttrNumber) (ul + 1);
+		AttrNumber attno = (AttrNumber)(ul + 1);
 
 		Var *var = gpdb::MakeVar(
 			idxVarno, attno,
@@ -3923,13 +3933,13 @@ CTranslatorDXLToPlStmt::TranslateDXLCTEConsumerToSharedScan(
 		OID oid_type = CMDIdGPDB::CastMdid(sc_ident_dxlop->MdidType())->Oid();
 
 		Var *var =
-			gpdb::MakeVar(OUTER_VAR, (AttrNumber) (ul + 1), oid_type,
+			gpdb::MakeVar(OUTER_VAR, (AttrNumber)(ul + 1), oid_type,
 						  sc_ident_dxlop->TypeModifier(), 0 /* varlevelsup */);
 
 		CHAR *resname = CTranslatorUtils::CreateMultiByteCharStringFromWCString(
 			sc_proj_elem_dxlop->GetMdNameAlias()->GetMDName()->GetBuffer());
 		TargetEntry *target_entry = gpdb::MakeTargetEntry(
-			(Expr *) var, (AttrNumber) (ul + 1), resname, false /* resjunk */);
+			(Expr *) var, (AttrNumber)(ul + 1), resname, false /* resjunk */);
 		plan->targetlist = gpdb::LAppend(plan->targetlist, target_entry);
 
 		output_context->InsertMapping(colid, target_entry);
@@ -4829,7 +4839,7 @@ CTranslatorDXLToPlStmt::TranslateDXLProjList(
 		target_entry->resname =
 			CTranslatorUtils::CreateMultiByteCharStringFromWCString(
 				sc_proj_elem_dxlop->GetMdNameAlias()->GetMDName()->GetBuffer());
-		target_entry->resno = (AttrNumber) (ul + 1);
+		target_entry->resno = (AttrNumber)(ul + 1);
 
 		if (IsA(expr, Var))
 		{
@@ -5018,7 +5028,7 @@ CTranslatorDXLToPlStmt::TranslateDXLProjectListToHashTargetList(
 			sc_proj_elem_dxlop->GetMdNameAlias()->GetMDName()->GetBuffer());
 
 		TargetEntry *target_entry =
-			gpdb::MakeTargetEntry((Expr *) var, (AttrNumber) (ul + 1), resname,
+			gpdb::MakeTargetEntry((Expr *) var, (AttrNumber)(ul + 1), resname,
 								  false	 // resjunk
 			);
 
