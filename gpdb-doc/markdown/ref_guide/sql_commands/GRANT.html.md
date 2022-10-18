@@ -104,6 +104,7 @@ The possible privileges are:
 - `CONNECT`
 - `TEMPORARY`, `TEMP`
 - `EXECUTE`
+- `USAGE`
 - `ALL PRIVILEGES`
 
 The `FUNCTION` syntax works for plain functions, aggregate functions, and window functions, but not for procedures; use `PROCEDURE` for those. Alternatively, use `ROUTINE` to refer to a function, aggregate function, window function, or procedure regardless of its precise type.
