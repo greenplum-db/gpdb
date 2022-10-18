@@ -53,6 +53,7 @@
 #include "optimizer/optimizer.h"
 #include "parser/parse_node.h"
 #include "parser/parse_agg.h"
+#include "parser/parse_expr.h"
 #include "parser/parse_func.h"
 #include "parser/parse_oper.h"
 #include "parser/parse_cte.h"
@@ -9140,6 +9141,137 @@ get_rule_expr(Node *node, deparse_context *context,
 		case T_RowIdExpr:
 			{
 				appendStringInfo(buf, "RowIdExpr");
+			}
+			break;
+
+		case T_GpPartitionDefinition:
+			{
+				GpPartitionDefinition *def = (GpPartitionDefinition*)node;
+				ListCell *lc;
+				char *sep = "";
+
+				if (def->isTemplate)
+					appendStringInfo(buf, "SUBPARTITION TEMPLATE(");
+
+				foreach(lc, def->partDefElems)
+				{
+					GpPartDefElem *elem = lfirst_node(GpPartDefElem, lc);
+
+					if (elem->colencs)
+						elog(ERROR, "Partition specific ENCODING clause not supported yet");
+
+					appendStringInfoString(buf, sep);
+					sep = ", ";
+					if (elem->partName)
+					{
+						if (elem->isDefault)
+							appendStringInfo(buf, "DEFAULT SUBPARTITION %s", elem->partName);
+						else
+							appendStringInfo(buf, "SUBPARTITION %s", elem->partName);
+					}
+
+					if (elem->boundSpec)
+					{
+						switch (nodeTag(elem->boundSpec))
+						{
+							case T_GpPartitionRangeSpec:
+							{
+								GpPartitionRangeSpec *rspec =
+														 (GpPartitionRangeSpec *) elem->boundSpec;
+								if (rspec->partStart)
+								{
+									Const *val = castNode(Const,
+														  linitial(rspec->partStart->val));
+									Assert(!val->constisnull);
+									Assert(rspec->partStart->edge ==
+											   PART_EDGE_INCLUSIVE);
+									appendStringInfo(buf, " START (");
+									get_const_expr(val, context, true);
+									appendStringInfo(buf, ")");
+								}
+								if (rspec->partEnd)
+								{
+									Const *val = castNode(Const,
+														  linitial(rspec->partEnd->val));
+									Assert(!val->constisnull);
+									Assert(rspec->partEnd->edge ==
+											   PART_EDGE_EXCLUSIVE);
+									appendStringInfo(buf, " END (");
+									get_const_expr(val, context, true);
+									appendStringInfo(buf, ")");
+								}
+								if (rspec->partEvery)
+								{
+									OpExpr *opexpr;
+									Node   *every;
+
+									opexpr =
+										(OpExpr *) strip_implicit_coercions((Node *) linitial(
+											rspec->partEvery));
+									every  = (Node *) lsecond(opexpr->args);
+
+									appendStringInfo(buf, " Every (");
+									get_rule_expr(every, context, true);
+									appendStringInfo(buf, ")");
+								}
+							}
+								break;
+							case T_GpPartitionListSpec:
+							{
+								GpPartitionListSpec *lspec = (GpPartitionListSpec *) elem->boundSpec;
+								ListCell *cell;
+
+								appendStringInfoString(buf, " VALUES (");
+								sep = "";
+								foreach(cell, lspec->partValues)
+								{
+									Const *val;
+
+									Assert(list_length(lfirst(cell)) == 1);
+									val = castNode(Const, linitial(lfirst(cell)));
+									appendStringInfoString(buf, sep);
+									get_const_expr(val, context, -1);
+									sep = ", ";
+								}
+								appendStringInfoChar(buf, ')');
+							}
+								break;
+							default:
+								elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
+						}
+					}
+				}
+
+				if (def->encClauses)
+					appendStringInfoString(buf, ", ");
+
+				sep = "";
+				foreach(lc, def->encClauses)
+				{
+					ColumnReferenceStorageDirective *crsd = lfirst_node(ColumnReferenceStorageDirective, lc);
+					ListCell *cell;
+
+					appendStringInfoString(buf, sep);
+					if (crsd->deflt)
+						appendStringInfo(buf, "DEFAULT COLUMN ENCODING (");
+					else
+						appendStringInfo(buf, "COLUMN %s ENCODING (", crsd->column);
+
+					sep = "";
+					foreach(cell, crsd->encoding)
+					{
+						DefElem *el = lfirst_node(DefElem, cell);
+						char *arg;
+
+						appendStringInfoString(buf, sep);
+						appendStringInfo(buf, "%s=", el->defname);
+						appendStringInfo(buf, "%s", arg = defGetString(el));
+						sep = ", ";
+					}
+					appendStringInfo(buf, ")");
+				}
+				if (def->isTemplate)
+					appendStringInfo(buf, ")");
 			}
 			break;
 
