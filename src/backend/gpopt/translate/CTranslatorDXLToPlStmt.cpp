@@ -3217,6 +3217,13 @@ ContainsSetReturningFuncOrOp(const CDXLNode *project_list_dxlnode,
 		CDXLOperator *op = expr_dxlnode->GetOperator();
 		switch (op->GetDXLOperator())
 		{
+			case EdxlopScalarFuncExpr:
+			{
+				if (!(CDXLScalarFuncExpr::Cast(op)->ReturnsSet()))
+				{
+					return true;
+				}
+			}
 			case EdxlopScalarOpExpr:
 			{
 				if (ContainsSetReturningScalarOp(expr_dxlnode))
@@ -3230,6 +3237,18 @@ ContainsSetReturningFuncOrOp(const CDXLNode *project_list_dxlnode,
 		}
 	}
 	return false;
+}
+
+void
+setPlanIdForChildNodes(Plan *iterator, ULONG newDiffInPlanNodeId)
+{
+	if (nullptr == iterator)
+	{
+		return;
+	}
+	iterator->plan_node_id = iterator->plan_node_id + newDiffInPlanNodeId;
+	setPlanIdForChildNodes(iterator->lefttree, newDiffInPlanNodeId);
+	setPlanIdForChildNodes(iterator->righttree, newDiffInPlanNodeId);
 }
 
 // XXX: this is a copy-pasta of TranslateDXLResult
@@ -3252,7 +3271,7 @@ CTranslatorDXLToPlStmt::TranslateDXLProjectSet(
 	ProjectSet *project_set = MakeNode(ProjectSet);
 
 	Plan *plan = &(project_set->plan);
-	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
+	plan->plan_node_id = 0;
 
 	// translate operator costs
 	TranslatePlanCosts(result_dxlnode, plan);
@@ -3319,7 +3338,6 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	Plan *project_set_final_plan = nullptr;
 	Plan *project_set_child_plan = nullptr;
 	BOOL willRequireResultNode = false;
-
 
 	// create result plan node
 	Result *result = MakeNode(Result);
@@ -3417,6 +3435,7 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 
 		Plan *temp_plan_project_set = TranslateDXLProjectSet(
 			result_dxlnode, output_context, ctxt_translation_prev_siblings);
+
 		temp_plan_project_set->targetlist = TargetListEntry;
 
 		if (project_set_final_plan == nullptr)
@@ -3470,17 +3489,31 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 		final_plan = &(result->plan);
 	}
 
-
+	//Set up of Plan Node Id
 	int planIdNew = result->plan.plan_node_id;
-	Plan *iterator = final_plan;
-	while (iterator->lefttree != nullptr &&
-		   (iterator->lefttree->type == T_Result ||
-			iterator->lefttree->type == T_ProjectSet))
+	Plan *iterator_setPlanId = final_plan;
+	ULONG countProjectSetNodes = 0;
+	while (iterator_setPlanId != nullptr &&
+		   (iterator_setPlanId->type == T_Result ||
+			iterator_setPlanId->type == T_ProjectSet))
 	{
-		set_upper_references(nullptr, iterator, 0);
-		iterator->plan_node_id = planIdNew;
-		planIdNew++;
-		iterator = iterator->lefttree;
+		countProjectSetNodes++;
+		iterator_setPlanId->plan_node_id = planIdNew;
+		planIdNew = planIdNew + 1;
+		iterator_setPlanId = iterator_setPlanId->lefttree;
+	}
+
+	ULONG newDiffInPlanNodeId = countProjectSetNodes - 1;
+	setPlanIdForChildNodes(iterator_setPlanId, newDiffInPlanNodeId);
+
+	// Set up upper references
+	Plan *iterator_setUpperRef = final_plan;
+	while (iterator_setUpperRef->lefttree != nullptr &&
+		   (iterator_setUpperRef->lefttree->type == T_Result ||
+			iterator_setUpperRef->lefttree->type == T_ProjectSet))
+	{
+		set_upper_references(nullptr, iterator_setUpperRef, 0);
+		iterator_setUpperRef = iterator_setUpperRef->lefttree;
 	}
 
 

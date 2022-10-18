@@ -3218,8 +3218,11 @@ record_plan_function_dependency(PlannerInfo *root, Oid funcid)
 		inval_item->cacheId = PROCOID;
 		inval_item->hashValue = GetSysCacheHashValue1(PROCOID,
 													  ObjectIdGetDatum(funcid));
+                if (NULL != root)
+                {
+                  root->glob->invalItems = lappend(root->glob->invalItems, inval_item);
+                }
 
-		root->glob->invalItems = lappend(root->glob->invalItems, inval_item);
 		add_proc_oids_for_dump(funcid);
 	}
 }
