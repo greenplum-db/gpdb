@@ -1828,9 +1828,11 @@ fix_expr_common(PlannerInfo *root, Node *node)
 
 		/* Check for regclass reference */
 		if (ISREGCLASSCONST(con))
-			root->glob->relationOids =
-				lappend_oid(root->glob->relationOids,
-							DatumGetObjectId(con->constvalue));
+                  if(NULL != root) {
+                    root->glob->relationOids =
+                        lappend_oid(root->glob->relationOids,
+                                    DatumGetObjectId(con->constvalue));
+                  }
 	}
 	else if (IsA(node, GroupingFunc))
 	{
