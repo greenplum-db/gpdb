@@ -1870,7 +1870,7 @@ Increasing the limit allocates more shared memory on the master host at server s
 
 ## <a id="max_connections"></a>max\_connections 
 
-The maximum number of concurrent connections to the database server. In a Greenplum Database system, user client connections go through the Greenplum master instance only. Segment instances should allow 5-10 times the amount as the master. When you increase this parameter, [max\_prepared\_transactions](#max_prepared_transactions) must be increased as well. For more information about limiting concurrent connections, see "Configuring Client Authentication" in the *Greenplum Database Administrator Guide*.
+The maximum number of concurrent connections to the database server. In a Greenplum Database system, user client connections go through the Greenplum master instance only. Segment instances should allow 3-10 times the amount as the master. When you increase this parameter, [max\_prepared\_transactions](#max_prepared_transactions) must be increased as well. For more information about limiting concurrent connections, see "Configuring Client Authentication" in the *Greenplum Database Administrator Guide*.
 
 Increasing this parameter may cause Greenplum Database to request more shared memory. See [shared\_buffers](#shared_buffers) for information about Greenplum server instance shared memory buffers.
 
