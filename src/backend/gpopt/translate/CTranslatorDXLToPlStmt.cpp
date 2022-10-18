@@ -23,9 +23,12 @@ extern "C" {
 #include "cdb/cdbvars.h"
 #include "executor/execPartition.h"
 #include "executor/executor.h"
+#include "nodes/makefuncs.h"
 #include "nodes/nodes.h"
 #include "nodes/plannodes.h"
 #include "nodes/primnodes.h"
+#include "optimizer/setrefs.h"
+#include "optimizer/tlist.h"
 #include "partitioning/partdesc.h"
 #include "storage/lmgr.h"
 #include "utils/partcache.h"
@@ -3158,6 +3161,35 @@ CTranslatorDXLToPlStmt::TranslateDXLSubQueryScan(
 }
 
 static bool
+ContainsSetReturningScalarOp(const CDXLNode *scalar_op_expr_dxlnode)
+{
+	const ULONG arity = scalar_op_expr_dxlnode->Arity();
+	for (ULONG ul = 0; ul < arity; ul++)
+	{
+		CDXLNode *expr_dxlnode = (*scalar_op_expr_dxlnode)[ul];
+		CDXLOperator *op = expr_dxlnode->GetOperator();
+		Edxlopid dxlopid = op->GetDXLOperator();
+		if (EdxlopScalarFuncExpr == dxlopid)
+		{
+			if (CDXLScalarFuncExpr::Cast(op)->ReturnsSet())
+				return true;
+			else
+				continue;
+		}
+		else if (EdxlopScalarOpExpr == dxlopid)
+		{
+			if (ContainsSetReturningScalarOp(expr_dxlnode))
+				return true;
+			else
+				continue;
+		}
+		else
+			continue;
+	}
+	return false;
+}
+
+static bool
 ContainsSetReturningFuncOrOp(const CDXLNode *project_list_dxlnode,
 							 CMDAccessor *md_accessor)
 {
@@ -3175,19 +3207,9 @@ ContainsSetReturningFuncOrOp(const CDXLNode *project_list_dxlnode,
 		CDXLOperator *op = expr_dxlnode->GetOperator();
 		switch (op->GetDXLOperator())
 		{
-			case EdxlopScalarFuncExpr:
-				if (CDXLScalarFuncExpr::Cast(op)->ReturnsSet())
-				{
-					return true;
-				}
-				break;
 			case EdxlopScalarOpExpr:
 			{
-				const IMDScalarOp *md_sclar_op = md_accessor->RetrieveScOp(
-					CDXLScalarOpExpr::Cast(op)->MDId());
-				const IMDFunction *md_func =
-					md_accessor->RetrieveFunc(md_sclar_op->FuncMdId());
-				if (md_func->ReturnsSet())
+				if (ContainsSetReturningScalarOp(expr_dxlnode))
 				{
 					return true;
 				}
@@ -3198,42 +3220,6 @@ ContainsSetReturningFuncOrOp(const CDXLNode *project_list_dxlnode,
 		}
 	}
 	return false;
-}
-
-// GPDB_12_MERGE_FIXME: this duplicates a check in ExecInitProjectSet
-static bool
-SanityCheckProjectSetTargetList(List *targetlist)
-{
-	ListCell *lc;
-	ForEach(lc, targetlist)
-	{
-		TargetEntry *te = (TargetEntry *) lfirst(lc);
-		Expr *expr = te->expr;
-		List *args;
-		if ((IsA(expr, FuncExpr) && ((FuncExpr *) expr)->funcretset) ||
-			(IsA(expr, OpExpr) && ((OpExpr *) expr)->opretset))
-		{
-			if (IsA(expr, FuncExpr))
-			{
-				args = ((FuncExpr *) expr)->args;
-			}
-			else
-			{
-				args = ((OpExpr *) expr)->args;
-			}
-			if (gpdb::ExpressionReturnsSet((Node *) args))
-			{
-				return false;
-			}
-			continue;
-		}
-
-		if (gpdb::ExpressionReturnsSet((Node *) expr))
-		{
-			return false;
-		}
-	}
-	return true;
 }
 
 // XXX: this is a copy-pasta of TranslateDXLResult
@@ -3301,15 +3287,6 @@ CTranslatorDXLToPlStmt::TranslateDXLProjectSet(
 	// cleanup
 	child_contexts->Release();
 
-	// double check the targetlist is kosher
-	// we are only doing this because ORCA didn't do it...
-	if (!SanityCheckProjectSetTargetList(plan->targetlist))
-	{
-		GPOS_RAISE(
-			gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-			GPOS_WSZ_LIT("Unexpected target list entries in ProjectSet node"));
-	}
-
 	return (Plan *) project_set;
 }
 
@@ -3326,16 +3303,13 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	const CDXLNode *result_dxlnode, CDXLTranslateContext *output_context,
 	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
 {
-	// GPDB_12_MERGE_FIXME: this *really* should be done inside ORCA
-	// at the latest during CTranslatorExprToDXL, to create a DXLProjectSet
-	// that way we don't have to "frisk" the DXLResult to distinguish it from an
-	// actual result node
-	if (ContainsSetReturningFuncOrOp((*result_dxlnode)[EdxlresultIndexProjList],
-									 m_md_accessor))
-	{
-		return TranslateDXLProjectSet(result_dxlnode, output_context,
-									  ctxt_translation_prev_siblings);
-	}
+	List *targetsWithSrf = NIL;
+	List *targetsWithSrfBool = NIL;
+	Plan *child_plan = nullptr;
+	Plan *project_set_final_plan = nullptr;
+	Plan *project_set_child_plan = nullptr;
+	BOOL willRequireResultNode = false;
+
 
 	// create result plan node
 	Result *result = MakeNode(Result);
@@ -3355,12 +3329,10 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 		// translate child plan
 		child_dxlnode = (*result_dxlnode)[EdxlresultIndexChild];
 
-		Plan *child_plan = TranslateDXLOperatorToPlan(
-			child_dxlnode, &child_context, ctxt_translation_prev_siblings);
+		child_plan = TranslateDXLOperatorToPlan(child_dxlnode, &child_context,
+												ctxt_translation_prev_siblings);
 
 		GPOS_ASSERT(nullptr != child_plan && "child plan cannot be NULL");
-
-		result->plan.lefttree = child_plan;
 	}
 
 	CDXLNode *project_list_dxlnode = (*result_dxlnode)[EdxlresultIndexProjList];
@@ -3386,25 +3358,126 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 								 nullptr,  // base table translation context
 								 child_contexts, output_context);
 
+
 	plan->qual = quals_list;
 
 	result->resconstantqual = (Node *) one_time_quals_list;
 
 	SetParamIds(plan);
 
+	PathTarget *completeResultPathTarget =
+		make_pathtarget_from_tlist(plan->targetlist);
+
+
+	split_pathtarget_at_srfs(nullptr, completeResultPathTarget, nullptr,
+							 &targetsWithSrf, &targetsWithSrfBool);
+
+	if (1 == list_length(targetsWithSrf))
+	{
+		result->plan.lefttree = child_plan;
+		child_contexts->Release();
+		return (Plan *) result;
+	}
+
+	if (ContainsSetReturningFuncOrOp((*result_dxlnode)[EdxlresultIndexProjList],
+									 m_md_accessor))
+	{
+		willRequireResultNode = true;
+	}
+
+	ListCell *lc;
+	ULONG listLength = 1;
+	int targetsWithSrf_length = list_length(targetsWithSrf);
+	ForEach(lc, targetsWithSrf)
+	{
+		if (listLength == 1)
+		{
+			listLength = listLength + 1;
+			continue;
+		}
+		if (willRequireResultNode && targetsWithSrf_length == listLength)
+		{
+			break;
+		}
+
+		listLength = listLength + 1;
+
+		List *TargetListEntry =
+			make_tlist_from_pathtarget((PathTarget *) lfirst(lc));
+
+		Plan *temp_plan_project_set = TranslateDXLProjectSet(
+			result_dxlnode, output_context, ctxt_translation_prev_siblings);
+		temp_plan_project_set->targetlist = TargetListEntry;
+
+		if (project_set_final_plan == nullptr)
+		{
+			project_set_final_plan = temp_plan_project_set;
+			project_set_child_plan = temp_plan_project_set;
+		}
+		else
+		{
+			temp_plan_project_set->lefttree = project_set_final_plan;
+			project_set_final_plan = temp_plan_project_set;
+		}
+	}
+	if (nullptr != child_plan)
+	{
+		project_set_child_plan->lefttree = child_plan;
+	}
+
+
+	Plan *final_plan = nullptr;
+	if (willRequireResultNode)
+	{
+		result->plan.lefttree = project_set_final_plan;
+		final_plan = &(result->plan);
+	}
+	else if (nullptr != project_set_final_plan)
+	{
+		int i = 0;
+		ListCell *listCellProjectTargetEntry;
+		ForEach(listCellProjectTargetEntry, project_set_final_plan->targetlist)
+		{
+			TargetEntry *te =
+				(TargetEntry *) lfirst(listCellProjectTargetEntry);
+			CDXLNode *proj_elem_dxlnode = (*project_list_dxlnode)[i];
+			GPOS_ASSERT(EdxlopScalarProjectElem ==
+						proj_elem_dxlnode->GetOperator()->GetDXLOperator());
+			CDXLScalarProjElem *sc_proj_elem_dxlop =
+				CDXLScalarProjElem::Cast(proj_elem_dxlnode->GetOperator());
+			GPOS_ASSERT(1 == proj_elem_dxlnode->Arity());
+			te->resname =
+				CTranslatorUtils::CreateMultiByteCharStringFromWCString(
+					sc_proj_elem_dxlop->GetMdNameAlias()
+						->GetMDName()
+						->GetBuffer());
+			i++;
+		}
+		final_plan = project_set_final_plan;
+	}
+	else
+	{
+		final_plan = &(result->plan);
+	}
+
+
+	int planIdNew = result->plan.plan_node_id;
+	Plan *iterator = final_plan;
+	while (iterator->lefttree != nullptr &&
+		   (iterator->lefttree->type == T_Result ||
+			iterator->lefttree->type == T_ProjectSet))
+	{
+		set_upper_references(NULL, iterator, 0);
+		iterator->plan_node_id = planIdNew;
+		planIdNew++;
+		iterator = iterator->lefttree;
+	}
+
+
 	// cleanup
 	child_contexts->Release();
 
-	// double check the targetlist is kosher
-	// we are only doing this because ORCA didn't do it...
-	if (!SanityCheckProjectSetTargetList(plan->targetlist))
-	{
-		GPOS_RAISE(
-			gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-			GPOS_WSZ_LIT("Unexpected target list entries in ProjectSet node"));
-	}
-
-	return (Plan *) result;
+	return final_plan;
 }
 
 //---------------------------------------------------------------------------
@@ -3638,7 +3711,7 @@ CTranslatorDXLToPlStmt::TranslateDXLAppend(
 			CDXLScalarIdent::Cast(expr_dxlnode->GetOperator());
 
 		Index idxVarno = OUTER_VAR;
-		AttrNumber attno = (AttrNumber)(ul + 1);
+		AttrNumber attno = (AttrNumber) (ul + 1);
 
 		Var *var = gpdb::MakeVar(
 			idxVarno, attno,
@@ -3850,13 +3923,13 @@ CTranslatorDXLToPlStmt::TranslateDXLCTEConsumerToSharedScan(
 		OID oid_type = CMDIdGPDB::CastMdid(sc_ident_dxlop->MdidType())->Oid();
 
 		Var *var =
-			gpdb::MakeVar(OUTER_VAR, (AttrNumber)(ul + 1), oid_type,
+			gpdb::MakeVar(OUTER_VAR, (AttrNumber) (ul + 1), oid_type,
 						  sc_ident_dxlop->TypeModifier(), 0 /* varlevelsup */);
 
 		CHAR *resname = CTranslatorUtils::CreateMultiByteCharStringFromWCString(
 			sc_proj_elem_dxlop->GetMdNameAlias()->GetMDName()->GetBuffer());
 		TargetEntry *target_entry = gpdb::MakeTargetEntry(
-			(Expr *) var, (AttrNumber)(ul + 1), resname, false /* resjunk */);
+			(Expr *) var, (AttrNumber) (ul + 1), resname, false /* resjunk */);
 		plan->targetlist = gpdb::LAppend(plan->targetlist, target_entry);
 
 		output_context->InsertMapping(colid, target_entry);
@@ -4756,7 +4829,7 @@ CTranslatorDXLToPlStmt::TranslateDXLProjList(
 		target_entry->resname =
 			CTranslatorUtils::CreateMultiByteCharStringFromWCString(
 				sc_proj_elem_dxlop->GetMdNameAlias()->GetMDName()->GetBuffer());
-		target_entry->resno = (AttrNumber)(ul + 1);
+		target_entry->resno = (AttrNumber) (ul + 1);
 
 		if (IsA(expr, Var))
 		{
@@ -4945,7 +5018,7 @@ CTranslatorDXLToPlStmt::TranslateDXLProjectListToHashTargetList(
 			sc_proj_elem_dxlop->GetMdNameAlias()->GetMDName()->GetBuffer());
 
 		TargetEntry *target_entry =
-			gpdb::MakeTargetEntry((Expr *) var, (AttrNumber)(ul + 1), resname,
+			gpdb::MakeTargetEntry((Expr *) var, (AttrNumber) (ul + 1), resname,
 								  false	 // resjunk
 			);
 

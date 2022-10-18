@@ -129,7 +129,7 @@ static Node *fix_scan_expr(PlannerInfo *root, Node *node, int rtoffset);
 static Node *fix_scan_expr_mutator(Node *node, fix_scan_expr_context *context);
 static bool fix_scan_expr_walker(Node *node, fix_scan_expr_context *context);
 static void set_join_references(PlannerInfo *root, Join *join, int rtoffset);
-static void set_upper_references(PlannerInfo *root, Plan *plan, int rtoffset);
+void set_upper_references(PlannerInfo *root, Plan *plan, int rtoffset);
 static void set_param_references(PlannerInfo *root, Plan *plan);
 static Node *convert_combining_aggrefs(Node *node, void *context);
 static Node *convert_deduplicated_aggrefs(Node *node, void *context);
@@ -2163,7 +2163,7 @@ set_join_references(PlannerInfo *root, Join *join, int rtoffset)
  * needed in the output then we want to reference the subplan tlist element
  * rather than recomputing the expression.
  */
-static void
+void
 set_upper_references(PlannerInfo *root, Plan *plan, int rtoffset)
 {
 	Plan	   *subplan = plan->lefttree;
