@@ -16,6 +16,7 @@
 
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CLogical.h"
+#include "gpopt/operators/CLogicalConstTableGet.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CLogicalLeftOuterCorrelatedApply.h"
 #include "gpopt/operators/CLogicalLeftOuterJoin.h"
@@ -889,6 +890,21 @@ CNormalizer::PushThruJoin(CMemoryPool *mp, CExpression *pexprJoin,
 		// whenever possible, push incoming predicate through outer join's outer child,
 		// recursion will eventually reach the rest of PushThruJoin() to process join predicates
 		PushThruOuterChild(mp, pexprJoin, pexprConj, ppexprResult);
+
+		return;
+	}
+
+	// if we have an nary join with only inner joins and a false scalar condition,
+	// simplify the expression to a constant false. Trying to normalize this would
+	// improperly cause the scalar condition to be pulled into one of the predicates,
+	// and leave the condition as a const false
+	if (popNAryJoin && !fMixedInnerOuterJoin &&
+		CUtils::FScalarConstFalse(pexprConj))
+	{
+		COperator *popCTG = GPOS_NEW(mp) CLogicalConstTableGet(
+			mp, pexprJoin->DeriveOutputColumns()->Pdrgpcr(mp),
+			GPOS_NEW(mp) IDatum2dArray(mp));
+		*ppexprResult = GPOS_NEW(mp) CExpression(mp, popCTG);
 
 		return;
 	}
