@@ -209,9 +209,41 @@ alter table foo_p exchange partition for(6) with table bar_p;
 select has_table_privilege('part_role', 'foo_p_1_prt_6'::regclass, 'select');
 select has_table_privilege('part_role', 'bar_p'::regclass, 'select');
 
+-- the ONLY keyword will affect just the partition root for both grant/revoke
+create role part_role2;
+grant select on only foo_p to part_role2;
+select has_table_privilege('part_role2', 'foo_p'::regclass, 'select');
+select has_table_privilege('part_role2', 'foo_p_1_prt_6'::regclass, 'select');
+
+grant select on foo_p to part_role2;
+revoke select on only foo_p from part_role2;
+select has_table_privilege('part_role2', 'foo_p'::regclass, 'select');
+select has_table_privilege('part_role2', 'foo_p_1_prt_6'::regclass, 'select');
+revoke select on foo_p from part_role2;
+select has_table_privilege('part_role2', 'foo_p_1_prt_6'::regclass, 'select');
+
+create table foo_p2 (a int, b int) partition by range(a) (start(1) end(10) every(1));
+grant select on foo_p, only foo_p2 to part_role2; -- multiple tables in same statement
+select has_table_privilege('part_role2', 'foo_p'::regclass, 'select');
+select has_table_privilege('part_role2', 'foo_p_1_prt_6'::regclass, 'select');
+select has_table_privilege('part_role2', 'foo_p2'::regclass, 'select');
+select has_table_privilege('part_role2', 'foo_p2_1_prt_6'::regclass, 'select');
+
+-- more cases
+revoke all on foo_p from part_role2;
+revoke all on foo_p2 from part_role2;
+grant select on only public.foo_p to part_role2; -- with schema
+select has_table_privilege('part_role2', 'foo_p'::regclass, 'select');
+select has_table_privilege('part_role2', 'foo_p_1_prt_6'::regclass, 'select');
+grant update(b) on only foo_p2 to part_role2; -- column level priviledge
+select relname, has_column_privilege('part_role2', oid, 'b', 'update') from pg_class
+where relname = 'foo_p2' or relname = 'foo_p2_1_prt_6';
+
 drop table foo_p;
+drop table foo_p2;
 drop table bar_p;
 drop role part_role;
+drop role part_role2;
 
 -- validation
 create table foo_p (i int) partition by range(i)
