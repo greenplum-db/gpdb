@@ -308,27 +308,6 @@ RegProcedure GetOpFunc(Oid opno);
 // operator name
 char *GetOpName(Oid opno);
 
-#if 0
-	// parts of a partitioned table
-	bool IsLeafPartition(Oid oid);
-
-	// partition table has an external partition
-	bool HasExternalPartition(Oid oid);
-
-	// find the oid of the root partition given partition oid belongs to
-	Oid GetRootPartition(Oid oid);
-	
-	// partition attributes
-	List *GetPartitionAttrs(Oid oid);
-
-	// get partition keys and kinds ordered by partition level
-	void GetOrderedPartKeysAndKinds(Oid oid, List **pkeys, List **pkinds);
-
-	/* GPDB_12_MERGE_FIXME: mergings stats not yet implemented with new partitioning implementation */
-	// parts of a partitioned table
-	//PartitionNode *GetParts(Oid relid, int16 level, Oid parent, bool inctemplate, bool includesubparts);
-#endif
-
 // keys of the relation with the given oid
 List *GetRelationKeys(Oid relid);
 
@@ -421,14 +400,6 @@ void ListFree(List *list);
 
 // deep free of a list
 void ListFreeDeep(List *list);
-
-#if 0
-	// does a partition table have an appendonly child
-	bool IsAppendOnlyPartitionTable(Oid root_oid);
-
-	// does a multi-level partitioned table have uniform partitioning hierarchy
-	bool IsMultilevelPartitionUniform(Oid root_oid);
-#endif
 
 // lookup type cache
 TypeCacheEntry *LookupTypeCache(Oid type_id, int flags);
@@ -533,14 +504,6 @@ Node *MutateExpressionTree(Node *node, Node *(*mutator)(), void *context);
 // modify a query or an expression tree
 Node *MutateQueryOrExpressionTree(Node *node, Node *(*mutator)(), void *context,
 								  int flags);
-
-#if 0
-	// check whether the part with the given oid is the root of a partition table
-	bool RelPartIsRoot(Oid relid);
-	
-	// check whether the part with the given oid is an interior subpartition
-	bool RelPartIsInterior(Oid relid);
-#endif
 
 bool RelIsPartitioned(Oid relid);
 
@@ -691,11 +654,6 @@ Expr *TransformArrayConstToArrayExpr(Const *constant);
 
 // transform array Const to an ArrayExpr
 Node *EvalConstExpressions(Node *node);
-
-#if 0
-	// static partition selection given a PartitionSelector node
-	SelectedParts *RunStaticPartitionSelection(PartitionSelector *ps);
-#endif
 
 #ifdef FAULT_INJECTOR
 // simple fault injector used by COptTasks.cpp to inject GPDB fault

@@ -193,11 +193,6 @@ private:
 						  CEnfdProp::EPropEnforcingType epetRewindability,
 						  CEnfdProp::EPropEnforcingType epetPropagation);
 
-	// check if partition propagation resolver is passed an empty part
-	// propagation spec
-	static BOOL FCheckReqdPartPropagation(CPhysical *pop,
-										  CEnfdPartitionPropagation *pepp);
-
 	// unrank the plan with the given 'plan_id' from the memo
 	CExpression *PexprUnrank(ULLONG plan_id);
 
