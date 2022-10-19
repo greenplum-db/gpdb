@@ -375,11 +375,7 @@ GetTransactionSnapshot(void)
 			 getDistributedTransactionId(),
 			 DtxContextToString(DistributedTransactionContext));
 
-		// GPDB_91_MERGE_FIXME: the name of UpdateSerializableCommandId is a bit
-		// wrong, now that SERIALIZABLE and REPEATABLE READ are not the same.
-		// From comparison, the if-check above was changed from checking
-		// IsXactIsoLevelSerializable to IsolationUsesXactSnapshot()
-		UpdateSerializableCommandId(CurrentSnapshot->curcid);
+		UpdateCommandIdInSnapshot(CurrentSnapshot->curcid);
 
 		return CurrentSnapshot;
 	}

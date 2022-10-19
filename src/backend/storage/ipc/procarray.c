@@ -3132,10 +3132,9 @@ HaveVirtualXIDsDelayingChkpt(VirtualTransactionId *vxids, int nvxids)
 
 /*
  * MPP: Special code to update the command id in the SharedLocalSnapshot
- * when we are in SERIALIZABLE isolation mode.
  */
 void
-UpdateSerializableCommandId(CommandId curcid)
+UpdateCommandIdInSnapshot(CommandId curcid)
 {
 	if ((DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER ||
 		 DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER) &&
