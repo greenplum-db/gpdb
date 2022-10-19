@@ -301,7 +301,6 @@ where a=1 and b=0;
           <dxl:IndexInfo Mdid="0.1962926.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.1975983.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.1962900.1.1" Name="dd_singlecol_idx" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
@@ -341,7 +340,6 @@ where a=1 and b=0;
           <dxl:IndexInfo Mdid="0.1962926.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.1975983.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.1962900.1.1.7" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>

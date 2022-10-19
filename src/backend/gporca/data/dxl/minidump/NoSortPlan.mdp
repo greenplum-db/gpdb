@@ -176,7 +176,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.3373430.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.3373378.1.1.8" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -268,7 +267,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.3373430.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>

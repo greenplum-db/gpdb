@@ -51,7 +51,6 @@ select * from foo where gp_segment_id=2;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>

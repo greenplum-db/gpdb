@@ -23,7 +23,6 @@
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
-      <dxl:Triggers/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
     <dxl:Relation Mdid="0.1234.1.2" Name="T" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
@@ -36,7 +35,6 @@
         <dxl:IndexInfo Mdid="0.2345.2.1" IsPartial="false"/>
         <dxl:IndexInfo Mdid="0.2347.1.1" IsPartial="false"/>
       </dxl:IndexInfoList>
-      <dxl:Triggers/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
     <dxl:Index Mdid="0.2345.2.1" Name="T_a" IsClustered="false" IndexType="B-tree" KeyColumns="1" IncludedColumns="1">
@@ -56,7 +54,6 @@
       <dxl:IndexInfoList>
         <dxl:IndexInfo Mdid="0.2346.2.1" IsPartial="false"/>
       </dxl:IndexInfoList>
-      <dxl:Triggers/>
       <dxl:CheckConstraints/>
       <dxl:Partitions>
         <dxl:Partition Mdid="0.1258001.5.1"/>
@@ -77,7 +74,6 @@
       <dxl:IndexInfoList>
         <dxl:IndexInfo Mdid="0.2346.2.1" IsPartial="false"/>
       </dxl:IndexInfoList>
-      <dxl:Triggers/>
       <dxl:CheckConstraints/>
       <dxl:PartConstraint>
         <dxl:And>
@@ -109,7 +105,6 @@
       <dxl:IndexInfoList>
         <dxl:IndexInfo Mdid="0.2346.2.1" IsPartial="false"/>
       </dxl:IndexInfoList>
-      <dxl:Triggers/>
       <dxl:CheckConstraints/>
       <dxl:PartConstraint>
         <dxl:And>
@@ -159,7 +154,6 @@
       <dxl:IndexInfoList>
         <dxl:IndexInfo Mdid="0.2347.2.1" IsPartial="false"/>
       </dxl:IndexInfoList>
-      <dxl:Triggers/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
     <dxl:Relation Mdid="0.1260.5.1" Name="S" IsTemporary="true" StorageType="AppendOnly, Column-oriented" DistributionPolicy="MasterOnly" NumberLeafPartitions="0">
@@ -176,7 +170,6 @@
       <dxl:IndexInfoList>
         <dxl:IndexInfo Mdid="0.2348.2.1" IsPartial="false"/>
       </dxl:IndexInfoList>
-      <dxl:Triggers/>
       <dxl:CheckConstraints>
         <dxl:CheckConstraint Mdid="0.561000.1.0"/>
       </dxl:CheckConstraints>
@@ -191,9 +184,6 @@
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
-      <dxl:Triggers>
-        <dxl:Trigger Mdid="0.561922.1.0"/>
-      </dxl:Triggers>
       <dxl:CheckConstraints/>
     </dxl:Relation>
     <dxl:Type Mdid="0.2669067.1.0" Name="intint" IsRedistributable="false" IsHashable="false" IsMergeJoinable="false" IsComposite="true" BaseRelationMdid="0.2669066.1.0" IsTextRelated="false" IsFixedLength="false" Length="-1" PassByValue="false">
@@ -264,7 +254,6 @@
       <dxl:ResultType Mdid="0.2249.1.0"/>
       <dxl:OutputColumns TypeMdids="0.23.1.0,0.23.1.0"/>
     </dxl:GPDBFunc>
-    <dxl:GPDBTrigger Mdid="0.561922.1.0" Name="t_ins_del" RelationMdid="0.2669066.1.0" FuncId="0.561920.1.0" IsRow="true" IsBefore="true" IsInsert="true" IsDelete="true" IsUpdate="false" IsEnabled="true"/>
     <dxl:CheckConstraint Mdid="0.561000.1.0" Name="a_eq_b" RelationMdid="0.2669066.1.0">
       <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
         <dxl:Ident ColId="1" ColName="A" TypeMdid="0.23.1.0"/>
@@ -323,7 +312,6 @@
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
-      <dxl:Triggers/>
       <dxl:CheckConstraints/>
     </dxl:ExternalRelation>
     <dxl:ExternalRelation Mdid="0.378406.1.0" Name="ext_2" DistributionPolicy="Random" Keys="7,1">
@@ -354,7 +342,6 @@
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
-      <dxl:Triggers/>
       <dxl:CheckConstraints/>
     </dxl:ExternalRelation>
     <dxl:ExternalRelation Mdid="0.378429.1.0" Name="ext_3" DistributionPolicy="MasterOnly" Keys="7,1">
@@ -385,7 +372,6 @@
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
-      <dxl:Triggers/>
       <dxl:CheckConstraints/>
     </dxl:ExternalRelation>
     <dxl:ExternalRelation Mdid="0.876377.1.0" Name="ext_4" DistributionPolicy="Random" Keys="8,2" RejectLimit="100" RejectLimitInRows="true" FormatErrorRelId="0.876352.1.0">
@@ -419,7 +405,6 @@
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
-      <dxl:Triggers/>
       <dxl:CheckConstraints/>
     </dxl:ExternalRelation>
     <dxl:Relation Mdid="0.363445.1.0" Name="S" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0" NumberLeafPartitions="0">
@@ -436,7 +421,6 @@
       <dxl:IndexInfoList>
         <dxl:IndexInfo Mdid="0.2347.2.1" IsPartial="false"/>
       </dxl:IndexInfoList>
-      <dxl:Triggers/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
     <dxl:CTASRelation Mdid="5.252525.1.0" Name="CTAS" IsTemporary="false" StorageType="Heap" VarTypeModList="-1" DistributionPolicy="Hash" DistributionColumns="0">

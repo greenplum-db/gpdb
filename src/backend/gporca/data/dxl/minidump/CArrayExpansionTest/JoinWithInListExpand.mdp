@@ -54,7 +54,6 @@ select a,b from foo, bar where foo.a in (1,2,3,4,5,6) and foo.a = bar.c;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.24614.1.1.3" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
@@ -183,7 +182,6 @@ select a,b from foo, bar where foo.a in (1,2,3,4,5,6) and foo.a = bar.c;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.24614.1.1.8" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="3.000000" FreqRemain="1.000000" ColStatsMissing="false"/>

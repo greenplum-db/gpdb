@@ -212,7 +212,6 @@ EXPLAIN SELECT b2, sum(c1) FROM t1 LEFT JOIN t2 ON a1 = b2 GROUP BY b2 ORDER BY 
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
@@ -253,7 +252,6 @@ EXPLAIN SELECT b2, sum(c1) FROM t1 LEFT JOIN t2 ON a1 = b2 GROUP BY b2 ORDER BY 
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>

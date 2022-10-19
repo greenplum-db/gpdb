@@ -67,7 +67,6 @@ public:
 		EmdtAgg,
 		EmdtOp,
 		EmdtType,
-		EmdtTrigger,
 		EmdtCheckConstraint,
 		EmdtRelStats,
 		EmdtColStats,

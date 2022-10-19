@@ -52,7 +52,6 @@ explain select * from bar where a in (1, (select count(*) from bar));
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.15.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true">

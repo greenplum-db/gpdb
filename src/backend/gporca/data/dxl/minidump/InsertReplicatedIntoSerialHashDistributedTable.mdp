@@ -69,7 +69,6 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.32776.1.0" Name="distributed_table" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
@@ -110,7 +109,6 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>

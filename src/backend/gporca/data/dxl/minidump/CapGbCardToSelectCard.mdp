@@ -111,7 +111,6 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -5732,7 +5731,6 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.26188.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.25160.1.1" Name="item" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;28,22">
@@ -5828,7 +5826,6 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.26188.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Index Mdid="0.26188.1.0" Name="item_pkey" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28">

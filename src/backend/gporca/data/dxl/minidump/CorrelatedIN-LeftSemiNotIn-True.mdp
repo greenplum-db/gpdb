@@ -118,7 +118,6 @@ create table customer
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16404.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.518.1.0" Name="&lt;&gt;" ComparisonType="NEq" ReturnsNullOnNullInput="true">
@@ -201,7 +200,6 @@ create table customer
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16425.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Index Mdid="0.16404.1.0" Name="customer_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8,9">
@@ -374,7 +372,6 @@ create table customer
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16441.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.16406.1.0.9" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>

@@ -161,7 +161,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.567205.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.567182.1.1.5" Name="cmin" Width="4.000000"/>

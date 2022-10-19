@@ -70,7 +70,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint DefaultPartition="0,1" Unbounded="true"/>
       </dxl:Relation>

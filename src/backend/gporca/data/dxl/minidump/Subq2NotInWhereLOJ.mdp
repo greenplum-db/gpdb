@@ -141,7 +141,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.531.1.0" Name="&lt;&gt;" ComparisonType="NEq" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
@@ -232,7 +231,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.664.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
@@ -371,7 +369,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBFunc Mdid="0.669.1.0" Name="varchar" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false">

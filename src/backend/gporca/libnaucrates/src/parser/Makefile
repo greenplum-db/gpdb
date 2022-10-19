@@ -74,7 +74,6 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerMDGPDBCheckConstraint.o \
               CParseHandlerMDGPDBFunc.o \
               CParseHandlerMDGPDBScalarOp.o \
-              CParseHandlerMDGPDBTrigger.o \
               CParseHandlerMDIndex.o \
               CParseHandlerMDIndexInfoList.o \
               CParseHandlerMDRelation.o \
@@ -105,7 +104,6 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerPhysicalDML.o \
               CParseHandlerPhysicalDynamicBitmapTableScan.o \
               CParseHandlerPhysicalOp.o \
-              CParseHandlerPhysicalRowTrigger.o \
               CParseHandlerPhysicalSplit.o \
               CParseHandlerPhysicalTVF.o \
               CParseHandlerPhysicalWindow.o \

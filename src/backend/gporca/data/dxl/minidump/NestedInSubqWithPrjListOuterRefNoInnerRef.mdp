@@ -83,7 +83,6 @@ EXPLAIN SELECT * FROM foo WHERE foo.a IN (SELECT foo.b + 1 FROM (SELECT * FROM b
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.90119.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
@@ -117,7 +116,6 @@ EXPLAIN SELECT * FROM foo WHERE foo.a IN (SELECT foo.b + 1 FROM (SELECT * FROM b
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.155655.1.0.3" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
@@ -151,7 +149,6 @@ EXPLAIN SELECT * FROM foo WHERE foo.a IN (SELECT foo.b + 1 FROM (SELECT * FROM b
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.90122.1.0.5" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>

@@ -643,7 +643,6 @@ where d.msisdn=f.subscriberaddress and f.sessioncreationtimestamp >= d.start_dtm
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint DefaultPartition="0" Unbounded="true">
         </dxl:PartConstraint>
@@ -4893,7 +4892,6 @@ where d.msisdn=f.subscriberaddress and f.sessioncreationtimestamp >= d.start_dtm
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.1277041.1.1.15" Name="updated_by" Width="24.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000">

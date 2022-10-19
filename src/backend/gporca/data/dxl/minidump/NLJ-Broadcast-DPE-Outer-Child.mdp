@@ -57,7 +57,6 @@ select * from bmao_part as t1 join bmao_part as t2 on t1.a < t2.a where t1.a < 5
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.37336903001.1.1"/>
@@ -96,7 +95,6 @@ select * from bmao_part as t1 join bmao_part as t2 on t1.a < t2.a where t1.a < 5
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -145,7 +143,6 @@ select * from bmao_part as t1 join bmao_part as t2 on t1.a < t2.a where t1.a < 5
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -194,7 +191,6 @@ select * from bmao_part as t1 join bmao_part as t2 on t1.a < t2.a where t1.a < 5
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>

@@ -663,7 +663,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.247422001.1.0"/>
@@ -721,7 +720,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -770,7 +768,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -819,7 +816,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -868,7 +864,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -917,7 +912,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -966,7 +960,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1015,7 +1008,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1064,7 +1056,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1113,7 +1104,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1162,7 +1152,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1211,7 +1200,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1260,7 +1248,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1309,7 +1296,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1358,7 +1344,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1407,7 +1392,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1456,7 +1440,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1505,7 +1488,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1554,7 +1536,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1603,7 +1584,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1652,7 +1632,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1701,7 +1680,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1750,7 +1728,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1802,7 +1779,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.247416.1.0" Name="bar" Rows="1.000000" EmptyRelation="false"/>
@@ -1837,7 +1813,6 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>

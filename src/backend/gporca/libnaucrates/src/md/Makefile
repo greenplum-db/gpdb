@@ -39,7 +39,6 @@ OBJS        = CDXLBucket.o \
               CMDRequest.o \
               CMDScCmpGPDB.o \
               CMDScalarOpGPDB.o \
-              CMDTriggerGPDB.o \
               CMDTypeBoolGPDB.o \
               CMDTypeGenericGPDB.o \
               CMDTypeInt2GPDB.o \

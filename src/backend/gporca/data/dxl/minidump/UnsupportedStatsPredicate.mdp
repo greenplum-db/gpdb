@@ -886,7 +886,6 @@
           <dxl:IndexInfo Mdid="0.2662.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2663.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.2615.1.1" Name="pg_namespace" Rows="7.000000"/>
@@ -927,7 +926,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.2615.1.1.10" Name="gp_segment_id" Width="4.000000"/>

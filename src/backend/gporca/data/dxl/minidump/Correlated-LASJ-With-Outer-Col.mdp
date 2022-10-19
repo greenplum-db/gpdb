@@ -50,7 +50,6 @@ select * from t1 where a not in (select a from t2 where t2.b<>t1.b group by t2.a
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.518.1.0" Name="&lt;&gt;" ComparisonType="NEq" ReturnsNullOnNullInput="true">
@@ -495,7 +494,6 @@ select * from t1 where a not in (select a from t2 where t2.b<>t1.b group by t2.a
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.91.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true">

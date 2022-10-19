@@ -52,7 +52,6 @@ set optimizer_enable_hashjoin = off;
           <dxl:IndexInfo Mdid="0.32786.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.32790.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.32768.1.0" Name="bar" Rows="0.000000" EmptyRelation="true"/>
@@ -90,7 +89,6 @@ set optimizer_enable_hashjoin = off;
           <dxl:IndexInfo Mdid="0.32784.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.32785.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -160,7 +158,6 @@ set optimizer_enable_hashjoin = off;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Index Mdid="0.32785.1.0" Name="bar_idx_b" IsClustered="false" IndexType="B-tree" KeyColumns="1" IncludedColumns="0,1,2,3,4,5,6,7,8">

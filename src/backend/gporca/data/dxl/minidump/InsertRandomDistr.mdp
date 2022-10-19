@@ -156,7 +156,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.16468.1.0" Name="rr" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="8,2" NumberLeafPartitions="0">
@@ -190,7 +189,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>

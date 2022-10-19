@@ -269,7 +269,6 @@ explain select C.i from C where C.i in (select avg(i) over (partition by i) from
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.98671.1.0" Name="c" Rows="0.000000" EmptyRelation="true"/>
@@ -304,7 +303,6 @@ explain select C.i from C where C.i in (select avg(i) over (partition by i) from
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.98668.1.0.0" Name="i" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="false">

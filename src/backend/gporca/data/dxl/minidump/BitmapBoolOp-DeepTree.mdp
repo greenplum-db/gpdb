@@ -53,7 +53,6 @@
           <dxl:IndexInfo Mdid="0.145227.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.145248.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.145159.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
@@ -98,7 +97,6 @@
           <dxl:IndexInfo Mdid="0.145227.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.145248.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">

@@ -163,7 +163,6 @@ enum Edxlopid
 
 	EdxlopPhysicalDML,
 	EdxlopPhysicalSplit,
-	EdxlopPhysicalRowTrigger,
 
 	EdxlopPhysicalAssert,
 

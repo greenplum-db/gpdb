@@ -129,7 +129,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.17091.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.1042.1.0" Name="bpchar" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="true" IsFixedLength="false" Length="-1" PassByValue="false">
@@ -1481,7 +1480,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.17091.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.17068.1.1.13" Name="ctid" Width="6.000000"/>

@@ -77,9 +77,6 @@ private:
 	// array of index infos
 	CMDIndexInfoArray *m_mdindex_info_array;
 
-	// array of trigger ids
-	IMdIdArray *m_mdid_trigger_array;
-
 	// array of check constraint mdids
 	IMdIdArray *m_mdid_check_constraint_array;
 
@@ -121,7 +118,7 @@ public:
 		Ereldistrpolicy rel_distr_policy, CMDColumnArray *mdcol_array,
 		ULongPtrArray *distr_col_array, IMdIdArray *distr_opfamilies,
 		BOOL convert_hash_to_random, ULongPtr2dArray *keyset_array,
-		CMDIndexInfoArray *md_index_info_array, IMdIdArray *mdid_triggers_array,
+		CMDIndexInfoArray *md_index_info_array,
 		IMdIdArray *mdid_check_constraint_array, INT reject_limit,
 		BOOL is_reject_limit_in_rows, IMDId *mdid_fmt_err_table);
 
@@ -194,9 +191,6 @@ public:
 	// number of indices
 	ULONG IndexCount() const override;
 
-	// number of triggers
-	ULONG TriggerCount() const override;
-
 	// return the absolute position of the given attribute position excluding dropped columns
 	ULONG NonDroppedColAt(ULONG pos) const override;
 
@@ -205,9 +199,6 @@ public:
 
 	// retrieve the id of the metadata cache index at the given position
 	IMDId *IndexMDidAt(ULONG pos) const override;
-
-	// retrieve the id of the metadata cache trigger at the given position
-	IMDId *TriggerMDidAt(ULONG pos) const override;
 
 	// serialize metadata relation in DXL format given a serializer object
 	void Serialize(gpdxl::CXMLSerializer *) const override;

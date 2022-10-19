@@ -174,7 +174,6 @@ EXPLAIN SELECT * FROM listfoo WHERE b IS DISTINCT FROM NULL;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.319609001.1.0"/>
@@ -218,7 +217,6 @@ EXPLAIN SELECT * FROM listfoo WHERE b IS DISTINCT FROM NULL;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -266,7 +264,6 @@ EXPLAIN SELECT * FROM listfoo WHERE b IS DISTINCT FROM NULL;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -314,7 +311,6 @@ EXPLAIN SELECT * FROM listfoo WHERE b IS DISTINCT FROM NULL;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -362,7 +358,6 @@ EXPLAIN SELECT * FROM listfoo WHERE b IS DISTINCT FROM NULL;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:IsNull>
@@ -404,7 +399,6 @@ EXPLAIN SELECT * FROM listfoo WHERE b IS DISTINCT FROM NULL;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:Not>

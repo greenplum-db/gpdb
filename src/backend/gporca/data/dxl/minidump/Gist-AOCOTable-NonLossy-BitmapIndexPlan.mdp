@@ -150,7 +150,6 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..0.00 rows=1 width=4)
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.566300.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.718.1.0" Name="circle" IsRedistributable="false" IsHashable="false" IsMergeJoinable="false" IsComposite="false" IsFixedLength="true" Length="24" PassByValue="false">

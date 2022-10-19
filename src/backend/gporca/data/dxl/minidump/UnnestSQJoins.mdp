@@ -706,7 +706,6 @@ WHERE
           <dxl:IndexInfo Mdid="0.2653.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2654.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.2616.1.1" Name="pg_opclass" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
@@ -761,7 +760,6 @@ WHERE
           <dxl:IndexInfo Mdid="0.2686.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2687.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.2602.1.1.9" Name="cmax" Width="4.000000"/>
@@ -1078,7 +1076,6 @@ WHERE
           <dxl:IndexInfo Mdid="0.2651.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2652.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.2602.1.1.11" Name="gp_segment_id" Width="4.000000"/>

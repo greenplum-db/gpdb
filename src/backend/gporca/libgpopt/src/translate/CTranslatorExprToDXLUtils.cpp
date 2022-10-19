@@ -1246,8 +1246,7 @@ CTranslatorExprToDXLUtils::SetDirectDispatchInfo(
 	GPOS_ASSERT(nullptr != pdrgpdsBaseTables);
 
 	Edxlopid edxlopid = dxlnode->GetOperator()->GetDXLOperator();
-	if (EdxlopPhysicalCTAS == edxlopid || EdxlopPhysicalDML == edxlopid ||
-		EdxlopPhysicalRowTrigger == edxlopid)
+	if (EdxlopPhysicalCTAS == edxlopid || EdxlopPhysicalDML == edxlopid)
 	{
 		// direct dispatch for CTAS and DML handled elsewhere
 		// TODO:  - Oct 15, 2014; unify

@@ -121,7 +121,6 @@ explain select f.k, f.subq from (select tab3.k, (select tab2.k from tab2 where t
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.1043.1.0" Name="varchar" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="true" IsFixedLength="false" Length="-1" PassByValue="false">
@@ -264,7 +263,6 @@ explain select f.k, f.subq from (select tab3.k, (select tab2.k from tab2 where t
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.98465.1.0" Name="tab3" Rows="9846.000000" EmptyRelation="false"/>
@@ -302,7 +300,6 @@ explain select f.k, f.subq from (select tab3.k, (select tab2.k from tab2 where t
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.98465.1.0.1" Name="j" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="false">

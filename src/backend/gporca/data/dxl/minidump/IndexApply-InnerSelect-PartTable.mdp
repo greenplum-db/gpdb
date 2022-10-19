@@ -81,7 +81,6 @@ SELECT * FROM s i1, t t2 where t2.c2 = i1.c2 and t2.c1 > 10;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.32553517.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.32553346001.1.0"/>
@@ -137,7 +136,6 @@ SELECT * FROM s i1, t t2 where t2.c2 = i1.c2 and t2.c1 > 10;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.32553517001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -203,7 +201,6 @@ SELECT * FROM s i1, t t2 where t2.c2 = i1.c2 and t2.c1 > 10;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.32553517002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -269,7 +266,6 @@ SELECT * FROM s i1, t t2 where t2.c2 = i1.c2 and t2.c1 > 10;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.32553517003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -335,7 +331,6 @@ SELECT * FROM s i1, t t2 where t2.c2 = i1.c2 and t2.c1 > 10;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.32553517.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.32553346001.1.1"/>
@@ -391,7 +386,6 @@ SELECT * FROM s i1, t t2 where t2.c2 = i1.c2 and t2.c1 > 10;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.32553517001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -457,7 +451,6 @@ SELECT * FROM s i1, t t2 where t2.c2 = i1.c2 and t2.c1 > 10;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.32553517002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -523,7 +516,6 @@ SELECT * FROM s i1, t t2 where t2.c2 = i1.c2 and t2.c1 > 10;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.32553517003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -828,7 +820,6 @@ SELECT * FROM s i1, t t2 where t2.c2 = i1.c2 and t2.c1 > 10;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.2278.1.0" Name="void" IsRedistributable="false" IsHashable="false" IsMergeJoinable="false" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">

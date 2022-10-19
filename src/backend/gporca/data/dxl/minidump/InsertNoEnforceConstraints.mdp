@@ -160,7 +160,6 @@ insert into constraints_tab values (NULL, -1);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints>
           <dxl:CheckConstraint Mdid="0.16427.1.0"/>
         </dxl:CheckConstraints>

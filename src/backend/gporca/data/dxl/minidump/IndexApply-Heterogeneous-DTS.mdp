@@ -103,7 +103,6 @@ WHERE tt.event_ts &gt;= tq.ets AND
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.523.1.0" Name="&lt;=" ComparisonType="LEq" ReturnsNullOnNullInput="true">
@@ -299,7 +298,6 @@ WHERE tt.event_ts &gt;= tq.ets AND
           <dxl:IndexInfo Mdid="0.16033719.1.0" IsPartial="true"/>
           <dxl:IndexInfo Mdid="0.16033738.1.0" IsPartial="true"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.16033575001.1.0"/>
@@ -350,7 +348,6 @@ WHERE tt.event_ts &gt;= tq.ets AND
           <dxl:IndexInfo Mdid="0.16033719001.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.16033738001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -411,7 +408,6 @@ WHERE tt.event_ts &gt;= tq.ets AND
           <dxl:IndexInfo Mdid="0.16033719002.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.16033738002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -472,7 +468,6 @@ WHERE tt.event_ts &gt;= tq.ets AND
           <dxl:IndexInfo Mdid="0.16033719003.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.16033738003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -534,7 +529,6 @@ WHERE tt.event_ts &gt;= tq.ets AND
           <dxl:IndexInfo Mdid="0.16033719.1.0" IsPartial="true"/>
           <dxl:IndexInfo Mdid="0.16033738.1.0" IsPartial="true"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.16033575001.1.1"/>
@@ -585,7 +579,6 @@ WHERE tt.event_ts &gt;= tq.ets AND
           <dxl:IndexInfo Mdid="0.16033719001.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.16033738001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -646,7 +639,6 @@ WHERE tt.event_ts &gt;= tq.ets AND
           <dxl:IndexInfo Mdid="0.16033719002.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.16033738002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -707,7 +699,6 @@ WHERE tt.event_ts &gt;= tq.ets AND
           <dxl:IndexInfo Mdid="0.16033719003.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.16033738003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>

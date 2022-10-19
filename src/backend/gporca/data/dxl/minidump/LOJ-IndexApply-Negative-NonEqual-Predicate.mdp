@@ -78,7 +78,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1995.1.0"/>
@@ -107,7 +106,6 @@
           <dxl:IndexInfo Mdid="0.40986.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.40990.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1995.1.0"/>
@@ -148,7 +146,6 @@
           <dxl:IndexInfo Mdid="0.40984.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.40985.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1995.1.0"/>

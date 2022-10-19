@@ -205,7 +205,6 @@ EXPLAIN SELECT b2, sum(c1) FROM t1, t2 WHERE a1 = b2 GROUP BY b2 ORDER BY b2;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.16430.1.0" Name="t2" Rows="1.000000" RelPages="1" RelAllVisible="0" EmptyRelation="false"/>
@@ -243,7 +242,6 @@ EXPLAIN SELECT b2, sum(c1) FROM t1, t2 WHERE a1 = b2 GROUP BY b2 ORDER BY b2;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>

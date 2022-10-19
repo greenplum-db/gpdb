@@ -234,7 +234,6 @@ Result  (cost=0.00..0.00 rows=1 width=36)
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.573475.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.604.1.0" Name="polygon" IsRedistributable="false" IsHashable="false" IsMergeJoinable="false" IsComposite="false" IsFixedLength="false" Length="-1" PassByValue="false">

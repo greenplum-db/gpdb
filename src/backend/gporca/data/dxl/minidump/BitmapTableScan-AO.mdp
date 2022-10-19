@@ -241,7 +241,6 @@ explain select * from t_ao where c2 = 'HEAP';
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.21846783.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.21846751.1.1" Name="t_ao" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,7">
@@ -280,7 +279,6 @@ explain select * from t_ao where c2 = 'HEAP';
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.21846783.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.21846751.1.1.5" Name="c6" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000">

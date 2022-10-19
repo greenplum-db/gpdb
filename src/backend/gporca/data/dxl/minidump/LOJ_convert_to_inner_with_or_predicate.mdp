@@ -241,7 +241,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.63865.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.63859.1.0" Name="foo" Rows="0.000000" EmptyRelation="true"/>
@@ -279,7 +278,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Index Mdid="0.63865.1.0" Name="jazz_ix" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="0,1,2,3,4,5,6,7,8,9">

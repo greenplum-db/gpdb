@@ -1200,7 +1200,6 @@ select * from customer_address, store where customer_address.ca_county::text = s
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.525049.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.516672.1.1" Name="store" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;35,29">
@@ -1317,7 +1316,6 @@ select * from customer_address, store where customer_address.ca_county::text = s
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.525049.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.508415.1.1.19" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -2698,7 +2696,6 @@ select * from customer_address, store where customer_address.ca_county::text = s
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.518353.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.508415.1.1" Name="customer_address" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;19,13">
@@ -2767,7 +2764,6 @@ select * from customer_address, store where customer_address.ca_county::text = s
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.518353.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.516672.1.1.29" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>

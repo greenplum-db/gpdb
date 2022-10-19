@@ -287,7 +287,6 @@ AND
           <dxl:IndexInfo Mdid="0.3306.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.3307.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.2898.1.1" Name="pg_foreign_data_wrapper" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="12,5">
@@ -336,7 +335,6 @@ AND
           <dxl:IndexInfo Mdid="0.3306.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.3307.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.93.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true">
@@ -521,9 +519,6 @@ AND
           <dxl:IndexInfo Mdid="0.2677.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.6029.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers>
-          <dxl:Trigger Mdid="0.10303.1.0"/>
-        </dxl:Triggers>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.1260.1.1" Name="pg_authid" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="24,17">
@@ -609,9 +604,6 @@ AND
           <dxl:IndexInfo Mdid="0.2677.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.6029.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers>
-          <dxl:Trigger Mdid="0.10303.1.0"/>
-        </dxl:Triggers>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.1009.1.0" Name="_text" IsRedistributable="true" IsHashable="false" IsMergeJoinable="false" IsComposite="false" IsFixedLength="false" Length="-1" PassByValue="false">

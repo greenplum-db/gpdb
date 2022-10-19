@@ -207,7 +207,6 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE c > 10 AND f > 15;
           <dxl:IndexInfo Mdid="0.25116.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.25133.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints>
           <dxl:CheckConstraint Mdid="0.25051.1.0"/>
         </dxl:CheckConstraints>

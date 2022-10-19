@@ -208,7 +208,6 @@ select sum(a) from (select a, b*c, c||d from woo) as too;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>

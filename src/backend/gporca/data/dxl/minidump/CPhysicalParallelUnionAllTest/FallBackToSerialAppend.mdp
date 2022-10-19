@@ -159,7 +159,6 @@ SELECT * FROM pp WHERE b=2 AND c=2;
           <dxl:IndexInfo Mdid="0.2435371.1.0" IsPartial="true"/>
           <dxl:IndexInfo Mdid="0.2435390.1.0" IsPartial="true"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.2435227001.1.1"/>
@@ -204,7 +203,6 @@ SELECT * FROM pp WHERE b=2 AND c=2;
           <dxl:IndexInfo Mdid="0.2435371001.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2435390001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -259,7 +257,6 @@ SELECT * FROM pp WHERE b=2 AND c=2;
           <dxl:IndexInfo Mdid="0.2435371002.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2435390002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -314,7 +311,6 @@ SELECT * FROM pp WHERE b=2 AND c=2;
           <dxl:IndexInfo Mdid="0.2435371003.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2435390003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>

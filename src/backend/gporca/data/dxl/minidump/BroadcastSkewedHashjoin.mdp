@@ -2493,7 +2493,6 @@ Intent: The join should pick up a Broadcast over Redistribute. The hashjoin is s
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.16406.1.0" Name="bar" Rows="20000.000000" EmptyRelation="false"/>
@@ -2528,7 +2527,6 @@ Intent: The join should pick up a Broadcast over Redistribute. The hashjoin is s
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.23.1.0" Name="int4" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">

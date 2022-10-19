@@ -75,7 +75,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16402.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.16388.1.0" Name="t2" Rows="0.000000" EmptyRelation="true"/>
@@ -112,7 +111,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16416.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.521.1.0" Name="&gt;" ComparisonType="GT" ReturnsNullOnNullInput="true">

@@ -148,7 +148,6 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenPhysicalPartitionSelectorId, GPOS_WSZ_LIT("SelectorId")},
 		{EdxltokenPhysicalPartitionSelectorScanId, GPOS_WSZ_LIT("ScanId")},
 		{EdxltokenPhysicalSplit, GPOS_WSZ_LIT("Split")},
-		{EdxltokenPhysicalRowTrigger, GPOS_WSZ_LIT("RowTrigger")},
 		{EdxltokenPhysicalAssert, GPOS_WSZ_LIT("Assert")},
 		{EdxltokenPhysicalCTEProducer, GPOS_WSZ_LIT("CTEProducer")},
 		{EdxltokenPhysicalCTEConsumer, GPOS_WSZ_LIT("CTEConsumer")},
@@ -653,17 +652,6 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenReturnsNullOnNullInput,
 		 GPOS_WSZ_LIT("ReturnsNullOnNullInput")},
 		{EdxltokenIsNDVPreserving, GPOS_WSZ_LIT("IsNDVPreserving")},
-
-		{EdxltokenTriggers, GPOS_WSZ_LIT("Triggers")},
-		{EdxltokenTrigger, GPOS_WSZ_LIT("Trigger")},
-
-		{EdxltokenGPDBTrigger, GPOS_WSZ_LIT("GPDBTrigger")},
-		{EdxltokenGPDBTriggerRow, GPOS_WSZ_LIT("IsRow")},
-		{EdxltokenGPDBTriggerBefore, GPOS_WSZ_LIT("IsBefore")},
-		{EdxltokenGPDBTriggerInsert, GPOS_WSZ_LIT("IsInsert")},
-		{EdxltokenGPDBTriggerDelete, GPOS_WSZ_LIT("IsDelete")},
-		{EdxltokenGPDBTriggerUpdate, GPOS_WSZ_LIT("IsUpdate")},
-		{EdxltokenGPDBTriggerEnabled, GPOS_WSZ_LIT("IsEnabled")},
 
 		{EdxltokenGPDBFunc, GPOS_WSZ_LIT("GPDBFunc")},
 		{EdxltokenGPDBFuncStability, GPOS_WSZ_LIT("Stability")},

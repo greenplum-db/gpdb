@@ -74,7 +74,6 @@ EXPLAIN SELECT * FROM foo WHERE a IN (SELECT b+1 FROM bar);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.90122.1.0" Name="bar" Rows="100.000000" EmptyRelation="false"/>
@@ -106,7 +105,6 @@ EXPLAIN SELECT * FROM foo WHERE a IN (SELECT b+1 FROM bar);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.90122.1.0.5" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>

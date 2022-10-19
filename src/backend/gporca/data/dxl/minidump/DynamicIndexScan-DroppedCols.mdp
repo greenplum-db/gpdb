@@ -204,7 +204,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.32962.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
@@ -254,7 +253,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.32963.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
@@ -314,7 +312,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.32967.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
@@ -491,7 +488,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.32971.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>

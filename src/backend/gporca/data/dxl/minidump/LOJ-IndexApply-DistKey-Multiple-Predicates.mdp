@@ -82,7 +82,6 @@ explain select * from foo left join bar on bar.a=foo.a and bar.a<foo.b left oute
           <dxl:IndexInfo Mdid="0.49175.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.49176.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1995.1.0"/>
@@ -120,7 +119,6 @@ explain select * from foo left join bar on bar.a=foo.a and bar.a<foo.b left oute
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1995.1.0"/>
@@ -162,7 +160,6 @@ explain select * from foo left join bar on bar.a=foo.a and bar.a<foo.b left oute
           <dxl:IndexInfo Mdid="0.49180.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.49181.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1995.1.0"/>

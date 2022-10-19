@@ -181,7 +181,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.1695223001.1.0"/>
@@ -227,7 +226,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -281,7 +279,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -335,7 +332,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -389,7 +385,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490004.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -443,7 +438,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490005.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -497,7 +491,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.1695223001.1.1"/>
@@ -543,7 +536,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -597,7 +589,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -651,7 +642,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -705,7 +695,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490004.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -759,7 +748,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490005.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>

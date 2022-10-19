@@ -74,7 +74,6 @@ explain analyze insert into t1 select t2.a,t3.b from t2, t3 where t2.a = t3.a;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.16538.1.0" Name="t2" Rows="1000.000000" EmptyRelation="false"/>
@@ -112,7 +111,6 @@ explain analyze insert into t1 select t2.a,t3.b from t2, t3 where t2.a = t3.a;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.26.1.0" Name="oid" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
@@ -165,7 +163,6 @@ explain analyze insert into t1 select t2.a,t3.b from t2, t3 where t2.a = t3.a;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.16543.1.0.4" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="4.000000" FreqRemain="1.000000" ColStatsMissing="false"/>

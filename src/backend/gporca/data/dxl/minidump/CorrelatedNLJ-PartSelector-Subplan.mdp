@@ -185,7 +185,6 @@ EXPLAIN SELECT pk from partitioned_table WHERE a > (select d from other_table wh
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.24627001.1.0"/>
@@ -223,7 +222,6 @@ EXPLAIN SELECT pk from partitioned_table WHERE a > (select d from other_table wh
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -272,7 +270,6 @@ EXPLAIN SELECT pk from partitioned_table WHERE a > (select d from other_table wh
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -326,7 +323,6 @@ EXPLAIN SELECT pk from partitioned_table WHERE a > (select d from other_table wh
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.97.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true">

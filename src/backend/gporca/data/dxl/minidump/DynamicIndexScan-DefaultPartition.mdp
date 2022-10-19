@@ -222,7 +222,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.275094.1.0" IsPartial="true"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.274855001.1.1"/>
@@ -268,7 +267,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.275094001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -322,7 +320,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.275094002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -376,7 +373,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.275094003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -430,7 +426,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.275094004.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -484,7 +479,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.275094005.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>

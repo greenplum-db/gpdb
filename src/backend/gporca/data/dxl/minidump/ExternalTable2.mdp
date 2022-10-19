@@ -149,7 +149,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:ExternalRelation>
       <dxl:ColumnStatistics Mdid="1.18347.1.1.5" Name="cmax" Width="4.000000"/>

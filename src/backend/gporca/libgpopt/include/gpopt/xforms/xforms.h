@@ -65,7 +65,6 @@
 #include "gpopt/xforms/CXformImplementLeftSemiCorrelatedApplyIn.h"
 #include "gpopt/xforms/CXformImplementLimit.h"
 #include "gpopt/xforms/CXformImplementPartitionSelector.h"
-#include "gpopt/xforms/CXformImplementRowTrigger.h"
 #include "gpopt/xforms/CXformImplementSequence.h"
 #include "gpopt/xforms/CXformImplementSequenceProject.h"
 #include "gpopt/xforms/CXformImplementSplit.h"

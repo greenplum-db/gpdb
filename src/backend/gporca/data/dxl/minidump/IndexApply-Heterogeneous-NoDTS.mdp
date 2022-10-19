@@ -268,7 +268,6 @@ ORDER BY 1 asc ;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Index Mdid="0.16032679.1.0" Name="my_tq_agg_small_part_ets_end_ts_ix_1" IsClustered="false" IndexType="B-tree" KeyColumns="0,4" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11">
@@ -331,7 +330,6 @@ ORDER BY 1 asc ;
           <dxl:IndexInfo Mdid="0.16032679.1.0" IsPartial="true"/>
           <dxl:IndexInfo Mdid="0.16032698.1.0" IsPartial="true"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.16032574001.1.0"/>
@@ -381,7 +379,6 @@ ORDER BY 1 asc ;
           <dxl:IndexInfo Mdid="0.16032679001.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.16032698001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -442,7 +439,6 @@ ORDER BY 1 asc ;
           <dxl:IndexInfo Mdid="0.16032679002.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.16032698002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -504,7 +500,6 @@ ORDER BY 1 asc ;
           <dxl:IndexInfo Mdid="0.16032679.1.0" IsPartial="true"/>
           <dxl:IndexInfo Mdid="0.16032698.1.0" IsPartial="true"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.16032574001.1.1"/>
@@ -554,7 +549,6 @@ ORDER BY 1 asc ;
           <dxl:IndexInfo Mdid="0.16032679001.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.16032698001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -615,7 +609,6 @@ ORDER BY 1 asc ;
           <dxl:IndexInfo Mdid="0.16032679002.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.16032698002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>

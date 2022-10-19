@@ -69,7 +69,6 @@ const CHAR *CParseHandlerTest::m_rgszPlanDXLFileNames[] = {
 	"../data/dxl/parse_tests/q48-IndexOnlyScan.xml",
 	"../data/dxl/parse_tests/q49-Coalesce.xml",
 	"../data/dxl/parse_tests/q57-DMLDelete.xml",
-	"../data/dxl/parse_tests/q58-DMLInsert.xml",
 	"../data/dxl/parse_tests/q60-DMLUpdate.xml",
 	"../data/dxl/parse_tests/q61-PlanWithStats.xml",
 	"../data/dxl/parse_tests/q62-CTEPlan.xml",

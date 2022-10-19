@@ -55,7 +55,6 @@ OBJS        = CDecorrelator.o \
               CXformImplementFullOuterMergeJoin.o \
               CXformImplementLimit.o \
               CXformImplementPartitionSelector.o \
-              CXformImplementRowTrigger.o \
               CXformImplementSequence.o \
               CXformImplementSequenceProject.o \
               CXformImplementSplit.o \

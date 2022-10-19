@@ -159,7 +159,6 @@ with x as (select a a1, a a2, b from foo) select * from x where a1 = 1;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.783736.1.1.8" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="3.000000" FreqRemain="0.000000" ColStatsMissing="false"/>

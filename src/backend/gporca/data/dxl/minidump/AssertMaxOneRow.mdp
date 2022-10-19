@@ -881,7 +881,6 @@ where oid= (select reltoastrelid from pg_class where relname='fsts_alter_set_sto
           <dxl:IndexInfo Mdid="0.2662.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2663.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.1259.1.1" Name="pg_class" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="37,30">
@@ -1005,7 +1004,6 @@ where oid= (select reltoastrelid from pg_class where relname='fsts_alter_set_sto
           <dxl:IndexInfo Mdid="0.2662.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2663.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.1009.1.0" Name="_text" IsRedistributable="true" IsHashable="false" IsMergeJoinable="false" IsComposite="false" IsFixedLength="false" Length="-1" PassByValue="false">

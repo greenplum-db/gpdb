@@ -230,10 +230,8 @@ CParseHandlerMDRelation::EndElement(const XMLCh *const,	 // element_uri,
 	// construct metadata object from the created child elements
 	CParseHandlerMetadataColumns *md_cols_parse_handler =
 		dynamic_cast<CParseHandlerMetadataColumns *>((*this)[0]);
-	CParseHandlerMetadataIdList *pphMdidlTriggers =
-		dynamic_cast<CParseHandlerMetadataIdList *>((*this)[2]);
 	CParseHandlerMetadataIdList *pphMdidlCheckConstraints =
-		dynamic_cast<CParseHandlerMetadataIdList *>((*this)[3]);
+		dynamic_cast<CParseHandlerMetadataIdList *>((*this)[2]);
 
 	GPOS_ASSERT(nullptr != md_cols_parse_handler->GetMdColArray());
 	GPOS_ASSERT(nullptr != pphMdlIndexInfo->GetMdIndexInfoArray());
@@ -243,13 +241,11 @@ CParseHandlerMDRelation::EndElement(const XMLCh *const,	 // element_uri,
 	CMDColumnArray *md_col_array = md_cols_parse_handler->GetMdColArray();
 	CMDIndexInfoArray *md_index_info_array =
 		pphMdlIndexInfo->GetMdIndexInfoArray();
-	IMdIdArray *mdid_triggers_array = pphMdidlTriggers->GetMdIdArray();
 	IMdIdArray *mdid_check_constraint_array =
 		pphMdidlCheckConstraints->GetMdIdArray();
 
 	md_col_array->AddRef();
 	md_index_info_array->AddRef();
-	mdid_triggers_array->AddRef();
 	mdid_check_constraint_array->AddRef();
 
 	IMdIdArray *distr_opfamilies = nullptr;
@@ -276,8 +272,7 @@ CParseHandlerMDRelation::EndElement(const XMLCh *const,	 // element_uri,
 		m_rel_distr_policy, md_col_array, m_distr_col_array, distr_opfamilies,
 		m_partition_cols_array, m_str_part_types_array, m_num_of_partitions,
 		child_partitions, m_convert_hash_to_random, m_key_sets_arrays,
-		md_index_info_array, mdid_triggers_array, mdid_check_constraint_array,
-		m_part_constraint);
+		md_index_info_array, mdid_check_constraint_array, m_part_constraint);
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();
@@ -366,13 +361,6 @@ CParseHandlerMDRelation::ParseChildNodes()
 	m_parse_handler_mgr->ActivateParseHandler(
 		check_constraint_list_parse_handler);
 
-	// parse handler for trigger list
-	CParseHandlerBase *trigger_list_parse_handler =
-		CParseHandlerFactory::GetParseHandler(
-			m_mp, CDXLTokens::XmlstrToken(EdxltokenMetadataIdList),
-			m_parse_handler_mgr, this);
-	m_parse_handler_mgr->ActivateParseHandler(trigger_list_parse_handler);
-
 	// parse handler for index info list
 	CParseHandlerBase *index_info_list_parse_handler =
 		CParseHandlerFactory::GetParseHandler(
@@ -390,7 +378,6 @@ CParseHandlerMDRelation::ParseChildNodes()
 	// store parse handlers
 	this->Append(columns_parse_handler);
 	this->Append(index_info_list_parse_handler);
-	this->Append(trigger_list_parse_handler);
 	this->Append(check_constraint_list_parse_handler);
 }
 

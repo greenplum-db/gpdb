@@ -529,7 +529,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.33052642.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.33052616.1.1" Name="store_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9;29,23">
@@ -628,7 +627,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.33052642.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -7490,7 +7488,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.33052182.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.33052156.1.1" Name="store_returns" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9;26,20">
@@ -7580,7 +7577,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.33052182.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.33051926.1.1.23" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -8555,7 +8551,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.33051952.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Index Mdid="0.33052182.1.0" Name="store_returns_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="2,9" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26">
@@ -8657,7 +8652,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.33051952.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:MDCast Mdid="3.23.1.0;23.1.0" Name="int4" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.23.1.0" CastFuncId="0.0.0.0"/>

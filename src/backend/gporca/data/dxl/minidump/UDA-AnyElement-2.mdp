@@ -361,7 +361,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.2638872.1.1.7" Name="tableoid" Width="4.000000" NullFreq="0.000000"/>

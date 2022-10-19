@@ -96,7 +96,6 @@ ORDER BY 1 asc ;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16166830.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.16166659001.1.0"/>
@@ -146,7 +145,6 @@ ORDER BY 1 asc ;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16166830001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -206,7 +204,6 @@ ORDER BY 1 asc ;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16166830002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -266,7 +263,6 @@ ORDER BY 1 asc ;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16166830003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -327,7 +323,6 @@ ORDER BY 1 asc ;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16166830.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.16166659001.1.1"/>
@@ -377,7 +372,6 @@ ORDER BY 1 asc ;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16166830001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -437,7 +431,6 @@ ORDER BY 1 asc ;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16166830002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -497,7 +490,6 @@ ORDER BY 1 asc ;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16166830003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1631,7 +1623,6 @@ ORDER BY 1 asc ;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.2278.1.0" Name="void" IsRedistributable="false" IsHashable="false" IsMergeJoinable="false" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">

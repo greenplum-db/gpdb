@@ -183,7 +183,6 @@ explain select * from foo where ((b = 25 or b=35) and a > 10) or (b<15 and a>5);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.34063001.1.1"/>
@@ -232,7 +231,6 @@ explain select * from foo where ((b = 25 or b=35) and a > 10) or (b<15 and a>5);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -284,7 +282,6 @@ explain select * from foo where ((b = 25 or b=35) and a > 10) or (b<15 and a>5);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -336,7 +333,6 @@ explain select * from foo where ((b = 25 or b=35) and a > 10) or (b<15 and a>5);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -388,7 +384,6 @@ explain select * from foo where ((b = 25 or b=35) and a > 10) or (b<15 and a>5);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -440,7 +435,6 @@ explain select * from foo where ((b = 25 or b=35) and a > 10) or (b<15 and a>5);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -492,7 +486,6 @@ explain select * from foo where ((b = 25 or b=35) and a > 10) or (b<15 and a>5);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -544,7 +537,6 @@ explain select * from foo where ((b = 25 or b=35) and a > 10) or (b<15 and a>5);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -596,7 +588,6 @@ explain select * from foo where ((b = 25 or b=35) and a > 10) or (b<15 and a>5);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -648,7 +639,6 @@ explain select * from foo where ((b = 25 or b=35) and a > 10) or (b<15 and a>5);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -700,7 +690,6 @@ explain select * from foo where ((b = 25 or b=35) and a > 10) or (b<15 and a>5);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>

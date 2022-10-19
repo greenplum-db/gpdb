@@ -197,11 +197,6 @@ private:
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 		CParseHandlerBase *parse_handler_root);
 
-	// construct an MD trigger parse handler
-	static CParseHandlerBase *CreateMDTriggerParseHandler(
-		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-		CParseHandlerBase *parse_handler_root);
-
 	// construct an MD cast parse handler
 	static CParseHandlerBase *CreateMDCastParseHandler(
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
@@ -815,11 +810,6 @@ private:
 
 	// construct a physical split parse handler
 	static CParseHandlerBase *CreatePhysicalSplitParseHandler(
-		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-		CParseHandlerBase *parse_handler_root);
-
-	// construct a physical row trigger parse handler
-	static CParseHandlerBase *CreatePhysicalRowTriggerParseHandler(
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 		CParseHandlerBase *parse_handler_root);
 

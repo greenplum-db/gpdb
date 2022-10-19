@@ -148,7 +148,6 @@ select * from foo, (select NULL a from bar) other where foo.a is not distinct fr
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.25525.1.0" Name="bar" Rows="1.000000" EmptyRelation="false"/>
@@ -183,7 +182,6 @@ select * from foo, (select NULL a from bar) other where foo.a is not distinct fr
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.96.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true">

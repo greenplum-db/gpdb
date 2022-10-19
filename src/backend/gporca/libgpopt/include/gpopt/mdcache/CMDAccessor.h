@@ -40,7 +40,6 @@ class IMDRelation;
 class IMDRelationExternal;
 class IMDScalarOp;
 class IMDAggregate;
-class IMDTrigger;
 class IMDIndex;
 class IMDCheckConstraint;
 class IMDProvider;
@@ -331,9 +330,6 @@ public:
 
 	// interface to an aggregate from the MD cache
 	const IMDAggregate *RetrieveAgg(IMDId *mdid);
-
-	// interface to a trigger from the MD cache
-	const IMDTrigger *RetrieveTrigger(IMDId *mdid);
 
 	// interface to an index from the MD cache
 	const IMDIndex *RetrieveIndex(IMDId *mdid);

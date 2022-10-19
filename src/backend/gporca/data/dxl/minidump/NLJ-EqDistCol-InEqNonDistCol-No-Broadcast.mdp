@@ -162,7 +162,6 @@ explain select * from a1,b1 where a1.a = b1.a and a1.a != b1.b;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.49824.1.0" Name="a1" Rows="0.000000" EmptyRelation="true"/>
@@ -197,7 +196,6 @@ explain select * from a1,b1 where a1.a = b1.a and a1.a != b1.b;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.49827.1.0.1" Name="b" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>

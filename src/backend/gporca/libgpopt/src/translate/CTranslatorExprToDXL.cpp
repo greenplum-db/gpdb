@@ -54,7 +54,6 @@
 #include "gpopt/operators/CPhysicalMotionRoutedDistribute.h"
 #include "gpopt/operators/CPhysicalNLJoin.h"
 #include "gpopt/operators/CPhysicalPartitionSelector.h"
-#include "gpopt/operators/CPhysicalRowTrigger.h"
 #include "gpopt/operators/CPhysicalScalarAgg.h"
 #include "gpopt/operators/CPhysicalSequenceProject.h"
 #include "gpopt/operators/CPhysicalSort.h"
@@ -118,7 +117,6 @@
 #include "naucrates/dxl/operators/CDXLPhysicalRedistributeMotion.h"
 #include "naucrates/dxl/operators/CDXLPhysicalResult.h"
 #include "naucrates/dxl/operators/CDXLPhysicalRoutedDistributeMotion.h"
-#include "naucrates/dxl/operators/CDXLPhysicalRowTrigger.h"
 #include "naucrates/dxl/operators/CDXLPhysicalSequence.h"
 #include "naucrates/dxl/operators/CDXLPhysicalSort.h"
 #include "naucrates/dxl/operators/CDXLPhysicalSplit.h"
@@ -504,11 +502,6 @@ CTranslatorExprToDXL::CreateDXLNode(CExpression *pexpr,
 			break;
 		case COperator::EopPhysicalSplit:
 			dxlnode = CTranslatorExprToDXL::PdxlnSplit(
-				pexpr, colref_array, pdrgpdsBaseTables, pulNonGatherMotions,
-				pfDML);
-			break;
-		case COperator::EopPhysicalRowTrigger:
-			dxlnode = CTranslatorExprToDXL::PdxlnRowTrigger(
 				pexpr, colref_array, pdrgpdsBaseTables, pulNonGatherMotions,
 				pfDML);
 			break;
@@ -5215,88 +5208,6 @@ CTranslatorExprToDXL::PdxlnSplit(CExpression *pexpr,
 										   false /* validate_children */);
 #endif
 	return pdxlnSplit;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorExprToDXL::PdxlnRowTrigger
-//
-//	@doc:
-//		Translate a row trigger operator
-//
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorExprToDXL::PdxlnRowTrigger(CExpression *pexpr,
-									  CColRefArray *,  // colref_array,
-									  CDistributionSpecArray *pdrgpdsBaseTables,
-									  ULONG *pulNonGatherMotions, BOOL *pfDML)
-{
-	GPOS_ASSERT(nullptr != pexpr);
-	GPOS_ASSERT(1 == pexpr->Arity());
-
-	// extract components
-	CPhysicalRowTrigger *popRowTrigger =
-		CPhysicalRowTrigger::PopConvert(pexpr->Pop());
-
-	CExpression *pexprChild = (*pexpr)[0];
-
-	IMDId *rel_mdid = popRowTrigger->GetRelMdId();
-	rel_mdid->AddRef();
-
-	INT type = popRowTrigger->GetType();
-
-	CColRefSet *pcrsRequired = GPOS_NEW(m_mp) CColRefSet(m_mp);
-	ULongPtrArray *colids_old = nullptr;
-	ULongPtrArray *colids_new = nullptr;
-
-	CColRefArray *pdrgpcrOld = popRowTrigger->PdrgpcrOld();
-	if (nullptr != pdrgpcrOld)
-	{
-		colids_old = CUtils::Pdrgpul(m_mp, pdrgpcrOld);
-		pcrsRequired->Include(pdrgpcrOld);
-	}
-
-	CColRefArray *pdrgpcrNew = popRowTrigger->PdrgpcrNew();
-	if (nullptr != pdrgpcrNew)
-	{
-		colids_new = CUtils::Pdrgpul(m_mp, pdrgpcrNew);
-		pcrsRequired->Include(pdrgpcrNew);
-	}
-
-	CColRefArray *pdrgpcrRequired = pcrsRequired->Pdrgpcr(m_mp);
-	CDXLNode *child_dxlnode = CreateDXLNode(
-		pexprChild, pdrgpcrRequired, pdrgpdsBaseTables, pulNonGatherMotions,
-		pfDML, false /*fRemap*/, false /*fRoot*/);
-	pdrgpcrRequired->Release();
-	pcrsRequired->Release();
-
-	CDXLPhysicalRowTrigger *pdxlopRowTrigger = GPOS_NEW(m_mp)
-		CDXLPhysicalRowTrigger(m_mp, rel_mdid, type, colids_old, colids_new);
-
-	// project list
-	CColRefSet *pcrsOutput = pexpr->Prpp()->PcrsRequired();
-	CDXLNode *pdxlnPrL = nullptr;
-	if (nullptr != pdrgpcrNew)
-	{
-		pdxlnPrL = PdxlnProjList(pcrsOutput, pdrgpcrNew);
-	}
-	else
-	{
-		pdxlnPrL = PdxlnProjList(pcrsOutput, pdrgpcrOld);
-	}
-
-	CDXLNode *pdxlnRowTrigger = GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopRowTrigger);
-	CDXLPhysicalProperties *dxl_properties = GetProperties(pexpr);
-	pdxlnRowTrigger->SetProperties(dxl_properties);
-
-	pdxlnRowTrigger->AddChild(pdxlnPrL);
-	pdxlnRowTrigger->AddChild(child_dxlnode);
-
-#ifdef GPOS_DEBUG
-	pdxlnRowTrigger->GetOperator()->AssertValid(pdxlnRowTrigger,
-												false /* validate_children */);
-#endif
-	return pdxlnRowTrigger;
 }
 
 //---------------------------------------------------------------------------

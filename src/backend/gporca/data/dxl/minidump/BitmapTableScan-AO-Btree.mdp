@@ -48,7 +48,6 @@ explain select * from indexonao where a = 21;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.22227385.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.22227328.1.1" Name="indexonao" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,1">
@@ -69,7 +68,6 @@ explain select * from indexonao where a = 21;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.22227385.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.22227328.1.1.3" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>

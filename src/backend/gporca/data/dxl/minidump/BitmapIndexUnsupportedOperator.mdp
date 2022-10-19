@@ -85,7 +85,6 @@ undefined for Bitmap Index Scan. ORCA should find a plan transforming
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.32784.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>

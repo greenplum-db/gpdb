@@ -6030,7 +6030,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.1977341001.1.1"/>
@@ -6134,7 +6133,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -6246,7 +6244,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -6358,7 +6355,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -6470,7 +6466,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -6582,7 +6577,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -6710,7 +6704,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.1962503001.1.1"/>
@@ -6829,7 +6822,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -6956,7 +6948,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -7083,7 +7074,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -7210,7 +7200,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -7337,7 +7326,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -15541,7 +15529,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.97.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true">

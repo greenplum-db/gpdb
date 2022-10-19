@@ -140,7 +140,6 @@ EXPLAIN SELECT * FROM table_with_two_indices_ao WHERE b = 15 AND c BETWEEN 10000
           <dxl:IndexInfo Mdid="0.45040.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.44979.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.44841001.1.0"/>
@@ -172,7 +171,6 @@ EXPLAIN SELECT * FROM table_with_two_indices_ao WHERE b = 15 AND c BETWEEN 10000
           <dxl:IndexInfo Mdid="0.45040001.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.44979001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -215,7 +213,6 @@ EXPLAIN SELECT * FROM table_with_two_indices_ao WHERE b = 15 AND c BETWEEN 10000
           <dxl:IndexInfo Mdid="0.45040002.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.44979002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>

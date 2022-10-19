@@ -160,7 +160,6 @@ explain with v as (select x,y from bar) select v1.x from v v1, v v2 where v1.x =
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>

@@ -173,7 +173,6 @@ SELECT b[1] AS typmod_in_array_ref FROM foo;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>

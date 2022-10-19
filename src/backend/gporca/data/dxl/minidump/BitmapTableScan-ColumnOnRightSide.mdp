@@ -88,7 +88,6 @@ SELECT * FROM my_tq_agg_small tq WHERE 110 >= tq.ets;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.31763881.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.31763855.1.1" Name="my_tq_agg_small" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
@@ -133,7 +132,6 @@ SELECT * FROM my_tq_agg_small tq WHERE 110 >= tq.ets;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.31763881.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.525.1.0" Name="&gt;=" ComparisonType="GEq" ReturnsNullOnNullInput="true">

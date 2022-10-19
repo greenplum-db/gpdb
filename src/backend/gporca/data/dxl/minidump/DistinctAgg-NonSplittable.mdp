@@ -642,7 +642,6 @@
           <dxl:IndexInfo Mdid="0.211301.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.211302.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBAgg Mdid="0.211808.1.0" Name="newavg" IsSplittable="false" HashAggCapable="false">

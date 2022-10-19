@@ -4888,7 +4888,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.18425.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.17929.1.1.23" Name="tableoid" Width="4.000000"/>
@@ -6606,7 +6605,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.17952.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.18359.1.1" Name="web_sales" Rows="719603.000000"/>
@@ -6739,7 +6737,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.18382.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.17929.1.1.21" Name="xmax" Width="4.000000"/>

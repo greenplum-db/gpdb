@@ -74,7 +74,6 @@ Rows out:  1 rows at destination with 0.250 ms to first row, 0.251 ms to end.
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints>
           <dxl:CheckConstraint Mdid="0.16395.1.0"/>
         </dxl:CheckConstraints>

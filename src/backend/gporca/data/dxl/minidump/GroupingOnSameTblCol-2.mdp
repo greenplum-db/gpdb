@@ -1555,7 +1555,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.2372852.1.1.21" Name="country" Width="12.000000" NullFreq="0.064606" NdvRemain="6.000000" FreqRemain="0.065212">
@@ -3398,7 +3397,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint DefaultPartition="0" Unbounded="true">
         </dxl:PartConstraint>

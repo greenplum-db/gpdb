@@ -196,7 +196,6 @@ select a1, a2 from foo_a UNION ALL (select x1, x2 FROM (select b1, b2, b3 from f
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.17297891.1.1.3" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="10.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
@@ -326,7 +325,6 @@ select a1, a2 from foo_a UNION ALL (select x1, x2 FROM (select b1, b2, b3 from f
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.17297865.1.1.9" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="2.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
@@ -402,7 +400,6 @@ select a1, a2 from foo_a UNION ALL (select x1, x2 FROM (select b1, b2, b3 from f
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.17297891.1.1.7" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>

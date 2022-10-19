@@ -72,7 +72,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.213016.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>

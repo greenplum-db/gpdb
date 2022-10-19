@@ -162,7 +162,6 @@ EXPLAIN SELECT b::varchar(40) FROM tab1;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>

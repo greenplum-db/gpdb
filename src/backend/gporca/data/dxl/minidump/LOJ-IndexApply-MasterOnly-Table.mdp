@@ -406,7 +406,6 @@ union all
           <dxl:IndexInfo Mdid="0.2703.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2704.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.607.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true">
@@ -567,7 +566,6 @@ union all
           <dxl:IndexInfo Mdid="0.2662.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2663.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.1009.1.0" Name="_text" IsRedistributable="true" IsHashable="false" IsMergeJoinable="false" IsComposite="false" IsFixedLength="false" Length="-1" PassByValue="false">
@@ -617,7 +615,6 @@ union all
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.2031673.1.0" Name="bar" Rows="0.000000" EmptyRelation="true"/>
@@ -655,7 +652,6 @@ union all
           <dxl:IndexInfo Mdid="0.2031702.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2031716.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.1259.1.0.27" Name="oid" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>

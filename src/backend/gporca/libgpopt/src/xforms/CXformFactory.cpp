@@ -213,7 +213,7 @@ CXformFactory::Instantiate()
 	Add(GPOS_NEW(m_mp) CXformDelete2DML(m_mp));
 	Add(GPOS_NEW(m_mp) CXformUpdate2DML(m_mp));
 	Add(GPOS_NEW(m_mp) CXformImplementDML(m_mp));
-	Add(GPOS_NEW(m_mp) CXformImplementRowTrigger(m_mp));
+	SkipUnused(1);
 	Add(GPOS_NEW(m_mp) CXformImplementSplit(m_mp));
 	Add(GPOS_NEW(m_mp) CXformJoinCommutativity(m_mp));
 	Add(GPOS_NEW(m_mp) CXformJoinAssociativity(m_mp));

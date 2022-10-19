@@ -141,7 +141,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870.1.0" IsPartial="true"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.8685596001.1.0"/>
@@ -191,7 +190,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -255,7 +253,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -319,7 +316,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -383,7 +379,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870004.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -447,7 +442,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870005.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -511,7 +505,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870006.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:Not>
@@ -631,7 +624,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870.1.0" IsPartial="true"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.8685596001.1.1"/>
@@ -681,7 +673,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -745,7 +736,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -809,7 +799,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -873,7 +862,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870004.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -937,7 +925,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870005.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1001,7 +988,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870006.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:Not>

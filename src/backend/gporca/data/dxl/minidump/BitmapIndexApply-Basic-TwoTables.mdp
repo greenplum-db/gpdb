@@ -76,7 +76,6 @@ explain SELECT * FROM s i1, t t2 where t2.c2 = i1.c2;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -314,7 +313,6 @@ explain SELECT * FROM s i1, t t2 where t2.c2 = i1.c2;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.29842205.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.29842149.1.1" Name="t" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
@@ -365,7 +363,6 @@ explain SELECT * FROM s i1, t t2 where t2.c2 = i1.c2;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.29842205.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.29842149.1.1.13" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>

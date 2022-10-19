@@ -92,7 +92,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.296558.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.296532.1.1.3" Name="xmin" Width="4.000000" NullFreq="0.000000"/>
@@ -187,7 +186,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.296558.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.296532.1.1.7" Name="tableoid" Width="4.000000" NullFreq="0.000000"/>

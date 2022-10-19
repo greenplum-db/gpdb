@@ -115,7 +115,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.98326.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.98421.1.0.1" Name="l_partkey" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
@@ -436,7 +435,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.98440.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>

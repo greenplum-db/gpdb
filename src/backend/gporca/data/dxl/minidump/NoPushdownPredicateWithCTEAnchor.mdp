@@ -219,7 +219,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBAgg Mdid="0.2116.1.0" Name="max" IsSplittable="true" HashAggCapable="true">

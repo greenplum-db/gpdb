@@ -157,10 +157,8 @@ CParseHandlerMDRelationExternal::EndElement(
 		dynamic_cast<CParseHandlerMetadataColumns *>((*this)[0]);
 	CParseHandlerMDIndexInfoList *md_index_info_list_parse_handler =
 		dynamic_cast<CParseHandlerMDIndexInfoList *>((*this)[1]);
-	CParseHandlerMetadataIdList *mdid_triggers_parse_list =
-		dynamic_cast<CParseHandlerMetadataIdList *>((*this)[2]);
 	CParseHandlerMetadataIdList *mdid_check_constraint_parse_handler =
-		dynamic_cast<CParseHandlerMetadataIdList *>((*this)[3]);
+		dynamic_cast<CParseHandlerMetadataIdList *>((*this)[2]);
 
 	GPOS_ASSERT(nullptr != md_cols_parse_handler->GetMdColArray());
 	GPOS_ASSERT(nullptr !=
@@ -171,13 +169,11 @@ CParseHandlerMDRelationExternal::EndElement(
 	CMDColumnArray *md_col_array = md_cols_parse_handler->GetMdColArray();
 	CMDIndexInfoArray *md_index_info_array =
 		md_index_info_list_parse_handler->GetMdIndexInfoArray();
-	IMdIdArray *mdid_triggers_array = mdid_triggers_parse_list->GetMdIdArray();
 	IMdIdArray *mdid_check_constraint_array =
 		mdid_check_constraint_parse_handler->GetMdIdArray();
 
 	md_col_array->AddRef();
 	md_index_info_array->AddRef();
-	mdid_triggers_array->AddRef();
 	mdid_check_constraint_array->AddRef();
 
 	IMdIdArray *distr_opfamilies = nullptr;
@@ -193,9 +189,8 @@ CParseHandlerMDRelationExternal::EndElement(
 	m_imd_obj = GPOS_NEW(m_mp) CMDRelationExternalGPDB(
 		m_mp, m_mdid, m_mdname, m_rel_distr_policy, md_col_array,
 		m_distr_col_array, distr_opfamilies, m_convert_hash_to_random,
-		m_key_sets_arrays, md_index_info_array, mdid_triggers_array,
-		mdid_check_constraint_array, m_reject_limit, m_is_rej_limit_in_rows,
-		m_mdid_fmt_err_table);
+		m_key_sets_arrays, md_index_info_array, mdid_check_constraint_array,
+		m_reject_limit, m_is_rej_limit_in_rows, m_mdid_fmt_err_table);
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();

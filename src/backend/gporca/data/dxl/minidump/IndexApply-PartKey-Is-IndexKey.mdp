@@ -215,7 +215,6 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.41880949.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.41880825001.1.0"/>
@@ -255,7 +254,6 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.41880949001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -306,7 +304,6 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.41880949002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -357,7 +354,6 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.41880949.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.41880825001.1.1"/>
@@ -397,7 +393,6 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.41880949001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -448,7 +443,6 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.41880949002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -521,7 +515,6 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
           <dxl:IndexInfo Mdid="0.41881168.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.41881111.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.41880987001.1.0"/>
@@ -565,7 +558,6 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
           <dxl:IndexInfo Mdid="0.41881168001.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.41881111001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -620,7 +612,6 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
           <dxl:IndexInfo Mdid="0.41881168002.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.41881111002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -675,7 +666,6 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
           <dxl:IndexInfo Mdid="0.41881168.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.41881111.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.41880987001.1.1"/>
@@ -719,7 +709,6 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
           <dxl:IndexInfo Mdid="0.41881168001.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.41881111001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -774,7 +763,6 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
           <dxl:IndexInfo Mdid="0.41881168002.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.41881111002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>

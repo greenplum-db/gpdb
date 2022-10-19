@@ -46,7 +46,6 @@ see sql/DynamicBitmapIndexScan.sql
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.16959.1.1.6" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
@@ -245,7 +244,6 @@ see sql/DynamicBitmapIndexScan.sql
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.1700.1.0" Name="numeric" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="false" Length="-1" PassByValue="false">
@@ -315,7 +313,6 @@ see sql/DynamicBitmapIndexScan.sql
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.17270.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.16959001.1.1"/>
@@ -352,7 +349,6 @@ see sql/DynamicBitmapIndexScan.sql
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.17270001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -397,7 +393,6 @@ see sql/DynamicBitmapIndexScan.sql
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.17270002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -442,7 +437,6 @@ see sql/DynamicBitmapIndexScan.sql
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.17270003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -487,7 +481,6 @@ see sql/DynamicBitmapIndexScan.sql
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.17270004.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -532,7 +525,6 @@ see sql/DynamicBitmapIndexScan.sql
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.17270005.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>

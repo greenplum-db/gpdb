@@ -203,7 +203,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.574.1.0" Name="&amp;&amp;" ComparisonType="Other" ReturnsNullOnNullInput="true">

@@ -247,7 +247,6 @@ SELECT * FROM test WHERE a in (1, 47);
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.41692.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.41665.1.1.7" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="3.000000" FreqRemain="1.000000" ColStatsMissing="false"/>

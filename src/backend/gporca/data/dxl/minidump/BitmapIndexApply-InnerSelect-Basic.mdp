@@ -173,7 +173,6 @@ select * from x, y where x.i > y.j and y.k = 10;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.52975721.1.1.5" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -218,7 +217,6 @@ select * from x, y where x.i > y.j and y.k = 10;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.52975773.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.52975747.1.1" Name="y" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
@@ -260,7 +258,6 @@ select * from x, y where x.i > y.j and y.k = 10;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.52975773.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.52975747.1.1.7" Name="xmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>

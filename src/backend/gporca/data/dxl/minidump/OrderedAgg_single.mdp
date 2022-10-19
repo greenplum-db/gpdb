@@ -89,7 +89,6 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2) FROM foo;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>

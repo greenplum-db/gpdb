@@ -217,7 +217,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.471042.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.471019.1.1.11" Name="tableoid" Width="4.000000"/>

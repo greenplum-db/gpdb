@@ -78,7 +78,6 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE c > 12 OR d > 13;
           <dxl:IndexInfo Mdid="0.16728.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.16776.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.16648001.1.0"/>
@@ -113,7 +112,6 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE c > 12 OR d > 13;
           <dxl:IndexInfo Mdid="0.16728.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.16776.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -159,7 +157,6 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE c > 12 OR d > 13;
           <dxl:IndexInfo Mdid="0.16728.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.16776.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -296,7 +293,6 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE c > 12 OR d > 13;
           <dxl:IndexInfo Mdid="0.16745.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.16790.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints>
           <dxl:CheckConstraint Mdid="0.16680.1.0"/>
         </dxl:CheckConstraints>

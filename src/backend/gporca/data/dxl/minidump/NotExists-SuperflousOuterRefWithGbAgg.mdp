@@ -69,7 +69,6 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.24583.1.0" Name="c" Rows="9.000000" EmptyRelation="false"/>
@@ -104,7 +103,6 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">

@@ -89,7 +89,6 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.81920.1.0" Name="cs" Rows="13000.000000" EmptyRelation="false"/>
@@ -127,7 +126,6 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.81926.1.0" Name="it" Rows="100.000000" EmptyRelation="false"/>
@@ -162,7 +160,6 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.81929.1.0" Name="sr" Rows="10200.000000" EmptyRelation="false"/>
@@ -200,7 +197,6 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.81923.1.0.1" Name="ss_ticket_number" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="false">

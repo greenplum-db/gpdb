@@ -87,7 +87,6 @@
           <dxl:IndexInfo Mdid="0.123266.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.123270.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">

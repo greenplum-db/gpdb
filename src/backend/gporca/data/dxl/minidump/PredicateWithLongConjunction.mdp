@@ -2617,7 +2617,6 @@
           <dxl:IndexInfo Mdid="0.16783.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.16800.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.16752.1.0.4" Name="e" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="false">

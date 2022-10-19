@@ -126,7 +126,6 @@ select * from t full join s on t1 = s1;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.25382.1.1.5" Name="cmin" Width="4.000000"/>
@@ -168,7 +167,6 @@ select * from t full join s on t1 = s1;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.25382.1.1.7" Name="cmax" Width="4.000000"/>

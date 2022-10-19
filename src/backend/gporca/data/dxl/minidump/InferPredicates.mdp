@@ -198,7 +198,6 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.25679001.1.0"/>
@@ -238,7 +237,6 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -317,7 +315,6 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.25698001.1.0"/>
@@ -357,7 +354,6 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>

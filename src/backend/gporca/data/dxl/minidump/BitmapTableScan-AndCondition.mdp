@@ -158,7 +158,6 @@ explain select * from xfoo where j = 1 and k = 2;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.51565282.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.51565256.1.1" Name="xfoo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
@@ -200,7 +199,6 @@ explain select * from xfoo where j = 1 and k = 2;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.51565282.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.51565256.1.1.10" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>

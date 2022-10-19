@@ -273,7 +273,6 @@ EXPLAIN SELECT * FROM s i1, t t2 where t2.c2 = i1.c2  and t2.c3 > i1.c3 or t2.c1
           <dxl:IndexInfo Mdid="0.31264085.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.31264106.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.31264029.1.1" Name="t" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
@@ -325,7 +324,6 @@ EXPLAIN SELECT * FROM s i1, t t2 where t2.c2 = i1.c2  and t2.c3 > i1.c3 or t2.c1
           <dxl:IndexInfo Mdid="0.31264085.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.31264106.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.96.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true">
@@ -427,7 +425,6 @@ EXPLAIN SELECT * FROM s i1, t t2 where t2.c2 = i1.c2  and t2.c3 > i1.c3 or t2.c1
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>

@@ -81,7 +81,6 @@ explain select tab3.k, (select tab2.k from tab2 where tab2.i = tab1.i limit 1) a
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.40960.1.0" Name="tab1" Rows="1000.000000" EmptyRelation="false"/>
@@ -119,7 +118,6 @@ explain select tab3.k, (select tab2.k from tab2 where tab2.i = tab1.i limit 1) a
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.40972.1.0" Name="tab3" Rows="4994.000000" EmptyRelation="false"/>
@@ -157,7 +155,6 @@ explain select tab3.k, (select tab2.k from tab2 where tab2.i = tab1.i limit 1) a
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">

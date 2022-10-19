@@ -211,7 +211,6 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=4)
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.574046.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.573974001.1.0"/>
@@ -257,7 +256,6 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=4)
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.574046001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -314,7 +312,6 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=4)
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.574046002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>

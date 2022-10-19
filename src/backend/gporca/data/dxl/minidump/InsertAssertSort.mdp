@@ -125,7 +125,6 @@ explain insert into tbl_cds_buysell_orders_new (a,b,c)
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:ExternalRelation>
       <dxl:Type Mdid="0.26.1.0" Name="oid" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
@@ -255,7 +254,6 @@ explain insert into tbl_cds_buysell_orders_new (a,b,c)
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints>
           <dxl:CheckConstraint Mdid="0.30252099.1.0"/>
         </dxl:CheckConstraints>
@@ -294,7 +292,6 @@ explain insert into tbl_cds_buysell_orders_new (a,b,c)
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints>
           <dxl:CheckConstraint Mdid="0.30252099.1.0"/>
         </dxl:CheckConstraints>

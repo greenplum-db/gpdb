@@ -37,8 +37,7 @@ CMDRelationGPDB::CMDRelationGPDB(
 	CharPtrArray *str_part_types_array, ULONG num_of_partitions,
 	IMdIdArray *partition_oids, BOOL convert_hash_to_random,
 	ULongPtr2dArray *keyset_array, CMDIndexInfoArray *md_index_info_array,
-	IMdIdArray *mdid_triggers_array, IMdIdArray *mdid_check_constraint_array,
-	CDXLNode *mdpart_constraint)
+	IMdIdArray *mdid_check_constraint_array, CDXLNode *mdpart_constraint)
 	: m_mp(mp),
 	  m_mdid(mdid),
 	  m_mdname(mdname),
@@ -56,7 +55,6 @@ CMDRelationGPDB::CMDRelationGPDB(
 	  m_partition_oids(partition_oids),
 	  m_keyset_array(keyset_array),
 	  m_mdindex_info_array(md_index_info_array),
-	  m_mdid_trigger_array(mdid_triggers_array),
 	  m_mdid_check_constraint_array(mdid_check_constraint_array),
 	  m_mdpart_constraint(mdpart_constraint),
 	  m_system_columns(0),
@@ -67,7 +65,6 @@ CMDRelationGPDB::CMDRelationGPDB(
 	GPOS_ASSERT(mdid->IsValid());
 	GPOS_ASSERT(nullptr != mdcol_array);
 	GPOS_ASSERT(nullptr != md_index_info_array);
-	GPOS_ASSERT(nullptr != mdid_triggers_array);
 	GPOS_ASSERT(nullptr != mdid_check_constraint_array);
 	GPOS_ASSERT_IMP(
 		convert_hash_to_random,
@@ -138,7 +135,6 @@ CMDRelationGPDB::~CMDRelationGPDB()
 	CRefCount::SafeRelease(m_str_part_types_array);
 	CRefCount::SafeRelease(m_keyset_array);
 	m_mdindex_info_array->Release();
-	m_mdid_trigger_array->Release();
 	m_mdid_check_constraint_array->Release();
 	m_col_width_array->Release();
 	CRefCount::SafeRelease(m_mdpart_constraint);
@@ -472,20 +468,6 @@ CMDRelationGPDB::IndexCount() const
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CMDRelationGPDB::TriggerCount
-//
-//	@doc:
-//		Returns the number of triggers of this relation
-//
-//---------------------------------------------------------------------------
-ULONG
-CMDRelationGPDB::TriggerCount() const
-{
-	return m_mdid_trigger_array->Size();
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CMDRelationGPDB::GetMdCol
 //
 //	@doc:
@@ -555,20 +537,6 @@ IMDId *
 CMDRelationGPDB::IndexMDidAt(ULONG pos) const
 {
 	return (*m_mdindex_info_array)[pos]->MDId();
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CMDRelationGPDB::TriggerMDidAt
-//
-//	@doc:
-//		Returns the id of the trigger at the specified position of the trigger array
-//
-//---------------------------------------------------------------------------
-IMDId *
-CMDRelationGPDB::TriggerMDidAt(ULONG pos) const
-{
-	return (*m_mdid_trigger_array)[pos];
 }
 
 //---------------------------------------------------------------------------
@@ -739,11 +707,6 @@ CMDRelationGPDB::Serialize(CXMLSerializer *xml_serializer) const
 		CDXLTokens::GetDXLTokenStr(EdxltokenIndexInfoList));
 
 
-	// serialize trigger information
-	SerializeMDIdList(xml_serializer, m_mdid_trigger_array,
-					  CDXLTokens::GetDXLTokenStr(EdxltokenTriggers),
-					  CDXLTokens::GetDXLTokenStr(EdxltokenTrigger));
-
 	// serialize check constraint information
 	SerializeMDIdList(xml_serializer, m_mdid_check_constraint_array,
 					  CDXLTokens::GetDXLTokenStr(EdxltokenCheckConstraints),
@@ -869,9 +832,6 @@ CMDRelationGPDB::DebugPrint(IOstream &os) const
 		CMDIndexInfo *mdindex_info = (*m_mdindex_info_array)[ul];
 		mdindex_info->DebugPrint(os);
 	}
-
-	os << "Triggers: ";
-	CDXLUtils::DebugPrintMDIdArray(os, m_mdid_trigger_array);
 
 	os << "Check Constraint: ";
 	CDXLUtils::DebugPrintMDIdArray(os, m_mdid_check_constraint_array);

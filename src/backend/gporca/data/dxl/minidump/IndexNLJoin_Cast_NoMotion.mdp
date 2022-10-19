@@ -206,7 +206,6 @@ explain select * from R1 inner join S1 on a = b union all select * from R2 inner
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.130092.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.130094.1.0" Name="s2" Rows="0.000000" EmptyRelation="true"/>
@@ -240,7 +239,6 @@ explain select * from R1 inner join S1 on a = b union all select * from R2 inner
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.130113.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Index Mdid="0.130092.1.0" Name="r2_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7">
@@ -276,7 +274,6 @@ explain select * from R1 inner join S1 on a = b union all select * from R2 inner
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.130052.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.122074.1.0" Name="s1" Rows="0.000000" EmptyRelation="true"/>
@@ -298,7 +295,6 @@ explain select * from R1 inner join S1 on a = b union all select * from R2 inner
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.130069.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.98.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true">

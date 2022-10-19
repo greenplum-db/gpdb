@@ -964,7 +964,6 @@
           <dxl:IndexInfo Mdid="0.2662.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2663.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Index Mdid="0.2663.1.0" Name="pg_class_relname_nsp_index" IsClustered="false" KeyColumns="0,1" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37">
@@ -1727,7 +1726,6 @@
           <dxl:IndexInfo Mdid="0.2662.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2663.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.3373352.1.1" Name="x" Rows="9011.000000" EmptyRelation="false"/>
@@ -1762,7 +1760,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:MDCast Mdid="3.23.1.0;26.1.0" Name="oid" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.26.1.0" CastFuncId="0.0.0.0"/>

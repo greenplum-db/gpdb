@@ -51,7 +51,6 @@ Table X (int i, int j) is distributed by i, column i has index
           <dxl:IndexInfo Mdid="0.17159874.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.17159920.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.16422594.1.1" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
@@ -91,7 +90,6 @@ Table X (int i, int j) is distributed by i, column i has index
           <dxl:IndexInfo Mdid="0.17159874.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.17159920.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">

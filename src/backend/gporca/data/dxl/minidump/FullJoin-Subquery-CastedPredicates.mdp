@@ -93,7 +93,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.32772.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.24576.1.0" Name="t1" Rows="0.000000" EmptyRelation="true"/>
@@ -129,7 +128,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.24576.1.0" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
@@ -163,7 +161,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Index Mdid="0.16391.1.0" Name="bar_idx_d" IsClustered="false" IndexType="B-tree" KeyColumns="1" IncludedColumns="0,1,2,3,4,5,6,7,8">
@@ -205,7 +202,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16391.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.24579.1.0.8" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>

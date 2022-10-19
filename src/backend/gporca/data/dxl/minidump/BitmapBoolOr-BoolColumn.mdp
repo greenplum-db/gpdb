@@ -566,7 +566,6 @@ explain select * from t where c2 = 'HEAP' or c4 = 't' or c5 = 'f';
           <dxl:IndexInfo Mdid="0.21849058.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.21849079.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.21849009.1.1" Name="t" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
@@ -619,7 +618,6 @@ explain select * from t where c2 = 'HEAP' or c4 = 't' or c5 = 'f';
           <dxl:IndexInfo Mdid="0.21849058.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.21849079.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.21849009.1.1.13" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>

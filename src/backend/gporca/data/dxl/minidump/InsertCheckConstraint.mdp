@@ -180,7 +180,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints>
           <dxl:CheckConstraint Mdid="0.17029.1.0"/>
           <dxl:CheckConstraint Mdid="0.17017.1.0"/>
@@ -223,7 +222,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints>
           <dxl:CheckConstraint Mdid="0.17029.1.0"/>
           <dxl:CheckConstraint Mdid="0.17017.1.0"/>

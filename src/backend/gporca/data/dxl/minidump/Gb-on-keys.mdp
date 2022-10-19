@@ -151,7 +151,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1154050.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>

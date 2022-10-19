@@ -113,7 +113,6 @@ explain select * from t_numeric where c5 in (10, 11);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints>
           <dxl:CheckConstraint Mdid="0.4123353.1.0"/>
         </dxl:CheckConstraints>
@@ -179,7 +178,6 @@ explain select * from t_numeric where c5 in (10, 11);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints>
           <dxl:CheckConstraint Mdid="0.4123353.1.0"/>
         </dxl:CheckConstraints>

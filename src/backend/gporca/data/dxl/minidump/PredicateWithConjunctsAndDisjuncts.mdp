@@ -2220,7 +2220,6 @@
           <dxl:IndexInfo Mdid="0.16523.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.16540.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Index Mdid="0.16506.1.0" Name="t1_b" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14">

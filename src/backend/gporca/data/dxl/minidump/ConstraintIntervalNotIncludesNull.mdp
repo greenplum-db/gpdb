@@ -61,7 +61,6 @@ Rows out:  0 rows with 0.007 ms to end.
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints>
           <dxl:CheckConstraint Mdid="0.16391.1.0"/>
         </dxl:CheckConstraints>

@@ -85,7 +85,6 @@ Optimizer status: PQO version 2.67.0
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.40960.1.0" Name="tab1" Rows="1000.000000" EmptyRelation="false"/>
@@ -123,7 +122,6 @@ Optimizer status: PQO version 2.67.0
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.40972.1.0" Name="tab3" Rows="4994.000000" EmptyRelation="false"/>
@@ -161,7 +159,6 @@ Optimizer status: PQO version 2.67.0
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">

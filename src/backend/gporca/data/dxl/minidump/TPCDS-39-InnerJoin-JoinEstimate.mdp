@@ -2106,7 +2106,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.32912.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.32889.1.1.31" Name="xmax" Width="4.000000"/>
@@ -2535,7 +2534,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.33600.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.33577.1.1.7" Name="xmax" Width="4.000000"/>

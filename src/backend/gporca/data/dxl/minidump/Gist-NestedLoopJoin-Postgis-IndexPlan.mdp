@@ -196,7 +196,6 @@ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..433.00 rows=1 width=24)
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.566555.1.0" Name="&amp;&amp;" ComparisonType="Other" ReturnsNullOnNullInput="true">
@@ -243,7 +242,6 @@ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..433.00 rows=1 width=24)
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.581647.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>

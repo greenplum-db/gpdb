@@ -528,7 +528,6 @@
           <dxl:IndexInfo Mdid="0.55602.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.55603.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Index Mdid="0.55598.1.0" Name="idx_a" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="0,1,2,3,4,5">

@@ -431,7 +431,6 @@ select * from (select * from p1 except select * from p2) as p, tt where p.b=tt.b
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.174229001.1.1"/>
@@ -472,7 +471,6 @@ select * from (select * from p1 except select * from p2) as p, tt where p.b=tt.b
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -521,7 +519,6 @@ select * from (select * from p1 except select * from p2) as p, tt where p.b=tt.b
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -570,7 +567,6 @@ select * from (select * from p1 except select * from p2) as p, tt where p.b=tt.b
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -619,7 +615,6 @@ select * from (select * from p1 except select * from p2) as p, tt where p.b=tt.b
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -668,7 +663,6 @@ select * from (select * from p1 except select * from p2) as p, tt where p.b=tt.b
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1224,7 +1218,6 @@ select * from (select * from p1 except select * from p2) as p, tt where p.b=tt.b
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.174451.1.1" Name="p2" Rows="10000.000000" EmptyRelation="false"/>
@@ -1259,7 +1252,6 @@ select * from (select * from p1 except select * from p2) as p, tt where p.b=tt.b
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.174451001.1.1"/>
@@ -1300,7 +1292,6 @@ select * from (select * from p1 except select * from p2) as p, tt where p.b=tt.b
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1349,7 +1340,6 @@ select * from (select * from p1 except select * from p2) as p, tt where p.b=tt.b
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1398,7 +1388,6 @@ select * from (select * from p1 except select * from p2) as p, tt where p.b=tt.b
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1447,7 +1436,6 @@ select * from (select * from p1 except select * from p2) as p, tt where p.b=tt.b
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1496,7 +1484,6 @@ select * from (select * from p1 except select * from p2) as p, tt where p.b=tt.b
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>

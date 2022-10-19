@@ -35,7 +35,6 @@
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
 #include "gpopt/operators/CLogicalPartitionSelector.h"
-#include "gpopt/operators/CLogicalRowTrigger.h"
 #include "gpopt/operators/CLogicalSelect.h"
 #include "gpopt/operators/CLogicalSequenceProject.h"
 #include "gpopt/operators/CPhysicalInnerHashJoin.h"
@@ -62,10 +61,8 @@
 #include "gpopt/xforms/CXformExploration.h"
 #include "naucrates/base/CDatumInt8GPDB.h"
 #include "naucrates/md/CMDIdGPDB.h"
-#include "naucrates/md/CMDTriggerGPDB.h"
 #include "naucrates/md/IMDCheckConstraint.h"
 #include "naucrates/md/IMDScalarOp.h"
-#include "naucrates/md/IMDTrigger.h"
 #include "naucrates/md/IMDTypeBool.h"
 #include "naucrates/md/IMDTypeInt4.h"
 #include "naucrates/md/IMDTypeInt8.h"
@@ -1337,7 +1334,6 @@ CXformUtils::PexprLogicalDMLOverProject(CMemoryPool *mp,
 	}
 
 	// new expressions to project
-	IMDId *rel_mdid = ptabdesc->MDId();
 	CExpression *pexprProject = nullptr;
 	CColRef *pcrAction = nullptr;
 	CColRef *pcrOid = nullptr;
@@ -1354,13 +1350,6 @@ CXformUtils::PexprLogicalDMLOverProject(CMemoryPool *mp,
 	pcrAction = CUtils::PcrFromProjElem((*pexprPrL)[0]);
 
 	GPOS_ASSERT(nullptr != pcrAction);
-
-	if (FTriggersExist(edmlop, ptabdesc, true /*fBefore*/))
-	{
-		rel_mdid->AddRef();
-		pexprProject = PexprRowTrigger(mp, pexprProject, edmlop, rel_mdid,
-									   true /*fBefore*/, colref_array);
-	}
 
 	if (CLogicalDML::EdmlInsert == edmlop)
 	{
@@ -1384,94 +1373,7 @@ CXformUtils::PexprLogicalDMLOverProject(CMemoryPool *mp,
 
 	CExpression *pexprOutput = pexprDML;
 
-	if (FTriggersExist(edmlop, ptabdesc, false /*fBefore*/))
-	{
-		rel_mdid->AddRef();
-		pexprOutput = PexprRowTrigger(mp, pexprOutput, edmlop, rel_mdid,
-									  false /*fBefore*/, colref_array);
-	}
-
 	return pexprOutput;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CXformUtils::FTriggersExist
-//
-//	@doc:
-//		Check whether there are any BEFORE or AFTER row-level triggers on
-//		the given table that match the given DML operation
-//
-//---------------------------------------------------------------------------
-BOOL
-CXformUtils::FTriggersExist(CLogicalDML::EDMLOperator edmlop,
-							CTableDescriptor *ptabdesc, BOOL fBefore)
-{
-	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	const IMDRelation *pmdrel = md_accessor->RetrieveRel(ptabdesc->MDId());
-	const ULONG ulTriggers = pmdrel->TriggerCount();
-
-	for (ULONG ul = 0; ul < ulTriggers; ul++)
-	{
-		const IMDTrigger *pmdtrigger =
-			md_accessor->RetrieveTrigger(pmdrel->TriggerMDidAt(ul));
-		if (!pmdtrigger->IsEnabled() || !pmdtrigger->ExecutesOnRowLevel() ||
-			!FTriggerApplies(edmlop, pmdtrigger))
-		{
-			continue;
-		}
-
-		if (pmdtrigger->IsBefore() == fBefore)
-		{
-			return true;
-		}
-	}
-
-	return false;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CXformUtils::FTriggerApplies
-//
-//	@doc:
-//		Does the given trigger type match the given logical DML type
-//
-//---------------------------------------------------------------------------
-BOOL
-CXformUtils::FTriggerApplies(CLogicalDML::EDMLOperator edmlop,
-							 const IMDTrigger *pmdtrigger)
-{
-	return ((CLogicalDML::EdmlInsert == edmlop && pmdtrigger->IsInsert()) ||
-			(CLogicalDML::EdmlDelete == edmlop && pmdtrigger->IsDelete()) ||
-			(CLogicalDML::EdmlUpdate == edmlop && pmdtrigger->IsUpdate()));
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CXformUtils::PexprRowTrigger
-//
-//	@doc:
-//		Construct a trigger expression on top of the given expression
-//
-//---------------------------------------------------------------------------
-CExpression *
-CXformUtils::PexprRowTrigger(CMemoryPool *mp, CExpression *pexprChild,
-							 CLogicalDML::EDMLOperator edmlop, IMDId *rel_mdid,
-							 BOOL fBefore, CColRefArray *colref_array)
-{
-	GPOS_ASSERT(CLogicalDML::EdmlInsert == edmlop ||
-				CLogicalDML::EdmlDelete == edmlop);
-
-	colref_array->AddRef();
-	if (CLogicalDML::EdmlInsert == edmlop)
-	{
-		return PexprRowTrigger(mp, pexprChild, edmlop, rel_mdid, fBefore,
-							   nullptr /*pdrgpcrOld*/, colref_array);
-	}
-
-	return PexprRowTrigger(mp, pexprChild, edmlop, rel_mdid, fBefore,
-						   colref_array, nullptr /*pdrgpcrNew*/);
 }
 
 //---------------------------------------------------------------------------
@@ -1547,47 +1449,6 @@ CXformUtils::PexprAssertNotNull(CMemoryPool *mp, CExpression *pexprChild,
 		CExpression(mp, popAssert, pexprChild, pexprAssertPredicate);
 }
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CXformUtils::PexprRowTrigger
-//
-//	@doc:
-//		Construct a trigger expression on top of the given expression
-//
-//---------------------------------------------------------------------------
-CExpression *
-CXformUtils::PexprRowTrigger(CMemoryPool *mp, CExpression *pexprChild,
-							 CLogicalDML::EDMLOperator edmlop, IMDId *rel_mdid,
-							 BOOL fBefore, CColRefArray *pdrgpcrOld,
-							 CColRefArray *pdrgpcrNew)
-{
-	INT type = GPMD_TRIGGER_ROW;
-	if (fBefore)
-	{
-		type |= GPMD_TRIGGER_BEFORE;
-	}
-
-	switch (edmlop)
-	{
-		case CLogicalDML::EdmlInsert:
-			type |= GPMD_TRIGGER_INSERT;
-			break;
-		case CLogicalDML::EdmlDelete:
-			type |= GPMD_TRIGGER_DELETE;
-			break;
-		case CLogicalDML::EdmlUpdate:
-			type |= GPMD_TRIGGER_UPDATE;
-			break;
-		default:
-			GPOS_ASSERT(!"Invalid DML operation");
-	}
-
-	return GPOS_NEW(mp) CExpression(
-		mp,
-		GPOS_NEW(mp)
-			CLogicalRowTrigger(mp, rel_mdid, type, pdrgpcrOld, pdrgpcrNew),
-		pexprChild);
-}
 
 //---------------------------------------------------------------------------
 //	@function:

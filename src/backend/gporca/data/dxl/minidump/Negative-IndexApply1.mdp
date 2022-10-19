@@ -63,7 +63,6 @@ select * from z,tt where tt.i=5 and z.i=6 ;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16387.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
@@ -111,7 +110,6 @@ select * from z,tt where tt.i=5 and z.i=6 ;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16391.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>

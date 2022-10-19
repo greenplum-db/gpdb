@@ -199,7 +199,6 @@ SELECT * FROM information_schema.tables;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.2615.1.1.10" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -461,7 +460,6 @@ SELECT * FROM information_schema.tables;
           <dxl:IndexInfo Mdid="0.2684.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2685.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.1207.1.0" Name="~~" ComparisonType="Other" ReturnsNullOnNullInput="true">
@@ -511,7 +509,6 @@ SELECT * FROM information_schema.tables;
           <dxl:IndexInfo Mdid="0.2684.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2685.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:MDCast Mdid="3.26.1.0;26.1.0" Name="oid" BinaryCoercible="true" SourceTypeId="0.26.1.0" DestinationTypeId="0.26.1.0" CastFuncId="0.0.0.0"/>
@@ -1093,7 +1090,6 @@ SELECT * FROM information_schema.tables;
           <dxl:IndexInfo Mdid="0.2662.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2663.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.1259.1.1" Name="pg_class" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="37,30">
@@ -1217,7 +1213,6 @@ SELECT * FROM information_schema.tables;
           <dxl:IndexInfo Mdid="0.2662.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2663.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.1009.1.0" Name="_text" IsRedistributable="true" IsHashable="false" IsMergeJoinable="false" IsComposite="false" IsFixedLength="false" Length="-1" PassByValue="false">

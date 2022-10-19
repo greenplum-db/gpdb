@@ -90,7 +90,6 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -409,7 +408,6 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.73771.1.1" Name="foo7" Rows="1000.000000" EmptyRelation="false"/>
@@ -453,7 +451,6 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.73895.1.1.1" Name="i2" Width="3.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="false">
@@ -786,7 +783,6 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.73833.1.1.1" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="1000.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
@@ -1348,7 +1344,6 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.73833.1.1.3" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="3.000000" FreqRemain="1.000000" ColStatsMissing="false"/>

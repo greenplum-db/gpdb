@@ -1180,7 +1180,6 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.30058.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Index Mdid="0.30058.1.0" Name="solo_idx" IsClustered="false" IndexType="B-tree" KeyColumns="1,2,7,17,22,29" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,20,21,22,28,29,30,31,32,33,34,35,36">

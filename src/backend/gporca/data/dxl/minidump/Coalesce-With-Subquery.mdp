@@ -475,9 +475,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers>
-          <dxl:Trigger Mdid="0.10307.1.0"/>
-        </dxl:Triggers>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.1262.1.1" Name="pg_database" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="18,11">
@@ -544,9 +541,6 @@
           <dxl:IndexInfo Mdid="0.2671.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2672.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers>
-          <dxl:Trigger Mdid="0.10306.1.0"/>
-        </dxl:Triggers>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.1213.1.1.13" Name="tableoid" Width="4.000000"/>
@@ -648,7 +642,6 @@
           <dxl:IndexInfo Mdid="0.2697.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2698.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>

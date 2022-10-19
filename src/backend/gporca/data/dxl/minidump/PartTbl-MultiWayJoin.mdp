@@ -252,7 +252,6 @@ explain select count(*) from r_p, s c, s d, s e where r_p.a = c.c and r_p.a = d.
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.57425001.1.0"/>
@@ -296,7 +295,6 @@ explain select count(*) from r_p, s c, s d, s e where r_p.a = c.c and r_p.a = d.
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -347,7 +345,6 @@ explain select count(*) from r_p, s c, s d, s e where r_p.a = c.c and r_p.a = d.
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -414,7 +411,6 @@ explain select count(*) from r_p, s c, s d, s e where r_p.a = c.c and r_p.a = d.
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>

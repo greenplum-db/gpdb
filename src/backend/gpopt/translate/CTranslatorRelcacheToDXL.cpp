@@ -363,12 +363,6 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	IMDRelation *md_rel = nullptr;
 	IMdIdArray *partition_oids = nullptr;
 
-	/*
-	 * Pretend that there are no triggers, because we don't want ORCA to handle
-	 * them. The executor can run them fine on its own.
-	 */
-	IMdIdArray *mdid_triggers_array = GPOS_NEW(mp) IMdIdArray(mp);
-
 	// get rel name
 	mdname = GetRelName(mp, rel.get());
 
@@ -450,7 +444,7 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 		md_rel = GPOS_NEW(mp) CMDRelationExternalGPDB(
 			mp, mdid, mdname, dist, mdcol_array, distr_cols, distr_op_families,
 			convert_hash_to_random, keyset_array, md_index_info_array,
-			mdid_triggers_array, check_constraint_mdids, extentry->rejectlimit,
+			check_constraint_mdids, extentry->rejectlimit,
 			('r' == extentry->rejectlimittype),
 			nullptr /* it's sufficient to pass NULL here since ORCA
 								doesn't really make use of the logerrors value.
@@ -472,8 +466,8 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 			mp, mdid, mdname, is_temporary, rel_storage_type, dist, mdcol_array,
 			distr_cols, distr_op_families, part_keys, part_types,
 			num_leaf_partitions, partition_oids, convert_hash_to_random,
-			keyset_array, md_index_info_array, mdid_triggers_array,
-			check_constraint_mdids, mdpart_constraint);
+			keyset_array, md_index_info_array, check_constraint_mdids,
+			mdpart_constraint);
 	}
 
 	return md_rel;

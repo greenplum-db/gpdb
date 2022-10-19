@@ -181,7 +181,6 @@ EXPLAIN SELECT a FROM snackbox JOIN (SELECT c FROM hottoast LIMIT 3) hottoast ON
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.34247.1.0" Name="hottoast" Rows="0.000000" EmptyRelation="true"/>
@@ -213,7 +212,6 @@ EXPLAIN SELECT a FROM snackbox JOIN (SELECT c FROM hottoast LIMIT 3) hottoast ON
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:MDCast Mdid="3.23.1.0;23.1.0" Name="int4" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.23.1.0" CastFuncId="0.0.0.0" CoercePathType="0"/>

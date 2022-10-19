@@ -181,7 +181,6 @@ explain select * from t where b=3;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.181458.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
@@ -232,7 +231,6 @@ explain select * from t where b=3;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.181454.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
@@ -276,7 +274,6 @@ explain select * from t where b=3;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.181462.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
@@ -336,7 +333,6 @@ explain select * from t where b=3;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.181463.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>

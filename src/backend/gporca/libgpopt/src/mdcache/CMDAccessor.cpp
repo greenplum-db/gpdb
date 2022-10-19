@@ -43,7 +43,6 @@
 #include "naucrates/md/IMDRelationExternal.h"
 #include "naucrates/md/IMDScCmp.h"
 #include "naucrates/md/IMDScalarOp.h"
-#include "naucrates/md/IMDTrigger.h"
 #include "naucrates/md/IMDType.h"
 #include "naucrates/traceflags/traceflags.h"
 
@@ -799,29 +798,6 @@ CMDAccessor::RetrieveAgg(IMDId *mdid)
 	}
 
 	return dynamic_cast<const IMDAggregate *>(pmdobj);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CMDAccessor::RetrieveTrigger
-//
-//	@doc:
-//		Retrieves the metadata description for a trigger from the md cache,
-//		possibly retrieving it from the external metadata provider and storing
-//		it in the cache first.
-//
-//---------------------------------------------------------------------------
-const IMDTrigger *
-CMDAccessor::RetrieveTrigger(IMDId *mdid)
-{
-	const IMDCacheObject *pmdobj = GetImdObj(mdid);
-	if (IMDCacheObject::EmdtTrigger != pmdobj->MDType())
-	{
-		GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDCacheEntryNotFound,
-				   mdid->GetBuffer());
-	}
-
-	return dynamic_cast<const IMDTrigger *>(pmdobj);
 }
 
 //---------------------------------------------------------------------------

@@ -2399,7 +2399,6 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.48922.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.36716.1.0.1" Name="oid" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="false">
@@ -4067,7 +4066,6 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.48950.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint DefaultPartition="" Unbounded="false">
           <dxl:And>

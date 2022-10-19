@@ -1054,7 +1054,6 @@ EXPLAIN SELECT * FROM t1, t2, t3, t4 where b = c;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.106564.1.0" Name="t3" Rows="300.000000" EmptyRelation="false"/>
@@ -1086,7 +1085,6 @@ EXPLAIN SELECT * FROM t1, t2, t3, t4 where b = c;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.106567.1.0" Name="t4" Rows="20.000000" EmptyRelation="false"/>
@@ -1118,7 +1116,6 @@ EXPLAIN SELECT * FROM t1, t2, t3, t4 where b = c;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.106561.1.0" Name="t2" Rows="300.000000" EmptyRelation="false"/>
@@ -1150,7 +1147,6 @@ EXPLAIN SELECT * FROM t1, t2, t3, t4 where b = c;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:MDCast Mdid="3.23.1.0;23.1.0" Name="int4" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.23.1.0" CastFuncId="0.0.0.0" CoercePathType="0"/>

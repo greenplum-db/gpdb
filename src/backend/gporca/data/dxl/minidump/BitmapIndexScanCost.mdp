@@ -237,7 +237,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16445.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:MDCast Mdid="3.25.1.0;25.1.0" Name="text" BinaryCoercible="true" SourceTypeId="0.25.1.0" DestinationTypeId="0.25.1.0" CastFuncId="0.0.0.0" CoercePathType="0"/>

@@ -705,7 +705,6 @@ explain select * from t where c1 = 10 or (c2 = '4' and c5> 100);
           <dxl:IndexInfo Mdid="0.1632594.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.1632615.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.1632545.1.1" Name="t" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
@@ -757,7 +756,6 @@ explain select * from t where c1 = 10 or (c2 = '4' and c5> 100);
           <dxl:IndexInfo Mdid="0.1632594.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.1632615.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.1632545.1.1.7" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>

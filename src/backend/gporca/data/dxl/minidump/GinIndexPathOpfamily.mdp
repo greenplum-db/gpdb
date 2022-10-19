@@ -169,7 +169,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.20131.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Index Mdid="0.20131.1.0" Name="jidx" IsClustered="false" IndexType="Gin" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7">

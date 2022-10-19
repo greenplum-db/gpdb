@@ -581,7 +581,6 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.672881.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.672855.1.1" Name="item" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;28,22">
@@ -677,7 +676,6 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.672881.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.23.1.0" Name="int4" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
@@ -6128,7 +6126,6 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.673571.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.673545.1.1" Name="store_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9;29,23">
@@ -6227,7 +6224,6 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.673571.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:MDCast Mdid="3.23.1.0;23.1.0" Name="int4" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.23.1.0" CastFuncId="0.0.0.0"/>

@@ -91,19 +91,6 @@ CXformUpdate2DML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	// child of update operator
 	CExpression *pexprChild = (*pexpr)[0];
 	pexprChild->AddRef();
-
-	IMDId *rel_mdid = ptabdesc->MDId();
-	if (CXformUtils::FTriggersExist(CLogicalDML::EdmlUpdate, ptabdesc,
-									true /*fBefore*/))
-	{
-		rel_mdid->AddRef();
-		pdrgpcrDelete->AddRef();
-		pdrgpcrInsert->AddRef();
-		pexprChild = CXformUtils::PexprRowTrigger(
-			mp, pexprChild, CLogicalDML::EdmlUpdate, rel_mdid, true /*fBefore*/,
-			pdrgpcrDelete, pdrgpcrInsert);
-	}
-
 	// generate the action column and split operator
 	COptCtxt *poctxt = COptCtxt::PoctxtFromTLS();
 	CMDAccessor *md_accessor = poctxt->Pmda();

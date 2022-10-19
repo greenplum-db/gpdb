@@ -93,7 +93,6 @@ EXPLAIN SELECT * FROM date_parts WHERE year BETWEEN 2002 AND 2003;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.3748065.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint DefaultPartition="" Unbounded="false">
           <dxl:Or>

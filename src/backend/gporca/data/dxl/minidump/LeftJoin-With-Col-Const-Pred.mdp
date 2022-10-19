@@ -1080,9 +1080,6 @@
           <dxl:IndexInfo Mdid="0.2677.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.6029.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers>
-          <dxl:Trigger Mdid="0.10307.1.0"/>
-        </dxl:Triggers>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.2608.1.1" Name="pg_depend" Rows="5602.000000"/>
@@ -1132,7 +1129,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.2608.1.1.9" Name="cmin" Width="4.000000"/>
@@ -1502,7 +1498,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Relation Mdid="0.1259.1.1" Name="pg_class" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="37,30">
@@ -1623,7 +1618,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.2608.1.1.11" Name="cmax" Width="4.000000"/>
@@ -1839,7 +1833,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.5011.1.1.15" Name="oid" Width="8.000000"/>

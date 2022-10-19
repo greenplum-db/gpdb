@@ -595,17 +595,6 @@ enum Edxltoken
 	EdxltokenReturnsNullOnNullInput,
 	EdxltokenIsNDVPreserving,
 
-	EdxltokenTriggers,
-	EdxltokenTrigger,
-
-	EdxltokenGPDBTrigger,
-	EdxltokenGPDBTriggerRow,
-	EdxltokenGPDBTriggerBefore,
-	EdxltokenGPDBTriggerInsert,
-	EdxltokenGPDBTriggerDelete,
-	EdxltokenGPDBTriggerUpdate,
-	EdxltokenGPDBTriggerEnabled,
-
 	EdxltokenGPDBFunc,
 	EdxltokenGPDBFuncStability,
 	EdxltokenGPDBFuncStable,
@@ -674,7 +663,6 @@ enum Edxltoken
 	EdxltokenDirectDispatchIsRaw,
 	EdxltokenDirectDispatchKeyValue,
 	EdxltokenPhysicalSplit,
-	EdxltokenPhysicalRowTrigger,
 	EdxltokenPhysicalAssert,
 
 	EdxltokenErrorCode,

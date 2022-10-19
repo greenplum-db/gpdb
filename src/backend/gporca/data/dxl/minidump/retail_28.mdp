@@ -2302,7 +2302,6 @@ ORDER BY to_char(order_datetime,'YYYY-Q')
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.4449193.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint DefaultPartition="0" Unbounded="true">
           <dxl:And>
@@ -2444,7 +2443,6 @@ ORDER BY to_char(order_datetime,'YYYY-Q')
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.4449193.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint DefaultPartition="0" Unbounded="true">
           <dxl:And>

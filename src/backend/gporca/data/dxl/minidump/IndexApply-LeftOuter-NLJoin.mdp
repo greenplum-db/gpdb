@@ -120,7 +120,6 @@ explain select * from t0 left join t1 on t0.a=t1.a left join t2 on (t2.a=t0.a an
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.195606.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Index Mdid="0.195606.1.0" Name="t2_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8">
@@ -180,7 +179,6 @@ explain select * from t0 left join t1 on t0.a=t1.a left join t2 on (t2.a=t0.a an
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.195652.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.26.1.0" Name="oid" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
@@ -282,7 +280,6 @@ explain select * from t0 left join t1 on t0.a=t1.a left join t2 on (t2.a=t0.a an
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.195670.1.0" Name="t3" Rows="0.000000" EmptyRelation="true"/>
@@ -307,7 +304,6 @@ explain select * from t0 left join t1 on t0.a=t1.a left join t2 on (t2.a=t0.a an
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.195690.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.195576.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
@@ -378,7 +374,6 @@ explain select * from t0 left join t1 on t0.a=t1.a left join t2 on (t2.a=t0.a an
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.195590.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>

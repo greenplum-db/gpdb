@@ -1015,7 +1015,6 @@ select product_id,concat('#attribute_'||attribute_id::varchar||':'||attribute) a
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBAgg Mdid="0.1553621.1.0" Name="concat" IsSplittable="false" HashAggCapable="false">

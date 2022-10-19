@@ -133,7 +133,6 @@ public:
 		EopLogicalUpdate,
 		EopLogicalDML,
 		EopLogicalSplit,
-		EopLogicalRowTrigger,
 		EopLogicalPartitionSelector,
 		EopLogicalAssert,
 		EopLogicalMaxOneRow,
@@ -244,7 +243,6 @@ public:
 
 		EopPhysicalDML,
 		EopPhysicalSplit,
-		EopPhysicalRowTrigger,
 
 		EopPhysicalAssert,
 

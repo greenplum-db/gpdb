@@ -164,7 +164,6 @@ select y.aProdb * y.aPlusb from (select x.a * x.b, x.aPlusb from (select a, b, a
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>

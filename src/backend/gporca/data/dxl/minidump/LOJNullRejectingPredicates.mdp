@@ -79,7 +79,6 @@ explain select * from t1 left join t2 on t1.a=t2.a left join t3 on t2.a=t3.a lef
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.49155.1.0" Name="t2" Rows="0.000000" EmptyRelation="true"/>
@@ -120,7 +119,6 @@ explain select * from t1 left join t2 on t1.a=t2.a left join t3 on t2.a=t3.a lef
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.49152.1.0" Name="t1" Rows="0.000000" EmptyRelation="true"/>
@@ -161,7 +159,6 @@ explain select * from t1 left join t2 on t1.a=t2.a left join t3 on t2.a=t3.a lef
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.49158.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
@@ -203,7 +200,6 @@ explain select * from t1 left join t2 on t1.a=t2.a left join t3 on t2.a=t3.a lef
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">

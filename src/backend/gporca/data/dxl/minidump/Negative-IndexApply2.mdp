@@ -68,7 +68,6 @@ select * from z_p,tt_p where tt_p.i=5 and z_p.i=6;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16402.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
@@ -123,7 +122,6 @@ select * from z_p,tt_p where tt_p.i=5 and z_p.i=6;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16401.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
@@ -166,7 +164,6 @@ select * from z_p,tt_p where tt_p.i=5 and z_p.i=6;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16403.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
@@ -262,7 +259,6 @@ select * from z_p,tt_p where tt_p.i=5 and z_p.i=6;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16414.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
@@ -337,7 +333,6 @@ select * from z_p,tt_p where tt_p.i=5 and z_p.i=6;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16413.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
@@ -383,7 +378,6 @@ select * from z_p,tt_p where tt_p.i=5 and z_p.i=6;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.16415.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>

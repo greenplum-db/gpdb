@@ -1830,7 +1830,6 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.29404.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint DefaultPartition="0,1" Unbounded="true">
           <dxl:Or>

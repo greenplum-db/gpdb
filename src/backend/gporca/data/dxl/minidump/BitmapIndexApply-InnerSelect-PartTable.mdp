@@ -184,7 +184,6 @@ select * from x, y where x.i > y.j and y.k = 10;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.53062514.1.1.9" Name="tableoid" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -231,7 +230,6 @@ select * from x, y where x.i > y.j and y.k = 10;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.53062705.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.53062540001.1.0"/>
@@ -278,7 +276,6 @@ select * from x, y where x.i > y.j and y.k = 10;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.53062705001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -335,7 +332,6 @@ select * from x, y where x.i > y.j and y.k = 10;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.53062705002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -392,7 +388,6 @@ select * from x, y where x.i > y.j and y.k = 10;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.53062705003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -449,7 +444,6 @@ select * from x, y where x.i > y.j and y.k = 10;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.53062705.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
           <dxl:Partition Mdid="0.53062540001.1.1"/>
@@ -496,7 +490,6 @@ select * from x, y where x.i > y.j and y.k = 10;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.53062705001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -553,7 +546,6 @@ select * from x, y where x.i > y.j and y.k = 10;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.53062705002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -610,7 +602,6 @@ select * from x, y where x.i > y.j and y.k = 10;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.53062705003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>

@@ -89,7 +89,6 @@ select * from pt where gender in ( 'F', 'FM');
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint DefaultPartition="0" Unbounded="true">
         </dxl:PartConstraint>

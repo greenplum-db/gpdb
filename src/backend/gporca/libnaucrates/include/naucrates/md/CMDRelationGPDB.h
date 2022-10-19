@@ -97,9 +97,6 @@ private:
 	// array of index info
 	CMDIndexInfoArray *m_mdindex_info_array;
 
-	// array of trigger ids
-	IMdIdArray *m_mdid_trigger_array;
-
 	// array of check constraint mdids
 	IMdIdArray *m_mdid_check_constraint_array;
 
@@ -134,7 +131,6 @@ public:
 		CharPtrArray *str_part_types_array, ULONG num_of_partitions,
 		IMdIdArray *partition_oids, BOOL convert_hash_to_random,
 		ULongPtr2dArray *keyset_array, CMDIndexInfoArray *md_index_info_array,
-		IMdIdArray *mdid_triggers_array,
 		IMdIdArray *mdid_check_constraint_array, CDXLNode *mdpart_constraint);
 
 	// dtor
@@ -227,14 +223,8 @@ public:
 	// number of indices
 	ULONG IndexCount() const override;
 
-	// number of triggers
-	ULONG TriggerCount() const override;
-
 	// retrieve the id of the metadata cache index at the given position
 	IMDId *IndexMDidAt(ULONG pos) const override;
-
-	// retrieve the id of the metadata cache trigger at the given position
-	IMDId *TriggerMDidAt(ULONG pos) const override;
 
 	// serialize metadata relation in DXL format given a serializer object
 	void Serialize(gpdxl::CXMLSerializer *) const override;

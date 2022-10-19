@@ -62,7 +62,6 @@ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=4)
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints>
           <dxl:CheckConstraint Mdid="0.16387.1.0"/>
         </dxl:CheckConstraints>
