@@ -1445,8 +1445,6 @@ void
 AppendOnlyBlockDirectory_End_forSearch(
 									   AppendOnlyBlockDirectory *blockDirectory)
 {
-	int			groupNo;
-
 	if (blockDirectory->blkdirRel == NULL)
 		return;
 
