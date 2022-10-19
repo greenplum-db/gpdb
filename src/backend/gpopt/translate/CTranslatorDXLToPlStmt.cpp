@@ -3184,28 +3184,6 @@ ContainsLowLevelSetReturningFunctions(const CDXLNode *scalar_expr_dxlnode)
 				continue;
 			}
 		}
-		//		else if (EdxlopScalarOpExpr == dxlopid)
-		//		{
-		//			if (ContainsLowLevelSetReturningFunctions(expr_dxlnode))
-		//			{
-		//				return true;
-		//			}
-		//			else
-		//			{
-		//				continue;
-		//			}
-		//		}
-		//		else if (EdxlopScalarCast == dxlopid)
-		//		{
-		//			if (ContainsLowLevelSetReturningFunctions(expr_dxlnode))
-		//			{
-		//				return true;
-		//			}
-		//			else
-		//			{
-		//				continue;
-		//			}
-		//		}
 		else
 		{
 			if (ContainsLowLevelSetReturningFunctions(expr_dxlnode))
@@ -3248,14 +3226,6 @@ ContainsSetReturningFuncOrOp(const CDXLNode *project_list_dxlnode,
 				}
 				break;
 			}
-				//			case EdxlopScalarOpExpr:
-				//			{
-				//				if (ContainsLowLevelSetReturningFunctions(expr_dxlnode))
-				//				{
-				//					return true;
-				//				}
-				//				break;
-				//			}
 			default:
 			{
 				if (ContainsLowLevelSetReturningFunctions(expr_dxlnode))
@@ -3306,46 +3276,7 @@ CTranslatorDXLToPlStmt::TranslateDXLProjectSet(
 	// translate operator costs
 	TranslatePlanCosts(result_dxlnode, plan);
 
-	//	CDXLNode *child_dxlnode = nullptr;
-	//	CDXLTranslateContext child_context(m_mp, false,
-	//									   output_context->GetColIdToParamIdMap());
-
-	//	if (result_dxlnode->Arity() - 1 == EdxlresultIndexChild)
-	//	{
-	//		// translate child plan
-	//		child_dxlnode = (*result_dxlnode)[EdxlresultIndexChild];
-	//
-	//		Plan *child_plan = TranslateDXLOperatorToPlan(
-	//			child_dxlnode, &child_context, ctxt_translation_prev_siblings);
-	//
-	//		GPOS_ASSERT(nullptr != child_plan && "child plan cannot be NULL");
-	//
-	//		project_set->plan.lefttree = child_plan;
-	//	}
-
-	//	CDXLNode *project_list_dxlnode = (*result_dxlnode)[EdxlresultIndexProjList];
-	//	CDXLNode *filter_dxlnode = (*result_dxlnode)[EdxlresultIndexFilter];
-	//
-	//	List *quals_list = nullptr;
-	//
-	//	CDXLTranslationContextArray *child_contexts =
-	//		GPOS_NEW(m_mp) CDXLTranslationContextArray(m_mp);
-	//	child_contexts->Append(&child_context);
-	//
-	//	// translate proj list and filter
-	//	TranslateProjListAndFilter(project_list_dxlnode, filter_dxlnode,
-	//							   nullptr,	 // translate context for the base table
-	//							   child_contexts, &plan->targetlist, &quals_list,
-	//							   output_context);
-	//
-	//
-	//	plan->qual = quals_list;
-
 	SetParamIds(plan);
-
-	// cleanup
-	//	child_contexts->Release();
-
 	return (Plan *) project_set;
 }
 

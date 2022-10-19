@@ -14147,8 +14147,6 @@ select count(*) from (select regexp_split_to_table((a)::text, ','::text) from ne
 (1 row)
 
 select * from (select trim(regexp_split_to_table((a)::text, ','::text)) from nested_srf)a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
  btrim 
 -------
  abc
@@ -14157,8 +14155,6 @@ DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet nod
 (3 rows)
 
 select count(*) from (select trim(regexp_split_to_table((a)::text, ','::text)) from nested_srf)a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
  count 
 -------
      3
@@ -14182,15 +14178,11 @@ HINT:  You might be able to move the set-returning function into a LATERAL FROM 
 truncate nested_srf;
 insert into nested_srf values (NULL);
 select * from (select trim(regexp_split_to_table((a)::text, ','::text)) from nested_srf)a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
  btrim 
 -------
 (0 rows)
 
 select count(*) from (select trim(regexp_split_to_table((a)::text, ','::text)) from nested_srf)a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
  count 
 -------
      0
