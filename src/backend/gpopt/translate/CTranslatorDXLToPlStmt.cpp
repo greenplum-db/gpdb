@@ -3184,31 +3184,38 @@ ContainsLowLevelSetReturningFunctions(const CDXLNode *scalar_expr_dxlnode)
 				continue;
 			}
 		}
-		else if (EdxlopScalarOpExpr == dxlopid)
-		{
-			if (ContainsLowLevelSetReturningFunctions(expr_dxlnode))
-			{
-				return true;
-			}
-			else
-			{
-				continue;
-			}
-		}
-		else if (EdxlopScalarCast == dxlopid)
-		{
-			if (ContainsLowLevelSetReturningFunctions(expr_dxlnode))
-			{
-				return true;
-			}
-			else
-			{
-				continue;
-			}
-		}
+		//		else if (EdxlopScalarOpExpr == dxlopid)
+		//		{
+		//			if (ContainsLowLevelSetReturningFunctions(expr_dxlnode))
+		//			{
+		//				return true;
+		//			}
+		//			else
+		//			{
+		//				continue;
+		//			}
+		//		}
+		//		else if (EdxlopScalarCast == dxlopid)
+		//		{
+		//			if (ContainsLowLevelSetReturningFunctions(expr_dxlnode))
+		//			{
+		//				return true;
+		//			}
+		//			else
+		//			{
+		//				continue;
+		//			}
+		//		}
 		else
 		{
-			continue;
+			if (ContainsLowLevelSetReturningFunctions(expr_dxlnode))
+			{
+				return true;
+			}
+			else
+			{
+				continue;
+			}
 		}
 	}
 	return false;
@@ -3241,7 +3248,15 @@ ContainsSetReturningFuncOrOp(const CDXLNode *project_list_dxlnode,
 				}
 				break;
 			}
-			case EdxlopScalarOpExpr:
+				//			case EdxlopScalarOpExpr:
+				//			{
+				//				if (ContainsLowLevelSetReturningFunctions(expr_dxlnode))
+				//				{
+				//					return true;
+				//				}
+				//				break;
+				//			}
+			default:
 			{
 				if (ContainsLowLevelSetReturningFunctions(expr_dxlnode))
 				{
@@ -3249,8 +3264,6 @@ ContainsSetReturningFuncOrOp(const CDXLNode *project_list_dxlnode,
 				}
 				break;
 			}
-			default:
-				break;
 		}
 	}
 	return false;
@@ -3527,8 +3540,7 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	// Set up upper references
 	Plan *iterator_setUpperRef = final_plan;
 	while (iterator_setUpperRef->lefttree != nullptr &&
-		   (iterator_setUpperRef->lefttree->type == T_Result ||
-			iterator_setUpperRef->lefttree->type == T_ProjectSet))
+		   iterator_setUpperRef->lefttree->type == T_ProjectSet)
 	{
 		set_upper_references(nullptr, iterator_setUpperRef, 0);
 		iterator_setUpperRef = iterator_setUpperRef->lefttree;
