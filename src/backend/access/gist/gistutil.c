@@ -910,7 +910,7 @@ gistoptions(Datum reloptions, bool validate)
 	fillRelOptions((void *) rdopts, sizeof(GiSTOptions), options, numoptions,
 				   validate, tab, lengthof(tab));
 
-	pfree(options);
+	free_options_deep(options, numoptions);
 
 	return (bytea *) rdopts;
 }

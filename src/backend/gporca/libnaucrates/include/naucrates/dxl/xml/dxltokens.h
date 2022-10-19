@@ -239,6 +239,7 @@ enum Edxltoken
 	EdxltokenWindowFrameSpec,
 	EdxltokenWindowFSRow,
 	EdxltokenWindowFSRange,
+	EdxltokenWindowFSGroups,
 
 	EdxltokenWindowLeadingBoundary,
 	EdxltokenWindowTrailingBoundary,
@@ -256,6 +257,12 @@ enum Edxltoken
 	EdxltokenWindowESCurrentRow,
 	EdxltokenWindowESGroup,
 	EdxltokenWindowESTies,
+
+	EdxltokenWindowStartInRangeOid,
+	EdxltokenWindowEndInRangeOid,
+	EdxltokenWindowInRangeColl,
+	EdxltokenWindowInRangeAsc,
+	EdxltokenWindowInRangeNullsFirst,
 
 	EdxltokenWindowrefOid,
 	EdxltokenWindowrefDistinct,

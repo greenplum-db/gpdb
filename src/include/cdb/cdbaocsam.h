@@ -235,8 +235,14 @@ typedef struct AOCSFetchDescData
 
 typedef AOCSFetchDescData *AOCSFetchDesc;
 
-typedef struct AOCSUpdateDescData *AOCSUpdateDesc;
 typedef struct AOCSDeleteDescData *AOCSDeleteDesc;
+
+typedef struct AOCSUniqueCheckDescData
+{
+	AppendOnlyBlockDirectory *blockDirectory;
+} AOCSUniqueCheckDescData;
+
+typedef struct AOCSUniqueCheckDescData *AOCSUniqueCheckDesc;
 
 /*
  * Descriptor for fetches from table via an index.
@@ -302,7 +308,7 @@ extern void aocs_rescan(AOCSScanDesc scan);
 extern void aocs_endscan(AOCSScanDesc scan);
 
 extern bool aocs_getnext(AOCSScanDesc scan, ScanDirection direction, TupleTableSlot *slot);
-extern AOCSInsertDesc aocs_insert_init(Relation rel, int segno);
+extern AOCSInsertDesc aocs_insert_init(Relation rel, int segno, int64 num_rows);
 extern void aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool *null, AOTupleId *aoTupleId);
 static inline void aocs_insert(AOCSInsertDesc idesc, TupleTableSlot *slot)
 {
@@ -318,12 +324,6 @@ extern bool aocs_fetch(AOCSFetchDesc aocsFetchDesc,
 					   AOTupleId *aoTupleId,
 					   TupleTableSlot *slot);
 extern void aocs_fetch_finish(AOCSFetchDesc aocsFetchDesc);
-
-extern AOCSUpdateDesc aocs_update_init(Relation rel, int segno);
-extern void aocs_update_finish(AOCSUpdateDesc desc);
-extern TM_Result aocs_update(AOCSUpdateDesc desc, TupleTableSlot *slot,
-			AOTupleId *oldTupleId, AOTupleId *newTupleId);
-
 extern AOCSDeleteDesc aocs_delete_init(Relation rel);
 extern TM_Result aocs_delete(AOCSDeleteDesc desc, 
 		AOTupleId *aoTupleId);

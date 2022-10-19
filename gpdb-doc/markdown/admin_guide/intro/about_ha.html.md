@@ -20,7 +20,7 @@ Two standard mirroring configurations are available when you initialize or expan
 
 [Figure 1](#iw157574) shows how table data is distributed across segments when spread mirroring is configured.
 
-![](../graphics/spread-mirroring.png "Spread Mirroring in Greenplum Database")
+![Spread Mirroring in Greenplum Database](../graphics/spread-mirroring.png "Spread Mirroring in Greenplum Database")
 
 ## <a id="segment_failover"></a>Segment Failover and Recovery 
 
@@ -38,7 +38,7 @@ If the primary master fails, the log replication process stops, and the standby 
 
 Since the master does not contain any user data, only the system catalog tables need to be synchronized between the primary and backup copies. When these tables are updated, changes are automatically copied over to the standby master to ensure synchronization with the primary master.
 
-![](../graphics/standby_master.jpg "Master Mirroring in Greenplum Database")
+![Master Mirroring in Greenplum Database](../graphics/standby_master.jpg "Master Mirroring in Greenplum Database")
 
 ## <a id="interconnect_redundancy"></a>About Interconnect Redundancy 
 

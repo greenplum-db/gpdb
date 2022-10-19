@@ -140,4 +140,3 @@ ALTER FUNCTION foofunc_exec_on_initplan() OWNER TO test_psql_de_role;
 -- Clean up
 DROP OWNED BY test_psql_de_role;
 DROP ROLE test_psql_de_role;
-DROP ACCESS METHOD bogus;

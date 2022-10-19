@@ -24,6 +24,7 @@
 #include "access/appendonly_compaction.h"
 #include "access/appendonlywriter.h"
 #include "catalog/catalog.h"
+#include "catalog/gp_fastsequence.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_appendonly.h"
 #include "cdb/cdbaocsam.h"
@@ -105,8 +106,6 @@ AOCSSegmentFileTruncateToEOF(Relation aorel, int segno, AOCSVPInfo *vpinfo)
 	int			j;
 
 	Assert(RelationIsAoCols(aorel));
-
-	relname = RelationGetRelationName(aorel);
 
 	for (j = 0; j < vpinfo->nEntry; ++j)
 	{
@@ -268,6 +267,14 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 	estate->es_num_result_relations = 1;
 	estate->es_result_relation_info = resultRelInfo;
 
+	/*
+	 * We don't want uniqueness checks to be performed while "insert"ing tuples
+	 * to a destination segfile during AOCSMoveTuple(). This is to ensure that
+	 * we can avoid spurious conflicts between the moved tuple and the original
+	 * tuple.
+	 */
+	estate->gp_bypass_unique_check = true;
+
 	while (aocs_getnext(scanDesc, ForwardScanDirection, slot))
 	{
 		CHECK_FOR_INTERRUPTS();
@@ -371,7 +378,11 @@ AOCSCompact(Relation aorel,
 
 		if (*insert_segno != -1)
 		{
-			insertDesc = aocs_insert_init(aorel, *insert_segno);
+			/*
+			 * Note: since we don't know how many rows will actually be inserted
+			 * we provide the default number of rows to bump gp_fastsequence by.
+			 */
+			insertDesc = aocs_insert_init(aorel, *insert_segno, NUM_FAST_SEQUENCES);
 
 			AOCSSegmentFileFullCompaction(aorel,
 										  insertDesc,

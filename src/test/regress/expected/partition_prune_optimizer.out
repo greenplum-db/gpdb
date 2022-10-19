@@ -46,7 +46,7 @@ explain (costs off) select * from lp;
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on lp
-         Number of partitions to scan: 6 
+         Number of partitions to scan: 6 (out of 6)
  Optimizer: Pivotal Optimizer (GPORCA)
 (4 rows)
 
@@ -55,7 +55,7 @@ explain (costs off) select * from lp where a > 'a' and a < 'd';
 -----------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on lp
-         Number of partitions to scan: 2 
+         Number of partitions to scan: 2 (out of 6)
          Filter: ((a > 'a'::bpchar) AND (a < 'd'::bpchar))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -65,7 +65,7 @@ explain (costs off) select * from lp where a > 'a' and a <= 'd';
 ------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on lp
-         Number of partitions to scan: 3 
+         Number of partitions to scan: 3 (out of 6)
          Filter: ((a > 'a'::bpchar) AND (a <= 'd'::bpchar))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -75,7 +75,7 @@ explain (costs off) select * from lp where a = 'a';
 ------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Dynamic Seq Scan on lp
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 6)
          Filter: (a = 'a'::bpchar)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -85,7 +85,7 @@ explain (costs off) select * from lp where 'a' = a;	/* commuted */
 ------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Dynamic Seq Scan on lp
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 6)
          Filter: (a = 'a'::bpchar)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -95,7 +95,7 @@ explain (costs off) select * from lp where a is not null;
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on lp
-         Number of partitions to scan: 5 
+         Number of partitions to scan: 5 (out of 6)
          Filter: (NOT (a IS NULL))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -105,7 +105,7 @@ explain (costs off) select * from lp where a is null;
 ------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Dynamic Seq Scan on lp
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 6)
          Filter: (a IS NULL)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -115,7 +115,7 @@ explain (costs off) select * from lp where a = 'a' or a = 'c';
 ----------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Dynamic Seq Scan on lp
-         Number of partitions to scan: 2 
+         Number of partitions to scan: 2 (out of 6)
          Filter: ((a = 'a'::bpchar) OR (a = 'c'::bpchar))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -125,7 +125,7 @@ explain (costs off) select * from lp where a is not null and (a = 'a' or a = 'c'
 ----------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Dynamic Seq Scan on lp
-         Number of partitions to scan: 2 
+         Number of partitions to scan: 2 (out of 6)
          Filter: ((NOT (a IS NULL)) AND ((a = 'a'::bpchar) OR (a = 'c'::bpchar)))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -135,7 +135,7 @@ explain (costs off) select * from lp where a <> 'g';
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on lp
-         Number of partitions to scan: 4 
+         Number of partitions to scan: 4 (out of 6)
          Filter: (a <> 'g'::bpchar)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -145,7 +145,7 @@ explain (costs off) select * from lp where a <> 'a' and a <> 'd';
 -------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on lp
-         Number of partitions to scan: 4 
+         Number of partitions to scan: 4 (out of 6)
          Filter: ((a <> 'a'::bpchar) AND (a <> 'd'::bpchar))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -155,7 +155,7 @@ explain (costs off) select * from lp where a not in ('a', 'd');
 ------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on lp
-         Number of partitions to scan: 4 
+         Number of partitions to scan: 4 (out of 6)
          Filter: (a <> ALL ('{a,d}'::bpchar[]))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1161,7 +1161,7 @@ explain (costs off) select * from boolpart where a in (true, false);
 ------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Dynamic Seq Scan on boolpart
-         Number of partitions to scan: 2 
+         Number of partitions to scan: 2 (out of 3)
          Filter: (a = ANY ('{t,f}'::boolean[]))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1171,7 +1171,7 @@ explain (costs off) select * from boolpart where a = false;
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on boolpart
-         Number of partitions to scan: 3 
+         Number of partitions to scan: 3 (out of 3)
          Filter: (NOT a)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1181,7 +1181,7 @@ explain (costs off) select * from boolpart where not a = false;
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on boolpart
-         Number of partitions to scan: 3 
+         Number of partitions to scan: 3 (out of 3)
          Filter: a
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1191,7 +1191,7 @@ explain (costs off) select * from boolpart where a is true or a is not true;
 --------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on boolpart
-         Number of partitions to scan: 3 
+         Number of partitions to scan: 3 (out of 3)
          Filter: ((a IS TRUE) OR (a IS NOT TRUE))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1201,7 +1201,7 @@ explain (costs off) select * from boolpart where a is not true;
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on boolpart
-         Number of partitions to scan: 3 
+         Number of partitions to scan: 3 (out of 3)
          Filter: (a IS NOT TRUE)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1211,7 +1211,7 @@ explain (costs off) select * from boolpart where a is not true and a is not fals
 --------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on boolpart
-         Number of partitions to scan: 3 
+         Number of partitions to scan: 3 (out of 3)
          Filter: ((a IS NOT TRUE) AND (a IS NOT FALSE))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1221,7 +1221,7 @@ explain (costs off) select * from boolpart where a is unknown;
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on boolpart
-         Number of partitions to scan: 3 
+         Number of partitions to scan: 3 (out of 3)
          Filter: (a IS UNKNOWN)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1231,7 +1231,7 @@ explain (costs off) select * from boolpart where a is not unknown;
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on boolpart
-         Number of partitions to scan: 3 
+         Number of partitions to scan: 3 (out of 3)
          Filter: (a IS NOT UNKNOWN)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1246,7 +1246,7 @@ explain (costs off) select * from coercepart where a in ('ab', to_char(125, '999
 -----------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on coercepart
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 3)
          Filter: ((a)::text = ANY ('{ab," 125"}'::text[]))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1256,7 +1256,7 @@ explain (costs off) select * from coercepart where a ~ any ('{ab}');
 ----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on coercepart
-         Number of partitions to scan: 3 
+         Number of partitions to scan: 3 (out of 3)
          Filter: ((a)::text ~ ANY ('{ab}'::text[]))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1266,7 +1266,7 @@ explain (costs off) select * from coercepart where a !~ all ('{ab}');
 -----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on coercepart
-         Number of partitions to scan: 3 
+         Number of partitions to scan: 3 (out of 3)
          Filter: ((a)::text !~ ALL ('{ab}'::text[]))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1276,7 +1276,7 @@ explain (costs off) select * from coercepart where a ~ any ('{ab,bc}');
 -------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on coercepart
-         Number of partitions to scan: 3 
+         Number of partitions to scan: 3 (out of 3)
          Filter: ((a)::text ~ ANY ('{ab,bc}'::text[]))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1286,7 +1286,7 @@ explain (costs off) select * from coercepart where a !~ all ('{ab,bc}');
 --------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on coercepart
-         Number of partitions to scan: 3 
+         Number of partitions to scan: 3 (out of 3)
          Filter: ((a)::text !~ ALL ('{ab,bc}'::text[]))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1421,7 +1421,7 @@ explain (costs off) select * from rp where a <> 1;
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on rp
-         Number of partitions to scan: 3 
+         Number of partitions to scan: 3 (out of 3)
          Filter: (a <> 1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1431,7 +1431,7 @@ explain (costs off) select * from rp where a <> 1 and a <> 2;
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on rp
-         Number of partitions to scan: 3 
+         Number of partitions to scan: 3 (out of 3)
          Filter: ((a <> 1) AND (a <> 2))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1442,7 +1442,7 @@ explain (costs off) select * from lp where a <> 'a';
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on lp
-         Number of partitions to scan: 5 
+         Number of partitions to scan: 5 (out of 6)
          Filter: (a <> 'a'::bpchar)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1461,7 +1461,7 @@ explain (costs off) select * from lp where (a <> 'a' and a <> 'd') or a is null;
 ------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on lp
-         Number of partitions to scan: 5 
+         Number of partitions to scan: 5 (out of 6)
          Filter: (((a <> 'a'::bpchar) AND (a <> 'd'::bpchar)) OR (a IS NULL))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1537,7 +1537,7 @@ explain (costs off) select * from like_op_noprune where a like '%BC';
 -------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on like_op_noprune
-         Number of partitions to scan: 2 
+         Number of partitions to scan: 2 (out of 2)
          Filter: (a ~~ '%BC'::text)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1575,7 +1575,7 @@ explain (costs off) select * from rparted_by_int2 where a > 100000000000000;
 -------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on rparted_by_int2
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 3)
          Filter: (a > '100000000000000'::bigint)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1953,7 +1953,7 @@ explain (analyze, costs off, summary off, timing off) select * from list_part wh
 ------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1) (actual rows=1 loops=1)
    ->  Dynamic Seq Scan on list_part (actual rows=1 loops=1)
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 4)
          Filter: (a = 1)
          Partitions scanned:  1 .
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -1965,7 +1965,7 @@ explain (analyze, costs off, summary off, timing off) select * from list_part wh
 ------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=4 loops=1)
    ->  Dynamic Seq Scan on list_part (actual rows=3 loops=1)
-         Number of partitions to scan: 4 
+         Number of partitions to scan: 4 (out of 4)
          Filter: (a = list_part_fn(a))
          Partitions scanned:  Avg 4.0 x 3 workers.  Max 4 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -1977,7 +1977,7 @@ explain (analyze, costs off, summary off, timing off) select * from list_part wh
 ------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=0 loops=1)
    ->  Dynamic Seq Scan on list_part (actual rows=0 loops=1)
-         Number of partitions to scan: 4 
+         Number of partitions to scan: 4 (out of 4)
          Filter: (a = (1 + a))
          Partitions scanned:  Avg 4.0 x 3 workers.  Max 4 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -2626,49 +2626,32 @@ truncate ab;
 insert into ab values (1, 1), (1, 2), (1, 3), (2, 1);
 explain (analyze, costs off, summary off, timing off)
 update ab_a1 set b = 3 from ab_a2 where ab_a2.b = (select 1);
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
+                                                       QUERY PLAN                                                        
+-------------------------------------------------------------------------------------------------------------------------
  Update on ab_a1 (actual rows=0 loops=1)
-   Update on ab_a1_b1
-   Update on ab_a1_b2
-   Update on ab_a1_b3
-   InitPlan 1 (returns $0)  (slice1)
-     ->  Result (actual rows=1 loops=1)
-   ->  Nested Loop (actual rows=1 loops=1)
-         ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=1 loops=1)
-               ->  Append (actual rows=1 loops=1)
-                     ->  Seq Scan on ab_a2_b1 (actual rows=1 loops=1)
-                           Filter: (b = $0)
-                     ->  Seq Scan on ab_a2_b2 (never executed)
-                           Filter: (b = $0)
-                     ->  Seq Scan on ab_a2_b3 (never executed)
-                           Filter: (b = $0)
-         ->  Materialize (actual rows=1 loops=1)
-               ->  Seq Scan on ab_a1_b1 (actual rows=1 loops=1)
-   ->  Nested Loop (actual rows=1 loops=1)
-         ->  Broadcast Motion 3:3  (slice3; segments: 3) (actual rows=1 loops=1)
-               ->  Append (actual rows=1 loops=1)
-                     ->  Seq Scan on ab_a2_b1 (actual rows=1 loops=1)
-                           Filter: (b = $0)
-                     ->  Seq Scan on ab_a2_b2 (never executed)
-                           Filter: (b = $0)
-                     ->  Seq Scan on ab_a2_b3 (never executed)
-                           Filter: (b = $0)
-         ->  Materialize (actual rows=1 loops=1)
-               ->  Seq Scan on ab_a1_b2 (actual rows=1 loops=1)
-   ->  Nested Loop (actual rows=1 loops=1)
-         ->  Broadcast Motion 3:3  (slice4; segments: 3) (actual rows=1 loops=1)
-               ->  Append (actual rows=1 loops=1)
-                     ->  Seq Scan on ab_a2_b1 (actual rows=1 loops=1)
-                           Filter: (b = $0)
-                     ->  Seq Scan on ab_a2_b2 (never executed)
-                           Filter: (b = $0)
-                     ->  Seq Scan on ab_a2_b3 (never executed)
-                           Filter: (b = $0)
-         ->  Materialize (actual rows=1 loops=1)
-               ->  Seq Scan on ab_a1_b3 (actual rows=1 loops=1)
- Optimizer: Postgres query optimizer
-(40 rows)
+   ->  Result (actual rows=6 loops=1)
+         ->  Split (actual rows=6 loops=1)
+               ->  Nested Loop (actual rows=3 loops=1)
+                     Join Filter: true
+                     ->  Dynamic Seq Scan on ab_a1 ab_a1_1 (actual rows=3 loops=1)
+                           Number of partitions to scan: 3 (out of 3)
+                           Partitions scanned:  Avg 3.0 x 3 workers.  Max 3 parts (seg0).
+                     ->  Materialize (actual rows=1 loops=4)
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3) (actual rows=1 loops=1)
+                                 ->  Hash Join (actual rows=1 loops=1)
+                                       Hash Cond: ((1) = ab_a2.b)
+                                       Extra Text: (seg2)   Hash chain length 1.0 avg, 1 max, using 1 of 262144 buckets.
+                                       ->  Result (actual rows=1 loops=1)
+                                             One-Time Filter: (gp_execution_segment() = 2)
+                                             ->  Result (actual rows=1 loops=1)
+                                       ->  Hash (actual rows=1 loops=1)
+                                             Buckets: 262144  Batches: 1  Memory Usage: 2049kB
+                                             ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=1 loops=1)
+                                                   ->  Dynamic Seq Scan on ab_a2 (actual rows=1 loops=1)
+                                                         Number of partitions to scan: 3 (out of 3)
+                                                         Partitions scanned:  Avg 3.0 x 3 workers.  Max 3 parts (seg0).
+ Optimizer: Pivotal Optimizer (GPORCA)
+(23 rows)
 
 select tableoid::regclass, * from ab;
  tableoid | a | b 
@@ -2722,7 +2705,7 @@ select * from tbl1 join tprt on tbl1.col1 > tprt.col1;
          Rows Removed by Join Filter: 3
          ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=7 loops=1)
                ->  Dynamic Seq Scan on tprt (actual rows=3 loops=1)
-                     Number of partitions to scan: 6 
+                     Number of partitions to scan: 6 (out of 6)
                      Partitions scanned:  Avg 6.0 x 3 workers.  Max 6 parts (seg0).
          ->  Seq Scan on tbl1 (actual rows=1 loops=8)
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -2740,7 +2723,7 @@ select * from tbl1 join tprt on tbl1.col1 = tprt.col1;
          ->  Hash (actual rows=3 loops=1)
                Buckets: 524288  Batches: 1  Memory Usage: 4097kB
                ->  Dynamic Seq Scan on tprt (actual rows=3 loops=1)
-                     Number of partitions to scan: 6 
+                     Number of partitions to scan: 6 (out of 6)
                      Partitions scanned:  Avg 6.0 x 3 workers.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
 (10 rows)
@@ -2779,7 +2762,7 @@ select * from tbl1 inner join tprt on tbl1.col1 > tprt.col1;
          Rows Removed by Join Filter: 6
          ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=7 loops=1)
                ->  Dynamic Seq Scan on tprt (actual rows=3 loops=1)
-                     Number of partitions to scan: 6 
+                     Number of partitions to scan: 6 (out of 6)
                      Partitions scanned:  Avg 6.0 x 3 workers.  Max 6 parts (seg0).
          ->  Seq Scan on tbl1 (actual rows=3 loops=8)
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -2797,7 +2780,7 @@ select * from tbl1 inner join tprt on tbl1.col1 = tprt.col1;
          ->  Hash (actual rows=3 loops=1)
                Buckets: 524288  Batches: 1  Memory Usage: 4097kB
                ->  Dynamic Seq Scan on tprt (actual rows=3 loops=1)
-                     Number of partitions to scan: 6 
+                     Number of partitions to scan: 6 (out of 6)
                      Partitions scanned:  Avg 6.0 x 3 workers.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
 (10 rows)
@@ -2855,7 +2838,7 @@ select * from tbl1 join tprt on tbl1.col1 < tprt.col1;
          Rows Removed by Join Filter: 6
          ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=7 loops=1)
                ->  Dynamic Seq Scan on tprt (actual rows=3 loops=1)
-                     Number of partitions to scan: 6 
+                     Number of partitions to scan: 6 (out of 6)
                      Partitions scanned:  Avg 6.0 x 3 workers.  Max 6 parts (seg0).
          ->  Seq Scan on tbl1 (actual rows=1 loops=8)
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -2884,7 +2867,7 @@ select * from tbl1 join tprt on tbl1.col1 = tprt.col1;
          ->  Hash (actual rows=3 loops=1)
                Buckets: 524288  Batches: 1  Memory Usage: 4097kB
                ->  Dynamic Seq Scan on tprt (actual rows=3 loops=1)
-                     Number of partitions to scan: 6 
+                     Number of partitions to scan: 6 (out of 6)
                      Partitions scanned:  Avg 6.0 x 3 workers.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
 (10 rows)
@@ -3055,8 +3038,8 @@ select * from stable_qual_pruning where a < localtimestamp;
 -------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=0 loops=1)
    ->  Dynamic Seq Scan on stable_qual_pruning (actual rows=0 loops=1)
-         Number of partitions to scan: 2 
-         Filter: (a < 'Thu May 19 15:14:26.02528 2022'::timestamp without time zone)
+         Number of partitions to scan: 2 (out of 3)
+         Filter: (a < 'Tue Sep 13 01:07:32.868324 2022'::timestamp without time zone)
          Partitions scanned:  Avg 2.0 x 3 workers.  Max 2 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
@@ -3068,7 +3051,7 @@ select * from stable_qual_pruning where a < '2000-02-01'::timestamptz;
 --------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=0 loops=1)
    ->  Dynamic Seq Scan on stable_qual_pruning (actual rows=0 loops=1)
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 3)
          Filter: (a < 'Tue Feb 01 00:00:00 2000 PST'::timestamp with time zone)
          Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -3092,7 +3075,7 @@ select * from stable_qual_pruning
 ----------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=0 loops=1)
    ->  Dynamic Seq Scan on stable_qual_pruning (actual rows=0 loops=1)
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 3)
          Filter: (a = ANY ('{"Tue Feb 01 00:00:00 2000","Fri Jan 01 00:00:00 2010"}'::timestamp without time zone[]))
          Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -3105,8 +3088,8 @@ select * from stable_qual_pruning
 -----------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=0 loops=1)
    ->  Dynamic Seq Scan on stable_qual_pruning (actual rows=0 loops=1)
-         Number of partitions to scan: 1 
-         Filter: (a = ANY ('{"Tue Feb 01 00:00:00 2000","Thu May 19 15:14:26.037645 2022"}'::timestamp without time zone[]))
+         Number of partitions to scan: 1 (out of 3)
+         Filter: (a = ANY ('{"Tue Feb 01 00:00:00 2000","Tue Sep 13 01:07:32.90543 2022"}'::timestamp without time zone[]))
          Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
@@ -3128,7 +3111,7 @@ select * from stable_qual_pruning
 ---------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=0 loops=1)
    ->  Dynamic Seq Scan on stable_qual_pruning (actual rows=0 loops=1)
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 3)
          Filter: (a = ANY ('{"Tue Feb 01 00:00:00 2000 PST","Fri Jan 01 00:00:00 2010 PST"}'::timestamp with time zone[]))
          Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -3241,7 +3224,7 @@ select * from boolp where a = (select value from boolvalues where value);
                Buckets: 262144  Batches: 1  Memory Usage: 2048kB
                ->  Broadcast Motion 3:3  (slice4; segments: 3) (actual rows=0 loops=1)
                      ->  Dynamic Seq Scan on boolp (actual rows=0 loops=1)
-                           Number of partitions to scan: 2 
+                           Number of partitions to scan: 2 (out of 2)
                            Partitions scanned:  Avg 2.0 x 3 workers.  Max 2 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
 (18 rows)
@@ -3265,7 +3248,7 @@ select * from boolp where a = (select value from boolvalues where not value);
                Buckets: 262144  Batches: 1  Memory Usage: 2048kB
                ->  Broadcast Motion 3:3  (slice4; segments: 3) (actual rows=0 loops=1)
                      ->  Dynamic Seq Scan on boolp (actual rows=0 loops=1)
-                           Number of partitions to scan: 2 
+                           Number of partitions to scan: 2 (out of 2)
                            Partitions scanned:  Avg 2.0 x 3 workers.  Max 2 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
 (18 rows)
@@ -3372,7 +3355,7 @@ explain (analyze, costs off, summary off, timing off) select * from ma_test wher
                                  ->  Partial Aggregate (actual rows=1 loops=1)
                                        ->  Seq Scan on ma_test_p2 (actual rows=5 loops=1)
                ->  Dynamic Seq Scan on ma_test (actual rows=6 loops=2)
-                     Number of partitions to scan: 3 
+                     Number of partitions to scan: 3 (out of 3)
                      Partitions scanned:  Avg 2.0 x 3 workers of 2 scans.  Max 2 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
 (17 rows)
@@ -3398,7 +3381,7 @@ explain (costs off) select * from pp_arrpart where a = '{1}';
 ------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Dynamic Seq Scan on pp_arrpart
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = '{1}'::integer[])
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -3416,29 +3399,29 @@ explain (costs off) select * from pp_arrpart where a in ('{4, 5}', '{1}');
 ----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on pp_arrpart
-         Number of partitions to scan: 2 
+         Number of partitions to scan: 2 (out of 2)
          Filter: ((a = '{4,5}'::integer[]) OR (a = '{1}'::integer[]))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
 explain (costs off) update pp_arrpart set a = a where a = '{1}';
-               QUERY PLAN               
-----------------------------------------
+                    QUERY PLAN                     
+---------------------------------------------------
  Update on pp_arrpart
-   Update on pp_arrpart1
-   ->  Seq Scan on pp_arrpart1
+   ->  Dynamic Seq Scan on pp_arrpart pp_arrpart_1
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = '{1}'::integer[])
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
 explain (costs off) delete from pp_arrpart where a = '{1}';
-               QUERY PLAN               
-----------------------------------------
+                    QUERY PLAN                     
+---------------------------------------------------
  Delete on pp_arrpart
-   Delete on pp_arrpart1
-   ->  Seq Scan on pp_arrpart1
+   ->  Dynamic Seq Scan on pp_arrpart pp_arrpart_1
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = '{1}'::integer[])
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
 drop table pp_arrpart;
@@ -3504,7 +3487,7 @@ explain (costs off) select * from pp_enumpart where a = 'blue';
 ------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Dynamic Seq Scan on pp_enumpart
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = 'blue'::pp_colors)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -3532,7 +3515,7 @@ explain (costs off) select * from pp_recpart where a = '(1,1)'::pp_rectype;
 -------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on pp_recpart
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = '(1,1)'::pp_rectype)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -3560,7 +3543,7 @@ explain (costs off) select * from pp_intrangepart where a = '[1,2]'::int4range;
 -------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Dynamic Seq Scan on pp_intrangepart
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = '[1,3)'::int4range)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -3589,29 +3572,29 @@ explain (costs off) select * from pp_lp where a = 1;
 ------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Dynamic Seq Scan on pp_lp
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
 explain (costs off) update pp_lp set value = 10 where a = 1;
-             QUERY PLAN              
--------------------------------------
+                QUERY PLAN                
+------------------------------------------
  Update on pp_lp
-   Update on pp_lp1
-   ->  Seq Scan on pp_lp1
+   ->  Dynamic Seq Scan on pp_lp pp_lp_1
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = 1)
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
 explain (costs off) delete from pp_lp where a = 1;
-             QUERY PLAN              
--------------------------------------
+                QUERY PLAN                
+------------------------------------------
  Delete on pp_lp
-   Delete on pp_lp1
-   ->  Seq Scan on pp_lp1
+   ->  Dynamic Seq Scan on pp_lp pp_lp_1
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = 1)
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
 set enable_partition_pruning = off;
@@ -3621,36 +3604,30 @@ explain (costs off) select * from pp_lp where a = 1;
 ------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Dynamic Seq Scan on pp_lp
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
 explain (costs off) update pp_lp set value = 10 where a = 1;
-             QUERY PLAN              
--------------------------------------
+                QUERY PLAN                
+------------------------------------------
  Update on pp_lp
-   Update on pp_lp1
-   Update on pp_lp2
-   ->  Seq Scan on pp_lp1
+   ->  Dynamic Seq Scan on pp_lp pp_lp_1
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = 1)
-   ->  Seq Scan on pp_lp2
-         Filter: (a = 1)
- Optimizer: Postgres query optimizer
-(8 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 explain (costs off) delete from pp_lp where a = 1;
-             QUERY PLAN              
--------------------------------------
+                QUERY PLAN                
+------------------------------------------
  Delete on pp_lp
-   Delete on pp_lp1
-   Delete on pp_lp2
-   ->  Seq Scan on pp_lp1
+   ->  Dynamic Seq Scan on pp_lp pp_lp_1
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = 1)
-   ->  Seq Scan on pp_lp2
-         Filter: (a = 1)
- Optimizer: Postgres query optimizer
-(8 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 set constraint_exclusion = 'off'; -- this should not affect the result.
 explain (costs off) select * from pp_lp where a = 1;
@@ -3658,36 +3635,30 @@ explain (costs off) select * from pp_lp where a = 1;
 ------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Dynamic Seq Scan on pp_lp
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
 explain (costs off) update pp_lp set value = 10 where a = 1;
-             QUERY PLAN              
--------------------------------------
+                QUERY PLAN                
+------------------------------------------
  Update on pp_lp
-   Update on pp_lp1
-   Update on pp_lp2
-   ->  Seq Scan on pp_lp1
+   ->  Dynamic Seq Scan on pp_lp pp_lp_1
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = 1)
-   ->  Seq Scan on pp_lp2
-         Filter: (a = 1)
- Optimizer: Postgres query optimizer
-(8 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 explain (costs off) delete from pp_lp where a = 1;
-             QUERY PLAN              
--------------------------------------
+                QUERY PLAN                
+------------------------------------------
  Delete on pp_lp
-   Delete on pp_lp1
-   Delete on pp_lp2
-   ->  Seq Scan on pp_lp1
+   ->  Dynamic Seq Scan on pp_lp pp_lp_1
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = 1)
-   ->  Seq Scan on pp_lp2
-         Filter: (a = 1)
- Optimizer: Postgres query optimizer
-(8 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 drop table pp_lp;
 -- Ensure enable_partition_prune does not affect non-partitioned tables.
@@ -3774,7 +3745,7 @@ explain (costs off) select * from pp_temp_parent where true;
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on pp_temp_parent
-         Number of partitions to scan: 2 
+         Number of partitions to scan: 2 (out of 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (4 rows)
 
@@ -3783,7 +3754,7 @@ explain (costs off) select * from pp_temp_parent where a = 2;
 ------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Dynamic Seq Scan on pp_temp_parent
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)

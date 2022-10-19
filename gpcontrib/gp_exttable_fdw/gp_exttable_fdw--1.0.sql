@@ -29,7 +29,7 @@ CREATE FUNCTION pg_exttable(OUT reloid oid,
                             OUT command text,
                             OUT rejectlimit int4,
                             OUT rejectlimittype "char",
-                            OUT logerrors "char",
+                            OUT logerrors bool,
                             OUT encoding int4,
                             OUT writable bool)
 RETURNS SETOF record

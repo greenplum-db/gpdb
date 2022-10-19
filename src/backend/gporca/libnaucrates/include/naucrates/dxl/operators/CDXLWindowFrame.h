@@ -26,6 +26,7 @@ enum EdxlFrameSpec
 {
 	EdxlfsRow = 0,
 	EdxlfsRange,
+	EdxlfsGroups,
 	EdxlfsSentinel
 };
 
@@ -62,13 +63,31 @@ private:
 	// scalar value representing the boundary trailing
 	CDXLNode *m_dxlnode_trailing;
 
+	// in_range function for startOffset
+	OID m_start_in_range_func;
+
+	// in_range function for endOffset
+	OID m_end_in_range_func;
+
+	// collation for in_range tests
+	OID m_in_range_coll;
+
+	// use ASC sort order for in_range tests
+	BOOL m_in_range_asc;
+
+	// nulls sort first for in_range tests
+	BOOL m_in_range_nulls_first;
+
 public:
 	CDXLWindowFrame(const CDXLWindowFrame &) = delete;
 
 	// ctor
 	CDXLWindowFrame(EdxlFrameSpec edxlfs,
 					EdxlFrameExclusionStrategy frame_exc_strategy,
-					CDXLNode *dxlnode_leading, CDXLNode *dxlnode_trailing);
+					CDXLNode *dxlnode_leading, CDXLNode *dxlnode_trailing,
+					OID start_in_range_func, OID end_in_range_func,
+					OID in_range_coll, bool in_range_asc,
+					bool in_range_nulls_first);
 
 	//dtor
 	~CDXLWindowFrame() override;
@@ -98,6 +117,36 @@ public:
 	PdxlnLeading() const
 	{
 		return m_dxlnode_leading;
+	}
+
+	OID
+	PdxlnStartInRangeFunc() const
+	{
+		return m_start_in_range_func;
+	}
+
+	OID
+	PdxlnEndInRangeFunc() const
+	{
+		return m_end_in_range_func;
+	}
+
+	OID
+	PdxlnInRangeColl() const
+	{
+		return m_in_range_coll;
+	}
+
+	BOOL
+	PdxlnInRangeAsc() const
+	{
+		return m_in_range_asc;
+	}
+
+	BOOL
+	PdxlnInRangeNullsFirst() const
+	{
+		return m_in_range_nulls_first;
 	}
 
 	// return the string representation of the exclusion strategy

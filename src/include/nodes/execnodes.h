@@ -672,6 +672,12 @@ typedef struct EState
 	/* partition oid that is being scanned, used by DynamicBitmapHeapScan/IndexScan */
 	int			partitionOid;
 
+	/*
+	 * GPDB: gp_bypass_unique_check is introduced so that routines, such as AO
+	 * vacuum, can avoid running uniqueness checks while inserting tuples.
+	 */
+	bool		gp_bypass_unique_check;
+
 } EState;
 
 struct PlanState;

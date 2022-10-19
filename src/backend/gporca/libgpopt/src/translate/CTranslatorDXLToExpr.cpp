@@ -1474,6 +1474,26 @@ CTranslatorDXLToExpr::PexprLogicalUpdate(const CDXLNode *dxlnode)
 				   GPOS_WSZ_LIT("Update on replicated tables"));
 	}
 
+	const IMDRelation *pmdrel = m_pmda->RetrieveRel(ptabdesc->MDId());
+	if (pmdrel->IsPartitioned())
+	{
+		GPOS_ASSERT(EdxlopLogicalUpdate == pdxlopUpdate->GetDXLOperator());
+
+		IMdIdArray *partition_mdids = pmdrel->ChildPartitionMdids();
+		for (ULONG ul = 0; ul < partition_mdids->Size(); ++ul)
+		{
+			IMDId *part_mdid = (*partition_mdids)[ul];
+			const IMDRelation *partrel = m_pmda->RetrieveRel(part_mdid);
+
+			if (partrel->IsPartitioned())
+			{
+				// Multi-level partitioned tables are unsupported - fall back
+				GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+						   GPOS_WSZ_LIT("Multi-level partitioned tables"));
+			}
+		}
+	}
+
 	ULONG ctid_colid = pdxlopUpdate->GetCtIdColId();
 	ULONG segid_colid = pdxlopUpdate->GetSegmentIdColId();
 
@@ -1888,9 +1908,17 @@ CTranslatorDXLToExpr::Pwf(const CDXLWindowFrame *window_frame)
 	{
 		efs = CWindowFrame::EfsRange;
 	}
+	else if (EdxlfsGroups == window_frame->ParseDXLFrameSpec())
+	{
+		efs = CWindowFrame::EfsGroups;
+	}
 
-	CWindowFrame *pwf = GPOS_NEW(m_mp)
-		CWindowFrame(m_mp, efs, efbLead, efbTrail, pexprLead, pexprTrail, efes);
+	CWindowFrame *pwf = GPOS_NEW(m_mp) CWindowFrame(
+		m_mp, efs, efbLead, efbTrail, pexprLead, pexprTrail, efes,
+		window_frame->PdxlnStartInRangeFunc(),
+		window_frame->PdxlnEndInRangeFunc(), window_frame->PdxlnInRangeColl(),
+		window_frame->PdxlnInRangeAsc(),
+		window_frame->PdxlnInRangeNullsFirst());
 
 	return pwf;
 }

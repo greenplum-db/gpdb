@@ -24,7 +24,7 @@ Greenplum Database supports:
 -   *list partitioning*: division of data based on a list of values, such as sales territory or product line.
 -   A combination of both types.
 
-![](../graphics/partitions.jpg "Example Multi-level Partition Design")
+![Example Multi-level Partition Design](../graphics/partitions.jpg "Example Multi-level Partition Design")
 
 ## <a id="topic64"></a>Table Partitioning in Greenplum Database 
 

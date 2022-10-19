@@ -18,6 +18,7 @@
 #include "tcop/tcopprot.h"
 #include "optimizer/optimizer.h"
 #include "optimizer/planmain.h"
+#include "parser/analyze.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/syscache.h"
@@ -119,11 +120,11 @@ gp_dump_query_oids(PG_FUNCTION_ARGS)
 		RawStmt    *parsetree = lfirst_node(RawStmt, lc);
 		List	   *queryTree_sublist;
 
-		queryTree_sublist = pg_analyze_and_rewrite(parsetree,
-												   sqlText,
-												   NULL,
-												   0,
-												   NULL);
+
+		Query	*query = parse_analyze(parsetree, sqlText, NULL, 0, NULL);
+		query->expandMatViews = true;
+		queryTree_sublist = pg_rewrite_query(query);
+
 		flat_query_list = list_concat(flat_query_list,
 									  list_copy(queryTree_sublist));
 	}

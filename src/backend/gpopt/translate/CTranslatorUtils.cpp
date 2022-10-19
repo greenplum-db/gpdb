@@ -1146,7 +1146,6 @@ CTranslatorUtils::GenerateColIds(
 		is_outer_ref,  // array of flags indicating if input columns are outer references
 	CIdGenerator *colid_generator)
 {
-	GPOS_ASSERT(nullptr != target_list);
 	GPOS_ASSERT(nullptr != input_mdid_arr);
 	GPOS_ASSERT(nullptr != input_colids);
 	GPOS_ASSERT(nullptr != is_outer_ref);
@@ -1206,7 +1205,10 @@ CTranslatorUtils::FixUnknownTypeConstant(Query *old_query,
 										 List *output_target_list)
 {
 	GPOS_ASSERT(nullptr != old_query);
-	GPOS_ASSERT(nullptr != output_target_list);
+	if (nullptr == output_target_list)
+	{
+		return old_query;
+	}
 
 	Query *new_query = nullptr;
 
@@ -1346,8 +1348,6 @@ ULongPtrArray *
 CTranslatorUtils::GetPosInTargetList(CMemoryPool *mp, List *target_list,
 									 BOOL keep_res_junked)
 {
-	GPOS_ASSERT(nullptr != target_list);
-
 	ListCell *target_entry_cell = nullptr;
 	ULongPtrArray *positions = GPOS_NEW(mp) ULongPtrArray(mp);
 	ULONG ul = 0;

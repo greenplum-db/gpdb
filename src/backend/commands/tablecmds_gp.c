@@ -1209,7 +1209,9 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 				partdesc = RelationGetPartitionDesc(temprel);
 
 				if (partdesc->nparts == 0)
-					elog(ERROR, "GPDB add partition syntax needs at least one sibling to exist");
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+								errmsg("GPDB add partition syntax needs at least one sibling to exist")));
 
 				if (partdesc->is_leaf[0])
 				{
@@ -1239,9 +1241,14 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 				}
 			} while (1);
 
+			Assert(!gpPartDef->fromCatalog);
+			gpPartDef = transformGpPartitionDefinition(RelationGetRelid(rel), cmd->queryString, gpPartDef);
+			if (gpPartDef->isTemplate)
+				StoreGpPartitionTemplate(ancestors ? llast_oid(ancestors) : RelationGetRelid(rel),
+										 list_length(ancestors), gpPartDef);
 			List *cstmts = generatePartitions(RelationGetRelid(rel),
 											  gpPartDef, subpart, cmd->queryString,
-											  NIL, NULL, NULL, false);
+											  NIL, NULL, NULL, true);
 			foreach(l, cstmts)
 			{
 				Node *stmt = (Node *) lfirst(l);
@@ -1342,13 +1349,21 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 				PartitionDesc partdesc = RelationGetPartitionDesc(rel);
 
 				if (partdesc->nparts == 0)
-					elog(ERROR, "GPDB SET SUBPARTITION TEMPLATE syntax needs at least one sibling to exist");
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+								errmsg("GPDB SET SUBPARTITION TEMPLATE syntax needs at least one sibling to exist")));
 
 				firstchildoid = partdesc->oids[0];
 				firstrel = table_open(firstchildoid, AccessShareLock);
 				if (firstrel->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
-					elog(ERROR, "level %d is not partitioned and hence can't set subpartition template for the same",
-						 level);
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+								errmsg("level %d is not partitioned and hence can't set subpartition template for the same",
+									   level)));
+				if (RelationGetPartitionDesc(firstrel)->nparts == 0)
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+								errmsg("GPDB SET SUBPARTITION TEMPLATE syntax needs at least one sibling to exist")));
 
 				/* if this is not leaf level partition then sub-partition must exist for next level */
 				if (!RelationGetPartitionDesc(firstrel)->is_leaf[0])
@@ -1364,12 +1379,13 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 				}
 
 				/*
-				 * call generatePartitions() using first child as partition to
+				 * call generatePartitions() using first child's PartitionKey to
 				 * add partitions, just to validate the subpartition template,
 				 * if anything wrong it will error out.
 				 */
+				templateDef = transformGpPartitionDefinition(firstchildoid, cmd->queryString, templateDef);
 				generatePartitions(firstchildoid, templateDef, NULL, cmd->queryString,
-								   NIL, NULL, NULL, true);
+								   NIL, NULL, NULL, false);
 				table_close(firstrel, AccessShareLock);
 
 				StoreGpPartitionTemplate(topParentrelid, level, templateDef);

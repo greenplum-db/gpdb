@@ -318,6 +318,13 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenScalarWindowFrameTrailingEdge, GPOS_WSZ_LIT("TrailingEdge")},
 		{EdxltokenWindowFSRow, GPOS_WSZ_LIT("Row")},
 		{EdxltokenWindowFSRange, GPOS_WSZ_LIT("Range")},
+		{EdxltokenWindowFSGroups, GPOS_WSZ_LIT("Groups")},
+
+		{EdxltokenWindowStartInRangeOid, GPOS_WSZ_LIT("StartInRange")},
+		{EdxltokenWindowEndInRangeOid, GPOS_WSZ_LIT("EndInRange")},
+		{EdxltokenWindowInRangeColl, GPOS_WSZ_LIT("InRangeColl")},
+		{EdxltokenWindowInRangeAsc, GPOS_WSZ_LIT("InRangeAsc")},
+		{EdxltokenWindowInRangeNullsFirst, GPOS_WSZ_LIT("InRangeNullsFirst")},
 
 		{EdxltokenWindowExclusionStrategy, GPOS_WSZ_LIT("ExclusionStrategy")},
 		{EdxltokenWindowESNone, GPOS_WSZ_LIT("None")},

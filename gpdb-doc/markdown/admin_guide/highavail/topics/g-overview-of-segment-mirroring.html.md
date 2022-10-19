@@ -23,11 +23,11 @@ Mirror segment instances can be placed on hosts in the cluster in different conf
 
 *Group mirroring* is the default mirroring configuration when you enable mirroring during system initialization. The mirror segments for each host's primary segments are placed on one other host. If a single host fails, the number of active primary segments doubles on the host that backs the failed host. [Figure 1](#fig_rrr_nt2_xt) illustrates a group mirroring configuration.
 
-![](../../graphics/group-mirroring.png "Group Segment Mirroring in Greenplum Database")
+![Group Segment Mirroring in Greenplum Database](../../graphics/group-mirroring.png "Group Segment Mirroring in Greenplum Database")
 
 *Spread mirroring* can be specified during system initialization. This configuration spreads each host's mirrors over multiple hosts so that if any single host fails, no other host will have more than one mirror promoted to an active primary segment. Spread mirroring is possible only if there are more hosts than segments per host. [Figure 2](#fig_ew1_qgg_xt) illustrates the placement of mirrors in a spread segment mirroring configuration.
 
-![](../../graphics/spread-mirroring.png "Spread Segment Mirroring in Greenplum Database")
+![Spread Segment Mirroring in Greenplum Database](../../graphics/spread-mirroring.png "Spread Segment Mirroring in Greenplum Database")
 
 **Note:** You must ensure you have the appropriate number of host systems for your mirroring configuration when you create a system or when you expand a system. For example, to create a system that is configured with spread mirroring requires more hosts than segment instances per host, and a system that is configured with group mirroring requires at least two new hosts when expanding the system. For information about segment mirroring configurations, see [Segment Mirroring Configurations](../../../best_practices/ha.html#topic_ngz_qf4_tt). For information about expanding systems with segment mirroring enabled, see [Planning Mirror Segments](../../expand/expand-planning.html).
 

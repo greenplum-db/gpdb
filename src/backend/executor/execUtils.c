@@ -211,6 +211,8 @@ CreateExecutorState(void)
 	estate->currentSliceId = 0;
 	estate->eliminateAliens = false;
 
+	estate->gp_bypass_unique_check = false;
+
 	/*
 	 * Return the executor state structure
 	 */
@@ -1642,6 +1644,18 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 	}
 
 	/*
+	 * If we are finishing a query before all the tuples of the query
+	 * plan were fetched we must call ExecSquelchNode before checking
+	 * the dispatch results in order to tell we no longer
+	 * need any more tuples.
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH && !estate->es_got_eos &&
+		!(estate->es_top_eflags & EXEC_FLAG_EXPLAIN_ONLY))
+	{
+		ExecSquelchNode(queryDesc->planstate);
+	}
+
+	/*
 	 * If QD, wait for QEs to finish and check their results.
 	 */
 	if (estate->dispatcherState && estate->dispatcherState->primaryResults)
@@ -1650,17 +1664,6 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 		CdbDispatcherState *ds = estate->dispatcherState;
 		DispatchWaitMode waitMode = DISPATCH_WAIT_NONE;
 		ErrorData *qeError = NULL;
-
-		/*
-		 * If we are finishing a query before all the tuples of the query
-		 * plan were fetched we must call ExecSquelchNode before checking
-		 * the dispatch results in order to tell the nodes below we no longer
-		 * need any more tuples.
-		 */
-		if (!estate->es_got_eos)
-		{
-			ExecSquelchNode(queryDesc->planstate);
-		}
 
 		/*
 		 * Wait for completion of all QEs.  We send a "graceful" query

@@ -92,6 +92,9 @@ typedef struct MinipagePerColumnGroup
 #define NUM_MINIPAGE_ENTRIES (((MaxHeapTupleSize)/8 - sizeof(HeapTupleHeaderData) - 64 * 3)\
 							  / sizeof(MinipageEntry))
 
+#define IsMinipageFull(minipagePerColumnGroup) \
+	((minipagePerColumnGroup)->numMinipageEntries == (uint32) gp_blockdirectory_minipage_size)
+
 /*
  * Define a structure for the append-only relation block directory.
  */
@@ -192,6 +195,9 @@ extern bool AppendOnlyBlockDirectory_GetEntry(
 	AOTupleId 						*aoTupleId,
 	int                             columnGroupNo,
 	AppendOnlyBlockDirectoryEntry	*directoryEntry);
+extern bool AppendOnlyBlockDirectory_CoversTuple(
+	AppendOnlyBlockDirectory		*blockDirectory,
+	AOTupleId 						*aoTupleId);
 extern void AppendOnlyBlockDirectory_Init_forInsert(
 	AppendOnlyBlockDirectory *blockDirectory,
 	Snapshot appendOnlyMetaDataSnapshot,
@@ -236,6 +242,11 @@ extern void AppendOnlyBlockDirectory_DeleteSegmentFile(
 		Snapshot snapshot,
 		int segno,
 		int columnGroupNo);
+
+extern void AppendOnlyBlockDirectory_InsertPlaceholder(AppendOnlyBlockDirectory *blockDirectory,
+												  int64 firstRowNum,
+												  int64 fileOffset,
+												  int columnGroupNo);
 
 static inline uint32
 minipage_size(uint32 nEntry)

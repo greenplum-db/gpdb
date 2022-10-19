@@ -118,7 +118,7 @@
             <dxl:SortingColumnList>
               <dxl:SortingColumn ColId="1" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
             </dxl:SortingColumnList>
-            <dxl:WindowFrame FrameSpec="Range" ExclusionStrategy="Nulls">
+            <dxl:WindowFrame FrameSpec="Range" ExclusionStrategy="Nulls" StartInRange="0" EndInRange="0" InRangeColl="0" InRangeAsc="false" InRangeNullsFirst="false">
               <dxl:TrailingEdge TrailingBoundary="BoundedPreceding">
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
               </dxl:TrailingEdge>

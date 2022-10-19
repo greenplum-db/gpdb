@@ -2193,7 +2193,6 @@ findRangeSubtypeDiffFunction(List *procname, Oid subtype)
 Oid
 AssignTypeArrayOid(char *arrayTypeName, Oid typeNamespace)
 {
-	/* GPDB_12_MERGE_FIXME: do we need some special code for IsBinaryUpgrade here? */
 	Oid			type_array_oid;
 	Relation	pg_type;
 

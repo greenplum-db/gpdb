@@ -1342,48 +1342,16 @@ CXformUtils::PexprLogicalDMLOverProject(CMemoryPool *mp,
 	CColRef *pcrAction = nullptr;
 	CColRef *pcrOid = nullptr;
 
-	if (ptabdesc->IsPartitioned() && CLogicalDML::EdmlDelete == edmlop)
-	{
-		// generate a PartitionSelector node which generates OIDs, then add a project
-		// on top of that to add the action column
-		CExpression *pexprSelector = PexprLogicalPartitionSelector(
-			mp, ptabdesc, colref_array, pexprChild);
-		if (CUtils::FGeneratePartOid(ptabdesc->MDId()))
-		{
-			pcrOid = CLogicalPartitionSelector::PopConvert(pexprSelector->Pop())
-						 ->PcrOid();
-		}
-		pexprProject = CUtils::PexprAddProjection(
-			mp, pexprSelector, CUtils::PexprScalarConstInt4(mp, val));
-		CExpression *pexprPrL = (*pexprProject)[1];
-		pcrAction = CUtils::PcrFromProjElem((*pexprPrL)[0]);
-	}
-	else
-	{
-		CExpressionArray *pdrgpexprProjected =
-			GPOS_NEW(mp) CExpressionArray(mp);
-		// generate one project node with two new columns: action, oid (based on the traceflag)
-		pdrgpexprProjected->Append(CUtils::PexprScalarConstInt4(mp, val));
+	CExpressionArray *pdrgpexprProjected = GPOS_NEW(mp) CExpressionArray(mp);
+	// generate one project node with new columns: action
+	pdrgpexprProjected->Append(CUtils::PexprScalarConstInt4(mp, val));
 
-		BOOL fGeneratePartOid = CUtils::FGeneratePartOid(ptabdesc->MDId());
-		if (fGeneratePartOid)
-		{
-			OID oidTable = CMDIdGPDB::CastMdid(rel_mdid)->Oid();
-			pdrgpexprProjected->Append(
-				CUtils::PexprScalarConstOid(mp, oidTable));
-		}
+	pexprProject =
+		CUtils::PexprAddProjection(mp, pexprChild, pdrgpexprProjected);
+	pdrgpexprProjected->Release();
 
-		pexprProject =
-			CUtils::PexprAddProjection(mp, pexprChild, pdrgpexprProjected);
-		pdrgpexprProjected->Release();
-
-		CExpression *pexprPrL = (*pexprProject)[1];
-		pcrAction = CUtils::PcrFromProjElem((*pexprPrL)[0]);
-		if (fGeneratePartOid)
-		{
-			pcrOid = CUtils::PcrFromProjElem((*pexprPrL)[1]);
-		}
-	}
+	CExpression *pexprPrL = (*pexprProject)[1];
+	pcrAction = CUtils::PcrFromProjElem((*pexprPrL)[0]);
 
 	GPOS_ASSERT(nullptr != pcrAction);
 
@@ -2217,7 +2185,7 @@ CXformUtils::PexprWindowWithRowNumber(CMemoryPool *mp,
 {
 	// partitioning information
 	CDistributionSpec *pds = nullptr;
-	if (nullptr != pdrgpcrInput)
+	if (nullptr != pdrgpcrInput && 0 < pdrgpcrInput->Size())
 	{
 		CExpressionArray *pdrgpexprInput =
 			CUtils::PdrgpexprScalarIdents(mp, pdrgpcrInput);

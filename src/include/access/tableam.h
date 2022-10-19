@@ -324,6 +324,11 @@ typedef struct TableAmRoutine
 									  TupleTableSlot *slot,
 									  bool *call_again, bool *all_dead);
 
+	/* See table_index_fetch_tuple_exists() for details */
+	bool		(*index_fetch_tuple_exists) (Relation rel,
+											 ItemPointer tid,
+											 Snapshot snapshot,
+											 bool *all_dead);
 
 	/* ------------------------------------------------------------------------
 	 * Callbacks for non-modifying operations on individual tuples
@@ -1066,6 +1071,24 @@ extern bool table_index_fetch_tuple_check(Relation rel,
 										  Snapshot snapshot,
 										  bool *all_dead);
 
+/*
+ * GPDB: Check if a tuple exists for a given tid obtained from an index.
+ * This is used to entertain unique index checks on AO/CO tables. For heap
+ * tables, the regular method of beginindexscan..fetchtuple..endindexscan
+ * can be used. Creating/destroying scan descriptors for AO/CO tables are
+ * too expensive to be done on a per-tuple basis.
+ *
+ * This has to have an identical signature to table_index_fetch_tuple_check().
+ */
+static inline bool
+table_index_fetch_tuple_exists(Relation rel,
+							   ItemPointer tid,
+							   Snapshot snapshot,
+							   bool *all_dead)
+{
+	return rel->rd_tableam->index_fetch_tuple_exists(rel, tid, snapshot,
+														   all_dead);
+}
 
 /* ------------------------------------------------------------------------
  * Functions for non-modifying operations on individual tuples

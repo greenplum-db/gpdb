@@ -207,6 +207,12 @@ public:
 		return false;
 	}
 
+	virtual CConstraint *
+	GetConstraintOnSegmentId() const
+	{
+		return nullptr;
+	}
+
 	// return a copy of the constraint with remapped columns
 	virtual CConstraint *PcnstrCopyWithRemappedColumns(
 		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist) = 0;

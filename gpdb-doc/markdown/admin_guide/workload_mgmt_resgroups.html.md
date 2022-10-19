@@ -188,7 +188,7 @@ The minimum `MEMORY_SHARED_QUOTA` that you can specify is 0, the maximum is 100.
 
 As mentioned previously, `CONCURRENCY` identifies the maximum number of concurrently running transactions permitted in a resource group for roles. If fixed memory is reserved by a resource group \(non-zero `MEMORY_LIMIT`\), it is divided into `CONCURRENCY` number of transaction slots. Each slot is allocated a fixed, equal amount of the resource group memory. Greenplum Database guarantees this fixed memory to each transaction.
 
-![](graphics/resgroupmem.png "Resource Group Memory Allotments")
+![Resource Group Memory Allotments](graphics/resgroupmem.png "Resource Group Memory Allotments")
 
 When a query's memory usage exceeds the fixed per-transaction memory usage amount, Greenplum Database allocates available resource group shared memory to the query. The maximum amount of resource group memory available to a specific transaction slot is the sum of the transaction's fixed memory and the full resource group shared memory allotment.
 

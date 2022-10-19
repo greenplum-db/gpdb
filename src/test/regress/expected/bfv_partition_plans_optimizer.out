@@ -1,9 +1,22 @@
 -- start_matchsubs
 -- m/((Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (0[1-9]|[12][0-9]|3[01]) ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](.[0-9]+)? (?!0000)[0-9]{4}.*)+(['"])/
 -- s/((Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (0[1-9]|[12][0-9]|3[01]) ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](.[0-9]+)? (?!0000)[0-9]{4}.*)+(['"])/xxx xx xx xx:xx:xx xxxx"/
+-- m/Memory Usage: \d+\w?B/
+-- s/Memory Usage: \d+\w?B/Memory Usage: ###B/
+-- m/Memory: \d+kB/
+-- s/Memory: \d+kB/Memory: ###kB/
+-- m/Max: \d+kB/
+-- s/Max: \d+kB/Max: ###kB/
+-- m/Buckets: \d+/
+-- s/Buckets: \d+/Buckets: ###/
+-- m/Batches: \d+/
+-- s/Batches: \d+/Batches: ###/
+-- m/using \d+ of \d+ buckets/
+-- s/using \d+ of \d+ buckets/using ## of ### buckets/
 -- end_matchsubs
 create schema bfv_partition_plans;
 set search_path=bfv_partition_plans;
+SET optimizer_trace_fallback=on;
 --
 -- Initial setup for all the partitioning test for this suite
 --
@@ -72,6 +85,8 @@ distributed by (subscription_id, bill_stmt_id)
     
 -- TEST
 select count_operator('select cust_type, subscription_status,count(distinct subscription_id),sum(voice_call_min),sum(minute_per_call) from mpp7980 where month_id =E''2009-04-01'' group by rollup(1,2);','SIGSEGV');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               0
@@ -115,6 +130,8 @@ insert into mpp23195_t1 values (generate_series(1,19));
 insert into mpp23195_t2 values (1);
 -- TEST
 select find_operator('select * from mpp23195_t1,mpp23195_t2 where mpp23195_t1.i < mpp23195_t2.i;', 'Dynamic Index Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  find_operator 
 ---------------
  ['true']
@@ -153,12 +170,16 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 -- TEST
 set optimizer_enable_hashjoin = off;
 select find_operator('analyze select * from mpp21834_t2,mpp21834_t1 where mpp21834_t2.i < mpp21834_t1.i;','Dynamic Index Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  find_operator 
 ---------------
  ['false']
 (1 row)
 
 select find_operator('analyze select * from mpp21834_t2,mpp21834_t1 where mpp21834_t2.i < mpp21834_t1.i;','Nested Loop');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  find_operator 
 ---------------
  ['true']
@@ -192,6 +213,8 @@ insert into mpp23288(a) select generate_series(1,20);
 analyze mpp23288;
 -- TEST
 select count_operator('select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on (t1.a < t2.a and t2.a =10) order by t2.a, t1.a;','Dynamic Seq Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               2
@@ -212,6 +235,8 @@ select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on (t1.a < t2.a and t2
 (9 rows)
 
 select count_operator('select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on (t1.a < t2.a and (t2.a = 10 or t2.a = 5 or t2.a = 12)) order by t2.a, t1.a;','Dynamic Seq Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               2
@@ -247,6 +272,8 @@ select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on (t1.a < t2.a and (t
 (24 rows)
 
 select count_operator('select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on t1.a < t2.a and t2.a = 1 or t2.a < 10 order by t2.a, t1.a;','Dynamic Seq Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               2
@@ -485,60 +512,80 @@ analyze p3;
 analyze p;
 -- TEST
 select count_operator('select * from (select * from p1 union all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               2
 (1 row)
 
 select count_operator('select * from (select * from p1 union select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               2
 (1 row)
 
 select count_operator('select * from (select * from p1 except all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               0
 (1 row)
 
 select count_operator('select * from (select * from p1 except select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               2
 (1 row)
 
 select count_operator('select * from (select * from p1 intersect all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               2
 (1 row)
 
 select count_operator('select * from (select * from p1 union select * from p2 union all select * from p3) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               3
 (1 row)
 
 select count_operator('select * from (select * from p1 union select * from p2 union all select * from p) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               2
 (1 row)
 
 select count_operator('select * from (select * from p1 union select * from p union all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               2
 (1 row)
 
 select count_operator('select * from (select * from p1 union select * from p2 intersect all select * from p3) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               3
 (1 row)
 
 select count_operator('select * from (select * from p1 union select * from p intersect all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               2
@@ -577,6 +624,8 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 create index dbs_index on dbs using bitmap(c3);
 -- TEST
 select find_operator('(select * from dts where c2 = 1) union (select * from dts where c2 = 2) union (select * from dts where c2 = 3) union (select * from dts where c2 = 4) union (select * from dts where c2 = 5) union (select * from dts where c2 = 6) union (select * from dts where c2 = 7) union (select * from dts where c2 = 8) union (select * from dts where c2 = 9) union (select * from dts where c2 = 10);', 'Dynamic Seq Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  find_operator 
 ---------------
  ['true']
@@ -598,6 +647,8 @@ select find_operator('(select * from dts where c2 = 1) union (select * from dts 
 
 set optimizer_enable_dynamictablescan = off;
 select find_operator('(select * from dis where c3 = 1) union (select * from dis where c3 = 2) union (select * from dis where c3 = 3) union (select * from dis where c3 = 4) union (select * from dis where c3 = 5) union (select * from dis where c3 = 6) union (select * from dis where c3 = 7) union (select * from dis where c3 = 8) union (select * from dis where c3 = 9) union (select * from dis where c3 = 10);', 'Dynamic Index Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  find_operator 
 ---------------
  ['true']
@@ -618,6 +669,8 @@ select find_operator('(select * from dis where c3 = 1) union (select * from dis 
 (0 rows)
 
 select find_operator('select * from dbs where c2= 15 and c3 = 5;', 'Bitmap Heap Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  find_operator 
 ---------------
  ['false']
@@ -663,11 +716,17 @@ create index pp_rest_2_idx on pp_1_prt_3(c,a);
 -- TEST
 set optimizer_enable_dynamictablescan = off;
 select * from pp where b=2 and c=2;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
  a | b | c 
 ---+---+---
 (0 rows)
 
 select count_operator('select * from pp where b=2 and c=2;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
  count_operator 
 ----------------
               0
@@ -714,6 +773,8 @@ select * from ds_4 where month_id = '200800';
 (0 rows)
 
 select count_operator('select * from ds_4 where month_id = E''200800'';','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               0
@@ -725,6 +786,8 @@ select * from ds_4 where month_id > '200800';
 (0 rows)
 
 select count_operator('select * from ds_4 where month_id > E''200800'';','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               0
@@ -736,6 +799,8 @@ select * from ds_4 where month_id <= '200800';
 (0 rows)
 
 select count_operator('select * from ds_4 where month_id <= E''200800'';','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               0
@@ -747,6 +812,8 @@ select * from ds_4 a1,ds_4 a2 where a1.month_id = a2.month_id and a1.month_id > 
 (0 rows)
 
 select count_operator('select * from ds_4 a1,ds_4 a2 where a1.month_id = a2.month_id and a1.month_id > E''200800'';','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               1
@@ -807,7 +874,7 @@ EXPLAIN SELECT b FROM bar GROUP BY b;
    ->  HashAggregate  (cost=0.00..431.05 rows=7 width=4)
          Group Key: b
          ->  Dynamic Seq Scan on bar  (cost=0.00..431.01 rows=334 width=4)
-               Number of partitions to scan: 2 
+               Number of partitions to scan: 2 (out of 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
@@ -839,12 +906,12 @@ explain analyze select a.* from mpp8031 a, mpp8031 b where a.oid = b.oid;
    ->  Hash Join  (cost=0.00..862.00 rows=1 width=16) (never executed)
          Hash Cond: (mpp8031.oid = mpp8031_1.oid)
          ->  Dynamic Seq Scan on mpp8031  (cost=0.00..431.00 rows=1 width=16) (never executed)
-               Number of partitions to scan: 4 
+               Number of partitions to scan: 4 (out of 4)
          ->  Hash  (cost=431.00..431.00 rows=1 width=4) (never executed)
                Buckets: 524288  Batches: 1  Memory Usage: 4096kB
                ->  Dynamic Seq Scan on mpp8031 mpp8031_1  (cost=0.00..431.00 rows=1 width=4) (never executed)
-                     Number of partitions to scan: 4 
-                     Partitions scanned:  Avg 4.0 (out of 4) x 3 workers.  Max 4 parts (seg0).
+                     Number of partitions to scan: 4 (out of 4)
+                     Partitions scanned:  Avg 4.0 x 3 workers.  Max 4 parts (seg0).
  Planning Time: 4.433 ms
    (slice0)    Executor memory: 31K bytes.
    (slice1)    Executor memory: 4156K bytes avg x 3 workers, 4156K bytes max (seg0).  Work_mem: 4096K bytes max.
@@ -876,10 +943,16 @@ SUBPARTITION TEMPLATE
 END (2015111100::numeric) WITH (appendonly=false)
 );
 INSERT INTO part_tbl VALUES (2015111000, 479534741, 99999999);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
 INSERT INTO part_tbl VALUES (2015111000, 479534742, 99999999);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
 CREATE INDEX part_tbl_idx 
 ON part_tbl(profile_key);
 EXPLAIN SELECT * FROM part_tbl WHERE profile_key = 99999999;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
                                                 QUERY PLAN                                                
 ----------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.07 rows=2 width=25)
@@ -892,6 +965,8 @@ EXPLAIN SELECT * FROM part_tbl WHERE profile_key = 99999999;
 (7 rows)
 
 SELECT * FROM part_tbl WHERE profile_key = 99999999;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
  time_client_key | ngin_service_key | profile_key 
 -----------------+------------------+-------------
       2015111000 |        479534742 |    99999999
@@ -944,11 +1019,11 @@ explain select * from r_part r1, r_part r2 where r1.a=1; -- should eliminate par
    ->  Nested Loop  (cost=0.00..1324032.53 rows=3 width=16)
          Join Filter: true
          ->  Dynamic Seq Scan on r_part r_part_1  (cost=0.00..431.00 rows=3 width=8)
-               Number of partitions to scan: 9 
+               Number of partitions to scan: 9 (out of 9)
          ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
                ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
                      ->  Dynamic Seq Scan on r_part  (cost=0.00..431.00 rows=1 width=8)
-                           Number of partitions to scan: 1 
+                           Number of partitions to scan: 1 (out of 9)
                            Filter: (a = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (11 rows)
@@ -959,7 +1034,7 @@ explain select * from r_part where a in (7,8); -- should eliminate partitions
 ------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=2 width=8)
    ->  Dynamic Seq Scan on r_part  (cost=0.00..431.00 rows=1 width=8)
-         Number of partitions to scan: 2 
+         Number of partitions to scan: 2 (out of 9)
          Filter: (a = ANY ('{7,8}'::integer[]))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -993,7 +1068,7 @@ explain select * from r_part where a = 1 order by a,b; -- should eliminate parti
    ->  Sort  (cost=0.00..431.00 rows=1 width=8)
          Sort Key: a, b
          ->  Dynamic Seq Scan on r_part  (cost=0.00..431.00 rows=1 width=8)
-               Number of partitions to scan: 1 
+               Number of partitions to scan: 1 (out of 9)
                Filter: (a = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
@@ -1007,7 +1082,7 @@ explain execute f1(1); -- should eliminate partitions
    ->  Sort  (cost=0.00..431.00 rows=1 width=8)
          Sort Key: a, b
          ->  Dynamic Seq Scan on r_part  (cost=0.00..431.00 rows=1 width=8)
-               Number of partitions to scan: 1 
+               Number of partitions to scan: 1 (out of 9)
                Filter: (a = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
@@ -1021,7 +1096,7 @@ explain execute f2(2); -- should eliminate partitions
    ->  Sort  (cost=0.00..431.00 rows=1 width=8)
          Sort Key: a, b
          ->  Dynamic Seq Scan on r_part  (cost=0.00..431.00 rows=1 width=8)
-               Number of partitions to scan: 1 
+               Number of partitions to scan: 1 (out of 9)
                Filter: (a = 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
@@ -1034,7 +1109,7 @@ explain select * from r_co where a=2; -- should eliminate partitions
 ------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=8)
    ->  Dynamic Seq Scan on r_co  (cost=0.00..431.00 rows=1 width=8)
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 9)
          Filter: (a = 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1050,7 +1125,7 @@ explain execute f3(2); -- should eliminate partitions
    ->  Sort  (cost=0.00..431.00 rows=1 width=8)
          Sort Key: a, b
          ->  Dynamic Seq Scan on r_co  (cost=0.00..431.00 rows=1 width=8)
-               Number of partitions to scan: 1 
+               Number of partitions to scan: 1 (out of 9)
                Filter: (a = 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
@@ -1084,7 +1159,7 @@ explain select * from fact where dd < '2009-01-02'::date; -- partitions eliminat
 -------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
    ->  Dynamic Seq Scan on fact  (cost=0.00..431.00 rows=1 width=16)
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 4)
          Filter: (dd < '01-02-2009'::date)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1094,7 +1169,7 @@ explain select * from fact where dd < to_date('2009-01-02','YYYY-MM-DD'); -- par
 -------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
    ->  Dynamic Seq Scan on fact  (cost=0.00..431.00 rows=1 width=16)
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 4)
          Filter: (dd < '01-02-2009'::date)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1104,8 +1179,8 @@ explain select * from fact where dd < current_date; --partitions eliminated
 -------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
    ->  Dynamic Seq Scan on fact  (cost=0.00..431.00 rows=1 width=16)
-         Number of partitions to scan: 1 
-         Filter: (dd < '05-09-2022'::date)
+         Number of partitions to scan: 1 (out of 4)
+         Filter: (dd < '09-30-2022'::date)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
@@ -1117,7 +1192,7 @@ explain execute f1('2009-01-02'::date); -- should eliminate partitions
 -------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
    ->  Dynamic Seq Scan on fact  (cost=0.00..431.00 rows=1 width=16)
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 4)
          Filter: (dd < '01-02-2009'::date)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1128,7 +1203,7 @@ explain execute f1(to_date('2009-01-02', 'YYYY-MM-DD')); -- should eliminate par
 -------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
    ->  Dynamic Seq Scan on fact  (cost=0.00..431.00 rows=1 width=16)
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 4)
          Filter: (dd < '01-02-2009'::date)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1144,6 +1219,8 @@ create table mpp6247_bar (like mpp6247_foo);
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 -- EXPECT: Single HJ after partition elimination instead of sequence of HJ under Append
 select count_operator('delete from mpp6247_foo using mpp6247_bar where mpp6247_foo.c1 = mpp6247_bar.c1 and mpp6247_foo.dt = ''2009-05-03''', 'Hash Join');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               1
@@ -1151,6 +1228,102 @@ select count_operator('delete from mpp6247_foo using mpp6247_bar where mpp6247_f
 
 drop table mpp6247_bar;
 drop table mpp6247_foo;
+-- Validate that basic DELETE on partition table with index functions properly
+CREATE TABLE delete_from_indexed_pt (a int, b int) PARTITION BY RANGE(b) (START (0) END (7) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX index_delete_from_indexed_pt ON delete_from_indexed_pt USING bitmap(b);
+INSERT INTO delete_from_indexed_pt SELECT i, i%6 FROM generate_series(1, 10)i;
+EXPLAIN (COSTS OFF) DELETE FROM delete_from_indexed_pt WHERE b=1;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Delete on delete_from_indexed_pt
+   ->  Dynamic Seq Scan on delete_from_indexed_pt delete_from_indexed_pt_1
+         Number of partitions to scan: 1 (out of 3)
+         Filter: (b = 1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+DELETE FROM delete_from_indexed_pt WHERE b=1;
+SELECT * FROM delete_from_indexed_pt;
+ a  | b 
+----+---
+  6 | 0
+  5 | 5
+  9 | 3
+ 10 | 4
+  2 | 2
+  8 | 2
+  3 | 3
+  4 | 4
+(8 rows)
+
+-- Validate that basic DELETE on partition table using DPE functions properly
+CREATE TABLE delete_from_pt (a int, b int) PARTITION BY RANGE(b) (START (0) END (7) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE t(a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO delete_from_pt SELECT i, i%6 FROM generate_series(1, 10)i;
+INSERT INTO t VALUES (1);
+ANALYZE delete_from_pt, t;
+EXPLAIN (COSTS OFF, TIMING OFF, SUMMARY OFF, ANALYZE) DELETE FROM delete_from_pt WHERE b IN (SELECT b FROM delete_from_pt, t WHERE t.a=delete_from_pt.b);
+                                                                    QUERY PLAN                                                                     
+---------------------------------------------------------------------------------------------------------------------------------------------------
+ Delete on delete_from_pt (actual rows=0 loops=1)
+   ->  Hash Join (actual rows=1 loops=1)
+         Hash Cond: (delete_from_pt_1.b = delete_from_pt_2.b)
+         Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 1 of 262144 buckets.
+         ->  Dynamic Seq Scan on delete_from_pt delete_from_pt_1 (actual rows=3 loops=1)
+               Number of partitions to scan: 3 (out of 3)
+               Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
+         ->  Hash (actual rows=1 loops=1)
+               Buckets: 262144  Batches: 1  Memory Usage: 2049kB
+               ->  Partition Selector (selector id: $0) (actual rows=1 loops=1)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3) (actual rows=1 loops=1)
+                           ->  GroupAggregate (actual rows=1 loops=1)
+                                 Group Key: delete_from_pt_2.b
+                                 ->  Sort (actual rows=2 loops=1)
+                                       Sort Key: delete_from_pt_2.b
+                                       Sort Method:  quicksort  Memory: 75kB
+                                       Executor Memory: 178kB  Segments: 3  Max: 60kB (segment 0)
+                                       ->  Redistribute Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
+                                             Hash Key: delete_from_pt_2.b
+                                             ->  GroupAggregate (actual rows=1 loops=1)
+                                                   Group Key: delete_from_pt_2.b
+                                                   ->  Sort (actual rows=1 loops=1)
+                                                         Sort Key: delete_from_pt_2.b
+                                                         Sort Method:  quicksort  Memory: 75kB
+                                                         Executor Memory: 178kB  Segments: 3  Max: 60kB (segment 0)
+                                                         ->  Hash Join (actual rows=1 loops=1)
+                                                               Hash Cond: (delete_from_pt_2.b = t.a)
+                                                               Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 1 of 262144 buckets.
+                                                               ->  Dynamic Seq Scan on delete_from_pt delete_from_pt_2 (actual rows=3 loops=1)
+                                                                     Number of partitions to scan: 3 (out of 3)
+                                                                     Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
+                                                               ->  Hash (actual rows=1 loops=1)
+                                                                     Buckets: 262144  Batches: 1  Memory Usage: 2049kB
+                                                                     ->  Partition Selector (selector id: $1) (actual rows=1 loops=1)
+                                                                           ->  Broadcast Motion 3:3  (slice3; segments: 3) (actual rows=1 loops=1)
+                                                                                 ->  Seq Scan on t (actual rows=1 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(37 rows)
+
+SELECT * FROM delete_from_pt order by a;
+ a  | b 
+----+---
+  2 | 2
+  3 | 3
+  4 | 4
+  5 | 5
+  6 | 0
+  8 | 2
+  9 | 3
+ 10 | 4
+(8 rows)
+
+RESET optimizer_trace_fallback;
 -- CLEANUP
 -- start_ignore
 drop schema if exists bfv_partition_plans cascade;

@@ -18,7 +18,7 @@ MADlib’s suite of SQL-based algorithms run at scale within a single Greenplum 
 
 MADlib is part of the database fabric with no changes to the Greenplum architecture. This makes it easy for database administrators to deploy and manage since it is not a separate daemon or separate software running outside the database.
 
-![](graphics/gp_greenplum_diagram.png "Greenplum MADlib Analytics Architecture")
+![Greenplum with MADlib](graphics/gp_greenplum_diagram.png "Greenplum MADlib Analytics Architecture")
 
 ## <a id="section_lmf_pv1_rqb"></a>Machine Learning 
 

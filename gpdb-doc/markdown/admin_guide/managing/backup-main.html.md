@@ -20,7 +20,7 @@ The PostgreSQL non-parallel utilities should be used only for special cases. The
 
 The `pg_restore` utility requires compressed dump files created by `pg_dump` or `pg_dumpall`. To perform a non-parallel restore using parallel backup files, you can copy the backup files from each segment host to the master host, and then load them through the master.
 
-![](../graphics/nonpar_restore.jpg "Non-parallel Restore Using Parallel Backup Files")
+![Non-parallel Restore Using Parallel Backup Files](../graphics/nonpar_restore.jpg "Non-parallel Restore Using Parallel Backup Files")
 
 Another non-parallel method for backing up Greenplum Database data is to use the `COPY TO` SQL command to copy all or a portion of a table out of the database to a delimited text file on the master host.
 

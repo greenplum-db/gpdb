@@ -2861,16 +2861,28 @@ CTranslatorDXLToPlStmt::TranslateDXLWindow(
 			{
 				window->frameOptions |= FRAMEOPTION_ROWS;
 			}
+			else if (EdxlfsGroups == window_frame->ParseDXLFrameSpec())
+			{
+				window->frameOptions |= FRAMEOPTION_GROUPS;
+			}
 			else
 			{
 				window->frameOptions |= FRAMEOPTION_RANGE;
 			}
 
-			if (window_frame->ParseFrameExclusionStrategy() != EdxlfesNulls)
+			if (window_frame->ParseFrameExclusionStrategy() ==
+				EdxlfesCurrentRow)
 			{
-				GPOS_RAISE(gpdxl::ExmaDXL,
-						   gpdxl::ExmiQuery2DXLUnsupportedFeature,
-						   GPOS_WSZ_LIT("EXCLUDE clause in window frame"));
+				window->frameOptions |= FRAMEOPTION_EXCLUDE_CURRENT_ROW;
+			}
+			else if (window_frame->ParseFrameExclusionStrategy() ==
+					 EdxlfesGroup)
+			{
+				window->frameOptions |= FRAMEOPTION_EXCLUDE_GROUP;
+			}
+			else if (window_frame->ParseFrameExclusionStrategy() == EdxlfesTies)
+			{
+				window->frameOptions |= FRAMEOPTION_EXCLUDE_TIES;
 			}
 
 			// translate the CDXLNodes representing the leading and trailing edge
@@ -2895,35 +2907,35 @@ CTranslatorDXLToPlStmt::TranslateDXLWindow(
 					->ParseDXLFrameBoundary();
 			if (lead_boundary_type == EdxlfbUnboundedPreceding)
 			{
-				window->frameOptions |= FRAMEOPTION_END_UNBOUNDED_PRECEDING;
+				window->frameOptions |= FRAMEOPTION_START_UNBOUNDED_PRECEDING;
 			}
 			if (lead_boundary_type == EdxlfbBoundedPreceding)
 			{
-				window->frameOptions |= FRAMEOPTION_END_OFFSET_PRECEDING;
+				window->frameOptions |= FRAMEOPTION_START_OFFSET_PRECEDING;
 			}
 			if (lead_boundary_type == EdxlfbCurrentRow)
 			{
-				window->frameOptions |= FRAMEOPTION_END_CURRENT_ROW;
+				window->frameOptions |= FRAMEOPTION_START_CURRENT_ROW;
 			}
 			if (lead_boundary_type == EdxlfbBoundedFollowing)
 			{
-				window->frameOptions |= FRAMEOPTION_END_OFFSET_FOLLOWING;
+				window->frameOptions |= FRAMEOPTION_START_OFFSET_FOLLOWING;
 			}
 			if (lead_boundary_type == EdxlfbUnboundedFollowing)
 			{
-				window->frameOptions |= FRAMEOPTION_END_UNBOUNDED_FOLLOWING;
+				window->frameOptions |= FRAMEOPTION_START_UNBOUNDED_FOLLOWING;
 			}
 			if (lead_boundary_type == EdxlfbDelayedBoundedPreceding)
 			{
-				window->frameOptions |= FRAMEOPTION_END_OFFSET_PRECEDING;
+				window->frameOptions |= FRAMEOPTION_START_OFFSET_PRECEDING;
 			}
 			if (lead_boundary_type == EdxlfbDelayedBoundedFollowing)
 			{
-				window->frameOptions |= FRAMEOPTION_END_OFFSET_FOLLOWING;
+				window->frameOptions |= FRAMEOPTION_START_OFFSET_FOLLOWING;
 			}
 			if (0 != win_frame_leading_dxlnode->Arity())
 			{
-				window->endOffset =
+				window->startOffset =
 					(Node *) m_translator_dxl_to_scalar->TranslateDXLToScalar(
 						(*win_frame_leading_dxlnode)[0], &colid_var_mapping);
 			}
@@ -2937,38 +2949,44 @@ CTranslatorDXLToPlStmt::TranslateDXLWindow(
 					->ParseDXLFrameBoundary();
 			if (trail_boundary_type == EdxlfbUnboundedPreceding)
 			{
-				window->frameOptions |= FRAMEOPTION_START_UNBOUNDED_PRECEDING;
+				window->frameOptions |= FRAMEOPTION_END_UNBOUNDED_PRECEDING;
 			}
 			if (trail_boundary_type == EdxlfbBoundedPreceding)
 			{
-				window->frameOptions |= FRAMEOPTION_START_OFFSET_PRECEDING;
+				window->frameOptions |= FRAMEOPTION_END_OFFSET_PRECEDING;
 			}
 			if (trail_boundary_type == EdxlfbCurrentRow)
 			{
-				window->frameOptions |= FRAMEOPTION_START_CURRENT_ROW;
+				window->frameOptions |= FRAMEOPTION_END_CURRENT_ROW;
 			}
 			if (trail_boundary_type == EdxlfbBoundedFollowing)
 			{
-				window->frameOptions |= FRAMEOPTION_START_OFFSET_FOLLOWING;
+				window->frameOptions |= FRAMEOPTION_END_OFFSET_FOLLOWING;
 			}
 			if (trail_boundary_type == EdxlfbUnboundedFollowing)
 			{
-				window->frameOptions |= FRAMEOPTION_START_UNBOUNDED_FOLLOWING;
+				window->frameOptions |= FRAMEOPTION_END_UNBOUNDED_FOLLOWING;
 			}
 			if (trail_boundary_type == EdxlfbDelayedBoundedPreceding)
 			{
-				window->frameOptions |= FRAMEOPTION_START_OFFSET_PRECEDING;
+				window->frameOptions |= FRAMEOPTION_END_OFFSET_PRECEDING;
 			}
 			if (trail_boundary_type == EdxlfbDelayedBoundedFollowing)
 			{
-				window->frameOptions |= FRAMEOPTION_START_OFFSET_FOLLOWING;
+				window->frameOptions |= FRAMEOPTION_END_OFFSET_FOLLOWING;
 			}
 			if (0 != win_frame_trailing_dxlnode->Arity())
 			{
-				window->startOffset =
+				window->endOffset =
 					(Node *) m_translator_dxl_to_scalar->TranslateDXLToScalar(
 						(*win_frame_trailing_dxlnode)[0], &colid_var_mapping);
 			}
+
+			window->startInRangeFunc = window_frame->PdxlnStartInRangeFunc();
+			window->endInRangeFunc = window_frame->PdxlnEndInRangeFunc();
+			window->inRangeColl = window_frame->PdxlnInRangeColl();
+			window->inRangeAsc = window_frame->PdxlnInRangeAsc();
+			window->inRangeNullsFirst = window_frame->PdxlnInRangeNullsFirst();
 
 			// cleanup
 			child_contexts->Release();
@@ -4274,6 +4292,15 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 
 	IMDId *mdid_target_table = phy_dml_dxlop->GetDXLTableDescr()->MDId();
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(mdid_target_table);
+
+	if (md_rel->IsPartitioned())
+	{
+		dml->forceTupleRouting = true;
+	}
+	else
+	{
+		dml->forceTupleRouting = false;
+	}
 
 	if (IMDRelation::EreldistrMasterOnly != md_rel->GetRelDistribution())
 	{

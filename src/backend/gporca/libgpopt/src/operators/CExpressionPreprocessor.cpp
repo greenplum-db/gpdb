@@ -2840,17 +2840,19 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
 			CExpression *pprojexpr =
 				CUtils::PNthProjectElementExpr(pproject, ul);
 
-			CExpressionHandle exprhdl(mp);
-			exprhdl.Attach(pprojexpr);
-			exprhdl.DeriveProps(nullptr /*pdpctxt*/);
-
-			if (exprhdl.Arity() > 1 && exprhdl.DeriveHasNonScalarFunction(1))
+			if (pprojexpr->DeriveHasNonScalarFunction() ||
+				pprojexpr->DeriveHasSubquery())
 			{
 				// Bail if project expression contains a set-returning function
+				// or subquery
 				pdrgpexpr->Release();
 				pexpr->AddRef();
 				return pexpr;
 			}
+
+			CExpressionHandle exprhdl(mp);
+			exprhdl.Attach(pprojexpr);
+			exprhdl.DeriveProps(nullptr /*pdpctxt*/);
 
 			if (exprhdl.FChildrenHaveVolatileFunc())
 			{

@@ -6,7 +6,7 @@ You can deploy a backup or mirror of the master instance on a separate host mach
 
 When you enable master mirroring for an existing system, the primary master continues to provide service to users while a snapshot of the primary master instance is taken. While the snapshot is taken and deployed on the standby master, changes to the primary master are also recorded. After the snapshot has been deployed on the standby master, the standby master is synchronized and kept current using Write-Ahead Logging \(WAL\)-based streaming replication. Greenplum Database WAL replication uses the `walsender` and `walreceiver` replication processes. The `walsender` process is a primary master process. The `walreceiver` is a standby master process.
 
-![](../../graphics/standby_master.jpg "Master Mirroring in Greenplum Database")
+![Master Mirroring in Greenplum Database](../../graphics/standby_master.jpg "Master Mirroring in Greenplum Database")
 
 Since the master does not house user data, only system catalog tables are synchronized between the primary and standby masters. When these tables are updated, the replication logs that capture the changes are streamed to the standby master to keep it current with the primary. During WAL replication, all database modifications are written to replication logs before being applied, to ensure data integrity for any in-process operations.
 

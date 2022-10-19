@@ -6,7 +6,7 @@ Greenplum offers a unique combination of a powerful, massively parallel processi
 
 ## <a id="gp_ecosystem"></a>The Greenplum Database Integrated Analytics Ecosystem 
 
-![](graphics/gp_integrated_analyticsv3.png)
+![Greenplum integrated analytics](graphics/gp_integrated_analyticsv3.png)
 
 The following Greenplum Database analytics extensions are explored in different documentation sections, with installation and usage instructions:
 

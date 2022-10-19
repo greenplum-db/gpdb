@@ -30,6 +30,8 @@ test: copy_eol
 # file related tests (like gp_log_system, etc) faster.
 test: disable_autovacuum
 test: gp_toolkit
+# test gp_fastsequence allocation (early in schedule as log grepping is expensive)
+test: uao_dml/gp_fastsequence_row uao_dml/gp_fastsequence_column
 test: python_processed64bit
 test: enable_autovacuum
 
@@ -113,7 +115,7 @@ test: rangefuncs_cdb gp_dqa subselect_gp subselect_gp2 gp_transactions olap_grou
 
 # 'partition' runs for a long time, so try to keep it together with other
 # long-running tests.
-test: partition partition1 partition_indexing partition_storage partition_ddl partition_with_user_defined_function partition_unlogged partition_subquery partition_with_user_defined_function_that_truncates
+test: partition partition1 partition_indexing partition_storage partition_ddl partition_with_user_defined_function partition_unlogged partition_subquery partition_with_user_defined_function_that_truncates gp_partition_template
 
 test: index_constraint_naming index_constraint_naming_partition index_constraint_naming_upgrade
 

@@ -1454,6 +1454,20 @@ convert_ANY_sublink_to_join(PlannerInfo *root, SubLink *sublink,
 
 	if (correlated)
 	{
+		/* Delete ORDER BY and DISTINCT. 
+		 *
+		 * There is no need to do the group-by or order-by inside the
+		 * subquery, if we have decided to pull up the sublink (when the
+		 * subquery is correlated). For the group-by case, after the sublink
+		 * pull-up, there will be a semi-join plan node generated in top
+		 * level, which will weed out duplicate tuples naturally. For the
+		 * order-by case, after the sublink pull-up, the subquery will become
+		 * a jointree, inside which the tuples' order doesn't matter. In a
+		 * summary, it's safe to elimate the group-by or order-by causes here.
+		*/
+		cdbsubselect_drop_orderby(subselect);
+		cdbsubselect_drop_distinct(subselect);
+
 		/*
 		 * Under certain conditions, we cannot pull up the subquery as a join.
 		 */

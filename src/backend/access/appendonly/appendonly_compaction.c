@@ -34,6 +34,7 @@
 #include "access/tuptoaster.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
+#include "catalog/gp_fastsequence.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_am.h"
 #include "catalog/pg_appendonly.h"
@@ -447,6 +448,14 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	estate->es_result_relation_info = resultRelInfo;
 
 	/*
+	 * We don't want uniqueness checks to be performed while "insert"ing tuples
+	 * to a destination segfile during AppendOnlyMoveTuple(). This is to ensure
+	 * that we can avoid spurious conflicts between the moved tuple and the
+	 * original tuple.
+	 */
+	estate->gp_bypass_unique_check = true;
+
+	/*
 	 * Go through all visible tuples and move them to a new segfile.
 	 */
 	while (appendonly_getnextslot(&scanDesc->rs_base, ForwardScanDirection, slot))
@@ -795,7 +804,11 @@ AppendOnlyCompact(Relation aorel,
 		}
 		if (*insert_segno != -1)
 		{
-			insertDesc = appendonly_insert_init(aorel, *insert_segno);
+			/*
+			 * Note: since we don't know how many rows will actually be inserted,
+			 * we provide the default number of rows to bump gp_fastsequence by.
+			 */
+			insertDesc = appendonly_insert_init(aorel, *insert_segno, NUM_FAST_SEQUENCES);
 			AppendOnlySegmentFileFullCompaction(aorel,
 												insertDesc,
 												fsinfo,

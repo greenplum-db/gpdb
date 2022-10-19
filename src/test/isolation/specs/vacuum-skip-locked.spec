@@ -8,11 +8,17 @@ setup
 	CREATE TABLE parted (a INT) PARTITION BY LIST (a);
 	CREATE TABLE part1 PARTITION OF parted FOR VALUES IN (1);
 	CREATE TABLE part2 PARTITION OF parted FOR VALUES IN (2);
+
+	CREATE TABLE parted_ao (a INT) using ao_column
+		distributed by (a) PARTITION BY LIST (a);
+	CREATE TABLE part1_ao PARTITION OF parted_ao FOR VALUES IN (1);
+	CREATE TABLE part2_ao PARTITION OF parted_ao FOR VALUES IN (2);
 }
 
 teardown
 {
 	DROP TABLE IF EXISTS parted;
+	DROP TABLE IF EXISTS parted_ao;
 }
 
 session "s1"
@@ -30,6 +36,16 @@ step "commit"
 {
 	COMMIT;
 }
+step "lock_share_ao"
+{
+	BEGIN;
+	LOCK part1_ao IN SHARE MODE;
+}
+step "lock_access_exclusive_ao"
+{
+	BEGIN;
+	LOCK part1_ao IN ACCESS EXCLUSIVE MODE;
+}
 
 session "s2"
 step "vac_specified"		{ VACUUM (SKIP_LOCKED) part1, part2; }
@@ -40,6 +56,14 @@ step "vac_analyze_specified"	{ VACUUM (ANALYZE, SKIP_LOCKED) part1, part2; }
 step "vac_analyze_all_parts"	{ VACUUM (ANALYZE, SKIP_LOCKED) parted; }
 step "vac_full_specified"	{ VACUUM (SKIP_LOCKED, FULL) part1, part2; }
 step "vac_full_all_parts"	{ VACUUM (SKIP_LOCKED, FULL) parted; }
+step "vac_specified_ao"		{ VACUUM (SKIP_LOCKED) part1_ao, part2_ao; }
+step "vac_all_parts_ao"		{ VACUUM (SKIP_LOCKED) parted_ao; }
+step "analyze_specified_ao"	{ ANALYZE (SKIP_LOCKED) part1_ao, part2_ao; }
+step "analyze_all_parts_ao"	{ ANALYZE (SKIP_LOCKED) parted_ao; }
+step "vac_analyze_specified_ao"	{ VACUUM (ANALYZE, SKIP_LOCKED) part1_ao, part2_ao; }
+step "vac_analyze_all_parts_ao"	{ VACUUM (ANALYZE, SKIP_LOCKED) parted_ao; }
+step "vac_full_specified_ao"	{ VACUUM (SKIP_LOCKED, FULL) part1_ao, part2_ao; }
+step "vac_full_all_parts_ao"	{ VACUUM (SKIP_LOCKED, FULL) parted_ao; }
 
 permutation "lock_share" "vac_specified" "commit"
 permutation "lock_share" "vac_all_parts" "commit"
@@ -62,3 +86,18 @@ permutation "lock_access_exclusive" "vac_analyze_specified" "commit"
 #permutation "lock_access_exclusive" "vac_analyze_all_parts" "commit"
 permutation "lock_access_exclusive" "vac_full_specified" "commit"
 permutation "lock_access_exclusive" "vac_full_all_parts" "commit"
+
+permutation "lock_share_ao" "vac_specified_ao" "commit"
+permutation "lock_share_ao" "vac_all_parts_ao" "commit"
+permutation "lock_share_ao" "analyze_specified_ao" "commit"
+permutation "lock_share_ao" "analyze_all_parts_ao" "commit"
+permutation "lock_share_ao" "vac_analyze_specified_ao" "commit"
+permutation "lock_share_ao" "vac_analyze_all_parts_ao" "commit"
+permutation "lock_share_ao" "vac_full_specified_ao" "commit"
+permutation "lock_share_ao" "vac_full_all_parts_ao" "commit"
+permutation "lock_access_exclusive_ao" "vac_specified_ao" "commit"
+permutation "lock_access_exclusive_ao" "vac_all_parts_ao" "commit"
+permutation "lock_access_exclusive_ao" "analyze_specified_ao" "commit"
+permutation "lock_access_exclusive_ao" "vac_analyze_specified_ao" "commit"
+permutation "lock_access_exclusive_ao" "vac_full_specified_ao" "commit"
+permutation "lock_access_exclusive_ao" "vac_full_all_parts_ao" "commit"

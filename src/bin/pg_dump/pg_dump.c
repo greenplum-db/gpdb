@@ -361,49 +361,8 @@ static void testGPbackend(Archive *fout);
 static char *nextToken(register char **stringp, register const char *delim);
 static void addDistributedBy(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo, int actual_atts);
 static void addDistributedByOld(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo, int actual_atts);
-static bool isGPDB(Archive *fout);
-static bool isGPDB6000OrLater(Archive *fout);
 
 /* END MPP ADDITION */
-
-/*
- * Check if we are talking to GPDB
- */
-static bool
-isGPDB(Archive *fout)
-{
-	static int	value = -1;		/* -1 = not known yet, 0 = no, 1 = yes */
-
-	/* Query the server on first call, and cache the result */
-	if (value == -1)
-	{
-		const char *query = "select pg_catalog.version()";
-		PGresult   *res;
-		char	   *ver;
-
-		res = ExecuteSqlQuery(fout, query, PGRES_TUPLES_OK);
-
-		ver = (PQgetvalue(res, 0, 0));
-		if (strstr(ver, "Greenplum") != NULL)
-			value = 1;
-		else
-			value = 0;
-
-		PQclear(res);
-	}
-	return (value == 1) ? true : false;
-}
-
-
-static bool
-isGPDB6000OrLater(Archive *fout)
-{
-	if (!isGPDB(fout))
-		return false;		/* Not Greenplum at all. */
-
-	/* GPDB 6 is based on PostgreSQL 9.4 */
-	return fout->remoteVersion >= 90400;
-}
 
 int
 main(int argc, char **argv)
@@ -884,7 +843,7 @@ main(int argc, char **argv)
 	 * We allow the server to be back to 8.3, and up to any minor release of
 	 * our own major version.  (See also version check in pg_dumpall.c.)
 	 */
-	fout->minRemoteVersion = 80300;	/* we can handle back to 8.3 */
+	fout->minRemoteVersion = GPDB5_MAJOR_PGVERSION;	/* we can handle back to 8.3 */
 	fout->maxRemoteVersion = (PG_VERSION_NUM / 100) * 100 + 99;
 
 	fout->numWorkers = numWorkers;
@@ -3416,9 +3375,9 @@ dumpDatabaseConfig(Archive *AH, PQExpBuffer outbuf,
 	}
 
 	/*
-	 * If we're upgrading from GPDB 5 or below, use the legacy hash ops.
+	 * If we're upgrading from GPDB 5, use the legacy hash ops.
 	 */
-	if (AH->dopt->binary_upgrade && AH->remoteVersion < 90400)
+	if (AH->dopt->binary_upgrade && AH->remoteVersion < GPDB6_MAJOR_PGVERSION)
 	{
 		makeAlterConfigCommand(conn, "gp_use_legacy_hashops=on",
 							   "DATABASE", dbname, NULL, NULL, outbuf);
@@ -4621,10 +4580,11 @@ binary_upgrade_set_namespace_oid(Archive *fout, PQExpBuffer upgrade_buffer,
 	/*
 	 * In PostgreSQL, the creation of the public schema is not dumped, because
 	 * it's assumed to exist in a new cluster. But in GPDB, we need to re-create
-	 * it, so that we can set its OID.
-	 *
-	 * GPDB_12_MERGE_FIXME: Or could we rely that it has the same built-in
-	 * OID on all nodes?
+	 * it, so that we can set its OID. This change is required because Oid
+	 * preassignment during upgrade requires the namespace. If the public
+	 * schema is not re-created, Oid preassignments in public will be
+	 * mismatched between old and new cluster if the schema had been
+	 * dropped and recreated on the old cluster.
 	 */
 	if (strcmp(pg_nspname, "public") == 0)
 	{
@@ -6527,7 +6487,7 @@ getTables(Archive *fout, int *numTables)
 	 * If there is more than 1 entry in the policy table for an
 	 * oid the scalar subquery will fail as intended.
 	 */
-	if (isGPDB6000OrLater(fout))
+	if (fout->remoteVersion >= GPDB6_MAJOR_PGVERSION)
 	 		appendPQExpBufferStr(query,
 							"pg_catalog.pg_get_table_distributedby(c.oid) as distclause, ");
 	else
@@ -6585,7 +6545,7 @@ getTables(Archive *fout, int *numTables)
 					" AND tc.relkind = " CppAsString2(RELKIND_TOASTVALUE)
 					" AND c.relkind <> " CppAsString2(RELKIND_PARTITIONED_TABLE) ")\n");
 
-	if (fout->remoteVersion <= 90426) // GPDB 6 or below
+	if (fout->remoteVersion < GPDB7_MAJOR_PGVERSION)
 		appendPQExpBufferStr(query,
 						  "LEFT JOIN pg_partition_rule pr ON c.oid = pr.parchildrelid\n"
 						  "LEFT JOIN pg_partition p ON pr.paroid = p.oid\n"
@@ -6986,7 +6946,7 @@ getBMIndxInfo(Archive *fout)
 	Oid bitmap_index_namespace;
 
 	/* On GPDB5 pg_bitmapindex OID is 3012 */
-	bitmap_index_namespace = fout->remoteVersion >= 90400 ? PG_BITMAPINDEX_NAMESPACE : 3012;
+	bitmap_index_namespace = fout->remoteVersion >= GPDB6_MAJOR_PGVERSION ? PG_BITMAPINDEX_NAMESPACE : 3012;
 
 	resetPQExpBuffer(query);
 
@@ -7056,29 +7016,6 @@ getOwnedSeqs(Archive *fout, TableInfo tblinfo[], int numTables)
 			continue;			/* not an owned sequence */
 
 		owning_tab = findTableByOid(seqinfo->owning_tab);
-
-		/*
-		 * GPDB_96_MERGE_FIXME: Currently, ALTER TABLE EXCHANGE can produce
-		 * a situation that isn't handled well:
-		 *
-		 * create table parttab (i int4, p serial) partition by range (i) (start (1) end (2));
-		 * create table ex (i int4, p serial) ;
-		 * Alter table parttab exchange partition for (rank(1)) with table ex;
-		 *
-		 * After these commands, the sequence implictly created for ex.p
-		 * column, 'ex_p_seq', is still Owned By the original 'ex' table,
-		 * which is now partition of 'parttab'. But because partitions are not
-		 * put into the list of tables, findTableByOid() will return NULL.
-		 *
-		 * Upstream commit f9e439b1ca introduces a sanity check here, which
-		 * will throw an error if findTableByOid() returns NULL, which is
-		 * better than segfaulting. But we really need to fix ALTER TABLE
-		 * EXCHANGE PARTITION so that it doesn't create this situation in
-		 * the first place. For now though, just skip over, like we used to
-		 * before the 9.6 merge.
-		 */
-		if (owning_tab == NULL)
-			continue;
 
 		if (owning_tab == NULL)
 			fatal("failed sanity check, parent table with OID %u of sequence with OID %u not found",
@@ -12346,7 +12283,7 @@ dumpFunc(Archive *fout, const FuncInfo *finfo)
 								"false AS proleakproof,\n");
 
 		/* GPDB6 added proexeclocation */
-		if (fout->remoteVersion >= 90400)
+		if (fout->remoteVersion >= GPDB6_MAJOR_PGVERSION)
 				appendPQExpBuffer(query,
 								"proexeclocation,\n");
 		else
@@ -16135,7 +16072,6 @@ dumpExternal(Archive *fout, const TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer 
 		bool		isweb = false;
 		bool		iswritable = false;
 		char	   *options;
-		bool		gpdb6OrLater = isGPDB6000OrLater(fout);
 		char	   *logerrors = NULL;
 		char	   *on_clause;
 		char	   *qualrelname;
@@ -16151,7 +16087,7 @@ dumpExternal(Archive *fout, const TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer 
 						  qualrelname);
 
 		/* Now get required information from pg_exttable */
-		if (gpdb6OrLater)
+		if (fout->remoteVersion >= GPDB6_MAJOR_PGVERSION)
 		{
 			appendPQExpBuffer(query,
 					"SELECT x.urilocation, x.execlocation, x.fmttype, x.fmtopts, x.command, "
@@ -16948,7 +16884,7 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 		 * These do not exist on GPDB7, so first check if we are dumping
 		 * from <= GPDB6.
 		 */
-		if (fout->remoteVersion <= 90400 &&
+		if (fout->remoteVersion < GPDB7_MAJOR_PGVERSION &&
 				(*tbinfo->partclause && *tbinfo->partclause != '\0'))
 		{
 			/* partition by clause */
@@ -17129,7 +17065,7 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 					appendStringLiteralAH(q, tbinfo->attnames[j], fout);
 
 					/* GPDB partitioning */
-					if (fout->remoteVersion <= 90400)
+					if (fout->remoteVersion < GPDB7_MAJOR_PGVERSION)
 					{
 						/*
 						 * Do for all descendants of a partition table.
@@ -17458,14 +17394,10 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 		char	   *tableam = NULL;
 
 		if (tbinfo->relkind == RELKIND_RELATION ||
+			tbinfo->relkind == RELKIND_PARTITIONED_TABLE ||
 			tbinfo->relkind == RELKIND_MATVIEW)
 			tableam = tbinfo->amname;
 
-		/*
-		 * GPDB_94_MERGE_FIXME: Why gpdb doesn't pass conditionally
-		 * SECTION_PRE_DATA or SECTION_POST_DATA based on tbinfo->postponed_def
-		 * similar to upstream.
-		 */
 		ArchiveEntry(fout, tbinfo->dobj.catId, tbinfo->dobj.dumpId,
 					 ARCHIVE_OPTS(.tag = tbinfo->dobj.name,
 								  .namespace = tbinfo->dobj.namespace->dobj.name,
@@ -17474,7 +17406,8 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 								  .tableam = tableam,
 								  .owner = tbinfo->rolname,
 								  .description = reltypename,
-								  .section = SECTION_PRE_DATA,
+								  .section = tbinfo->postponed_def ?
+								  SECTION_POST_DATA : SECTION_PRE_DATA,
 								  .createStmt = q->data,
 								  .dropStmt = delq->data));
 	}
@@ -17590,12 +17523,11 @@ dumpAttrDef(Archive *fout, const AttrDefInfo *adinfo)
 	qualrelname = pg_strdup(fmtQualifiedDumpable(tbinfo));
 
 	/*
-	 * GPDB_12_MERGE_FIXME: upstream always uses ONLY here, why gpdb need
-	 * condition? Fix corresponding tests in t/002_pg_dump.pl if you change
-	 * this.
-	 *
-	 * If the table is the parent of a partitioning hierarchy, the default
-	 * constraint must be applied to all children as well.
+	 * GPDB: Upstream uses ALTER TABLE ONLY below. If the table
+	 * is the parent of a GPDB partitioning hierarchy, the default
+	 * constraint must cascade to all children as well. Because of
+	 * this, we use ALTER TABLE instead when acting on a partition
+	 * parent.
 	 */
 	appendPQExpBuffer(q, "ALTER TABLE %s%s ",
 					  tbinfo->parparent ? "" : "ONLY ",
@@ -19680,7 +19612,7 @@ testGPbackend(Archive *fout)
 static void
 addDistributedBy(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo, int actual_atts)
 {
-	if (isGPDB6000OrLater(fout))
+	if (fout->remoteVersion >= GPDB6_MAJOR_PGVERSION)
 	{
 		if (strcmp(tbinfo->distclause, "") != 0)
 			appendPQExpBuffer(q, " %s", tbinfo->distclause);
