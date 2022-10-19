@@ -231,7 +231,6 @@ explain (costs off, timing off, summary off, analyze) select * from pt where pti
          Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 2 of 262144 buckets.
          ->  Dynamic Seq Scan on pt (actual rows=8 loops=1)
                Number of partitions to scan: 6 (out of 6)
-               Filter: (NOT (ptid IS NULL))
                Partitions scanned:  Avg 2.0 x 3 workers.  Max 2 parts (seg0).
          ->  Hash (actual rows=2 loops=1)
                Buckets: 262144  Batches: 1  Memory Usage: 2049kB
