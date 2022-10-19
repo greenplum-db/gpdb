@@ -707,3 +707,28 @@ drop cascades to table testschema.atable
 drop cascades to table testschema.tablespace_acl
 DROP ROLE regress_tablespace_user1;
 DROP ROLE regress_tablespace_user2;
+-- Test that altering tablespace of a partition table should recurse into its child tables unless ONLY is specified.
+CREATE TABLE tablespace_part(a int, b int) PARTITION BY RANGE(a) (partition t1 START (1) END (100));
+CREATE TABLESPACE myts LOCATION '@testtablespace@';
+ALTER TABLE tablespace_part SET TABLESPACE myts;
+-- Both parent and child tables use the new tablespace
+SELECT c.relname, t.spcname FROM pg_class c LEFT JOIN pg_tablespace t ON c.reltablespace = t.oid WHERE relname LIKE 'tablespace_part%';
+         relname          | spcname 
+--------------------------+---------
+ tablespace_part          | myts
+ tablespace_part_1_prt_t1 | myts
+(2 rows)
+
+DROP TABLE tablespace_part;
+CREATE TABLE tablespace_part(a int, b int) PARTITION BY RANGE(a) (partition t1 START (1) END (100));
+ALTER TABLE ONLY tablespace_part SET TABLESPACE myts;
+-- Only the parent table uses the new tablespace
+SELECT c.relname, t.spcname FROM pg_class c LEFT JOIN pg_tablespace t ON c.reltablespace = t.oid WHERE relname LIKE 'tablespace_part%';
+         relname          | spcname 
+--------------------------+---------
+ tablespace_part          | myts
+ tablespace_part_1_prt_t1 | 
+(2 rows)
+
+DROP TABLE tablespace_part;
+DROP TABLESPACE myts;
