@@ -1837,7 +1837,11 @@ fix_expr_common(PlannerInfo *root, Node *node)
 	else if (IsA(node, GroupingFunc))
 	{
 		GroupingFunc *g = (GroupingFunc *) node;
-		AttrNumber *grouping_map = root->grouping_map;
+                AttrNumber *grouping_map = NULL;
+                if(NULL != root)
+                {
+                  grouping_map = root->grouping_map;
+                }
 
 		/* If there are no grouping sets, we don't need this. */
 

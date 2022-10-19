@@ -3161,17 +3161,21 @@ CTranslatorDXLToPlStmt::TranslateDXLSubQueryScan(
 }
 
 static bool
-ContainsSetReturningScalarOp(const CDXLNode *scalar_op_expr_dxlnode)
+ContainsLowLevelSetReturningFunctions(const CDXLNode *scalar_expr_dxlnode)
 {
-	const ULONG arity = scalar_op_expr_dxlnode->Arity();
+	const ULONG arity = scalar_expr_dxlnode->Arity();
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
-		CDXLNode *expr_dxlnode = (*scalar_op_expr_dxlnode)[ul];
+		CDXLNode *expr_dxlnode = (*scalar_expr_dxlnode)[ul];
 		CDXLOperator *op = expr_dxlnode->GetOperator();
 		Edxlopid dxlopid = op->GetDXLOperator();
 		if (EdxlopScalarFuncExpr == dxlopid)
 		{
 			if (CDXLScalarFuncExpr::Cast(op)->ReturnsSet())
+			{
+				return true;
+			}
+			else if (ContainsLowLevelSetReturningFunctions(expr_dxlnode))
 			{
 				return true;
 			}
@@ -3182,7 +3186,18 @@ ContainsSetReturningScalarOp(const CDXLNode *scalar_op_expr_dxlnode)
 		}
 		else if (EdxlopScalarOpExpr == dxlopid)
 		{
-			if (ContainsSetReturningScalarOp(expr_dxlnode))
+			if (ContainsLowLevelSetReturningFunctions(expr_dxlnode))
+			{
+				return true;
+			}
+			else
+			{
+				continue;
+			}
+		}
+		else if (EdxlopScalarCast == dxlopid)
+		{
+			if (ContainsLowLevelSetReturningFunctions(expr_dxlnode))
 			{
 				return true;
 			}
@@ -3219,14 +3234,16 @@ ContainsSetReturningFuncOrOp(const CDXLNode *project_list_dxlnode,
 		{
 			case EdxlopScalarFuncExpr:
 			{
-				if (!(CDXLScalarFuncExpr::Cast(op)->ReturnsSet()))
+				if (!(CDXLScalarFuncExpr::Cast(op)->ReturnsSet()) &&
+					ContainsLowLevelSetReturningFunctions(expr_dxlnode))
 				{
 					return true;
 				}
+				break;
 			}
 			case EdxlopScalarOpExpr:
 			{
-				if (ContainsSetReturningScalarOp(expr_dxlnode))
+				if (ContainsLowLevelSetReturningFunctions(expr_dxlnode))
 				{
 					return true;
 				}
@@ -3449,7 +3466,7 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 			project_set_final_plan = temp_plan_project_set;
 		}
 	}
-	if (nullptr != child_plan)
+	if (nullptr != child_plan && nullptr != project_set_child_plan)
 	{
 		project_set_child_plan->lefttree = child_plan;
 	}
