@@ -18,6 +18,8 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP } | UNLOGGED] TABLE [IF NOT EXISTS]
     [, ... ]
 ] )
 [ INHERITS ( <parent_table> [, ... ] ) ]
+
+[ USING ( <access method> ) ]
 [ WITH ( <storage_parameter> [=<value>] [, ... ] ) ]
 [ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
 [ TABLESPACE <tablespace_name> ]
@@ -58,6 +60,8 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
     | <table_constraint> } 
     [, ... ]
 ) ]
+
+[ USING ( <access method> ) ]
 [ WITH ( <storage_parameter> [=<value>] [, ... ] ) ]
 [ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
 [ TABLESPACE <tablespace_name> ]
@@ -115,6 +119,12 @@ and storage\_directive for a column is:
     [blocksize={8192-2097152} ]
 ```
 
+and access_method for the table is:
+
+```
+
+```
+
 and storage\_parameter for the table is:
 
 ```
@@ -127,6 +137,7 @@ and storage\_parameter for the table is:
    fillfactor={10-100}
    [oids=FALSE]
 ```
+
 
 and key\_action is:
 
@@ -348,6 +359,14 @@ INITIALLY IMMEDIATE
 INITIALLY DEFERRED
 :   If a constraint is deferrable, this clause specifies the default time to check the constraint. If the constraint is `INITIALLY IMMEDIATE`, it is checked after each statement. This is the default. If the constraint is `INITIALLY DEFERRED`, it is checked only at the end of the transaction. The constraint check time can be altered with the `SET CONSTRAINTS` command.
 
+USING ( access_method=value)
+:   The `USING` clause specifies the access method for the table you are creating. Set to `heap` to create the table as a heap-storage table, `ao_row` to create the table as append-optimized with row-oriented storage (AO), or `ao_column` to create the table as append-optimized with column-oriented storage (AOCO). The default is `heap`.
+
+  <p class="note">
+<strong>Note:</strong>
+While you can also specify the table's access method using <code>WITH ( storage_parameter=appendoptimized )</code> VMware recommends that you use <code>USING ( access_method=value )</code> instead.
+</p>
+  
 WITH \( storage\_parameter=value \)
 :   The `WITH` clause can specify storage parameters for tables, and for indexes associated with a `UNIQUE` or `PRIMARY` constraint. Note that you can also set storage parameters on a particular partition or subpartition by declaring the `WITH` clause in the partition specification. The lowest-level settings have priority.
 
