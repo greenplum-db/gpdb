@@ -129,7 +129,7 @@ static Node *fix_scan_expr(PlannerInfo *root, Node *node, int rtoffset);
 static Node *fix_scan_expr_mutator(Node *node, fix_scan_expr_context *context);
 static bool fix_scan_expr_walker(Node *node, fix_scan_expr_context *context);
 static void set_join_references(PlannerInfo *root, Join *join, int rtoffset);
-static void set_upper_references(PlannerInfo *root, Plan *plan, int rtoffset);
+void set_upper_references(PlannerInfo *root, Plan *plan, int rtoffset);
 static void set_param_references(PlannerInfo *root, Plan *plan);
 static Node *convert_combining_aggrefs(Node *node, void *context);
 static Node *convert_deduplicated_aggrefs(Node *node, void *context);
@@ -1828,14 +1828,20 @@ fix_expr_common(PlannerInfo *root, Node *node)
 
 		/* Check for regclass reference */
 		if (ISREGCLASSCONST(con))
-			root->glob->relationOids =
-				lappend_oid(root->glob->relationOids,
-							DatumGetObjectId(con->constvalue));
+                  if (NULL !=root) {
+                    root->glob->relationOids =
+                        lappend_oid(root->glob->relationOids,
+                                    DatumGetObjectId(con->constvalue));
+                  }
 	}
 	else if (IsA(node, GroupingFunc))
 	{
 		GroupingFunc *g = (GroupingFunc *) node;
-		AttrNumber *grouping_map = root->grouping_map;
+                AttrNumber *grouping_map = NULL;
+
+                if(NULL != root) {
+                  grouping_map = root->grouping_map;
+                }
 
 		/* If there are no grouping sets, we don't need this. */
 
@@ -2163,7 +2169,7 @@ set_join_references(PlannerInfo *root, Join *join, int rtoffset)
  * needed in the output then we want to reference the subplan tlist element
  * rather than recomputing the expression.
  */
-static void
+void
 set_upper_references(PlannerInfo *root, Plan *plan, int rtoffset)
 {
 	Plan	   *subplan = plan->lefttree;
@@ -3218,8 +3224,10 @@ record_plan_function_dependency(PlannerInfo *root, Oid funcid)
 		inval_item->cacheId = PROCOID;
 		inval_item->hashValue = GetSysCacheHashValue1(PROCOID,
 													  ObjectIdGetDatum(funcid));
-
-		root->glob->invalItems = lappend(root->glob->invalItems, inval_item);
+                if (NULL != root) {
+                  root->glob->invalItems =
+                      lappend(root->glob->invalItems, inval_item);
+                }
 		add_proc_oids_for_dump(funcid);
 	}
 }

@@ -1271,7 +1271,10 @@ split_pathtarget_at_srfs(PlannerInfo *root,
 						add_sp_item_to_pathtarget(ntarget, item);
 				}
 			}
-			set_pathtarget_cost_width(root, ntarget);
+
+                        if (NULL != root) {
+                          set_pathtarget_cost_width(root, ntarget);
+                        }
 		}
 
 		/*

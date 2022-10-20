@@ -23,12 +23,16 @@ extern "C" {
 #include "cdb/cdbvars.h"
 #include "executor/execPartition.h"
 #include "executor/executor.h"
+#include "nodes/makefuncs.h"
 #include "nodes/nodes.h"
 #include "nodes/plannodes.h"
 #include "nodes/primnodes.h"
+#include "optimizer/setrefs.h"
+#include "optimizer/tlist.h"
 #include "partitioning/partdesc.h"
 #include "storage/lmgr.h"
 #include "utils/partcache.h"
+
 #if 0
 #include "cdb/partitionselection.h"
 #endif
@@ -3176,6 +3180,34 @@ CTranslatorDXLToPlStmt::TranslateDXLSubQueryScan(
 }
 
 static bool
+ContainsLowLevelSetReturningFunctions(const CDXLNode *scalar_expr_dxlnode)
+{
+	const ULONG arity = scalar_expr_dxlnode->Arity();
+	for (ULONG ul = 0; ul < arity; ul++)
+	{
+		CDXLNode *expr_dxlnode = (*scalar_expr_dxlnode)[ul];
+		CDXLOperator *op = expr_dxlnode->GetOperator();
+		Edxlopid dxlopid = op->GetDXLOperator();
+		if (EdxlopScalarFuncExpr == dxlopid)
+		{
+			if (CDXLScalarFuncExpr::Cast(op)->ReturnsSet() ||
+				ContainsLowLevelSetReturningFunctions(expr_dxlnode))
+			{
+				return true;
+			}
+		}
+		else
+		{
+			if (ContainsLowLevelSetReturningFunctions(expr_dxlnode))
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+static bool
 ContainsSetReturningFuncOrOp(const CDXLNode *project_list_dxlnode,
 							 CMDAccessor *md_accessor)
 {
@@ -3191,67 +3223,36 @@ ContainsSetReturningFuncOrOp(const CDXLNode *project_list_dxlnode,
 		CDXLNode *expr_dxlnode = (*proj_elem_dxlnode)[0];
 
 		CDXLOperator *op = expr_dxlnode->GetOperator();
-		switch (op->GetDXLOperator())
+		Edxlopid dxlopid = op->GetDXLOperator();
+		if (EdxlopScalarFuncExpr == dxlopid)
 		{
-			case EdxlopScalarFuncExpr:
-				if (CDXLScalarFuncExpr::Cast(op)->ReturnsSet())
-				{
-					return true;
-				}
-				break;
-			case EdxlopScalarOpExpr:
+			if (!(CDXLScalarFuncExpr::Cast(op)->ReturnsSet()) &&
+				ContainsLowLevelSetReturningFunctions(expr_dxlnode))
 			{
-				const IMDScalarOp *md_sclar_op = md_accessor->RetrieveScOp(
-					CDXLScalarOpExpr::Cast(op)->MDId());
-				const IMDFunction *md_func =
-					md_accessor->RetrieveFunc(md_sclar_op->FuncMdId());
-				if (md_func->ReturnsSet())
-				{
-					return true;
-				}
-				break;
+				return true;
 			}
-			default:
-				break;
+		}
+		else
+		{
+			if (ContainsLowLevelSetReturningFunctions(expr_dxlnode))
+			{
+				return true;
+			}
 		}
 	}
 	return false;
 }
 
-// GPDB_12_MERGE_FIXME: this duplicates a check in ExecInitProjectSet
-static bool
-SanityCheckProjectSetTargetList(List *targetlist)
+void
+setPlanIdForChildNodes(Plan *iterator, ULONG newDiffInPlanNodeId)
 {
-	ListCell *lc;
-	ForEach(lc, targetlist)
+	if (nullptr == iterator)
 	{
-		TargetEntry *te = (TargetEntry *) lfirst(lc);
-		Expr *expr = te->expr;
-		List *args;
-		if ((IsA(expr, FuncExpr) && ((FuncExpr *) expr)->funcretset) ||
-			(IsA(expr, OpExpr) && ((OpExpr *) expr)->opretset))
-		{
-			if (IsA(expr, FuncExpr))
-			{
-				args = ((FuncExpr *) expr)->args;
-			}
-			else
-			{
-				args = ((OpExpr *) expr)->args;
-			}
-			if (gpdb::ExpressionReturnsSet((Node *) args))
-			{
-				return false;
-			}
-			continue;
-		}
-
-		if (gpdb::ExpressionReturnsSet((Node *) expr))
-		{
-			return false;
-		}
+		return;
 	}
-	return true;
+	iterator->plan_node_id = iterator->plan_node_id + newDiffInPlanNodeId;
+	setPlanIdForChildNodes(iterator->lefttree, newDiffInPlanNodeId);
+	setPlanIdForChildNodes(iterator->righttree, newDiffInPlanNodeId);
 }
 
 // XXX: this is a copy-pasta of TranslateDXLResult
@@ -3274,60 +3275,12 @@ CTranslatorDXLToPlStmt::TranslateDXLProjectSet(
 	ProjectSet *project_set = MakeNode(ProjectSet);
 
 	Plan *plan = &(project_set->plan);
-	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
+	plan->plan_node_id = 0;
 
 	// translate operator costs
 	TranslatePlanCosts(result_dxlnode, plan);
 
-	CDXLNode *child_dxlnode = nullptr;
-	CDXLTranslateContext child_context(m_mp, false,
-									   output_context->GetColIdToParamIdMap());
-
-	if (result_dxlnode->Arity() - 1 == EdxlresultIndexChild)
-	{
-		// translate child plan
-		child_dxlnode = (*result_dxlnode)[EdxlresultIndexChild];
-
-		Plan *child_plan = TranslateDXLOperatorToPlan(
-			child_dxlnode, &child_context, ctxt_translation_prev_siblings);
-
-		GPOS_ASSERT(nullptr != child_plan && "child plan cannot be NULL");
-
-		project_set->plan.lefttree = child_plan;
-	}
-
-	CDXLNode *project_list_dxlnode = (*result_dxlnode)[EdxlresultIndexProjList];
-	CDXLNode *filter_dxlnode = (*result_dxlnode)[EdxlresultIndexFilter];
-
-	List *quals_list = nullptr;
-
-	CDXLTranslationContextArray *child_contexts =
-		GPOS_NEW(m_mp) CDXLTranslationContextArray(m_mp);
-	child_contexts->Append(&child_context);
-
-	// translate proj list and filter
-	TranslateProjListAndFilter(project_list_dxlnode, filter_dxlnode,
-							   nullptr,	 // translate context for the base table
-							   child_contexts, &plan->targetlist, &quals_list,
-							   output_context);
-
-
-	plan->qual = quals_list;
-
 	SetParamIds(plan);
-
-	// cleanup
-	child_contexts->Release();
-
-	// double check the targetlist is kosher
-	// we are only doing this because ORCA didn't do it...
-	if (!SanityCheckProjectSetTargetList(plan->targetlist))
-	{
-		GPOS_RAISE(
-			gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-			GPOS_WSZ_LIT("Unexpected target list entries in ProjectSet node"));
-	}
-
 	return (Plan *) project_set;
 }
 
@@ -3344,16 +3297,12 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	const CDXLNode *result_dxlnode, CDXLTranslateContext *output_context,
 	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
 {
-	// GPDB_12_MERGE_FIXME: this *really* should be done inside ORCA
-	// at the latest during CTranslatorExprToDXL, to create a DXLProjectSet
-	// that way we don't have to "frisk" the DXLResult to distinguish it from an
-	// actual result node
-	if (ContainsSetReturningFuncOrOp((*result_dxlnode)[EdxlresultIndexProjList],
-									 m_md_accessor))
-	{
-		return TranslateDXLProjectSet(result_dxlnode, output_context,
-									  ctxt_translation_prev_siblings);
-	}
+	List *targetsWithSrf = NIL;
+	List *targetsWithSrfBool = NIL;
+	Plan *child_plan = nullptr;
+	Plan *project_set_final_plan = nullptr;
+	Plan *project_set_child_plan = nullptr;
+	BOOL willRequireResultNode = false;
 
 	// create result plan node
 	Result *result = MakeNode(Result);
@@ -3373,12 +3322,10 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 		// translate child plan
 		child_dxlnode = (*result_dxlnode)[EdxlresultIndexChild];
 
-		Plan *child_plan = TranslateDXLOperatorToPlan(
-			child_dxlnode, &child_context, ctxt_translation_prev_siblings);
+		child_plan = TranslateDXLOperatorToPlan(child_dxlnode, &child_context,
+												ctxt_translation_prev_siblings);
 
 		GPOS_ASSERT(nullptr != child_plan && "child plan cannot be NULL");
-
-		result->plan.lefttree = child_plan;
 	}
 
 	CDXLNode *project_list_dxlnode = (*result_dxlnode)[EdxlresultIndexProjList];
@@ -3404,25 +3351,142 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 								 nullptr,  // base table translation context
 								 child_contexts, output_context);
 
+
 	plan->qual = quals_list;
 
 	result->resconstantqual = (Node *) one_time_quals_list;
 
 	SetParamIds(plan);
 
+	PathTarget *completeResultPathTarget =
+		make_pathtarget_from_tlist(plan->targetlist);
+
+
+	split_pathtarget_at_srfs(nullptr, completeResultPathTarget, nullptr,
+							 &targetsWithSrf, &targetsWithSrfBool);
+
+	if (1 == list_length(targetsWithSrf))
+	{
+		result->plan.lefttree = child_plan;
+		child_contexts->Release();
+		return (Plan *) result;
+	}
+
+	if (ContainsSetReturningFuncOrOp((*result_dxlnode)[EdxlresultIndexProjList],
+									 m_md_accessor))
+	{
+		willRequireResultNode = true;
+	}
+
+	ListCell *lc;
+	ULONG listLength = 1;
+	int targetsWithSrf_length = list_length(targetsWithSrf);
+	ForEach(lc, targetsWithSrf)
+	{
+		if (listLength == 1)
+		{
+			listLength = listLength + 1;
+			continue;
+		}
+		if (willRequireResultNode && targetsWithSrf_length == listLength)
+		{
+			break;
+		}
+
+		listLength = listLength + 1;
+
+		List *TargetListEntry =
+			make_tlist_from_pathtarget((PathTarget *) lfirst(lc));
+
+		Plan *temp_plan_project_set = TranslateDXLProjectSet(
+			result_dxlnode, output_context, ctxt_translation_prev_siblings);
+
+		temp_plan_project_set->targetlist = TargetListEntry;
+		temp_plan_project_set->qual = plan->qual;
+
+		if (project_set_final_plan == nullptr)
+		{
+			project_set_final_plan = temp_plan_project_set;
+			project_set_child_plan = temp_plan_project_set;
+		}
+		else
+		{
+			temp_plan_project_set->lefttree = project_set_final_plan;
+			project_set_final_plan = temp_plan_project_set;
+		}
+	}
+
+	if (nullptr != child_plan && nullptr != project_set_child_plan)
+	{
+		project_set_child_plan->lefttree = child_plan;
+	}
+
+	Plan *final_plan = nullptr;
+
+	if (willRequireResultNode)
+	{
+		result->plan.lefttree = project_set_final_plan;
+		final_plan = &(result->plan);
+	}
+	else if (nullptr != project_set_final_plan)
+	{
+		int i = 0;
+		ListCell *listCellProjectTargetEntry;
+		ForEach(listCellProjectTargetEntry, project_set_final_plan->targetlist)
+		{
+			TargetEntry *te =
+				(TargetEntry *) lfirst(listCellProjectTargetEntry);
+			CDXLNode *proj_elem_dxlnode = (*project_list_dxlnode)[i];
+			GPOS_ASSERT(EdxlopScalarProjectElem ==
+						proj_elem_dxlnode->GetOperator()->GetDXLOperator());
+			CDXLScalarProjElem *sc_proj_elem_dxlop =
+				CDXLScalarProjElem::Cast(proj_elem_dxlnode->GetOperator());
+			GPOS_ASSERT(1 == proj_elem_dxlnode->Arity());
+			te->resname =
+				CTranslatorUtils::CreateMultiByteCharStringFromWCString(
+					sc_proj_elem_dxlop->GetMdNameAlias()
+						->GetMDName()
+						->GetBuffer());
+			i++;
+		}
+		final_plan = project_set_final_plan;
+	}
+	else
+	{
+		final_plan = &(result->plan);
+	}
+
+	//Set up of Plan Node Id
+	int planIdNew = result->plan.plan_node_id;
+	Plan *iterator_setPlanId = final_plan;
+	ULONG countProjectSetNodes = 0;
+	while (iterator_setPlanId != nullptr &&
+		   (iterator_setPlanId->type == T_Result ||
+			iterator_setPlanId->type == T_ProjectSet))
+	{
+		countProjectSetNodes++;
+		iterator_setPlanId->plan_node_id = planIdNew;
+		planIdNew = planIdNew + 1;
+		iterator_setPlanId = iterator_setPlanId->lefttree;
+	}
+
+	ULONG newDiffInPlanNodeId = countProjectSetNodes - 1;
+	setPlanIdForChildNodes(iterator_setPlanId, newDiffInPlanNodeId);
+
+	// Set up upper references
+	Plan *iterator_setUpperRef = final_plan;
+	while (iterator_setUpperRef->lefttree != nullptr &&
+		   iterator_setUpperRef->lefttree->type == T_ProjectSet)
+	{
+		set_upper_references(nullptr, iterator_setUpperRef, 0);
+		iterator_setUpperRef = iterator_setUpperRef->lefttree;
+	}
+
+
 	// cleanup
 	child_contexts->Release();
 
-	// double check the targetlist is kosher
-	// we are only doing this because ORCA didn't do it...
-	if (!SanityCheckProjectSetTargetList(plan->targetlist))
-	{
-		GPOS_RAISE(
-			gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-			GPOS_WSZ_LIT("Unexpected target list entries in ProjectSet node"));
-	}
-
-	return (Plan *) result;
+	return final_plan;
 }
 
 //---------------------------------------------------------------------------
