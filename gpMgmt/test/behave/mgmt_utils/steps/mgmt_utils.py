@@ -3784,7 +3784,6 @@ def impl(context):
     locale = get_en_utf_locale()
     context.execute_steps('''When a demo cluster is created using gpinitsystem args "--lc-ctype=%s"''' % locale)
 
-
 @given('the user asynchronously runs pg_basebackup with {segment} of content {contentid} as source and the process is saved')
 @when('the user asynchronously runs pg_basebackup with {segment} of content {contentid} as source and the process is saved')
 @then('the user asynchronously runs pg_basebackup with {segment} of content {contentid} as source and the process is saved')
@@ -3834,3 +3833,8 @@ def impl(context, contentid):
 
     if str(contentid) not in segments_with_running_basebackup:
         raise Exception("pg_basebackup entry was not found for content %s in gp_stat_replication" % contentid)
+@given('create a gpcheckperf input host file')
+def impl(context):
+    cmd = Command(name='create input host file', cmdStr='echo sdw1 > /tmp/hostfile1;echo mdw >> /tmp/hostfile1;')
+    cmd.run(validateAfter=True)
+
