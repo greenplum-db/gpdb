@@ -287,6 +287,7 @@ partition by range(j)
 );
 
 execute ccddlcheck;
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ccddl'::regclass;
 
 insert into ccddl select 1, (i % 19) + 1, ((i+3) % 5) + 1, i+3 from generate_series(1, 100) i;
 
@@ -367,6 +368,7 @@ subpartition template (subpartition sp1 start(1) end(20),
 (partition p1 start(1) end(20));
 
 execute ccddlcheck;
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ccddl'::regclass;
 
 alter table ccddl alter partition p1 split partition sp1 at (10) into (partition sp2, partition sp3);
 execute ccddlcheck;
@@ -400,6 +402,7 @@ CREATE TABLE ccddl (id int, year int, month int, day int, region text)
 		)
 	( START (2008) END (2010) );
 execute ccddlcheck;
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ccddl'::regclass;
 
 -- Ensure we can read and write
 insert into ccddl select 1, 2008, 1, 2, 'usa' from generate_series(1, 100);
@@ -512,6 +515,8 @@ alter table ccddl add partition newp
 	with (appendonly=true, orientation=column);
 
 execute ccddlcheck;
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ccddl'::regclass;
+
 drop table ccddl;
 
 -----------------------------------------------------------------------
@@ -527,8 +532,9 @@ create table gg (i int, k int) with (appendonly=true, orientation=column)
 partition by range(k) (partition p1 start(1) end(2), column i
 encoding(compresstype=sdf2sdf));
 
--- We don't support partition element specific encoding clauses in subpartition
--- templates as we have no place to store them.
+-- Historically we don't support partition element specific encoding clauses in
+-- subpartition templates as we didn't have place to store them. We now have
+-- place to store them if we want to, but for now we keep this door closed
 create table a (i int, j int) with (appendonly=true, orientation=column)
       partition by range(i) subpartition by range(j)
       subpartition template(start(1) end(10) default column encoding (compresstype=zlib),

@@ -9240,6 +9240,37 @@ get_rule_expr(Node *node, deparse_context *context,
 								elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
 						}
 					}
+					if (elem->options)
+					{
+						ListCell *cell;
+
+						appendStringInfoString(buf, sep);
+						appendStringInfoString(buf, " WITH (");
+						if (elem->accessMethod)
+						{
+							if (pg_strcasecmp(elem->accessMethod, "ao_row") != 0)
+							{
+								appendStringInfoString(buf, "appendonly=true, orientation=row");
+								sep = ", ";
+							}
+							else if (pg_strcasecmp(elem->accessMethod, "ao_column") != 0)
+							{
+								appendStringInfoString(buf, "appendonly=true, orientation=column");
+								sep = ", ";
+							}
+						}
+						foreach (cell, elem->options)
+						{
+							DefElem *el = lfirst_node(DefElem, cell);
+							char *arg;
+
+							appendStringInfoString(buf, sep);
+							appendStringInfo(buf, "%s=", el->defname);
+							appendStringInfo(buf, "%s", arg = defGetString(el));
+							sep = ", ";
+						}
+						appendStringInfoChar(buf, ')');
+					}
 				}
 
 				if (def->encClauses)

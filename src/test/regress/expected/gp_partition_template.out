@@ -169,6 +169,106 @@ SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range
  subpart_range_templ_1_prt_e_2_prt_r5_2                  | subpart_range_templ_1_prt_e            | t      |     2 | FOR VALUES FROM ('01-02-2022') TO ('01-02-2023')
 (28 rows)
 
+-- Set a new subpartition template w/ WITH clause
+ALTER TABLE subpart_range_templ SET SUBPARTITION TEMPLATE
+    (
+    subpartition r4 END (date '2020-01-01') WITH (appendonly=true, compresslevel=5),
+    DEFAULT SUBPARTITION yet_another_year
+    );
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_templ'::regclass;
+ level |                                                                             pg_get_expr                                                                              
+-------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1 | SUBPARTITION TEMPLATE(DEFAULT SUBPARTITION yet_another_year, SUBPARTITION r4 END ('01-01-2020'::date),  WITH (appendonly=true, orientation=column, compresslevel=5))
+(1 row)
+
+ALTER TABLE subpart_range_templ ADD PARTITION f VALUES ('F');
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
+                          relid                          |              parentrelid               | isleaf | level |                   pg_get_expr                    
+---------------------------------------------------------+----------------------------------------+--------+-------+--------------------------------------------------
+ subpart_range_templ                                     |                                        | f      |     0 | 
+ subpart_range_templ_1_prt_other_letter                  | subpart_range_templ                    | f      |     1 | DEFAULT
+ subpart_range_templ_1_prt_a                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('A')
+ subpart_range_templ_1_prt_b                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('B')
+ subpart_range_templ_1_prt_other_letter_2_prt_other_year | subpart_range_templ_1_prt_other_letter | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_other_letter_2_prt_r1         | subpart_range_templ_1_prt_other_letter | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_other_letter_2_prt_r2_1       | subpart_range_templ_1_prt_other_letter | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_other_letter_2_prt_r2_2       | subpart_range_templ_1_prt_other_letter | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_a_2_prt_other_year            | subpart_range_templ_1_prt_a            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_a_2_prt_r1                    | subpart_range_templ_1_prt_a            | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_a_2_prt_r2_1                  | subpart_range_templ_1_prt_a            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_a_2_prt_r2_2                  | subpart_range_templ_1_prt_a            | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_b_2_prt_other_year            | subpart_range_templ_1_prt_b            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_b_2_prt_r1                    | subpart_range_templ_1_prt_b            | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_b_2_prt_r2_1                  | subpart_range_templ_1_prt_b            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_b_2_prt_r2_2                  | subpart_range_templ_1_prt_b            | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_c                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('C')
+ subpart_range_templ_1_prt_c_2_prt_other_year            | subpart_range_templ_1_prt_c            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_c_2_prt_r1                    | subpart_range_templ_1_prt_c            | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_c_2_prt_r2_1                  | subpart_range_templ_1_prt_c            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_c_2_prt_r2_2                  | subpart_range_templ_1_prt_c            | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_d                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('D')
+ subpart_range_templ_1_prt_d_2_prt_r3                    | subpart_range_templ_1_prt_d            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2005')
+ subpart_range_templ_1_prt_e                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('E')
+ subpart_range_templ_1_prt_e_2_prt_yet_another_year      | subpart_range_templ_1_prt_e            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_e_2_prt_r4                    | subpart_range_templ_1_prt_e            | t      |     2 | FOR VALUES FROM ('01-02-2020') TO ('01-02-2021')
+ subpart_range_templ_1_prt_e_2_prt_r5_1                  | subpart_range_templ_1_prt_e            | t      |     2 | FOR VALUES FROM ('01-02-2021') TO ('01-02-2022')
+ subpart_range_templ_1_prt_e_2_prt_r5_2                  | subpart_range_templ_1_prt_e            | t      |     2 | FOR VALUES FROM ('01-02-2022') TO ('01-02-2023')
+ subpart_range_templ_1_prt_f                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('F')
+ subpart_range_templ_1_prt_f_2_prt_yet_another_year      | subpart_range_templ_1_prt_f            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_f_2_prt_r4                    | subpart_range_templ_1_prt_f            | t      |     2 | FOR VALUES FROM (MINVALUE) TO ('01-01-2020')
+(31 rows)
+
+ALTER TABLE subpart_range_templ SET SUBPARTITION TEMPLATE
+    (
+    subpartition r4 START (date '2020-01-01') EXCLUSIVE WITH (appendonly=true, orientation=column, compresslevel=5),
+    DEFAULT SUBPARTITION yet_another_year
+    );
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_templ'::regclass;
+ level |                                                                             pg_get_expr                                                                             
+-------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1 | SUBPARTITION TEMPLATE(DEFAULT SUBPARTITION yet_another_year, SUBPARTITION r4 START ('01-02-2020'::date),  WITH (appendonly=true, orientation=row, compresslevel=5))
+(1 row)
+
+ALTER TABLE subpart_range_templ ADD PARTITION g VALUES ('G');
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
+                          relid                          |              parentrelid               | isleaf | level |                   pg_get_expr                    
+---------------------------------------------------------+----------------------------------------+--------+-------+--------------------------------------------------
+ subpart_range_templ                                     |                                        | f      |     0 | 
+ subpart_range_templ_1_prt_other_letter                  | subpart_range_templ                    | f      |     1 | DEFAULT
+ subpart_range_templ_1_prt_a                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('A')
+ subpart_range_templ_1_prt_b                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('B')
+ subpart_range_templ_1_prt_other_letter_2_prt_other_year | subpart_range_templ_1_prt_other_letter | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_other_letter_2_prt_r1         | subpart_range_templ_1_prt_other_letter | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_other_letter_2_prt_r2_1       | subpart_range_templ_1_prt_other_letter | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_other_letter_2_prt_r2_2       | subpart_range_templ_1_prt_other_letter | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_a_2_prt_other_year            | subpart_range_templ_1_prt_a            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_a_2_prt_r1                    | subpart_range_templ_1_prt_a            | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_a_2_prt_r2_1                  | subpart_range_templ_1_prt_a            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_a_2_prt_r2_2                  | subpart_range_templ_1_prt_a            | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_b_2_prt_other_year            | subpart_range_templ_1_prt_b            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_b_2_prt_r1                    | subpart_range_templ_1_prt_b            | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_b_2_prt_r2_1                  | subpart_range_templ_1_prt_b            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_b_2_prt_r2_2                  | subpart_range_templ_1_prt_b            | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_c                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('C')
+ subpart_range_templ_1_prt_c_2_prt_other_year            | subpart_range_templ_1_prt_c            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_c_2_prt_r1                    | subpart_range_templ_1_prt_c            | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_c_2_prt_r2_1                  | subpart_range_templ_1_prt_c            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_c_2_prt_r2_2                  | subpart_range_templ_1_prt_c            | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_d                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('D')
+ subpart_range_templ_1_prt_d_2_prt_r3                    | subpart_range_templ_1_prt_d            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2005')
+ subpart_range_templ_1_prt_e                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('E')
+ subpart_range_templ_1_prt_e_2_prt_yet_another_year      | subpart_range_templ_1_prt_e            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_e_2_prt_r4                    | subpart_range_templ_1_prt_e            | t      |     2 | FOR VALUES FROM ('01-02-2020') TO ('01-02-2021')
+ subpart_range_templ_1_prt_e_2_prt_r5_1                  | subpart_range_templ_1_prt_e            | t      |     2 | FOR VALUES FROM ('01-02-2021') TO ('01-02-2022')
+ subpart_range_templ_1_prt_e_2_prt_r5_2                  | subpart_range_templ_1_prt_e            | t      |     2 | FOR VALUES FROM ('01-02-2022') TO ('01-02-2023')
+ subpart_range_templ_1_prt_f                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('F')
+ subpart_range_templ_1_prt_f_2_prt_yet_another_year      | subpart_range_templ_1_prt_f            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_f_2_prt_r4                    | subpart_range_templ_1_prt_f            | t      |     2 | FOR VALUES FROM (MINVALUE) TO ('01-01-2020')
+ subpart_range_templ_1_prt_g                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('G')
+ subpart_range_templ_1_prt_g_2_prt_yet_another_year      | subpart_range_templ_1_prt_g            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_g_2_prt_r4                    | subpart_range_templ_1_prt_g            | t      |     2 | FOR VALUES FROM ('01-02-2020') TO (MAXVALUE)
+(34 rows)
+
 -- Multi-level RANGE subpartitioning using templates
 CREATE TABLE subpart_range_templ_multilevel (id int, year int, month int, day int,
                     region text)

@@ -2365,9 +2365,9 @@ alter table rank_settemp add partition f1 values ('N');
 alter table rank_settemp set subpartition template (start (date '2007-01-01') with (appendonly=true, compresslevel=5));
 alter table rank_settemp add partition f2 values ('C');
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'rank_settemp'::regclass;
-    relid     | level |                    pg_get_expr                     
---------------+-------+----------------------------------------------------
- rank_settemp |     1 | SUBPARTITION TEMPLATE( START ('01-01-2007'::date))
+    relid     | level |                                                   pg_get_expr                                                    
+--------------+-------+------------------------------------------------------------------------------------------------------------------
+ rank_settemp |     1 | SUBPARTITION TEMPLATE( START ('01-01-2007'::date),  WITH (appendonly=true, orientation=column, compresslevel=5))
 (1 row)
 
 drop table rank_settemp;

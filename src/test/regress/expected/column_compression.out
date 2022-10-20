@@ -753,6 +753,12 @@ execute ccddlcheck;
  ccddl_1_prt_p2_2_prt_sp1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (8 rows)
 
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ccddl'::regclass;
+ level |                                                                                                          pg_get_expr                                                                                                           
+-------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1 | SUBPARTITION TEMPLATE(SUBPARTITION sp1 VALUES (1, 2, 3, 4, 5), COLUMN i ENCODING (compresstype=zlib), COLUMN j ENCODING (compresstype=rle_type), COLUMN k ENCODING (compresstype=zlib), COLUMN l ENCODING (compresstype=zlib))
+(1 row)
+
 insert into ccddl select 1, (i % 19) + 1, ((i+3) % 5) + 1, i+3 from generate_series(1, 100) i;
 select * from ccddl;
  i | j  | k |  l  
@@ -1181,6 +1187,12 @@ execute ccddlcheck;
  ccddl_1_prt_p1_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
 (2 rows)
 
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ccddl'::regclass;
+ level |                                                                          pg_get_expr                                                                           
+-------+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1 | SUBPARTITION TEMPLATE(SUBPARTITION sp1 START (1::integer) END (20::integer), COLUMN i ENCODING (compresstype=zlib), COLUMN j ENCODING (compresstype=rle_type))
+(1 row)
+
 alter table ccddl alter partition p1 split partition sp1 at (10) into (partition sp2, partition sp3);
 execute ccddlcheck;
          relname          | attnum |                       attoptions                        
@@ -1234,6 +1246,13 @@ execute ccddlcheck;
  ccddl_1_prt_1_2_prt_1_3_prt_usa |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
  ccddl_1_prt_1_2_prt_1_3_prt_usa |      5 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
 (5 rows)
+
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ccddl'::regclass;
+ level |                                                 pg_get_expr                                                 
+-------+-------------------------------------------------------------------------------------------------------------
+     1 | SUBPARTITION TEMPLATE( START (1::integer) END (13::integer), COLUMN month ENCODING (compresstype=rle_type))
+     2 | SUBPARTITION TEMPLATE(SUBPARTITION usa VALUES ('usa'), COLUMN region ENCODING (compresstype=rle_type))
+(2 rows)
 
 -- Ensure we can read and write
 insert into ccddl select 1, 2008, 1, 2, 'usa' from generate_series(1, 100);
@@ -1516,6 +1535,12 @@ execute ccddlcheck;
  ccddl_1_prt_newp_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (15 rows)
 
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ccddl'::regclass;
+ level |                                           pg_get_expr                                           
+-------+-------------------------------------------------------------------------------------------------
+     1 | SUBPARTITION TEMPLATE(SUBPARTITION sp1 VALUES (1), DEFAULT COLUMN ENCODING (compresstype=zlib))
+(1 row)
+
 drop table ccddl;
 -----------------------------------------------------------------------
 -- Partitioning support
@@ -1533,8 +1558,9 @@ encoding(compresstype=sdf2sdf));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ERROR:  unknown compresstype "sdf2sdf"
--- We don't support partition element specific encoding clauses in subpartition
--- templates as we have no place to store them.
+-- Historically we don't support partition element specific encoding clauses in
+-- subpartition templates as we didn't have place to store them. We now have
+-- place to store them if we want to, but for now we keep this door closed
 create table a (i int, j int) with (appendonly=true, orientation=column)
       partition by range(i) subpartition by range(j)
       subpartition template(start(1) end(10) default column encoding (compresstype=zlib),

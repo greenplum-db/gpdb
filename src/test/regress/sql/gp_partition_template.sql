@@ -49,6 +49,25 @@ SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.
 ALTER TABLE subpart_range_templ ADD PARTITION e VALUES ('E');
 SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
 
+-- Set a new subpartition template w/ WITH clause
+ALTER TABLE subpart_range_templ SET SUBPARTITION TEMPLATE
+    (
+    subpartition r4 END (date '2020-01-01') WITH (appendonly=true, compresslevel=5),
+    DEFAULT SUBPARTITION yet_another_year
+    );
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_templ'::regclass;
+ALTER TABLE subpart_range_templ ADD PARTITION f VALUES ('F');
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
+
+ALTER TABLE subpart_range_templ SET SUBPARTITION TEMPLATE
+    (
+    subpartition r4 START (date '2020-01-01') EXCLUSIVE WITH (appendonly=true, orientation=column, compresslevel=5),
+    DEFAULT SUBPARTITION yet_another_year
+    );
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_templ'::regclass;
+ALTER TABLE subpart_range_templ ADD PARTITION g VALUES ('G');
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
+
 -- Multi-level RANGE subpartitioning using templates
 CREATE TABLE subpart_range_templ_multilevel (id int, year int, month int, day int,
                     region text)
