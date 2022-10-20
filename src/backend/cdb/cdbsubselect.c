@@ -1402,7 +1402,18 @@ is_exprs_nullable_internal(Node *exprs, List *nonnullable_vars, List *rtable)
 
 	if (IsA(exprs, Var))
 	{
+		Var *tmpvar = (Var *)exprs;
+
+		/* params treat as nullable exprs */
+		if (tmpvar->varlevelsup != 0)
+			return true;
+
 		Var		   *var = cdb_map_to_base_var((Var *) exprs, rtable);
+
+		/* once not found RTE of var, return as nullable expr */
+		if (var == NULL)
+			return true;
+
 		return !list_member(nonnullable_vars, var);
 	}
 	else if (IsA(exprs, List))
@@ -1542,7 +1553,10 @@ cdb_find_all_vars_walker(Node *node, FindAllVarsContext *context)
 
 	if (IsA(node, Var))
 	{
-		Var     *var;
+		Var *var = (Var *)node;
+
+		if (var->varlevelsup != 0)
+			return false;
 
 		/*
 		 * The vars fetched from targetList/testexpr.. can be from virtual range table (RTE_JOIN),
@@ -1550,7 +1564,10 @@ cdb_find_all_vars_walker(Node *node, FindAllVarsContext *context)
 		 * them to base vars is needed before check nullable.
 		 */
 		var = cdb_map_to_base_var((Var *) node, context->rtable);
-		context->vars = list_append_unique(context->vars, var);
+
+		if (var != NULL)
+			context->vars = list_append_unique(context->vars, var);
+
 		return false;
 	}
 
@@ -1562,11 +1579,15 @@ cdb_map_to_base_var(Var *var, List *rtable)
 {
 	RangeTblEntry *rte    = rt_fetch(var->varno, rtable);
 
-	while(rte->rtekind == RTE_JOIN && rte->joinaliasvars)
+	while(rte != NULL && rte->rtekind == RTE_JOIN && rte->joinaliasvars)
 	{
 		var = (Var *) list_nth(rte->joinaliasvars, var->varattno-1);
 		rte = rt_fetch(var->varno, rtable);
 	}
+
+	/* not found RTE in current level rtable */
+	if (rte == NULL)
+		return NULL;
 
 	return var;
 }
