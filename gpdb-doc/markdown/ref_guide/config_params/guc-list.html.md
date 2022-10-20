@@ -218,6 +218,14 @@ Sets the default statistics sampling target \(the number of values that are stor
 |-----------|-------|-------------------|
 |0 \> Integer \> 10000|100|master, session, reload|
 
+## <a id="default_table_access_method"></a>default_table_access_method
+
+The default table access method when a `CREATE TABLE` command does not explicitly specify an access method.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|heap, ao_row, ao_column|heap|master, session|
+
 ## <a id="default_tablespace"></a>default\_tablespace 
 
 The default tablespace in which to create objects \(tables and indexes\) when a `CREATE` command does not explicitly specify a tablespace.
