@@ -7,13 +7,14 @@ This section contains an overview of the Greenplum Database PL/Python Language.
 -   [About Greenplum PL/Python](#topic2)
 -   [Enabling and Removing PL/Python support](#topic4)
 -   [Developing Functions with PL/Python](#topic7)
+-   [About Developing PL/Python Procedures](#topic7a)
 -   [Installing Python Modules](#topic10)
 -   [Examples](#topic11)
 -   [References](#topic12)
 
 ## <a id="topic2"></a>About Greenplum PL/Python 
 
-PL/Python is a loadable procedural language. With the Greenplum Database PL/Python extensions, you can write Greenplum Database user-defined functions in Python that take advantage of Python features and modules to quickly build robust database applications.
+PL/Python is a loadable procedural language. With the Greenplum Database PL/Python extensions, you can write Greenplum Database user-defined functions and procedures in Python that take advantage of Python features and modules to quickly build robust database applications.
 
 You can run PL/Python code blocks as anonymous code blocks. See the [DO](../ref_guide/sql_commands/DO.html) command in the *Greenplum Database Reference Guide*.
 
@@ -73,9 +74,7 @@ The default command fails if any existing objects \(such as functions\) depend o
 
 ## <a id="topic7"></a>Developing Functions with PL/Python 
 
-The body of a PL/Python user-defined function is a Python script. When the function is called, its arguments are passed as elements of the array `args[]`. Named arguments are also passed as ordinary variables to the Python script. The result is returned from the PL/Python function with `return` statement, or `yield` statement in case of a result-set statement.
-
-PL/Python translates Python's `None` into the SQL `null` value.
+The body of a PL/Python user-defined function is a Python script. When the function is called, its arguments are passed as elements of the array `args[]`. Named arguments are also passed as ordinary variables to the Python script. The result is returned from the PL/Python function with `return` statement, or `yield` statement in case of a result-set statement. If you do not provide a return value, Python returns the default `None`. PL/Python translates Python's `None` into the SQL null value.
 
 ### <a id="topic_datatypemap"></a>Data Type Mapping 
 
@@ -310,6 +309,45 @@ psql=#
     return GD['mymodule'].sumd([1,2,3])
 $$;
 ```
+
+## <a id="topic7a"></a>About PL/Python Procedures
+
+A PL/Python procedure is similar to a PL/Python function. Refer to [User-Defined Procedures](../admin_guide/query/topics/functions-operators.html#topic28a) for more information on procedures in Greenplum Database and how they differ from functions.
+
+In a PL/Python procedure, the result from the Python code must be `None` (typically achieved by ending the procedure without a `return` statement or by using a `return` statement without argument); otherwise, an error will be raised.
+
+You can pass back output parameters of a PL/Python procedure in the same way that you do for a function. For example:
+
+``` sql
+CREATE PROCEDURE python_triple(INOUT a integer, INOUT b integer) AS $$
+return (a * 3, b * 3)
+$$ LANGUAGE plpythonu;
+
+CALL python_triple(5, 10);
+```
+
+### <a id="proc_transmgmt"></a>About Transaction Management in Procedures
+
+In a procedure called from the top level or an anonymous code block (`DO` command) called from the top level it is possible to control transactions. To commit the current transaction, call `plpy.commit()`. To roll back the current transaction, call `plpy.rollback()`. (Note that it is not possible to run the SQL commands `COMMIT` or `ROLLBACK` via `plpy.execute()` or similar. You must commit or rollback using these functions.) After a transaction is ended, a new transaction is automatically started, so there is no separate function for that.
+
+Here is an example:
+
+``` sql
+CREATE PROCEDURE transaction_test1()
+LANGUAGE plpythonu
+AS $$
+for i in range(0, 10):
+    plpy.execute("INSERT INTO test1 (a) VALUES (%d)" % i)
+    if i % 2 == 0:
+        plpy.commit()
+    else:
+        plpy.rollback()
+$$;
+
+CALL transaction_test1();
+```
+
+A transaction cannot be ended when an explicit subtransaction is active.
 
 ## <a id="topic10"></a>Installing Python Modules 
 
