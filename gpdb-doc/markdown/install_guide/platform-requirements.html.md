@@ -118,7 +118,7 @@ Greenplum Databased 6 supports these Java versions for PL/Java and PXF:
 
 ## <a id="topic_tnl_3mx_zgb"></a>Hardware and Network 
 
-The following table lists minimum recommended specifications for hardware servers intended to support Greenplum Database on Linux systems in a production environment. All host servers in your Greenplum Database system must have the same hardware and software configuration. Greenplum also provides hardware build guides for its certified hardware platforms. It is recommended that you work with a Greenplum Systems Engineer to review your anticipated environment to ensure an appropriate hardware configuration for Greenplum Database.
+The following table lists minimum recommended specifications for hardware servers intended to support Greenplum Database on Linux systems in a production environment. All host servers in your Greenplum Database system must have the same hardware and software configuration. Greenplum also provides hardware build guides for its certified hardware platforms. Work with a Greenplum Systems Engineer to review your anticipated environment to ensure an appropriate hardware configuration for Greenplum Database.
 
 <div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic_tnl_3mx_zgb__ji162790" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap">Minimum Hardware Requirements</span></caption><colgroup><col style="width:120pt" /><col style="width:255pt" /></colgroup><tbody class="tbody">
 <tr class="row">
@@ -150,6 +150,15 @@ The following table lists minimum recommended specifications for hardware server
 </tbody>
 </table>
 </div>
+
+**Hyperthreading**
+
+One of the key Greenplum features is Resource Groups, which offer concurrency control, CPU control, memory control, workload isolation, and dynamic bursting. 
+
+When using resource groups to control resource allocation among the server physical cores, unset hyperthreading (HT) in the server BIOS (HT is `On` by default in servers with Intel CPUs). 
+
+Switching HT to `Off` offers the best single query performance, isolation, and predictability, in high core (24+), high sockets (4+) platforms. 
+
 
 ### <a id="topic_elb_4ss_n4b"></a>Tanzu Greenplum on DCA Systems 
 
