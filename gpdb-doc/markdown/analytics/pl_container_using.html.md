@@ -119,11 +119,7 @@ When PL/Container logging is enabled, you can set the log level with the Greenpl
     **Note:** The parameter `log_min_messages` controls both the Greenplum Database and PL/Container logging, increasing the log level might affect Greenplum Database performance even if a PL/Container UDF is not running.
 
 
-## <a id="topic_rh3_p3q_dw"></a>PL/Container Functions 
-
-When you enable PL/Container in a database of a Greenplum Database system, the language `plcontainer` is registered in that database. Specify `plcontainer` as a language in a UDF definition to create and run user-defined functions in the procedural languages supported by the PL/Container Docker images.
-
-### <a id="topic_c3v_clg_wkb"></a>Limitations 
+## <a id="topic_rh3_p3q_dw"></a>PL/Container Function Limitations 
 
 Review the following limitations when creating and using PL/Container PL/Python and PL/R functions:
 
@@ -139,14 +135,16 @@ Review the following limitations when creating and using PL/Container PL/Python 
 -   `OUT` parameters are not supported.
 -   The Python `dict` type cannot be returned from a PL/Python UDF. When returning the Python `dict` type from a UDF, you can convert the `dict` type to a Greenplum Database user-defined data type \(UDT\).
 
-### <a id="using_functions"></a>Using PL/Container functions 
+## <a id="using_functions"></a>Developing PL/Container functions 
 
-A UDF definition that uses PL/Container must have the these items.
+When you enable PL/Container in a database of a Greenplum Database system, the language `plcontainer` is registered in that database. Specify `plcontainer` as a language in a UDF definition to create and run user-defined functions in the procedural languages supported by the PL/Container Docker images.
+
+A UDF definition that uses PL/Container must have these items.
 
 -   The first line of the UDF must be `# container: ID`
 -   The `LANGUAGE` attribute must be `plcontainer`
 
-The ID is the name that PL/Container uses to identify a Docker image. When Greenplum Database runs a UDF on a host, the Docker image on the host is used to start a Docker container that runs the UDF. In the XML configuration file `plcontainer_configuration.xml`, there is a `runtime` XML element that contains a corresponding `id` XML element that specifies the Docker container startup information. See [../utility\_guide/ref/plcontainer-configuration.md\#](../utility_guide/ref/plcontainer-configuration.html) for information about how PL/Container maps the ID to a Docker image.
+The ID is the name that PL/Container uses to identify a Docker image. When Greenplum Database runs a UDF on a host, the Docker image on the host is used to start a Docker container that runs the UDF. In the XML configuration file `plcontainer_configuration.xml`, there is a `runtime` XML element that contains a corresponding `id` XML element that specifies the Docker container startup information. See [plcontainer Configuration File](../utility_guide/ref/plcontainer-configuration.html) for information about how PL/Container maps the ID to a Docker image.
 
 The PL/Container configuration file is read only on the first invocation of a PL/Container function in each Greenplum Database session that runs PL/Container functions. You can force the configuration file to be re-read by performing a `SELECT` command on the view `plcontainer_refresh_config` during the session. For example, this `SELECT` command forces the configuration file to be read.
 
@@ -218,7 +216,7 @@ When Greenplum Database runs a PL/Container UDF, Query Executer \(QE\) processes
 
 **Warning:** Changing `gp_vmem_idle_resource_timeout` value, might affect performance due to resource issues. The parameter also controls the freeing of Greenplum Database resources other than Docker containers.
 
-### <a id="function_examples"></a>Examples 
+### <a id="function_examples"></a>Basic Function Examples 
 
 The values in the `# container` lines of the examples, `plc_python_shared` and `plc_r_shared`, are the `id` XML elements defined in the `plcontainer_config.xml` file. The `id` element is mapped to the `image` element that specifies the Docker image to be started. If you configured PL/Container with a different ID, change the value of the `# container` line. For information about configuring PL/Container and viewing the configuration settings, see [plcontainer Configuration File](../utility_guide/ref/plcontainer-configuration.html).
 
@@ -243,7 +241,7 @@ $$ LANGUAGE plcontainer;
 
 If the `# container` line in a UDF specifies an ID that is not in the PL/Container configuration file, Greenplum Database returns an error when you try to run the UDF.
 
-### <a id="topic_ctk_xjg_wkb"></a>About PL/Container Running PL/Python 
+### <a id="topic_ctk_xjg_wkb"></a>About PL/Python Methods in PL/Container
 
 In the Python language container, the module `plpy` is implemented. The module contains these methods:
 
@@ -279,7 +277,7 @@ For information about PL/Python, see [PL/Python Language](pl_python.html).
 
 For information about the `plpy` methods, see [https://www.postgresql.org/docs/9.4/plpython-database.htm](https://www.postgresql.org/docs/9.4/plpython-database.html).
 
-### <a id="topic_plc_py3"></a>About PL/Container Running PL/Python with Python 3 
+### <a id="topic_plc_py3"></a>About PL/Python 3 Methods in PL/Container 
 
 PL/Container for Greenplum Database 5 supports Python version 3.6+. PL/Container for Greenplum Database 6 supports Python 3.7+.
 
@@ -290,7 +288,7 @@ Keep in mind that UDFs that you created for Python 2 may not run in PL/Container
 -   Changes to Python - [What’s New in Python 3](https://docs.python.org/3/whatsnew/3.0.html)
 -   Porting from Python 2 to 3 - [Porting Python 2 Code to Python 3](https://docs.python.org/3/howto/pyporting.html)
 
-### <a id="topic_lqz_t3q_dw"></a>About PL/Container Running PL/R 
+### <a id="topic_lqz_t3q_dw"></a>About PL/R Methods in PL/Container
 
 In the R language container, the module `pg.spi` is implemented. The module contains these methods:
 

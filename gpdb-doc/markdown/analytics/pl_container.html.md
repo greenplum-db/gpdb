@@ -2,7 +2,7 @@
 title: PL/Container Language 
 ---
 
-Pl/Container enables users to run Greenplum procedural language functions inside a Docker container, to avoid security risks associated with running Python or R code on Greenplum segment hosts. This topic covers information about the architecture, installation, and setup of PL/Container:
+PL/Container enables users to run Greenplum procedural language functions inside a Docker container, to avoid security risks associated with running Python or R code on Greenplum segment hosts. For Python, PL/Container also enables you to use the Compute Unified Device Architecture (CUDA) API with Nvidia GPU hardware in your procedural language functions. This topic covers information about the architecture, installation, and setup of PL/Container:
 
 -   [About the PL/Container Language Extension](#about_pl_container)
 -   [Install PL/Container](#topic3)
@@ -19,7 +19,7 @@ The PL/Container language extension is available as an open source module. For i
 
 ## <a id="about_pl_container"></a>About the PL/Container Language Extension 
 
-The Greenplum Database PL/Container language extension allows users to create and run PL/Python or PL/R user-defined functions \(UDFs\) securely, inside a Docker container. Docker provides the ability to package and run an application in a loosely isolated environment called a container. For information about Docker, see the [Docker web site](https://www.docker.com).
+The Greenplum Database PL/Container language extension allows you to create and run PL/Python or PL/R user-defined functions \(UDFs\) securely, inside a Docker container. Docker provides the ability to package and run an application in a loosely isolated environment called a container. For information about Docker, see the [Docker web site](https://www.docker.com).
 
 Running UDFs inside the Docker container ensures that:
 
@@ -70,13 +70,13 @@ The following sections describe these tasks in detail.
     **Note:** PL/Container 2.1.x supports Docker images with Python 3 installed.
 
 -   For PL/Container 3 Beta use Greenplum Database 6.1 or later on CentOS 7.x \(or later\), RHEL 7.x \(or later\), or Ubuntu 18.04.
--   The minimum Linux OS kernel version supported is 3.10. To verfiy your kernel release use:
+-   The minimum Linux OS kernel version supported is 3.10. To verify your kernel release use:
 
     ```
     $ uname -r
     ```
 
--   The minimum Docker versions on all hosts needs to be Docker 19.03.
+-   The minimum supporteed Docker versions on all hosts is Docker 19.03.
 
 ### <a id="install_docker"></a>Install Docker 
 
@@ -216,7 +216,7 @@ Install the Docker images that PL/Container will use to create language-specific
 
 **Note:** The PL/Container open source module contains dockerfiles to build Docker images that can be used with PL/Container. You can build a Docker image to run PL/Python UDFs and a Docker image to run PL/R UDFs. See the dockerfiles in the GitHub repository at [https://github.com/greenplum-db/plcontainer](https://github.com/greenplum-db/plcontainer).
 
--   Download the files that contain the Docker images from the [VMware Tanzu Network](https://network.pivotal.io). For example, for Greenplum 6.5, click on "PL/Container Docker Image for Python 2.1.1" which downloads **plcontainer-python-image-2.1.1-gp6.tar.gz** with Python 2.7.12 and the *Python Data Science Module Package*.
+-   Download the files that contain the Docker images from the [VMware Tanzu Network](https://network.pivotal.io). For example, for Greenplum 6.22, click on "PL/Container Image for Pythone 2.2.0" which downloads **plcontainer-python3-image-2.2.0-gp6.tar.gz** with Python 3.9 and the *Python 3.9 Data Science Module Package*.
 
     If you require different images from the ones provided by Tanzu Greenplum, you can create custom Docker images, install the image and add the image to the PL/ Container configuration.
 
@@ -226,13 +226,13 @@ Install the Docker images that PL/Container will use to create language-specific
 
     ```
     # Install a Python 2 based Docker image
-    plcontainer image-add -f /home/gpadmin/plcontainer-python-image-2.1.1-gp6.tar.gz
+    plcontainer image-add -f /home/gpadmin/plcontainer-python-image-2.2.0-gp6.tar.gz
                 
     # Install a Python 3 based Docker image
-    plcontainer image-add -f /home/gpadmin/plcontainer-python3-image-2.1.1-gp6.tar.gz
+    plcontainer image-add -f /home/gpadmin/plcontainer-python3-image-2.2.0-gp6.tar.gz
                 
     # Install an R based Docker image
-    plcontainer image-add -f /home/gpadmin/plcontainer-r-image-2.1.1-gp6.tar.gz
+    plcontainer image-add -f /home/gpadmin/plcontainer-r-image-2.1.3-gp6.tar.gz
     
     # Install the Beta R image for use with PL/Container 3.0.0 Beta
     plcontainer image-add -f /home/gpadmin/plcontainer-r-image-3.0.0-beta-gp6.tar.gz
@@ -271,7 +271,7 @@ Install the Docker images that PL/Container will use to create language-specific
     # Add a Python 2 based runtime
     plcontainer runtime-add -r plc_python_shared -i pivotaldata/plcontainer_python_shared:devel -l python
                 
-    # Add a Python 3 based runtime that is supported with PL/Container 2.1.x
+    # Add a Python 3 based runtime that is supported with PL/Container 2.2.x
     plcontainer runtime-add -r plc_python3_shared -i pivotaldata/plcontainer_python3_shared:devel -l python3
                 
     # Add an R based runtime
@@ -385,10 +385,10 @@ To upgrade, perform the following procedure:
     $ plcontainer runtime-backup -f plcontainer202-backup.xml
     ```
 
-2.  Use the Greenplum Database `gppkg` utility with the `-u` option to update the PL/Container language extension. For example, the following command updates the PL/Container language extension to version 2.1.1 on a Linux system:
+2.  Use the Greenplum Database `gppkg` utility with the `-u` option to update the PL/Container language extension. For example, the following command updates the PL/Container language extension to version 2.2.0 on a Linux system:
 
     ```
-    $ gppkg -u plcontainer-2.1.1-gp6-rhel7_x86_64.gppkg
+    $ gppkg -u plcontainer-2.2.0-gp6-rhel7_x86_64.gppkg
     ```
 
 3.  Source the Greenplum Database environment file `$GPHOME/greenplum_path.sh`.
