@@ -119,12 +119,6 @@ and storage\_directive for a column is:
     [blocksize={8192-2097152} ]
 ```
 
-and access_method for the table is:
-
-```
-
-```
-
 and storage\_parameter for the table is:
 
 ```
