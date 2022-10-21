@@ -10,7 +10,7 @@ DROP SCHEMA [IF EXISTS] <name> [, ...] [CASCADE | RESTRICT]
 
 ## <a id="section3"></a>Description 
 
-`DROP SCHEMA` removes schemas from the database. A schema can only be dropped by its owner or a superuser. Note that the owner can drop the schema \(and thereby all contained objects\) even if he does not own some of the objects within the schema.
+`DROP SCHEMA` removes schemas from the database. A schema can only be dropped by its owner or a superuser. Note that the owner can drop the schema \(and thereby all contained objects\) even if they do not own some of the objects within the schema.
 
 ## <a id="section4"></a>Parameters 
 

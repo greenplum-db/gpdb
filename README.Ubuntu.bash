@@ -40,8 +40,6 @@ sudo apt-get install -y \
 	python3-yaml \
 	zlib1g-dev
 
-pip3 install conan
-
 sudo tee -a /etc/sysctl.conf << EOF
 kernel.shmmax = 5000000000000
 kernel.shmmni = 32768

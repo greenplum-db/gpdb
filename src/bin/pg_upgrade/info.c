@@ -240,10 +240,8 @@ create_rel_filename_map(const char *old_data, const char *new_data,
 	map->natts = old_rel->natts;
 	map->type = old_rel->reltype;
 
-#if 0 /* GPDB_12_MERGE_FIXME - replace relstorage check which was removed */
 	/* An AO table doesn't necessarily have segment 0 at all. */
-	map->missing_seg0_ok = relstorage_is_ao(old_rel->relstorage);
-#endif
+	map->missing_seg0_ok = is_appendonly(old_rel->relstorage);
 
 	/* used only for logging and error reporting, old/new are identical */
 	map->nspname = old_rel->nspname;
@@ -397,7 +395,6 @@ get_db_infos(ClusterInfo *cluster)
 	/* we don't preserve pg_database.oid so we sort by name */
 			 "ORDER BY 2",
 	/* 9.2 removed the spclocation column */
-	/* GPDB_XX_MERGE_FIXME: spclocation was removed in 6.0 cycle */
 			 (GET_MAJOR_VERSION(cluster->major_version) == 803) ?
 			 "t.spclocation" : "pg_catalog.pg_tablespace_location(t.oid)");
 

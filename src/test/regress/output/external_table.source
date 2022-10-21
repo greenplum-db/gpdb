@@ -4927,18 +4927,53 @@ SELECT * FROM test_part_integrity;
 (4 rows)
 
 DROP TABLE test_part_integrity;
--- Test external partition error out on changing root distribution policy
+-- Testing altering the distribution policy of external tables.
+CREATE WRITABLE EXTERNAL WEB TABLE ext_w_dist(a int, b int) EXECUTE 'cat > @abs_srcdir@/data/ext_w_dist.tbl' FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' ') DISTRIBUTED BY (a);
+ALTER TABLE ext_w_dist SET WITH (reorganize=true); -- should error out if forcing reorganize
+ERROR:  cannot reorganize external table "ext_w_dist"
+SELECT policytype, distkey FROM gp_distribution_policy WHERE localoid = 'ext_w_dist'::regclass;
+ policytype | distkey 
+------------+---------
+ p          | 1
+(1 row)
+
+ALTER TABLE ext_w_dist SET DISTRIBUTED BY (b);
+SELECT policytype, distkey FROM gp_distribution_policy WHERE localoid = 'ext_w_dist'::regclass;
+ policytype | distkey 
+------------+---------
+ p          | 2
+(1 row)
+
+ALTER TABLE ext_w_dist SET DISTRIBUTED RANDOMLY;
+SELECT policytype, distkey FROM gp_distribution_policy WHERE localoid = 'ext_w_dist'::regclass;
+ policytype | distkey 
+------------+---------
+ p          | 
+(1 row)
+
+-- Testing external table as the partition child.
 CREATE TABLE part_root(a int) PARTITION BY RANGE(a);
 CREATE TABLE part_child (LIKE part_root);
-CREATE WRITABLE EXTERNAL WEB TABLE part_ext_w(a int) EXECUTE 'cat > @abs_srcdir@/data/part_ext.tbl' FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' ');;
+CREATE WRITABLE EXTERNAL WEB TABLE part_ext_w(a int) EXECUTE 'cat > @abs_srcdir@/data/part_ext.tbl' FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' ') DISTRIBUTED BY (a);
 ALTER TABLE part_root ATTACH PARTITION part_child FOR VALUES FROM (0) TO (10);
 ALTER TABLE part_root ATTACH PARTITION part_ext_w FOR VALUES FROM (10) TO (20);
 -- Adding column should work fine
 ALTER TABLE part_root ADD COLUMN b int;
 INSERT INTO part_root SELECT i,i FROM generate_series(1,19)i;
--- altering distribution policy should fail
+-- altering distribution policy should work fine 
+SELECT policytype, distkey FROM gp_distribution_policy WHERE localoid = 'part_ext_w'::regclass;
+ policytype | distkey 
+------------+---------
+ p          | 1
+(1 row)
+
 ALTER TABLE part_root SET DISTRIBUTED BY (b);
-ERROR:  "part_ext_w" is not a table
+SELECT policytype, distkey FROM gp_distribution_policy WHERE localoid = 'part_ext_w'::regclass;
+ policytype | distkey 
+------------+---------
+ p          | 2
+(1 row)
+
 DROP TABLE part_root;
 -- check logerrors value of pg_exttable
 CREATE EXTERNAL TABLE ext_false (c INT) 

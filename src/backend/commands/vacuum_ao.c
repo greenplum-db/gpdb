@@ -534,6 +534,8 @@ vacuum_appendonly_index(Relation indexRelation,
 	stats = index_bulk_delete(&ivinfo, NULL, appendonly_tid_reaped,
 							  (void *) dead_segs);
 
+	SIMPLE_FAULT_INJECTOR("vacuum_ao_after_index_delete");
+
 	/* Do post-VACUUM cleanup */
 	stats = index_vacuum_cleanup(&ivinfo, stats);
 

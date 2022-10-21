@@ -1,18 +1,26 @@
 -- gp_dump_query_oids() doesn't list built-in functions, so we need a UDF to test with.
 CREATE FUNCTION dumptestfunc(t text) RETURNS integer AS $$ SELECT 123 $$ LANGUAGE SQL;
 CREATE FUNCTION dumptestfunc2(t text) RETURNS integer AS $$ SELECT 123 $$ LANGUAGE SQL;
+create table base(a int);
+create materialized view base_mv as select a from base;
 
 -- The function returns OIDs. We need to replace them with something reproducable.
 CREATE FUNCTION sanitize_output(t text) RETURNS text AS $$
 declare
   dumptestfunc_oid oid;
   dumptestfunc2_oid oid;
+  base_oid oid;
+  base_mv_oid oid;
 begin
     dumptestfunc_oid = 'dumptestfunc'::regproc::oid;
     dumptestfunc2_oid = 'dumptestfunc2'::regproc::oid;
+    base_oid = 'base'::regclass::oid;
+    base_mv_oid = 'base_mv'::regclass::oid;
 
     t := replace(t, dumptestfunc_oid::text, '<dumptestfunc>');
     t := replace(t, dumptestfunc2_oid::text, '<dumptestfunc2>');
+    t := replace(t, base_oid::text, '<base_table>');
+    t := replace(t, base_mv_oid::text, '<base_mv>');
 
     RETURN t;
 end;
@@ -74,6 +82,7 @@ SELECT array['ptable'::regclass::oid::text,
              'ctable'::regclass::oid::text,
              'cctable'::regclass::oid::text] <@  (string_to_array((SELECT info->>'relids' FROM minirepro_partition_test WHERE id = 2),','));
 SELECT array['pg_class'::regclass::oid::text] <@  (string_to_array((SELECT info->>'relids' FROM minirepro_partition_test WHERE id = 3),','));
+SELECT sanitize_output(gp_dump_query_oids('SELECT * FROM base_mv'));
 DROP TABLE foo;
 DROP TABLE cctable;
 DROP TABLE ctable;

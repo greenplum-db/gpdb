@@ -24,6 +24,7 @@
 #include "access/tuptoaster.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
+#include "catalog/gp_fastsequence.h"
 #include "catalog/heap.h"
 #include "catalog/index.h"
 #include "catalog/pg_am.h"
@@ -52,6 +53,7 @@ typedef struct AppendOnlyDMLState
 	Oid relationOid;
 	AppendOnlyInsertDesc	insertDesc;
 	AppendOnlyDeleteDesc	deleteDesc;
+	AppendOnlyUniqueCheckDesc uniqueCheckDesc;
 } AppendOnlyDMLState;
 
 
@@ -153,6 +155,7 @@ enter_dml_state(const Oid relationOid)
 
 	state->insertDesc = NULL;
 	state->deleteDesc = NULL;
+	state->uniqueCheckDesc = NULL;
 
 	appendOnlyLocal.last_used_state = state;
 	return state;
@@ -254,6 +257,15 @@ appendonly_dml_finish(Relation relation, CmdType operation)
 		appendonly_insert_finish(state->insertDesc);
 		state->insertDesc = NULL;
 	}
+
+	if (state->uniqueCheckDesc)
+	{
+		AppendOnlyBlockDirectory_End_forSearch(state->uniqueCheckDesc->blockDirectory);
+		pfree(state->uniqueCheckDesc->blockDirectory);
+		state->uniqueCheckDesc->blockDirectory = NULL;
+		pfree(state->uniqueCheckDesc);
+		state->uniqueCheckDesc = NULL;
+	}
 }
 
 /*
@@ -272,10 +284,12 @@ reset_state_cb(void *arg)
 }
 
 /*
- * Retrieve the insertDescriptor for a relation. Initialize it if needed.
+ * Retrieve the insertDescriptor for a relation. Initialize it if its absent.
+ * 'num_rows': Number of rows to be inserted. (NUM_FAST_SEQUENCES if we don't
+ * know it beforehand). This arg is not used if the descriptor already exists.
  */
 static AppendOnlyInsertDesc
-get_insert_descriptor(const Relation relation)
+get_or_create_ao_insert_descriptor(const Relation relation, int64 num_rows)
 {
 	AppendOnlyDMLState *state;
 
@@ -284,10 +298,29 @@ get_insert_descriptor(const Relation relation)
 	if (state->insertDesc == NULL)
 	{
 		MemoryContext oldcxt;
+		AppendOnlyInsertDesc insertDesc;
 
 		oldcxt = MemoryContextSwitchTo(appendOnlyLocal.stateCxt);
-		state->insertDesc = appendonly_insert_init(relation,
-												   ChooseSegnoForWrite(relation));
+		insertDesc = appendonly_insert_init(relation,
+											ChooseSegnoForWrite(relation),
+											num_rows);
+		/*
+		 * If we have a unique index, insert a placeholder block directory row
+		 * to entertain uniqueness checks from concurrent inserts. See
+		 * AppendOnlyBlockDirectory_InsertPlaceholder() for details.
+		 */
+		if (relationHasUniqueIndex(relation))
+		{
+			int64 firstRowNum = insertDesc->lastSequence + 1;
+			BufferedAppend *bufferedAppend = &insertDesc->storageWrite.bufferedAppend;
+			int64 fileOffset = BufferedAppendNextBufferPosition(bufferedAppend);
+
+			AppendOnlyBlockDirectory_InsertPlaceholder(&insertDesc->blockDirectory,
+													   firstRowNum,
+													   fileOffset,
+													   0);
+		}
+		state->insertDesc = insertDesc;
 		MemoryContextSwitchTo(oldcxt);
 	}
 
@@ -298,7 +331,7 @@ get_insert_descriptor(const Relation relation)
  * Retrieve the deleteDescriptor for a relation. Initialize it if needed.
  */
 static AppendOnlyDeleteDesc
-get_delete_descriptor(const Relation relation, bool forUpdate)
+get_or_create_delete_descriptor(const Relation relation, bool forUpdate)
 {
 	AppendOnlyDMLState *state;
 
@@ -306,23 +339,7 @@ get_delete_descriptor(const Relation relation, bool forUpdate)
 
 	if (state->deleteDesc == NULL)
 	{
-		/*
-		 * GPDB_12_MERGE_FIXME: Can we perform this check earlier on?
-		 * Example during init? Idealy should be called on master node first,
-		 * that way we will avoid the dispatch.
-		 */
 		MemoryContext oldcxt;
-		if (IsolationUsesXactSnapshot())
-		{
-			if (forUpdate)
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("updates on append-only tables are not supported in serializable transactions")));
-			else
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("deletes on append-only tables are not supported in serializable transactions")));
-		}
 
 		oldcxt = MemoryContextSwitchTo(appendOnlyLocal.stateCxt);
 		state->deleteDesc = appendonly_delete_init(relation);
@@ -332,6 +349,28 @@ get_delete_descriptor(const Relation relation, bool forUpdate)
 	return state->deleteDesc;
 }
 
+static AppendOnlyUniqueCheckDesc
+get_or_create_unique_check_desc(Relation relation, Snapshot snapshot)
+{
+	AppendOnlyDMLState *state = find_dml_state(RelationGetRelid(relation));
+
+	if (!state->uniqueCheckDesc)
+	{
+		MemoryContext oldcxt;
+		AppendOnlyUniqueCheckDesc uniqueCheckDesc;
+
+		oldcxt = MemoryContextSwitchTo(appendOnlyLocal.stateCxt);
+		uniqueCheckDesc = palloc0(sizeof(AppendOnlyUniqueCheckDescData));
+		uniqueCheckDesc->blockDirectory = palloc0(sizeof(AppendOnlyBlockDirectory));
+		AppendOnlyBlockDirectory_Init_forSearch(uniqueCheckDesc->blockDirectory,
+												snapshot, NULL, -1, relation,
+												1, false, NULL);
+		state->uniqueCheckDesc = uniqueCheckDesc;
+		MemoryContextSwitchTo(oldcxt);
+	}
+
+	return state->uniqueCheckDesc;
+}
 
 /* ------------------------------------------------------------------------
  * Slot related callbacks for appendonly AM
@@ -482,7 +521,6 @@ appendonly_index_fetch_tuple(struct IndexFetchTableData *scan,
 								  snapshot,
 								  appendOnlyMetaDataSnapshot);
 	}
-
 	/*
 	 * There is no reason to expect changes on snapshot between tuple
 	 * fetching calls after fech_init is called, treat it as a
@@ -492,7 +530,87 @@ appendonly_index_fetch_tuple(struct IndexFetchTableData *scan,
 
 	appendonly_fetch(aoscan->aofetch, (AOTupleId *) tid, slot);
 
+	/*
+	 * Currently, we don't determine this parameter. By contract, it is to be
+	 * set to true iff we can determine that this row is dead to all
+	 * transactions. Failure to set this will lead to use of a garbage value
+	 * in certain code, such as that for unique index checks.
+	 * This is typically used for HOT chains, which we don't support.
+	 */
+	if (all_dead)
+		*all_dead = false;
+
+	/* Currently, we don't determine this parameter. By contract, it is to be
+	 * set to true iff there is another tuple for the tid, so that we can prompt
+	 * the caller to call index_fetch_tuple() again for the same tid.
+	 * This is typically used for HOT chains, which we don't support.
+	 */
+	if (call_again)
+		*call_again = false;
+
 	return !TupIsNull(slot);
+}
+
+/*
+ * Check if a visible tuple exists given the tid and a snapshot. This is
+ * currently used to determine uniqueness checks.
+ *
+ * We determine existence simply by checking if a *visible* block directory
+ * entry covers the given tid.
+ *
+ * There is no need to fetch the tuple (we actually can't reliably do so as
+ * we might encounter a placeholder row in the block directory)
+ */
+static bool
+appendonly_index_fetch_tuple_exists(Relation rel,
+									ItemPointer tid,
+									Snapshot snapshot,
+									bool *all_dead)
+{
+	AppendOnlyUniqueCheckDesc 	uniqueCheckDesc;
+	AppendOnlyBlockDirectory 	*blockDirectory;
+	AOTupleId 					*aoTupleId = (AOTupleId *) tid;
+
+#ifdef USE_ASSERT_CHECKING
+	int			segmentFileNum = AOTupleIdGet_segmentFileNum(aoTupleId);
+	int64		rowNum = AOTupleIdGet_rowNum(aoTupleId);
+
+	Assert(segmentFileNum != InvalidFileSegNumber);
+	Assert(rowNum != InvalidAORowNum);
+	/*
+	 * Since this can only be called in the context of a unique index check, the
+	 * snapshots that are supplied can only be non-MVCC snapshots: SELF and DIRTY.
+	 */
+	Assert(snapshot->snapshot_type == SNAPSHOT_SELF ||
+		   snapshot->snapshot_type == SNAPSHOT_DIRTY);
+#endif
+
+	/*
+	 * Currently, we don't determine this parameter. By contract, it is to be
+	 * set to true iff we can determine that this row is dead to all
+	 * transactions. Failure to set this will lead to use of a garbage value
+	 * in certain code, such as that for unique index checks.
+	 * This is typically used for HOT chains, which we don't support.
+	 */
+	if (all_dead)
+		*all_dead = false;
+
+	/*
+	 * FIXME: for when we want CREATE UNIQUE INDEX CONCURRENTLY to work
+	 * Unique constraint violation checks with SNAPSHOT_SELF are currently
+	 * required to support CREATE UNIQUE INDEX CONCURRENTLY. Currently, the
+	 * sole placeholder row inserted at first insert might not be visible to
+	 * the snapshot, if it was already updated by its actual first row. So,
+	 * we would need to flush a placeholder row at the beginning of each new
+	 * in-memory minipage. Currently, CREATE INDEX CONCURRENTLY isn't
+	 * supported, so we assume such a check satisfies SNAPSHOT_SELF.
+	 */
+	if (snapshot->snapshot_type == SNAPSHOT_SELF)
+		return true;
+
+	uniqueCheckDesc = get_or_create_unique_check_desc(rel, snapshot);
+	blockDirectory = uniqueCheckDesc->blockDirectory;
+	return AppendOnlyBlockDirectory_CoversTuple(blockDirectory, aoTupleId);
 }
 
 
@@ -589,7 +707,13 @@ appendonly_tuple_insert(Relation relation, TupleTableSlot *slot, CommandId cid,
 	AppendOnlyInsertDesc    insertDesc;
 	MemTuple				mtuple;
 
-	insertDesc = get_insert_descriptor(relation);
+	/* Fetch the insert desc, which likely already has been created
+	 *
+	 * Note: since we don't know how many rows will actually be inserted (as we
+	 * don't know how many rows are visible), we provide the default number of
+	 * rows to bump gp_fastsequence by.
+	 */
+	insertDesc = get_or_create_ao_insert_descriptor(relation, NUM_FAST_SEQUENCES);
 	mtuple = appendonly_form_memtuple(slot, insertDesc->mt_bind);
 
 	/* Update the tuple with table oid */
@@ -623,17 +747,20 @@ appendonly_tuple_complete_speculative(Relation relation, TupleTableSlot *slot,
  *	appendonly_multi_insert	- insert multiple tuples into an ao relation
  *
  * This is like appendonly_tuple_insert(), but inserts multiple tuples in one
- * operation. Typicaly used by COPY. This is preferrable than calling
- * appendonly_tuple_insert() in a loop because ... WAL??
+ * operation. Typically used by COPY.
+ *
+ * In the ao_row AM, we already realize the benefits of batched WAL (WAL is
+ * generated only when the insert buffer is full). There is also no page locking
+ * that we can optimize, as ao_row relations don't use the PG buffer cache. So,
+ * this is a thin layer over appendonly_tuple_insert() with one important
+ * optimization: We allocate the insert desc with ntuples up front, which can
+ * reduce the number of gp_fast_sequence allocations.
  */
 static void
 appendonly_multi_insert(Relation relation, TupleTableSlot **slots, int ntuples,
 						CommandId cid, int options, BulkInsertState bistate)
 {
-	/*
-	 * GPDB_12_MERGE_FIXME: Poor man's implementation for now in order to make
-	 * the tests pass. Implement properly.
-	 */
+	(void) get_or_create_ao_insert_descriptor(relation, ntuples);
 	for (int i = 0; i < ntuples; i++)
 		appendonly_tuple_insert(relation, slots[i], cid, options, bistate);
 }
@@ -646,7 +773,7 @@ appendonly_tuple_delete(Relation relation, ItemPointer tid, CommandId cid,
 	AppendOnlyDeleteDesc	deleteDesc;
 	TM_Result				result;
 
-	deleteDesc = get_delete_descriptor(relation, false);
+	deleteDesc = get_or_create_delete_descriptor(relation, false);
 	result = appendonly_delete(deleteDesc, (AOTupleId *) tid);
 	if (result == TM_Ok)
 		pgstat_count_heap_delete(relation);
@@ -677,8 +804,13 @@ appendonly_tuple_update(Relation relation, ItemPointer otid, TupleTableSlot *slo
 	MemTuple				mtuple;
 	TM_Result				result;
 
-	insertDesc = get_insert_descriptor(relation);
-	deleteDesc = get_delete_descriptor(relation, true);
+	/*
+	 * Note: since we don't know how many rows will actually be inserted (as we
+	 * don't know how many rows are visible), we provide the default number of
+	 * rows to bump gp_fastsequence by.
+	 */
+	insertDesc = get_or_create_ao_insert_descriptor(relation, NUM_FAST_SEQUENCES);
+	deleteDesc = get_or_create_delete_descriptor(relation, true);
 
 	/* Update the tuple with table oid */
 	slot->tts_tableOid = RelationGetRelid(relation);
@@ -1019,7 +1151,7 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	
 	write_seg_no = ChooseSegnoForWrite(NewHeap);
 
-	aoInsertDesc = appendonly_insert_init(NewHeap, write_seg_no);
+	aoInsertDesc = appendonly_insert_init(NewHeap, write_seg_no, (int64) *num_tuples);
 
 	/* Insert sorted heap tuples into new storage */
 	for (;;)
@@ -1949,6 +2081,7 @@ static const TableAmRoutine ao_row_methods = {
 	.index_fetch_reset = appendonly_index_fetch_reset,
 	.index_fetch_end = appendonly_index_fetch_end,
 	.index_fetch_tuple = appendonly_index_fetch_tuple,
+	.index_fetch_tuple_exists = appendonly_index_fetch_tuple_exists,
 
 	.tuple_insert = appendonly_tuple_insert,
 	.tuple_insert_speculative = appendonly_tuple_insert_speculative,

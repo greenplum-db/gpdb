@@ -595,6 +595,7 @@ DefineIndex(Oid relationId,
 	int			save_nestlevel = -1;
 	bool		shouldDispatch;
 	int			i;
+	Oid			blkdirrelid = InvalidOid;
 
 	if (Gp_role == GP_ROLE_DISPATCH && !IsBootstrapProcessingMode())
 		shouldDispatch = true;
@@ -710,7 +711,6 @@ DefineIndex(Oid relationId,
 	rel = table_open(relationId, NoLock);
 	if (RelationIsAppendOptimized(rel))
 	{
-		Oid blkdirrelid = InvalidOid;
 		GetAppendOnlyEntryAuxOids(relationId, NULL, NULL, &blkdirrelid, NULL, NULL, NULL);
 
 		if (!OidIsValid(blkdirrelid))
@@ -946,10 +946,23 @@ DefineIndex(Oid relationId,
 				 errmsg("access method \"%s\" does not support exclusion constraints",
 						accessMethodName)));
 
-    if  (stmt->unique && RelationIsAppendOptimized(rel))
-        ereport(ERROR,
-                (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-                 errmsg("append-only tables do not support unique indexes")));
+	if (stmt->unique && RelationIsAppendOptimized(rel))
+	{
+		/* XXX: Remove when unique indexes are fully supported on AO/CO tables. */
+		if (!gp_appendonly_enable_unique_index)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						errmsg("append-only tables do not support unique indexes")));
+
+		if (stmt->concurrent)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						errmsg("append-only tables do not support unique indexes built concurrently")));
+
+		/* Additional version checks needed if block directory already exists */
+		if (OidIsValid(blkdirrelid))
+			ValidateRelationVersionForUniqueIndex(rel);
+	}
 
 	amcanorder = amRoutine->amcanorder;
 	amoptions = amRoutine->amoptions;

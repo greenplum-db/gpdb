@@ -273,7 +273,7 @@ WARNING:  skipping "vacowned_part2" --- only table or database owner can vacuum 
 RESET ROLE;
 -- Partitioned table and one partition owned by other user.
 ALTER TABLE vacowned_parted OWNER TO regress_vacuum;
-ALTER TABLE vacowned_part1 OWNER TO regress_vacuum;
+ALTER TABLE vacowned_part2 OWNER TO CURRENT_USER;
 SET ROLE regress_vacuum;
 VACUUM vacowned_parted;
 WARNING:  skipping "vacowned_part2" --- only table or database owner can vacuum it
@@ -293,6 +293,7 @@ WARNING:  skipping "vacowned_part2" --- only table or database owner can vacuum 
 RESET ROLE;
 -- Only one partition owned by other user.
 ALTER TABLE vacowned_parted OWNER TO CURRENT_USER;
+ALTER TABLE vacowned_part1 OWNER TO regress_vacuum;
 SET ROLE regress_vacuum;
 VACUUM vacowned_parted;
 WARNING:  skipping "vacowned_parted" --- only table or database owner can vacuum it
@@ -316,6 +317,7 @@ RESET ROLE;
 -- Only partitioned table owned by other user.
 ALTER TABLE vacowned_parted OWNER TO regress_vacuum;
 ALTER TABLE vacowned_part1 OWNER TO CURRENT_USER;
+ALTER TABLE vacowned_part2 OWNER TO CURRENT_USER;
 SET ROLE regress_vacuum;
 VACUUM vacowned_parted;
 WARNING:  skipping "vacowned_part1" --- only table or database owner can vacuum it

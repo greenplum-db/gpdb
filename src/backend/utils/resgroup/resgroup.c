@@ -615,6 +615,7 @@ InitResGroups(void)
 		Oid			groupId = ((Form_pg_resgroup) GETSTRUCT(tuple))->oid;
 		ResGroupData	*group;
 		int cpuRateLimit;
+		Bitmapset *bmsCurrent;
 
 		GetResGroupCapabilities(relResGroupCapability, groupId, &caps);
 		cpuRateLimit = caps.cpuRateLimit;
@@ -631,8 +632,12 @@ InitResGroups(void)
 		}
 		else
 		{
-			Bitmapset *bmsCurrent = CpusetToBitset(caps.cpuset,
-												   MaxCpuSetLength);
+			char **cpusetArray = getSpiltCpuSet(caps.cpuset);
+			if (Gp_role == GP_ROLE_EXECUTE && cpusetArray[1] != NULL)
+				bmsCurrent = CpusetToBitset(cpusetArray[1], MaxCpuSetLength);
+			else
+				bmsCurrent = CpusetToBitset(cpusetArray[0], MaxCpuSetLength);
+
 			Bitmapset *bmsCommon = bms_intersect(bmsCurrent, bmsUnused);
 			Bitmapset *bmsMissing = bms_difference(bmsCurrent, bmsCommon);
 
@@ -657,7 +662,11 @@ InitResGroups(void)
 				 * write cpus to corresponding file
 				 * if all the cores are available
 				 */
-				ResGroupOps_SetCpuSet(groupId, caps.cpuset);
+				char **cpusetArray = getSpiltCpuSet(caps.cpuset);
+				if (Gp_role == GP_ROLE_EXECUTE && cpusetArray[1] != NULL)
+					ResGroupOps_SetCpuSet(groupId, cpusetArray[1]);
+				else
+					ResGroupOps_SetCpuSet(groupId, cpusetArray[0]);
 				bmsUnused = bms_del_members(bmsUnused, bmsCurrent);
 			}
 			else
@@ -909,8 +918,13 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CPUSET)
 		{
 			if (gp_resource_group_enable_cgroup_cpuset)
-				ResGroupOps_SetCpuSet(callbackCtx->groupid,
-									  callbackCtx->caps.cpuset);
+			{
+				char **cpusetArray = getSpiltCpuSet(callbackCtx->caps.cpuset);
+				if (Gp_role == GP_ROLE_EXECUTE && cpusetArray[1] != NULL)
+					ResGroupOps_SetCpuSet(callbackCtx->groupid, cpusetArray[1]);
+				else
+					ResGroupOps_SetCpuSet(callbackCtx->groupid, cpusetArray[0]);
+			}
 		}
 		else if (callbackCtx->limittype != RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO)
 		{
@@ -935,12 +949,32 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 								  MaxCpuSetLength);
 			/* Add old value to default group
 			 * sub new value from default group */
-			CpusetUnion(defaultCpusetGroup,
-							callbackCtx->oldCaps.cpuset,
+			char **cpusetArray = getSpiltCpuSet(callbackCtx->caps.cpuset);
+			char **oldcpusetArray = getSpiltCpuSet(callbackCtx->oldCaps.cpuset);
+
+			if (Gp_role == GP_ROLE_EXECUTE)
+			{
+				char *oldcpuset = (oldcpusetArray[1] == NULL) ?
+								oldcpusetArray[0] : oldcpusetArray[1];
+				char *cpuset = (cpusetArray[1] == NULL) ?
+								cpusetArray[0] : cpusetArray[1];
+
+				CpusetUnion(defaultCpusetGroup,
+							oldcpuset,
 							MaxCpuSetLength);
-			CpusetDifference(defaultCpusetGroup,
-							callbackCtx->caps.cpuset,
+				CpusetDifference(defaultCpusetGroup,
+							cpuset,
 							MaxCpuSetLength);
+			} else
+			{
+				CpusetUnion(defaultCpusetGroup,
+							oldcpusetArray[0],
+							MaxCpuSetLength);
+				CpusetDifference(defaultCpusetGroup,
+							cpusetArray[0],
+							MaxCpuSetLength);
+			}
+
 			ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, defaultCpusetGroup);
 		}
 	}

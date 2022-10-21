@@ -289,4 +289,66 @@ CExpressionUtils::PexprDedupChildren(CMemoryPool *mp, CExpression *pexpr)
 	pop->AddRef();
 	return GPOS_NEW(mp) CExpression(mp, pop, pdrgpexprChildren);
 }
+
+// if the expression is a LogicalSelect and contains correlated EXISTS/ANY subqueries,
+// extract those subqueries and return the derived constraint property from subqueries.
+// this is useful when we try to infer and propagate predicates from subquery to outer
+// relation. returns null if the expression doesn't satisfy aforementioned requirements.
+CPropConstraint *
+CExpressionUtils::GetPropConstraintFromSubquery(CMemoryPool *mp,
+												CExpression *pexpr)
+{
+	GPOS_ASSERT(nullptr != pexpr);
+	if (pexpr->Pop()->Eopid() != COperator::EopLogicalSelect)
+	{
+		return nullptr;
+	}
+
+	CExpression *filter = (*pexpr)[1];
+	CExpressionArray *subqueries = GPOS_NEW(mp) CExpressionArray(mp);
+
+	if (CUtils::FCorrelatedExistsAnySubquery(filter))
+	{
+		filter->AddRef();
+		subqueries->Append(filter);
+	}
+	else if (CPredicateUtils::FAnd(filter))
+	{
+		const ULONG arity = filter->Arity();
+		for (ULONG ul = 0; ul < arity; ul++)
+		{
+			CExpression *childFilter = (*filter)[ul];
+			if (CUtils::FCorrelatedExistsAnySubquery(childFilter))
+			{
+				childFilter->AddRef();
+				subqueries->Append(childFilter);
+			}
+		}
+	}
+	else
+	{
+		subqueries->Release();
+		return nullptr;
+	}
+
+	if (subqueries->Size() == 0)
+	{
+		subqueries->Release();
+		return nullptr;
+	}
+
+	CExpression *exprSubquery =
+		CPredicateUtils::PexprConjunction(mp, subqueries);
+	CColRefSetArray *colRefSetArray = nullptr;
+	CConstraint *pcnstr =
+		CConstraint::PcnstrFromScalarExpr(mp, exprSubquery, &colRefSetArray);
+	exprSubquery->Release();
+
+	if (nullptr == pcnstr)
+	{
+		CRefCount::SafeRelease(colRefSetArray);
+		return nullptr;
+	}
+	return GPOS_NEW(mp) CPropConstraint(mp, colRefSetArray, pcnstr);
+}
 // EOF

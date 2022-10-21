@@ -1513,17 +1513,11 @@ CTranslatorScalarToDXL::TranslateAggrefToDXL(
 CDXLWindowFrame *
 CTranslatorScalarToDXL::TranslateWindowFrameToDXL(
 	int frame_options, const Node *start_offset, const Node *end_offset,
+	Oid start_in_range_func, Oid end_in_range_func, Oid in_range_coll,
+	bool in_range_asc, bool in_range_nulls_first,
 	const CMappingVarColId *var_colid_mapping, CDXLNode *new_scalar_proj_list)
 {
 	EdxlFrameSpec frame_spec;
-
-	// GPDB_12_MERGE_FIXME: there's no reason ORCA would care about this, other
-	// than that it doesn't roundtrip this piece of info.
-	if ((frame_options & FRAMEOPTION_EXCLUSION))
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-				   GPOS_WSZ_LIT("window frame EXCLUDE"));
-	}
 
 	if ((frame_options & FRAMEOPTION_ROWS) != 0)
 	{
@@ -1532,25 +1526,10 @@ CTranslatorScalarToDXL::TranslateWindowFrameToDXL(
 	else if ((frame_options & FRAMEOPTION_RANGE) != 0)
 	{
 		frame_spec = EdxlfsRange;
-		// GPDB_12_MERGE_FIXME: as soon as we can pass WindowClause::startInRangeFunc
-		// and friends to ORCA and get them back, we can support stuff like
-		// RANGE 1 PRECEDING
-		if ((frame_options &
-			 (FRAMEOPTION_START_OFFSET | FRAMEOPTION_END_OFFSET)))
-		{
-			GPOS_RAISE(
-				gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-				GPOS_WSZ_LIT(
-					"window frame RANGE with OFFSET PRECEDING or FOLLOWING"));
-		}
 	}
 	else if ((frame_options & FRAMEOPTION_GROUPS) != 0)
 	{
-		// GPDB_12_MERGE_FIXME: there's no reason the optimizer would care too
-		// much about this. As long as we recognize and roundtrip this, I think
-		// the executor will take care of it
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-				   GPOS_WSZ_LIT("window frame GROUPS mode"));
+		frame_spec = EdxlfsGroups;
 	}
 	else
 	{
@@ -1558,30 +1537,24 @@ CTranslatorScalarToDXL::TranslateWindowFrameToDXL(
 				   GPOS_WSZ_LIT("window frame option"));
 	}
 
-
-	// GPDB_12_MERGE_FIXME: the following window frame options are flipped (i.e.
-	// the START_ and END_ ones are swapped accidently in commit
-	// ebf9763c78826819). The only reason we got away with it is because we also
-	// flipped them in CTranslatorDXLToPlStmt::TranslateDXLWindow(). Flip them
-	// back after the merge.
 	EdxlFrameBoundary leading_boundary;
-	if ((frame_options & FRAMEOPTION_END_UNBOUNDED_PRECEDING) != 0)
+	if ((frame_options & FRAMEOPTION_START_UNBOUNDED_PRECEDING) != 0)
 	{
 		leading_boundary = EdxlfbUnboundedPreceding;
 	}
-	else if ((frame_options & FRAMEOPTION_END_OFFSET_PRECEDING) != 0)
+	else if ((frame_options & FRAMEOPTION_START_OFFSET_PRECEDING) != 0)
 	{
 		leading_boundary = EdxlfbBoundedPreceding;
 	}
-	else if ((frame_options & FRAMEOPTION_END_CURRENT_ROW) != 0)
+	else if ((frame_options & FRAMEOPTION_START_CURRENT_ROW) != 0)
 	{
 		leading_boundary = EdxlfbCurrentRow;
 	}
-	else if ((frame_options & FRAMEOPTION_END_OFFSET_FOLLOWING) != 0)
+	else if ((frame_options & FRAMEOPTION_START_OFFSET_FOLLOWING) != 0)
 	{
 		leading_boundary = EdxlfbBoundedFollowing;
 	}
-	else if ((frame_options & FRAMEOPTION_END_UNBOUNDED_FOLLOWING) != 0)
+	else if ((frame_options & FRAMEOPTION_START_UNBOUNDED_FOLLOWING) != 0)
 	{
 		leading_boundary = EdxlfbUnboundedFollowing;
 	}
@@ -1592,23 +1565,23 @@ CTranslatorScalarToDXL::TranslateWindowFrameToDXL(
 	}
 
 	EdxlFrameBoundary trailing_boundary;
-	if ((frame_options & FRAMEOPTION_START_UNBOUNDED_PRECEDING) != 0)
+	if ((frame_options & FRAMEOPTION_END_UNBOUNDED_PRECEDING) != 0)
 	{
 		trailing_boundary = EdxlfbUnboundedPreceding;
 	}
-	else if ((frame_options & FRAMEOPTION_START_OFFSET_PRECEDING) != 0)
+	else if ((frame_options & FRAMEOPTION_END_OFFSET_PRECEDING) != 0)
 	{
 		trailing_boundary = EdxlfbBoundedPreceding;
 	}
-	else if ((frame_options & FRAMEOPTION_START_CURRENT_ROW) != 0)
+	else if ((frame_options & FRAMEOPTION_END_CURRENT_ROW) != 0)
 	{
 		trailing_boundary = EdxlfbCurrentRow;
 	}
-	else if ((frame_options & FRAMEOPTION_START_OFFSET_FOLLOWING) != 0)
+	else if ((frame_options & FRAMEOPTION_END_OFFSET_FOLLOWING) != 0)
 	{
 		trailing_boundary = EdxlfbBoundedFollowing;
 	}
-	else if ((frame_options & FRAMEOPTION_START_UNBOUNDED_FOLLOWING) != 0)
+	else if ((frame_options & FRAMEOPTION_END_UNBOUNDED_FOLLOWING) != 0)
 	{
 		trailing_boundary = EdxlfbUnboundedFollowing;
 	}
@@ -1621,6 +1594,18 @@ CTranslatorScalarToDXL::TranslateWindowFrameToDXL(
 	// We don't support non-default EXCLUDE [CURRENT ROW | GROUP | TIES |
 	// NO OTHERS] options.
 	EdxlFrameExclusionStrategy strategy = EdxlfesNulls;
+	if ((frame_options & FRAMEOPTION_EXCLUDE_CURRENT_ROW) != 0)
+	{
+		strategy = EdxlfesCurrentRow;
+	}
+	else if ((frame_options & FRAMEOPTION_EXCLUDE_GROUP) != 0)
+	{
+		strategy = EdxlfesGroup;
+	}
+	else if ((frame_options & FRAMEOPTION_EXCLUDE_TIES) != 0)
+	{
+		strategy = EdxlfesTies;
+	}
 
 	CDXLNode *lead_edge = GPOS_NEW(m_mp)
 		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarWindowFrameEdge(
@@ -1630,20 +1615,21 @@ CTranslatorScalarToDXL::TranslateWindowFrameToDXL(
 						   m_mp, false /* fLeading */, trailing_boundary));
 
 	// translate the lead and trail value
-	if (nullptr != end_offset)
-	{
-		lead_edge->AddChild(TranslateWindowFrameEdgeToDXL(
-			end_offset, var_colid_mapping, new_scalar_proj_list));
-	}
-
 	if (nullptr != start_offset)
 	{
-		trail_edge->AddChild(TranslateWindowFrameEdgeToDXL(
+		lead_edge->AddChild(TranslateWindowFrameEdgeToDXL(
 			start_offset, var_colid_mapping, new_scalar_proj_list));
 	}
 
-	CDXLWindowFrame *window_frame_dxl = GPOS_NEW(m_mp)
-		CDXLWindowFrame(frame_spec, strategy, lead_edge, trail_edge);
+	if (nullptr != end_offset)
+	{
+		trail_edge->AddChild(TranslateWindowFrameEdgeToDXL(
+			end_offset, var_colid_mapping, new_scalar_proj_list));
+	}
+
+	CDXLWindowFrame *window_frame_dxl = GPOS_NEW(m_mp) CDXLWindowFrame(
+		frame_spec, strategy, lead_edge, trail_edge, start_in_range_func,
+		end_in_range_func, in_range_coll, in_range_asc, in_range_nulls_first);
 
 	return window_frame_dxl;
 }

@@ -53,6 +53,8 @@
 #define DEFAULT_VARBLOCK_TEMPSPACE_LEN   	 (4 * 1024)
 #define DEFAULT_FS_SAFE_WRITE_SIZE			 (0)
 
+extern AppendOnlyBlockDirectory *GetAOBlockDirectory(Relation relation);
+
 /*
  * AppendOnlyInsertDescData is used for inserting data into append-only
  * relations. It serves an equivalent purpose as AppendOnlyScanDescData
@@ -345,6 +347,12 @@ typedef AppendOnlyFetchDescData *AppendOnlyFetchDesc;
 
 typedef struct AppendOnlyDeleteDescData *AppendOnlyDeleteDesc;
 
+typedef struct AppendOnlyUniqueCheckDescData
+{
+	AppendOnlyBlockDirectory *blockDirectory;
+} AppendOnlyUniqueCheckDescData;
+
+typedef struct AppendOnlyUniqueCheckDescData *AppendOnlyUniqueCheckDesc;
 /*
  * Descriptor for fetches from table via an index.
  */
@@ -388,7 +396,9 @@ extern bool appendonly_fetch(
 	TupleTableSlot *slot);
 extern void appendonly_fetch_finish(AppendOnlyFetchDesc aoFetchDesc);
 extern void appendonly_dml_init(Relation relation, CmdType operation);
-extern AppendOnlyInsertDesc appendonly_insert_init(Relation rel, int segno);
+extern AppendOnlyInsertDesc appendonly_insert_init(Relation rel,
+												   int segno,
+												   int64 num_rows);
 extern void appendonly_insert(
 		AppendOnlyInsertDesc aoInsertDesc, 
 		MemTuple instup, 

@@ -2552,11 +2552,19 @@ appendonly_delete(AppendOnlyDeleteDesc aoDeleteDesc,
  * this function to initialize our varblock and bufferedAppend structures
  * and memory for appending data into the relation file.
  *
+ * 'num_rows': Size of gp_fast_sequence allocation for this insert iteration.
+ * If a valid number of rows value is provided, in cases where we have a sense
+ * of how many rows we will be inserting (such as multi-insert), we use that to
+ * perform the allocation. Otherwise, if 0 is supplied, the default
+ * NUM_FAST_SEQUENCES is used. Using a larger range for gp_fast_sequence helps
+ * reduce trips to gp_fast_sequence, enhancing performance, especially for
+ * concurrent loads.
+ *
  * see appendonly_insert() for more specifics about inserting tuples into
  * append only tables.
  */
 AppendOnlyInsertDesc
-appendonly_insert_init(Relation rel, int segno)
+appendonly_insert_init(Relation rel, int segno, int64 num_rows)
 {
 	AppendOnlyInsertDesc aoInsertDesc;
 	int			maxtupsize;
@@ -2755,13 +2763,8 @@ appendonly_insert_init(Relation rel, int segno)
 	GetAppendOnlyEntryAuxOids(aoInsertDesc->aoi_rel->rd_id, NULL, &segrelid,
 			NULL, NULL, NULL, NULL);
 
-	firstSequence =
-		GetFastSequences(segrelid,
-						 segno,
-						 NUM_FAST_SEQUENCES);
-	aoInsertDesc->numSequences = NUM_FAST_SEQUENCES;
-
-	/* Set last_sequence value */
+	firstSequence = GetFastSequences(segrelid, segno, num_rows);
+	aoInsertDesc->numSequences = num_rows;
 	Assert(firstSequence > aoInsertDesc->rowCount);
 	aoInsertDesc->lastSequence = firstSequence - 1;
 

@@ -165,6 +165,10 @@ open_ds_write(Relation rel, DatumStreamWrite **ds, TupleDesc relationTupleDesc, 
 										XLogIsNeeded() && RelationNeedsWAL(rel));
 
 	}
+
+	for (int i = 0; i < RelationGetNumberOfAttributes(rel); i++)
+		pfree(opts[i]);
+	pfree(opts);
 }
 
 /*
@@ -254,6 +258,10 @@ open_ds_read(Relation rel, DatumStreamRead **ds, TupleDesc relationTupleDesc,
 										   RelationGetRelationName(rel),
 										    /* title */ titleBuf.data);
 	}
+
+	for (int i = 0; i < RelationGetNumberOfAttributes(rel); i++)
+		pfree(opts[i]);
+	pfree(opts);
 }
 
 static void
@@ -893,7 +901,7 @@ SetBlockFirstRowNums(DatumStreamWrite **datumStreams,
 
 
 AOCSInsertDesc
-aocs_insert_init(Relation rel, int segno)
+aocs_insert_init(Relation rel, int segno, int64 num_rows)
 {
     NameData    nd;
 	AOCSInsertDesc desc;
@@ -935,15 +943,8 @@ aocs_insert_init(Relation rel, int segno)
 	 * Even in the case of no indexes, we need to update the fast sequences,
 	 * since the table may contain indexes at some point of time.
 	 */
-	desc->numSequences = 0;
-
-	firstSequence =
-		GetFastSequences(desc->segrelid,
-						 segno,
-						 NUM_FAST_SEQUENCES);
-	desc->numSequences = NUM_FAST_SEQUENCES;
-
-	/* Set last_sequence value */
+	firstSequence = GetFastSequences(desc->segrelid, segno, num_rows);
+	desc->numSequences = num_rows;
 	Assert(firstSequence > desc->rowCount);
 	desc->lastSequence = firstSequence - 1;
 
@@ -1706,95 +1707,6 @@ aocs_fetch_finish(AOCSFetchDesc aocsFetchDesc)
 	AppendOnlyVisimap_Finish(&aocsFetchDesc->visibilityMap, AccessShareLock);
 }
 
-typedef struct AOCSUpdateDescData
-{
-	AOCSInsertDesc insertDesc;
-
-	/*
-	 * visibility map
-	 */
-	AppendOnlyVisimap visibilityMap;
-
-	/*
-	 * Visimap delete support structure. Used to handle out-of-order deletes
-	 */
-	AppendOnlyVisimapDelete visiMapDelete;
-
-}			AOCSUpdateDescData;
-
-AOCSUpdateDesc
-aocs_update_init(Relation rel, int segno)
-{
-	Oid			visimaprelid;
-	Oid			visimapidxid;
-	AOCSUpdateDesc desc = (AOCSUpdateDesc) palloc0(sizeof(AOCSUpdateDescData));
-
-	desc->insertDesc = aocs_insert_init(rel, segno);
-
-    GetAppendOnlyEntryAuxOids(rel->rd_id,
-                              desc->insertDesc->appendOnlyMetaDataSnapshot,
-                              NULL, NULL, NULL,
-                              &visimaprelid, &visimapidxid);
-	AppendOnlyVisimap_Init(&desc->visibilityMap,
-						   visimaprelid,
-						   visimapidxid,
-						   RowExclusiveLock,
-						   desc->insertDesc->appendOnlyMetaDataSnapshot);
-
-	AppendOnlyVisimapDelete_Init(&desc->visiMapDelete,
-								 &desc->visibilityMap);
-
-	return desc;
-}
-
-void
-aocs_update_finish(AOCSUpdateDesc desc)
-{
-	Assert(desc);
-
-	AppendOnlyVisimapDelete_Finish(&desc->visiMapDelete);
-
-	aocs_insert_finish(desc->insertDesc);
-	desc->insertDesc = NULL;
-
-	/* Keep lock until the end of transaction */
-	AppendOnlyVisimap_Finish(&desc->visibilityMap, NoLock);
-
-	pfree(desc);
-}
-
-TM_Result
-aocs_update(AOCSUpdateDesc desc, TupleTableSlot *slot,
-			AOTupleId *oldTupleId, AOTupleId *newTupleId)
-{
-	TM_Result result;
-
-	Assert(desc);
-	Assert(oldTupleId);
-	Assert(newTupleId);
-
-#ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet(
-								   "appendonly_update",
-								   DDLNotSpecified,
-								   "", //databaseName
-								   RelationGetRelationName(desc->insertDesc->aoi_rel));
-	/* tableName */
-#endif
-
-	result = AppendOnlyVisimapDelete_Hide(&desc->visiMapDelete, oldTupleId);
-	if (result != TM_Ok)
-		return result;
-
-	slot_getallattrs(slot);
-	aocs_insert_values(desc->insertDesc,
-					   slot->tts_values, slot->tts_isnull,
-					   newTupleId);
-
-	return result;
-}
-
-
 /*
  * AOCSDeleteDescData is used for delete data from AOCS relations.
  * It serves an equivalent purpose as AppendOnlyScanDescData
@@ -1930,6 +1842,11 @@ aocs_begin_headerscan(Relation rel, int colno)
 							   "ALTER TABLE ADD COLUMN scan",
 							   &ao_attr);
 	hdesc->colno = colno;
+
+	for (int i = 0; i < RelationGetNumberOfAttributes(rel); i++)
+		pfree(opts[i]);
+	pfree(opts);
+
 	return hdesc;
 }
 
@@ -2025,6 +1942,11 @@ aocs_addcol_init(Relation rel,
 											   titleBuf.data,
 											   XLogIsNeeded() && RelationNeedsWAL(rel));
 	}
+
+	for (i = 0; i < RelationGetNumberOfAttributes(rel); i++)
+		pfree(opts[i]);
+	pfree(opts);
+
 	return desc;
 }
 

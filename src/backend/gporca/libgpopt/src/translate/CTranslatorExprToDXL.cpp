@@ -6175,8 +6175,10 @@ CTranslatorExprToDXL::GetWindowFrame(CWindowFrame *pwf)
 	}
 
 	// mappings for frame info in expression and dxl worlds
-	const ULONG rgulSpecMapping[][2] = {{CWindowFrame::EfsRows, EdxlfsRow},
-										{CWindowFrame::EfsRange, EdxlfsRange}};
+	const ULONG rgulSpecMapping[][2] = {
+		{CWindowFrame::EfsRows, EdxlfsRow},
+		{CWindowFrame::EfsRange, EdxlfsRange},
+		{CWindowFrame::EfsGroups, EdxlfsGroups}};
 
 	const ULONG rgulBoundaryMapping[][2] = {
 		{CWindowFrame::EfbUnboundedPreceding, EdxlfbUnboundedPreceding},
@@ -6222,8 +6224,10 @@ CTranslatorExprToDXL::GetWindowFrame(CWindowFrame *pwf)
 		pdxlnTrailing->AddChild(PdxlnScalar(pwf->PexprTrailing()));
 	}
 
-	return GPOS_NEW(m_mp) CDXLWindowFrame(edxlfs, frame_exc_strategy,
-										  pdxlnLeading, pdxlnTrailing);
+	return GPOS_NEW(m_mp) CDXLWindowFrame(
+		edxlfs, frame_exc_strategy, pdxlnLeading, pdxlnTrailing,
+		pwf->StartInRangeFunc(), pwf->EndInRangeFunc(), pwf->InRangeColl(),
+		pwf->InRangeAsc(), pwf->InRangeNullsFirst());
 }
 
 

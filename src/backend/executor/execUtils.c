@@ -211,6 +211,8 @@ CreateExecutorState(void)
 	estate->currentSliceId = 0;
 	estate->eliminateAliens = false;
 
+	estate->gp_bypass_unique_check = false;
+
 	/*
 	 * Return the executor state structure
 	 */

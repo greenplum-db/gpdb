@@ -114,7 +114,6 @@ static relopt_string stringRelOpts_gp[] =
 	{{NULL}}
 };
 
-static void free_options_deep(relopt_value *options, int num_options);
 static relopt_value *get_option_set(relopt_value *options, int num_options, const char *opt_name);
 static bool reloption_is_default(const char *optstr, int optlen);
 
@@ -1144,6 +1143,9 @@ setDefaultCompressionLevel(char *compresstype)
 		return 1;
 }
 
+/*
+ * It's used to prevent persistent memory leaks when parseRelOptions() is called repeatedly.
+ */
 void
 free_options_deep(relopt_value *options, int num_options)
 {

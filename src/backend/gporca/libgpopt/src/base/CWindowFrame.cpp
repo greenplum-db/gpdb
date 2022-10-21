@@ -20,7 +20,7 @@ using namespace gpopt;
 FORCE_GENERATE_DBGSTR(CWindowFrame);
 
 // string encoding of frame specification
-const CHAR rgszFrameSpec[][10] = {"Rows", "Range"};
+const CHAR rgszFrameSpec[][10] = {"Rows", "Range", "Groups"};
 GPOS_CPL_ASSERT(CWindowFrame::EfsSentinel == GPOS_ARRAY_SIZE(rgszFrameSpec));
 
 // string encoding of frame boundary
@@ -51,18 +51,23 @@ const CWindowFrame CWindowFrame::m_wfEmpty;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CWindowFrame::CWindowFrame(CMemoryPool *mp, EFrameSpec efs,
-						   EFrameBoundary efbLeading,
-						   EFrameBoundary efbTrailing,
-						   CExpression *pexprLeading,
-						   CExpression *pexprTrailing,
-						   EFrameExclusionStrategy efes)
+CWindowFrame::CWindowFrame(
+	CMemoryPool *mp, EFrameSpec efs, EFrameBoundary efbLeading,
+	EFrameBoundary efbTrailing, CExpression *pexprLeading,
+	CExpression *pexprTrailing, EFrameExclusionStrategy efes,
+	OID start_in_range_func, OID end_in_range_func, OID in_range_coll,
+	bool in_range_asc, bool in_range_nulls_first)
 	: m_efs(efs),
 	  m_efbLeading(efbLeading),
 	  m_efbTrailing(efbTrailing),
 	  m_pexprLeading(pexprLeading),
 	  m_pexprTrailing(pexprTrailing),
-	  m_efes(efes)
+	  m_efes(efes),
+	  m_start_in_range_func(start_in_range_func),
+	  m_end_in_range_func(end_in_range_func),
+	  m_in_range_coll(in_range_coll),
+	  m_in_range_asc(in_range_asc),
+	  m_in_range_nulls_first(in_range_nulls_first)
 {
 	GPOS_ASSERT_IMP(EfbBoundedPreceding == m_efbLeading ||
 						EfbBoundedFollowing == m_efbLeading,
@@ -199,8 +204,10 @@ CWindowFrame::PwfCopyWithRemappedColumns(CMemoryPool *mp,
 			mp, colref_mapping, must_exist);
 	}
 
-	return GPOS_NEW(mp) CWindowFrame(mp, m_efs, m_efbLeading, m_efbTrailing,
-									 pexprLeading, pexprTrailing, m_efes);
+	return GPOS_NEW(mp) CWindowFrame(
+		mp, m_efs, m_efbLeading, m_efbTrailing, pexprLeading, pexprTrailing,
+		m_efes, m_start_in_range_func, m_end_in_range_func, m_in_range_coll,
+		m_in_range_asc, m_in_range_nulls_first);
 }
 
 //---------------------------------------------------------------------------

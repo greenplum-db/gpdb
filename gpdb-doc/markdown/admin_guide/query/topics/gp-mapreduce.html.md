@@ -398,5 +398,5 @@ This example MapReduce job utilizes the untrusted `plpythonu` language; as such,
 
 The following diagram shows the job flow of the MapReduce job defined in the example:
 
-![](../../graphics/mapreducejob.jpg)
+![MapReduce job flow](../../graphics/mapreducejob.jpg)
 

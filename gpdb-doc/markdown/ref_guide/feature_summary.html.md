@@ -25,7 +25,7 @@ In the process of building a parallel, shared-nothing database system and query 
     Note that `UNIQUE INDEXES` \(but not `UNIQUE CONSTRAINTS`\) are enforced on a part basis within a partitioned table. They guarantee the uniqueness of the key within each part or sub-part.
 
 5.  `VOLATILE` or `STABLE` functions cannot run on the segments, and so are generally limited to being passed literal values as the arguments to their parameters.
-6.  Triggers are not supported since they typically rely on the use of `VOLATILE` functions.
+6.  Triggers are not generally supported because they typically rely on the use of `VOLATILE` functions. PostgreSQL [Event Triggers](https://www.postgresql.org/docs/9.4/event-triggers.html) are supported because they capture only DDL events.
 7.  Referential integrity constraints \(foreign keys\) are not enforced in Greenplum Database. Users can declare foreign keys and this information is kept in the system catalog, however.
 8.  Sequence manipulation functions `CURRVAL` and `LASTVAL`.
 
@@ -124,6 +124,11 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 </tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER DOMAIN</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER EVENT TRIGGER</code></td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
 </tr>
@@ -329,6 +334,11 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 </tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE DOMAIN</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE EVENT TRIGGER</code></td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
 </tr>
@@ -570,6 +580,11 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP DOMAIN</code></td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP EVENT TRIGGER</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
 </tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP EXTENSION</code></td>

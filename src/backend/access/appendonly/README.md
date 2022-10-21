@@ -178,3 +178,51 @@ Vacuum drop phase, to recycle segments that have been compacted,
 checks the xmin of each AWAITING_DROP segment. If it's visible to
 everyone, the segfile is recycled. It uses the relation extension lock
 to protect the scan over pg_aoseg.
+
+
+# Unique indexes
+
+To answer uniqueness checks for AO/AOCO tables, we have a complication. Unlike
+heap, in AO/CO we don't store the xmin/xmax fields in the tuples. So, we have to
+rely on block directory rows that "cover" the data rows to satisfy index lookups.
+The xmin/xmax of the block directory row(s) help determine tuple visibility for
+uniqueness checks.
+
+Since block directory rows are written usually much after the data row has been
+inserted, there are windows in which there is no block  directory row on disk
+for a given data row - a problem for concurrent unique index checks. So during
+INSERT/COPY, at the beginning of the insertion operation, we insert a
+placeholder block directory row to cover ALL future tuples going to the current
+segment file for this command.
+
+To answer unique index lookups, we don't have to physically fetch the tuple from
+the table. This is key to answering unique index lookups against placeholder
+rows which predate their corresponding data rows. We simply perform a sysscan of
+the block directory, and if we have a visible entry that encompasses the rowNum
+being looked up, we report success.
+
+Tableam changes: Since there is a lot of overhead (leads to ~20x performance
+degradation in the worst case) in setting up and tearing down scan descriptors
+for AO/CO tables, we avoid the scanbegin..fetch..scanend construct in
+table_index_fetch_tuple_check().
+
+So, a new tableam API index_fetch_tuple_exists() is used, which is implemented
+only for AO/CO tables. Here, we fetch a UniqueCheckDesc, which stores all the
+in-memory state to help us perform a unique index check. This descriptor is
+attached to the DMLState structs. Currently, the descriptor holds only a block
+directory struct. It will be modified later on to hold a visimap reference to
+help implement DELETEs/UPDATEs. Furthermore, we initialize this struct on the
+first unique index check performed, akin to how we initialize descriptors for
+insert and delete.
+
+AO lazy VACUUM is different from heap vacuum in the sense that ctids of data
+tuples change (and the index tuples need to be updated as a consequence). It
+leverages the scan and insert code to scan live tuples from each segfile and to
+move (insert) them in a target segfile. While moving tuples, we need to avoid
+performing uniqueness checks from the insert machinery. This is to ensure that
+we avoid spurious conflicts between the moved tuple and the original tuple. We
+don't need to insert a placeholder row for the backend running vacuum as the old
+index entries will still point to the segment being compacted. This will be the
+case up until the index entries are bulk deleted, but by then the new index
+entries along with new block directory rows would already have been written and
+would be able to answer uniqueness checks.

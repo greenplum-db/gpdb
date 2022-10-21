@@ -248,13 +248,28 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 		{
 			EnsureCpusetIsAvailable(ERROR);
 
-			ResGroupOps_SetCpuSet(groupid, caps.cpuset);
 			/* reset default group, subtract new group cpu cores */
 			char defaultGroupCpuset[MaxCpuSetLength];
 			ResGroupOps_GetCpuSet(DEFAULT_CPUSET_GROUP_ID,
 								  defaultGroupCpuset,
 								  MaxCpuSetLength);
-			CpusetDifference(defaultGroupCpuset, caps.cpuset, MaxCpuSetLength);
+
+			/* for cpuset we need to handle seperately on mastre and segment */
+			if (!CpusetIsEmpty(caps.cpuset))
+			{
+				char **cpusetArray = getSpiltCpuSet(caps.cpuset);
+
+				if (Gp_role == GP_ROLE_EXECUTE && cpusetArray[1] != NULL)
+				{
+					ResGroupOps_SetCpuSet(groupid, cpusetArray[1]);
+					CpusetDifference(defaultGroupCpuset, cpusetArray[1], MaxCpuSetLength);
+				} else
+				{
+					ResGroupOps_SetCpuSet(groupid, cpusetArray[0]);
+					CpusetDifference(defaultGroupCpuset, cpusetArray[0], MaxCpuSetLength);
+				}
+			}
+
 			ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, defaultGroupCpuset);
 		}
 		SIMPLE_FAULT_INJECTOR("create_resource_group_fail");
@@ -400,9 +415,13 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 	else if (limitType == RESGROUP_LIMIT_TYPE_CPUSET)
 	{
 		EnsureCpusetIsAvailable(ERROR);
-
 		cpuset = defGetString(defel);
-		checkCpusetSyntax(cpuset);
+		char **cpusetArray = getSpiltCpuSet(cpuset);
+		for (int i = 0; i < CpuSetArrayLength; i++)
+		{
+			if (cpusetArray[i] != NULL)
+				checkCpusetSyntax(cpusetArray[i]);
+		}
 	}
 	else
 	{
@@ -1011,8 +1030,13 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 		if (type == RESGROUP_LIMIT_TYPE_CPUSET) 
 		{
 			const char *cpuset = defGetString(defel);
-			checkCpusetSyntax(cpuset);
 			StrNCpy(caps->cpuset, cpuset, sizeof(caps->cpuset));
+			char **cpusetArray = getSpiltCpuSet(cpuset);
+			for (int i = 0; i < CpuSetArrayLength; i++)
+			{
+				if (cpusetArray[i] != NULL)
+					checkCpusetSyntax(cpusetArray[i]);
+			}
 			caps->cpuRateLimit = CPU_RATE_LIMIT_DISABLED;
 		}
 		else 
@@ -1292,30 +1316,34 @@ validateCapabilities(Relation rel,
 		gp_resource_group_enable_cgroup_cpuset)
 	{
 		Bitmapset *bmsAll = NULL;
+		Bitmapset *bmsMissing = NULL;
 
 		/* Get all available cores */
 		ResGroupOps_GetCpuSet(RESGROUP_ROOT_ID,
 							  cpusetAll,
 							  MaxCpuSetLength);
 		bmsAll = CpusetToBitset(cpusetAll, MaxCpuSetLength);
+
 		/* Check whether the cores in this group are available */
-		if (!CpusetIsEmpty(caps->cpuset))
+		if (!CpusetIsEmpty(caps->cpuset)) {
+			char **cpusetArray = getSpiltCpuSet(caps->cpuset);
+			if (Gp_role == GP_ROLE_EXECUTE && cpusetArray[1] != NULL)
+				bmsCurrent = CpusetToBitset(cpusetArray[1], MaxCpuSetLength);
+			else
+				bmsCurrent = CpusetToBitset(cpusetArray[0], MaxCpuSetLength);
+		}
+
+		bmsCommon = bms_intersect(bmsCurrent, bmsAll);
+		bmsMissing = bms_difference(bmsCurrent, bmsCommon);
+
+		if (!bms_is_empty(bmsMissing))
 		{
-			Bitmapset *bmsMissing = NULL;
+			BitsetToCpuset(bmsMissing, cpusetMissing, MaxCpuSetLength);
 
-			bmsCurrent = CpusetToBitset(caps->cpuset, MaxCpuSetLength);
-			bmsCommon = bms_intersect(bmsCurrent, bmsAll);
-			bmsMissing = bms_difference(bmsCurrent, bmsCommon);
-
-			if (!bms_is_empty(bmsMissing))
-			{
-				BitsetToCpuset(bmsMissing, cpusetMissing, MaxCpuSetLength);
-
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("cpu cores %s are unavailable on the system",
-								cpusetMissing)));
-			}
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					errmsg("cpu cores %s are unavailable on the system",
+					cpusetMissing)));
 		}
 	}
 
@@ -1396,7 +1424,13 @@ validateCapabilities(Relation rel,
 
 					Assert(!bms_is_empty(bmsCurrent));
 
-					bmsOther = CpusetToBitset(valueStr, MaxCpuSetLength);
+					char **cpusetArray = getSpiltCpuSet(valueStr);
+
+					if (Gp_role == GP_ROLE_EXECUTE && cpusetArray[1] != NULL)
+						bmsOther = CpusetToBitset(cpusetArray[1], MaxCpuSetLength);
+					else
+						bmsOther = CpusetToBitset(cpusetArray[0], MaxCpuSetLength);
+
 					bmsCommon = bms_intersect(bmsCurrent, bmsOther);
 
 					if (!bms_is_empty(bmsCommon))
@@ -1567,4 +1601,44 @@ checkCpusetSyntax(const char *cpuset)
 		return false;
 	}
 	return true;
+}
+
+/*
+ * Seperate cpuset by coordinator and segment
+ * Return as cpusetArray
+ * cpusetArray[0] --> master cpuset
+ * cpusetArray[1] --> segment cpuset
+ */
+extern char **
+getSpiltCpuSet(const char *cpuset)
+{
+	int i = 0;
+	char **arraycpuset = (char **)palloc0(sizeof(char *) * CpuSetArrayLength);
+	char *copycpuset = (char *)palloc0(sizeof(char) * MaxCpuSetLength);
+	strcpy(copycpuset, cpuset);
+	char *spiltCpuset = strtok(copycpuset, ";");
+
+	while (spiltCpuset != NULL)
+	{
+		arraycpuset[i++] = spiltCpuset;
+		spiltCpuset = strtok(NULL, ";");
+	}
+
+	char *ret = strstr(cpuset, ";");
+	if (ret != NULL && i != CpuSetArrayLength)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				errmsg("cpuset invalid")));
+	}
+
+	/* null string syntax is invalid */
+	if (arraycpuset[0] == NULL && arraycpuset[1] == NULL)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				errmsg("cpuset invalid")));
+	}
+
+	return arraycpuset;
 }

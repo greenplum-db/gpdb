@@ -164,7 +164,7 @@ Group mirroring is easiest to set up and is the default Greenplum mirroring conf
 
 The following diagram shows a group mirroring configuration with eight primary segments on four hosts.
 
-![](graphics/group-mirrors.png)
+![Group mirroring configuration](graphics/group-mirrors.png)
 
 Unless both the primary and mirror of the same segment instance fail, up to half of your hosts can fail and the cluster will continue to run as long as resources \(CPU, memory, and IO\) are sufficient to meet the needs.
 
@@ -176,7 +176,7 @@ With spread mirroring, mirrors for each host's primary segments are spread acros
 
 The following diagram shows the spread mirroring configuration for a cluster with three primaries on four hosts.
 
-![](graphics/spread-mirrors.png)
+![Spread mirroring configuration](graphics/spread-mirrors.png)
 
 Expanding a cluster with spread mirroring requires more planning and may take more time. You must either add a set of hosts equal to the number of primaries per host plus one, or you can add two nodes in a group mirroring configuration and, when the expansion is complete, move mirrors to recreate the spread mirror configuration.
 
@@ -188,7 +188,7 @@ With block mirroring, nodes are divided into blocks, for example a block of four
 
 The following diagram shows a single block mirroring configuration for a block of four hosts, each with eight primary segments:
 
-![](graphics/block-mirrors-4x8.png)
+![Block mirroring configuration](graphics/block-mirrors-4x8.png)
 
 If there are eight hosts, an additional four-host block is added with the mirrors for primary segments 32 through 63 set up in the same pattern.
 

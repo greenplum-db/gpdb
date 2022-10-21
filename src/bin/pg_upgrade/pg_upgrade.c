@@ -185,11 +185,6 @@ main(int argc, char **argv)
 
 	if (is_greenplum_dispatcher_mode())
 	{
-		/*
-		 * GPDB_12_MERGE_FIXME: this is where we used to create new databases
-		 * in case we were the dispatcher, now upstream does prepare_new_globals.
-		 * Verify that this replacement is what we want.
-		 */
 		prepare_new_globals();
 
 		create_new_objects();

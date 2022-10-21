@@ -43,6 +43,8 @@
 #include "utils/lsyscache.h"
 #include "utils/rel.h"
 
+#include "catalog/aocatalog.h"
+
 
 /* We use a list of these to detect recursion in RewriteQuery */
 typedef struct rewrite_event
@@ -1504,7 +1506,8 @@ rewriteTargetListUD(Query *parsetree, RangeTblEntry *target_rte,
 
 	if (target_relation->rd_rel->relkind == RELKIND_RELATION ||
 		target_relation->rd_rel->relkind == RELKIND_MATVIEW ||
-		target_relation->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+		target_relation->rd_rel->relkind == RELKIND_PARTITIONED_TABLE ||
+		IsAppendonlyMetadataRelkind(target_relation->rd_rel->relkind))
 	{
 		/*
 		 * Emit CTID so that executor can find the row to update or delete.
@@ -2010,8 +2013,12 @@ fireRIRrules(Query *parsetree, List *activeRIRs)
 		 * expanded as if they were regular views, if they are not scannable.
 		 * In that case this test would need to be postponed till after we've
 		 * opened the rel, so that we could check its state.
+		 *
+		 * In the minirepro utility in GPDB, we use the expandMatViews flag
+		 * to treat materialized views as regular views when dumping the
+		 * DDL in order to dump dependent objects
 		 */
-		if (rte->relkind == RELKIND_MATVIEW)
+		if (rte->relkind == RELKIND_MATVIEW && !parsetree->expandMatViews)
 			continue;
 
 		/*

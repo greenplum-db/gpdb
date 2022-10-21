@@ -35,6 +35,7 @@ try:
     from pgdb import DatabaseError
     from gppylib.gpcatalog import COORDINATOR_ONLY_TABLES
     from gppylib.operations.package import SyncPackages
+    from gppylib.programs.clsRecoverSegment_triples import get_segments_with_running_basebackup
     from gppylib.operations.utils import ParallelOperation
     from gppylib.parseutils import line_reader, check_values, canonicalize_address
     from gppylib.heapchecksum import HeapChecksum
@@ -1155,6 +1156,13 @@ class gpexpand:
         return dict(cursor.fetchall())
 
     def addNewSegments(self, inputFileEntryList):
+        segments_with_running_basebackup = get_segments_with_running_basebackup()
+        contentIds_with_running_basebackup = [seg.contentId for seg in inputFileEntryList if seg.contentId in segments_with_running_basebackup]
+
+        if len(contentIds_with_running_basebackup)>0:
+            raise Exception(
+            "Found pg_basebackup running for segments with contentIds %s" %contentIds_with_running_basebackup)
+
         for seg in inputFileEntryList:
             self.gparray.addExpansionSeg(content=int(seg.contentId)
                                          , preferred_role=seg.role

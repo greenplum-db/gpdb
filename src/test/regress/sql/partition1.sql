@@ -87,7 +87,7 @@ partition bb start (2008,2) end (2009,3)
 
 drop table ggg cascade;
 
--- Mismatch between number of columns in PARTITION BY and in the START/END clauses
+-- Mismatch between number of columns in PARTITION BY and in the START/END/EVERY/VALUES clauses
 create table pby_mismatch (a char(1), b numeric, d numeric)
 distributed by (a)
 partition by range (b)
@@ -102,6 +102,21 @@ partition by range (b)
 (
   partition aa start (2007) end (2008,1),
   partition bb start (2008) end (2009,1)
+);
+
+create table pby_mismatch (a char(1), b numeric, d numeric)
+    distributed by (a)
+partition by range (b)
+(
+  partition aa start (2007) end (2008) every (1),
+  partition bb start (2008) end (2009) every (1,2)
+);
+
+create table pby_mismatch (a char(1), b numeric, d numeric)
+    distributed by (a)
+partition by list (b)
+(
+  partition cc values ((1,2))
 );
 
 -- basic list partition
@@ -1754,3 +1769,6 @@ PARTITION BY RANGE(col2)
   (partition partone start(1) end(100000001),
    partition parttwo start(100000001) end(200000001),
    partition partthree start(200000001) end(300000001));
+
+-- Test not supported partition strategy with legacy GPDB syntax
+create table hashpart_gpspec (a int, b int) partition by hash (b) (partition p1 start (1) end (2));

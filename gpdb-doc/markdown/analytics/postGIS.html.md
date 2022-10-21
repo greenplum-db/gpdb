@@ -14,7 +14,7 @@ For information about upgrading PostGIS on Greenplum Database 6 systems, see [Up
 
 ## <a id="topic2"></a>About PostGIS 
 
-PostGIS is a spatial database extension for PostgreSQL that allows GIS \(Geographic Information Systems\) objects to be stored in the database. The Greenplum PostGIS extension includes support for GiST-based R-Tree spatial indexes and functions for analysis and processing of GIS objects.
+PostGIS is a spatial database extension for PostgreSQL that allows GIS (Geographic Information Systems) objects to be stored in the database. The Greenplum PostGIS extension includes support for GiST-based R-Tree spatial indexes, and functions for analysis and processing of GIS objects.
 
 The Greenplum PostGIS extension supports some PostGIS optional extensions and includes support for the PostGIS `raster` data type. With the PostGIS Raster objects, PostGIS `geometry` data type offers a single set of overlay SQL functions \(such as `ST_Intersects`\) operating seamlessly on vector and raster geospatial data. PostGIS Raster uses the GDAL \(Geospatial Data Abstraction Library\) translator library for raster geospatial data formats that presents a [single raster abstract data model](https://gdal.org/user/raster_data_model.html) to a calling application.
 
@@ -26,24 +26,18 @@ For information about GDAL, see [https://gdal.org/](https://gdal.org/).
 
 ## <a id="topic3"></a>Greenplum PostGIS Extension 
 
-The Greenplum PostGIS extension package is available from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). After you download the package, you can follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the **Greenplum Advanced Analytics PostGIS** software. You can install the package using the Greenplum Package Manager \(`gppkg`\). For details, see `gppkg` in the *Greenplum Database Utility Guide*.
+The Greenplum PostGIS extension package is available from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). After you download the package, you can follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the download. You can install the package using the Greenplum Package Manager (`gppkg`). For details, see [`gppkg`](../utility_guide/ref/gppkg.html) in the _Greenplum Database Utility Guide_.
 
-Greenplum Database supports the PostGIS extension with these component versions.
+Greenplum Database supports the following PostGIS extension versions and components:
 
--   PostGIS 2.5.4
--   Proj 4.8.0
--   Geos 3.10.2
--   GDAL 1.11.1
--   Json 0.12
--   Expat 2.4.4
+- PostGIS 2.5.4, and components Proj 4.8.0, Geos 3.10.2, GDAL 1.11.1, Json 0.12, Expat 2.4.4
+- PostGIS 2.1.5, and components Proj 4.8.0, Geos 3.4.2, GDAL 1.11.1, Json 0.12, Expat 2.1.0
 
-For the information about supported Greenplum extension packages and software versions, see [../install\_guide/platform-requirements.html](../install_guide/platform-requirements.html).
+For information about the supported Greenplum extension packages and software versions, see [Extensions](../install_guide/platform-requirements.html#topic_eyc_l2h_zz) in the _Tanzu Greenplum Tools and Extensions Compatibility_ topic.
 
-There have been significant changes in PostGIS 2.5.4 compared with the previously supported version of 2.1.5. For a list of new and enhanced functions in PostGIS 2.5, see the PostGIS documentation [PostGIS Functions new or enhanced in 2.5](https://postgis.net/docs/manual-2.5/PostGIS_Special_Functions_Index.html#NewFunctions_2_5).
+There are significant changes in PostGIS 2.5.4 compared with 2.1.5. For a list of new and enhanced functions in PostGIS 2.5, see the PostGIS documentation [PostGIS Functions new or enhanced in 2.5](https://postgis.net/docs/manual-2.5/PostGIS_Special_Functions_Index.html#NewFunctions_2_5) and [Release 2.5.4](https://postgis.net/docs/manual-2.5/release_notes.html).
 
-For a comprehensive list of PostGIS changes in PostGIS 2.5.4 and earlier, see PostGIS 2.5 Appendix A [Release 2.5.4](https://postgis.net/docs/manual-2.5/release_notes.html).
-
-**Note:** If you installed Greenplum PostGIS 2.1.5, you cannot upgrade from PostGIS 2.1.5 to 2.5.4. You must uninstall PostGIS 2.1.5 and install PostGIS 2.5.4.
+<p class="note"><strong>Note:</strong> To upgrade PostGIS refer to  <a href="./postgis-upgrade.html">Upgrading PostGIS 2.1.5 or 2.5.4</a>.</p>
 
 This table lists the PostGIS extensions support by Greenplum PostGIS.
 

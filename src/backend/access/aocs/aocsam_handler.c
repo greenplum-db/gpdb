@@ -21,6 +21,7 @@
 #include "access/tableam.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
+#include "catalog/gp_fastsequence.h"
 #include "catalog/heap.h"
 #include "catalog/index.h"
 #include "catalog/pg_appendonly.h"
@@ -84,6 +85,7 @@ typedef struct AOCODMLState
 	Oid relationOid;
 	AOCSInsertDesc insertDesc;
 	AOCSDeleteDesc deleteDesc;
+	AOCSUniqueCheckDesc uniqueCheckDesc;
 } AOCODMLState;
 
 static void reset_state_cb(void *arg);
@@ -185,6 +187,7 @@ enter_dml_state(const Oid relationOid)
 
 	state->insertDesc = NULL;
 	state->deleteDesc = NULL;
+	state->uniqueCheckDesc = NULL;
 
 	aocoLocal.last_used_state = state;
 	return state;
@@ -287,13 +290,24 @@ aoco_dml_finish(Relation relation, CmdType operation)
 		state->insertDesc = NULL;
 	}
 
+	if (state->uniqueCheckDesc)
+	{
+		AppendOnlyBlockDirectory_End_forSearch(state->uniqueCheckDesc->blockDirectory);
+		pfree(state->uniqueCheckDesc->blockDirectory);
+		state->uniqueCheckDesc->blockDirectory = NULL;
+		pfree(state->uniqueCheckDesc);
+		state->uniqueCheckDesc = NULL;
+	}
+
 }
 
 /*
- * Retrieve the insertDescriptor for a relation. Initialize it if needed.
+ * Retrieve the insertDescriptor for a relation. Initialize it if its absent.
+ * 'num_rows': Number of rows to be inserted. (NUM_FAST_SEQUENCES if we don't
+ * know it beforehand). This arg is not used if the descriptor already exists.
  */
 static AOCSInsertDesc
-get_insert_descriptor(const Relation relation)
+get_or_create_aoco_insert_descriptor(const Relation relation, int64 num_rows)
 {
 	AOCODMLState *state;
 
@@ -302,10 +316,50 @@ get_insert_descriptor(const Relation relation)
 	if (state->insertDesc == NULL)
 	{
 		MemoryContext oldcxt;
+		AOCSInsertDesc insertDesc;
 
 		oldcxt = MemoryContextSwitchTo(aocoLocal.stateCxt);
-		state->insertDesc = aocs_insert_init(relation,
-											 ChooseSegnoForWrite(relation));
+		insertDesc = aocs_insert_init(relation,
+									  ChooseSegnoForWrite(relation),
+									  num_rows);
+		/*
+		 * If we have a unique index, insert a placeholder block directory row to
+		 * entertain uniqueness checks from concurrent inserts. See
+		 * AppendOnlyBlockDirectory_InsertPlaceholder() for details.
+		 *
+		 * Note: For AOCO tables, we need to only insert a placeholder block
+		 * directory row for the 1st non-dropped column. This is because
+		 * during a uniqueness check, only the first non-dropped column's block
+		 * directory entry is consulted. (See AppendOnlyBlockDirectory_CoversTuple())
+		 */
+		if (relationHasUniqueIndex(relation))
+		{
+			int 				firstNonDroppedColumn = -1;
+			int64 				firstRowNum;
+			DatumStreamWrite 	*dsw;
+			BufferedAppend 		*bufferedAppend;
+			int64 				fileOffset;
+
+			for(int i = 0; i < relation->rd_att->natts; i++)
+			{
+				if (!relation->rd_att->attrs[i].attisdropped) {
+					firstNonDroppedColumn = i;
+					break;
+				}
+			}
+			Assert(firstNonDroppedColumn != -1);
+
+			dsw = insertDesc->ds[firstNonDroppedColumn];
+			firstRowNum = dsw->blockFirstRowNum;
+			bufferedAppend = &dsw->ao_write.bufferedAppend;
+			fileOffset = BufferedAppendNextBufferPosition(bufferedAppend);
+
+			AppendOnlyBlockDirectory_InsertPlaceholder(&insertDesc->blockDirectory,
+													   firstRowNum,
+													   fileOffset,
+													   firstNonDroppedColumn);
+		}
+		state->insertDesc = insertDesc;
 		MemoryContextSwitchTo(oldcxt);
 	}
 
@@ -317,7 +371,7 @@ get_insert_descriptor(const Relation relation)
  * Retrieve the deleteDescriptor for a relation. Initialize it if needed.
  */
 static AOCSDeleteDesc
-get_delete_descriptor(const Relation relation, bool forUpdate)
+get_or_create_delete_descriptor(const Relation relation, bool forUpdate)
 {
 	AOCODMLState *state;
 
@@ -325,23 +379,7 @@ get_delete_descriptor(const Relation relation, bool forUpdate)
 
 	if (state->deleteDesc == NULL)
 	{
-		/*
-		 * GPDB_12_MERGE_FIXME: Can we perform this check earlier on?
-		 * Example during init? Idealy should be called on master node first,
-		 * that way we will avoid the dispatch.
-		 */
 		MemoryContext oldcxt;
-		if (IsolationUsesXactSnapshot())
-		{
-			if (forUpdate)
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("updates on append-only tables are not supported in serializable transactions")));
-			else
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("deletes on append-only tables are not supported in serializable transactions")));
-		}
 
 		oldcxt = MemoryContextSwitchTo(aocoLocal.stateCxt);
 		state->deleteDesc = aocs_delete_init(relation);
@@ -349,6 +387,29 @@ get_delete_descriptor(const Relation relation, bool forUpdate)
 	}
 
 	return state->deleteDesc;
+}
+
+static AOCSUniqueCheckDesc
+get_or_create_unique_check_desc(Relation relation, Snapshot snapshot)
+{
+	AOCODMLState *state = find_dml_state(RelationGetRelid(relation));
+
+	if (!state->uniqueCheckDesc)
+	{
+		MemoryContext oldcxt;
+		AOCSUniqueCheckDesc uniqueCheckDesc;
+
+		oldcxt = MemoryContextSwitchTo(aocoLocal.stateCxt);
+		uniqueCheckDesc = palloc0(sizeof(AOCSUniqueCheckDescData));
+		uniqueCheckDesc->blockDirectory = palloc0(sizeof(AppendOnlyBlockDirectory));
+		AppendOnlyBlockDirectory_Init_forSearch(uniqueCheckDesc->blockDirectory,
+												snapshot, NULL, -1, relation,
+												relation->rd_att->natts, false, NULL);
+		state->uniqueCheckDesc = uniqueCheckDesc;
+		MemoryContextSwitchTo(oldcxt);
+	}
+
+	return state->uniqueCheckDesc;
 }
 
 /*
@@ -653,6 +714,7 @@ aoco_index_fetch_tuple(struct IndexFetchTableData *scan,
                              bool *call_again, bool *all_dead)
 {
 	IndexFetchAOCOData *aocoscan = (IndexFetchAOCOData *) scan;
+	bool found = false;
 
 	if (!aocoscan->aocofetch)
 	{
@@ -680,7 +742,6 @@ aoco_index_fetch_tuple(struct IndexFetchTableData *scan,
 											  appendOnlyMetaDataSnapshot,
 											  aocoscan->proj);
 	}
-
 	/*
 	 * There is no reason to expect changes on snapshot between tuple
 	 * fetching calls after fech_init is called, treat it as a
@@ -693,10 +754,90 @@ aoco_index_fetch_tuple(struct IndexFetchTableData *scan,
 	if (aocs_fetch(aocoscan->aocofetch, (AOTupleId *) tid, slot))
 	{
 		ExecStoreVirtualTuple(slot);
-		return true;
+		found = true;
 	}
 
-	return false;
+	/*
+	 * Currently, we don't determine this parameter. By contract, it is to be
+	 * set to true iff we can determine that this row is dead to all
+	 * transactions. Failure to set this will lead to use of a garbage value
+	 * in certain code, such as that for unique index checks.
+	 * This is typically used for HOT chains, which we don't support.
+	 */
+	if (all_dead)
+		*all_dead = false;
+
+	/* Currently, we don't determine this parameter. By contract, it is to be
+	 * set to true iff there is another tuple for the tid, so that we can prompt
+	 * the caller to call index_fetch_tuple() again for the same tid.
+	 * This is typically used for HOT chains, which we don't support.
+	 */
+	if (call_again)
+		*call_again = false;
+
+	return found;
+}
+
+/*
+ * Check if a visible tuple exists given the tid and a snapshot. This is
+ * currently used to determine uniqueness checks.
+ *
+ * We determine existence simply by checking if a *visible* block directory
+ * entry covers the given tid.
+ *
+ * There is no need to fetch the tuple (we actually can't reliably do so as
+ * we might encounter a placeholder row in the block directory)
+ */
+static bool
+aoco_index_fetch_tuple_exists(Relation rel,
+							  ItemPointer tid,
+							  Snapshot snapshot,
+							  bool *all_dead)
+{
+	AOCSUniqueCheckDesc 		uniqueCheckDesc;
+	AppendOnlyBlockDirectory 	*blockDirectory;
+	AOTupleId 					*aoTupleId = (AOTupleId *) tid;
+
+#ifdef USE_ASSERT_CHECKING
+	int			segmentFileNum = AOTupleIdGet_segmentFileNum(aoTupleId);
+	int64		rowNum = AOTupleIdGet_rowNum(aoTupleId);
+
+	Assert(segmentFileNum != InvalidFileSegNumber);
+	Assert(rowNum != InvalidAORowNum);
+	/*
+	 * Since this can only be called in the context of a unique index check, the
+	 * snapshots that are supplied can only be non-MVCC snapshots: SELF and DIRTY.
+	 */
+	Assert(snapshot->snapshot_type == SNAPSHOT_SELF ||
+		   snapshot->snapshot_type == SNAPSHOT_DIRTY);
+#endif
+
+	/*
+	 * Currently, we don't determine this parameter. By contract, it is to be
+	 * set to true iff we can determine that this row is dead to all
+	 * transactions. Failure to set this will lead to use of a garbage value
+	 * in certain code, such as that for unique index checks.
+	 * This is typically used for HOT chains, which we don't support.
+	 */
+	if (all_dead)
+		*all_dead = false;
+
+	/*
+	 * FIXME: for when we want CREATE UNIQUE INDEX CONCURRENTLY to work
+	 * Unique constraint violation checks with SNAPSHOT_SELF are currently
+	 * required to support CREATE UNIQUE INDEX CONCURRENTLY. Currently, the
+	 * sole placeholder row inserted at first insert might not be visible to
+	 * the snapshot, if it was already updated by its actual first row. So,
+	 * we would need to flush a placeholder row at the beginning of each new
+	 * in-memory minipage. Currently, CREATE INDEX CONCURRENTLY isn't
+	 * supported, so we assume such a check satisfies SNAPSHOT_SELF.
+	 */
+	if (snapshot->snapshot_type == SNAPSHOT_SELF)
+		return true;
+
+	uniqueCheckDesc = get_or_create_unique_check_desc(rel, snapshot);
+	blockDirectory = uniqueCheckDesc->blockDirectory;
+	return AppendOnlyBlockDirectory_CoversTuple(blockDirectory, aoTupleId);
 }
 
 static void
@@ -706,7 +847,12 @@ aoco_tuple_insert(Relation relation, TupleTableSlot *slot, CommandId cid,
 
 	AOCSInsertDesc          insertDesc;
 
-	insertDesc = get_insert_descriptor(relation);
+	/*
+	 * Note: since we don't know how many rows will actually be inserted (as we
+	 * don't know how many rows are visible), we provide the default number of
+	 * rows to bump gp_fastsequence by.
+	 */
+	insertDesc = get_or_create_aoco_insert_descriptor(relation, NUM_FAST_SEQUENCES);
 
 	aocs_insert(insertDesc, slot);
 
@@ -733,17 +879,20 @@ aoco_tuple_complete_speculative(Relation relation, TupleTableSlot *slot,
  *	aoco_multi_insert	- insert multiple tuples into an ao relation
  *
  * This is like aoco_tuple_insert(), but inserts multiple tuples in one
- * operation. Typicaly used by COPY. This is preferrable than calling
- * aoco_tuple_insert() in a loop because ... WAL??
+ * operation. Typically used by COPY.
+ *
+ * In the ao_column AM, we already realize the benefits of batched WAL (WAL is
+ * generated only when the insert buffer is full). There is also no page locking
+ * that we can optimize, as ao_column relations don't use the PG buffer cache.
+ * So, this is a thin layer over aoco_tuple_insert() with one important
+ * optimization: We allocate the insert desc with ntuples up front, which can
+ * reduce the number of gp_fast_sequence allocations.
  */
 static void
 aoco_multi_insert(Relation relation, TupleTableSlot **slots, int ntuples,
                         CommandId cid, int options, BulkInsertState bistate)
 {
-	/*
-	* GPDB_12_MERGE_FIXME: Poor man's implementation for now in order to make
-		* the tests pass. Implement properly.
-		*/
+	(void) get_or_create_aoco_insert_descriptor(relation, ntuples);
 	for (int i = 0; i < ntuples; i++)
 		aoco_tuple_insert(relation, slots[i], cid, options, bistate);
 }
@@ -756,7 +905,7 @@ aoco_tuple_delete(Relation relation, ItemPointer tid, CommandId cid,
 	AOCSDeleteDesc deleteDesc;
 	TM_Result	result;
 
-	deleteDesc = get_delete_descriptor(relation, false);
+	deleteDesc = get_or_create_delete_descriptor(relation, false);
 	result = aocs_delete(deleteDesc, (AOTupleId *) tid);
 	if (result == TM_Ok)
 		pgstat_count_heap_delete(relation);
@@ -786,8 +935,13 @@ aoco_tuple_update(Relation relation, ItemPointer otid, TupleTableSlot *slot,
 	AOCSDeleteDesc deleteDesc;
 	TM_Result	result;
 
-	insertDesc = get_insert_descriptor(relation);
-	deleteDesc = get_delete_descriptor(relation, true);
+	/*
+	 * Note: since we don't know how many rows will actually be inserted (as we
+	 * don't know how many rows are visible), we provide the default number of
+	 * rows to bump gp_fastsequence by.
+	 */
+	insertDesc = get_or_create_aoco_insert_descriptor(relation, NUM_FAST_SEQUENCES);
+	deleteDesc = get_or_create_delete_descriptor(relation, true);
 
 	/* Update the tuple with table oid */
 	slot->tts_tableOid = RelationGetRelid(relation);
@@ -1203,7 +1357,7 @@ aoco_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	
 	write_seg_no = ChooseSegnoForWrite(NewHeap);
 
-	idesc = aocs_insert_init(NewHeap, write_seg_no);
+	idesc = aocs_insert_init(NewHeap, write_seg_no, (int64) *num_tuples);
 
 	/* Insert sorted heap tuples into new storage */
 	for (;;)
@@ -1912,6 +2066,7 @@ static const TableAmRoutine ao_column_methods = {
 	.index_fetch_reset = aoco_index_fetch_reset,
 	.index_fetch_end = aoco_index_fetch_end,
 	.index_fetch_tuple = aoco_index_fetch_tuple,
+	.index_fetch_tuple_exists = aoco_index_fetch_tuple_exists,
 
 	.tuple_insert = aoco_tuple_insert,
 	.tuple_insert_speculative = aoco_tuple_insert_speculative,

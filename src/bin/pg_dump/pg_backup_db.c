@@ -335,7 +335,7 @@ ConnectDatabase(Archive *AHX,
 	if (binary_upgrade)
 	{
 		keywords[6] = "options";
-		values[6] = AH->public.remoteVersion < 120000 ?
+		values[6] = AH->public.remoteVersion < GPDB7_MAJOR_PGVERSION ?
 								"-c gp_session_role=utility" : "-c gp_role=utility";
 		keywords[7] = NULL;
 		values[7] = NULL;

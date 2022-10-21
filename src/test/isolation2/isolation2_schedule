@@ -6,6 +6,7 @@ test: check_gxid
 
 test: checkpoint_dtx_info
 test: autovacuum-analyze
+test: vacuum_skip_locked_onseg
 test: lockmodes
 test: pg_rewind_fail_missing_xlog
 test: prepared_xact_deadlock_pg_rewind
@@ -91,7 +92,8 @@ test: distributedlog-bug
 test: invalidated_toast_index
 test: distributed_snapshot
 test: gp_collation
-test: ao_upgrade ao_blkdir
+test: ao_upgrade
+test: ao_blkdir
 test: bitmap_index_concurrent
 test: bitmap_index_crash
 test: bitmap_update_words_backup_block
@@ -305,3 +307,9 @@ test: export_distributed_snapshot
 
 # test TCP interconnect teardown bounded wait
 test: tcp_ic_teardown
+
+# Tests for unique indexes on AO/CO tables (uses fault injector)
+test: ao_unique_index
+test: aocs_unique_index
+test: uao/ao_unique_index_vacuum_row
+test: uao/ao_unique_index_vacuum_column

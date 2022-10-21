@@ -768,6 +768,8 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
 
 		/* Update the reloptions string. */
 		reloptions = transformAOStdRdOptions(stdRdOptions, reloptions);
+
+		free_options_deep(options, numoptions);
 	}
 	else if (RelationIsAppendOptimized(OldHeap) && NewAccessMethod == HEAP_TABLE_AM_OID)
 	{

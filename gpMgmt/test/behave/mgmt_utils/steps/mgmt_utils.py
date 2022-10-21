@@ -23,6 +23,7 @@ from contextlib import closing
 from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR
 from gppylib.commands.gp import SegmentStart, GpStandbyStart, CoordinatorStop
 from gppylib.commands import gp
+from gppylib.commands.pg import PgBaseBackup
 from gppylib.commands.unix import findCmdInPath, Scp
 from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
 from gppylib.operations.buildMirrorSegments import get_recovery_progress_pattern
@@ -438,6 +439,8 @@ def impl(context, content):
     dburl = dbconn.DbURL(hostname=host, port=port, dbname='template1')
     wait_for_desired_query_result(dburl, query, desired_result, utility=True)
 
+@given('the user waits until recovery_progress.file is created in {logdir} and verifies its format')
+@when('the user waits until recovery_progress.file is created in {logdir} and verifies its format')
 @then('the user waits until recovery_progress.file is created in {logdir} and verifies its format')
 def impl(context, logdir):
     attempt = 0
@@ -461,6 +464,7 @@ def impl(context, logdir):
         if attempt == num_retries:
             raise Exception('Timed out after {} retries'.format(num_retries))
 
+
 @then( 'verify if the gprecoverseg.lock directory is present in coordinator_data_directory')
 def impl(context):
     gprecoverseg_lock_file = "%s/gprecoverseg.lock" % gp.get_coordinatordatadir()
@@ -468,6 +472,7 @@ def impl(context):
         raise Exception('gprecoverseg.lock directory does not exist')
     else:
         return
+
 
 @then('verify that lines from recovery_progress.file are present in segment progress files in {logdir}')
 def impl(context, logdir):
@@ -630,15 +635,26 @@ def impl(context, kill_process_name, log_msg, logfile_name):
               "fi; done" % (log_msg, logfile_name, kill_process_name)
     run_async_command(context, command)
 
-
+@given('the user asynchronously sets up to end {process_name} process with SIGINT')
 @when('the user asynchronously sets up to end {process_name} process with SIGINT')
+@then('the user asynchronously sets up to end {process_name} process with SIGINT')
 def impl(context, process_name):
     command = "ps ux | grep bin/%s | awk '{print $2}' | xargs kill -2" % (process_name)
     run_async_command(context, command)
 
+
+@given('the user asynchronously sets up to end {process_name} process with SIGHUP')
 @when('the user asynchronously sets up to end {process_name} process with SIGHUP')
+@then('the user asynchronously sets up to end {process_name} process with SIGHUP')
 def impl(context, process_name):
     command = "ps ux | grep bin/%s | awk '{print $2}' | xargs kill -9" % (process_name)
+    run_async_command(context, command)
+
+@given('the user asynchronously ends {process_name} process with SIGHUP')
+@when('the user asynchronously ends {process_name} process with SIGHUP')
+@then('the user asynchronously ends {process_name} process with SIGHUP')
+def impl(context, process_name):
+    command = "ps ux | grep %s | awk '{print $2}' | xargs kill -9" % (process_name)
     run_async_command(context, command)
 
 @when('the user asynchronously sets up to end gpcreateseg process when it starts')
@@ -1526,6 +1542,8 @@ def impl(context):
     return
 
 
+@given('verify that mirror on content {content_ids} is {expected_status}')
+@when('verify that mirror on content {content_ids} is {expected_status}')
 @then('verify that mirror on content {content_ids} is {expected_status}')
 def impl(context, content_ids, expected_status):
     if content_ids == 'None':
@@ -2916,6 +2934,7 @@ def step_impl(context, segment_id):
     wait_for_unblocked_transactions(context)
 
 @given('the user runs gpexpand with a static inputfile for a two-node cluster with mirrors')
+@when('the user runs gpexpand with a static inputfile for a two-node cluster with mirrors')
 def impl(context):
     inputfile_contents = """
 sdw1|sdw1|20502|/tmp/gpexpand_behave/two_nodes/data/primary/gpseg2|6|2|p
@@ -3768,3 +3787,54 @@ def impl(context, args):
 def impl(context):
     locale = get_en_utf_locale()
     context.execute_steps('''When a demo cluster is created using gpinitsystem args "--lc-ctype=%s"''' % locale)
+
+
+@given('the user asynchronously runs pg_basebackup with {segment} of content {contentid} as source and the process is saved')
+@when('the user asynchronously runs pg_basebackup with {segment} of content {contentid} as source and the process is saved')
+@then('the user asynchronously runs pg_basebackup with {segment} of content {contentid} as source and the process is saved')
+def impl(context, segment, contentid):
+    if segment == 'mirror':
+        role = 'm'
+    elif segment == 'primary':
+        role = 'p'
+
+    all_segments = GpArray.initFromCatalog(dbconn.DbURL()).getDbList()
+
+    basebackup_target = all_segments[0]
+    basebackup_source = all_segments[0]
+    for seg in all_segments:
+        if role == seg.role and str(seg.content) == contentid:
+            basebackup_source = seg
+        elif str(seg.content) == contentid:
+            basebackup_target = seg
+
+    make_temp_dir(context, '/tmp')
+
+    cmd = PgBaseBackup(target_datadir=context.temp_base_dir,
+                       source_host=basebackup_source.getSegmentHostName(),
+                       source_port=str(basebackup_source.getSegmentPort()),
+                       create_slot=True,
+                       replication_slot_name="replication_slot",
+                       forceoverwrite=True,
+                       target_gp_dbid=basebackup_target.getSegmentDbId())
+    asyncproc = cmd.runNoWait()
+    context.asyncproc = asyncproc
+
+
+@given('gp_stat_replication table has pg_basebackup entry for content {contentid}')
+@when('gp_stat_replication table has pg_basebackup entry for content {contentid}')
+@then('gp_stat_replication table has pg_basebackup entry for content {contentid}')
+def impl(context, contentid):
+    sql = "select gp_segment_id from gp_stat_replication where application_name = 'pg_basebackup'"
+
+    try:
+        with closing(dbconn.connect(dbconn.DbURL())) as conn:
+            res = dbconn.query(conn, sql)
+            rows = res.fetchall()
+    except Exception as e:
+        raise Exception("Failed to query gp_stat_replication: %s" % str(e))
+
+    segments_with_running_basebackup = {str(row[0]) for row in rows}
+
+    if str(contentid) not in segments_with_running_basebackup:
+        raise Exception("pg_basebackup entry was not found for content %s in gp_stat_replication" % contentid)

@@ -1887,8 +1887,9 @@ where exists(select * from tenk1 b
                                                                ->  Seq Scan on int4_tbl
                                                          ->  Index Scan using tenk1_thous_tenthous on tenk1 tenk1_1
                                                                Index Cond: (tenthous = int4_tbl.f1)
+                                                               Filter: (NOT (twothousand IS NULL))
  Optimizer: Pivotal Optimizer (GPORCA)
-(24 rows)
+(25 rows)
 
 --
 -- More complicated constructs

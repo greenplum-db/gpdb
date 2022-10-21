@@ -279,6 +279,8 @@ public:
 	// create a DXL WindowFrame node from a GPDB expression
 	CDXLWindowFrame *TranslateWindowFrameToDXL(
 		int frame_options, const Node *start_offset, const Node *end_offset,
+		Oid start_in_range_func, Oid end_in_range_func, Oid in_range_coll,
+		bool in_range_asc, bool in_range_nulls_first,
 		const CMappingVarColId *var_colid_mapping,
 		CDXLNode *new_scalar_proj_list);
 

@@ -32,11 +32,19 @@ using namespace gpdxl;
 CDXLWindowFrame::CDXLWindowFrame(EdxlFrameSpec edxlfs,
 								 EdxlFrameExclusionStrategy frame_exc_strategy,
 								 CDXLNode *dxlnode_leading,
-								 CDXLNode *dxlnode_trailing)
+								 CDXLNode *dxlnode_trailing,
+								 OID start_in_range_func, OID end_in_range_func,
+								 OID in_range_coll, bool in_range_asc,
+								 bool in_range_nulls_first)
 	: m_dxl_win_frame_spec(edxlfs),
 	  m_dxl_frame_exclusion_strategy(frame_exc_strategy),
 	  m_dxlnode_leading(dxlnode_leading),
-	  m_dxlnode_trailing(dxlnode_trailing)
+	  m_dxlnode_trailing(dxlnode_trailing),
+	  m_start_in_range_func(start_in_range_func),
+	  m_end_in_range_func(end_in_range_func),
+	  m_in_range_coll(in_range_coll),
+	  m_in_range_asc(in_range_asc),
+	  m_in_range_nulls_first(in_range_nulls_first)
 {
 	GPOS_ASSERT(EdxlfsSentinel > m_dxl_win_frame_spec);
 	GPOS_ASSERT(EdxlfesSentinel > m_dxl_frame_exclusion_strategy);
@@ -112,6 +120,10 @@ CDXLWindowFrame::PstrFS(EdxlFrameSpec edxlfs)
 	{
 		return CDXLTokens::GetDXLTokenStr(EdxltokenWindowFSRow);
 	}
+	else if (EdxlfsGroups == edxlfs)
+	{
+		return CDXLTokens::GetDXLTokenStr(EdxltokenWindowFSGroups);
+	}
 
 	return CDXLTokens::GetDXLTokenStr(EdxltokenWindowFSRange);
 }
@@ -139,6 +151,21 @@ CDXLWindowFrame::SerializeToDXL(CXMLSerializer *xml_serializer) const
 	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(EdxltokenWindowExclusionStrategy),
 		PstrES(m_dxl_frame_exclusion_strategy));
+
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenWindowStartInRangeOid),
+		m_start_in_range_func);
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenWindowEndInRangeOid),
+		m_end_in_range_func);
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenWindowInRangeColl),
+		m_in_range_coll);
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenWindowInRangeAsc), m_in_range_asc);
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenWindowInRangeNullsFirst),
+		m_in_range_nulls_first);
 
 	// add the values representing the window boundary
 	m_dxlnode_trailing->SerializeToDXL(xml_serializer);

@@ -441,7 +441,7 @@ explain select C.i from C where C.i in (select avg(i) over (partition by i) from
     <dxl:Plan Id="0" SpaceSize="0">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.000918" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.000951" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="i">
@@ -452,7 +452,7 @@ explain select C.i from C where C.i in (select avg(i) over (partition by i) from
         <dxl:OneTimeFilter/>
         <dxl:Sort SortDiscardDuplicates="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.000918" Rows="1.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.000951" Rows="1.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="i">
@@ -470,7 +470,7 @@ explain select C.i from C where C.i in (select avg(i) over (partition by i) from
           <dxl:LimitOffset/>
           <dxl:HashJoin JoinType="In">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.000918" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.000951" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="i">
@@ -496,7 +496,7 @@ explain select C.i from C where C.i in (select avg(i) over (partition by i) from
             </dxl:HashCondList>
             <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000125" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000158" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="i">
@@ -510,7 +510,7 @@ explain select C.i from C where C.i in (select avg(i) over (partition by i) from
               <dxl:SortingColumnList/>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000021" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000069" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="i">
@@ -520,7 +520,13 @@ explain select C.i from C where C.i in (select avg(i) over (partition by i) from
                     <dxl:Ident ColId="1" ColName="j" TypeMdid="0.23.1.0"/>
                   </dxl:ProjElem>
                 </dxl:ProjList>
-                <dxl:Filter/>
+                <dxl:Filter>
+                  <dxl:Not>
+                    <dxl:IsNull>
+                      <dxl:Ident ColId="0" ColName="i" TypeMdid="0.23.1.0"/>
+                    </dxl:IsNull>
+                  </dxl:Not>
+                </dxl:Filter>
                 <dxl:TableDescriptor Mdid="0.98671.1.0" TableName="c">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0" ColWidth="4"/>
