@@ -1673,6 +1673,10 @@ find_crsd(const char *column, List *stenc)
  * 'colDefs' - list of ColumnDefs
  * 'stenc' - list of ColumnReferenceStorageDirectives
  * 'withOptions' - list of WITH options
+ * 'parentenc' - list of ColumnReferenceStorageDirectives explicitly defined for
+ * parent partition
+ * 'explicitOnly' - Only return explicitly defined column encoding values
+ *  to be used for child partitions
  *
  * ENCODING options can be attached to column definitions, like
  * "mycolumn integer ENCODING ..."; these go into ColumnDefs. They
@@ -1701,7 +1705,7 @@ find_crsd(const char *column, List *stenc)
  * This needs access to possible inherited columns, so it can only be done after
  * expanding them.
  */
-List* transformColumnEncoding(Relation rel, List *colDefs, List *stenc, List *withOptions, bool rootpartition, bool errorOnEncodingClause)
+List* transformColumnEncoding(Relation rel, List *colDefs, List *stenc, List *withOptions, List *parentenc, bool explicitOnly, bool errorOnEncodingClause)
 {
 	ColumnReferenceStorageDirective *deflt = NULL;
 	ListCell   *lc;
@@ -1776,7 +1780,8 @@ List* transformColumnEncoding(Relation rel, List *colDefs, List *stenc, List *wi
 		 * 1. An explicit encoding clause in the ColumnDef
 		 * 2. A column reference storage directive for this column
 		 * 3. A default column encoding in the statement
-		 * 4. A default for the type.
+		 * 4. Parent partition's column encoding values
+		 * 5. A default for the type.
 		 */
 		if (d->encoding)
 		{
@@ -1796,9 +1801,14 @@ List* transformColumnEncoding(Relation rel, List *colDefs, List *stenc, List *wi
 			{
 				if (deflt)
 					encoding = copyObject(deflt->encoding);
-				else if (!rootpartition)
+				else if (!explicitOnly)
 				{
-					if (d->typeName)
+					if (parentenc)
+					{
+						ColumnReferenceStorageDirective *parent_col_encoding = find_crsd(d->colname, parentenc);
+						encoding = transformStorageEncodingClause(parent_col_encoding->encoding, true);
+					}
+					else if (d->typeName)
 						encoding = get_type_encoding(d->typeName);
 					if (!encoding)
 						encoding = default_column_encoding_clause(rel);

@@ -2190,8 +2190,7 @@ describeOneTableDetails(const char *schemaname,
 			attstattarget_col = cols++;
 		}
 
-		if (greenplum_is_ao_column(tableinfo.relstorage, tableinfo.relam) &&
-				tableinfo.relkind != RELKIND_PARTITIONED_TABLE)
+		if (greenplum_is_ao_column(tableinfo.relstorage, tableinfo.relam))
 		{
 			if (isGE42 == true)
 			{
@@ -2334,8 +2333,7 @@ describeOneTableDetails(const char *schemaname,
 	if (attstattarget_col >= 0)
 		headers[cols++] = gettext_noop("Stats target");
 
-	if (verbose && greenplum_is_ao_column(tableinfo.relstorage, tableinfo.relam) && 
-			tableinfo.relkind != RELKIND_PARTITIONED_TABLE)
+	if (verbose && greenplum_is_ao_column(tableinfo.relstorage, tableinfo.relam))
 	{
 		headers[cols++] = gettext_noop("Compression Type");
 		headers[cols++] = gettext_noop("Compression Level");
@@ -2422,7 +2420,7 @@ describeOneTableDetails(const char *schemaname,
 							  false, false);
 
 		if (greenplum_is_ao_column(tableinfo.relstorage, tableinfo.relam)
-				&& attoptions_col >= 0 && tableinfo.relkind != RELKIND_PARTITIONED_TABLE)
+				&& attoptions_col >= 0)
 		{
 			/* The compression type, compression level, and block size are all in the next column.
 			 * attributeOptions is a text array of key=value pairs retrieved as a string from the catalog.

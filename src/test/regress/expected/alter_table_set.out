@@ -201,15 +201,19 @@ SELECT c.relname, c.reloptions, a.blocksize, a.compresslevel FROM pg_class c LEF
 SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'part_relopt%';
      relname     | attnum |                       attoptions                        
 -----------------+--------+---------------------------------------------------------
- part_relopt_1   |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ part_relopt     |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ part_relopt     |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
  part_relopt_1   |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- part_relopt_2_1 |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ part_relopt_1   |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ part_relopt_2   |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ part_relopt_2   |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
  part_relopt_2_1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- part_relopt_2_2 |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ part_relopt_2_1 |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
  part_relopt_2_2 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- part_relopt_3   |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ part_relopt_2_2 |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
  part_relopt_3   |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
-(8 rows)
+ part_relopt_3   |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+(12 rows)
 
 ALTER TABLE part_relopt SET (compresslevel=3);
 SELECT c.relname, c.reloptions, a.blocksize, a.compresslevel FROM pg_class c LEFT JOIN pg_appendonly a ON a.relid = c.oid WHERE c.relname LIKE 'part_relopt%';
@@ -226,15 +230,19 @@ SELECT c.relname, c.reloptions, a.blocksize, a.compresslevel FROM pg_class c LEF
 SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'part_relopt%';
      relname     | attnum |                       attoptions                        
 -----------------+--------+---------------------------------------------------------
- part_relopt_1   |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ part_relopt     |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ part_relopt     |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
  part_relopt_1   |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- part_relopt_2_1 |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ part_relopt_1   |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ part_relopt_2   |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ part_relopt_2   |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
  part_relopt_2_1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- part_relopt_2_2 |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ part_relopt_2_1 |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
  part_relopt_2_2 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- part_relopt_3   |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ part_relopt_2_2 |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
  part_relopt_3   |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
-(8 rows)
+ part_relopt_3   |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+(12 rows)
 
 -- Check mixed AMs in the partition hierarchy. Currently we error out.
 CREATE TABLE part_relopt2(a int, b int) PARTITION BY RANGE(a);
@@ -258,24 +266,24 @@ ALTER TABLE part_2_1 SET (blocksize=65536);
 SELECT c.relname, c.reloptions FROM pg_class c WHERE c.relname = 'part_1' OR c.relname = 'part_2_1';
  relname  |    reloptions     
 ----------+-------------------
- part_1   | {fillfactor=70}
  part_2_1 | {blocksize=65536}
+ part_1   | {fillfactor=70}
 (2 rows)
 
 ALTER TABLE part_relopt2 RESET(fillfactor);
 SELECT c.relname, c.reloptions FROM pg_class c WHERE c.relname = 'part_1' OR c.relname = 'part_2_1';
  relname  |    reloptions     
 ----------+-------------------
- part_1   | 
  part_2_1 | {blocksize=65536}
+ part_1   | 
 (2 rows)
 
 ALTER TABLE part_relopt2 RESET(blocksize);
 SELECT c.relname, c.reloptions FROM pg_class c WHERE c.relname = 'part_1' OR c.relname = 'part_2_1';
  relname  | reloptions 
 ----------+------------
- part_1   | 
  part_2_1 | 
+ part_1   | 
 (2 rows)
 
 -- Data is intact

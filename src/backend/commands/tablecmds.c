@@ -564,6 +564,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 	List	   *old_constraints;
 	List	   *rawDefaults;
 	List	   *cookedDefaults;
+	List       *parentenc = NIL;
 	Datum		reloptions;
 	Datum		oldoptions = (Datum) 0;
 	ListCell   *listptr;
@@ -808,7 +809,11 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 		parentrel = table_open(parentrelid, AccessShareLock);
 
 		if (parentrel->rd_rel->relam == accessMethodId)
+		{
 			oldoptions = get_rel_opts(parentrel);
+			if (accessMethodId == AO_COLUMN_TABLE_AM_OID)
+				parentenc = rel_get_column_encodings(parentrel);
+		}
 
 		table_close(parentrel, AccessShareLock);
 	}
@@ -983,15 +988,17 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 	 * legitimately error out, it is prefered to call it before updating the
 	 * catalog in heap_create_with_catalog().
 	 *
-	 * For RELKIND_PARTITIONED_TABLE, let the transformation of attribute
-	 * encoding happen. We don't store it for parent partition in
-	 * pg_attribute_encoding table. Transformed encoding will be used to
-	 * create child partition create stmts, hence avoid marking it NIL as
-	 * well.
+	 * For RELKIND_PARTITIONED_TABLE, we will create a list of encodings
+	 * for the root partition to add to pg_attribute_encoding which includes
+	 * explicitly specified column encodings and values picked from defaults
+	 * We will also transform the stmt->attr_encodings to be passed down to
+	 * create child partition create stmts which would only include explicitly
+	 * specified column encodings from the current root partition
 	 *
 	 * This is done in dispatcher (and in utility mode). In QE, we receive
 	 * the already-processed options from the QD.
 	 */
+
 	if ((relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW ||
 		 relkind == RELKIND_PARTITIONED_TABLE) &&
 		Gp_role != GP_ROLE_EXECUTE)
@@ -1009,6 +1016,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 								schema,
 								stmt->attr_encodings,
 								stmt->options,
+								parentenc,
 								relkind == RELKIND_PARTITIONED_TABLE,
 								accessMethodId != AO_COLUMN_TABLE_AM_OID
 										&& !stmt->partbound 
@@ -1143,7 +1151,22 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 		cooked_constraints = list_concat(cooked_constraints, newCookedDefaults);
 	}
 
-	if (stmt->attr_encodings && (relkind != RELKIND_PARTITIONED_TABLE))
+	if (relkind == RELKIND_PARTITIONED_TABLE && RelationIsAoCols(rel))
+	{
+		List *part_attr_encodings =
+			transformColumnEncoding(NULL /* Relation */,
+									schema,
+									stmt->attr_encodings,
+									stmt->options,
+									parentenc,
+									false,
+									accessMethodId != AO_COLUMN_TABLE_AM_OID
+									&& !stmt->partbound && !stmt->partspec
+									/* errorOnEncodingClause */);
+
+		AddRelationAttributeEncodings(rel, part_attr_encodings);
+	}
+	else if (stmt->attr_encodings && RelationIsAoCols(rel))
 		AddRelationAttributeEncodings(rel, stmt->attr_encodings);
 
 	/*
@@ -4170,7 +4193,8 @@ static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOpti
 							colDefs /*column clauses*/,
 							stenc /*encoding clauses*/,
 							withOptions /*withOptions*/,
-							rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE /*rootpartition*/,
+							NULL /*parent encoding*/,
+							false /*explicitOnly*/,
 							false /*errorOnEncodingClause*/);
 	AddRelationAttributeEncodings(rel, attr_encodings);
 }
@@ -7517,7 +7541,8 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 	enc = transformColumnEncoding(rel, list_make1(colDef), 
 					NULL /* COLUMN ENCODING clauses is only for CREATE TABLE */, 
 					NULL /* withOptions */,
-					false /* rootpartition */, 
+					NULL /* parent encodings */,
+					false /* explicitOnly */,
 					!RelationIsAoCols(rel) /* errorOnEncodingClause */);
 	/* 
 	 * Store the encoding clause for AO/CO tables.
@@ -14699,6 +14724,12 @@ ATExecSetAccessMethodNoStorage(Relation rel, Oid newAccessMethod)
 
 	heap_freetuple(tuple);
 	table_close(pg_class, RowExclusiveLock);
+
+	/*
+	 * Remove the pg_attribute_encoding entries when we are changing the AOCO table to some other AM.
+	 */
+	if (oldrelam == AO_COLUMN_TABLE_AM_OID)
+		RemoveAttributeEncodingsByRelid(relid);
 
 	/* Make sure the relam change is visible */
 	CommandCounterIncrement();

@@ -566,6 +566,18 @@ SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_templ
 EXECUTE encoding_check;
                    relname                   | attnum |                       attoptions                        
 ---------------------------------------------+--------+---------------------------------------------------------
+ subpart_templ_encoding                      |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                      |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                      |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                      |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1             |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1             |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1             |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1             |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2             |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2             |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2             |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2             |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
  subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
  subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
  subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
@@ -582,13 +594,25 @@ EXECUTE encoding_check;
  subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
  subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
  subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-(16 rows)
+(28 rows)
 
 -- FIXME: the new partitions should have the encodings specified in the template
 ALTER TABLE subpart_templ_encoding ADD PARTITION p3 START (30) END (40);
 EXECUTE encoding_check;
                    relname                   | attnum |                       attoptions                        
 ---------------------------------------------+--------+---------------------------------------------------------
+ subpart_templ_encoding                      |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                      |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                      |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                      |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1             |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1             |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1             |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1             |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2             |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2             |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2             |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2             |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
  subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
  subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
  subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
@@ -605,6 +629,10 @@ EXECUTE encoding_check;
  subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
  subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
  subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p3             |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3             |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3             |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3             |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
  subpart_templ_encoding_1_prt_p3_2_prt_sp1_1 |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
  subpart_templ_encoding_1_prt_p3_2_prt_sp1_1 |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
  subpart_templ_encoding_1_prt_p3_2_prt_sp1_1 |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
@@ -613,7 +641,7 @@ EXECUTE encoding_check;
  subpart_templ_encoding_1_prt_p3_2_prt_sp1_2 |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
  subpart_templ_encoding_1_prt_p3_2_prt_sp1_2 |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
  subpart_templ_encoding_1_prt_p3_2_prt_sp1_2 |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
-(24 rows)
+(40 rows)
 
 -- List partition with enclause
 DROP TABLE IF EXISTS subpart_templ_encoding;
@@ -652,6 +680,18 @@ SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_templ
 EXECUTE encoding_check;
                   relname                  | attnum |                       attoptions                        
 -------------------------------------------+--------+---------------------------------------------------------
+ subpart_templ_encoding                    |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                    |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                    |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                    |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1           |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1           |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1           |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1           |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2           |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2           |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2           |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2           |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
  subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
  subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
  subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
@@ -660,13 +700,25 @@ EXECUTE encoding_check;
  subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
  subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
  subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-(8 rows)
+(20 rows)
 
 -- FIXME: the new partitions should have the encodings specified in the template
 ALTER TABLE subpart_templ_encoding ADD PARTITION p3 START (30) END (40);
 EXECUTE encoding_check;
                   relname                  | attnum |                       attoptions                        
 -------------------------------------------+--------+---------------------------------------------------------
+ subpart_templ_encoding                    |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                    |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                    |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                    |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1           |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1           |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1           |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1           |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2           |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2           |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2           |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2           |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
  subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
  subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
  subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
@@ -675,11 +727,15 @@ EXECUTE encoding_check;
  subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
  subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
  subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p3           |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3           |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3           |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3           |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
  subpart_templ_encoding_1_prt_p3_2_prt_sp1 |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
  subpart_templ_encoding_1_prt_p3_2_prt_sp1 |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
  subpart_templ_encoding_1_prt_p3_2_prt_sp1 |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
  subpart_templ_encoding_1_prt_p3_2_prt_sp1 |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
-(12 rows)
+(28 rows)
 
 -- Partition specific ENCODING clause is not supported in SUBPARTITION TEMPLATE
 create table template_partelem_enc (i int, j int, k int, l int)

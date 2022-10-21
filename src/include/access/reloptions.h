@@ -336,8 +336,8 @@ extern List *build_ao_rel_storage_opts(List *opts, Relation rel);
 
 /* attribute enconding specific functions */
 extern List *transformColumnEncoding(Relation rel, List *colDefs,
-										List *stenc, List *withOptions,
-										bool rootpartition, bool allowEncodingClause);
+										List *stenc, List *withOptions, List *parentenc,
+										bool forChildPartitions, bool allowEncodingClause);
 extern List *transformStorageEncodingClause(List *options, bool validate);
 extern List *form_default_storage_directive(List *enc);
 extern bool is_storage_encoding_directive(char *name);
