@@ -241,9 +241,9 @@ $$ LANGUAGE plcontainer;
 
 If the `# container` line in a UDF specifies an ID that is not in the PL/Container configuration file, Greenplum Database returns an error when you try to run the UDF.
 
-### <a id="topic_ctk_xjg_wkb"></a>About PL/Python Methods in PL/Container
+### <a id="topic_ctk_xjg_wkb"></a>About PL/Python 2 Functions in PL/Container
 
-In the Python language container, the module `plpy` is implemented. The module contains these methods:
+In the Python 2 language container, the module `plpy` is implemented. The module contains these methods:
 
 -   `plpy.execute(stmt)` - Runs the query string `stmt` and returns query result in a list of dictionary objects. To be able to access the result fields ensure your query returns named fields.
 -   `plpy.prepare(stmt[, argtypes])` - Prepares the execution plan for a query. It is called with a query string and a list of parameter types, if you have parameter references in the query.
@@ -277,7 +277,7 @@ For information about PL/Python, see [PL/Python Language](pl_python.html).
 
 For information about the `plpy` methods, see [https://www.postgresql.org/docs/9.4/plpython-database.htm](https://www.postgresql.org/docs/9.4/plpython-database.html).
 
-### <a id="topic_plc_py3"></a>About PL/Python 3 Methods in PL/Container 
+### <a id="topic_plc_py3"></a>About PL/Python 3 Functions in PL/Container 
 
 PL/Container for Greenplum Database 5 supports Python version 3.6+. PL/Container for Greenplum Database 6 supports Python 3.7+.
 
@@ -288,7 +288,179 @@ Keep in mind that UDFs that you created for Python 2 may not run in PL/Container
 -   Changes to Python - [What’s New in Python 3](https://docs.python.org/3/whatsnew/3.0.html)
 -   Porting from Python 2 to 3 - [Porting Python 2 Code to Python 3](https://docs.python.org/3/howto/pyporting.html)
 
-### <a id="topic_lqz_t3q_dw"></a>About PL/R Methods in PL/Container
+### <a id="cuda"></a>Developing CUDA API Functions with PL/Container
+
+Beginning with version 2.2, PL/Container supports developing Compute Unified Device Architecture (CUDA) API functions that utilize NVIDIA GPU hardware. This is accomplished by using the NVIDIA Container Toolkit `nvidia-docker` image and the `pycuda` python library. This procedure explains how to set up PL/Container for developing these functions.
+
+#### Prerequisites
+
+To develop CUDA functions with PL/Container you require:
+- A Docker installation having Docker engine version v19.03 or newer 
+- PL/Container version 2.2.0 or newer 
+- At least one NVIDIA GPU with the required GPU driver installed on your host
+- An installation of the 
+
+See the [Getting Started](https://github.com/NVIDIA/nvidia-docker) section of the NVIDIA Container Toolkit GitHub project for Information about installing the NVIDIA driver or Docker engine for your Linux distribution.
+
+Follow the [Installation Guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) for the NVIDIA Container Toolkit GitHub project to install the `nvidia-docker` container.
+
+Verify that the Docker image can use your installed GPU(s) by running the command similar to:
+
+```
+$ docker run --rm --gpus=all -it nvidia/cuda:11.7.0-devel-ubuntu20.04 nvidia-smi –L
+```
+
+(Substitute the actual `nvidia-docker` image name and tag that you installed.) The command output should show that GPU hardware is utilized. For example:
+
+```
+GPU 0: NVIDIA GeForce RTX 2070 (UUID: GPU-d4d626a3-bbc9-ef88-98dc-44423ad081bf) 
+```
+
+Record the name of the GPU device ID (0 in the above example) or the device UUID (GPU-d4d626a3-bbc9-ef88-98dc-44423ad081bf) that you want to assign to the PL/Container image.
+
+#### Install and Customize the PL/Container Image
+
+1. Download the `plcontainer-python3-image-2.2.0-gp6.tar.gz` file from the **Greenplum Procedural Languages** section on [Tanzu Network](https://network.pivotal.io/products/vmware-tanzu-greenplum).
+
+2. Load the downloaded PL/Container image into Docker:
+    ```
+    $ docker image load < plcontainer-python3-image-2.2.0-gp6.tar.gz
+    ```
+
+3. Install the `python3-pycuda` software to your operating system. For example:
+    ```
+    $ sudo apt install python3-cuda
+    ```
+
+4. Use a text editor to create a Dockerfile that customizes the PL/Container image to add GPU support. For example:
+    ```
+    FROM pivotaldata/plcontainer_python3_shared:devel 
+    
+    ENV XKBLAYOUT=en 
+    ENV DEBIAN_FRONTEND=noninteractive 
+    
+    # Install CUDA from https://developer.nvidia.com/cuda-downloads 
+    # By downloading and using the software, you agree to fully comply with the terms and conditions of the CUDA EULA. 
+    RUN true &&\ 
+        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin && \ 
+        mv cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600 && \ 
+        wget https://developer.download.nvidia.com/compute/cuda/11.7.0/local_installers/cuda-repo-ubuntu1804-11-7-local_11.7.0-515.43.04-1_amd64.deb && \ 
+        dpkg -i cuda-repo-ubuntu1804-11-7-local_11.7.0-515.43.04-1_amd64.deb && \ 
+        cp /var/cuda-repo-ubuntu1804-11-7-local/cuda-*-keyring.gpg /usr/share/keyrings/ && \ 
+        apt-get update && \ 
+        apt-get -y install cuda && \ 
+        rm cuda-repo-ubuntu1804-11-7-local_11.7.0-515.43.04-1_amd64.deb &&\ 
+        rm -rf /var/lib/apt/lists/* 
+    
+    ENV PATH="/usr/local/cuda-11.7/bin/:${PATH}" 
+    ENV LD_LIBRARY_PATH="/usr/local/cuda-11.7/lib64:${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" 
+    ENV CUDA_HOME="/usr/local/cuda-11.7" 
+
+    RUN true && \ 
+        python3.7 -m pip --no-cache-dir install typing-extensions==3.10.0.0 && \ 
+        python3.7 -m pip --no-cache-dir install Mako==1.2.0 && \ 
+        python3.7 -m pip --no-cache-dir install platformdirs==2.5.2 && \ 
+        python3.7 -m pip --no-cache-dir install pytools==2022.1.2 && \ 
+        python3.7 -m pip --no-cache-dir install pycuda==2021.1 
+    ```
+
+5. Build the a customized container using your Dockerfile:
+    ```
+    $ docker build . -t localhost/plcontainer_python3_cuda_shared:latest
+    ```
+    **Note:** The remaining instructions use the example image tag `host/plcontainer_python3_cuda_shared:latest`. Substitute the actual tag name as needed.
+
+6. Import the image runtime to PL/Container:
+    ```
+    $ plcontainer runtime-add -r plc_python_cuda_shared -I localhost/plcontainer_python3_cuda_shared:latest -l python3  
+    ```
+
+7. Edit the image runtime to assign a GPU. The following example adds GPU device ID `0` as the GPU, and `gpadmin` as the designated role. Substitute either the GPU device ID or the device UUID that you recorded earlier:
+    ```
+    $ plcontainer runtime-edit
+    ```
+    ```
+        <runtime> 
+            <id>plc_python_cuda_shared</id> 
+            <image>localhost/plcontainer_python3_cuda_shared:latest</image> 
+            <command>/clientdir/py3client.sh</command> 
+        <setting roles="gpadmin" /> 
+            <shared_directory access="ro" container="/clientdir" host="/home/sa/GPDB/install/bin/plcontainer_clients"/> 
+            <device_request type="gpu" > 
+                <deviceid>0</deviceid> 
+            </device_request> 
+        </runtime>
+    ---
+
+#### Create and Run a Sample CUDA Function
+
+1. Connect to a Greenplum database where PL/Container is installed:
+    ```
+    $ psql -d mytest -h master_host -p 5432 -U `gpadmin`
+    ```
+
+2. Create a sample PL/Container function that uses the container you customized (`plc_python_cuda_shared` in this example):
+    ```
+    CREATE FUNCTION hello_cuda() RETURNS float4[] AS $$ 
+    # container: plc_python_cuda_shared 
+    
+    import pycuda.driver as drv 
+    import pycuda.tools 
+    import pycuda.autoinit 
+    import numpy 
+    import numpy.linalg as la 
+    from pycuda.compiler import SourceModule 
+    
+    mod = SourceModule(""" 
+    __global__ void multiply_them(float *dest, float *a, float *b) 
+    { 
+      const int i = threadIdx.x; 
+      dest[i] = a[i] * b[i]; 
+    } 
+    """) 
+    
+    multiply_them = mod.get_function("multiply_them") 
+      
+    a = numpy.random.randn(400).astype(numpy.float32) 
+    b = numpy.random.randn(400).astype(numpy.float32) 
+    
+    dest = numpy.zeros_like(a) 
+    multiply_them( 
+            drv.Out(dest), drv.In(a), drv.In(b), 
+            block=(400,1,1)) 
+      
+    return [float(i) for i in (dest-a*b)] 
+    
+    $$ LANGUAGE plcontainer; 
+    ```
+
+3. Run the sample function and verify its output:
+    ```
+    $ with a as (select unnest(hello) as cuda from hello_cuda() as hello) select sum(cuda) from a; 
+    ```
+    ```
+    psql>   +-----+ 
+    psql>   | sum | 
+    psql>   |-----| 
+    psql>   | 0.0 | 
+    psql>   +-----+ 
+    psql>   SELECT 1 
+    psql>   Time: 0.012s 
+    ```
+    ```
+    $ select * from hello_cuda();
+    ```
+    ```
+    psql>   +-----------------------+ 
+    psql>   |       hello_cuda      | 
+    psql>   |-----------------------| 
+    psql>   | {0, 0.... many 0 ...} | 
+    psql>   +-----------------------+ 
+    psql>   SELECT 1 
+    psql>   Time: 0.012s 
+   ```
+
+### <a id="topic_lqz_t3q_dw"></a>About PL/R Functions in PL/Container
 
 In the R language container, the module `pg.spi` is implemented. The module contains these methods:
 
