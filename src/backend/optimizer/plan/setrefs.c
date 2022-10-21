@@ -1828,20 +1828,22 @@ fix_expr_common(PlannerInfo *root, Node *node)
 
 		/* Check for regclass reference */
 		if (ISREGCLASSCONST(con))
-                  if (NULL !=root) {
-                    root->glob->relationOids =
-                        lappend_oid(root->glob->relationOids,
-                                    DatumGetObjectId(con->constvalue));
-                  }
+		{
+			if (NULL !=root)
+			{
+				root->glob->relationOids = lappend_oid(root->glob->relationOids,DatumGetObjectId(con->constvalue));
+			}
+		}
 	}
 	else if (IsA(node, GroupingFunc))
 	{
 		GroupingFunc *g = (GroupingFunc *) node;
                 AttrNumber *grouping_map = NULL;
 
-                if(NULL != root) {
-                  grouping_map = root->grouping_map;
-                }
+		if (NULL != root)
+		{
+			grouping_map = root->grouping_map;
+		}
 
 		/* If there are no grouping sets, we don't need this. */
 
@@ -3224,10 +3226,10 @@ record_plan_function_dependency(PlannerInfo *root, Oid funcid)
 		inval_item->cacheId = PROCOID;
 		inval_item->hashValue = GetSysCacheHashValue1(PROCOID,
 													  ObjectIdGetDatum(funcid));
-                if (NULL != root) {
-                  root->glob->invalItems =
-                      lappend(root->glob->invalItems, inval_item);
-                }
+		if (NULL != root)
+		{
+			root->glob->invalItems = lappend(root->glob->invalItems, inval_item);
+		}
 		add_proc_oids_for_dump(funcid);
 	}
 }

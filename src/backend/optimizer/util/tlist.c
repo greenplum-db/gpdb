@@ -1272,9 +1272,10 @@ split_pathtarget_at_srfs(PlannerInfo *root,
 				}
 			}
 
-                        if (NULL != root) {
-                          set_pathtarget_cost_width(root, ntarget);
-                        }
+			if (NULL != root)
+			{
+				set_pathtarget_cost_width(root, ntarget);
+			}
 		}
 
 		/*

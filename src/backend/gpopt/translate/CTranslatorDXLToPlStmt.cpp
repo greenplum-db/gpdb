@@ -27,7 +27,6 @@ extern "C" {
 #include "nodes/nodes.h"
 #include "nodes/plannodes.h"
 #include "nodes/primnodes.h"
-#include "optimizer/setrefs.h"
 #include "optimizer/tlist.h"
 #include "partitioning/partdesc.h"
 #include "storage/lmgr.h"
@@ -3180,7 +3179,7 @@ CTranslatorDXLToPlStmt::TranslateDXLSubQueryScan(
 }
 
 static bool
-ContainsLowLevelSetReturningFunctions(const CDXLNode *scalar_expr_dxlnode)
+ContainsLowLevelSetReturningFunc(const CDXLNode *scalar_expr_dxlnode)
 {
 	const ULONG arity = scalar_expr_dxlnode->Arity();
 	for (ULONG ul = 0; ul < arity; ul++)
@@ -3191,14 +3190,14 @@ ContainsLowLevelSetReturningFunctions(const CDXLNode *scalar_expr_dxlnode)
 		if (EdxlopScalarFuncExpr == dxlopid)
 		{
 			if (CDXLScalarFuncExpr::Cast(op)->ReturnsSet() ||
-				ContainsLowLevelSetReturningFunctions(expr_dxlnode))
+				ContainsLowLevelSetReturningFunc(expr_dxlnode))
 			{
 				return true;
 			}
 		}
 		else
 		{
-			if (ContainsLowLevelSetReturningFunctions(expr_dxlnode))
+			if (ContainsLowLevelSetReturningFunc(expr_dxlnode))
 			{
 				return true;
 			}
@@ -3208,8 +3207,8 @@ ContainsLowLevelSetReturningFunctions(const CDXLNode *scalar_expr_dxlnode)
 }
 
 static bool
-ContainsSetReturningFuncOrOp(const CDXLNode *project_list_dxlnode,
-							 CMDAccessor *md_accessor)
+ContainsSetReturningFunc(const CDXLNode *project_list_dxlnode,
+						 CMDAccessor *md_accessor)
 {
 	const ULONG arity = project_list_dxlnode->Arity();
 	for (ULONG ul = 0; ul < arity; ++ul)
@@ -3218,23 +3217,20 @@ ContainsSetReturningFuncOrOp(const CDXLNode *project_list_dxlnode,
 		GPOS_ASSERT(EdxlopScalarProjectElem ==
 					proj_elem_dxlnode->GetOperator()->GetDXLOperator());
 		GPOS_ASSERT(1 == proj_elem_dxlnode->Arity());
-
-		// translate proj element expression
 		CDXLNode *expr_dxlnode = (*proj_elem_dxlnode)[0];
-
 		CDXLOperator *op = expr_dxlnode->GetOperator();
 		Edxlopid dxlopid = op->GetDXLOperator();
 		if (EdxlopScalarFuncExpr == dxlopid)
 		{
 			if (!(CDXLScalarFuncExpr::Cast(op)->ReturnsSet()) &&
-				ContainsLowLevelSetReturningFunctions(expr_dxlnode))
+				ContainsLowLevelSetReturningFunc(expr_dxlnode))
 			{
 				return true;
 			}
 		}
 		else
 		{
-			if (ContainsLowLevelSetReturningFunctions(expr_dxlnode))
+			if (ContainsLowLevelSetReturningFunc(expr_dxlnode))
 			{
 				return true;
 			}
@@ -3244,19 +3240,25 @@ ContainsSetReturningFuncOrOp(const CDXLNode *project_list_dxlnode,
 }
 
 void
-setPlanIdForChildNodes(Plan *iterator, ULONG newDiffInPlanNodeId)
+setPlanIdForChildNodes(Plan *plan, ULONG diff_plannode_id)
 {
-	if (nullptr == iterator)
+	if (nullptr == plan)
 	{
 		return;
 	}
-	iterator->plan_node_id = iterator->plan_node_id + newDiffInPlanNodeId;
-	setPlanIdForChildNodes(iterator->lefttree, newDiffInPlanNodeId);
-	setPlanIdForChildNodes(iterator->righttree, newDiffInPlanNodeId);
+	plan->plan_node_id = plan->plan_node_id + diff_plannode_id;
+	setPlanIdForChildNodes(plan->lefttree, diff_plannode_id);
+	setPlanIdForChildNodes(plan->righttree, diff_plannode_id);
 }
 
-// XXX: this is a copy-pasta of TranslateDXLResult
-// Is there a way to reduce the duplication?
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorDXLToPlStmt::TranslateDXLProjectSet
+//
+//	@doc:
+//		Translate DXL result node into GPDB project set plan node
+//
+//---------------------------------------------------------------------------
 Plan *
 CTranslatorDXLToPlStmt::TranslateDXLProjectSet(
 	const CDXLNode *result_dxlnode, CDXLTranslateContext *output_context,
@@ -3273,13 +3275,11 @@ CTranslatorDXLToPlStmt::TranslateDXLProjectSet(
 
 	// create project set (nee result) plan node
 	ProjectSet *project_set = MakeNode(ProjectSet);
-
 	Plan *plan = &(project_set->plan);
 	plan->plan_node_id = 0;
 
 	// translate operator costs
 	TranslatePlanCosts(result_dxlnode, plan);
-
 	SetParamIds(plan);
 	return (Plan *) project_set;
 }
@@ -3297,16 +3297,15 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	const CDXLNode *result_dxlnode, CDXLTranslateContext *output_context,
 	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
 {
-	List *targetsWithSrf = NIL;
-	List *targetsWithSrfBool = NIL;
+	List *targets_with_srf = NIL;
+	List *targets_with_srf_bool = NIL;
 	Plan *child_plan = nullptr;
 	Plan *project_set_final_plan = nullptr;
 	Plan *project_set_child_plan = nullptr;
-	BOOL willRequireResultNode = false;
+	BOOL will_require_result_node = false;
 
 	// create result plan node
 	Result *result = MakeNode(Result);
-
 	Plan *plan = &(result->plan);
 	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
 
@@ -3332,9 +3331,7 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	CDXLNode *filter_dxlnode = (*result_dxlnode)[EdxlresultIndexFilter];
 	CDXLNode *one_time_filter_dxlnode =
 		(*result_dxlnode)[EdxlresultIndexOneTimeFilter];
-
 	List *quals_list = nullptr;
-
 	CDXLTranslationContextArray *child_contexts =
 		GPOS_NEW(m_mp) CDXLTranslationContextArray(m_mp);
 	child_contexts->Append(&child_context);
@@ -3351,60 +3348,52 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 								 nullptr,  // base table translation context
 								 child_contexts, output_context);
 
-
 	plan->qual = quals_list;
-
 	result->resconstantqual = (Node *) one_time_quals_list;
-
 	SetParamIds(plan);
-
-	PathTarget *completeResultPathTarget =
+	PathTarget *complete_result_pathtarget =
 		make_pathtarget_from_tlist(plan->targetlist);
+	split_pathtarget_at_srfs(nullptr, complete_result_pathtarget, nullptr,
+							 &targets_with_srf, &targets_with_srf_bool);
 
-
-	split_pathtarget_at_srfs(nullptr, completeResultPathTarget, nullptr,
-							 &targetsWithSrf, &targetsWithSrfBool);
-
-	if (1 == list_length(targetsWithSrf))
+	if (1 == list_length(targets_with_srf))
 	{
 		result->plan.lefttree = child_plan;
 		child_contexts->Release();
 		return (Plan *) result;
 	}
 
-	if (ContainsSetReturningFuncOrOp((*result_dxlnode)[EdxlresultIndexProjList],
-									 m_md_accessor))
+	if (ContainsSetReturningFunc((*result_dxlnode)[EdxlresultIndexProjList],
+								 m_md_accessor))
 	{
-		willRequireResultNode = true;
+		will_require_result_node = true;
 	}
 
 	ListCell *lc;
-	ULONG listLength = 1;
-	int targetsWithSrf_length = list_length(targetsWithSrf);
-	ForEach(lc, targetsWithSrf)
+	ULONG list_cell_pos = 1;
+	int targets_with_srf_list_length = list_length(targets_with_srf);
+	ForEach(lc, targets_with_srf)
 	{
-		if (listLength == 1)
+		if (list_cell_pos == 1)
 		{
-			listLength = listLength + 1;
+			list_cell_pos = list_cell_pos + 1;
 			continue;
 		}
-		if (willRequireResultNode && targetsWithSrf_length == listLength)
+		if (will_require_result_node &&
+			targets_with_srf_list_length == list_cell_pos)
 		{
 			break;
 		}
 
-		listLength = listLength + 1;
-
-		List *TargetListEntry =
+		list_cell_pos = list_cell_pos + 1;
+		List *target_list_entry =
 			make_tlist_from_pathtarget((PathTarget *) lfirst(lc));
-
 		Plan *temp_plan_project_set = TranslateDXLProjectSet(
 			result_dxlnode, output_context, ctxt_translation_prev_siblings);
-
-		temp_plan_project_set->targetlist = TargetListEntry;
+		temp_plan_project_set->targetlist = target_list_entry;
 		temp_plan_project_set->qual = plan->qual;
 
-		if (project_set_final_plan == nullptr)
+		if (nullptr == project_set_final_plan)
 		{
 			project_set_final_plan = temp_plan_project_set;
 			project_set_child_plan = temp_plan_project_set;
@@ -3416,27 +3405,24 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 		}
 	}
 
-	if (nullptr != child_plan && nullptr != project_set_child_plan)
-	{
-		project_set_child_plan->lefttree = child_plan;
-	}
-
+	project_set_child_plan->lefttree = child_plan;
 	Plan *final_plan = nullptr;
 
-	if (willRequireResultNode)
+	if (will_require_result_node)
 	{
 		result->plan.lefttree = project_set_final_plan;
 		final_plan = &(result->plan);
 	}
-	else if (nullptr != project_set_final_plan)
+	else
 	{
-		int i = 0;
-		ListCell *listCellProjectTargetEntry;
-		ForEach(listCellProjectTargetEntry, project_set_final_plan->targetlist)
+		ULONG ul = 0;
+		ListCell *listcell_project_targetentry;
+		ForEach(listcell_project_targetentry,
+				project_set_final_plan->targetlist)
 		{
 			TargetEntry *te =
-				(TargetEntry *) lfirst(listCellProjectTargetEntry);
-			CDXLNode *proj_elem_dxlnode = (*project_list_dxlnode)[i];
+				(TargetEntry *) lfirst(listcell_project_targetentry);
+			CDXLNode *proj_elem_dxlnode = (*project_list_dxlnode)[ul];
 			GPOS_ASSERT(EdxlopScalarProjectElem ==
 						proj_elem_dxlnode->GetOperator()->GetDXLOperator());
 			CDXLScalarProjElem *sc_proj_elem_dxlop =
@@ -3447,41 +3433,35 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 					sc_proj_elem_dxlop->GetMdNameAlias()
 						->GetMDName()
 						->GetBuffer());
-			i++;
+			ul++;
 		}
 		final_plan = project_set_final_plan;
 	}
-	else
-	{
-		final_plan = &(result->plan);
-	}
 
 	//Set up of Plan Node Id
-	int planIdNew = result->plan.plan_node_id;
-	Plan *iterator_setPlanId = final_plan;
-	ULONG countProjectSetNodes = 0;
-	while (iterator_setPlanId != nullptr &&
-		   (iterator_setPlanId->type == T_Result ||
-			iterator_setPlanId->type == T_ProjectSet))
+	int new_plan_id = result->plan.plan_node_id;
+	Plan *it_set_plan_id = final_plan;
+	ULONG projectset_node_count = 0;
+	while (it_set_plan_id != nullptr && (it_set_plan_id->type == T_Result ||
+										 it_set_plan_id->type == T_ProjectSet))
 	{
-		countProjectSetNodes++;
-		iterator_setPlanId->plan_node_id = planIdNew;
-		planIdNew = planIdNew + 1;
-		iterator_setPlanId = iterator_setPlanId->lefttree;
+		projectset_node_count++;
+		it_set_plan_id->plan_node_id = new_plan_id;
+		new_plan_id = new_plan_id + 1;
+		it_set_plan_id = it_set_plan_id->lefttree;
 	}
 
-	ULONG newDiffInPlanNodeId = countProjectSetNodes - 1;
-	setPlanIdForChildNodes(iterator_setPlanId, newDiffInPlanNodeId);
+	ULONG diff_plannode_id = projectset_node_count - 1;
+	setPlanIdForChildNodes(it_set_plan_id, diff_plannode_id);
 
 	// Set up upper references
-	Plan *iterator_setUpperRef = final_plan;
-	while (iterator_setUpperRef->lefttree != nullptr &&
-		   iterator_setUpperRef->lefttree->type == T_ProjectSet)
+	Plan *it_set_upper_ref = final_plan;
+	while (it_set_upper_ref->lefttree != nullptr &&
+		   it_set_upper_ref->lefttree->type == T_ProjectSet)
 	{
-		set_upper_references(nullptr, iterator_setUpperRef, 0);
-		iterator_setUpperRef = iterator_setUpperRef->lefttree;
+		set_upper_references(nullptr, it_set_upper_ref, 0);
+		it_set_upper_ref = it_set_upper_ref->lefttree;
 	}
-
 
 	// cleanup
 	child_contexts->Release();
