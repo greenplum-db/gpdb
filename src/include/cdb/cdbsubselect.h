@@ -24,4 +24,7 @@ extern bool is_simple_subquery(PlannerInfo *root, Query *subquery, RangeTblEntry
 				   JoinExpr *lowest_outer_join);
 extern JoinExpr *convert_IN_to_antijoin(PlannerInfo *root, SubLink *sublink, Relids available_rels);
 
+extern void cdbsubselect_drop_orderby(Query *subselect);
+extern void cdbsubselect_drop_distinct(Query *subselect);
+
 #endif   /* CDBSUBSELECT_H */

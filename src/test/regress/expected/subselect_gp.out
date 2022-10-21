@@ -1672,6 +1672,81 @@ EXPLAIN SELECT '' AS five, f1 AS "Correlated Field"
  Optimizer: Postgres query optimizer
 (13 rows)
 
+-- Test simplify group-by/order-by inside subquery if sublink pull-up is possible
+EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
+  FROM SUBSELECT_TBL upper
+  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f1 = upper.f1 GROUP BY f2);
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=3.11..6.30 rows=8 width=8)
+   ->  Hash Semi Join  (cost=3.11..6.30 rows=3 width=8)
+         Hash Cond: (upper.f1 = subselect_tbl.f1)
+         ->  Seq Scan on subselect_tbl upper  (cost=0.00..3.08 rows=3 width=8)
+         ->  Hash  (cost=3.10..3.10 rows=1 width=8)
+               ->  Seq Scan on subselect_tbl  (cost=0.00..3.10 rows=1 width=8)
+                     Filter: (f1 = f2)
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
+  FROM SUBSELECT_TBL upper
+  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f1 = upper.f1  GROUP BY f2 LIMIT 3);
+                                                           QUERY PLAN                                                            
+---------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..28.15 rows=4 width=8)
+   ->  Seq Scan on subselect_tbl upper  (cost=0.00..28.15 rows=2 width=8)
+         Filter: (SubPlan 1)
+         SubPlan 1  (slice2; segments: 3)
+           ->  Limit  (cost=3.11..3.15 rows=1 width=4)
+                 ->  Limit  (cost=3.11..3.13 rows=1 width=4)
+                       ->  GroupAggregate  (cost=3.11..3.13 rows=1 width=4)
+                             Group Key: subselect_tbl.f2
+                             ->  Sort  (cost=3.11..3.11 rows=1 width=4)
+                                   Sort Key: subselect_tbl.f2
+                                   ->  Result  (cost=0.00..3.11 rows=1 width=4)
+                                         Filter: (subselect_tbl.f1 = upper.f1)
+                                         ->  Materialize  (cost=0.00..3.11 rows=1 width=4)
+                                               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.10 rows=1 width=4)
+                                                     ->  Seq Scan on subselect_tbl  (cost=0.00..3.10 rows=1 width=4)
+ Optimizer: Postgres query optimizer
+(16 rows)
+
+EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
+  FROM SUBSELECT_TBL upper
+  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f1 = upper.f1 ORDER BY f2);
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=3.11..6.30 rows=8 width=8)
+   ->  Hash Semi Join  (cost=3.11..6.30 rows=3 width=8)
+         Hash Cond: (upper.f1 = subselect_tbl.f1)
+         ->  Seq Scan on subselect_tbl upper  (cost=0.00..3.08 rows=3 width=8)
+         ->  Hash  (cost=3.10..3.10 rows=1 width=8)
+               ->  Seq Scan on subselect_tbl  (cost=0.00..3.10 rows=1 width=8)
+                     Filter: (f1 = f2)
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
+  FROM SUBSELECT_TBL upper
+  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f1 = upper.f1  ORDER BY f2 LIMIT 3);
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..28.14 rows=4 width=8)
+   ->  Seq Scan on subselect_tbl upper  (cost=0.00..28.14 rows=2 width=8)
+         Filter: (SubPlan 1)
+         SubPlan 1  (slice2; segments: 3)
+           ->  Limit  (cost=3.11..3.15 rows=1 width=4)
+                 ->  Limit  (cost=3.11..3.11 rows=1 width=4)
+                       ->  Sort  (cost=3.11..3.11 rows=1 width=4)
+                             Sort Key: subselect_tbl.f2
+                             ->  Result  (cost=0.00..3.11 rows=1 width=4)
+                                   Filter: (subselect_tbl.f1 = upper.f1)
+                                   ->  Materialize  (cost=0.00..3.11 rows=1 width=4)
+                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.10 rows=1 width=4)
+                                               ->  Seq Scan on subselect_tbl  (cost=0.00..3.10 rows=1 width=4)
+ Optimizer: Postgres query optimizer
+(14 rows)
+
 --
 -- Test cases to catch unpleasant interactions between IN-join processing
 -- and subquery pullup.
@@ -1723,10 +1798,10 @@ EXPLAIN select count(*) from
    where unique1 IN (select distinct hundred from tenk1 b)) ss;
                                                         QUERY PLAN                                                         
 ---------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=437.18..437.19 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=437.11..437.16 rows=1 width=8)
-         ->  Aggregate  (cost=437.11..437.12 rows=1 width=8)
-               ->  Hash Semi Join  (cost=220.50..436.86 rows=34 width=0)
+ Aggregate  (cost=644.06..644.07 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=644.00..644.05 rows=1 width=8)
+         ->  Aggregate  (cost=644.00..644.01 rows=1 width=8)
+               ->  Hash Join  (cost=416.25..643.75 rows=34 width=0)
                      Hash Cond: (a.unique1 = b.hundred)
                      ->  Seq Scan on tenk1 a  (cost=0.00..189.00 rows=3334 width=4)
                      ->  Hash  (cost=219.25..219.25 rows=34 width=4)
@@ -1734,9 +1809,7 @@ EXPLAIN select count(*) from
                                  Group Key: b.hundred
                                  ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..387.00 rows=3334 width=4)
                                        Hash Key: b.hundred
-                                       ->  HashAggregate  (cost=70.67..71.67 rows=100 width=4)
-                                             Group Key: b.hundred
-                                             ->  Seq Scan on tenk1 b  (cost=0.00..62.33 rows=3333 width=4)
+                                       ->  Seq Scan on tenk1 b  (cost=0.00..189.00 rows=3334 width=4)
  Optimizer: Postgres query optimizer
 (15 rows)
 
@@ -1750,7 +1823,7 @@ EXPLAIN select count(distinct ss.ten) from
          ->  Aggregate  (cost=439.11..439.12 rows=1 width=8)
                ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=220.50..438.86 rows=34 width=4)
                      Hash Key: a.ten
-                     ->  Hash Semi Join  (cost=220.50..436.86 rows=34 width=4)
+                     ->  Hash Join  (cost=416.25..643.75 rows=34 width=4)
                            Hash Cond: (a.unique1 = b.hundred)
                            ->  Seq Scan on tenk1 a  (cost=0.00..189.00 rows=3334 width=8)
                            ->  Hash  (cost=219.25..219.25 rows=34 width=4)
@@ -1758,9 +1831,7 @@ EXPLAIN select count(distinct ss.ten) from
                                        Group Key: b.hundred
                                        ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=214.00..216.00 rows=34 width=4)
                                              Hash Key: b.hundred
-                                             ->  HashAggregate  (cost=214.00..214.00 rows=34 width=4)
-                                                   Group Key: b.hundred
-                                                   ->  Seq Scan on tenk1 b  (cost=0.00..189.00 rows=3334 width=4)
+                                             ->  Seq Scan on tenk1 b  (cost=0.00..189.00 rows=3334 width=4)
  Optimizer: Postgres query optimizer
 (15 rows)
 
@@ -2668,6 +2739,34 @@ select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issu
  i |   j   
 ---+-------
  1 | 10002
+(1 row)
+
+-- case 3, check correlated DISTINCT ON
+explain select * from issue_12656 a where (i, j) in
+(select distinct on (i) i, j from issue_12656 b where a.i=b.i order by i, j asc);
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..3.11 rows=1 width=8)
+   ->  Seq Scan on issue_12656 a  (cost=0.00..3.11 rows=1 width=8)
+         Filter: (SubPlan 1)
+         SubPlan 1  (slice2; segments: 3)
+           ->  Unique  (cost=1.03..1.04 rows=1 width=8)
+                 Group Key: b.i
+                 ->  Sort  (cost=1.03..1.04 rows=1 width=8)
+                       Sort Key (Distinct): b.j
+                       ->  Result  (cost=0.00..1.03 rows=1 width=8)
+                             Filter: (a.i = b.i)
+                             ->  Materialize  (cost=0.00..1.03 rows=1 width=8)
+                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.02 rows=1 width=8)
+                                         ->  Seq Scan on issue_12656 b  (cost=0.00..1.02 rows=1 width=8)
+ Optimizer: Postgres query optimizer
+(14 rows)
+
+select * from issue_12656 a where (i, j) in
+(select distinct on (i) i, j from issue_12656 b where a.i=b.i order by i, j asc);
+ i |   j   
+---+-------
+ 1 | 10001
 (1 row)
 
 -- A guard test case for gpexpand's populate SQL

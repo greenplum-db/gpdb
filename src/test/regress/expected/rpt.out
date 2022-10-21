@@ -1178,12 +1178,12 @@ set enable_nestloop=on;
 explain select b from dist_tab where b in (select distinct c from rep_tab);
                                             QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000001.16..10000000601.46 rows=4 width=4)
-   ->  Nested Loop  (cost=10000000001.16..10000000601.46 rows=2 width=4)
-         ->  GroupAggregate  (cost=10000000001.03..10000000001.06 rows=2 width=4)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000001.16..10000000601.42 rows=4 width=4)
+   ->  Nested Loop  (cost=10000000001.16..10000000601.42 rows=2 width=4)
+         ->  Unique  (cost=10000000001.03..10000000001.04 rows=1 width=4)
                Group Key: rep_tab.c
-               ->  Sort  (cost=10000000001.03..10000000001.03 rows=2 width=4)
-                     Sort Key: rep_tab.c
+               ->  Sort  (cost=10000000001.03..10000000001.03 rows=1 width=4)
+                     Sort Key (Distinct): rep_tab.c
                      ->  Seq Scan on rep_tab  (cost=10000000000.00..10000000001.02 rows=2 width=4)
          ->  Index Only Scan using idx on dist_tab  (cost=0.13..300.17 rows=1 width=4)
                Index Cond: (b = rep_tab.c)
@@ -1211,20 +1211,16 @@ analyze rand_tab;
 --
 -- join derives EdtHashed
 explain select c from rep_tab where c in (select distinct c from rep_tab);
-                                                    QUERY PLAN                                                     
--------------------------------------------------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=20000000001.11..20000000002.17 rows=4 width=4)
-   ->  Hash Semi Join  (cost=20000000001.11..20000000002.17 rows=4 width=4)
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=20000000001.05..20000000002.11 rows=4 width=4)
+   ->  Hash Semi Join  (cost=20000000001.05..20000000002.11 rows=4 width=4)
          Hash Cond: (rep_tab.c = rep_tab_1.c)
          ->  Seq Scan on rep_tab  (cost=10000000000.00..10000000001.02 rows=2 width=4)
-         ->  Hash  (cost=10000000001.08..10000000001.08 rows=1 width=4)
-               ->  GroupAggregate  (cost=10000000001.03..10000000001.06 rows=2 width=4)
-                     Group Key: rep_tab_1.c
-                     ->  Sort  (cost=10000000001.03..10000000001.03 rows=2 width=4)
-                           Sort Key: rep_tab_1.c
-                           ->  Seq Scan on rep_tab rep_tab_1  (cost=10000000000.00..10000000001.02 rows=2 width=4)
+         ->  Hash  (cost=10000000001.02..10000000001.02 rows=1 width=4)
+               ->  Seq Scan on rep_tab rep_tab_1  (cost=10000000000.00..10000000001.02 rows=2 width=4)
  Optimizer: Postgres query optimizer
-(11 rows)
+(7 rows)
 
 select c from rep_tab where c in (select distinct c from rep_tab);
  c 
@@ -1239,20 +1235,16 @@ select c from rep_tab where c in (select distinct c from rep_tab);
 --
 -- join derives EdtHashed
 explain select a from dist_tab where a in (select distinct c from rep_tab);
-                                               QUERY PLAN                                                
----------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=20000000001.11..20000000003.20 rows=4 width=4)
-   ->  Hash Semi Join  (cost=20000000001.11..20000000003.20 rows=2 width=4)
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=20000000001.05..20000000003.14 rows=4 width=4)
+   ->  Hash Semi Join  (cost=20000000001.05..20000000003.14 rows=2 width=4)
          Hash Cond: (dist_tab.a = rep_tab.c)
          ->  Seq Scan on dist_tab  (cost=10000000000.00..10000000002.04 rows=2 width=4)
-         ->  Hash  (cost=10000000001.08..10000000001.08 rows=1 width=4)
-               ->  GroupAggregate  (cost=10000000001.03..10000000001.06 rows=2 width=4)
-                     Group Key: rep_tab.c
-                     ->  Sort  (cost=10000000001.03..10000000001.03 rows=2 width=4)
-                           Sort Key: rep_tab.c
-                           ->  Seq Scan on rep_tab  (cost=10000000000.00..10000000001.02 rows=2 width=4)
+         ->  Hash  (cost=10000000001.02..10000000001.02 rows=1 width=4)
+               ->  Seq Scan on rep_tab  (cost=10000000000.00..10000000001.02 rows=2 width=4)
  Optimizer: Postgres query optimizer
-(11 rows)
+(7 rows)
 
 select a from dist_tab where a in (select distinct c from rep_tab);
  a 
@@ -1269,20 +1261,16 @@ select a from dist_tab where a in (select distinct c from rep_tab);
 --
 -- join derives EdtRandom
 explain select d from rand_tab where d in (select distinct c from rep_tab);
-                                               QUERY PLAN                                                
----------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=20000000001.11..20000000003.17 rows=4 width=4)
-   ->  Hash Semi Join  (cost=20000000001.11..20000000003.17 rows=2 width=4)
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=20000000001.05..20000000002.11 rows=4 width=4)
+   ->  Hash Semi Join  (cost=20000000001.05..20000000002.11 rows=2 width=4)
          Hash Cond: (rand_tab.d = rep_tab.c)
-         ->  Seq Scan on rand_tab  (cost=10000000000.00..10000000002.02 rows=1 width=4)
-         ->  Hash  (cost=10000000001.08..10000000001.08 rows=1 width=4)
-               ->  GroupAggregate  (cost=10000000001.03..10000000001.06 rows=2 width=4)
-                     Group Key: rep_tab.c
-                     ->  Sort  (cost=10000000001.03..10000000001.03 rows=2 width=4)
-                           Sort Key: rep_tab.c
-                           ->  Seq Scan on rep_tab  (cost=10000000000.00..10000000001.02 rows=2 width=4)
+         ->  Seq Scan on rand_tab  (cost=10000000000.00..10000000001.02 rows=1 width=4)
+         ->  Hash  (cost=10000000001.02..10000000001.02 rows=1 width=4)
+               ->  Seq Scan on rep_tab  (cost=10000000000.00..10000000001.02 rows=2 width=4)
  Optimizer: Postgres query optimizer
-(11 rows)
+(7 rows)
 
 select d from rand_tab where d in (select distinct c from rep_tab);
  d 
@@ -1299,17 +1287,15 @@ select d from rand_tab where d in (select distinct c from rep_tab);
 explain select c from rep_tab where c in (select distinct a from dist_tab);
                                                  QUERY PLAN                                                 
 ------------------------------------------------------------------------------------------------------------
- Hash Semi Join  (cost=20000000003.18..20000000003.22 rows=4 width=4)
+ Hash Semi Join  (cost=20000000003.19..20000000003.23 rows=4 width=4)
    Hash Cond: (rep_tab.c = dist_tab.a)
    ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=10000000001.02..10000000001.02 rows=2 width=4)
          ->  Seq Scan on rep_tab  (cost=10000000000.00..10000000001.02 rows=2 width=4)
-   ->  Hash  (cost=10000000002.13..10000000002.13 rows=1 width=4)
-         ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=10000000002.05..10000000002.13 rows=2 width=4)
-               ->  HashAggregate  (cost=10000000002.05..10000000002.07 rows=1 width=4)
-                     Group Key: dist_tab.a
-                     ->  Seq Scan on dist_tab  (cost=10000000000.00..10000000002.04 rows=2 width=4)
+   ->  Hash  (cost=10000000002.12..10000000002.12 rows=2 width=4)
+         ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=10000000000.00..10000000002.12 rows=4 width=4)
+               ->  Seq Scan on dist_tab  (cost=10000000000.00..10000000002.04 rows=2 width=4)
  Optimizer: Postgres query optimizer
-(10 rows)
+(8 rows)
 
 select c from rep_tab where c in (select distinct a from dist_tab);
  c 
@@ -1324,27 +1310,17 @@ select c from rep_tab where c in (select distinct a from dist_tab);
 --
 -- join derives EdtHashed
 explain select c from rep_tab where c in (select distinct d from rand_tab);
-                                                             QUERY PLAN                                                             
-------------------------------------------------------------------------------------------------------------------------------------
- Hash Semi Join  (cost=20000000003.27..20000000003.31 rows=4 width=4)
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
+ Hash Semi Join  (cost=20000000003.11..20000000003.15 rows=4 width=4)
    Hash Cond: (rep_tab.c = rand_tab.d)
    ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=10000000001.02..10000000001.02 rows=2 width=4)
          ->  Seq Scan on rep_tab  (cost=10000000000.00..10000000001.02 rows=2 width=4)
-   ->  Hash  (cost=10000000002.22..10000000002.22 rows=1 width=4)
-         ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=10000000002.11..10000000002.22 rows=2 width=4)
-               ->  GroupAggregate  (cost=10000000002.11..10000000002.16 rows=1 width=4)
-                     Group Key: rand_tab.d
-                     ->  Sort  (cost=10000000002.11..10000000002.11 rows=1 width=4)
-                           Sort Key: rand_tab.d
-                           ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=10000000002.03..10000000002.10 rows=1 width=4)
-                                 Hash Key: rand_tab.d
-                                 ->  GroupAggregate  (cost=10000000002.03..10000000002.06 rows=1 width=4)
-                                       Group Key: rand_tab.d
-                                       ->  Sort  (cost=10000000002.03..10000000002.03 rows=1 width=4)
-                                             Sort Key: rand_tab.d
-                                             ->  Seq Scan on rand_tab  (cost=10000000000.00..10000000002.02 rows=1 width=4)
+   ->  Hash  (cost=10000000002.06..10000000002.06 rows=1 width=4)
+         ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=10000000000.00..10000000002.06 rows=2 width=4)
+               ->  Seq Scan on rand_tab  (cost=10000000000.00..10000000002.02 rows=1 width=4)
  Optimizer: Postgres query optimizer
-(18 rows)
+(8 rows)
 
 select c from rep_tab where c in (select distinct d from rand_tab);
  c 

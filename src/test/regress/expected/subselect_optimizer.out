@@ -928,9 +928,8 @@ select * from int4_tbl o where (f1, f1) in
                ->  Subquery Scan on "ANY_subquery"
                      Output: "ANY_subquery".f1, "ANY_subquery".g
                      Filter: ("ANY_subquery".f1 = "ANY_subquery".g)
-                     ->  HashAggregate
+                     ->  Result
                            Output: i.f1, (generate_series(1, 2) / 10)
-                           Group Key: i.f1
                            ->  Seq Scan on public.int4_tbl i
                                  Output: i.f1
  Optimizer: Postgres query optimizer

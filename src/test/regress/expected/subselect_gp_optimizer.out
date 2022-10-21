@@ -1654,6 +1654,81 @@ EXPLAIN SELECT '' AS five, f1 AS "Correlated Field"
  Optimizer: Postgres query optimizer
 (13 rows)
 
+-- Test simplify group-by/order-by inside subquery if sublink pull-up is possible
+EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
+  FROM SUBSELECT_TBL upper
+  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f1 = upper.f1 GROUP BY f2);
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..862.00 rows=3 width=16)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=8 width=8)
+         ->  Hash Semi Join  (cost=0.00..862.00 rows=3 width=8)
+               Hash Cond: ((subselect_tbl.f1 = subselect_tbl_1.f1) AND (subselect_tbl.f1 = subselect_tbl_1.f2))
+               ->  Seq Scan on subselect_tbl  (cost=0.00..431.00 rows=3 width=8)
+               ->  Hash  (cost=431.00..431.00 rows=3 width=8)
+                     ->  Seq Scan on subselect_tbl subselect_tbl_1  (cost=0.00..431.00 rows=3 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
+  FROM SUBSELECT_TBL upper
+  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f1 = upper.f1  GROUP BY f2 LIMIT 3);
+                                                              QUERY PLAN                                                               
+---------------------------------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..1324038.55 rows=3 width=16)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324038.55 rows=8 width=8)
+         ->  Seq Scan on subselect_tbl  (cost=0.00..1324038.55 rows=3 width=8)
+               Filter: (SubPlan 1)
+               SubPlan 1  (slice2; segments: 3)
+                 ->  Limit  (cost=0.00..431.01 rows=1 width=4)
+                       ->  GroupAggregate  (cost=0.00..431.01 rows=1 width=4)
+                             Group Key: subselect_tbl_1.f2
+                             ->  Sort  (cost=0.00..431.01 rows=1 width=4)
+                                   Sort Key: subselect_tbl_1.f2
+                                   ->  Result  (cost=0.00..431.01 rows=1 width=4)
+                                         Filter: (subselect_tbl_1.f1 = subselect_tbl.f1)
+                                         ->  Materialize  (cost=0.00..431.00 rows=8 width=8)
+                                               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=8)
+                                                     ->  Seq Scan on subselect_tbl subselect_tbl_1  (cost=0.00..431.00 rows=3 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(16 rows)
+
+EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
+  FROM SUBSELECT_TBL upper
+  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f1 = upper.f1 ORDER BY f2);
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..862.00 rows=3 width=16)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=8 width=8)
+         ->  Hash Semi Join  (cost=0.00..862.00 rows=3 width=8)
+               Hash Cond: ((subselect_tbl.f1 = subselect_tbl_1.f1) AND (subselect_tbl.f1 = subselect_tbl_1.f2))
+               ->  Seq Scan on subselect_tbl  (cost=0.00..431.00 rows=3 width=8)
+               ->  Hash  (cost=431.00..431.00 rows=3 width=8)
+                     ->  Seq Scan on subselect_tbl subselect_tbl_1  (cost=0.00..431.00 rows=3 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
+  FROM SUBSELECT_TBL upper
+  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f1 = upper.f1  ORDER BY f2 LIMIT 3);
+                                                           QUERY PLAN                                                            
+---------------------------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..1324038.57 rows=3 width=16)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324038.57 rows=8 width=8)
+         ->  Seq Scan on subselect_tbl  (cost=0.00..1324038.57 rows=3 width=8)
+               Filter: (SubPlan 1)
+               SubPlan 1  (slice2; segments: 3)
+                 ->  Limit  (cost=0.00..431.01 rows=1 width=4)
+                       ->  Sort  (cost=0.00..431.01 rows=1 width=4)
+                             Sort Key: subselect_tbl_1.f2
+                             ->  Result  (cost=0.00..431.01 rows=1 width=4)
+                                   Filter: (subselect_tbl_1.f1 = subselect_tbl.f1)
+                                   ->  Materialize  (cost=0.00..431.00 rows=8 width=8)
+                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=8)
+                                               ->  Seq Scan on subselect_tbl subselect_tbl_1  (cost=0.00..431.00 rows=3 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(14 rows)
+
 --
 -- Test cases to catch unpleasant interactions between IN-join processing
 -- and subquery pullup.
@@ -2817,6 +2892,34 @@ select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issu
  i |   j   
 ---+-------
  1 | 10002
+(1 row)
+
+-- case 3, check correlated DISTINCT ON
+explain select * from issue_12656 a where (i, j) in
+(select distinct on (i) i, j from issue_12656 b where a.i=b.i order by i, j asc);
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..3.11 rows=1 width=8)
+   ->  Seq Scan on issue_12656 a  (cost=0.00..3.11 rows=1 width=8)
+         Filter: (SubPlan 1)
+         SubPlan 1  (slice2; segments: 3)
+           ->  Unique  (cost=1.03..1.04 rows=1 width=8)
+                 Group Key: b.i
+                 ->  Sort  (cost=1.03..1.04 rows=1 width=8)
+                       Sort Key (Distinct): b.j
+                       ->  Result  (cost=0.00..1.03 rows=1 width=8)
+                             Filter: (a.i = b.i)
+                             ->  Materialize  (cost=0.00..1.03 rows=1 width=8)
+                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.02 rows=1 width=8)
+                                         ->  Seq Scan on issue_12656 b  (cost=0.00..1.02 rows=1 width=8)
+ Optimizer: Postgres query optimizer
+(14 rows)
+
+select * from issue_12656 a where (i, j) in
+(select distinct on (i) i, j from issue_12656 b where a.i=b.i order by i, j asc);
+ i |   j   
+---+-------
+ 1 | 10001
 (1 row)
 
 -- A guard test case for gpexpand's populate SQL
