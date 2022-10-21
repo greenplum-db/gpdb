@@ -890,6 +890,17 @@ _readReplicaIdentityStmt(void)
 	READ_DONE();
 }
 
+static AlterDatabaseStmt *
+_readAlterDatabaseStmt(void)
+{
+	READ_LOCALS(AlterDatabaseStmt);
+
+	READ_STRING_FIELD(dbname);
+	READ_NODE_FIELD(options);
+
+	READ_DONE();
+}
+
 static AlterTableStmt *
 _readAlterTableStmt(void)
 {
@@ -4722,6 +4733,8 @@ parseNodeString(void)
 		return_value = _readNewConstraint();
 	else if (MATCHX("NEWCOLUMNVALUE"))
 		return_value = _readNewColumnValue();
+	else if (MATCHX("ALTERDATABASESTMT"))
+		return_value = _readAlterDatabaseStmt();
 	else if (MATCHX("ALTERTABLESTMT"))
 		return_value = _readAlterTableStmt();
 	else if (MATCHX("ALTERTYPESTMT"))

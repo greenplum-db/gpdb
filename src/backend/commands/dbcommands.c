@@ -1770,16 +1770,11 @@ AlterDatabase(ParseState *pstate, AlterDatabaseStmt *stmt, bool isTopLevel)
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		char	   *cmd;
-
-		cmd = psprintf("ALTER DATABASE %s CONNECTION LIMIT %d",
-					   quote_identifier(stmt->dbname), dbconnlimit);
-
-		CdbDispatchCommand(cmd,
-						   DF_NEED_TWO_PHASE|
-						   DF_WITH_SNAPSHOT,
-						   NULL);
-		pfree(cmd);
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_NEED_TWO_PHASE|
+									DF_WITH_SNAPSHOT,
+									NIL,
+									NULL);
 	}
 	return dboid;
 }

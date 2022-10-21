@@ -1,0 +1,147 @@
+--
+-- Test create/alter database options
+--
+-- Test CONNECTION LIMIT
+create database limitdb connection limit 1;
+select -1 as gp_segment_id, datconnlimit from pg_database where datname='limitdb'
+union
+select gp_segment_id, datconnlimit from gp_dist_random('pg_database') where datname='limitdb'
+order by gp_segment_id;
+ gp_segment_id | datconnlimit 
+---------------+--------------
+            -1 |            1
+             0 |            1
+             1 |            1
+             2 |            1
+(4 rows)
+
+alter database limitdb connection limit 2;
+select -1 as gp_segment_id, datconnlimit from pg_database where datname='limitdb'
+union
+select gp_segment_id, datconnlimit from gp_dist_random('pg_database') where datname='limitdb'
+order by gp_segment_id;
+ gp_segment_id | datconnlimit 
+---------------+--------------
+            -1 |            2
+             0 |            2
+             1 |            2
+             2 |            2
+(4 rows)
+
+alter database limitdb with connection limit 0;
+-- create a regular user as superusers are exempt from limits
+create user connlimit_test_user;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
+-- add superuser to pg_hba.conf
+\! echo "local    all         connlimit_test_user         trust" >> $COORDINATOR_DATA_DIRECTORY/pg_hba.conf
+select pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t
+(1 row)
+
+-- should fail, because the connection limit is 0
+\! psql limitdb -c "select 'connected'" -U connlimit_test_user
+psql: error: FATAL:  too many connections for database "limitdb"
+-- Test ALLOW_CONNECTIONS
+create database limitdb2 allow_connections = true;
+select -1 as gp_segment_id, datconnlimit, datallowconn from pg_database where datname='limitdb2'
+union
+select gp_segment_id, datconnlimit, datallowconn from gp_dist_random('pg_database') where datname='limitdb2'
+order by gp_segment_id;
+ gp_segment_id | datconnlimit | datallowconn 
+---------------+--------------+--------------
+            -1 |           -1 | t
+             0 |           -1 | t
+             1 |           -1 | t
+             2 |           -1 | t
+(4 rows)
+
+alter database limitdb2 with allow_connections = false;
+select -1 as gp_segment_id, datconnlimit, datallowconn from pg_database where datname='limitdb2'
+union
+select gp_segment_id, datconnlimit, datallowconn from gp_dist_random('pg_database') where datname='limitdb2'
+order by gp_segment_id;
+ gp_segment_id | datconnlimit | datallowconn 
+---------------+--------------+--------------
+            -1 |           -1 | f
+             0 |           -1 | f
+             1 |           -1 | f
+             2 |           -1 | f
+(4 rows)
+
+-- should fail, as we have disallowed connections
+\! psql limitdb2 -c "select 'connected'" -U connlimit_test_user
+psql: error: FATAL:  database "limitdb2" is not currently accepting connections
+-- Test IS_TEMPLATE
+create database templatedb is_template=true;
+select -1 as gp_segment_id, datistemplate from pg_database where datname = 'templatedb'
+union
+select gp_segment_id, datistemplate from gp_dist_random('pg_database') where datname = 'templatedb'
+order by gp_segment_id;
+ gp_segment_id | datistemplate 
+---------------+---------------
+            -1 | t
+             0 | t
+             1 | t
+             2 | t
+(4 rows)
+
+\c templatedb
+create table templatedb_table(i int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+\c regression
+create database copieddb template templatedb;
+\c copieddb
+-- check that the table is carried over from the template
+\d templatedb_table
+          Table "public.templatedb_table"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ i      | integer |           |          | 
+Distributed by: (i)
+
+\c regression
+-- cannot drop a template database
+drop database templatedb;
+ERROR:  cannot drop a template database
+alter database templatedb with is_template=false;
+select -1 as gp_segment_id, datistemplate from pg_database where datname = 'templatedb'
+union
+select gp_segment_id, datistemplate from gp_dist_random('pg_database') where datname = 'templatedb'
+order by gp_segment_id;
+ gp_segment_id | datistemplate 
+---------------+---------------
+            -1 | f
+             0 | f
+             1 | f
+             2 | f
+(4 rows)
+
+-- Test ALTER DATABASE with funny characters. (There used to be a quoting
+-- bug in dispatching ALTER DATABASE .. CONNECTION LIMIT.)
+alter database limitdb rename to "limit_evil_'""_db";
+alter database "limit_evil_'""_db" connection limit 3;
+select -1 as gp_segment_id, datconnlimit from pg_database where datname like 'limit%db'
+union
+select gp_segment_id, datconnlimit from gp_dist_random('pg_database') where datname like 'limit%db'
+order by gp_segment_id;
+ gp_segment_id | datconnlimit 
+---------------+--------------
+            -1 |            3
+             0 |            3
+             1 |            3
+             2 |            3
+(4 rows)
+
+-- re-allow connections to avoid downstream pg_upgrade --check test error
+alter database limitdb2 with allow_connections = true;
+-- remove rule from pg_hba.conf for connlimit_test_user
+\! sed -i '$ d' $COORDINATOR_DATA_DIRECTORY/pg_hba.conf
+select pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t
+(1 row)
+
