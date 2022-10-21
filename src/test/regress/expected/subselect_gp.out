@@ -1763,11 +1763,9 @@ EXPLAIN select count(*) from
                                  Group Key: b.hundred
                                  ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..389.00 rows=3334 width=4)
                                        Hash Key: b.hundred
-                                       ->  HashAggregate  (cost=70.67..71.67 rows=100 width=4)
-                                             Group Key: b.hundred
                                              ->  Seq Scan on tenk1 b  (cost=0.00..62.33 rows=3333 width=4)
  Optimizer: Postgres query optimizer
-(15 rows)
+(13 rows)
 
 EXPLAIN select count(distinct ss.ten) from
   (select ten from tenk1 a
@@ -1791,9 +1789,7 @@ EXPLAIN select count(distinct ss.ten) from
                                                    Group Key: b.hundred
                                                    ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..389.00 rows=3334 width=4)
                                                          Hash Key: b.hundred
-                                                         ->  HashAggregate  (cost=70.67..71.67 rows=100 width=4)
-                                                               Group Key: b.hundred
-                                                               ->  Seq Scan on tenk1 b  (cost=0.00..62.33 rows=3333 width=4)
+                                                         ->  Seq Scan on tenk1 b  (cost=0.00..62.33 rows=3333 width=4)
  Optimizer: Postgres query optimizer
 (19 rows)
 
@@ -3060,6 +3056,33 @@ select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issu
  i |   j   
 ---+-------
  1 | 10002
+(1 row)
+
+-- case 3, check correlated DISTINCT ON
+explain select * from issue_12656 a where (i, j) in
+(select distinct on (i) i, j from issue_12656 b where a.i=b.i order by i, j asc);
+                                                         QUERY PLAN                                                         
+----------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..895.00 rows=43050 width=8)
+   ->  Seq Scan on issue_12656 a  (cost=0.00..321.00 rows=14350 width=8)
+         Filter: (SubPlan 1)
+         SubPlan 1
+           ->  Unique  (cost=9818.00..10033.25 rows=1000 width=8)
+                 ->  Sort  (cost=9818.00..10033.25 rows=86100 width=8)
+                       Sort Key: b.j
+                       ->  Result  (cost=0.00..2760.50 rows=86100 width=8)
+                             Filter: (a.i = b.i)
+                             ->  Materialize  (cost=0.00..1899.50 rows=86100 width=8)
+                                   ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=8)
+                                         ->  Seq Scan on issue_12656 b  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select * from issue_12656 a where (i, j) in
+(select distinct on (i) i, j from issue_12656 b where a.i=b.i order by i, j asc);
+ i |   j   
+---+-------
+ 1 | 10001
 (1 row)
 
 ---

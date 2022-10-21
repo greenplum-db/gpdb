@@ -1209,6 +1209,13 @@ select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issu
 
 select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issue_12656 order by i, j desc);
 
+-- case 3, check correlated DISTINCT ON
+explain select * from issue_12656 a where (i, j) in
+(select distinct on (i) i, j from issue_12656 b where a.i=b.i order by i, j asc);
+
+select * from issue_12656 a where (i, j) in
+(select distinct on (i) i, j from issue_12656 b where a.i=b.i order by i, j asc);
+
 ---
 --- Test param info is preserved when bringing a path to OuterQuery locus
 ---

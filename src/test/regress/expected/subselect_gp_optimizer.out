@@ -3146,6 +3146,33 @@ select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issu
  1 | 10002
 (1 row)
 
+-- case 3, check correlated DISTINCT ON
+explain select * from issue_12656 a where (i, j) in
+(select distinct on (i) i, j from issue_12656 b where a.i=b.i order by i, j asc);
+                                                         QUERY PLAN                                                         
+----------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..895.00 rows=43050 width=8)
+   ->  Seq Scan on issue_12656 a  (cost=0.00..321.00 rows=14350 width=8)
+         Filter: (SubPlan 1)
+         SubPlan 1
+           ->  Unique  (cost=9818.00..10033.25 rows=1000 width=8)
+                 ->  Sort  (cost=9818.00..10033.25 rows=86100 width=8)
+                       Sort Key: b.j
+                       ->  Result  (cost=0.00..2760.50 rows=86100 width=8)
+                             Filter: (a.i = b.i)
+                             ->  Materialize  (cost=0.00..1899.50 rows=86100 width=8)
+                                   ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=8)
+                                         ->  Seq Scan on issue_12656 b  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select * from issue_12656 a where (i, j) in
+(select distinct on (i) i, j from issue_12656 b where a.i=b.i order by i, j asc);
+ i |   j   
+---+-------
+ 1 | 10001
+(1 row)
+
 ---
 --- Test param info is preserved when bringing a path to OuterQuery locus
 ---
