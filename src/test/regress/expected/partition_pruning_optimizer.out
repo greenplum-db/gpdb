@@ -1801,52 +1801,20 @@ select * from mytable where ZeroFunc(i)=0 and i=-1 order by i;
 drop function ZeroFunc(int) cascade;
 NOTICE:  drop cascades to index mytable_idx1
 drop table mytable cascade;
--- @description Tests for static partition selection (MPP-24709, GPSQL-2879)
--- GPDB_12_MERGE_FIXME: this function extract the number such as [5,10] out of
--- the string "Partition selected: 5 out of 10". We have temporarily broken
--- that when we reimplemented dynamic seq scan. Currently only the number of
--- selected partitions is avalable, get the total number of partitions back
--- post merge.
-create or replace function get_selected_parts(explain_query text) returns text as
-$$
-import re
-rv = plpy.execute(explain_query)
-search_text = 'Dynamic Seq Scan on '
-result = []
-result.append(0)
-result.append(0)
-selected = 0
-out_of = 0
-pattern = re.compile(r"\s+Number of partitions to scan: (?P<selected>\d+)")
-for i in range(len(rv)):
-    cur_line = rv[i]['QUERY PLAN']
-    if search_text.lower() in cur_line.lower():
-        j = i+1
-        temp_line = rv[j]['QUERY PLAN']
-        while (not pattern.match(temp_line)):
-            j += 1
-            if j == len(rv) - 1:
-                break
-            temp_line = rv[j]['QUERY PLAN']
-
-        else:
-            selected += int(pattern.match(temp_line).group('selected'))
-result[0] = selected
-result[1] = out_of
-return result
-$$
-language plpython3u;
 drop table if exists partprune_foo;
 create table partprune_foo(a int, b int, c int) partition by range (b) (start (1) end (101) every (10));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into partprune_foo select g % 5 + 1, g + 1, g % 10 + 1 from generate_series(0, 99) g;
 analyze partprune_foo;
-select get_selected_parts('explain select * from partprune_foo;');
- get_selected_parts 
---------------------
- [10, 0]
-(1 row)
+explain select * from partprune_foo;
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.01 rows=100 width=12)
+   ->  Dynamic Seq Scan on partprune_foo  (cost=0.00..431.00 rows=34 width=12)
+         Number of partitions to scan: 10 (out of 10)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
 
 select * from partprune_foo;
  a |  b  | c  
@@ -1953,11 +1921,15 @@ select * from partprune_foo;
  4 |  99 |  9
 (100 rows)
 
-select get_selected_parts('explain select * from partprune_foo where b = 35;');
- get_selected_parts 
---------------------
- [1, 0]
-(1 row)
+explain select * from partprune_foo where b = 35;
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+   ->  Dynamic Seq Scan on partprune_foo  (cost=0.00..431.00 rows=1 width=12)
+         Number of partitions to scan: 1 (out of 10)
+         Filter: (b = 35)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 select * from partprune_foo where b = 35;
  a | b  | c 
@@ -1965,11 +1937,15 @@ select * from partprune_foo where b = 35;
  5 | 35 | 5
 (1 row)
 
-select get_selected_parts('explain select * from partprune_foo where b < 35;');
- get_selected_parts 
---------------------
- [4, 0]
-(1 row)
+explain select * from partprune_foo where b < 35;
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=35 width=12)
+   ->  Dynamic Seq Scan on partprune_foo  (cost=0.00..431.00 rows=12 width=12)
+         Number of partitions to scan: 4 (out of 10)
+         Filter: (b < 35)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 select * from partprune_foo where b < 35;
  a | b  | c  
@@ -2010,11 +1986,15 @@ select * from partprune_foo where b < 35;
  3 | 33 |  3
 (34 rows)
 
-select get_selected_parts('explain select * from partprune_foo where b in (5, 6, 14, 23);');
- get_selected_parts 
---------------------
- [3, 0]
-(1 row)
+explain select * from partprune_foo where b in (5, 6, 14, 23);
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=5 width=12)
+   ->  Dynamic Seq Scan on partprune_foo  (cost=0.00..431.00 rows=2 width=12)
+         Number of partitions to scan: 3 (out of 10)
+         Filter: (b = ANY ('{5,6,14,23}'::integer[]))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 select * from partprune_foo where b in (5, 6, 14, 23);
  a | b  | c 
@@ -2025,11 +2005,15 @@ select * from partprune_foo where b in (5, 6, 14, 23);
  4 | 14 | 4
 (4 rows)
 
-select get_selected_parts('explain select * from partprune_foo where b < 15 or b > 60;');
- get_selected_parts 
---------------------
- [7, 0]
-(1 row)
+explain select * from partprune_foo where b < 15 or b > 60;
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=56 width=12)
+   ->  Dynamic Seq Scan on partprune_foo  (cost=0.00..431.00 rows=19 width=12)
+         Number of partitions to scan: 7 (out of 10)
+         Filter: ((b < 15) OR (b > 60))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 select * from partprune_foo where b < 15 or b > 60;
  a |  b  | c  
@@ -2090,22 +2074,28 @@ select * from partprune_foo where b < 15 or b > 60;
  5 | 100 | 10
 (54 rows)
 
-select get_selected_parts('explain select * from partprune_foo where b = 150;');
- get_selected_parts 
---------------------
- [0, 0]
-(1 row)
+explain select * from partprune_foo where b = 150;
+                QUERY PLAN                 
+-------------------------------------------
+ Result  (cost=0.00..0.00 rows=0 width=12)
+   One-Time Filter: false
+ Optimizer: Pivotal Optimizer (GPORCA)
+(3 rows)
 
 select * from partprune_foo where b = 150;
  a | b | c 
 ---+---+---
 (0 rows)
 
-select get_selected_parts('explain select * from partprune_foo where b = a*5;');
- get_selected_parts 
---------------------
- [10, 0]
-(1 row)
+explain select * from partprune_foo where b = a*5;
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.01 rows=40 width=12)
+   ->  Dynamic Seq Scan on partprune_foo  (cost=0.00..431.00 rows=14 width=12)
+         Number of partitions to scan: 10 (out of 10)
+         Filter: (b = (a * 5))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 select * from partprune_foo where b = a*5;
  a | b  | c 
@@ -2116,11 +2106,15 @@ select * from partprune_foo where b = a*5;
 -- Test with IN() lists
 -- Number of elements > threshold, partition elimination is not performed
 set optimizer_array_expansion_threshold = 3;
-select get_selected_parts('explain select * from partprune_foo where b in (5, 6, 14, 23);');
- get_selected_parts 
---------------------
- [3, 0]
-(1 row)
+explain select * from partprune_foo where b in (5, 6, 14, 23);
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=5 width=12)
+   ->  Dynamic Seq Scan on partprune_foo  (cost=0.00..431.00 rows=2 width=12)
+         Number of partitions to scan: 3 (out of 10)
+         Filter: (b = ANY ('{5,6,14,23}'::integer[]))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 select * from partprune_foo where b in (5, 6, 14, 23);
  a | b  | c 
@@ -2133,11 +2127,15 @@ select * from partprune_foo where b in (5, 6, 14, 23);
 
 reset optimizer_array_expansion_threshold;
 -- Test "ANY (<array>)" syntax.
-select get_selected_parts($$ explain select * from partprune_foo where b = ANY ('{5, 6, 14}') $$);
- get_selected_parts 
---------------------
- [2, 0]
-(1 row)
+explain select * from partprune_foo where b = ANY ('{5, 6, 14}');
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=4 width=12)
+   ->  Dynamic Seq Scan on partprune_foo  (cost=0.00..431.00 rows=2 width=12)
+         Number of partitions to scan: 2 (out of 10)
+         Filter: (b = ANY ('{5,6,14}'::integer[]))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 select * from partprune_foo where b = ANY ('{5, 6, 14}');
  a | b  | c 
@@ -2147,11 +2145,15 @@ select * from partprune_foo where b = ANY ('{5, 6, 14}');
  4 | 14 | 4
 (3 rows)
 
-select get_selected_parts($$ explain select * from partprune_foo where b < ANY ('{12, 14, 11}') $$);
- get_selected_parts 
---------------------
- [2, 0]
-(1 row)
+explain select * from partprune_foo where b < ANY ('{12, 14, 11}');
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=15 width=12)
+   ->  Dynamic Seq Scan on partprune_foo  (cost=0.00..431.00 rows=5 width=12)
+         Number of partitions to scan: 2 (out of 10)
+         Filter: (b < ANY ('{12,14,11}'::integer[]))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 select * from partprune_foo where b < ANY ('{12, 14, 11}');
  a | b  | c  
@@ -2193,72 +2195,783 @@ PARTITION BY RANGE (year)
 insert into DATE_PARTS select i, extract(year from dt), extract(month from dt), extract(day from dt), NULL from (select i, '2002-01-01'::date + i * interval '1 day' day as dt from generate_series(1, 3650) as i) as t;
 -- Expected total parts => 4 * 1 * 4 => 16: 
 -- TODO #141973839: we selected extra parts because of disjunction: 32 parts: 4 * 2 * 4
-select get_selected_parts('explain analyze select * from DATE_PARTS where month between 1 and 3;');
- get_selected_parts 
---------------------
- [0, 0]
-(1 row)
+explain analyze select * from DATE_PARTS where month between 1 and 3;
+                                                                                         QUERY PLAN                                                                                         
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..320000007993.12 rows=13408 width=48) (actual time=9.727..14.884 rows=901 loops=1)
+   ->  Append  (cost=10000000000.00..320000007814.35 rows=4469 width=48) (actual time=0.037..5.878 rows=314 loops=1)
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_2  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.030..0.284 rows=44 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_3  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.017..0.356 rows=46 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_4  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.025..0.288 rows=45 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.016..0.048 rows=4 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_2  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_3  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_4  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.035 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_2  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.017..0.323 rows=53 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_3  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.016..0.271 rows=44 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_4  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.016..0.250 rows=39 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.017..0.054 rows=5 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_2  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_3  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_4  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.030 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_2  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.016..0.149 rows=22 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_3  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.017..0.174 rows=26 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_4  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.017..0.192 rows=25 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.016..0.042 rows=3 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_2  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.023 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_3  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_4  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.029 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_2  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_3  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_4  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.023 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_2  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_3  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_4  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.041 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_mo_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.036 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 3))
+ Optimizer: Postgres query optimizer
+ Planning Time: 28.309 ms
+   (slice0)    Executor memory: 231K bytes.
+   (slice1)    Executor memory: 274K bytes avg x 3 workers, 274K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 21.142 ms
+(72 rows)
 
 -- Expected total parts => 4 * 2 * 4 => 32: 
 -- TODO #141973839: we selected extra parts because of disjunction: 48 parts: 4 * 3 * 4
-select get_selected_parts('explain analyze select * from DATE_PARTS where month between 1 and 4;');
- get_selected_parts 
---------------------
- [0, 0]
-(1 row)
+explain analyze select * from DATE_PARTS where month between 1 and 4;
+                                                                                         QUERY PLAN                                                                                         
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..480000011989.68 rows=20112 width=48) (actual time=8.477..15.269 rows=1201 loops=1)
+   ->  Append  (cost=10000000000.00..480000011721.52 rows=6704 width=48) (actual time=0.037..7.940 rows=420 loops=1)
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_2  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.032..0.286 rows=44 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_3  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.017..0.315 rows=46 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_4  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.016..0.305 rows=45 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.016..0.047 rows=4 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q2_3_prt_2  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.017..0.127 rows=17 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+               Rows Removed by Filter: 34
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q2_3_prt_3  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.017..0.133 rows=18 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+               Rows Removed by Filter: 26
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q2_3_prt_4  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.017..0.116 rows=15 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+               Rows Removed by Filter: 30
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q2_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.041 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_2  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_3  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_4  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_2  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.016..0.365 rows=53 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_3  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.016..0.273 rows=44 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_4  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.017..0.248 rows=39 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.035..0.072 rows=5 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_q2_3_prt_2  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.019..0.126 rows=16 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+               Rows Removed by Filter: 34
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_q2_3_prt_3  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.017..0.140 rows=16 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+               Rows Removed by Filter: 22
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_q2_3_prt_4  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.016..0.124 rows=17 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+               Rows Removed by Filter: 18
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_q2_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.026 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_2  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_3  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_4  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.029 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_2  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.016..0.148 rows=22 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_3  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.016..0.173 rows=26 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_4  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.016..0.164 rows=25 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.016..0.041 rows=3 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_q2_3_prt_2  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.016..0.089 rows=11 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+               Rows Removed by Filter: 11
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_q2_3_prt_3  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.016..0.072 rows=8 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+               Rows Removed by Filter: 12
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_q2_3_prt_4  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.032..0.115 rows=9 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+               Rows Removed by Filter: 21
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_q2_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.033 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_2  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_3  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.035 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_4  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.047 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.023 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_2  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_3  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.041 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_4  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.035 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.036 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q2_3_prt_2  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q2_3_prt_3  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.060 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q2_3_prt_4  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.036 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q2_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_2  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_3  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.035 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_4  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.034 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_mo_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=140 width=48) (actual time=0.000..0.028 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4))
+ Optimizer: Postgres query optimizer
+ Planning Time: 27.777 ms
+   (slice0)    Executor memory: 358K bytes.
+   (slice1)    Executor memory: 410K bytes avg x 3 workers, 410K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 23.453 ms
+(113 rows)
 
 -- Expected total parts => 1 * 2 * 4 => 8: 
 -- TODO #141973839: we selected extra parts because of disjunction: 24 parts: 2 * 3 * 4
-select get_selected_parts('explain analyze select * from DATE_PARTS where year = 2003 and month between 1 and 4;');
- get_selected_parts 
---------------------
- [0, 0]
-(1 row)
+explain analyze select * from DATE_PARTS where year = 2003 and month between 1 and 4;
+                                                                                   QUERY PLAN                                                                                    
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..120000003341.75 rows=50 width=48) (actual time=2.056..2.696 rows=120 loops=1)
+   ->  Append  (cost=10000000000.00..120000003341.08 rows=17 width=48) (actual time=0.041..1.027 rows=47 loops=1)
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_2  (cost=10000000000.00..10000000278.42 rows=1 width=48) (actual time=0.030..0.133 rows=16 loops=1)
+               Filter: ((month >= 1) AND (month <= 4) AND (year = 2003))
+               Rows Removed by Filter: 25
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_3  (cost=10000000000.00..10000000278.42 rows=1 width=48) (actual time=0.020..0.099 rows=12 loops=1)
+               Filter: ((month >= 1) AND (month <= 4) AND (year = 2003))
+               Rows Removed by Filter: 34
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_4  (cost=10000000000.00..10000000278.42 rows=1 width=48) (actual time=0.017..0.085 rows=10 loops=1)
+               Filter: ((month >= 1) AND (month <= 4) AND (year = 2003))
+               Rows Removed by Filter: 27
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000278.42 rows=1 width=48) (actual time=0.015..0.037 rows=2 loops=1)
+               Filter: ((month >= 1) AND (month <= 4) AND (year = 2003))
+               Rows Removed by Filter: 1
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q2_3_prt_2  (cost=10000000000.00..10000000278.42 rows=1 width=48) (actual time=0.018..0.067 rows=6 loops=1)
+               Filter: ((month >= 1) AND (month <= 4) AND (year = 2003))
+               Rows Removed by Filter: 45
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q2_3_prt_3  (cost=10000000000.00..10000000278.42 rows=1 width=48) (actual time=0.018..0.059 rows=5 loops=1)
+               Filter: ((month >= 1) AND (month <= 4) AND (year = 2003))
+               Rows Removed by Filter: 30
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q2_3_prt_4  (cost=10000000000.00..10000000278.42 rows=1 width=48) (actual time=0.019..0.056 rows=4 loops=1)
+               Filter: ((month >= 1) AND (month <= 4) AND (year = 2003))
+               Rows Removed by Filter: 41
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q2_3_prt_other_days  (cost=10000000000.00..10000000278.42 rows=1 width=48) (actual time=0.000..0.041 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4) AND (year = 2003))
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_2  (cost=10000000000.00..10000000278.42 rows=1 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4) AND (year = 2003))
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_3  (cost=10000000000.00..10000000278.42 rows=1 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4) AND (year = 2003))
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_4  (cost=10000000000.00..10000000278.42 rows=1 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4) AND (year = 2003))
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_other_days  (cost=10000000000.00..10000000278.42 rows=1 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: ((month >= 1) AND (month <= 4) AND (year = 2003))
+ Optimizer: Postgres query optimizer
+ Planning Time: 12.493 ms
+   (slice0)    Executor memory: 104K bytes.
+   (slice1)    Executor memory: 108K bytes avg x 3 workers, 108K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 4.097 ms
+(39 rows)
 
 -- 1 :: 5 :: 4 => 20 // Only default for year
-select get_selected_parts('explain analyze select * from DATE_PARTS where year = 1999;');
- get_selected_parts 
---------------------
- [0, 0]
-(1 row)
+explain analyze select * from DATE_PARTS where year = 1999;
+                                                                                        QUERY PLAN                                                                                         
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..200000004184.24 rows=838 width=48) (actual time=2.588..2.600 rows=0 loops=1)
+   ->  Append  (cost=10000000000.00..200000004173.06 rows=279 width=48) (actual time=0.000..0.477 rows=0 loops=1)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_2  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.041 rows=0 loops=1)
+               Filter: (year = 1999)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_3  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+               Filter: (year = 1999)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_4  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.029 rows=0 loops=1)
+               Filter: (year = 1999)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.026 rows=0 loops=1)
+               Filter: (year = 1999)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q2_3_prt_2  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.042 rows=0 loops=1)
+               Filter: (year = 1999)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q2_3_prt_3  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+               Filter: (year = 1999)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q2_3_prt_4  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.041 rows=0 loops=1)
+               Filter: (year = 1999)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q2_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.041 rows=0 loops=1)
+               Filter: (year = 1999)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q3_3_prt_2  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+               Filter: (year = 1999)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q3_3_prt_3  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.040 rows=0 loops=1)
+               Filter: (year = 1999)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q3_3_prt_4  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.028 rows=0 loops=1)
+               Filter: (year = 1999)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q3_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+               Filter: (year = 1999)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q4_3_prt_2  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.028 rows=0 loops=1)
+               Filter: (year = 1999)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q4_3_prt_3  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+               Filter: (year = 1999)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q4_3_prt_4  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+               Filter: (year = 1999)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q4_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.041 rows=0 loops=1)
+               Filter: (year = 1999)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_2  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+               Filter: (year = 1999)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_3  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+               Filter: (year = 1999)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_4  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+               Filter: (year = 1999)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_mo_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+               Filter: (year = 1999)
+ Optimizer: Postgres query optimizer
+ Planning Time: 20.828 ms
+   (slice0)    Executor memory: 135K bytes.
+   (slice1)    Executor memory: 171K bytes avg x 3 workers, 171K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 5.046 ms
+(48 rows)
 
 -- 4 :: 1 :: 4 => 16 // Only default for month
-select get_selected_parts('explain analyze select * from DATE_PARTS where month = 13;');
- get_selected_parts 
---------------------
- [0, 0]
-(1 row)
+explain analyze select * from DATE_PARTS where month = 13;
+                                                                                        QUERY PLAN                                                                                         
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..160000003347.39 rows=670 width=48) (actual time=1.369..1.381 rows=0 loops=1)
+   ->  Append  (cost=10000000000.00..160000003338.45 rows=223 width=48) (actual time=0.000..0.366 rows=0 loops=1)
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_2  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.038 rows=0 loops=1)
+               Filter: (month = 13)
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_3  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.026 rows=0 loops=1)
+               Filter: (month = 13)
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_4  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.025 rows=0 loops=1)
+               Filter: (month = 13)
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.025 rows=0 loops=1)
+               Filter: (month = 13)
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_2  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.026 rows=0 loops=1)
+               Filter: (month = 13)
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_3  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.025 rows=0 loops=1)
+               Filter: (month = 13)
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_4  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.025 rows=0 loops=1)
+               Filter: (month = 13)
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.039 rows=0 loops=1)
+               Filter: (month = 13)
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_2  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.026 rows=0 loops=1)
+               Filter: (month = 13)
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_3  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.025 rows=0 loops=1)
+               Filter: (month = 13)
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_4  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.025 rows=0 loops=1)
+               Filter: (month = 13)
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.025 rows=0 loops=1)
+               Filter: (month = 13)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_2  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.025 rows=0 loops=1)
+               Filter: (month = 13)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_3  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.025 rows=0 loops=1)
+               Filter: (month = 13)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_4  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.026 rows=0 loops=1)
+               Filter: (month = 13)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_mo_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.035 rows=0 loops=1)
+               Filter: (month = 13)
+ Optimizer: Postgres query optimizer
+ Planning Time: 19.412 ms
+   (slice0)    Executor memory: 114K bytes.
+   (slice1)    Executor memory: 135K bytes avg x 3 workers, 135K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 3.472 ms
+(40 rows)
 
 -- 1 :: 1 :: 4 => 4 // Default for both year and month
-select get_selected_parts('explain analyze select * from DATE_PARTS where year = 1999 and month = 13;');
- get_selected_parts 
---------------------
- [0, 0]
-(1 row)
+explain analyze select * from DATE_PARTS where year = 1999 and month = 13;
+                                                                                        QUERY PLAN                                                                                        
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..40000000974.18 rows=12 width=48) (actual time=0.657..0.668 rows=0 loops=1)
+   ->  Append  (cost=10000000000.00..40000000974.02 rows=4 width=48) (actual time=0.000..0.121 rows=0 loops=1)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_2  (cost=10000000000.00..10000000243.50 rows=1 width=48) (actual time=0.000..0.039 rows=0 loops=1)
+               Filter: ((year = 1999) AND (month = 13))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_3  (cost=10000000000.00..10000000243.50 rows=1 width=48) (actual time=0.000..0.025 rows=0 loops=1)
+               Filter: ((year = 1999) AND (month = 13))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_4  (cost=10000000000.00..10000000243.50 rows=1 width=48) (actual time=0.000..0.025 rows=0 loops=1)
+               Filter: ((year = 1999) AND (month = 13))
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_mo_3_prt_other_days  (cost=10000000000.00..10000000243.50 rows=1 width=48) (actual time=0.000..0.025 rows=0 loops=1)
+               Filter: ((year = 1999) AND (month = 13))
+ Optimizer: Postgres query optimizer
+ Planning Time: 13.378 ms
+   (slice0)    Executor memory: 49K bytes.
+   (slice1)    Executor memory: 49K bytes avg x 3 workers, 49K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 2.081 ms
+(16 rows)
 
 -- 4 :: 5 :: 1 => 20 // Only default part for day
-select get_selected_parts('explain analyze select * from DATE_PARTS where day = 40;');
- get_selected_parts 
---------------------
- [0, 0]
-(1 row)
+explain analyze select * from DATE_PARTS where day = 40;
+                                                                                        QUERY PLAN                                                                                         
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..200000004184.24 rows=838 width=48) (actual time=1.413..1.423 rows=0 loops=1)
+   ->  Append  (cost=10000000000.00..200000004173.06 rows=279 width=48) (actual time=0.000..0.417 rows=0 loops=1)
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.039 rows=0 loops=1)
+               Filter: (day = 40)
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q2_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.026 rows=0 loops=1)
+               Filter: (day = 40)
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q3_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+               Filter: (day = 40)
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q4_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.026 rows=0 loops=1)
+               Filter: (day = 40)
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: (day = 40)
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.025 rows=0 loops=1)
+               Filter: (day = 40)
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_q2_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.025 rows=0 loops=1)
+               Filter: (day = 40)
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_q3_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.038 rows=0 loops=1)
+               Filter: (day = 40)
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_q4_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.025 rows=0 loops=1)
+               Filter: (day = 40)
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: (day = 40)
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.026 rows=0 loops=1)
+               Filter: (day = 40)
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_q2_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.024 rows=0 loops=1)
+               Filter: (day = 40)
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_q3_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.026 rows=0 loops=1)
+               Filter: (day = 40)
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_q4_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.025 rows=0 loops=1)
+               Filter: (day = 40)
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: (day = 40)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: (day = 40)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q2_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: (day = 40)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q3_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: (day = 40)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q4_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: (day = 40)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_mo_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: (day = 40)
+ Optimizer: Postgres query optimizer
+ Planning Time: 22.754 ms
+   (slice0)    Executor memory: 137K bytes.
+   (slice1)    Executor memory: 172K bytes avg x 3 workers, 172K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 3.426 ms
+(48 rows)
 
 -- General predicate
 -- TODO #141973839. We expected 112 parts: (month = 1) =>   4 * 1 * 4 => 16, month > 3 => 4 * 4 * 4 => 64, month in (0, 1, 2) => 4 * 1 * 4 => 16, month is NULL => 4 * 1 * 4 => 16.
 -- However, we selected 128 parts: (month = 1) =>   4 * 1 * 4 => 16, month > 3 => 4 * 4 * 4 => 64, month in (0, 1, 2) => 4 * 2 * 4 => 32, month is NULL => 4 * 1 * 4 => 16.
-select get_selected_parts('explain analyze select * from DATE_PARTS where month = 1 union all select * from DATE_PARTS where month > 3 union all select * from DATE_PARTS where month in (0,1,2) union all select * from DATE_PARTS where month is null;');
- get_selected_parts 
---------------------
- [0, 0]
-(1 row)
+explain analyze select * from DATE_PARTS where month = 1 union all select * from DATE_PARTS where month > 3 union all select * from DATE_PARTS where month in (0,1,2) union all select * from DATE_PARTS where month is null;
+                                                                                                                           QUERY PLAN                                                                                                                            
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..1280000044683.26 rows=899230 width=48) (actual time=12.026..52.338 rows=3649 loops=1)
+   ->  Append  (cost=10000000000.00..1280000032693.53 rows=299743 width=48) (actual time=0.049..52.683 rows=1227 loops=1)
+         ->  Append  (cost=10000000000.00..160000003338.45 rows=223 width=48) (actual time=0.039..2.076 rows=110 loops=1)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_2  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.026..0.151 rows=20 loops=1)
+                     Filter: (month = 1)
+                     Rows Removed by Filter: 21
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_3  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.016..0.108 rows=14 loops=1)
+                     Filter: (month = 1)
+                     Rows Removed by Filter: 22
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_4  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.016..0.119 rows=16 loops=1)
+                     Filter: (month = 1)
+                     Rows Removed by Filter: 29
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.015..0.043 rows=3 loops=1)
+                     Filter: (month = 1)
+                     Rows Removed by Filter: 1
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_2  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.016..0.120 rows=16 loops=1)
+                     Filter: (month = 1)
+                     Rows Removed by Filter: 37
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_3  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.016..0.114 rows=15 loops=1)
+                     Filter: (month = 1)
+                     Rows Removed by Filter: 27
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_4  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.016..0.113 rows=15 loops=1)
+                     Filter: (month = 1)
+                     Rows Removed by Filter: 24
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.016..0.039 rows=2 loops=1)
+                     Filter: (month = 1)
+                     Rows Removed by Filter: 3
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_2  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.015..0.085 rows=7 loops=1)
+                     Filter: (month = 1)
+                     Rows Removed by Filter: 15
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_3  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.023..0.080 rows=8 loops=1)
+                     Filter: (month = 1)
+                     Rows Removed by Filter: 11
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_4  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.015..0.107 rows=9 loops=1)
+                     Filter: (month = 1)
+                     Rows Removed by Filter: 16
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.016..0.039 rows=2 loops=1)
+                     Filter: (month = 1)
+                     Rows Removed by Filter: 1
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_2  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.024 rows=0 loops=1)
+                     Filter: (month = 1)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_3  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.023 rows=0 loops=1)
+                     Filter: (month = 1)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_4  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.023 rows=0 loops=1)
+                     Filter: (month = 1)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.032 rows=0 loops=1)
+                     Filter: (month = 1)
+         ->  Append  (cost=10000000000.00..640000014839.11 rows=297956 width=48) (actual time=0.025..31.689 rows=924 loops=1)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_q2_3_prt_2  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.016..0.306 rows=51 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_q2_3_prt_3  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.016..0.269 rows=44 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_q2_3_prt_4  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.016..0.275 rows=45 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_q2_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.016..0.038 rows=2 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_q3_3_prt_2  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.017..0.276 rows=45 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_q3_3_prt_3  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.016..0.270 rows=44 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_q3_3_prt_4  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.020..0.302 rows=49 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_q3_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.016..0.050 rows=4 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_q4_3_prt_2  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.016..0.258 rows=42 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_q4_3_prt_3  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.016..0.280 rows=46 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_q4_3_prt_4  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.016..0.273 rows=42 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_q4_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.016..0.044 rows=3 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_2  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.024 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_3  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.023 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_4  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.023 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.030 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_q2_3_prt_2  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.016..0.303 rows=50 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_q2_3_prt_3  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.025..0.262 rows=42 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_q2_3_prt_4  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.020..0.276 rows=45 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_q2_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.017..0.039 rows=2 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_q3_3_prt_2  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.016..0.270 rows=44 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_q3_3_prt_3  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.016..0.266 rows=44 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_q3_3_prt_4  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.024..0.363 rows=47 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_q3_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.017..0.050 rows=4 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_q4_3_prt_2  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.055..0.311 rows=41 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_q4_3_prt_3  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.025..0.295 rows=48 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_q4_3_prt_4  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.017..0.277 rows=41 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_q4_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.021..0.049 rows=3 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_2  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.025 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_3  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.024 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_4  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.023 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.037 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_q2_3_prt_2  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.016..0.152 rows=23 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_q2_3_prt_3  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.017..0.136 rows=20 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_q2_3_prt_4  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=14.069..14.415 rows=30 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_q2_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.041..0.063 rows=1 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_q3_3_prt_2  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.034..0.298 rows=23 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_q3_3_prt_3  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.026..0.253 rows=24 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_q3_3_prt_4  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.027..0.246 rows=23 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_q3_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.027..0.056 rows=2 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_q4_3_prt_2  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.027..0.236 rows=24 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_q4_3_prt_3  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.021..0.190 rows=22 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_q4_3_prt_4  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.028..0.217 rows=25 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_q4_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.021..0.047 rows=2 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_2  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.028 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_3  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.028 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_4  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.032 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.028 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q2_3_prt_2  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.039 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q2_3_prt_3  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q2_3_prt_4  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q2_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q3_3_prt_2  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.028 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q3_3_prt_3  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q3_3_prt_4  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q3_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.036 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q4_3_prt_2  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q4_3_prt_3  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q4_3_prt_4  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q4_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_2  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.031 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_3  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_4  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.027 rows=0 loops=1)
+                     Filter: (month > 3)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_mo_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=4656 width=48) (actual time=0.000..0.036 rows=0 loops=1)
+                     Filter: (month > 3)
+         ->  Append  (cost=10000000000.00..320000007240.04 rows=1341 width=48) (actual time=0.028..4.760 rows=205 loops=1)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_2 date_parts_1_prt_2_2_prt_q1_3_prt_2_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.015..0.243 rows=30 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+                     Rows Removed by Filter: 14
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_3 date_parts_1_prt_2_2_prt_q1_3_prt_3_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.015..0.247 rows=32 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+                     Rows Removed by Filter: 14
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_4 date_parts_1_prt_2_2_prt_q1_3_prt_4_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.013..0.245 rows=31 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+                     Rows Removed by Filter: 14
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_other_days date_parts_1_prt_2_2_prt_q1_3_prt_other_days_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.019..0.051 rows=3 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+                     Rows Removed by Filter: 1
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_2 date_parts_1_prt_2_2_prt_other_months_3_prt_2_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_3 date_parts_1_prt_2_2_prt_other_months_3_prt_3_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.000..0.020 rows=0 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_4 date_parts_1_prt_2_2_prt_other_months_3_prt_4_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.000..0.020 rows=0 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_other_days date_parts_1_prt_2_2_prt_other_months_3_prt_other_days_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.000..0.020 rows=0 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_2 date_parts_1_prt_3_2_prt_q1_3_prt_2_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.013..0.265 rows=35 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+                     Rows Removed by Filter: 18
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_3 date_parts_1_prt_3_2_prt_q1_3_prt_3_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.013..0.234 rows=31 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+                     Rows Removed by Filter: 13
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_4 date_parts_1_prt_3_2_prt_q1_3_prt_4_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.013..0.215 rows=28 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+                     Rows Removed by Filter: 11
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_other_days date_parts_1_prt_3_2_prt_q1_3_prt_other_days_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.012..0.038 rows=2 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+                     Rows Removed by Filter: 3
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_2 date_parts_1_prt_3_2_prt_other_months_3_prt_2_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.000..0.020 rows=0 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_3 date_parts_1_prt_3_2_prt_other_months_3_prt_3_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.000..0.201 rows=0 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_4 date_parts_1_prt_3_2_prt_other_months_3_prt_4_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_other_days date_parts_1_prt_3_2_prt_other_months_3_prt_other_days_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.000..0.020 rows=0 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_2 date_parts_1_prt_4_2_prt_q1_3_prt_2_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.014..0.135 rows=16 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+                     Rows Removed by Filter: 6
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_3 date_parts_1_prt_4_2_prt_q1_3_prt_3_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.012..0.155 rows=19 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+                     Rows Removed by Filter: 7
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_4 date_parts_1_prt_4_2_prt_q1_3_prt_4_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.013..0.157 rows=17 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+                     Rows Removed by Filter: 8
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_other_days date_parts_1_prt_4_2_prt_q1_3_prt_other_days_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.012..0.036 rows=2 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+                     Rows Removed by Filter: 1
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_2 date_parts_1_prt_4_2_prt_other_months_3_prt_2_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.000..0.020 rows=0 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_3 date_parts_1_prt_4_2_prt_other_months_3_prt_3_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.000..0.020 rows=0 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_4 date_parts_1_prt_4_2_prt_other_months_3_prt_4_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.000..0.020 rows=0 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_other_days date_parts_1_prt_4_2_prt_other_months_3_prt_other_days_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.000..0.020 rows=0 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_2 date_parts_1_prt_outlying_years_2_prt_q1_3_prt_2_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.000..0.020 rows=0 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_3 date_parts_1_prt_outlying_years_2_prt_q1_3_prt_3_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.000..0.020 rows=0 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_4 date_parts_1_prt_outlying_years_2_prt_q1_3_prt_4_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.000..0.020 rows=0 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_other_days date_parts_1_prt_outlying_years_2_prt_q1_3_prt_other_days_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.000..0.020 rows=0 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_2 date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_2_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.000..0.020 rows=0 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_3 date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_3_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.000..0.019 rows=0 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_4 date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_4_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.000..0.019 rows=0 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_mo_3_prt_other_days date_parts_1_prt_outlying_years_2_prt_other_mo_3_prt_other_da_1  (cost=10000000000.00..10000000226.04 rows=42 width=48) (actual time=0.000..0.019 rows=0 loops=1)
+                     Filter: (month = ANY ('{0,1,2}'::integer[]))
+         ->  Append  (cost=10000000000.00..160000002779.78 rows=223 width=48) (actual time=0.000..0.252 rows=0 loops=1)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_2 date_parts_1_prt_2_2_prt_other_months_3_prt_2_2  (cost=10000000000.00..10000000173.67 rows=14 width=48) (actual time=0.000..0.020 rows=0 loops=1)
+                     Filter: (month IS NULL)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_3 date_parts_1_prt_2_2_prt_other_months_3_prt_3_2  (cost=10000000000.00..10000000173.67 rows=14 width=48) (actual time=0.000..0.020 rows=0 loops=1)
+                     Filter: (month IS NULL)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_4 date_parts_1_prt_2_2_prt_other_months_3_prt_4_2  (cost=10000000000.00..10000000173.67 rows=14 width=48) (actual time=0.000..0.020 rows=0 loops=1)
+                     Filter: (month IS NULL)
+               ->  Seq Scan on date_parts_1_prt_2_2_prt_other_months_3_prt_other_days date_parts_1_prt_2_2_prt_other_months_3_prt_other_days_2  (cost=10000000000.00..10000000173.67 rows=14 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+                     Filter: (month IS NULL)
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_2 date_parts_1_prt_3_2_prt_other_months_3_prt_2_2  (cost=10000000000.00..10000000173.67 rows=14 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+                     Filter: (month IS NULL)
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_3 date_parts_1_prt_3_2_prt_other_months_3_prt_3_2  (cost=10000000000.00..10000000173.67 rows=14 width=48) (actual time=0.000..0.019 rows=0 loops=1)
+                     Filter: (month IS NULL)
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_4 date_parts_1_prt_3_2_prt_other_months_3_prt_4_2  (cost=10000000000.00..10000000173.67 rows=14 width=48) (actual time=0.000..0.019 rows=0 loops=1)
+                     Filter: (month IS NULL)
+               ->  Seq Scan on date_parts_1_prt_3_2_prt_other_months_3_prt_other_days date_parts_1_prt_3_2_prt_other_months_3_prt_other_days_2  (cost=10000000000.00..10000000173.67 rows=14 width=48) (actual time=0.000..0.019 rows=0 loops=1)
+                     Filter: (month IS NULL)
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_2 date_parts_1_prt_4_2_prt_other_months_3_prt_2_2  (cost=10000000000.00..10000000173.67 rows=14 width=48) (actual time=0.000..0.019 rows=0 loops=1)
+                     Filter: (month IS NULL)
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_3 date_parts_1_prt_4_2_prt_other_months_3_prt_3_2  (cost=10000000000.00..10000000173.67 rows=14 width=48) (actual time=0.000..0.019 rows=0 loops=1)
+                     Filter: (month IS NULL)
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_4 date_parts_1_prt_4_2_prt_other_months_3_prt_4_2  (cost=10000000000.00..10000000173.67 rows=14 width=48) (actual time=0.000..0.019 rows=0 loops=1)
+                     Filter: (month IS NULL)
+               ->  Seq Scan on date_parts_1_prt_4_2_prt_other_months_3_prt_other_days date_parts_1_prt_4_2_prt_other_months_3_prt_other_days_2  (cost=10000000000.00..10000000173.67 rows=14 width=48) (actual time=0.000..0.020 rows=0 loops=1)
+                     Filter: (month IS NULL)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_2 date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_2_2  (cost=10000000000.00..10000000173.67 rows=14 width=48) (actual time=0.000..0.019 rows=0 loops=1)
+                     Filter: (month IS NULL)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_3 date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_3_2  (cost=10000000000.00..10000000173.67 rows=14 width=48) (actual time=0.000..0.019 rows=0 loops=1)
+                     Filter: (month IS NULL)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_4 date_parts_1_prt_outlying_years_2_prt_other_months_3_prt_4_2  (cost=10000000000.00..10000000173.67 rows=14 width=48) (actual time=0.000..0.019 rows=0 loops=1)
+                     Filter: (month IS NULL)
+               ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_other_mo_3_prt_other_days date_parts_1_prt_outlying_years_2_prt_other_mo_3_prt_other_da_2  (cost=10000000000.00..10000000173.67 rows=14 width=48) (actual time=0.000..0.019 rows=0 loops=1)
+                     Filter: (month IS NULL)
+ Optimizer: Postgres query optimizer
+ Planning Time: 43.813 ms
+   (slice0)    Executor memory: 832K bytes.
+   (slice1)    Executor memory: 1016K bytes avg x 3 workers, 1016K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 75.577 ms
+(292 rows)
 
 -- Equality predicate
 -- 16 partitions => 4 from year x 1 from month x 4 from days.
-select get_selected_parts('explain analyze select * from DATE_PARTS where month = 3;');  -- Not working (it only produces general)
- get_selected_parts 
---------------------
- [0, 0]
-(1 row)
+explain analyze select * from DATE_PARTS where month = 3;  -- Not working (it only produces general)
+                                                                                     QUERY PLAN                                                                                      
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..160000003347.39 rows=670 width=48) (actual time=3.294..4.974 rows=310 loops=1)
+   ->  Append  (cost=10000000000.00..160000003338.45 rows=223 width=48) (actual time=0.043..2.129 rows=109 loops=1)
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_2  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.027..0.115 rows=14 loops=1)
+               Filter: (month = 3)
+               Rows Removed by Filter: 30
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_3  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.018..0.116 rows=16 loops=1)
+               Filter: (month = 3)
+               Rows Removed by Filter: 22
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_4  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.016..0.116 rows=16 loops=1)
+               Filter: (month = 3)
+               Rows Removed by Filter: 21
+         ->  Seq Scan on date_parts_1_prt_2_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.015..0.035 rows=2 loops=1)
+               Filter: (month = 3)
+               Rows Removed by Filter: 1
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_2  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.017..0.129 rows=18 loops=1)
+               Filter: (month = 3)
+               Rows Removed by Filter: 35
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_3  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.016..0.104 rows=14 loops=1)
+               Filter: (month = 3)
+               Rows Removed by Filter: 20
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_4  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.017..0.126 rows=15 loops=1)
+               Filter: (month = 3)
+               Rows Removed by Filter: 24
+         ->  Seq Scan on date_parts_1_prt_3_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.016..0.042 rows=3 loops=1)
+               Filter: (month = 3)
+               Rows Removed by Filter: 2
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_2  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.017..0.076 rows=9 loops=1)
+               Filter: (month = 3)
+               Rows Removed by Filter: 10
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_3  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.016..0.064 rows=7 loops=1)
+               Filter: (month = 3)
+               Rows Removed by Filter: 8
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_4  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.017..0.070 rows=8 loops=1)
+               Filter: (month = 3)
+               Rows Removed by Filter: 17
+         ->  Seq Scan on date_parts_1_prt_4_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.015..0.031 rows=1 loops=1)
+               Filter: (month = 3)
+               Rows Removed by Filter: 2
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_2  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.036 rows=0 loops=1)
+               Filter: (month = 3)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_3  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: (month = 3)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_4  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: (month = 3)
+         ->  Seq Scan on date_parts_1_prt_outlying_years_2_prt_q1_3_prt_other_days  (cost=10000000000.00..10000000208.58 rows=14 width=48) (actual time=0.000..0.031 rows=0 loops=1)
+               Filter: (month = 3)
+ Optimizer: Postgres query optimizer
+ Planning Time: 13.592 ms
+   (slice0)    Executor memory: 114K bytes.
+   (slice1)    Executor memory: 135K bytes avg x 3 workers, 135K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 7.465 ms
+(52 rows)
 
 -- More Equality and General Predicates ---
 create table foo(a int, b int)
@@ -2268,11 +2981,34 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- General predicate
 -- Total 6 parts. b = 1: 1 part, b > 3: 2 parts, b in (0, 1): 2 parts. b is null: 1 part
-select get_selected_parts('explain analyze select * from foo where b = 1 union all select * from foo where b > 3 union all select * from foo where b in (0,1) union all select * from foo where b is null;');
- get_selected_parts 
---------------------
- [6, 0]
-(1 row)
+explain analyze select * from foo where b = 1 union all select * from foo where b > 3 union all select * from foo where b in (0,1) union all select * from foo where b is null;
+                                                       QUERY PLAN                                                        
+-------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1724.00 rows=1 width=8) (actual time=1.094..1.104 rows=0 loops=1)
+   ->  Append  (cost=0.00..1724.00 rows=1 width=8) (actual time=0.000..0.384 rows=0 loops=1)
+         ->  Dynamic Seq Scan on foo  (cost=0.00..431.00 rows=1 width=8) (actual time=0.000..0.106 rows=0 loops=1)
+               Number of partitions to scan: 1 (out of 3)
+               Filter: (b = 1)
+               Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
+         ->  Dynamic Seq Scan on foo foo_1  (cost=0.00..431.00 rows=1 width=8) (actual time=0.000..0.156 rows=0 loops=1)
+               Number of partitions to scan: 2 (out of 3)
+               Filter: (b > 3)
+               Partitions scanned:  Avg 2.0 x 3 workers.  Max 2 parts (seg0).
+         ->  Dynamic Seq Scan on foo foo_2  (cost=0.00..431.00 rows=1 width=8) (actual time=0.000..0.098 rows=0 loops=1)
+               Number of partitions to scan: 2 (out of 3)
+               Filter: (b = ANY ('{0,1}'::integer[]))
+               Partitions scanned:  Avg 2.0 x 3 workers.  Max 2 parts (seg0).
+         ->  Dynamic Seq Scan on foo foo_3  (cost=0.00..431.00 rows=1 width=8) (actual time=0.000..0.050 rows=0 loops=1)
+               Number of partitions to scan: 1 (out of 3)
+               Filter: (b IS NULL)
+               Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 29.025 ms
+   (slice0)    Executor memory: 39K bytes.
+   (slice1)    Executor memory: 65K bytes avg x 3 workers, 65K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 3.017 ms
+(24 rows)
 
 drop table if exists pt;
 NOTICE:  table "pt" does not exist, skipping
@@ -2284,11 +3020,34 @@ PARTITION BY LIST (gender)
   DEFAULT PARTITION other );
 -- General filter
 -- TODO #141916623. Expecting 6 parts, but optimizer plan selects 7 parts. The 6 parts breakdown is: gender = 'F': 1 part, gender < 'M': 2 parts (including default), gender in ('F', F'M'): 2 parts, gender is null => 1 part
-select get_selected_parts('explain analyze select * from pt where gender = ''F'' union all select * from pt where gender < ''M'' union all select * from pt where gender in (''F'', ''FM'') union all select * from pt where gender is null;');
- get_selected_parts 
---------------------
- [6, 0]
-(1 row)
+explain analyze select * from pt where gender = 'F' union all select * from pt where gender < 'M' union all select * from pt where gender in ('F', 'FM') union all select * from pt where gender is null;
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1724.00 rows=1 width=12) (actual time=1.279..1.288 rows=0 loops=1)
+   ->  Append  (cost=0.00..1724.00 rows=1 width=12) (actual time=0.000..0.537 rows=0 loops=1)
+         ->  Dynamic Seq Scan on pt  (cost=0.00..431.00 rows=1 width=12) (actual time=0.000..0.289 rows=0 loops=1)
+               Number of partitions to scan: 1 (out of 3)
+               Filter: ((gender)::text = 'F'::text)
+               Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
+         ->  Dynamic Seq Scan on pt pt_1  (cost=0.00..431.00 rows=1 width=12) (actual time=0.000..0.135 rows=0 loops=1)
+               Number of partitions to scan: 2 (out of 3)
+               Filter: ((gender)::text < 'M'::text)
+               Partitions scanned:  Avg 2.0 x 3 workers.  Max 2 parts (seg0).
+         ->  Dynamic Seq Scan on pt pt_2  (cost=0.00..431.00 rows=1 width=12) (actual time=0.000..0.080 rows=0 loops=1)
+               Number of partitions to scan: 2 (out of 3)
+               Filter: ((gender)::text = ANY ('{F,FM}'::text[]))
+               Partitions scanned:  Avg 2.0 x 3 workers.  Max 2 parts (seg0).
+         ->  Dynamic Seq Scan on pt pt_3  (cost=0.00..431.00 rows=1 width=12) (actual time=0.000..0.049 rows=0 loops=1)
+               Number of partitions to scan: 1 (out of 3)
+               Filter: (gender IS NULL)
+               Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 62.511 ms
+   (slice0)    Executor memory: 39K bytes.
+   (slice1)    Executor memory: 65K bytes avg x 3 workers, 65K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 2.667 ms
+(24 rows)
 
 -- DML
 -- Non-default part
@@ -2374,11 +3133,38 @@ ALTER PARTITION FOR (date '2011-01-01')
 EXCHANGE PARTITION FOR ('usa') WITH TABLE sales_exchange_part ;
 ANALYZE sales;
 -- TODO: #141973839. Expected 10 parts, currently selecting 15 parts. First level: 4 parts + 1 default. Second level 2 parts. Total 10 parts.
-select get_selected_parts('explain analyze select * from sales where region = ''usa'' or region = ''asia'';');
- get_selected_parts 
---------------------
- [0, 0]
-(1 row)
+explain analyze select * from sales where region = 'usa' or region = 'asia';
+                                                                           QUERY PLAN                                                                           
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..100000000010.60 rows=30 width=50) (actual time=1.227..1.242 rows=1 loops=1)
+   ->  Append  (cost=10000000000.00..100000000010.20 rows=10 width=50) (actual time=0.055..0.224 rows=1 loops=1)
+         ->  Seq Scan on sales_1_prt_2_2_prt_asia  (cost=10000000000.00..10000000001.01 rows=1 width=54) (actual time=0.000..0.038 rows=0 loops=1)
+               Filter: ((region = 'usa'::text) OR (region = 'asia'::text))
+         ->  Seq Scan on sales_1_prt_2_2_prt_usa  (cost=10000000000.00..10000000001.01 rows=1 width=19) (actual time=0.020..0.035 rows=1 loops=1)
+               Filter: ((region = 'usa'::text) OR (region = 'asia'::text))
+         ->  Seq Scan on sales_1_prt_3_2_prt_asia  (cost=10000000000.00..10000000001.01 rows=1 width=54) (actual time=0.000..0.023 rows=0 loops=1)
+               Filter: ((region = 'usa'::text) OR (region = 'asia'::text))
+         ->  Seq Scan on sales_1_prt_3_2_prt_usa  (cost=10000000000.00..10000000001.01 rows=1 width=54) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: ((region = 'usa'::text) OR (region = 'asia'::text))
+         ->  Seq Scan on sales_1_prt_4_2_prt_asia  (cost=10000000000.00..10000000001.01 rows=1 width=54) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: ((region = 'usa'::text) OR (region = 'asia'::text))
+         ->  Seq Scan on sales_1_prt_4_2_prt_usa  (cost=10000000000.00..10000000001.01 rows=1 width=54) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: ((region = 'usa'::text) OR (region = 'asia'::text))
+         ->  Seq Scan on sales_1_prt_5_2_prt_asia  (cost=10000000000.00..10000000001.01 rows=1 width=54) (actual time=0.000..0.022 rows=0 loops=1)
+               Filter: ((region = 'usa'::text) OR (region = 'asia'::text))
+         ->  Seq Scan on sales_1_prt_5_2_prt_usa  (cost=10000000000.00..10000000001.01 rows=1 width=54) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: ((region = 'usa'::text) OR (region = 'asia'::text))
+         ->  Seq Scan on sales_1_prt_outlying_dates_2_prt_asia  (cost=10000000000.00..10000000001.01 rows=1 width=54) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: ((region = 'usa'::text) OR (region = 'asia'::text))
+         ->  Seq Scan on sales_1_prt_outlying_dates_2_prt_usa  (cost=10000000000.00..10000000001.01 rows=1 width=54) (actual time=0.000..0.021 rows=0 loops=1)
+               Filter: ((region = 'usa'::text) OR (region = 'asia'::text))
+ Optimizer: Postgres query optimizer
+ Planning Time: 9.813 ms
+   (slice0)    Executor memory: 90K bytes.
+   (slice1)    Executor memory: 96K bytes avg x 3 workers, 96K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 2.831 ms
+(28 rows)
 
 select * from sales where region = 'usa' or region = 'asia';
  trans_id |    date    | amount | region 
@@ -2451,32 +3237,122 @@ insert into bar values(1, 5.6); --default
 insert into bar values(1, NULL); --p1
 -- In-equality
 -- 8 parts: All 4 parts on first level and each will have 2 range parts 
-select get_selected_parts('explain analyze select * from bar where j>0.02;');
- get_selected_parts 
---------------------
- [0, 0]
-(1 row)
+explain analyze select * from bar where j>0.02;
+                                                                     QUERY PLAN                                                                      
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..80000003909.33 rows=132267 width=36) (actual time=1.313..1.723 rows=4 loops=1)
+   ->  Append  (cost=10000000000.00..80000002145.78 rows=44089 width=36) (actual time=0.051..0.304 rows=4 loops=1)
+         ->  Seq Scan on bar_1_prt_p1_2_prt_1  (cost=10000000000.00..10000000240.67 rows=5511 width=36) (actual time=0.038..0.058 rows=1 loops=1)
+               Filter: (j > 0.02)
+               Rows Removed by Filter: 1
+         ->  Seq Scan on bar_1_prt_p1_2_prt_2  (cost=10000000000.00..10000000240.67 rows=5511 width=36) (actual time=0.000..0.027 rows=0 loops=1)
+               Filter: (j > 0.02)
+         ->  Seq Scan on bar_1_prt_p2_2_prt_1  (cost=10000000000.00..10000000240.67 rows=5511 width=36) (actual time=0.019..0.038 rows=1 loops=1)
+               Filter: (j > 0.02)
+         ->  Seq Scan on bar_1_prt_p2_2_prt_2  (cost=10000000000.00..10000000240.67 rows=5511 width=36) (actual time=0.000..0.026 rows=0 loops=1)
+               Filter: (j > 0.02)
+         ->  Seq Scan on bar_1_prt_p3_2_prt_1  (cost=10000000000.00..10000000240.67 rows=5511 width=36) (actual time=0.019..0.038 rows=1 loops=1)
+               Filter: (j > 0.02)
+         ->  Seq Scan on bar_1_prt_p3_2_prt_2  (cost=10000000000.00..10000000240.67 rows=5511 width=36) (actual time=0.000..0.026 rows=0 loops=1)
+               Filter: (j > 0.02)
+         ->  Seq Scan on bar_1_prt_other_2_prt_1  (cost=10000000000.00..10000000240.67 rows=5511 width=36) (actual time=0.019..0.038 rows=1 loops=1)
+               Filter: (j > 0.02)
+         ->  Seq Scan on bar_1_prt_other_2_prt_2  (cost=10000000000.00..10000000240.67 rows=5511 width=36) (actual time=0.000..0.028 rows=0 loops=1)
+               Filter: (j > 0.02)
+ Optimizer: Postgres query optimizer
+ Planning Time: 6.915 ms
+   (slice0)    Executor memory: 57K bytes.
+   (slice1)    Executor memory: 66K bytes avg x 3 workers, 66K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 3.429 ms
+(25 rows)
 
 -- 6 parts: Excluding 1 list parts at first level. So, 3 at first level and each has 2 at second level.
-select get_selected_parts('explain analyze select * from bar where j>2.8;');
- get_selected_parts 
---------------------
- [0, 0]
-(1 row)
+explain analyze select * from bar where j>2.8;
+                                                                     QUERY PLAN                                                                      
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..60000002932.00 rows=99200 width=36) (actual time=0.748..1.015 rows=1 loops=1)
+   ->  Append  (cost=10000000000.00..60000001609.33 rows=33067 width=36) (actual time=0.096..0.197 rows=1 loops=1)
+         ->  Seq Scan on bar_1_prt_p2_2_prt_1  (cost=10000000000.00..10000000240.67 rows=5511 width=36) (actual time=0.000..0.045 rows=0 loops=1)
+               Filter: (j > 2.8)
+         ->  Seq Scan on bar_1_prt_p2_2_prt_2  (cost=10000000000.00..10000000240.67 rows=5511 width=36) (actual time=0.000..0.028 rows=0 loops=1)
+               Filter: (j > 2.8)
+         ->  Seq Scan on bar_1_prt_p3_2_prt_1  (cost=10000000000.00..10000000240.67 rows=5511 width=36) (actual time=0.021..0.040 rows=1 loops=1)
+               Filter: (j > 2.8)
+         ->  Seq Scan on bar_1_prt_p3_2_prt_2  (cost=10000000000.00..10000000240.67 rows=5511 width=36) (actual time=0.000..0.027 rows=0 loops=1)
+               Filter: (j > 2.8)
+         ->  Seq Scan on bar_1_prt_other_2_prt_1  (cost=10000000000.00..10000000240.67 rows=5511 width=36) (actual time=0.000..0.032 rows=0 loops=1)
+               Filter: (j > 2.8)
+         ->  Seq Scan on bar_1_prt_other_2_prt_2  (cost=10000000000.00..10000000240.67 rows=5511 width=36) (actual time=0.000..0.039 rows=0 loops=1)
+               Filter: (j > 2.8)
+ Optimizer: Postgres query optimizer
+ Planning Time: 5.708 ms
+   (slice0)    Executor memory: 52K bytes.
+   (slice1)    Executor memory: 52K bytes avg x 3 workers, 52K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 2.637 ms
+(20 rows)
 
 -- Distinct From
 -- 6 parts: Everything except 1 part that contains 5.6.
-select get_selected_parts('explain analyze select * from bar where j is distinct from 5.6;');
- get_selected_parts 
---------------------
- [0, 0]
-(1 row)
+explain analyze select * from bar where j is distinct from 5.6;
+                                                                      QUERY PLAN                                                                      
+------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..80000007871.38 rows=396403 width=36) (actual time=0.983..1.023 rows=4 loops=1)
+   ->  Append  (cost=10000000000.00..80000002586.01 rows=132134 width=36) (actual time=0.047..0.314 rows=4 loops=1)
+         ->  Seq Scan on bar_1_prt_p1_2_prt_1  (cost=10000000000.00..10000000240.67 rows=16517 width=36) (actual time=0.034..0.060 rows=2 loops=1)
+               Filter: (j IS DISTINCT FROM 5.6)
+         ->  Seq Scan on bar_1_prt_p1_2_prt_2  (cost=10000000000.00..10000000240.67 rows=16517 width=36) (actual time=0.000..0.028 rows=0 loops=1)
+               Filter: (j IS DISTINCT FROM 5.6)
+         ->  Seq Scan on bar_1_prt_p2_2_prt_1  (cost=10000000000.00..10000000240.67 rows=16517 width=36) (actual time=0.020..0.039 rows=1 loops=1)
+               Filter: (j IS DISTINCT FROM 5.6)
+         ->  Seq Scan on bar_1_prt_p2_2_prt_2  (cost=10000000000.00..10000000240.67 rows=16517 width=36) (actual time=0.000..0.027 rows=0 loops=1)
+               Filter: (j IS DISTINCT FROM 5.6)
+         ->  Seq Scan on bar_1_prt_p3_2_prt_1  (cost=10000000000.00..10000000240.67 rows=16517 width=36) (actual time=0.000..0.032 rows=0 loops=1)
+               Filter: (j IS DISTINCT FROM 5.6)
+         ->  Seq Scan on bar_1_prt_p3_2_prt_2  (cost=10000000000.00..10000000240.67 rows=16517 width=36) (actual time=0.000..0.027 rows=0 loops=1)
+               Filter: (j IS DISTINCT FROM 5.6)
+         ->  Seq Scan on bar_1_prt_other_2_prt_1  (cost=10000000000.00..10000000240.67 rows=16517 width=36) (actual time=0.019..0.039 rows=1 loops=1)
+               Filter: (j IS DISTINCT FROM 5.6)
+         ->  Seq Scan on bar_1_prt_other_2_prt_2  (cost=10000000000.00..10000000240.67 rows=16517 width=36) (actual time=0.000..0.032 rows=0 loops=1)
+               Filter: (j IS DISTINCT FROM 5.6)
+ Optimizer: Postgres query optimizer
+ Planning Time: 5.868 ms
+   (slice0)    Executor memory: 57K bytes.
+   (slice1)    Executor memory: 66K bytes avg x 3 workers, 66K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 2.881 ms
+(24 rows)
 
 -- 8 parts: NULL is shared with others on p1. So, all 8 parts.
-select get_selected_parts('explain analyze select * from bar where j is distinct from NULL;');
- get_selected_parts 
---------------------
- [0, 0]
-(1 row)
+explain analyze select * from bar where j is distinct from NULL;
+                                                                      QUERY PLAN                                                                      
+------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..80000007540.71 rows=396403 width=36) (actual time=0.868..1.242 rows=4 loops=1)
+   ->  Append  (cost=10000000000.00..80000002255.34 rows=132134 width=36) (actual time=0.044..0.291 rows=4 loops=1)
+         ->  Seq Scan on bar_1_prt_p1_2_prt_1  (cost=10000000000.00..10000000199.33 rows=16517 width=36) (actual time=0.031..0.052 rows=1 loops=1)
+               Filter: (j IS NOT NULL)
+               Rows Removed by Filter: 1
+         ->  Seq Scan on bar_1_prt_p1_2_prt_2  (cost=10000000000.00..10000000199.33 rows=16517 width=36) (actual time=0.000..0.131 rows=0 loops=1)
+               Filter: (j IS NOT NULL)
+         ->  Seq Scan on bar_1_prt_p2_2_prt_1  (cost=10000000000.00..10000000199.33 rows=16517 width=36) (actual time=0.018..0.036 rows=1 loops=1)
+               Filter: (j IS NOT NULL)
+         ->  Seq Scan on bar_1_prt_p2_2_prt_2  (cost=10000000000.00..10000000199.33 rows=16517 width=36) (actual time=0.000..0.026 rows=0 loops=1)
+               Filter: (j IS NOT NULL)
+         ->  Seq Scan on bar_1_prt_p3_2_prt_1  (cost=10000000000.00..10000000199.33 rows=16517 width=36) (actual time=0.018..0.036 rows=1 loops=1)
+               Filter: (j IS NOT NULL)
+         ->  Seq Scan on bar_1_prt_p3_2_prt_2  (cost=10000000000.00..10000000199.33 rows=16517 width=36) (actual time=0.000..0.188 rows=0 loops=1)
+               Filter: (j IS NOT NULL)
+         ->  Seq Scan on bar_1_prt_other_2_prt_1  (cost=10000000000.00..10000000199.33 rows=16517 width=36) (actual time=0.018..0.036 rows=1 loops=1)
+               Filter: (j IS NOT NULL)
+         ->  Seq Scan on bar_1_prt_other_2_prt_2  (cost=10000000000.00..10000000199.33 rows=16517 width=36) (actual time=0.000..0.028 rows=0 loops=1)
+               Filter: (j IS NOT NULL)
+ Optimizer: Postgres query optimizer
+ Planning Time: 5.842 ms
+   (slice0)    Executor memory: 57K bytes.
+   (slice1)    Executor memory: 65K bytes avg x 3 workers, 65K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 3.154 ms
+(25 rows)
 
 RESET ALL;
