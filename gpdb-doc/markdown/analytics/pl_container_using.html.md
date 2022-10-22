@@ -390,7 +390,7 @@ Record the name of the GPU device ID (0 in the above example) or the device UUID
                 <deviceid>0</deviceid> 
             </device_request> 
         </runtime>
-    ---
+    ```
 
 #### Create and Run a Sample CUDA Function
 
