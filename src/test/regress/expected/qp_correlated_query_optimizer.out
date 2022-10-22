@@ -3719,9 +3719,6 @@ EXPLAIN SELECT a FROM qp_tab1 f1 LEFT JOIN qp_tab2 on a=c WHERE NOT EXISTS(SELEC
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (11 rows)
 
--- start_ignore
-GPDB_12_MERGE_FIXME: Fallsback due to unsupported exec location.
--- end_ignore
 EXPLAIN SELECT DISTINCT a FROM qp_tab1 WHERE NOT (SELECT TRUE FROM qp_tab2 WHERE EXISTS (SELECT * FROM qp_tab3 WHERE qp_tab2.c = qp_tab3.e));
                                                              QUERY PLAN                                                             
 ------------------------------------------------------------------------------------------------------------------------------------
