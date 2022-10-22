@@ -1006,9 +1006,12 @@ rollback to settings;
 -- the hash table)
 -- parallel with parallel-aware hash join (hits ExecParallelHashLoadTuple and
 -- sts_puttuple oversized tuple cases because it's multi-batch)
--- GPDB_12_MERGE_FIXME: I (Heikki) could not cajole the planner to create a
+-- NOTE: I (Heikki) could not cajole the planner to create a
 -- plan like in upstream. I accepted the plan you get, but now this doesn't
 -- exercise the special code path it's supposed to.
+-- Greenplum does not support parallel scan or parallel hash join now, the
+-- following cases will not hit the code path is supposed to be. We leave
+-- it here for maybe future wrk.
 savepoint settings;
 set max_parallel_workers_per_gather = 2;
 set enable_parallel_hash = on;
