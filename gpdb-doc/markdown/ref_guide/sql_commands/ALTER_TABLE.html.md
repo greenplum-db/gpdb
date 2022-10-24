@@ -153,7 +153,7 @@ where storage\_parameter is:
 ```
   <p class="note">
 <strong>Note:</strong>
-While you can specify the table's access method using <code> the <code>appendoptimized</code> storage parameter, VMware recommends that you use <code>SET ACCESS METHOD &lt;access method></code> instead.
+While you can specify the table's access method using the <code>appendoptimized</code> storage parameter, VMware recommends that you use <code>SET ACCESS METHOD &lt;access method></code> instead.
 </p>
 
 ## <a id="section3"></a>Description 
