@@ -233,7 +233,7 @@ extern void ResGroupMoveQuery(int sessionId, Oid groupId, const char *groupName)
 extern int32 ResGroupGetSessionMemUsage(int sessionId);
 extern int32 ResGroupGetGroupAvailableMem(Oid groupId);
 extern Oid ResGroupGetGroupIdBySessionId(int sessionId);
-extern char **getSpiltCpuSet(const char *cpuset);
+extern char *getSplitCpuSet(const char *cpuset);
 
 #define LOG_RESGROUP_DEBUG(...) \
 	do {if (Debug_resource_group) elog(__VA_ARGS__); } while(false);

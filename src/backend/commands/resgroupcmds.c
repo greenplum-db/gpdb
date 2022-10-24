@@ -254,20 +254,10 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 								  defaultGroupCpuset,
 								  MaxCpuSetLength);
 
-			/* for cpuset we need to handle seperately on mastre and segment */
 			if (!CpusetIsEmpty(caps.cpuset))
 			{
-				char **cpusetArray = getSpiltCpuSet(caps.cpuset);
-
-				if (Gp_role == GP_ROLE_EXECUTE && cpusetArray[1] != NULL)
-				{
-					ResGroupOps_SetCpuSet(groupid, cpusetArray[1]);
-					CpusetDifference(defaultGroupCpuset, cpusetArray[1], MaxCpuSetLength);
-				} else
-				{
-					ResGroupOps_SetCpuSet(groupid, cpusetArray[0]);
-					CpusetDifference(defaultGroupCpuset, cpusetArray[0], MaxCpuSetLength);
-				}
+				ResGroupOps_SetCpuSet(groupid, getSplitCpuSet(caps.cpuset));
+				CpusetDifference(defaultGroupCpuset, cpuset, MaxCpuSetLength);
 			}
 
 			ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, defaultGroupCpuset);
@@ -416,12 +406,7 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 	{
 		EnsureCpusetIsAvailable(ERROR);
 		cpuset = defGetString(defel);
-		char **cpusetArray = getSpiltCpuSet(cpuset);
-		for (int i = 0; i < CpuSetArrayLength; i++)
-		{
-			if (cpusetArray[i] != NULL)
-				checkCpusetSyntax(cpusetArray[i]);
-		}
+		(void)getSplitCpuSet(cpuset);
 	}
 	else
 	{
@@ -1031,12 +1016,7 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 		{
 			const char *cpuset = defGetString(defel);
 			StrNCpy(caps->cpuset, cpuset, sizeof(caps->cpuset));
-			char **cpusetArray = getSpiltCpuSet(cpuset);
-			for (int i = 0; i < CpuSetArrayLength; i++)
-			{
-				if (cpusetArray[i] != NULL)
-					checkCpusetSyntax(cpusetArray[i]);
-			}
+			(void)getSplitCpuSet(cpuset);
 			caps->cpuRateLimit = CPU_RATE_LIMIT_DISABLED;
 		}
 		else 
@@ -1326,11 +1306,8 @@ validateCapabilities(Relation rel,
 
 		/* Check whether the cores in this group are available */
 		if (!CpusetIsEmpty(caps->cpuset)) {
-			char **cpusetArray = getSpiltCpuSet(caps->cpuset);
-			if (Gp_role == GP_ROLE_EXECUTE && cpusetArray[1] != NULL)
-				bmsCurrent = CpusetToBitset(cpusetArray[1], MaxCpuSetLength);
-			else
-				bmsCurrent = CpusetToBitset(cpusetArray[0], MaxCpuSetLength);
+			char *cpuset = getSplitCpuSet(caps->cpuset);
+			bmsCurrent = CpusetToBitset(cpuset, MaxCpuSetLength);
 		}
 
 		bmsCommon = bms_intersect(bmsCurrent, bmsAll);
@@ -1424,13 +1401,8 @@ validateCapabilities(Relation rel,
 
 					Assert(!bms_is_empty(bmsCurrent));
 
-					char **cpusetArray = getSpiltCpuSet(valueStr);
-
-					if (Gp_role == GP_ROLE_EXECUTE && cpusetArray[1] != NULL)
-						bmsOther = CpusetToBitset(cpusetArray[1], MaxCpuSetLength);
-					else
-						bmsOther = CpusetToBitset(cpusetArray[0], MaxCpuSetLength);
-
+					char *cpuset = getSplitCpuSet(valueStr);
+					bmsOther = CpusetToBitset(cpuset, MaxCpuSetLength);
 					bmsCommon = bms_intersect(bmsCurrent, bmsOther);
 
 					if (!bms_is_empty(bmsCommon))
@@ -1605,27 +1577,29 @@ checkCpusetSyntax(const char *cpuset)
 
 /*
  * Seperate cpuset by coordinator and segment
- * Return as cpusetArray
- * cpusetArray[0] --> master cpuset
- * cpusetArray[1] --> segment cpuset
+ * Return as splitcpuset
+ * arraycpuset[0] --> master cpuset
+ * arraycpuset[1] --> segment cpuset
  */
-extern char **
-getSpiltCpuSet(const char *cpuset)
+extern char *
+getSplitCpuSet(const char *cpuset)
 {
-	int i = 0;
+	int iter = 0;
+	char *splitcpuset = NULL;
+
 	char **arraycpuset = (char **)palloc0(sizeof(char *) * CpuSetArrayLength);
 	char *copycpuset = (char *)palloc0(sizeof(char) * MaxCpuSetLength);
 	strcpy(copycpuset, cpuset);
-	char *spiltCpuset = strtok(copycpuset, ";");
 
-	while (spiltCpuset != NULL)
+	char *itercpuset = strtok(copycpuset, ";");
+	while (itercpuset != NULL)
 	{
-		arraycpuset[i++] = spiltCpuset;
-		spiltCpuset = strtok(NULL, ";");
+		arraycpuset[iter++] = itercpuset;
+		itercpuset = strtok(NULL, ";");
 	}
 
 	char *ret = strstr(cpuset, ";");
-	if (ret != NULL && i != CpuSetArrayLength)
+	if (ret != NULL && iter != CpuSetArrayLength)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
@@ -1634,11 +1608,20 @@ getSpiltCpuSet(const char *cpuset)
 
 	/* null string syntax is invalid */
 	if (arraycpuset[0] == NULL && arraycpuset[1] == NULL)
-	{
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				errmsg("cpuset invalid")));
-	}
 
-	return arraycpuset;
+	if (arraycpuset[0] != NULL)
+		checkCpusetSyntax(arraycpuset[0]);
+	if (arraycpuset[1] != NULL)
+		checkCpusetSyntax(arraycpuset[1]);
+
+	/* Get result cpuset by gprole, on master or segment */
+	if (Gp_role == GP_ROLE_EXECUTE && arraycpuset[1] != NULL)
+		splitcpuset = arraycpuset[1];
+	else
+		splitcpuset = arraycpuset[0];
+
+	return splitcpuset;
 }
