@@ -40,4 +40,13 @@ export PATH
 export PYTHONPATH
 export LD_LIBRARY_PATH
 export OPENSSL_CONF
+
+# Load the external environment variable files
+if [ -d "${GPHOME}/etc/environment.d" ]; then
+	set -o allexport
+	for env in $(find "${GPHOME}/etc/environment.d" -name '*.conf' -type f | sort -n); do
+		source "${env}"
+	done
+	set +o allexport
+fi
 EOF
