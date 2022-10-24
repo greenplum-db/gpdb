@@ -61,7 +61,7 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
     [, ... ]
 ) ]
 
-[ USING ( <access method> ) ]
+[ USING <access_method> ]
 [ WITH ( <storage_parameter> [=<value>] [, ... ] ) ]
 [ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
 [ TABLESPACE <tablespace_name> ]
@@ -353,7 +353,7 @@ INITIALLY IMMEDIATE
 INITIALLY DEFERRED
 :   If a constraint is deferrable, this clause specifies the default time to check the constraint. If the constraint is `INITIALLY IMMEDIATE`, it is checked after each statement. This is the default. If the constraint is `INITIALLY DEFERRED`, it is checked only at the end of the transaction. The constraint check time can be altered with the `SET CONSTRAINTS` command.
 
-USING ( access_method=value)
+USING <access_method>
 :   The `USING` clause specifies the access method for the table you are creating. Set to `heap` to create the table as a heap-storage table, `ao_row` to create the table as append-optimized with row-oriented storage (AO), or `ao_column` to create the table as append-optimized with column-oriented storage (AOCO). The default is determined by the value of the `default_table_access_method` server configuration parameter.
 
   <p class="note">

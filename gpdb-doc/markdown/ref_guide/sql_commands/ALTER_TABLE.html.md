@@ -56,6 +56,7 @@ where <action> is one of:
   CLUSTER ON <index_name>
   SET WITHOUT CLUSTER
   SET WITHOUT OIDS
+  SET ACCESS METHOD <access_method>
   SET (<storage_parameter> = <value>)
   RESET (<storage_parameter> [, ... ])
   INHERIT <parent_table>
@@ -149,8 +150,11 @@ where storage\_parameter is:
    compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
    compresslevel={0-9}
    fillfactor={10-100}
-   [oids=FALSE]
 ```
+  <p class="note">
+<strong>Note:</strong>
+While you can specify the table's access method using <code> the <code>appendoptimized</code> storage parameter, VMware recommends that you use <code>SET ACCESS METHOD \<access_method\></code> instead.
+</p>
 
 ## <a id="section3"></a>Description 
 
@@ -226,6 +230,14 @@ You must own the table to use `ALTER TABLE`. To change the schema or tablespace 
 **Note:** Memory usage increases significantly when a table has many partitions, if a table has compression, or if the blocksize for a table is large. If the number of relations associated with the table is large, this condition can force an operation on the table to use more memory. For example, if the table is a CO table and has a large number of columns, each column is a relation. An operation like `ALTER TABLE ALTER COLUMN` opens all the columns in the table allocates associated buffers. If a CO table has 40 columns and 100 partitions, and the columns are compressed and the blocksize is 2 MB \(with a system factor of 3\), the system attempts to allocate 24 GB, that is \(40 ×100\) × \(2 ×3\) MB or 24 GB.
 
 ## <a id="section4"></a>Parameters 
+
+access method
+:   The method for accessing the table. Set to `heap` to alter the table to be a heap-storage table, `ao_row` to alter the table to be append-optimized with row-oriented storage (AO), or `ao_column` to alter the table to be append-optimized with column-oriented storage (AOCO).
+
+  <p class="note">
+<strong>Note:</strong>
+While you can also specify the table's access method using <code>SET \<storage_parameter\></code>, VMware recommends that you use <code>SET ACCESS METHOD</code> instead.
+</p>
 
 ONLY
 :   Only perform the operation on the table name specified. If the `ONLY` keyword is not used, the operation will be performed on the named table and any child table partitions associated with that table.
