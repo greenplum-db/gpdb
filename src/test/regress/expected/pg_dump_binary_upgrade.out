@@ -1,4 +1,6 @@
--- Ensure that pg_dump --binary-upgrade correctly suppresses the ALTER
+-- 1) Ensure that pg_dump --binary-upgrade correctly outputs
+-- ALTER TABLE DROP COLUMN DDL for external tables.
+-- 2) Ensure that pg_dump --binary-upgrade correctly suppresses the ALTER
 -- TABLE DROP COLUMN DDL ouptut when a GPDB partition table with a
 -- dropped column reference on the root partition exists whereas the
 -- same dropped column reference does not exist on all of its child
@@ -8,7 +10,15 @@
 -- pg_upgrade's check_gp.c for more details on homogeneous and
 -- heterogeneous partitions.
 CREATE SCHEMA dump_this_schema;
--- Scenario 1: Create homogeneous partition table where the root
+-- 1) External tables with dropped columns is dumped correctly.
+CREATE EXTERNAL TABLE dump_this_schema.external_table_with_dropped_columns (
+    a int,
+    b int,
+    c int
+) LOCATION ('gpfdist://1.1.1.1:8082/xxxx.csv') FORMAT 'csv';
+ALTER EXTERNAL TABLE dump_this_schema.external_table_with_dropped_columns DROP COLUMN a;
+ALTER EXTERNAL TABLE dump_this_schema.external_table_with_dropped_columns DROP COLUMN b;
+-- 2) Scenario 1: Create homogeneous partition table where the root
 -- partition and ALL of its child partitions have the dropped column
 -- reference.
 CREATE TABLE dump_this_schema.dropped_column_homogeneous_partition_table (
@@ -41,7 +51,7 @@ WHERE a.attisdropped = true AND relname LIKE 'dropped_column_homogeneous_partiti
  dropped_column_homogeneous_partition_table          | ........pg.dropped.3........
 (3 rows)
 
--- Scenario 2: Create homogeneous partition table where only the root
+-- 2) Scenario 2: Create homogeneous partition table where only the root
 -- partition has the dropped column reference (as defined by
 -- pg_upgrade heterogeneous partition check function).
 CREATE TABLE dump_this_schema.dropped_column_special_homogeneous_partition_table (
@@ -75,7 +85,7 @@ WHERE a.attisdropped = true AND relname LIKE 'dropped_column_special_homogeneous
  dropped_column_special_homogeneous_partition_table | ........pg.dropped.3........
 (1 row)
 
--- Scenario 3: Create homogeneous partition table where only the root
+-- 2) Scenario 3: Create homogeneous partition table where only the root
 -- and subroot partition has the dropped column reference (as defined
 -- by pg_upgrade heterogeneous partition check function).
 CREATE TABLE dump_this_schema.dropped_column_special_homogeneous_partition_with_subpart (
@@ -121,7 +131,8 @@ WHERE a.attisdropped = true AND relname LIKE 'dropped_column_special_homogeneous
 \! pg_dump --binary-upgrade --schema dump_this_schema regression | grep " DROP COLUMN "
 ALTER TABLE dump_this_schema.dropped_column_homogeneous_partition_table DROP COLUMN "........pg.dropped.3........";
 DROP SCHEMA dump_this_schema CASCADE;
-NOTICE:  drop cascades to 3 other objects
-DETAIL:  drop cascades to table dump_this_schema.dropped_column_homogeneous_partition_table
+NOTICE:  drop cascades to 4 other objects
+DETAIL:  drop cascades to external table dump_this_schema.external_table_with_dropped_columns
+drop cascades to table dump_this_schema.dropped_column_homogeneous_partition_table
 drop cascades to table dump_this_schema.dropped_column_special_homogeneous_partition_table
 drop cascades to table dump_this_schema.dropped_column_special_homogeneous_partition_with_subpart
