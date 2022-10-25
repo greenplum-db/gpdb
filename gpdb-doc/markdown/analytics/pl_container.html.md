@@ -2,7 +2,7 @@
 title: PL/Container Language 
 ---
 
-PL/Container enables users to run Greenplum procedural language functions inside a Docker container, to avoid security risks associated with running Python or R code on Greenplum segment hosts. For Python, PL/Container also enables you to use the Compute Unified Device Architecture (CUDA) API with Nvidia GPU hardware in your procedural language functions. This topic covers information about the architecture, installation, and setup of PL/Container:
+PL/Container enables users to run Greenplum procedural language functions inside a Docker container, to avoid security risks associated with running Python or R code on Greenplum segment hosts. For Python, PL/Container also enables you to use the Compute Unified Device Architecture (CUDA) API with NVIDIA GPU hardware in your procedural language functions. This topic covers information about the architecture, installation, and setup of PL/Container:
 
 -   [About the PL/Container Language Extension](#about_pl_container)
 -   [Install PL/Container](#topic3)
