@@ -181,7 +181,7 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
 	topslice->directDispatch.contentIds = NIL;
 	topslice->directDispatch.haveProcessedAnyCalculations = false;
 
-	m_dxl_to_plstmt_context->m_orig_query = (Query *) orig_query;
+	m_dxl_to_plstmt_context->SetQuery((Query *) orig_query);
 	m_dxl_to_plstmt_context->AddSlice(topslice);
 	m_dxl_to_plstmt_context->SetCurrentSlice(topslice);
 
@@ -601,9 +601,9 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan(
 	{
 		OID oidRel = CMDIdGPDB::CastMdid(md_rel->MDId())->Oid();
 
-		ForeignScan *foreign_scan =
-			gpdb::CreateForeignScan(oidRel, index, qual, targetlist,
-									m_dxl_to_plstmt_context->m_orig_query, rte);
+		ForeignScan *foreign_scan = gpdb::CreateForeignScan(
+			oidRel, index, qual, targetlist,
+			m_dxl_to_plstmt_context->GetOrigQuery(), rte);
 		foreign_scan->scan.scanrelid = index;
 		plan = &(foreign_scan->scan.plan);
 		plan_return = (Plan *) foreign_scan;

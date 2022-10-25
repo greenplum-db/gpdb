@@ -137,6 +137,8 @@ private:
 
 	UlongToUlongMap *m_part_selector_to_param_map;
 
+	// original query, needed to create RelOptInfo
+	Query *m_orig_query;
 
 public:
 	// ctor/dtor
@@ -259,7 +261,17 @@ public:
 
 	Index FindRTE(Oid reloid);
 
-	Query *m_orig_query;
+	void
+	SetQuery(Query *query)
+	{
+		m_orig_query = query;
+	}
+
+	Query *
+	GetOrigQuery()
+	{
+		return m_orig_query;
+	}
 };
 
 }  // namespace gpdxl

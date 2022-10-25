@@ -978,23 +978,26 @@ BuildForeignScan(Oid relid, Index scanrelid, List *qual, List *targetlist, Query
 	 *
 	 * The simple_rte_array is used in build_simple_rel, and populates
 	 * fields for the fdw. We only need 1 entry here, as we process only 1
-	 * scan.
+	 * scan. We construt these arrays/structures to create a RelOptInfo,
+	 * which is needed by the FDW API functions
 	 */
 
 	PlannerInfo		*root;
 	root = makeNode(PlannerInfo);
-	root->parse = query;
-	/* Arrays are accessed using RT indexes (1..N) */
+	root->parse = query; // used to create RelOptInfo
+	/* Arrays are accessed using RT indexes (1..N). We only need 1 entry
+	 * here, as we're only processing 1 scan
+	 */
 	root->simple_rel_array_size = 2;
 
 	/* simple_rel_array is initialized to all NULLs */
-	root->simple_rel_array = (RelOptInfo **) palloc0(2 * sizeof(RelOptInfo *));
+	root->simple_rel_array = (RelOptInfo **) palloc0(root->simple_rel_array_size * sizeof(RelOptInfo *));
 
 	/* simple_rte_array is an array equivalent of the rtable list */
-	root->simple_rte_array = (RangeTblEntry **) palloc0(2 * sizeof(RangeTblEntry *));
+	root->simple_rte_array = (RangeTblEntry **) palloc0(root->simple_rel_array_size * sizeof(RangeTblEntry *));
 	root->simple_rte_array[1] = rte;
 
-	RelOptInfo *rel = build_simple_rel(root, 1, NULL);
+	RelOptInfo *rel = build_simple_rel(root, 1 /* index 1 */, NULL);
 	rel->fdwroutine->GetForeignRelSize(root, rel, relid);
 	rel->fdwroutine->GetForeignPaths(root, rel, relid);
 
