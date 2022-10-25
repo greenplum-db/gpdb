@@ -1491,8 +1491,13 @@ PostmasterMain(int argc, char *argv[])
 				 errmsg("could not remove file \"%s\": %m",
 						LOG_METAINFO_DATAFILE)));
 
+	/*
+	 * If resource group enabled, init it. And before we fork the child processes,
+	 * add the parent process to the default system group (OID=6441), this must be
+	 * initialized before InitResManager().
+	 * */
 	if (IsResGroupEnabled())
-		CGroupRelevantInit();
+		initCgroup();
 
 	/*
 	 * If enabled, start up syslogger collection subprocess

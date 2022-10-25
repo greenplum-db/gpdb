@@ -359,38 +359,29 @@ error_out:
  * Initialize the global CGroupOpsRoutine struct of resource groups.
  */
 void
-CGroupRelevantInit(void)
+CGroupOpsAndInfoInit(void)
 {
 	bool        found;
 	int			size;
 
-	size = sizeof(*cgroupOpsRoutine);
-	cgroupOpsRoutine = ShmemInitStruct("global cgroup operations routine",
+	size = sizeof(CGroupOpsRoutine);
+	cgroupOpsRoutine = (CGroupOpsRoutine *)
+		ShmemInitStruct("global cgroup operations routine",
 									   size, &found);
 	if (found)
 		return;
 	if (cgroupOpsRoutine == NULL)
 		goto error_out;
 
-#ifdef __linux__
-	if (!gp_resource_group_enable_cgroup_version_two)
-		cgroup_handler_alpha();
-#else
-	cgroup_handler_dummy();
-#endif
-
-	size = sizeof(*cgroupSystemInfo);
-	cgroupSystemInfo = ShmemInitStruct("global cgroup system info",
+	size = sizeof(CGroupSystemInfo);
+	cgroupSystemInfo = (CGroupSystemInfo *)
+		ShmemInitStruct("global cgroup system info",
 									   size, &found);
 
 	if (found)
 		return;
 	if (cgroupSystemInfo == NULL)
 		goto error_out;
-
-	cgroupOpsRoutine->probecgroup();
-	cgroupOpsRoutine->checkcgroup();
-	cgroupOpsRoutine->initcgroup();
 
 	return;
 
@@ -414,6 +405,43 @@ AllocResGroupEntry(Oid groupId, const ResGroupCaps *caps)
 	Assert(group != NULL);
 
 	LWLockRelease(ResGroupLock);
+}
+
+void
+initCgroup(void)
+{
+	bool probe_result;
+
+#ifdef __linux__
+	if (!gp_resource_group_enable_cgroup_version_two)
+		cgroup_handler_alpha();
+#else
+	cgroup_handler_dummy();
+#endif
+
+	if (!IsUnderPostmaster)
+	{
+		/* If we are under postmaster, we should probe and init cgroup */
+
+		probe_result = cgroupOpsRoutine->probecgroup();
+		if (!probe_result)
+			elog(ERROR, "The control group is not well configured, please check your"
+						"system configuration.");
+
+		cgroupOpsRoutine->checkcgroup();
+		cgroupOpsRoutine->initcgroup();
+	}
+	else
+	{
+		/* In postgres, we should check the share memory */
+		probe_result = getCgroupMountDir();
+		if (!probe_result)
+			elog(ERROR, "The control group is not well configured, please check your"
+						"system configuration.");
+
+		if (cgroupSystemInfo->ncores == 0)
+			cgroupSystemInfo->ncores = getCPUCores();
+	}
 }
 
 /*
@@ -717,7 +745,7 @@ ResGroupCreateOnAbort(const ResourceGroupCallbackContext *callbackCtx)
 		{
 			/* return cpu cores to default group */
 			char defaultGroupCpuset[MaxCpuSetLength];
-			cgroupOpsRoutine->getcpuset(DEFAULT_CPUSET_GROUP_ID,
+			ResGroupOps_GetCpuSet(DEFAULT_CPUSET_GROUP_ID,
 								  defaultGroupCpuset,
 								  MaxCpuSetLength);
 			CpusetUnion(defaultGroupCpuset,

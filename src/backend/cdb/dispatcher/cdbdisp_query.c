@@ -37,7 +37,7 @@
 #include "utils/faultinjector.h"
 #include "utils/resgroup.h"
 #include "utils/resource_manager.h"
-#include "utils/cgroup.h"
+#include "utils/resgroup-ops.h"
 #include "utils/session_state.h"
 #include "utils/typcache.h"
 #include "miscadmin.h"

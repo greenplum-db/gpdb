@@ -4867,7 +4867,7 @@ PostgresMain(int argc, char *argv[],
 #endif
 
 	if (IsResGroupEnabled())
-		CGroupRelevantInit();
+		initCgroup();
 
 	/* We need to allow SIGINT, etc during the initial transaction */
 	PG_SETMASK(&UnBlockSig);

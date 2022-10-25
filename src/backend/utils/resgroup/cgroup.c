@@ -535,7 +535,7 @@ getCgroupMountDir()
 	struct mntent *me;
 	FILE *fp;
 
-	if (cgroupSystemInfo->cgroup_dir[0])
+	if (strlen(cgroupSystemInfo->cgroup_dir) != 0)
 		return true;
 
 	memset(cgroupSystemInfo->cgroup_dir,'\0',sizeof(cgroupSystemInfo->cgroup_dir));

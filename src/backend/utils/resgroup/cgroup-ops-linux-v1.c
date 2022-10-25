@@ -166,7 +166,7 @@ static const PermList permlists[] =
 	/*
 	 * cpuset permissions can be mandatory or optional depends on the switch.
 	 *
-	 * resgroup cpuset is introduced in 6.0 devel and backported
+	 * resgroup cpuset is introduced in 6.0 devel and backport
 	 * to 5.x branch since 5.6.1.  To provide backward compatibilities cpuset
 	 * permissions are optional on 5.x branch.
 	 */
@@ -175,6 +175,23 @@ static const PermList permlists[] =
 
 	{ NULL, false, NULL }
 };
+
+static const char *getcgroupname_v1(void);
+static bool probecgroup_v1(void);
+static void checkcgroup_v1(void);
+static void initcgroup_v1(void);
+static void adjustgucs_v1(void);
+static void createcgroup_v1(Oid group);
+static void attachcgroup_v1(Oid group, int pid, bool is_cpuset_enabled);
+static void detachcgroup_v1(Oid group, CGroupComponentType component, int fd_dir);
+static void destroycgroup_v1(Oid group, bool migrate);
+static int lockcgroup_v1(Oid group, CGroupComponentType component, bool block);
+static void unlockcgroup_v1(int fd);
+static void setcpulimit_v1(Oid group, int cpu_rate_limit);
+static int64 getcpuusage_v1(Oid group);
+static void getcpuset_v1(Oid group, char *cpuset, int len);
+static void setcpuset_v1(Oid group, const char *cpuset);
+static float convertcpuusage_v1(int64 usage, int64 duration);
 
 /*
  * Detect gpdb cgroup component dirs.
@@ -493,10 +510,8 @@ checkComponentHierarchy()
 
 /*
  * Init gpdb cpu settings.
- *
- * Must be called after Probe() and Bless().
  */
-void
+static void
 initCpu(void)
 {
 	CGroupComponentType component = CGROUP_COMPONENT_CPU;
@@ -551,10 +566,8 @@ initCpu(void)
 
 /*
  * Init gpdb cpuset settings.
- *
- * Must be called after Probe() and Bless().
  */
-void
+static void
 initCpuSet(void)
 {
 	CGroupComponentType component = CGROUP_COMPONENT_CPUSET;
@@ -624,7 +637,7 @@ getCfsPeriodUs(CGroupComponentType component)
 }
 
 /* Return the name for the OS group implementation */
-const char *
+static const char *
 getcgroupname_v1(void)
 {
 	return "cgroup";
@@ -636,16 +649,9 @@ getcgroupname_v1(void)
  * Return true if everything is OK, or false is some requirements are not
  * satisfied.  Will not fail in either case.
  */
-bool
+static bool
 probecgroup_v1(void)
 {
-	/*
-	 * We only have to do these checks and initialization once on each host,
-	 * so only let postmaster do the job.
-	 */
-	if (IsUnderPostmaster)
-		return true;
-
 	/*
 	 * Ignore the error even if cgroup mount point can not be successfully
 	 * probed, the error will be reported in Bless() later.
@@ -666,7 +672,7 @@ probecgroup_v1(void)
 }
 
 /* Check whether the OS group implementation is available and usable */
-void
+static void
 checkcgroup_v1(void)
 {
 	CGroupComponentType component = CGROUP_COMPONENT_CPU;
@@ -695,7 +701,7 @@ checkcgroup_v1(void)
 
 	/*
  	 * Check if cpu and cpuset subsystems are mounted on the same hierarchy.
- 	 * We do not allow they mount on the same hierarchy, because writting pid
+ 	 * We do not allow they mount on the same hierarchy, because writing pid
  	 * to DEFAULT_CPUSET_GROUP_ID in ResGroupOps_AssignGroup will cause the
  	 * removal of the pid in group BASETYPE_GPDB, which will make cpu usage
  	 * out of control.
@@ -726,7 +732,7 @@ checkcgroup_v1(void)
 }
 
 /* Initialize the OS group */
-void
+static void
 initcgroup_v1(void)
 {
 	initCpu();
@@ -746,7 +752,7 @@ initcgroup_v1(void)
 }
 
 /* Adjust GUCs for this OS group implementation */
-void
+static void
 adjustgucs_v1(void)
 {
 	/*
@@ -762,7 +768,7 @@ adjustgucs_v1(void)
 /*
  * Create the OS group for group.
  */
-void
+static void
 createcgroup_v1(Oid group)
 {
 	int retry = 0;
@@ -865,7 +871,7 @@ createDefaultCpuSetGroup(void)
  *
  * pid is the process id.
  */
-void
+static void
 attachcgroup_v1(Oid group, int pid, bool is_cpuset_enabled)
 {
 	/* needn't write to file if the pid has already been written in.
@@ -911,7 +917,7 @@ attachcgroup_v1(Oid group, int pid, bool is_cpuset_enabled)
  * fd_dir is the fd for this lock, on any failure fd_dir will be closed
  * (and unlocked implicitly) then an error is raised.
  */
-void
+static void
 detachcgroup_v1(Oid group, CGroupComponentType component, int fd_dir)
 {
 	char 	path[MAX_CGROUP_PATHLEN];
@@ -1031,7 +1037,7 @@ detachcgroup_v1(Oid group, CGroupComponentType component, int fd_dir)
  * One OS group can not be dropped if there are processes running under it,
  * if migrate is true these processes will be moved out automatically.
  */
-void
+static void
 destroycgroup_v1(Oid group, bool migrate)
 {
 	if (!deleteDir(group, CGROUP_COMPONENT_CPU, "cpu.shares", migrate, detachcgroup_v1) ||
@@ -1048,13 +1054,13 @@ destroycgroup_v1(Oid group, bool migrate)
  * Lock the OS group. While the group is locked it won't be removed by other
  * processes.
  *
- * This function would block if block is true, otherwise it return with -1
+ * This function would block if block is true, otherwise it returns with -1
  * immediately.
  *
- * On success it return a fd to the OS group, pass it to
+ * On success, it returns a fd to the OS group, pass it to
  * ResGroupOps_UnLockGroup() to unlock it.
  */
-int
+static int
 lockcgroup_v1(Oid group, CGroupComponentType component, bool block)
 {
 	char path[MAX_CGROUP_PATHLEN];
@@ -1066,11 +1072,11 @@ lockcgroup_v1(Oid group, CGroupComponentType component, bool block)
 }
 
 /*
- * Unblock a OS group.
+ * Unblock an OS group.
  *
  * fd is the value returned by ResGroupOps_LockGroup().
  */
-void
+static void
 unlockcgroup_v1(int fd)
 {
 	if (fd >= 0)
@@ -1082,7 +1088,7 @@ unlockcgroup_v1(int fd)
  *
  * cpu_rate_limit should be within [0, 100].
  */
-void
+static void
 setcpulimit_v1(Oid group, int cpu_rate_limit)
 {
 	CGroupComponentType component = CGROUP_COMPONENT_CPU;
@@ -1111,7 +1117,7 @@ setcpulimit_v1(Oid group, int cpu_rate_limit)
  * Get the cpu usage of the OS group, that is the total cpu time obtained
  * by this OS group, in nano seconds.
  */
-int64
+static int64
 getcpuusage_v1(Oid group)
 {
 	CGroupComponentType component = CGROUP_COMPONENT_CPUACCT;
@@ -1125,7 +1131,7 @@ getcpuusage_v1(Oid group)
  * @param cpuset: the str to be set
  * @param len: the upper limit of the str
  */
-void
+static void
 getcpuset_v1(Oid group, char *cpuset, int len)
 {
 	CGroupComponentType component = CGROUP_COMPONENT_CPUSET;
@@ -1145,7 +1151,7 @@ getcpuset_v1(Oid group, char *cpuset, int len)
  * one core number or the core numbers interval, separated by comma.
  * E.g. 0,1,2-3.
  */
-void
+static void
 setcpuset_v1(Oid group, const char *cpuset)
 {
 	CGroupComponentType component = CGROUP_COMPONENT_CPUSET;
@@ -1165,7 +1171,7 @@ setcpuset_v1(Oid group, const char *cpuset)
  *
  * When fully consuming one cpu core the return value will be 100.0 .
  */
-float
+static float
 convertcpuusage_v1(int64 usage, int64 duration)
 {
 	float		percent;

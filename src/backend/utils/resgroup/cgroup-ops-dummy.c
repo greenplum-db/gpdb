@@ -33,7 +33,7 @@
 extern CGroupOpsRoutine *cGroupOpsRoutine;
 
 /* Return the name for the OS group implementation */
-const char *
+static const char *
 getcgroupname_dummy(void)
 {
 	return "unsupported";
@@ -45,7 +45,7 @@ getcgroupname_dummy(void)
  * Return true if everything is OK, or false is some requirements are not
  * satisfied.  Will not fail in either case.
  */
-bool
+static bool
 probecgroup_dummy(void)
 {
 	unsupported_system();
@@ -53,21 +53,21 @@ probecgroup_dummy(void)
 }
 
 /* Check whether the OS group implementation is available and useable */
-void
+static void
 checkcgroup_dummy(void)
 {
 	unsupported_system();
 }
 
 /* Initialize the OS group */
-void
+static void
 initcgroup_dummy(void)
 {
 	unsupported_system();
 }
 
 /* Adjust GUCs for this OS group implementation */
-void
+static void
 adjustgucs_dummy(void)
 {
 	unsupported_system();
@@ -76,7 +76,7 @@ adjustgucs_dummy(void)
 /*
  * Create the OS group for group.
  */
-void
+static void
 createcgroup_dummy(Oid group)
 {
 	unsupported_system();
@@ -89,7 +89,7 @@ createcgroup_dummy(Oid group)
  *
  * pid is the process id.
  */
-void
+static void
 attachcgroup_dummy(Oid group, int pid, bool is_cpuset_enabled)
 {
 	unsupported_system();
@@ -104,7 +104,7 @@ attachcgroup_dummy(Oid group, int pid, bool is_cpuset_enabled)
  * fd_dir is the fd for this lock, on any failure fd_dir will be closed
  * (and unlocked implicitly) then an error is raised.
  */
-void
+static void
 detachcgroup_dummy(Oid group, CGroupComponentType component, int fd_dir)
 {
 	unsupported_system();
@@ -116,7 +116,7 @@ detachcgroup_dummy(Oid group, CGroupComponentType component, int fd_dir)
  * One OS group can not be dropped if there are processes running under it,
  * if migrate is true these processes will be moved out automatically.
  */
-void
+static void
 destroycgroup_dummy(Oid group, bool migrate)
 {
 	unsupported_system();
@@ -132,11 +132,11 @@ destroycgroup_dummy(Oid group, bool migrate)
  * On success it return a fd to the OS group, pass it to
  * ResGroupOps_UnLockGroup() to unlock it.
  */
-int
+static int
 lockcgroup_dummy(Oid group, CGroupComponentType component, bool block)
 {
 	unsupported_system();
-	return 0;
+	return -1;
 }
 
 /*
@@ -144,7 +144,7 @@ lockcgroup_dummy(Oid group, CGroupComponentType component, bool block)
  *
  * fd is the value returned by ResGroupOps_LockGroup().
  */
-void
+static oid
 unlockcgroup_dummy(int fd)
 {
 	unsupported_system();
@@ -155,7 +155,7 @@ unlockcgroup_dummy(int fd)
  *
  * cpu_rate_limit should be within [0, 100].
  */
-void
+static void
 setcpulimit_dummy(Oid group, int cpu_rate_limit)
 {
 	unsupported_system();
@@ -165,7 +165,7 @@ setcpulimit_dummy(Oid group, int cpu_rate_limit)
  * Get the cpu usage of the OS group, that is the total cpu time obtained
  * by this OS group, in nano seconds.
  */
-int64
+static int64
 getcpuusage_dummy(Oid group)
 {
 	unsupported_system();
@@ -178,7 +178,7 @@ getcpuusage_dummy(Oid group)
  * @param cpuset: the str to be set
  * @param len: the upper limit of the str
  */
-void
+static void
 getcpuset_dummy(Oid group, char *cpuset, int len)
 {
 	unsupported_system();
@@ -192,7 +192,7 @@ getcpuset_dummy(Oid group, char *cpuset, int len)
  * one core number or the core numbers interval, separated by comma.
  * E.g. 0,1,2-3.
  */
-void
+static void
 setcpuset_dummy(Oid group, const char *cpuset)
 {
 	unsupported_system();
@@ -206,7 +206,7 @@ setcpuset_dummy(Oid group, const char *cpuset)
  *
  * When fully consuming one cpu core the return value will be 100.0 .
  */
-float
+static float
 convertcpuusage_dummy(int64 usage, int64 duration)
 {
 	unsupported_system();

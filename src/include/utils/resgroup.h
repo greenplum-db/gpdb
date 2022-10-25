@@ -125,8 +125,9 @@ typedef struct
 /* Shared memory and semaphores */
 extern Size ResGroupShmemSize(void);
 extern void ResGroupControlInit(void);
-extern void CGroupRelevantInit(void);
+extern void CGroupOpsAndInfoInit(void);
 
+extern void initCgroup(void);
 /* Load resource group information from catalog */
 extern void	InitResGroups(void);
 

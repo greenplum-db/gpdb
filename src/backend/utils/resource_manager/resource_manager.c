@@ -48,6 +48,7 @@ ResManagerShmemInit(void)
 	else if (IsResGroupEnabled() && !IsUnderPostmaster)
 	{
 		ResGroupControlInit();
+		CGroupOpsAndInfoInit();
 	}
 }
 
@@ -77,6 +78,7 @@ InitResManager(void)
 		 */
 
 		InitResGroups();
+
 		cgroupOpsRoutine->adjustgucs();
 
 		ResGroupActivated = true;
