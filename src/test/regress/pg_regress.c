@@ -2454,37 +2454,53 @@ run_single_test(const char *test, test_function tfunc)
 }
 
 /*
+ * Get error message pattern based on return code
+ */
+static const char *
+get_helper_err_pattern(int rc)
+{
+	if (rc == -2)
+	{
+		return "The program \"%s\" is needed by %s "
+			"has differece in build version (check \"GpTest.pm\" import) with "
+			"\"%s\".\nPlease rebuild tests or reconfigure the project.\n";
+	}
+	/* default error message pattern */
+	return "The program \"%s\" is needed by %s "
+		"but was not found in the same directory as \"%s\".\n"
+		"Please check that file exists (or is it a regular file).\n";
+}
+
+/*
  * Find the other binaries that we need. Currently, gpdiff.pl and
  * gpstringsubs.pl.
  */
 static void
 find_helper_programs(const char *argv0)
 {
-	if (find_other_exec(argv0, "gpdiff.pl", "gpdiff.pl " GP_VERSION"\n", gpdiffprog) != 0)
+	int 		rc;
+	char		full_path[MAXPGPATH];
+	const char 	*msg;
+
+	if ((rc = find_other_exec(argv0, "gpdiff.pl", "gpdiff.pl " GP_VERSION"\n", gpdiffprog)) != 0)
 	{
-		char		full_path[MAXPGPATH];
+		msg = get_helper_err_pattern(rc);
 
 		if (find_my_exec(argv0, full_path) < 0)
 			strlcpy(full_path, progname, sizeof(full_path));
 
-		fprintf(stderr,
-				_("The program \"gpdiff.pl\" is needed by %s "
-				  "but was not found in the same directory as \"%s\".\n"),
-				progname, full_path);
+		fprintf(stderr, _(msg), "gpdiff.pl", progname, full_path);
 		exit(1);
 	}
 
-	if (find_other_exec(argv0, "gpstringsubs.pl", "gpstringsubs.pl " GP_VERSION"\n", gpstringsubsprog) != 0)
+	if ((rc = find_other_exec(argv0, "gpstringsubs.pl", "gpstringsubs.pl " GP_VERSION"\n", gpstringsubsprog)) != 0)
 	{
-		char		full_path[MAXPGPATH];
+		msg = get_helper_err_pattern(rc);
 
 		if (find_my_exec(argv0, full_path) < 0)
 			strlcpy(full_path, progname, sizeof(full_path));
 
-		fprintf(stderr,
-				_("The program \"gpstringsubs.pl\" is needed by %s "
-				  "but was not found in the same directory as \"%s\".\n"),
-				progname, full_path);
+		fprintf(stderr, _(msg), "gpstringsubs.pl", progname, full_path);
 		exit(1);
 	}
 }
