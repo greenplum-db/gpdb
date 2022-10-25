@@ -85,8 +85,8 @@ CREATE VIEW cancel_all AS
     WHERE query LIKE 'SELECT * FROM % WHERE busy%';
 
 -- create two resource groups
-CREATE RESOURCE GROUP rg1_cpu_test WITH (concurrency=5, cpu_rate_limit=10, memory_limit=20);
-CREATE RESOURCE GROUP rg2_cpu_test WITH (concurrency=5, cpu_rate_limit=20, memory_limit=20);
+CREATE RESOURCE GROUP rg1_cpu_test WITH (concurrency=5, cpu_rate_limit=10);
+CREATE RESOURCE GROUP rg2_cpu_test WITH (concurrency=5, cpu_rate_limit=20);
 
 --
 -- check gpdb cgroup configuration
@@ -141,7 +141,7 @@ DO LANGUAGE PLPYTHON3U $$
             SELECT oid FROM pg_resgroup WHERE rsgname='{}'
         '''.format(name))[0]['oid'])
         sub_shares = get_cgroup_prop('/cpu/gpdb/{}/cpu.shares'.format(oid))
-        assert sub_shares == shares * cpu_rate_limit / 100
+        assert sub_shares == int(shares * cpu_rate_limit / 100)
 
     # check default groups
     check_group_shares('default_group')

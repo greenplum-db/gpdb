@@ -7,7 +7,7 @@ DROP TABLE IF EXISTS bigtable;
 
 CREATE LANGUAGE plpython3u;
 
-CREATE RESOURCE GROUP rg1_cpuset_test WITH (memory_limit = 10, cpuset='0');
+CREATE RESOURCE GROUP rg1_cpuset_test WITH (cpuset='0');
 CREATE ROLE role1_cpuset_test RESOURCE GROUP rg1_cpuset_test;
 
 -- check whether the queries running in the specific group on the specific core set
@@ -77,7 +77,7 @@ line = fd.readline()
 fd.close()
 line = line.strip('\n')
 sql = "create resource group " + grp + " with (" \
-	+ "memory_limit=1, cpuset='" + line + "')"
+	+ "cpuset='" + line + "')"
 result = conn.query(sql)
 
 file = "@cgroup_mnt_point@/cpuset/gpdb/1/cpuset.cpus"
@@ -259,9 +259,9 @@ select * from cancel_all;
 -- default group value must be valid
 -- suppose the cores numbered 0 & 1 are available
 SELECT check_rules();
-CREATE RESOURCE GROUP rg1_test_group WITH (memory_limit=10, cpuset='0');
+CREATE RESOURCE GROUP rg1_test_group WITH (cpuset='0');
 SELECT check_rules();
-CREATE RESOURCE GROUP rg2_test_group WITH (memory_limit=10, cpuset='1');
+CREATE RESOURCE GROUP rg2_test_group WITH (cpuset='1');
 SELECT check_rules();
 ALTER RESOURCE GROUP rg1_test_group SET cpu_rate_limit 1;
 SELECT check_rules();
@@ -282,7 +282,7 @@ SELECT check_rules();
 -- negative: simulate DDL fail
 -- create fail
 SELECT gp_inject_fault('create_resource_group_fail', 'error', 1);
-CREATE RESOURCE GROUP rg1_test_group WITH (memory_limit=10, cpuset='0');
+CREATE RESOURCE GROUP rg1_test_group WITH (cpuset='0');
 SELECT groupid, groupname, cpuset
 	FROM gp_toolkit.gp_resgroup_config
 	WHERE cpuset != '-1';

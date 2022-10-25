@@ -1709,23 +1709,13 @@ CREATE VIEW gp_toolkit.gp_resgroup_config AS
          , G.rsgname   AS groupname
          , T1.value    AS concurrency
          , T2.value    AS cpu_rate_limit
-         , T3.value    AS memory_limit
-         , T4.value    AS memory_shared_quota
-         , T5.value    AS memory_spill_ratio
-         , CASE WHEN T6.value IS NULL THEN 'vmtracker'
-                WHEN T6.value='0'     THEN 'vmtracker'
-                WHEN T6.value='1'     THEN 'cgroup'
-                ELSE 'unknown'
-           END         AS memory_auditor
-         , T7.value    AS cpuset
+         , T3.value    AS cpu_shares
+         , T4.value    AS cpuset
     FROM pg_resgroup G
          JOIN pg_resgroupcapability T1 ON G.oid = T1.resgroupid AND T1.reslimittype = 1
          JOIN pg_resgroupcapability T2 ON G.oid = T2.resgroupid AND T2.reslimittype = 2
          JOIN pg_resgroupcapability T3 ON G.oid = T3.resgroupid AND T3.reslimittype = 3
-         JOIN pg_resgroupcapability T4 ON G.oid = T4.resgroupid AND T4.reslimittype = 4
-         JOIN pg_resgroupcapability T5 ON G.oid = T5.resgroupid AND T5.reslimittype = 5
-    LEFT JOIN pg_resgroupcapability T6 ON G.oid = T6.resgroupid AND T6.reslimittype = 6
-    LEFT JOIN pg_resgroupcapability T7 ON G.oid = T7.resgroupid AND T7.reslimittype = 7
+         LEFT JOIN pg_resgroupcapability T4 ON G.oid = T4.resgroupid AND T4.reslimittype = 4
     ;
 
 GRANT SELECT ON gp_toolkit.gp_resgroup_config TO public;
@@ -1763,7 +1753,6 @@ CREATE VIEW gp_toolkit.gp_resgroup_status_per_host AS
           , groupid
           , (json_each(cpu_usage)).key::smallint AS segment_id
           , (json_each(cpu_usage)).value AS cpu
-          , (json_each(memory_usage)).value AS memory
         FROM gp_toolkit.gp_resgroup_status
     )
     SELECT
@@ -1771,12 +1760,6 @@ CREATE VIEW gp_toolkit.gp_resgroup_status_per_host AS
       , s.groupid
       , c.hostname
       , round(avg((s.cpu)::text::numeric), 2) AS cpu
-      , sum((s.memory->'used'            )::text::integer) AS memory_used
-      , sum((s.memory->'available'       )::text::integer) AS memory_available
-      , sum((s.memory->'quota_used'      )::text::integer) AS memory_quota_used
-      , sum((s.memory->'quota_available' )::text::integer) AS memory_quota_available
-      , sum((s.memory->'shared_used'     )::text::integer) AS memory_shared_used
-      , sum((s.memory->'shared_available')::text::integer) AS memory_shared_available
     FROM s
     INNER JOIN pg_catalog.gp_segment_configuration AS c
         ON s.segment_id = c.content
@@ -1805,7 +1788,6 @@ CREATE VIEW gp_toolkit.gp_resgroup_status_per_segment AS
           , groupid
           , (json_each(cpu_usage)).key::smallint AS segment_id
           , (json_each(cpu_usage)).value AS cpu
-          , (json_each(memory_usage)).value AS memory
         FROM gp_toolkit.gp_resgroup_status
     )
     SELECT
@@ -1813,13 +1795,7 @@ CREATE VIEW gp_toolkit.gp_resgroup_status_per_segment AS
       , s.groupid
       , c.hostname
       , s.segment_id
-      , sum((s.cpu                       )::text::numeric) AS cpu
-      , sum((s.memory->'used'            )::text::integer) AS memory_used
-      , sum((s.memory->'available'       )::text::integer) AS memory_available
-      , sum((s.memory->'quota_used'      )::text::integer) AS memory_quota_used
-      , sum((s.memory->'quota_available' )::text::integer) AS memory_quota_available
-      , sum((s.memory->'shared_used'     )::text::integer) AS memory_shared_used
-      , sum((s.memory->'shared_available')::text::integer) AS memory_shared_available
+      , sum((s.cpu)::text::numeric) AS cpu
     FROM s
     INNER JOIN pg_catalog.gp_segment_configuration AS c
         ON s.segment_id = c.content

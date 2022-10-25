@@ -1,7 +1,6 @@
 -- enable resource group and restart cluster.
 -- start_ignore
 ! gpconfig -c gp_resource_group_cpu_limit -v 0.9;
-! gpconfig -c gp_resource_group_memory_limit -v 0.9;
 ! gpconfig -c gp_resource_manager -v group;
 
 -- 40 should be enough for the following cases and some
@@ -12,7 +11,6 @@
 
 show gp_resource_manager;
 show gp_resource_group_cpu_limit;
-show gp_resource_group_memory_limit;
 show max_connections;
 
 -- by default admin_group has concurrency set to -1 which leads to

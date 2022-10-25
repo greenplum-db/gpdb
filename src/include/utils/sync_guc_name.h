@@ -53,8 +53,6 @@
 		"gp_max_packet_size",
 		"gp_max_slices",
 		"gp_motion_slice_noop",
-		"gp_resgroup_memory_policy_auto_fixed_mem",
-		"gp_resgroup_print_operator_memory_limits",
 		"gp_resqueue_memory_policy_auto_fixed_mem",
 		"gp_resqueue_print_operator_memory_limits",
 		"gp_select_invisible",

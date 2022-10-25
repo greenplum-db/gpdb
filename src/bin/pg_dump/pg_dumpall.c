@@ -775,38 +775,27 @@ dumpResGroups(PGconn *conn)
 	int		i_groupname,
 			i_cpu_rate_limit,
 			i_concurrency,
-			i_memory_limit,
-			i_memory_shared_quota,
-			i_memory_spill_ratio,
-			i_memory_auditor,
+			i_cpu_shares,
 			i_cpuset;
 
+	/* RG FIXME: reorder this SQL after we add cpu-shares. */
 	printfPQExpBuffer(buf, "SELECT g.rsgname AS groupname, "
 					  "t1.value AS concurrency, "
 					  "t2.value AS cpu_rate_limit, "
-					  "t3.value AS memory_limit, "
-					  "t4.value AS memory_shared_quota, "
-					  "t5.value AS memory_spill_ratio, "
-					  "t6.value AS memory_auditor, "
-					  "t7.value AS cpuset "
+					  "t3.value AS cpu_shares, "
+					  "t4.value AS cpuset "
 					  "FROM pg_resgroup g "
 					  "     JOIN pg_resgroupcapability t1 ON g.oid = t1.resgroupid AND t1.reslimittype = 1 "
 					  "     JOIN pg_resgroupcapability t2 ON g.oid = t2.resgroupid AND t2.reslimittype = 2 "
 					  "     JOIN pg_resgroupcapability t3 ON g.oid = t3.resgroupid AND t3.reslimittype = 3 "
-					  "     JOIN pg_resgroupcapability t4 ON g.oid = t4.resgroupid AND t4.reslimittype = 4 "
-					  "     JOIN pg_resgroupcapability t5 ON g.oid = t5.resgroupid AND t5.reslimittype = 5 "
-					  "LEFT JOIN pg_resgroupcapability t6 ON g.oid = t6.resgroupid AND t6.reslimittype = 6 "
-					  "LEFT JOIN pg_resgroupcapability t7 ON g.oid = t7.resgroupid AND t7.reslimittype = 7;");
+					  "LEFT JOIN pg_resgroupcapability t4 ON g.oid = t4.resgroupid AND t4.reslimittype = 4;");
 
 	res = executeQuery(conn, buf->data);
 
 	i_groupname = PQfnumber(res, "groupname");
 	i_cpu_rate_limit = PQfnumber(res, "cpu_rate_limit");
 	i_concurrency = PQfnumber(res, "concurrency");
-	i_memory_limit = PQfnumber(res, "memory_limit");
-	i_memory_shared_quota = PQfnumber(res, "memory_shared_quota");
-	i_memory_spill_ratio = PQfnumber(res, "memory_spill_ratio");
-	i_memory_auditor = PQfnumber(res, "memory_auditor");
+	i_cpu_shares = PQfnumber(res, "cpu_shares");
 	i_cpuset = PQfnumber(res, "cpuset");
 
 	if (PQntuples(res) > 0)
@@ -819,28 +808,17 @@ dumpResGroups(PGconn *conn)
 	fprintf(OPF, "ALTER RESOURCE GROUP \"admin_group\" SET cpu_rate_limit 1;\n");
 	fprintf(OPF, "ALTER RESOURCE GROUP \"default_group\" SET cpu_rate_limit 1;\n");
 	fprintf(OPF, "ALTER RESOURCE GROUP \"system_group\" SET cpu_rate_limit 1;\n");
-	fprintf(OPF, "ALTER RESOURCE GROUP \"admin_group\" SET memory_limit 1;\n");
-	fprintf(OPF, "ALTER RESOURCE GROUP \"default_group\" SET memory_limit 1;\n");
-	fprintf(OPF, "ALTER RESOURCE GROUP \"system_group\" SET memory_limit 1;\n");
 
 	for (i = 0; i < PQntuples(res); i++)
 	{
 		const char *groupname;
 		const char *cpu_rate_limit;
 		const char *concurrency;
-		const char *memory_limit;
-		const char *memory_shared_quota;
-		const char *memory_spill_ratio;
-		const char *memory_auditor;
 		const char *cpuset;
 
 		groupname = PQgetvalue(res, i, i_groupname);
 		cpu_rate_limit = PQgetvalue(res, i, i_cpu_rate_limit);
 		concurrency = PQgetvalue(res, i, i_concurrency);
-		memory_limit = PQgetvalue(res, i, i_memory_limit);
-		memory_shared_quota = PQgetvalue(res, i, i_memory_shared_quota);
-		memory_spill_ratio = PQgetvalue(res, i, i_memory_spill_ratio);
-		memory_auditor = PQgetvalue(res, i, i_memory_auditor);
 		cpuset = PQgetvalue(res, i, i_cpuset);
 
 		resetPQExpBuffer(buf);
@@ -859,12 +837,6 @@ dumpResGroups(PGconn *conn)
 			 */
 			appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET concurrency %s;\n",
 							  fmtId(groupname), concurrency);
-			appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET memory_limit %s;\n",
-							  fmtId(groupname), memory_limit);
-			appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET memory_shared_quota %s;\n",
-							  fmtId(groupname), memory_shared_quota);
-			appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET memory_spill_ratio %s;\n",
-							  fmtId(groupname), memory_spill_ratio);
 			if (atoi(cpu_rate_limit) >= 0)
 				appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET cpu_rate_limit %s;\n",
 								  fmtId(groupname), cpu_rate_limit);
@@ -874,22 +846,10 @@ dumpResGroups(PGconn *conn)
 		}
 		else
 		{
-			const char *memory_auditor_name;
 			const char *cpu_prop;
 			char cpu_setting[1024];
 
-			/*
-			 * Possible values of memory_auditor:
-			 * - "1": cgroup;
-			 * - "0": vmtracker;
-			 * - "": not set, e.g. created on an older version which does not
-			 *   support memory_auditor yet, consider it as vmtracker;
-			 */
-			if (strcmp(memory_auditor, "1") == 0)
-				memory_auditor_name = "cgroup";
-			else
-				memory_auditor_name = "vmtracker";
-
+			/* RG FIXME: Add the data of cpu_shares. */
 			if (atoi(cpu_rate_limit) >= 0)
 			{
 				cpu_prop = "cpu_rate_limit";
@@ -902,12 +862,8 @@ dumpResGroups(PGconn *conn)
 			}
 
 			printfPQExpBuffer(buf, "CREATE RESOURCE GROUP %s WITH ("
-							  "concurrency=%s, %s=%s, "
-							  "memory_limit=%s, memory_shared_quota=%s, "
-							  "memory_spill_ratio=%s, memory_auditor=%s);\n",
-							  fmtId(groupname), concurrency, cpu_prop, cpu_setting,
-							  memory_limit, memory_shared_quota,
-							  memory_spill_ratio, memory_auditor_name);
+							  "concurrency=%s, %s=%s);\n",
+							  fmtId(groupname), concurrency, cpu_prop, cpu_setting);
 		}
 
 		fprintf(OPF, "%s", buf->data);

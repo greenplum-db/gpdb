@@ -79,7 +79,6 @@ extern Datum userdata_project(PG_FUNCTION_ARGS);
 /* Resource queue/group support */
 extern Datum checkResourceQueueMemoryLimits(PG_FUNCTION_ARGS);
 extern Datum repeatPalloc(PG_FUNCTION_ARGS);
-extern Datum resGroupPalloc(PG_FUNCTION_ARGS);
 
 /* Gang management test support */
 extern Datum gangRaiseInfo(PG_FUNCTION_ARGS);
@@ -628,35 +627,6 @@ repeatPalloc(PG_FUNCTION_ARGS)
 	int i;
 
 	for (i = 0; i < count; i++)
-		MemoryContextAlloc(TopMemoryContext, size * 1024 * 1024);
-
-	PG_RETURN_INT32(0);
-}
-
-PG_FUNCTION_INFO_V1(resGroupPalloc);
-Datum
-resGroupPalloc(PG_FUNCTION_ARGS)
-{
-	float ratio = PG_GETARG_FLOAT8(0);
-	int memLimit, slotQuota, sharedQuota;
-	int size;
-	int count;
-	int i;
-
-	if (!IsResGroupEnabled())
-		PG_RETURN_INT32(0);
-
-	ResGroupGetMemInfo(&memLimit, &slotQuota, &sharedQuota);
-	size = ceilf(VmemTracker_ConvertVmemChunksToMB(memLimit) * ratio);
-	if (size <= 0)
-		elog(ERROR, "invalid alloc size %d", size);
-
-	count = size / 512;
-	for (i = 0; i < count; i++)
-		MemoryContextAlloc(TopMemoryContext, 512 * 1024 * 1024);
-
-	size %= 512;
-	if (size > 0)
 		MemoryContextAlloc(TopMemoryContext, size * 1024 * 1024);
 
 	PG_RETURN_INT32(0);

@@ -37,7 +37,7 @@
 #include "utils/faultinjector.h"
 #include "utils/resgroup.h"
 #include "utils/resource_manager.h"
-#include "utils/resgroup-ops.h"
+#include "utils/cgroup.h"
 #include "utils/session_state.h"
 #include "utils/typcache.h"
 #include "miscadmin.h"
@@ -265,21 +265,6 @@ CdbDispatchPlan(struct QueryDesc *queryDesc,
 	if (queryDesc->extended_query)
 	{
 		verify_shared_snapshot_ready(gp_command_count);
-	}
-
-	/* In the final stage, add the resource information needed for QE by the resource group */
-	stmt->total_memory_coordinator = 0;
-	stmt->nsegments_coordinator = 0;
-
-	if (IsResGroupEnabled() && gp_resource_group_enable_recalculate_query_mem &&
-		memory_spill_ratio != RESGROUP_FALLBACK_MEMORY_SPILL_RATIO)
-	{
-		/*
-		 * We enable resource group re-calculate the query_mem on QE, and we are not in
-		 * fall back mode (use statement_mem).
-		 */
-		stmt->total_memory_coordinator = ResGroupOps_GetTotalMemory();
-		stmt->nsegments_coordinator = ResGroupGetHostPrimaryCount();
 	}
 
 	cdbdisp_dispatchX(queryDesc, planRequiresTxn, cancelOnError);

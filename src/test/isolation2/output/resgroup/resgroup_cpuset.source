@@ -2,7 +2,7 @@
 CREATE LANGUAGE plpython3u;
 CREATE
 
-CREATE RESOURCE GROUP rg1_cpuset_test WITH (memory_limit = 10, cpuset='0');
+CREATE RESOURCE GROUP rg1_cpuset_test WITH (cpuset='0');
 CREATE
 CREATE ROLE role1_cpuset_test RESOURCE GROUP rg1_cpuset_test;
 CREATE
@@ -195,14 +195,14 @@ SELECT check_rules();
 -------------
  t           
 (1 row)
-CREATE RESOURCE GROUP rg1_test_group WITH (memory_limit=10, cpuset='0');
+CREATE RESOURCE GROUP rg1_test_group WITH (cpuset='0');
 CREATE
 SELECT check_rules();
  check_rules 
 -------------
  t           
 (1 row)
-CREATE RESOURCE GROUP rg2_test_group WITH (memory_limit=10, cpuset='1');
+CREATE RESOURCE GROUP rg2_test_group WITH (cpuset='1');
 CREATE
 SELECT check_rules();
  check_rules 
@@ -270,7 +270,7 @@ SELECT gp_inject_fault('create_resource_group_fail', 'error', 1);
 -----------------
  Success:        
 (1 row)
-CREATE RESOURCE GROUP rg1_test_group WITH (memory_limit=10, cpuset='0');
+CREATE RESOURCE GROUP rg1_test_group WITH (cpuset='0');
 ERROR:  fault triggered, fault name:'create_resource_group_fail' fault type:'error'
 SELECT groupid, groupname, cpuset FROM gp_toolkit.gp_resgroup_config WHERE cpuset != '-1';
  groupid | groupname | cpuset 

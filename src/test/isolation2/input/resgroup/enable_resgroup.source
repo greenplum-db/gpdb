@@ -66,12 +66,3 @@ $$;
 -- very small memory quota for each resgroup slot, correct it.
 0: ALTER RESOURCE GROUP admin_group SET concurrency 2;
 
--- explicitly set memory settings
-0: ALTER RESOURCE GROUP admin_group SET memory_limit 10;
-0: ALTER RESOURCE GROUP default_group SET memory_limit 30;
-0: ALTER RESOURCE GROUP admin_group SET memory_shared_quota 80;
-0: ALTER RESOURCE GROUP default_group SET memory_shared_quota 80;
--- in later cases we will SHOW memory_spill_ratio as first command
--- to verify that it can be correctly loaded even for bypassed commands
-0: ALTER RESOURCE GROUP admin_group SET memory_spill_ratio 10;
-0: ALTER RESOURCE GROUP default_group SET memory_spill_ratio 10;

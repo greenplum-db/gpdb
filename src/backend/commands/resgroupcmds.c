@@ -36,19 +36,14 @@
 #include "utils/datetime.h"
 #include "utils/fmgroids.h"
 #include "utils/resgroup.h"
-#include "utils/resgroup-ops.h"
+#include "utils/cgroup.h"
 #include "utils/resource_manager.h"
 #include "utils/resowner.h"
 #include "utils/syscache.h"
 #include "utils/faultinjector.h"
 
 #define RESGROUP_DEFAULT_CONCURRENCY (20)
-#define RESGROUP_DEFAULT_MEM_SHARED_QUOTA (80)
-#define RESGROUP_DEFAULT_MEM_SPILL_RATIO RESGROUP_FALLBACK_MEMORY_SPILL_RATIO
-#define RESGROUP_DEFAULT_MEMORY_LIMIT RESGROUP_UNLIMITED_MEMORY_LIMIT
-
-#define RESGROUP_DEFAULT_MEM_AUDITOR (RESGROUP_MEMORY_AUDITOR_VMTRACKER)
-#define RESGROUP_INVALID_MEM_AUDITOR (-1)
+#define RESGROUP_DEFAULT_CPU_SHARES (100)
 
 #define RESGROUP_MIN_CONCURRENCY	(0)
 #define RESGROUP_MAX_CONCURRENCY	(MaxConnections)
@@ -56,30 +51,12 @@
 #define RESGROUP_MIN_CPU_RATE_LIMIT	(1)
 #define RESGROUP_MAX_CPU_RATE_LIMIT	(100)
 
-#define RESGROUP_MIN_MEMORY_LIMIT	(0)
-#define RESGROUP_MAX_MEMORY_LIMIT	(100)
-
-#define RESGROUP_MIN_MEMORY_SHARED_QUOTA	(0)
-#define RESGROUP_MAX_MEMORY_SHARED_QUOTA	(100)
-
-#define RESGROUP_MIN_MEMORY_SPILL_RATIO		(0)
-#define RESGROUP_MAX_MEMORY_SPILL_RATIO		(100)
-
-/*
- * The names must be in the same order as ResGroupMemAuditorType.
- */
-static const char *ResGroupMemAuditorName[] =
-{
-	"vmtracker",	// RESGROUP_MEMORY_AUDITOR_VMTRACKER
-	"cgroup"		// RESGROUP_MEMORY_AUDITOR_CGROUP
-};
 
 static int str2Int(const char *str, const char *prop);
 static ResGroupLimitType getResgroupOptionType(const char* defname);
 static ResGroupCap getResgroupOptionValue(DefElem *defel, int type);
 static const char *getResgroupOptionName(ResGroupLimitType type);
 static void checkResgroupCapLimit(ResGroupLimitType type, ResGroupCap value);
-static void checkResgroupCapConflicts(ResGroupCaps *caps);
 static void parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps);
 static void validateCapabilities(Relation rel, Oid groupid, ResGroupCaps *caps, bool newGroup);
 static void insertResgroupCapabilityEntry(Relation rel, Oid groupid, uint16 type, const char *value);
@@ -94,7 +71,6 @@ static void checkAuthIdForDrop(Oid groupId);
 static void createResgroupCallback(XactEvent event, void *arg);
 static void dropResgroupCallback(XactEvent event, void *arg);
 static void alterResgroupCallback(XactEvent event, void *arg);
-static int getResGroupMemAuditor(char *name);
 static bool checkCpusetSyntax(const char *cpuset);
 
 /*
@@ -236,26 +212,24 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 		RegisterXactCallbackOnce(createResgroupCallback, callbackCtx);
 
 		/* Create os dependent part for this resource group */
-		ResGroupOps_CreateGroup(groupid);
-
-		ResGroupOps_SetMemoryLimit(groupid, caps.memLimit);
+		cgroupOpsRoutine->createcgroup(groupid);
 
 		if (caps.cpuRateLimit != CPU_RATE_LIMIT_DISABLED)
 		{
-			ResGroupOps_SetCpuRateLimit(groupid, caps.cpuRateLimit);
+			cgroupOpsRoutine->setcpulimit(groupid, caps.cpuRateLimit);
 		}
 		else if (!CpusetIsEmpty(caps.cpuset))
 		{
 			EnsureCpusetIsAvailable(ERROR);
 
-			ResGroupOps_SetCpuSet(groupid, caps.cpuset);
+			cgroupOpsRoutine->setcpuset(groupid, caps.cpuset);
 			/* reset default group, subtract new group cpu cores */
 			char defaultGroupCpuset[MaxCpuSetLength];
-			ResGroupOps_GetCpuSet(DEFAULT_CPUSET_GROUP_ID,
+			cgroupOpsRoutine->getcpuset(DEFAULT_CPUSET_GROUP_ID,
 								  defaultGroupCpuset,
 								  MaxCpuSetLength);
 			CpusetDifference(defaultGroupCpuset, caps.cpuset, MaxCpuSetLength);
-			ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, defaultGroupCpuset);
+			cgroupOpsRoutine->setcpuset(DEFAULT_CPUSET_GROUP_ID, defaultGroupCpuset);
 		}
 		SIMPLE_FAULT_INJECTOR("create_resource_group_fail");
 	}
@@ -451,20 +425,12 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 			caps.cpuRateLimit = value;
 			SetCpusetEmpty(caps.cpuset, sizeof(caps.cpuset));
 			break;
-		case RESGROUP_LIMIT_TYPE_MEMORY:
-			caps.memLimit = value;
+		case RESGROUP_LIMIT_TYPE_CPU_SHARES:
+			caps.cpuShares = value;
+			SetCpusetEmpty(caps.cpuset, sizeof(caps.cpuset));
 			break;
 		case RESGROUP_LIMIT_TYPE_CONCURRENCY:
 			caps.concurrency = value;
-			break;
-		case RESGROUP_LIMIT_TYPE_MEMORY_SHARED_QUOTA:
-			caps.memSharedQuota = value;
-			break;
-		case RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO:
-			caps.memSpillRatio = value;
-			break;
-		case RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR:
-			caps.memAuditor = value;
 			break;
 		case RESGROUP_LIMIT_TYPE_CPUSET:
 			StrNCpy(caps.cpuset, cpuset, sizeof(caps.cpuset));
@@ -473,8 +439,6 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 		default:
 			break;
 	}
-
-	checkResgroupCapConflicts(&caps);
 
 	validateCapabilities(pg_resgroupcapability_rel, groupid, &caps, false);
 
@@ -599,22 +563,6 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 			case RESGROUP_LIMIT_TYPE_CPU:
 				resgroupCaps->cpuRateLimit = str2Int(value,
 													 getResgroupOptionName(type));
-				break;
-			case RESGROUP_LIMIT_TYPE_MEMORY:
-				resgroupCaps->memLimit = str2Int(value,
-												 getResgroupOptionName(type));
-				break;
-			case RESGROUP_LIMIT_TYPE_MEMORY_SHARED_QUOTA:
-				resgroupCaps->memSharedQuota = str2Int(value,
-													   getResgroupOptionName(type));
-				break;
-			case RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO:
-				resgroupCaps->memSpillRatio = str2Int(value,
-													  getResgroupOptionName(type));
-				break;
-			case RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR:
-				resgroupCaps->memAuditor = str2Int(value,
-												   getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_CPUSET:
 				StrNCpy(resgroupCaps->cpuset, value, sizeof(resgroupCaps->cpuset));
@@ -769,11 +717,6 @@ ResGroupCheckForRole(Oid groupId)
 
 	/* Load current resource group capabilities */
 	GetResGroupCapabilities(pg_resgroupcapability_rel, groupId, &caps);
-	if (caps.memAuditor == RESGROUP_MEMORY_AUDITOR_CGROUP)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("you cannot assign a role to this resource group"),
-				 errdetail("The memory_auditor property for this group is not the default.")));
 
 	heap_close(pg_resgroupcapability_rel, AccessShareLock);
 }
@@ -790,18 +733,12 @@ getResgroupOptionType(const char* defname)
 {
 	if (strcmp(defname, "cpu_rate_limit") == 0)
 		return RESGROUP_LIMIT_TYPE_CPU;
-	else if (strcmp(defname, "memory_limit") == 0)
-		return RESGROUP_LIMIT_TYPE_MEMORY;
 	else if (strcmp(defname, "concurrency") == 0)
 		return RESGROUP_LIMIT_TYPE_CONCURRENCY;
-	else if (strcmp(defname, "memory_shared_quota") == 0)
-		return RESGROUP_LIMIT_TYPE_MEMORY_SHARED_QUOTA;
-	else if (strcmp(defname, "memory_spill_ratio") == 0)
-		return RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO;
-	else if (strcmp(defname, "memory_auditor") == 0)
-		return RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR;
 	else if (strcmp(defname, "cpuset") == 0)
 		return RESGROUP_LIMIT_TYPE_CPUSET;
+	else if (strcmp(defname, "cpu_shares") == 0)
+		return RESGROUP_LIMIT_TYPE_CPU_SHARES;
 	else
 		return RESGROUP_LIMIT_TYPE_UNKNOWN;
 }
@@ -814,15 +751,7 @@ getResgroupOptionValue(DefElem *defel, int type)
 {
 	int64 value;
 
-	if (type == RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR)
-	{
-		char *auditor_name = defGetString(defel);
-		value = getResGroupMemAuditor(auditor_name);
-	}
-	else
-	{
-		value = defGetInt64(defel);
-	}
+	value = defGetInt64(defel);
 
 	if (value < INT_MIN || value > INT_MAX)
 		ereport(ERROR,
@@ -847,16 +776,10 @@ getResgroupOptionName(ResGroupLimitType type)
 			return "concurrency";
 		case RESGROUP_LIMIT_TYPE_CPU:
 			return "cpu_rate_limit";
-		case RESGROUP_LIMIT_TYPE_MEMORY:
-			return "memory_limit";
-		case RESGROUP_LIMIT_TYPE_MEMORY_SHARED_QUOTA:
-			return "memory_shared_quota";
-		case RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO:
-			return "memory_spill_ratio";
-		case RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR:
-			return "memory_auditor";
 		case RESGROUP_LIMIT_TYPE_CPUSET:
 			return "cpuset";
+		case RESGROUP_LIMIT_TYPE_CPU_SHARES:
+			return "cpu_shares";
 		default:
 			return "unknown";
 	}
@@ -889,92 +812,10 @@ checkResgroupCapLimit(ResGroupLimitType type, int value)
 								   RESGROUP_MAX_CPU_RATE_LIMIT)));
 				break;
 
-			case RESGROUP_LIMIT_TYPE_MEMORY:
-				if (value < RESGROUP_MIN_MEMORY_LIMIT ||
-					value > RESGROUP_MAX_MEMORY_LIMIT)
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							errmsg("memory_limit range is [%d, %d]",
-								   RESGROUP_MIN_MEMORY_LIMIT,
-								   RESGROUP_MAX_MEMORY_LIMIT)));
-				break;
-
-			case RESGROUP_LIMIT_TYPE_MEMORY_SHARED_QUOTA:
-				if (value < RESGROUP_MIN_MEMORY_SHARED_QUOTA ||
-					value > RESGROUP_MAX_MEMORY_SHARED_QUOTA)
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							errmsg("memory_shared_quota range is [%d, %d]",
-								   RESGROUP_MIN_MEMORY_SHARED_QUOTA,
-								   RESGROUP_MAX_MEMORY_SHARED_QUOTA)));
-				break;
-
-			case RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO:
-				if (value < RESGROUP_MIN_MEMORY_SPILL_RATIO ||
-					value > RESGROUP_MAX_MEMORY_SPILL_RATIO)
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							errmsg("memory_spill_ratio range is [%d, %d]",
-								   RESGROUP_MIN_MEMORY_SPILL_RATIO,
-								   RESGROUP_MAX_MEMORY_SPILL_RATIO)));
-				break;
-
-			case RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR:
-				if (value != RESGROUP_MEMORY_AUDITOR_VMTRACKER &&
-					value != RESGROUP_MEMORY_AUDITOR_CGROUP)
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							errmsg("memory_auditor should be \"%s\" or \"%s\"",
-								   ResGroupMemAuditorName[RESGROUP_MEMORY_AUDITOR_VMTRACKER],
-								   ResGroupMemAuditorName[RESGROUP_MEMORY_AUDITOR_CGROUP])));
-				break;
-
 			default:
 				Assert(!"unexpected options");
 				break;
 		}
-}
-
-/*
- * Check conflict settings in caps.
- */
-static void
-checkResgroupCapConflicts(ResGroupCaps *caps)
-{
-	/*
-	 * When memory_limit is unlimited the memory_spill_ratio must be set to
-	 * 'fallback' mode to use the statement_mem.
-	 */
-	if (caps->memLimit == RESGROUP_UNLIMITED_MEMORY_LIMIT &&
-		caps->memSpillRatio != RESGROUP_FALLBACK_MEMORY_SPILL_RATIO)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("when memory_limit is unlimited memory_spill_ratio must be set to %d",
-						RESGROUP_FALLBACK_MEMORY_SPILL_RATIO)));
-
-	/*
-	 * When memory_auditor is cgroup the concurrency must be 0.
-	 */
-	if (caps->memAuditor == RESGROUP_MEMORY_AUDITOR_CGROUP &&
-		caps->concurrency != 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("resource group concurrency must be 0 when group memory_auditor is %s",
-					ResGroupMemAuditorName[RESGROUP_MEMORY_AUDITOR_CGROUP])));
-
-	/*
-	 * The cgroup memory_auditor should not be used without a properly
-	 * configured cgroup memory directory.
-	 */
-	if (caps->memAuditor == RESGROUP_MEMORY_AUDITOR_CGROUP &&
-		!gp_resource_group_enable_cgroup_memory)
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_GP_FEATURE_NOT_CONFIGURED),
-				 errmsg("cgroup is not properly configured for the 'cgroup' memory auditor"),
-				 errhint("Extra cgroup configurations are required to enable this feature, "
-						 "please refer to the Greenplum Documentation for details")));
-	}
 }
 
 /*
@@ -1014,6 +855,7 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 			checkCpusetSyntax(cpuset);
 			StrNCpy(caps->cpuset, cpuset, sizeof(caps->cpuset));
 			caps->cpuRateLimit = CPU_RATE_LIMIT_DISABLED;
+			caps->cpuShares = CPU_SHARES_DISABLED;
 		}
 		else 
 		{
@@ -1029,17 +871,9 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 					caps->cpuRateLimit = value;
 					SetCpusetEmpty(caps->cpuset, sizeof(caps->cpuset));
 					break;
-				case RESGROUP_LIMIT_TYPE_MEMORY:
-					caps->memLimit = value;
-					break;
-				case RESGROUP_LIMIT_TYPE_MEMORY_SHARED_QUOTA:
-					caps->memSharedQuota = value;
-					break;
-				case RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO:
-					caps->memSpillRatio = value;
-					break;
-				case RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR:
-					caps->memAuditor = value;
+				case RESGROUP_LIMIT_TYPE_CPU_SHARES:
+					caps->cpuShares = value;
+					SetCpusetEmpty(caps->cpuset, sizeof(caps->cpuset));
 					break;
 				default:
 					break;
@@ -1065,19 +899,8 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_CONCURRENCY)))
 		caps->concurrency = RESGROUP_DEFAULT_CONCURRENCY;
 
-	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_MEMORY)))
-		caps->memLimit = RESGROUP_DEFAULT_MEMORY_LIMIT;
-
-	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_MEMORY_SHARED_QUOTA)))
-		caps->memSharedQuota = RESGROUP_DEFAULT_MEM_SHARED_QUOTA;
-
-	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO)))
-		caps->memSpillRatio = RESGROUP_DEFAULT_MEM_SPILL_RATIO;
-
-	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR)))
-		caps->memAuditor = RESGROUP_DEFAULT_MEM_AUDITOR;
-
-	checkResgroupCapConflicts(caps);
+	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_CPU_SHARES)))
+		caps->cpuShares = RESGROUP_DEFAULT_CPU_SHARES;
 }
 
 /*
@@ -1157,21 +980,9 @@ insertResgroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *caps)
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_CPU, value);
 
-	snprintf(value, sizeof(value), "%d", caps->memLimit);
+	snprintf(value, sizeof(value), "%d", caps->cpuShares);
 	insertResgroupCapabilityEntry(rel, groupId,
-								  RESGROUP_LIMIT_TYPE_MEMORY, value);
-
-	snprintf(value, sizeof(value), "%d", caps->memSharedQuota);
-	insertResgroupCapabilityEntry(rel, groupId,
-								  RESGROUP_LIMIT_TYPE_MEMORY_SHARED_QUOTA, value);
-
-	snprintf(value, sizeof(value), "%d", caps->memSpillRatio);
-	insertResgroupCapabilityEntry(rel, groupId,
-								  RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO, value);
-
-	snprintf(value, sizeof(value), "%d", caps->memAuditor);
-	insertResgroupCapabilityEntry(rel, groupId,
-								  RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR, value);
+								  RESGROUP_LIMIT_TYPE_CPU_SHARES, value);
 
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_CPUSET, caps->cpuset);
@@ -1274,7 +1085,6 @@ validateCapabilities(Relation rel,
 	HeapTuple tuple;
 	SysScanDesc sscan;
 	int totalCpu = caps->cpuRateLimit;
-	int totalMem = caps->memLimit;
 	char cpusetAll[MaxCpuSetLength] = {0};
 	char cpusetMissing[MaxCpuSetLength] = {0};
 	Bitmapset *bmsCurrent = NULL;
@@ -1294,7 +1104,7 @@ validateCapabilities(Relation rel,
 		Bitmapset *bmsAll = NULL;
 
 		/* Get all available cores */
-		ResGroupOps_GetCpuSet(RESGROUP_ROOT_ID,
+		cgroupOpsRoutine->getcpuset(CGROUP_ROOT_ID,
 							  cpusetAll,
 							  MaxCpuSetLength);
 		bmsAll = CpusetToBitset(cpusetAll, MaxCpuSetLength);
@@ -1369,16 +1179,11 @@ validateCapabilities(Relation rel,
 								   RESGROUP_MAX_CPU_RATE_LIMIT)));
 			}
 		}
-		else if (reslimittype == RESGROUP_LIMIT_TYPE_MEMORY)
+		if (reslimittype == RESGROUP_LIMIT_TYPE_CPU_SHARES)
 		{
+			/* RG FIXME: validate cpu_shares */
 			valueStr = TextDatumGetCString(valueDatum);
 			value = str2Int(valueStr, getResgroupOptionName(reslimittype));
-			totalMem += value;
-			if (totalMem > RESGROUP_MAX_MEMORY_LIMIT)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						errmsg("total memory_limit exceeded the limit of %d",
-							   RESGROUP_MAX_MEMORY_LIMIT)));
 		}
 		else if (reslimittype == RESGROUP_LIMIT_TYPE_CPUSET)
 		{
@@ -1525,23 +1330,6 @@ str2Int(const char *str, const char *prop)
 				errmsg("%s requires a numeric value", prop)));
 
 	return floor(val);
-}
-
-/*
- * Get memory auditor from auditor name.
- */
-static int
-getResGroupMemAuditor(char *name)
-{
-	int index;
-
-	for (index = 0; index < RESGROUP_MEMORY_AUDITOR_COUNT; index ++)
-	{
-		if (strcmp(ResGroupMemAuditorName[index], name) == 0)
-			return index;
-	}
-
-	return RESGROUP_INVALID_MEM_AUDITOR;
 }
 
 /*
