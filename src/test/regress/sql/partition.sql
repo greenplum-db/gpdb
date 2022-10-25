@@ -3853,3 +3853,209 @@ DROP TABLE expanded_parent2;
 DROP TABLE unexpanded_parent;
 DROP TABLE unexpanded_attach;
 DROP TABLE unexpanded_attach2;
+
+--
+-- Verify inheritance behavior of new partition child using various syntax
+--
+-- set owner for partition root (should be inherited except for ATTACH, EXCHANGE)
+CREATE ROLE part_inherit_role CREATEROLE;
+CREATE ROLE part_inherit_other_role IN ROLE part_inherit_role;
+CREATE ROLE part_inherit_priv_role;
+CREATE ROLE part_inherit_attach_priv_role;
+CREATE ROLE part_inherit_exchange_out_priv_role;
+SET ROLE part_inherit_role;
+
+CREATE TABLE part_inherit (
+    a int,
+    b int,
+-- non-partition constraint should be inherited except for ATTACH, EXCHANGE
+    CONSTRAINT con1 CHECK (a >= 0)
+)
+PARTITION BY RANGE (a)
+SUBPARTITION BY RANGE (b)
+SUBPARTITION TEMPLATE
+(SUBPARTITION l2_child START(10100) END(10200))
+(DEFAULT PARTITION l1_default,
+       PARTITION l1_child1 START (0) END (100),
+       PARTITION l1_to_split START (100) END (200),
+       PARTITION l1_to_exchange START (200) END (300))
+--AM and reloption should be inherited except for ATTACH, EXCHANGE
+WITH (appendonly = TRUE, compresslevel = 7);
+
+-- Set more properties for the root.
+-- index are inherited 
+CREATE INDEX part_inherit_i on part_inherit(a);
+-- privileges are inherited except for ATTACH, EXCHANGE
+GRANT UPDATE ON part_inherit TO part_inherit_priv_role;
+-- triggers are inherited except for subpartitions 
+-- FIXME: In 6X we used to not inherit triggers at all, in 7X we start to inherit
+-- trigger like the upstream, but the subpartitions created from the subpartition 
+-- template still don't inherit the triggers. We should fix that.
+CREATE FUNCTION part_inherit_trig() RETURNS TRIGGER LANGUAGE plpgsql
+  AS $$ BEGIN RETURN NULL; END $$;
+CREATE TRIGGER part_inherit_tg AFTER INSERT ON part_inherit
+  FOR EACH ROW EXECUTE FUNCTION part_inherit_trig();
+-- rules are not inherited
+CREATE RULE part_inherit_rule AS ON UPDATE TO part_inherit DO INSERT INTO part_inherit values(1);
+-- row-level security policies are not inherited
+ALTER TABLE part_inherit ENABLE ROW LEVEL SECURITY;
+
+-- Check the current status 
+SELECT c.relname,
+        c.reloptions,
+        a.amname as am,
+        c.relhasindex as hasindex,
+        r.rolname as owner,
+        c.relacl as acl,
+        c.relchecks as numchecks,
+        c.relhasrules as hasrules,
+        c.relhastriggers as hastriggers,
+        c.relrowsecurity as rowsecurity
+FROM pg_class c join pg_roles r on c.relowner = r.oid
+        join pg_am a on c.relam = a.oid
+WHERE c.relname LIKE 'part_inherit%' AND 
+        c.relkind NOT IN ('i', 'I');
+
+-- Now create child partitions in various forms 
+
+-- set an alternative role
+SET ROLE part_inherit_other_role;
+
+-- CREATE TABLE PARTITION OF
+CREATE TABLE part_inherit_partof PARTITION OF part_inherit FOR VALUES FROM (300) TO (400);
+
+SELECT c.relname,
+        c.reloptions,
+        a.amname as am,
+        c.relhasindex as hasindex,
+        r.rolname as owner,
+        c.relacl as acl,
+        c.relchecks as numchecks,
+        c.relhasrules as hasrules,
+        c.relhastriggers as hastriggers,
+        c.relrowsecurity as rowsecurity
+FROM pg_class c join pg_roles r on c.relowner = r.oid
+        join pg_am a on c.relam = a.oid
+WHERE c.relname = 'part_inherit_partof';
+
+-- Now create child partitions in various forms 
+-- ATTACH PARTITION
+-- error if the partition-to-be doesn't have the same constraint as the parent.
+CREATE TABLE part_inherit_attach(a int, b int);
+ALTER TABLE part_inherit ATTACH PARTITION part_inherit_attach FOR VALUES FROM (400) TO (500);
+DROP TABLE part_inherit_attach;
+-- good case: have the same constraint as parent. Can have other constraint too.
+CREATE TABLE part_inherit_attach(a int, b int, CONSTRAINT con1 CHECK (a>=0), CONSTRAINT con2 CHECK (b>=0));
+-- reloptions and AM ('heap' which is different than the future parent) will be kept
+ALTER TABLE part_inherit_attach SET (fillfactor=30);
+-- privilege will be kept
+GRANT UPDATE ON part_inherit_attach TO part_inherit_attach_priv_role;
+-- do the attach
+ALTER TABLE part_inherit ATTACH PARTITION part_inherit_attach FOR VALUES FROM (400) TO (500);
+
+SELECT c.relname,
+        c.reloptions,
+        a.amname as am,
+        c.relhasindex as hasindex,
+        r.rolname as owner,
+        c.relacl as acl,
+        c.relchecks as numchecks,
+        c.relhasrules as hasrules,
+        c.relhastriggers as hastriggers,
+        c.relrowsecurity as rowsecurity
+FROM pg_class c join pg_roles r on c.relowner = r.oid
+        join pg_am a on c.relam = a.oid
+WHERE c.relname = 'part_inherit_attach';
+
+
+-- ADD PARTITION
+ALTER TABLE part_inherit ADD PARTITION added START(500) END(600);
+
+SELECT c.relname,
+        c.reloptions,
+        a.amname as am,
+        c.relhasindex as hasindex,
+        r.rolname as owner,
+        c.relacl as acl,
+        c.relchecks as numchecks,
+        c.relhasrules as hasrules,
+        c.relhastriggers as hastriggers,
+        c.relrowsecurity as rowsecurity
+FROM pg_class c join pg_roles r on c.relowner = r.oid
+        join pg_am a on c.relam = a.oid
+WHERE c.relname LIKE 'part_inherit_1_prt_added%' AND 
+        c.relkind NOT IN ('i', 'I');
+
+-- EXCHANGE PARTITION - same behavior as ATTACH PARTITION
+-- error if the partition-to-be doesn't have the same constraint as the parent.
+CREATE TABLE part_inherit_exchange_out(a int, b int);
+ALTER TABLE part_inherit_1_prt_l1_to_exchange EXCHANGE PARTITION l2_child WITH TABLE part_inherit_exchange_out;
+DROP TABLE part_inherit_exchange_out;
+-- good case: have the same constraint as parent. Can have other constraint too.
+CREATE TABLE part_inherit_exchange_out(a int, b int, CONSTRAINT con1 CHECK (a>=0), CONSTRAINT con2 CHECK (b>=0));
+-- reloptions and AM ('heap' which is different than the future parent) will be kept
+ALTER TABLE part_inherit_exchange_out SET (fillfactor=30);
+-- privilege will be kept
+GRANT UPDATE ON part_inherit_exchange_out TO part_inherit_exchange_out_priv_role;
+-- do the exchange
+ALTER TABLE part_inherit_1_prt_l1_to_exchange EXCHANGE PARTITION l2_child WITH TABLE part_inherit_exchange_out;
+
+SELECT c.relname,
+        c.reloptions,
+        a.amname as am,
+        c.relhasindex as hasindex,
+        r.rolname as owner,
+        c.relacl as acl,
+        c.relchecks as numchecks,
+        c.relhasrules as hasrules,
+        c.relhastriggers as hastriggers,
+        c.relrowsecurity as rowsecurity
+FROM pg_class c join pg_roles r on c.relowner = r.oid
+        join pg_am a on c.relam = a.oid
+WHERE (c.relname LIKE 'part_inherit_1_prt_l1_to_exchange%' OR c.relname = 'part_inherit_exchange_out')
+	AND c.relkind NOT IN ('i', 'I');
+
+-- SPLIT PARTITION
+ALTER TABLE part_inherit_1_prt_l1_to_split SPLIT PARTITION l2_child AT (10150) INTO (PARTITION split1, PARTITION split2);
+
+SELECT c.relname,
+        c.reloptions,
+        a.amname as am,
+        c.relhasindex as hasindex,
+        r.rolname as owner,
+        c.relacl as acl,
+        c.relchecks as numchecks,
+        c.relhasrules as hasrules,
+        c.relhastriggers as hastriggers,
+        c.relrowsecurity as rowsecurity
+FROM pg_class c join pg_roles r on c.relowner = r.oid
+        join pg_am a on c.relam = a.oid
+WHERE c.relname LIKE 'part_inherit_1_prt_l1_to_split%' AND 
+        c.relkind NOT IN ('i', 'I');
+
+-- Now print everything for comparison
+SELECT c.relname,
+        c.reloptions,
+        a.amname as am,
+        c.relhasindex as hasindex,
+        r.rolname as owner,
+        c.relacl as acl,
+        c.relchecks as numchecks,
+        c.relhasrules as hasrules,
+        c.relhastriggers as hastriggers,
+        c.relrowsecurity as rowsecurity
+FROM pg_class c join pg_roles r on c.relowner = r.oid
+        join pg_am a on c.relam = a.oid
+WHERE c.relname LIKE 'part_inherit%' AND 
+        c.relkind NOT IN ('i', 'I');
+
+RESET ROLE;
+
+DROP TABLE part_inherit;
+DROP FUNCTION part_inherit_trig CASCADE;
+DROP TABLE part_inherit_exchange_out;
+DROP ROLE part_inherit_role;
+DROP ROLE part_inherit_other_role;
+DROP ROLE part_inherit_priv_role;
+DROP ROLE part_inherit_attach_priv_role;
+DROP ROLE part_inherit_exchange_out_priv_role;
