@@ -18,6 +18,8 @@
 # required setup steps
 test: test_setup
 
+test: pg_dump_binary_upgrade
+
 test: gp_dispatch_keepalives
 
 # copy command
