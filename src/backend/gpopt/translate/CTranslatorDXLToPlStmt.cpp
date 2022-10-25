@@ -3260,9 +3260,7 @@ setPlanIdForChildNodes(Plan *plan, ULONG diff_plannode_id)
 //
 //---------------------------------------------------------------------------
 Plan *
-CTranslatorDXLToPlStmt::TranslateDXLProjectSet(
-	const CDXLNode *result_dxlnode, CDXLTranslateContext *output_context,
-	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
+CTranslatorDXLToPlStmt::TranslateDXLProjectSet(const CDXLNode *result_dxlnode)
 {
 	// GPDB_12_MERGE_FIXME: had we generated a DXLProjectSet in ORCA we wouldn't
 	// have needed to be defensive here...
@@ -3353,9 +3351,14 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	SetParamIds(plan);
 	PathTarget *complete_result_pathtarget =
 		make_pathtarget_from_tlist(plan->targetlist);
+
+	// Split given PathTarget into multiple levels to position SRFs safely
 	split_pathtarget_at_srfs(nullptr, complete_result_pathtarget, nullptr,
 							 &targets_with_srf, &targets_with_srf_bool);
 
+	// If the PathTarget does not contain any set returning functions then
+	// split_pathtarget_at_srfs method will return the same PathTarget back.
+	// In this case a ProjectSet node is not required.
 	if (1 == list_length(targets_with_srf))
 	{
 		result->plan.lefttree = child_plan;
@@ -3388,8 +3391,7 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 		list_cell_pos = list_cell_pos + 1;
 		List *target_list_entry =
 			make_tlist_from_pathtarget((PathTarget *) lfirst(lc));
-		Plan *temp_plan_project_set = TranslateDXLProjectSet(
-			result_dxlnode, output_context, ctxt_translation_prev_siblings);
+		Plan *temp_plan_project_set = TranslateDXLProjectSet(result_dxlnode);
 		temp_plan_project_set->targetlist = target_list_entry;
 		temp_plan_project_set->qual = plan->qual;
 

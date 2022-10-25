@@ -5,6 +5,38 @@
 -- show version
 SELECT count(*) from gp_opt_version();
 
+CREATE FUNCTION sub(integer, integer) RETURNS integer
+AS 'select $1 - $2;'
+    LANGUAGE SQL
+    IMMUTABLE
+    RETURNS NULL ON NULL INPUT;
+explain verbose select sub(6,4);
+explain verbose select generate_series(1,4) as x;
+select generate_series(1,4) as x;
+explain verbose select abs(abs(-10));
+explain verbose select abs(generate_series(-5,-1)) as absolute;
+select abs(generate_series(-5,-1)) as absolute;
+explain verbose select abs(abs(-10)), abs(generate_series(-5,-1));
+select abs(abs(-10)) as x, abs(generate_series(-5,-1)) as y;
+explain verbose select generate_series(1,4)+1 as output;
+select generate_series(1,4)+1 as output;
+explain verbose select generate_series(generate_series(1,3),4);
+select generate_series(generate_series(1,3),4) as output;
+explain verbose select generate_series(generate_series(1,2)+1,4) as output;
+select generate_series(generate_series(1,2)+1,4) as output;
+explain verbose select generate_series(generate_series(1,2),4)+1 as output;
+select generate_series(generate_series(1,2),4)+1 as output;
+explain verbose select generate_series(generate_series(1,2)+1,4)+1 as output;
+select generate_series(generate_series(1,2)+1,4)+1 as output;
+create table test_srf(a int,b int,c int) distributed by (a);
+insert into test_srf values(2,2,2);
+insert into test_srf values(3,2,2);
+explain verbose select generate_series(1,a) as output,b,c from test_srf;
+select generate_series(1,a) as output,b,c from test_srf;
+explain verbose select generate_series(1,a+1),b+generate_series(1,4),c from test_srf;
+select generate_series(1,a+1),b+generate_series(1,4),c from test_srf;
+drop function sub;
+drop table if exists test_srf;
 -- Mask out Log & timestamp for orca message that has feature not supported.
 -- start_matchsubs
 -- m/^LOG.*\"Feature/
