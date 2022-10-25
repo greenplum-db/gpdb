@@ -224,6 +224,7 @@ double		gp_resource_group_memory_limit;
 bool		gp_resource_group_bypass;
 bool		gp_resource_group_cpu_ceiling_enforcement;
 bool		gp_resource_group_enable_recalculate_query_mem;
+bool		gp_resource_group_enable_cgroup_version_two;
 
 /* Metrics collector debug GUC */
 bool		vmem_process_interrupt = false;
@@ -2772,6 +2773,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+		{"gp_resource_group_enable_cgroup_version_two", PGC_POSTMASTER, RESOURCES,
+			gettext_noop("Enable linux cgroup version 2"),
+			NULL
+		},
+		&gp_resource_group_enable_cgroup_version_two,
+		false, NULL, NULL
+	},
+
+	{
 		{"stats_queue_level", PGC_SUSET, STATS_COLLECTOR,
 			gettext_noop("Collects resource queue-level statistics on database activity."),
 			NULL
@@ -3042,7 +3052,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			NULL
 		},
 		&gp_resource_group_cpu_priority,
-		10, 1, 256,
+		1, 1, 50,
 		NULL, NULL, NULL
 	},
 

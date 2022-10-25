@@ -75,7 +75,7 @@
 #include "utils/workfile_mgr.h"
 #include "utils/faultinjector.h"
 #include "utils/resource_manager.h"
-#include "utils/resgroup-ops.h"
+#include "utils/cgroup.h"
 
 #include "catalog/pg_statistic.h"
 #include "catalog/pg_class.h"
@@ -275,7 +275,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 					should_skip_operator_memory_assign = false;
 
 					/* Get total system memory on the QE in MB */
-					int 	total_memory_segment = ResGroupOps_GetTotalMemory();
+					int 	total_memory_segment = getTotalMemory();
 					int 	nsegments_segment = ResGroupGetHostPrimaryCount();
 					uint64	coordinator_query_mem = queryDesc->plannedstmt->query_mem;
 

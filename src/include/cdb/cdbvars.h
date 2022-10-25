@@ -676,6 +676,9 @@ extern bool coredump_on_memerror;
 /* Greenplum resource group query_mem re-calculate on QE */
 extern bool gp_resource_group_enable_recalculate_query_mem;
 
+/* Greenplum linux cgroup version, is enable version 2 */
+extern bool gp_resource_group_enable_cgroup_version_two;
+
 /*
  * Autostats feature, whether or not to to automatically run ANALYZE after 
  * insert/delete/update/ctas or after ctas/copy/insert in case the target

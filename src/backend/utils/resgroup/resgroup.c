@@ -68,11 +68,12 @@
 #include "utils/builtins.h"
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
-#include "utils/resgroup-ops.h"
+#include "utils/cgroup.h"
 #include "utils/resgroup.h"
 #include "utils/resource_manager.h"
 #include "utils/session_state.h"
 #include "utils/vmem_tracker.h"
+#include "utils/cgroup-ops-v1.h"
 
 #define InvalidSlotId	(-1)
 #define RESGROUP_MAX_SLOTS	(MaxConnections)
@@ -537,6 +538,28 @@ AllocResGroupEntry(Oid groupId, const ResGroupCaps *caps)
 	LWLockRelease(ResGroupLock);
 }
 
+void
+initCgroup(void)
+{
+#ifdef __linux__
+	if (!gp_resource_group_enable_cgroup_version_two)
+	{
+		cgroupOpsRoutine = get_group_routine_alpha();
+		cgroupSystemInfo = get_cgroup_sysinfo_alpha();
+	}
+#else
+	elog(ERROR, "The resource group is not support on your operating system.");
+#endif
+
+	bool probe_result = cgroupOpsRoutine->probecgroup();
+	if (!probe_result)
+		elog(ERROR, "The control group is not well configured, please check your"
+					"system configuration.");
+
+	cgroupOpsRoutine->checkcgroup();
+	cgroupOpsRoutine->initcgroup();
+}
+
 /*
  * Load the resource groups in shared memory. Note this
  * can only be done after enough setup has been done. This uses
@@ -599,7 +622,7 @@ InitResGroups(void)
 	if (gp_resource_group_enable_cgroup_cpuset)
 	{
 		/* Get cpuset from cpuset/gpdb, and transform it into bitset */
-		ResGroupOps_GetCpuSet(RESGROUP_ROOT_ID, cpuset, MaxCpuSetLength);
+		cgroupOpsRoutine->getcpuset(CGROUP_ROOT_ID, cpuset, MaxCpuSetLength);
 		bmsUnused = CpusetToBitset(cpuset, MaxCpuSetLength);
 		/* get the minimum core number, in case of the zero core is not exist */
 		defaultCore = bms_next_member(bmsUnused, -1);
@@ -620,12 +643,12 @@ InitResGroups(void)
 		group = createGroup(groupId, &caps);
 		Assert(group != NULL);
 
-		ResGroupOps_CreateGroup(groupId);
-		ResGroupOps_SetMemoryLimit(groupId, caps.memLimit);
+		cgroupOpsRoutine->createcgroup(groupId);
+		cgroupOpsRoutine->setmemorylimit(groupId, caps.memLimit);
 		
 		if (caps.cpuRateLimit != CPU_RATE_LIMIT_DISABLED)
 		{
-			ResGroupOps_SetCpuRateLimit(groupId, caps.cpuRateLimit);
+			cgroupOpsRoutine->setcpulimit(groupId, caps.cpuRateLimit);
 		}
 		else
 		{
@@ -655,7 +678,7 @@ InitResGroups(void)
 				 * write cpus to corresponding file
 				 * if all the cores are available
 				 */
-				ResGroupOps_SetCpuSet(groupId, caps.cpuset);
+				cgroupOpsRoutine->setcpuset(groupId, caps.cpuset);
 				bmsUnused = bms_del_members(bmsUnused, bmsCurrent);
 			}
 			else
@@ -668,7 +691,7 @@ InitResGroups(void)
 				 * can startup, then DBA can fix it
 				 */
 				snprintf(cpuset, MaxCpuSetLength, "%d", defaultCore);
-				ResGroupOps_SetCpuSet(groupId, cpuset);
+				cgroupOpsRoutine->setcpuset(groupId, cpuset);
 				BitsetToCpuset(bmsMissing, cpusetMissing, MaxCpuSetLength);
 				ereport(WARNING,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
@@ -706,7 +729,7 @@ InitResGroups(void)
 		Assert(cpuset[0]);
 		Assert(!CpusetIsEmpty(cpuset));
 
-		ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, cpuset);
+		cgroupOpsRoutine->setcpuset(DEFAULT_CPUSET_GROUP_ID, cpuset);
 	}
 
 	pResGroupControl->loaded = true;
@@ -803,14 +826,14 @@ ResGroupDropFinish(const ResourceGroupCallbackContext *callbackCtx,
 				{
 					/* reset default group, add cpu cores to it */
 					char cpuset[MaxCpuSetLength];
-					ResGroupOps_GetCpuSet(DEFAULT_CPUSET_GROUP_ID,
+					cgroupOpsRoutine->getcpuset(DEFAULT_CPUSET_GROUP_ID,
 										  cpuset, MaxCpuSetLength);
 					CpusetUnion(cpuset, group->caps.cpuset, MaxCpuSetLength);
-					ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, cpuset);
+					cgroupOpsRoutine->setcpuset(DEFAULT_CPUSET_GROUP_ID, cpuset);
 				}
 			}
 
-			ResGroupOps_DestroyGroup(callbackCtx->groupid, migrate);
+			cgroupOpsRoutine->destroycgroup(callbackCtx->groupid, migrate);
 		}
 	}
 	PG_CATCH();
@@ -848,20 +871,20 @@ ResGroupCreateOnAbort(const ResourceGroupCallbackContext *callbackCtx)
 		savedInterruptHoldoffCount = InterruptHoldoffCount;
 		removeGroup(callbackCtx->groupid);
 		/* remove the os dependent part for this resource group */
-		ResGroupOps_DestroyGroup(callbackCtx->groupid, true);
+		cgroupOpsRoutine->destroycgroup(callbackCtx->groupid, true);
 
 		if (!CpusetIsEmpty(callbackCtx->caps.cpuset) &&
 			gp_resource_group_enable_cgroup_cpuset)
 		{
 			/* return cpu cores to default group */
 			char defaultGroupCpuset[MaxCpuSetLength];
-			ResGroupOps_GetCpuSet(DEFAULT_CPUSET_GROUP_ID,
+			cgroupOpsRoutine->getcpuset(DEFAULT_CPUSET_GROUP_ID,
 								  defaultGroupCpuset,
 								  MaxCpuSetLength);
 			CpusetUnion(defaultGroupCpuset,
 						callbackCtx->caps.cpuset,
 						MaxCpuSetLength);
-			ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, defaultGroupCpuset);
+			cgroupOpsRoutine->setcpuset(DEFAULT_CPUSET_GROUP_ID, defaultGroupCpuset);
 		}
 	}
 	PG_CATCH();
@@ -901,13 +924,13 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 
 		if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CPU)
 		{
-			ResGroupOps_SetCpuRateLimit(callbackCtx->groupid,
+			cgroupOpsRoutine->setcpulimit(callbackCtx->groupid,
 										callbackCtx->caps.cpuRateLimit);
 		}
 		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CPUSET)
 		{
 			if (gp_resource_group_enable_cgroup_cpuset)
-				ResGroupOps_SetCpuSet(callbackCtx->groupid,
+				cgroupOpsRoutine->setcpuset(callbackCtx->groupid,
 									  callbackCtx->caps.cpuset);
 		}
 		else if (callbackCtx->limittype != RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO)
@@ -928,7 +951,7 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 		{
 			char defaultCpusetGroup[MaxCpuSetLength];
 			/* get current default group value */
-			ResGroupOps_GetCpuSet(DEFAULT_CPUSET_GROUP_ID,
+			cgroupOpsRoutine->getcpuset(DEFAULT_CPUSET_GROUP_ID,
 								  defaultCpusetGroup,
 								  MaxCpuSetLength);
 			/* Add old value to default group
@@ -939,7 +962,7 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 			CpusetDifference(defaultCpusetGroup,
 							callbackCtx->caps.cpuset,
 							MaxCpuSetLength);
-			ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, defaultCpusetGroup);
+			cgroupOpsRoutine->setcpuset(DEFAULT_CPUSET_GROUP_ID, defaultCpusetGroup);
 		}
 	}
 	PG_CATCH();
@@ -1833,7 +1856,7 @@ decideResGroup(ResGroupInfo *pGroupInfo)
 
 	if (!group)
 	{
-		groupId = superuser() ? ADMINRESGROUP_OID : DEFAULTRESGROUP_OID;
+		groupId = superuser() ? GPDB_ADMIN_CGROUP : GPDB_DEFAULT_CGROUP;
 		group = groupHashFind(groupId, false);
 	}
 
@@ -2113,7 +2136,7 @@ decideTotalChunks(int32 *totalChunks, int32 *chunkSizeInBits)
 	nsegments = Gp_role == GP_ROLE_EXECUTE ? host_primary_segment_count : pResGroupControl->segmentsOnMaster;
 	Assert(nsegments > 0);
 
-	tmptotalChunks = ResGroupOps_GetTotalMemory() * gp_resource_group_memory_limit / nsegments;
+	tmptotalChunks = getTotalMemory() * gp_resource_group_memory_limit / nsegments;
 
 	/*
 	 * If vmem is larger than 16GB (i.e., 16K MB), we make the chunks bigger
@@ -2636,9 +2659,8 @@ AssignResGroupOnMaster(void)
 		self->bypassMemoryLimit = self->memUsage + RESGROUP_BYPASS_MODE_MEMORY_LIMIT_ON_QD;
 
 		/* Add into cgroup */
-		ResGroupOps_AssignGroup(bypassedGroup->groupId,
-								&bypassedGroup->caps,
-								MyProcPid);
+		cgroupOpsRoutine->attachcgroup(bypassedGroup->groupId, MyProcPid,
+									  bypassedGroup->caps.cpuRateLimit == CPU_RATE_LIMIT_DISABLED);
 
 		groupSetMemorySpillRatio(&bypassedGroup->caps);
 		return;
@@ -2666,7 +2688,8 @@ AssignResGroupOnMaster(void)
 		SIMPLE_FAULT_INJECTOR("resgroup_assigned_on_master");
 
 		/* Add into cgroup */
-		ResGroupOps_AssignGroup(self->groupId, &(self->caps), MyProcPid);
+		cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
+									  self->caps.cpuRateLimit == CPU_RATE_LIMIT_DISABLED);
 
 		/* Set spill guc */
 		groupSetMemorySpillRatio(&slot->caps);
@@ -2850,11 +2873,12 @@ SwitchResGroupOnSegment(const char *buf, int len)
 
 	LWLockRelease(ResGroupLock);
 
-	/* finally we can say we are in a valid resgroup */
+	/* finally, we can say we are in a valid resgroup */
 	Assert(selfIsAssigned());
 
 	/* Add into cgroup */
-	ResGroupOps_AssignGroup(self->groupId, &(self->caps), MyProcPid);
+	cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
+								  self->caps.cpuRateLimit == CPU_RATE_LIMIT_DISABLED);
 }
 
 /*
@@ -4100,25 +4124,25 @@ groupMemOnAlterForCgroup(Oid groupId, ResGroupData *group)
 static void
 groupApplyCgroupMemInc(ResGroupData *group)
 {
-	ResGroupCompType comp = RESGROUP_COMP_TYPE_MEMORY;
-	int32 memory_limit;
-	int32 memory_inc;
+	CGroupComponentType component = CGROUP_COMPONENT_MEMORY;
+	int32 memory_limit_chunks;
+	int32 memory_inc_chunks;
 	int fd;
 
 	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(group->memGap < 0);
 
-	memory_inc = mempoolReserve(group->groupId, group->memGap * -1);
+	memory_inc_chunks = mempoolReserve(group->groupId, group->memGap * -1);
 
-	if (memory_inc <= 0)
+	if (memory_inc_chunks <= 0)
 		return;
 
-	fd = ResGroupOps_LockGroup(group->groupId, comp, true);
-	memory_limit = ResGroupOps_GetMemoryLimit(group->groupId);
-	ResGroupOps_SetMemoryLimitByValue(group->groupId, memory_limit + memory_inc);
-	ResGroupOps_UnLockGroup(group->groupId, fd);
+	fd = cgroupOpsRoutine->lockcgroup(group->groupId, component, true);
+	memory_limit_chunks = cgroupOpsRoutine->getmemorylimitchunks(group->groupId);
+	cgroupOpsRoutine->setmemorylimitbychunks(group->groupId, memory_limit_chunks + memory_inc_chunks);
+	cgroupOpsRoutine->unlockcgroup(fd);
 
-	group->memGap += memory_inc;
+	group->memGap += memory_inc_chunks;
 }
 
 /*
@@ -4129,7 +4153,7 @@ groupApplyCgroupMemInc(ResGroupData *group)
 static void
 groupApplyCgroupMemDec(ResGroupData *group)
 {
-	ResGroupCompType comp = RESGROUP_COMP_TYPE_MEMORY;
+	CGroupComponentType component = CGROUP_COMPONENT_MEMORY;
 	int32 memory_limit;
 	int32 memory_dec;
 	int fd;
@@ -4137,14 +4161,14 @@ groupApplyCgroupMemDec(ResGroupData *group)
 	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(group->memGap > 0);
 
-	fd = ResGroupOps_LockGroup(group->groupId, comp, true);
-	memory_limit = ResGroupOps_GetMemoryLimit(group->groupId);
+	fd = cgroupOpsRoutine->lockcgroup(group->groupId, component, true);
+	memory_limit = cgroupOpsRoutine->getmemorylimitchunks(group->groupId);
 	Assert(memory_limit > group->memGap);
 
 	memory_dec = group->memGap;
 
-	ResGroupOps_SetMemoryLimitByValue(group->groupId, memory_limit - memory_dec);
-	ResGroupOps_UnLockGroup(group->groupId, fd);
+	cgroupOpsRoutine->setmemorylimitbychunks(group->groupId, memory_limit - memory_dec);
+	cgroupOpsRoutine->unlockcgroup(fd);
 
 	mempoolRelease(group->groupId, memory_dec);
 	notifyGroupsOnMem(group->groupId);
@@ -4191,10 +4215,10 @@ groupMemOnDumpForCgroup(ResGroupData *group, StringInfo str)
 	appendStringInfo(str, "{");
 	appendStringInfo(str, "\"used\":%d, ",
 			VmemTracker_ConvertVmemChunksToMB(
-				ResGroupOps_GetMemoryUsage(group->groupId) / ResGroupGetHostPrimaryCount()));
+					cgroupOpsRoutine->getmemoryusage(group->groupId) / ResGroupGetHostPrimaryCount()));
 	appendStringInfo(str, "\"limit_granted\":%d",
 			VmemTracker_ConvertVmemChunksToMB(
-				ResGroupOps_GetMemoryLimit(group->groupId) / ResGroupGetHostPrimaryCount()));
+					cgroupOpsRoutine->getmemorylimitchunks(group->groupId) / ResGroupGetHostPrimaryCount()));
 	appendStringInfo(str, "}");
 }
 
@@ -4435,7 +4459,7 @@ cpusetOperation(char *cpuset1, const char *cpuset2,
 	else
 	{
 		/* Get cpuset from cpuset/gpdb, and transform it into bitset */
-		ResGroupOps_GetCpuSet(RESGROUP_ROOT_ID, cpuset, MaxCpuSetLength);
+		cgroupOpsRoutine->getcpuset(CGROUP_ROOT_ID, cpuset, MaxCpuSetLength);
 		Bitmapset *bmsDefault = CpusetToBitset(cpuset, MaxCpuSetLength);
 		/* get the minimum core number, in case of the zero core is not exist */
 		defaultCore = bms_next_member(bmsDefault, -1);
@@ -4642,7 +4666,8 @@ HandleMoveResourceGroup(void)
 			self->caps = slot->caps;
 
 			/* Add into cgroup */
-			ResGroupOps_AssignGroup(self->groupId, &(self->caps), MyProcPid);
+			cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
+										  self->caps.cpuRateLimit == CPU_RATE_LIMIT_DISABLED);
 		}
 		PG_CATCH();
 		{
@@ -4708,7 +4733,8 @@ HandleMoveResourceGroup(void)
 		Assert(selfIsAssigned());
 
 		/* Add into cgroup */
-		ResGroupOps_AssignGroup(self->groupId, &(self->caps), MyProcPid);
+		cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
+									  self->caps.cpuRateLimit == CPU_RATE_LIMIT_DISABLED);
 	}
 }
 

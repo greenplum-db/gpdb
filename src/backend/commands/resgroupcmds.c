@@ -36,7 +36,7 @@
 #include "utils/datetime.h"
 #include "utils/fmgroids.h"
 #include "utils/resgroup.h"
-#include "utils/resgroup-ops.h"
+#include "utils/cgroup.h"
 #include "utils/resource_manager.h"
 #include "utils/resowner.h"
 #include "utils/syscache.h"
@@ -236,26 +236,26 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 		RegisterXactCallbackOnce(createResgroupCallback, callbackCtx);
 
 		/* Create os dependent part for this resource group */
-		ResGroupOps_CreateGroup(groupid);
+		cgroupOpsRoutine->createcgroup(groupid);
 
-		ResGroupOps_SetMemoryLimit(groupid, caps.memLimit);
+		cgroupOpsRoutine->setmemorylimit(groupid, caps.memLimit);
 
 		if (caps.cpuRateLimit != CPU_RATE_LIMIT_DISABLED)
 		{
-			ResGroupOps_SetCpuRateLimit(groupid, caps.cpuRateLimit);
+			cgroupOpsRoutine->setcpulimit(groupid, caps.cpuRateLimit);
 		}
 		else if (!CpusetIsEmpty(caps.cpuset))
 		{
 			EnsureCpusetIsAvailable(ERROR);
 
-			ResGroupOps_SetCpuSet(groupid, caps.cpuset);
+			cgroupOpsRoutine->setcpuset(groupid, caps.cpuset);
 			/* reset default group, subtract new group cpu cores */
 			char defaultGroupCpuset[MaxCpuSetLength];
-			ResGroupOps_GetCpuSet(DEFAULT_CPUSET_GROUP_ID,
+			cgroupOpsRoutine->getcpuset(DEFAULT_CPUSET_GROUP_ID,
 								  defaultGroupCpuset,
 								  MaxCpuSetLength);
 			CpusetDifference(defaultGroupCpuset, caps.cpuset, MaxCpuSetLength);
-			ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, defaultGroupCpuset);
+			cgroupOpsRoutine->setcpuset(DEFAULT_CPUSET_GROUP_ID, defaultGroupCpuset);
 		}
 		SIMPLE_FAULT_INJECTOR("create_resource_group_fail");
 	}
@@ -1294,7 +1294,7 @@ validateCapabilities(Relation rel,
 		Bitmapset *bmsAll = NULL;
 
 		/* Get all available cores */
-		ResGroupOps_GetCpuSet(RESGROUP_ROOT_ID,
+		cgroupOpsRoutine->getcpuset(CGROUP_ROOT_ID,
 							  cpusetAll,
 							  MaxCpuSetLength);
 		bmsAll = CpusetToBitset(cpusetAll, MaxCpuSetLength);

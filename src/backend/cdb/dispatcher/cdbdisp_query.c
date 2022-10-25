@@ -37,7 +37,7 @@
 #include "utils/faultinjector.h"
 #include "utils/resgroup.h"
 #include "utils/resource_manager.h"
-#include "utils/resgroup-ops.h"
+#include "utils/cgroup.h"
 #include "utils/session_state.h"
 #include "utils/typcache.h"
 #include "miscadmin.h"
@@ -279,7 +279,7 @@ CdbDispatchPlan(struct QueryDesc *queryDesc,
 		 * We enable resource group re-calculate the query_mem on QE, and we are not in
 		 * fall back mode (use statement_mem).
 		 */
-		stmt->total_memory_coordinator = ResGroupOps_GetTotalMemory();
+		stmt->total_memory_coordinator = getTotalMemory();
 		stmt->nsegments_coordinator = ResGroupGetHostPrimaryCount();
 	}
 
