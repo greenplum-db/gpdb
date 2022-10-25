@@ -155,9 +155,7 @@ The following table lists minimum recommended specifications for hardware server
 
 Resource Groups - one of the key Greenplum Database features - can control transaction concurrency, CPU and memory resources, workload isolation, and dynamic bursting. 
 
-When using resource groups to control resource allocation in the server physical and logical cores, it is beneficial to switch off hyperthreading (HT) in the server BIOS or UEFI. Hyperthreading is `On` by default on Intel CPU cores. 
-
-Switching HT to `Off` offers the best single query performance, isolation, and predictability in high core (24+), high sockets (4+) platforms. 
+When using resource groups to control resource allocation on Intel based systems, consider switching off Hyper-Threading (HT) in the server BIOS (for Intel cores the default is ON). Switching off HT might cause a small throughput reduction (less than 15%), but can achieve greater isolation between resource groups, and higher query performance with lower concurrency workloads.
 
 ### <a id="topic_elb_4ss_n4b"></a>Tanzu Greenplum on DCA Systems 
 
