@@ -141,7 +141,7 @@ DO LANGUAGE PLPYTHON3U $$
             SELECT oid FROM pg_resgroup WHERE rsgname='{}'
         '''.format(name))[0]['oid'])
         sub_shares = get_cgroup_prop('/cpu/gpdb/{}/cpu.shares'.format(oid))
-        assert sub_shares == shares * cpu_rate_limit / 100
+        assert sub_shares == int(shares * cpu_rate_limit / 100)
 
     # check default groups
     check_group_shares('default_group')

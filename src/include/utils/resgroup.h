@@ -19,6 +19,7 @@
 #include "cdb/memquota.h"
 #include "catalog/pg_resgroup.h"
 #include "utils/session_state.h"
+#include "utils/cgroup.h"
 
 /*
  * The max number of resource groups.
@@ -151,6 +152,7 @@ typedef struct
 extern Size ResGroupShmemSize(void);
 extern void ResGroupControlInit(void);
 
+extern void initCgroup(void);
 /* Load resource group information from catalog */
 extern void	InitResGroups(void);
 

@@ -24,7 +24,7 @@
 #include "utils/builtins.h"
 #include "utils/datetime.h"
 #include "utils/resgroup.h"
-#include "utils/resgroup-ops.h"
+#include "utils/cgroup.h"
 #include "utils/resource_manager.h"
 
 typedef struct ResGroupStat
@@ -65,7 +65,7 @@ calcCpuUsage(StringInfoData *str,
 
 	appendStringInfo(str, "\"%d\":%.2f",
 					 GpIdentity.segindex,
-					 ResGroupOps_ConvertCpuUsageToPercent(usage, duration));
+					 cgroupOpsRoutine->convertcpuusage(usage, duration));
 }
 
 /*
@@ -93,7 +93,7 @@ getResUsage(ResGroupStatCtx *ctx, Oid inGroupId)
 		ResGroupStat *row = &ctx->groups[j];
 		Oid groupId = DatumGetObjectId(row->groupId);
 
-		usages[j] = ResGroupOps_GetCpuUsage(groupId);
+		usages[j] = cgroupOpsRoutine->getcpuusage(groupId);
 		timestamps[j] = GetCurrentTimestamp();
 	}
 
@@ -147,7 +147,7 @@ getResUsage(ResGroupStatCtx *ctx, Oid inGroupId)
 
 					appendStringInfo(row->cpuUsage, "{");
 					calcCpuUsage(row->cpuUsage, usages[j], timestamps[j],
-								 ResGroupOps_GetCpuUsage(groupId),
+								 cgroupOpsRoutine->getcpuusage(groupId),
 								 GetCurrentTimestamp());
 				}
 
@@ -181,7 +181,7 @@ getResUsage(ResGroupStatCtx *ctx, Oid inGroupId)
 							 GpIdentity.segindex, DatumGetCString(d));
 
 			calcCpuUsage(row->cpuUsage, usages[j], timestamps[j],
-						 ResGroupOps_GetCpuUsage(groupId),
+						 cgroupOpsRoutine->getcpuusage(groupId),
 						 GetCurrentTimestamp());
 		}
 	}

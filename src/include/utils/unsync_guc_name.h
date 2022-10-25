@@ -247,6 +247,7 @@
 		"gp_resqueue_priority_inactivity_timeout",
 		"gp_resqueue_priority_local_interval",
 		"gp_resqueue_priority_sweeper_interval",
+		"gp_resource_group_enable_cgroup_version_two",
 		"gp_retrieve_conn",
 		"gp_role",
 		"gp_safefswritesize",

@@ -153,8 +153,8 @@
 #include "cdb/cdbendpoint.h"
 #include "cdb/ic_proxy_bgworker.h"
 #include "utils/metrics_utils.h"
+#include "utils/resgroup.h"
 #include "utils/resource_manager.h"
-#include "utils/resgroup-ops.h"
 
 /*
  * This is set in backends that are handling a GPDB specific message (FTS or
@@ -1491,9 +1491,13 @@ PostmasterMain(int argc, char *argv[])
 				 errmsg("could not remove file \"%s\": %m",
 						LOG_METAINFO_DATAFILE)));
 
-	/* If enabled, init cgroup */
+	/*
+	 * If resource group enabled, init it. And before we fork the child processes,
+	 * add the parent process to the default system group (OID=6441), this must be
+	 * initialized before InitResManager().
+	 * */
 	if (IsResGroupEnabled())
-		ResGroupOps_Init();
+		initCgroup();
 
 	/*
 	 * If enabled, start up syslogger collection subprocess
