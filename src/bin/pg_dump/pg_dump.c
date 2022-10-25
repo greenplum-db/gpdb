@@ -5469,7 +5469,8 @@ getTables(Archive *fout, int *numTables)
 		else
 			tblinfo[i].parparent = false;
 
-		if (tblinfo[i].parparent && tblinfo[i].parrelid != 0 && tblinfo[i].relstorage == 'x')
+
+		if (tblinfo[i].parrelid != 0 && tblinfo[i].relstorage == 'x')
 		{
 			/*
 			 * Length of tmpStr is bigger than the sum of NAMEDATALEN
@@ -5499,8 +5500,11 @@ getTables(Archive *fout, int *numTables)
 		 * This requires the getTable query to also collect all
 		 * partition children so they can be referenced, but we do not want
 		 * to dump the partition children as their DDL will be handled by the parent.
+		 * We do need to dump external partition DDL however, so ensure partition children
+		 * with external storage have their dump flag set.
 		 */
-		if (tblinfo[i].relkind == RELKIND_COMPOSITE_TYPE || tblinfo[i].parrelid != 0)
+		if (tblinfo[i].relkind == RELKIND_COMPOSITE_TYPE ||
+			(tblinfo[i].parrelid != 0 && tblinfo[i].relstorage != 'x'))
 			tblinfo[i].dobj.dump = false;
 		else
 			selectDumpableTable(&tblinfo[i]);
