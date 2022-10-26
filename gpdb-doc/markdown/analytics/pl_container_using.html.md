@@ -299,7 +299,7 @@ To develop CUDA functions with PL/Container you require:
 - PL/Container version 2.2.0 or newer 
 - At least one NVIDIA GPU with the required GPU driver installed on your host
 
-See the [Getting Started](https://github.com/NVIDIA/nvidia-docker) section of the NVIDIA Container Toolkit GitHub project for Information about installing the NVIDIA driver or Docker engine for your Linux distribution.
+See the [Getting Started](https://github.com/NVIDIA/nvidia-docker) section of the NVIDIA Container Toolkit GitHub project for information about installing the NVIDIA driver or Docker engine for your Linux distribution.
 
 Follow the [Installation Guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) for the NVIDIA Container Toolkit GitHub project to install the `nvidia-docker` container.
 
