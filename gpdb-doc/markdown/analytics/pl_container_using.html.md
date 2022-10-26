@@ -393,7 +393,7 @@ Record the name of the GPU device ID (0 in the above example) or the device UUID
     $ psql -d mytest -h master_host -p 5432 -U `gpadmin`
     ```
 
-2. Create a sample PL/Container function that uses the container you customized (`plc_python_cuda_shared` in this example):
+2. Create a sample PL/Container function that uses the container you customized (`plc_python_cuda_shared` in this example). This simple function multiplies randomized, single-precision numbers by sending them to the CUDA constructor of `pycuda.compiler.SourceModule`:
     ```
     CREATE FUNCTION hello_cuda() RETURNS float4[] AS $$ 
     # container: plc_python_cuda_shared 
