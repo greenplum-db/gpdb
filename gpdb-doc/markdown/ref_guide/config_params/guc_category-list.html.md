@@ -50,6 +50,7 @@ These parameters control how clients connect and authenticate to Greenplum Datab
 - [krb_caseins_users](guc-list.html#krb_caseins_users)
 - [krb_server_keyfile](guc-list.html#krb_server_keyfile)
 - [password_encryption](guc-list.html#password_encryption)
+- [row_security](guc-list.html#row_security)
 - [ssl](guc-list.html#ssl)
 - [ssl_ciphers](guc-list.html#ssl_ciphers)
 

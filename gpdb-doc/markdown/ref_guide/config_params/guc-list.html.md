@@ -2527,6 +2527,20 @@ Sets the types of queries managed by resource queues. If set to on, then `SELECT
 |-----------|-------|-------------------|
 |Boolean|off|master, system, restart|
 
+## <a id="row_security"></a>row\_security
+
+**Note:** This configuration parameter has no effect on roles which bypass every row security policy, for example, superusers and roles configured with the `BYPASSRLS` attribute.
+
+Controls whether to raise an error in lieu of applying a row security policy. When set to `on`, policies apply normally. When set to `off`, queries which would otherwise apply at least one policy fail.
+
+The default is `on`. Change `row_security` to `off` where limited row visibility could cause incorrect results; for example, `pg_dump` makes that change by default.
+
+For more information about row-level security policies, see [CREATE POLICY](../sql_commands/CREATE_POLICY.html).
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|on|master, system, restart|
+
 ## <a id="runaway_detector_activation_percent"></a>runaway\_detector\_activation\_percent 
 
 For queries that are managed by resource queues or resource groups, this parameter determines when Greenplum Database terminates running queries based on the amount of memory the queries are using. A value of 100 deactivates the automatic termination of queries based on the percentage of memory that is utilized.
