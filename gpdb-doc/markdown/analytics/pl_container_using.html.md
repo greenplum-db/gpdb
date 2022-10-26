@@ -326,12 +326,7 @@ Record the name of the GPU device ID (0 in the above example) or the device UUID
     $ docker image load < plcontainer-python3-image-2.2.0-gp6.tar.gz
     ```
 
-3. Install the `python3-pycuda` software to your operating system. For example:
-    ```
-    $ sudo apt install python3-cuda
-    ```
-
-4. Use a text editor to create a Dockerfile that customizes the PL/Container image to add GPU support. For example:
+3. Customize the PL/Container image to add the required CUDA runtime and `pycuda` library. The following example Dockerfile contents show how to add CUDA 11.7 and `pycuda` 2021.1 to the PL/Container image. Use a text editor to create the Dockerfile:
     ```
     FROM pivotaldata/plcontainer_python3_shared:devel 
     
