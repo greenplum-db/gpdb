@@ -5,9 +5,9 @@ Changes the definition of a schema.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-ALTER SCHEMA <name> RENAME TO <newname>
+ALTER SCHEMA <name> RENAME TO <new_name>
 
-ALTER SCHEMA <name> OWNER TO <newowner>
+ALTER SCHEMA <name> OWNER TO { <new_owner> | CURRENT_USER | SESSION_USER }
 ```
 
 ## <a id="section3"></a>Description 
@@ -21,10 +21,10 @@ You must own the schema to use `ALTER SCHEMA`. To rename a schema you must also 
 name
 :   The name of an existing schema.
 
-newname
+new\_name
 :   The new name of the schema. The new name cannot begin with `pg_`, as such names are reserved for system schemas.
 
-newowner
+new\_owner
 :   The new owner of the schema.
 
 ## <a id="section5"></a>Compatibility 
