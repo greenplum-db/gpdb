@@ -21,6 +21,7 @@ Greenplum Database provides the following system views not available in PostgreS
 -   [pg\_partition\_columns](pg_partition_columns.html)
 -   [pg\_partition\_templates](pg_partition_templates.html)
 -   [pg\_partitions](pg_partitions.html)
+-   [pg\_policies](pg_policies.html)
 -   [pg\_resqueue\_attributes](pg_resqueue_attributes.html)
 -   pg\_resqueue\_status \(Deprecated. Use [gp\_toolkit.gp\_resqueue\_status](../gp_toolkit.html).\)
 -   [pg\_stat\_activity](pg_stat_activity.html)
