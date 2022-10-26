@@ -430,7 +430,7 @@ Record the name of the GPU device ID (0 in the above example) or the device UUID
 
 3. Run the sample function and verify its output:
     ```
-    $ with a as (select unnest(hello) as cuda from hello_cuda() as hello) select sum(cuda) from a; 
+    $ WITH a AS (SELECT unnest(hello) AS cuda FROM hello_cuda() AS hello) SELECT sum(cuda) FROM a; 
     ```
     ```
     psql>   +-----+ 
@@ -442,7 +442,7 @@ Record the name of the GPU device ID (0 in the above example) or the device UUID
     psql>   Time: 0.012s 
     ```
     ```
-    $ select * from hello_cuda();
+    $ SELECT * FROM hello_cuda();
     ```
     ```
     psql>   +-----------------------+ 
