@@ -76,7 +76,7 @@ The following sections describe these tasks in detail.
     $ uname -r
     ```
 
--   The minimum supporteed Docker versions on all hosts is Docker 19.03.
+-   The minimum supported Docker versions on all hosts is Docker 19.03.
 
 ### <a id="install_docker"></a>Install Docker 
 
