@@ -303,7 +303,7 @@ See the [Getting Started](https://github.com/NVIDIA/nvidia-docker) section of th
 
 Follow the [Installation Guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) for the NVIDIA Container Toolkit GitHub project to install the `nvidia-docker` container.
 
-Verify that the Docker image can use your installed GPU(s) by running the command similar to:
+Verify that the Docker image can use your installed GPU(s) by running a command similar to:
 
 ```
 $ docker run --rm --gpus=all -it nvidia/cuda:11.7.0-devel-ubuntu20.04 nvidia-smi –L
