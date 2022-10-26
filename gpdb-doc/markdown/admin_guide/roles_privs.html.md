@@ -336,10 +336,6 @@ You can also use the `DROP OWNED` and `REASSIGN OWNED` commands for managing obj
 
 ```
 
-### <a id="topic7"></a>Simulating Row Level Access Control 
-
-Greenplum Database does not support row-level access or row-level, labeled security. You can simulate row-level access by using views to restrict the rows that are selected. You can simulate row-level labels by adding an extra column to the table to store sensitivity information, and then using views to control row-level access based on this column. You can then grant roles access to the views rather than to the base table.
-
 ## <a id="topic8"></a>Encrypting Data 
 
 Greenplum Database is installed with an optional module of encryption/decryption functions called `pgcrypto`. The `pgcrypto` functions allow database administrators to store certain columns of data in encrypted form. This adds an extra layer of protection for sensitive data, as data stored in Greenplum Database in encrypted form cannot be read by anyone who does not have the encryption key, nor can it be read directly from the disks.
