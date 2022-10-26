@@ -362,7 +362,7 @@ Record the name of the GPU device ID (0 in the above example) or the device UUID
     ```
     $ docker build . -t localhost/plcontainer_python3_cuda_shared:latest
     ```
-    **Note:** The remaining instructions use the example image tag `host/plcontainer_python3_cuda_shared:latest`. Substitute the actual tag name as needed.
+    **Note:** The remaining instructions use the example image tag `localhost/plcontainer_python3_cuda_shared:latest`. Substitute the actual tag name as needed.
 
 6. Import the image runtime to PL/Container:
     ```
