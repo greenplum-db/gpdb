@@ -1831,14 +1831,16 @@ fix_expr_common(PlannerInfo *root, Node *node)
 		{
 			if (NULL !=root)
 			{
-				root->glob->relationOids = lappend_oid(root->glob->relationOids,DatumGetObjectId(con->constvalue));
+				root->glob->relationOids =
+					lappend_oid(root->glob->relationOids,
+						DatumGetObjectId(con->constvalue));
 			}
 		}
 	}
 	else if (IsA(node, GroupingFunc))
 	{
 		GroupingFunc *g = (GroupingFunc *) node;
-                AttrNumber *grouping_map = NULL;
+		AttrNumber *grouping_map = NULL;
 
 		if (NULL != root)
 		{

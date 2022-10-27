@@ -3178,6 +3178,17 @@ CTranslatorDXLToPlStmt::TranslateDXLSubQueryScan(
 	return (Plan *) subquery_scan;
 }
 
+// If the top level is not a function returning set then we need to check if
+// the project element conatains any SRF's deep down the tree.
+// If we found any SRF's at lower levels then we will require a result node on
+// top of ProjectSet node.Eg
+// <dxl:ProjElem ColId="1" Alias="abs">
+//		  <dxl:FuncExpr FuncId="0.1397.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
+//			<dxl:FuncExpr FuncId="0.1067.1.0" FuncRetSet="true" TypeMdid="0.23.1.0">
+//			  ...
+//			</dxl:FuncExpr>
+//		  </dxl:FuncExpr>
+// Here we have SRF present at a lower level. So we will require a result node on top.
 static bool
 ContainsLowLevelSetReturningFunc(const CDXLNode *scalar_expr_dxlnode)
 {
@@ -3206,6 +3217,19 @@ ContainsLowLevelSetReturningFunc(const CDXLNode *scalar_expr_dxlnode)
 	return false;
 }
 
+// This method is required to check if we need a result node on top of ProjectSet node.
+// If the project element contains SRF on top then we don't require a
+// result node.Eg
+//  <dxl:ProjElem ColId="1" Alias="generate_series">
+//		 <dxl:FuncExpr FuncId="0.1067.1.0" FuncRetSet="true" TypeMdid="0.23.1.0">
+//		   ...
+//			 <dxl:FuncExpr FuncId="0.1067.1.0" FuncRetSet="true" TypeMdid="0.23.1.0">
+//			   ...
+//			 </dxl:FuncExpr>
+//			 ...
+//		 </dxl:FuncExpr>
+// Here we have a FuncExpr which returns a set on top.So we don't require a result node on
+// top of ProjectSet node.
 static bool
 ContainsSetReturningFunc(const CDXLNode *project_list_dxlnode,
 						 CMDAccessor *md_accessor)
@@ -3239,18 +3263,6 @@ ContainsSetReturningFunc(const CDXLNode *project_list_dxlnode,
 	return false;
 }
 
-void
-setPlanIdForChildNodes(Plan *plan, ULONG diff_plannode_id)
-{
-	if (nullptr == plan)
-	{
-		return;
-	}
-	plan->plan_node_id = plan->plan_node_id + diff_plannode_id;
-	setPlanIdForChildNodes(plan->lefttree, diff_plannode_id);
-	setPlanIdForChildNodes(plan->righttree, diff_plannode_id);
-}
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorDXLToPlStmt::TranslateDXLProjectSet
@@ -3274,7 +3286,7 @@ CTranslatorDXLToPlStmt::TranslateDXLProjectSet(const CDXLNode *result_dxlnode)
 	// create project set (nee result) plan node
 	ProjectSet *project_set = MakeNode(ProjectSet);
 	Plan *plan = &(project_set->plan);
-	plan->plan_node_id = 0;
+	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
 
 	// translate operator costs
 	TranslatePlanCosts(result_dxlnode, plan);
@@ -3295,11 +3307,26 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	const CDXLNode *result_dxlnode, CDXLTranslateContext *output_context,
 	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
 {
+	// Method split_pathtarget_at_srfs will split the given PathTarget into multiple levels to position SRFs safely.
+	// This list will hold the splited PathTarget created by split_pathtarget_at_srfs method.
 	List *targets_with_srf = NIL;
+
+	// List of bool flags indicating whether the
+	// corresponding PathTarget contains any evaluatable SRFs
 	List *targets_with_srf_bool = NIL;
+
+	// Pointer to the child plan of result dxl node
 	Plan *child_plan = nullptr;
+
+	// Pointer to the top level ProjectSet node. If a result node is required then it will
+	// be attached to the lefttree of the result node.
 	Plan *project_set_final_plan = nullptr;
+
+	// Pointer to the lowest level ProjectSet node. If multiple ProjectSet nodes are required then
+	// the child plan of result dxl node will be attched to its lefttree.
 	Plan *project_set_child_plan = nullptr;
+
+	// Do we require a result node to be attached on top of ProjectSet node.
 	BOOL will_require_result_node = false;
 
 	// create result plan node
@@ -3318,10 +3345,8 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	{
 		// translate child plan
 		child_dxlnode = (*result_dxlnode)[EdxlresultIndexChild];
-
 		child_plan = TranslateDXLOperatorToPlan(child_dxlnode, &child_context,
 												ctxt_translation_prev_siblings);
-
 		GPOS_ASSERT(nullptr != child_plan && "child plan cannot be NULL");
 	}
 
@@ -3377,9 +3402,11 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	int targets_with_srf_list_length = list_length(targets_with_srf);
 	ForEach(lc, targets_with_srf)
 	{
+		// The first element of the PathTarget list created by split_pathtarget_at_srfs
+		// method will not contain any SRF's. So skipping it.
 		if (list_cell_pos == 1)
 		{
-			list_cell_pos = list_cell_pos + 1;
+			list_cell_pos++;
 			continue;
 		}
 		if (will_require_result_node &&
@@ -3388,7 +3415,7 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 			break;
 		}
 
-		list_cell_pos = list_cell_pos + 1;
+		list_cell_pos++;
 		List *target_list_entry =
 			make_tlist_from_pathtarget((PathTarget *) lfirst(lc));
 		Plan *temp_plan_project_set = TranslateDXLProjectSet(result_dxlnode);
@@ -3439,22 +3466,6 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 		}
 		final_plan = project_set_final_plan;
 	}
-
-	//Set up of Plan Node Id
-	int new_plan_id = result->plan.plan_node_id;
-	Plan *it_set_plan_id = final_plan;
-	ULONG projectset_node_count = 0;
-	while (it_set_plan_id != nullptr && (it_set_plan_id->type == T_Result ||
-										 it_set_plan_id->type == T_ProjectSet))
-	{
-		projectset_node_count++;
-		it_set_plan_id->plan_node_id = new_plan_id;
-		new_plan_id = new_plan_id + 1;
-		it_set_plan_id = it_set_plan_id->lefttree;
-	}
-
-	ULONG diff_plannode_id = projectset_node_count - 1;
-	setPlanIdForChildNodes(it_set_plan_id, diff_plannode_id);
 
 	// Set up upper references
 	Plan *it_set_upper_ref = final_plan;
