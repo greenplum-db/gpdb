@@ -190,17 +190,17 @@ Greenplum Database combines delta compression with RLE compression for data in c
 
 ## <a id="topic43"></a>Adding Column-level Compression 
 
-You can add the following storage directives to a column for append-optimized tables with column orientation:
+You can add the following storage parameters to a column for append-optimized tables with column orientation:
 
 -   Compression type
 -   Compression level
 -   Block size for a column
 
-Add storage directives using the `CREATE TABLE`, `ALTER TABLE`, and `CREATE TYPE` commands.
+Add storage parameters using the `CREATE TABLE`, `ALTER TABLE`, and `CREATE TYPE` commands.
 
-The following table details the types of storage directives and possible values for each.
+The following table details the types of storage parameters and possible values for each.
 
-<table class="table" id="topic43__im198636"><caption><span class="table--title-label">Table 3. </span><span class="title">Storage Directives for Column-level Compression</span></caption><colgroup><col style="width:87pt"><col style="width:95pt"><col style="width:147pt"><col style="width:167.25pt"></colgroup><thead class="thead">
+<table class="table" id="topic43__im198636"><caption><span class="table--title-label">Table 3. </span><span class="title">Storage Parameters for Column-level Compression</span></caption><colgroup><col style="width:87pt"><col style="width:95pt"><col style="width:147pt"><col style="width:167.25pt"></colgroup><thead class="thead">
             <tr class="row">
               <th class="entry" id="topic43__im198636__entry__1">Name</th>
               <th class="entry" id="topic43__im198636__entry__2">Definition</th>
@@ -265,19 +265,19 @@ The following table details the types of storage directives and possible values 
             </tr>
           </tbody></table>
 
-The following is the format for adding storage directives.
+The following is the format for adding storage parameters.
 
 ```
-[ ENCODING ( <storage_directive> [,…] ) ] 
+[ ENCODING ( <storage_parameter [,…] ) ] 
 ```
 
-where the word ENCODING is required and the storage directive has three parts:
+where the word ENCODING is required and the storage parameter has three parts:
 
--   The name of the directive
+-   The name of the parameter
 -   An equals sign
 -   The specification
 
-Separate multiple storage directives with a comma. Apply a storage directive to a single column or designate it as the default for all columns, as shown in the following `CREATE TABLE` clauses.
+Separate multiple storage parameters with a comma. Apply a storage parameter to a single column or designate it as the default for all columns, as shown in the following `CREATE TABLE` clauses.
 
 *General Usage:*
 
@@ -327,17 +327,17 @@ Column compression settings are inherited from the type level to the table level
 -   Column compression settings specified for subpartitions override any compression settings at the partition, column or table levels.
 -   When an `ENCODING` clause conflicts with a `WITH` clause, the `ENCODING` clause has higher precedence than the `WITH` clause.
 
-**Note:** The `INHERITS` clause is not allowed in a table that contains a storage directive or a column reference storage directive.
+**Note:** The `INHERITS` clause is not allowed in a table that contains a storage parameter or a column reference storage parameter.
 
-Tables created using the `LIKE` clause ignore storage directive and column reference storage directives.
+Tables created using the `LIKE` clause ignore storage parameter and column reference storage parameters.
 
 ### <a id="topic46"></a>Optimal Location for Column Compression Settings 
 
 The best practice is to set the column compression settings at the level where the data resides. See [Example 5](#topic52), which shows a table with a partition depth of 2. `RLE_TYPE` compression is added to a column at the subpartition level.
 
-### <a id="topic47"></a>Storage Directives Examples 
+### <a id="topic47"></a>Storage Parameters Examples 
 
-The following examples show the use of storage directives in `CREATE TABLE` statements.
+The following examples show the use of storage parameters in `CREATE TABLE` statements.
 
 #### <a id="topic48"></a>Example 1 
 
@@ -364,7 +364,7 @@ CREATE TABLE T2 (c1 int ENCODING (compresstype=zlib),
 
 #### <a id="topic50"></a>Example 3 
 
-In this example, column `c1` is compressed using `zlib` and uses the block size defined by the system. Column `c2` is compressed with `quicklz`, and uses a block size of `65536`. Column `c3` is compressed using `zlib` and uses the block size defined by the system. Note that column `c3` uses `zlib` \(not `RLE_TYPE`\) in the partitions, because the column storage in the partition clause has precedence over the storage directive in the column definition for the table.
+In this example, column `c1` is compressed using `zlib` and uses the block size defined by the system. Column `c2` is compressed with `quicklz`, and uses a block size of `65536`. Column `c3` is compressed using `zlib` and uses the block size defined by the system. Note that column `c3` uses `zlib` \(not `RLE_TYPE`\) in the partitions, because the column storage in the partition clause has precedence over the storage parameter in the column definition for the table.
 
 ```
 CREATE TABLE T3 (c1 int ENCODING (compresstype=zlib),
@@ -378,7 +378,7 @@ CREATE TABLE T3 (c1 int ENCODING (compresstype=zlib),
 
 #### <a id="topic51"></a>Example 4 
 
-In this example, `CREATE TABLE` assigns the `zlib` `compresstype` storage directive to `c1`. Column `c2` has no storage directive and inherits the compression type \(`quicklz`\) and block size \(`65536`\) from the `DEFAULT COLUMN ENCODING` clause.
+In this example, `CREATE TABLE` assigns the `zlib` `compresstype` storage parameter to `c1`. Column `c2` has no storage parameter and inherits the compression type \(`quicklz`\) and block size \(`65536`\) from the `DEFAULT COLUMN ENCODING` clause.
 
 Column `c3`'s `ENCODING` clause defines its compression type, `RLE_TYPE`. The `ENCODING` clause defined for a specific column overrides the `DEFAULT ENCODING` clause, so column `c3` uses the default block size, `32768`.
 
@@ -452,7 +452,7 @@ CREATE TYPE int33 (
    );
 ```
 
-When you specify `int33` as a column type in a `CREATE TABLE` command, the column is created with the storage directives you specified for the type:
+When you specify `int33` as a column type in a `CREATE TABLE` command, the column is created with the storage parameters you specified for the type:
 
 ```
 CREATE TABLE t2 (c1 int33)
@@ -469,7 +469,7 @@ Specifying large block sizes can consume large amounts of memory. Block size det
 
 ## <a id="topic55"></a>Altering a Table 
 
-The `ALTER TABLE`command changes the definition of a table. Use `ALTER TABLE` to change table attributes such as column definitions, distribution policy, storage model, and partition structure \(see also [Maintaining Partitioned Tables](ddl-partition.html)\). For example, to add a not-null constraint to a table column:
+The `ALTER TABLE`command changes the definition of a table. Use `ALTER TABLE` to change table attributes such as column definitions, distribution policy, access method, storage model, and partition structure \(see also [Maintaining Partitioned Tables](ddl-partition.html)\). For example, to add a not-null constraint to a table column:
 
 ```
 => ALTER TABLE address ALTER COLUMN street SET NOT NULL;
@@ -509,23 +509,18 @@ ALTER TABLE sales SET WITH (REORGANIZE=TRUE);
 
 Changing the distribution policy of a table to `DISTRIBUTED REPLICATED` or from `DISTRIBUTED REPLICATED` always redistributes the table data, even when you use `REORGANIZE=FALSE`.
 
+### <a id="topic59"></a>Altering the Table Access Method
+
+You may alter the method for accessing a table using the `SET ACCESS METHOD` clause. Set to `heap` to alter the table to be a heap-storage table, `ao_row` to alter the table to be append-optimized with row-oriented storage (AO), or `ao_column` to alter the table to be append-optimized with column-oriented storage (AOCO).
+
+  <p class="note">
+<strong>Note:</strong>
+While you can also specify the table's access method using <code>SET &lt;storage_parameter></code>, VMware recommends that you use <code>SET ACCESS METHOD &lt;access_method></code> instead.
+</p>
+
 ### <a id="topic59"></a>Altering the Table Storage Model 
 
-Table storage, compression, and orientation can be declared only at creation. To change the storage model, you must create a table with the correct storage options, load the original table data into the new table, drop the original table, and rename the new table with the original table's name. You must also re-grant any table permissions. For example:
-
-```
-CREATE TABLE sales2 (LIKE sales) 
-WITH (appendoptimized=true, compresstype=quicklz, 
-      compresslevel=1, orientation=column);
-INSERT INTO sales2 SELECT * FROM sales;
-DROP TABLE sales;
-ALTER TABLE sales2 RENAME TO sales;
-GRANT ALL PRIVILEGES ON sales TO admin;
-GRANT SELECT ON sales TO guest;
-
-```
-
-**Note:** The `LIKE` clause does not copy over partition structures when creating a new table.
+You may dynamically update a table's storage model -- including whether the table is heap, AO or AOCO; the tabble's compression and blocksize settings; and fillfactor; --  by setting a variety of storage parameters when you invoke `ALTER TABLE` with the `SET <storage_parameter>` clause. 
 
 See [Splitting a Partition](ddl-partition.html) to learn how to change the storage model of a partitioned table.
 
