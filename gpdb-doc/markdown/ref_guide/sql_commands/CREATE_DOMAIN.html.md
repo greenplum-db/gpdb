@@ -74,7 +74,7 @@ An example of a common way to break this assumption is to reference a user-defin
 
 ## <a id="section5"></a>Examples 
 
-This example creates the `us_postal_code` data type and then uses the type in a table defintion. A regular expression test is used to verify that the value looks like a valid US postal code.
+This example creates the `us_postal_code` data type and then uses the type in a table definition. A regular expression test is used to verify that the value looks like a valid US postal code.
 
 ```
 CREATE DOMAIN us_postal_code AS TEXT
