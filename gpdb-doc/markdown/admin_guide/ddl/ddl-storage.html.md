@@ -469,7 +469,7 @@ Specifying large block sizes can consume large amounts of memory. Block size det
 
 ## <a id="topic55"></a>Altering a Table 
 
-The `ALTER TABLE`command changes the definition of a table. Use `ALTER TABLE` to change table attributes such as column definitions, distribution policy, access method, storage model, and partition structure \(see also [Maintaining Partitioned Tables](ddl-partition.html)\). For example, to add a not-null constraint to a table column:
+The `ALTER TABLE` command changes the definition of a table. Use `ALTER TABLE` to change table attributes such as column definitions, distribution policy, access method, storage model, and partition structure \(see also [Maintaining Partitioned Tables](ddl-partition.html)\). For example, to add a not-null constraint to a table column:
 
 ```
 => ALTER TABLE address ALTER COLUMN street SET NOT NULL;
