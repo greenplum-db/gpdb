@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
-<dxl:Comment><![CDATA[
+  <dxl:Comment><![CDATA[
      Objective: ORCA should generate plans with the ProjectSet node
 
      create table test_srf(a int,b int,c int) distributed by (a);
@@ -72,7 +72,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
