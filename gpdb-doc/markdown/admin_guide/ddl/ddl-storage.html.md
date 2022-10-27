@@ -509,7 +509,7 @@ ALTER TABLE sales SET WITH (REORGANIZE=TRUE);
 
 Changing the distribution policy of a table to `DISTRIBUTED REPLICATED` or from `DISTRIBUTED REPLICATED` always redistributes the table data, even when you use `REORGANIZE=FALSE`.
 
-### <a id="topic59"></a>Altering the Table Access Method
+### <a id="access_method"></a>Altering the Table Access Method
 
 You may alter the method for accessing a table using the `SET ACCESS METHOD` clause. Set to `heap` to alter the table to be a heap-storage table, `ao_row` to alter the table to be append-optimized with row-oriented storage (AO), or `ao_column` to alter the table to be append-optimized with column-oriented storage (AOCO).
 
@@ -520,7 +520,9 @@ While you can also specify the table's access method using <code>SET &lt;storage
 
 ### <a id="topic59"></a>Altering the Table Storage Model 
 
-You may dynamically update a table's storage model -- including whether the table is heap, AO or AOCO; the tabble's compression and blocksize settings; and fillfactor; --  by setting a variety of storage parameters when you invoke `ALTER TABLE` with the `SET <storage_parameter>` clause. 
+You may dynamically update a table's storage model -- including whether the table is heap, AO or AOCO; the table's compression and blocksize settings; and the table's fillfactor; --  by setting a variety of storage parameters when you invoke `ALTER TABLE` with the `SET <storage_parameter>` clause. 
+
+### <a id="storage_model_partition"></a>Altering the Storage Model of a Partitioned Table
 
 See [Splitting a Partition](ddl-partition.html) to learn how to change the storage model of a partitioned table.
 
