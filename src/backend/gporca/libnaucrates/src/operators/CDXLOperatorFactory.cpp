@@ -2229,8 +2229,10 @@ CDXLOperatorFactory::MakeMdIdFromStr(CDXLMemoryManager *dxl_memory_manager,
 	switch (typ)
 	{
 		case IMDId::EmdidGPDB:
+		case IMDId::EmdidInd:
+		case IMDId::EmdidCheckConstraint:
 			mdid = GetGPDBMdId(dxl_memory_manager, remaining_tokens,
-							   target_attr, target_elem);
+							   target_attr, target_elem, typ);
 			break;
 
 		case IMDId::EmdidGPDBCtas:
@@ -2278,7 +2280,8 @@ CDXLOperatorFactory::MakeMdIdFromStr(CDXLMemoryManager *dxl_memory_manager,
 CMDIdGPDB *
 CDXLOperatorFactory::GetGPDBMdId(CDXLMemoryManager *dxl_memory_manager,
 								 XMLChArray *remaining_tokens,
-								 Edxltoken target_attr, Edxltoken target_elem)
+								 Edxltoken target_attr, Edxltoken target_elem,
+								 IMDId::EMDIdType mdidType)
 {
 	GPOS_ASSERT(GPDXL_GPDB_MDID_COMPONENTS <= remaining_tokens->Size());
 
@@ -2297,7 +2300,7 @@ CDXLOperatorFactory::GetGPDBMdId(CDXLMemoryManager *dxl_memory_manager,
 
 	// construct metadata id object
 	return GPOS_NEW(dxl_memory_manager->Pmp())
-		CMDIdGPDB(oid_colid, version_major, version_minor);
+		CMDIdGPDB(mdidType, oid_colid, version_major, version_minor);
 }
 
 //---------------------------------------------------------------------------

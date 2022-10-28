@@ -68,6 +68,8 @@ public:
 	CMDIdGPDB(CSystemId sysid, OID oid);
 	explicit CMDIdGPDB(OID oid);
 	CMDIdGPDB(OID oid, ULONG version_major, ULONG version_minor);
+	CMDIdGPDB(EMDIdType mdIdType, OID oid, ULONG version_major = 1,
+			  ULONG version_minor = 0);
 
 	// copy ctor
 	explicit CMDIdGPDB(const CMDIdGPDB &mdidSource);
@@ -75,7 +77,7 @@ public:
 	virtual EMDIdType
 	MdidType() const
 	{
-		return EmdidGPDB;
+		return m_sysid.MdidType();
 	}
 
 	// string representation of mdid
@@ -126,7 +128,7 @@ public:
 	static const CMDIdGPDB *
 	CastMdid(const IMDId *mdid)
 	{
-		GPOS_ASSERT(NULL != mdid && EmdidGPDB == mdid->MdidType());
+		GPOS_ASSERT(NULL != mdid);
 
 		return dynamic_cast<const CMDIdGPDB *>(mdid);
 	}
@@ -135,8 +137,7 @@ public:
 	static CMDIdGPDB *
 	CastMdid(IMDId *mdid)
 	{
-		GPOS_ASSERT(NULL != mdid && (EmdidGPDB == mdid->MdidType() ||
-									 EmdidGPDBCtas == mdid->MdidType()));
+		GPOS_ASSERT(NULL != mdid);
 
 		return dynamic_cast<CMDIdGPDB *>(mdid);
 	}
