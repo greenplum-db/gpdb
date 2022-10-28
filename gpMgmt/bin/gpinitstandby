@@ -24,7 +24,7 @@ except ImportError as e:
     sys.exit('ERROR: Cannot import modules.  Please check that you '
              'have sourced greenplum_path.sh.  Detail: ' + str(e))
 
-EXECNAME = os.path.split(__file__)[-1]
+EXECNAME = 'gpinitstandby'
 
 # initstandby state constants for rollback
 INIT_STANDBY_STATE_NOT_STARTED=0

@@ -109,7 +109,7 @@ gpexpand -c
 
 gpexpand -? | -h | --help | --verbose | -v"""
 
-EXECNAME = os.path.split(__file__)[-1]
+EXECNAME = 'gpexpand'
 
 
 # ----------------------- Command line option parser ----------------------

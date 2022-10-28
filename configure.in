@@ -810,6 +810,13 @@ PGAC_ARG_BOOL(enable, ic-proxy, no,
 AC_SUBST(enable_ic_proxy)
 
 #
+# Standalone management utils
+#
+PGAC_ARG_BOOL(enable, standalone-utils, no,
+              [enable building standalone management utils])
+AC_SUBST(enable_standalone_utils)
+
+#
 # Include directories
 #
 ac_save_IFS=$IFS

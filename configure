@@ -746,6 +746,7 @@ ICU_CFLAGS
 with_icu
 enable_thread_safety
 INCLUDES
+enable_standalone_utils
 enable_ic_proxy
 HAVE_CXX14
 enable_gpcloud
@@ -882,6 +883,7 @@ enable_orca
 enable_mapreduce
 enable_gpcloud
 enable_ic_proxy
+enable_standalone_utils
 enable_thread_safety
 with_icu
 with_tcl
@@ -1581,6 +1583,8 @@ Optional Features:
   --enable-gpcloud        enable gpcloud support
   --enable-ic-proxy       enable interconnect proxy mode (requires libuv
                           library)
+  --enable-standalone-utils
+                          enable building standalone management utils
   --disable-thread-safety disable thread-safety in client libraries
   --disable-largefile     omit support for large files
 
@@ -8295,6 +8299,34 @@ $as_echo "#define ENABLE_IC_PROXY 1" >>confdefs.h
 
 else
   enable_ic_proxy=no
+
+fi
+
+
+
+
+#
+# Standalone management utils
+#
+
+
+# Check whether --enable-standalone-utils was given.
+if test "${enable_standalone_utils+set}" = set; then :
+  enableval=$enable_standalone_utils;
+  case $enableval in
+    yes)
+      :
+      ;;
+    no)
+      :
+      ;;
+    *)
+      as_fn_error $? "no argument expected for --enable-standalone-utils option" "$LINENO" 5
+      ;;
+  esac
+
+else
+  enable_standalone_utils=no
 
 fi
 

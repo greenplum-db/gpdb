@@ -1338,16 +1338,23 @@ def conflict_with_gpexpand(utility, refuse_phase1=True, refuse_phase2=False):
 
 #=-=-=-=-=-=-=-=-=-= Bash Migration Helper Functions =-=-=-=-=-=-=-=-
 
+def py_stmts_to_command(stmts):
+    return "python3 -c '" + ("\n".join([
+        "import sys",
+        "import os",
+        "sys.path.insert(0, os.path.join(os.environ[\"GPHOME\"], \"lib\", \"python\"))"
+    ] + stmts)) + "'"
+
 def start_standbycoordinator(host, datadir, port, era=None,
                         wrapper=None, wrapper_args=None):
     logger.info("Starting standby coordinator")
 
     logger.info("Checking if standby coordinator is running on host: %s  in directory: %s" % (host,datadir))
     cmd = Command("recovery_startup",
-                  ("python3 -c "
-                   "'from gppylib.commands.gp import recovery_startup; "
-                   """recovery_startup("{0}", "{1}")'""").format(
-                       datadir, port),
+                  py_stmts_to_command([
+                    "from gppylib.commands.gp import recovery_startup",
+                    "recovery_startup(\"{0}\", \"{1}\")".format(datadir, port)
+                  ]),
                   ctxt=REMOTE, remoteHost=host)
     cmd.run()
     res = cmd.get_results().stderr
@@ -1378,9 +1385,10 @@ def start_standbycoordinator(host, datadir, port, era=None,
         # shell script.
         pid = getPostmasterPID(host, datadir)
         cmd = Command("get pids",
-                      ("python3 -c "
-                       "'from gppylib.commands import unix; "
-                       "print(unix.getDescendentProcesses({0}))'".format(pid)),
+                      py_stmts_to_command([
+                        "from gppylib.commands import unix",
+                        "print(unix.getDescendentProcesses({0}))".format(pid)
+                      ]),
                       ctxt=REMOTE, remoteHost=host)
         cmd.run()
         logger.debug(str(cmd))

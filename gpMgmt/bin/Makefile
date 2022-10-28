@@ -21,10 +21,24 @@ PROGRAMS= analyzedb gpactivatestandby gpaddmirrors gpcheckcat gpcheckperf \
 installdirs:
 	$(MKDIR_P) '$(DESTDIR)$(bindir)/lib'
 
-installprograms: installdirs
+standalone_dir=./standalone/gpmgmt_bin
+installstandalone: installdirs
+ifeq ($(enable_standalone_utils),yes)
+	python3 ../setup.py build --force && \
+	python3 ../setup.py install_exe --skip-build --install-dir="$(libdir)/$(standalone_dir)"; \
+	for file_name in $(PROGRAMS); do \
+		if [ -e $(libdir)/$(standalone_dir)/__frozen__$$file_name ]; then \
+			ln -sf $(libdir)/$(standalone_dir)/__frozen__$$file_name $(DESTDIR)$(bindir)/$$file_name; \
+		fi \
+	done
+endif
+
+installprograms: installdirs installstandalone
 	for file in $(PROGRAMS); do \
-		$(INSTALL_SCRIPT) $$file '$(DESTDIR)$(bindir)/'$$file ; \
-		$(PERL) $(top_builddir)/putversion '$(DESTDIR)$(bindir)/'$$file ; \
+		if [ ! -e $(DESTDIR)$(bindir)/$$file ]; then \
+			$(INSTALL_SCRIPT) $$file '$(DESTDIR)$(bindir)/'$$file ; \
+			$(PERL) $(top_builddir)/putversion '$(DESTDIR)$(bindir)/'$$file ; \
+		fi \
 	done
 	# Symlink gpcheckcat from bin to bin/lib to maintain backward compatibility
 	if [ ! -L $(DESTDIR)$(bindir)/lib/gpcheckcat  ]; then \
@@ -177,6 +191,8 @@ installcheck: installcheck-bash
 	$(MAKE) -C gpload_test $@
 
 clean distclean:
+	rm -rf build/
+	find $(PYLIB_DIR) ! -name '.gitkeep' -type f -exec rm -rf {} +
 	rm -rf $(PYLIB_SRC_EXT)/$(PYLINT_DIR)
 	rm -rf $(PYLIB_SRC_EXT)/$(PYGRESQL_DIR)/build
 	rm -rf $(PYLIB_SRC)/$(PYGRESQL_DIR)/build

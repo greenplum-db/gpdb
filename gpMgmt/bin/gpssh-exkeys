@@ -60,7 +60,7 @@ except ImportError as e:
 #
 
 class Global:
-    script_name = os.path.split(__file__)[-1]
+    script_name = 'gpssh-exkeys'
     opt = {}
     opt['-v'] = False
     opt['-h'] = []

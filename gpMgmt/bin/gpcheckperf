@@ -64,7 +64,7 @@ def usage(exitarg):
 
 
 class Global():
-    script_name = os.path.split(__file__)[-1]
+    script_name = 'gpcheckperf'
     opt = {'-d': [], '-D': False, '-v': False, '-V': False, '-r': '',
            '-B': 1024 * 32, '-S': 0, '-h': [], '-f': None,
            '--duration': 15, '--net': None, '--netserver': 'gpnetbenchServer',

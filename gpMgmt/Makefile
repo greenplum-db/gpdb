@@ -8,8 +8,13 @@ $(recurse)
 
 generate_greenplum_path_file:
 	mkdir -p $(DESTDIR)$(prefix)
+ifeq ($(enable_standalone_utils),yes)
+	unset LIBPATH; \
+	bin/generate-greenplum-path.sh no no > $(DESTDIR)$(prefix)/greenplum_path.sh
+else
 	unset LIBPATH; \
 	bin/generate-greenplum-path.sh > $(DESTDIR)$(prefix)/greenplum_path.sh
+endif
 
 install: generate_greenplum_path_file
 	mkdir -p $(DESTDIR)$(prefix)/lib/python

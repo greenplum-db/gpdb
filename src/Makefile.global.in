@@ -230,6 +230,7 @@ enable_orafce		= @enable_orafce@
 enable_mapreduce    = @enable_mapreduce@
 enable_gpcloud 	    = @enable_gpcloud@
 enable_ic_proxy     = @enable_ic_proxy@
+enable_standalone_utils = @enable_standalone_utils@
 
 enable_tap_tests = @enable_tap_tests@
 

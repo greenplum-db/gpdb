@@ -1,0 +1,2 @@
+setuptools~=59.6.0
+cx_Freeze~=6.11.1

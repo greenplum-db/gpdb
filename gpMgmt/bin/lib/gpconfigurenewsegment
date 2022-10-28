@@ -29,7 +29,7 @@ Used by at least gpexpand, gprecoverseg, and gpaddmirrors
 """)
 
 DEFAULT_BATCH_SIZE=8
-EXECNAME = os.path.split(__file__)[-1]
+EXECNAME = 'gpconfigurenewsegment'
 
 class ValidationException(Exception):
 

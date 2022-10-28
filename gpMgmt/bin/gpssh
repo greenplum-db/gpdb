@@ -38,7 +38,7 @@ from gppylib.commands.gp import get_coordinatordatadir
 # all the command line options
 #
 class __globals__:
-    script_name = os.path.split(__file__)[-1]
+    script_name = 'gpssh'
     USER = os.environ.get('LOGNAME') or os.environ.get('USER')
     opt = {}
     opt['-v'] = False

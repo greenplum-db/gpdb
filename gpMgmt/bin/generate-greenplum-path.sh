@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+SET_PYTHONHOME="${1:-no}"
+SET_PYTHONPATH="${2:-yes}"
+
 cat <<"EOF"
 if test -n "${ZSH_VERSION:-}"; then
     # zsh
@@ -26,8 +29,24 @@ else
 fi
 EOF
 
+if [ "${SET_PYTHONHOME}" = "yes" ]; then
+	cat <<-"EOF"
+	PYTHONHOME="${GPHOME}/ext/python"
+	export PYTHONHOME
+
+	PATH="${PYTHONHOME}/bin:${PATH}"
+	LD_LIBRARY_PATH="${PYTHONHOME}/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+	EOF
+fi
+
+if [ "${SET_PYTHONPATH}" = "yes" ]; then
+	cat <<-"EOF"
+	PYTHONPATH="${GPHOME}/lib/python"
+	export PYTHONPATH
+	EOF
+fi
+
 cat <<"EOF"
-PYTHONPATH="${GPHOME}/lib/python"
 PATH="${GPHOME}/bin:${PATH}"
 LD_LIBRARY_PATH="${GPHOME}/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
@@ -37,7 +56,6 @@ fi
 
 export GPHOME
 export PATH
-export PYTHONPATH
 export LD_LIBRARY_PATH
 export OPENSSL_CONF
 EOF

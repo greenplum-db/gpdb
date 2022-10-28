@@ -43,7 +43,7 @@ description = ("""
 Moves mirror segments in a pre-existing GPDB Array.
 """)
 
-EXECNAME = os.path.split(__file__)[-1]
+EXECNAME = 'gpmovemirrors'
 
 _help = ["""
 The input file should be a plain text file with the format:
