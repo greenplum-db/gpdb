@@ -457,7 +457,7 @@ class GpExpandStatus():
 
     def _sync_status_file(self):
         """Syncs the gpexpand status file with the coordinator mirror"""
-        cpCmd = Scp('gpexpand copying status file to coordinator mirror',
+        cpCmd = Rsync('gpexpand copying status file to coordinator mirror',
                     srcFile=self._status_filename,
                     dstFile=self._status_standby_filename,
                     dstHost=self._coordinator_mirror.getSegmentHostName())
@@ -527,7 +527,7 @@ class GpExpandStatus():
         """ Sync the segment configuration backup file to standby """
         if self._coordinator_mirror:
             self.logger.debug("Sync segment configuration backup file")
-            cpCmd = Scp('gpexpand copying segment configuration backup file to coordinator mirror',
+            cpCmd = Rsync('gpexpand copying segment configuration backup file to coordinator mirror',
                         srcFile=self._gp_segment_configuration_backup,
                         dstFile=self._segment_configuration_standby_filename,
                         dstHost=self._coordinator_mirror.getSegmentHostName())
@@ -772,7 +772,7 @@ class SegmentTemplate:
         """Distributes template tar file to hosts"""
         for host in self.hosts:
             logger.debug('Copying tar file to %s' % host)
-            cpCmd = Scp(name='gpexpand distribute tar file to new hosts',
+            cpCmd = Rsync(name='gpexpand distribute tar file to new hosts',
                         srcFile=self.schema_tar_file,
                         dstFile=self.segTarDir,
                         dstHost=host)
@@ -861,7 +861,7 @@ class SegmentTemplate:
         localHostname = self.gparray.coordinator.getSegmentHostName()
         cmdName = 'gpexpand copying postgresql.conf to %s:%s/postgresql.conf' \
                   % (self.srcSegHostname, self.srcSegDataDir)
-        cpCmd = Scp(name=cmdName, srcFile=self.srcSegDataDir + '/postgresql.conf',
+        cpCmd = Rsync(name=cmdName, srcFile=self.srcSegDataDir + '/postgresql.conf',
             dstFile=self.tempDir, dstHost=localHostname, ctxt=REMOTE,
             remoteHost=self.srcSegHostname)
         cpCmd.run(validateAfter=True)
@@ -869,7 +869,7 @@ class SegmentTemplate:
         self.logger.info('Copying pg_hba.conf from existing segment into template')
         cmdName = 'gpexpand copy pg_hba.conf to %s:%s/pg_hba.conf' \
                   % (self.srcSegHostname, self.srcSegDataDir)
-        cpCmd = Scp(name=cmdName, srcFile=self.srcSegDataDir + '/pg_hba.conf',
+        cpCmd = Rsync(name=cmdName, srcFile=self.srcSegDataDir + '/pg_hba.conf',
                     dstFile=self.tempDir, dstHost=localHostname,ctxt=REMOTE,
                     remoteHost=self.srcSegHostname)
         cpCmd.run(validateAfter=True)

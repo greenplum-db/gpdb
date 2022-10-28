@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 
 '''
-gpscp -- scp to multiple hosts at once
+gpsync -- rsync to multiple hosts at once
 
-Usage: gpscp [--version] [-?v] [-r] [-p port] [-u user]
+Usage: gpsync [--version] [-?v] [-r] [-a] [-p port] [-u user]
              [-h host] [-f hostfile] [-J host_substitution_character] [[user@]host1:]file1 [...] [[user@]hosts2:]file2
 
 	     --version    : print version information
              -?           : print this help screen
 	     -v	          : verbose mode
              -r           : recursively copy entire directories
+             -a           : archive mode; equals -rlptgoD (no -H,-A,-X)
 	     -h host      : ssh host to connect to (multiple -h is okay)
 	     -f file      : a file listing all hosts to connect to
              -J character : character to be substitute as hostname [default='=']
@@ -36,6 +37,7 @@ class Global:
     opt['-f'] = None
     opt['-J'] = '=:'
     opt['-r'] = False
+    opt['-a'] = False
     filePath = []
 
 
@@ -61,7 +63,7 @@ def print_version():
 #############
 def parseCommandLine():
     try:
-        (options, args) = getopt.getopt(sys.argv[1:], '?vrJ:p:u:h:f:', ['version'])
+        (options, args) = getopt.getopt(sys.argv[1:], '?vraJ:p:u:h:f:', ['version'])
     except Exception as e:
         usage('Error: ' + str(e))
 
@@ -77,6 +79,8 @@ def parseCommandLine():
         elif (switch == '-J'):
             GV.opt[switch] = val + ':'
         elif (switch == '-r'):
+            GV.opt[switch] = True
+        elif (switch == '-a'):
             GV.opt[switch] = True
         elif (switch == '--version'):
             print_version()
@@ -109,13 +113,14 @@ try:
     if len(GV.opt['-h']) == 0:
         usage('Error: missing hosts in -h and/or -f arguments')
 
-    scp = 'scp -o "BatchMode yes" -o "StrictHostKeyChecking no"'
-    if GV.opt['-r']:  scp += ' -r'
+    rsync = 'rsync -e "ssh -o BatchMode=yes -o StrictHostKeyChecking=no"'
+    if GV.opt['-r']:  rsync += ' -r'
+    if GV.opt['-a']:  rsync += ' -a'
 
     proc = []
     for peer in GV.opt['-h']:
         peer = canonicalize_address(peer)  # MPP-13617
-        cmd = scp + ' '
+        cmd = rsync + ' '
         for f in GV.filePath:
             cmd += f.replace(GV.opt['-J'], '%s:' % peer) + ' '
         if GV.opt['-v']: print('[INFO]', cmd)

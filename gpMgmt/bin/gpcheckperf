@@ -103,8 +103,8 @@ def gpssh(cmd):
     return not rc, out
 
 
-def gpscp(src, dst):
-    c = ['%s/bin/gpscp' % GPHOME]
+def gpsync(src, dst):
+    c = ['%s/bin/gpsync' % GPHOME]
     if GV.opt['-V']:
         c.append('-v')
     if GV.opt['-f']:
@@ -391,9 +391,9 @@ def copyExecOver(fname):
     if not os.access(path, os.X_OK):
         sys.exit('[Exit] file not executable: ' + path)
 
-    (ok, out) = gpscp(path, '=:%s' % target)
+    (ok, out) = gpsync(path, '=:%s' % target)
     if not ok:
-        sys.exit('[Error] command failed: gpscp %s =:%s with output: %s' % (path, target, out))
+        sys.exit('[Error] command failed: gpsync %s =:%s with output: %s' % (path, target, out))
 
     # chmod +x file
     (ok, out) = gpssh('chmod a+rx %s' % target)

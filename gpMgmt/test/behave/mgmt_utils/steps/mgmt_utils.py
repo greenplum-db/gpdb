@@ -24,7 +24,6 @@ from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR
 from gppylib.commands.gp import SegmentStart, GpStandbyStart, CoordinatorStop
 from gppylib.commands import gp
 from gppylib.commands.pg import PgBaseBackup
-from gppylib.commands.unix import findCmdInPath, Scp
 from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
 from gppylib.operations.buildMirrorSegments import get_recovery_progress_pattern
 from gppylib.operations.unix import ListRemoteFilesByPattern, CheckRemoteFile
@@ -1611,7 +1610,7 @@ def impl(context, seg):
                   remoteHost=hostname, ctxt=REMOTE)
     cmd.run(validateAfter=True)
 
-    cmd = Command(name="Copy background script to remote host", cmdStr='scp %s %s:/tmp' % (filename, hostname))
+    cmd = Command(name="Copy background script to remote host", cmdStr='rsync %s %s:/tmp' % (filename, hostname))
     cmd.run(validateAfter=True)
 
     cmd = Command(name="Run Bg process to save pid",
@@ -1661,23 +1660,20 @@ def impl(context, seg):
     pid_file = os.path.join(data_dir, 'postmaster.pid')
     pid_file_orig = pid_file + '.orig'
 
-    cmd = Command(name="Copy pid file", cmdStr='cp %s %s' % (pid_file_orig, pid_file), remoteHost=hostname, ctxt=REMOTE)
-    cmd.run(validateAfter=True)
-
-    cpCmd = Command(name='copy pid file to coordinator for editing', cmdStr='scp %s:%s /tmp' % (hostname, pid_file))
+    cpCmd = Command(name='copy pid file to coordinator for editing', cmdStr='rsync %s:%s /tmp' % (hostname, pid_file_orig))
 
     cpCmd.run(validateAfter=True)
 
-    with open('/tmp/postmaster.pid', 'r') as fr:
+    with open('/tmp/postmaster.pid.orig', 'r') as fr:
         lines = fr.readlines()
 
     lines[0] = "%s\n" % context.bg_pid
 
-    with open('/tmp/postmaster.pid', 'w') as fw:
+    with open('/tmp/postmaster.pid.orig', 'w') as fw:
         fw.writelines(lines)
 
     cpCmd = Command(name='copy pid file to segment after editing',
-                    cmdStr='scp /tmp/postmaster.pid %s:%s' % (hostname, pid_file))
+                    cmdStr='rsync /tmp/postmaster.pid.orig %s:%s' % (hostname, pid_file))
     cpCmd.run(validateAfter=True)
 
 
@@ -1701,7 +1697,7 @@ def impl(context, seg):
     cmd = Command(name="Copy pid file", cmdStr='cp %s %s' % (pid_file_orig, pid_file), remoteHost=hostname, ctxt=REMOTE)
     cmd.run(validateAfter=True)
 
-    cpCmd = Command(name='copy pid file to coordinator for editing', cmdStr='scp %s:%s /tmp' % (hostname, pid_file))
+    cpCmd = Command(name='copy pid file to coordinator for editing', cmdStr='rsync %s:%s /tmp' % (hostname, pid_file))
 
     cpCmd.run(validateAfter=True)
 
@@ -1724,7 +1720,7 @@ def impl(context, seg):
         fw.writelines(lines)
 
     cpCmd = Command(name='copy pid file to segment after editing',
-                    cmdStr='scp /tmp/postmaster.pid %s:%s' % (hostname, pid_file))
+                    cmdStr='rsync /tmp/postmaster.pid %s:%s' % (hostname, pid_file))
     cpCmd.run(validateAfter=True)
 
 
@@ -2586,10 +2582,10 @@ def impl(context, location):
             host_opts.extend(['-h', host])
 
         subprocess.check_call([
-            'gpscp',
-            '-rv',
+            'gpsync',
+            '-av',
             ] + host_opts + [
-            os.getenv('GPHOME'),
+            os.getenv('GPHOME')+'/',
             '=:{}'.format(location),
         ])
 
@@ -3314,7 +3310,7 @@ def step_impl(context):
             remote_postgresql_conf = "%s/%s" % (datadir, 'postgresql.conf')
             local_conf_copy = os.path.join(gp.get_coordinatordatadir(), "%s.%s" % ('postgresql.conf', hostname))
             cmd = Command(name="Copy remote conf to local to diff",
-                        cmdStr='scp %s:%s %s' % (hostname, remote_postgresql_conf, local_conf_copy))
+                        cmdStr='rsync %s:%s %s' % (hostname, remote_postgresql_conf, local_conf_copy))
             cmd.run(validateAfter=True)
 
             dic = pgconf.readfile(filename=local_conf_copy)
@@ -3664,10 +3660,10 @@ def impl(context):
     standby_local_gp_segment_configuration_file = "%s/%s.standby" % \
             (coordinator_datadir, gp_segment_configuration_backup)
 
-    cmd = Command(name="Copy standby file to coordinator", cmdStr='scp %s %s' % \
+    cmd = Command(name="Copy standby file to coordinator", cmdStr='rsync %s %s' % \
             (standby_remote_statusfile, standby_local_statusfile))
     cmd.run(validateAfter=True)
-    cmd = Command(name="Copy standby file to coordinator", cmdStr='scp %s %s' % \
+    cmd = Command(name="Copy standby file to coordinator", cmdStr='rsync %s %s' % \
             (standby_remote_gp_segment_configuration_file, standby_local_gp_segment_configuration_file))
     cmd.run(validateAfter=True)
 

@@ -295,7 +295,7 @@ def impl(context):
 
     # This blows away any existing authorized_keys file on the segments.
     subprocess.check_call([
-        'gpscp',
+        'gpsync',
         '-v',
         ] + host_opts + [
         '~/.ssh/id_rsa.pub',

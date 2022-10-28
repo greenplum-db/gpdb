@@ -89,7 +89,7 @@ MV=`findCmdInPath mv`
 MKDIR=`findCmdInPath mkdir`
 PING=`findCmdInPath ping`
 RM=`findCmdInPath rm`
-SCP=`findCmdInPath scp`
+RSYNC=`findCmdInPath rsync`
 SED=`findCmdInPath sed`
 SLEEP=`findCmdInPath sleep`
 SORT=`findCmdInPath sort`
@@ -156,7 +156,7 @@ PG_CONF=postgresql.conf
 PG_INTERNAL_CONF=internal.auto.conf
 PG_HBA=pg_hba.conf
 if [ x"$TRUSTED_SHELL" = x"" ]; then TRUSTED_SHELL="$SSH"; fi
-if [ x"$TRUSTED_COPY" = x"" ]; then TRUSTED_COPY="$SCP"; fi
+if [ x"$TRUSTED_COPY" = x"" ]; then TRUSTED_COPY="$RSYNC  "; fi
 PG_CONF_ADD_FILE=$WORKDIR/postgresql_conf_gp_additions
 DEFAULTDB=template1
 
