@@ -120,6 +120,14 @@ CTranslatorRelcacheToDXL::RetrieveObject(CMemoryPool *mp,
 			md_obj = RetrieveScCmp(mp, mdid);
 			break;
 
+		case IMDId::EmdidInd:
+			md_obj = RetrieveIndex(mp, md_accessor, mdid);
+			break;
+
+		case IMDId::EmdidCheckConstraint:
+			md_obj = RetrieveCheckConstraints(mp, md_accessor, mdid);
+			break;
+
 		default:
 			break;
 	}
@@ -155,11 +163,6 @@ CTranslatorRelcacheToDXL::RetrieveObjectGPDB(CMemoryPool *mp,
 
 	// find out what type of object this oid stands for
 
-	if (gpdb::IndexExists(oid))
-	{
-		return RetrieveIndex(mp, md_accessor, mdid);
-	}
-
 	if (gpdb::TypeExists(oid))
 	{
 		return RetrieveType(mp, mdid);
@@ -183,11 +186,6 @@ CTranslatorRelcacheToDXL::RetrieveObjectGPDB(CMemoryPool *mp,
 	if (gpdb::FunctionExists(oid))
 	{
 		return RetrieveFunc(mp, mdid);
-	}
-
-	if (gpdb::CheckConstraintExists(oid))
-	{
-		return RetrieveCheckConstraints(mp, md_accessor, mdid);
 	}
 
 	// no match found
@@ -254,7 +252,8 @@ CTranslatorRelcacheToDXL::RetrieveRelIndexInfo(CMemoryPool *mp, Relation rel)
 
 		if (IsIndexSupported(index_rel.get()))
 		{
-			CMDIdGPDB *mdid_index = GPOS_NEW(mp) CMDIdGPDB(index_oid);
+			CMDIdGPDB *mdid_index =
+				GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidInd, index_oid);
 			// for a regular table, external table or leaf partition, an index is always complete
 			CMDIndexInfo *md_index_info =
 				GPOS_NEW(mp) CMDIndexInfo(mdid_index, false /* is_partial */);
@@ -284,8 +283,8 @@ CTranslatorRelcacheToDXL::RetrieveRelCheckConstraints(CMemoryPool *mp, OID oid)
 	{
 		OID check_constraint_oid = lfirst_oid(lc);
 		GPOS_ASSERT(0 != check_constraint_oid);
-		CMDIdGPDB *mdid_check_constraint =
-			GPOS_NEW(mp) CMDIdGPDB(check_constraint_oid);
+		CMDIdGPDB *mdid_check_constraint = GPOS_NEW(mp)
+			CMDIdGPDB(IMDId::EmdidCheckConstraint, check_constraint_oid);
 		check_constraint_mdids->Append(mdid_check_constraint);
 	}
 

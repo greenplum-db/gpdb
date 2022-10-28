@@ -473,7 +473,8 @@ public:
 	// parse a GPDB mdid object from an array of its components
 	static CMDIdGPDB *GetGPDBMdId(CDXLMemoryManager *dxl_memory_manager,
 								  XMLChArray *remaining_tokens,
-								  Edxltoken target_attr, Edxltoken target_elem);
+								  Edxltoken target_attr, Edxltoken target_elem,
+								  IMDId::EMDIdType mdidType = IMDId::EmdidGPDB);
 
 	// parse a GPDB CTAS mdid object from an array of its components
 	static CMDIdGPDB *GetGPDBCTASMdId(CDXLMemoryManager *dxl_memory_manager,

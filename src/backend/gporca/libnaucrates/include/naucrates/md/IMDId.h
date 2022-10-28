@@ -74,6 +74,8 @@ public:
 		EmdidCastFunc = 3,
 		EmdidScCmp = 4,
 		EmdidGPDBCtas = 5,
+		EmdidInd = 6,
+		EmdidCheckConstraint = 7,
 		EmdidSentinel
 	};
 

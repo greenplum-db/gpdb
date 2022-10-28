@@ -185,6 +185,21 @@ CMDIdGPDB::CMDIdGPDB(OID oid, ULONG version_major, ULONG version_minor)
 	Serialize();
 }
 
+CMDIdGPDB::CMDIdGPDB(EMDIdType mdIdType, OID oid, ULONG version_major,
+					 ULONG version_minor)
+	: m_sysid(mdIdType, GPMD_GPDB_SYSID),
+	  m_oid(oid),
+	  m_major_version(version_major),
+	  m_minor_version(version_minor),
+	  m_str(m_mdid_array, GPOS_ARRAY_SIZE(m_mdid_array))
+{
+	GPOS_RTL_ASSERT(
+		mdIdType == IMDId::EmdidGPDB ||
+		(mdIdType >= IMDId::EmdidInd && mdIdType < IMDId::EmdidSentinel));
+	// serialize mdid into static string
+	Serialize();
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CMDIdGPDB::CMDIdGPDB
@@ -202,7 +217,6 @@ CMDIdGPDB::CMDIdGPDB(const CMDIdGPDB &mdid_source)
 	  m_str(m_mdid_array, GPOS_ARRAY_SIZE(m_mdid_array))
 {
 	GPOS_ASSERT(mdid_source.IsValid());
-	GPOS_ASSERT(IMDId::EmdidGPDB == mdid_source.MdidType());
 
 	// serialize mdid into static string
 	Serialize();
@@ -295,7 +309,7 @@ CMDIdGPDB::VersionMinor() const
 BOOL
 CMDIdGPDB::Equals(const IMDId *mdid) const
 {
-	if (nullptr == mdid || EmdidGPDB != mdid->MdidType())
+	if (nullptr == mdid || MdidType() != mdid->MdidType())
 	{
 		return false;
 	}
@@ -348,7 +362,7 @@ CMDIdGPDB::Serialize(CXMLSerializer *xml_serializer,
 IOstream &
 CMDIdGPDB::OsPrint(IOstream &os) const
 {
-	os << "(" << Oid() << "," << VersionMajor() << "." << VersionMinor() << ")";
+	os << "(" << m_str.GetBuffer() << ")";
 	return os;
 }
 
