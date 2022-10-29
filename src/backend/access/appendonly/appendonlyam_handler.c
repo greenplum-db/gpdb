@@ -72,23 +72,16 @@ typedef struct AppendOnlyDMLState
  *		a memory context that should be long lived enough and is
  *			responsible for reseting the state via its reset cb
  */
-static struct AppendOnlyLocal
+typedef struct AppendOnlyDMLStates
 {
 	AppendOnlyDMLState	   *last_used_state;
-	HTAB				   *dmlDescriptorTab;
+	HTAB				   *state_table;
 
 	MemoryContext			stateCxt;
 	MemoryContextCallback	cb;
-} appendOnlyLocal	  = {
-	.last_used_state  = NULL,
-	.dmlDescriptorTab = NULL,
+} AppendOnlyDMLStates;
 
-	.stateCxt		  = NULL,
-	.cb				  = {
-		.func	= reset_state_cb,
-		.arg	= NULL
-	},
-};
+static AppendOnlyDMLStates appendOnlyDMLStates;
 
 /* ------------------------------------------------------------------------
  * DML state related functions
@@ -96,40 +89,39 @@ static struct AppendOnlyLocal
  */
 
 /*
+ * Initialize the backend local AppendOnlyDMLStates object for this backend for
+ * the current DML or DML-like command (if not already initialized).
+ *
  * This function should be called with a current memory context whose life
  * span is enough to last until the end of this command execution.
  */
 static void
-init_dml_local_state(void)
+init_appendonly_dml_states()
 {
 	HASHCTL hash_ctl;
 
-	if (!appendOnlyLocal.dmlDescriptorTab)
+	if (!appendOnlyDMLStates.state_table)
 	{
-		Assert(appendOnlyLocal.stateCxt == NULL);
-		appendOnlyLocal.stateCxt = AllocSetContextCreate(
+		Assert(appendOnlyDMLStates.stateCxt == NULL);
+		appendOnlyDMLStates.stateCxt = AllocSetContextCreate(
 												CurrentMemoryContext,
 												"AppendOnly DML State Context",
 												ALLOCSET_SMALL_SIZES);
-		MemoryContextRegisterResetCallback(
-								appendOnlyLocal.stateCxt,
-							   &appendOnlyLocal.cb);
+
+		appendOnlyDMLStates.cb.func = reset_state_cb;
+		appendOnlyDMLStates.cb.arg = NULL;
+		MemoryContextRegisterResetCallback(appendOnlyDMLStates.stateCxt,
+										   &appendOnlyDMLStates.cb);
 
 		memset(&hash_ctl, 0, sizeof(hash_ctl));
 		hash_ctl.keysize = sizeof(Oid);
 		hash_ctl.entrysize = sizeof(AppendOnlyDMLState);
-		hash_ctl.hcxt = appendOnlyLocal.stateCxt;
-		appendOnlyLocal.dmlDescriptorTab =
+		hash_ctl.hcxt = appendOnlyDMLStates.stateCxt;
+		appendOnlyDMLStates.state_table =
 			hash_create("AppendOnly DML state", 128, &hash_ctl,
 						HASH_CONTEXT | HASH_ELEM | HASH_BLOBS);
 	}
 }
-
-
-/*
- * There are disctinct *_dm_state functions in order to document a bit better
- * the intention behind each one of those and keep them as thin as possible.
- */
 
 /*
  * Create and insert a state entry for a relation. The actual descriptors will
@@ -137,19 +129,18 @@ init_dml_local_state(void)
  *
  * Should be called exactly once per relation.
  */
-static inline AppendOnlyDMLState *
-enter_dml_state(const Oid relationOid)
+static inline void
+init_dml_state(const Oid relationOid)
 {
 	AppendOnlyDMLState *state;
 	bool				found;
 
-	Assert(appendOnlyLocal.dmlDescriptorTab);
+	Assert(appendOnlyDMLStates.state_table);
 
-	state = (AppendOnlyDMLState *) hash_search(
-										appendOnlyLocal.dmlDescriptorTab,
-									   &relationOid,
-										HASH_ENTER,
-									   &found);
+	state = (AppendOnlyDMLState *) hash_search(appendOnlyDMLStates.state_table,
+											   &relationOid,
+											   HASH_ENTER,
+											   &found);
 
 	Assert(!found);
 
@@ -157,8 +148,7 @@ enter_dml_state(const Oid relationOid)
 	state->deleteDesc = NULL;
 	state->uniqueCheckDesc = NULL;
 
-	appendOnlyLocal.last_used_state = state;
-	return state;
+	appendOnlyDMLStates.last_used_state = state;
 }
 
 /*
@@ -169,21 +159,20 @@ static inline AppendOnlyDMLState *
 find_dml_state(const Oid relationOid)
 {
 	AppendOnlyDMLState *state;
-	Assert(appendOnlyLocal.dmlDescriptorTab);
+	Assert(appendOnlyDMLStates.state_table);
 
-	if (appendOnlyLocal.last_used_state &&
-			appendOnlyLocal.last_used_state->relationOid == relationOid)
-		return appendOnlyLocal.last_used_state;
+	if (appendOnlyDMLStates.last_used_state &&
+			appendOnlyDMLStates.last_used_state->relationOid == relationOid)
+		return appendOnlyDMLStates.last_used_state;
 
-	state = (AppendOnlyDMLState *) hash_search(
-										appendOnlyLocal.dmlDescriptorTab,
-									   &relationOid,
-										HASH_FIND,
-										NULL);
+	state = (AppendOnlyDMLState *) hash_search(appendOnlyDMLStates.state_table,
+											   &relationOid,
+											   HASH_FIND,
+											   NULL);
 
 	Assert(state);
 
-	appendOnlyLocal.last_used_state = state;
+	appendOnlyDMLStates.last_used_state = state;
 	return state;
 }
 
@@ -197,19 +186,18 @@ static inline AppendOnlyDMLState *
 remove_dml_state(const Oid relationOid)
 {
 	AppendOnlyDMLState *state;
-	Assert(appendOnlyLocal.dmlDescriptorTab);
+	Assert(appendOnlyDMLStates.state_table);
 
-	state = (AppendOnlyDMLState *) hash_search(
-										appendOnlyLocal.dmlDescriptorTab,
-									   &relationOid,
-										HASH_REMOVE,
-										NULL);
+	state = (AppendOnlyDMLState *) hash_search(appendOnlyDMLStates.state_table,
+											   &relationOid,
+											   HASH_REMOVE,
+											   NULL);
 
 	Assert(state);
 
-	if (appendOnlyLocal.last_used_state &&
-			appendOnlyLocal.last_used_state->relationOid == relationOid)
-		appendOnlyLocal.last_used_state = NULL;
+	if (appendOnlyDMLStates.last_used_state &&
+			appendOnlyDMLStates.last_used_state->relationOid == relationOid)
+		appendOnlyDMLStates.last_used_state = NULL;
 
 	return state;
 }
@@ -220,8 +208,8 @@ remove_dml_state(const Oid relationOid)
 void
 appendonly_dml_init(Relation relation)
 {
-	init_dml_local_state();
-	(void) enter_dml_state(RelationGetRelid(relation));
+	init_appendonly_dml_states();
+	init_dml_state(RelationGetRelid(relation));
 }
 
 /*
@@ -275,9 +263,9 @@ appendonly_dml_finish(Relation relation)
 static void
 reset_state_cb(void *arg)
 {
-	appendOnlyLocal.dmlDescriptorTab = NULL;
-	appendOnlyLocal.last_used_state = NULL;
-	appendOnlyLocal.stateCxt = NULL;
+	appendOnlyDMLStates.state_table = NULL;
+	appendOnlyDMLStates.last_used_state = NULL;
+	appendOnlyDMLStates.stateCxt = NULL;
 }
 
 /*
@@ -297,7 +285,7 @@ get_or_create_ao_insert_descriptor(const Relation relation, int64 num_rows)
 		MemoryContext oldcxt;
 		AppendOnlyInsertDesc insertDesc;
 
-		oldcxt = MemoryContextSwitchTo(appendOnlyLocal.stateCxt);
+		oldcxt = MemoryContextSwitchTo(appendOnlyDMLStates.stateCxt);
 		insertDesc = appendonly_insert_init(relation,
 											ChooseSegnoForWrite(relation),
 											num_rows);
@@ -338,7 +326,7 @@ get_or_create_delete_descriptor(const Relation relation, bool forUpdate)
 	{
 		MemoryContext oldcxt;
 
-		oldcxt = MemoryContextSwitchTo(appendOnlyLocal.stateCxt);
+		oldcxt = MemoryContextSwitchTo(appendOnlyDMLStates.stateCxt);
 		state->deleteDesc = appendonly_delete_init(relation);
 		MemoryContextSwitchTo(oldcxt);
 	}
@@ -356,7 +344,7 @@ get_or_create_unique_check_desc(Relation relation, Snapshot snapshot)
 		MemoryContext oldcxt;
 		AppendOnlyUniqueCheckDesc uniqueCheckDesc;
 
-		oldcxt = MemoryContextSwitchTo(appendOnlyLocal.stateCxt);
+		oldcxt = MemoryContextSwitchTo(appendOnlyDMLStates.stateCxt);
 		uniqueCheckDesc = palloc0(sizeof(AppendOnlyUniqueCheckDescData));
 		uniqueCheckDesc->blockDirectory = palloc0(sizeof(AppendOnlyBlockDirectory));
 		AppendOnlyBlockDirectory_Init_forSearch(uniqueCheckDesc->blockDirectory,
