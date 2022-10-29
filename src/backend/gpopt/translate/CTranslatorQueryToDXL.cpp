@@ -2242,6 +2242,140 @@ CTranslatorQueryToDXL::IsDuplicateDqaArg(List *dqa_list, Aggref *aggref)
 
 //---------------------------------------------------------------------------
 //	@function:
+//		GroupingSetContainsValue
+//
+//	@doc:
+//		Check if value is a member of the GroupingSet content. Content for
+//		SIMPLE nodes is an integer list of ressortgroupref values. Content
+//		CUBE, ROLLUP, and SET nodes are either SIMPLE nodes or other ROLLUP or
+//		CUBE nodes. See details in parsenodes.h GroupingSet for more details.
+//---------------------------------------------------------------------------
+static BOOL
+GroupingSetContainsValue(GroupingSet *group, INT value)
+{
+	ListCell *lc = nullptr;
+	if (group->kind == GROUPING_SET_SIMPLE)
+	{
+		ForEach(lc, group->content)
+		{
+			if (lfirst_int(lc) == value)
+			{
+				return true;
+			}
+		}
+	}
+	if (group->kind == GROUPING_SET_CUBE ||
+		group->kind == GROUPING_SET_ROLLUP || group->kind == GROUPING_SET_SETS)
+	{
+		ForEach(lc, group->content)
+		{
+			if (GroupingSetContainsValue((GroupingSet *) lfirst(lc), value))
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorQueryToDXL::CheckNoDuplicateAliasGroupingColumn
+//
+//	@doc:
+//		Check if there are multiple grouping set specs that reference
+//		duplicate alias columns that may produce NULL values. This can lead to
+//		a known wrong results scenario even in Postgres. Punt until a proper
+//		solution is found in Postgres. See following threads [1][2] for more
+//		details.
+//
+//		[1] https://www.postgresql.org/message-id/flat/CAHnPFjSdFx_TtNpQturPMkRSJMYaD5rGP2=8iFH9V24-OjHGiQ@mail.gmail.com
+//		[2] https://www.postgresql.org/message-id/flat/830269.1656693747@sss.pgh.pa.us
+//---------------------------------------------------------------------------
+void
+CTranslatorQueryToDXL::CheckNoDuplicateAliasGroupingColumn(List *target_list,
+														   List *group_clause,
+														   List *grouping_set)
+{
+	if (gpdb::ListLength(grouping_set) < 2)
+	{
+		// no duplicates in different grouping specs if only 1 grouping set
+		return;
+	}
+
+	if (gpdb::ListLength(group_clause) < 2)
+	{
+		// no duplicates referenced from grouping set if only 1 group clause
+		return;
+	}
+
+	// Find if there are duplicate aliases in the target list
+	ListCell *lc1 = nullptr;
+	ListCell *lc2 = nullptr;
+
+	CBitSet *bitset = GPOS_NEW(m_mp) CBitSet(m_mp);
+
+	List *processed_list = NIL;
+	ForEach(lc1, target_list)
+	{
+		TargetEntry *target_entry = (TargetEntry *) lfirst(lc1);
+
+		ForEach(lc2, processed_list)
+		{
+			TargetEntry *target_entry_inner = (TargetEntry *) lfirst(lc2);
+			if (gpdb::Equals(target_entry->expr, target_entry_inner->expr))
+			{
+				// ressortgroupref's point to alias'd columns
+				bitset->ExchangeSet(target_entry->ressortgroupref);
+				bitset->ExchangeSet(target_entry_inner->ressortgroupref);
+			}
+		}
+
+		processed_list = gpdb::LAppend(processed_list, target_entry);
+	}
+
+	if (gpdb::ListLength(processed_list) < 1)
+	{
+		// no duplicates if no duplicates found in target list
+		return;
+	}
+
+	int countSimple = 0;
+	int countNonSimple = 0;
+	ForEach(lc1, grouping_set)
+	{
+		GroupingSet *group = (GroupingSet *) lfirst(lc1);
+		CBitSetIter bsiter(*bitset);
+
+		while (bsiter.Advance())
+		{
+			if (GroupingSetContainsValue(group, bsiter.Bit()))
+			{
+				if (group->kind == GROUPING_SET_CUBE ||
+					group->kind == GROUPING_SET_ROLLUP ||
+					group->kind == GROUPING_SET_SETS)
+				{
+					countNonSimple += 1;
+				}
+				else if (group->kind == GROUPING_SET_SIMPLE)
+				{
+					countSimple += 1;
+				}
+			}
+		}
+	}
+
+	if (countNonSimple > 1 || (countNonSimple > 0 && countSimple > 0))
+	{
+		GPOS_RAISE(
+			gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+			GPOS_WSZ_LIT(
+				"Multiple grouping sets specifications with duplicate aliased columns"));
+	}
+}
+
+//---------------------------------------------------------------------------
+//	@function:
 //		CTranslatorQueryToDXL::TranslateGroupingSets
 //
 //	@doc:
@@ -2284,6 +2418,9 @@ CTranslatorQueryToDXL::TranslateGroupingSets(
 		CRefCount::SafeRelease(bitset);
 		return result_dxlnode;
 	}
+
+	CheckNoDuplicateAliasGroupingColumn(target_list, group_clause,
+										grouping_set);
 
 	// grouping functions refer to grouping col positions, so construct a map pos->grouping column
 	// while processing the grouping clause
