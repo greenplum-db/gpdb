@@ -2750,9 +2750,9 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 								   table_slot_callbacks(resultRelInfo->ri_RelationDesc));
 
 		if (RelationIsAoRows(resultRelInfo->ri_RelationDesc))
-			appendonly_dml_init(resultRelInfo->ri_RelationDesc, operation);
+			appendonly_dml_init(resultRelInfo->ri_RelationDesc);
 		else if (RelationIsAoCols(resultRelInfo->ri_RelationDesc))
-			aoco_dml_init(resultRelInfo->ri_RelationDesc, operation);
+			aoco_dml_init(resultRelInfo->ri_RelationDesc);
 
 		/* Also let FDWs init themselves for foreign-table result rels */
 		if (!resultRelInfo->ri_usesFdwDirectModify &&
@@ -3203,10 +3203,9 @@ ExecEndModifyTable(ModifyTableState *node)
 			resultRelInfo->ri_FdwRoutine->EndForeignModify(node->ps.state,
 														   resultRelInfo);
 		if (RelationIsAoRows(resultRelInfo->ri_RelationDesc))
-			appendonly_dml_finish(resultRelInfo->ri_RelationDesc,
-								  node->operation);
+			appendonly_dml_finish(resultRelInfo->ri_RelationDesc);
 		else if(RelationIsAoCols(resultRelInfo->ri_RelationDesc))
-			aoco_dml_finish(resultRelInfo->ri_RelationDesc, node->operation);
+			aoco_dml_finish(resultRelInfo->ri_RelationDesc);
 	}
 
 	/*

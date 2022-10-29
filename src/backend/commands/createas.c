@@ -558,9 +558,9 @@ intorel_startup_dummy(DestReceiver *self, int operation, TupleDesc typeinfo)
 	/* See intorel_initplan() for explanation */
 
 	if (RelationIsAoRows(((DR_intorel *)self)->rel))
-		appendonly_dml_init(((DR_intorel *)self)->rel, CMD_INSERT);
+		appendonly_dml_init(((DR_intorel *)self)->rel);
 	else if (RelationIsAoCols(((DR_intorel *)self)->rel))
-		aoco_dml_init(((DR_intorel *)self)->rel, CMD_INSERT);
+		aoco_dml_init(((DR_intorel *)self)->rel);
 }
 
 /*

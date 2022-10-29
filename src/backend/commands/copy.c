@@ -4220,9 +4220,9 @@ CopyFrom(CopyState cstate)
 	 * provide a good enough interface for this yet.
 	 */
 	if (RelationIsAoRows(resultRelInfo->ri_RelationDesc))
-		appendonly_dml_init(resultRelInfo->ri_RelationDesc, CMD_INSERT);
+		appendonly_dml_init(resultRelInfo->ri_RelationDesc);
 	else if (RelationIsAoCols(resultRelInfo->ri_RelationDesc))
-		aoco_dml_init(resultRelInfo->ri_RelationDesc, CMD_INSERT);
+		aoco_dml_init(resultRelInfo->ri_RelationDesc);
 
 	for (;;)
 	{

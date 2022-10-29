@@ -879,9 +879,9 @@ ExecInitPartitionInfo(ModifyTableState *mtstate, EState *estate,
 				leaf_part_rri);
 
 	if (RelationIsAoRows(leaf_part_rri->ri_RelationDesc))
-		appendonly_dml_init(leaf_part_rri->ri_RelationDesc, mtstate->operation);
+		appendonly_dml_init(leaf_part_rri->ri_RelationDesc);
 	else if (RelationIsAoCols(leaf_part_rri->ri_RelationDesc))
-		aoco_dml_init(leaf_part_rri->ri_RelationDesc, mtstate->operation);
+		aoco_dml_init(leaf_part_rri->ri_RelationDesc);
 
 	MemoryContextSwitchTo(oldcxt);
 
@@ -1170,9 +1170,9 @@ ExecCleanupTupleRouting(ModifyTableState *mtstate,
 		 * appendoptimized table, ensure the DML operation is finished.
 		 */
 		if (RelationIsAoRows(resultRelInfo->ri_RelationDesc))
-			appendonly_dml_finish(resultRelInfo->ri_RelationDesc, mtstate->operation);
+			appendonly_dml_finish(resultRelInfo->ri_RelationDesc);
 		if (RelationIsAoCols(resultRelInfo->ri_RelationDesc))
-			aoco_dml_finish(resultRelInfo->ri_RelationDesc, mtstate->operation);
+			aoco_dml_finish(resultRelInfo->ri_RelationDesc);
 
 		ExecCloseIndices(resultRelInfo);
 		table_close(resultRelInfo->ri_RelationDesc, NoLock);

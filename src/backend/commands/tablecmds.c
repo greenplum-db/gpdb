@@ -6446,9 +6446,9 @@ ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap, LOCKMODE lockmode)
 		scan = table_beginscan(oldrel, snapshot, 0, NULL);
 
 		if (newrel && RelationIsAoRows(newrel))
-			appendonly_dml_init(newrel, CMD_INSERT);
+			appendonly_dml_init(newrel);
 		else if (newrel && RelationIsAoCols(newrel))
-			aoco_dml_init(newrel, CMD_INSERT);
+			aoco_dml_init(newrel);
 
 		/*
 		 * Switch to per-tuple memory context and reset it for each tuple

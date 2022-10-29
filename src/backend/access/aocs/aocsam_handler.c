@@ -247,13 +247,10 @@ remove_dml_state(const Oid relationOid)
 }
 
 /*
- * Although the operation param is superfluous at the momment, the signature of
- * the function is such for balance between the init and finish.
- *
  * This function should be called exactly once per relation.
  */
 void
-aoco_dml_init(Relation relation, CmdType operation)
+aoco_dml_init(Relation relation)
 {
 	init_dml_local_state();
 	(void) enter_dml_state(RelationGetRelid(relation));
@@ -263,7 +260,7 @@ aoco_dml_init(Relation relation, CmdType operation)
  * This function should be called exactly once per relation.
  */
 void
-aoco_dml_finish(Relation relation, CmdType operation)
+aoco_dml_finish(Relation relation)
 {
 	AOCODMLState *state;
 
@@ -981,7 +978,7 @@ aoco_tuple_lock(Relation relation, ItemPointer tid, Snapshot snapshot,
 static void
 aoco_finish_bulk_insert(Relation relation, int options)
 {
-	aoco_dml_finish(relation, CMD_INSERT);
+	aoco_dml_finish(relation);
 }
 
 

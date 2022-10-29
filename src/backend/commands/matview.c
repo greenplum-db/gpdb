@@ -614,9 +614,9 @@ transientrel_startup(DestReceiver *self, int operation, TupleDesc typeinfo)
 	myState->processed = 0;
 
 	if (RelationIsAoRows(myState->transientrel))
-		appendonly_dml_init(myState->transientrel, CMD_INSERT);
+		appendonly_dml_init(myState->transientrel);
 	else if (RelationIsAoCols(myState->transientrel))
-		aoco_dml_init(myState->transientrel, CMD_INSERT);
+		aoco_dml_init(myState->transientrel);
 
 	/* Not using WAL requires smgr_targblock be initially invalid */
 	Assert(RelationGetTargetBlock(transientrel) == InvalidBlockNumber);

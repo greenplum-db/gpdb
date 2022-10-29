@@ -215,13 +215,10 @@ remove_dml_state(const Oid relationOid)
 }
 
 /*
- * Although the operation param is superfluous at the momment, the signature of
- * the function is such for balance between the init and finish.
- *
  * This function should be called exactly once per relation.
  */
 void
-appendonly_dml_init(Relation relation, CmdType operation)
+appendonly_dml_init(Relation relation)
 {
 	init_dml_local_state();
 	(void) enter_dml_state(RelationGetRelid(relation));
@@ -231,7 +228,7 @@ appendonly_dml_init(Relation relation, CmdType operation)
  * This function should be called exactly once per relation.
  */
 void
-appendonly_dml_finish(Relation relation, CmdType operation)
+appendonly_dml_finish(Relation relation)
 {
 	AppendOnlyDMLState *state;
 
@@ -854,7 +851,7 @@ appendonly_tuple_lock(Relation relation, ItemPointer tid, Snapshot snapshot,
 static void
 appendonly_finish_bulk_insert(Relation relation, int options)
 {
-	appendonly_dml_finish(relation, CMD_INSERT);
+	appendonly_dml_finish(relation);
 }
 
 
