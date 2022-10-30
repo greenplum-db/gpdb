@@ -246,7 +246,8 @@ remove_dml_state(const Oid relationOid)
 }
 
 /*
- * This function should be called exactly once per relation.
+ * Provides an opportunity to create backend-local state to be consulted during
+ * the course of the current DML or DML-like command, for the given relation.
  */
 void
 aoco_dml_init(Relation relation)
@@ -256,7 +257,8 @@ aoco_dml_init(Relation relation)
 }
 
 /*
- * This function should be called exactly once per relation.
+ * Provides an opportunity to clean up backend-local state set up for the
+ * current DML or DML-like command, for the given relation.
  */
 void
 aoco_dml_finish(Relation relation)
@@ -2063,6 +2065,9 @@ static const TableAmRoutine ao_column_methods = {
 	.index_fetch_end = aoco_index_fetch_end,
 	.index_fetch_tuple = aoco_index_fetch_tuple,
 	.index_fetch_tuple_exists = aoco_index_fetch_tuple_exists,
+
+	.dml_init = aoco_dml_init,
+	.dml_finish = aoco_dml_finish,
 
 	.tuple_insert = aoco_tuple_insert,
 	.tuple_insert_speculative = aoco_tuple_insert_speculative,

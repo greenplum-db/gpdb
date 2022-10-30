@@ -6445,10 +6445,8 @@ ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap, LOCKMODE lockmode)
 		snapshot = RegisterSnapshot(GetLatestSnapshot());
 		scan = table_beginscan(oldrel, snapshot, 0, NULL);
 
-		if (newrel && RelationIsAoRows(newrel))
-			appendonly_dml_init(newrel);
-		else if (newrel && RelationIsAoCols(newrel))
-			aoco_dml_init(newrel);
+		if (newrel && newrel->rd_tableam)
+			table_dml_init(newrel);
 
 		/*
 		 * Switch to per-tuple memory context and reset it for each tuple

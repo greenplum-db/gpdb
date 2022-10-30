@@ -203,17 +203,24 @@ remove_dml_state(const Oid relationOid)
 }
 
 /*
- * This function should be called exactly once per relation.
+ * Provides an opportunity to create backend-local state to be consulted during
+ * the course of the current DML or DML-like command, for the given relation.
  */
 void
 appendonly_dml_init(Relation relation)
 {
+	/*
+	 * Initialize the repository of per-relation states, if not done already for
+	 * the current DML or DML-like command.
+	 */
 	init_appendonly_dml_states();
+	/* initialize the per-relation state */
 	init_dml_state(RelationGetRelid(relation));
 }
 
 /*
- * This function should be called exactly once per relation.
+ * Provides an opportunity to clean up backend-local state set up for the
+ * current DML or DML-like command, for the given relation.
  */
 void
 appendonly_dml_finish(Relation relation)
@@ -2067,6 +2074,9 @@ static const TableAmRoutine ao_row_methods = {
 	.index_fetch_end = appendonly_index_fetch_end,
 	.index_fetch_tuple = appendonly_index_fetch_tuple,
 	.index_fetch_tuple_exists = appendonly_index_fetch_tuple_exists,
+
+	.dml_init = appendonly_dml_init,
+	.dml_finish = appendonly_dml_finish,
 
 	.tuple_insert = appendonly_tuple_insert,
 	.tuple_insert_speculative = appendonly_tuple_insert_speculative,

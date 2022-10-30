@@ -2749,10 +2749,8 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 			ExecInitExtraTupleSlot(mtstate->ps.state, ExecGetResultType(mtstate->mt_plans[i]),
 								   table_slot_callbacks(resultRelInfo->ri_RelationDesc));
 
-		if (RelationIsAoRows(resultRelInfo->ri_RelationDesc))
-			appendonly_dml_init(resultRelInfo->ri_RelationDesc);
-		else if (RelationIsAoCols(resultRelInfo->ri_RelationDesc))
-			aoco_dml_init(resultRelInfo->ri_RelationDesc);
+		if (resultRelInfo->ri_RelationDesc->rd_tableam)
+			table_dml_init(resultRelInfo->ri_RelationDesc);
 
 		/* Also let FDWs init themselves for foreign-table result rels */
 		if (!resultRelInfo->ri_usesFdwDirectModify &&
@@ -3202,10 +3200,8 @@ ExecEndModifyTable(ModifyTableState *node)
 			resultRelInfo->ri_FdwRoutine->EndForeignModify != NULL)
 			resultRelInfo->ri_FdwRoutine->EndForeignModify(node->ps.state,
 														   resultRelInfo);
-		if (RelationIsAoRows(resultRelInfo->ri_RelationDesc))
-			appendonly_dml_finish(resultRelInfo->ri_RelationDesc);
-		else if(RelationIsAoCols(resultRelInfo->ri_RelationDesc))
-			aoco_dml_finish(resultRelInfo->ri_RelationDesc);
+		if (resultRelInfo->ri_RelationDesc->rd_tableam)
+			table_dml_finish(resultRelInfo->ri_RelationDesc);
 	}
 
 	/*
