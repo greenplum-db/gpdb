@@ -80,6 +80,9 @@ typedef struct AOCSBitmapScanData
 	int	rs_cindex;	/* current tuple's index tbmres->offset or -1 */
 } *AOCSBitmapScan;
 
+/*
+ * Per-relation backend-local DML state for DML or DML-like operations.
+ */
 typedef struct AOCODMLState
 {
 	Oid relationOid;
@@ -89,17 +92,10 @@ typedef struct AOCODMLState
 } AOCODMLState;
 
 static void reset_state_cb(void *arg);
+
 /*
- * GPDB_12_MERGE_FIXME: This is a temporary state of things. A locally stored
- * state is needed currently because there is no viable place to store this
- * information outside of the table access method. Ideally the caller should be
- * responsible for initializing a state and passing it over using the table
- * access method api.
- *
- * Until this is in place, the local state is not to be accessed directly but
- * only via the *_dml_state functions.
- * It contains:
- *		a quick look up member for the common case
+ * A repository for per-relation backend-local DML states. Contains:
+ *		a quick look up member for the common case (only 1 relation)
  *		a hash table which keeps per relation information
  *		a memory context that should be long lived enough and is
  *			responsible for reseting the state via its reset cb
