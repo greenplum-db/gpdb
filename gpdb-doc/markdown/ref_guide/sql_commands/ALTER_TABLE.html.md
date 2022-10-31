@@ -38,7 +38,7 @@ where <action> is one of:
   ADD [COLUMN] <column_name data_type> [ DEFAULT <default_expr> ]
       [<column_constraint> [ ... ]]
       [ COLLATE <collation> ]
-      [ ENCODING ( <storage_parameter> [,...] ) ]
+      [ ENCODING ( <column_storage_parameter> [,...] ) ]
   DROP [COLUMN] [IF EXISTS] <column_name> [RESTRICT | CASCADE]
   ALTER [COLUMN] <column_name> [ SET DATA ] TYPE <type> [COLLATE <collation>] [USING <expression>]
   ALTER [COLUMN] <column_name> SET DEFAULT <expression>
@@ -141,16 +141,38 @@ and subpartition\_element is:
 [ TABLESPACE <tablespace> ]
 ```
 
-where storage\_parameter is:
+where column_storage_parameter is:
 
 ```
-   appendoptimized={TRUE|FALSE}
-   blocksize={8192-2097152}
-   orientation={COLUMN|ROW}
-   compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
-   compresslevel={0-9}
-   fillfactor={10-100}
+   blocksize={8192-2097152}
+   compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
+   compresslevel={0-9}
+
 ```
+where storage\_parameter when used with the `SET` command is:
+
+```
+   blocksize={8192-2097152}
+   compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
+   compresslevel={0-9}
+   fillfactor={10-100}
+   checksum= {true | false }
+
+```
+
+where storage\_parameter when used with the `SET WITH` command is:
+
+```
+   appendoptimized={TRUE|FALSE}
+   blocksize={8192-2097152}
+   orientation={COLUMN|ROW}
+   compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
+   compresslevel={0-9}
+   fillfactor={10-100}
+   checksum= {true | false }
+
+```
+
   <p class="note">
 <strong>Note:</strong>
 While you can specify the table's access method using the <code>appendoptimized</code> storage parameter, VMware recommends that you use <code>SET ACCESS METHOD &lt;access method></code> instead.
