@@ -43,8 +43,10 @@ export OPENSSL_CONF
 
 # Load the external environment variable files
 if [ -d "${GPHOME}/etc/environment.d" ]; then
+	LOGGER=$(which logger 2> /dev/null || which true)
 	set -o allexport
 	for env in $(find "${GPHOME}/etc/environment.d" -name '*.conf' -type f | sort -n); do
+		$LOGGER -t "greenplum-path.sh" "loading environment from ${env}"
 		source "${env}"
 	done
 	set +o allexport
