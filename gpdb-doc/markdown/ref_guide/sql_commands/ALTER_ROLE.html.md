@@ -34,8 +34,8 @@ ALTER ROLE { <role_specification> | ALL } [ IN DATABASE <database_name> ] SET <c
 ALTER ROLE { <role_specification> | ALL } [ IN DATABASE <database_name> ] RESET <configuration_parameter>
 ALTER ROLE { <role_specification> | ALL } [ IN DATABASE <database_name> ] RESET ALL
 
-ALTER ROLE <role_name> RESOURCE QUEUE {<queue_name> | NONE}
-ALTER ROLE <role_name> RESOURCE GROUP {<group_name> | NONE}
+ALTER ROLE <role_specification> RESOURCE QUEUE {<queue_name> | NONE}
+ALTER ROLE <role_specification> RESOURCE GROUP {<group_name> | NONE}
 
 where <role_specification> can be:
 
