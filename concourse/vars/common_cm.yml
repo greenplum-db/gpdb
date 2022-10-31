@@ -1,5 +1,4 @@
 ---
-# usage: fly set-pipeline -p 6X_STABLE-dev -l common_dev.yml
 aws-bucket: gpdb5-assert-concourse-builds-dev
 google-project-id: data-gpdb-cm
 gcs-bucket: pivotal-gpdb-concourse-resources-dev
