@@ -158,10 +158,7 @@ def create_pipeline(args, git_remote, git_branch):
     else:
         test_trigger = "false"
 
-    if args.pipeline_target == 'prod':
-        variables_type = "prod"
-    else:
-        variables_type = "dev"
+    variables_type = args.pipeline_target
 
     context = {
         'template_filename': args.template_filename,
@@ -264,9 +261,9 @@ def print_fly_commands(args, git_remote, git_branch):
                            "https://github.com/greenplum-db/gpdb.git", BASE_BRANCH))
         return
 
-    print('NOTE: You can set the developer pipeline with the following:\n')
-    print(gen_pipeline(args, pipeline_name, ["common_prod.yml", "common_dev.yml"], git_remote, git_branch))
-
+    else:
+        print('NOTE: You can set the developer pipeline with the following:\n')
+        print(gen_pipeline(args, pipeline_name, ["common_prod.yml", "common_" + args.pipeline_target + ".yml"], git_remote, git_branch))
 
 def main():
     """main: parse args and create pipeline"""
@@ -311,8 +308,9 @@ def main():
         action='store',
         dest='pipeline_target',
         default='dev',
-        help='Concourse target to use either: prod, dev, or <team abbreviation> '
-             'where abbreviation is found from the team\'s ccp secrets file name ending.'
+        help='Concourse target supported: prod, dev, dev2, cm, ud, or dp. '
+             'The Pipeline target value is also used to identify the CI '
+             'project specific common file in the vars directory.'
     )
 
     parser.add_argument(
