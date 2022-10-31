@@ -34,6 +34,8 @@ where option can be:
     | SYSID <uid> [, ...]
     | RESOURCE QUEUE <queue_name>
     | RESOURCE GROUP <group_name>
+    | [ DENY <deny_point> ]
+    | [ DENY BETWEEN <deny_point> AND <deny_point>]
 ```
 
 ## <a id="section3"></a>Description 
@@ -129,6 +131,35 @@ RESOURCE QUEUE queue\_name
 
 :   Roles with the `SUPERUSER` attribute are exempt from resource queue limits. For a superuser role, queries always run immediately regardless of limits imposed by an assigned resource queue.
 
+DENY deny\_point
+DENY BETWEEN deny\_point AND deny\_point
+:   The `DENY` and `DENY BETWEEN` keywords set time-based constraints that are enforced at login. `DENY` sets a day or a day and time to deny access. `DENY BETWEEN` sets an interval during which access is denied. Both use the parameter deny\_point that has the following format:
+
+```
+DAY day [ TIME 'time' ]
+```
+
+The two parts of the `deny_point` parameter use the following formats:
+
+For `day`:
+
+```
+{'Sunday' | 'Monday' | 'Tuesday' |'Wednesday' | 'Thursday' | 'Friday' | 
+'Saturday' | 0-6 }
+```
+
+For `time`:
+
+```
+{ 00-23 : 00-59 | 01-12 : 00-59 { AM | PM }}
+```
+
+The `DENY BETWEEN` clause uses two deny\_point parameters:
+
+```
+DENY BETWEEN <deny_point> AND <deny_point>
+```
+
 ## <a id="section5"></a>Notes 
 
 Use [ALTER ROLE](ALTER_ROLE.html) to change the attributes of a role, and [DROP ROLE](DROP_ROLE.html) to remove a role. All the attributes specified by `CREATE ROLE` can be modified by later `ALTER ROLE` commands.
@@ -175,6 +206,12 @@ Create a role that can create databases and manage other roles:
 
 ```
 CREATE ROLE admin WITH CREATEDB CREATEROLE;
+```
+
+Create a role that does not allow login access on Sundays:
+
+```
+CREATE ROLE user3 DENY DAY 'Sunday';
 ```
 
 Create a role that can create readable and writable external tables of type 'gpfdist':

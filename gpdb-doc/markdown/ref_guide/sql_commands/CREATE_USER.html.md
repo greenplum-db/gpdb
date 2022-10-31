@@ -31,6 +31,8 @@ where option can be:
     | SYSID <uid>
     | RESOURCE QUEUE <queue_name>
     | RESOURCE GROUP <group_name>
+    | [ DENY <deny_point> ]
+    | [ DENY BETWEEN <deny_point> AND <deny_point>]
 ```
 
 ## <a id="section3"></a>Description 

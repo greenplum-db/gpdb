@@ -24,6 +24,9 @@ where option can be:
     | CONNECTION LIMIT <connlimit>
     | [ENCRYPTED ] PASSWORD '<password>' | PASSWORD NULL
     | VALID UNTIL '<timestamp>'
+    | [ DENY <deny_point> ]
+    | [ DENY BETWEEN <deny_point> AND <deny_point>]
+    | [ DROP DENY FOR <deny_point> ]
 
 ALTER USER <name> RENAME TO <new_name>
 
