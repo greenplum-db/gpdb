@@ -59,6 +59,7 @@ where <action> is one of:
   SET ACCESS METHOD <access_method>
   SET (<storage_parameter> = <value>)
   RESET (<storage_parameter> [, ... ])
+  SET  WITH (<storage_parameter> = <value>)
   INHERIT <parent_table>
   NO INHERIT <parent_table>
   OF `type_name`
