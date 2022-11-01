@@ -23,7 +23,7 @@ name
 :   The name of the schema to remove.
 
 CASCADE
-:   Automatically drop objects \(tables, functions, etc.\) that are contained in the schema, and in turn all objects that depend on those objects
+:   Automatically drop objects \(tables, functions, etc.\) that are contained in the schema, and in turn all objects that depend on those objects.
 
 RESTRICT
 :   Refuse to drop the schema if it contains any objects. This is the default.
