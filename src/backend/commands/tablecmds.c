@@ -810,7 +810,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 		if (parentrel->rd_rel->relam == accessMethodId)
 			oldoptions = get_rel_opts(parentrel);
 
-		table_close(parentrel, AccessExclusiveLock);
+		table_close(parentrel, AccessShareLock);
 	}
 
 	/*
