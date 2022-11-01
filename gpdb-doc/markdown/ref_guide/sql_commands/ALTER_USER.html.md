@@ -1,6 +1,6 @@
 # ALTER USER 
 
-Changes the defintion of a database role.
+Changes the definition of a database role.
 
 ## <a id="section2"></a>Synopsis 
 
