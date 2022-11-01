@@ -235,7 +235,7 @@ init_tuplestore_state(ShareInputScanState *node)
 
 				ts = tuplestore_begin_heap(true, /* randomAccess */
 										   false, /* interXact */
-										   10); /* maxKBytes FIXME */
+										   PlanStateOperatorMemKB((PlanState *) node)); /* maxKBytes */
 
 				shareinput_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), sisc->share_id);
 				tuplestore_make_shared(ts,
