@@ -1,32 +1,32 @@
-# gpscp 
+# gpsync 
 
 Copies files between multiple hosts at once.
 
 ## <a id="section2"></a>Synopsis 
 
 ```
-gpscp { -f <hostfile_gpssh> | -h <hostname> [-h <hostname> ...] } 
-      [-J <character>] [-v] [[<user>@]<hostname>:]<file_to_copy> [...]
-      [[<user>@]<hostname>:]<copy_to_path>
+gpsync { -f <hostfile_gpssh> | -h <hostname> [-h <hostname> ...] } 
+      [-a <source_dir> <target_dir>][-J <character>] [-v] [[<user>@]<hostname>:]<file_to_copy> [...]
+      [[<user>@]<hostname>:]<copy_to_path> 
 
-gpscp -? 
+gpsync -? 
 
-gpscp --version
+gpsync --version
 ```
 
 ## <a id="section3"></a>Description 
 
-The `gpscp` utility allows you to copy one or more files from the specified hosts to other specified hosts in one command using SCP \(secure copy\). For example, you can copy a file from the Greenplum Database coordinator host to all of the segment hosts at the same time.
+The `gpsync` utility allows you to copy one or more files from the specified hosts to other specified hosts in one command using SCP \(secure copy\). For example, you can copy a file from the Greenplum Database coordinator host to all of the segment hosts at the same time.
 
 To specify the hosts involved in the SCP session, use the `-f` option to specify a file containing a list of host names, or use the `-h` option to name single host names on the command-line. At least one host name \(`-h`\) or a host file \(`-f`\) is required. The `-J` option allows you to specify a single character to substitute for the hostname in the `copy from` and `copy to` destination strings. If `-J` is not specified, the default substitution character is an equal sign \(`=`\). For example, the following command will copy `.bashrc` from the local host to `/home/gpadmin` on all hosts named in `hostfile_gpssh`:
 
 ```
-gpscp -f hostfile_gpssh .bashrc =:/home/gpadmin
+gpsync -f hostfile_gpssh .bashrc =:/home/gpadmin
 ```
 
-If a user name is not specified in the host list or with user`@` in the file path, `gpscp` will copy files as the currently logged in user. To determine the currently logged in user, do a `whoami` command. By default, `gpscp` goes to `$HOME` of the session user on the remote hosts after login. To ensure the file is copied to the correct location on the remote hosts, it is recommended that you use absolute paths.
+If a user name is not specified in the host list or with user`@` in the file path, `gpsync` will copy files as the currently logged in user. To determine the currently logged in user, do a `whoami` command. By default, `gpsync` goes to `$HOME` of the session user on the remote hosts after login. To ensure the file is copied to the correct location on the remote hosts, it is recommended that you use absolute paths.
 
-Before using `gpscp`, you must have a trusted host setup between the hosts involved in the SCP session. You can use the utility `gpssh-exkeys` to update the known host files and exchange public keys between hosts if you have not done so already.
+Before using `gpsync`, you must have a trusted host setup between the hosts involved in the SCP session. You can use the utility `gpssh-exkeys` to update the known host files and exchange public keys between hosts if you have not done so already.
 
 ## <a id="section4"></a>Options 
 
@@ -39,6 +39,9 @@ Before using `gpscp`, you must have a trusted host setup between the hosts invol
 
 -h hostname
 :   Specifies a single host name that will participate in this SCP session. You can use the `-h` option multiple times to specify multiple host names.
+
+-a 
+:   Sync source and target directories in archival mode.
 
 -J character
 :   The `-J` option allows you to specify a single character to substitute for the hostname in the `copy from` and `copy to` destination strings. If `-J` is not specified, the default substitution character is an equal sign \(`=`\).
@@ -63,13 +66,13 @@ copy\_to\_path
 Copy the file named `installer.tar` to `/` on all the hosts in the file `hostfile_gpssh`.
 
 ```
-gpscp -f hostfile_gpssh installer.tar =:/
+gpsync -f hostfile_gpssh installer.tar =:/
 ```
 
 Copy the file named myfuncs.so to the specified location on the hosts named `sdw1` and `sdw2`:
 
 ```
-gpscp -h sdw1 -h sdw2 myfuncs.so =:/usr/local/greenplum-db/lib
+gpsync -h sdw1 -h sdw2 myfuncs.so =:/usr/local/greenplum-db/lib
 ```
 
 ## <a id="seealso"></a>See Also 
