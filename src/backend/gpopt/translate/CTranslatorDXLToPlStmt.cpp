@@ -3179,7 +3179,7 @@ CTranslatorDXLToPlStmt::TranslateDXLSubQueryScan(
 }
 
 // If the top level is not a function returning set then we need to check if
-// the project element conatains any SRF's deep down the tree.
+// the project element contains any SRF's deep down the tree.
 // If we found any SRF's at lower levels then we will require a result node on
 // top of ProjectSet node.Eg
 // <dxl:ProjElem ColId="1" Alias="abs">
@@ -3198,20 +3198,12 @@ ContainsLowLevelSetReturningFunc(const CDXLNode *scalar_expr_dxlnode)
 		CDXLNode *expr_dxlnode = (*scalar_expr_dxlnode)[ul];
 		CDXLOperator *op = expr_dxlnode->GetOperator();
 		Edxlopid dxlopid = op->GetDXLOperator();
-		if (EdxlopScalarFuncExpr == dxlopid)
+
+		if ((EdxlopScalarFuncExpr == dxlopid &&
+			 CDXLScalarFuncExpr::Cast(op)->ReturnsSet()) ||
+			ContainsLowLevelSetReturningFunc(expr_dxlnode))
 		{
-			if (CDXLScalarFuncExpr::Cast(op)->ReturnsSet() ||
-				ContainsLowLevelSetReturningFunc(expr_dxlnode))
-			{
-				return true;
-			}
-		}
-		else
-		{
-			if (ContainsLowLevelSetReturningFunc(expr_dxlnode))
-			{
-				return true;
-			}
+			return true;
 		}
 	}
 	return false;
@@ -3231,8 +3223,8 @@ ContainsLowLevelSetReturningFunc(const CDXLNode *scalar_expr_dxlnode)
 // Here we have a FuncExpr which returns a set on top.So we don't require a result node on
 // top of ProjectSet node.
 static bool
-ContainsSetReturningFunc(const CDXLNode *project_list_dxlnode,
-						 CMDAccessor *md_accessor)
+RequiresResultNode(const CDXLNode *project_list_dxlnode,
+				   CMDAccessor *md_accessor)
 {
 	const ULONG arity = project_list_dxlnode->Arity();
 	for (ULONG ul = 0; ul < arity; ++ul)
@@ -3391,8 +3383,8 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 		return (Plan *) result;
 	}
 
-	if (ContainsSetReturningFunc((*result_dxlnode)[EdxlresultIndexProjList],
-								 m_md_accessor))
+	if (RequiresResultNode((*result_dxlnode)[EdxlresultIndexProjList],
+						   m_md_accessor))
 	{
 		will_require_result_node = true;
 	}
