@@ -117,11 +117,11 @@ ALTER TABLE heapbase2 SET WITH (appendoptimized=true);
 
 -- The altered tables should inherit storage options from gp_default_storage_options
 show gp_default_storage_options;
-SELECT blocksize,compresslevel,checksum,compresstype,columnstore
+SELECT blocksize,compresslevel,checksum,compresstype
 FROM pg_appendonly WHERE relid in ('heapbase'::regclass::oid, 'heapbase2'::regclass::oid);
 SELECT reloptions from pg_class where relname in ('heapbase','heapbase2');
 
-SELECT blocksize,compresslevel,checksum,compresstype,columnstore
+SELECT blocksize,compresslevel,checksum,compresstype
 FROM pg_appendonly WHERE relid in ('heapchild'::regclass::oid, 'heapchild2'::regclass::oid);
 SELECT reloptions from pg_class where relname in ('heapchild','heapchild2');
 
@@ -414,7 +414,7 @@ SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class 
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ao2co%';
 
 -- pg_appendonly should reflect the changes in reloptions
-SELECT c.relname,a.blocksize,a.compresslevel,a.checksum,a.compresstype,a.columnstore
+SELECT c.relname,a.blocksize,a.compresslevel,a.checksum,a.compresstype
 FROM pg_appendonly a, pg_class c WHERE a.relid = c.oid AND relname like ('ao2co%');
 
 DROP TABLE ao2co;
@@ -651,7 +651,7 @@ SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class 
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'heap2co%';
 
 -- pg_appendonly should reflect the changes in reloptions
-SELECT c.relname,a.blocksize,a.compresslevel,a.checksum,a.compresstype,a.columnstore
+SELECT c.relname,a.blocksize,a.compresslevel,a.checksum,a.compresstype
 FROM pg_appendonly a, pg_class c WHERE a.relid = c.oid AND relname like ('heap2co%');
 
 DROP TABLE heap2co;

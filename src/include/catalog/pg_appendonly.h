@@ -32,7 +32,6 @@ CATALOG(pg_appendonly,6105,AppendOnlyRelationId)
 	int16			compresslevel;		/* the (per seg) total number of varblocks */
 	bool			checksum;			/* true if checksum is stored with data and checked */
 	NameData		compresstype;		/* the compressor used (e.g. zlib) */
-    bool            columnstore;        /* true if orientation is column */ 
     Oid             segrelid;           /* OID of aoseg table; 0 if none */
     Oid             blkdirrelid;        /* OID of aoblkdir table; 0 if none */
     Oid             blkdiridxid;        /* if aoblkdir table, OID of aoblkdir index */
@@ -107,7 +106,6 @@ InsertAppendOnlyEntry(Oid relid,
 					  int safefswritesize,
 					  int compresslevel,
 					  bool checksum,
-					  bool columnstore,
 					  char* compresstype,
 					  Oid segrelid,
 					  Oid blkdirrelid,

@@ -12,7 +12,6 @@ The `pg_appendonly` table contains information about the storage options and oth
 |`minorversion`|smallint| |The minor version number of the pg\_appendonly table.|
 |`checksum`|boolean| |A checksum value that is stored to compare the state of a block of data at compression time and at scan time to ensure data integrity.|
 |`compresstype`|text| |Type of compression used to compress append-optimized tables. Valid values are:<br/><br/>-   `none` \(no compression\)<br/><br/>-   `rle_type` \(run-length encoding compression\)<br/><br/>-   `zlib` \(gzip compression\)<br/><br/>-   `zstd` \(Zstandard compression\)<br/><br/>-   `quicklz`<sup>1</sup>|
-|`columnstore`|boolean| |`1` for column-oriented storage, `0` for row-oriented storage.|
 |`segrelid`|oid| |Table on-disk segment file id.|
 |`segidxid`|oid| |Index on-disk segment file id.|
 |`blkdirrelid`|oid| |Block used for on-disk column-oriented table file.|

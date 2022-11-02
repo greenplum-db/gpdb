@@ -17,7 +17,6 @@ RESET gp_default_storage_options;
 SELECT
 	c.relname,
 	am.amname,
-	a.columnstore,
 	a.compresstype,
 	a.compresslevel
 FROM

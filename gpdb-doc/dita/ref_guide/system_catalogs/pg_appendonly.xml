@@ -103,15 +103,6 @@
           </row>
           <row>
             <entry colname="col1">
-              <codeph>columnstore</codeph>
-            </entry>
-            <entry colname="col2">boolean</entry>
-            <entry colname="col3"/>
-            <entry colname="col4"><codeph>1</codeph> for column-oriented storage, <codeph>0</codeph>
-              for row-oriented storage.</entry>
-          </row>
-          <row>
-            <entry colname="col1">
               <codeph>segrelid</codeph>
             </entry>
             <entry colname="col2">oid</entry>

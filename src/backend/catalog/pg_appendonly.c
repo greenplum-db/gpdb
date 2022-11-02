@@ -50,7 +50,6 @@ InsertAppendOnlyEntry(Oid relid,
 					  int safefswritesize, 
 					  int compresslevel,
 					  bool checksum,
-                      bool columnstore,
 					  char* compresstype,
 					  Oid segrelid,
 					  Oid blkdirrelid,
@@ -91,7 +90,6 @@ InsertAppendOnlyEntry(Oid relid,
 	values[Anum_pg_appendonly_compresslevel - 1] = Int32GetDatum(compresslevel);
 	values[Anum_pg_appendonly_checksum - 1] = BoolGetDatum(checksum);
 	values[Anum_pg_appendonly_compresstype - 1] = NameGetDatum(&compresstype_name);
-	values[Anum_pg_appendonly_columnstore - 1] = BoolGetDatum(columnstore);
 	values[Anum_pg_appendonly_segrelid - 1] = ObjectIdGetDatum(segrelid);
 	values[Anum_pg_appendonly_blkdirrelid - 1] = ObjectIdGetDatum(blkdirrelid);
 	values[Anum_pg_appendonly_blkdiridxid - 1] = ObjectIdGetDatum(blkdiridxid);

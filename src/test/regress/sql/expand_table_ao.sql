@@ -354,7 +354,7 @@ show gp_default_storage_options;
 select localoid::regclass::name, policytype, numsegments, distkey, distclass
 from gp_distribution_policy where localoid = 't_9526'::regclass::oid;
 -- storage paramter should be same with before
-select blocksize,compresslevel,checksum,compresstype,columnstore from pg_appendonly where relid='t_9526'::regclass::oid;
+select blocksize,compresslevel,checksum,compresstype from pg_appendonly where relid='t_9526'::regclass::oid;
 
 -- set back
 set gp_default_storage_options = '';
@@ -380,7 +380,7 @@ show gp_default_storage_options;
 select localoid::regclass::name, policytype, numsegments, distkey, distclass
     from gp_distribution_policy where localoid = 't_9527'::regclass::oid;
 -- storage paramter should be same with before
-select blocksize,compresslevel,checksum,compresstype,columnstore from pg_appendonly where relid='t_9527'::regclass::oid;
+select blocksize,compresslevel,checksum,compresstype from pg_appendonly where relid='t_9527'::regclass::oid;
 
 -- set back
 set gp_default_storage_options = '';
@@ -405,7 +405,7 @@ show gp_default_storage_options;
 select localoid::regclass::name, policytype, numsegments, distkey, distclass
     from gp_distribution_policy where localoid = 't_9528'::regclass::oid;
 -- storage paramter should be same with before
-select blocksize,compresslevel,checksum,compresstype,columnstore from pg_appendonly where relid='t_9528'::regclass::oid;
+select blocksize,compresslevel,checksum,compresstype from pg_appendonly where relid='t_9528'::regclass::oid;
 
 -- set back
 set gp_default_storage_options = '';
