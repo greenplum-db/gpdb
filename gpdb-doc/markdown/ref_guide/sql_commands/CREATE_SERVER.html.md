@@ -5,7 +5,7 @@ Defines a new foreign server.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-CREATE SERVER <server_name> [ TYPE '<server_type>' ] [ VERSION '<server_version>' ]
+CREATE SERVER [ IF NOT EXISTS ] <server_name> [ TYPE '<server_type>' ] [ VERSION '<server_version>' ]
     FOREIGN DATA WRAPPER <fdw_name>
     [ OPTIONS ( [ mpp_execute { 'master' | 'any' | 'all segments' } [, ] ]
                 [ num_segments '<num>' [, ] ]
@@ -21,6 +21,10 @@ A foreign server typically encapsulates connection information that a foreign-da
 Creating a server requires the `USAGE` privilege on the foreign-data wrapper specified.
 
 ## <a id="section4"></a>Parameters 
+
+IF NOT EXISTS
+
+:   Do not throw an error if a server with the same name already exists. Greenplum Database issues a notice in this case. Note that there is no guarantee that the existing server is anything like the one that would have been created.
 
 server\_name
 :   The name of the foreign server to create. The server name must be unique within the database.
@@ -61,10 +65,10 @@ When using the dblink module \(see [dblink](../modules/dblink.html)\), you can u
 
 ## <a id="section6"></a>Examples 
 
-Create a foreign server named `myserver` that uses the foreign-data wrapper named `pgsql` and includes connection options:
+Create a foreign server named `myserver` that uses a foreign-data wrapper named `gpfdw1` and includes connection options:
 
 ```
-CREATE SERVER myserver FOREIGN DATA WRAPPER pgsql 
+CREATE SERVER myserver FOREIGN DATA WRAPPER gpfdw1 
     OPTIONS (host 'foo', dbname 'foodb', port '5432');
 ```
 
@@ -74,7 +78,7 @@ CREATE SERVER myserver FOREIGN DATA WRAPPER pgsql
 
 ## <a id="section8"></a>See Also 
 
-[ALTER SERVER](ALTER_SERVER.html), [DROP SERVER](DROP_SERVER.html), [CREATE FOREIGN DATA WRAPPER](CREATE_FOREIGN_DATA_WRAPPER.html), [CREATE USER MAPPING](CREATE_USER_MAPPING.html)
+[ALTER SERVER](ALTER_SERVER.html), [DROP SERVER](DROP_SERVER.html), [CREATE FOREIGN DATA WRAPPER](CREATE_FOREIGN_DATA_WRAPPER.html), [CREATE FOREIGN TABLE](CREATE_FOREIGN_TABLE.html), [CREATE USER MAPPING](CREATE_USER_MAPPING.html)
 
 **Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 
