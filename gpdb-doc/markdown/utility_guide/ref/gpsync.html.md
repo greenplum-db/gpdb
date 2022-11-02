@@ -6,7 +6,7 @@ Copies files between multiple hosts at once.
 
 ```
 gpsync { -f <hostfile_gpssh> | -h <hostname> [-h <hostname> ...] } 
-      [-a <source_dir> <target_dir>][-J <character>] [-v] [[<user>@]<hostname>:]<file_to_copy> [...]
+      [-a][-J <character>] [-v] [[<user>@]<hostname>:]<file_to_copy> [...]
       [[<user>@]<hostname>:]<copy_to_path> 
 
 gpsync -? 
