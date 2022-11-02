@@ -10,7 +10,7 @@ tf-bucket-name: gpdb5-pipeline-dynamic-terraform
 google-project-id: data-gpdb-ci
 google-zone: us-central1-a
 google-region: us-central1
-gp-concourse-cluster-provisioner-git-branch: master
+gp-concourse-cluster-provisioner-git-branch: main
 gp-concourse-cluster-provisioner-git-remote: git@github.com:pivotal/gp-concourse-cluster-provisioner.git
 gcs-bucket: pivotal-gpdb-concourse-resources-prod
 gcs-bucket-intermediates: pivotal-gpdb-concourse-resources-intermediates-prod
@@ -20,7 +20,6 @@ madlib-git-branch: master
 madlib-git-tag-filter: rel/*
 madlib-git-remote: https://github.com/apache/madlib.git
 madlib-ci-git-remote: git@github.com:Pivotal-DataFabric/madlib-ci.git
-madlib-ci-git-branch: master
 madlib-ci-tag-filter: rel/v*
 # Originally from gp-continuous-integration/secrets/gpdb_6X_STABLE-ci-secrets.prod.yml
 gpdb-git-branch: 6X_STABLE
