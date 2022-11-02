@@ -501,7 +501,7 @@ This view is accessible to all users.
 |memory\_shared\_quota|The shared memory quota \(`MEMORY_SHARED_QUOTA`\) value specified for the resource group.|
 |memory\_spill\_ratio|The memory spill ratio \(`MEMORY_SPILL_RATIO`\) value specified for the resource group.|
 |memory\_auditor|The memory auditor for the resource group.|
-|cpuset|The CPU cores reserved for the resource group, or -1.|
+|cpuset|The CPU cores reserved for the resource group on the master host and segment hosts, or -1.|
 
 ### <a id="topic31x"></a>gp\_resgroup\_status 
 

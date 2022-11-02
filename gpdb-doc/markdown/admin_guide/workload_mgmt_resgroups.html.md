@@ -66,7 +66,7 @@ Resource group attributes and limits:
 |MEMORY\_AUDITOR|The memory auditor in use for the resource group. `vmtracker` \(the default\) is required if you want to assign the resource group to roles. Specify `cgroup` to assign the resource group to an external component.|
 |CONCURRENCY|The maximum number of concurrent transactions, including active and idle transactions, that are permitted in the resource group.|
 |CPU\_RATE\_LIMIT|The percentage of CPU resources available to this resource group.|
-|CPUSET|The CPU cores to reserve for this resource group.|
+|CPUSET|The CPU cores to reserve for this resource group on the coordinator and segment hosts.|
 |MEMORY\_LIMIT|The percentage of reserved memory resources available to this resource group.|
 |MEMORY\_SHARED\_QUOTA|The percentage of reserved memory to share across transactions submitted in this resource group.|
 |MEMORY\_SPILL\_RATIO|The memory usage threshold for memory-intensive transactions. When a transaction reaches this threshold, it spills to disk.|
@@ -110,11 +110,11 @@ You can set the server configuration parameter [gp\_resource\_group\_queuing\_ti
 
 ## <a id="topic833971717"></a>CPU Limits 
 
-You configure the share of CPU resources to reserve for a resource group on a segment host by assigning specific CPU core\(s\) to the group, or by identifying the percentage of segment CPU resources to allocate to the group. Greenplum Database uses the `CPUSET` and `CPU_RATE_LIMIT` resource group limits to identify the CPU resource allocation mode. You must specify only one of these limits when you configure a resource group.
+You configure the share of CPU resources to reserve for a resource group on the coordinator and segment hosts by assigning specific CPU core\(s\) to the group, or by identifying the percentage of segment CPU resources to allocate to the group. Greenplum Database uses the `CPUSET` and `CPU_RATE_LIMIT` resource group limits to identify the CPU resource allocation mode. You must specify only one of these limits when you configure a resource group.
 
 You may employ both modes of CPU resource allocation simultaneously in your Greenplum Database cluster. You may also change the CPU resource allocation mode for a resource group at runtime.
 
-The [gp\_resource\_group\_cpu\_limit](../ref_guide/config_params/guc-list.html) server configuration parameter identifies the maximum percentage of system CPU resources to allocate to resource groups on each Greenplum Database segment host. This limit governs the maximum CPU usage of all resource groups on a segment host regardless of the CPU allocation mode configured for the group. The remaining unreserved CPU resources are used for the OS kernel and the Greenplum Database auxiliary daemon processes. The default `gp_resource_group_cpu_limit` value is .9 \(90%\).
+The [gp\_resource\_group\_cpu\_limit](../ref_guide/config_params/guc-list.html) server configuration parameter identifies the maximum percentage of system CPU resources to allocate to resource groups on each Greenplum Database host. This limit governs the maximum CPU usage of all resource groups on the coordinator or on a segment host regardless of the CPU allocation mode configured for the group. The remaining unreserved CPU resources are used for the OS kernel and the Greenplum Database auxiliary daemon processes. The default `gp_resource_group_cpu_limit` value is .9 \(90%\).
 
 **Note:** The default `gp_resource_group_cpu_limit` value may not leave sufficient CPU resources if you are running other workloads on your Greenplum Database cluster nodes, so be sure to adjust this server configuration parameter accordingly.
 
@@ -124,7 +124,7 @@ The [gp\_resource\_group\_cpu\_limit](../ref_guide/config_params/guc-list.html) 
 
 You identify the CPU cores that you want to reserve for a resource group with the `CPUSET` property. The CPU cores that you specify must be available in the system and cannot overlap with any CPU cores that you reserved for other resource groups. \(Although Greenplum Database uses the cores that you assign to a resource group exclusively for that group, note that those CPU cores may also be used by non-Greenplum processes in the system.\)
 
-Specify a comma-separated list of single core numbers or number intervals when you configure `CPUSET`. You must enclose the core numbers/intervals in single quotes, for example, '1,3-4'.
+Specify CPU cores separately for the coordinator host and segment hosts, separated by a semicolon. Use a comma-separated list of single core numbers or number intervals when you configure cores for `CPUSET`. You must enclose the core numbers/intervals in single quotes, for example, '1;1,3-4' uses core 1 on the coordinator host, and cores 1, 3, and 4 on segment hosts.
 
 When you assign CPU cores to `CPUSET` groups, consider the following:
 
@@ -446,11 +446,11 @@ For example, to create a resource group named *rgroup1* with a CPU limit of 20, 
 
 The CPU limit of 20 is shared by every role to which `rgroup1` is assigned. Similarly, the memory limit of 25 is shared by every role to which `rgroup1` is assigned. `rgroup1` utilizes the default `MEMORY_AUDITOR` `vmtracker` and the default `CONCURRENCY` setting of 20.
 
-*When you create a resource group for an external component*, you must provide `CPU_RATE_LIMIT` or `CPUSET` and `MEMORY_LIMIT` limit values. You must also provide the `MEMORY_AUDITOR` and explicitly set `CONCURRENCY` to zero \(0\). For example, to create a resource group named *rgroup\_extcomp* for which you reserve CPU core 1 and assign a memory limit of 15:
+*When you create a resource group for an external component*, you must provide `CPU_RATE_LIMIT` or `CPUSET` and `MEMORY_LIMIT` limit values. You must also provide the `MEMORY_AUDITOR` and explicitly set `CONCURRENCY` to zero \(0\). For example, to create a resource group named *rgroup\_extcomp* for which you reserve CPU core 1 on coordinator and segment hosts, and assign a memory limit of 15:
 
 ```
 =# CREATE RESOURCE GROUP rgroup_extcomp WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
-     CPUSET='1', MEMORY_LIMIT=15);
+     CPUSET='1;1', MEMORY_LIMIT=15);
 
 ```
 
@@ -459,7 +459,7 @@ The [ALTER RESOURCE GROUP](../ref_guide/sql_commands/ALTER_RESOURCE_GROUP.html) 
 ```
 =# ALTER RESOURCE GROUP rg_role_light SET CONCURRENCY 7;
 =# ALTER RESOURCE GROUP exec SET MEMORY_SPILL_RATIO 25;
-=# ALTER RESOURCE GROUP rgroup1 SET CPUSET '2,4';
+=# ALTER RESOURCE GROUP rgroup1 SET CPUSET '1;2,4';
 
 ```
 
