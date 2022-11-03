@@ -1,4 +1,4 @@
-/* contrib/uuid-ossp/uuid-ossp--1.0.sql */
+/* contrib/uuid-ossp/uuid-ossp--1.1.sql */
 
 -- complain if script is sourced in psql, rather than via CREATE EXTENSION
 \echo Use '''CREATE EXTENSION "uuid-ossp"''' to load this file. \quit
