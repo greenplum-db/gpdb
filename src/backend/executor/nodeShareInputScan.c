@@ -233,9 +233,16 @@ init_tuplestore_state(ShareInputScanState *node)
 				elog(DEBUG1, "SISC writer (shareid=%d, slice=%d): No tuplestore yet, creating tuplestore",
 					 sisc->share_id, currentSliceId);
 
+				/*
+				 * We have to write all the tuples to disk for cross-slice share input scan,
+				 * no matter how much memory we give to the tuplestore we would always spill the
+				 * tuples. To avoid wasting memory we could even set maxKBytes to 0KB.
+				 * We choose 16 pages here only to optimize I/O performance.
+				 * 16 pages is on par with the ntupelstore implementation on 6X_STABLE.
+				 */
 				ts = tuplestore_begin_heap(true, /* randomAccess */
 										   false, /* interXact */
-										   PlanStateOperatorMemKB((PlanState *) node)); /* maxKBytes */
+										   16 * BLCKSZ / 1024); /* maxKBytes */
 
 				shareinput_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), sisc->share_id);
 				tuplestore_make_shared(ts,
