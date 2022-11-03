@@ -18,7 +18,7 @@
 # under the License.
 # ----------------------------------------------------------------------
 
-"""Generate pipeline (default: gpdb_master-generated.yml) from template (default:
+"""Generate pipeline (default: gpdb_main-generated.yml) from template (default:
 templates/gpdb-tpl.yml).
 
 Python module requirements:
@@ -426,7 +426,7 @@ def main():
     git_branch = suggested_git_branch()
 
     # if generating a dev pipeline but didn't specify an output,
-    # don't overwrite the master pipeline
+    # don't overwrite the main pipeline
     if args.pipeline_target != 'prod' and not output_path_is_set:
         pipeline_file_suffix = suggested_git_branch()
         if args.user != os.getlogin():

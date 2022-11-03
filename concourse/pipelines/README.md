@@ -27,7 +27,7 @@ The following workflow should be followed:
 
 * Edit the template file (`templates/gpdb-tpl.yml`).
 * Generate the pipeline. During this step, the pipeline release jobs will be validated.
-* Use the Concourse `fly` command to set the pipeline (`gpdb_master-generated.yml`).
+* Use the Concourse `fly` command to set the pipeline (`gpdb_main-generated.yml`).
 * Once the pipeline is validated to function properly, commit the updated template and pipeline.
 
 ## Requirements
@@ -57,7 +57,7 @@ gen_pipeline.py -h|--help
 ### Create Production Pipeline
 
 The `./gen_pipeline.py -t prod` command will generate the production
-pipeline (`gpdb_master-generated.yml`). All supported platforms and
+pipeline (`gpdb_main-generated.yml`). All supported platforms and
 test sections are included. The pipeline release jobs will be
 validated. The output of the utility will provide details of the
 pipeline generated. Following standard conventions, two `fly`
@@ -75,7 +75,7 @@ all jobs accounted for
 
 ======================================================================
   Generate Pipeline type: .. : prod
-  Pipeline file ............ : gpdb_master-generated.yml
+  Pipeline file ............ : gpdb_main-generated.yml
   Template file ............ : gpdb-tpl.yml
   OS Types ................. : ['centos6', 'centos7', 'win']
   Test sections ............ : ['ICW', 'CS', 'MPP', 'MM', 'DPM', 'UD', 'FileRep']
@@ -86,25 +86,25 @@ NOTE: You can set the production pipelines with the following:
 
 fly -t prod \
     set-pipeline \
-    -p gpdb_master \
-    -c gpdb_master-generated.yml \
+    -p gpdb_main \
+    -c gpdb_main-generated.yml \
     -l ~/workspace/gpdb/concourse/vars/common_prod.yml \
     -v gpdb-git-remote=https://github.com/greenplum-db/gpdb.git \
     -v gpdb-git-branch=main \
-    -v pipeline-name=gpdb_master
+    -v pipeline-name=gpdb_main
 
 fly -t prod \
     set-pipeline \
-    -p gpdb_master_without_asserts \
-    -c gpdb_master-generated.yml \
+    -p gpdb_main_without_asserts \
+    -c gpdb_main-generated.yml \
     -l ~/workspace/gpdb/concourse/vars/common_prod.yml \
     -l ~/workspace/gpdb/concourse/vars/without_asserts_common_prod.yml \
     -v gpdb-git-remote=https://github.com/greenplum-db/gpdb.git \
     -v gpdb-git-branch=main \
-    -v pipeline-name=gpdb_master_without_asserts
+    -v pipeline-name=gpdb_main_without_asserts
 ```
 
-The generated pipeline file `gpdb_master-generated.yml` will be set,
+The generated pipeline file `gpdb_main-generated.yml` will be set,
 validated and ultimately committed (including the updated pipeline
 template) to the source repository.
 
