@@ -23,7 +23,7 @@ resources:
 - name: gp_workloads
   type: git-lfs
   source:
-    branch: master
+    branch: main
     private_key: ((qp/gp_workloads_deploy_key))
     uri: ((gp_workloads-git-remote))
 
