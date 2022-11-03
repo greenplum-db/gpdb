@@ -628,21 +628,21 @@ resources:
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/gpdb7/server-rc-(.*)-rhel7_x86_64((rc-build-type-gcs)).tar.gz
+    regexp: server/published/main/server-rc-(.*)-rhel7_x86_64((rc-build-type-gcs)).tar.gz
 
 - name: bin_gpdb_rhel8_rc
   type: gcs
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/gpdb7/server-rc-(.*)-rhel8_x86_64((rc-build-type-gcs)).tar.gz
+    regexp: server/published/main/server-rc-(.*)-rhel8_x86_64((rc-build-type-gcs)).tar.gz
 
 - name: bin_gpdb_ubuntu18.04_rc
   type: gcs
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/gpdb7/server-rc-(.*)-ubuntu18.04_x86_64((rc-build-type-gcs)).tar.gz
+    regexp: server/published/main/server-rc-(.*)-ubuntu18.04_x86_64((rc-build-type-gcs)).tar.gz
 
 
 - name: bin_gpdb_clients_centos7_rc
@@ -650,21 +650,21 @@ resources:
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: clients/published/gpdb7/clients-rc-(.*)-rhel7_x86_64((rc-build-type-gcs)).tar.gz
+    regexp: clients/published/main/clients-rc-(.*)-rhel7_x86_64((rc-build-type-gcs)).tar.gz
 
 - name: bin_gpdb_clients_rhel8_rc
   type: gcs
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: clients/published/gpdb7/clients-rc-(.*)-rhel8_x86_64((rc-build-type-gcs)).tar.gz
+    regexp: clients/published/main/clients-rc-(.*)-rhel8_x86_64((rc-build-type-gcs)).tar.gz
 
 - name: bin_gpdb_clients_ubuntu18.04_rc
   type: gcs
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: clients/published/gpdb7/clients-rc-(.*)-ubuntu18.04_x86_64((rc-build-type-gcs)).tar.gz
+    regexp: clients/published/main/clients-rc-(.*)-ubuntu18.04_x86_64((rc-build-type-gcs)).tar.gz
 
 {% endif %}
 - name: server_src_rc
@@ -673,9 +673,9 @@ resources:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
 {% if directed_release %}
-    regexp: server-src/published/gpdb7/((gpdb-git-branch))-server-src-rc-*.tar.gz
+    regexp: server-src/published/main/((gpdb-git-branch))-server-src-rc-*.tar.gz
 {% else %}
-    regexp: server-src/published/gpdb7/server-src-rc-*.tar.gz
+    regexp: server-src/published/main/server-src-rc-*.tar.gz
 {% endif %}
 {% endif %}
 
@@ -685,14 +685,14 @@ resources:
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/gpdb7/greenplum-db-(.*)-rhel7-x86_64((rc-build-type-gcs)).rpm
+    regexp: server/published/main/greenplum-db-(.*)-rhel7-x86_64((rc-build-type-gcs)).rpm
 
 - name: gpdb_rpm_installer_rhel8
   type: gcs
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/gpdb7/greenplum-db-(.*)-rhel8-x86_64((rc-build-type-gcs)).rpm
+    regexp: server/published/main/greenplum-db-(.*)-rhel8-x86_64((rc-build-type-gcs)).rpm
 
 - name: greenplum-database-release
   type: git
@@ -731,7 +731,7 @@ resources:
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/gpdb7/server-build-(.*)-rhel7_x86_64((rc-build-type-gcs)).tar.gz
+    regexp: server/published/main/server-build-(.*)-rhel7_x86_64((rc-build-type-gcs)).tar.gz
 {% endif %}
 
 {% endif %}
@@ -756,7 +756,7 @@ resources:
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/gpdb7/server-build-(.*)-rhel8_x86_64((rc-build-type-gcs)).tar.gz
+    regexp: server/published/main/server-build-(.*)-rhel8_x86_64((rc-build-type-gcs)).tar.gz
 {% endif %}
 
 {% endif %}
@@ -781,7 +781,7 @@ resources:
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/gpdb7/server-build-(.*)-ubuntu18.04_x86_64((rc-build-type-gcs)).tar.gz
+    regexp: server/published/main/server-build-(.*)-ubuntu18.04_x86_64((rc-build-type-gcs)).tar.gz
 {% endif %}
 
 {% endif %}
