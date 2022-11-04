@@ -16,9 +16,9 @@ gpsync --version
 
 ## <a id="section3"></a>Description 
 
-The `gpsync` utility allows you to copy one or more files from the specified hosts to other specified hosts in one command using SCP \(secure copy\). For example, you can copy a file from the Greenplum Database coordinator host to all of the segment hosts at the same time.
+The `gpsync` utility allows you to copy one or more files from the specified hosts to other specified hosts in one command using remote sync. For example, you can copy a file from the Greenplum Database coordinator host to all of the segment hosts at the same time.
 
-To specify the hosts involved in the SCP session, use the `-f` option to specify a file containing a list of host names, or use the `-h` option to name single host names on the command-line. At least one host name \(`-h`\) or a host file \(`-f`\) is required. The `-J` option allows you to specify a single character to substitute for the hostname in the `copy from` and `copy to` destination strings. If `-J` is not specified, the default substitution character is an equal sign \(`=`\). For example, the following command will copy `.bashrc` from the local host to `/home/gpadmin` on all hosts named in `hostfile_gpssh`:
+To specify the hosts involved in the remote sync session, use the `-f` option to specify a file containing a list of host names, or use the `-h` option to name single host names on the command-line. At least one host name \(`-h`\) or a host file \(`-f`\) is required. The `-J` option allows you to specify a single character to substitute for the hostname in the `copy from` and `copy to` destination strings. If `-J` is not specified, the default substitution character is an equal sign \(`=`\). For example, the following command will copy `.bashrc` from the local host to `/home/gpadmin` on all hosts named in `hostfile_gpssh`:
 
 ```
 gpsync -f hostfile_gpssh .bashrc =:/home/gpadmin
@@ -26,19 +26,19 @@ gpsync -f hostfile_gpssh .bashrc =:/home/gpadmin
 
 If a user name is not specified in the host list or with user`@` in the file path, `gpsync` will copy files as the currently logged in user. To determine the currently logged in user, do a `whoami` command. By default, `gpsync` goes to `$HOME` of the session user on the remote hosts after login. To ensure the file is copied to the correct location on the remote hosts, it is recommended that you use absolute paths.
 
-Before using `gpsync`, you must have a trusted host setup between the hosts involved in the SCP session. You can use the utility `gpssh-exkeys` to update the known host files and exchange public keys between hosts if you have not done so already.
+Before using `gpsync`, you must have a trusted host setup between the hosts involved in the remote sync session. You can use the utility `gpssh-exkeys` to update the known host files and exchange public keys between hosts if you have not done so already.
 
 ## <a id="section4"></a>Options 
 
 -f hostfile\_gpssh
-:   Specifies the name of a file that contains a list of hosts that will participate in this SCP session. The syntax of the host file is one host per line as follows:
+:   Specifies the name of a file that contains a list of hosts that will participate in this remote sync session. The syntax of the host file is one host per line as follows:
 
 :   ```
 <hostname>
 ```
 
 -h hostname
-:   Specifies a single host name that will participate in this SCP session. You can use the `-h` option multiple times to specify multiple host names.
+:   Specifies a single host name that will participate in this remote sync session. You can use the `-h` option multiple times to specify multiple host names.
 
 -a 
 :   Sync source and target directories in archival mode.
@@ -47,7 +47,7 @@ Before using `gpsync`, you must have a trusted host setup between the hosts invo
 :   The `-J` option allows you to specify a single character to substitute for the hostname in the `copy from` and `copy to` destination strings. If `-J` is not specified, the default substitution character is an equal sign \(`=`\).
 
 -v \(verbose mode\)
-:   Optional. Reports additional messages in addition to the SCP command output.
+:   Optional. Reports additional messages in addition to the remote sync command output.
 
 file\_to\_copy
 :   Required. The file name \(or absolute path\) of a file that you want to copy to other hosts \(or file locations\). This can be either a file on the local host or on another named host.
