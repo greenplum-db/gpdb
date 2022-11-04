@@ -1667,6 +1667,21 @@ SELECT grant_table_in_function();
 -- GrantStmt
 SELECT grant_table_in_function();
 
+-- Validate that ISSUE #14395 which manifested as a crash while deriving stats
+-- on partitioned tables over CTEs is resolved.
+CREATE TABLE a_partition_table_used_in_cte_test(c1 int)
+PARTITION BY LIST(c1)
+(
+	PARTITION a_part values(2,3),
+	DEFAULT partition other
+);
+
+INSERT INTO a_partition_table_used_in_cte_test SELECT 2;
+ANALYZE a_partition_table_used_in_cte_test;
+WITH cte AS (
+  SELECT * FROM a_partition_table_used_in_cte_test WHERE c1 < 2
+) SELECT * FROM cte WHERE c1 = 1;
+
 -- CLEANUP
 -- start_ignore
 drop schema if exists bfv_partition cascade;
