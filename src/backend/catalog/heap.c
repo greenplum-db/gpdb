@@ -1080,6 +1080,84 @@ InsertPgAttributeTuple(Relation pg_attribute_rel,
 	heap_freetuple(tup);
 }
 
+void
+UpdatePgAttributeTuple(Relation pg_attribute_rel,
+					   Form_pg_attribute new_attribute)
+{
+	Datum		values[Natts_pg_attribute];
+	bool		nulls[Natts_pg_attribute];
+	bool		repl[Natts_pg_attribute];
+	HeapTuple   oldtup;
+	HeapTuple	newtup;
+	Relation    attr_rel;
+	SysScanDesc scan;
+	ScanKeyData skey[2];
+
+	/* This is a tad tedious, but way cleaner than what we used to do... */
+	memset(values, 0, sizeof(values));
+	memset(nulls, false, sizeof(nulls));
+	memset(repl, true, sizeof(nulls));
+
+	values[Anum_pg_attribute_attrelid - 1] = ObjectIdGetDatum(new_attribute->attrelid);
+	values[Anum_pg_attribute_attname - 1] = NameGetDatum(&new_attribute->attname);
+	values[Anum_pg_attribute_atttypid - 1] = ObjectIdGetDatum(new_attribute->atttypid);
+	values[Anum_pg_attribute_attstattarget - 1] = Int32GetDatum(new_attribute->attstattarget);
+	values[Anum_pg_attribute_attlen - 1] = Int16GetDatum(new_attribute->attlen);
+	values[Anum_pg_attribute_attnum - 1] = Int16GetDatum(new_attribute->attnum);
+	values[Anum_pg_attribute_attndims - 1] = Int32GetDatum(new_attribute->attndims);
+	values[Anum_pg_attribute_attcacheoff - 1] = Int32GetDatum(-1);
+	values[Anum_pg_attribute_atttypmod - 1] = Int32GetDatum(new_attribute->atttypmod);
+	values[Anum_pg_attribute_attbyval - 1] = BoolGetDatum(new_attribute->attbyval);
+	values[Anum_pg_attribute_attstorage - 1] = CharGetDatum(new_attribute->attstorage);
+	values[Anum_pg_attribute_attalign - 1] = CharGetDatum(new_attribute->attalign);
+	values[Anum_pg_attribute_attnotnull - 1] = BoolGetDatum(new_attribute->attnotnull);
+	values[Anum_pg_attribute_atthasdef - 1] = BoolGetDatum(new_attribute->atthasdef);
+	values[Anum_pg_attribute_atthasmissing - 1] = BoolGetDatum(new_attribute->atthasmissing);
+	values[Anum_pg_attribute_attidentity - 1] = CharGetDatum(new_attribute->attidentity);
+	values[Anum_pg_attribute_attgenerated - 1] = CharGetDatum(new_attribute->attgenerated);
+	values[Anum_pg_attribute_attisdropped - 1] = BoolGetDatum(new_attribute->attisdropped);
+	values[Anum_pg_attribute_attislocal - 1] = BoolGetDatum(new_attribute->attislocal);
+	values[Anum_pg_attribute_attinhcount - 1] = Int32GetDatum(new_attribute->attinhcount);
+	values[Anum_pg_attribute_attcollation - 1] = ObjectIdGetDatum(new_attribute->attcollation);
+
+	/* start out with empty permissions and empty options */
+	nulls[Anum_pg_attribute_attacl - 1] = true;
+	nulls[Anum_pg_attribute_attoptions - 1] = true;
+	nulls[Anum_pg_attribute_attfdwoptions - 1] = true;
+	nulls[Anum_pg_attribute_attmissingval - 1] = true;
+
+	repl[Anum_pg_attribute_attrelid - 1] = false;
+	repl[Anum_pg_attribute_attnum - 1] = false;
+
+	attr_rel = table_open(AttributeRelationId, RowExclusiveLock);
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_attribute_attrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(new_attribute->attrelid));
+	ScanKeyInit(&skey[1],
+				Anum_pg_attribute_attnum,
+				BTEqualStrategyNumber, F_OIDEQ,
+				Int16GetDatum(new_attribute->attnum));
+	scan = systable_beginscan(attr_rel, AttributeRelidNumIndexId, true,
+							  NULL, 2, skey);
+
+	oldtup = systable_getnext(scan);
+	Assert(HeapTupleIsValid(oldtup));
+
+	newtup = heap_modify_tuple(oldtup, RelationGetDescr(attr_rel), values, nulls, repl);
+
+	/* finally update the tuple, and clean up */
+	CatalogTupleUpdate(attr_rel, &oldtup->t_self, newtup);
+
+	CacheInvalidateHeapTuple(attr_rel, oldtup, newtup);
+
+	systable_endscan(scan);
+	heap_close(attr_rel, RowExclusiveLock);
+
+	heap_freetuple(newtup);
+}
+
 /* --------------------------------
  *		AddNewAttributeTuples
  *

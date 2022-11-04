@@ -5926,7 +5926,6 @@ ATAocsWriteSegFileNewColumns(
 	int i;
 
 	/* Start index in values and isnull array for newly added columns. */
-	AttrNumber newcol = tupdesc->natts - idesc->num_newcols;
 
 	/* Loop over each varblock in an appendonly segno. */
 	while (aocs_get_nextheader(sdesc))
@@ -6009,7 +6008,7 @@ ATAocsWriteSegFileNewColumns(
 								 (int) con->contype);
 					}
 				}
-				aocs_addcol_insert_datum(idesc, values+newcol, isnull+newcol);
+				aocs_addcol_insert_datum(idesc, values, isnull);
 				ResetExprContext(econtext);
 				CHECK_FOR_INTERRUPTS();
 			}
@@ -6086,7 +6085,7 @@ ATAocsWriteNewColumns(AlteredTableInfo *tab)
 	int32 scancol; /* chosen column number to scan from */
 	ListCell *l;
 	Snapshot snapshot;
-	int addcols;
+	List *new_attrnums = NIL;
 
 	snapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 
@@ -6112,6 +6111,7 @@ ATAocsWriteNewColumns(AlteredTableInfo *tab)
 	{
 		newval = lfirst(l);
 		newval->exprstate = ExecPrepareExpr((Expr *) newval->expr, estate);
+		new_attrnums = lappend_int(new_attrnums, newval->attnum);
 	}
 
 	rel = heap_open(tab->relid, NoLock);
@@ -6143,7 +6143,7 @@ ATAocsWriteNewColumns(AlteredTableInfo *tab)
 	if (nseg > 0)
 	{
 		aocs_addcol_emptyvpe(rel, segInfos, nseg,
-							 list_length(tab->newvals));
+							 new_attrnums);
 	}
 
 	scancol = column_to_scan(segInfos, nseg, tab->oldDesc->natts, rel);
@@ -6176,14 +6176,8 @@ ATAocsWriteNewColumns(AlteredTableInfo *tab)
 		ExecStoreAllNullTuple(slot);
 
 		sdesc = aocs_begin_headerscan(rel, scancol);
-		addcols = RelationGetDescr(rel)->natts - tab->oldDesc->natts;
-		/*
-		 * Protect against potential negative number here.
-		 * Note that natts is not decremented to reflect dropped columns,
-		 * so this should be safe
-		 */
-		Assert(addcols > 0);
-		idesc = aocs_addcol_init(rel, addcols);
+
+		idesc = aocs_addcol_init(rel, new_attrnums);
 
 		/* Loop over all appendonly segments */
 		for (segi = 0; segi < nseg; ++segi)
@@ -7263,7 +7257,33 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 	}
 
 	/* Determine the new attribute's number */
-	newattnum = ((Form_pg_class) GETSTRUCT(reltup))->relnatts + 1;
+	int16 relnatts = ((Form_pg_class) GETSTRUCT(reltup))->relnatts;
+	if (colDef->reuse_dropped)
+	{
+		if (RelationIsAoCols(rel))
+		{
+			newattnum = relnatts + 1;
+			for (int i = 0; i < rel->rd_att->natts; i++)
+			{
+				if (rel->rd_att->attrs[i].attisdropped)
+				{
+					newattnum = i + 1;
+					break;
+				}
+			}
+		}
+		else
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						errmsg("table \"%s\" is not AOCO table. Cannot add \"%s\" reusing dropped attnum",
+							   RelationGetRelationName(rel), colDef->colname),
+							   errdetail("Reusing dropped attnum is only supported for AOCO tables")));
+		}
+	}
+	else
+		newattnum = relnatts + 1;
+
 	if (newattnum > MaxHeapAttributeNumber)
 		ereport(ERROR,
 				(errcode(ERRCODE_TOO_MANY_COLUMNS),
@@ -7310,16 +7330,21 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 
 	ReleaseSysCache(typeTuple);
 
-	InsertPgAttributeTuple(attrdesc, &attribute, NULL);
+	if (newattnum > relnatts)
+		InsertPgAttributeTuple(attrdesc, &attribute, NULL);
+	else
+		UpdatePgAttributeTuple(attrdesc, &attribute);
 
 	table_close(attrdesc, RowExclusiveLock);
 
 	/*
 	 * Update pg_class tuple as appropriate
 	 */
-	((Form_pg_class) GETSTRUCT(reltup))->relnatts = newattnum;
-
-	CatalogTupleUpdate(pgclass, &reltup->t_self, reltup);
+	if (newattnum > relnatts)
+	{
+		((Form_pg_class) GETSTRUCT(reltup))->relnatts = newattnum;
+		CatalogTupleUpdate(pgclass, &reltup->t_self, reltup);
+	}
 
 	heap_freetuple(reltup);
 
@@ -7561,7 +7586,12 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 	 * Store the encoding clause for AO/CO tables.
 	 */
 	if (RelationIsAoCols(rel))
-		AddRelationAttributeEncodings(myrelid, enc);
+	{
+		if (newattnum > relnatts)
+			AddRelationAttributeEncodings(myrelid, enc);
+		else
+			UpdateAttributeEncodings(myrelid, enc);
+	}
 
 	/* MPP-6929: metadata tracking */
 	if ((Gp_role == GP_ROLE_DISPATCH) && MetaTrackValidKindNsp(rel->rd_rel))
@@ -9034,6 +9064,20 @@ ATExecDropColumn(List **wqueue, Relation rel, const char *colName,
 			table_close(childrel, NoLock);
 		}
 		table_close(attr_rel, RowExclusiveLock);
+	}
+
+	/* Drop blkdir entries for the column */
+	if (rel->rd_rel->relkind == RELKIND_RELATION && RelationIsAoCols(rel))
+	{
+		Oid blkdirrelid;
+		GetAppendOnlyEntryAuxOids(rel->rd_id, NULL, NULL, &blkdirrelid, NULL, NULL, NULL);
+
+		if OidIsValid(blkdirrelid)
+		{
+			Snapshot snapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
+			AppendOnlyBlockDirectory_DeleteColumnGroup(rel, snapshot, attnum-1);
+			UnregisterSnapshot(snapshot);
+		}
 	}
 
 	/* Add object to delete */

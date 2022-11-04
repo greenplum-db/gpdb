@@ -311,7 +311,7 @@ typedef struct AOCSAddColumnDescData
 	DatumStreamWrite **dsw;
 	/* array of datum stream write objects, one per new column */
 
-	int num_newcols;
+	List *new_attrnums;
 
 	int32 cur_segno;
 
@@ -361,7 +361,7 @@ extern void aocs_headerscan_opensegfile(
 extern bool aocs_get_nextheader(AOCSHeaderScanDesc hdesc);
 extern void aocs_end_headerscan(AOCSHeaderScanDesc hdesc);
 extern AOCSAddColumnDesc aocs_addcol_init(
-		Relation rel, int num_newcols);
+		Relation rel, List *newvals);
 extern void aocs_addcol_newsegfile(
 		AOCSAddColumnDesc desc, AOCSFileSegInfo *seginfo, char *basepath,
 		RelFileNodeBackend relfilenode);
@@ -372,7 +372,7 @@ extern void aocs_addcol_insert_datum(AOCSAddColumnDesc desc,
 extern void aocs_addcol_finish(AOCSAddColumnDesc desc);
 extern void aocs_addcol_emptyvpe(
 		Relation rel, AOCSFileSegInfo **segInfos,
-		int32 nseg, int num_newcols);
+		int32 nseg, List *newvals);
 extern void aocs_addcol_setfirstrownum(AOCSAddColumnDesc desc,
 		int64 firstRowNum);
 

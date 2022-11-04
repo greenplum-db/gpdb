@@ -149,7 +149,7 @@ extern void InsertInitialAOCSFileSegInfo(Relation prel, int32 segno, int32 nvp, 
 extern void UpdateAOCSFileSegInfo(struct AOCSInsertDescData *desc);
 extern void AOCSFileSegInfoAddVpe(
 					  Relation prel, int32 segno,
-					  struct AOCSAddColumnDescData *desc, int num_newcols, bool empty);
+					  struct AOCSAddColumnDescData *desc, List *newvals, bool empty);
 extern void AOCSFileSegInfoAddCount(Relation prel, int32 segno, int64 tupadded, int64 varblockadded, int64 modcount_added);
 extern void ClearAOCSFileSegInfo(Relation prel, int segno);
 extern void MarkAOCSFileSegInfoAwaitingDrop(Relation parentrel, int segno);

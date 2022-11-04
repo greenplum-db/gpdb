@@ -4153,6 +4153,7 @@ _outColumnDef(StringInfo str, const ColumnDef *node)
 	WRITE_BOOL_FIELD(is_local);
 	WRITE_BOOL_FIELD(is_not_null);
 	WRITE_BOOL_FIELD(is_from_type);
+	WRITE_BOOL_FIELD(reuse_dropped);
 	WRITE_INT_FIELD(attnum);
 	WRITE_INT_FIELD(storage);
 	WRITE_NODE_FIELD(raw_default);

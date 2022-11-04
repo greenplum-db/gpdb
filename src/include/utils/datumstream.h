@@ -300,12 +300,12 @@ extern void destroy_datumstreamread(DatumStreamRead * ds);
 extern int64 datumstreamwrite_block(DatumStreamWrite *ds,
 									AppendOnlyBlockDirectory *blockDirectory,
 									int columnGroupNo,
-									bool addColAction);
+									bool addColAction, int blkdirminipageIndex);
 extern int64 datumstreamwrite_lob(DatumStreamWrite *ds,
 								  Datum d,
 								  AppendOnlyBlockDirectory *blockDirectory,
 								  int columnGroupNo,
-								  bool addColAction);
+								  bool addColAction, int blkdirminipageIndex);
 extern int	datumstreamread_block(DatumStreamRead * ds,
 								  AppendOnlyBlockDirectory *blockDirectory,
 								  int colGroupNo);

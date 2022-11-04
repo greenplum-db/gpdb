@@ -234,18 +234,23 @@ extern bool AppendOnlyBlockDirectory_InsertEntry(
 	int64 firstRowNum,
 	int64 fileOffset,
 	int64 rowCount,
-	bool addColAction);
+	bool addColAction,
+	int minipageIndex);
 extern void AppendOnlyBlockDirectory_End_forInsert(
 	AppendOnlyBlockDirectory *blockDirectory);
 extern void AppendOnlyBlockDirectory_End_forSearch(
 	AppendOnlyBlockDirectory *blockDirectory);
 extern void AppendOnlyBlockDirectory_End_addCol(
-	AppendOnlyBlockDirectory *blockDirectory);
+	AppendOnlyBlockDirectory *blockDirectory, List *new_attrnums);
 extern void AppendOnlyBlockDirectory_DeleteSegmentFile(
 	Relation aoRel,
 		Snapshot snapshot,
 		int segno,
 		int columnGroupNo);
+extern void AppendOnlyBlockDirectory_DeleteColumnGroup(
+	Relation aoRel,
+	Snapshot snapshot,
+	int columnGroupNo);
 extern void AppendOnlyBlockDirectory_End_forUniqueChecks(
 	AppendOnlyBlockDirectory *blockDirectory);
 

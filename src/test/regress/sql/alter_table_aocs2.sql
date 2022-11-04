@@ -629,7 +629,71 @@ CREATE TEMP TABLE relfileaftertestaddcol AS
     WHERE relname LIKE 'testaddcol%' ORDER BY segid;
 
 -- table shouldn't be rewritten
-SELECT count(*) FROM (SELECT * FROM relfilebeforetestaddcol UNION SELECT * FROM relfileaftertestaddcol)a;
+SELECT * FROM relfilebeforetestaddcol EXCEPT SELECT * FROM relfileaftertestaddcol;
 
 -- data is intact
 SELECT * FROM testaddcol;
+
+
+-- Check if add column reuse dropped doesn't rewrite the table and doesn't take extra attnum
+CREATE TABLE testaddcolrd(a int, b int, c int, d int) WITH (appendonly=true, orientation=column);
+CREATE INDEX idxa on testaddcolrd(a);
+CREATE INDEX idxb on testaddcolrd(b);
+CREATE INDEX idxd on testaddcolrd(d);
+INSERT INTO testaddcolrd SELECT i,i,i,i from generate_series(1, 5)i;
+
+ALTER TABLE testaddcolrd DROP COLUMN b, DROP COLUMN d;
+CREATE TEMP TABLE relfilebeforetestaddcolrd AS
+SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'testaddcolrd%'
+UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+WHERE relname LIKE 'testaddcolrd%' ORDER BY segid;
+
+ALTER TABLE testaddcolrd ADD COLUMN i int DEFAULT 5,
+ADD COLUMN j int DEFAULT NULL REUSE DROPPED, ADD COLUMN k int;
+
+SELECT relnatts FROM pg_class WHERE relname='testaddcolrd';
+
+CREATE TEMP TABLE relfileaftertestaddcolrd AS
+SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'testaddcolrd%'
+UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+WHERE relname LIKE 'testaddcolrd%' ORDER BY segid;
+
+-- table shouldn't be rewritten
+SELECT * FROM relfilebeforetestaddcolrd EXCEPT SELECT * FROM relfileaftertestaddcolrd;
+
+--check data is intact
+SELECT * FROM testaddcolrd;
+
+-- new rows are added correctly
+INSERT INTO testaddcolrd SELECT i,i,i,i,i from generate_series(1, 5)i;
+SELECT * FROM testaddcolrd;
+
+
+-- Check if reuse dropped is not allowed on tables with child heap/ao partitions
+CREATE TABLE aoco_parent_child_other(a int, b int, c int, d int)
+    WITH (APPENDONLY = true, ORIENTATION = column)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+(START (0) END (1) EVERY (1) WITH (APPENDONLY = true),
+    START (1) END (2) EVERY (1) WITH (APPENDONLY = false));
+
+ALTER TABLE aoco_parent_child_other DROP COLUMN c;
+
+-- should error out
+ALTER TABLE aoco_parent_child_other ADD COLUMN i int REUSE DROPPED;
+
+
+-- Check if reuse dropped is allowed on partitioned tables with all child aoco partitions
+CREATE TABLE aoco_parent_aoco_child(a int, b int, c int, d int)
+    WITH (APPENDONLY = true, ORIENTATION = column)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+(START (0) END (1) EVERY (1) WITH (APPENDONLY = true, ORIENTATION = column),
+    START (1) END (2) EVERY (1) WITH (APPENDONLY = true, ORIENTATION = column));
+
+ALTER TABLE aoco_parent_aoco_child DROP COLUMN c;
+
+-- should not error out
+ALTER TABLE aoco_parent_aoco_child ADD COLUMN i int REUSE DROPPED;
+
+SELECT relnatts FROM pg_class WHERE relname='aoco_parent_aoco_child';

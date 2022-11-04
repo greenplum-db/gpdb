@@ -527,6 +527,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 
 %type <node>	TableElement TypedTableElement ConstraintElem TableFuncElement
 %type <node>	columnDef columnOptions
+%type <boolean> reuse_dropped_attnum_clause
 %type <defelt>	def_elem reloption_elem old_aggr_elem keyvalue_pair operator_def_elem
 %type <node>	ExtTableElement
 %type <node>	ExtcolumnDef
@@ -808,7 +809,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 
 	CREATEEXTTABLE
 
-	DECODE DENY DISTRIBUTED DXL
+	DECODE DENY DISTRIBUTED DROPPED DXL
 
 	ERRORS EVERY EXCHANGE EXPAND
 
@@ -834,7 +835,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 
 	QUEUE
 
-	RANDOMLY READABLE READS REJECT_P REPLICATED RESOURCE
+	RANDOMLY READABLE READS REJECT_P REPLICATED RESOURCE REUSE
 	ROOTPARTITION
 
 	SCATTER SEGMENT SEGMENTS SPLIT SUBPARTITION
@@ -968,6 +969,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc DOMAIN_P
 			%nonassoc DOUBLE_P
 			%nonassoc DROP
+			%nonassoc DROPPED
 			%nonassoc EACH
 			%nonassoc ENABLE_P
 			%nonassoc ENCODING
@@ -1096,6 +1098,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc RESTRICT
 			%nonassoc RETRIEVE
 			%nonassoc RETURNS
+			%nonassoc REUSE
 			%nonassoc REVOKE
 			%nonassoc ROLE
 			%nonassoc ROLLBACK
@@ -2827,38 +2830,46 @@ index_partition_cmd:
 
 alter_table_cmd:
 			/* ALTER TABLE <name> ADD <coldef> */
-			ADD_P columnDef
+			ADD_P columnDef reuse_dropped_attnum_clause
 				{
 					AlterTableCmd *n = makeNode(AlterTableCmd);
 					n->subtype = AT_AddColumn;
-					n->def = $2;
+					ColumnDef *c = (ColumnDef *) $2;
+					c->reuse_dropped = $3;
+					n->def = (Node *)c;
 					n->missing_ok = false;
 					$$ = (Node *)n;
 				}
 			/* ALTER TABLE <name> ADD IF NOT EXISTS <coldef> */
-			| ADD_P IF_P NOT EXISTS columnDef
+			| ADD_P IF_P NOT EXISTS columnDef reuse_dropped_attnum_clause
 				{
 					AlterTableCmd *n = makeNode(AlterTableCmd);
 					n->subtype = AT_AddColumn;
-					n->def = $5;
+					ColumnDef *c = (ColumnDef *) $5;
+					c->reuse_dropped = $6;
+					n->def = (Node *)c;
 					n->missing_ok = true;
 					$$ = (Node *)n;
 				}
 			/* ALTER TABLE <name> ADD COLUMN <coldef> */
-			| ADD_P COLUMN columnDef
+			| ADD_P COLUMN columnDef reuse_dropped_attnum_clause
 				{
 					AlterTableCmd *n = makeNode(AlterTableCmd);
 					n->subtype = AT_AddColumn;
-					n->def = $3;
 					n->missing_ok = false;
+					ColumnDef *c = (ColumnDef *) $3;
+					c->reuse_dropped = $4;
+					n->def = (Node *)c;
 					$$ = (Node *)n;
 				}
 			/* ALTER TABLE <name> ADD COLUMN IF NOT EXISTS <coldef> */
-			| ADD_P COLUMN IF_P NOT EXISTS columnDef
+			| ADD_P COLUMN IF_P NOT EXISTS columnDef reuse_dropped_attnum_clause
 				{
 					AlterTableCmd *n = makeNode(AlterTableCmd);
 					n->subtype = AT_AddColumn;
-					n->def = $6;
+					ColumnDef *c = (ColumnDef *) $6;
+					c->reuse_dropped = $7;
+					n->def = (Node *)c;
 					n->missing_ok = true;
 					$$ = (Node *)n;
 				}
@@ -5506,6 +5517,11 @@ part_elem: ColId opt_collate opt_class
 table_access_method_clause:
 			USING access_method					{ $$ = $2; }
 			| /*EMPTY*/							{ $$ = NULL; }
+		;
+
+reuse_dropped_attnum_clause:
+			REUSE DROPPED  { $$ = true; }
+			| /* EMPTY */  { $$ = false; }
 		;
 
 /* WITHOUT OIDS is legacy only */
@@ -18658,6 +18674,7 @@ col_name_keyword:
 			| COALESCE
 			| DEC
 			| DECIMAL_P
+			| DROPPED
 			| EXISTS
 			| EXTRACT
 			| FLOAT_P
@@ -18680,6 +18697,7 @@ col_name_keyword:
 			| POSITION
 			| PRECISION
 			| REAL
+			| REUSE
 			| ROW
 			| SETOF
 			| SMALLINT

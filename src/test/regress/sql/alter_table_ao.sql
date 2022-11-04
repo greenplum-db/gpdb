@@ -424,3 +424,11 @@ ALTER TABLE split_tupdesc_leak SPLIT DEFAULT PARTITION AT ('201412')
 	INTO (PARTITION p_split_tupdesc_leak_ym, PARTITION p_split_tupdesc_leak_ym_201412);
 
 DROP TABLE split_tupdesc_leak;
+
+
+-- Check if ADD COLUMN REUSE DROPPED errors out
+CREATE TABLE ao_addcolrd(a int, b int, c int) USING ao_row;
+ALTER TABLE ao_addcolrd DROP COLUMN b;
+
+-- should error out
+ALTER TABLE ao_addcolrd ADD COLUMN d int REUSE DROPPED;

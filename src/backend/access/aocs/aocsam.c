@@ -1000,7 +1000,7 @@ aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool *null, AOTupleId *aoTupl
 			void	   *toFree2;
 
 			/* write the block up to this one */
-			datumstreamwrite_block(idesc->ds[i], &idesc->blockDirectory, i, false);
+			datumstreamwrite_block(idesc->ds[i], &idesc->blockDirectory, i, false, 0);
 			if (itemCount > 0)
 			{
 				/*
@@ -1023,7 +1023,7 @@ aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool *null, AOTupleId *aoTupl
 										   datum,
 										   &idesc->blockDirectory,
 										   i,
-										   false);
+										   false, 0);
 				Assert(err >= 0);
 
 				/*
@@ -1074,7 +1074,7 @@ aocs_insert_finish(AOCSInsertDesc idesc)
 
 	for (i = 0; i < rel->rd_att->natts; ++i)
 	{
-		datumstreamwrite_block(idesc->ds[i], &idesc->blockDirectory, i, false);
+		datumstreamwrite_block(idesc->ds[i], &idesc->blockDirectory, i, false, 0);
 		datumstreamwrite_close_file(idesc->ds[i]);
 	}
 
@@ -1870,19 +1870,20 @@ aocs_end_headerscan(AOCSHeaderScanDesc hdesc)
  */
 AOCSAddColumnDesc
 aocs_addcol_init(Relation rel,
-				 int num_newcols)
+				 List *new_attrnums)
 {
 	char	   *ct;
 	int32		clvl;
 	int32		blksz;
 	AOCSAddColumnDesc desc;
 	int			i;
+	ListCell 	*l;
 	int			iattr;
 	StringInfoData titleBuf;
 	bool        checksum;
 
 	desc = palloc(sizeof(AOCSAddColumnDescData));
-	desc->num_newcols = num_newcols;
+	desc->new_attrnums = new_attrnums;
 	desc->rel = rel;
 	desc->cur_segno = -1;
 
@@ -1892,7 +1893,7 @@ aocs_addcol_init(Relation rel,
 	 */
 	StdRdOptions **opts = RelationGetAttributeOptions(rel);
 
-	desc->dsw = palloc(sizeof(DatumStreamWrite *) * desc->num_newcols);
+	desc->dsw = palloc(sizeof(DatumStreamWrite *) * list_length(desc->new_attrnums));
 
     GetAppendOnlyEntryAttributes(rel->rd_id,
                                  NULL,
@@ -1901,9 +1902,10 @@ aocs_addcol_init(Relation rel,
                                  &checksum,
                                  NULL);
 
-	iattr = rel->rd_att->natts - num_newcols;
-	for (i = 0; i < num_newcols; ++i, ++iattr)
+	i = 0;
+	foreach(l, new_attrnums)
 	{
+		iattr = lfirst_int(l) - 1;
 		Form_pg_attribute attr = TupleDescAttr(rel->rd_att, iattr);
 
 		initStringInfo(&titleBuf);
@@ -1917,6 +1919,8 @@ aocs_addcol_init(Relation rel,
 											   attr, RelationGetRelationName(rel),
 											   titleBuf.data,
 											   XLogIsNeeded() && RelationNeedsWAL(rel));
+
+		i++;
 	}
 
 	for (i = 0; i < RelationGetNumberOfAttributes(rel); i++)
@@ -1938,26 +1942,28 @@ aocs_addcol_newsegfile(AOCSAddColumnDesc desc,
 	int32		fileSegNo;
 	char		fn[MAXPGPATH];
 	int			i;
+	ListCell 	*l;
 	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
-
-	/* Column numbers of newly added columns start from here. */
-	AttrNumber	colno = desc->rel->rd_att->natts - desc->num_newcols;
 
 	if (desc->dsw[0]->need_close_file)
 	{
 		aocs_addcol_closefiles(desc);
-		AppendOnlyBlockDirectory_End_addCol(&desc->blockDirectory);
+		AppendOnlyBlockDirectory_End_addCol(&desc->blockDirectory,
+											desc->new_attrnums);
 	}
 	AppendOnlyBlockDirectory_Init_addCol(&desc->blockDirectory,
 										 appendOnlyMetaDataSnapshot,
 										 (FileSegInfo *) seginfo,
 										 desc->rel,
 										 seginfo->segno,
-										 desc->num_newcols,
+										 list_length(desc->new_attrnums),
 										 true /* isAOCol */ );
-	for (i = 0; i < desc->num_newcols; ++i, ++colno)
+
+	i = 0;
+	foreach(l, desc->new_attrnums)
 	{
 		int			version;
+		int         colno = lfirst_int(l) - 1;
 
 		/* Always write in the latest format */
 		version = AORelationVersion_GetLatest();
@@ -1970,6 +1976,7 @@ aocs_addcol_newsegfile(AOCSAddColumnDesc desc,
 								   &relfilenode, fileSegNo,
 								   version);
 		desc->dsw[i]->blockFirstRowNum = 1;
+		i++;
 	}
 	desc->cur_segno = seginfo->segno;
 	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
@@ -1979,23 +1986,27 @@ void
 aocs_addcol_closefiles(AOCSAddColumnDesc desc)
 {
 	int			i;
-	AttrNumber	colno = desc->rel->rd_att->natts - desc->num_newcols;
+	AttrNumber	colno;
+	ListCell 	*l;
 
-	for (i = 0; i < desc->num_newcols; ++i)
+	i = 0;
+	foreach(l, desc->new_attrnums)
 	{
-		datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, i + colno, true);
+		colno = lfirst_int(l) - 1;
+		datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, colno, true, i);
 		datumstreamwrite_close_file(desc->dsw[i]);
+		i++;
 	}
 	/* Update pg_aocsseg_* with eof of each segfile we just closed. */
 	AOCSFileSegInfoAddVpe(desc->rel, desc->cur_segno, desc,
-						  desc->num_newcols, false /* non-empty VPEntry */ );
+						  desc->new_attrnums, false /* non-empty VPEntry */ );
 }
 
 void
 aocs_addcol_setfirstrownum(AOCSAddColumnDesc desc, int64 firstRowNum)
 {
        int                     i;
-       for (i = 0; i < desc->num_newcols; ++i)
+       for (i = 0; i < list_length(desc->new_attrnums); ++i)
        {
                /*
                 * Next block's first row number.
@@ -2011,18 +2022,22 @@ aocs_addcol_setfirstrownum(AOCSAddColumnDesc desc, int64 firstRowNum)
 void
 aocs_addcol_endblock(AOCSAddColumnDesc desc, int64 firstRowNum)
 {
-	int			i;
-	AttrNumber	colno = desc->rel->rd_att->natts - desc->num_newcols;
+	ListCell *l;
+	int i = 0;
 
-	for (i = 0; i < desc->num_newcols; ++i)
+	foreach(l, desc->new_attrnums)
 	{
-		datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, i + colno, true);
+		AttrNumber	colno = lfirst_int(l) - 1;
+
+		datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, colno, true, i);
 
 		/*
 		 * Next block's first row number.  In this case, the block being ended
 		 * has less number of rows than its capacity.
 		 */
 		desc->dsw[i]->blockFirstRowNum = firstRowNum;
+
+		i++;
 	}
 }
 
@@ -2038,15 +2053,16 @@ aocs_addcol_insert_datum(AOCSAddColumnDesc desc, Datum *d, bool *isnull)
 	Datum		datum;
 	int			err;
 	int			i;
+	ListCell 	*l;
 	int			itemCount;
 
-	/* first column's number */
-	AttrNumber	colno = desc->rel->rd_att->natts - desc->num_newcols;
-
-	for (i = 0; i < desc->num_newcols; ++i)
+	i = 0;
+	foreach(l, desc->new_attrnums)
 	{
-		datum = d[i];
-		err = datumstreamwrite_put(desc->dsw[i], datum, isnull[i], &toFree1);
+		AttrNumber	colno = lfirst_int(l) - 1;
+
+		datum = d[colno];
+		err = datumstreamwrite_put(desc->dsw[i], datum, isnull[colno], &toFree1);
 		if (toFree1 != NULL)
 		{
 			/*
@@ -2062,7 +2078,7 @@ aocs_addcol_insert_datum(AOCSAddColumnDesc desc, Datum *d, bool *isnull)
 			 */
 			itemCount = datumstreamwrite_nth(desc->dsw[i]);
 			/* write the block up to this one */
-			datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, i + colno, true);
+			datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, colno, true, i);
 			if (itemCount > 0)
 			{
 				/* Next block's first row number */
@@ -2070,17 +2086,17 @@ aocs_addcol_insert_datum(AOCSAddColumnDesc desc, Datum *d, bool *isnull)
 			}
 
 			/* now write this new item to the new block */
-			err = datumstreamwrite_put(desc->dsw[i], datum, isnull[i],
+			err = datumstreamwrite_put(desc->dsw[i], datum, isnull[colno],
 									   &toFree2);
 			Assert(toFree2 == NULL);
 			if (err < 0)
 			{
-				Assert(!isnull[i]);
+				Assert(!isnull[colno]);
 				err = datumstreamwrite_lob(desc->dsw[i],
 										   datum,
 										   &desc->blockDirectory,
-										   i + colno,
-										   true);
+										   colno,
+										   true, i);
 				Assert(err >= 0);
 
 				/*
@@ -2093,6 +2109,8 @@ aocs_addcol_insert_datum(AOCSAddColumnDesc desc, Datum *d, bool *isnull)
 		}
 		if (toFree1 != NULL)
 			pfree(toFree1);
+
+		i++;
 	}
 }
 
@@ -2102,8 +2120,9 @@ aocs_addcol_finish(AOCSAddColumnDesc desc)
 	int			i;
 
 	aocs_addcol_closefiles(desc);
-	AppendOnlyBlockDirectory_End_addCol(&desc->blockDirectory);
-	for (i = 0; i < desc->num_newcols; ++i)
+
+	AppendOnlyBlockDirectory_End_addCol(&desc->blockDirectory, desc->new_attrnums);
+	for (i = 0; i < list_length(desc->new_attrnums); ++i)
 		destroy_datumstreamwrite(desc->dsw[i]);
 	pfree(desc->dsw);
 	desc->dsw = NULL;
@@ -2118,7 +2137,7 @@ aocs_addcol_finish(AOCSAddColumnDesc desc)
 void
 aocs_addcol_emptyvpe(Relation rel,
 					 AOCSFileSegInfo **segInfos, int32 nseg,
-					 int num_newcols)
+					 List *new_attrnums)
 {
 	int			i;
 
@@ -2133,7 +2152,7 @@ aocs_addcol_emptyvpe(Relation rel,
 			 * each newly added column on QE.
 			 */
 			AOCSFileSegInfoAddVpe(rel, segInfos[i]->segno, NULL,
-								  num_newcols, true /* empty VPEntry */ );
+								  new_attrnums, true /* empty VPEntry */ );
 		}
 	}
 }

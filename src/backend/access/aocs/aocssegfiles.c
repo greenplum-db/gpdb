@@ -846,7 +846,7 @@ UpdateAOCSFileSegInfo(AOCSInsertDesc idesc)
  */
 void
 AOCSFileSegInfoAddVpe(Relation prel, int32 segno,
-					  AOCSAddColumnDesc desc, int num_newcols, bool empty)
+					  AOCSAddColumnDesc desc, List *new_attrnums, bool empty)
 {
 	LockAcquireResult acquireResult;
 
@@ -868,7 +868,6 @@ AOCSFileSegInfoAddVpe(Relation prel, int32 segno,
 
 	/* nvp is new columns + existing columns */
 	int			i;
-	int			j;
 
 	if (Gp_role == GP_ROLE_UTILITY)
 	{
@@ -941,6 +940,8 @@ AOCSFileSegInfoAddVpe(Relation prel, int32 segno,
 	newvpinfo = create_aocs_vpinfo(nvp);
 	if (!empty)
 	{
+		ListCell *l;
+
 		d[Anum_pg_aocs_vpinfo - 1] =
 			fastgetattr(oldtup, Anum_pg_aocs_vpinfo, tupdesc,
 						&null[Anum_pg_aocs_vpinfo - 1]);
@@ -949,9 +950,7 @@ AOCSFileSegInfoAddVpe(Relation prel, int32 segno,
 															   d[Anum_pg_aocs_vpinfo - 1]);
 		struct varlena *dv = pg_detoast_datum(v);
 
-		Assert(VARSIZE(dv) == aocs_vpinfo_size(nvp - num_newcols));
 		oldvpinfo = (AOCSVPInfo *) dv;
-		Assert(oldvpinfo->nEntry + num_newcols == nvp);
 		/* copy existing columns' eofs to new vpinfo */
 		for (i = 0; i < oldvpinfo->nEntry; ++i)
 		{
@@ -960,12 +959,16 @@ AOCSFileSegInfoAddVpe(Relation prel, int32 segno,
 				oldvpinfo->entry[i].eof_uncompressed;
 		}
 		/* eof for new segfiles come next */
-		for (i = oldvpinfo->nEntry, j = 0; i < nvp; ++i, ++j)
+		i = 0;
+		foreach(l, new_attrnums)
 		{
-			newvpinfo->entry[i].eof = desc->dsw[j]->eof;
-			newvpinfo->entry[i].eof_uncompressed =
-				desc->dsw[j]->eofUncompress;
+			int newcol = lfirst_int(l) - 1;
+			newvpinfo->entry[newcol].eof = desc->dsw[i]->eof;
+			newvpinfo->entry[newcol].eof_uncompressed =
+				desc->dsw[i]->eofUncompress;
+			i++;
 		}
+
 		if (dv != v)
 		{
 			pfree(dv);
