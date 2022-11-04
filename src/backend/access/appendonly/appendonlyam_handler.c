@@ -247,9 +247,16 @@ appendonly_dml_finish(Relation relation)
 
 	if (state->uniqueCheckDesc)
 	{
+		/* clean up the block directory */
 		AppendOnlyBlockDirectory_End_forSearch(state->uniqueCheckDesc->blockDirectory);
 		pfree(state->uniqueCheckDesc->blockDirectory);
 		state->uniqueCheckDesc->blockDirectory = NULL;
+
+		/* clean up the visimap */
+		AppendOnlyVisimap_Finish(state->uniqueCheckDesc->visimap, AccessShareLock);
+		pfree(state->uniqueCheckDesc->visimap);
+		state->uniqueCheckDesc->visimap = NULL;
+
 		pfree(state->uniqueCheckDesc);
 		state->uniqueCheckDesc = NULL;
 	}
@@ -345,13 +352,28 @@ get_or_create_unique_check_desc(Relation relation, Snapshot snapshot)
 	{
 		MemoryContext oldcxt;
 		AppendOnlyUniqueCheckDesc uniqueCheckDesc;
+		Oid visimaprelid;
+		Oid visimapidxid;
 
 		oldcxt = MemoryContextSwitchTo(appendOnlyDMLStates.stateCxt);
 		uniqueCheckDesc = palloc0(sizeof(AppendOnlyUniqueCheckDescData));
+
+		/* Initialize the block directory */
 		uniqueCheckDesc->blockDirectory = palloc0(sizeof(AppendOnlyBlockDirectory));
 		AppendOnlyBlockDirectory_Init_forSearch(uniqueCheckDesc->blockDirectory,
 												snapshot, NULL, -1, relation,
 												1, false, NULL);
+		/* Initialize the visimap */
+		uniqueCheckDesc->visimap = palloc0(sizeof(AppendOnlyVisimap));
+		GetAppendOnlyEntryAuxOids(relation->rd_id,
+								  snapshot,
+								  NULL, NULL, NULL,
+								  &visimaprelid, &visimapidxid);
+		AppendOnlyVisimap_Init(uniqueCheckDesc->visimap,
+							   visimaprelid,
+							   visimapidxid,
+							   AccessShareLock,
+							   snapshot);
 		state->uniqueCheckDesc = uniqueCheckDesc;
 		MemoryContextSwitchTo(oldcxt);
 	}
@@ -547,6 +569,12 @@ appendonly_index_fetch_tuple(struct IndexFetchTableData *scan,
  *
  * There is no need to fetch the tuple (we actually can't reliably do so as
  * we might encounter a placeholder row in the block directory)
+ *
+ * If no visible block directory entry exists, we are done. If it does, we need
+ * to further check the visibility of the tuple itself by consulting the visimap.
+ * Now, the visimap check can be skipped if the tuple was found to have been
+ * inserted by a concurrent in-progress transaction, in which case we return
+ * true and have the xwait machinery kick in.
  */
 static bool
 appendonly_index_fetch_tuple_exists(Relation rel,
@@ -555,8 +583,8 @@ appendonly_index_fetch_tuple_exists(Relation rel,
 									bool *all_dead)
 {
 	AppendOnlyUniqueCheckDesc 	uniqueCheckDesc;
-	AppendOnlyBlockDirectory 	*blockDirectory;
 	AOTupleId 					*aoTupleId = (AOTupleId *) tid;
+	bool						visible;
 
 #ifdef USE_ASSERT_CHECKING
 	int			segmentFileNum = AOTupleIdGet_segmentFileNum(aoTupleId);
@@ -596,8 +624,40 @@ appendonly_index_fetch_tuple_exists(Relation rel,
 		return true;
 
 	uniqueCheckDesc = get_or_create_unique_check_desc(rel, snapshot);
-	blockDirectory = uniqueCheckDesc->blockDirectory;
-	return AppendOnlyBlockDirectory_CoversTuple(blockDirectory, aoTupleId);
+	/*
+	 * Check to see if there is a block directory entry for the tuple. If no
+	 * such entry exists, the tuple doesn't exist physically in the segfile.
+	 */
+	if (!AppendOnlyBlockDirectory_CoversTuple(uniqueCheckDesc->blockDirectory,
+											  aoTupleId))
+		return false;
+
+	/*
+	 * If the xmin or xmax are set for the dirty snapshot, after the block
+	 * directory is scanned with the snapshot, it means that there is a
+	 * concurrent in-progress transaction inserting the tuple. So, return true
+	 * and have the xwait machinery kick in.
+	 */
+	if (TransactionIdIsValid(snapshot->xmin) || TransactionIdIsValid(snapshot->xmax))
+		return true;
+
+	/*
+	 * Consult the visimap to check if the tuple was deleted by a *committed*
+	 * transaction.
+	 */
+	visible = AppendOnlyVisimap_IsVisible(uniqueCheckDesc->visimap, aoTupleId);
+	/*
+	 * Since we disallow deletes and updates running in parallel with inserts,
+	 * there is no way that the dirty snapshot has it's xmin and xmax populated
+	 * after the visimap has been scanned with it.
+	 *
+	 * Note: we disallow it by grabbing an ExclusiveLock on the QD (See
+	 * CdbTryOpenTable()). So if we are running in utility mode, there is no
+	 * such restriction.
+	 */
+	AssertImply(Gp_role != GP_ROLE_UTILITY,
+				(!TransactionIdIsValid(snapshot->xmin) && !TransactionIdIsValid(snapshot->xmax)));
+	return visible;
 }
 
 

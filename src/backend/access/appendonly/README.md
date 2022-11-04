@@ -199,7 +199,20 @@ To answer unique index lookups, we don't have to physically fetch the tuple from
 the table. This is key to answering unique index lookups against placeholder
 rows which predate their corresponding data rows. We simply perform a sysscan of
 the block directory, and if we have a visible entry that encompasses the rowNum
-being looked up, we report success.
+being looked up, we go on to the next check. Otherwise, we have no conflict and
+return. The next check that we need to perform is against the visimap, to see if
+the tuple is visible. If yes, then we have a conflict. Since the snapshot used
+to perform uniqueness checks for AO/CO is SNAPSHOT_DIRTY (we currently don't
+support SNAPSHOT_SELF used for CREATE UNIQUE INDEX CONCURRENTLY), it is possible
+to detect if the block directory tuple (and by extension the data tuple) was
+inserted by a concurrent in-progress transaction. In this case, we simply avoid
+the visimap check and return true. The benefit of performing the sysscan on the
+block directory is that HeapTupleSatisfiesDirty() is called, and in the process,
+the snapshot's xmin and/or xmax fields are updated (see SNAPSHOT_DIRTY for
+details on its special contract). Returning true in this situation will lead to
+the unique index code's xwait mechanism to kick in (see _bt_check_unique()) and
+the current transaction will wait for the one that inserted the tuple to commit
+or abort.
 
 Tableam changes: Since there is a lot of overhead (leads to ~20x performance
 degradation in the worst case) in setting up and tearing down scan descriptors
@@ -209,11 +222,9 @@ table_index_fetch_tuple_check().
 So, a new tableam API index_fetch_tuple_exists() is used, which is implemented
 only for AO/CO tables. Here, we fetch a UniqueCheckDesc, which stores all the
 in-memory state to help us perform a unique index check. This descriptor is
-attached to the DMLState structs. Currently, the descriptor holds only a block
-directory struct. It will be modified later on to hold a visimap reference to
-help implement DELETEs/UPDATEs. Furthermore, we initialize this struct on the
-first unique index check performed, akin to how we initialize descriptors for
-insert and delete.
+attached to the DMLState structs. The descriptor holds a block directory struct
+and a visimap struct. Furthermore, we initialize this struct on the first unique
+index check performed, akin to how we initialize descriptors for insert and delete.
 
 AO lazy VACUUM is different from heap vacuum in the sense that ctids of data
 tuples change (and the index tuples need to be updated as a consequence). It
