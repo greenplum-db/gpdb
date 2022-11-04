@@ -221,6 +221,7 @@ void
 appendonly_dml_finish(Relation relation)
 {
 	AppendOnlyDMLState *state;
+	bool				had_delete_desc = false;
 
 	state = remove_dml_state(RelationGetRelid(relation));
 
@@ -236,6 +237,8 @@ appendonly_dml_finish(Relation relation)
 		 */
 		if (!state->insertDesc)
 			AORelIncrementModCount(relation);
+
+		had_delete_desc = true;
 	}
 
 	if (state->insertDesc)
@@ -252,9 +255,16 @@ appendonly_dml_finish(Relation relation)
 		pfree(state->uniqueCheckDesc->blockDirectory);
 		state->uniqueCheckDesc->blockDirectory = NULL;
 
-		/* clean up the visimap */
-		AppendOnlyVisimap_Finish(state->uniqueCheckDesc->visimap, AccessShareLock);
-		pfree(state->uniqueCheckDesc->visimap);
+		/*
+		 * If this fetch is a part of an update, then we have been reusing the
+		 * visimap used by the delete half of the update, which would have
+		 * already been cleaned up above. Clean up otherwise.
+		 */
+		if (!had_delete_desc)
+		{
+			AppendOnlyVisimap_Finish(state->uniqueCheckDesc->visimap, AccessShareLock);
+			pfree(state->uniqueCheckDesc->visimap);
+		}
 		state->uniqueCheckDesc->visimap = NULL;
 
 		pfree(state->uniqueCheckDesc);
@@ -363,17 +373,31 @@ get_or_create_unique_check_desc(Relation relation, Snapshot snapshot)
 		AppendOnlyBlockDirectory_Init_forSearch(uniqueCheckDesc->blockDirectory,
 												snapshot, NULL, -1, relation,
 												1, false, NULL);
-		/* Initialize the visimap */
-		uniqueCheckDesc->visimap = palloc0(sizeof(AppendOnlyVisimap));
-		GetAppendOnlyEntryAuxOids(relation->rd_id,
-								  snapshot,
-								  NULL, NULL, NULL,
-								  &visimaprelid, &visimapidxid);
-		AppendOnlyVisimap_Init(uniqueCheckDesc->visimap,
-							   visimaprelid,
-							   visimapidxid,
-							   AccessShareLock,
-							   snapshot);
+
+		/*
+		 * If this is part of an update, we need to reuse the visimap used by
+		 * the delete half of the update. This is to avoid spurious conflicts
+		 * when the key's previous and new value are identical. Using the
+		 * visimap from the delete half ensures that the visimap can recognize
+		 * any tuples deleted by us prior to this insert, within this command.
+		 */
+		if (state->deleteDesc)
+			uniqueCheckDesc->visimap = &state->deleteDesc->visibilityMap;
+		else
+		{
+			/* Initialize the visimap */
+			uniqueCheckDesc->visimap = palloc0(sizeof(AppendOnlyVisimap));
+			GetAppendOnlyEntryAuxOids(relation->rd_id,
+									  snapshot,
+									  NULL, NULL, NULL,
+									  &visimaprelid, &visimapidxid);
+			AppendOnlyVisimap_Init(uniqueCheckDesc->visimap,
+								   visimaprelid,
+								   visimapidxid,
+								   AccessShareLock,
+								   snapshot);
+		}
+
 		state->uniqueCheckDesc = uniqueCheckDesc;
 		MemoryContextSwitchTo(oldcxt);
 	}

@@ -345,6 +345,36 @@ typedef struct AppendOnlyFetchDescData
 
 typedef AppendOnlyFetchDescData *AppendOnlyFetchDesc;
 
+/*
+ * AppendOnlyDeleteDescData is used for delete data from append-only
+ * relations. It serves an equivalent purpose as AppendOnlyScanDescData
+ * (relscan.h) only that the later is used for scanning append-only
+ * relations.
+ */
+typedef struct AppendOnlyDeleteDescData
+{
+	/*
+	 * Relation to delete from
+	 */
+	Relation	aod_rel;
+
+	/*
+	 * Snapshot to use for meta data operations
+	 */
+	Snapshot	appendOnlyMetaDataSnapshot;
+
+	/*
+	 * visibility map
+	 */
+	AppendOnlyVisimap visibilityMap;
+
+	/*
+	 * Visimap delete support structure. Used to handle out-of-order deletes
+	 */
+	AppendOnlyVisimapDelete visiMapDelete;
+
+}			AppendOnlyDeleteDescData;
+
 typedef struct AppendOnlyDeleteDescData *AppendOnlyDeleteDesc;
 
 typedef struct AppendOnlyUniqueCheckDescData
