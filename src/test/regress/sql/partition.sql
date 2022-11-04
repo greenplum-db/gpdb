@@ -4175,3 +4175,38 @@ reset optimizer_enable_materialize;
 
 drop table t1_12533;
 drop table t2_12533;
+
+
+--test for data selection from partition tables with predicate on date or timestamp type-------------
+
+create table public.test
+(datedday date)
+    WITH (
+        appendonly=false
+        )
+    PARTITION BY RANGE(datedday)
+(
+    PARTITION pn_20221022 START ('2022-10-22'::date) END ('2022-10-23'::date),
+    PARTITION pn_20221023 START ('2022-10-23'::date) END ('2022-10-24'::date),
+    DEFAULT PARTITION pdefault
+    );
+
+insert into public.test(datedday)
+select ('2022-10-22'::date)
+union
+select ('2022-10-23'::date);
+
+--Test case with condition on date and timestamp
+explain (costs off) select max(datedday) from public.test where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+select max(datedday) from public.test where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+
+--Test case with condition on date and timestamp
+explain (costs off) select max(datedday) from public.test where datedday='2022-10-23' or datedday='2022-10-22';
+select max(datedday) from public.test where datedday='2022-10-23' or datedday='2022-10-22';
+
+--Test case with condition on timestamp and timestamp
+explain (costs off) select max(datedday) from public.test where datedday=('2022-10-23'::date -interval '0 day') or datedday=('2022-10-23'::date -interval '1 day');
+select max(datedday) from public.test where datedday=('2022-10-23'::date -interval '0 day') or datedday=('2022-10-23'::date -interval '1 day');
+
+explain (costs off) select datedday from public.test where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+select datedday from public.test where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');

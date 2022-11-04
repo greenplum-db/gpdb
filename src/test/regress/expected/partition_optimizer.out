@@ -8655,3 +8655,106 @@ reset optimizer_enable_hashjoin;
 reset optimizer_enable_materialize;
 drop table t1_12533;
 drop table t2_12533;
+--test for data selection from partition tables with predicate on date or timestamp type-------------
+create table public.test
+(datedday date)
+    WITH (
+        appendonly=false
+        )
+    PARTITION BY RANGE(datedday)
+(
+    PARTITION pn_20221022 START ('2022-10-22'::date) END ('2022-10-23'::date),
+    PARTITION pn_20221023 START ('2022-10-23'::date) END ('2022-10-24'::date),
+    DEFAULT PARTITION pdefault
+    );
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'datedday' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "test_1_prt_pdefault" for table "test"
+NOTICE:  CREATE TABLE will create partition "test_1_prt_pn_20221022" for table "test"
+NOTICE:  CREATE TABLE will create partition "test_1_prt_pn_20221023" for table "test"
+insert into public.test(datedday)
+select ('2022-10-22'::date)
+union
+select ('2022-10-23'::date);
+--Test case with condition on date and timestamp
+explain (costs off) select max(datedday) from public.test where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+                                                                 QUERY PLAN                                                                  
+---------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Aggregate
+               ->  Sequence
+                     ->  Partition Selector for test (dynamic scan id: 1)
+                           Partitions selected: 2 (out of 3)
+                     ->  Dynamic Seq Scan on test (dynamic scan id: 1)
+                           Filter: ((datedday = '10-23-2022'::date) OR (datedday = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+select max(datedday) from public.test where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+    max     
+------------
+ 10-23-2022
+(1 row)
+
+--Test case with condition on date and timestamp
+explain (costs off) select max(datedday) from public.test where datedday='2022-10-23' or datedday='2022-10-22';
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Aggregate
+               ->  Sequence
+                     ->  Partition Selector for test (dynamic scan id: 1)
+                           Partitions selected: 2 (out of 3)
+                     ->  Dynamic Seq Scan on test (dynamic scan id: 1)
+                           Filter: ((datedday = '10-23-2022'::date) OR (datedday = '10-22-2022'::date))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+select max(datedday) from public.test where datedday='2022-10-23' or datedday='2022-10-22';
+    max     
+------------
+ 10-23-2022
+(1 row)
+
+--Test case with condition on timestamp and timestamp
+explain (costs off) select max(datedday) from public.test where datedday=('2022-10-23'::date -interval '0 day') or datedday=('2022-10-23'::date -interval '1 day');
+                                                                                    QUERY PLAN                                                                                    
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Aggregate
+               ->  Sequence
+                     ->  Partition Selector for test (dynamic scan id: 1)
+                           Partitions selected: 2 (out of 3)
+                     ->  Dynamic Seq Scan on test (dynamic scan id: 1)
+                           Filter: ((datedday = 'Sun Oct 23 00:00:00 2022'::timestamp without time zone) OR (datedday = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+select max(datedday) from public.test where datedday=('2022-10-23'::date -interval '0 day') or datedday=('2022-10-23'::date -interval '1 day');
+    max     
+------------
+ 10-23-2022
+(1 row)
+
+explain (costs off) select datedday from public.test where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+                                                           QUERY PLAN                                                            
+---------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Sequence
+         ->  Partition Selector for test (dynamic scan id: 1)
+               Partitions selected: 2 (out of 3)
+         ->  Dynamic Seq Scan on test (dynamic scan id: 1)
+               Filter: ((datedday = '10-23-2022'::date) OR (datedday = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+select datedday from public.test where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+  datedday  
+------------
+ 10-23-2022
+ 10-22-2022
+(2 rows)
+
