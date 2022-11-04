@@ -64,6 +64,7 @@
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
 #include "optimizer/tlist.h"
+#include "optimizer/planner.h"
 #include "parser/parse_clause.h"
 #include "parser/parse_oper.h"
 #include "utils/lsyscache.h"
@@ -200,9 +201,8 @@ static void add_single_dqa_hash_agg_path(PlannerInfo *root,
 static void add_single_mixed_dqa_hash_agg_path(PlannerInfo *root,
                                                Path *path,
                                                cdb_agg_planning_context *ctx,
-                                               RelOptInfo *output_rel,
-                                               PathTarget *input_target,
-                                               List       *dqa_group_clause);
+                                               cdb_multi_dqas_info *info,
+                                               RelOptInfo *output_rel);
 static void
 add_multi_dqas_hash_agg_path(PlannerInfo *root,
 							 Path *path,
@@ -215,6 +215,10 @@ fetch_single_dqa_info(PlannerInfo *root,
 					  Path *path,
 					  cdb_agg_planning_context *ctx,
 					  cdb_multi_dqas_info *info);
+
+static void
+fetch_single_dqa_target(cdb_agg_planning_context *ctx,
+                        cdb_multi_dqas_info *info);
 
 static void
 fetch_multi_dqas_info(PlannerInfo *root,
@@ -476,13 +480,13 @@ cdb_create_multistage_grouping_paths(PlannerInfo *root,
 		case SINGLE_DQA_WITHAGG:
 			{
 				fetch_single_dqa_info(root, cheapest_path, &ctx, &info);
+				fetch_single_dqa_target(&ctx, &info);
 
 				add_single_mixed_dqa_hash_agg_path(root,
-				                                   cheapest_path,
-				                                   &ctx,
-				                                   output_rel,
-				                                   info.input_proj_target,
-				                                   info.dqa_group_clause);
+												   cheapest_path,
+												   &ctx,
+												   &info,
+												   output_rel);
 			}
 			break;
 		case MULTI_DQAS:
@@ -1195,25 +1199,48 @@ strip_aggdistinct(PathTarget *target)
 
 /*
  * Create Paths for an Aggregate with one DISTINCT-qualified aggregate and
- * multi normal aggregate.
+ * multi normal aggregate(DQA_WITHAGG).
+ * 
+ * Ex:
+ * select sum(disintct a), count(b) from t1 group by c;
+ * 
+ *	->HashAgg (to aggregate)
+ *	  output: sum(a), c, count(b)
+ *		-> HashAgg (to eliminate duplicates)
+ *		   output: a, c, count(b)
+ *			-> Streaming HashAgg (to eliminate duplicates)
+ *			   output: a, c, count(b)
+ *				-> input
+ *
+ *	As plan case above, we could call the middle HashAgg is an Intermedaite Agg Plan
+ *	node here, like the Aggref count(b) above case, because output of this node 
+ *	has as the same combining type as input.
  */
-static void add_single_mixed_dqa_hash_agg_path(PlannerInfo *root,
-                                               Path *path,
-                                               cdb_agg_planning_context *ctx,
-                                               RelOptInfo *output_rel,
-                                               PathTarget *input_target,
-                                               List       *dqa_group_clause)
+static void 
+add_single_mixed_dqa_hash_agg_path(PlannerInfo *root,
+								   Path *path,
+								   cdb_agg_planning_context *ctx,
+								   cdb_multi_dqas_info *info,
+								   RelOptInfo *output_rel)
 {
-	List	   *dqa_group_tles;
-	CdbPathLocus distinct_locus;
-	bool		distinct_need_redistribute;
-	CdbPathLocus singleQE_locus;
+	List			*dqa_group_tles;
+	List 			*group_tles;
+	CdbPathLocus	distinct_locus;
+	CdbPathLocus	group_locus;
+	bool			distinct_need_redistribute;
+	bool			group_need_redistribute;
+	double			num_groups;
+	double			dnum_groups;
+	List			*dqa_group_clause;
+	List			*group_clause;
 
 	if (!gp_enable_agg_distinct)
 		return;
 
-	if (ctx->groupClause)
-		return;
+	/*
+	 * intermediate_target fetched by fetch_single_dqa_target()
+	 */
+	PathTarget *intermediate_target = info->partial_target;
 
 	/*
 	 * If subpath is projection capable, we do not want to generate a
@@ -1221,48 +1248,197 @@ static void add_single_mixed_dqa_hash_agg_path(PlannerInfo *root,
 	 * constrain a child tlist when it creates subplan. Thus, GROUP BY expr
 	 * may not be found in the scan targetlist.
 	 */
-	path = apply_projection_to_path(root, path->parent, path, input_target);
+	path = apply_projection_to_path(root, path->parent, path, info->input_proj_target);
 
-	dqa_group_tles = get_common_group_tles(input_target, dqa_group_clause, NIL  );
+	/* 
+	 * dqa_group_clause is (DISTINCT + GROUP BY) and group_clause is (GROUP BY)
+	 * so group_clause is always subset of dqa_group_clause.
+	 */
+	dqa_group_clause = info->dqa_group_clause;
+	group_clause = ctx->groupClause;
+
+	/*
+	 * Calculate the number of groups in the deduplicated stage, per segment.
+	 * distinct_locus is the corresponding locus for the deduplicated stage.
+	 */
+	dqa_group_tles = get_common_group_tles(intermediate_target, dqa_group_clause, NIL);
 	distinct_locus = choose_grouping_locus(root, path,
 										   dqa_group_tles,
 										   &distinct_need_redistribute);
+	dnum_groups = estimate_num_groups_on_segment(info->dNumDistinctGroups, path->rows, path->locus);
 
-	if (!CdbPathLocus_IsPartitioned(distinct_locus))
-		return;
+	/*
+	 * Calculate the number of groups in the final stage, per segment.
+	 * group_locus is the corresponding locus for the final stage.
+	 */
+	group_tles = get_common_group_tles(intermediate_target, group_clause, NIL);
+	group_locus = choose_grouping_locus(root, path,
+										group_tles,
+										&group_need_redistribute);
 
-	if (distinct_need_redistribute)
+	if (CdbPathLocus_IsPartitioned(group_locus))
+		num_groups = clamp_row_est(ctx->dNumGroupsTotal /
+								   CdbPathLocus_NumSegments(path->locus));
+	else
+		num_groups = ctx->dNumGroupsTotal;
+
+	if (!distinct_need_redistribute || !group_need_redistribute)
+	{
+		/*
+		 * 1. If the input's locus matches the DISTINCT, but not GROUP BY:
+		 *
+		 *  HashAggregate
+		 *     -> Redistribute (according to GROUP BY)
+		 *         -> HashAggregate (to eliminate duplicates)
+		 *             -> input (hashed by GROUP BY + DISTINCT)
+		 *
+		 * 2. If the input's locus matches the GROUP BY(don't care DISTINCT any more):
+		 *
+		 *  HashAggregate (to aggregate)
+		 *     -> HashAggregate (to eliminate duplicates)
+		 *           -> input (hashed by GROUP BY)
+		 *
+		 */
+		path = (Path *) create_agg_path(root,
+										output_rel,
+										path,
+										intermediate_target,
+										AGG_HASHED,
+										AGGSPLIT_INITIAL_SERIAL,
+										false, /* streaming */
+										dqa_group_clause,
+										NIL,
+										ctx->agg_partial_costs, /* FIXME */
+										dnum_groups);
+
+		if (group_need_redistribute)
+			path = cdbpath_create_motion_path(root, path, NIL, false,
+											group_locus);
+
+		path = (Path *) create_agg_path(root,
+										output_rel,
+										path,
+										ctx->target,
+										ctx->groupClause ? AGG_HASHED : AGG_PLAIN,
+										AGGSPLIT_FINAL_DESERIAL | AGGSPLIT_DQAWITHAGG,
+										false, /* streaming */
+										ctx->groupClause,
+										ctx->havingQual,
+										ctx->agg_final_costs,
+		 								num_groups);
+
+		add_path(output_rel, path);
+	}
+	else if (CdbPathLocus_IsHashed(group_locus))
+	{
+		/*
+		 *  HashAgg (to aggregate)
+		 *     -> HashAgg (to eliminate duplicates)
+		 *          -> Redistribute (according to GROUP BY)
+		 *               -> Streaming HashAgg (to eliminate duplicates)
+		 *                    -> input
+		 *
+		 * It may seem silly to have two Aggs on top of each other like this,
+		 * but the Agg node can't do DISTINCT-aggregation by hashing at the
+		 * moment. So we have to do it with two separate Aggs steps.
+		 */
+		if (gp_enable_dqa_pruning)
+			path = (Path *) create_agg_path(root,
+											output_rel,
+											path,
+											intermediate_target,
+											AGG_HASHED,
+											AGGSPLIT_INITIAL_SERIAL,
+											true, /* streaming */
+											dqa_group_clause,
+											NIL,
+											ctx->agg_partial_costs, /* FIXME */
+											dnum_groups);
+
 		path = cdbpath_create_motion_path(root, path, NIL, false,
-										  distinct_locus);
+										group_locus);
+		path = (Path *) create_agg_path(root,
+										output_rel,
+										path,
+										intermediate_target,
+										AGG_HASHED,
+										gp_enable_dqa_pruning ? AGGSPLIT_INTERMEDIATE : AGGSPLIT_INITIAL_SERIAL,
+										false, /* streaming */
+										dqa_group_clause,
+										NIL,
+										ctx->agg_partial_costs, /* FIXME */
+										dnum_groups);
 
-	path = (Path *) create_agg_path(root,
-									output_rel,
-									path,
-									ctx->partial_grouping_target,
-									AGG_PLAIN,
-									AGGSPLIT_INITIAL_SERIAL,
-									false, /* streaming */
-									ctx->groupClause,
-									NIL,
-									ctx->agg_partial_costs, /* FIXME */
-									estimate_num_groups_on_segment(ctx->dNumGroupsTotal,
-																   path->rows, path->locus));
+		path = (Path *) create_agg_path(root,
+										output_rel,
+										path,
+										ctx->target,
+										ctx->groupClause ? AGG_HASHED : AGG_PLAIN,
+										AGGSPLIT_FINAL_DESERIAL | AGGSPLIT_DQAWITHAGG,
+										false, /* streaming */
+										ctx->groupClause,
+										ctx->havingQual,
+										ctx->agg_final_costs,
+										num_groups);
+		add_path(output_rel, path);
+	}
+	else if (CdbPathLocus_IsHashed(distinct_locus))
+	{
+		/*
+		 *  Finalize Aggregate
+		 *     -> Gather Motion
+		 *          -> Partial Aggregate
+		 *              -> HashAggregate, to remove duplicates
+		 *                  -> Redistribute Motion (according to DISTINCT arg)
+		 *                      -> Streaming HashAgg (to eliminate duplicates)
+		 *                          -> input
+		 */
+		path = (Path *) create_agg_path(root,
+										output_rel,
+										path,
+										intermediate_target,
+										AGG_HASHED,
+										AGGSPLIT_INITIAL_SERIAL,
+										true, /* streaming */
+										dqa_group_clause,
+										NIL,
+										ctx->agg_partial_costs, /* FIXME */
+										dnum_groups);
 
-	CdbPathLocus_MakeSingleQE(&singleQE_locus, getgpsegmentCount());
-	path = cdbpath_create_motion_path(root, path, NIL, false, singleQE_locus);
+		path = cdbpath_create_motion_path(root, path, NIL, false,
+										distinct_locus);
+		path = (Path *) create_agg_path(root,
+										output_rel,
+										path,
+										intermediate_target,
+										AGG_HASHED,
+										AGGSPLIT_INTERMEDIATE,
+										false, /* streaming */
+										dqa_group_clause,
+										NIL,
+										ctx->agg_partial_costs, /* FIXME */
+										dnum_groups);
 
-	path = (Path *) create_agg_path(root,
-									output_rel,
-									path,
-									ctx->target,
-									AGG_PLAIN,
-									AGGSPLIT_FINAL_DESERIAL,
-									false, /* streaming */
-									ctx->groupClause,
-									ctx->havingQual,
-									ctx->agg_final_costs,
-									ctx->dNumGroupsTotal);
-	add_path(output_rel, path);
+		path = cdbpath_create_motion_path(root, path, NIL, false,
+										group_locus);
+
+		path = (Path *) create_agg_path(root,
+										output_rel,
+										path,
+										ctx->target,
+										ctx->groupClause ? AGG_HASHED : AGG_PLAIN,
+										AGGSPLIT_FINAL_DESERIAL | AGGSPLIT_DQAWITHAGG,
+										false, /* streaming */
+										ctx->groupClause,
+										ctx->havingQual,
+										ctx->agg_final_costs,
+										num_groups);
+		add_path(output_rel, path);
+	}
+	else
+		elog(LOG, "cannot generate multi-stage hashagg path for intermediate agg of single-dqa");
+
+	return;
 }
 
 /*
@@ -2261,7 +2437,22 @@ fetch_single_dqa_info(PlannerInfo *root,
 		sortcl->tleSortGroupRef = info->input_proj_target->sortgrouprefs[idx];
 		sortcl->hashable = true;	/* we verified earlier that it's hashable */
 
-		info->dqa_group_clause = lappend(info->dqa_group_clause, sortcl);
+		if (ctx->groupClause == NULL)
+		{
+			info->dqa_group_clause = lappend(info->dqa_group_clause, sortcl);
+		} else
+		{
+			foreach (lcc, ctx->groupClause)
+			{
+				SortGroupClause *ctx_sortcl = (SortGroupClause *)lfirst(lcc);
+
+				if (!equal(ctx_sortcl, sortcl))
+				{
+					info->dqa_group_clause = lappend(info->dqa_group_clause, sortcl);
+				}
+			}
+		}
+
 		dqa_group_exprs = lappend(dqa_group_exprs, arg_tle->expr);
 	}
 
@@ -2285,6 +2476,96 @@ fetch_single_dqa_info(PlannerInfo *root,
 												   dqa_group_exprs,
 												   num_total_input_rows,
 												   NULL);
+}
+
+/*
+ * fetch_single_dqa_target
+ *
+ * Fetch partial target for dqa_withagg aggregate.
+ * partial target consist of Distinct column and non-distinct agg column
+ * we also call these partial target as intermediate target as below
+ */
+static void
+fetch_single_dqa_target(cdb_agg_planning_context *ctx,
+					    cdb_multi_dqas_info *info)
+{
+	int index = 0;
+	ListCell *lc = NULL;
+	PathTarget *partial_target = ctx->partial_grouping_target;
+	PathTarget *sub_target = copy_pathtarget(info->input_proj_target);
+
+	/* 
+	 * Construct intermidate target which consist of subtarget and 
+	 * partial aggregate target.
+	 */
+	foreach(lc, partial_target->exprs)
+	{
+		Expr *expr = (Expr *)lfirst(lc);
+
+		/* Other type expr will be evaluated as Agg done */
+		if (!IsA(expr, Aggref))
+			continue;
+
+		Aggref *ref = (Aggref *)expr;
+		/*
+		 * Do not add aggref with distinct since
+		 * all distinct column will be added next
+		 */
+		if (ref->aggdistinct != NULL)
+			continue;
+
+		add_column_to_pathtarget(sub_target, expr, 0);
+	}
+
+	/*
+	 * Eliminate duplicate columns in intermidate target.
+	 * For example:
+	 * 
+	 * select sum(distinct c), count(b) from t group by d;
+	 * 
+	 * -> HashAggregate         (final_target)
+	 *      -> HashAggregate    (intermedaite_target)
+	 *           -> Seqscan     (sub_target)
+	 * 
+	 * final_target:            sum(b), count(b)
+	 * intermedaite_target:     c, d, count(b)
+	 * sub_target:              c, b, d
+	 * 
+	 * we have concat sub_target and parital_target to generate intermedaite_target,
+	 * like upper example we will get intermedaite_target as c, b, d, count(b)
+	 * So we need remove column "b" in intermedaite_target, because count(b) will 
+	 * become partial aggregate after refer sub_target. Upper node in final_target
+	 * should refer partial count(b) instead of "b".
+	 */
+	PathTarget *intermediate_target = create_empty_pathtarget();
+	foreach(lc, sub_target->exprs)
+	{
+		Expr	   *expr = (Expr *) lfirst(lc);
+		Index		sgref = get_pathtarget_sortgroupref(sub_target, index++);
+
+		if (sgref)
+		{
+			/*
+			 * Add Grouping + Distinct column into intermidate target.
+			 */
+			add_column_to_pathtarget(intermediate_target, expr, sgref);
+		}
+		else
+		{
+			/* Discard non-grouping column */
+			if (IsA(expr, Var))
+				continue;
+
+			/* Add partial aggregate to intermediate_target */
+			if (IsA(expr, Aggref))
+				add_column_to_pathtarget(intermediate_target, expr, 0);
+			else
+				elog(ERROR, "unrecognized node %d when add intermedate target.", expr->type);
+		}
+	}
+
+	info->partial_target = intermediate_target;
+	return;
 }
 
 /*
