@@ -4036,13 +4036,22 @@ selectListPartition(PartitionNode *partnode, Datum *values, bool *isnull,
 	Partition  *part = partnode->part;
 	MemoryContext oldcxt = NULL;
 	PartitionListState *ls;
-
+	int	natts = partnode->part->parnatts;
 	if (accessMethods && accessMethods->amstate[partnode->part->parlevel])
+	{
 		ls = (PartitionListState *) accessMethods->amstate[partnode->part->parlevel];
+		/*
+		 * Setting the following condition, to ensure correct access
+		 * function is selected every time in a scenario with multiple
+		 * predicates of different type.
+		 */
+		for (int j = 0; j < natts; j++)
+		{
+			ls->eqinit[j] = false;
+		}
+	}
 	else
 	{
-		int			natts = partnode->part->parnatts;
-
 		ls = palloc(sizeof(PartitionListState));
 
 		ls->eqfuncs = palloc(sizeof(FmgrInfo) * natts);
@@ -4372,13 +4381,13 @@ selectRangePartition(PartitionNode *partnode, Datum *values, bool *isnull,
 	MemoryContext oldcxt = NULL;
 
 	Assert(partnode->part->parkind == 'r');
-
+	int	natts = partnode->part->parnatts;
 	if (accessMethods && accessMethods->amstate[partnode->part->parlevel])
+	{
 		rs = (PartitionRangeState *) accessMethods->amstate[partnode->part->parlevel];
+	}
 	else
 	{
-		int			natts = partnode->part->parnatts;
-
 		/*
 		 * We're still in our caller's memory context so the memory will
 		 * persist long enough for us.
@@ -4388,18 +4397,6 @@ selectRangePartition(PartitionNode *partnode, Datum *values, bool *isnull,
 		rs->ltfuncs_direct = palloc0(sizeof(FmgrInfo) * natts);
 		rs->lefuncs_inverse = palloc0(sizeof(FmgrInfo) * natts);
 		rs->ltfuncs_inverse = palloc0(sizeof(FmgrInfo) * natts);
-
-		/*
-		 * Set the function Oid to InvalidOid to signal that we haven't looked
-		 * up this function yet
-		 */
-		for (int keyno = 0; keyno < natts; keyno++)
-		{
-			rs->lefuncs_direct[keyno].fn_oid = InvalidOid;
-			rs->ltfuncs_direct[keyno].fn_oid = InvalidOid;
-			rs->lefuncs_inverse[keyno].fn_oid = InvalidOid;
-			rs->lefuncs_inverse[keyno].fn_oid = InvalidOid;
-		}
 
 		/*
 		 * Unrolling the rules into an array currently works for the top level
@@ -4417,6 +4414,18 @@ selectRangePartition(PartitionNode *partnode, Datum *values, bool *isnull,
 		}
 		else
 			rs->rules = NULL;
+	}
+
+	/*
+	 *  Invalidating the fn_oid, so that for each call of selectRangePartition()
+	 *  we choose the new fn_oid based on the type of datum
+	 */
+	for (int keyno = 0; keyno < natts; keyno++)
+	{
+		rs->lefuncs_direct[keyno].fn_oid = InvalidOid;
+		rs->ltfuncs_direct[keyno].fn_oid = InvalidOid;
+		rs->lefuncs_inverse[keyno].fn_oid = InvalidOid;
+		rs->ltfuncs_inverse[keyno].fn_oid = InvalidOid;
 	}
 
 	if (accessMethods && accessMethods->part_cxt)
