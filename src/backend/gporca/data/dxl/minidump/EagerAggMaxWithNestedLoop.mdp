@@ -65,7 +65,7 @@
         </dxl:OptimizerConfig>
         <dxl:Metadata SystemIds="0.GPDB">
             <dxl:RelationStatistics EmptyRelation="false" Mdid="2.16385.1.0" Name="foo" Rows="100001784.000000"/>
-            <dxl:Relation DistributionColumns="0" DistributionPolicy="Hash" HasOids="false" IsTemporary="false" Keys="9,3" Mdid="0.16385.1.0" Name="foo" NumberLeafPartitions="0" StorageType="Heap">
+            <dxl:Relation DistributionColumns="0" DistributionPolicy="Hash" HasOids="false" IsTemporary="false" Keys="9,3" Mdid="6.16385.1.0" Name="foo" NumberLeafPartitions="0" StorageType="Heap">
                 <dxl:Columns>
                     <dxl:Column Attno="1" ColWidth="4" Mdid="0.23.1.0" Name="j1" Nullable="true">
                         <dxl:DefaultValue/>
@@ -103,7 +103,7 @@
                 <dxl:CheckConstraints/>
             </dxl:Relation>
             <dxl:RelationStatistics EmptyRelation="false" Mdid="2.16388.1.0" Name="bar" Rows="100023.000000"/>
-            <dxl:Relation DistributionColumns="0" DistributionPolicy="Hash" HasOids="false" IsTemporary="false" Keys="9,3" Mdid="0.16388.1.0" Name="bar" NumberLeafPartitions="0" StorageType="Heap">
+            <dxl:Relation DistributionColumns="0" DistributionPolicy="Hash" HasOids="false" IsTemporary="false" Keys="9,3" Mdid="6.16388.1.0" Name="bar" NumberLeafPartitions="0" StorageType="Heap">
                 <dxl:Columns>
                     <dxl:Column Attno="1" ColWidth="4" Mdid="0.23.1.0" Name="j2" Nullable="true">
                         <dxl:DefaultValue/>

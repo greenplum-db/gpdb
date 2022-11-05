@@ -2229,6 +2229,7 @@ CDXLOperatorFactory::MakeMdIdFromStr(CDXLMemoryManager *dxl_memory_manager,
 	switch (typ)
 	{
 		case IMDId::EmdidGPDB:
+		case IMDId::EmdidRel:
 		case IMDId::EmdidInd:
 		case IMDId::EmdidCheckConstraint:
 			mdid = GetGPDBMdId(dxl_memory_manager, remaining_tokens,
@@ -2343,8 +2344,9 @@ CDXLOperatorFactory::GetColStatsMdId(CDXLMemoryManager *dxl_memory_manager,
 {
 	GPOS_ASSERT(GPDXL_GPDB_MDID_COMPONENTS + 1 == remaining_tokens->Size());
 
-	CMDIdGPDB *rel_mdid = GetGPDBMdId(dxl_memory_manager, remaining_tokens,
-									  target_attr, target_elem);
+	CMDIdGPDB *rel_mdid =
+		GetGPDBMdId(dxl_memory_manager, remaining_tokens, target_attr,
+					target_elem, IMDId::EmdidRel);
 
 	XMLCh *attno_xml = (*remaining_tokens)[3];
 	ULONG attno = ConvertAttrValueToUlong(dxl_memory_manager, attno_xml,
@@ -2370,8 +2372,9 @@ CDXLOperatorFactory::GetRelStatsMdId(CDXLMemoryManager *dxl_memory_manager,
 {
 	GPOS_ASSERT(GPDXL_GPDB_MDID_COMPONENTS == remaining_tokens->Size());
 
-	CMDIdGPDB *rel_mdid = GetGPDBMdId(dxl_memory_manager, remaining_tokens,
-									  target_attr, target_elem);
+	CMDIdGPDB *rel_mdid =
+		GetGPDBMdId(dxl_memory_manager, remaining_tokens, target_attr,
+					target_elem, IMDId::EmdidRel);
 
 	// construct metadata id object
 	return GPOS_NEW(dxl_memory_manager->Pmp()) CMDIdRelStats(rel_mdid);

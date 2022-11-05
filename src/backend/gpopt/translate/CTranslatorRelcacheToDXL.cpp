@@ -124,7 +124,7 @@ CTranslatorRelcacheToDXL::RetrieveObject(CMemoryPool *mp,
 	switch (mdid->MdidType())
 	{
 		case IMDId::EmdidGPDB:
-			md_obj = RetrieveObjectGPDB(mp, md_accessor, mdid);
+			md_obj = RetrieveObjectGPDB(mp, mdid);
 			break;
 
 		case IMDId::EmdidRelStats:
@@ -141,6 +141,10 @@ CTranslatorRelcacheToDXL::RetrieveObject(CMemoryPool *mp,
 
 		case IMDId::EmdidScCmp:
 			md_obj = RetrieveScCmp(mp, mdid);
+			break;
+
+		case IMDId::EmdidRel:
+			md_obj = RetrieveRel(mp, md_accessor, mdid);
 			break;
 
 		case IMDId::EmdidInd:
@@ -174,9 +178,7 @@ CTranslatorRelcacheToDXL::RetrieveObject(CMemoryPool *mp,
 //
 //---------------------------------------------------------------------------
 IMDCacheObject *
-CTranslatorRelcacheToDXL::RetrieveObjectGPDB(CMemoryPool *mp,
-											 CMDAccessor *md_accessor,
-											 IMDId *mdid)
+CTranslatorRelcacheToDXL::RetrieveObjectGPDB(CMemoryPool *mp, IMDId *mdid)
 {
 	GPOS_ASSERT(mdid->MdidType() == CMDIdGPDB::EmdidGPDB);
 
@@ -189,11 +191,6 @@ CTranslatorRelcacheToDXL::RetrieveObjectGPDB(CMemoryPool *mp,
 	if (gpdb::TypeExists(oid))
 	{
 		return RetrieveType(mp, mdid);
-	}
-
-	if (gpdb::RelationExists(oid))
-	{
-		return RetrieveRel(mp, md_accessor, mdid);
 	}
 
 	if (gpdb::OperatorExists(oid))
@@ -965,7 +962,7 @@ CTranslatorRelcacheToDXL::RetrieveRelExternalPartitions(CMemoryPool *mp,
 	foreach (lc, extparts_list)
 	{
 		OID ext_rel_oid = lfirst_oid(lc);
-		external_partitions->Append(GPOS_NEW(mp) CMDIdGPDB(ext_rel_oid));
+		external_partitions->Append(GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, ext_rel_oid));
 	}
 
 	return external_partitions;
@@ -1093,7 +1090,7 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 			rel_oid = gpdb::GetRootPartition(rel_oid);
 		}
 
-		CMDIdGPDB *mdid_rel = GPOS_NEW(mp) CMDIdGPDB(rel_oid);
+		CMDIdGPDB *mdid_rel = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, rel_oid);
 
 		md_rel = md_accessor->RetrieveRel(mdid_rel);
 
@@ -1649,7 +1646,8 @@ CTranslatorRelcacheToDXL::RetrieveType(CMemoryPool *mp, IMDId *mdid)
 	CMDIdGPDB *mdid_type_relid = NULL;
 	if (is_composite_type)
 	{
-		mdid_type_relid = GPOS_NEW(mp) CMDIdGPDB(gpdb::GetTypeRelid(oid_type));
+		mdid_type_relid = GPOS_NEW(mp)
+			CMDIdGPDB(IMDId::EmdidRel, gpdb::GetTypeRelid(oid_type));
 	}
 
 	// get array type mdid
@@ -2050,7 +2048,7 @@ CTranslatorRelcacheToDXL::RetrieveCheckConstraints(CMemoryPool *mp,
 	// get relation oid associated with the check constraint
 	OID rel_oid = gpdb::GetCheckConstraintRelid(check_constraint_oid);
 	GPOS_ASSERT(InvalidOid != rel_oid);
-	CMDIdGPDB *mdid_rel = GPOS_NEW(mp) CMDIdGPDB(rel_oid);
+	CMDIdGPDB *mdid_rel = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, rel_oid);
 
 	// translate the check constraint expression
 	Node *node = gpdb::PnodeCheckConstraint(check_constraint_oid);

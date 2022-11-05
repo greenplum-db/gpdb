@@ -277,7 +277,7 @@
       <dxl:ColumnStatistics Mdid="1.205524.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="1.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
       <dxl:MDCast Mdid="3.1043.1.0;25.1.0" Name="text" BinaryCoercible="true" SourceTypeId="0.1043.1.0" DestinationTypeId="0.25.1.0" CastFuncId="0.0.0.0" CoercePathType="0"/>
       <dxl:RelationStatistics Mdid="2.205524.1.0" Name="test_mdid" Rows="1.000000" RelPages="1" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.205524.1.0" Name="test_mdid" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.205524.1.0" Name="test_mdid" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;10,4" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -314,19 +314,19 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
-          <dxl:IndexInfo Mdid="6.205530.1.0" IsPartial="false"/>
+          <dxl:IndexInfo Mdid="7.205530.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
         <dxl:Triggers/>
         <dxl:CheckConstraints>
-          <dxl:CheckConstraint Mdid="7.205529.1.0"/>
-          <dxl:CheckConstraint Mdid="7.205528.1.0"/>
-          <dxl:CheckConstraint Mdid="7.205527.1.0"/>
+          <dxl:CheckConstraint Mdid="8.205529.1.0"/>
+          <dxl:CheckConstraint Mdid="8.205528.1.0"/>
+          <dxl:CheckConstraint Mdid="8.205527.1.0"/>
         </dxl:CheckConstraints>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
         </dxl:DistrOpfamilies>
       </dxl:Relation>
-      <dxl:CheckConstraint Mdid="7.205528.1.0" Name="ckc_c" RelationMdid="0.205524.1.0">
+      <dxl:CheckConstraint Mdid="8.205528.1.0" Name="ckc_c" RelationMdid="6.205524.1.0">
         <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.531.1.0">
           <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
             <dxl:Ident ColId="3" ColName="c" TypeMdid="0.1043.1.0" TypeModifier="14"/>
@@ -334,18 +334,18 @@
           <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAAB3h4eA==" LintValue="2302730647"/>
         </dxl:Comparison>
       </dxl:CheckConstraint>
-      <dxl:CheckConstraint Mdid="7.205529.1.0" Name="ckc_d" RelationMdid="0.205524.1.0">
+      <dxl:CheckConstraint Mdid="8.205529.1.0" Name="ckc_d" RelationMdid="6.205524.1.0">
         <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.419.1.0">
           <dxl:Ident ColId="4" ColName="d" TypeMdid="0.20.1.0"/>
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
         </dxl:Comparison>
       </dxl:CheckConstraint>
-      <dxl:Index Mdid="6.205530.1.0" Name="test_mdid_pkey" IsClustered="false" IndexType="B-tree" PhysicalIndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10">
+      <dxl:Index Mdid="7.205530.1.0" Name="test_mdid_pkey" IsClustered="false" IndexType="B-tree" PhysicalIndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:CheckConstraint Mdid="7.205527.1.0" Name="ckc_b" RelationMdid="0.205524.1.0">
+      <dxl:CheckConstraint Mdid="8.205527.1.0" Name="ckc_b" RelationMdid="6.205524.1.0">
         <dxl:ArrayComp OperatorName="=" OperatorMdid="0.1054.1.0" OperatorType="Any">
           <dxl:Ident ColId="2" ColName="b" TypeMdid="0.1042.1.0" TypeModifier="5"/>
           <dxl:Array ArrayType="0.1014.1.0" ElementType="0.1042.1.0" MultiDimensional="false">
@@ -370,7 +370,7 @@
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="11"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.205524.1.0" TableName="test_mdid">
+          <dxl:TableDescriptor Mdid="6.205524.1.0" TableName="test_mdid">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.1042.1.0" TypeModifier="5" ColWidth="2"/>
@@ -434,8 +434,8 @@
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="11"/>
             </dxl:Comparison>
           </dxl:IndexCondList>
-          <dxl:IndexDescriptor Mdid="6.205530.1.0" IndexName="test_mdid_pkey"/>
-          <dxl:TableDescriptor Mdid="0.205524.1.0" TableName="test_mdid">
+          <dxl:IndexDescriptor Mdid="7.205530.1.0" IndexName="test_mdid_pkey"/>
+          <dxl:TableDescriptor Mdid="6.205524.1.0" TableName="test_mdid">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.1042.1.0" TypeModifier="5" ColWidth="2"/>
