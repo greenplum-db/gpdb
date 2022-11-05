@@ -291,7 +291,7 @@ union all
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1247.1.0" Name="pg_type" Rows="399.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1247.1.0" Name="pg_type" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="35,28" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1247.1.0" Name="pg_type" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="35,28" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="typname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -457,7 +457,7 @@ union all
         </dxl:Opfamilies>
       </dxl:Index>
       <dxl:RelationStatistics Mdid="2.1259.1.0" Name="pg_class" Rows="405.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1259.1.0" Name="pg_class" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="33,26" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1259.1.0" Name="pg_class" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="33,26" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="relname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -584,7 +584,7 @@ union all
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.2031667.1.0" Name="foo" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.2031667.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.2031667.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -618,7 +618,7 @@ union all
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.2031673.1.0" Name="bar" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.2031673.1.0" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.2031673.1.0" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -671,7 +671,7 @@ union all
         </dxl:Columns>
         <dxl:LogicalJoin JoinType="Left">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.2031667.1.0" TableName="foo">
+            <dxl:TableDescriptor Mdid="6.2031667.1.0" TableName="foo">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="8"/>
                 <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.1043.1.0" ColWidth="8"/>
@@ -686,7 +686,7 @@ union all
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.1259.1.0" TableName="pg_class">
+            <dxl:TableDescriptor Mdid="6.1259.1.0" TableName="pg_class">
               <dxl:Columns>
                 <dxl:Column ColId="10" Attno="1" ColName="relname" TypeMdid="0.19.1.0" ColWidth="64"/>
                 <dxl:Column ColId="11" Attno="2" ColName="relnamespace" TypeMdid="0.26.1.0" ColWidth="4"/>
@@ -734,7 +734,7 @@ union all
         </dxl:LogicalJoin>
         <dxl:LogicalJoin JoinType="Left">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.2031673.1.0" TableName="bar">
+            <dxl:TableDescriptor Mdid="6.2031673.1.0" TableName="bar">
               <dxl:Columns>
                 <dxl:Column ColId="44" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="8"/>
                 <dxl:Column ColId="45" Attno="2" ColName="b" TypeMdid="0.1043.1.0" ColWidth="8"/>
@@ -749,7 +749,7 @@ union all
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.1247.1.0" TableName="pg_type">
+            <dxl:TableDescriptor Mdid="6.1247.1.0" TableName="pg_type">
               <dxl:Columns>
                 <dxl:Column ColId="53" Attno="1" ColName="typname" TypeMdid="0.19.1.0" ColWidth="64"/>
                 <dxl:Column ColId="54" Attno="2" ColName="typnamespace" TypeMdid="0.26.1.0" ColWidth="4"/>
@@ -862,7 +862,7 @@ union all
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.2031667.1.0" TableName="foo">
+              <dxl:TableDescriptor Mdid="6.2031667.1.0" TableName="foo">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="8"/>
                   <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.1043.1.0" ColWidth="8"/>
@@ -897,7 +897,7 @@ union all
             </dxl:IndexCondList>
 	<dxl:Partitions/>
             <dxl:IndexDescriptor Mdid="0.2662.1.0" IndexName="pg_class_oid_index"/>
-            <dxl:TableDescriptor Mdid="0.1259.1.0" TableName="pg_class">
+            <dxl:TableDescriptor Mdid="6.1259.1.0" TableName="pg_class">
               <dxl:Columns>
                 <dxl:Column ColId="13" Attno="5" ColName="relam" TypeMdid="0.26.1.0" ColWidth="4"/>
                 <dxl:Column ColId="35" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -958,7 +958,7 @@ union all
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.2031673.1.0" TableName="bar">
+              <dxl:TableDescriptor Mdid="6.2031673.1.0" TableName="bar">
                 <dxl:Columns>
                   <dxl:Column ColId="43" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="8"/>
                   <dxl:Column ColId="44" Attno="2" ColName="b" TypeMdid="0.1043.1.0" ColWidth="8"/>
@@ -993,7 +993,7 @@ union all
             </dxl:IndexCondList>
 	<dxl:Partitions/>
             <dxl:IndexDescriptor Mdid="0.2703.1.0" IndexName="pg_type_oid_index"/>
-            <dxl:TableDescriptor Mdid="0.1247.1.0" TableName="pg_type">
+            <dxl:TableDescriptor Mdid="6.1247.1.0" TableName="pg_type">
               <dxl:Columns>
                 <dxl:Column ColId="63" Attno="12" ColName="typelem" TypeMdid="0.26.1.0" ColWidth="4"/>
                 <dxl:Column ColId="80" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

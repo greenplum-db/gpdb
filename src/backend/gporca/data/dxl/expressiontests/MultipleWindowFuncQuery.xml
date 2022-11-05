@@ -28,7 +28,7 @@
         </dxl:ProjElem>
       </dxl:ProjList>
       <dxl:LogicalGet>
-        <dxl:TableDescriptor Mdid="0.16071689.1.1" TableName="s">
+        <dxl:TableDescriptor Mdid="6.16071689.1.1" TableName="s">
           <dxl:Columns>
             <dxl:Column ColId="1" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="2" Attno="2" ColName="d" TypeMdid="0.23.1.0"/>

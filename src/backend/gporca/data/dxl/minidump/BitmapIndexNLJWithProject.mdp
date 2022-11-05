@@ -584,7 +584,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.32977.1.0" Name="foo" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.32977.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="3" PartitionTypes="r" NumberLeafPartitions="5">
+      <dxl:Relation Mdid="6.32977.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="3" PartitionTypes="r" NumberLeafPartitions="5">
         <dxl:Columns>
           <dxl:Column Name="dist_a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -628,14 +628,14 @@
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
         </dxl:DistrOpfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.32977001.1.0"/>
-          <dxl:Partition Mdid="0.32977002.1.0"/>
-          <dxl:Partition Mdid="0.32977003.1.0"/>
-          <dxl:Partition Mdid="0.32977004.1.0"/>
-          <dxl:Partition Mdid="0.32977005.1.0"/>
+          <dxl:Partition Mdid="6.32977001.1.0"/>
+          <dxl:Partition Mdid="6.32977002.1.0"/>
+          <dxl:Partition Mdid="6.32977003.1.0"/>
+          <dxl:Partition Mdid="6.32977004.1.0"/>
+          <dxl:Partition Mdid="6.32977005.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.32977001.1.0" Name="foo_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32977001.1.0" Name="foo_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="dist_a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -694,7 +694,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.32977002.1.0" Name="foo_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32977002.1.0" Name="foo_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="dist_a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -753,7 +753,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.32977003.1.0" Name="foo_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32977003.1.0" Name="foo_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="dist_a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -812,7 +812,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.32977004.1.0" Name="foo_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32977004.1.0" Name="foo_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="dist_a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -871,7 +871,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.32977005.1.0" Name="foo_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32977005.1.0" Name="foo_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="dist_a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1758,7 +1758,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.33001.1.0" Name="bar" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.33001.1.0" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.33001.1.0" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="dist_e" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1803,11 +1803,11 @@
           <dxl:Opfamily Mdid="0.12738.1.0"/>
         </dxl:Opfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.33012001.1.0"/>
-          <dxl:Partition Mdid="0.33012002.1.0"/>
-          <dxl:Partition Mdid="0.33012003.1.0"/>
-          <dxl:Partition Mdid="0.33012004.1.0"/>
-          <dxl:Partition Mdid="0.33012005.1.0"/>
+          <dxl:Partition Mdid="6.33012001.1.0"/>
+          <dxl:Partition Mdid="6.33012002.1.0"/>
+          <dxl:Partition Mdid="6.33012003.1.0"/>
+          <dxl:Partition Mdid="6.33012004.1.0"/>
+          <dxl:Partition Mdid="6.33012005.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
     </dxl:Metadata>
@@ -1836,7 +1836,7 @@
         </dxl:And>
         <dxl:LogicalJoin JoinType="Inner">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.33001.1.0" TableName="bar">
+            <dxl:TableDescriptor Mdid="6.33001.1.0" TableName="bar">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="dist_e" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="2" Attno="2" ColName="f" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -1858,7 +1858,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.32977.1.0" TableName="foo" ExecuteAsUser="10">
+              <dxl:TableDescriptor Mdid="6.32977.1.0" TableName="foo" ExecuteAsUser="10">
                 <dxl:Columns>
                   <dxl:Column ColId="11" Attno="1" ColName="dist_a" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="12" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -1971,7 +1971,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.33001.1.0" TableName="bar">
+            <dxl:TableDescriptor Mdid="6.33001.1.0" TableName="bar">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="dist_e" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="1" Attno="2" ColName="f" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -2081,11 +2081,11 @@
                 <dxl:IndexDescriptor Mdid="0.33012.1.0" IndexName="foo_1_prt_1_dist_a_part_d_idx"/>
               </dxl:BitmapIndexProbe>
               <dxl:Partitions>
-                <dxl:Partition Mdid="0.32977003.1.0"/>
-                <dxl:Partition Mdid="0.32977004.1.0"/>
-                <dxl:Partition Mdid="0.32977005.1.0"/>
+                <dxl:Partition Mdid="6.32977003.1.0"/>
+                <dxl:Partition Mdid="6.32977004.1.0"/>
+                <dxl:Partition Mdid="6.32977005.1.0"/>
               </dxl:Partitions>
-              <dxl:TableDescriptor Mdid="0.32977.1.0" TableName="foo" ExecuteAsUser="10">
+              <dxl:TableDescriptor Mdid="6.32977.1.0" TableName="foo" ExecuteAsUser="10">
                 <dxl:Columns>
                   <dxl:Column ColId="10" Attno="1" ColName="dist_a" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>

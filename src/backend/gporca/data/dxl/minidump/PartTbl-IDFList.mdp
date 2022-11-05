@@ -164,7 +164,7 @@ EXPLAIN SELECT * FROM listfoo WHERE b IS DISTINCT FROM 2;
       <dxl:ColumnStatistics Mdid="1.319609.1.0.1" Name="b" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.319609.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.319609.1.0" Name="listfoo" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.319609.1.0" Name="listfoo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="l" NumberLeafPartitions="5">
+      <dxl:Relation Mdid="6.319609.1.0" Name="listfoo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="l" NumberLeafPartitions="5">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -200,14 +200,14 @@ EXPLAIN SELECT * FROM listfoo WHERE b IS DISTINCT FROM 2;
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.319609001.1.0"/>
-          <dxl:Partition Mdid="0.319609002.1.0"/>
-          <dxl:Partition Mdid="0.319609003.1.0"/>
-          <dxl:Partition Mdid="0.319609004.1.0"/>
-          <dxl:Partition Mdid="0.319609005.1.0"/>
+          <dxl:Partition Mdid="6.319609001.1.0"/>
+          <dxl:Partition Mdid="6.319609002.1.0"/>
+          <dxl:Partition Mdid="6.319609003.1.0"/>
+          <dxl:Partition Mdid="6.319609004.1.0"/>
+          <dxl:Partition Mdid="6.319609005.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.319609001.1.0" Name="listfoo_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.319609001.1.0" Name="listfoo_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -254,7 +254,7 @@ EXPLAIN SELECT * FROM listfoo WHERE b IS DISTINCT FROM 2;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.319609002.1.0" Name="listfoo_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.319609002.1.0" Name="listfoo_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -301,7 +301,7 @@ EXPLAIN SELECT * FROM listfoo WHERE b IS DISTINCT FROM 2;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.319609003.1.0" Name="listfoo_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.319609003.1.0" Name="listfoo_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -348,7 +348,7 @@ EXPLAIN SELECT * FROM listfoo WHERE b IS DISTINCT FROM 2;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.319609004.1.0" Name="listfoo_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.319609004.1.0" Name="listfoo_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -389,7 +389,7 @@ EXPLAIN SELECT * FROM listfoo WHERE b IS DISTINCT FROM 2;
           </dxl:IsNull>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.319609005.1.0" Name="listfoo_prt_other" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.319609005.1.0" Name="listfoo_prt_other" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -456,7 +456,7 @@ EXPLAIN SELECT * FROM listfoo WHERE b IS DISTINCT FROM 2;
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
         </dxl:IsDistinctFrom>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.319609.1.0" TableName="listfoo">
+          <dxl:TableDescriptor Mdid="6.319609.1.0" TableName="listfoo">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -513,12 +513,12 @@ EXPLAIN SELECT * FROM listfoo WHERE b IS DISTINCT FROM 2;
             </dxl:IsDistinctFrom>
           </dxl:Filter>
           <dxl:Partitions>
-            <dxl:Partition Mdid="0.319609001.1.0"/>
-            <dxl:Partition Mdid="0.319609003.1.0"/>
-            <dxl:Partition Mdid="0.319609004.1.0"/>
-            <dxl:Partition Mdid="0.319609005.1.0"/>
+            <dxl:Partition Mdid="6.319609001.1.0"/>
+            <dxl:Partition Mdid="6.319609003.1.0"/>
+            <dxl:Partition Mdid="6.319609004.1.0"/>
+            <dxl:Partition Mdid="6.319609005.1.0"/>
           </dxl:Partitions>
-          <dxl:TableDescriptor Mdid="0.319609.1.0" TableName="listfoo">
+          <dxl:TableDescriptor Mdid="6.319609.1.0" TableName="listfoo">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>

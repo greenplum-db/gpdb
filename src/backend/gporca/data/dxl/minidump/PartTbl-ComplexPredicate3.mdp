@@ -149,7 +149,7 @@ explain select * from foo where (b = 25 and a > 10) or (b<15 and a>5);
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.34063.1.1" Name="foo" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.34063.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.34063.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -185,19 +185,19 @@ explain select * from foo where (b = 25 and a > 10) or (b<15 and a>5);
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.34063001.1.1"/>
-          <dxl:Partition Mdid="0.34063002.1.1"/>
-          <dxl:Partition Mdid="0.34063003.1.1"/>
-          <dxl:Partition Mdid="0.34063004.1.1"/>
-          <dxl:Partition Mdid="0.34063005.1.1"/>
-          <dxl:Partition Mdid="0.34063006.1.1"/>
-          <dxl:Partition Mdid="0.34063007.1.1"/>
-          <dxl:Partition Mdid="0.34063008.1.1"/>
-          <dxl:Partition Mdid="0.34063009.1.1"/>
-          <dxl:Partition Mdid="0.34063010.1.1"/>
+          <dxl:Partition Mdid="6.34063001.1.1"/>
+          <dxl:Partition Mdid="6.34063002.1.1"/>
+          <dxl:Partition Mdid="6.34063003.1.1"/>
+          <dxl:Partition Mdid="6.34063004.1.1"/>
+          <dxl:Partition Mdid="6.34063005.1.1"/>
+          <dxl:Partition Mdid="6.34063006.1.1"/>
+          <dxl:Partition Mdid="6.34063007.1.1"/>
+          <dxl:Partition Mdid="6.34063008.1.1"/>
+          <dxl:Partition Mdid="6.34063009.1.1"/>
+          <dxl:Partition Mdid="6.34063010.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.34063001.1.1" Name="foo_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.34063001.1.1" Name="foo_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -248,7 +248,7 @@ explain select * from foo where (b = 25 and a > 10) or (b<15 and a>5);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.34063002.1.1" Name="foo_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.34063002.1.1" Name="foo_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -299,7 +299,7 @@ explain select * from foo where (b = 25 and a > 10) or (b<15 and a>5);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.34063003.1.1" Name="foo_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.34063003.1.1" Name="foo_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -350,7 +350,7 @@ explain select * from foo where (b = 25 and a > 10) or (b<15 and a>5);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.34063004.1.1" Name="foo_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.34063004.1.1" Name="foo_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -401,7 +401,7 @@ explain select * from foo where (b = 25 and a > 10) or (b<15 and a>5);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.34063005.1.1" Name="foo_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.34063005.1.1" Name="foo_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -452,7 +452,7 @@ explain select * from foo where (b = 25 and a > 10) or (b<15 and a>5);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.34063006.1.1" Name="foo_prt_6" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.34063006.1.1" Name="foo_prt_6" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -503,7 +503,7 @@ explain select * from foo where (b = 25 and a > 10) or (b<15 and a>5);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.34063007.1.1" Name="foo_prt_7" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.34063007.1.1" Name="foo_prt_7" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -554,7 +554,7 @@ explain select * from foo where (b = 25 and a > 10) or (b<15 and a>5);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.34063008.1.1" Name="foo_prt_8" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.34063008.1.1" Name="foo_prt_8" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -605,7 +605,7 @@ explain select * from foo where (b = 25 and a > 10) or (b<15 and a>5);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.34063009.1.1" Name="foo_prt_9" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.34063009.1.1" Name="foo_prt_9" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -656,7 +656,7 @@ explain select * from foo where (b = 25 and a > 10) or (b<15 and a>5);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.34063010.1.1" Name="foo_prt_10" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.34063010.1.1" Name="foo_prt_10" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -772,7 +772,7 @@ explain select * from foo where (b = 25 and a > 10) or (b<15 and a>5);
           </dxl:And>
         </dxl:Or>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.34063.1.1" TableName="foo">
+          <dxl:TableDescriptor Mdid="6.34063.1.1" TableName="foo">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -847,18 +847,18 @@ explain select * from foo where (b = 25 and a > 10) or (b<15 and a>5);
             </dxl:Or>
           </dxl:Filter>
           <dxl:Partitions>
-            <dxl:Partition Mdid="0.34063001.1.1"/>
-            <dxl:Partition Mdid="0.34063002.1.1"/>
-            <dxl:Partition Mdid="0.34063003.1.1"/>
-            <dxl:Partition Mdid="0.34063004.1.1"/>
-            <dxl:Partition Mdid="0.34063005.1.1"/>
-            <dxl:Partition Mdid="0.34063006.1.1"/>
-            <dxl:Partition Mdid="0.34063007.1.1"/>
-            <dxl:Partition Mdid="0.34063008.1.1"/>
-            <dxl:Partition Mdid="0.34063009.1.1"/>
-            <dxl:Partition Mdid="0.34063010.1.1"/>
+            <dxl:Partition Mdid="6.34063001.1.1"/>
+            <dxl:Partition Mdid="6.34063002.1.1"/>
+            <dxl:Partition Mdid="6.34063003.1.1"/>
+            <dxl:Partition Mdid="6.34063004.1.1"/>
+            <dxl:Partition Mdid="6.34063005.1.1"/>
+            <dxl:Partition Mdid="6.34063006.1.1"/>
+            <dxl:Partition Mdid="6.34063007.1.1"/>
+            <dxl:Partition Mdid="6.34063008.1.1"/>
+            <dxl:Partition Mdid="6.34063009.1.1"/>
+            <dxl:Partition Mdid="6.34063010.1.1"/>
           </dxl:Partitions>
-          <dxl:TableDescriptor Mdid="0.34063.1.1" TableName="foo">
+          <dxl:TableDescriptor Mdid="6.34063.1.1" TableName="foo">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
