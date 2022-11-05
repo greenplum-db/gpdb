@@ -180,9 +180,7 @@ private:
 													IMDId *mdid);
 
 	// retrieve a GPDB metadata object from the relcache
-	static IMDCacheObject *RetrieveObjectGPDB(CMemoryPool *mp,
-											  CMDAccessor *md_accessor,
-											  IMDId *mdid);
+	static IMDCacheObject *RetrieveObjectGPDB(CMemoryPool *mp, IMDId *mdid);
 
 	// retrieve relstats object from the relcache
 	static IMDCacheObject *RetrieveRelStats(CMemoryPool *mp, IMDId *mdid);

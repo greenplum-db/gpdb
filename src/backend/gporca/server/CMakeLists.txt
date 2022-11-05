@@ -362,7 +362,7 @@ CRightJoinTest:
 RightJoinHashed RightJoinRedistribute RightJoinReplicated RightJoinBothReplicated RightJoinNoDPSNonDistKey RightJoinTVF;
 
 CSqlFunctionTest:
-SqlFuncNullReject SqlFuncPredFactorize SqlFuncDmlScalar SqlFuncDmlTvf;
+SqlFuncNullReject SqlFuncPredFactorize SqlFuncDmlScalar SqlFuncDmlTvf CompositeTypeRelMdId;
 
 CScalarFuncPushDownTest:
 ScalarFuncPushedBelowGather ConstScalarFuncNotPushedBelowGather;

@@ -129,7 +129,7 @@ CTranslatorUtils::GetTableDescr(CMemoryPool *mp, CMDAccessor *md_accessor,
 	}
 #endif
 
-	CMDIdGPDB *mdid = GPOS_NEW(mp) CMDIdGPDB(rel_oid);
+	CMDIdGPDB *mdid = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, rel_oid);
 
 	const IMDRelation *rel = md_accessor->RetrieveRel(mdid);
 

@@ -181,6 +181,11 @@ CMDIdGPDB::CMDIdGPDB(OID oid, ULONG version_major, ULONG version_minor)
 	  m_str(m_mdid_array, GPOS_ARRAY_SIZE(m_mdid_array))
 {
 	// TODO:  - Jan 31, 2012; supply system id in constructor
+	if (CMDIdGPDB::m_mdid_invalid_key.Oid() == oid)
+	{
+		// construct an invalid mdid 0.0.0
+		m_major_version = 0;
+	}
 	// serialize mdid into static string
 	Serialize();
 }
@@ -195,7 +200,12 @@ CMDIdGPDB::CMDIdGPDB(EMDIdType mdIdType, OID oid, ULONG version_major,
 {
 	GPOS_RTL_ASSERT(
 		mdIdType == IMDId::EmdidGPDB ||
-		(mdIdType >= IMDId::EmdidInd && mdIdType < IMDId::EmdidSentinel));
+		(mdIdType >= IMDId::EmdidRel && mdIdType < IMDId::EmdidSentinel));
+	if (CMDIdGPDB::m_mdid_invalid_key.Oid() == oid)
+	{
+		// construct an invalid mdid 0.0.0
+		m_major_version = 0;
+	}
 	// serialize mdid into static string
 	Serialize();
 }
@@ -333,7 +343,10 @@ CMDIdGPDB::Equals(const IMDId *mdid) const
 BOOL
 CMDIdGPDB::IsValid() const
 {
-	return !Equals(&CMDIdGPDB::m_mdid_invalid_key);
+	const CMDIdGPDB *invalid = &CMDIdGPDB::m_mdid_invalid_key;
+	return !(m_oid == invalid->Oid() &&
+			 m_major_version == invalid->VersionMajor() &&
+			 m_minor_version == invalid->VersionMinor());
 }
 
 //---------------------------------------------------------------------------
