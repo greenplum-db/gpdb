@@ -10512,7 +10512,6 @@ create rule can_set_tag_audit_update AS
   VALUES (now(), old.x, old.y, old.z);
 insert into can_set_tag_target select i, i + 1, i + 2 from generate_series(1,2) as i;
 create role unpriv;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 grant all on can_set_tag_target to unpriv;
 grant all on can_set_tag_audit to unpriv;
 set role unpriv;

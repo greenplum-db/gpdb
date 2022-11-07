@@ -746,7 +746,6 @@ CREATE STATISTICS priv_test_stats (mcv) ON a, b
 ANALYZE priv_test_tbl;
 -- User with no access
 CREATE USER regress_stats_user1;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 SET SESSION AUTHORIZATION regress_stats_user1;
 SELECT * FROM priv_test_tbl; -- Permission denied
 ERROR:  permission denied for table priv_test_tbl

@@ -41,7 +41,6 @@
 /qp_gist_indexes2.sql
 /qp_regexp.sql
 /query_info_hook_test.sql
-/resource_queue_function.sql
 /rpt_tpch.sql
 /session_reset.sql
 /sreh.sql

@@ -452,7 +452,6 @@ SELECT spcoptions FROM pg_tablespace WHERE spcname = 'testspace_otherloc';
 (1 row)
 
 CREATE ROLE t_owner;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 ALTER TABLESPACE testspace_otherloc OWNER TO t_owner;
 SELECT rolname from pg_roles WHERE oid in (SELECT spcowner FROM pg_tablespace WHERE spcname = 'testspace_otherloc');
  rolname 

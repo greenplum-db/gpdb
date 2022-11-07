@@ -15,7 +15,6 @@ SELECT relname, relhasindex
    WHERE relkind IN ('r', 'p') AND (nspname ~ '^pg_temp_') IS NOT TRUE
    AND relname NOT LIKE 'gp_%'
    AND relname NOT LIKE '__gp_%'
-   AND relname <> 'pg_resqueue'
    ORDER BY relname;
 
 -- restore normal output mode

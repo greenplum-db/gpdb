@@ -1,5 +1,4 @@
 create user memquota_role1 with nosuperuser nocreatedb nocreaterole;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 GRANT ALL PRIVILEGES ON PUBLIC.heap_orders TO memquota_role1;
 create resource queue memquota_resqueue1 active threshold 4;
 alter resource queue memquota_resqueue1 with (memory_limit = '500MB');

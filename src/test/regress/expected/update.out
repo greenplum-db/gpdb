@@ -557,7 +557,6 @@ DROP FUNCTION func_parted_mod_b();
 -----------------------------------------
 ALTER TABLE range_parted ENABLE ROW LEVEL SECURITY;
 CREATE USER regress_range_parted_user;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 GRANT ALL ON range_parted, mintab TO regress_range_parted_user;
 CREATE POLICY seeall ON range_parted AS PERMISSIVE FOR SELECT USING (true);
 CREATE POLICY policy_range_parted ON range_parted for UPDATE USING (true) WITH CHECK (c % 2 = 0);

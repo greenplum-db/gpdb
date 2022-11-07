@@ -44,7 +44,6 @@ insert into testhagg select i,i,i,i from
 analyze testhagg;
 
 set statement_mem="1800";
-set gp_resqueue_print_operator_memory_limits=on;
 
 -- the number of rows returned by the query varies depending on the number of segments, so
 -- only print the first 10

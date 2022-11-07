@@ -99,26 +99,23 @@ WHERE c.oid < 16384 AND
       relkind = 'r' AND
       attstorage != 'p'
 ORDER BY 1, 2;
-         relname          |      attname       |   atttypid   
---------------------------+--------------------+--------------
- gp_configuration_history | desc               | text
- gp_version_at_initdb     | productversion     | text
- pg_attribute             | attacl             | aclitem[]
- pg_attribute             | attfdwoptions      | text[]
- pg_attribute             | attmissingval      | anyarray
- pg_attribute             | attoptions         | text[]
- pg_class                 | relacl             | aclitem[]
- pg_class                 | reloptions         | text[]
- pg_class                 | relpartbound       | pg_node_tree
- pg_index                 | indexprs           | pg_node_tree
- pg_index                 | indpred            | pg_node_tree
- pg_largeobject           | data               | bytea
- pg_largeobject_metadata  | lomacl             | aclitem[]
- pg_resgroupcapability    | value              | text
- pg_resourcetype          | resdefaultsetting  | text
- pg_resourcetype          | resdisabledsetting | text
- pg_resqueuecapability    | ressetting         | text
- pg_stat_last_operation   | stasubtype         | text
- pg_stat_last_shoperation | stasubtype         | text
-(19 rows)
+         relname          |    attname     |   atttypid   
+--------------------------+----------------+--------------
+ gp_configuration_history | desc           | text
+ gp_version_at_initdb     | productversion | text
+ pg_attribute             | attacl         | aclitem[]
+ pg_attribute             | attfdwoptions  | text[]
+ pg_attribute             | attmissingval  | anyarray
+ pg_attribute             | attoptions     | text[]
+ pg_class                 | relacl         | aclitem[]
+ pg_class                 | reloptions     | text[]
+ pg_class                 | relpartbound   | pg_node_tree
+ pg_index                 | indexprs       | pg_node_tree
+ pg_index                 | indpred        | pg_node_tree
+ pg_largeobject           | data           | bytea
+ pg_largeobject_metadata  | lomacl         | aclitem[]
+ pg_resgroupcapability    | value          | text
+ pg_stat_last_operation   | stasubtype     | text
+ pg_stat_last_shoperation | stasubtype     | text
+(16 rows)
 

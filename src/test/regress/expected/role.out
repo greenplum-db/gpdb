@@ -14,17 +14,11 @@ DROP ROLE IF EXISTS role_setting_test_4;
 DROP ROLE IF EXISTS role_setting_test_5;
 DROP ROLE IF EXISTS role_setting_test_6;
 CREATE ROLE role_setting_test_1 NOLOGIN;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE ROLE role_setting_test_2 NOLOGIN;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE ROLE role_setting_test_3 NOLOGIN;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE ROLE role_setting_test_4 NOLOGIN;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE ROLE role_setting_test_5 NOLOGIN;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE ROLE role_setting_test_6 NOLOGIN;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE SCHEMA common_schema;
 /* Alter Role Set, with a GUC with units (statement_mem) and not (search_path) */
 ALTER ROLE role_setting_test_1 SET statement_mem TO '150MB';
@@ -62,9 +56,7 @@ ALTER ROLE role_setting_test_6 IN DATABASE regression RESET ALL;
 -- Note: Don't drop the test roles, so that they get tested with pg_dump/restore, too,
 -- if you dump the regression database.
 create role superuser;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 create role u1;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 set role superuser;
 create table t1(a int, b int constraint c check (b>=100));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
@@ -83,9 +75,7 @@ drop role u1;
 drop role superuser;
 -- Test creating user who has been renamed before.
 CREATE USER jonathan11 WITH PASSWORD 'abc1';
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE USER jonathan12 WITH PASSWORD 'abc2';
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 ALTER USER jonathan11 RENAME TO jona11;
 NOTICE:  MD5 password cleared because of role rename
 ALTER USER jonathan12 RENAME TO jona12;
@@ -93,13 +83,11 @@ NOTICE:  MD5 password cleared because of role rename
 DROP USER jona11;
 DROP USER jona12;
 CREATE USER jonathan12 WITH PASSWORD 'abc2';
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 ALTER USER jonathan11 RENAME TO jona11;
 ERROR:  role "jonathan11" does not exist
 ALTER USER jonathan12 RENAME TO jona12;
 NOTICE:  MD5 password cleared because of role rename
 CREATE GROUP marketing WITH USER jona11,jona12;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 ERROR:  role "jona11" does not exist
 ALTER GROUP marketing RENAME TO market;
 ERROR:  role "marketing" does not exist
@@ -118,7 +106,6 @@ reset client_min_messages;
 -- Create a user with two per-user settings. One is superuser-only,
 -- and another is not.
 create user guctestrole;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 alter user guctestrole set zero_damaged_pages=off; -- PGC_SUSET
 alter user guctestrole set application_name='test'; -- PGC_USERSET
 select rolconfig from pg_roles where rolname = 'guctestrole';

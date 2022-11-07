@@ -47,7 +47,6 @@ select gp_inject_fault('create_function_fail', 'reset', dbid) from gp_segment_co
 -- Similar comments please refer above case's
 --
 create role user_12713;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 set role user_12713;
 -- the will fail due to privilege
 create extension gp_debug_numsegments;

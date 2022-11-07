@@ -189,7 +189,6 @@ tot_trk_conv bigint,
 all_conv bigint,
 rank integer);
 create role tbl4009_gpadmin;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 alter type qp_misc_jiras.tbl4009_mediageoitem owner to tbl4009_gpadmin;
 select typname, rolname as owner from pg_type,pg_authid where typname='tbl4009_mediageoitem' and pg_type.typowner=pg_authid.oid;
        typname        |      owner      

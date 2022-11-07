@@ -227,9 +227,6 @@ SELECT t18_pytest();
 select distinct paramname
 from gp_toolkit.gp_param_setting('allow_system_table_mods');
 
-select distinct paramname
-from gp_toolkit.gp_param_setting('max_resource_queues');
-
 -- ----------------------------------------------------------------------
 -- Test: 21
 -- ----------------------------------------------------------------------

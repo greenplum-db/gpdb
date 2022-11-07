@@ -55,20 +55,6 @@ DO
  group               
 (1 row)
 
--- resource queue statistics should not crash
-0: SELECT * FROM pg_resqueue_status;
- rsqname | rsqcountlimit | rsqcountvalue | rsqcostlimit | rsqcostvalue | rsqwaiters | rsqholders 
----------+---------------+---------------+--------------+--------------+------------+------------
-(0 rows)
-0: SELECT * FROM gp_toolkit.gp_resqueue_status;
- queueid | rsqname | rsqcountlimit | rsqcountvalue | rsqcostlimit | rsqcostvalue | rsqmemorylimit | rsqmemoryvalue | rsqwaiters | rsqholders 
----------+---------+---------------+---------------+--------------+--------------+----------------+----------------+------------+------------
-(0 rows)
-0: SELECT * FROM gp_toolkit.gp_resq_priority_backend;
- rqpsession | rqpcommand | rqppriority | rqpweight 
-------------+------------+-------------+-----------
-(0 rows)
-
 -- verify the default settings
 0: SELECT * from gp_toolkit.gp_resgroup_config;
  groupid | groupname     | concurrency | cpu_rate_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset 

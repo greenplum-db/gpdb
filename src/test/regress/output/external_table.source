@@ -283,7 +283,6 @@ ERROR:  protocol "demoprot_untrusted2" already exists
 ALTER PROTOCOL demoprot_untrustedx RENAME TO demoprot_untrusted2; --should failed
 ERROR:  protocol "demoprot_untrustedx" does not exist
 CREATE ROLE extprotu NOSUPERUSER;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 SET SESSION AUTHORIZATION extprotu;
 CREATE WRITABLE EXTERNAL TABLE ext_w(a int) location('demoprot://demoprotfile.txt') format 'text'; -- should fail
 ERROR:  permission denied for external protocol demoprot
@@ -340,7 +339,6 @@ DROP PROTOCOL demoprot_droptest1, demoprot_droptest2;
 DROP ROLE IF EXISTS extprot_non_superuser;
 NOTICE:  role "extprot_non_superuser" does not exist, skipping
 CREATE ROLE extprot_non_superuser WITH NOSUPERUSER LOGIN CREATEDB;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 SET ROLE extprot_non_superuser;
 CREATE PROTOCOL demoprot_non_superuser (readfunc = 'read_from_file', writefunc = 'write_to_file');
 ERROR:  must be superuser to create an external protocol
@@ -351,7 +349,6 @@ RESET ROLE;
 -- GitHub Issue #12748: https://github.com/greenplum-db/gpdb/issues/12748
 CREATE TRUSTED PROTOCOL dummy_protocol_issue_12748 (readfunc = 'read_from_file', writefunc = 'write_to_file');
 CREATE ROLE test_role_issue_12748;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 GRANT ALL ON PROTOCOL dummy_protocol_issue_12748 TO test_role_issue_12748;
 DROP OWNED BY test_role_issue_12748;
 -- Clean up.
@@ -933,7 +930,6 @@ CONTEXT:  External table exttab_permissions_2, line 7 of file://@hostname@@abs_s
 -- Only superuser can do gp_truncate_error_log('*.*')
 DROP ROLE IF EXISTS exttab_non_superuser;
 CREATE ROLE exttab_non_superuser WITH NOSUPERUSER LOGIN CREATEDB;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 SET ROLE exttab_non_superuser;
 SELECT COUNT(*) FROM gp_read_error_log('exttab_permissions_1');
 ERROR:  permission denied for table exttab_permissions_1  (seg2 slice1 @hostname@:40002 pid=50448)
@@ -997,9 +993,7 @@ DROP DATABASE IF EXISTS exttab_db;
 DROP ROLE IF EXISTS exttab_user1;
 DROP ROLE IF EXISTS exttab_user2;
 CREATE ROLE exttab_user1 WITH NOSUPERUSER LOGIN;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE ROLE exttab_user2 WITH NOSUPERUSER LOGIN;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE DATABASE exttab_db WITH OWNER=exttab_user1;
 \c exttab_db
 -- generate some error logs in this db
@@ -1054,9 +1048,7 @@ SELECT * FROM gp_read_error_log('exttab_permissions_1');
 DROP ROLE IF EXISTS errlog_exttab_user3;
 DROP ROLE IF EXISTS errlog_exttab_user4;
 CREATE ROLE errlog_exttab_user3 WITH NOSUPERUSER LOGIN;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE ROLE errlog_exttab_user4 WITH NOSUPERUSER LOGIN;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 -- generate some error logs in this db
 CREATE EXTERNAL TABLE exttab_permissions_3( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')

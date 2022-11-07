@@ -1315,7 +1315,6 @@ drop table mpp4582;
 -- commands don't vary depending on current user.
 DROP USER IF EXISTS mpp3641_user;
 CREATE USER mpp3641_user;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 GRANT ALL ON SCHEMA bfv_partition TO mpp3641_user;
 SET ROLE mpp3641_user;
 CREATE TABLE mpp3641a (

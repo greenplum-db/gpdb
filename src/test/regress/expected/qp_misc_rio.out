@@ -293,13 +293,6 @@ from gp_toolkit.gp_param_setting('allow_system_table_mods');
  allow_system_table_mods
 (1 row)
 
-select distinct paramname
-from gp_toolkit.gp_param_setting('max_resource_queues');
-      paramname      
----------------------
- max_resource_queues
-(1 row)
-
 -- ----------------------------------------------------------------------
 -- Test: 21
 -- ----------------------------------------------------------------------
@@ -601,10 +594,8 @@ drop role if exists triggertest_nopriv_b;
 -- end_ignore
 -- Create a non-privileged user triggertest_nopriv_a
 create role triggertest_nopriv_a with login ;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 -- Create another non-privileged user triggertest_nopriv_b
 create role triggertest_nopriv_b with login ;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 GRANT ALL ON SCHEMA qp_misc_rio TO triggertest_nopriv_a;
 GRANT ALL ON SCHEMA qp_misc_rio TO triggertest_nopriv_b;
 -- Connect as non-privileged user "triggertest_nopriv_a"

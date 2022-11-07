@@ -1763,7 +1763,6 @@ LINE 1: alter type int[2][3] set default encoding(compresstype=RLE_T...
                       ^
 -- permissions checks
 create role typcheck;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 set session authorization typcheck;
 alter type int42 set default encoding (compresstype=zlib, compresslevel=1);
 ERROR:  must be owner of type int42

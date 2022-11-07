@@ -31,14 +31,11 @@ CREATE RESOURCE GROUP rg_dump_test3 WITH (concurrency=2, cpu_rate_limit=5, memor
 WARNING:  resource group is disabled
 HINT:  To enable set gp_resource_manager=group
 CREATE ROLE role_dump_test1 RESOURCE GROUP rg_dump_test1;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 WARNING:  resource group is disabled
 HINT:  To enable set gp_resource_manager=group
 CREATE ROLE role_dump_test2 RESOURCE GROUP rg_dump_test2;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 WARNING:  resource group is disabled
 HINT:  To enable set gp_resource_manager=group
 CREATE ROLE role_dump_test3 RESOURCE GROUP rg_dump_test3;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 WARNING:  resource group is disabled
 HINT:  To enable set gp_resource_manager=group

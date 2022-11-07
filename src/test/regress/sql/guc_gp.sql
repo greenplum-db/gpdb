@@ -1,4 +1,3 @@
-SELECT min_val, max_val FROM pg_settings WHERE name = 'gp_resqueue_priority_cpucores_per_segment';
 
 -- Test cursor gang should not be reused if SET command happens.
 CREATE OR REPLACE FUNCTION test_set_cursor_func() RETURNS text as $$

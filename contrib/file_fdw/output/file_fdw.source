@@ -7,9 +7,7 @@ DROP ROLE IF EXISTS regress_file_fdw_superuser, regress_file_fdw_user, regress_n
 RESET client_min_messages;
 CREATE ROLE regress_file_fdw_superuser LOGIN SUPERUSER; -- is a superuser
 CREATE ROLE regress_file_fdw_user LOGIN;                -- has priv and user mapping
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE ROLE regress_no_priv_user LOGIN;                 -- has priv but no user mapping
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 -- Install file_fdw
 CREATE EXTENSION file_fdw;
 -- regress_file_fdw_superuser owns fdw-related objects

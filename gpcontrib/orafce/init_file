@@ -19,11 +19,5 @@
 # of messages.
 m/^(?:HINT|NOTICE):\s+.+\'DISTRIBUTED BY\' clause.*/
 
-# The following NOTICE is generated when creating a role. It is to inform the
-# user that the database will assign the default resource queue to the role if
-# the user has not explicitly specified one. Merging tests from postgres will
-# cause the tests to output these messages and we would need to manually modify
-# the corresponding expected output. Hence we want to ignore these.
-m/^NOTICE:.*resource queue required -- using default resource queue ".*"/
 
 -- end_matchignore

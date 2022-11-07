@@ -54,11 +54,6 @@ $$;
 
 0: SHOW gp_resource_manager;
 
--- resource queue statistics should not crash
-0: SELECT * FROM pg_resqueue_status;
-0: SELECT * FROM gp_toolkit.gp_resqueue_status;
-0: SELECT * FROM gp_toolkit.gp_resq_priority_backend;
-
 -- verify the default settings
 0: SELECT * from gp_toolkit.gp_resgroup_config;
 

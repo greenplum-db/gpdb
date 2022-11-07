@@ -44,7 +44,6 @@ insert into testsisc select i, i % 1000, i % 100000, i % 75 from
 (select generate_series(1, nsegments * 50000) as i from 
 	(select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar; 
 
-set gp_resqueue_print_operator_memory_limits=on;
 set statement_mem='2MB';
 -- ORCA does not generate SharedInputScan with a Sort node underneath it. For
 -- the following query, ORCA disregards the order by inside the cte definition;

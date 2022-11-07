@@ -44,7 +44,7 @@ test: instr_in_shmem_setup
 test: instr_in_shmem
 
 test: createdb
-test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp triggers_gp returning_gp resource_queue_with_rule gp_types gp_index cluster_gp combocid_gp gp_sort gp_prepared_xacts gp_backend_info
+test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp triggers_gp returning_gp gp_types gp_index cluster_gp combocid_gp gp_sort gp_prepared_xacts gp_backend_info
 test: spi_processed64bit
 test: gp_lock
 test: gp_tablespace_with_faults
@@ -144,8 +144,6 @@ test: alter_table_set alter_table_gp alter_table_ao alter_table_set_am subtransa
 test: aocs
 test: ic
 
-test: resource_queue
-test: resource_queue_function
 test: disable_autovacuum
 # Check for shmem leak for instrumentation slots before gpdb restart
 test: instr_in_shmem_verify
@@ -153,7 +151,6 @@ test: instr_in_shmem_verify
 # hold locks.
 test: partition_locking
 test: vacuum_gp
-test: resource_queue_stat
 # background analyze may affect pgstat
 test: pg_stat
 test: bfv_partition qp_misc_rio
@@ -164,7 +161,6 @@ test: enable_autovacuum
 test: resource_group
 test: resource_group_cpuset
 test: resource_group_gucs
-test: wrkloadadmin
 
 # expand_table tests may affect the result of 'gp_explain', keep them below that
 test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation pg_stat_last_shoperation gp_numeric_agg partindex_test partition_pruning runtime_stats expand_table expand_table_ao expand_table_aoco expand_table_regression
@@ -179,7 +175,8 @@ test: minirepro
 # NOTE: gporca_faults uses gp_fault_injector - so do not add to a parallel group
 test: gporca_faults
 
-test: bb_memory_quota
+# RESOURCE_QUEUE_FIXME: Do we need to modify bb_memory_quota to test resource group?
+#test: bb_memory_quota
 
 # Tests for replicated table
 test: rpt rpt_joins rpt_tpch rpt_returning
@@ -197,8 +194,10 @@ test: qp_functions_in_contexts_setup
 # test: qp_misc_rio_join_small qp_misc_rio qp_correlated_query qp_targeted_dispatch qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4 qp_query_execution qp_functions_in_from qp_functions_in_select qp_functions_in_subquery qp_functions_in_subquery_column qp_functions_in_subquery_constant qp_functions_in_with
 test: qp_misc_rio_join_small qp_correlated_query qp_targeted_dispatch qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4 qp_query_execution qp_functions_in_from qp_functions_in_select qp_functions_in_subquery qp_functions_in_subquery_column qp_functions_in_with correlated_subquery
 
-test: dpe qp_dpe qp_subquery qp_left_anti_semi_join qp_union_intersect qp_functions qp_functions_idf qp_regexp qp_resource_queue qp_orca_fallback gp_sync_lc_gucs
+test: dpe qp_dpe qp_subquery qp_left_anti_semi_join qp_union_intersect qp_functions qp_functions_idf qp_regexp qp_orca_fallback gp_sync_lc_gucs
 
+#RESOURCE_QUEUE_FIXME: Do we nedd to change qp_resource_queue to qp_resource_group to test query process while using resource group?
+#test: qp_resource_queue
 test: olap_setup
 test: qp_olap_group qp_olap_group2
 

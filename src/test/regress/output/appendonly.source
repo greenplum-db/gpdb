@@ -1479,7 +1479,6 @@ SELECT * FROM appendonly_subxans_test WHERE a < 10;
 (0 rows)
 
 CREATE ROLE appendony_test_user2;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 BEGIN;
 CREATE TABLE fo(a int, b int) WITH (appendonly=true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.

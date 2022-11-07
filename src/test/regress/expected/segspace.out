@@ -202,7 +202,6 @@ create table foo (i int, j int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 set statement_mem=1024; -- 1mb for 3 segment to get leak.
-set gp_resqueue_print_operator_memory_limits=on;
 set gp_cte_sharing=on;
 -- enable the fault injector
 select gp_inject_fault('workfile_write_failure', 'reset', 2);
@@ -254,7 +253,6 @@ select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used
 (1 row)
 
 reset statement_mem;
-reset gp_resqueue_print_operator_memory_limits;
 reset gp_cte_sharing;
 ------------ workfile_limit_per_segment leak check during ERROR on DELETE with APPEND-ONLY table -------------------
 drop table if exists testsisc;

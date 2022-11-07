@@ -76,8 +76,7 @@ extern Datum noop_project(PG_FUNCTION_ARGS);
 extern Datum userdata_describe(PG_FUNCTION_ARGS);
 extern Datum userdata_project(PG_FUNCTION_ARGS);
 
-/* Resource queue/group support */
-extern Datum checkResourceQueueMemoryLimits(PG_FUNCTION_ARGS);
+/* Resource group support */
 extern Datum repeatPalloc(PG_FUNCTION_ARGS);
 extern Datum resGroupPalloc(PG_FUNCTION_ARGS);
 
@@ -442,48 +441,7 @@ multiset_example(PG_FUNCTION_ARGS)
 	SRF_RETURN_NEXT(fctx, tup_datum);
 }
 
-/*
- * Checks if memory limit of resource queue is in sync across
- * shared memory and catalog.
- * This function should ONLY be used for unit testing.
- */
-PG_FUNCTION_INFO_V1(checkResourceQueueMemoryLimits);
-Datum
-checkResourceQueueMemoryLimits(PG_FUNCTION_ARGS)
-{
-	char *queueName = PG_GETARG_CSTRING(0);
-	Oid queueId;
-	ResQueue queue;
-	double v1, v2;
 
-	if (!IsResQueueEnabled())
-		return (Datum)0;
-
-	if (queueName == NULL)
-		return (Datum)0;
-
-	/* get OID for queue */
-	queueId = GetResQueueIdForName(queueName);
-
-	if (queueId == InvalidOid)
-		return (Datum)0;
-
-	/* ResQueueHashFind needs a lock */
-	LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
-
-	/* get shared memory version of queue */
-	queue = ResQueueHashFind(queueId);
-
-	LWLockRelease(ResQueueLock);
-
-	if (!queue)
-		return (Datum) 0;
-
-	v1 = ceil(queue->limits[RES_MEMORY_LIMIT].threshold_value);
-	v2 = ceil((double) ResourceQueueGetMemoryLimitInCatalog(queueId));
-
-	PG_RETURN_BOOL(v1 == v2);
-}
 
 /*
  * Helper function to raise an INFO with options including DETAIL, HINT

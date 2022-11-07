@@ -1155,7 +1155,6 @@ select * from mpp5754 order by n_nationkey;
 drop table mpp5754;
 -- MPP-5918
 create role atsdb;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 create table owner_test(i int, toast text) distributed randomly;
 alter table owner_test owner to atsdb;
 alter table owner_test set with (reorganize = true) distributed by (i);

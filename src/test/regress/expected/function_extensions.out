@@ -337,7 +337,6 @@ $$ language plpgsql EXECUTE ON ANY IMMUTABLE;
 -- Set the owner, to make the output of the \df+ tests below repeatable,
 -- regardless of the name of the current user.
 CREATE ROLE srftestuser;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 ALTER FUNCTION test_srf() OWNER TO srftestuser;
 select test_srf();
  test_srf 

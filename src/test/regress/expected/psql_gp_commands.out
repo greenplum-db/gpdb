@@ -121,7 +121,6 @@ DROP ROLE test_psql_du_e9;
 -- Create a test schema, with different kinds of relations. To make the
 -- expected output insensitive to the current username, change the owner.
 CREATE ROLE test_psql_de_role;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE FOREIGN DATA WRAPPER dummy_wrapper;
 COMMENT ON FOREIGN DATA WRAPPER dummy_wrapper IS 'useless';
 CREATE SERVER dummy_server FOREIGN DATA WRAPPER dummy_wrapper;

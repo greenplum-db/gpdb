@@ -54,7 +54,6 @@ INSERT INTO test_mat_large SELECT i,i,i,i,i,i,i,i from
 	(select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
 
 SET statement_mem=1024;
-set gp_resqueue_print_operator_memory_limits=on;
 set enable_hashjoin = false;
 set enable_nestloop = true;
 -- ORCA doesn't honor enable_nestloop/enable_hashjoin, so this won't produce

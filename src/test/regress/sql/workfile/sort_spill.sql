@@ -35,7 +35,6 @@ insert into testsort select i, i % 1000, i % 100000, i % 75 from
 	(select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
 
 set statement_mem="1MB";
-set gp_resqueue_print_operator_memory_limits=on;
 
 select avg(i2) from (select i1,i2 from testsort order by i2) foo;
 select * from sort_spill.is_workfile_created('explain (analyze, verbose) select i1,i2 from testsort order by i2;');
