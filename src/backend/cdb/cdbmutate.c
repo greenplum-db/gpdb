@@ -705,7 +705,6 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 			subplan->qDispSliceId = sliceId;
 		}
 	}
-	hash_destroy(state.planid_subplans);
 
 	/*
 	 * Discard subtrees of Query node that aren't needed for execution. Note
