@@ -1681,6 +1681,7 @@ ANALYZE a_partition_table_used_in_cte_test;
 WITH cte AS (
   SELECT * FROM a_partition_table_used_in_cte_test WHERE c1 < 2
 ) SELECT * FROM cte WHERE c1 = 1;
+DROP TABLE a_partition_table_used_in_cte_test;
 
 -- CLEANUP
 -- start_ignore

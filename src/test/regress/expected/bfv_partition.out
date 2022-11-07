@@ -3102,6 +3102,7 @@ WITH cte AS (
 ----
 (0 rows)
 
+DROP TABLE a_partition_table_used_in_cte_test;
 -- CLEANUP
 -- start_ignore
 drop schema if exists bfv_partition cascade;
