@@ -57,9 +57,6 @@ DEPENDENCY_EXCLUSION = [
     'pg_namespace',
     'pg_resgroup',
     'pg_resgroupcapability',
-    'pg_resourcetype',
-    'pg_resqueue',
-    'pg_resqueuecapability',
     'pg_tablespace'
     ]
 
@@ -231,9 +228,6 @@ class GPCatalog():
         self._tables['pg_depend']._setPrimaryKey(
             "classid objid objsubid refclassid refobjid refobjsubid deptype")
 
-        if self._version >= "4.0":
-            self._tables['pg_resqueuecapability']._setPrimaryKey(
-                "resqueueid restypid")
 
     def _getJson(self):
         """

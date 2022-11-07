@@ -2572,12 +2572,9 @@ def processForeignKeyResult(catname, pkcatname, colname, allValues):
 
         # Special cases:
         #    1. pg_class(oid) referencing pg_type(oid) - relation & composite type
-        #    2. pg_resqueuecapability(restypid) referencing pg_resourcetype(restypid)
         if pkcatname == 'pg_type' and fkeytab == 'pg_class':
             rowObjName = 'pg_class'
             oid = getOidFromPK(rowObjName, fkeys)
-        elif pkcatname == 'pg_resourcetype' and gpColName == 'restypid':
-            oid = getResourceTypeOid(oid)
         gpObj = getGPObject(oid, rowObjName)
         gpObj.addForeignKeyIssue(issue)
 

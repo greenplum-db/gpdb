@@ -35,7 +35,6 @@
 
 static void help(void);
 
-static void dumpResQueues(PGconn *conn);
 static void dumpResGroups(PGconn *conn);
 static void dumpRoleConstraints(PGconn *conn);
 
@@ -70,7 +69,6 @@ static bool skip_acls = false;
 static bool verbose = false;
 static bool dosync = true;
 
-static int	resource_queues = 0;
 static int	resource_groups = 0;
 
 static int	binary_upgrade = 0;
@@ -139,7 +137,6 @@ main(int argc, char *argv[])
 		{"extra-float-digits", required_argument, NULL, 5},
 		{"if-exists", no_argument, &if_exists, 1},
 		{"inserts", no_argument, &inserts, 1},
-		{"resource-queues", no_argument, &resource_queues, 1},
 		{"resource-groups", no_argument, &resource_groups, 1},
 		{"roles-only", no_argument, NULL, 999},
 		{"lock-wait-timeout", required_argument, NULL, 2},
@@ -283,7 +280,7 @@ main(int argc, char *argv[])
 			 * and require the use of long options for the conflicting pair.
 			 */
 			case 'r':
-				fprintf(stderr, _("-r option is not supported. Did you mean --roles-only or --resource-queues?\n"));
+				fprintf(stderr, _("-r option is not supported. Did you mean --roles-only?\n"));
 				exit(1);
 				break;
 
@@ -367,7 +364,6 @@ main(int argc, char *argv[])
 				/* gp-format */
 				appendPQExpBuffer(pgdumpopts, " --gp-syntax");
 				gp_syntax = true;
-				resource_queues = 1; /* --resource-queues is implied by --gp-syntax */
 				resource_groups = 1; /* --resource-groups is implied by --gp-syntax */
 				break;
 			case 1001:
@@ -637,10 +633,6 @@ main(int argc, char *argv[])
 		 */
 		if (!tablespaces_only)
 		{
-			/* Dump Resource Queues */
-			if (resource_queues)
-				dumpResQueues(conn);
-
 			/* Dump Resource Groups */
 			if (resource_groups)
 				dumpResGroups(conn);
@@ -707,7 +699,6 @@ help(void)
 	printf(_("  -S, --superuser=NAME         superuser user name to use in the dump\n"));
 	printf(_("  -t, --tablespaces-only       dump only tablespaces, no databases or roles\n"));
 	printf(_("  -x, --no-privileges          do not dump privileges (grant/revoke)\n"));
-	printf(_("  --resource-queues            dump resource queue data\n"));
 	printf(_("  --resource-groups            dump resource group data\n"));
 	printf(_("  --binary-upgrade             for use by upgrade utilities only\n"));
 	printf(_("  --column-inserts             dump data as INSERT commands with column names\n"));
@@ -750,18 +741,6 @@ help(void)
 	printf(_("Report bugs to <bugs@greenplum.org>.\n"));
 }
 
-
-/*
- * Build the WITH clause for resource queue dump
- */
-static void 
-buildWithClause(const char *resname, const char *ressetting, PQExpBuffer buf)
-{
-	if (0 == strncmp("memory_limit", resname, 12) && (strncmp(ressetting, "-1", 2) != 0))
-        	appendPQExpBuffer(buf, " %s='%s'", resname, ressetting);
-	else
-		appendPQExpBuffer(buf, " %s=%s", resname, ressetting);
-}
 
 /*
  * Dump resource group
@@ -921,180 +900,6 @@ dumpResGroups(PGconn *conn)
 }
 
 /*
- * Dump resource queues
- */
-static void
-dumpResQueues(PGconn *conn)
-{
-	PQExpBuffer buf = createPQExpBuffer();
-	PGresult   *res;
-	int			i_rsqname,
-				i_resname,
-				i_ressetting,
-				i_rqoid;
-	int			i;
-	char	   *prev_rsqname = NULL;
-	bool		bWith = false;
-
-	printfPQExpBuffer(buf,
-					  "SELECT oid, rsqname, 'activelimit' as resname, "
-					  "rsqcountlimit::text as ressetting, "
-					  "1 as ord FROM pg_resqueue "
-					  "UNION "
-					  "SELECT oid, rsqname, 'costlimit' as resname, "
-					  "rsqcostlimit::text as ressetting, "
-					  "2 as ord FROM pg_resqueue "
-					  "UNION "
-					  "SELECT oid, rsqname, 'overcommit' as resname, "
-					  "case when rsqovercommit then '1' "
-					  "else '0' end as ressetting, "
-					  "3 as ord FROM pg_resqueue "
-					  "UNION "
-					  "SELECT oid, rsqname, 'ignorecostlimit' as resname, "
-					  "rsqignorecostlimit::text as ressetting, "
-					  "4 as ord FROM pg_resqueue "
-					  "UNION "
-						  "SELECT rq.oid, rq.rsqname, rt.resname, rc.ressetting, "
-						  "rt.restypid as ord FROM "
-						  "pg_resqueue rq,  pg_resourcetype rt, "
-						  "pg_resqueuecapability rc WHERE "
-						  "rq.oid=rc.resqueueid and rc.restypid = rt.restypid "
-						  "order by rsqname,  ord");
-
-	res = executeQuery(conn, buf->data);
-
-	i_rqoid = PQfnumber(res, "oid");
-	i_rsqname = PQfnumber(res, "rsqname");
-	i_resname = PQfnumber(res, "resname");
-	i_ressetting = PQfnumber(res, "ressetting");
-
-	if (PQntuples(res) > 0)
-	    fprintf(OPF, "--\n-- Resource Queues\n--\n\n");
-
-
-	/*
-	 * settings for resource queue are spread over multiple rows, but sorted
-	 * by queue name (and ranked in order of resname ) eg:
-	 *
-	 * rsqname	  |		resname		| ressetting | ord
-	 * -----------+-----------------+------------+----- pg_default |
-	 * activelimit	   | 20			|	1 pg_default | costlimit	   | -1 |
-	 * 2 pg_default | overcommit	  | 0		   |   3 pg_default |
-	 * ignorecostlimit | 0			|	4
-	 *
-	 * This format lets us support an arbitrary number of resqueuecapability
-	 * entries.  So watch for change of rsqname to switch to next CREATE
-	 * statement.
-	 *
-	 */
-
-	for (i = 0; i < PQntuples(res); i++)
-	{
-		const char *rsqname;
-		const char *resname;
-		const char *ressetting;
-
-		rsqname = PQgetvalue(res, i, i_rsqname);
-		resname = PQgetvalue(res, i, i_resname);
-		ressetting = PQgetvalue(res, i, i_ressetting);
-
-		/* if first CREATE statement, or name changed... */
-		if (!prev_rsqname || (0 != strcmp(rsqname, prev_rsqname)))
-		{
-			if (prev_rsqname)
-			{
-				/* terminate the WITH if necessary */
-				if (bWith)
-					appendPQExpBuffer(buf, ") ");
-
-				appendPQExpBuffer(buf, ";\n");
-
-				fprintf(OPF, "%s", buf->data);
-
-				free(prev_rsqname);
-			}
-
-			bWith = false;
-
-			/* save the name */
-			prev_rsqname = strdup(rsqname);
-
-			resetPQExpBuffer(buf);
-
-			/* MPP-6926: cannot DROP or CREATE default queue, so ALTER it  */
-			if (0 == strcmp(rsqname, "pg_default"))
-				appendPQExpBuffer(buf, "ALTER RESOURCE QUEUE %s", fmtId(rsqname));
-			else
-				appendPQExpBuffer(buf, "CREATE RESOURCE QUEUE %s", fmtId(rsqname));
-		}
-
-		/* NOTE: currently 3.3-style, but will switch to one WITH clause... */
-
-		if (0 == strcmp("activelimit", resname))
-		{
-			if (strcmp(ressetting, "-1") != 0)
-				appendPQExpBuffer(buf, " ACTIVE THRESHOLD %s",
-								  ressetting);
-		}
-		else if (0 == strcmp("costlimit", resname))
-		{
-			if (strcmp(ressetting, "-1") != 0)
-				appendPQExpBuffer(buf, " COST THRESHOLD %.2f",
-								  atof(ressetting));
-		}
-		else if (0 == strcmp("ignorecostlimit", resname))
-		{
-			if (!((strcmp(ressetting, "-1") == 0)
-				  || (strcmp(ressetting, "0") == 0)))
-				appendPQExpBuffer(buf, " IGNORE THRESHOLD %.2f",
-								  atof(ressetting));
-		}
-		else if (0 == strcmp("overcommit", resname))
-		{
-			if (strcmp(ressetting, "1") == 0)
-				appendPQExpBuffer(buf, " OVERCOMMIT");
-			else
-				appendPQExpBuffer(buf, " NOOVERCOMMIT");
-		}
-		else
-		{
-			/* build the WITH clause */
-			if (bWith)
-				appendPQExpBuffer(buf, ",\n");
-			else
-			{
-				bWith = true;
-				appendPQExpBuffer(buf, "\n WITH (");
-			}
-
-			buildWithClause(resname, ressetting, buf);
-
-		}
-
-	}							/* end for */
-
-	/* need to write out last statement */
-	if (prev_rsqname)
-	{
-		/* terminate the WITH if necessary */
-		if (bWith)
-			appendPQExpBuffer(buf, ") ");
-
-		appendPQExpBuffer(buf, ";\n");
-
-		fprintf(OPF, "%s", buf->data);
-
-		free(prev_rsqname);
-	}
-
-	PQclear(res);
-
-	destroyPQExpBuffer(buf);
-
-	fprintf(OPF, "\n\n");
-}
-
-/*
  * Drop roles
  */
 static void
@@ -1170,7 +975,6 @@ dumpRoles(PGconn *conn)
 				i_rolreplication,
 				i_rolbypassrls,
 				i_rolcomment,
-				i_rolqueuename = -1,	/* keep compiler quiet */
 				i_rolgroupname = -1,	/* keep compiler quiet */
 				i_rolcreaterextgpfd = -1,
 				i_rolcreaterexthttp = -1,
@@ -1184,15 +988,13 @@ dumpRoles(PGconn *conn)
 	 * Support for gphdfs was removed in Greenplum 6
 	 */
 	bool		hdfs_auth = (server_version >= 80215 && server_version < 80400);
-	char	   *resq_col = resource_queues ? ", (SELECT rsqname FROM pg_resqueue WHERE "
-	"  pg_resqueue.oid = rolresqueue) AS rolqueuename " : "";
 	char	   *resgroup_col = resource_groups ? ", (SELECT rsgname FROM pg_resgroup WHERE "
 	"  pg_resgroup.oid = rolresgroup) AS rolgroupname " : "";
 	char	   *extauth_col = exttab_auth ? ", rolcreaterextgpfd, rolcreaterexthttp, rolcreatewextgpfd" : "";
 	char	   *hdfs_col = hdfs_auth ? ", rolcreaterexthdfs, rolcreatewexthdfs " : "";
 
 	/*
-	 * Query to select role info get resqueue if version support it get
+	 * Query to select role info get resgroup if version support it get
 	 * external table auth on gpfdist, gpfdists and http if version support it get
 	 */
 
@@ -1205,10 +1007,10 @@ dumpRoles(PGconn *conn)
 						  "rolvaliduntil, rolreplication, rolbypassrls, "
 						  "pg_catalog.shobj_description(oid, '%s') as rolcomment, "
 						  "rolname = current_user AS is_current_user "
-						  " %s %s %s %s"
+						  " %s %s %s"
 						  "FROM %s "
 						  "WHERE rolname !~ '^pg_' "
-						  "ORDER BY 2", role_catalog, resq_col, resgroup_col, extauth_col, hdfs_col, role_catalog);
+						  "ORDER BY 2", role_catalog, resgroup_col, extauth_col, hdfs_col, role_catalog);
 	else if (server_version >= 90500)
 		printfPQExpBuffer(buf,
 						  "SELECT oid, rolname, rolsuper, rolinherit, "
@@ -1217,9 +1019,9 @@ dumpRoles(PGconn *conn)
 						  "rolvaliduntil, rolreplication, rolbypassrls, "
 						  "pg_catalog.shobj_description(oid, '%s') as rolcomment, "
 						  "rolname = current_user AS is_current_user "
-						  " %s %s %s %s"
+						  " %s %s %s"
 						  "FROM %s "
-						  "ORDER BY 2", role_catalog, resq_col, resgroup_col, extauth_col, hdfs_col, role_catalog);
+						  "ORDER BY 2", role_catalog, resgroup_col, extauth_col, hdfs_col, role_catalog);
 	else if (server_version >= 90100)
 		printfPQExpBuffer(buf,
 						  "SELECT oid, rolname, rolsuper, rolinherit, "
@@ -1229,9 +1031,9 @@ dumpRoles(PGconn *conn)
 						  "false as rolbypassrls, "
 						  "pg_catalog.shobj_description(oid, '%s') as rolcomment, "
 						  "rolname = current_user AS is_current_user "
-						  " %s %s %s %s"
+						  " %s %s %s"
 						  "FROM %s "
-						  "ORDER BY 2", role_catalog, resq_col, resgroup_col, extauth_col, hdfs_col, role_catalog);
+						  "ORDER BY 2", role_catalog, resgroup_col, extauth_col, hdfs_col, role_catalog);
 	else
 		printfPQExpBuffer(buf,
 						  "SELECT oid, rolname, rolsuper, rolinherit, "
@@ -1241,9 +1043,9 @@ dumpRoles(PGconn *conn)
 						  "false as rolbypassrls, "
 						  "pg_catalog.shobj_description(oid, '%s') as rolcomment, "
 						  "rolname = current_user AS is_current_user "
-						  " %s %s %s %s"
+						  " %s %s %s"
 						  "FROM %s "
-						  "ORDER BY 2", role_catalog, resq_col, resgroup_col, extauth_col, hdfs_col, role_catalog);
+						  "ORDER BY 2", role_catalog, resgroup_col, extauth_col, hdfs_col, role_catalog);
 
 	res = executeQuery(conn, buf->data);
 
@@ -1261,9 +1063,6 @@ dumpRoles(PGconn *conn)
 	i_rolbypassrls = PQfnumber(res, "rolbypassrls");
 	i_rolcomment = PQfnumber(res, "rolcomment");
 	i_is_current_user = PQfnumber(res, "is_current_user");
-
-	if (resource_queues)
-		i_rolqueuename = PQfnumber(res, "rolqueuename");
 
 	if (resource_groups)
 		i_rolgroupname = PQfnumber(res, "rolgroupname");
@@ -1374,12 +1173,6 @@ dumpRoles(PGconn *conn)
 			appendPQExpBuffer(buf, " VALID UNTIL '%s'",
 							  PQgetvalue(res, i, i_rolvaliduntil));
 
-		if (resource_queues)
-		{
-			if (!PQgetisnull(res, i, i_rolqueuename))
-				appendPQExpBuffer(buf, " RESOURCE QUEUE %s",
-								  PQgetvalue(res, i, i_rolqueuename));
-		}
 
 		if (resource_groups)
 		{
