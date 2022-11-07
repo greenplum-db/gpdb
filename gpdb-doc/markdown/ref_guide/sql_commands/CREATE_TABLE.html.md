@@ -358,7 +358,7 @@ USING <access_method>
 
   <p class="note">
 <strong>Note:</strong>
-While you can also specify the table's access method using <code>WITH ( storage_parameter=appendoptimized )</code> VMware recommends that you use <code>USING ( access_method=value )</code> instead.
+While you can also specify the table's access method using <code>WITH (appendoptimized=true|false, orientation=row|column)</code> VMware recommends that you use <code>USING &ltaccess_method></code> instead.
 </p>
   
 WITH \( storage\_parameter=value \)

@@ -469,7 +469,7 @@ Specifying large block sizes can consume large amounts of memory. Block size det
 
 ## <a id="topic55"></a>Altering a Table 
 
-The `ALTER TABLE` command changes the definition of a table. Use `ALTER TABLE` to change table attributes such as column definitions, distribution policy, access method, storage model, and partition structure \(see also [Maintaining Partitioned Tables](ddl-partition.html)\). For example, to add a not-null constraint to a table column:
+The `ALTER TABLE` command changes the definition of a table. Use `ALTER TABLE` to change table attributes such as column definitions, distribution policy, access method, storage parameters, and partition structure \(see also [Maintaining Partitioned Tables](ddl-partition.html)\). For example, to add a not-null constraint to a table column:
 
 ```
 => ALTER TABLE address ALTER COLUMN street SET NOT NULL;
@@ -515,7 +515,7 @@ You may alter the method for accessing a table using the `SET ACCESS METHOD` cla
 
   <p class="note">
 <strong>Note:</strong>
-While you can also specify the table's access method using <code>SET &lt;storage_parameter></code>, VMware recommends that you use <code>SET ACCESS METHOD &lt;access_method></code> instead.
+While you can also specify the table's access method using <code>SET &lt;storage_parameter></code> or  <code>SET WITH&lt;storage_parameter></code>, VMware recommends that you use <code>SET ACCESS METHOD &lt;access_method></code> instead.
 </p>
 
 ### <a id="topic59"></a>Altering the Table Storage Model 

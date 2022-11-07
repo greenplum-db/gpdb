@@ -171,6 +171,7 @@ where storage\_parameter when used with the `SET WITH` command is:
    compresslevel={0-9}
    fillfactor={10-100}
    checksum= {true | false }
+   reorganize
 
 ```
 
