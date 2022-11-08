@@ -4037,23 +4037,23 @@ selectListPartition(PartitionNode *partnode, Datum *values, bool *isnull,
 	MemoryContext oldcxt = NULL;
 	PartitionListState *ls;
 
-	if (accessMethods && accessMethods->amstate[partnode->part->parlevel])
-		ls = (PartitionListState *) accessMethods->amstate[partnode->part->parlevel];
-	else
-	{
-		int			natts = partnode->part->parnatts;
+	//if (accessMethods && accessMethods->amstate[partnode->part->parlevel])
+	//	ls = (PartitionListState *) accessMethods->amstate[partnode->part->parlevel];
+	//else
+	//{
+        int   natts = partnode->part->parnatts;
 
-		ls = palloc(sizeof(PartitionListState));
+        ls = palloc(sizeof(PartitionListState));
 
-		ls->eqfuncs = palloc(sizeof(FmgrInfo) * natts);
-		ls->eqinit = palloc0(sizeof(bool) * natts);
+        ls->eqfuncs = palloc(sizeof(FmgrInfo) * natts);
+        ls->eqinit = palloc0(sizeof(bool) * natts);
 
-		if (accessMethods)
-			accessMethods->amstate[partnode->part->parlevel] = (void *) ls;
-	}
+        if (accessMethods)
+                accessMethods->amstate[partnode->part->parlevel] = (void *) ls;
+	//}
 
-	if (accessMethods && accessMethods->part_cxt)
-		oldcxt = MemoryContextSwitchTo(accessMethods->part_cxt);
+	//if (accessMethods && accessMethods->part_cxt)
+		//oldcxt = MemoryContextSwitchTo(accessMethods->part_cxt);
 
 	*foundOid = InvalidOid;
 

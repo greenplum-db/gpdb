@@ -8727,7 +8727,7 @@ reset optimizer_enable_materialize;
 drop table t1_12533;
 drop table t2_12533;
 --test for data selection from partition tables with predicate on date or timestamp type-------------
-create table public.test
+create table public.test_rangePartition
 (datedday date)
     WITH (
         appendonly=false
@@ -8740,100 +8740,101 @@ create table public.test
     );
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'datedday' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "test_1_prt_pdefault" for table "test"
-NOTICE:  CREATE TABLE will create partition "test_1_prt_pn_20221022" for table "test"
-NOTICE:  CREATE TABLE will create partition "test_1_prt_pn_20221023" for table "test"
-insert into public.test(datedday)
+NOTICE:  CREATE TABLE will create partition "test_rangepartition_1_prt_pdefault" for table "test_rangepartition"
+NOTICE:  CREATE TABLE will create partition "test_rangepartition_1_prt_pn_20221022" for table "test_rangepartition"
+NOTICE:  CREATE TABLE will create partition "test_rangepartition_1_prt_pn_20221023" for table "test_rangepartition"
+insert into public.test_rangePartition(datedday)
 select ('2022-10-22'::date)
 union
 select ('2022-10-23'::date);
 --Test case with condition on date and timestamp
-explain (costs off) select max(datedday) from public.test where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+explain (costs off) select max(datedday) from public.test_rangePartition where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
                                                                  QUERY PLAN                                                                  
 ---------------------------------------------------------------------------------------------------------------------------------------------
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Aggregate
                ->  Append
-                     ->  Seq Scan on test_1_prt_pdefault
+                     ->  Seq Scan on test_rangepartition_1_prt_pdefault
                            Filter: ((datedday = '10-23-2022'::date) OR (datedday = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
-                     ->  Seq Scan on test_1_prt_pn_20221022
+                     ->  Seq Scan on test_rangepartition_1_prt_pn_20221022
                            Filter: ((datedday = '10-23-2022'::date) OR (datedday = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
-                     ->  Seq Scan on test_1_prt_pn_20221023
+                     ->  Seq Scan on test_rangepartition_1_prt_pn_20221023
                            Filter: ((datedday = '10-23-2022'::date) OR (datedday = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
  Optimizer: Postgres query optimizer
 (11 rows)
 
-select max(datedday) from public.test where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+select max(datedday) from public.test_rangePartition where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
     max     
 ------------
  10-23-2022
 (1 row)
 
 --Test case with condition on date and timestamp
-explain (costs off) select max(datedday) from public.test where datedday='2022-10-23' or datedday='2022-10-22';
+explain (costs off) select max(datedday) from public.test_rangePartition where datedday='2022-10-23' or datedday='2022-10-22';
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
  Aggregate
    ->  Gather Motion 2:1  (slice1; segments: 2)
          ->  Aggregate
                ->  Append
-                     ->  Seq Scan on test_1_prt_pdefault
+                     ->  Seq Scan on test_rangepartition_1_prt_pdefault
                            Filter: ((datedday = '10-23-2022'::date) OR (datedday = '10-22-2022'::date))
-                     ->  Seq Scan on test_1_prt_pn_20221022
+                     ->  Seq Scan on test_rangepartition_1_prt_pn_20221022
                            Filter: ((datedday = '10-23-2022'::date) OR (datedday = '10-22-2022'::date))
-                     ->  Seq Scan on test_1_prt_pn_20221023
+                     ->  Seq Scan on test_rangepartition_1_prt_pn_20221023
                            Filter: ((datedday = '10-23-2022'::date) OR (datedday = '10-22-2022'::date))
  Optimizer: Postgres query optimizer
 (11 rows)
 
-select max(datedday) from public.test where datedday='2022-10-23' or datedday='2022-10-22';
+select max(datedday) from public.test_rangePartition where datedday='2022-10-23' or datedday='2022-10-22';
     max     
 ------------
  10-23-2022
 (1 row)
 
 --Test case with condition on timestamp and timestamp
-explain (costs off) select max(datedday) from public.test where datedday=('2022-10-23'::date -interval '0 day') or datedday=('2022-10-23'::date -interval '1 day');
+explain (costs off) select max(datedday) from public.test_rangePartition where datedday=('2022-10-23'::date -interval '0 day') or datedday=('2022-10-23'::date -interval '1 day');
                                                                                     QUERY PLAN                                                                                    
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Aggregate
                ->  Append
-                     ->  Seq Scan on test_1_prt_pdefault
+                     ->  Seq Scan on test_rangepartition_1_prt_pdefault
                            Filter: ((datedday = 'Sun Oct 23 00:00:00 2022'::timestamp without time zone) OR (datedday = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
-                     ->  Seq Scan on test_1_prt_pn_20221022
+                     ->  Seq Scan on test_rangepartition_1_prt_pn_20221022
                            Filter: ((datedday = 'Sun Oct 23 00:00:00 2022'::timestamp without time zone) OR (datedday = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
-                     ->  Seq Scan on test_1_prt_pn_20221023
+                     ->  Seq Scan on test_rangepartition_1_prt_pn_20221023
                            Filter: ((datedday = 'Sun Oct 23 00:00:00 2022'::timestamp without time zone) OR (datedday = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
  Optimizer: Postgres query optimizer
 (11 rows)
 
-select max(datedday) from public.test where datedday=('2022-10-23'::date -interval '0 day') or datedday=('2022-10-23'::date -interval '1 day');
+select max(datedday) from public.test_rangePartition where datedday=('2022-10-23'::date -interval '0 day') or datedday=('2022-10-23'::date -interval '1 day');
     max     
 ------------
  10-23-2022
 (1 row)
 
-explain (costs off) select datedday from public.test where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+explain (costs off) select datedday from public.test_rangePartition where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
                                                            QUERY PLAN                                                            
 ---------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Append
-         ->  Seq Scan on test_1_prt_pdefault
+         ->  Seq Scan on test_rangepartition_1_prt_pdefault
                Filter: ((datedday = '10-23-2022'::date) OR (datedday = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
-         ->  Seq Scan on test_1_prt_pn_20221022
+         ->  Seq Scan on test_rangepartition_1_prt_pn_20221022
                Filter: ((datedday = '10-23-2022'::date) OR (datedday = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
-         ->  Seq Scan on test_1_prt_pn_20221023
+         ->  Seq Scan on test_rangepartition_1_prt_pn_20221023
                Filter: ((datedday = '10-23-2022'::date) OR (datedday = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
  Optimizer: Postgres query optimizer
 (9 rows)
 
-select datedday from public.test where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+select datedday from public.test_rangePartition where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
   datedday  
 ------------
  10-23-2022
  10-22-2022
 (2 rows)
 
+drop table test_rangePartition;
