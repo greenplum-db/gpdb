@@ -63,6 +63,7 @@
 #include "ic_proxy_server.h"
 #include "ic_proxy_pkt_cache.h"
 #include "ic_proxy_router.h"
+#include "utils/faultinjector.h"
 
 #include <uv.h>
 
@@ -210,18 +211,20 @@ ic_proxy_client_table_shutdown_by_dbid(uint16 dbid)
 	{
 		ICProxyClient *client = entry->client;
 
-		/* cached pkts must also be dropped */
-		ic_proxy_client_drop_p2c_cache(client);
-
 		if (client->state & IC_PROXY_CLIENT_STATE_PLACEHOLDER)
 			continue;
 
 		if (client->key.remoteDbid != dbid)
 			continue;
 
+		/* cached pkts from/to the remote dbid must also be dropped */
+		ic_proxy_client_drop_p2c_cache(client);
+
 		ic_proxy_client_shutdown_c2p(client);
 		ic_proxy_client_shutdown_p2c(client);
 	}
+
+	SIMPLE_FAULT_INJECTOR("ic_proxy_client_table_shutdown_by_dbid_end");
 }
 
 /*
@@ -1261,6 +1264,8 @@ ic_proxy_client_cache_p2c_pkt(ICProxyClient *client, ICProxyPkt *pkt)
 		   "ic-proxy: %s: cached a %s for future use, %d in the list",
 				 ic_proxy_client_get_name(client), ic_proxy_pkt_to_str(pkt),
 				 list_length(client->pkts));
+
+	SIMPLE_FAULT_INJECTOR("ic_proxy_client_cached_p2c_pkt");
 }
 
 /*

@@ -421,7 +421,11 @@ static BackgroundWorker PMAuxProcList[MaxPMAuxProc] =
 
 #ifdef ENABLE_IC_PROXY
 	{"ic proxy process",
+#ifdef FAULT_INJECTOR
+	 BGWORKER_SHMEM_ACCESS,
+#else
 	 0,
+#endif
 	 BgWorkerStart_RecoveryFinished,
 	 0, /* restart immediately if ic proxy process exits with non-zero code */
 	 ICProxyMain, {0}, {0}, 0, 0,
