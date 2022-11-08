@@ -4036,24 +4036,31 @@ selectListPartition(PartitionNode *partnode, Datum *values, bool *isnull,
 	Partition  *part = partnode->part;
 	MemoryContext oldcxt = NULL;
 	PartitionListState *ls;
+        int	natts = partnode->part->parnatts;
+	if (accessMethods && accessMethods->amstate[partnode->part->parlevel])
+        {
+		ls = (PartitionListState *) accessMethods->amstate[partnode->part->parlevel];
+                // setting the following condition, to ensure correct access function is selected
+                //every time in a scenario with multiple predicates of different type in a partition table query.
+                for (int j=0;j< natts;j++)
+                {
+                        ls->eqinit[j]=false;
+                }
+        }
+	else
+	{
 
-	//if (accessMethods && accessMethods->amstate[partnode->part->parlevel])
-	//	ls = (PartitionListState *) accessMethods->amstate[partnode->part->parlevel];
-	//else
-	//{
-        int   natts = partnode->part->parnatts;
+		ls = palloc(sizeof(PartitionListState));
 
-        ls = palloc(sizeof(PartitionListState));
+		ls->eqfuncs = palloc(sizeof(FmgrInfo) * natts);
+		ls->eqinit = palloc0(sizeof(bool) * natts);
 
-        ls->eqfuncs = palloc(sizeof(FmgrInfo) * natts);
-        ls->eqinit = palloc0(sizeof(bool) * natts);
+		if (accessMethods)
+			accessMethods->amstate[partnode->part->parlevel] = (void *) ls;
+	}
 
-        if (accessMethods)
-                accessMethods->amstate[partnode->part->parlevel] = (void *) ls;
-	//}
-
-	//if (accessMethods && accessMethods->part_cxt)
-		//oldcxt = MemoryContextSwitchTo(accessMethods->part_cxt);
+	if (accessMethods && accessMethods->part_cxt)
+		oldcxt = MemoryContextSwitchTo(accessMethods->part_cxt);
 
 	*foundOid = InvalidOid;
 
@@ -4080,7 +4087,7 @@ selectListPartition(PartitionNode *partnode, Datum *values, bool *isnull,
 		 */
 		foreach(lc2, vals)
 		{
-			ListCell   *lc3;
+                        ListCell   *lc3;
 			List	   *colvals = (List *) lfirst(lc2);
 			int			i = 0;
 
@@ -4372,48 +4379,66 @@ selectRangePartition(PartitionNode *partnode, Datum *values, bool *isnull,
 	MemoryContext oldcxt = NULL;
 
 	Assert(partnode->part->parkind == 'r');
-
-
-        int			natts = partnode->part->parnatts;
-
-        /*
-         * We're still in our caller's memory context so the memory will
-         * persist long enough for us.
-         */
-        rs = palloc(sizeof(PartitionRangeState));
-        rs->lefuncs_direct = palloc0(sizeof(FmgrInfo) * natts);
-        rs->ltfuncs_direct = palloc0(sizeof(FmgrInfo) * natts);
-        rs->lefuncs_inverse = palloc0(sizeof(FmgrInfo) * natts);
-        rs->ltfuncs_inverse = palloc0(sizeof(FmgrInfo) * natts);
-
-        /*
-         * Set the function Oid to InvalidOid to signal that we haven't looked
-         * up this function yet
-         */
-        for (int keyno = 0; keyno < natts; keyno++)
+        int	natts = partnode->part->parnatts;
+	if (accessMethods && accessMethods->amstate[partnode->part->parlevel])
         {
-                rs->lefuncs_direct[keyno].fn_oid = InvalidOid;
-                rs->ltfuncs_direct[keyno].fn_oid = InvalidOid;
-                rs->lefuncs_inverse[keyno].fn_oid = InvalidOid;
-                rs->lefuncs_inverse[keyno].fn_oid = InvalidOid;
-        }
-
-        /*
-         * Unrolling the rules into an array currently works for the top level
-         * partition only
-         */
-        if (partnode->part->parlevel == 0)
-        {
-                int			i = 0;
-                ListCell   *lc;
-
-                rs->rules = palloc(sizeof(PartitionRule *) * list_length(rules));
-
-                foreach(lc, rules)
-                        rs->rules[i++] = (PartitionRule *) lfirst(lc);
+                rs = (PartitionRangeState *) accessMethods->amstate[partnode->part->parlevel];
+                // invalidating the fn_oid, to ensure correct access function is selected
+                // every time in a scenario with multiple predicates of different type in a partition table query.
+                for (int keyno = 0; keyno < natts; keyno++)
+                {
+                        rs->lefuncs_direct[keyno].fn_oid = InvalidOid;
+                        rs->ltfuncs_direct[keyno].fn_oid = InvalidOid;
+                        rs->lefuncs_inverse[keyno].fn_oid = InvalidOid;
+                        rs->lefuncs_inverse[keyno].fn_oid = InvalidOid;
+                }
         }
         else
-                rs->rules = NULL;
+	{
+
+
+		/*
+		 * We're still in our caller's memory context so the memory will
+		 * persist long enough for us.
+		 */
+		rs = palloc(sizeof(PartitionRangeState));
+		rs->lefuncs_direct = palloc0(sizeof(FmgrInfo) * natts);
+		rs->ltfuncs_direct = palloc0(sizeof(FmgrInfo) * natts);
+		rs->lefuncs_inverse = palloc0(sizeof(FmgrInfo) * natts);
+		rs->ltfuncs_inverse = palloc0(sizeof(FmgrInfo) * natts);
+
+		/*
+		 * Set the function Oid to InvalidOid to signal that we haven't looked
+		 * up this function yet
+		 */
+		for (int keyno = 0; keyno < natts; keyno++)
+		{
+                        rs->lefuncs_direct[keyno].fn_oid = InvalidOid;
+			rs->ltfuncs_direct[keyno].fn_oid = InvalidOid;
+			rs->lefuncs_inverse[keyno].fn_oid = InvalidOid;
+			rs->lefuncs_inverse[keyno].fn_oid = InvalidOid;
+		}
+
+		/*
+		 * Unrolling the rules into an array currently works for the top level
+		 * partition only
+		 */
+		if (partnode->part->parlevel == 0)
+		{
+			int     i = 0;
+			ListCell   *lc;
+
+			rs->rules = palloc(sizeof(PartitionRule *) * list_length(rules));
+
+			foreach(lc, rules)
+				rs->rules[i++] = (PartitionRule *) lfirst(lc);
+		}
+		else
+			rs->rules = NULL;
+	}
+
+	if (accessMethods && accessMethods->part_cxt)
+		oldcxt = MemoryContextSwitchTo(accessMethods->part_cxt);
 
 	*foundOid = InvalidOid;
 
