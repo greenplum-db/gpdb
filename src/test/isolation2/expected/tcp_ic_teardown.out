@@ -2,27 +2,10 @@
 -- teardown on the motion sender side, for the final response from the motion
 -- receiver(s).
 
-CREATE FUNCTION set_gp_ic_type(ic_type text) RETURNS VOID as $$ import os cmd = 'gpconfig -c gp_interconnect_type -v %s' % ic_type if os.system(cmd) is not 0: plpy.error('Setting gp_interconnect_type to %s failed' % ic_type) $$ LANGUAGE plpythonu;
-CREATE
-
 CREATE TABLE tcp_ic_teardown(i int);
 CREATE
 INSERT INTO tcp_ic_teardown SELECT generate_series(1, 5);
 INSERT 5
-
--- Save current IC type before we set it to 'tcp', so we can revert it at the
--- end of the test.
--1U: CREATE TABLE saved_ic_type AS SELECT current_setting('gp_interconnect_type') AS ic_type;
-CREATE 1
--1U: SELECT set_gp_ic_type('tcp');
- set_gp_ic_type 
-----------------
-                
-(1 row)
-!\retcode gpstop -au;
--- start_ignore
--- end_ignore
-(exited with code 0)
 
 SELECT gp_inject_fault('waitOnOutbound', 'suspend', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 0;
  gp_inject_fault 
@@ -77,16 +60,3 @@ SELECT gp_inject_fault('doSendStopMessageTCP', 'reset', dbid) FROM gp_segment_co
 1<:  <... completed>
 ERROR:  timed out waiting for response from motion receiver during TCP interconnect teardown  (seg1 slice1 192.168.0.148:7003 pid=654372)
 DETAIL:  1 connection(s) with pending response after 3 seconds
-
--- Revert IC type
--1U: SELECT set_gp_ic_type(ic_type) FROM saved_ic_type;
- set_gp_ic_type 
-----------------
-                
-(1 row)
-!\retcode gpstop -au;
--- start_ignore
--- end_ignore
-(exited with code 0)
--1U: DROP TABLE saved_ic_type;
-DROP
