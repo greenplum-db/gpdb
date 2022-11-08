@@ -1800,7 +1800,31 @@ shareinput_walker(Node *node, ShareInputContext *ctx)
 	else
 		recursive_down = true;
 
-	if (recursive_down)
+	if (recursive_down && IsA(node, SubPlan))
+	{
+		/*
+		 * The general comment to all SubPlan nodes. Before, we walked through
+		 * subplans separately from main plan. 'motStack' we use in mutators
+		 * not contains possible motion(slice) id from main plan in this case.
+		 * This caused underlying subplan's nodes not marked as cross-slice -
+		 * we didn't respect upper slices from main plan. To avoid this, we
+		 * now iterate over all nodes (even non-plan nodes), iterate through
+		 * subplans as parts of main tree and right on their places.
+		 */
+		SubPlan    *subplan = (SubPlan *) node;
+
+		/*
+		 * The code around rtables (for SubqueryScan and
+		 * TableFunctionScan) works only with appropriate subroot. Find
+		 * one and copy to context.
+		 */
+		ctx->base.node = (Node *) planner_subplan_get_root(root, subplan);
+		plan_tree_walker(node, shareinput_walker, ctx);
+
+		/* Restore all values which could be changed above */
+		ctx->base.node = (Node *) root;
+	}
+	else if (recursive_down && is_plan_node(node))
 	{
 		/*
 		 * The code below can modify various params depends on it's logic.
@@ -1812,27 +1836,7 @@ shareinput_walker(Node *node, ShareInputContext *ctx)
 		Plan	   *save_lefttree = plan->lefttree;
 		Plan	   *save_righttree = plan->righttree;
 
-		/*
-		 * The general comment to all SubPlan nodes. Before, we walked through
-		 * subplans separately from main plan. 'motStack' we use in mutators
-		 * not contains possible motion(slice) id from main plan in this case.
-		 * This caused underlying subplan's nodes not marked as cross-slice -
-		 * we didn't respect upper slices from main plan. To avoid this, we
-		 * now iterate over all nodes (even non-plan nodes), iterate through
-		 * subplans as parts of main tree and right on their places.
-		 */
-		if (IsA(node, SubPlan))
-		{
-			SubPlan    *subplan = (SubPlan *) node;
-
-			/*
-			 * The code around rtables (for SubqueryScan and
-			 * TableFunctionScan) works only with appropriate subroot. Find
-			 * one and copy to context.
-			 */
-			ctx->base.node = (Node *) planner_subplan_get_root(root, subplan);
-		}
-		else if (IsA(node, SubqueryScan))
+		if (IsA(node, SubqueryScan))
 		{
 			SubqueryScan *subqscan = (SubqueryScan *) node;
 			RelOptInfo *rel;
@@ -1925,6 +1929,8 @@ shareinput_walker(Node *node, ShareInputContext *ctx)
 		plan->lefttree = save_lefttree;
 		plan->righttree = save_righttree;
 	}
+	else if (recursive_down)
+		plan_tree_walker(node, shareinput_walker, ctx);
 
 	if (is_plan_node(node))
 		(*mutator) (node, root, true);
