@@ -3747,14 +3747,14 @@ shouldBypassQuery(const char *query_string)
 	{
 		parsetree = (Node *) lfirst(parsetree_item);
 
+		raw_expression_tree_walker(parsetree, checkBypassWalker, NULL);
+
 		if (nodeTag(parsetree) != T_VariableSetStmt &&
 			nodeTag(parsetree) != T_VariableShowStmt)
 		{
 			bypass = false;
 			break;
 		}
-
-		raw_expression_tree_walker(parsetree, checkBypassWalker, NULL);
 	}
 
 	list_free_deep(parsetree_list);
