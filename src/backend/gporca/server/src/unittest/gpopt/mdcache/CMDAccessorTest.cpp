@@ -553,7 +553,8 @@ CMDAccessorTest::EresUnittest_IndexPartConstraint()
 	CColumnFactory *col_factory = COptCtxt::PoctxtFromTLS()->Pcf();
 
 	// lookup a relation in the MD cache
-	CMDIdGPDB *rel_mdid = GPOS_NEW(mp) CMDIdGPDB(GPOPT_TEST_REL_OID22);
+	CMDIdGPDB *rel_mdid =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_TEST_REL_OID22);
 
 	const IMDRelation *pmdrel = mda.RetrieveRel(rel_mdid);
 	GPOS_ASSERT(0 < pmdrel->IndexCount());

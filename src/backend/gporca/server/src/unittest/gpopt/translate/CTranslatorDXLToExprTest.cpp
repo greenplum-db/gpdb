@@ -244,7 +244,8 @@ public:
 		CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 		m_pmdtypeint4 =
 			md_accessor->PtMDType<IMDTypeInt4>(CTestUtils::m_sysidDefault);
-		CMDIdGPDB *mdid = GPOS_NEW(mp) CMDIdGPDB(oidTableOid, 1, 1);
+		CMDIdGPDB *mdid =
+			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, oidTableOid, 1, 1);
 
 		const BOOL convert_hash_to_random = false;
 		const ULONG ulExecuteAsUser = 0;

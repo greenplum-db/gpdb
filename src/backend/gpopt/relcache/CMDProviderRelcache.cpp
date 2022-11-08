@@ -50,10 +50,11 @@ CMDProviderRelcache::CMDProviderRelcache(CMemoryPool *mp) : m_mp(mp)
 //---------------------------------------------------------------------------
 CWStringBase *
 CMDProviderRelcache::GetMDObjDXLStr(CMemoryPool *mp, CMDAccessor *md_accessor,
-									IMDId *md_id) const
+									IMDId *md_id,
+									IMDCacheObject::Emdtype mdtype) const
 {
-	IMDCacheObject *md_obj =
-		CTranslatorRelcacheToDXL::RetrieveObject(mp, md_accessor, md_id);
+	IMDCacheObject *md_obj = CTranslatorRelcacheToDXL::RetrieveObject(
+		mp, md_accessor, md_id, mdtype);
 
 	GPOS_ASSERT(NULL != md_obj);
 

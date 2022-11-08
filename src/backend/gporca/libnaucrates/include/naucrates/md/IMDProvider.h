@@ -48,9 +48,9 @@ public:
 	}
 
 	// returns the DXL string of the requested metadata object
-	virtual CWStringBase *GetMDObjDXLStr(CMemoryPool *mp,
-										 CMDAccessor *md_accessor,
-										 IMDId *mdid) const = 0;
+	virtual CWStringBase *GetMDObjDXLStr(
+		CMemoryPool *mp, CMDAccessor *md_accessor, IMDId *mdid,
+		IMDCacheObject::Emdtype mdtype) const = 0;
 
 	// return the mdid for the specified system id and type
 	virtual IMDId *MDId(CMemoryPool *mp, CSystemId sysid,

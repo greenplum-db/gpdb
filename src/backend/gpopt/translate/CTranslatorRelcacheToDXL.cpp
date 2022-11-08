@@ -112,7 +112,8 @@ GetIndexTypeFromOid(OID index_oid)
 //---------------------------------------------------------------------------
 IMDCacheObject *
 CTranslatorRelcacheToDXL::RetrieveObject(CMemoryPool *mp,
-										 CMDAccessor *md_accessor, IMDId *mdid)
+										 CMDAccessor *md_accessor, IMDId *mdid,
+										 IMDCacheObject::Emdtype mdtype)
 {
 	IMDCacheObject *md_obj = NULL;
 	GPOS_ASSERT(NULL != md_accessor);
@@ -124,7 +125,7 @@ CTranslatorRelcacheToDXL::RetrieveObject(CMemoryPool *mp,
 	switch (mdid->MdidType())
 	{
 		case IMDId::EmdidGPDB:
-			md_obj = RetrieveObjectGPDB(mp, mdid);
+			md_obj = RetrieveObjectGPDB(mp, mdid, mdtype);
 			break;
 
 		case IMDId::EmdidRelStats:
@@ -178,7 +179,8 @@ CTranslatorRelcacheToDXL::RetrieveObject(CMemoryPool *mp,
 //
 //---------------------------------------------------------------------------
 IMDCacheObject *
-CTranslatorRelcacheToDXL::RetrieveObjectGPDB(CMemoryPool *mp, IMDId *mdid)
+CTranslatorRelcacheToDXL::RetrieveObjectGPDB(CMemoryPool *mp, IMDId *mdid,
+											 IMDCacheObject::Emdtype mdtype)
 {
 	GPOS_ASSERT(mdid->MdidType() == CMDIdGPDB::EmdidGPDB);
 
@@ -186,35 +188,40 @@ CTranslatorRelcacheToDXL::RetrieveObjectGPDB(CMemoryPool *mp, IMDId *mdid)
 
 	GPOS_ASSERT(0 != oid);
 
-	// find out what type of object this oid stands for
-
-	if (gpdb::TypeExists(oid))
+	switch (mdtype)
 	{
-		return RetrieveType(mp, mdid);
-	}
+		case IMDCacheObject::EmdtType:
+			return RetrieveType(mp, mdid);
 
-	if (gpdb::OperatorExists(oid))
-	{
-		return RetrieveScOp(mp, mdid);
-	}
+		case IMDCacheObject::EmdtOp:
+			return RetrieveScOp(mp, mdid);
 
-	if (gpdb::AggregateExists(oid))
-	{
-		return RetrieveAgg(mp, mdid);
-	}
+		case IMDCacheObject::EmdtAgg:
+			return RetrieveAgg(mp, mdid);
 
-	if (gpdb::FunctionExists(oid))
-	{
-		return RetrieveFunc(mp, mdid);
-	}
+		case IMDCacheObject::EmdtFunc:
+			return RetrieveFunc(mp, mdid);
 
-	if (gpdb::TriggerExists(oid))
-	{
-		return RetrieveTrigger(mp, mdid);
-	}
+		case IMDCacheObject::EmdtTrigger:
+			return RetrieveTrigger(mp, mdid);
 
-	// no match found
-	return NULL;
+		case IMDCacheObject::EmdtSentinel:
+			// for window function lookup
+			if (gpdb::AggregateExists(oid))
+			{
+				return RetrieveAgg(mp, mdid);
+			}
+			else if (gpdb::FunctionExists(oid))
+			{
+				return RetrieveFunc(mp, mdid);
+			}
+			// no match found
+			return NULL;
+
+		default:
+			GPOS_RTL_ASSERT_MSG(false, "Unexpected MD type.");
+			return NULL;
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -962,7 +969,8 @@ CTranslatorRelcacheToDXL::RetrieveRelExternalPartitions(CMemoryPool *mp,
 	foreach (lc, extparts_list)
 	{
 		OID ext_rel_oid = lfirst_oid(lc);
-		external_partitions->Append(GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, ext_rel_oid));
+		external_partitions->Append(
+			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, ext_rel_oid));
 	}
 
 	return external_partitions;

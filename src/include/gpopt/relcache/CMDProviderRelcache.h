@@ -62,8 +62,8 @@ public:
 
 	// returns the DXL string of the requested metadata object
 	virtual CWStringBase *GetMDObjDXLStr(CMemoryPool *mp,
-										 CMDAccessor *md_accessor,
-										 IMDId *md_id) const;
+										 CMDAccessor *md_accessor, IMDId *md_id,
+										 IMDCacheObject::Emdtype mdtype) const;
 
 	// return the mdid for the requested type
 	virtual IMDId *

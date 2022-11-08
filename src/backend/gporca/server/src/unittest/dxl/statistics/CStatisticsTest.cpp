@@ -313,7 +313,8 @@ CStatisticsTest::PtabdescTwoColumnSource(CMemoryPool *mp,
 										 const CWStringConst &strColB)
 {
 	CTableDescriptor *ptabdesc = GPOS_NEW(mp) CTableDescriptor(
-		mp, GPOS_NEW(mp) CMDIdGPDB(GPOPT_TEST_REL_OID1, 1, 1), nameTable,
+		mp, GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_TEST_REL_OID1, 1, 1),
+		nameTable,
 		false,	// convert_hash_to_random
 		IMDRelation::EreldistrRandom, IMDRelation::ErelstorageHeap,
 		0  // ulExecuteAsUser

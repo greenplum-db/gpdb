@@ -120,8 +120,10 @@ CMDProviderTest::TestMDLookup(CMemoryPool *mp, IMDProvider *pmdp)
 		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_MDCACHE_TEST_OID,
 							   12 /* version */, 1 /* minor version */);
 
-	CWStringBase *pstrMDObject1 = pmdp->GetMDObjDXLStr(mp, amda.Pmda(), pmdid1);
-	CWStringBase *pstrMDObject2 = pmdp->GetMDObjDXLStr(mp, amda.Pmda(), pmdid2);
+	CWStringBase *pstrMDObject1 =
+		pmdp->GetMDObjDXLStr(mp, amda.Pmda(), pmdid1, IMDCacheObject::EmdtRel);
+	CWStringBase *pstrMDObject2 =
+		pmdp->GetMDObjDXLStr(mp, amda.Pmda(), pmdid2, IMDCacheObject::EmdtRel);
 
 	GPOS_ASSERT(NULL != pstrMDObject1 && NULL != pstrMDObject2);
 
@@ -169,8 +171,8 @@ CMDProviderTest::EresUnittest_Stats()
 		CMDIdRelStats *rel_stats_mdid = GPOS_NEW(mp) CMDIdRelStats(GPOS_NEW(
 			mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_MDCACHE_TEST_OID, 1, 1));
 
-		CWStringBase *pstrRelStats =
-			pmdpFile->GetMDObjDXLStr(mp, amda.Pmda(), rel_stats_mdid);
+		CWStringBase *pstrRelStats = pmdpFile->GetMDObjDXLStr(
+			mp, amda.Pmda(), rel_stats_mdid, IMDCacheObject::EmdtRelStats);
 		GPOS_ASSERT(NULL != pstrRelStats);
 		IMDCacheObject *pmdobjRelStats =
 			CDXLUtils::ParseDXLToIMDIdCacheObj(mp, pstrRelStats, NULL);
@@ -181,8 +183,8 @@ CMDProviderTest::EresUnittest_Stats()
 				CMDIdGPDB(IMDId::EmdidRel, GPOPT_MDCACHE_TEST_OID, 1, 1),
 			1 /* attno */);
 
-		CWStringBase *pstrColStats =
-			pmdpFile->GetMDObjDXLStr(mp, amda.Pmda(), mdid_col_stats);
+		CWStringBase *pstrColStats = pmdpFile->GetMDObjDXLStr(
+			mp, amda.Pmda(), mdid_col_stats, IMDCacheObject::EmdtColStats);
 		GPOS_ASSERT(NULL != pstrColStats);
 		IMDCacheObject *pmdobjColStats =
 			CDXLUtils::ParseDXLToIMDIdCacheObj(mp, pstrColStats, NULL);
@@ -235,11 +237,12 @@ CMDProviderTest::EresUnittest_Negative()
 
 		// lookup a non-existing objects
 		CMDIdGPDB *mdid = GPOS_NEW(mp)
-			CMDIdGPDB(GPOPT_MDCACHE_TEST_OID, 15 /* major version */,
-					  1 /* minor version */);
+			CMDIdGPDB(IMDId::EmdidRel, GPOPT_MDCACHE_TEST_OID,
+					  15 /* major version */, 1 /* minor version */);
 
 		// call should result in an exception
-		(void) pmdpFile->GetMDObjDXLStr(mp, amda.Pmda(), mdid);
+		(void) pmdpFile->GetMDObjDXLStr(mp, amda.Pmda(), mdid,
+										IMDCacheObject::EmdtRel);
 	}
 
 	return GPOS_FAILED;
