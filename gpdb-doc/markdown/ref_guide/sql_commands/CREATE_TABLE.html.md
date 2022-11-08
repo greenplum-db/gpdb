@@ -353,11 +353,11 @@ INITIALLY DEFERRED
 :   If a constraint is deferrable, this clause specifies the default time to check the constraint. If the constraint is `INITIALLY IMMEDIATE`, it is checked after each statement. This is the default. If the constraint is `INITIALLY DEFERRED`, it is checked only at the end of the transaction. The constraint check time can be altered with the `SET CONSTRAINTS` command.
 
 USING <access_method>
-:   The `USING` clause specifies the access method for the table you are creating. Set to `heap` to create the table as a heap-storage table, `ao_row` to create the table as append-optimized with row-oriented storage (AO), or `ao_column` to create the table as append-optimized with column-oriented storage (AOCO). The default is determined by the value of the `default_table_access_method` server configuration parameter.
+:   The `USING` clause specifies the access method for the table you are creating. Set to `heap` to access the table as a heap-storage table, `ao_row` to access the table as an append-optimized table with row-oriented storage (AO), or `ao_column` to access the table as an append-optimized table with column-oriented storage (AOCO).The default is determined by the value of the `default_table_access_method` server configuration parameter.
 
   <p class="note">
 <strong>Note:</strong>
-While you can also specify the table's access method using <code>WITH (appendoptimized=true|false, orientation=row|column)</code> VMware recommends that you use <code>USING &ltaccess_method></code> instead.
+Although you can specify the table's access method using <code>WITH (appendoptimized=true|false, orientation=row|column)</code> VMware recommends that you use <code>USING &ltaccess_method></code> instead.
 </p>
   
 WITH \( storage\_parameter=value \)

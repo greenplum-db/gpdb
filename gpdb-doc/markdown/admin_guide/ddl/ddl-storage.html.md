@@ -515,7 +515,7 @@ You may alter the method for accessing a table using the `SET ACCESS METHOD` cla
 
   <p class="note">
 <strong>Note:</strong>
-While you can also specify the table's access method using <code>SET &lt;storage_parameter></code> or  <code>SET WITH&lt;storage_parameter></code>, VMware recommends that you use <code>SET ACCESS METHOD &lt;access_method></code> instead.
+Although you can specify the table's access method using <code>SET &lt;storage_parameter></code> or  <code>SET WITH&lt;storage_parameter></code>, VMware recommends that you use <code>SET ACCESS METHOD &lt;access_method></code> instead.
 </p>
 
 ### <a id="topic59"></a>Altering the Table Storage Model 

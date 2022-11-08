@@ -147,7 +147,6 @@ where column_storage_parameter is:
    blocksize={8192-2097152}
    compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
    compresslevel={0-9}
-
 ```
 where storage\_parameter when used with the `SET` command is:
 
@@ -157,7 +156,6 @@ where storage\_parameter when used with the `SET` command is:
    compresslevel={0-9}
    fillfactor={10-100}
    checksum= {true | false }
-
 ```
 
 where storage\_parameter when used with the `SET WITH` command is:
@@ -171,12 +169,11 @@ where storage\_parameter when used with the `SET WITH` command is:
    fillfactor={10-100}
    checksum={true | false }
    reorganize={true | false }
-
 ```
 
   <p class="note">
 <strong>Note:</strong>
-While you can specify the table's access method using the <code>appendoptimized</code> storage parameter, VMware recommends that you use <code>SET ACCESS METHOD &lt;access method></code> instead.
+Although you can specify the table's access method using the <code>appendoptimized</code> storage parameter, VMware recommends that you use <code>SET ACCESS METHOD &lt;access method></code> instead.
 </p>
 
 ## <a id="section3"></a>Description 
@@ -255,11 +252,11 @@ You must own the table to use `ALTER TABLE`. To change the schema or tablespace 
 ## <a id="section4"></a>Parameters 
 
 access method
-:   The method for accessing the table. Set to `heap` to alter the table to be a heap-storage table, `ao_row` to alter the table to be append-optimized with row-oriented storage (AO), or `ao_column` to alter the table to be append-optimized with column-oriented storage (AOCO).
+:   The method to use for accessing the table. Set to `heap` to access the table as a heap-storage table, `ao_row` to access the table as an append-optimized table with row-oriented storage (AO), or `ao_column` to access the table as an append-optimized table with column-oriented storage (AOCO).
 
   <p class="note">
 <strong>Note:</strong>
-While you can also specify the table's access method using <code>SET &lt;storage_parameter></code>, VMware recommends that you use <code>SET ACCESS METHOD &lt;access_method></code> instead.
+Although you can specify the table's access method using <code>SET &lt;storage_parameter></code>, VMware recommends that you use <code>SET ACCESS METHOD &lt;access_method></code> instead.
 </p>
 
 ONLY

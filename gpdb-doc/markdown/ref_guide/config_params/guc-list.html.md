@@ -220,7 +220,7 @@ Sets the default statistics sampling target \(the number of values that are stor
 
 ## <a id="default_table_access_method"></a>default_table_access_method
 
-The default table access method when a `CREATE TABLE` command does not explicitly specify an access method.
+Sets the default table access method when a `CREATE TABLE` command does not explicitly specify an access method.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
