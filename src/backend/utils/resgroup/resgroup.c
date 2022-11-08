@@ -3677,6 +3677,17 @@ groupWaitQueueFind(ResGroupData *group, const PGPROC *proc)
 }
 #endif/* USE_ASSERT_CHECKING */
 
+static bool checkBypassWalker(Node *node, void *context) {
+	if (node == NULL)
+		return false;
+
+	if (IsA(node, SelectStmt)){
+
+	}
+
+	return true;
+}
+
 /*
  * Parse the query and check if this query should
  * bypass the management of resource group.
@@ -3742,6 +3753,8 @@ shouldBypassQuery(const char *query_string)
 			bypass = false;
 			break;
 		}
+
+		raw_expression_tree_walker(parsetree, checkBypassWalker, NULL);
 	}
 
 	list_free_deep(parsetree_list);
