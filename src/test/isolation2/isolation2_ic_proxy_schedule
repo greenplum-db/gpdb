@@ -4,3 +4,6 @@
 
 # test TCP interconnect teardown bounded wait (Proxy IC reuses TCP setup/teardown)
 test: tcp_ic_teardown
+
+# test TCP proxy peer shutdown
+test: ic_proxy_peer_shutdown
