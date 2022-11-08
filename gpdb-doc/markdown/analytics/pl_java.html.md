@@ -186,10 +186,10 @@ Before you install the PL/Java extension, make sure that your Greenplum database
         export LD_LIBRARY_PATH=$GPHOME/lib:$GPHOME/ext/python/lib:$JAVA_HOME/lib/server:$LD_LIBRARY_PATH
         ```
 
-    This example [gpscp](../utility_guide/ref/gpscp.html) command copies the file to all hosts specified in the file `gphosts_file`.
+    This example [gpsync](../utility_guide/ref/gpsync.html) command copies the file to all hosts specified in the file `gphosts_file`.
 
     ```
-    $ gpscp -f gphosts_file $GPHOME/greenplum_path.sh 
+    $ gpsync -f gphosts_file $GPHOME/greenplum_path.sh 
     =:$GPHOME/greenplum_path.sh
     ```
 
@@ -216,10 +216,10 @@ Perform the following steps as the Greenplum Database administrator `gpadmin`.
 
     **Note:** The PL/Java `install.sql` script, used in previous releases to register the language, is deprecated.
 
-2.  Copy your Java archives \(JAR files\) to the same directory on all Greenplum Database hosts. This example uses the Greenplum Database `gpscp` utility to copy the file `myclasses.jar` to the directory `$GPHOME/lib/postgresql/java/`:
+2.  Copy your Java archives \(JAR files\) to the same directory on all Greenplum Database hosts. This example uses the Greenplum Database `gpsync` utility to copy the file `myclasses.jar` to the directory `$GPHOME/lib/postgresql/java/`:
 
     ```
-    $ gpscp -f gphosts_file myclasses.jar 
+    $ gpsync -f gphosts_file myclasses.jar 
     =:/usr/local/greenplum-db/lib/postgresql/java/
     ```
 
@@ -750,10 +750,10 @@ jar cfm analytics.jar manifest.txt *.class
 
 Upload the jar file to the Greenplum master host.
 
-Run the `gpscp` utility to copy the jar file to the Greenplum Java directory. Use the `-f` option to specify the file that contains a list of the master and segment hosts.
+Run the `gpsync` utility to copy the jar file to the Greenplum Java directory. Use the `-f` option to specify the file that contains a list of the master and segment hosts.
 
 ```
-gpscp -f gphosts_file analytics.jar 
+gpsync -f gphosts_file analytics.jar 
 =:/usr/local/greenplum-db/lib/postgresql/java/
 ```
 

@@ -769,7 +769,7 @@ Perform the following procedure to run the example:
 10. Copy the shared library to every host in your Greenplum Database installation. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
 
     ```
-    gpadmin@gpmaster$ gpscp -v -f seghostfile /usr/local/greenplum-db/lib/postgresql/gppc_concat.so =:/usr/local/greenplum-db/lib/postgresql/gppc_concat.so
+    gpadmin@gpmaster$ gpsync -v -f seghostfile /usr/local/greenplum-db/lib/postgresql/gppc_concat.so =:/usr/local/greenplum-db/lib/postgresql/gppc_concat.so
     ```
 
 11. Open a `psql` session. For example:
@@ -950,7 +950,7 @@ Perform the following procedure to run the example:
 10. Copy the shared library to every host in your Greenplum Database installation. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
 
     ```
-    gpadmin@gpmaster$ gpscp -v -f seghostfile /usr/local/greenplum-db/lib/postgresql/gppc_rettbl.so =:/usr/local/greenplum-db/lib/postgresql/gppc_rettbl.so
+    gpadmin@gpmaster$ gpsync -v -f seghostfile /usr/local/greenplum-db/lib/postgresql/gppc_rettbl.so =:/usr/local/greenplum-db/lib/postgresql/gppc_rettbl.so
     ```
 
 11. Create a `.sql` file to register the GPPC `return_tbl()` function. Open a file named `gppc_rettbl_reg.sql` in the editor of your choice.

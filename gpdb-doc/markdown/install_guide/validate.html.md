@@ -10,7 +10,7 @@ Greenplum provides a management utility called [gpcheckperf](../utility_guide/re
 -   Disk I/O Performance \(`dd` test\)
 -   Memory Bandwidth \(`stream` test\)
 
-Before using `gpcheckperf`, you must have a trusted host setup between the hosts involved in the performance test. You can use the utility [gpssh-exkeys](../utility_guide/ref/gpssh-exkeys.html) to update the known host files and exchange public keys between hosts if you have not done so already. Note that `gpcheckperf` calls to [gpssh](../utility_guide/ref/gpssh.html) and [gpscp](../utility_guide/ref/gpscp.html), so these Greenplum utilities must be in your `$PATH`.
+Before using `gpcheckperf`, you must have a trusted host setup between the hosts involved in the performance test. You can use the utility [gpssh-exkeys](../utility_guide/ref/gpssh-exkeys.html) to update the known host files and exchange public keys between hosts if you have not done so already. Note that `gpcheckperf` calls to [gpssh](../utility_guide/ref/gpssh.html) and [gpsync](../utility_guide/ref/gpsync.html), so these Greenplum utilities must be in your `$PATH`.
 
 -   **[Validating Network Performance](validate.html)**  
 
