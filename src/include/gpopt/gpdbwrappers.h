@@ -226,27 +226,6 @@ char FuncDataAccess(Oid funcid);
 // exec location property of given function
 char FuncExecLocation(Oid funcid);
 
-// trigger name
-char *GetTriggerName(Oid triggerid);
-
-// trigger relid
-Oid GetTriggerRelid(Oid triggerid);
-
-// trigger funcid
-Oid GetTriggerFuncid(Oid triggerid);
-
-// trigger type
-int32 GetTriggerType(Oid triggerid);
-
-// is trigger enabled
-bool IsTriggerEnabled(Oid triggerid);
-
-// does trigger exist
-bool TriggerExists(Oid oid);
-
-// does check constraint exist
-bool CheckConstraintExists(Oid check_constraint_oid);
-
 // check constraint name
 char *GetCheckConstraintName(Oid check_constraint_oid);
 
@@ -325,9 +304,6 @@ bool HeapAttIsNull(HeapTuple tup, int attnum);
 
 // free heap tuple
 void FreeHeapTuple(HeapTuple htup);
-
-// does an index exist with the given oid
-bool IndexExists(Oid oid);
 
 // get the default hash opclass for type
 Oid GetDefaultDistributionOpclassForType(Oid typid);
@@ -484,9 +460,6 @@ bool IsOpNDVPreserving(Oid opno);
 // get input types for a given operator
 void GetOpInputTypes(Oid opno, Oid *lefttype, Oid *righttype);
 
-// does an operator exist with the given oid
-bool OperatorExists(Oid oid);
-
 // expression tree walker
 bool WalkExpressionTree(Node *node, bool (*walker)(), void *context);
 
@@ -529,9 +502,6 @@ gpos::BOOL IsChildPartDistributionMismatched(Relation rel);
     gpos::BOOL ChildPartHasTriggers(Oid oid, int trigger_type);
 #endif
 
-// does a relation exist with the given oid
-bool RelationExists(Oid oid);
-
 // estimate the relation size using the real number of blocks and tuple density
 void CdbEstimateRelationSize(RelOptInfo *relOptInfo, Relation rel,
 							 int32 *attr_widths, BlockNumber *pages,
@@ -567,9 +537,6 @@ List *FindMatchingMembersInTargetList(Node *node, List *targetlist);
 
 // check if two gpdb objects are equal
 bool Equals(void *p1, void *p2);
-
-// does a type exist with the given oid
-bool TypeExists(Oid oid);
 
 // check whether a type is composite
 bool IsCompositeType(Oid typid);

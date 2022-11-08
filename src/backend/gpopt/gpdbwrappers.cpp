@@ -759,18 +759,6 @@ gpdb::GetCommutatorOp(Oid opno)
 	return 0;
 }
 
-bool
-gpdb::CheckConstraintExists(Oid check_constraint_oid)
-{
-	GP_WRAP_START;
-	{
-		/* catalog tables: pg_constraint */
-		return check_constraint_exists(check_constraint_oid);
-	}
-	GP_WRAP_END;
-	return false;
-}
-
 char *
 gpdb::GetCheckConstraintName(Oid check_constraint_oid)
 {
@@ -1080,18 +1068,6 @@ gpdb::FreeHeapTuple(HeapTuple htup)
 		return;
 	}
 	GP_WRAP_END;
-}
-
-bool
-gpdb::IndexExists(Oid oid)
-{
-	GP_WRAP_START;
-	{
-		/* catalog tables: pg_index */
-		return index_exists(oid);
-	}
-	GP_WRAP_END;
-	return false;
 }
 
 Oid
@@ -1683,18 +1659,6 @@ gpdb::GetOpInputTypes(Oid opno, Oid *lefttype, Oid *righttype)
 	GP_WRAP_END;
 }
 
-bool
-gpdb::OperatorExists(Oid oid)
-{
-	GP_WRAP_START;
-	{
-		/* catalog tables: pg_operator */
-		return operator_exists(oid);
-	}
-	GP_WRAP_END;
-	return false;
-}
-
 void *
 gpdb::GPDBAlloc(Size size)
 {
@@ -1795,18 +1759,6 @@ gpdb::IsChildPartDistributionMismatched(Relation rel)
 	{
 		/* catalog tables: pg_class, pg_inherits */
 		return child_distribution_mismatch(rel);
-	}
-	GP_WRAP_END;
-	return false;
-}
-
-bool
-gpdb::RelationExists(Oid oid)
-{
-	GP_WRAP_START;
-	{
-		/* catalog tables: pg_class */
-		return relation_exists(oid);
 	}
 	GP_WRAP_END;
 	return false;
@@ -1927,18 +1879,6 @@ gpdb::Equals(void *p1, void *p2)
 	GP_WRAP_START;
 	{
 		return equal(p1, p2);
-	}
-	GP_WRAP_END;
-	return false;
-}
-
-bool
-gpdb::TypeExists(Oid oid)
-{
-	GP_WRAP_START;
-	{
-		/* catalog tables: pg_type */
-		return type_exists(oid);
 	}
 	GP_WRAP_END;
 	return false;

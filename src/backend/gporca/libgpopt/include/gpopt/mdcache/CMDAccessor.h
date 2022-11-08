@@ -222,7 +222,8 @@ private:
 	CDouble m_dFetchTime;
 
 	// interface to a MD cache object
-	const IMDCacheObject *GetImdObj(IMDId *mdid);
+	const IMDCacheObject *GetImdObj(IMDId *mdid,
+									IMDCacheObject::Emdtype mdtype);
 
 	// return the type corresponding to the given type info and source system id
 	const IMDType *RetrieveType(CSystemId sysid, IMDType::ETypeInfo type_info);
