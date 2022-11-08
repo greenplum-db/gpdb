@@ -1223,7 +1223,9 @@ default_reloptions(Datum reloptions, bool validate, relopt_kind kind)
 		{"autovacuum_analyze_scale_factor", RELOPT_TYPE_REAL,
 		offsetof(StdRdOptions, autovacuum) +offsetof(AutoVacOpts, analyze_scale_factor)},
 		{"user_catalog_table", RELOPT_TYPE_BOOL,
-		offsetof(StdRdOptions, user_catalog_table)}
+		offsetof(StdRdOptions, user_catalog_table)},
+		{SOPT_ANALYZEHLL, RELOPT_TYPE_BOOL,
+		offsetof(StdRdOptions, analyze_hll_non_part_table)}
 	};
 
 	options = parseRelOptions(reloptions, validate, kind, &numoptions);

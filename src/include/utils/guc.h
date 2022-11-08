@@ -613,6 +613,7 @@ extern IndexCheckType gp_indexcheck_vacuum;
 #define SOPT_ALIAS_APPENDOPTIMIZED "appendoptimized"
 /* Max number of chars needed to hold value of a storage option. */
 #define MAX_SOPT_VALUE_LEN 15
+#define SOPT_ANALYZEHLL    "analyze_hll_non_part_table"
 
 /*
  * Functions exported by guc.c

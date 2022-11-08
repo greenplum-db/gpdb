@@ -228,6 +228,7 @@ typedef struct StdRdOptions
 	int			fillfactor;		/* page fill factor in percent (0..100) */
 	AutoVacOpts autovacuum;		/* autovacuum-related options */
 
+	bool		analyze_hll_non_part_table; 		/* force hll statistics collection on relation */
 	bool		appendonly;		/* is this an appendonly relation? */
 	int			blocksize;		/* max varblock size (AO rels only) */
 	int			compresslevel;  /* compression level (AO rels only) */

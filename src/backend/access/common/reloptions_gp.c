@@ -61,6 +61,15 @@ static relopt_bool boolRelOpts_gp[] =
 		},
 		AO_DEFAULT_CHECKSUM
 	},
+	{
+		{
+			SOPT_ANALYZEHLL,
+			"Enable HLL stats collection during analyze",
+			RELOPT_KIND_HEAP,
+			ShareUpdateExclusiveLock
+		},
+		ANALYZE_DEFAULT_HLL
+	},
 	/* list terminator */
 	{{NULL}}
 };
@@ -602,7 +611,8 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 				foundComptype = false,
 				foundComplevel = false,
 				foundChecksum = false,
-				foundOrientation = false;
+				foundOrientation = false,
+				foundAnalyzeHLL = false;
 
 	/*
 	 * withOpts must be parsed to see if an option was spcified in WITH()
@@ -722,6 +732,17 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 				astate = accumArrayResult(astate, d, false, TEXTOID,
 										  CurrentMemoryContext);
 			}
+			soptLen = strlen(SOPT_ANALYZEHLL);
+			if (withLen > soptLen &&
+				pg_strncasecmp(strval, SOPT_ANALYZEHLL, soptLen) == 0)
+			{
+				foundAnalyzeHLL = true;
+				d = CStringGetTextDatum(psprintf("%s=%s",
+												 SOPT_ANALYZEHLL,
+												 (opts->analyze_hll_non_part_table ? "true" : "false")));
+				astate = accumArrayResult(astate, d, false, TEXTOID,
+										  CurrentMemoryContext);
+			}
 		}
 	}
 
@@ -791,6 +812,14 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 		astate = accumArrayResult(astate, d, false, TEXTOID,
 								  CurrentMemoryContext);
 	}
+	if ((opts->analyze_hll_non_part_table != ANALYZE_DEFAULT_HLL) && !foundAnalyzeHLL)
+	{
+		d = CStringGetTextDatum(psprintf("%s=%s",
+										 SOPT_ANALYZEHLL,
+										 (opts->analyze_hll_non_part_table ? "true" : "false")));
+		astate = accumArrayResult(astate, d, false, TEXTOID,
+								  CurrentMemoryContext);
+	}
 	return astate ?
 		makeArrayResult(astate, CurrentMemoryContext) :
 		PointerGetDatum(NULL);
@@ -809,6 +838,7 @@ validate_and_adjust_options(StdRdOptions *result,
 	relopt_value *complevel_opt;
 	relopt_value *checksum_opt;
 	relopt_value *orientation_opt;
+	relopt_value *analyze_hll_non_part_table_opt;
 
 	/* fillfactor */
 	fillfactor_opt = get_option_set(options, num_options, SOPT_FILLFACTOR);
@@ -1065,6 +1095,16 @@ validate_and_adjust_options(StdRdOptions *result,
 								result->compresstype)));
 		}
 	}
+	/* analyze_hll_non_part_table */
+	analyze_hll_non_part_table_opt = get_option_set(options, num_options, SOPT_ANALYZEHLL);
+	if (analyze_hll_non_part_table_opt != NULL)
+	{
+		if (!KIND_IS_RELATION(kind))
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("usage of parameter \"analyze_hll_non_part_table\" in a non relation object is not supported")));
+		result->analyze_hll_non_part_table = analyze_hll_non_part_table_opt->values.bool_val;
+	}
 
 	if (result->appendonly && result->compresstype[0])
 		if (result->compresslevel == AO_DEFAULT_COMPRESSLEVEL)
@@ -1099,6 +1139,8 @@ validate_and_refill_options(StdRdOptions *result, relopt_value *options,
 
 		if (!(get_option_set(options, numrelopts, SOPT_ORIENTATION)))
 			result->columnstore = ao_storage_opts.columnstore;
+		if (!(get_option_set(options, numrelopts, SOPT_ANALYZEHLL)))
+			result->analyze_hll_non_part_table = ao_storage_opts.analyze_hll_non_part_table;
 	}
 
 	validate_and_adjust_options(result, options, numrelopts, kind, validate);
