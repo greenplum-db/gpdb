@@ -2361,16 +2361,17 @@ CTranslatorQueryToDXL::CheckNoDuplicateAliasGroupingColumn(List *target_list,
 				{
 					countSimple += 1;
 				}
+
+				if (countNonSimple > 1 ||
+					(countNonSimple > 0 && countSimple > 0))
+				{
+					GPOS_RAISE(
+						gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+						GPOS_WSZ_LIT(
+							"Multiple grouping sets specifications with duplicate aliased columns"));
+				}
 			}
 		}
-	}
-
-	if (countNonSimple > 1 || (countNonSimple > 0 && countSimple > 0))
-	{
-		GPOS_RAISE(
-			gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-			GPOS_WSZ_LIT(
-				"Multiple grouping sets specifications with duplicate aliased columns"));
 	}
 }
 
