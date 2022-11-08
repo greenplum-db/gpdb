@@ -801,16 +801,16 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 									 totalrows);
 				/*
 				 * Store HLL/HLL fullscan information for leaf partitions in
-				 * the stats object. If table was created with "analyze_hll" option, also collect
+				 * the stats object. If table was created with "analyze_hll_non_part_table" option, also collect
 				 * HLL stats for non-leaf tables
 				 */
-				bool analyze_hll = false;
+				bool analyze_hll_non_part_table = false;
 				if (onerel->rd_options != NULL &&
-							((StdRdOptions *) onerel->rd_options)->analyze_hll)
+							((StdRdOptions *) onerel->rd_options)->analyze_hll_non_part_table)
 				{
-					analyze_hll = true;
+					analyze_hll_non_part_table = true;
 				}
-				if (onerel->rd_rel->relkind == RELKIND_RELATION && (onerel->rd_rel->relispartition || analyze_hll))
+				if (onerel->rd_rel->relkind == RELKIND_RELATION && (onerel->rd_rel->relispartition || analyze_hll_non_part_table))
 				{
 					MemoryContext old_context;
 					Datum *hll_values;

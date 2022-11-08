@@ -633,7 +633,7 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 				foundAnalyzeHLL = true;
 				d = CStringGetTextDatum(psprintf("%s=%s",
 												 SOPT_ANALYZEHLL,
-												 (opts->analyze_hll ? "true" : "false")));
+												 (opts->analyze_hll_non_part_table ? "true" : "false")));
 				astate = accumArrayResult(astate, d, false, TEXTOID,
 										  CurrentMemoryContext);
 			}
@@ -689,11 +689,11 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 		astate = accumArrayResult(astate, d, false, TEXTOID,
 								  CurrentMemoryContext);
 	}
-	if ((opts->analyze_hll != ANALYZE_DEFAULT_HLL) && !foundAnalyzeHLL)
+	if ((opts->analyze_hll_non_part_table != ANALYZE_DEFAULT_HLL) && !foundAnalyzeHLL)
 	{
 		d = CStringGetTextDatum(psprintf("%s=%s",
 										 SOPT_ANALYZEHLL,
-										 (opts->analyze_hll ? "true" : "false")));
+										 (opts->analyze_hll_non_part_table ? "true" : "false")));
 		astate = accumArrayResult(astate, d, false, TEXTOID,
 								  CurrentMemoryContext);
 	}
@@ -740,7 +740,7 @@ reloption_is_default(const char *optstr, int optlen)
 										 AO_DEFAULT_CHECKSUM ? "true" : "false");
 	}
 	else if (optlen > strlen(SOPT_ANALYZEHLL) &&
-		pg_strncasecmp(optstr, SOPT_ANALYZEHLL, strlen("analyze_hll")) == 0)
+		pg_strncasecmp(optstr, SOPT_ANALYZEHLL, strlen("analyze_hll_non_part_table")) == 0)
 	{
 		defaultopt = psprintf("%s=%s",
 							  SOPT_ANALYZEHLL,
