@@ -23,8 +23,7 @@ ALTER TABLE [IF EXISTS] <name>
 ALTER TABLE ALL IN TABLESPACE <name> [ OWNED BY <role_name> [, ... ] ]
     SET TABLESPACE <new_tablespace> [ NOWAIT ]
 
-ALTER TABLE [IF EXISTS] [ONLY] <name> SET 
-     WITH (REORGANIZE=true|false)
+ALTER TABLE [IF EXISTS] [ONLY] <name>
    | DISTRIBUTED BY ({<column_name> [<opclass>]} [, ... ] )
    | DISTRIBUTED RANDOMLY
    | DISTRIBUTED REPLICATED 
@@ -170,8 +169,8 @@ where storage\_parameter when used with the `SET WITH` command is:
    compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
    compresslevel={0-9}
    fillfactor={10-100}
-   checksum= {true | false }
-   reorganize
+   checksum={true | false }
+   reorganize={true | false }
 
 ```
 
@@ -316,12 +315,12 @@ value
 :   The new value for the `FILLFACTOR` parameter, which is a percentage between 10 and 100. 100 is the default.
 
 DISTRIBUTED BY \(\{column\_name \[opclass\]\}\) \| DISTRIBUTED RANDOMLY \| DISTRIBUTED REPLICATED
-:   Specifies the distribution policy for a table. Changing a hash distribution policy causes the table data to be physically redistributed, which can be resource intensive. If you declare the same hash distribution policy or change from hash to random distribution, data will not be redistributed unless you declare `SET WITH (REORGANIZE=true)`.
+:   Specifies the distribution policy for a table. Changing a hash distribution policy causes the table data to be physically redistributed, which can be resource intensive. If you declare the same hash distribution policy or change from hash to random distribution, data will not be redistributed unless you declare `SET WITH (reorganize=true)`.
 
 :   Changing to or from a replicated distribution policy causes the table data to be redistributed.
 
-REORGANIZE=true\|false
-:   Use `REORGANIZE=true` when the hash distribution policy has not changed or when you have changed from a hash to a random distribution, and you want to redistribute the data anyways.
+reorganize=true\|false
+:   Use `reorganize=true` when the hash distribution policy has not changed or when you have changed from a hash to a random distribution, and you want to redistribute the data anyways.
 
 parent\_table
 :   A parent table to associate or de-associate with this table.
