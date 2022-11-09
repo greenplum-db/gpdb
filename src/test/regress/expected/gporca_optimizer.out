@@ -11546,7 +11546,7 @@ EXPLAIN (COSTS OFF) WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM 
                                                ->  Shared Scan (share slice:id 4:0)
                SubPlan 3  (slice6; segments: 3)
                  ->  Result
-                       Filter: (share0_ref4.b = onetimefilter1.b)
+                       Filter: (share0_ref3.b = onetimefilter1.b)
                        ->  Materialize
                              ->  Broadcast Motion 3:3  (slice5; segments: 3)
                                    ->  Result
