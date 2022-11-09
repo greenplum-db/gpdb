@@ -15,9 +15,9 @@ function build_arch() {
     fi
     local id="$(. /etc/os-release && echo "${ID}")"
     local version=$(. /etc/os-release && echo "${VERSION_ID}")
-    # BLD_ARCH expects rhel{6,7,8}_x86_64 || rocky8_x86_64 || photon3_x86_64 || sles12_x86_64 || ubuntu18.04_x86_64
+    # BLD_ARCH expects rhel{6,7,8}_x86_64 || rocky8_x86_64 || photon3_x86_64 || sles12_x86_64 || ubuntu18.04_x86_64 || ol8_x86_64
     case ${id} in
-    photon | sles | rhel | rocky) version=$(echo "${version}" | cut -d. -f1) ;;
+    photon | sles | rhel | rocky | ol) version=$(echo "${version}" | cut -d. -f1) ;;
     centos) id="rhel" ;;
     *) ;;
     esac
