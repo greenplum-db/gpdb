@@ -11,7 +11,7 @@ my $node_master = get_new_node('master');
 # and it needs proper authentication configuration.
 $node_master->init(
 	allows_streaming => 1,
-	auth_extra       => [ '--create-role', 'repl_role' ]);
+	auth_extra       => [ '--create-role', 'gpadmin' ]);
 $node_master->start;
 my $backup_name = 'my_backup';
 
