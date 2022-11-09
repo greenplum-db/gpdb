@@ -3678,11 +3678,18 @@ groupWaitQueueFind(ResGroupData *group, const PGPROC *proc)
 #endif/* USE_ASSERT_CHECKING */
 
 static bool checkBypassWalker(Node *node, void *context) {
+	ListCell *cell;
+	bool *bypass = context;
+
 	if (node == NULL)
 		return false;
 
-	if (IsA(node, SelectStmt)){
-
+	if (IsA(node, RangeVar)) {
+		foreach(cell, (List *)node) {
+			RangeVar *from = (RangeVar *)lfirst(cell);
+			if (strcmp(from->schemaname, "pg_catalog") != 0)
+				*bypass = false;
+		}
 	}
 
 	return false;
@@ -3747,7 +3754,12 @@ shouldBypassQuery(const char *query_string)
 	{
 		parsetree = (Node *) lfirst(parsetree_item);
 
-		raw_expression_tree_walker(parsetree, checkBypassWalker, NULL);
+		if (IsA(parsetree, SelectStmt)){
+			raw_expression_tree_walker(parsetree, checkBypassWalker, &bypass);
+		}
+
+		if (bypass == false)
+			break;
 
 		if (nodeTag(parsetree) != T_VariableSetStmt &&
 			nodeTag(parsetree) != T_VariableShowStmt)
