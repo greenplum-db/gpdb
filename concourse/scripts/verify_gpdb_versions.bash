@@ -25,7 +25,7 @@ yum -d0 -y install git
 GREENPLUM_INSTALL_DIR=/usr/local/greenplum-db-devel
 GPDB_SRC_SHA=$(cd gpdb_src && git rev-parse HEAD)
 
-for bin_gpdb in bin_gpdb_{centos7,ubuntu18.04}; do
+for bin_gpdb in bin_gpdb_rhel8; do
   install_greenplum "$bin_gpdb" "${GREENPLUM_INSTALL_DIR}"
   assert_postgres_version_matches "$GPDB_SRC_SHA" "${GREENPLUM_INSTALL_DIR}"
 done

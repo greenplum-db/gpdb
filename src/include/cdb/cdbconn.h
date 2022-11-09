@@ -53,6 +53,8 @@ typedef struct SegmentDatabaseDescriptor
     char                   *whoami;         /* QE identifier for msgs */
 	bool					isWriter;
 	int						identifier;		/* unique identifier in the cdbcomponent segment pool */
+	double					establishConnTime; /* the time of establish connection to the segment,
+												* -1 means this connection is cached */
 } SegmentDatabaseDescriptor;
 
 SegmentDatabaseDescriptor *

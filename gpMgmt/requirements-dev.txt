@@ -14,7 +14,7 @@ monotonic<=1.5
 oauth2client<=4.1.3
 pyOpenSSL<=19.1.0
 retry_decorator<=1.1.0
-six<=1.14.0
+six>=1.12.0,<=1.14.0
 SocksiPy-branch<=1.01
 enum34<=1.1.6
 traceback2<=1.4.0

@@ -549,3 +549,35 @@ select * from gp_segment_configuration a, t13393 ,gp_segment_configuration b whe
 SELECT gp_inject_fault('cdbcomponent_recycle_idle_qe_error', 'reset', dbid, current_setting('gp_session_id')::int)
  from gp_segment_configuration where content=-1 and role='p';
 drop table t13393;
+
+-- test for print create time for gang.
+CREATE OR REPLACE FUNCTION cleanupAllGangs() RETURNS BOOL
+AS '@abs_builddir@/regress@DLSUFFIX@', 'cleanupAllGangs' LANGUAGE C;
+
+-- cleanupAllGangs();
+select cleanupAllGangs();
+
+show gp_print_create_gang_time;
+
+-- create a new n-gang
+set gp_print_create_gang_time=on;
+
+set optimizer=off;
+
+--gang reused
+create table t_create_gang_time(tc1 int,tc2 int);
+
+--1-gang reused
+select * from t_create_gang_time where tc1=1;
+explain analyze select * from t_create_gang_time where tc1=1;
+
+--n-gang reused and 1-gang is created.
+select * from t_create_gang_time t1, t_create_gang_time t2 where t1.tc1=2;
+
+explain analyze select * from t_create_gang_time t1, t_create_gang_time t2 where t1.tc1=2;
+
+reset gp_print_create_gang_time;
+reset optimizer;
+drop function cleanupAllGangs();
+drop table t_create_gang_time;
+

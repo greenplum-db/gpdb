@@ -326,7 +326,6 @@ extern int rep_lag_avoidance_threshold;
 extern bool gp_maintenance_mode;
 extern bool gp_maintenance_conn;
 extern bool allow_segment_DML;
-extern bool gp_allow_rename_relation_without_lock;
 
 extern bool gp_ignore_error_table;
 
@@ -619,6 +618,7 @@ extern IndexCheckType gp_indexcheck_insert;
 #define SOPT_COMPTYPE      "compresstype"
 #define SOPT_COMPLEVEL     "compresslevel"
 #define SOPT_CHECKSUM      "checksum"
+#define SOPT_ANALYZEHLL    "analyze_hll_non_part_table"
 
 /*
  * Functions exported by guc.c

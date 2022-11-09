@@ -68,12 +68,8 @@ JOBS_THAT_ARE_GATES = [
 JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = (
     [
         'combine_cli_coverage',
-        'compile_gpdb_binary_swap_centos7',
         'compile_gpdb_clients_windows',
         'walrep_2',
-        'madlib_build_gppkg',
-        'MADlib_Test_planner_centos7',
-        'MADlib_Test_orca_centos7',
         'Publish Server Builds',
     ] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
 )
@@ -297,8 +293,8 @@ def main():
         '--os_types',
         action='store',
         dest='os_types',
-        default=['centos7'],
-        choices=['centos7', 'rhel8', 'ubuntu18.04', 'win'],
+        default=['rhel8'],
+        choices=['rhel8', 'win'],
         nargs='+',
         help='List of OS values to support'
     )
@@ -411,7 +407,7 @@ def main():
         args.use_ICW_workers = True
 
     if args.pipeline_configuration == 'prod' or args.pipeline_configuration == 'full' or args.directed_release:
-        args.os_types = ['centos6', 'centos7', 'rhel8', 'ubuntu18.04', 'win']
+        args.os_types = ['rhel8', 'win']
         args.test_sections = [
             'ICW',
             'Replication',

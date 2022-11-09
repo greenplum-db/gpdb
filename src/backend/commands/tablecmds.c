@@ -3556,40 +3556,6 @@ renameatt_internal(Oid myrelid,
 }
 
 /*
- * A helper function for RenameRelation, to createa a very minimal, fake,
- * RelationData struct for a relation. This is used in
- * gp_allow_rename_relation_without_lock mode, in place of opening the
- * relcache entry for real.
- *
- * RenameRelation only needs the rd_rel field to be filled in, so that's
- * all we fetch.
- */
-static Relation
-fake_relation_open(Oid myrelid)
-{
-	Relation relrelation;    /* for RELATION relation */
-	Relation fakerel;
-	HeapTuple reltup;
-
-	fakerel = palloc0(sizeof(RelationData));
-
-	/*
-	 * Find relation's pg_class tuple, and make sure newrelname isn't in use.
-	 */
-	relrelation = heap_open(RelationRelationId, RowExclusiveLock);
-
-	reltup = SearchSysCacheCopy(RELOID,
-								ObjectIdGetDatum(myrelid),
-								0, 0, 0);
-	if (!HeapTupleIsValid(reltup))        /* shouldn't happen */
-		elog(ERROR, "cache lookup failed for relation %u", myrelid);
-	fakerel->rd_rel = (Form_pg_class) GETSTRUCT(reltup);
-
-	heap_close(relrelation, RowExclusiveLock);
-
-	return fakerel;
-}
-/*
  * Perform permissions and integrity checks before acquiring a relation lock.
  */
 static void
@@ -3839,18 +3805,10 @@ RenameRelation(RenameStmt *stmt)
 	}
 
 	/*
-	 * In Postgres, grab an exclusive lock on the target table, index, sequence
+	 * Grab an exclusive lock on the target table, index, sequence
 	 * or view, which we will NOT release until end of transaction.
-	 *
-	 * In GPDB, added supportability feature under GUC to allow rename table
-	 * without AccessExclusiveLock for scenarios like directly modifying system
-	 * catalogs. This will change transaction isolation behaviors, however, this
-	 * won't cause any data corruption.
 	 */
-	if (gp_allow_rename_relation_without_lock)
-		targetrelation = fake_relation_open(relid);
-	else
-		targetrelation = relation_open(relid, AccessExclusiveLock);
+	targetrelation = relation_open(relid, AccessExclusiveLock);
 	oldrelname = pstrdup(RelationGetRelationName(targetrelation));
 
 	/* Do the work */
@@ -3862,8 +3820,7 @@ RenameRelation(RenameStmt *stmt)
 	/*
 	 * Close rel, but keep exclusive lock!
 	 */
-	if (!gp_allow_rename_relation_without_lock)
-		relation_close(targetrelation, NoLock);
+	relation_close(targetrelation, NoLock);
 
 	ObjectAddressSet(address, RelationRelationId, relid);
 
@@ -3883,7 +3840,6 @@ RenameRelationInternal(Oid myrelid, const char *newrelname, bool is_internal, bo
 	Oid			namespaceId;
 
 	/*
-	 * In Postgres:
 	 * Grab a lock on the target relation, which we will NOT release until end
 	 * of transaction.  We need at least a self-exclusive lock so that
 	 * concurrent DDL doesn't overwrite the rename if they start updating
@@ -3892,16 +3848,8 @@ RenameRelationInternal(Oid myrelid, const char *newrelname, bool is_internal, bo
 	 * handle this information changing under them.  For indexes, we can use a
 	 * reduced lock level because RelationReloadIndexInfo() handles indexes
 	 * specially.
-	 *
-	 * In GPDB, added supportability feature under GUC to allow rename table
-	 * without AccessExclusiveLock for scenarios like directly modifying system
-	 * catalogs. This will change transaction isolation behaviors, however, this
-	 * won't cause any data corruption.
 	 */
-	if (gp_allow_rename_relation_without_lock)
-		targetrelation = fake_relation_open(myrelid);
-	else
-		targetrelation = relation_open(myrelid, is_index ? ShareUpdateExclusiveLock : AccessExclusiveLock);
+	targetrelation = relation_open(myrelid, is_index ? ShareUpdateExclusiveLock : AccessExclusiveLock);
 	namespaceId = RelationGetNamespace(targetrelation);
 
 	/*
@@ -3973,8 +3921,7 @@ RenameRelationInternal(Oid myrelid, const char *newrelname, bool is_internal, bo
 	/*
 	 * Close rel, but keep lock!
 	 */
-	if (!gp_allow_rename_relation_without_lock)
-		relation_close(targetrelation, NoLock);
+	relation_close(targetrelation, NoLock);
 }
 
 /*

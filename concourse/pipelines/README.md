@@ -77,7 +77,7 @@ all jobs accounted for
   Generate Pipeline type: .. : prod
   Pipeline file ............ : gpdb_main-generated.yml
   Template file ............ : gpdb-tpl.yml
-  OS Types ................. : ['centos6', 'centos7', 'win']
+  OS Types ................. : ['rhel8', 'win']
   Test sections ............ : ['ICW', 'CS', 'MPP', 'MM', 'DPM', 'UD', 'FileRep']
   test_trigger ............. : True
 ======================================================================
@@ -112,13 +112,13 @@ template) to the source repository.
 
 As an example of generating a pipeline with a targeted test subset,
 the following can be used to generate a pipeline with supporting
-builds (default: centos7 platform) and `CLI` only jobs.
+builds (default: rhel8 platform) and `CLI` only jobs.
 
 The generated pipeline and helper `fly` command are intended encourage
 engineers to set the pipeline with a team-name-string (-t) and engineer
 (-u) identifiable names.
 
-NOTE: The majority of jobs are only available for the `centos7`
+NOTE: The majority of jobs are only available for the `rhel8`
       platform.
 
 ```
@@ -128,7 +128,7 @@ $ ./gen_pipeline.py -t dpm -u curry -a CLI
   Generate Pipeline type: .. : dpm
   Pipeline file ............ : gpdb-dpm-curry.yml
   Template file ............ : gpdb-tpl.yml
-  OS Types ................. : ['centos7']
+  OS Types ................. : ['rhel8']
   Test sections ............ : ['CLI']
   test_trigger ............. : True
 ======================================================================
@@ -146,16 +146,16 @@ fly -t dev \
 ```
 
 Use the following to generate a pipeline with `ICW` and `CS` test jobs
-for `centos7` and `ubuntu18.04` platforms.
+for `rhel8` platforms.
 
 ```
-$ ./gen_pipeline.py -t cs -u durant -O {centos7,ubuntu18.04} -a {ICW,CS}
+$ ./gen_pipeline.py -t cs -u durant -O {rhel8} -a {ICW,CS}
 
 ======================================================================
   Generate Pipeline type: .. : cs
   Pipeline file ............ : gpdb-cs-durant.yml
   Template file ............ : gpdb-tpl.yml
-  OS Types ................. : ['centos7', 'ubuntu18.04']
+  OS Types ................. : ['rhel8']
   Test sections ............ : ['ICW', 'CS']
   test_trigger ............. : True
 ======================================================================

@@ -224,7 +224,6 @@ enable_strong_random	= @enable_strong_random@
 enable_largefile	= @enable_largefile@
 enable_orca		= @enable_orca@
 enable_gpfdist		= @enable_gpfdist@
-enable_pxf			= @enable_pxf@
 enable_debug_extensions = @enable_debug_extensions@
 enable_orafce		= @enable_orafce@
 enable_mapreduce    = @enable_mapreduce@

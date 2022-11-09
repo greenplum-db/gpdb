@@ -2978,7 +2978,6 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 	{
 		PlanRowMark *rc = lfirst_node(PlanRowMark, l);
 		ExecRowMark *erm;
-		bool		isdistributed = false;
 
 		/* ignore "parent" rowmarks; they are irrelevant at runtime */
 		if (rc->isParent)
@@ -2987,21 +2986,13 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 		/*
 		 * Like in preprocess_targetlist, ignore distributed tables.
 		 */
-		/*
-		 * GPDB_91_MERGE_FIXME: we are largely just ignoring locking altogether.
-		 * Perhaps that's OK as long as we take a full table lock on any UPDATEs
-		 * or DELETEs. But sure doesn't seem right. Can we do better?
-		 */
 		{
 			RangeTblEntry *rte = rt_fetch(rc->rti, estate->es_plannedstmt->rtable);
 
 			if (rte->rtekind == RTE_RELATION)
 			{
-				Relation relation = heap_open(rte->relid, NoLock);
-				if (GpPolicyIsPartitioned(relation->rd_cdbpolicy))
-					isdistributed = true;
-				heap_close(relation, NoLock);
-				if (isdistributed)
+				GpPolicy *policy = GpPolicyFetch(rte->relid);
+				if (GpPolicyIsPartitioned(policy))
 					continue;
 			}
 		}

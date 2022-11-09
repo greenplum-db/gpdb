@@ -43,6 +43,7 @@
 #define AO_DEFAULT_COMPRESSTYPE   "none"
 #endif
 #define AO_DEFAULT_CHECKSUM       true
+#define ANALYZE_DEFAULT_HLL       false
 
 /* types supported by reloptions */
 typedef enum relopt_type

@@ -1549,7 +1549,7 @@ insert into bar_p values(5, 5);
 drop table bar_p;
 -- Drop should not leave anything lingering for bar_p or its
 -- subpartitions in pg_partition* catalog tables.
-select relid, level, template from gp_partition_template where not exists (select oid from pg_class where oid = relid);
+select relid, level, pg_get_expr(template, relid) from gp_partition_template where not exists (select oid from pg_class where oid = relid);
 
 -- MPP-4172
 -- should fail
@@ -1664,11 +1664,11 @@ select relid::regclass, level from gp_partition_template where relid = 'rank_set
 alter table rank_settemp set subpartition template (default subpartition def2);
 
 -- def2 is there
-select relid::regclass, level, template from gp_partition_template where relid = 'rank_settemp'::regclass;
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'rank_settemp'::regclass;
 
 alter table rank_settemp set subpartition template (default subpartition def2);
 -- Should still be there
-select relid::regclass, level, template from gp_partition_template where relid = 'rank_settemp'::regclass;
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'rank_settemp'::regclass;
 
 
 alter table rank_settemp set subpartition template (start (date '2006-01-01') with (appendonly=true));
@@ -1676,7 +1676,7 @@ alter table rank_settemp add partition f1 values ('N');
 alter table rank_settemp set subpartition template (start (date '2007-01-01') with (appendonly=true, compresslevel=5));
 alter table rank_settemp add partition f2 values ('C');
 
-select relid::regclass, level, template from gp_partition_template where relid = 'rank_settemp'::regclass;
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'rank_settemp'::regclass;
 
 drop table rank_settemp;
 
@@ -2381,7 +2381,7 @@ subpartition l2 values (6,7,8,9,10) );
 alter table mpp5992 
 set subpartition template (subpartition l1 values (1,2,3), 
 subpartition l2 values (4,5,6), subpartition l3 values (7,8,9,10));
-select relid::regclass, level, template from gp_partition_template where relid = 'mpp5992'::regclass;
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'mpp5992'::regclass;
 
 -- Now we can add a new partition
 alter table mpp5992 
@@ -2400,7 +2400,7 @@ start (date '2013-01-01') end (date '2014-01-01') WITH (appendonly=true);
 
 select * from pg_partition_tree('mpp5992');
 select relname, relam, pg_get_expr(relpartbound, oid) from pg_class where relname like 'mpp5992%';
-select relid::regclass, level, template from gp_partition_template where relid = 'mpp5992'::regclass;
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'mpp5992'::regclass;
 
 -- MPP-10223: split subpartitions
 CREATE TABLE MPP10223pk
@@ -2544,7 +2544,7 @@ subpartition by range(d)
 subpartition template (start (1) end (10) every (1))
 (start (20) end (30) every (1));
 
-select relid::regclass, level, template from gp_partition_template where relid = 'MPP10480'::regclass;
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'MPP10480'::regclass;
 
 -- MPP-10421: fix SPLIT of partitions with PRIMARY KEY constraint/indexes
 CREATE TABLE mpp10321a

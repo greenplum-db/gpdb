@@ -155,6 +155,7 @@ bool		Debug_datumstream_read_print_varlena_info = false;
 bool		Debug_datumstream_write_use_small_initial_buffers = false;
 bool		gp_create_table_random_default_distribution = true;
 bool		gp_allow_non_uniform_partitioning_ddl = true;
+bool		gp_print_create_gang_time = false;
 int			dtx_phase2_retry_second = 0;
 
 bool gp_log_suboverflow_statement = false;
@@ -233,7 +234,6 @@ bool		execute_pruned_plan = false;
 bool		gp_maintenance_mode;
 bool		gp_maintenance_conn;
 bool		allow_segment_DML;
-bool		gp_allow_rename_relation_without_lock = false;
 
 /* Time based authentication GUC */
 char	   *gp_auth_time_override_str = NULL;
@@ -592,16 +592,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&allow_segment_DML,
-		false,
-		NULL, NULL, NULL
-	},
-	{
-		{"gp_allow_rename_relation_without_lock", PGC_USERSET, CUSTOM_OPTIONS,
-			gettext_noop("Allow ALTER TABLE RENAME without AccessExclusiveLock"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_allow_rename_relation_without_lock,
 		false,
 		NULL, NULL, NULL
 	},
@@ -1760,6 +1750,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_allow_non_uniform_partitioning_ddl,
 		true,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_print_create_gang_time", PGC_USERSET, CUSTOM_OPTIONS,
+			gettext_noop("Allow print information about create gang time."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&gp_print_create_gang_time,
+		false,
 		NULL, NULL, NULL
 	},
 
