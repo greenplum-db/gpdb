@@ -157,7 +157,6 @@ where storage\_parameter when used with the `SET` command is:
    fillfactor={10-100}
    checksum= {true | false }
    analyze_hll_non_part_table={true | false }
-
 ```
 
 where storage\_parameter when used with the `SET WITH` command is:
