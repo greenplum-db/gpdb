@@ -3692,7 +3692,7 @@ static bool checkBypassWalker(Node *node, void *context) {
 		}
 	}
 
-	return false;
+	return raw_expression_tree_walker(node, checkBypassWalker, context);
 }
 
 /*
