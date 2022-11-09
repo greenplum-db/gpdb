@@ -45,7 +45,7 @@ SELECT port FROM gp_segment_configuration
 			WHERE content <> -1 AND role = 'p'
 			LIMIT 1
 \gset
-\connect - - - :port
+\connect - gpadmin - :port
 \connect: FATAL:  connections to primary segments are not allowed
 DETAIL:  This database instance is running as a primary segment in a Greenplum cluster and does not permit direct connections.
 HINT:  To force a connection anyway (dangerous!), use utility mode.

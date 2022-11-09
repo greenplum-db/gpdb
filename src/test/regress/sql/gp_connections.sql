@@ -40,7 +40,7 @@ SELECT port FROM gp_segment_configuration
 			WHERE content <> -1 AND role = 'p'
 			LIMIT 1
 \gset
-\connect - - - :port
+\connect - gpadmin - :port
 
 -- DON'T PUT ANYTHING BELOW THIS TEST! It'll be ignored since the above \connect
 -- fails and exits the script. Add them above, instead.

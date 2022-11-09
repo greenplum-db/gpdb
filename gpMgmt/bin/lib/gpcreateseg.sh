@@ -143,7 +143,7 @@ CREATE_QES_PRIMARY () {
         do
             # MPP-15889
             CIDR_COORDINATOR_IP=$(GET_CIDRADDR $COORDINATOR_IP)
-            $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	${CIDR_COORDINATOR_IP}	trust >> ${GP_DIR}/$PG_HBA"
+            $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	$USER_NAME	${CIDR_COORDINATOR_IP}	trust >> ${GP_DIR}/$PG_HBA"
             PARA_EXIT $? "Update $PG_HBA for coordinator IP address ${CIDR_COORDINATOR_IP}"
           done
         if [ x"" != x"$STANDBY_HOSTNAME" ];then
@@ -152,13 +152,13 @@ CREATE_QES_PRIMARY () {
           do
           # MPP-15889
               CIDR_STANDBY_IP=$(GET_CIDRADDR $STANDBY_IP)
-              $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	${CIDR_STANDBY_IP}	trust >> ${GP_DIR}/$PG_HBA"
+              $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	$USER_NAME	${CIDR_STANDBY_IP}	trust >> ${GP_DIR}/$PG_HBA"
               PARA_EXIT $? "Update $PG_HBA for coordinator standby address ${CIDR_STANDBY_IP}"
           done
         fi
     
         # Add all local IPV4 addresses
-        SEGMENT_IPV4_LOCAL_ADDRESS_ALL=( $( REMOTE_EXECUTE_AND_GET_OUTPUT $GP_HOSTADDRESS "$IPV4_ADDR_LIST_CMD | $GREP inet | $GREP -v \"127.0.0\" | $AWK '{print \$2}' | $CUT -d'/' -f1" ))
+        SEGMENT_IPV4_LOCAL_ADDRESS_ALL=( $( REMOTE_EXECUTE_AND_GET_OUTPUT $GP_HOSTADDRESS "$IPV4_ADDR_LIST_CMD | $GREP inet | $AWK '{print \$2}' | $CUT -d'/' -f1" ))
         ADD_PG_HBA_ENTRIES "${SEGMENT_IPV4_LOCAL_ADDRESS_ALL[@]}"
     
         if [ x"" != x"$MIRROR_HOSTADDRESS" ]; then
@@ -178,8 +178,8 @@ CREATE_QES_PRIMARY () {
         fi
     else # use hostnames in pg_hba.conf
         # add localhost
-        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          all         localhost      trust >> ${GP_DIR}/$PG_HBA"
-        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	${COORDINATOR_HOSTNAME}	trust >> ${GP_DIR}/$PG_HBA"
+        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         localhost      trust >> ${GP_DIR}/$PG_HBA"
+        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	$USER_NAME	${COORDINATOR_HOSTNAME}	trust >> ${GP_DIR}/$PG_HBA"
         if [ x"" != x"$MIRROR_HOSTADDRESS" ]; then
           $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $MIRROR_HOSTADDRESS      trust >> ${GP_DIR}/$PG_HBA"
         fi
