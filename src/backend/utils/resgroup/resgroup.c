@@ -394,6 +394,7 @@ static void cpusetOperation(char *cpuset1,
 							const char *cpuset2,
 							int len,
 							bool sub);
+static bool checkBypassWalker(Node *node, void *context);
 
 #ifdef USE_ASSERT_CHECKING
 static bool selfHasGroup(void);
@@ -3677,20 +3678,20 @@ groupWaitQueueFind(ResGroupData *group, const PGPROC *proc)
 }
 #endif/* USE_ASSERT_CHECKING */
 
-static bool checkBypassWalker(Node *node, void *context) {
-	ListCell *cell;
+static bool
+checkBypassWalker(Node *node, void *context)
+{
 	bool *bypass = context;
 
 	if (node == NULL)
 		return false;
 
-	if (IsA(node, RangeVar)) {
-		foreach(cell, (List *)node) {
-			RangeVar *from = (RangeVar *)lfirst(cell);
-			if (strcmp(from->schemaname, "pg_catalog") != 0){
-				*bypass = false;
-				return true;
-			}
+	if (IsA(node, RangeVar))
+	{
+		RangeVar *from = (RangeVar *)node;
+		if (strcmp(from->schemaname, "pg_catalog") != 0){
+			*bypass = false;
+			return true;
 		}
 	}
 
@@ -3756,7 +3757,8 @@ shouldBypassQuery(const char *query_string)
 	{
 		parsetree = (Node *) lfirst(parsetree_item);
 
-		if (IsA(parsetree, SelectStmt)){
+		if (IsA(parsetree, SelectStmt))
+		{
 			raw_expression_tree_walker(parsetree, checkBypassWalker, &bypass);
 			if (bypass == false)
 				break;
