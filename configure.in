@@ -220,13 +220,6 @@ PGAC_ARG_BOOL(enable, gpfdist, yes,
 AC_SUBST(enable_gpfdist)
 
 #
-# pxf
-#
-PGAC_ARG_BOOL(enable, pxf, yes,
-             [do not build pxf])
-AC_SUBST(enable_pxf)
-
-#
 # include debug extensions in gpcontrib
 #
 PGAC_ARG_BOOL(enable, debug-extensions, yes,
@@ -1141,15 +1134,11 @@ PGAC_ARG_BOOL(with, rt, yes,
 AC_SUBST(with_rt)
 
 #
-# libcurl. Used for external table support and the PXF extension
+# libcurl. Used for external table support
 #
 PGAC_ARG_BOOL(with, libcurl, yes,
               [do not use libcurl])
 AC_SUBST(with_libcurl)
-
-if test "$with_libcurl" = "no" && test "$enable_pxf" = "yes"; then
-  AC_MSG_ERROR([libcurl is required by PXF])
-fi
 
 if test "$with_libcurl" = "no" && test "$enable_gpcloud" = "yes"; then
   AC_MSG_ERROR([libcurl is required by gpcloud])
