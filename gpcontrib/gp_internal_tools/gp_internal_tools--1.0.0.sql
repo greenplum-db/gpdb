@@ -86,11 +86,15 @@ WITH all_entries AS (
             runaway_vmem_mb int,
             runaway_command_cnt int,
             idle_start timestamp with time zone
-          ))
+          )),
+  process_level_info AS (
+    SELECT sess_id, usename, datname, ARRAY_AGG(DISTINCT query) AS query
+      FROM pg_stat_activity
+    GROUP BY (sess_id, usename, datname))
 SELECT S.datname,
        M.sessionid as sess_id,
        S.usename,
-       S.query as query,
+       ARRAY_AGG(DISTINCT S.query) as recent_queries,
        M.segid,
        M.vmem_mb,
        case when M.runaway_status = 0 then false else true end as is_runaway,
@@ -101,7 +105,7 @@ SELECT S.datname,
        M.runaway_command_cnt,
        idle_start
 FROM all_entries M LEFT OUTER JOIN
-pg_stat_activity as S
+process_level_info as S
 ON M.sessionid = S.sess_id;
 
 GRANT SELECT ON session_level_memory_consumption TO public;
