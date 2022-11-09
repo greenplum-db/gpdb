@@ -527,7 +527,9 @@ CREATE WRITABLE EXTERNAL TABLE wext_test_guc (a int, b text) LOCATION ('gpfdist:
 -- retry interval 1, 2, 4, 8, 16, then timeout. total 6 tries
 set gpfdist_retry_timeout = 20;
 INSERT INTO wext_test_guc SELECT * FROM test_guc;
-
+-- set gpfdist_retry_timeout to be 0, and the retry will be prohibited.
+set gpfdist_retry_timeout = 0;
+INSERT INTO wext_test_guc SELECT * FROM test_guc;
 DROP TABLE IF EXISTS test_guc;
 DROP EXTERNAL TABLE IF EXISTS wext_test_guc;
 

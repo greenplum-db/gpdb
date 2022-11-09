@@ -568,6 +568,17 @@ gp_perform_backoff_and_check_response(URL_CURL_FILE *file, perform_func perform)
 			return;
 		}
 		/*
+		 * If gpfdist_retry_timeout == 0, Retry is prohibited
+		 */
+		if (!gpfdist_retry_timeout)
+		{
+			elog(LOG, "abort writing data to gpfdist, and retry is prohibited");
+			ereport(ERROR,
+					(errcode(ERRCODE_CONNECTION_FAILURE),
+					 errmsg("error when connecting to gpfdist %s, quit without retry",
+							file->curl_url)));
+		}
+		/*
 		 * Retry until end_time is reached
 		 */
 		now = time(NULL);

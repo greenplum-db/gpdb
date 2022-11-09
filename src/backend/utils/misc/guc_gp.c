@@ -2950,7 +2950,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_UNIT_S | GUC_NOT_IN_SAMPLE
 		},
 		&gpfdist_retry_timeout,
-		300, 1, 7200,
+		300, 0, 7200,
 		NULL, NULL, NULL
 	},
 

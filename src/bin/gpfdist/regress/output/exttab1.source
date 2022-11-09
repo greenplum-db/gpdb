@@ -719,6 +719,10 @@ CREATE WRITABLE EXTERNAL TABLE wext_test_guc (a int, b text) LOCATION ('gpfdist:
 set gpfdist_retry_timeout = 20;
 INSERT INTO wext_test_guc SELECT * FROM test_guc;
 ERROR:  error when connecting to gpfdist http://127.0.0.1:7070/test_guc.tbl, quit after 6 tries  (seg0 10.152.8.113:6005 pid=17374)
+-- set gpfdist_retry_timeout to be 0, and the retry will be prohibited.
+set gpfdist_retry_timeout = 0;
+INSERT INTO wext_test_guc SELECT * FROM test_guc;
+ERROR:  error when connecting to gpfdist http://127.0.0.1:7070/test_guc.tbl, quit without retry  (seg0 10.152.8.113:6005 pid=17374)
 DROP TABLE IF EXISTS test_guc;
 DROP EXTERNAL TABLE IF EXISTS wext_test_guc;
 --
