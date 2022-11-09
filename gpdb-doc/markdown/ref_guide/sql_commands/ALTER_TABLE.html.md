@@ -161,7 +161,7 @@ where storage\_parameter when used with the `SET` command is:
 where storage\_parameter when used with the `SET WITH` command is:
 
 ```
-   appendoptimized={TRUE|FALSE}
+   appendoptimized={true | false }
    blocksize={8192-2097152}
    orientation={COLUMN|ROW}
    compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
@@ -169,6 +169,7 @@ where storage\_parameter when used with the `SET WITH` command is:
    fillfactor={10-100}
    checksum={true | false }
    reorganize={true | false }
+   analyze_hll_non_part_table={true | false }
 ```
 
   <p class="note">
@@ -316,8 +317,11 @@ DISTRIBUTED BY \(\{column\_name \[opclass\]\}\) \| DISTRIBUTED RANDOMLY \| DISTR
 
 :   Changing to or from a replicated distribution policy causes the table data to be redistributed.
 
+analyze_hll_non_part_table=true|false
+:   Use `analyze_hll_non_part_table=true` to force collection of HLL statistics even if the table is not part of a partitioned table. The default is `false`.
+
 reorganize=true\|false
-:   Use `reorganize=true` when the hash distribution policy has not changed or when you have changed from a hash to a random distribution, and you want to redistribute the data anyways.
+:   Use `reorganize=true` when the hash distribution policy has not changed or when you have changed from a hash to a random distribution, and you want to redistribute the data anyway.
 
 parent\_table
 :   A parent table to associate or de-associate with this table.

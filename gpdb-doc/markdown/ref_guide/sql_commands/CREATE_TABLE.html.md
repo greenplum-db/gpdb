@@ -206,6 +206,7 @@ where storage\_parameter for a partition is:
    compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
    compresslevel={1-19}
    fillfactor={10-100}
+   analyze_hll_non_part_table={TRUE|FALSE}
    [oids=FALSE]
 ```
 
@@ -390,6 +391,8 @@ WITH \( storage\_parameter=value \)
 :   The `compresslevel` option is valid only if `appendoptimized=TRUE`.
 
 :   **fillfactor** — The fillfactor for a table is a percentage between 10 and 100. 100 \(complete packing\) is the default. When a smaller fillfactor is specified, `INSERT` operations pack table pages only to the indicated percentage; the remaining space on each page is reserved for updating rows on that page. This gives `UPDATE` a chance to place the updated copy of a row on the same page as the original, which is more efficient than placing it on a different page. For a table whose entries are never updated, complete packing is the best choice, but in heavily updated tables smaller fillfactors are appropriate. This parameter cannot be set for TOAST tables.
+
+:   **analyze_hll_non_part_table** — Set this storage parameter to `true` to force collection of HLL statistics even if the table is not part of a partitioned table. The default is `false`.
 
 ON COMMIT
 :   The behavior of temporary tables at the end of a transaction block can be controlled using `ON COMMIT`. The three options are:
