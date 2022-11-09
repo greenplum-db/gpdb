@@ -1772,121 +1772,135 @@ cdbmutate_warn_ctid_without_segid(struct PlannerInfo *root, struct RelOptInfo *r
  */
 
 /* Walk the tree for shareinput.
- * Shareinput fix shared_as_id and underlying_share_id of nodes in place.
+ * Shareinput fix shared_as_id and underlying_share_id of nodes in place.  We do not want to use
+ * the ordinary tree walker as it is unnecessary to make copies etc.
  */
 typedef bool (*SHAREINPUT_MUTATOR) (Node *node, PlannerInfo *root, bool fPop);
-typedef struct ShareInputContext
+static void
+shareinput_walker(SHAREINPUT_MUTATOR f, Node *node, PlannerInfo *root)
 {
-	plan_tree_base_prefix base;
-	SHAREINPUT_MUTATOR mutator;
-}	ShareInputContext;
-static bool
-shareinput_walker(Node *node, ShareInputContext *ctx)
-{
+	Plan	   *plan = NULL;
 	bool		recursive_down;
-	PlannerInfo *root = (PlannerInfo *) ctx->base.node;
-	PlannerGlobal *glob = root->glob;
-	SHAREINPUT_MUTATOR mutator = ctx->mutator;
 
 	if (node == NULL)
-		return false;
+		return;
 
-	/*
-	 * Always dig into non-plan nodes trying to find plan node. If plan node
-	 * found, call a mutator to decide should we dig more.
-	 */
-	if (is_plan_node(node))
-		recursive_down = (*mutator) (node, root, false);
-	else
-		recursive_down = true;
+	if (IsA(node, List))
+	{
+		List	   *l = (List *) node;
+		ListCell   *lc;
+
+		foreach(lc, l)
+		{
+			Node	   *n = lfirst(lc);
+
+			shareinput_walker(f, n, root);
+		}
+		return;
+	}
+
+	if (!is_plan_node(node))
+		return;
+
+	plan = (Plan *) node;
+	recursive_down = (*f) (node, root, false);
 
 	if (recursive_down)
 	{
-		/*
-		 * The code below can modify various params depends on it's logic.
-		 * Save old values all at once to make it uniform and to avoid
-		 * copypaste. 'root' is already saved above.
-		 */
-		Plan	   *plan = (Plan *) node;
-		List	   *save_rtable = glob->share.curr_rtable;
-		Plan	   *save_lefttree = plan->lefttree;
-		Plan	   *save_righttree = plan->righttree;
-
-		/*
-		 * The general comment to all SubPlan nodes. Before, we walked through
-		 * subplans separately from main plan. 'motStack' we use in mutators
-		 * not contains possible motion(slice) id from main plan in this case.
-		 * This caused underlying subplan's nodes not marked as cross-slice -
-		 * we didn't respect upper slices from main plan. To avoid this, we
-		 * now iterate over all nodes (even non-plan nodes), iterate through
-		 * subplans as parts of main tree and right on their places.
-		 */
-		if (IsA(node, SubPlan))
+		if (IsA(node, Append))
 		{
-			SubPlan    *subplan = (SubPlan *) node;
+			ListCell   *cell;
+			Append	   *app = (Append *) node;
 
-			/*
-			 * The code around rtables (for SubqueryScan and
-			 * TableFunctionScan) works only with appropriate subroot. Find
-			 * one and copy to context.
-			 */
-			ctx->base.node = (Node *) planner_subplan_get_root(root, subplan);
+			foreach(cell, app->appendplans)
+				shareinput_walker(f, (Node *) lfirst(cell), root);
+		}
+		else if (IsA(node, ModifyTable))
+		{
+			ListCell   *cell;
+			ModifyTable *mt = (ModifyTable *) node;
+
+			foreach(cell, mt->plans)
+				shareinput_walker(f, (Node *) lfirst(cell), root);
 		}
 		else if (IsA(node, SubqueryScan))
 		{
-			SubqueryScan *subqscan = (SubqueryScan *) node;
-			RelOptInfo *rel;
+			SubqueryScan  *subqscan = (SubqueryScan *) node;
+			PlannerGlobal *glob = root->glob;
+			PlannerInfo   *subroot;
+			List	      *save_rtable;
+			RelOptInfo    *rel;
 
 			/*
 			 * If glob->finalrtable is not NULL, rtables have been flatten,
 			 * thus we should use glob->finalrtable instead.
 			 */
-			if (glob->finalrtable == NULL)
+			save_rtable = glob->share.curr_rtable;
+			if (root->glob->finalrtable == NULL)
 			{
 				rel = find_base_rel(root, subqscan->scan.scanrelid);
-
 				/*
-				 * The Assert() on RelOptInfo's subplan being same as the
-				 * subqueryscan's subplan, is valid in Upstream but for not
-				 * for GPDB, since we create a new copy of the subplan if two
+				 * The Assert() on RelOptInfo's subplan being
+				 * same as the subqueryscan's subplan, is valid
+				 * in Upstream but for not for GPDB, since we
+				 * create a new copy of the subplan if two
 				 * SubPlans refer to the same initplan.
 				 */
-				ctx->base.node = (Node *) rel->subroot;
-				glob->share.curr_rtable = rel->subroot->parse->rtable;
+				subroot = rel->subroot;
+				glob->share.curr_rtable = subroot->parse->rtable;
 			}
 			else
+			{
+				subroot = root;
 				glob->share.curr_rtable = glob->finalrtable;
+			}
+			shareinput_walker(f, (Node *) subqscan->subplan, subroot);
+			glob->share.curr_rtable = save_rtable;
 		}
 		else if (IsA(node, TableFunctionScan))
 		{
-			TableFunctionScan *tfscan = (TableFunctionScan *) node;
-			RelOptInfo *rel;
+			TableFunctionScan  *tfscan = (TableFunctionScan *) node;
+			PlannerGlobal *glob = root->glob;
+			PlannerInfo   *subroot;
+			List	      *save_rtable;
+			RelOptInfo    *rel;
 
 			/*
 			 * If glob->finalrtable is not NULL, rtables have been flatten,
 			 * thus we should use glob->finalrtable instead.
 			 */
-			if (glob->finalrtable == NULL)
+			save_rtable = glob->share.curr_rtable;
+			if (root->glob->finalrtable == NULL)
 			{
 				rel = find_base_rel(root, tfscan->scan.scanrelid);
 				Assert(rel->subplan == tfscan->scan.plan.lefttree);
-				ctx->base.node = (Node *) rel->subroot;
-				glob->share.curr_rtable = rel->subroot->parse->rtable;
+				subroot = rel->subroot;
+				glob->share.curr_rtable = subroot->parse->rtable;
 			}
 			else
+			{
+				subroot = root;
 				glob->share.curr_rtable = glob->finalrtable;
+			}
+			shareinput_walker(f, (Node *)  tfscan->scan.plan.lefttree, subroot);
+			glob->share.curr_rtable = save_rtable;
 		}
+		else if (IsA(node, BitmapAnd))
+		{
+			ListCell   *cell;
+			BitmapAnd  *ba = (BitmapAnd *) node;
 
-		/*
-		 * Shared scan can be producer or consumer. As descibed in the
-		 * function comment, we should respect execution order, otherwise,
-		 * deadlock between producer and consumer may rise. plan_tree_walker()
-		 * use the standard order of processing - lefttree, then rigttree.
-		 * Ignoring of execution order here may move producer to another part
-		 * of join and consumer (which should be producer normally) to wait
-		 * infinitely for nothing. Let's fool standard plan_tree_walker() by
-		 * temporary switching join parts.
-		 */
+			foreach(cell, ba->bitmapplans)
+				shareinput_walker(f, (Node *) lfirst(cell), root);
+		}
+		else if (IsA(node, BitmapOr))
+		{
+			ListCell   *cell;
+			BitmapOr   *bo = (BitmapOr *) node;
+
+			foreach(cell, bo->bitmapplans)
+				shareinput_walker(f, (Node *) lfirst(cell), root);
+		}
 		else if (IsA(node, NestLoop))
 		{
 			/*
@@ -1897,14 +1911,20 @@ shareinput_walker(Node *node, ShareInputContext *ctx)
 
 			if (nl->join.prefetch_inner)
 			{
-				plan->lefttree = save_righttree;
-				plan->righttree = save_lefttree;
+				shareinput_walker(f, (Node *) plan->righttree, root);
+				shareinput_walker(f, (Node *) plan->lefttree, root);
+			}
+			else
+			{
+				shareinput_walker(f, (Node *) plan->lefttree, root);
+				shareinput_walker(f, (Node *) plan->righttree, root);
 			}
 		}
 		else if (IsA(node, HashJoin))
 		{
-			plan->lefttree = save_righttree;
-			plan->righttree = save_lefttree;
+			/* Hash join the hash table is at inner */
+			shareinput_walker(f, (Node *) plan->righttree, root);
+			shareinput_walker(f, (Node *) plan->lefttree, root);
 		}
 		else if (IsA(node, MergeJoin))
 		{
@@ -1912,24 +1932,34 @@ shareinput_walker(Node *node, ShareInputContext *ctx)
 
 			if (mj->unique_outer)
 			{
-				plan->lefttree = save_righttree;
-				plan->righttree = save_lefttree;
+				shareinput_walker(f, (Node *) plan->lefttree, root);
+				shareinput_walker(f, (Node *) plan->righttree, root);
+			}
+			else
+			{
+				shareinput_walker(f, (Node *) plan->righttree, root);
+				shareinput_walker(f, (Node *) plan->lefttree, root);
 			}
 		}
+		else if (IsA(node, Sequence))
+		{
+			ListCell   *cell = NULL;
+			Sequence   *sequence = (Sequence *) node;
 
-		plan_tree_walker(node, shareinput_walker, ctx);
-
-		/* Restore all values which could be changed above */
-		ctx->base.node = (Node *) root;
-		glob->share.curr_rtable = save_rtable;
-		plan->lefttree = save_lefttree;
-		plan->righttree = save_righttree;
+			foreach(cell, sequence->subplans)
+			{
+				shareinput_walker(f, (Node *) lfirst(cell), root);
+			}
+		}
+		else
+		{
+			shareinput_walker(f, (Node *) plan->lefttree, root);
+			shareinput_walker(f, (Node *) plan->righttree, root);
+			shareinput_walker(f, (Node *) plan->initPlan, root);
+		}
 	}
 
-	if (is_plan_node(node))
-		(*mutator) (node, root, true);
-
-	return false;
+	(*f) (node, root, true);
 }
 
 typedef struct
@@ -2147,13 +2177,9 @@ Plan *
 apply_shareinput_dag_to_tree(PlannerInfo *root, Plan *plan)
 {
 	PlannerGlobal *glob = root->glob;
-	ShareInputContext ctx;
-
-	ctx.base.node = (Node *) root;
-	ctx.mutator = shareinput_mutator_dag_to_tree;
 
 	glob->share.curr_rtable = root->parse->rtable;
-	shareinput_walker((Node *) plan, &ctx);
+	shareinput_walker(shareinput_mutator_dag_to_tree, (Node *) plan, root);
 	return plan;
 }
 
@@ -2194,13 +2220,9 @@ void
 collect_shareinput_producers(PlannerInfo *root, Plan *plan)
 {
 	PlannerGlobal *glob = root->glob;
-	ShareInputContext ctx;
-
-	ctx.base.node = (Node *) root;
-	ctx.mutator = collect_shareinput_producers_walker;
 
 	glob->share.curr_rtable = glob->finalrtable;
-	shareinput_walker((Node *) plan, &ctx);
+	shareinput_walker(collect_shareinput_producers_walker, (Node *) plan, root);
 }
 
 /* Some helper: implements a stack using List. */
@@ -2240,12 +2262,7 @@ shareinput_peekmot(ApplyShareInputContext *ctxt)
 Plan *
 replace_shareinput_targetlists(PlannerInfo *root, Plan *plan)
 {
-	ShareInputContext ctx;
-
-	ctx.base.node = (Node *) root;
-	ctx.mutator = replace_shareinput_targetlists_walker;
-
-	shareinput_walker((Node *) plan, &ctx);
+	shareinput_walker(replace_shareinput_targetlists_walker, (Node *) plan, root);
 	return plan;
 }
 
@@ -2599,7 +2616,7 @@ apply_shareinput_xslice(Plan *plan, PlannerInfo *root)
 {
 	PlannerGlobal *glob = root->glob;
 	ApplyShareInputContext *ctxt = &glob->share;
-	ShareInputContext walker_ctxt;
+	ListCell   *lp, *lr;
 
 	ctxt->motStack = NULL;
 	ctxt->qdShares = NULL;
@@ -2609,8 +2626,6 @@ apply_shareinput_xslice(Plan *plan, PlannerInfo *root)
 	ctxt->sliceMarks = palloc0(ctxt->producer_count * sizeof(int));
 
 	shareinput_pushmot(ctxt, 0);
-
-	walker_ctxt.base.node = (Node *) root;
 
 	/*
 	 * Walk the tree.  See comment for each pass for what each pass will do.
@@ -2624,18 +2639,42 @@ apply_shareinput_xslice(Plan *plan, PlannerInfo *root)
 	 * walk through all plans and collect all producer subplans into the
 	 * context, before processing the consumers.
 	 */
-	walker_ctxt.mutator = shareinput_mutator_xslice_1;
-	shareinput_walker((Node *) plan, &walker_ctxt);
+	forboth(lp, glob->subplans, lr, glob->subroots)
+	{
+		Plan	   *subplan = (Plan *) lfirst(lp);
+		PlannerInfo *subroot =  (PlannerInfo *) lfirst(lr);
+
+		shareinput_walker(shareinput_mutator_xslice_1, (Node *) subplan, subroot);
+	}
+	shareinput_walker(shareinput_mutator_xslice_1, (Node *) plan, root);
 
 	/* Now walk the tree again, and process all the consumers. */
-	walker_ctxt.mutator = shareinput_mutator_xslice_2;
-	shareinput_walker((Node *) plan, &walker_ctxt);
+	forboth(lp, glob->subplans, lr, glob->subroots)
+	{
+		Plan	   *subplan = (Plan *) lfirst(lp);
+		PlannerInfo *subroot =  (PlannerInfo *) lfirst(lr);
 
-	walker_ctxt.mutator = shareinput_mutator_xslice_3;
-	shareinput_walker((Node *) plan, &walker_ctxt);
+		shareinput_walker(shareinput_mutator_xslice_2, (Node *) subplan, subroot);
+	}
+	shareinput_walker(shareinput_mutator_xslice_2, (Node *) plan, root);
 
-	walker_ctxt.mutator = shareinput_mutator_xslice_4;
-	shareinput_walker((Node *) plan, &walker_ctxt);
+	forboth(lp, glob->subplans, lr, glob->subroots)
+	{
+		Plan	   *subplan = (Plan *) lfirst(lp);
+		PlannerInfo *subroot =  (PlannerInfo *) lfirst(lr);
+
+		shareinput_walker(shareinput_mutator_xslice_3, (Node *) subplan, subroot);
+	}
+	shareinput_walker(shareinput_mutator_xslice_3, (Node *) plan, root);
+
+	forboth(lp, glob->subplans, lr, glob->subroots)
+	{
+		Plan	   *subplan = (Plan *) lfirst(lp);
+		PlannerInfo *subroot =  (PlannerInfo *) lfirst(lr);
+
+		shareinput_walker(shareinput_mutator_xslice_4, (Node *) subplan, subroot);
+	}
+	shareinput_walker(shareinput_mutator_xslice_4, (Node *) plan, root);
 
 	return plan;
 }
@@ -2962,10 +3001,6 @@ fixup_subplan_walker(Node *node, SubPlanWalkerContext *context)
 			PlannerInfo *root = (PlannerInfo *) context->base.node;
 			Plan	    *dupsubplan = (Plan *) copyObject(planner_subplan_get_plan(root, subplan));
 			int			 newplan_id = list_length(root->glob->subplans) + 1;
-			PlannerInfo *dupsubroot = makeNode(PlannerInfo);
-
-			memcpy(dupsubroot, planner_subplan_get_root(root, subplan), sizeof(PlannerInfo));
-			root->glob->subroots = lappend(root->glob->subroots, dupsubroot);
 
 			subplan->plan_id = newplan_id;
 			root->glob->subplans = lappend(root->glob->subplans, dupsubplan);
