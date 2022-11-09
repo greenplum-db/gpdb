@@ -3685,7 +3685,7 @@ static bool checkBypassWalker(Node *node, void *context) {
 
 	}
 
-	return true;
+	return false;
 }
 
 /*
