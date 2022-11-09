@@ -3689,7 +3689,8 @@ checkBypassWalker(Node *node, void *context)
 	if (IsA(node, RangeVar))
 	{
 		RangeVar *from = (RangeVar *)node;
-		if (strcmp(from->schemaname, "pg_catalog") != 0){
+		if (from->schemaname != NULL &&
+			strcmp(from->schemaname, "pg_catalog") != 0){
 			*bypass = false;
 			return true;
 		}
