@@ -3687,8 +3687,10 @@ static bool checkBypassWalker(Node *node, void *context) {
 	if (IsA(node, RangeVar)) {
 		foreach(cell, (List *)node) {
 			RangeVar *from = (RangeVar *)lfirst(cell);
-			if (strcmp(from->schemaname, "pg_catalog") != 0)
+			if (strcmp(from->schemaname, "pg_catalog") != 0){
 				*bypass = false;
+				return true;
+			}
 		}
 	}
 
@@ -3756,12 +3758,9 @@ shouldBypassQuery(const char *query_string)
 
 		if (IsA(parsetree, SelectStmt)){
 			raw_expression_tree_walker(parsetree, checkBypassWalker, &bypass);
-		}
-
-		if (bypass == false)
-			break;
-
-		if (nodeTag(parsetree) != T_VariableSetStmt &&
+			if (bypass == false)
+				break;
+		}else if (nodeTag(parsetree) != T_VariableSetStmt &&
 			nodeTag(parsetree) != T_VariableShowStmt)
 		{
 			bypass = false;
