@@ -156,6 +156,8 @@ where storage\_parameter when used with the `SET` command is:
    compresslevel={0-9}
    fillfactor={10-100}
    checksum= {true | false }
+   analyze_hll_non_part_table={true | false }
+
 ```
 
 where storage\_parameter when used with the `SET WITH` command is:
@@ -169,7 +171,6 @@ where storage\_parameter when used with the `SET WITH` command is:
    fillfactor={10-100}
    checksum={true | false }
    reorganize={true | false }
-   analyze_hll_non_part_table={true | false }
 ```
 
   <p class="note">
