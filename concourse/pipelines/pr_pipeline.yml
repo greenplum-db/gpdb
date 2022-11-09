@@ -27,12 +27,18 @@ resources:
 - name: gpdb7-rhel8-build
   type: registry-image
   source:
-    repository: gcr.io/data-gpdb-public-images/gpdb7-rhel8-build
+    repository: gcr.io/data-gpdb-private-images/gpdb7-rhel8-build
+    tag: latest
+    username: _json_key
+    password: ((data-gpdb-private-images-container-registry-readonly-service-account-key))
 
 - name: gpdb7-rhel8-test
   type: registry-image
   source:
-    repository: gcr.io/data-gpdb-public-images/gpdb7-rhel8-test
+    repository: gcr.io/data-gpdb-private-images/gpdb7-rhel8-test
+    tag: latest
+    username: _json_key
+    password: ((data-gpdb-private-images-container-registry-readonly-service-account-key))
 
 jobs:
 - name: compile_and_test_gpdb
