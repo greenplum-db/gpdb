@@ -1008,10 +1008,11 @@ CTranslatorUtils::GetColumnAttnosForGroupBy(
 		// concatenation of the individual elements of the different grouping
 		// sets. Here we blend the last computed grouping set spec
 		// (col_attnos_arr_current) into the cumulated result (col_attnos_arr).
-		CBitSetArray *col_attnos_arr_temp = GPOS_NEW(mp) CBitSetArray(mp);
 		ULONG col_attnos_arr_size = col_attnos_arr->Size();
 		if (col_attnos_arr_size > 0)
 		{
+			CBitSetArray *col_attnos_arr_temp = GPOS_NEW(mp) CBitSetArray(mp);
+
 			for (ULONG ul = 0; ul < col_attnos_arr_size; ul++)
 			{
 				for (ULONG ulInner = 0;
