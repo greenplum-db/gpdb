@@ -94,7 +94,7 @@ WITH all_entries AS (
 SELECT S.datname,
        M.sessionid as sess_id,
        S.usename,
-       ARRAY_AGG(DISTINCT S.query) as recent_queries,
+       case when cardinality(S.query)=1 and (S.query)[1]='' then null else S.query end as recent_queries,
        M.segid,
        M.vmem_mb,
        case when M.runaway_status = 0 then false else true end as is_runaway,
