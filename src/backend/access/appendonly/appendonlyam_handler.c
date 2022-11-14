@@ -223,7 +223,16 @@ appendonly_dml_finish(Relation relation)
 	AppendOnlyDMLState *state;
 	bool				had_delete_desc = false;
 
-	state = remove_dml_state(RelationGetRelid(relation));
+	Oid relationOid = RelationGetRelid(relation);
+
+	Assert(appendOnlyDMLStates.state_table);
+
+	state = (AppendOnlyDMLState *)hash_search(appendOnlyDMLStates.state_table,
+											  &relationOid,
+											  HASH_FIND,
+											  NULL);
+
+	Assert(state);
 
 	if (state->deleteDesc)
 	{
@@ -270,6 +279,8 @@ appendonly_dml_finish(Relation relation)
 		pfree(state->uniqueCheckDesc);
 		state->uniqueCheckDesc = NULL;
 	}
+
+	remove_dml_state(relationOid);
 }
 
 /*
