@@ -745,7 +745,7 @@ ResGroupCreateOnAbort(const ResourceGroupCallbackContext *callbackCtx)
 		{
 			/* return cpu cores to default group */
 			char defaultGroupCpuset[MaxCpuSetLength];
-			ResGroupOps_GetCpuSet(DEFAULT_CPUSET_GROUP_ID,
+			cgroupOpsRoutine->getcpuset(DEFAULT_CPUSET_GROUP_ID,
 								  defaultGroupCpuset,
 								  MaxCpuSetLength);
 			CpusetUnion(defaultGroupCpuset,
