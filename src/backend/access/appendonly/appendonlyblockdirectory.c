@@ -221,6 +221,64 @@ AppendOnlyBlockDirectory_Init_forSearch(
 }
 
 /*
+ * AppendOnlyBlockDirectory_Init_forUniqueChecks
+ *
+ * Initializes the block directory to handle lookups for uniqueness checks.
+ *
+ * Note: These lookups will be purely restricted to the block directory relation
+ * itself and will not involve the physical AO relation.
+ *
+ * Note: we defer setting up the appendOnlyMetaDataSnapshot for the block
+ * directory to the index_fetch_tuple_exists() table AM call. This is because
+ * snapshots used for unique index lookups are special and don't follow the
+ * usual allocation or registration mechanism. They may be stack-allocated and a
+ * new snapshot object may be passed to every unique index check (this happens
+ * when SNAPSHOT_DIRTY is passed). While technically, we could set up the
+ * metadata snapshot in advance for SNAPSHOT_SELF, the alternative is fine.
+ */
+void
+AppendOnlyBlockDirectory_Init_forUniqueChecks(
+											  AppendOnlyBlockDirectory *blockDirectory,
+											  Relation aoRel,
+											  int numColumnGroups,
+											  Snapshot snapshot)
+{
+	Oid blkdirrelid;
+	Oid blkdiridxid;
+
+	Assert(RelationIsValid(aoRel));
+
+	Assert(snapshot->snapshot_type == SNAPSHOT_DIRTY ||
+			snapshot->snapshot_type == SNAPSHOT_SELF);
+
+	GetAppendOnlyEntryAuxOids(aoRel->rd_id,
+							  InvalidSnapshot, /* catalog snapshot is enough */
+							  NULL, &blkdirrelid, &blkdiridxid, NULL, NULL);
+
+	if (!OidIsValid(blkdirrelid) || !OidIsValid(blkdiridxid))
+		elog(ERROR, "Could not find block directory for relation: %u", aoRel->rd_id);
+
+	blockDirectory->aoRel = aoRel;
+	blockDirectory->isAOCol = RelationIsAoCols(aoRel);
+
+	/* Segfile setup is not necessary as physical AO tuples will not be accessed */
+	blockDirectory->segmentFileInfo = NULL;
+	blockDirectory->totalSegfiles = -1;
+	blockDirectory->currentSegmentFileNum = -1;
+
+	/* Metadata snapshot assignment is deferred to lookup-time */
+	blockDirectory->appendOnlyMetaDataSnapshot = InvalidSnapshot;
+
+	blockDirectory->numColumnGroups = numColumnGroups;
+	blockDirectory->proj = NULL;
+
+	blockDirectory->blkdirRel = heap_open(blkdirrelid, AccessShareLock);
+	blockDirectory->blkdirIdx = index_open(blkdiridxid, AccessShareLock);
+
+	init_internal(blockDirectory);
+}
+
+/*
  * AppendOnlyBlockDirectory_Init_forInsert
  *
  * Initialize the block directory to handle the inserts.
@@ -1507,6 +1565,21 @@ AppendOnlyBlockDirectory_End_addCol(
 	index_close(blockDirectory->blkdirIdx, NoLock);
 	heap_close(blockDirectory->blkdirRel, NoLock);
 	CatalogCloseIndexes(blockDirectory->indinfo);
+
+	MemoryContextDelete(blockDirectory->memoryContext);
+}
+
+void
+AppendOnlyBlockDirectory_End_forUniqueChecks(AppendOnlyBlockDirectory *blockDirectory)
+{
+	Assert(RelationIsValid(blockDirectory->blkdirRel));
+
+	/* This must have been reset after each uniqueness check */
+	Assert(blockDirectory->appendOnlyMetaDataSnapshot == InvalidSnapshot);
+
+	if (blockDirectory->blkdirIdx)
+		index_close(blockDirectory->blkdirIdx, AccessShareLock);
+	heap_close(blockDirectory->blkdirRel, AccessShareLock);
 
 	MemoryContextDelete(blockDirectory->memoryContext);
 }

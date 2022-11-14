@@ -290,7 +290,7 @@ aoco_dml_finish(Relation relation)
 	if (state->uniqueCheckDesc)
 	{
 		/* clean up the block directory */
-		AppendOnlyBlockDirectory_End_forSearch(state->uniqueCheckDesc->blockDirectory);
+		AppendOnlyBlockDirectory_End_forUniqueChecks(state->uniqueCheckDesc->blockDirectory);
 		pfree(state->uniqueCheckDesc->blockDirectory);
 		state->uniqueCheckDesc->blockDirectory = NULL;
 
@@ -301,7 +301,7 @@ aoco_dml_finish(Relation relation)
 		 */
 		if (!had_delete_desc)
 		{
-			AppendOnlyVisimap_Finish(state->uniqueCheckDesc->visimap, AccessShareLock);
+			AppendOnlyVisimap_Finish_forUniquenessChecks(state->uniqueCheckDesc->visimap);
 			pfree(state->uniqueCheckDesc->visimap);
 		}
 		state->uniqueCheckDesc->visimap = NULL;
@@ -401,7 +401,7 @@ get_or_create_delete_descriptor(const Relation relation, bool forUpdate)
 }
 
 static AOCSUniqueCheckDesc
-get_or_create_unique_check_desc(Relation relation)
+get_or_create_unique_check_desc(Relation relation, Snapshot snapshot)
 {
 	AOCODMLState *state = find_dml_state(RelationGetRelid(relation));
 
@@ -409,25 +409,16 @@ get_or_create_unique_check_desc(Relation relation)
 	{
 		MemoryContext oldcxt;
 		AOCSUniqueCheckDesc uniqueCheckDesc;
-		Oid visimaprelid;
-		Oid visimapidxid;
 
 		oldcxt = MemoryContextSwitchTo(aocoDMLStates.stateCxt);
 		uniqueCheckDesc = palloc0(sizeof(AOCSUniqueCheckDescData));
 
 		/* Initialize the block directory */
 		uniqueCheckDesc->blockDirectory = palloc0(sizeof(AppendOnlyBlockDirectory));
-		/*
-		 * Note: we defer setting up the appendOnlyMetaDataSnapshot for the
-		 * block directory to aoco_index_fetch_tuple_exists(). This is because
-		 * snapshots used for unique index lookups may be stack-allocated and a
-		 * new snapshot object may be passed to every unique index check. (for
-		 * SNAPSHOT_DIRTY)
-		 */
-		AppendOnlyBlockDirectory_Init_forSearch(uniqueCheckDesc->blockDirectory,
-												InvalidSnapshot, /* appendOnlyMetaDataSnapshot */
-												NULL, -1, relation,
-												relation->rd_att->natts, false, NULL);
+		AppendOnlyBlockDirectory_Init_forUniqueChecks(uniqueCheckDesc->blockDirectory,
+													  relation,
+													  relation->rd_att->natts, /* numColGroups */
+													  snapshot);
 		/*
 		 * If this is part of an update, we need to reuse the visimap used by
 		 * the delete half of the update. This is to avoid spurious conflicts
@@ -441,22 +432,9 @@ get_or_create_unique_check_desc(Relation relation)
 		{
 			/* Initialize the visimap */
 			uniqueCheckDesc->visimap = palloc0(sizeof(AppendOnlyVisimap));
-			GetAppendOnlyEntryAuxOids(relation->rd_id,
-									  InvalidSnapshot, /* catalog snap is fine for this */
-									  NULL, NULL, NULL,
-									  &visimaprelid, &visimapidxid);
-			/*
-			 * Note: we don't set up the appendOnlyMetadataSnapshot for the
-			 * visimap here. It is deferred to aoco_index_fetch_tuple_exists().
-			 * This is because snapshots used for unique index lookups may be
-			 * stack-allocated and a new snapshot object may be used for every
-			 * unique index check. (for SNAPSHOT_DIRTY)
-			 */
-			AppendOnlyVisimap_Init(uniqueCheckDesc->visimap,
-								   visimaprelid,
-								   visimapidxid,
-								   AccessShareLock,
-								   InvalidSnapshot /* appendOnlyMetaDataSnapshot */);
+			AppendOnlyVisimap_Init_forUniqueCheck(uniqueCheckDesc->visimap,
+												  relation,
+												  snapshot);
 		}
 
 		state->uniqueCheckDesc = uniqueCheckDesc;
@@ -856,11 +834,7 @@ aoco_index_fetch_tuple_exists(Relation rel,
 {
 	AOCSUniqueCheckDesc 		uniqueCheckDesc;
 	AOTupleId 					*aoTupleId = (AOTupleId *) tid;
-	AppendOnlyBlockDirectory 	*blockDirectory;
-	AppendOnlyVisimap 			*visimap;
-	bool						blkdir_covers;
 	bool						visible;
-	Snapshot 					save_snapshot;
 
 #ifdef USE_ASSERT_CHECKING
 	int			segmentFileNum = AOTupleIdGet_segmentFileNum(aoTupleId);
@@ -899,23 +873,12 @@ aoco_index_fetch_tuple_exists(Relation rel,
 	if (snapshot->snapshot_type == SNAPSHOT_SELF)
 		return true;
 
-	uniqueCheckDesc = get_or_create_unique_check_desc(rel);
+	uniqueCheckDesc = get_or_create_unique_check_desc(rel, snapshot);
 
-	/*
-	 * Check to see if there is a block directory entry for the tuple. If no
-	 * such entry exists, the tuple doesn't exist physically in the segfile.
-	 *
-	 * Note: We need to use the passed in snapshot to perform the block
-	 * directory lookup. See get_or_create_unique_check_desc() for why we don't
-	 * set the snapshot up prior.
-	 */
-	blockDirectory = uniqueCheckDesc->blockDirectory;
-	Assert(blockDirectory->appendOnlyMetaDataSnapshot == InvalidSnapshot);
-	blockDirectory->appendOnlyMetaDataSnapshot = snapshot;
-	blkdir_covers = AppendOnlyBlockDirectory_CoversTuple(blockDirectory,
-														 aoTupleId);
-	blockDirectory->appendOnlyMetaDataSnapshot = InvalidSnapshot;
-	if (!blkdir_covers)
+	/* First, scan the block directory */
+	if (!AppendOnlyBlockDirectory_UniqueCheck(uniqueCheckDesc->blockDirectory,
+											  aoTupleId,
+											  snapshot))
 		return false;
 
 	/*
@@ -924,24 +887,14 @@ aoco_index_fetch_tuple_exists(Relation rel,
 	 * concurrent in-progress transaction inserting the tuple. So, return true
 	 * and have the xwait machinery kick in.
 	 */
+	Assert(snapshot->snapshot_type == SNAPSHOT_DIRTY);
 	if (TransactionIdIsValid(snapshot->xmin) || TransactionIdIsValid(snapshot->xmax))
 		return true;
 
-	/*
-	 * Consult the visimap to check if the tuple was deleted by a *committed*
-	 * transaction.
-	 *
-	 * Note: we need to use the passed in snapshot to perform the visimap lookup.
-	 * See get_or_create_unique_check_desc() for why we don't set the snapshot
-	 * up prior there.
-	 * If this is part of an update, we are reusing the visimap from the delete
-	 * half of the update, so better restore its snapshot once we are done.
-	 */
-	visimap = uniqueCheckDesc->visimap;
-	save_snapshot = visimap->visimapStore.snapshot;
-	visimap->visimapStore.snapshot = snapshot;
-	visible = AppendOnlyVisimap_IsVisible(visimap, aoTupleId);
-	visimap->visimapStore.snapshot = save_snapshot;
+	/* Now, consult the visimap */
+	visible = AppendOnlyVisimap_UniqueCheck(uniqueCheckDesc->visimap,
+											aoTupleId,
+											snapshot);
 
 	/*
 	 * Since we disallow deletes and updates running in parallel with inserts,
