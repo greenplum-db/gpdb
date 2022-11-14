@@ -193,10 +193,32 @@ ClearOidAssignmentsOnCommit(void)
 	preserve_oids_on_commit = false;
 }
 
+List *
+SaveOidAssignments(void)
+{
+	List *l = NIL;
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		l = dispatch_oids;
+		dispatch_oids = NIL;
+	}
+	else if (Gp_role == GP_ROLE_EXECUTE)
+	{
+		l = preassigned_oids;
+		preassigned_oids = NIL;
+	}
+
+	return l;
+}
+
 void
 RestoreOidAssignments(List *oid_assignments)
 {
-	dispatch_oids = oid_assignments;
+	if (Gp_role == GP_ROLE_DISPATCH)
+		dispatch_oids = oid_assignments;
+	else if (Gp_role == GP_ROLE_EXECUTE)
+		preassigned_oids = oid_assignments;
 }
 
 /* ----------------------------------------------------------------

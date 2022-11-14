@@ -22,6 +22,7 @@
 #include "postgres.h"
 
 #include "access/htup_details.h"
+#include "catalog/oid_dispatch.h"
 #include "catalog/pg_aggregate.h"
 #include "catalog/pg_class.h"
 #include "catalog/pg_language.h"
@@ -2477,7 +2478,9 @@ transform_array_Const_to_ArrayExpr(Const *c)
 Node *
 eval_const_expressions(PlannerInfo *root, Node *node)
 {
+	Node                          *result;
 	eval_const_expressions_context context;
+	List                          *saved_dispatch_oids;
 
 	if (root)
 		context.boundParams = root->glob->boundParams;	/* bound Params */
@@ -2492,7 +2495,20 @@ eval_const_expressions(PlannerInfo *root, Node *node)
 	context.max_size = 0;
 	context.eval_stable_functions = should_eval_stable_functions(root);
 
-	return eval_const_expressions_mutator(node, &context);
+	/*
+	 * Greenplum specific behavior
+	 *   the following step might need to dispatch, e.g. a function
+	 *   contaions SQL that accesses to distributed tables. This kind
+	 *   of dispatch never touches catalog and does not need dispatch_oids.
+	 *   We need to save and restore the global var dispatch_oids here.
+	 *
+	 *   Refer to issue https://github.com/greenplum-db/gpdb/issues/14465
+	 *   for more details.
+	 */
+	saved_dispatch_oids = SaveOidAssignments();
+	result = eval_const_expressions_mutator(node, &context);
+	RestoreOidAssignments(saved_dispatch_oids);
+	return result;
 }
 
 /*--------------------
