@@ -18,8 +18,6 @@ Greenplum Database provides the following system views not available in PostgreS
 -   [pg\_cursors](pg_cursors.html)
 -   [pg\_matviews](pg_matviews.html)
 -   [pg\_max\_external\_files](pg_max_external_files.html)
--   [pg\_partition\_columns](pg_partition_columns.html)
--   [pg\_partition\_templates](pg_partition_templates.html)
 -   [pg\_partitions](pg_partitions.html)
 -   [pg\_resqueue\_attributes](pg_resqueue_attributes.html)
 -   pg\_resqueue\_status \(Deprecated. Use [gp\_toolkit.gp\_resqueue\_status](../gp_toolkit.html).\)

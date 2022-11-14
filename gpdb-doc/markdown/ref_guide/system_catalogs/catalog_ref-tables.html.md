@@ -42,7 +42,7 @@
 -   [pg\_operator](pg_operator.html)
 -   [pg\_opfamily](pg_opfamily.html)
 -   [pg\_partition](pg_partition.html)
--   [pg\_partition\_rule](pg_partition_rule.html)
+-   [pg\_partitioned\_table](pg_partitioned_table.html)
 -   [pg\_pltemplate](pg_pltemplate.html)
 -   [pg\_proc](pg_proc.html)
 -   [pg\_resgroup](pg_resgroup.html)

@@ -138,13 +138,7 @@ System catalog table and view definitions in alphabetical order.
 
 -   [pg\_partition](../system_catalogs/pg_partition.html)  
 
--   [pg\_partition\_columns](../system_catalogs/pg_partition_columns.html)  
-
--   [pg\_partition\_encoding](../system_catalogs/pg_partition_encoding.html)  
-
--   [pg\_partition\_rule](../system_catalogs/pg_partition_rule.html)  
-
--   [pg\_partition\_templates](../system_catalogs/pg_partition_templates.html)  
+-   [pg\_partitioned\_table](../system_catalogs/pg_partitioned_table.html)  
 
 -   [pg\_partitions](../system_catalogs/pg_partitions.html)  
 
@@ -185,8 +179,6 @@ System catalog table and view definitions in alphabetical order.
 -   [pg\_stat\_last\_shoperation](../system_catalogs/pg_stat_last_shoperation.html)  
 
 -   [pg\_stat\_operations](../system_catalogs/pg_stat_operations.html)  
-
--   [pg\_stat\_partition\_operations](../system_catalogs/pg_stat_partition_operations.html)  
 
 -   [pg\_stat\_replication](../system_catalogs/pg_stat_replication.html)  
 
