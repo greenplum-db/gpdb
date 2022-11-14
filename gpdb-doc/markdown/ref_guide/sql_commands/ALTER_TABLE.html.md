@@ -37,7 +37,7 @@ where <action> is one of:
   ADD [COLUMN] <column_name data_type> [ DEFAULT <default_expr> ]
       [<column_constraint> [ ... ]]
       [ COLLATE <collation> ]
-      [ ENCODING ( <column_storage_parameter> [,...] ) ]
+      [ ENCODING ( <aoco_column_encoding> [,...] ) ]
   DROP [COLUMN] [IF EXISTS] <column_name> [RESTRICT | CASCADE]
   ALTER [COLUMN] <column_name> [ SET DATA ] TYPE <type> [COLLATE <collation>] [USING <expression>]
   ALTER [COLUMN] <column_name> SET DEFAULT <expression>
@@ -46,6 +46,7 @@ where <action> is one of:
   ALTER [COLUMN] <column_name> SET STATISTICS <integer>
   ALTER [COLUMN] column SET ( <attribute_option> = <value> [, ... ] )
   ALTER [COLUMN] column RESET ( <attribute_option> [, ... ] )
+  ALTER [COLUMN] column SET ENCODNG ( aoco_column_encoding [, ...] )
   ADD <table_constraint> [NOT VALID]
   ADD <table_constraint_using_index>
   VALIDATE CONSTRAINT <constraint_name>
@@ -141,13 +142,14 @@ and subpartition\_element is:
 [ TABLESPACE <tablespace> ]
 ```
 
-where column_storage_parameter is:
+where aoco_column_encoding is:
 
 ```
    blocksize={8192-2097152}
    compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
    compresslevel={0-9}
 ```
+
 where storage\_parameter when used with the `SET` command is:
 
 ```
@@ -241,7 +243,7 @@ Although you can specify the table's access method using the <code>appendoptimiz
 -   **SET SCHEMA** — Moves the table into another schema. Associated indexes, constraints, and sequences owned by table columns are moved as well.
 -   **ALTER PARTITION \| DROP PARTITION \| RENAME PARTITION \| TRUNCATE PARTITION \| ADD PARTITION \| SPLIT PARTITION \| EXCHANGE PARTITION \| SET SUBPARTITION TEMPLATE**— Changes the structure of a partitioned table. In most cases, you must go through the parent table to alter one of its child table partitions.
 
-**Note:** If you add a partition to a table that has subpartition encodings, the new partition inherits the storage directives for the subpartitions. For more information about the precedence of compression settings, see [Using Compression](../../admin_guide/ddl/ddl-storage.html#topic40).
+**Note:** If you add a partition to a table that has subpartition encodings, the new partition inherits the AOCO column encodings for the subpartitions. For more information about the precedence of compression settings, see [Using Compression](../../admin_guide/ddl/ddl-storage.html#topic40).
 
 All the forms of `ALTER TABLE` that act on a single table, except `RENAME` and `SET SCHEMA`, can be combined into a list of multiple alterations to apply together. For example, it is possible to add several columns and/or alter the type of several columns in a single command. This is particularly useful with large tables, since only one pass over the table need be made.
 
@@ -433,6 +435,7 @@ This table lists the `ALTER TABLE` operations that require a table rewrite when 
 |----------------------|---------------------------------|----------------|----|
 |`ALTER COLUMN TYPE`|Yes|Yes|Yes|
 |`ADD COLUMN`|No|Yes|Yes|
+| `ALTER COLUMN SET ENCODING`|Yes|N/A|N/A|
 
 **Note:** Dropping a system `oid` column also requires a table rewrite.
 
