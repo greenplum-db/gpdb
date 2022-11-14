@@ -1418,6 +1418,32 @@ AtEOXact_DispatchOids(bool isCommit)
 	}
 	else
 	{
+		/*
+		 * Short cut help avoid memory context reset since sometimes we may need
+		 * to restore the global vars. A typical case can be found in the issue:
+		 * https://github.com/greenplum-db/gpdb/issues/14465.
+		 */
+		if (dispatch_oids == NIL && Gp_role == GP_ROLE_DISPATCH)
+		{
+			/*
+			 * The global var dispatch_oids only used on QD,
+			 * on QE it will maintain preassigned_oids in Oids Context
+			 * when getting dispatch info.
+			 */
+			Assert(preassigned_oids == NIL);
+			return;
+		}
+		else if (preassigned_oids == NIL && Gp_role == GP_ROLE_EXECUTE)
+		{
+			/*
+			 * The global var preassigned_oids only used on QEs,
+			 * on QE it will maintain dispatch_oids in Oids Context
+			 * when building dispatch info.
+			 */
+			Assert(dispatch_oids == NIL);
+			return;
+		}
+
 		/* The list will be free'd with the memory context. */
 		dispatch_oids = NIL;
 	}
