@@ -26,7 +26,6 @@ name
 
 You cannot run `DROP TABLESPACE` inside a transaction block.
 
-XXX 
 Run `DROP TABLESPACE` during a period of low activity to avoid issues due to concurrent creation of tables and temporary objects. When a tablespace is dropped, there is a small window in which a table could be created in the tablespace that is currently being dropped. If this occurs, Greenplum Database returns a warning. This is an example of the `DROP TABLESPACE` warning.
 
 ```
@@ -38,7 +37,6 @@ DROP TABLESPACE
 ```
 
 The table data in the tablespace directory is not dropped. You can use the [ALTER TABLE](ALTER_TABLE.html) command to change the tablespace defined for the table and move the data to an existing tablespace.
-XXX 
 
 ## <a id="section5"></a>Examples 
 

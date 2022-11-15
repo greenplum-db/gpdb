@@ -30,7 +30,7 @@ owner\_name
 :   The name of the user who will own the tablespace. If omitted, defaults to the user running the command. Only superusers can create tablespaces, but they can assign ownership of tablespaces to non-superusers.
 
 LOCATION 'directory'
-:   The directory that will be used for the tablespace. The directory should be empty and must be owned by the Greenplum Database system user. You must specify the absolute path of the directory, XXX and the path name must not be greater than 100 characters in length. \(The location is used to create a symlink target in the pg\_tblspc directory, and symlink targets are truncated to 100 characters when sending to `tar` from utilities such as `pg_basebackup`.\) XXX
+:   The directory that will be used for the tablespace. The directory should be empty and must be owned by the Greenplum Database system user. You must specify the absolute path of the directory, and the path name must not be greater than 100 characters in length. \(The location is used to create a symlink target in the pg\_tblspc directory, and symlink targets are truncated to 100 characters when sending to `tar` from utilities such as `pg_basebackup`.\)
 
 :   You can specify a different tablespace directory for any Greenplum Database segment instance in the `WITH` clause.
 
@@ -50,9 +50,9 @@ Because `CREATE TABLESPACE` creates symbolic links from the `pg_tblspc` director
 
 You cannot run `CREATE TABLESPACE` inside a transaction block.
 
-XXX When creating tablespaces, ensure that file system locations have sufficient I/O speed and available disk space.
+When creating tablespaces, ensure that file system locations have sufficient I/O speed and available disk space.
 
-XXX **Note:** Greenplum Database does not support different tablespace locations for a primary-mirror pair with the same content ID. It is only possible to configure different locations for different content IDs. Do not modify symbolic links under the `pg_tblspc` directory so that primary-mirror pairs point to different file locations; this will lead to erroneous behavior.
+**Note:** Greenplum Database does not support different tablespace locations for a primary-mirror pair with the same content ID. It is only possible to configure different locations for different content IDs. Do not modify symbolic links under the `pg_tblspc` directory so that primary-mirror pairs point to different file locations; this will lead to erroneous behavior.
 
 ## <a id="section6"></a>Examples 
 
