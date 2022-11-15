@@ -32,25 +32,25 @@ IMDProvider::GetGPDBTypeMdid(CMemoryPool *mp,
 							 ,
 							 IMDType::ETypeInfo type_info)
 {
-	GPOS_ASSERT(IMDId::EmdidGPDB == sysid.MdidType());
+	GPOS_ASSERT(IMDId::EmdidGeneral == sysid.MdidType());
 	GPOS_ASSERT(IMDType::EtiGeneric > type_info);
 
 	switch (type_info)
 	{
 		case IMDType::EtiInt2:
-			return GPOS_NEW(mp) CMDIdGPDB(GPDB_INT2);
+			return GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT2);
 
 		case IMDType::EtiInt4:
-			return GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4);
+			return GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4);
 
 		case IMDType::EtiInt8:
-			return GPOS_NEW(mp) CMDIdGPDB(GPDB_INT8);
+			return GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT8);
 
 		case IMDType::EtiBool:
-			return GPOS_NEW(mp) CMDIdGPDB(GPDB_BOOL);
+			return GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_BOOL);
 
 		case IMDType::EtiOid:
-			return GPOS_NEW(mp) CMDIdGPDB(GPDB_OID);
+			return GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_OID);
 
 		default:
 			return nullptr;

@@ -210,7 +210,8 @@ CTranslatorUtils::IsSirvFunc(CMemoryPool *mp, CMDAccessor *md_accessor,
 		return false;
 	}
 
-	CMDIdGPDB *mdid_func = GPOS_NEW(mp) CMDIdGPDB(func_oid);
+	CMDIdGPDB *mdid_func =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, func_oid);
 	const IMDFunction *func = md_accessor->RetrieveFunc(mdid_func);
 
 	BOOL is_sirv = (!func->ReturnsSet() &&
@@ -276,7 +277,7 @@ CTranslatorUtils::ConvertToCDXLLogicalTVF(CMemoryPool *mp,
 		Const *constExpr = (Const *) rtfunc->funcexpr;
 
 		CMDIdGPDB *mdid_return_type =
-			GPOS_NEW(mp) CMDIdGPDB(constExpr->consttype);
+			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, constExpr->consttype);
 
 		const IMDType *type = md_accessor->RetrieveType(mdid_return_type);
 		CDXLColDescrArray *column_descrs = GetColumnDescriptorsFromComposite(
@@ -287,8 +288,8 @@ CTranslatorUtils::ConvertToCDXLLogicalTVF(CMemoryPool *mp,
 
 		// if TVF evaluates to const, pass invalid key as funcid
 		CDXLLogicalTVF *tvf_dxl = GPOS_NEW(mp)
-			CDXLLogicalTVF(mp, GPOS_NEW(mp) CMDIdGPDB(0), mdid_return_type,
-						   func_name, column_descrs);
+			CDXLLogicalTVF(mp, GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, 0),
+						   mdid_return_type, func_name, column_descrs);
 
 		return tvf_dxl;
 	}
@@ -302,9 +303,10 @@ CTranslatorUtils::ConvertToCDXLLogicalTVF(CMemoryPool *mp,
 				   GPOS_WSZ_LIT("SIRV functions"));
 	}
 	// get function id
-	CMDIdGPDB *mdid_func = GPOS_NEW(mp) CMDIdGPDB(funcexpr->funcid);
+	CMDIdGPDB *mdid_func =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, funcexpr->funcid);
 	CMDIdGPDB *mdid_return_type =
-		GPOS_NEW(mp) CMDIdGPDB(funcexpr->funcresulttype);
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, funcexpr->funcresulttype);
 	const IMDType *type = md_accessor->RetrieveType(mdid_return_type);
 
 	// get function from MDcache
@@ -426,7 +428,8 @@ CTranslatorUtils::ResolvePolymorphicTypes(CMemoryPool *mp,
 	for (ULONG ul = num_args; ul < total_args; ul++)
 	{
 		IMDId *resolved_mdid = nullptr;
-		resolved_mdid = GPOS_NEW(mp) CMDIdGPDB(arg_types[ul]);
+		resolved_mdid =
+			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, arg_types[ul]);
 		resolved_types->Append(resolved_mdid);
 	}
 
@@ -495,7 +498,7 @@ CTranslatorUtils::GetColumnDescriptorsFromRecord(CMemoryPool *mp,
 		CMDName *col_mdname = GPOS_NEW(mp) CMDName(mp, column_name);
 		GPOS_DELETE(column_name);
 
-		IMDId *col_type = GPOS_NEW(mp) CMDIdGPDB(coltype);
+		IMDId *col_type = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, coltype);
 
 		CDXLColDescr *dxl_col_descr = GPOS_NEW(mp) CDXLColDescr(
 			col_mdname, id_generator->next_id(), INT(ul + 1) /* attno */,
@@ -1507,7 +1510,7 @@ CTranslatorUtils::GetColumnDescrAt(CMemoryPool *mp, TargetEntry *target_entry,
 	// create a column descriptor
 	OID type_oid = gpdb::ExprType((Node *) target_entry->expr);
 	INT type_modifier = gpdb::ExprTypeMod((Node *) target_entry->expr);
-	CMDIdGPDB *col_type = GPOS_NEW(mp) CMDIdGPDB(type_oid);
+	CMDIdGPDB *col_type = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, type_oid);
 	CDXLColDescr *dxl_col_descr =
 		GPOS_NEW(mp) CDXLColDescr(mdname, colid, pos,	   /* attno */
 								  col_type, type_modifier, /* type_modifier */
@@ -1531,8 +1534,8 @@ CTranslatorUtils::CreateDummyProjectElem(CMemoryPool *mp, ULONG colid_input,
 {
 	CMDIdGPDB *original_mdid = CMDIdGPDB::CastMdid(dxl_col_descr->MdidType());
 	CMDIdGPDB *copy_mdid = GPOS_NEW(mp)
-		CMDIdGPDB(original_mdid->Oid(), original_mdid->VersionMajor(),
-				  original_mdid->VersionMinor());
+		CMDIdGPDB(IMDId::EmdidGeneral, original_mdid->Oid(),
+				  original_mdid->VersionMajor(), original_mdid->VersionMinor());
 
 	// create a column reference for the scalar identifier to be casted
 	CMDName *mdname =
@@ -2489,7 +2492,8 @@ CTranslatorUtils::IsCompositeConst(CMemoryPool *mp, CMDAccessor *md_accessor,
 
 	Const *constExpr = (Const *) rtfunc->funcexpr;
 
-	CMDIdGPDB *mdid_return_type = GPOS_NEW(mp) CMDIdGPDB(constExpr->consttype);
+	CMDIdGPDB *mdid_return_type =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, constExpr->consttype);
 
 	const IMDType *type = md_accessor->RetrieveType(mdid_return_type);
 

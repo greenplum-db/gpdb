@@ -100,7 +100,7 @@ using namespace gpopt;
 
 // static variable initialization
 // default source system id
-CSystemId CTestUtils::m_sysidDefault(IMDId::EmdidGPDB,
+CSystemId CTestUtils::m_sysidDefault(IMDId::EmdidGeneral,
 									 GPOS_WSZ_STR_LENGTH("GPDB"));
 
 
@@ -971,7 +971,9 @@ CTestUtils::PexprLogicalSubqueryWithConstTableGet(CMemoryPool *mp,
 		pexprSubquery = GPOS_NEW(mp) CExpression(
 			mp,
 			GPOS_NEW(mp) CScalarSubqueryAny(
-				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
+				mp,
+				GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP),
+				str, pcrInner),
 			pexprConstTableGet, CUtils::PexprScalarIdent(mp, pcrOuter));
 	}
 	else
@@ -980,7 +982,9 @@ CTestUtils::PexprLogicalSubqueryWithConstTableGet(CMemoryPool *mp,
 		pexprSubquery = GPOS_NEW(mp) CExpression(
 			mp,
 			GPOS_NEW(mp) CScalarSubqueryAll(
-				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
+				mp,
+				GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP),
+				str, pcrInner),
 			pexprConstTableGet, CUtils::PexprScalarIdent(mp, pcrOuter));
 	}
 
@@ -1582,7 +1586,8 @@ CTestUtils::PexprPrjElemWithSum(CMemoryPool *mp, CColRef *colref)
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 
 	// generate a SUM expression
-	CMDIdGPDB *pmdidSumAgg = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_SUM_AGG);
+	CMDIdGPDB *pmdidSumAgg =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_SUM_AGG);
 	CWStringConst *pstrAggFunc =
 		GPOS_NEW(mp) CWStringConst(GPOS_WSZ_LIT("sum"));
 	CExpression *pexprScalarAgg = CUtils::PexprAggFunc(
@@ -2012,7 +2017,8 @@ CTestUtils::PexprLogicalTVF(CMemoryPool *mp, ULONG ulArgs)
 
 	const WCHAR *wszFuncName = GPOS_WSZ_LIT("generate_series");
 
-	IMDId *mdid = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT8_GENERATE_SERIES);
+	IMDId *mdid =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT8_GENERATE_SERIES);
 	CWStringConst *str_func_name = GPOS_NEW(mp) CWStringConst(mp, wszFuncName);
 
 	const IMDTypeInt8 *pmdtypeint8 =
@@ -2265,7 +2271,7 @@ CTestUtils::PexprLogicalSequenceProject(CMemoryPool *mp, OID oidFunc,
 			CDistributionSpecHashed(pdrgpexpr, true /*fNullsCollocated*/),
 		pdrgpos, pdrgwf);
 
-	IMDId *mdid = GPOS_NEW(mp) CMDIdGPDB(oidFunc);
+	IMDId *mdid = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, oidFunc);
 	const IMDFunction *pmdfunc = md_accessor->RetrieveFunc(mdid);
 
 	IMDId *mdid_return_type = pmdfunc->GetResultTypeMdid();
@@ -2542,8 +2548,8 @@ CTestUtils::PqcGenerate(CMemoryPool *mp, CExpression *pexpr)
 
 	// generate a sort order
 	COrderSpec *pos = GPOS_NEW(mp) COrderSpec(mp);
-	pos->Append(GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_LT_OP), pcrsOutput->PcrAny(),
-				COrderSpec::EntFirst);
+	pos->Append(GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_LT_OP),
+				pcrsOutput->PcrAny(), COrderSpec::EntFirst);
 
 	CDistributionSpec *pds = GPOS_NEW(mp)
 		CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
@@ -4031,7 +4037,7 @@ CTestUtils::PexpSubqueryAll(CMemoryPool *mp, CExpression *pexprOuter)
 	return GPOS_NEW(mp) CExpression(
 		mp,
 		GPOS_NEW(mp) CScalarSubqueryAll(
-			mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP),
+			mp, GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP),
 			GPOS_NEW(mp) CWStringConst(GPOS_WSZ_LIT("=")), pcrInner),
 		pexprInner, CUtils::PexprScalarIdent(mp, pcrOuter));
 }
@@ -4062,7 +4068,7 @@ CTestUtils::PexpSubqueryAny(CMemoryPool *mp, CExpression *pexprOuter)
 	return GPOS_NEW(mp) CExpression(
 		mp,
 		GPOS_NEW(mp) CScalarSubqueryAny(
-			mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP),
+			mp, GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP),
 			GPOS_NEW(mp) CWStringConst(GPOS_WSZ_LIT("=")), pcrInner),
 		pexprInner, CUtils::PexprScalarIdent(mp, pcrOuter));
 }

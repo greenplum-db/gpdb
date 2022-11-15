@@ -27,27 +27,11 @@ using namespace gpos;
 using namespace gpdxl;
 using namespace gpmd;
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CMDProviderRelcache::CMDProviderRelcache
-//
-//	@doc:
-//		Constructs a file-based metadata provider
-//
-//---------------------------------------------------------------------------
 CMDProviderRelcache::CMDProviderRelcache(CMemoryPool *mp) : m_mp(mp)
 {
 	GPOS_ASSERT(nullptr != m_mp);
 }
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CMDProviderRelcache::GetMDObjDXLStr
-//
-//	@doc:
-//		Returns the DXL of the requested object in the provided memory pool
-//
-//---------------------------------------------------------------------------
 CWStringBase *
 CMDProviderRelcache::GetMDObjDXLStr(CMemoryPool *mp, CMDAccessor *md_accessor,
 									IMDId *md_id) const

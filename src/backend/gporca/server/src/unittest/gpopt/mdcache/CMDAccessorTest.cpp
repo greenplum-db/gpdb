@@ -135,9 +135,12 @@ CMDAccessorTest::EresUnittest_Basic()
 	GPOS_ASSERT(pimdrel1 == pimdrel3);
 
 	// access GPDB types, operators and aggregates
-	CMDIdGPDB *mdid_type = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4, 1, 0);
-	CMDIdGPDB *mdid_op = GPOS_NEW(mp) CMDIdGPDB(GPDB_OP_INT4_LT, 1, 0);
-	CMDIdGPDB *agg_mdid = GPOS_NEW(mp) CMDIdGPDB(GPDB_AGG_AVG, 1, 0);
+	CMDIdGPDB *mdid_type =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4, 1, 0);
+	CMDIdGPDB *mdid_op =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_OP_INT4_LT, 1, 0);
+	CMDIdGPDB *agg_mdid =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_AGG_AVG, 1, 0);
 
 #ifdef GPOS_DEBUG
 	const IMDType *pimdtype =
@@ -327,9 +330,9 @@ CMDAccessorTest::EresUnittest_Navigate()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// lookup a function in the MD cache
-	CMDIdGPDB *mdid_func =
-		GPOS_NEW(mp) CMDIdGPDB(GPDB_FUNC_TIMEOFDAY /* OID */,
-							   1 /* major version */, 0 /* minor version */);
+	CMDIdGPDB *mdid_func = GPOS_NEW(mp)
+		CMDIdGPDB(IMDId::EmdidGeneral, GPDB_FUNC_TIMEOFDAY /* OID */,
+				  1 /* major version */, 0 /* minor version */);
 
 	const IMDFunction *pmdfunc = mda.RetrieveFunc(mdid_func);
 

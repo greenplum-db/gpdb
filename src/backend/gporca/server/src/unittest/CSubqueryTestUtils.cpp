@@ -1054,7 +1054,9 @@ CSubqueryTestUtils::PexprSubqueryQuantified(
 		return GPOS_NEW(mp) CExpression(
 			mp,
 			GPOS_NEW(mp) gpopt::CScalarSubqueryAny(
-				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
+				mp,
+				GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP),
+				str, pcrInner),
 			pexprSelect, CUtils::PexprScalarIdent(mp, pcrOuter));
 	}
 
@@ -1062,7 +1064,8 @@ CSubqueryTestUtils::PexprSubqueryQuantified(
 	return GPOS_NEW(mp) CExpression(
 		mp,
 		GPOS_NEW(mp) CScalarSubqueryAll(
-			mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_NEQ_OP), str, pcrInner),
+			mp, GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_NEQ_OP),
+			str, pcrInner),
 		pexprSelect, CUtils::PexprScalarIdent(mp, pcrOuter));
 }
 
@@ -1514,7 +1517,9 @@ CSubqueryTestUtils::PexprSelectWithQuantifiedAggSubquery(
 		pexprSubqueryQuantified = GPOS_NEW(mp) CExpression(
 			mp,
 			GPOS_NEW(mp) gpopt::CScalarSubqueryAny(
-				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
+				mp,
+				GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP),
+				str, pcrInner),
 			pexprGb, CUtils::PexprScalarIdent(mp, pcrOuter));
 	}
 
@@ -1522,7 +1527,8 @@ CSubqueryTestUtils::PexprSelectWithQuantifiedAggSubquery(
 	pexprSubqueryQuantified = GPOS_NEW(mp) CExpression(
 		mp,
 		GPOS_NEW(mp) CScalarSubqueryAll(
-			mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_NEQ_OP), str, pcrInner),
+			mp, GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_NEQ_OP),
+			str, pcrInner),
 		pexprGb, CUtils::PexprScalarIdent(mp, pcrOuter));
 
 
@@ -1744,7 +1750,9 @@ CSubqueryTestUtils::PexprSubqueryWithConstTableGet(CMemoryPool *mp,
 		pexprSubquery = GPOS_NEW(mp) CExpression(
 			mp,
 			GPOS_NEW(mp) gpopt::CScalarSubqueryAny(
-				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
+				mp,
+				GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP),
+				str, pcrInner),
 			pexprConstTableGet, CUtils::PexprScalarIdent(mp, pcrOuter));
 	}
 	else
@@ -1753,7 +1761,9 @@ CSubqueryTestUtils::PexprSubqueryWithConstTableGet(CMemoryPool *mp,
 		pexprSubquery = GPOS_NEW(mp) CExpression(
 			mp,
 			GPOS_NEW(mp) CScalarSubqueryAll(
-				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
+				mp,
+				GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP),
+				str, pcrInner),
 			pexprConstTableGet, CUtils::PexprScalarIdent(mp, pcrOuter));
 	}
 
@@ -1804,7 +1814,9 @@ CSubqueryTestUtils::PexprSubqueryWithDisjunction(CMemoryPool *mp)
 		CExpression *pexprSubquery = GPOS_NEW(mp) CExpression(
 			mp,
 			GPOS_NEW(mp) gpopt::CScalarSubqueryAny(
-				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
+				mp,
+				GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP),
+				str, pcrInner),
 			pexprConstTableGet, CUtils::PexprScalarIdent(mp, pcrOuter));
 		pdrgpexpr->Append(pexprSubquery);
 	}

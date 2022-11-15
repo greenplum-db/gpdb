@@ -235,8 +235,8 @@ CMDProviderTest::EresUnittest_Negative()
 
 		// lookup a non-existing objects
 		CMDIdGPDB *mdid = GPOS_NEW(mp)
-			CMDIdGPDB(GPOPT_MDCACHE_TEST_OID, 15 /* major version */,
-					  1 /* minor version */);
+			CMDIdGPDB(IMDId::EmdidGeneral, GPOPT_MDCACHE_TEST_OID,
+					  15 /* major version */, 1 /* minor version */);
 
 		// call should result in an exception
 		(void) pmdpFile->GetMDObjDXLStr(mp, amda.Pmda(), mdid);

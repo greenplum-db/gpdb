@@ -2284,7 +2284,7 @@ CDXLOperatorFactory::MakeMdIdFromStr(CDXLMemoryManager *dxl_memory_manager,
 	IMDId *mdid = nullptr;
 	switch (typ)
 	{
-		case IMDId::EmdidGPDB:
+		case IMDId::EmdidGeneral:
 		case IMDId::EmdidRel:
 		case IMDId::EmdidInd:
 		case IMDId::EmdidCheckConstraint:
@@ -2527,7 +2527,7 @@ CDXLOperatorFactory::GetDatumVal(CDXLMemoryManager *dxl_memory_manager,
 	// get the type id and value of the datum from attributes
 	IMDId *mdid = ExtractConvertAttrValueToMdId(dxl_memory_manager, attrs,
 												EdxltokenTypeId, target_elem);
-	GPOS_ASSERT(IMDId::EmdidGPDB == mdid->MdidType());
+	GPOS_ASSERT(IMDId::EmdidGeneral == mdid->MdidType());
 	CMDIdGPDB *gpdb_mdid = CMDIdGPDB::CastMdid(mdid);
 
 	// get the type id from string
