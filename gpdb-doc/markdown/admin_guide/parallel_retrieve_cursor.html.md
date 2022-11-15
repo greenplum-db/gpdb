@@ -29,7 +29,6 @@ You can use the following functions and views to examine and manage parallel ret
 
 <div class="note">Each of these functions and views is located in the <code>pg_catalog</code> schema, and each <code>RETURNS TABLE</code>.</div>
 
-
 ## <a id="topic_using"></a>Using a Parallel Retrieve Cursor
 
 You will perform the following tasks when you use a Greenplum Database parallel retrieve cursor to read query results in parallel from Greenplum segments:
@@ -261,6 +260,11 @@ The commands return endpoint and retrieve session information in a table with th
 |cursorname|The name of the parallel retrieve cursor.|
 
 Refer to the [gp_segment_endpoints](../ref_guide/system_catalogs/gp_segment_endpoints.html#topic1) view reference page for more information about the endpoint attributes returned by these commands.
+
+
+## <a id="topic_cfg"></a>Limiting the Number of Concurrently Open Cursors
+
+By default, Greenplum Database allows an unlimited number of parallel retrieve cursors to be active in the cluster. Should you wish to limit the number of open cursors, the Greenplum Database superuser can set the [gp\_max\_parallel\_cursors](../ref_guide/config_params/guc-list.html#gp_max_parallel_cursors) server configuration parameter to the desired maximum.
 
 
 ## <a id="topic_limits"></a>Known Issues and Limitations
