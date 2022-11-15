@@ -141,7 +141,7 @@ settings
     :   Optional.  Activates or deactivates  Docker logging for the container. The attribute value `yes` enables logging. The attribute value `no` deactivates logging \(the default\).
 
     enable\_network="\{yes \| no\}"
-    :   Optional. Activates or deactivates network access for the UDF container. The attribute value `yes` enables UDFs to access the network. The attribute value `no` deactivates network access \(the default\).
+    :   Optional. Available starting with PL/Container version 2.2, this attribute activates or deactivates network access for the UDF container. The attribute value `yes` enables UDFs to access the network. The attribute value `no` deactivates network access \(the default\).
 
     The Greenplum Database server configuration parameter [log\_min\_messages](../../ref_guide/config_params/guc-list.html) controls the PL/Container log level. The default log level is `warning`. For information about PL/Container log information, see [Notes](../../analytics/pl_container_using.html).
 
