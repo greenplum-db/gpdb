@@ -221,7 +221,7 @@ find_dml_state(const Oid relationOid)
  *
  * Should be called exactly once per relation.
  */
-static inline AOCODMLState *
+static inline void
 remove_dml_state(const Oid relationOid)
 {
 	AOCODMLState *state;
@@ -238,7 +238,7 @@ remove_dml_state(const Oid relationOid)
 		aocoDMLStates.last_used_state->relationOid == relationOid)
 		aocoDMLStates.last_used_state = NULL;
 
-	return state;
+	return;
 }
 
 /*

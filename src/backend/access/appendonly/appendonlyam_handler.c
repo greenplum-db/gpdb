@@ -177,7 +177,7 @@ find_dml_state(const Oid relationOid)
  *
  * Should be called exactly once per relation.
  */
-static inline AppendOnlyDMLState *
+static inline void
 remove_dml_state(const Oid relationOid)
 {
 	AppendOnlyDMLState *state;
@@ -194,7 +194,7 @@ remove_dml_state(const Oid relationOid)
 			appendOnlyDMLStates.last_used_state->relationOid == relationOid)
 		appendOnlyDMLStates.last_used_state = NULL;
 
-	return state;
+	return;
 }
 
 /*
