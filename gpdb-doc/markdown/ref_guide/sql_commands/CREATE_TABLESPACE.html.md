@@ -7,8 +7,10 @@ Defines a new tablespace.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-CREATE TABLESPACE <tablespace_name> [OWNER <username>]  LOCATION '</path/to/dir>' 
-   [WITH (content<ID_1>='</path/to/dir1>'[, content<ID_2>='</path/to/dir2>' ... ])]
+CREATE TABLESPACE <tablespace_name>
+   [OWNER <user_name>]
+   LOCATION '<directory>' 
+   [WITH (content<ID_1>='<directory>'[, content<ID_2>='<directory>' ... ] [, <tablespace_option = value [, ... ] ])]
 ```
 
 ## <a id="section3"></a>Description 
@@ -23,27 +25,30 @@ In Greenplum Database, the file system location must exist on all hosts includin
 
 ## <a id="section4"></a>Parameters 
 
-tablespacename
+tablespace\_name
 :   The name of a tablespace to be created. The name cannot begin with `pg_` or `gp_`, as such names are reserved for system tablespaces.
 
-OWNER username
+user\_name
 :   The name of the user who will own the tablespace. If omitted, defaults to the user running the command. Only superusers can create tablespaces, but they can assign ownership of tablespaces to non-superusers.
 
-LOCATION '/path/to/dir'
+LOCATION 'directory'
 :   The absolute path to the directory \(host system file location\) that will be the root directory for the tablespace. When registering a tablepace, the directory should be empty and must be owned by the Greenplum Database system user. The directory must be specified by an absolute path name of no more than 100 characters. \(The location is used to create a symlink target in the pg\_tblspc directory, and symlink targets are truncated to 100 characters when sending to `tar` from utilities such as `pg_basebackup`.\)
 
 :   For each segment instance, you can specify a different directory for the tablespace in the `WITH` clause.
 
-contentID\_i='/path/to/dir\_i'
-:   The value ID\_i is the content ID for the segment instance. /path/to/dir\_i is the absolute path to the host system file location that the segment instance uses as the root directory for the tablespace. You cannot specify the content ID of the master instance \(`-1`\). You can specify the same directory for multiple segments.
+contentID\_i='directory\_i'
+:   The value ID\_i is the content ID for the segment instance. directory\_i is the absolute path to the host system file location that the segment instance uses as the root directory for the tablespace. You cannot specify the content ID of the master instance \(`-1`\). You can specify the same directory for multiple segments.
 
-:   If a segment instance is not listed in the `WITH` clause, Greenplum Database uses the directory specified in the `LOCATION` clause.
+:   If a segment instance is not listed in the `WITH` clause, Greenplum Database uses the tablespace directory specified in the `LOCATION` clause.
 
-:   When registering a tablepace, the directories should be empty and must be owned by the Greenplum Database system user. Each directory must be specified by an absolute path name of no more than 100 characters.
+:   The restrictions identified for the `LOCATION` directory also hold for directory\_i.
+
+tablespace\_option
+:   A tablespace parameter to set or reset. Currently, the only available parameters are seq\_page\_cost and random\_page\_cost. Setting either value for a particular tablespace will override the planner's usual estimate of the cost of reading pages from tables in that tablespace, as established by the configuration parameters of the same name \(see [seq_page_cost](../config_params/guc-list.html#seq_page_cost), [random_page_cost](../config_params/guc-list.html#random_page_cost)\). This may be useful if one tablespace is located on a disk which is faster or slower than the remainder of the I/O subsystem.
 
 ## <a id="section5"></a>Notes 
 
-Tablespaces are only supported on systems that support symbolic links.
+Because `CREATE TABLESPACE` creates symbolic links from the `pg_tblspc` directory in the master and segment instance data directory to the directories specified in the command, Greenplum Database supports tablespaces only on systems that support symbolic links.
 
 `CREATE TABLESPACE` cannot be run inside a transaction block.
 

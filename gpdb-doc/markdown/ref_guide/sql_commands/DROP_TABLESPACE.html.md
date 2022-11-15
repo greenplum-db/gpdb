@@ -7,7 +7,7 @@ Removes a tablespace.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-DROP TABLESPACE [IF EXISTS] <tablespacename>
+DROP TABLESPACE [IF EXISTS] <tablespace_name>
 ```
 
 ## <a id="section3"></a>Description 
@@ -21,7 +21,7 @@ A tablespace can only be dropped by its owner or a superuser. The tablespace mus
 IF EXISTS
 :   Do not throw an error if the tablespace does not exist. A notice is issued in this case.
 
-tablespacename
+tablespace\_name
 :   The name of the tablespace to remove.
 
 ## <a id="notes"></a>Notes 
