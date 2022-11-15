@@ -66,8 +66,6 @@ protected:
 public:
 	// ctors
 	CMDIdGPDB(CSystemId sysid, OID oid);
-	explicit CMDIdGPDB(OID oid);
-	CMDIdGPDB(OID oid, ULONG version_major, ULONG version_minor);
 	CMDIdGPDB(EMDIdType mdIdType, OID oid, ULONG version_major = 1,
 			  ULONG version_minor = 0);
 

@@ -2384,8 +2384,8 @@ CXformUtils::PexprRowNumber(CMemoryPool *mp)
 							 ->OidRowNumber();
 
 	CScalarWindowFunc *popRowNumber = GPOS_NEW(mp) CScalarWindowFunc(
-		mp, GPOS_NEW(mp) CMDIdGPDB(row_number_oid),
-		GPOS_NEW(mp) CMDIdGPDB(GPDB_INT8_OID),
+		mp, GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, row_number_oid),
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT8_OID),
 		GPOS_NEW(mp) CWStringConst(mp, GPOS_WSZ_LIT("row_number")),
 		CScalarWindowFunc::EwsImmediate, false /* is_distinct */,
 		false /* is_star_arg */, false /* is_simple_agg */
@@ -2753,7 +2753,7 @@ CXformUtils::FProcessGPDBAntiSemiHashJoin(
 			if (FExtractEquality(
 					pexprPred, &pexprEquality,
 					&pexprFalse) &&	 // extracted equality expression
-				IMDId::EmdidGPDB ==
+				IMDId::EmdidGeneral ==
 					CScalarConst::PopConvert(pexprFalse->Pop())
 						->GetDatum()
 						->MDId()

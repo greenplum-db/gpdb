@@ -27,14 +27,6 @@ using namespace gpos;
 using namespace gpdxl;
 using namespace gpmd;
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CMDProviderRelcache::CMDProviderRelcache
-//
-//	@doc:
-//		Constructs a file-based metadata provider
-//
-//---------------------------------------------------------------------------
 CMDProviderRelcache::CMDProviderRelcache(CMemoryPool *mp) : m_mp(mp)
 {
 	GPOS_ASSERT(NULL != m_mp);

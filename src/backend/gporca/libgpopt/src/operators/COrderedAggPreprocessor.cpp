@@ -275,7 +275,8 @@ COrderedAggPreprocessor::SplitPrjList(
 			// STEP 3(a): Explicit Cast total_count to bigint.
 			// Since count() returns bigint, sum(count()) returns numeric and gp_percentile agg's
 			// expect the total_count as bigint, therefore adding an explicit cast on top
-			IMDId *mdid_func = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT8_CAST);
+			IMDId *mdid_func =
+				GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT8_CAST);
 			const IMDFunction *cast_func = md_accessor->RetrieveFunc(mdid_func);
 			const CWStringConst *pstrFunc = GPOS_NEW(mp) CWStringConst(
 				mp, (cast_func->Mdname().GetMDName())->GetBuffer());
@@ -300,8 +301,8 @@ COrderedAggPreprocessor::SplitPrjList(
 			// STEP 4: CREATE ordered spec for the Join to merge on the colref passed in as part
 			// of the ordered agg's WITHIN(ORDER BY) clause
 			COrderSpec *pos = GPOS_NEW(mp) COrderSpec(mp);
-			IMDId *mdid_curr_sortop =
-				GPOS_NEW(mp) CMDIdGPDB(curr_sort_clause->SortOp());
+			IMDId *mdid_curr_sortop = GPOS_NEW(mp)
+				CMDIdGPDB(IMDId::EmdidGeneral, curr_sort_clause->SortOp());
 			IMDType::ECmpType curr_cmp_type =
 				CUtils::ParseCmpType(mdid_curr_sortop);
 			// Instead of using the SortOp directly, we use the colref's operator for the comparison type

@@ -30,7 +30,7 @@ CMDIdGPDBCtas CMDIdGPDBCtas::m_mdid_invalid_key(0);
 //
 //---------------------------------------------------------------------------
 CMDIdGPDBCtas::CMDIdGPDBCtas(OID oid)
-	: CMDIdGPDB(CSystemId(IMDId::EmdidGPDB, GPMD_GPDB_CTAS_SYSID), oid)
+	: CMDIdGPDB(CSystemId(IMDId::EmdidGeneral, GPMD_GPDB_CTAS_SYSID), oid)
 {
 	Serialize();
 }

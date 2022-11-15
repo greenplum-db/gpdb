@@ -368,7 +368,7 @@ CMDTypeGenericGPDB::CreateDXLDatumVal(CMemoryPool *mp, IMDId *mdid,
 									  BOOL is_null, BYTE *pba, ULONG length,
 									  LINT lValue, CDouble dValue)
 {
-	GPOS_ASSERT(IMDId::EmdidGPDB == mdid->MdidType());
+	GPOS_ASSERT(IMDId::EmdidGeneral == mdid->MdidType());
 
 	if (HasByte2DoubleMapping(mdid))
 	{

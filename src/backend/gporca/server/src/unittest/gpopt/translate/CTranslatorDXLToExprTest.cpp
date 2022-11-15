@@ -645,13 +645,13 @@ CTranslatorDXLToExprTest::EresUnittest_SelectQueryWithScalarOp()
 		CExpression *pexprScConst = CUtils::PexprScalarConstInt4(mp, ulVal);
 		CExpression *pexprScOp = CUtils::PexprScalarOp(
 			mp, pcrLeft, pexprScConst, CWStringConst(GPOS_WSZ_LIT("+")),
-			GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_ADD_OP));
+			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_ADD_OP));
 
 		// create a scalar compare for a > b + 2
 		CColRef *pcrRight = (*colref_array)[0];
 		CExpression *pexprScCmp = CUtils::PexprScalarCmp(
 			mp, pcrRight, pexprScOp, CWStringConst(GPOS_WSZ_LIT(">")),
-			GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_GT_OP));
+			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_GT_OP));
 
 		CExpression *pexprExpected =
 			CUtils::PexprLogicalSelect(mp, pexprLgGet, pexprScCmp);

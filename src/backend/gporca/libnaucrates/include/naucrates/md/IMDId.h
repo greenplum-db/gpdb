@@ -67,7 +67,7 @@ public:
 	//------------------------------------------------------------------
 	enum EMDIdType
 	{
-		EmdidGPDB = 0,
+		EmdidGeneral = 0,
 		EmdidColStats = 1,
 		EmdidRelStats = 2,
 		EmdidCastFunc = 3,

@@ -68,7 +68,7 @@ CTranslatorDXLToExpr::CTranslatorDXLToExpr(CMemoryPool *mp,
 										   CMDAccessor *md_accessor,
 										   BOOL fInitColumnFactory)
 	: m_mp(mp),
-	  m_sysid(IMDId::EmdidGPDB, GPMD_GPDB_SYSID),
+	  m_sysid(IMDId::EmdidGeneral, GPMD_GPDB_SYSID),
 	  m_pmda(md_accessor),
 	  m_phmulcr(NULL),
 	  m_phmululCTE(NULL),
