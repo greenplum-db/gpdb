@@ -444,7 +444,7 @@ refresh_matview_datafill(DestReceiver *dest, Query *query,
 	 *
 	 * See Github Issue for details: https://github.com/greenplum-db/gpdb/issues/11956
 	 */
-	List       *saved_dispatch_oids = GetAssignedOidsForDispatch();
+	List       *saved_dispatch_oids = SaveOidAssignments();
 
 	/* Lock and rewrite, using a copy to preserve the original query. */
 	copied_query = copyObject(query);
