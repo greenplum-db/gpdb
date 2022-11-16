@@ -186,6 +186,7 @@ Doc Index
         - [postgres\_fdw](./modules/postgres_fdw.md)
         - [postgresql-hll](./modules/postgresql-hll.md)
         - [sslinfo](./modules/sslinfo.md)
+        - [uuid-ossp](./modules/uuid-ossp.md)
     - [Character Set Support](./character_sets.md)
     - [Server Configuration Parameters](./config_params/guc_config.md)
         - [Parameter Categories](./config_params/guc_category-list.md)
