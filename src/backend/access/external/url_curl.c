@@ -57,6 +57,17 @@ typedef struct curlhandle_t
 	struct curlhandle_t *prev;
 } curlhandle_t;
 
+#ifdef USE_ZSTD
+typedef struct zstdcontext_t
+{
+	ZSTD_DCtx	   *zstd_dctx;		/* The zstd context */
+
+	ResourceOwner owner;			/* owner of this handle */
+	struct zstdcontext_t *next;
+	struct zstdcontext_t *prev;
+} zstdcontext_t;
+#endif
+
 /*
  * Private state for a web external table, implemented with libcurl.
  *
@@ -187,6 +198,78 @@ fill_buffer(URL_CURL_FILE *curl, int want);
 static curlhandle_t *open_curl_handles;
 
 static bool url_curl_resowner_callback_registered;
+
+#ifdef USE_ZSTD
+static zstdcontext_t *open_zstd_context;
+static bool zstd_resowner_callback_registered;
+
+static zstdcontext_t *
+create_zstdcontext(void)
+{
+	zstdcontext_t *ctx;
+
+	ctx = MemoryContextAlloc(TopMemoryContext, sizeof(zstdcontext_t));
+	ctx->zstd_dctx = NULL;
+
+	ctx->owner = CurrentResourceOwner;
+	ctx->prev = NULL;
+	ctx->next = open_zstd_context;
+	if (open_zstd_context)
+		open_zstd_context->prev = ctx;
+	open_zstd_context = ctx;
+
+	return ctx;
+}
+
+static void
+destroy_zstdcontext(zstdcontext_t *ctx)
+{
+	/* unlink from linked list first */
+	if (ctx->prev)
+		ctx->prev->next = ctx->next;
+	else
+		open_zstd_context = open_zstd_context->next;
+	if (ctx->next)
+		ctx->next->prev = ctx->prev;
+
+	if (ctx->zstd_dctx)
+	{
+		/* cleanup */
+		ZSTD_freeDCtx(ctx->zstd_dctx);
+		ctx->zstd_dctx = NULL;
+	}
+
+	pfree(ctx);
+}
+
+static void
+zstd_release_callback(ResourceReleasePhase phase,
+						bool isCommit,
+						bool isTopLevel,
+						void *arg)
+{
+	zstdcontext_t *curr;
+	zstdcontext_t *next;
+
+	if (phase != RESOURCE_RELEASE_AFTER_LOCKS)
+		return;
+
+	next = open_zstd_context;
+	while (next)
+	{
+		curr = next;
+		next = curr->next;
+
+		if (curr->owner == CurrentResourceOwner)
+		{
+			if (isCommit)
+				elog(LOG, "zstd reference leak: %p still referenced", curr);
+
+			destroy_zstdcontext(curr);
+		}
+	}
+}
+#endif
 
 static curlhandle_t *
 create_curlhandle(void)
@@ -1167,6 +1250,14 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		url_curl_resowner_callback_registered = true;
 	}
 
+#ifdef USE_ZSTD
+	if (!zstd_resowner_callback_registered)
+	{
+		RegisterResourceReleaseCallback(zstd_release_callback, NULL);
+		zstd_resowner_callback_registered = true;
+	}
+#endif
+
 	tmp = make_url(url, is_ipv6);
 
 	file = (URL_CURL_FILE *) palloc0(sizeof(URL_CURL_FILE));
@@ -1492,8 +1583,8 @@ url_curl_fclose(URL_FILE *fileg, bool failOnError, const char *relname)
 
 	pfree(file->common.url);
 #ifdef USE_ZSTD
-	if (file->zstd)
-		ZSTD_freeDCtx(file->zstd_dctx);
+	if(file->zstd && !file->for_write)
+		destroy_zstdcontext(file->zstd_ctx);
 #endif
 
 	pfree(file);
