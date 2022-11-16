@@ -104,14 +104,14 @@ and *like\_option* is:
 {INCLUDING|EXCLUDING} {DEFAULTS|CONSTRAINTS|INDEXES|STORAGE|COMMENTS|ALL}
 ```
 
-and index\_parameters in `UNIQUE` and `PRIMARY KEY` constraints are:
+and index_parameters in `UNIQUE` and `PRIMARY KEY` constraints are:
 
 ```
 [ WITH ( <storage_parameter> [=<value>] [, ... ] ) ]
 [ USING INDEX TABLESPACE <tablespace_name> ] 
 ```
 
-and storage\_directive for a column is:
+and storage_directive for a column is:
 
 ```
    compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
