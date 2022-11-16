@@ -998,7 +998,7 @@ SELECT * FROM testaddcol;
  1 | 5
 (5 rows)
 
--- Check if add column reuse dropped doesn't rewrite the table and doesn't take extra attnum
+-- Check if add column reuse_dropped doesn't rewrite the table and doesn't take extra attnum
 CREATE TABLE testaddcolrd(a int, b int, c int, d int) WITH (appendonly=true, orientation=column);
 CREATE INDEX idxa on testaddcolrd(a);
 CREATE INDEX idxb on testaddcolrd(b);
@@ -1012,7 +1012,7 @@ WHERE relname LIKE 'testaddcolrd%' ORDER BY segid;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'segid' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ALTER TABLE testaddcolrd ADD COLUMN i int DEFAULT 5,
-ADD COLUMN j int DEFAULT NULL REUSE DROPPED, ADD COLUMN k int;
+ADD COLUMN j int DEFAULT NULL REUSE_DROPPED, ADD COLUMN k int;
 SELECT relnatts FROM pg_class WHERE relname='testaddcolrd';
  relnatts 
 ----------
@@ -1058,7 +1058,7 @@ SELECT * FROM testaddcolrd;
  4 | 4 | 4 | 4 | 4
 (10 rows)
 
--- Check if reuse dropped is not allowed on tables with child heap/ao partitions
+-- Check if reuse_dropped is not allowed on tables with child heap/ao partitions
 CREATE TABLE aoco_parent_child_other(a int, b int, c int, d int)
     WITH (APPENDONLY = true, ORIENTATION = column)
     DISTRIBUTED BY (a)
@@ -1067,10 +1067,10 @@ CREATE TABLE aoco_parent_child_other(a int, b int, c int, d int)
     START (1) END (2) EVERY (1) WITH (APPENDONLY = false));
 ALTER TABLE aoco_parent_child_other DROP COLUMN c;
 -- should error out
-ALTER TABLE aoco_parent_child_other ADD COLUMN i int REUSE DROPPED;
+ALTER TABLE aoco_parent_child_other ADD COLUMN i int REUSE_DROPPED;
 ERROR:  table "aoco_parent_child_other_1_prt_1" is not AOCO table. Cannot add "i" reusing dropped attnum
 DETAIL:  Reusing dropped attnum is only supported for AOCO tables
--- Check if reuse dropped is allowed on partitioned tables with all child aoco partitions
+-- Check if reuse_dropped is allowed on partitioned tables with all child aoco partitions
 CREATE TABLE aoco_parent_aoco_child(a int, b int, c int, d int)
     WITH (APPENDONLY = true, ORIENTATION = column)
     DISTRIBUTED BY (a)
@@ -1079,7 +1079,7 @@ CREATE TABLE aoco_parent_aoco_child(a int, b int, c int, d int)
     START (1) END (2) EVERY (1) WITH (APPENDONLY = true, ORIENTATION = column));
 ALTER TABLE aoco_parent_aoco_child DROP COLUMN c;
 -- should not error out
-ALTER TABLE aoco_parent_aoco_child ADD COLUMN i int REUSE DROPPED;
+ALTER TABLE aoco_parent_aoco_child ADD COLUMN i int REUSE_DROPPED;
 SELECT relnatts FROM pg_class WHERE relname='aoco_parent_aoco_child';
  relnatts 
 ----------

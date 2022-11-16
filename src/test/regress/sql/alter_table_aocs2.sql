@@ -635,7 +635,7 @@ SELECT * FROM relfilebeforetestaddcol EXCEPT SELECT * FROM relfileaftertestaddco
 SELECT * FROM testaddcol;
 
 
--- Check if add column reuse dropped doesn't rewrite the table and doesn't take extra attnum
+-- Check if add column reuse_dropped doesn't rewrite the table and doesn't take extra attnum
 CREATE TABLE testaddcolrd(a int, b int, c int, d int) WITH (appendonly=true, orientation=column);
 CREATE INDEX idxa on testaddcolrd(a);
 CREATE INDEX idxb on testaddcolrd(b);
@@ -649,7 +649,7 @@ UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_c
 WHERE relname LIKE 'testaddcolrd%' ORDER BY segid;
 
 ALTER TABLE testaddcolrd ADD COLUMN i int DEFAULT 5,
-ADD COLUMN j int DEFAULT NULL REUSE DROPPED, ADD COLUMN k int;
+ADD COLUMN j int DEFAULT NULL REUSE_DROPPED, ADD COLUMN k int;
 
 SELECT relnatts FROM pg_class WHERE relname='testaddcolrd';
 
@@ -669,7 +669,7 @@ INSERT INTO testaddcolrd SELECT i,i,i,i,i from generate_series(1, 5)i;
 SELECT * FROM testaddcolrd;
 
 
--- Check if reuse dropped is not allowed on tables with child heap/ao partitions
+-- Check if reuse_dropped is not allowed on tables with child heap/ao partitions
 CREATE TABLE aoco_parent_child_other(a int, b int, c int, d int)
     WITH (APPENDONLY = true, ORIENTATION = column)
     DISTRIBUTED BY (a)
@@ -680,10 +680,10 @@ CREATE TABLE aoco_parent_child_other(a int, b int, c int, d int)
 ALTER TABLE aoco_parent_child_other DROP COLUMN c;
 
 -- should error out
-ALTER TABLE aoco_parent_child_other ADD COLUMN i int REUSE DROPPED;
+ALTER TABLE aoco_parent_child_other ADD COLUMN i int REUSE_DROPPED;
 
 
--- Check if reuse dropped is allowed on partitioned tables with all child aoco partitions
+-- Check if reuse_dropped is allowed on partitioned tables with all child aoco partitions
 CREATE TABLE aoco_parent_aoco_child(a int, b int, c int, d int)
     WITH (APPENDONLY = true, ORIENTATION = column)
     DISTRIBUTED BY (a)
@@ -694,6 +694,6 @@ CREATE TABLE aoco_parent_aoco_child(a int, b int, c int, d int)
 ALTER TABLE aoco_parent_aoco_child DROP COLUMN c;
 
 -- should not error out
-ALTER TABLE aoco_parent_aoco_child ADD COLUMN i int REUSE DROPPED;
+ALTER TABLE aoco_parent_aoco_child ADD COLUMN i int REUSE_DROPPED;
 
 SELECT relnatts FROM pg_class WHERE relname='aoco_parent_aoco_child';

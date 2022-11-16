@@ -809,7 +809,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 
 	CREATEEXTTABLE
 
-	DECODE DENY DISTRIBUTED DROPPED DXL
+	DECODE DENY DISTRIBUTED DXL
 
 	ERRORS EVERY EXCHANGE EXPAND
 
@@ -835,7 +835,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 
 	QUEUE
 
-	RANDOMLY READABLE READS REJECT_P REPLICATED RESOURCE REUSE
+	RANDOMLY READABLE READS REJECT_P REPLICATED RESOURCE REUSE_DROPPED
 	ROOTPARTITION
 
 	SCATTER SEGMENT SEGMENTS SPLIT SUBPARTITION
@@ -969,7 +969,6 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc DOMAIN_P
 			%nonassoc DOUBLE_P
 			%nonassoc DROP
-			%nonassoc DROPPED
 			%nonassoc EACH
 			%nonassoc ENABLE_P
 			%nonassoc ENCODING
@@ -1098,7 +1097,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc RESTRICT
 			%nonassoc RETRIEVE
 			%nonassoc RETURNS
-			%nonassoc REUSE
+			%nonassoc REUSE_DROPPED
 			%nonassoc REVOKE
 			%nonassoc ROLE
 			%nonassoc ROLLBACK
@@ -5520,7 +5519,7 @@ table_access_method_clause:
 		;
 
 reuse_dropped_attnum_clause:
-			REUSE DROPPED  { $$ = true; }
+			REUSE_DROPPED  { $$ = true; }
 			| /* EMPTY */  { $$ = false; }
 		;
 
@@ -18674,7 +18673,6 @@ col_name_keyword:
 			| COALESCE
 			| DEC
 			| DECIMAL_P
-			| DROPPED
 			| EXISTS
 			| EXTRACT
 			| FLOAT_P
@@ -18697,7 +18695,7 @@ col_name_keyword:
 			| POSITION
 			| PRECISION
 			| REAL
-			| REUSE
+			| REUSE_DROPPED
 			| ROW
 			| SETOF
 			| SMALLINT
