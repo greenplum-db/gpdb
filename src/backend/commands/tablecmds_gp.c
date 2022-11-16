@@ -1243,9 +1243,6 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 
 			Assert(!gpPartDef->fromCatalog);
 			gpPartDef = transformGpPartitionDefinition(RelationGetRelid(rel), cmd->queryString, gpPartDef);
-			if (gpPartDef->isTemplate)
-				StoreGpPartitionTemplate(ancestors ? llast_oid(ancestors) : RelationGetRelid(rel),
-										 list_length(ancestors), gpPartDef);
 			List *cstmts = generatePartitions(RelationGetRelid(rel),
 											  gpPartDef, subpart, cmd->queryString,
 											  NIL, NULL, NULL, true);
