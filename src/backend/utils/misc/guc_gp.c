@@ -3372,7 +3372,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			NULL
 		},
 		&gp_resource_group_cpu_priority,
-		10, 1, 256,
+		10, 1, 50,
 		NULL, NULL, NULL
 	},
 

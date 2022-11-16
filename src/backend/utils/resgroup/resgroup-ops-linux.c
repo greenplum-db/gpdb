@@ -1296,14 +1296,9 @@ initCpu(void)
 	/*
 	 * shares := parent.shares * gp_resource_group_cpu_priority
 	 *
-	 * We used to set a large shares (like 1024 * 256, the maximum possible
+	 * We used to set a large shares (like 1024 * 50, the maximum possible
 	 * value), it has very bad effect on overall system performance,
 	 * especially on 1-core or 2-core low-end systems.
-	 * Processes in a cold cgroup get launched and scheduled with large
-	 * latency (a simple `cat a.txt` may executes for more than 100s).
-	 * Here a cold cgroup is a cgroup that doesn't have active running
-	 * processes, this includes not only the toplevel system cgroup,
-	 * but also the inactive gpdb resgroups.
 	 */
 	shares = readInt64(RESGROUP_ROOT_ID, BASETYPE_PARENT, comp, "cpu.shares");
 	shares = shares * gp_resource_group_cpu_priority;
