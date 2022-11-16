@@ -99,7 +99,7 @@
       </dxl:Type>
       <dxl:ColumnStatistics Mdid="1.507724.1.1.5" Name="gp_segment_id" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.507724.1.1.4" Name="tableoid" Width="4.000000"/>
-      <dxl:Relation Mdid="0.507724.1.0" Name="ao" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="5,3">
+      <dxl:Relation Mdid="6.507724.1.0" Name="ao" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="5,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -230,7 +230,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.507724.1.1" Name="ao" Rows="8.000000"/>
-      <dxl:Relation Mdid="0.507724.1.1" Name="ao" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="5,3">
+      <dxl:Relation Mdid="6.507724.1.1" Name="ao" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="5,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -271,7 +271,7 @@
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.507724.1.1" TableName="ao">
+          <dxl:TableDescriptor Mdid="6.507724.1.1" TableName="ao">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -323,7 +323,7 @@
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
             </dxl:Comparison>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.507724.1.1" TableName="ao">
+          <dxl:TableDescriptor Mdid="6.507724.1.1" TableName="ao">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>

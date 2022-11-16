@@ -1995,7 +1995,7 @@
       <dxl:ColumnStatistics Mdid="1.33577.1.1.5" Name="xmin" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.33577.1.1.4" Name="ctid" Width="6.000000"/>
       <dxl:RelationStatistics Mdid="2.32889.1.1" Name="date_dim" Rows="72930.000000"/>
-      <dxl:Relation Mdid="0.32889.1.1" Name="date_dim" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;34,28">
+      <dxl:Relation Mdid="6.32889.1.1" Name="date_dim" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -2496,7 +2496,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.33577.1.1" Name="inventory" Rows="11530621.000000"/>
-      <dxl:Relation Mdid="0.33577.1.1" Name="inventory" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;10,4">
+      <dxl:Relation Mdid="6.33577.1.1" Name="inventory" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;10,4">
         <dxl:Columns>
           <dxl:Column Name="inv_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -2579,7 +2579,7 @@
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.33577.1.1" TableName="inventory">
+          <dxl:TableDescriptor Mdid="6.33577.1.1" TableName="inventory">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="inv_date_sk" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="inv_item_sk" TypeMdid="0.23.1.0"/>
@@ -2596,7 +2596,7 @@
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.32889.1.1" TableName="date_dim">
+          <dxl:TableDescriptor Mdid="6.32889.1.1" TableName="date_dim">
             <dxl:Columns>
               <dxl:Column ColId="12" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="13" Attno="2" ColName="d_date_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
@@ -2798,7 +2798,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.33577.1.1" TableName="inventory">
+            <dxl:TableDescriptor Mdid="6.33577.1.1" TableName="inventory">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="inv_date_sk" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="inv_item_sk" TypeMdid="0.23.1.0"/>
@@ -3003,7 +3003,7 @@
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="2001"/>
               </dxl:Comparison>
             </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.32889.1.1" TableName="date_dim">
+            <dxl:TableDescriptor Mdid="6.32889.1.1" TableName="date_dim">
               <dxl:Columns>
                 <dxl:Column ColId="11" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="12" Attno="2" ColName="d_date_id" TypeMdid="0.1042.1.0" ColWidth="16"/>

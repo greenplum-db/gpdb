@@ -207,7 +207,7 @@
       <dxl:ColumnStatistics Mdid="1.27119.25.1.5" Name="1.27119.25.1.5" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.27119.25.1.4" Name="1.27119.25.1.4" Width="8.000000"/>
       <dxl:RelationStatistics Mdid="2.27119.25.1" Name="2.27119.25.1" Rows="8.000000"/>
-      <dxl:Relation Mdid="0.27119.25.1" Name="p" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.27119.25.1" Name="p" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -271,7 +271,7 @@
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.27119.25.1" TableName="p">
+          <dxl:TableDescriptor Mdid="6.27119.25.1" TableName="p">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -333,7 +333,7 @@
                 <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:PartitionSelector RelationMdid="0.27119.25.1" PartitionLevels="1" ScanId="1">
+            <dxl:PartitionSelector RelationMdid="6.27119.25.1" PartitionLevels="1" ScanId="1">
               <dxl:Properties>
                 <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
               </dxl:Properties>
@@ -505,7 +505,7 @@
                   </dxl:Comparison>
                 </dxl:IndexCondList>
                 <dxl:IndexDescriptor Mdid="0.27323.25.0" IndexName="p_ind"/>
-                <dxl:TableDescriptor Mdid="0.27119.25.1" TableName="p">
+                <dxl:TableDescriptor Mdid="6.27119.25.1" TableName="p">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -537,7 +537,7 @@
                     <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                   </dxl:Comparison>
                 </dxl:Filter>
-                <dxl:TableDescriptor Mdid="0.27119.25.1" TableName="p">
+                <dxl:TableDescriptor Mdid="6.27119.25.1" TableName="p">
                   <dxl:Columns>
                     <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="10" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

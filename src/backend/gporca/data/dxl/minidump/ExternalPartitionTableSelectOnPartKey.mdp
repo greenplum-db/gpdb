@@ -203,7 +203,7 @@
       <dxl:ColumnStatistics Mdid="1.65602.1.0.3" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="1000000.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
       <dxl:ColumnStatistics Mdid="1.65602.1.0.2" Name="region" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.65602.1.0" Name="sales" Rows="1000000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.65602.1.0" Name="sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r" ConvertHashToRandom="true" NumberLeafPartitions="3">
+      <dxl:Relation Mdid="6.65602.1.0" Name="sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r" ConvertHashToRandom="true" NumberLeafPartitions="3">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -255,12 +255,12 @@
           </dxl:And>
         </dxl:PartConstraint>
         <dxl:ExternalPartitions>
-          <dxl:ExternalPartition Mdid="0.65630.1.0"/>
+          <dxl:ExternalPartition Mdid="6.65630.1.0"/>
         </dxl:ExternalPartitions>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.65602.1.0.5" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.65602.1.0.4" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:ExternalRelation Mdid="0.65630.1.0" Name="sales_1_prt_yr_2_ext" DistributionPolicy="Random" Keys="9,3">
+      <dxl:ExternalRelation Mdid="6.65630.1.0" Name="sales_1_prt_yr_2_ext" DistributionPolicy="Random" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -355,7 +355,7 @@
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="2010"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.65602.1.0" TableName="sales">
+          <dxl:TableDescriptor Mdid="6.65602.1.0" TableName="sales">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="id" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="2" ColName="year" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -427,7 +427,7 @@
                 <dxl:Ident ColId="2" ColName="region" TypeMdid="0.25.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:PartitionSelector RelationMdid="0.65602.1.0" PartitionLevels="1" ScanId="1">
+            <dxl:PartitionSelector RelationMdid="6.65602.1.0" PartitionLevels="1" ScanId="1">
               <dxl:Properties>
                 <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
               </dxl:Properties>
@@ -630,7 +630,7 @@
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.65602.1.0" TableName="sales">
+                <dxl:TableDescriptor Mdid="6.65602.1.0" TableName="sales">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="id" TypeMdid="0.23.1.0" ColWidth="4"/>
                     <dxl:Column ColId="1" Attno="2" ColName="year" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -661,7 +661,7 @@
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.65630.1.0" TableName="sales_1_prt_yr_2_ext">
+                <dxl:TableDescriptor Mdid="6.65630.1.0" TableName="sales_1_prt_yr_2_ext">
                   <dxl:Columns>
                     <dxl:Column ColId="10" Attno="1" ColName="id" TypeMdid="0.23.1.0" ColWidth="4"/>
                     <dxl:Column ColId="11" Attno="2" ColName="year" TypeMdid="0.23.1.0" ColWidth="4"/>

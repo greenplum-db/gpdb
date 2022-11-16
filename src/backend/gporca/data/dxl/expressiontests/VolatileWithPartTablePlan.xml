@@ -86,7 +86,7 @@
                 <dxl:Ident ColId="1" ColName="x" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:TableDescriptor Mdid="0.74764.1.1" TableName="pt">
+            <dxl:TableDescriptor Mdid="6.74764.1.1" TableName="pt">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="pk" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="x" TypeMdid="0.23.1.0"/>

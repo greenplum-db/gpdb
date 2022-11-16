@@ -124,7 +124,7 @@ select * from pt, t where pt.j = t.t1;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.16556.1.1" Name="pt" Rows="30.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.16556.1.1" Name="pt" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,5,3" PartitionColumns="2,1" PartitionTypes="r,r">
+      <dxl:Relation Mdid="6.16556.1.1" Name="pt" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,5,3" PartitionColumns="2,1" PartitionTypes="r,r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -293,7 +293,7 @@ select * from pt, t where pt.j = t.t1;
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="10"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Relation Mdid="0.17017.1.1" Name="t" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2">
+      <dxl:Relation Mdid="6.17017.1.1" Name="t" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2">
         <dxl:Columns>
           <dxl:Column Name="t1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -327,7 +327,7 @@ select * from pt, t where pt.j = t.t1;
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.16556.1.1" TableName="pt">
+          <dxl:TableDescriptor Mdid="6.16556.1.1" TableName="pt">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -339,7 +339,7 @@ select * from pt, t where pt.j = t.t1;
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.17017.1.1" TableName="t">
+          <dxl:TableDescriptor Mdid="6.17017.1.1" TableName="t">
             <dxl:Columns>
               <dxl:Column ColId="7" Attno="1" ColName="t1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="8" Attno="2" ColName="t2" TypeMdid="0.23.1.0"/>
@@ -424,7 +424,7 @@ select * from pt, t where pt.j = t.t1;
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.16556.1.1" TableName="pt">
+            <dxl:TableDescriptor Mdid="6.16556.1.1" TableName="pt">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -435,7 +435,7 @@ select * from pt, t where pt.j = t.t1;
               </dxl:Columns>
             </dxl:TableDescriptor>
           </dxl:DynamicTableScan>
-          <dxl:PartitionSelector RelationMdid="0.16556.1.1" PartitionLevels="2" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.16556.1.1" PartitionLevels="2" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -496,7 +496,7 @@ select * from pt, t where pt.j = t.t1;
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.17017.1.1" TableName="t">
+                <dxl:TableDescriptor Mdid="6.17017.1.1" TableName="t">
                   <dxl:Columns>
                     <dxl:Column ColId="6" Attno="1" ColName="t1" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="7" Attno="2" ColName="t2" TypeMdid="0.23.1.0"/>

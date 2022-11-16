@@ -1667,7 +1667,7 @@
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1247.1.1" Name="pg_type" Rows="322.000000" EmptyRelation="false"/>
       <dxl:RelationStatistics Mdid="2.1259.1.1" Name="pg_class" Rows="337.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1247.1.1" Name="pg_type" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="30,23">
+      <dxl:Relation Mdid="6.1247.1.1" Name="pg_type" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="30,23">
         <dxl:Columns>
           <dxl:Column Name="typname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -1767,7 +1767,7 @@
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1259.1.1" Name="pg_class" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="37,30">
+      <dxl:Relation Mdid="6.1259.1.1" Name="pg_class" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="37,30">
         <dxl:Columns>
           <dxl:Column Name="relname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -1948,7 +1948,7 @@
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.1259.1.1" TableName="pg_class">
+          <dxl:TableDescriptor Mdid="6.1259.1.1" TableName="pg_class">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="relname" TypeMdid="0.19.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="relnamespace" TypeMdid="0.26.1.0"/>
@@ -1992,7 +1992,7 @@
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.1247.1.1" TableName="pg_type">
+          <dxl:TableDescriptor Mdid="6.1247.1.1" TableName="pg_type">
             <dxl:Columns>
               <dxl:Column ColId="39" Attno="1" ColName="typname" TypeMdid="0.19.1.0"/>
               <dxl:Column ColId="40" Attno="2" ColName="typnamespace" TypeMdid="0.26.1.0"/>
@@ -2284,7 +2284,7 @@
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:TableDescriptor Mdid="0.1247.1.1" TableName="pg_type">
+          <dxl:TableDescriptor Mdid="6.1247.1.1" TableName="pg_type">
             <dxl:Columns>
               <dxl:Column ColId="38" Attno="1" ColName="typname" TypeMdid="0.19.1.0"/>
               <dxl:Column ColId="39" Attno="2" ColName="typnamespace" TypeMdid="0.26.1.0"/>
@@ -2417,7 +2417,7 @@
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:TableDescriptor Mdid="0.1259.1.1" TableName="pg_class">
+          <dxl:TableDescriptor Mdid="6.1259.1.1" TableName="pg_class">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="relname" TypeMdid="0.19.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="relnamespace" TypeMdid="0.26.1.0"/>

@@ -45,7 +45,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.49158.1.0" Name="t3" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.49158.1.0" Name="t3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.49158.1.0" Name="t3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -86,7 +86,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.49155.1.0" Name="t2" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.49155.1.0" Name="t2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.49155.1.0" Name="t2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -127,7 +127,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.49152.1.0" Name="t1" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.49152.1.0" Name="t1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.49152.1.0" Name="t1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -169,7 +169,7 @@
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.49158.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.49161.1.0" Name="t4" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.49161.1.0" Name="t4" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.49161.1.0" Name="t4" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -347,7 +347,7 @@
           <dxl:LogicalJoin JoinType="Left">
             <dxl:LogicalJoin JoinType="Left">
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.49152.1.0" TableName="t1">
+                <dxl:TableDescriptor Mdid="6.49152.1.0" TableName="t1">
                   <dxl:Columns>
                     <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                     <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -364,7 +364,7 @@
                 </dxl:TableDescriptor>
               </dxl:LogicalGet>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.49155.1.0" TableName="t2">
+                <dxl:TableDescriptor Mdid="6.49155.1.0" TableName="t2">
                   <dxl:Columns>
                     <dxl:Column ColId="12" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                     <dxl:Column ColId="13" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -386,7 +386,7 @@
               </dxl:Comparison>
             </dxl:LogicalJoin>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.49158.1.0" TableName="t3">
+              <dxl:TableDescriptor Mdid="6.49158.1.0" TableName="t3">
                 <dxl:Columns>
                   <dxl:Column ColId="23" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="24" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -408,7 +408,7 @@
             </dxl:Comparison>
           </dxl:LogicalJoin>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.49161.1.0" TableName="t4">
+            <dxl:TableDescriptor Mdid="6.49161.1.0" TableName="t4">
               <dxl:Columns>
                 <dxl:Column ColId="34" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="35" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -717,7 +717,7 @@
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.49152.1.0" TableName="t1">
+                  <dxl:TableDescriptor Mdid="6.49152.1.0" TableName="t1">
                     <dxl:Columns>
                       <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                       <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -752,7 +752,7 @@
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.49155.1.0" TableName="t2">
+                  <dxl:TableDescriptor Mdid="6.49155.1.0" TableName="t2">
                     <dxl:Columns>
                       <dxl:Column ColId="11" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                       <dxl:Column ColId="12" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -788,7 +788,7 @@
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.49158.1.0" TableName="t3">
+                <dxl:TableDescriptor Mdid="6.49158.1.0" TableName="t3">
                   <dxl:Columns>
                     <dxl:Column ColId="22" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                     <dxl:Column ColId="23" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -824,7 +824,7 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.49161.1.0" TableName="t4">
+              <dxl:TableDescriptor Mdid="6.49161.1.0" TableName="t4">
                 <dxl:Columns>
                   <dxl:Column ColId="33" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="34" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>

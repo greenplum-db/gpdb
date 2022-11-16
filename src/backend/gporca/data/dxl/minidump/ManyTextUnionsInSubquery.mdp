@@ -209,7 +209,7 @@
       <dxl:ColumnStatistics Mdid="1.32988.1.0.1" Name="b" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.32988.1.0.0" Name="a" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.32988.1.0" Name="texting" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.32988.1.0" Name="texting" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32988.1.0" Name="texting" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -257,7 +257,7 @@
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.32994.1.0" Name="calling" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.32994.1.0" Name="calling" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32994.1.0" Name="calling" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -322,7 +322,7 @@
                     <dxl:Ident ColId="10" ColName="a" TypeMdid="0.25.1.0"/>
                   </dxl:Comparison>
                   <dxl:LogicalGet>
-                    <dxl:TableDescriptor Mdid="0.32994.1.0" TableName="calling">
+                    <dxl:TableDescriptor Mdid="6.32994.1.0" TableName="calling">
                       <dxl:Columns>
                         <dxl:Column ColId="10" Attno="1" ColName="a" TypeMdid="0.25.1.0" ColWidth="8"/>
                         <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.25.1.0" ColWidth="8"/>
@@ -571,7 +571,7 @@
             </dxl:SubqueryExists>
           </dxl:And>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.32988.1.0" TableName="texting">
+            <dxl:TableDescriptor Mdid="6.32988.1.0" TableName="texting">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.25.1.0" ColWidth="8"/>
                 <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.25.1.0" ColWidth="8"/>
@@ -999,7 +999,7 @@
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.32988.1.0" TableName="texting">
+                  <dxl:TableDescriptor Mdid="6.32988.1.0" TableName="texting">
                     <dxl:Columns>
                       <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.25.1.0" ColWidth="8"/>
                       <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.25.1.0" ColWidth="8"/>
@@ -1037,7 +1037,7 @@
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.32994.1.0" TableName="calling">
+                    <dxl:TableDescriptor Mdid="6.32994.1.0" TableName="calling">
                       <dxl:Columns>
                         <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.25.1.0" ColWidth="8"/>
                         <dxl:Column ColId="11" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

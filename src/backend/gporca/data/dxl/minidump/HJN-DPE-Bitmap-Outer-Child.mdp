@@ -165,7 +165,7 @@ select * from dbs_target, dbs_helper where dbs_target.c1 = dbs_helper.c1 and dbs
       <dxl:ColumnStatistics Mdid="1.42822392.1.1.5" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.42822392.1.1.4" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.42822392.1.1" Name="dbs_target" Rows="19000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.42822392.1.0" Name="dbs_target" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.42822392.1.0" Name="dbs_target" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -216,7 +216,7 @@ select * from dbs_target, dbs_helper where dbs_target.c1 = dbs_helper.c1 and dbs
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.42822392.1.1" Name="dbs_target" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.42822392.1.1" Name="dbs_target" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -328,7 +328,7 @@ select * from dbs_target, dbs_helper where dbs_target.c1 = dbs_helper.c1 and dbs
       <dxl:ColumnStatistics Mdid="1.42822392.1.1.7" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.42822392.1.1.6" Name="xmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.42823040.1.1" Name="dbs_helper" Rows="12.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.42823040.1.1" Name="dbs_helper" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.42823040.1.1" Name="dbs_helper" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -778,7 +778,7 @@ select * from dbs_target, dbs_helper where dbs_target.c1 = dbs_helper.c1 and dbs
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.42822392.1.1" TableName="dbs_target">
+          <dxl:TableDescriptor Mdid="6.42822392.1.1" TableName="dbs_target">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="c1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="c2" TypeMdid="0.23.1.0"/>
@@ -794,7 +794,7 @@ select * from dbs_target, dbs_helper where dbs_target.c1 = dbs_helper.c1 and dbs
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.42823040.1.1" TableName="dbs_helper">
+          <dxl:TableDescriptor Mdid="6.42823040.1.1" TableName="dbs_helper">
             <dxl:Columns>
               <dxl:Column ColId="11" Attno="1" ColName="c1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="12" Attno="2" ColName="c2" TypeMdid="0.23.1.0"/>
@@ -924,7 +924,7 @@ select * from dbs_target, dbs_helper where dbs_target.c1 = dbs_helper.c1 and dbs
               </dxl:IndexCondList>
               <dxl:IndexDescriptor Mdid="0.42822830.1.0" IndexName="dbs_index1_1_prt_1"/>
             </dxl:BitmapIndexProbe>
-            <dxl:TableDescriptor Mdid="0.42822392.1.1" TableName="dbs_target">
+            <dxl:TableDescriptor Mdid="6.42822392.1.1" TableName="dbs_target">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="c1" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="c2" TypeMdid="0.23.1.0"/>
@@ -939,7 +939,7 @@ select * from dbs_target, dbs_helper where dbs_target.c1 = dbs_helper.c1 and dbs
               </dxl:Columns>
             </dxl:TableDescriptor>
           </dxl:DynamicBitmapTableScan>
-          <dxl:PartitionSelector RelationMdid="0.42822392.1.1" PartitionLevels="1" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.42822392.1.1" PartitionLevels="1" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -990,7 +990,7 @@ select * from dbs_target, dbs_helper where dbs_target.c1 = dbs_helper.c1 and dbs
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.42823040.1.1" TableName="dbs_helper">
+              <dxl:TableDescriptor Mdid="6.42823040.1.1" TableName="dbs_helper">
                 <dxl:Columns>
                   <dxl:Column ColId="10" Attno="1" ColName="c1" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="11" Attno="2" ColName="c2" TypeMdid="0.23.1.0"/>

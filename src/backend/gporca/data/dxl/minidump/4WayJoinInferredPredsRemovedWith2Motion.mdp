@@ -55,7 +55,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.81923.1.0" Name="ss" Rows="270.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.81923.1.0" Name="ss" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.81923.1.0" Name="ss" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="ss_item_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -93,7 +93,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.81920.1.0" Name="cs" Rows="13000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.81920.1.0" Name="cs" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.81920.1.0" Name="cs" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="cs_item_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -131,7 +131,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.81926.1.0" Name="it" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.81926.1.0" Name="it" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.81926.1.0" Name="it" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="i_item_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -166,7 +166,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.81929.1.0" Name="sr" Rows="10200.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.81929.1.0" Name="sr" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.81929.1.0" Name="sr" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="sr_item_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -4567,7 +4567,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.81920.1.0" TableName="cs">
+          <dxl:TableDescriptor Mdid="6.81920.1.0" TableName="cs">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="cs_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="2" ColName="cs_order_number" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -4583,7 +4583,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.81926.1.0" TableName="it">
+          <dxl:TableDescriptor Mdid="6.81926.1.0" TableName="it">
             <dxl:Columns>
               <dxl:Column ColId="11" Attno="1" ColName="i_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="12" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -4598,7 +4598,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.81929.1.0" TableName="sr">
+          <dxl:TableDescriptor Mdid="6.81929.1.0" TableName="sr">
             <dxl:Columns>
               <dxl:Column ColId="20" Attno="1" ColName="sr_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="21" Attno="2" ColName="sr_ticket_number" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -4614,7 +4614,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.81923.1.0" TableName="ss">
+          <dxl:TableDescriptor Mdid="6.81923.1.0" TableName="ss">
             <dxl:Columns>
               <dxl:Column ColId="30" Attno="1" ColName="ss_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="31" Attno="2" ColName="ss_ticket_number" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -4836,7 +4836,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.81920.1.0" TableName="cs">
+                <dxl:TableDescriptor Mdid="6.81920.1.0" TableName="cs">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="cs_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
                     <dxl:Column ColId="1" Attno="2" ColName="cs_order_number" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -4919,7 +4919,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.81929.1.0" TableName="sr">
+                    <dxl:TableDescriptor Mdid="6.81929.1.0" TableName="sr">
                       <dxl:Columns>
                         <dxl:Column ColId="19" Attno="1" ColName="sr_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
                         <dxl:Column ColId="20" Attno="2" ColName="sr_ticket_number" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -4961,7 +4961,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:TableDescriptor Mdid="0.81926.1.0" TableName="it">
+                      <dxl:TableDescriptor Mdid="6.81926.1.0" TableName="it">
                         <dxl:Columns>
                           <dxl:Column ColId="10" Attno="1" ColName="i_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
                           <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -4996,7 +4996,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.81923.1.0" TableName="ss">
+            <dxl:TableDescriptor Mdid="6.81923.1.0" TableName="ss">
               <dxl:Columns>
                 <dxl:Column ColId="29" Attno="1" ColName="ss_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="30" Attno="2" ColName="ss_ticket_number" TypeMdid="0.23.1.0" ColWidth="4"/>

@@ -29,7 +29,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.16391.1.0" Name="bar1" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.16391.1.0" Name="bar1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16391.1.0" Name="bar1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="j2" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -67,7 +67,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.16394.1.0" Name="foo1" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.16394.1.0" Name="foo1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16394.1.0" Name="foo1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="j1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -284,7 +284,7 @@
           </dxl:ProjList>
           <dxl:LogicalJoin JoinType="Inner">
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.16394.1.0" TableName="foo1">
+              <dxl:TableDescriptor Mdid="6.16394.1.0" TableName="foo1">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="j1" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="2" Attno="2" ColName="g1" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -300,7 +300,7 @@
               </dxl:TableDescriptor>
             </dxl:LogicalGet>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.16391.1.0" TableName="bar1">
+              <dxl:TableDescriptor Mdid="6.16391.1.0" TableName="bar1">
                 <dxl:Columns>
                   <dxl:Column ColId="11" Attno="1" ColName="j2" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="12" Attno="2" ColName="g2" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -540,7 +540,7 @@
                             <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
                           </dxl:Comparison>
                         </dxl:Filter>
-                        <dxl:TableDescriptor Mdid="0.16394.1.0" TableName="foo1">
+                        <dxl:TableDescriptor Mdid="6.16394.1.0" TableName="foo1">
                           <dxl:Columns>
                             <dxl:Column ColId="0" Attno="1" ColName="j1" TypeMdid="0.23.1.0" ColWidth="4"/>
                             <dxl:Column ColId="1" Attno="2" ColName="g1" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -568,7 +568,7 @@
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.16391.1.0" TableName="bar1">
+                        <dxl:TableDescriptor Mdid="6.16391.1.0" TableName="bar1">
                           <dxl:Columns>
                             <dxl:Column ColId="10" Attno="1" ColName="j2" TypeMdid="0.23.1.0" ColWidth="4"/>
                             <dxl:Column ColId="11" Attno="2" ColName="g2" TypeMdid="0.23.1.0" ColWidth="4"/>

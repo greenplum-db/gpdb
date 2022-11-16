@@ -26,7 +26,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.16385.1.0" Name="t" Rows="901.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.16385.1.0" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16385.1.0" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.19.1.0" Nullable="true" ColWidth="64">
             <dxl:DefaultValue/>
@@ -227,7 +227,7 @@
           <dxl:ConstValue TypeMdid="0.19.1.0" Value="YWJjMwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#10;AAAAAAAAAAAAAAAAAAAAAAAAAA==" LintValue="2072455951"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="t">
+          <dxl:TableDescriptor Mdid="6.16385.1.0" TableName="t">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.19.1.0" ColWidth="64"/>
               <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -269,7 +269,7 @@
               <dxl:ConstValue TypeMdid="0.19.1.0" Value="YWJjMwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#10;AAAAAAAAAAAAAAAAAAAAAAAAAA==" LintValue="2072455951"/>
             </dxl:Comparison>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="t">
+          <dxl:TableDescriptor Mdid="6.16385.1.0" TableName="t">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.19.1.0" ColWidth="64"/>
               <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

@@ -181,7 +181,7 @@
       <dxl:ColumnStatistics Mdid="1.24588.1.1.4" Name="cmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.24756.1.1" Name="smallt2_part" Rows="0.000000"/>
       <dxl:RelationStatistics Mdid="2.24588.1.1" Name="smallt_part" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.24756.1.1" Name="smallt2_part" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.24756.1.1" Name="smallt2_part" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -215,7 +215,7 @@
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.24588.1.1" Name="smallt_part" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.24588.1.1" Name="smallt_part" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -284,7 +284,7 @@
                   <dxl:Ident ColId="10" ColName="i" TypeMdid="0.23.1.0"/>
                 </dxl:Comparison>
                 <dxl:LogicalGet>
-                  <dxl:TableDescriptor Mdid="0.24756.1.1" TableName="smallt2_part">
+                  <dxl:TableDescriptor Mdid="6.24756.1.1" TableName="smallt2_part">
                     <dxl:Columns>
                       <dxl:Column ColId="10" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="11" Attno="2" ColName="d" TypeMdid="0.1082.1.0"/>
@@ -303,7 +303,7 @@
           </dxl:ScalarSubquery>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.24588.1.1" TableName="smallt_part">
+          <dxl:TableDescriptor Mdid="6.24588.1.1" TableName="smallt_part">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="d" TypeMdid="0.1082.1.0"/>
@@ -370,7 +370,7 @@
                 <dxl:Ident ColId="1" ColName="d" TypeMdid="0.1082.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:PartitionSelector RelationMdid="0.24588.1.1" PartitionLevels="1" ScanId="1">
+            <dxl:PartitionSelector RelationMdid="6.24588.1.1" PartitionLevels="1" ScanId="1">
               <dxl:Properties>
                 <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
               </dxl:Properties>
@@ -404,7 +404,7 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.24588.1.1" TableName="smallt_part">
+              <dxl:TableDescriptor Mdid="6.24588.1.1" TableName="smallt_part">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="1" Attno="2" ColName="d" TypeMdid="0.1082.1.0"/>
@@ -466,7 +466,7 @@
                     <dxl:Ident ColId="9" ColName="i" TypeMdid="0.23.1.0"/>
                   </dxl:ProjElem>
                 </dxl:ProjList>
-                <dxl:PartitionSelector RelationMdid="0.24756.1.1" PartitionLevels="1" ScanId="2">
+                <dxl:PartitionSelector RelationMdid="6.24756.1.1" PartitionLevels="1" ScanId="2">
                   <dxl:Properties>
                     <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                   </dxl:Properties>
@@ -497,7 +497,7 @@
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.24756.1.1" TableName="smallt2_part">
+                  <dxl:TableDescriptor Mdid="6.24756.1.1" TableName="smallt2_part">
                     <dxl:Columns>
                       <dxl:Column ColId="9" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="10" Attno="2" ColName="d" TypeMdid="0.1082.1.0"/>

@@ -31,7 +31,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.57344.1.0" Name="pt" Rows="98.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.57344.1.0" Name="pt" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="10">
+      <dxl:Relation Mdid="6.57344.1.0" Name="pt" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="10">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1437,7 +1437,7 @@
           </dxl:And>
         </dxl:Or>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.57344.1.0" TableName="pt">
+          <dxl:TableDescriptor Mdid="6.57344.1.0" TableName="pt">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -1487,7 +1487,7 @@
               <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
-          <dxl:PartitionSelector RelationMdid="0.57344.1.0" PartitionLevels="1" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.57344.1.0" PartitionLevels="1" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -1611,7 +1611,7 @@
                 </dxl:And>
               </dxl:Or>
             </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.57344.1.0" TableName="pt">
+            <dxl:TableDescriptor Mdid="6.57344.1.0" TableName="pt">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>

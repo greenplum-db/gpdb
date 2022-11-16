@@ -182,7 +182,7 @@
       <dxl:ColumnStatistics Mdid="1.274855.1.1.5" Name="cmin" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.274855.1.1.4" Name="xmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.274855.1.1" Name="ppp" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.274855.1.1" Name="ppp" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.274855.1.1" Name="ppp" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -297,7 +297,7 @@
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.274855.1.1" TableName="ppp">
+          <dxl:TableDescriptor Mdid="6.274855.1.1" TableName="ppp">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -369,7 +369,7 @@
                 <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:PartitionSelector RelationMdid="0.274855.1.1" PartitionLevels="1" ScanId="1">
+            <dxl:PartitionSelector RelationMdid="6.274855.1.1" PartitionLevels="1" ScanId="1">
               <dxl:Properties>
                 <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
               </dxl:Properties>
@@ -516,7 +516,7 @@
                   </dxl:Comparison>
                 </dxl:IndexCondList>
                 <dxl:IndexDescriptor Mdid="0.275094.1.0" IndexName="ppp_1_prt_extra_ind_c"/>
-                <dxl:TableDescriptor Mdid="0.274855.1.1" TableName="ppp">
+                <dxl:TableDescriptor Mdid="6.274855.1.1" TableName="ppp">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -552,7 +552,7 @@
                     <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                   </dxl:Comparison>
                 </dxl:Filter>
-                <dxl:TableDescriptor Mdid="0.274855.1.1" TableName="ppp">
+                <dxl:TableDescriptor Mdid="6.274855.1.1" TableName="ppp">
                   <dxl:Columns>
                     <dxl:Column ColId="10" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

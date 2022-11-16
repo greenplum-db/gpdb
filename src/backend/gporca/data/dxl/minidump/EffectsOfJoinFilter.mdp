@@ -104,7 +104,7 @@
       <dxl:ColumnStatistics Mdid="1.1941602.1.1.3" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.1941602.1.1.2" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.1941602.1.1" Name="bar" Rows="1001718.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1941602.1.1" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.1941602.1.1" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="b1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -321,7 +321,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1006084.1.1" Name="foo" Rows="200.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1006084.1.1" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.1006084.1.1" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -383,7 +383,7 @@
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.1006084.1.1" TableName="foo">
+          <dxl:TableDescriptor Mdid="6.1006084.1.1" TableName="foo">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -398,7 +398,7 @@
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.1941602.1.1" TableName="bar">
+          <dxl:TableDescriptor Mdid="6.1941602.1.1" TableName="bar">
             <dxl:Columns>
               <dxl:Column ColId="10" Attno="1" ColName="b1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="11" Attno="2" ColName="b2" TypeMdid="0.23.1.0"/>
@@ -536,7 +536,7 @@
                 </dxl:Comparison>
               </dxl:Or>
             </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.1941602.1.1" TableName="bar">
+            <dxl:TableDescriptor Mdid="6.1941602.1.1" TableName="bar">
               <dxl:Columns>
                 <dxl:Column ColId="9" Attno="1" ColName="b1" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="10" Attno="2" ColName="b2" TypeMdid="0.23.1.0"/>
@@ -574,7 +574,7 @@
                 </dxl:Comparison>
               </dxl:Or>
             </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.1006084.1.1" TableName="foo">
+            <dxl:TableDescriptor Mdid="6.1006084.1.1" TableName="foo">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

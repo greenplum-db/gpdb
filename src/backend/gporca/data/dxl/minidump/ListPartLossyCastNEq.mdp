@@ -162,7 +162,7 @@ Optimizer: Pivotal Optimizer (GPORCA)
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
       <dxl:RelationStatistics Mdid="2.77262.1.0" Name="multi" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.77262.1.0" Name="multi" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="0,1" PartitionTypes="l,r" NumberLeafPartitions="8">
+      <dxl:Relation Mdid="6.77262.1.0" Name="multi" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="0,1" PartitionTypes="l,r" NumberLeafPartitions="8">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.701.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -225,7 +225,7 @@ Optimizer: Pivotal Optimizer (GPORCA)
           </dxl:Comparison>
         </dxl:And>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.77262.1.0" TableName="multi">
+          <dxl:TableDescriptor Mdid="6.77262.1.0" TableName="multi">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.701.1.0" ColWidth="8"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.701.1.0" ColWidth="8"/>
@@ -268,7 +268,7 @@ Optimizer: Pivotal Optimizer (GPORCA)
               <dxl:Ident ColId="1" ColName="b" TypeMdid="0.701.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
-          <dxl:PartitionSelector RelationMdid="0.77262.1.0" PartitionLevels="2" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.77262.1.0" PartitionLevels="2" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -332,7 +332,7 @@ Optimizer: Pivotal Optimizer (GPORCA)
                 </dxl:Comparison>
               </dxl:And>
             </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.77262.1.0" TableName="multi">
+            <dxl:TableDescriptor Mdid="6.77262.1.0" TableName="multi">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.701.1.0" ColWidth="8"/>
                 <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.701.1.0" ColWidth="8"/>

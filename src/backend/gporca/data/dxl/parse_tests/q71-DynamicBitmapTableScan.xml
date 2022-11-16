@@ -57,7 +57,7 @@
           </dxl:IndexCondList>
           <dxl:IndexDescriptor Mdid="0.197454.1.1" IndexName="foo_ab"/>
         </dxl:BitmapIndexProbe>
-        <dxl:TableDescriptor Mdid="0.1234.1.1" TableName="S">
+        <dxl:TableDescriptor Mdid="6.1234.1.1" TableName="S">
           <dxl:Columns>
             <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

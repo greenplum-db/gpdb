@@ -54,7 +54,7 @@ ORDER BY 1 asc ;
       <dxl:TraceFlags Value="102001,102002,102003,102024,102027,102029,102115,102116,102117,102119,102144,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
-      <dxl:Relation Mdid="0.16166659.1.0" Name="my_tq_agg_small" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.16166659.1.0" Name="my_tq_agg_small" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -112,7 +112,7 @@ ORDER BY 1 asc ;
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.16166659.1.1" Name="my_tq_agg_small" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.16166659.1.1" Name="my_tq_agg_small" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.16166659.1.1" Name="my_tq_agg_small" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -1250,7 +1250,7 @@ ORDER BY 1 asc ;
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.16166631.1.1" Name="my_tt_agg_small" Rows="420.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.16166631.1.1" Name="my_tt_agg_small" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
+      <dxl:Relation Mdid="6.16166631.1.1" Name="my_tt_agg_small" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="symbol" Attno="1" Mdid="0.1042.1.0" Nullable="true" ColWidth="16">
             <dxl:DefaultValue/>
@@ -1343,7 +1343,7 @@ ORDER BY 1 asc ;
             </dxl:ProjList>
             <dxl:LogicalJoin JoinType="Inner">
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.16166631.1.1" TableName="my_tt_agg_small">
+                <dxl:TableDescriptor Mdid="6.16166631.1.1" TableName="my_tt_agg_small">
                   <dxl:Columns>
                     <dxl:Column ColId="1" Attno="1" ColName="symbol" TypeMdid="0.1042.1.0" ColWidth="16"/>
                     <dxl:Column ColId="2" Attno="2" ColName="event_ts" TypeMdid="0.20.1.0"/>
@@ -1360,7 +1360,7 @@ ORDER BY 1 asc ;
                 </dxl:TableDescriptor>
               </dxl:LogicalGet>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.16166659.1.1" TableName="my_tq_agg_small">
+                <dxl:TableDescriptor Mdid="6.16166659.1.1" TableName="my_tq_agg_small">
                   <dxl:Columns>
                     <dxl:Column ColId="12" Attno="1" ColName="ets" TypeMdid="0.20.1.0"/>
                     <dxl:Column ColId="13" Attno="2" ColName="sym" TypeMdid="0.1043.1.0" ColWidth="16"/>
@@ -1531,7 +1531,7 @@ ORDER BY 1 asc ;
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.16166631.1.1" TableName="my_tt_agg_small">
+                        <dxl:TableDescriptor Mdid="6.16166631.1.1" TableName="my_tt_agg_small">
                           <dxl:Columns>
                             <dxl:Column ColId="0" Attno="1" ColName="symbol" TypeMdid="0.1042.1.0" ColWidth="16"/>
                             <dxl:Column ColId="1" Attno="2" ColName="event_ts" TypeMdid="0.20.1.0"/>
@@ -1561,7 +1561,7 @@ ORDER BY 1 asc ;
                           <dxl:Ident ColId="15" ColName="end_ts" TypeMdid="0.20.1.0"/>
                         </dxl:ProjElem>
                       </dxl:ProjList>
-                      <dxl:PartitionSelector RelationMdid="0.16166659.1.1" PartitionLevels="1" ScanId="1">
+                      <dxl:PartitionSelector RelationMdid="6.16166659.1.1" PartitionLevels="1" ScanId="1">
                         <dxl:Properties>
                           <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                         </dxl:Properties>
@@ -1626,7 +1626,7 @@ ORDER BY 1 asc ;
                           </dxl:Comparison>
                         </dxl:IndexCondList>
                         <dxl:IndexDescriptor Mdid="0.16166830.1.0" IndexName="my_tq_agg_small_ets_end_ts_ix_1_prt_p1"/>
-                        <dxl:TableDescriptor Mdid="0.16166659.1.1" TableName="my_tq_agg_small">
+                        <dxl:TableDescriptor Mdid="6.16166659.1.1" TableName="my_tq_agg_small">
                           <dxl:Columns>
                             <dxl:Column ColId="11" Attno="1" ColName="ets" TypeMdid="0.20.1.0"/>
                             <dxl:Column ColId="12" Attno="2" ColName="sym" TypeMdid="0.1043.1.0" ColWidth="16"/>

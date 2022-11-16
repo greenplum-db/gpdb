@@ -102,7 +102,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.8685596.1.0" Name="pt_lt_tab" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="l">
+      <dxl:Relation Mdid="6.8685596.1.0" Name="pt_lt_tab" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="l">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -458,7 +458,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           <dxl:Opfamily Mdid="0.3040.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:Relation Mdid="0.8685596.1.1" Name="pt_lt_tab" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="l">
+      <dxl:Relation Mdid="6.8685596.1.1" Name="pt_lt_tab" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="l">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1177,7 +1177,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
             <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACgAAAAAPAA==" DoubleValue="15.000000"/>
           </dxl:Comparison>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.8685596.1.1" TableName="pt_lt_tab">
+            <dxl:TableDescriptor Mdid="6.8685596.1.1" TableName="pt_lt_tab">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="col1" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="col2" TypeMdid="0.1700.1.0"/>
@@ -1281,7 +1281,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
                   <dxl:Ident ColId="3" ColName="col4" TypeMdid="0.16.1.0"/>
                 </dxl:ProjElem>
               </dxl:ProjList>
-              <dxl:PartitionSelector RelationMdid="0.8685596.1.1" PartitionLevels="1" ScanId="1">
+              <dxl:PartitionSelector RelationMdid="6.8685596.1.1" PartitionLevels="1" ScanId="1">
                 <dxl:Properties>
                   <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                 </dxl:Properties>
@@ -1331,7 +1331,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
                     <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACgAAAAAPAA==" DoubleValue="15.000000"/>
                   </dxl:Comparison>
                 </dxl:Filter>
-                <dxl:TableDescriptor Mdid="0.8685596.1.1" TableName="pt_lt_tab">
+                <dxl:TableDescriptor Mdid="6.8685596.1.1" TableName="pt_lt_tab">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="col1" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="1" Attno="2" ColName="col2" TypeMdid="0.1700.1.0"/>

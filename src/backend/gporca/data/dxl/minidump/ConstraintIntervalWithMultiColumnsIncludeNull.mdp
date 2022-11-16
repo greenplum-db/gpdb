@@ -137,7 +137,7 @@ Rows out:  1 rows at destination with 1693 ms to end.
         <dxl:Commutator Mdid="0.551.1.0"/>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.16457.1.0" Name="t" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.16457.1.0" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16457.1.0" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -173,7 +173,7 @@ Rows out:  1 rows at destination with 1693 ms to end.
           <dxl:CheckConstraint Mdid="0.16460.1.0"/>
         </dxl:CheckConstraints>
       </dxl:Relation>
-      <dxl:CheckConstraint Mdid="0.16460.1.0" Name="t_check" RelationMdid="0.16457.1.0">
+      <dxl:CheckConstraint Mdid="0.16460.1.0" Name="t_check" RelationMdid="6.16457.1.0">
         <dxl:And>
           <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.521.1.0">
             <dxl:OpExpr OperatorName="+" OperatorMdid="0.551.1.0" OperatorType="0.23.1.0">
@@ -214,7 +214,7 @@ Rows out:  1 rows at destination with 1693 ms to end.
           <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
         </dxl:IsNull>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.16457.1.0" TableName="t">
+          <dxl:TableDescriptor Mdid="6.16457.1.0" TableName="t">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -262,7 +262,7 @@ Rows out:  1 rows at destination with 1693 ms to end.
               <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
             </dxl:IsNull>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.16457.1.0" TableName="t">
+          <dxl:TableDescriptor Mdid="6.16457.1.0" TableName="t">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>

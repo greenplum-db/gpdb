@@ -42,7 +42,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.16384.1.0" Name="test" Rows="1000001.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.16384.1.0" Name="test" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16384.1.0" Name="test" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="d" Attno="1" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -283,7 +283,7 @@
           <dxl:ConstValue TypeMdid="0.1082.1.0" Value="txoAAA==" LintValue="6839"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.16384.1.0" TableName="test">
+          <dxl:TableDescriptor Mdid="6.16384.1.0" TableName="test">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="d" TypeMdid="0.1082.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -325,7 +325,7 @@
               <dxl:ConstValue TypeMdid="0.1082.1.0" Value="txoAAA==" LintValue="6839"/>
             </dxl:Comparison>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.16384.1.0" TableName="test">
+          <dxl:TableDescriptor Mdid="6.16384.1.0" TableName="test">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="d" TypeMdid="0.1082.1.0" ColWidth="4"/>
               <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

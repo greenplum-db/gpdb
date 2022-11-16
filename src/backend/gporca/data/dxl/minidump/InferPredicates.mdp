@@ -165,7 +165,7 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
         <dxl:Commutator Mdid="0.688.1.0"/>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.25679.1.0" Name="foo" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.25679.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="0" PartitionTypes="r" NumberLeafPartitions="1">
+      <dxl:Relation Mdid="6.25679.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="0" PartitionTypes="r" NumberLeafPartitions="1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -229,7 +229,7 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
           <dxl:Opfamily Mdid="0.7027.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:Relation Mdid="0.25698.1.0" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="0" PartitionTypes="r" NumberLeafPartitions="1">
+      <dxl:Relation Mdid="6.25698.1.0" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="0" PartitionTypes="r" NumberLeafPartitions="1">
         <dxl:Columns>
           <dxl:Column Name="d" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -298,7 +298,7 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
           </dxl:ProjList>
           <dxl:LogicalJoin JoinType="Inner">
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.25679.1.0" TableName="foo">
+              <dxl:TableDescriptor Mdid="6.25679.1.0" TableName="foo">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -314,7 +314,7 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
               </dxl:TableDescriptor>
             </dxl:LogicalGet>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.25698.1.0" TableName="bar">
+              <dxl:TableDescriptor Mdid="6.25698.1.0" TableName="bar">
                 <dxl:Columns>
                   <dxl:Column ColId="11" Attno="1" ColName="d" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="12" Attno="2" ColName="e" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -448,7 +448,7 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
                         <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
                       </dxl:Comparison>
                     </dxl:Filter>
-                    <dxl:TableDescriptor Mdid="0.25679.1.0" TableName="foo">
+                    <dxl:TableDescriptor Mdid="6.25679.1.0" TableName="foo">
                       <dxl:Columns>
                         <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                         <dxl:Column ColId="2" Attno="3" ColName="c" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -462,7 +462,7 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
                       </dxl:Columns>
                     </dxl:TableDescriptor>
                   </dxl:DynamicTableScan>
-                  <dxl:PartitionSelector RelationMdid="0.25679.1.0" PartitionLevels="1" ScanId="1">
+                  <dxl:PartitionSelector RelationMdid="6.25679.1.0" PartitionLevels="1" ScanId="1">
                     <dxl:Properties>
                       <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                     </dxl:Properties>
@@ -500,7 +500,7 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
                           <dxl:Ident ColId="10" ColName="d" TypeMdid="0.23.1.0"/>
                         </dxl:ProjElem>
                       </dxl:ProjList>
-                      <dxl:PartitionSelector RelationMdid="0.25698.1.0" PartitionLevels="1" ScanId="2">
+                      <dxl:PartitionSelector RelationMdid="6.25698.1.0" PartitionLevels="1" ScanId="2">
                         <dxl:Properties>
                           <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                         </dxl:Properties>
@@ -541,7 +541,7 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
                             <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
                           </dxl:Comparison>
                         </dxl:Filter>
-                        <dxl:TableDescriptor Mdid="0.25698.1.0" TableName="bar">
+                        <dxl:TableDescriptor Mdid="6.25698.1.0" TableName="bar">
                           <dxl:Columns>
                             <dxl:Column ColId="10" Attno="1" ColName="d" TypeMdid="0.23.1.0" ColWidth="4"/>
                             <dxl:Column ColId="13" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

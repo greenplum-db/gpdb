@@ -935,7 +935,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.114725.1.0" Name="uav2" Rows="100000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.114725.1.0" Name="uav2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.114725.1.0" Name="uav2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -973,7 +973,7 @@
         </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.114722.1.0" Name="uav1" Rows="100000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.114722.1.0" Name="uav1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.114722.1.0" Name="uav1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1413,7 +1413,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.114728.1.0" Name="uav4" Rows="100000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.114728.1.0" Name="uav4" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.114728.1.0" Name="uav4" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -2281,7 +2281,7 @@
             <dxl:Column ColId="1" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
           </dxl:Columns>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.114722.1.0" TableName="uav1">
+            <dxl:TableDescriptor Mdid="6.114722.1.0" TableName="uav1">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="id" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="2" Attno="2" ColName="val" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -2296,7 +2296,7 @@
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.114725.1.0" TableName="uav2">
+            <dxl:TableDescriptor Mdid="6.114725.1.0" TableName="uav2">
               <dxl:Columns>
                 <dxl:Column ColId="10" Attno="1" ColName="id" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="11" Attno="2" ColName="val" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -2312,7 +2312,7 @@
           </dxl:LogicalGet>
         </dxl:Union>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.114728.1.0" TableName="uav4">
+          <dxl:TableDescriptor Mdid="6.114728.1.0" TableName="uav4">
             <dxl:Columns>
               <dxl:Column ColId="19" Attno="1" ColName="id" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="20" Attno="2" ColName="val" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -2386,7 +2386,7 @@
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.114722.1.0" TableName="uav1">
+                <dxl:TableDescriptor Mdid="6.114722.1.0" TableName="uav1">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="id" TypeMdid="0.23.1.0" ColWidth="4"/>
                     <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -2452,7 +2452,7 @@
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.114725.1.0" TableName="uav2">
+                    <dxl:TableDescriptor Mdid="6.114725.1.0" TableName="uav2">
                       <dxl:Columns>
                         <dxl:Column ColId="9" Attno="1" ColName="id" TypeMdid="0.23.1.0" ColWidth="4"/>
                         <dxl:Column ColId="10" Attno="2" ColName="val" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -2536,7 +2536,7 @@
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:TableDescriptor Mdid="0.114728.1.0" TableName="uav4">
+                      <dxl:TableDescriptor Mdid="6.114728.1.0" TableName="uav4">
                         <dxl:Columns>
                           <dxl:Column ColId="18" Attno="1" ColName="id" TypeMdid="0.23.1.0" ColWidth="4"/>
                           <dxl:Column ColId="19" Attno="2" ColName="val" TypeMdid="0.23.1.0" ColWidth="4"/>

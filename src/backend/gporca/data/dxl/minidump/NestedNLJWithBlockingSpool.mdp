@@ -55,7 +55,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.98306.1.0" Name="part" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.98306.1.0" Name="part" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;15,9" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.98306.1.0" Name="part" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;15,9" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="p_partkey" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue>
@@ -361,7 +361,7 @@
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
       <dxl:RelationStatistics Mdid="2.98421.1.0" Name="lineitem" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.98421.1.0" Name="lineitem" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,3" Keys="0,3;22,16" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.98421.1.0" Name="lineitem" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,3" Keys="0,3;22,16" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="l_orderkey" Attno="1" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
             <dxl:DefaultValue/>
@@ -447,7 +447,7 @@
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.98421.1.0" TableName="lineitem">
+          <dxl:TableDescriptor Mdid="6.98421.1.0" TableName="lineitem">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="l_orderkey" TypeMdid="0.20.1.0" ColWidth="8"/>
               <dxl:Column ColId="2" Attno="2" ColName="l_partkey" TypeMdid="0.20.1.0" ColWidth="8"/>
@@ -476,7 +476,7 @@
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.98306.1.0" TableName="part">
+          <dxl:TableDescriptor Mdid="6.98306.1.0" TableName="part">
             <dxl:Columns>
               <dxl:Column ColId="24" Attno="1" ColName="p_partkey" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="25" Attno="2" ColName="p_name" TypeMdid="0.1043.1.0" TypeModifier="59" ColWidth="55"/>
@@ -498,7 +498,7 @@
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.98421.1.0" TableName="lineitem">
+          <dxl:TableDescriptor Mdid="6.98421.1.0" TableName="lineitem">
             <dxl:Columns>
               <dxl:Column ColId="40" Attno="1" ColName="l_orderkey" TypeMdid="0.20.1.0" ColWidth="8"/>
               <dxl:Column ColId="41" Attno="2" ColName="l_partkey" TypeMdid="0.20.1.0" ColWidth="8"/>
@@ -600,7 +600,7 @@
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.98421.1.0" TableName="lineitem">
+                <dxl:TableDescriptor Mdid="6.98421.1.0" TableName="lineitem">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="l_orderkey" TypeMdid="0.20.1.0" ColWidth="8"/>
                     <dxl:Column ColId="1" Attno="2" ColName="l_partkey" TypeMdid="0.20.1.0" ColWidth="8"/>
@@ -646,7 +646,7 @@
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.98421.1.0" TableName="lineitem">
+                    <dxl:TableDescriptor Mdid="6.98421.1.0" TableName="lineitem">
                       <dxl:Columns>
                         <dxl:Column ColId="39" Attno="1" ColName="l_orderkey" TypeMdid="0.20.1.0" ColWidth="8"/>
                         <dxl:Column ColId="40" Attno="2" ColName="l_partkey" TypeMdid="0.20.1.0" ColWidth="8"/>
@@ -682,7 +682,7 @@
               </dxl:Comparison>
             </dxl:IndexCondList>
             <dxl:IndexDescriptor Mdid="0.98326.1.0" IndexName="part_pkey"/>
-            <dxl:TableDescriptor Mdid="0.98306.1.0" TableName="part">
+            <dxl:TableDescriptor Mdid="6.98306.1.0" TableName="part">
               <dxl:Columns>
                 <dxl:Column ColId="23" Attno="1" ColName="p_partkey" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="32" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

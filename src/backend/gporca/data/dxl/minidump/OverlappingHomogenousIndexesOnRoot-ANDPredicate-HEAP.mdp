@@ -172,7 +172,7 @@
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Relation Mdid="0.1237480.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.1237480.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -243,7 +243,7 @@
       <dxl:ColumnStatistics Mdid="1.1237500.1.0.8" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.1237500.1.0.1" Name="b" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.1237500.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:CheckConstraint Mdid="0.1237503.1.0" Name="foo_1_prt_p2_check" RelationMdid="0.1237500.1.0">
+      <dxl:CheckConstraint Mdid="0.1237503.1.0" Name="foo_1_prt_p2_check" RelationMdid="6.1237500.1.0">
         <dxl:And>
           <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
             <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -256,7 +256,7 @@
         </dxl:And>
       </dxl:CheckConstraint>
       <dxl:RelationStatistics Mdid="2.1237500.1.0" Name="foo_1_prt_p2" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.1237500.1.0" Name="foo_1_prt_p2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1237500.1.0" Name="foo_1_prt_p2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -322,7 +322,7 @@
           </dxl:Comparison>
         </dxl:And>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.1237500.1.0" TableName="foo_1_prt_p2">
+          <dxl:TableDescriptor Mdid="6.1237500.1.0" TableName="foo_1_prt_p2">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -392,7 +392,7 @@
             </dxl:Comparison>
           </dxl:IndexCondList>
           <dxl:IndexDescriptor Mdid="0.1237555.1.0" IndexName="complete_idx_c_1_prt_p2"/>
-          <dxl:TableDescriptor Mdid="0.1237500.1.0" TableName="foo_1_prt_p2">
+          <dxl:TableDescriptor Mdid="6.1237500.1.0" TableName="foo_1_prt_p2">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

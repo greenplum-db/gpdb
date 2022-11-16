@@ -159,7 +159,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.90284.1.0" Name="t1n" Rows="2000523.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.90284.1.0" Name="t1n" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="10">
+      <dxl:Relation Mdid="6.90284.1.0" Name="t1n" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="10">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -671,7 +671,7 @@
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.90360.1.0" Name="t2n" Rows="2000523.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.90360.1.0" Name="t2n" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="10">
+      <dxl:Relation Mdid="6.90360.1.0" Name="t2n" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="10">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1572,7 +1572,7 @@
         </dxl:Comparison>
         <dxl:LogicalJoin JoinType="Inner">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.90284.1.0" TableName="t1n">
+            <dxl:TableDescriptor Mdid="6.90284.1.0" TableName="t1n">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -1589,7 +1589,7 @@
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.90360.1.0" TableName="t2n">
+            <dxl:TableDescriptor Mdid="6.90360.1.0" TableName="t2n">
               <dxl:Columns>
                 <dxl:Column ColId="12" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="13" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -1670,7 +1670,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.90284.1.0" TableName="t1n">
+            <dxl:TableDescriptor Mdid="6.90284.1.0" TableName="t1n">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -1684,7 +1684,7 @@
               </dxl:Columns>
             </dxl:TableDescriptor>
           </dxl:DynamicTableScan>
-          <dxl:PartitionSelector RelationMdid="0.90284.1.0" PartitionLevels="1" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.90284.1.0" PartitionLevels="1" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -1745,7 +1745,7 @@
                     <dxl:Ident ColId="13" ColName="c" TypeMdid="0.23.1.0"/>
                   </dxl:ProjElem>
                 </dxl:ProjList>
-                <dxl:PartitionSelector RelationMdid="0.90360.1.0" PartitionLevels="1" ScanId="2">
+                <dxl:PartitionSelector RelationMdid="6.90360.1.0" PartitionLevels="1" ScanId="2">
                   <dxl:Properties>
                     <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                   </dxl:Properties>
@@ -1787,7 +1787,7 @@
                       <dxl:ConstValue TypeMdid="0.23.1.0" Value="74"/>
                     </dxl:Comparison>
                   </dxl:Filter>
-                  <dxl:TableDescriptor Mdid="0.90360.1.0" TableName="t2n">
+                  <dxl:TableDescriptor Mdid="6.90360.1.0" TableName="t2n">
                     <dxl:Columns>
                       <dxl:Column ColId="11" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                       <dxl:Column ColId="12" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>

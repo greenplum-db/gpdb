@@ -135,7 +135,7 @@
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
       <dxl:RelationStatistics Mdid="2.816512.1.1" Name="bm_dyn_test_onepart" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.816512.1.0" Name="bm_dyn_test_onepart" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.816512.1.0" Name="bm_dyn_test_onepart" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -213,7 +213,7 @@
           </dxl:Or>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.816512.1.1" Name="bm_dyn_test_onepart" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.816512.1.1" Name="bm_dyn_test_onepart" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -349,7 +349,7 @@
           </dxl:Comparison>
         </dxl:And>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.816512.1.1" TableName="bm_dyn_test_onepart">
+          <dxl:TableDescriptor Mdid="6.816512.1.1" TableName="bm_dyn_test_onepart">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="3" ColName="j" TypeMdid="0.23.1.0"/>
@@ -399,7 +399,7 @@
               <dxl:Ident ColId="2" ColName="t" TypeMdid="0.25.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
-          <dxl:PartitionSelector RelationMdid="0.816512.1.1" PartitionLevels="1" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.816512.1.1" PartitionLevels="1" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -447,7 +447,7 @@
                 </dxl:Comparison>
               </dxl:And>
             </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.816512.1.1" TableName="bm_dyn_test_onepart">
+            <dxl:TableDescriptor Mdid="6.816512.1.1" TableName="bm_dyn_test_onepart">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="3" ColName="j" TypeMdid="0.23.1.0"/>

@@ -145,7 +145,7 @@
         <dxl:InverseOp Mdid="0.1210.1.0"/>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.1306191.1.1" Name="ccast" Rows="1000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1306191.1.1" Name="ccast" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
+      <dxl:Relation Mdid="6.1306191.1.1" Name="ccast" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="7">
             <dxl:DefaultValue/>
@@ -295,7 +295,7 @@
           </dxl:FuncExpr>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.1306191.1.1" TableName="ccast">
+          <dxl:TableDescriptor Mdid="6.1306191.1.1" TableName="ccast">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.1700.1.0"/>
               <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -339,7 +339,7 @@
               </dxl:Cast>
             </dxl:Comparison>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.1306191.1.1" TableName="ccast">
+          <dxl:TableDescriptor Mdid="6.1306191.1.1" TableName="ccast">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.1700.1.0"/>
               <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

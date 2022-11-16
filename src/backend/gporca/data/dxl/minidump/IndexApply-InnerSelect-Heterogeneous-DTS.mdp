@@ -137,7 +137,7 @@ WHERE tt.event_ts >= tq.ets AND
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.32989847.1.1" Name="my_tq_agg_small_part" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.32989847.1.0" Name="my_tq_agg_small_part" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.32989847.1.0" Name="my_tq_agg_small_part" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -195,7 +195,7 @@ WHERE tt.event_ts >= tq.ets AND
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.32989847.1.1" Name="my_tq_agg_small_part" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.32989847.1.1" Name="my_tq_agg_small_part" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -468,7 +468,7 @@ WHERE tt.event_ts >= tq.ets AND
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.32989821.1.1" Name="my_tt_agg_small" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.32989821.1.1" Name="my_tt_agg_small" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
+      <dxl:Relation Mdid="6.32989821.1.1" Name="my_tt_agg_small" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="symbol" Attno="1" Mdid="0.1042.1.0" Nullable="true" ColWidth="16">
             <dxl:DefaultValue/>
@@ -517,7 +517,7 @@ WHERE tt.event_ts >= tq.ets AND
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.32989821.1.1" TableName="my_tt_agg_small">
+          <dxl:TableDescriptor Mdid="6.32989821.1.1" TableName="my_tt_agg_small">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="symbol" TypeMdid="0.1042.1.0" ColWidth="16"/>
               <dxl:Column ColId="2" Attno="2" ColName="event_ts" TypeMdid="0.23.1.0"/>
@@ -534,7 +534,7 @@ WHERE tt.event_ts >= tq.ets AND
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.32989847.1.1" TableName="my_tq_agg_small_part">
+          <dxl:TableDescriptor Mdid="6.32989847.1.1" TableName="my_tq_agg_small_part">
             <dxl:Columns>
               <dxl:Column ColId="12" Attno="1" ColName="ets" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="13" Attno="2" ColName="sym" TypeMdid="0.1043.1.0" ColWidth="16"/>
@@ -663,7 +663,7 @@ WHERE tt.event_ts >= tq.ets AND
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.32989821.1.1" TableName="my_tt_agg_small">
+              <dxl:TableDescriptor Mdid="6.32989821.1.1" TableName="my_tt_agg_small">
                 <dxl:Columns>
                   <dxl:Column ColId="23" Attno="1" ColName="symbol" TypeMdid="0.1042.1.0" ColWidth="16"/>
                   <dxl:Column ColId="24" Attno="2" ColName="event_ts" TypeMdid="0.23.1.0"/>
@@ -692,7 +692,7 @@ WHERE tt.event_ts >= tq.ets AND
                 <dxl:Ident ColId="11" ColName="ets" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:PartitionSelector RelationMdid="0.32989847.1.1" PartitionLevels="1" ScanId="1">
+            <dxl:PartitionSelector RelationMdid="6.32989847.1.1" PartitionLevels="1" ScanId="1">
               <dxl:Properties>
                 <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
               </dxl:Properties>
@@ -945,7 +945,7 @@ WHERE tt.event_ts >= tq.ets AND
                     </dxl:Comparison>
                   </dxl:IndexCondList>
                   <dxl:IndexDescriptor Mdid="0.32989991.1.0" IndexName="my_tq_agg_small_part_ets_end_ts_ix_1"/>
-                  <dxl:TableDescriptor Mdid="0.32989847.1.1" TableName="my_tq_agg_small_part">
+                  <dxl:TableDescriptor Mdid="6.32989847.1.1" TableName="my_tq_agg_small_part">
                     <dxl:Columns>
                       <dxl:Column ColId="11" Attno="1" ColName="ets" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="12" Attno="2" ColName="sym" TypeMdid="0.1043.1.0" ColWidth="16"/>
@@ -1072,7 +1072,7 @@ WHERE tt.event_ts >= tq.ets AND
                     </dxl:Comparison>
                   </dxl:IndexCondList>
                   <dxl:IndexDescriptor Mdid="0.32990010.1.0" IndexName="my_tq_agg_small_part_ets_end_ts_ix_2"/>
-                  <dxl:TableDescriptor Mdid="0.32989847.1.1" TableName="my_tq_agg_small_part">
+                  <dxl:TableDescriptor Mdid="6.32989847.1.1" TableName="my_tq_agg_small_part">
                     <dxl:Columns>
                       <dxl:Column ColId="45" Attno="1" ColName="ets" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="46" Attno="2" ColName="sym" TypeMdid="0.1043.1.0" ColWidth="16"/>
@@ -1137,7 +1137,7 @@ WHERE tt.event_ts >= tq.ets AND
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.32989847.1.1" TableName="my_tq_agg_small_part">
+                  <dxl:TableDescriptor Mdid="6.32989847.1.1" TableName="my_tq_agg_small_part">
                     <dxl:Columns>
                       <dxl:Column ColId="68" Attno="1" ColName="ets" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="69" Attno="2" ColName="sym" TypeMdid="0.1043.1.0" ColWidth="16"/>

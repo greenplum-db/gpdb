@@ -99,7 +99,7 @@
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.161940.1.1" Name="orca" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
+      <dxl:Relation Mdid="6.161940.1.1" Name="orca" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -137,7 +137,7 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalInsert InsertColumns="2">
-        <dxl:TableDescriptor Mdid="0.161940.1.1" TableName="orca">
+        <dxl:TableDescriptor Mdid="6.161940.1.1" TableName="orca">
           <dxl:Columns>
             <dxl:Column ColId="3" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="4" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -181,7 +181,7 @@
             <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="0.161940.1.1" TableName="orca">
+        <dxl:TableDescriptor Mdid="6.161940.1.1" TableName="orca">
           <dxl:Columns>
             <dxl:Column ColId="3" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="4" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

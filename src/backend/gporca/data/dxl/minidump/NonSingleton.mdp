@@ -153,7 +153,7 @@ EXPLAIN SELECT a FROM snackbox JOIN (SELECT c FROM hottoast LIMIT 3) hottoast ON
       <dxl:ColumnStatistics Mdid="1.34244.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.34247.1.0.0" Name="c" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.34244.1.0" Name="snackbox" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.34244.1.0" Name="snackbox" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.34244.1.0" Name="snackbox" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -185,7 +185,7 @@ EXPLAIN SELECT a FROM snackbox JOIN (SELECT c FROM hottoast LIMIT 3) hottoast ON
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.34247.1.0" Name="hottoast" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.34247.1.0" Name="hottoast" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.34247.1.0" Name="hottoast" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -242,7 +242,7 @@ EXPLAIN SELECT a FROM snackbox JOIN (SELECT c FROM hottoast LIMIT 3) hottoast ON
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.34244.1.0" TableName="snackbox">
+          <dxl:TableDescriptor Mdid="6.34244.1.0" TableName="snackbox">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -262,7 +262,7 @@ EXPLAIN SELECT a FROM snackbox JOIN (SELECT c FROM hottoast LIMIT 3) hottoast ON
           </dxl:LimitCount>
           <dxl:LimitOffset/>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.34247.1.0" TableName="hottoast">
+            <dxl:TableDescriptor Mdid="6.34247.1.0" TableName="hottoast">
               <dxl:Columns>
                 <dxl:Column ColId="9" Attno="1" ColName="c" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="10" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -352,7 +352,7 @@ EXPLAIN SELECT a FROM snackbox JOIN (SELECT c FROM hottoast LIMIT 3) hottoast ON
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.34247.1.0" TableName="hottoast">
+                  <dxl:TableDescriptor Mdid="6.34247.1.0" TableName="hottoast">
                     <dxl:Columns>
                       <dxl:Column ColId="8" Attno="1" ColName="c" TypeMdid="0.23.1.0" ColWidth="4"/>
                       <dxl:Column ColId="9" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -384,7 +384,7 @@ EXPLAIN SELECT a FROM snackbox JOIN (SELECT c FROM hottoast LIMIT 3) hottoast ON
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.34244.1.0" TableName="snackbox">
+            <dxl:TableDescriptor Mdid="6.34244.1.0" TableName="snackbox">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

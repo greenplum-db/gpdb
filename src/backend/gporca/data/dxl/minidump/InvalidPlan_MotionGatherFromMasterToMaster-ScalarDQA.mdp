@@ -706,7 +706,7 @@
         <dxl:SumAgg Mdid="0.2107.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.5185748.1.1" Name="lineitem" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,16">
+      <dxl:Relation Mdid="6.5185748.1.1" Name="lineitem" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,16">
         <dxl:Columns>
           <dxl:Column Name="l_orderkey" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -2333,7 +2333,7 @@
           </dxl:ProjElem>
         </dxl:ProjList>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.5185748.1.1" TableName="lineitem">
+          <dxl:TableDescriptor Mdid="6.5185748.1.1" TableName="lineitem">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="l_orderkey" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="l_partkey" TypeMdid="0.23.1.0"/>

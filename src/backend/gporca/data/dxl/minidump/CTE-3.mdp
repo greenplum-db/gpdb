@@ -124,7 +124,7 @@
       <dxl:ColumnStatistics Mdid="1.25382.1.1.5" Name="cmin" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.25382.1.1.4" Name="xmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.25382.1.1" Name="s" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.25382.1.1" Name="s" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.25382.1.1" Name="s" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="s1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -178,7 +178,7 @@
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="6"/>
             </dxl:Comparison>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.25382.1.1" TableName="s">
+              <dxl:TableDescriptor Mdid="6.25382.1.1" TableName="s">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="s1" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="2" Attno="2" ColName="s2" TypeMdid="0.23.1.0"/>

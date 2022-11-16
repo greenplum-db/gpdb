@@ -27,7 +27,7 @@ explain insert into tbl_cds_buysell_orders_new (a,b,c)
       <dxl:TraceFlags Value="102001,102002,102003,102024,102025,102115,102116,102117,102119,102121,102144,103014,103015,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
-      <dxl:Relation Mdid="0.29841801.1.1" Name="tbl_cds_buysell_orders_new" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="9,7">
+      <dxl:Relation Mdid="6.29841801.1.1" Name="tbl_cds_buysell_orders_new" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="9,7">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -174,7 +174,7 @@ explain insert into tbl_cds_buysell_orders_new (a,b,c)
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.29841831.1.1" Name="ext_tbl_cds_buysell_orders_new" Rows="1000000.000000" EmptyRelation="false"/>
-      <dxl:ExternalRelation Mdid="0.29841831.1.1" Name="ext_tbl_cds_buysell_orders_new" DistributionPolicy="Random" Keys="9,3">
+      <dxl:ExternalRelation Mdid="6.29841831.1.1" Name="ext_tbl_cds_buysell_orders_new" DistributionPolicy="Random" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -238,7 +238,7 @@ explain insert into tbl_cds_buysell_orders_new (a,b,c)
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalInsert InsertColumns="1,2,3,21,22,23,24">
-        <dxl:TableDescriptor Mdid="0.29841801.1.1" TableName="tbl_cds_buysell_orders_new">
+        <dxl:TableDescriptor Mdid="6.29841801.1.1" TableName="tbl_cds_buysell_orders_new">
           <dxl:Columns>
             <dxl:Column ColId="11" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="12" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -274,7 +274,7 @@ explain insert into tbl_cds_buysell_orders_new (a,b,c)
             <dxl:LimitCount/>
             <dxl:LimitOffset/>
             <dxl:LogicalExternalGet>
-              <dxl:TableDescriptor Mdid="0.29841831.1.1" TableName="ext_tbl_cds_buysell_orders_new">
+              <dxl:TableDescriptor Mdid="6.29841831.1.1" TableName="ext_tbl_cds_buysell_orders_new">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -322,7 +322,7 @@ explain insert into tbl_cds_buysell_orders_new (a,b,c)
             <dxl:Ident ColId="13" ColName="g" TypeMdid="0.23.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="0.29841801.1.1" TableName="tbl_cds_buysell_orders_new">
+        <dxl:TableDescriptor Mdid="6.29841801.1.1" TableName="tbl_cds_buysell_orders_new">
           <dxl:Columns>
             <dxl:Column ColId="15" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="16" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -433,7 +433,7 @@ explain insert into tbl_cds_buysell_orders_new (a,b,c)
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.29841831.1.1" TableName="ext_tbl_cds_buysell_orders_new">
+                <dxl:TableDescriptor Mdid="6.29841831.1.1" TableName="ext_tbl_cds_buysell_orders_new">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

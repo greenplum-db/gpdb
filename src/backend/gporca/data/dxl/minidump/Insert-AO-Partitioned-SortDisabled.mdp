@@ -16,7 +16,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.24587.1.1" Name="t" Rows="20.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.24587.1.1" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.24587.1.1" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -156,7 +156,7 @@
       </dxl:Type>
       <dxl:ColumnStatistics Mdid="1.24587.1.1.7" Name="tableoid" Width="4.000000" NullFreq="0.000000" NdvRemain="1.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
       <dxl:ColumnStatistics Mdid="1.24587.1.1.6" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:Relation Mdid="0.24643.1.1" Name="t_ao" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" PartitionColumns="1" NumberLeafPartitions="10">
+      <dxl:Relation Mdid="6.24643.1.1" Name="t_ao" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" PartitionColumns="1" NumberLeafPartitions="10">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -367,7 +367,7 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalInsert InsertColumns="1,2">
-        <dxl:TableDescriptor Mdid="0.24643.1.1" TableName="t_ao">
+        <dxl:TableDescriptor Mdid="6.24643.1.1" TableName="t_ao">
           <dxl:Columns>
             <dxl:Column ColId="10" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="11" Attno="2" ColName="year" TypeMdid="0.23.1.0"/>
@@ -377,7 +377,7 @@
           </dxl:Columns>
         </dxl:TableDescriptor>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.24587.1.1" TableName="t">
+          <dxl:TableDescriptor Mdid="6.24587.1.1" TableName="t">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="year" TypeMdid="0.23.1.0"/>
@@ -407,7 +407,7 @@
             <dxl:Ident ColId="1" ColName="year" TypeMdid="0.23.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="0.24643.1.1" TableName="t_ao">
+        <dxl:TableDescriptor Mdid="6.24643.1.1" TableName="t_ao">
           <dxl:Columns>
             <dxl:Column ColId="11" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="12" Attno="2" ColName="year" TypeMdid="0.23.1.0"/>
@@ -433,7 +433,7 @@
           </dxl:ProjList>
           <dxl:Filter/>
           <dxl:OneTimeFilter/>
-          <dxl:PartitionSelector RelationMdid="0.24643.1.1" PartitionLevels="1" ScanId="0">
+          <dxl:PartitionSelector RelationMdid="6.24643.1.1" PartitionLevels="1" ScanId="0">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.000292" Rows="20.000000" Width="8"/>
             </dxl:Properties>
@@ -475,7 +475,7 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.24587.1.1" TableName="t">
+              <dxl:TableDescriptor Mdid="6.24587.1.1" TableName="t">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="1" Attno="2" ColName="year" TypeMdid="0.23.1.0"/>

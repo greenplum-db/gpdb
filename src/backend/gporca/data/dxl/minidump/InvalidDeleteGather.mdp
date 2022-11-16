@@ -376,7 +376,7 @@ DELETE FROM dml_heap_r USING dml_heap_s,dml_heap_p WHERE dml_heap_r.a = dml_heap
       <dxl:ColumnStatistics Mdid="1.49932066.1.1.1" Name="a" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.49932066.1.1.0" Name="b" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.49932009.1.1" Name="dml_heap_r" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.49932009.1.1" Name="dml_heap_r" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.49932009.1.1" Name="dml_heap_r" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -418,7 +418,7 @@ DELETE FROM dml_heap_r USING dml_heap_s,dml_heap_p WHERE dml_heap_r.a = dml_heap
       <dxl:ColumnStatistics Mdid="1.49932009.1.1.7" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.49932009.1.1.6" Name="xmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.49932038.1.1" Name="dml_heap_p" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.49932038.1.1" Name="dml_heap_p" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="11,5">
+      <dxl:Relation Mdid="6.49932038.1.1" Name="dml_heap_p" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
             <dxl:DefaultValue/>
@@ -804,7 +804,7 @@ DELETE FROM dml_heap_r USING dml_heap_s,dml_heap_p WHERE dml_heap_r.a = dml_heap
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.49932066.1.1" Name="dml_heap_s" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.49932066.1.1" Name="dml_heap_s" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.49932066.1.1" Name="dml_heap_s" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="b" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -858,7 +858,7 @@ DELETE FROM dml_heap_r USING dml_heap_s,dml_heap_p WHERE dml_heap_r.a = dml_heap
       <dxl:OutputColumns/>
       <dxl:CTEList/>
       <dxl:LogicalDelete DeleteColumns="1,2,3" CtidCol="4" SegmentIdCol="10">
-        <dxl:TableDescriptor Mdid="0.49932009.1.1" TableName="dml_heap_r">
+        <dxl:TableDescriptor Mdid="6.49932009.1.1" TableName="dml_heap_r">
           <dxl:Columns>
             <dxl:Column ColId="33" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="34" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -874,7 +874,7 @@ DELETE FROM dml_heap_r USING dml_heap_s,dml_heap_p WHERE dml_heap_r.a = dml_heap
         </dxl:TableDescriptor>
         <dxl:LogicalJoin JoinType="Inner">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.49932009.1.1" TableName="dml_heap_r">
+            <dxl:TableDescriptor Mdid="6.49932009.1.1" TableName="dml_heap_r">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -890,7 +890,7 @@ DELETE FROM dml_heap_r USING dml_heap_s,dml_heap_p WHERE dml_heap_r.a = dml_heap
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.49932066.1.1" TableName="dml_heap_s">
+            <dxl:TableDescriptor Mdid="6.49932066.1.1" TableName="dml_heap_s">
               <dxl:Columns>
                 <dxl:Column ColId="11" Attno="1" ColName="b" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="12" Attno="2" ColName="a" TypeMdid="0.23.1.0"/>
@@ -906,7 +906,7 @@ DELETE FROM dml_heap_r USING dml_heap_s,dml_heap_p WHERE dml_heap_r.a = dml_heap
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.49932038.1.1" TableName="dml_heap_p">
+            <dxl:TableDescriptor Mdid="6.49932038.1.1" TableName="dml_heap_p">
               <dxl:Columns>
                 <dxl:Column ColId="21" Attno="1" ColName="a" TypeMdid="0.1700.1.0"/>
                 <dxl:Column ColId="22" Attno="2" ColName="b" TypeMdid="0.1700.1.0"/>
@@ -955,7 +955,7 @@ DELETE FROM dml_heap_r USING dml_heap_s,dml_heap_p WHERE dml_heap_r.a = dml_heap
             <dxl:Ident ColId="2" ColName="c" TypeMdid="0.25.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="0.49932009.1.1" TableName="dml_heap_r">
+        <dxl:TableDescriptor Mdid="6.49932009.1.1" TableName="dml_heap_r">
           <dxl:Columns>
             <dxl:Column ColId="34" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="35" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -1050,7 +1050,7 @@ DELETE FROM dml_heap_r USING dml_heap_s,dml_heap_p WHERE dml_heap_r.a = dml_heap
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.49932038.1.1" TableName="dml_heap_p">
+                <dxl:TableDescriptor Mdid="6.49932038.1.1" TableName="dml_heap_p">
                   <dxl:Columns>
                     <dxl:Column ColId="20" Attno="1" ColName="a" TypeMdid="0.1700.1.0"/>
                     <dxl:Column ColId="21" Attno="2" ColName="b" TypeMdid="0.1700.1.0"/>
@@ -1142,7 +1142,7 @@ DELETE FROM dml_heap_r USING dml_heap_s,dml_heap_p WHERE dml_heap_r.a = dml_heap
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.49932009.1.1" TableName="dml_heap_r">
+                  <dxl:TableDescriptor Mdid="6.49932009.1.1" TableName="dml_heap_r">
                     <dxl:Columns>
                       <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -1179,7 +1179,7 @@ DELETE FROM dml_heap_r USING dml_heap_s,dml_heap_p WHERE dml_heap_r.a = dml_heap
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.49932066.1.1" TableName="dml_heap_s">
+                  <dxl:TableDescriptor Mdid="6.49932066.1.1" TableName="dml_heap_s">
                     <dxl:Columns>
                       <dxl:Column ColId="10" Attno="1" ColName="b" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="11" Attno="2" ColName="a" TypeMdid="0.23.1.0"/>

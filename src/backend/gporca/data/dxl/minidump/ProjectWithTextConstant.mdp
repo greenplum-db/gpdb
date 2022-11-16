@@ -1712,7 +1712,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.504088.1.1" Name="customer" Rows="998706.000000"/>
-      <dxl:Relation Mdid="0.504088.1.1" Name="customer" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="24,18">
+      <dxl:Relation Mdid="6.504088.1.1" Name="customer" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="24,18">
         <dxl:Columns>
           <dxl:Column Name="c_customer_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1816,7 +1816,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.504088.1.1" TableName="customer">
+              <dxl:TableDescriptor Mdid="6.504088.1.1" TableName="customer">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="c_customer_sk" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="2" Attno="2" ColName="c_customer_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
@@ -1854,7 +1854,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.504088.1.1" TableName="customer">
+              <dxl:TableDescriptor Mdid="6.504088.1.1" TableName="customer">
                 <dxl:Columns>
                   <dxl:Column ColId="27" Attno="1" ColName="c_customer_sk" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="28" Attno="2" ColName="c_customer_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
@@ -1943,7 +1943,7 @@
                 </dxl:Properties>
                 <dxl:ProjList/>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.504088.1.1" TableName="customer">
+                <dxl:TableDescriptor Mdid="6.504088.1.1" TableName="customer">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="c_customer_sk" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="18" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -1991,7 +1991,7 @@
                 </dxl:Properties>
                 <dxl:ProjList/>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.504088.1.1" TableName="customer">
+                <dxl:TableDescriptor Mdid="6.504088.1.1" TableName="customer">
                   <dxl:Columns>
                     <dxl:Column ColId="26" Attno="1" ColName="c_customer_sk" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="44" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

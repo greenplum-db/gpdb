@@ -187,7 +187,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE c > 10 AND f > 12;
       <dxl:ColumnStatistics Mdid="1.828078.1.0.8" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.828078.1.0.1" Name="b" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.828078.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:Relation Mdid="0.828058.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,12,6" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.828058.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,12,6" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -261,7 +261,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE c > 10 AND f > 12;
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.828078.1.0" Name="foo_1_prt_p2" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.828078.1.0" Name="foo_1_prt_p2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="12,6" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.828078.1.0" Name="foo_1_prt_p2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="12,6" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -312,7 +312,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE c > 10 AND f > 12;
           <dxl:CheckConstraint Mdid="0.828081.1.0"/>
         </dxl:CheckConstraints>
       </dxl:Relation>
-      <dxl:CheckConstraint Mdid="0.828081.1.0" Name="foo_1_prt_p2_check" RelationMdid="0.828078.1.0">
+      <dxl:CheckConstraint Mdid="0.828081.1.0" Name="foo_1_prt_p2_check" RelationMdid="6.828078.1.0">
         <dxl:And>
           <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
             <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -351,7 +351,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE c > 10 AND f > 12;
           </dxl:Comparison>
         </dxl:And>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.828078.1.0" TableName="foo_1_prt_p2">
+          <dxl:TableDescriptor Mdid="6.828078.1.0" TableName="foo_1_prt_p2">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -435,7 +435,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE c > 10 AND f > 12;
             </dxl:Comparison>
           </dxl:IndexCondList>
           <dxl:IndexDescriptor Mdid="0.828133.1.0" IndexName="idx_root_cd_1_prt_p2"/>
-          <dxl:TableDescriptor Mdid="0.828078.1.0" TableName="foo_1_prt_p2">
+          <dxl:TableDescriptor Mdid="6.828078.1.0" TableName="foo_1_prt_p2">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

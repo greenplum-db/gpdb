@@ -269,7 +269,7 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
       <dxl:ColumnStatistics Mdid="1.29191993.1.1.7" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.29191993.1.1.6" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.29191945.1.1" Name="product" Rows="8.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.29191945.1.0" Name="product" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
+      <dxl:Relation Mdid="6.29191945.1.0" Name="product" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
         <dxl:Columns>
           <dxl:Column Name="pn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -308,7 +308,7 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.29191945.1.1" Name="product" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
+      <dxl:Relation Mdid="6.29191945.1.1" Name="product" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
         <dxl:Columns>
           <dxl:Column Name="pn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -489,7 +489,7 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
         </dxl:Opfamilies>
       </dxl:Index>
       <dxl:RelationStatistics Mdid="2.29191849.1.1" Name="customer" Rows="4.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.29191849.1.0" Name="customer" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
+      <dxl:Relation Mdid="6.29191849.1.0" Name="customer" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
         <dxl:Columns>
           <dxl:Column Name="cn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -528,7 +528,7 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.29191849.1.1" Name="customer" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
+      <dxl:Relation Mdid="6.29191849.1.1" Name="customer" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
         <dxl:Columns>
           <dxl:Column Name="cn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -572,7 +572,7 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
       <dxl:RelationStatistics Mdid="2.29191993.1.1" Name="sale" Rows="12.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.29191993.1.0" Name="sale" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;12,6">
+      <dxl:Relation Mdid="6.29191993.1.0" Name="sale" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;12,6">
         <dxl:Columns>
           <dxl:Column Name="cn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -620,7 +620,7 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.29191993.1.1" Name="sale" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;12,6">
+      <dxl:Relation Mdid="6.29191993.1.1" Name="sale" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;12,6">
         <dxl:Columns>
           <dxl:Column Name="cn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -809,7 +809,7 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
                   <dxl:Ident ColId="3" ColName="pn" TypeMdid="0.23.1.0"/>
                 </dxl:Comparison>
                 <dxl:LogicalGet>
-                  <dxl:TableDescriptor Mdid="0.29191945.1.1" TableName="product">
+                  <dxl:TableDescriptor Mdid="6.29191945.1.1" TableName="product">
                     <dxl:Columns>
                       <dxl:Column ColId="24" Attno="1" ColName="pn" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="25" Attno="2" ColName="pname" TypeMdid="0.25.1.0"/>
@@ -827,7 +827,7 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
               </dxl:LogicalSelect>
             </dxl:SubqueryExists>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.29191849.1.1" TableName="customer">
+              <dxl:TableDescriptor Mdid="6.29191849.1.1" TableName="customer">
                 <dxl:Columns>
                   <dxl:Column ColId="14" Attno="1" ColName="cn" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="15" Attno="2" ColName="cname" TypeMdid="0.25.1.0"/>
@@ -845,7 +845,7 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
           </dxl:LogicalSelect>
         </dxl:SubqueryExists>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.29191993.1.1" TableName="sale">
+          <dxl:TableDescriptor Mdid="6.29191993.1.1" TableName="sale">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="cn" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="vn" TypeMdid="0.23.1.0"/>
@@ -931,7 +931,7 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.29191849.1.1" TableName="customer">
+                    <dxl:TableDescriptor Mdid="6.29191849.1.1" TableName="customer">
                       <dxl:Columns>
                         <dxl:Column ColId="13" Attno="1" ColName="cn" TypeMdid="0.23.1.0"/>
                         <dxl:Column ColId="16" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -989,7 +989,7 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:TableDescriptor Mdid="0.29191945.1.1" TableName="product">
+                      <dxl:TableDescriptor Mdid="6.29191945.1.1" TableName="product">
                         <dxl:Columns>
                           <dxl:Column ColId="23" Attno="1" ColName="pn" TypeMdid="0.23.1.0"/>
                           <dxl:Column ColId="26" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -1042,7 +1042,7 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.29191993.1.1" TableName="sale">
+            <dxl:TableDescriptor Mdid="6.29191993.1.1" TableName="sale">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="cn" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="vn" TypeMdid="0.23.1.0"/>

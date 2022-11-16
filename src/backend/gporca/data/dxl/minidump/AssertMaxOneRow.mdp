@@ -760,7 +760,7 @@ where oid= (select reltoastrelid from pg_class where relname='fsts_alter_set_sto
         </dxl:Opfamilies>
       </dxl:Index>
       <dxl:RelationStatistics Mdid="2.1259.1.1" Name="pg_class" Rows="337.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1259.1.0" Name="pg_class" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="37,30">
+      <dxl:Relation Mdid="6.1259.1.0" Name="pg_class" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="37,30">
         <dxl:Columns>
           <dxl:Column Name="relname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -884,7 +884,7 @@ where oid= (select reltoastrelid from pg_class where relname='fsts_alter_set_sto
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1259.1.1" Name="pg_class" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="37,30">
+      <dxl:Relation Mdid="6.1259.1.1" Name="pg_class" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="37,30">
         <dxl:Columns>
           <dxl:Column Name="relname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -1424,7 +1424,7 @@ where oid= (select reltoastrelid from pg_class where relname='fsts_alter_set_sto
                       <dxl:ConstValue TypeMdid="0.19.1.0" Value="ZnN0c19hbHRlcl9zZXRfc3RvcmFnZV90YWJsZQAAAAAAAAAAAAAAAAAAAAAA&#10;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
                     </dxl:Comparison>
                     <dxl:LogicalGet>
-                      <dxl:TableDescriptor Mdid="0.1259.1.1" TableName="pg_class">
+                      <dxl:TableDescriptor Mdid="6.1259.1.1" TableName="pg_class">
                         <dxl:Columns>
                           <dxl:Column ColId="77" Attno="1" ColName="relname" TypeMdid="0.19.1.0"/>
                           <dxl:Column ColId="78" Attno="2" ColName="relnamespace" TypeMdid="0.26.1.0"/>
@@ -1471,7 +1471,7 @@ where oid= (select reltoastrelid from pg_class where relname='fsts_alter_set_sto
                 </dxl:ScalarSubquery>
               </dxl:Comparison>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.1259.1.1" TableName="pg_class">
+                <dxl:TableDescriptor Mdid="6.1259.1.1" TableName="pg_class">
                   <dxl:Columns>
                     <dxl:Column ColId="39" Attno="1" ColName="relname" TypeMdid="0.19.1.0"/>
                     <dxl:Column ColId="40" Attno="2" ColName="relnamespace" TypeMdid="0.26.1.0"/>
@@ -1518,7 +1518,7 @@ where oid= (select reltoastrelid from pg_class where relname='fsts_alter_set_sto
           </dxl:ScalarSubquery>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.1259.1.1" TableName="pg_class">
+          <dxl:TableDescriptor Mdid="6.1259.1.1" TableName="pg_class">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="relname" TypeMdid="0.19.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="relnamespace" TypeMdid="0.26.1.0"/>
@@ -1667,7 +1667,7 @@ where oid= (select reltoastrelid from pg_class where relname='fsts_alter_set_sto
                       </dxl:Comparison>
                     </dxl:IndexCondList>
                     <dxl:IndexDescriptor Mdid="0.2663.1.0" IndexName="pg_class_relname_nsp_index"/>
-                    <dxl:TableDescriptor Mdid="0.1259.1.1" TableName="pg_class">
+                    <dxl:TableDescriptor Mdid="6.1259.1.1" TableName="pg_class">
                       <dxl:Columns>
                         <dxl:Column ColId="76" Attno="1" ColName="relname" TypeMdid="0.19.1.0"/>
                         <dxl:Column ColId="85" Attno="10" ColName="reltoastrelid" TypeMdid="0.26.1.0"/>
@@ -1706,7 +1706,7 @@ where oid= (select reltoastrelid from pg_class where relname='fsts_alter_set_sto
                   </dxl:Comparison>
                 </dxl:IndexCondList>
                 <dxl:IndexDescriptor Mdid="0.2662.1.0" IndexName="pg_class_oid_index"/>
-                <dxl:TableDescriptor Mdid="0.1259.1.1" TableName="pg_class">
+                <dxl:TableDescriptor Mdid="6.1259.1.1" TableName="pg_class">
                   <dxl:Columns>
                     <dxl:Column ColId="48" Attno="11" ColName="reltoastidxid" TypeMdid="0.26.1.0"/>
                     <dxl:Column ColId="68" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -1745,7 +1745,7 @@ where oid= (select reltoastrelid from pg_class where relname='fsts_alter_set_sto
             </dxl:Comparison>
           </dxl:IndexCondList>
           <dxl:IndexDescriptor Mdid="0.2662.1.0" IndexName="pg_class_oid_index"/>
-          <dxl:TableDescriptor Mdid="0.1259.1.1" TableName="pg_class">
+          <dxl:TableDescriptor Mdid="6.1259.1.1" TableName="pg_class">
             <dxl:Columns>
               <dxl:Column ColId="5" Attno="6" ColName="relfilenode" TypeMdid="0.26.1.0"/>
               <dxl:Column ColId="30" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

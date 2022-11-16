@@ -20,7 +20,7 @@ select * from like_error where some_text LIKE ANY (ARRAY['%text1%']);
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.16385.1.0" Name="like_error" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.16385.1.0" Name="like_error" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16385.1.0" Name="like_error" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="some_text" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -178,7 +178,7 @@ select * from like_error where some_text LIKE ANY (ARRAY['%text1%']);
           </dxl:Array>
         </dxl:ArrayComp>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="like_error">
+          <dxl:TableDescriptor Mdid="6.16385.1.0" TableName="like_error">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="some_text" TypeMdid="0.25.1.0" ColWidth="8"/>
               <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -222,7 +222,7 @@ select * from like_error where some_text LIKE ANY (ARRAY['%text1%']);
               </dxl:Array>
             </dxl:ArrayComp>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="like_error">
+          <dxl:TableDescriptor Mdid="6.16385.1.0" TableName="like_error">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="some_text" TypeMdid="0.25.1.0" ColWidth="8"/>
               <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

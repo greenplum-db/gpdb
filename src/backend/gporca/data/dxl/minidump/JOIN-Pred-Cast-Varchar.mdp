@@ -523,7 +523,7 @@
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.481210.1.1" Name="b" Rows="200.000000"/>
       <dxl:RelationStatistics Mdid="2.481184.1.1" Name="a" Rows="100.000000"/>
-      <dxl:Relation Mdid="0.481210.1.1" Name="b" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.481210.1.1" Name="b" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -557,7 +557,7 @@
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.481184.1.1" Name="a" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.481184.1.1" Name="a" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -610,7 +610,7 @@
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.481184.1.1" TableName="a">
+          <dxl:TableDescriptor Mdid="6.481184.1.1" TableName="a">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="j" TypeMdid="0.1043.1.0" ColWidth="10"/>
@@ -625,7 +625,7 @@
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.481210.1.1" TableName="b">
+          <dxl:TableDescriptor Mdid="6.481210.1.1" TableName="b">
             <dxl:Columns>
               <dxl:Column ColId="10" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="11" Attno="2" ColName="j" TypeMdid="0.1043.1.0" ColWidth="10"/>
@@ -707,7 +707,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.481210.1.1" TableName="b">
+            <dxl:TableDescriptor Mdid="6.481210.1.1" TableName="b">
               <dxl:Columns>
                 <dxl:Column ColId="9" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="10" Attno="2" ColName="j" TypeMdid="0.1043.1.0" ColWidth="10"/>
@@ -749,7 +749,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.481184.1.1" TableName="a">
+            <dxl:TableDescriptor Mdid="6.481184.1.1" TableName="a">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="j" TypeMdid="0.1043.1.0" ColWidth="10"/>

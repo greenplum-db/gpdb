@@ -142,7 +142,7 @@
       <dxl:ColumnStatistics Mdid="1.133758.1.1.7" Name="xmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.133758.1.1.6" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.133758.1.1" Name="ext_nation" Rows="1000000.000000"/>
-      <dxl:ExternalRelation Mdid="0.133758.1.1" Name="ext_nation" DistributionPolicy="Random" Keys="10,4">
+      <dxl:ExternalRelation Mdid="6.133758.1.1" Name="ext_nation" DistributionPolicy="Random" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="n_nationkey" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -204,7 +204,7 @@
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
         </dxl:Comparison>
         <dxl:LogicalExternalGet>
-          <dxl:TableDescriptor Mdid="0.133758.1.1" TableName="ext_nation">
+          <dxl:TableDescriptor Mdid="6.133758.1.1" TableName="ext_nation">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="n_nationkey" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="n_name" TypeMdid="0.1042.1.0" ColWidth="25"/>
@@ -267,7 +267,7 @@
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
             </dxl:Comparison>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.133758.1.1" TableName="ext_nation">
+          <dxl:TableDescriptor Mdid="6.133758.1.1" TableName="ext_nation">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="n_nationkey" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="n_name" TypeMdid="0.1042.1.0" ColWidth="25"/>

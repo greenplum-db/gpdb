@@ -2109,7 +2109,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.17281181.1.1" Name="store" Rows="12.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.17281181.1.1" Name="store" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;35,29">
+      <dxl:Relation Mdid="6.17281181.1.1" Name="store" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;35,29">
         <dxl:Columns>
           <dxl:Column Name="s_store_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -3521,7 +3521,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.15668460.1.1" Name="store_sales" Rows="2880988.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.15668460.1.1" Name="store_sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9;29,23">
+      <dxl:Relation Mdid="6.15668460.1.1" Name="store_sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9;29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -9149,7 +9149,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.17281135.1.1" Name="item" Rows="17877.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.17281135.1.1" Name="item" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;28,22">
+      <dxl:Relation Mdid="6.17281135.1.1" Name="item" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;28,22">
         <dxl:Columns>
           <dxl:Column Name="i_item_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -11493,7 +11493,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
         <dxl:LogicalCTEProducer CTEId="1" Columns="3">
           <dxl:LogicalJoin JoinType="Inner">
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.15668460.1.1" TableName="store_sales">
+              <dxl:TableDescriptor Mdid="6.15668460.1.1" TableName="store_sales">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="2" Attno="2" ColName="ss_sold_time_sk" TypeMdid="0.23.1.0"/>
@@ -11529,7 +11529,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
               </dxl:TableDescriptor>
             </dxl:LogicalGet>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.17281181.1.1" TableName="store">
+              <dxl:TableDescriptor Mdid="6.17281181.1.1" TableName="store">
                 <dxl:Columns>
                   <dxl:Column ColId="31" Attno="1" ColName="s_store_sk" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="32" Attno="2" ColName="s_store_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
@@ -11575,7 +11575,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
         </dxl:LogicalCTEProducer>
         <dxl:LogicalCTEProducer CTEId="2" Columns="67">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.17281135.1.1" TableName="item">
+            <dxl:TableDescriptor Mdid="6.17281135.1.1" TableName="item">
               <dxl:Columns>
                 <dxl:Column ColId="67" Attno="1" ColName="i_item_sk" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="68" Attno="2" ColName="i_item_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
@@ -11729,7 +11729,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.15668460.1.1" TableName="store_sales">
+                    <dxl:TableDescriptor Mdid="6.15668460.1.1" TableName="store_sales">
                       <dxl:Columns>
                         <dxl:Column ColId="125" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
                         <dxl:Column ColId="126" Attno="2" ColName="ss_sold_time_sk" TypeMdid="0.23.1.0"/>
@@ -11783,7 +11783,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                         </dxl:Properties>
                         <dxl:ProjList/>
                         <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.17281181.1.1" TableName="store">
+                        <dxl:TableDescriptor Mdid="6.17281181.1.1" TableName="store">
                           <dxl:Columns>
                             <dxl:Column ColId="154" Attno="1" ColName="s_store_sk" TypeMdid="0.23.1.0"/>
                             <dxl:Column ColId="155" Attno="2" ColName="s_store_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
@@ -11838,7 +11838,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.17281135.1.1" TableName="item">
+                <dxl:TableDescriptor Mdid="6.17281135.1.1" TableName="item">
                   <dxl:Columns>
                     <dxl:Column ColId="95" Attno="1" ColName="i_item_sk" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="96" Attno="2" ColName="i_item_id" TypeMdid="0.1042.1.0" ColWidth="16"/>

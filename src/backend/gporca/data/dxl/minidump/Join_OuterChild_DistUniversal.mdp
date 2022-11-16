@@ -197,7 +197,7 @@
       <dxl:ColumnStatistics Mdid="1.509062.1.1.7" Name="gp_segment_id" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.509062.1.1.6" Name="tableoid" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.509062.1.1" Name="mrs_t1" Rows="10.000000"/>
-      <dxl:Relation Mdid="0.509062.1.1" Name="mrs_t1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
+      <dxl:Relation Mdid="6.509062.1.1" Name="mrs_t1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="x" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -246,7 +246,7 @@
           <dxl:SubqueryAny OperatorName="&lt;=" OperatorMdid="0.523.1.0" ColId="2">
             <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.509062.1.1" TableName="mrs_t1">
+              <dxl:TableDescriptor Mdid="6.509062.1.1" TableName="mrs_t1">
                 <dxl:Columns>
                   <dxl:Column ColId="2" Attno="1" ColName="x" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="3" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -328,7 +328,7 @@
                     <dxl:Ident ColId="1" ColName="x" TypeMdid="0.23.1.0"/>
                   </dxl:Comparison>
                 </dxl:Filter>
-                <dxl:TableDescriptor Mdid="0.509062.1.1" TableName="mrs_t1">
+                <dxl:TableDescriptor Mdid="6.509062.1.1" TableName="mrs_t1">
                   <dxl:Columns>
                     <dxl:Column ColId="1" Attno="1" ColName="x" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

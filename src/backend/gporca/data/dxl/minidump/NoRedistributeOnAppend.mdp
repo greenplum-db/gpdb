@@ -186,7 +186,7 @@ GROUP BY b;
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
       <dxl:RelationStatistics Mdid="2.532490.1.0" Name="foo" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.532490.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.532490.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -272,7 +272,7 @@ GROUP BY b;
               </dxl:GroupingColumns>
               <dxl:ProjList/>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.532490.1.0" TableName="foo">
+                <dxl:TableDescriptor Mdid="6.532490.1.0" TableName="foo">
                   <dxl:Columns>
                     <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                     <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -305,7 +305,7 @@ GROUP BY b;
                 <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="21">
                   <dxl:Ident ColId="12" ColName="b" TypeMdid="0.23.1.0"/>
                   <dxl:LogicalGet>
-                    <dxl:TableDescriptor Mdid="0.532490.1.0" TableName="foo">
+                    <dxl:TableDescriptor Mdid="6.532490.1.0" TableName="foo">
                       <dxl:Columns>
                         <dxl:Column ColId="20" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                         <dxl:Column ColId="21" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -321,7 +321,7 @@ GROUP BY b;
                   </dxl:LogicalGet>
                 </dxl:SubqueryAny>
                 <dxl:LogicalGet>
-                  <dxl:TableDescriptor Mdid="0.532490.1.0" TableName="foo">
+                  <dxl:TableDescriptor Mdid="6.532490.1.0" TableName="foo">
                     <dxl:Columns>
                       <dxl:Column ColId="11" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                       <dxl:Column ColId="12" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -355,7 +355,7 @@ GROUP BY b;
                 <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="40">
                   <dxl:Ident ColId="31" ColName="b" TypeMdid="0.23.1.0"/>
                   <dxl:LogicalGet>
-                    <dxl:TableDescriptor Mdid="0.532490.1.0" TableName="foo">
+                    <dxl:TableDescriptor Mdid="6.532490.1.0" TableName="foo">
                       <dxl:Columns>
                         <dxl:Column ColId="39" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                         <dxl:Column ColId="40" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -371,7 +371,7 @@ GROUP BY b;
                   </dxl:LogicalGet>
                 </dxl:SubqueryAny>
                 <dxl:LogicalGet>
-                  <dxl:TableDescriptor Mdid="0.532490.1.0" TableName="foo">
+                  <dxl:TableDescriptor Mdid="6.532490.1.0" TableName="foo">
                     <dxl:Columns>
                       <dxl:Column ColId="30" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                       <dxl:Column ColId="31" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -585,7 +585,7 @@ GROUP BY b;
                                 </dxl:ProjElem>
                               </dxl:ProjList>
                               <dxl:Filter/>
-                              <dxl:TableDescriptor Mdid="0.532490.1.0" TableName="foo">
+                              <dxl:TableDescriptor Mdid="6.532490.1.0" TableName="foo">
                                 <dxl:Columns>
                                   <dxl:Column ColId="50" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                                   <dxl:Column ColId="48" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -715,7 +715,7 @@ GROUP BY b;
                                   </dxl:ProjElem>
                                 </dxl:ProjList>
                                 <dxl:Filter/>
-                                <dxl:TableDescriptor Mdid="0.532490.1.0" TableName="foo">
+                                <dxl:TableDescriptor Mdid="6.532490.1.0" TableName="foo">
                                   <dxl:Columns>
                                     <dxl:Column ColId="60" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                                     <dxl:Column ColId="58" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -750,7 +750,7 @@ GROUP BY b;
                                     </dxl:ProjElem>
                                   </dxl:ProjList>
                                   <dxl:Filter/>
-                                  <dxl:TableDescriptor Mdid="0.532490.1.0" TableName="foo">
+                                  <dxl:TableDescriptor Mdid="6.532490.1.0" TableName="foo">
                                     <dxl:Columns>
                                       <dxl:Column ColId="68" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                                       <dxl:Column ColId="69" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -882,7 +882,7 @@ GROUP BY b;
                                   </dxl:ProjElem>
                                 </dxl:ProjList>
                                 <dxl:Filter/>
-                                <dxl:TableDescriptor Mdid="0.532490.1.0" TableName="foo">
+                                <dxl:TableDescriptor Mdid="6.532490.1.0" TableName="foo">
                                   <dxl:Columns>
                                     <dxl:Column ColId="79" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                                     <dxl:Column ColId="77" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -917,7 +917,7 @@ GROUP BY b;
                                     </dxl:ProjElem>
                                   </dxl:ProjList>
                                   <dxl:Filter/>
-                                  <dxl:TableDescriptor Mdid="0.532490.1.0" TableName="foo">
+                                  <dxl:TableDescriptor Mdid="6.532490.1.0" TableName="foo">
                                     <dxl:Columns>
                                       <dxl:Column ColId="87" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                                       <dxl:Column ColId="88" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>

@@ -112,7 +112,7 @@ EXPLAIN INSERT INTO ColumnMapping VALUES (NULL);
       <dxl:SumAgg Mdid="0.0.0.0"/>
       <dxl:CountAgg Mdid="0.2147.1.0"/>
     </dxl:Type>
-    <dxl:Relation Mdid="0.616755.1.1" Name="columnmapping" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="8,2" NumberLeafPartitions="0">
+    <dxl:Relation Mdid="6.616755.1.1" Name="columnmapping" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="8,2" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="........pg.dropped.1........" Attno="1" Mdid="0.0.0.0" Nullable="true" IsDropped="true">
           <dxl:DefaultValue/>
@@ -153,7 +153,7 @@ EXPLAIN INSERT INTO ColumnMapping VALUES (NULL);
     </dxl:OutputColumns>
     <dxl:CTEList/>
     <dxl:LogicalInsert InsertColumns="2">
-      <dxl:TableDescriptor Mdid="0.616755.1.1" TableName="columnmapping">
+      <dxl:TableDescriptor Mdid="6.616755.1.1" TableName="columnmapping">
         <dxl:Columns>
           <dxl:Column ColId="3" Attno="2" ColName="id" TypeMdid="0.23.1.0"/>
           <dxl:Column ColId="4" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -197,7 +197,7 @@ EXPLAIN INSERT INTO ColumnMapping VALUES (NULL);
           <dxl:Ident ColId="1" ColName="id" TypeMdid="0.23.1.0"/>
         </dxl:ProjElem>
       </dxl:ProjList>
-      <dxl:TableDescriptor Mdid="0.616755.1.1" TableName="columnmapping">
+      <dxl:TableDescriptor Mdid="6.616755.1.1" TableName="columnmapping">
         <dxl:Columns>
           <dxl:Column ColId="3" Attno="2" ColName="id" TypeMdid="0.23.1.0"/>
           <dxl:Column ColId="4" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

@@ -46,7 +46,7 @@ SELECT * FROM my_tq_agg_small tq WHERE 110 >= tq.ets;
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:Relation Mdid="0.31763855.1.0" Name="my_tq_agg_small" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
+      <dxl:Relation Mdid="6.31763855.1.0" Name="my_tq_agg_small" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -91,7 +91,7 @@ SELECT * FROM my_tq_agg_small tq WHERE 110 >= tq.ets;
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.31763855.1.1" Name="my_tq_agg_small" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
+      <dxl:Relation Mdid="6.31763855.1.1" Name="my_tq_agg_small" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -311,7 +311,7 @@ SELECT * FROM my_tq_agg_small tq WHERE 110 >= tq.ets;
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="110"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.31763855.1.1" TableName="my_tq_agg_small">
+          <dxl:TableDescriptor Mdid="6.31763855.1.1" TableName="my_tq_agg_small">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="ets" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="sym" TypeMdid="0.1043.1.0" ColWidth="16"/>
@@ -391,7 +391,7 @@ SELECT * FROM my_tq_agg_small tq WHERE 110 >= tq.ets;
             </dxl:IndexCondList>
             <dxl:IndexDescriptor Mdid="0.31763881.1.0" IndexName="my_idx"/>
           </dxl:BitmapIndexProbe>
-          <dxl:TableDescriptor Mdid="0.31763855.1.1" TableName="my_tq_agg_small">
+          <dxl:TableDescriptor Mdid="6.31763855.1.1" TableName="my_tq_agg_small">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="ets" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="sym" TypeMdid="0.1043.1.0" ColWidth="16"/>

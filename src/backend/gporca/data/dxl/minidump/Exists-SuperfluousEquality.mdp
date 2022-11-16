@@ -250,7 +250,7 @@
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
       <dxl:RelationStatistics Mdid="2.40971.1.1" Name="x" Rows="1000.000000"/>
-      <dxl:Relation Mdid="0.40971.1.1" Name="x" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.40971.1.1" Name="x" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -286,7 +286,7 @@
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.40971.1.1.5" Name="xmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.40971.1.1.4" Name="cmin" Width="4.000000"/>
-      <dxl:Relation Mdid="0.40994.1.1" Name="y" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.40994.1.1" Name="y" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -345,7 +345,7 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.40994.1.1" TableName="y">
+                <dxl:TableDescriptor Mdid="6.40994.1.1" TableName="y">
                   <dxl:Columns>
                     <dxl:Column ColId="10" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="11" Attno="2" ColName="bi" TypeMdid="0.20.1.0"/>
@@ -367,7 +367,7 @@
           </dxl:Comparison>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.40971.1.1" TableName="x">
+          <dxl:TableDescriptor Mdid="6.40971.1.1" TableName="x">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="bi" TypeMdid="0.20.1.0"/>
@@ -416,7 +416,7 @@
               <dxl:Ident ColId="1" ColName="bi" TypeMdid="0.20.1.0"/>
             </dxl:Comparison>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.40971.1.1" TableName="x">
+          <dxl:TableDescriptor Mdid="6.40971.1.1" TableName="x">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="bi" TypeMdid="0.20.1.0"/>

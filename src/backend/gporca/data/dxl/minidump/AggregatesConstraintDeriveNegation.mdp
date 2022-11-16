@@ -30,7 +30,7 @@ explain select distinct a from t1 where a is not null and not (a = b);
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.16385.1.0" Name="t1" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.16385.1.0" Name="t1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16385.1.0" Name="t1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -211,7 +211,7 @@ explain select distinct a from t1 where a is not null and not (a = b);
             </dxl:Not>
           </dxl:And>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="t1">
+            <dxl:TableDescriptor Mdid="6.16385.1.0" TableName="t1">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -294,7 +294,7 @@ explain select distinct a from t1 where a is not null and not (a = b);
                   </dxl:Not>
                 </dxl:And>
               </dxl:Filter>
-              <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="t1">
+              <dxl:TableDescriptor Mdid="6.16385.1.0" TableName="t1">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>

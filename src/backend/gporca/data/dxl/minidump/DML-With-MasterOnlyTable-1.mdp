@@ -37,7 +37,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.49152.1.0" Name="x" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.49152.1.0" Name="x" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.49152.1.0" Name="x" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -231,7 +231,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.5036.1.0" Name="gp_segment_configuration" Rows="8.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.5036.1.0" Name="gp_segment_configuration" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="16,10" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.5036.1.0" Name="gp_segment_configuration" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="16,10" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="dbid" Attno="1" Mdid="0.21.1.0" Nullable="false" ColWidth="2">
             <dxl:DefaultValue/>
@@ -304,7 +304,7 @@
       <dxl:OutputColumns/>
       <dxl:CTEList/>
       <dxl:LogicalDelete DeleteColumns="1" CtidCol="2" SegmentIdCol="8">
-        <dxl:TableDescriptor Mdid="0.49152.1.0" TableName="x">
+        <dxl:TableDescriptor Mdid="6.49152.1.0" TableName="x">
           <dxl:Columns>
             <dxl:Column ColId="26" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
             <dxl:Column ColId="27" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -325,7 +325,7 @@
               </dxl:LimitCount>
               <dxl:LimitOffset/>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.5036.1.0" TableName="gp_segment_configuration">
+                <dxl:TableDescriptor Mdid="6.5036.1.0" TableName="gp_segment_configuration">
                   <dxl:Columns>
                     <dxl:Column ColId="9" Attno="1" ColName="dbid" TypeMdid="0.21.1.0" ColWidth="2"/>
                     <dxl:Column ColId="10" Attno="2" ColName="content" TypeMdid="0.21.1.0" ColWidth="2"/>
@@ -350,7 +350,7 @@
             </dxl:LogicalLimit>
           </dxl:SubqueryExists>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.49152.1.0" TableName="x">
+            <dxl:TableDescriptor Mdid="6.49152.1.0" TableName="x">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -377,7 +377,7 @@
             <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="0.49152.1.0" TableName="x">
+        <dxl:TableDescriptor Mdid="6.49152.1.0" TableName="x">
           <dxl:Columns>
             <dxl:Column ColId="30" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
             <dxl:Column ColId="31" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -444,7 +444,7 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.49152.1.0" TableName="x">
+              <dxl:TableDescriptor Mdid="6.49152.1.0" TableName="x">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -481,7 +481,7 @@
                     </dxl:Properties>
                     <dxl:ProjList/>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.5036.1.0" TableName="gp_segment_configuration">
+                    <dxl:TableDescriptor Mdid="6.5036.1.0" TableName="gp_segment_configuration">
                       <dxl:Columns>
                         <dxl:Column ColId="18" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
                         <dxl:Column ColId="19" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>

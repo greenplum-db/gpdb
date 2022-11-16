@@ -211,7 +211,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.16434.1.0" Name="ix_test" Rows="15877726.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.16434.1.0" Name="ix_test" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="5,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16434.1.0" Name="ix_test" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="5,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="message_id" Attno="1" Mdid="0.25.1.0" Nullable="false" ColWidth="33">
             <dxl:DefaultValue/>
@@ -289,7 +289,7 @@
             </dxl:LimitCount>
             <dxl:LimitOffset/>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.16434.1.0" TableName="ix_test">
+              <dxl:TableDescriptor Mdid="6.16434.1.0" TableName="ix_test">
                 <dxl:Columns>
                   <dxl:Column ColId="7" Attno="1" ColName="message_id" TypeMdid="0.25.1.0" ColWidth="33"/>
                   <dxl:Column ColId="8" Attno="2" ColName="message" TypeMdid="0.25.1.0" ColWidth="33"/>
@@ -303,7 +303,7 @@
           </dxl:LogicalLimit>
         </dxl:SubqueryAny>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.16434.1.0" TableName="ix_test">
+          <dxl:TableDescriptor Mdid="6.16434.1.0" TableName="ix_test">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="message_id" TypeMdid="0.25.1.0" ColWidth="33"/>
               <dxl:Column ColId="2" Attno="2" ColName="message" TypeMdid="0.25.1.0" ColWidth="33"/>
@@ -469,7 +469,7 @@
                                 </dxl:ProjElem>
                               </dxl:ProjList>
                               <dxl:Filter/>
-                              <dxl:TableDescriptor Mdid="0.16434.1.0" TableName="ix_test">
+                              <dxl:TableDescriptor Mdid="6.16434.1.0" TableName="ix_test">
                                 <dxl:Columns>
                                   <dxl:Column ColId="6" Attno="1" ColName="message_id" TypeMdid="0.25.1.0" ColWidth="33"/>
                                   <dxl:Column ColId="9" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -527,7 +527,7 @@
               </dxl:IndexCondList>
               <dxl:IndexDescriptor Mdid="0.16445.1.0" IndexName="ix_test_ix01"/>
             </dxl:BitmapIndexProbe>
-            <dxl:TableDescriptor Mdid="0.16434.1.0" TableName="ix_test">
+            <dxl:TableDescriptor Mdid="6.16434.1.0" TableName="ix_test">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="message_id" TypeMdid="0.25.1.0" ColWidth="33"/>
                 <dxl:Column ColId="1" Attno="2" ColName="message" TypeMdid="0.25.1.0" ColWidth="33"/>

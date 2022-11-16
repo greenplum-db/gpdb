@@ -130,7 +130,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.7189516.1.0" Name="part" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="9">
+      <dxl:Relation Mdid="6.7189516.1.0" Name="part" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="9">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -167,7 +167,7 @@
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
         </dxl:DistrOpfamilies>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.7189556.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.7189556.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -220,7 +220,7 @@
             </dxl:GroupingColumns>
             <dxl:ProjList/>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.7189556.1.0" TableName="foo">
+              <dxl:TableDescriptor Mdid="6.7189556.1.0" TableName="foo">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -235,7 +235,7 @@
             </dxl:LogicalGet>
           </dxl:LogicalGroupBy>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.7189516.1.0" TableName="part">
+            <dxl:TableDescriptor Mdid="6.7189516.1.0" TableName="part">
               <dxl:Columns>
                 <dxl:Column ColId="9" Attno="1" ColName="i" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="10" Attno="2" ColName="j" TypeMdid="0.23.1.0" ColWidth="4"/>

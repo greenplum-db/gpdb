@@ -53,7 +53,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.3723603.1.0" Name="foobar" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.3723603.1.0" Name="foobar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="10">
+      <dxl:Relation Mdid="6.3723603.1.0" Name="foobar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="10">
         <dxl:Columns>
           <dxl:Column Name="x1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -247,7 +247,7 @@
           </dxl:Comparison>
         </dxl:And>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.3723603.1.0" TableName="foobar">
+          <dxl:TableDescriptor Mdid="6.3723603.1.0" TableName="foobar">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="x1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="x2" TypeMdid="0.23.1.0"/>
@@ -299,7 +299,7 @@
                 <dxl:Ident ColId="2" ColName="x3" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:PartitionSelector RelationMdid="0.3723603.1.0" PartitionLevels="1" ScanId="1">
+            <dxl:PartitionSelector RelationMdid="6.3723603.1.0" PartitionLevels="1" ScanId="1">
               <dxl:Properties>
                 <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
               </dxl:Properties>
@@ -364,7 +364,7 @@
                 </dxl:IndexCondList>
                 <dxl:IndexDescriptor Mdid="0.3723795.1.0" IndexName="x2_ind_1_prt_1"/>
               </dxl:BitmapIndexProbe>
-              <dxl:TableDescriptor Mdid="0.3723603.1.0" TableName="foobar">
+              <dxl:TableDescriptor Mdid="6.3723603.1.0" TableName="foobar">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="x1" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="1" Attno="2" ColName="x2" TypeMdid="0.23.1.0"/>

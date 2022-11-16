@@ -52,7 +52,7 @@ group by b;
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.16385.1.0" Name="tsk" Rows="2000000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.16385.1.0" Name="tsk" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16385.1.0" Name="tsk" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -634,7 +634,7 @@ group by b;
           </dxl:ProjElem>
         </dxl:ProjList>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="tsk">
+          <dxl:TableDescriptor Mdid="6.16385.1.0" TableName="tsk">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -738,7 +738,7 @@ group by b;
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="tsk">
+                <dxl:TableDescriptor Mdid="6.16385.1.0" TableName="tsk">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                     <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>

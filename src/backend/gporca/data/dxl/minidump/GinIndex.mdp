@@ -138,7 +138,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.20124.1.0" Name="t" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.20124.1.0" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.20124.1.0" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.3802.1.0" Nullable="true" ColWidth="90">
             <dxl:DefaultValue/>
@@ -231,7 +231,7 @@
             <dxl:ConstValue TypeMdid="0.3802.1.0" Value="AAAAFAEAACAEAACAAAAAQHdhaXQ="/>
           </dxl:Comparison>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.20124.1.0" TableName="t">
+            <dxl:TableDescriptor Mdid="6.20124.1.0" TableName="t">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.3802.1.0" ColWidth="90"/>
                 <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -314,7 +314,7 @@
                 </dxl:IndexCondList>
                 <dxl:IndexDescriptor Mdid="0.20130.1.0" IndexName="jidx"/>
               </dxl:BitmapIndexProbe>
-              <dxl:TableDescriptor Mdid="0.20124.1.0" TableName="t">
+              <dxl:TableDescriptor Mdid="6.20124.1.0" TableName="t">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.3802.1.0" ColWidth="90"/>
                   <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

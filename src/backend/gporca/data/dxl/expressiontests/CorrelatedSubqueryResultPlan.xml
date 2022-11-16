@@ -159,7 +159,7 @@
                                       </dxl:ProjElem>
                                     </dxl:ProjList>
                                     <dxl:Filter/>
-                                    <dxl:TableDescriptor Mdid="0.899663.1.1" TableName="s">
+                                    <dxl:TableDescriptor Mdid="6.899663.1.1" TableName="s">
                                       <dxl:Columns>
                                         <dxl:Column ColId="20" Attno="1" ColName="s1" TypeMdid="0.23.1.0"/>
                                         <dxl:Column ColId="21" Attno="2" ColName="s2" TypeMdid="0.23.1.0"/>
@@ -225,7 +225,7 @@
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.899640.1.1" TableName="r">
+                        <dxl:TableDescriptor Mdid="6.899640.1.1" TableName="r">
                           <dxl:Columns>
                             <dxl:Column ColId="17" Attno="1" ColName="r1" TypeMdid="0.23.1.0"/>
                             <dxl:Column ColId="18" Attno="2" ColName="r2" TypeMdid="0.23.1.0"/>
@@ -240,7 +240,7 @@
             </dxl:SubPlan>
           </dxl:Comparison>
         </dxl:Filter>
-        <dxl:TableDescriptor Mdid="0.899686.1.1" TableName="t">
+        <dxl:TableDescriptor Mdid="6.899686.1.1" TableName="t">
           <dxl:Columns>
             <dxl:Column ColId="14" Attno="1" ColName="t1" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="15" Attno="2" ColName="t2" TypeMdid="0.23.1.0"/>

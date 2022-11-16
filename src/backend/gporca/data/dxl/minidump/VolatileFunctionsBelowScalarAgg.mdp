@@ -32,7 +32,7 @@
       <dxl:TraceFlags Value="102001,102002,102003,102074,102120,102144,103001,103014,103015,103022,103027,103033,104003,104004,104005,105000,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
-      <dxl:Relation Mdid="0.16385.1.0" Name="src" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16385.1.0" Name="src" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="f1" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="18">
             <dxl:DefaultValue/>
@@ -197,7 +197,7 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalInsert InsertColumns="4">
-        <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="src">
+        <dxl:TableDescriptor Mdid="6.16385.1.0" TableName="src">
           <dxl:Columns>
             <dxl:Column ColId="5" Attno="1" ColName="f1" TypeMdid="0.25.1.0" ColWidth="18"/>
             <dxl:Column ColId="6" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -261,7 +261,7 @@
             <dxl:Ident ColId="3" ColName="f1" TypeMdid="0.25.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="src">
+        <dxl:TableDescriptor Mdid="6.16385.1.0" TableName="src">
           <dxl:Columns>
             <dxl:Column ColId="6" Attno="1" ColName="f1" TypeMdid="0.25.1.0" ColWidth="18"/>
             <dxl:Column ColId="7" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

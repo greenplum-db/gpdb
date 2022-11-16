@@ -180,7 +180,7 @@ select * from pt where gender is null;
       <dxl:ColumnStatistics Mdid="1.321479.1.1.0" Name="id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:MDCast Mdid="3.1043.1.0;25.1.0" Name="text" BinaryCoercible="true" SourceTypeId="0.1043.1.0" DestinationTypeId="0.25.1.0" CastFuncId="0.0.0.0"/>
       <dxl:RelationStatistics Mdid="2.321479.1.1" Name="pt" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.321479.1.1" Name="pt" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="l" NumberLeafPartitions="3">
+      <dxl:Relation Mdid="6.321479.1.1" Name="pt" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="l" NumberLeafPartitions="3">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -263,7 +263,7 @@ select * from pt where gender is null;
                 <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABUY=" LintValue="160743980"/>
               </dxl:Comparison>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.321479.1.1" TableName="pt">
+                <dxl:TableDescriptor Mdid="6.321479.1.1" TableName="pt">
                   <dxl:Columns>
                     <dxl:Column ColId="1" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="2" Attno="2" ColName="gender" TypeMdid="0.1043.1.0" ColWidth="2"/>
@@ -286,7 +286,7 @@ select * from pt where gender is null;
                 <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABU0=" LintValue="160801324"/>
               </dxl:Comparison>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.321479.1.1" TableName="pt">
+                <dxl:TableDescriptor Mdid="6.321479.1.1" TableName="pt">
                   <dxl:Columns>
                     <dxl:Column ColId="10" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="11" Attno="2" ColName="gender" TypeMdid="0.1043.1.0" ColWidth="2"/>
@@ -315,7 +315,7 @@ select * from pt where gender is null;
               </dxl:ArrayCoerceExpr>
             </dxl:ArrayComp>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.321479.1.1" TableName="pt">
+              <dxl:TableDescriptor Mdid="6.321479.1.1" TableName="pt">
                 <dxl:Columns>
                   <dxl:Column ColId="19" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="20" Attno="2" ColName="gender" TypeMdid="0.1043.1.0" ColWidth="2"/>
@@ -336,7 +336,7 @@ select * from pt where gender is null;
             <dxl:Ident ColId="29" ColName="gender" TypeMdid="0.1043.1.0"/>
           </dxl:IsNull>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.321479.1.1" TableName="pt">
+            <dxl:TableDescriptor Mdid="6.321479.1.1" TableName="pt">
               <dxl:Columns>
                 <dxl:Column ColId="28" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="29" Attno="2" ColName="gender" TypeMdid="0.1043.1.0" ColWidth="2"/>
@@ -393,7 +393,7 @@ select * from pt where gender is null;
                 <dxl:Ident ColId="1" ColName="gender" TypeMdid="0.1043.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:PartitionSelector RelationMdid="0.321479.1.1" PartitionLevels="1" ScanId="1">
+            <dxl:PartitionSelector RelationMdid="6.321479.1.1" PartitionLevels="1" ScanId="1">
               <dxl:Properties>
                 <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
               </dxl:Properties>
@@ -441,7 +441,7 @@ select * from pt where gender is null;
                   <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABUY=" LintValue="160743980"/>
                 </dxl:Comparison>
               </dxl:Filter>
-              <dxl:TableDescriptor Mdid="0.321479.1.1" TableName="pt">
+              <dxl:TableDescriptor Mdid="6.321479.1.1" TableName="pt">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="1" Attno="2" ColName="gender" TypeMdid="0.1043.1.0" ColWidth="2"/>
@@ -468,7 +468,7 @@ select * from pt where gender is null;
                 <dxl:Ident ColId="10" ColName="gender" TypeMdid="0.1043.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:PartitionSelector RelationMdid="0.321479.1.1" PartitionLevels="1" ScanId="2">
+            <dxl:PartitionSelector RelationMdid="6.321479.1.1" PartitionLevels="1" ScanId="2">
               <dxl:Properties>
                 <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
               </dxl:Properties>
@@ -522,7 +522,7 @@ select * from pt where gender is null;
                   <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABU0=" LintValue="160801324"/>
                 </dxl:Comparison>
               </dxl:Filter>
-              <dxl:TableDescriptor Mdid="0.321479.1.1" TableName="pt">
+              <dxl:TableDescriptor Mdid="6.321479.1.1" TableName="pt">
                 <dxl:Columns>
                   <dxl:Column ColId="9" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="10" Attno="2" ColName="gender" TypeMdid="0.1043.1.0" ColWidth="2"/>
@@ -549,7 +549,7 @@ select * from pt where gender is null;
                 <dxl:Ident ColId="19" ColName="gender" TypeMdid="0.1043.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:PartitionSelector RelationMdid="0.321479.1.1" PartitionLevels="1" ScanId="3">
+            <dxl:PartitionSelector RelationMdid="6.321479.1.1" PartitionLevels="1" ScanId="3">
               <dxl:Properties>
                 <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
               </dxl:Properties>
@@ -619,7 +619,7 @@ select * from pt where gender is null;
                   </dxl:ArrayCoerceExpr>
                 </dxl:ArrayComp>
               </dxl:Filter>
-              <dxl:TableDescriptor Mdid="0.321479.1.1" TableName="pt">
+              <dxl:TableDescriptor Mdid="6.321479.1.1" TableName="pt">
                 <dxl:Columns>
                   <dxl:Column ColId="18" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="19" Attno="2" ColName="gender" TypeMdid="0.1043.1.0" ColWidth="2"/>
@@ -646,7 +646,7 @@ select * from pt where gender is null;
                 <dxl:Ident ColId="28" ColName="gender" TypeMdid="0.1043.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:PartitionSelector RelationMdid="0.321479.1.1" PartitionLevels="1" ScanId="4">
+            <dxl:PartitionSelector RelationMdid="6.321479.1.1" PartitionLevels="1" ScanId="4">
               <dxl:Properties>
                 <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
               </dxl:Properties>
@@ -689,7 +689,7 @@ select * from pt where gender is null;
                   <dxl:Ident ColId="28" ColName="gender" TypeMdid="0.1043.1.0"/>
                 </dxl:IsNull>
               </dxl:Filter>
-              <dxl:TableDescriptor Mdid="0.321479.1.1" TableName="pt">
+              <dxl:TableDescriptor Mdid="6.321479.1.1" TableName="pt">
                 <dxl:Columns>
                   <dxl:Column ColId="27" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="28" Attno="2" ColName="gender" TypeMdid="0.1043.1.0" ColWidth="2"/>

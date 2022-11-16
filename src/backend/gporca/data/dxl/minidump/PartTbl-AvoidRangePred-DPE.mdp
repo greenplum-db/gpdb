@@ -633,7 +633,7 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.247422.1.0" Name="abuela" Rows="300.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.247422.1.0" Name="abuela" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="22">
+      <dxl:Relation Mdid="6.247422.1.0" Name="abuela" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="22">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -670,7 +670,7 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
       <dxl:ColumnStatistics Mdid="1.247416.1.0.1" Name="d" Width="4.000000" NullFreq="0.000000" NdvRemain="1.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
       <dxl:ColumnStatistics Mdid="1.247416.1.0.0" Name="c" Width="4.000000" NullFreq="0.000000" NdvRemain="1.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
       <dxl:RelationStatistics Mdid="2.247419.1.0" Name="jazz" Rows="12.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.247419.1.0" Name="jazz" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.247419.1.0" Name="jazz" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="e" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -705,7 +705,7 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.247416.1.0" Name="bar" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.247416.1.0" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.247416.1.0" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -748,7 +748,7 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalJoin JoinType="Inner">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.247422.1.0" TableName="abuela">
+            <dxl:TableDescriptor Mdid="6.247422.1.0" TableName="abuela">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -763,7 +763,7 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.247416.1.0" TableName="bar">
+            <dxl:TableDescriptor Mdid="6.247416.1.0" TableName="bar">
               <dxl:Columns>
                 <dxl:Column ColId="10" Attno="1" ColName="c" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="11" Attno="2" ColName="d" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -799,7 +799,7 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
           </dxl:And>
         </dxl:LogicalJoin>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.247419.1.0" TableName="jazz">
+          <dxl:TableDescriptor Mdid="6.247419.1.0" TableName="jazz">
             <dxl:Columns>
               <dxl:Column ColId="19" Attno="1" ColName="e" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="20" Attno="2" ColName="f" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -908,7 +908,7 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.247422.1.0" TableName="abuela">
+              <dxl:TableDescriptor Mdid="6.247422.1.0" TableName="abuela">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -935,7 +935,7 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.247416.1.0" TableName="bar">
+              <dxl:TableDescriptor Mdid="6.247416.1.0" TableName="bar">
                 <dxl:Columns>
                   <dxl:Column ColId="9" Attno="1" ColName="c" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="10" Attno="2" ColName="d" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -950,7 +950,7 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
               </dxl:TableDescriptor>
             </dxl:TableScan>
           </dxl:HashJoin>
-          <dxl:PartitionSelector RelationMdid="0.247422.1.0" PartitionLevels="1" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.247422.1.0" PartitionLevels="1" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -995,7 +995,7 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.247419.1.0" TableName="jazz">
+              <dxl:TableDescriptor Mdid="6.247419.1.0" TableName="jazz">
                 <dxl:Columns>
                   <dxl:Column ColId="18" Attno="1" ColName="e" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="19" Attno="2" ColName="f" TypeMdid="0.23.1.0" ColWidth="4"/>

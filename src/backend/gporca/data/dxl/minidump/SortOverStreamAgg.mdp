@@ -538,7 +538,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.40615.1.1" Name="dm_calendar" Rows="730.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.40615.1.1" Name="dm_calendar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;38,32">
+      <dxl:Relation Mdid="6.40615.1.1" Name="dm_calendar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;38,32">
         <dxl:Columns>
           <dxl:Column Name="calendar_id" Attno="1" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
             <dxl:DefaultValue/>
@@ -2026,7 +2026,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.40615.1.1" TableName="dm_calendar">
+              <dxl:TableDescriptor Mdid="6.40615.1.1" TableName="dm_calendar">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="calendar_id" TypeMdid="0.20.1.0"/>
                   <dxl:Column ColId="2" Attno="2" ColName="date_name" TypeMdid="0.1043.1.0" ColWidth="200"/>
@@ -2207,7 +2207,7 @@
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.40615.1.1" TableName="dm_calendar">
+                    <dxl:TableDescriptor Mdid="6.40615.1.1" TableName="dm_calendar">
                       <dxl:Columns>
                         <dxl:Column ColId="0" Attno="1" ColName="calendar_id" TypeMdid="0.20.1.0"/>
                         <dxl:Column ColId="19" Attno="20" ColName="year_id" TypeMdid="0.1700.1.0"/>

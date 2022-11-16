@@ -3779,7 +3779,7 @@
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
       <dxl:RelationStatistics Mdid="2.1962503.1.1" Name="date_dim" Rows="73049.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1962503.1.0" Name="date_dim" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" PartitionColumns="6" PartitionTypes="r">
+      <dxl:Relation Mdid="6.1962503.1.0" Name="date_dim" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" PartitionColumns="6" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -3891,7 +3891,7 @@
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1962503.1.1" Name="date_dim" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" PartitionColumns="6" PartitionTypes="r">
+      <dxl:Relation Mdid="6.1962503.1.1" Name="date_dim" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" PartitionColumns="6" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -5808,7 +5808,7 @@
       </dxl:ColumnStatistics>
       <dxl:MDCast Mdid="3.23.1.0;23.1.0" Name="int4" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.23.1.0" CastFuncId="0.0.0.0"/>
       <dxl:RelationStatistics Mdid="2.1974810.1.1" Name="store_returns" Rows="287422.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1974810.1.1" Name="store_returns" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;25,26,20" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.1974810.1.1" Name="store_returns" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;25,26,20" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="sr_returned_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -10207,7 +10207,7 @@
               </dxl:Comparison>
             </dxl:And>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.1962503.1.1" TableName="date_dim">
+              <dxl:TableDescriptor Mdid="6.1962503.1.1" TableName="date_dim">
                 <dxl:Columns>
                   <dxl:Column ColId="28" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="29" Attno="2" ColName="d_date_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
@@ -10250,7 +10250,7 @@
           </dxl:LogicalSelect>
         </dxl:SubqueryAny>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.1974810.1.1" TableName="store_returns">
+          <dxl:TableDescriptor Mdid="6.1974810.1.1" TableName="store_returns">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="sr_return_time_sk" TypeMdid="0.23.1.0"/>
@@ -10494,7 +10494,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.1974810.1.1" TableName="store_returns">
+            <dxl:TableDescriptor Mdid="6.1974810.1.1" TableName="store_returns">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="sr_return_time_sk" TypeMdid="0.23.1.0"/>
@@ -10526,7 +10526,7 @@
               </dxl:Columns>
             </dxl:TableDescriptor>
           </dxl:DynamicTableScan>
-          <dxl:PartitionSelector RelationMdid="0.1974810.1.1" PartitionLevels="1" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.1974810.1.1" PartitionLevels="1" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -10592,7 +10592,7 @@
                       <dxl:Ident ColId="35" ColName="d_moy" TypeMdid="0.23.1.0"/>
                     </dxl:ProjElem>
                   </dxl:ProjList>
-                  <dxl:PartitionSelector RelationMdid="0.1962503.1.1" PartitionLevels="1" ScanId="2">
+                  <dxl:PartitionSelector RelationMdid="6.1962503.1.1" PartitionLevels="1" ScanId="2">
                     <dxl:Properties>
                       <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                     </dxl:Properties>
@@ -10645,7 +10645,7 @@
                         </dxl:Comparison>
                       </dxl:And>
                     </dxl:Filter>
-                    <dxl:TableDescriptor Mdid="0.1962503.1.1" TableName="date_dim">
+                    <dxl:TableDescriptor Mdid="6.1962503.1.1" TableName="date_dim">
                       <dxl:Columns>
                         <dxl:Column ColId="27" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
                         <dxl:Column ColId="33" Attno="7" ColName="d_year" TypeMdid="0.23.1.0"/>

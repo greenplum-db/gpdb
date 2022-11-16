@@ -663,7 +663,7 @@ WHERE
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.2602.1.1" Name="pg_amop" Rows="702.000000"/>
       <dxl:RelationStatistics Mdid="2.2616.1.1" Name="pg_opclass" Rows="141.000000"/>
-      <dxl:Relation Mdid="0.2602.1.1" Name="pg_amop" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+      <dxl:Relation Mdid="6.2602.1.1" Name="pg_amop" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
         <dxl:Columns>
           <dxl:Column Name="amopclaid" Attno="1" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -709,7 +709,7 @@ WHERE
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.2616.1.1" Name="pg_opclass" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+      <dxl:Relation Mdid="6.2616.1.1" Name="pg_opclass" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
         <dxl:Columns>
           <dxl:Column Name="opcamid" Attno="1" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -972,7 +972,7 @@ WHERE
       <dxl:ColumnStatistics Mdid="1.2601.1.1.1" Name="amstrategies" Width="2.000000"/>
       <dxl:ColumnStatistics Mdid="1.2601.1.1.0" Name="amname" Width="64.000000"/>
       <dxl:RelationStatistics Mdid="2.2601.1.1" Name="pg_am" Rows="5.000000"/>
-      <dxl:Relation Mdid="0.2601.1.1" Name="pg_am" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+      <dxl:Relation Mdid="6.2601.1.1" Name="pg_am" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
         <dxl:Columns>
           <dxl:Column Name="amname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -1137,7 +1137,7 @@ WHERE
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.2601.1.1" TableName="pg_am">
+          <dxl:TableDescriptor Mdid="6.2601.1.1" TableName="pg_am">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="amname" TypeMdid="0.19.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="amstrategies" TypeMdid="0.21.1.0"/>
@@ -1176,7 +1176,7 @@ WHERE
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.2616.1.1" TableName="pg_opclass">
+          <dxl:TableDescriptor Mdid="6.2616.1.1" TableName="pg_opclass">
             <dxl:Columns>
               <dxl:Column ColId="34" Attno="1" ColName="opcamid" TypeMdid="0.26.1.0"/>
               <dxl:Column ColId="35" Attno="2" ColName="opcname" TypeMdid="0.19.1.0"/>
@@ -1197,7 +1197,7 @@ WHERE
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.2602.1.1" TableName="pg_amop">
+          <dxl:TableDescriptor Mdid="6.2602.1.1" TableName="pg_amop">
             <dxl:Columns>
               <dxl:Column ColId="49" Attno="1" ColName="amopclaid" TypeMdid="0.26.1.0"/>
               <dxl:Column ColId="50" Attno="2" ColName="amopsubtype" TypeMdid="0.26.1.0"/>
@@ -1258,7 +1258,7 @@ WHERE
                     </dxl:Comparison>
                   </dxl:And>
                   <dxl:LogicalGet>
-                    <dxl:TableDescriptor Mdid="0.2602.1.1" TableName="pg_amop">
+                    <dxl:TableDescriptor Mdid="6.2602.1.1" TableName="pg_amop">
                       <dxl:Columns>
                         <dxl:Column ColId="61" Attno="1" ColName="amopclaid" TypeMdid="0.26.1.0"/>
                         <dxl:Column ColId="62" Attno="2" ColName="amopsubtype" TypeMdid="0.26.1.0"/>
@@ -1523,7 +1523,7 @@ WHERE
                           </dxl:Comparison>
                         </dxl:And>
                       </dxl:Filter>
-                      <dxl:TableDescriptor Mdid="0.2601.1.1" TableName="pg_am">
+                      <dxl:TableDescriptor Mdid="6.2601.1.1" TableName="pg_am">
                         <dxl:Columns>
                           <dxl:Column ColId="0" Attno="1" ColName="amname" TypeMdid="0.19.1.0"/>
                           <dxl:Column ColId="1" Attno="2" ColName="amstrategies" TypeMdid="0.21.1.0"/>
@@ -1558,7 +1558,7 @@ WHERE
                         </dxl:Comparison>
                       </dxl:IndexCondList>
                       <dxl:IndexDescriptor Mdid="0.2686.1.0" IndexName="pg_opclass_am_name_nsp_index"/>
-                      <dxl:TableDescriptor Mdid="0.2616.1.1" TableName="pg_opclass">
+                      <dxl:TableDescriptor Mdid="6.2616.1.1" TableName="pg_opclass">
                         <dxl:Columns>
                           <dxl:Column ColId="33" Attno="1" ColName="opcamid" TypeMdid="0.26.1.0"/>
                           <dxl:Column ColId="34" Attno="2" ColName="opcname" TypeMdid="0.19.1.0"/>
@@ -1587,7 +1587,7 @@ WHERE
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.2602.1.1" TableName="pg_amop">
+                    <dxl:TableDescriptor Mdid="6.2602.1.1" TableName="pg_amop">
                       <dxl:Columns>
                         <dxl:Column ColId="48" Attno="1" ColName="amopclaid" TypeMdid="0.26.1.0"/>
                         <dxl:Column ColId="49" Attno="2" ColName="amopsubtype" TypeMdid="0.26.1.0"/>
@@ -1724,7 +1724,7 @@ WHERE
                             </dxl:ProjElem>
                           </dxl:ProjList>
                           <dxl:Filter/>
-                          <dxl:TableDescriptor Mdid="0.2602.1.1" TableName="pg_amop">
+                          <dxl:TableDescriptor Mdid="6.2602.1.1" TableName="pg_amop">
                             <dxl:Columns>
                               <dxl:Column ColId="60" Attno="1" ColName="amopclaid" TypeMdid="0.26.1.0"/>
                               <dxl:Column ColId="61" Attno="2" ColName="amopsubtype" TypeMdid="0.26.1.0"/>

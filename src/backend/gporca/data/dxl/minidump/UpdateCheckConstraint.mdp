@@ -127,13 +127,13 @@
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:CheckConstraint Mdid="0.17017.1.0" Name="r_c_check" RelationMdid="0.17005.1.0">
+      <dxl:CheckConstraint Mdid="0.17017.1.0" Name="r_c_check" RelationMdid="6.17005.1.0">
         <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.521.1.0">
           <dxl:Ident ColId="3" ColName="c" TypeMdid="0.23.1.0"/>
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
         </dxl:Comparison>
       </dxl:CheckConstraint>
-      <dxl:Relation Mdid="0.17005.1.0" Name="r" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,20">
+      <dxl:Relation Mdid="6.17005.1.0" Name="r" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,20">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -176,7 +176,7 @@
           <dxl:CheckConstraint Mdid="0.17017.1.0"/>
         </dxl:CheckConstraints>
       </dxl:Relation>
-      <dxl:CheckConstraint Mdid="0.17029.1.0" Name="r_check" RelationMdid="0.17005.1.0">
+      <dxl:CheckConstraint Mdid="0.17029.1.0" Name="r_check" RelationMdid="6.17005.1.0">
         <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
           <dxl:Ident ColId="4" ColName="d" TypeMdid="0.23.1.0"/>
           <dxl:Ident ColId="3" ColName="c" TypeMdid="0.23.1.0"/>
@@ -196,7 +196,7 @@
       <dxl:ColumnStatistics Mdid="1.17005.1.1.5" Name="xmin" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.17005.1.1.4" Name="ctid" Width="6.000000"/>
       <dxl:RelationStatistics Mdid="2.17005.1.1" Name="r" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.17005.1.1" Name="r" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,10">
+      <dxl:Relation Mdid="6.17005.1.1" Name="r" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,10">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -246,7 +246,7 @@
       <dxl:OutputColumns/>
       <dxl:CTEList/>
       <dxl:LogicalUpdate DeleteColumns="1,2,3,4" InsertColumns="1,12,3,4" CtidCol="5" SegmentIdCol="11" PreserveOids="false">
-        <dxl:TableDescriptor Mdid="0.17005.1.1" TableName="r">
+        <dxl:TableDescriptor Mdid="6.17005.1.1" TableName="r">
           <dxl:Columns>
             <dxl:Column ColId="13" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="14" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -273,7 +273,7 @@
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
             </dxl:Comparison>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.17005.1.1" TableName="r">
+              <dxl:TableDescriptor Mdid="6.17005.1.1" TableName="r">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -313,7 +313,7 @@
             <dxl:Ident ColId="3" ColName="d" TypeMdid="0.23.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="0.17005.1.1" TableName="r">
+        <dxl:TableDescriptor Mdid="6.17005.1.1" TableName="r">
           <dxl:Columns>
             <dxl:Column ColId="14" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="15" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -532,7 +532,7 @@
                         <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                       </dxl:Comparison>
                     </dxl:Filter>
-                    <dxl:TableDescriptor Mdid="0.17005.1.1" TableName="r">
+                    <dxl:TableDescriptor Mdid="6.17005.1.1" TableName="r">
                       <dxl:Columns>
                         <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                         <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

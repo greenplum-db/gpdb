@@ -48,7 +48,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.16385.1.0" Name="testtable" Rows="0.000000" RelPages="0" RelAllVisible="0" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.16385.1.0" Name="testtable" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16385.1.0" Name="testtable" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="name" Attno="1" Mdid="0.1043.1.0" TypeModifier="14" Nullable="true" ColWidth="10">
             <dxl:DefaultValue/>
@@ -349,7 +349,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="testtable">
+              <dxl:TableDescriptor Mdid="6.16385.1.0" TableName="testtable">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="name" TypeMdid="0.1043.1.0" TypeModifier="14" ColWidth="10"/>
                   <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -494,7 +494,7 @@
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="testtable">
+                  <dxl:TableDescriptor Mdid="6.16385.1.0" TableName="testtable">
                     <dxl:Columns>
                       <dxl:Column ColId="0" Attno="1" ColName="name" TypeMdid="0.1043.1.0" TypeModifier="14" ColWidth="10"/>
                       <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

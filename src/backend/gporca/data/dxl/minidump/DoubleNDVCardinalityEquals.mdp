@@ -54,7 +54,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.212992.1.0" Name="mytable" Rows="141140992.000000" RelPages="743257" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.212992.1.0" Name="mytable" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.212992.1.0" Name="mytable" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -202,7 +202,7 @@
           <dxl:ConstValue TypeMdid="0.20.1.0" Value="5100000000133138764"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.212992.1.0" TableName="mytable">
+          <dxl:TableDescriptor Mdid="6.212992.1.0" TableName="mytable">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.20.1.0" ColWidth="8"/>
               <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -250,7 +250,7 @@
             </dxl:IndexCondList>
             <dxl:IndexDescriptor Mdid="0.213016.1.0" IndexName="idx_mytable_a"/>
           </dxl:BitmapIndexProbe>
-          <dxl:TableDescriptor Mdid="0.212992.1.0" TableName="mytable">
+          <dxl:TableDescriptor Mdid="6.212992.1.0" TableName="mytable">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.20.1.0" ColWidth="8"/>
               <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

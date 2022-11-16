@@ -1063,7 +1063,7 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.30044.1.0" Name="solo" Rows="36.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.30044.1.0" Name="solo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="36,30" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.30044.1.0" Name="solo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="36,30" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="some_id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1435,7 +1435,7 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
           </dxl:Comparison>
         </dxl:And>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.30044.1.0" TableName="solo">
+          <dxl:TableDescriptor Mdid="6.30044.1.0" TableName="solo">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="some_id" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="year_id" TypeMdid="0.21.1.0"/>
@@ -1637,7 +1637,7 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
             </dxl:Comparison>
           </dxl:IndexCondList>
           <dxl:IndexDescriptor Mdid="0.30058.1.0" IndexName="solo_idx"/>
-          <dxl:TableDescriptor Mdid="0.30044.1.0" TableName="solo">
+          <dxl:TableDescriptor Mdid="6.30044.1.0" TableName="solo">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="some_id" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="year_id" TypeMdid="0.21.1.0"/>

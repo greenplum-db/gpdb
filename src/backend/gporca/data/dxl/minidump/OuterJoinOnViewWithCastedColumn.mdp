@@ -177,7 +177,7 @@
         <dxl:ResultType Mdid="0.1043.1.0"/>
       </dxl:GPDBFunc>
       <dxl:RelationStatistics Mdid="2.106541.1.0" Name="foo" Rows="0.000000" RelPages="0" RelAllVisible="0" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.106541.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.106541.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -215,7 +215,7 @@
         </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.106547.1.0" Name="bar" Rows="0.000000" RelPages="0" RelAllVisible="0" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.106547.1.0" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.106547.1.0" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="c" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -308,7 +308,7 @@
           </dxl:ProjList>
           <dxl:LogicalJoin JoinType="Left">
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.106541.1.0" TableName="foo" ExecuteAsUser="10" LockMode="1">
+              <dxl:TableDescriptor Mdid="6.106541.1.0" TableName="foo" ExecuteAsUser="10" LockMode="1">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.25.1.0" ColWidth="8"/>
                   <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.25.1.0" ColWidth="8"/>
@@ -323,7 +323,7 @@
               </dxl:TableDescriptor>
             </dxl:LogicalGet>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.106547.1.0" TableName="bar" ExecuteAsUser="10" LockMode="1">
+              <dxl:TableDescriptor Mdid="6.106547.1.0" TableName="bar" ExecuteAsUser="10" LockMode="1">
                 <dxl:Columns>
                   <dxl:Column ColId="10" Attno="1" ColName="c" TypeMdid="0.25.1.0" ColWidth="8"/>
                   <dxl:Column ColId="11" Attno="2" ColName="d" TypeMdid="0.25.1.0" ColWidth="8"/>
@@ -444,7 +444,7 @@
                   <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAAB21laA==" LintValue="1828233457"/>
                 </dxl:Comparison>
               </dxl:Filter>
-              <dxl:TableDescriptor Mdid="0.106541.1.0" TableName="foo" ExecuteAsUser="10" LockMode="1">
+              <dxl:TableDescriptor Mdid="6.106541.1.0" TableName="foo" ExecuteAsUser="10" LockMode="1">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.25.1.0" ColWidth="8"/>
                   <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.25.1.0" ColWidth="8"/>
@@ -471,7 +471,7 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.106547.1.0" TableName="bar" ExecuteAsUser="10" LockMode="1">
+              <dxl:TableDescriptor Mdid="6.106547.1.0" TableName="bar" ExecuteAsUser="10" LockMode="1">
                 <dxl:Columns>
                   <dxl:Column ColId="9" Attno="1" ColName="c" TypeMdid="0.25.1.0" ColWidth="8"/>
                   <dxl:Column ColId="10" Attno="2" ColName="d" TypeMdid="0.25.1.0" ColWidth="8"/>

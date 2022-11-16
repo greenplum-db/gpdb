@@ -122,7 +122,7 @@
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.1171244.1.1" Name="inserttest" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.1171244.1.1" Name="inserttest" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -169,7 +169,7 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalInsert InsertColumns="14,2,3">
-        <dxl:TableDescriptor Mdid="0.1171244.1.1" TableName="inserttest">
+        <dxl:TableDescriptor Mdid="6.1171244.1.1" TableName="inserttest">
           <dxl:Columns>
             <dxl:Column ColId="4" Attno="1" ColName="col1" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="5" Attno="2" ColName="col2" TypeMdid="0.23.1.0"/>
@@ -231,7 +231,7 @@
             <dxl:Ident ColId="2" ColName="col3" TypeMdid="0.25.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="0.1171244.1.1" TableName="inserttest">
+        <dxl:TableDescriptor Mdid="6.1171244.1.1" TableName="inserttest">
           <dxl:Columns>
             <dxl:Column ColId="5" Attno="1" ColName="col1" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="6" Attno="2" ColName="col2" TypeMdid="0.23.1.0"/>

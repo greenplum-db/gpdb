@@ -129,7 +129,7 @@ insert into constraints_tab values (NULL, -1);
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.16424.1.0" Name="constraints_tab" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16424.1.0" Name="constraints_tab" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="notnullcol" Attno="1" Mdid="0.25.1.0" Nullable="false" ColWidth="8">
             <dxl:DefaultValue/>
@@ -173,7 +173,7 @@ insert into constraints_tab values (NULL, -1);
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalInsert InsertColumns="2,3">
-        <dxl:TableDescriptor Mdid="0.16424.1.0" TableName="constraints_tab">
+        <dxl:TableDescriptor Mdid="6.16424.1.0" TableName="constraints_tab">
           <dxl:Columns>
             <dxl:Column ColId="4" Attno="1" ColName="notnullcol" TypeMdid="0.25.1.0" ColWidth="8"/>
             <dxl:Column ColId="5" Attno="2" ColName="positivecol" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -220,7 +220,7 @@ insert into constraints_tab values (NULL, -1);
             <dxl:Ident ColId="2" ColName="positivecol" TypeMdid="0.23.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="0.16424.1.0" TableName="constraints_tab">
+        <dxl:TableDescriptor Mdid="6.16424.1.0" TableName="constraints_tab">
           <dxl:Columns>
             <dxl:Column ColId="4" Attno="1" ColName="notnullcol" TypeMdid="0.25.1.0" ColWidth="8"/>
             <dxl:Column ColId="5" Attno="2" ColName="positivecol" TypeMdid="0.23.1.0" ColWidth="4"/>

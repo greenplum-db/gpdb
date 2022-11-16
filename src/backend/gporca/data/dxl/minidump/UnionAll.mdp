@@ -4759,7 +4759,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.18402.1.1" Name="catalog_sales" Rows="1443660.000000"/>
-      <dxl:Relation Mdid="0.18402.1.1" Name="catalog_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="15,17" Keys="15,17;40,34">
+      <dxl:Relation Mdid="6.18402.1.1" Name="catalog_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="15,17" Keys="15,17;40,34">
         <dxl:Columns>
           <dxl:Column Name="cs_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6525,7 +6525,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.17929.1.1" Name="customer" Rows="100157.000000"/>
-      <dxl:Relation Mdid="0.17929.1.1" Name="customer" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;24,18">
+      <dxl:Relation Mdid="6.17929.1.1" Name="customer" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;24,18">
         <dxl:Columns>
           <dxl:Column Name="c_customer_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6610,7 +6610,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.18359.1.1" Name="web_sales" Rows="719603.000000"/>
-      <dxl:Relation Mdid="0.18359.1.1" Name="web_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17;40,34">
+      <dxl:Relation Mdid="6.18359.1.1" Name="web_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17;40,34">
         <dxl:Columns>
           <dxl:Column Name="ws_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -8759,7 +8759,7 @@
             <dxl:Column ColId="16" Attno="3" ColName="item_sk" TypeMdid="0.23.1.0"/>
           </dxl:Columns>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.18402.1.1" TableName="catalog_sales">
+            <dxl:TableDescriptor Mdid="6.18402.1.1" TableName="catalog_sales">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="cs_sold_date_sk" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="cs_sold_time_sk" TypeMdid="0.23.1.0"/>
@@ -8806,7 +8806,7 @@
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.18359.1.1" TableName="web_sales">
+            <dxl:TableDescriptor Mdid="6.18359.1.1" TableName="web_sales">
               <dxl:Columns>
                 <dxl:Column ColId="42" Attno="1" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="43" Attno="2" ColName="ws_sold_time_sk" TypeMdid="0.23.1.0"/>
@@ -8854,7 +8854,7 @@
           </dxl:LogicalGet>
         </dxl:UnionAll>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.17929.1.1" TableName="customer">
+          <dxl:TableDescriptor Mdid="6.17929.1.1" TableName="customer">
             <dxl:Columns>
               <dxl:Column ColId="83" Attno="1" ColName="c_customer_sk" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="84" Attno="2" ColName="c_customer_id" TypeMdid="0.1042.1.0"/>
@@ -8961,7 +8961,7 @@
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.18402.1.1" TableName="catalog_sales">
+                <dxl:TableDescriptor Mdid="6.18402.1.1" TableName="catalog_sales">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="cs_sold_date_sk" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="3" Attno="4" ColName="cs_bill_customer_sk" TypeMdid="0.23.1.0"/>
@@ -9004,7 +9004,7 @@
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.18359.1.1" TableName="web_sales">
+                <dxl:TableDescriptor Mdid="6.18359.1.1" TableName="web_sales">
                   <dxl:Columns>
                     <dxl:Column ColId="41" Attno="1" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="44" Attno="4" ColName="ws_item_sk" TypeMdid="0.23.1.0"/>
@@ -9035,7 +9035,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.17929.1.1" TableName="customer">
+            <dxl:TableDescriptor Mdid="6.17929.1.1" TableName="customer">
               <dxl:Columns>
                 <dxl:Column ColId="82" Attno="1" ColName="c_customer_sk" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="86" Attno="5" ColName="c_current_addr_sk" TypeMdid="0.23.1.0"/>

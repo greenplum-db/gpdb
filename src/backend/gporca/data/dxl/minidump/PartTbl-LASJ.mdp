@@ -501,7 +501,7 @@
       <dxl:ColumnStatistics Mdid="1.259515.1.1.7" Name="cmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.259515.1.1.6" Name="xmax" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.259515.1.1" Name="foo3_p" Rows="500.000000"/>
-      <dxl:Relation Mdid="0.259515.1.1" Name="foo3_p" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" PartitionColumns="2" PartitionTypes="l">
+      <dxl:Relation Mdid="6.259515.1.1" Name="foo3_p" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" PartitionColumns="2" PartitionTypes="l">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -543,7 +543,7 @@
       <dxl:ColumnStatistics Mdid="1.259515.1.1.5" Name="cmin" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.259515.1.1.4" Name="xmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.259490.1.1" Name="foo2" Rows="20.000000"/>
-      <dxl:Relation Mdid="0.259490.1.1" Name="foo2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.259490.1.1" Name="foo2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -603,7 +603,7 @@
             <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="11">
               <dxl:Ident ColId="3" ColName="k" TypeMdid="0.23.1.0"/>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.259490.1.1" TableName="foo2">
+                <dxl:TableDescriptor Mdid="6.259490.1.1" TableName="foo2">
                   <dxl:Columns>
                     <dxl:Column ColId="11" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="12" Attno="2" ColName="j" TypeMdid="0.25.1.0"/>
@@ -621,7 +621,7 @@
             </dxl:SubqueryAny>
           </dxl:Not>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.259515.1.1" TableName="foo3_p">
+            <dxl:TableDescriptor Mdid="6.259515.1.1" TableName="foo3_p">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="j" TypeMdid="0.1043.1.0" ColWidth="20"/>
@@ -707,7 +707,7 @@
                     <dxl:Ident ColId="2" ColName="k" TypeMdid="0.23.1.0"/>
                   </dxl:ProjElem>
                 </dxl:ProjList>
-                <dxl:PartitionSelector RelationMdid="0.259515.1.1" PartitionLevels="1" ScanId="1">
+                <dxl:PartitionSelector RelationMdid="6.259515.1.1" PartitionLevels="1" ScanId="1">
                   <dxl:Properties>
                     <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                   </dxl:Properties>
@@ -738,7 +738,7 @@
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.259515.1.1" TableName="foo3_p">
+                  <dxl:TableDescriptor Mdid="6.259515.1.1" TableName="foo3_p">
                     <dxl:Columns>
                       <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="2" Attno="3" ColName="k" TypeMdid="0.23.1.0"/>
@@ -774,7 +774,7 @@
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.259490.1.1" TableName="foo2">
+                  <dxl:TableDescriptor Mdid="6.259490.1.1" TableName="foo2">
                     <dxl:Columns>
                       <dxl:Column ColId="10" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="13" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

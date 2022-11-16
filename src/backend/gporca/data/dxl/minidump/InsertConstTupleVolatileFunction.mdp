@@ -143,7 +143,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.319018.1.1" Name="delete_test" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;8,2">
+      <dxl:Relation Mdid="6.319018.1.1" Name="delete_test" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;8,2">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue>
@@ -193,7 +193,7 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalInsert InsertColumns="2,3">
-        <dxl:TableDescriptor Mdid="0.319018.1.1" TableName="delete_test">
+        <dxl:TableDescriptor Mdid="6.319018.1.1" TableName="delete_test">
           <dxl:Columns>
             <dxl:Column ColId="4" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="5" Attno="2" ColName="a" TypeMdid="0.23.1.0"/>
@@ -244,7 +244,7 @@
             <dxl:Ident ColId="2" ColName="a" TypeMdid="0.23.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="0.319018.1.1" TableName="delete_test">
+        <dxl:TableDescriptor Mdid="6.319018.1.1" TableName="delete_test">
           <dxl:Columns>
             <dxl:Column ColId="4" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="5" Attno="2" ColName="a" TypeMdid="0.23.1.0"/>

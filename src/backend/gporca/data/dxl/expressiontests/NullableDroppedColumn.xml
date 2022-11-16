@@ -8,7 +8,7 @@ EXPLAIN SELECT id FROM ColumnMapping;
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:Metadata SystemIds="0.GPDB">
     <dxl:RelationStatistics Mdid="2.359942.1.1" Name="columnmapping" Rows="0.000000" EmptyRelation="true"/>
-    <dxl:Relation Mdid="0.359942.1.1" Name="columnmapping" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="" NumberLeafPartitions="0">
+    <dxl:Relation Mdid="6.359942.1.1" Name="columnmapping" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="........pg.dropped.1........" Attno="1" Mdid="0.0.0.0" Nullable="true" IsDropped="true">
           <dxl:DefaultValue/>
@@ -120,7 +120,7 @@ EXPLAIN SELECT id FROM ColumnMapping;
     </dxl:OutputColumns>
     <dxl:CTEList/>
     <dxl:LogicalGet>
-      <dxl:TableDescriptor Mdid="0.359942.1.1" TableName="columnmapping">
+      <dxl:TableDescriptor Mdid="6.359942.1.1" TableName="columnmapping">
         <dxl:Columns>
           <dxl:Column ColId="1" Attno="2" ColName="id" TypeMdid="0.23.1.0"/>
         </dxl:Columns>

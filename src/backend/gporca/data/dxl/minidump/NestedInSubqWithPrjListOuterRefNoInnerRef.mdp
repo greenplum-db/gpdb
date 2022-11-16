@@ -55,7 +55,7 @@ EXPLAIN SELECT * FROM foo WHERE foo.a IN (SELECT foo.b + 1 FROM (SELECT * FROM b
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.155655.1.0" Name="jank" Rows="0.000000" EmptyRelation="true"/>
       <dxl:RelationStatistics Mdid="2.90119.1.0" Name="foo" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.155655.1.0" Name="jank" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.155655.1.0" Name="jank" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="d" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -86,7 +86,7 @@ EXPLAIN SELECT * FROM foo WHERE foo.a IN (SELECT foo.b + 1 FROM (SELECT * FROM b
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.90119.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.90119.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -123,7 +123,7 @@ EXPLAIN SELECT * FROM foo WHERE foo.a IN (SELECT foo.b + 1 FROM (SELECT * FROM b
       <dxl:ColumnStatistics Mdid="1.155655.1.0.3" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.155655.1.0.2" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.90122.1.0" Name="bar" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.90122.1.0" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.90122.1.0" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -653,7 +653,7 @@ EXPLAIN SELECT * FROM foo WHERE foo.a IN (SELECT foo.b + 1 FROM (SELECT * FROM b
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:LogicalGet>
-                    <dxl:TableDescriptor Mdid="0.155655.1.0" TableName="jank">
+                    <dxl:TableDescriptor Mdid="6.155655.1.0" TableName="jank">
                       <dxl:Columns>
                         <dxl:Column ColId="18" Attno="1" ColName="d" TypeMdid="0.23.1.0"/>
                         <dxl:Column ColId="19" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -669,7 +669,7 @@ EXPLAIN SELECT * FROM foo WHERE foo.a IN (SELECT foo.b + 1 FROM (SELECT * FROM b
                 </dxl:LogicalProject>
               </dxl:SubqueryAny>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.90122.1.0" TableName="bar">
+                <dxl:TableDescriptor Mdid="6.90122.1.0" TableName="bar">
                   <dxl:Columns>
                     <dxl:Column ColId="10" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="11" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -686,7 +686,7 @@ EXPLAIN SELECT * FROM foo WHERE foo.a IN (SELECT foo.b + 1 FROM (SELECT * FROM b
           </dxl:LogicalProject>
         </dxl:SubqueryAny>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.90119.1.0" TableName="foo">
+          <dxl:TableDescriptor Mdid="6.90119.1.0" TableName="foo">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -754,7 +754,7 @@ EXPLAIN SELECT * FROM foo WHERE foo.a IN (SELECT foo.b + 1 FROM (SELECT * FROM b
                 </dxl:OpExpr>
               </dxl:Comparison>
             </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.90119.1.0" TableName="foo">
+            <dxl:TableDescriptor Mdid="6.90119.1.0" TableName="foo">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -821,7 +821,7 @@ EXPLAIN SELECT * FROM foo WHERE foo.a IN (SELECT foo.b + 1 FROM (SELECT * FROM b
                             </dxl:OpExpr>
                           </dxl:Comparison>
                         </dxl:Filter>
-                        <dxl:TableDescriptor Mdid="0.90122.1.0" TableName="bar">
+                        <dxl:TableDescriptor Mdid="6.90122.1.0" TableName="bar">
                           <dxl:Columns>
                             <dxl:Column ColId="9" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
                             <dxl:Column ColId="10" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -865,7 +865,7 @@ EXPLAIN SELECT * FROM foo WHERE foo.a IN (SELECT foo.b + 1 FROM (SELECT * FROM b
                                 </dxl:Properties>
                                 <dxl:ProjList/>
                                 <dxl:Filter/>
-                                <dxl:TableDescriptor Mdid="0.155655.1.0" TableName="jank">
+                                <dxl:TableDescriptor Mdid="6.155655.1.0" TableName="jank">
                                   <dxl:Columns>
                                     <dxl:Column ColId="17" Attno="1" ColName="d" TypeMdid="0.23.1.0"/>
                                     <dxl:Column ColId="18" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

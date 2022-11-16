@@ -1344,7 +1344,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.17142.1.1" Name="orders" Rows="15040.000000"/>
-      <dxl:Relation Mdid="0.17142.1.1" Name="orders" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="15,9">
+      <dxl:Relation Mdid="6.17142.1.1" Name="orders" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="15,9">
         <dxl:Columns>
           <dxl:Column Name="o_orderkey" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -2066,7 +2066,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.17119.1.1" Name="customer" Rows="1500.000000"/>
-      <dxl:Relation Mdid="0.17119.1.1" Name="customer" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="14,8">
+      <dxl:Relation Mdid="6.17119.1.1" Name="customer" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="14,8">
         <dxl:Columns>
           <dxl:Column Name="c_custkey" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -2119,7 +2119,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.17165.1.1" Name="lineitem" Rows="60398.000000"/>
-      <dxl:Relation Mdid="0.17165.1.1" Name="lineitem" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,16">
+      <dxl:Relation Mdid="6.17165.1.1" Name="lineitem" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,16">
         <dxl:Columns>
           <dxl:Column Name="l_orderkey" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -2489,7 +2489,7 @@
           </dxl:ProjList>
           <dxl:LogicalJoin JoinType="Inner">
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.17119.1.1" TableName="customer">
+              <dxl:TableDescriptor Mdid="6.17119.1.1" TableName="customer">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="c_custkey" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="2" Attno="2" ColName="c_name" TypeMdid="0.1043.1.0" ColWidth="25"/>
@@ -2510,7 +2510,7 @@
               </dxl:TableDescriptor>
             </dxl:LogicalGet>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.17142.1.1" TableName="orders">
+              <dxl:TableDescriptor Mdid="6.17142.1.1" TableName="orders">
                 <dxl:Columns>
                   <dxl:Column ColId="16" Attno="1" ColName="o_orderkey" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="17" Attno="2" ColName="o_custkey" TypeMdid="0.23.1.0"/>
@@ -2532,7 +2532,7 @@
               </dxl:TableDescriptor>
             </dxl:LogicalGet>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.17165.1.1" TableName="lineitem">
+              <dxl:TableDescriptor Mdid="6.17165.1.1" TableName="lineitem">
                 <dxl:Columns>
                   <dxl:Column ColId="32" Attno="1" ColName="l_orderkey" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="33" Attno="2" ColName="l_partkey" TypeMdid="0.23.1.0"/>
@@ -2758,7 +2758,7 @@
                         <dxl:ConstValue TypeMdid="0.1082.1.0" Value="J/n//w==" LintValue="-1753"/>
                       </dxl:Comparison>
                     </dxl:Filter>
-                    <dxl:TableDescriptor Mdid="0.17165.1.1" TableName="lineitem">
+                    <dxl:TableDescriptor Mdid="6.17165.1.1" TableName="lineitem">
                       <dxl:Columns>
                         <dxl:Column ColId="31" Attno="1" ColName="l_orderkey" TypeMdid="0.23.1.0"/>
                         <dxl:Column ColId="32" Attno="2" ColName="l_partkey" TypeMdid="0.23.1.0"/>
@@ -2833,7 +2833,7 @@
                           <dxl:ConstValue TypeMdid="0.1082.1.0" Value="J/n//w==" LintValue="-1753"/>
                         </dxl:Comparison>
                       </dxl:Filter>
-                      <dxl:TableDescriptor Mdid="0.17142.1.1" TableName="orders">
+                      <dxl:TableDescriptor Mdid="6.17142.1.1" TableName="orders">
                         <dxl:Columns>
                           <dxl:Column ColId="15" Attno="1" ColName="o_orderkey" TypeMdid="0.23.1.0"/>
                           <dxl:Column ColId="16" Attno="2" ColName="o_custkey" TypeMdid="0.23.1.0"/>
@@ -2880,7 +2880,7 @@
                             <dxl:ConstValue TypeMdid="0.1042.1.0" Value="AAAADEJVSUxESU5H" LintValue="725410676"/>
                           </dxl:Comparison>
                         </dxl:Filter>
-                        <dxl:TableDescriptor Mdid="0.17119.1.1" TableName="customer">
+                        <dxl:TableDescriptor Mdid="6.17119.1.1" TableName="customer">
                           <dxl:Columns>
                             <dxl:Column ColId="0" Attno="1" ColName="c_custkey" TypeMdid="0.23.1.0"/>
                             <dxl:Column ColId="1" Attno="2" ColName="c_name" TypeMdid="0.1043.1.0" ColWidth="25"/>

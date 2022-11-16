@@ -201,7 +201,7 @@
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:Relation Mdid="0.24803.1.0" Name="pt2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="2" PartitionTypes="r" ConvertHashToRandom="true" NumberLeafPartitions="5">
+      <dxl:Relation Mdid="6.24803.1.0" Name="pt2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="2" PartitionTypes="r" ConvertHashToRandom="true" NumberLeafPartitions="5">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -243,7 +243,7 @@
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
       <dxl:RelationStatistics Mdid="2.24827.1.0" Name="r" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.24827.1.0" Name="r" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.24827.1.0" Name="r" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -285,7 +285,7 @@
       <dxl:OutputColumns/>
       <dxl:CTEList/>
       <dxl:LogicalDelete DeleteColumns="1,2,3" CtidCol="4" SegmentIdCol="10">
-        <dxl:TableDescriptor Mdid="0.24803.1.0" TableName="pt2">
+        <dxl:TableDescriptor Mdid="6.24803.1.0" TableName="pt2">
           <dxl:Columns>
             <dxl:Column ColId="21" Attno="1" ColName="i" TypeMdid="0.23.1.0" ColWidth="4"/>
             <dxl:Column ColId="22" Attno="2" ColName="j" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -303,7 +303,7 @@
           <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="12">
             <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.24827.1.0" TableName="r">
+              <dxl:TableDescriptor Mdid="6.24827.1.0" TableName="r">
                 <dxl:Columns>
                   <dxl:Column ColId="11" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="12" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -320,7 +320,7 @@
             </dxl:LogicalGet>
           </dxl:SubqueryAny>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.24803.1.0" TableName="pt2">
+            <dxl:TableDescriptor Mdid="6.24803.1.0" TableName="pt2">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="i" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="2" Attno="2" ColName="j" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -355,7 +355,7 @@
             <dxl:Ident ColId="2" ColName="k" TypeMdid="0.23.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="0.24803.1.0" TableName="pt2">
+        <dxl:TableDescriptor Mdid="6.24803.1.0" TableName="pt2">
           <dxl:Columns>
             <dxl:Column ColId="26" Attno="1" ColName="i" TypeMdid="0.23.1.0" ColWidth="4"/>
             <dxl:Column ColId="27" Attno="2" ColName="j" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -395,7 +395,7 @@
           </dxl:ProjList>
           <dxl:Filter/>
           <dxl:OneTimeFilter/>
-          <dxl:PartitionSelector RelationMdid="0.24803.1.0" PartitionLevels="1" ScanId="0">
+          <dxl:PartitionSelector RelationMdid="6.24803.1.0" PartitionLevels="1" ScanId="0">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="862.000502" Rows="1.000000" Width="22"/>
             </dxl:Properties>
@@ -534,7 +534,7 @@
                         <dxl:Ident ColId="9" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                       </dxl:ProjElem>
                     </dxl:ProjList>
-                    <dxl:PartitionSelector RelationMdid="0.24803.1.0" PartitionLevels="1" ScanId="1">
+                    <dxl:PartitionSelector RelationMdid="6.24803.1.0" PartitionLevels="1" ScanId="1">
                       <dxl:Properties>
                         <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                       </dxl:Properties>
@@ -577,7 +577,7 @@
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:TableDescriptor Mdid="0.24803.1.0" TableName="pt2">
+                      <dxl:TableDescriptor Mdid="6.24803.1.0" TableName="pt2">
                         <dxl:Columns>
                           <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0" ColWidth="4"/>
                           <dxl:Column ColId="1" Attno="2" ColName="j" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -604,7 +604,7 @@
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.24827.1.0" TableName="r">
+                  <dxl:TableDescriptor Mdid="6.24827.1.0" TableName="r">
                     <dxl:Columns>
                       <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
                       <dxl:Column ColId="13" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

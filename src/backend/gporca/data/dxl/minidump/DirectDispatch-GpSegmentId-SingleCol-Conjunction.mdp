@@ -155,7 +155,7 @@
       </dxl:Type>
       <dxl:ColumnStatistics Mdid="1.32558.1.0.7" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.32558.1.0" Name="foo" Rows="0.000000" RelPages="0" RelAllVisible="0" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.32558.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32558.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -229,7 +229,7 @@
           </dxl:Comparison>
         </dxl:And>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.32558.1.0" TableName="foo" LockMode="1">
+          <dxl:TableDescriptor Mdid="6.32558.1.0" TableName="foo" LockMode="1">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -281,7 +281,7 @@
               </dxl:Comparison>
             </dxl:And>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.32558.1.0" TableName="foo" LockMode="1">
+          <dxl:TableDescriptor Mdid="6.32558.1.0" TableName="foo" LockMode="1">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

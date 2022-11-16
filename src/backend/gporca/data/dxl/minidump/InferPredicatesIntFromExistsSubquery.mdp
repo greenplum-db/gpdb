@@ -172,7 +172,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.16409.1.0" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16409.1.0" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="r1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -264,7 +264,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.16415.1.0" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16415.1.0" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="s1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -366,7 +366,7 @@
                 </dxl:Comparison>
               </dxl:And>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.16415.1.0" TableName="s" LockMode="1">
+                <dxl:TableDescriptor Mdid="6.16415.1.0" TableName="s" LockMode="1">
                   <dxl:Columns>
                     <dxl:Column ColId="13" Attno="1" ColName="s1" TypeMdid="0.23.1.0" ColWidth="4"/>
                     <dxl:Column ColId="14" Attno="2" ColName="s2" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -387,7 +387,7 @@
           </dxl:LogicalProject>
         </dxl:SubqueryExists>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.16409.1.0" TableName="r" LockMode="1">
+          <dxl:TableDescriptor Mdid="6.16409.1.0" TableName="r" LockMode="1">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="r1" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="2" ColName="r2" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -486,7 +486,7 @@
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="9"/>
               </dxl:Comparison>
             </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.16409.1.0" TableName="r" LockMode="1">
+            <dxl:TableDescriptor Mdid="6.16409.1.0" TableName="r" LockMode="1">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="r1" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="1" Attno="2" ColName="r2" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -554,7 +554,7 @@
                       <dxl:ConstValue TypeMdid="0.23.1.0" Value="9"/>
                     </dxl:Comparison>
                   </dxl:Filter>
-                  <dxl:TableDescriptor Mdid="0.16415.1.0" TableName="s" LockMode="1">
+                  <dxl:TableDescriptor Mdid="6.16415.1.0" TableName="s" LockMode="1">
                     <dxl:Columns>
                       <dxl:Column ColId="12" Attno="1" ColName="s1" TypeMdid="0.23.1.0" ColWidth="4"/>
                       <dxl:Column ColId="13" Attno="2" ColName="s2" TypeMdid="0.23.1.0" ColWidth="4"/>

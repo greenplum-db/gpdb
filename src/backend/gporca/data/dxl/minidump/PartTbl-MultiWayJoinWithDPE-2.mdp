@@ -676,7 +676,7 @@
       <dxl:ColumnStatistics Mdid="1.897052.1.1.7" Name="d_dow" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.897052.1.1.6" Name="d_year" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.904881.1.1" Name="store_sales" Rows="29490999296.000000"/>
-      <dxl:Relation Mdid="0.904881.1.1" Name="store_sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;29,23" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.904881.1.1" Name="store_sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;29,23" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -774,7 +774,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.897052.1.1" Name="date_dim" Rows="73049.000000"/>
-      <dxl:Relation Mdid="0.897052.1.1" Name="date_dim" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;34,28" PartitionColumns="6" PartitionTypes="r">
+      <dxl:Relation Mdid="6.897052.1.1" Name="date_dim" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;34,28" PartitionColumns="6" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1245,7 +1245,7 @@
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.904881.1.1" TableName="store_sales">
+          <dxl:TableDescriptor Mdid="6.904881.1.1" TableName="store_sales">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="ss_sold_time_sk" TypeMdid="0.23.1.0"/>
@@ -1281,7 +1281,7 @@
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.897052.1.1" TableName="date_dim">
+          <dxl:TableDescriptor Mdid="6.897052.1.1" TableName="date_dim">
             <dxl:Columns>
               <dxl:Column ColId="31" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="32" Attno="2" ColName="d_date_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
@@ -1754,7 +1754,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.904881.1.1" TableName="store_sales">
+            <dxl:TableDescriptor Mdid="6.904881.1.1" TableName="store_sales">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="ss_sold_time_sk" TypeMdid="0.23.1.0"/>
@@ -1789,7 +1789,7 @@
               </dxl:Columns>
             </dxl:TableDescriptor>
           </dxl:DynamicTableScan>
-          <dxl:PartitionSelector RelationMdid="0.904881.1.1" PartitionLevels="1" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.904881.1.1" PartitionLevels="1" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -2271,7 +2271,7 @@
                         <dxl:Ident ColId="57" ColName="d_current_year" TypeMdid="0.1042.1.0"/>
                       </dxl:ProjElem>
                     </dxl:ProjList>
-                    <dxl:PartitionSelector RelationMdid="0.897052.1.1" PartitionLevels="1" ScanId="2">
+                    <dxl:PartitionSelector RelationMdid="6.897052.1.1" PartitionLevels="1" ScanId="2">
                       <dxl:Properties>
                         <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                       </dxl:Properties>
@@ -2383,7 +2383,7 @@
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:TableDescriptor Mdid="0.897052.1.1" TableName="date_dim">
+                      <dxl:TableDescriptor Mdid="6.897052.1.1" TableName="date_dim">
                         <dxl:Columns>
                           <dxl:Column ColId="30" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
                           <dxl:Column ColId="31" Attno="2" ColName="d_date_id" TypeMdid="0.1042.1.0" ColWidth="16"/>

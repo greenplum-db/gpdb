@@ -177,7 +177,7 @@ explain select * from foo left join bar on bar.a=foo.a and bar.a<foo.b left oute
           <dxl:Opfamily Mdid="0.7035.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:Relation Mdid="0.951391.1.0" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.951391.1.0" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -250,7 +250,7 @@ explain select * from foo left join bar on bar.a=foo.a and bar.a<foo.b left oute
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.951385.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.951385.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -288,7 +288,7 @@ explain select * from foo left join bar on bar.a=foo.a and bar.a<foo.b left oute
         </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.951397.1.0" Name="zoo" Rows="0.000000" RelPages="0" RelAllVisible="0" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.951397.1.0" Name="zoo" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.951397.1.0" Name="zoo" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -374,7 +374,7 @@ explain select * from foo left join bar on bar.a=foo.a and bar.a<foo.b left oute
       <dxl:LogicalJoin JoinType="Left">
         <dxl:LogicalJoin JoinType="Left">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.951385.1.0" TableName="foo">
+            <dxl:TableDescriptor Mdid="6.951385.1.0" TableName="foo">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="8"/>
                 <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.1043.1.0" ColWidth="8"/>
@@ -389,7 +389,7 @@ explain select * from foo left join bar on bar.a=foo.a and bar.a<foo.b left oute
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.951391.1.0" TableName="bar">
+            <dxl:TableDescriptor Mdid="6.951391.1.0" TableName="bar">
               <dxl:Columns>
                 <dxl:Column ColId="10" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="8"/>
                 <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.1043.1.0" ColWidth="8"/>
@@ -423,7 +423,7 @@ explain select * from foo left join bar on bar.a=foo.a and bar.a<foo.b left oute
           </dxl:And>
         </dxl:LogicalJoin>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.951397.1.0" TableName="zoo">
+          <dxl:TableDescriptor Mdid="6.951397.1.0" TableName="zoo">
             <dxl:Columns>
               <dxl:Column ColId="19" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="8"/>
               <dxl:Column ColId="20" Attno="2" ColName="b" TypeMdid="0.1043.1.0" ColWidth="8"/>
@@ -560,7 +560,7 @@ explain select * from foo left join bar on bar.a=foo.a and bar.a<foo.b left oute
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.951385.1.0" TableName="foo">
+              <dxl:TableDescriptor Mdid="6.951385.1.0" TableName="foo">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="8"/>
                   <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.1043.1.0" ColWidth="8"/>
@@ -606,7 +606,7 @@ explain select * from foo left join bar on bar.a=foo.a and bar.a<foo.b left oute
                 </dxl:Comparison>
               </dxl:IndexCondList>
               <dxl:IndexDescriptor Mdid="0.951407.1.0" IndexName="bar_idx_a"/>
-              <dxl:TableDescriptor Mdid="0.951391.1.0" TableName="bar">
+              <dxl:TableDescriptor Mdid="6.951391.1.0" TableName="bar">
                 <dxl:Columns>
                   <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="8"/>
                   <dxl:Column ColId="10" Attno="2" ColName="b" TypeMdid="0.1043.1.0" ColWidth="8"/>
@@ -665,7 +665,7 @@ explain select * from foo left join bar on bar.a=foo.a and bar.a<foo.b left oute
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.951397.1.0" TableName="zoo">
+                <dxl:TableDescriptor Mdid="6.951397.1.0" TableName="zoo">
                   <dxl:Columns>
                     <dxl:Column ColId="18" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="8"/>
                     <dxl:Column ColId="19" Attno="2" ColName="b" TypeMdid="0.1043.1.0" ColWidth="8"/>

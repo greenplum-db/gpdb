@@ -224,7 +224,7 @@ EXPLAIN SELECT * FROM s i1, t t2 where t2.c2 = i1.c2  and t2.c3 > i1.c3 or t2.c1
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.31264029.1.1" Name="t" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.31264029.1.0" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
+      <dxl:Relation Mdid="6.31264029.1.0" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -276,7 +276,7 @@ EXPLAIN SELECT * FROM s i1, t t2 where t2.c2 = i1.c2  and t2.c3 > i1.c3 or t2.c1
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.31264029.1.1" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
+      <dxl:Relation Mdid="6.31264029.1.1" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -381,7 +381,7 @@ EXPLAIN SELECT * FROM s i1, t t2 where t2.c2 = i1.c2  and t2.c3 > i1.c3 or t2.c1
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.31264057.1.1" Name="s" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.31264057.1.1" Name="s" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
+      <dxl:Relation Mdid="6.31264057.1.1" Name="s" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -451,7 +451,7 @@ EXPLAIN SELECT * FROM s i1, t t2 where t2.c2 = i1.c2  and t2.c3 > i1.c3 or t2.c1
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.31264057.1.1" TableName="s">
+          <dxl:TableDescriptor Mdid="6.31264057.1.1" TableName="s">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="c1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="c2" TypeMdid="0.25.1.0"/>
@@ -471,7 +471,7 @@ EXPLAIN SELECT * FROM s i1, t t2 where t2.c2 = i1.c2  and t2.c3 > i1.c3 or t2.c1
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.31264029.1.1" TableName="t">
+          <dxl:TableDescriptor Mdid="6.31264029.1.1" TableName="t">
             <dxl:Columns>
               <dxl:Column ColId="15" Attno="1" ColName="c1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="16" Attno="2" ColName="c2" TypeMdid="0.25.1.0"/>
@@ -668,7 +668,7 @@ EXPLAIN SELECT * FROM s i1, t t2 where t2.c2 = i1.c2  and t2.c3 > i1.c3 or t2.c1
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.31264057.1.1" TableName="s">
+              <dxl:TableDescriptor Mdid="6.31264057.1.1" TableName="s">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="c1" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="1" Attno="2" ColName="c2" TypeMdid="0.25.1.0"/>
@@ -758,7 +758,7 @@ EXPLAIN SELECT * FROM s i1, t t2 where t2.c2 = i1.c2  and t2.c3 > i1.c3 or t2.c1
                 <dxl:IndexDescriptor Mdid="0.31264085.1.0" IndexName="idx_t_1"/>
               </dxl:BitmapIndexProbe>
             </dxl:BitmapOr>
-            <dxl:TableDescriptor Mdid="0.31264029.1.1" TableName="t">
+            <dxl:TableDescriptor Mdid="6.31264029.1.1" TableName="t">
               <dxl:Columns>
                 <dxl:Column ColId="14" Attno="1" ColName="c1" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="15" Attno="2" ColName="c2" TypeMdid="0.25.1.0"/>

@@ -63,7 +63,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:MDCast Mdid="3.1043.1.0;25.1.0" Name="text" BinaryCoercible="true" SourceTypeId="0.1043.1.0" DestinationTypeId="0.25.1.0" CastFuncId="0.0.0.0"/>
-      <dxl:Relation Mdid="0.17068.1.0" Name="customer_address" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;19,13">
+      <dxl:Relation Mdid="6.17068.1.0" Name="customer_address" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;19,13">
         <dxl:Columns>
           <dxl:Column Name="ca_address_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1415,7 +1415,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.17068.1.1" Name="customer_address" Rows="50221.000000"/>
-      <dxl:Relation Mdid="0.17068.1.1" Name="customer_address" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;19,13">
+      <dxl:Relation Mdid="6.17068.1.1" Name="customer_address" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;19,13">
         <dxl:Columns>
           <dxl:Column Name="ca_address_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -2039,7 +2039,7 @@
           <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAAEVVuaXRlZCBTdGF0ZXM=" LintValue="702178094"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.17068.1.1" TableName="customer_address">
+          <dxl:TableDescriptor Mdid="6.17068.1.1" TableName="customer_address">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="ca_address_sk" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="ca_address_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
@@ -2167,7 +2167,7 @@
               <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAAEVVuaXRlZCBTdGF0ZXM=" LintValue="702178094"/>
             </dxl:Comparison>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.17068.1.1" TableName="customer_address">
+          <dxl:TableDescriptor Mdid="6.17068.1.1" TableName="customer_address">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="ca_address_sk" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="ca_address_id" TypeMdid="0.1042.1.0" ColWidth="16"/>

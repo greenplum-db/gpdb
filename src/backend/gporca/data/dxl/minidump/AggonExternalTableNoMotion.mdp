@@ -141,7 +141,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.196638.1.0" Name="ext_expenses" Rows="1000000.000000" EmptyRelation="false"/>
-      <dxl:ExternalRelation Mdid="0.196638.1.0" Name="ext_expenses" DistributionPolicy="Random" Keys="11,5">
+      <dxl:ExternalRelation Mdid="6.196638.1.0" Name="ext_expenses" DistributionPolicy="Random" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="name" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -248,7 +248,7 @@
               <dxl:Column ColId="1" Attno="1" ColName="name" TypeMdid="0.25.1.0"/>
             </dxl:Columns>
             <dxl:LogicalExternalGet>
-              <dxl:TableDescriptor Mdid="0.196638.1.0" TableName="ext_expenses">
+              <dxl:TableDescriptor Mdid="6.196638.1.0" TableName="ext_expenses">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="name" TypeMdid="0.25.1.0" ColWidth="8"/>
                   <dxl:Column ColId="2" Attno="2" ColName="date" TypeMdid="0.1082.1.0" ColWidth="4"/>
@@ -266,7 +266,7 @@
               </dxl:TableDescriptor>
             </dxl:LogicalExternalGet>
             <dxl:LogicalExternalGet>
-              <dxl:TableDescriptor Mdid="0.196638.1.0" TableName="ext_expenses">
+              <dxl:TableDescriptor Mdid="6.196638.1.0" TableName="ext_expenses">
                 <dxl:Columns>
                   <dxl:Column ColId="13" Attno="1" ColName="name" TypeMdid="0.25.1.0" ColWidth="8"/>
                   <dxl:Column ColId="14" Attno="2" ColName="date" TypeMdid="0.1082.1.0" ColWidth="4"/>
@@ -285,7 +285,7 @@
             </dxl:LogicalExternalGet>
           </dxl:UnionAll>
           <dxl:LogicalExternalGet>
-            <dxl:TableDescriptor Mdid="0.196638.1.0" TableName="ext_expenses">
+            <dxl:TableDescriptor Mdid="6.196638.1.0" TableName="ext_expenses">
               <dxl:Columns>
                 <dxl:Column ColId="25" Attno="1" ColName="name" TypeMdid="0.25.1.0" ColWidth="8"/>
                 <dxl:Column ColId="26" Attno="2" ColName="date" TypeMdid="0.1082.1.0" ColWidth="4"/>
@@ -373,7 +373,7 @@
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.196638.1.0" TableName="ext_expenses">
+                <dxl:TableDescriptor Mdid="6.196638.1.0" TableName="ext_expenses">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="name" TypeMdid="0.25.1.0" ColWidth="8"/>
                     <dxl:Column ColId="5" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -396,7 +396,7 @@
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.196638.1.0" TableName="ext_expenses">
+                <dxl:TableDescriptor Mdid="6.196638.1.0" TableName="ext_expenses">
                   <dxl:Columns>
                     <dxl:Column ColId="12" Attno="1" ColName="name" TypeMdid="0.25.1.0" ColWidth="8"/>
                     <dxl:Column ColId="17" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -419,7 +419,7 @@
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.196638.1.0" TableName="ext_expenses">
+                <dxl:TableDescriptor Mdid="6.196638.1.0" TableName="ext_expenses">
                   <dxl:Columns>
                     <dxl:Column ColId="24" Attno="1" ColName="name" TypeMdid="0.25.1.0" ColWidth="8"/>
                     <dxl:Column ColId="29" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

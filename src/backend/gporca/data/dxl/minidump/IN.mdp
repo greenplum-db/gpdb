@@ -695,7 +695,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.41018.1.1" Name="part" Rows="200092.000000"/>
-      <dxl:Relation Mdid="0.41018.1.1" Name="part" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="15,9">
+      <dxl:Relation Mdid="6.41018.1.1" Name="part" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="15,9">
         <dxl:Columns>
           <dxl:Column Name="p_partkey" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -985,7 +985,7 @@
           </dxl:Array>
         </dxl:ArrayComp>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.41018.1.1" TableName="part">
+          <dxl:TableDescriptor Mdid="6.41018.1.1" TableName="part">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="p_partkey" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="p_name" TypeMdid="0.1043.1.0" ColWidth="55"/>
@@ -1088,7 +1088,7 @@
               </dxl:Array>
             </dxl:ArrayComp>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.41018.1.1" TableName="part">
+          <dxl:TableDescriptor Mdid="6.41018.1.1" TableName="part">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="p_partkey" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="p_name" TypeMdid="0.1043.1.0" ColWidth="55"/>

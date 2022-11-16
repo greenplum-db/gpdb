@@ -126,7 +126,7 @@
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.9459819.1.1" Name="foobar" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.9459819.1.0" Name="foobar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.9459819.1.0" Name="foobar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="x1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -165,7 +165,7 @@
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.9459819.1.1" Name="foobar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.9459819.1.1" Name="foobar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="x1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -224,7 +224,7 @@
           </dxl:Comparison>
         </dxl:And>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.9459819.1.1" TableName="foobar">
+          <dxl:TableDescriptor Mdid="6.9459819.1.1" TableName="foobar">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="x1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="x2" TypeMdid="0.23.1.0"/>
@@ -283,7 +283,7 @@
             </dxl:IndexCondList>
             <dxl:IndexDescriptor Mdid="0.9459845.1.0" IndexName="x2_idx"/>
           </dxl:BitmapIndexProbe>
-          <dxl:TableDescriptor Mdid="0.9459819.1.1" TableName="foobar">
+          <dxl:TableDescriptor Mdid="6.9459819.1.1" TableName="foobar">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="x1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="x2" TypeMdid="0.23.1.0"/>

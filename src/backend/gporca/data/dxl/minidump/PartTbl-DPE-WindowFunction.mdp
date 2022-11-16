@@ -533,7 +533,7 @@
       <dxl:ColumnStatistics Mdid="1.71316.1.1.7" Name="tableoid" Width="4.000000" NullFreq="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.71316.1.1.6" Name="cmax" Width="4.000000" NullFreq="0.000000"/>
       <dxl:RelationStatistics Mdid="2.71316.1.1" Name="pat" Rows="100009.000000"/>
-      <dxl:Relation Mdid="0.71316.1.1" Name="pat" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.71316.1.1" Name="pat" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -570,7 +570,7 @@
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.71822.1.1" Name="jpat" Rows="10000.000000"/>
-      <dxl:Relation Mdid="0.71822.1.1" Name="jpat" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.71822.1.1" Name="jpat" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -647,7 +647,7 @@
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.71822.1.1" TableName="jpat">
+            <dxl:TableDescriptor Mdid="6.71822.1.1" TableName="jpat">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.1082.1.0"/>
@@ -663,7 +663,7 @@
           </dxl:LogicalGet>
         </dxl:LogicalWindow>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.71316.1.1" TableName="pat">
+          <dxl:TableDescriptor Mdid="6.71316.1.1" TableName="pat">
             <dxl:Columns>
               <dxl:Column ColId="11" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="12" Attno="2" ColName="b" TypeMdid="0.1082.1.0"/>
@@ -743,7 +743,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.71316.1.1" TableName="pat">
+            <dxl:TableDescriptor Mdid="6.71316.1.1" TableName="pat">
               <dxl:Columns>
                 <dxl:Column ColId="10" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.1082.1.0"/>
@@ -757,7 +757,7 @@
               </dxl:Columns>
             </dxl:TableDescriptor>
           </dxl:DynamicTableScan>
-          <dxl:PartitionSelector RelationMdid="0.71316.1.1" PartitionLevels="1" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.71316.1.1" PartitionLevels="1" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -889,7 +889,7 @@
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.71822.1.1" TableName="jpat">
+                        <dxl:TableDescriptor Mdid="6.71822.1.1" TableName="jpat">
                           <dxl:Columns>
                             <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                             <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.1082.1.0"/>

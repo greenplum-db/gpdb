@@ -145,7 +145,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
       <dxl:ColumnStatistics Mdid="1.1695223.1.1.1" Name="j" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.1695223.1.1.0" Name="i" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.1695223.1.1" Name="pt2" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.1695223.1.0" Name="pt2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.1695223.1.0" Name="pt2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -196,7 +196,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1695223.1.1" Name="pt2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.1695223.1.1" Name="pt2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -347,7 +347,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
             <dxl:ConstValue TypeMdid="0.23.1.0" Value="5"/>
           </dxl:Comparison>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.1695223.1.1" TableName="pt2">
+            <dxl:TableDescriptor Mdid="6.1695223.1.1" TableName="pt2">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -513,7 +513,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
                           <dxl:Ident ColId="2" ColName="k" TypeMdid="0.23.1.0"/>
                         </dxl:ProjElem>
                       </dxl:ProjList>
-                      <dxl:PartitionSelector RelationMdid="0.1695223.1.1" PartitionLevels="1" ScanId="1">
+                      <dxl:PartitionSelector RelationMdid="6.1695223.1.1" PartitionLevels="1" ScanId="1">
                         <dxl:Properties>
                           <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                         </dxl:Properties>
@@ -562,7 +562,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
                           </dxl:Comparison>
                         </dxl:IndexCondList>
                         <dxl:IndexDescriptor Mdid="0.1695490.1.0" IndexName="pt2_idx_1_prt_1"/>
-                        <dxl:TableDescriptor Mdid="0.1695223.1.1" TableName="pt2">
+                        <dxl:TableDescriptor Mdid="6.1695223.1.1" TableName="pt2">
                           <dxl:Columns>
                             <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                             <dxl:Column ColId="1" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>

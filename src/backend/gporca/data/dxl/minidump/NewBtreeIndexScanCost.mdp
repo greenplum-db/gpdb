@@ -2345,7 +2345,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.36716.1.0" Name="oip" Rows="4106050.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.36716.1.0" Name="oip" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="15,9" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.36716.1.0" Name="oip" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="15,9" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
             <dxl:DefaultValue/>
@@ -3994,7 +3994,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.36722.1.0" Name="ria" Rows="248710000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.36722.1.0" Name="ria" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="19,20,14" PartitionColumns="11" PartitionTypes="r" NumberLeafPartitions="579">
+      <dxl:Relation Mdid="6.36722.1.0" Name="ria" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="19,20,14" PartitionColumns="11" PartitionTypes="r" NumberLeafPartitions="579">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
             <dxl:DefaultValue/>
@@ -4112,7 +4112,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.36716.1.0" TableName="oip">
+          <dxl:TableDescriptor Mdid="6.36716.1.0" TableName="oip">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="id" TypeMdid="0.20.1.0" ColWidth="8"/>
               <dxl:Column ColId="2" Attno="2" ColName="oid" TypeMdid="0.20.1.0" ColWidth="8"/>
@@ -4134,7 +4134,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.36722.1.0" TableName="ria">
+          <dxl:TableDescriptor Mdid="6.36722.1.0" TableName="ria">
             <dxl:Columns>
               <dxl:Column ColId="17" Attno="1" ColName="id" TypeMdid="0.20.1.0" ColWidth="8"/>
               <dxl:Column ColId="18" Attno="2" ColName="ip" TypeMdid="0.869.1.0" ColWidth="7"/>
@@ -4403,7 +4403,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="194073"/>
                 </dxl:Comparison>
               </dxl:Filter>
-              <dxl:TableDescriptor Mdid="0.36716.1.0" TableName="oip">
+              <dxl:TableDescriptor Mdid="6.36716.1.0" TableName="oip">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="id" TypeMdid="0.20.1.0" ColWidth="8"/>
                   <dxl:Column ColId="1" Attno="2" ColName="oid" TypeMdid="0.20.1.0" ColWidth="8"/>
@@ -4473,7 +4473,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
                 <dxl:Ident ColId="29" ColName="filter_match_id" TypeMdid="0.20.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:PartitionSelector RelationMdid="0.36722.1.0" PartitionLevels="1" ScanId="1">
+            <dxl:PartitionSelector RelationMdid="6.36722.1.0" PartitionLevels="1" ScanId="1">
               <dxl:Properties>
                 <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
               </dxl:Properties>
@@ -4550,7 +4550,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
                 </dxl:Comparison>
               </dxl:IndexCondList>
               <dxl:IndexDescriptor Mdid="0.48950.1.0" IndexName="ssm_ria_ip_1_prt_1"/>
-              <dxl:TableDescriptor Mdid="0.36722.1.0" TableName="ria">
+              <dxl:TableDescriptor Mdid="6.36722.1.0" TableName="ria">
                 <dxl:Columns>
                   <dxl:Column ColId="16" Attno="1" ColName="id" TypeMdid="0.20.1.0" ColWidth="8"/>
                   <dxl:Column ColId="17" Attno="2" ColName="ip" TypeMdid="0.869.1.0" ColWidth="7"/>

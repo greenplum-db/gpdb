@@ -194,7 +194,7 @@
       <dxl:ColumnStatistics Mdid="1.1418258.1.1.5" Name="xmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.1418258.1.1.4" Name="cmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.1418258.1.1" Name="foo" Rows="10.000000"/>
-      <dxl:Relation Mdid="0.1418258.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.1418258.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -239,7 +239,7 @@
       <dxl:CTEList>
         <dxl:LogicalCTEProducer CTEId="1" Columns="1,2">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.1418258.1.1" TableName="foo">
+            <dxl:TableDescriptor Mdid="6.1418258.1.1" TableName="foo">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -335,7 +335,7 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.1418258.1.1" TableName="foo">
+              <dxl:TableDescriptor Mdid="6.1418258.1.1" TableName="foo">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

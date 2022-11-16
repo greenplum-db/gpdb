@@ -37,7 +37,7 @@ WHERE  sach_vsnr = 465132477;
       <dxl:TraceFlags Value="101013,102001,102002,102003,102115,102116,102120,102128,102134,102135,102136,102144,103001,103014,103015,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
-      <dxl:Relation Mdid="0.42167058.1.1" Name="test_row_number_step2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,3">
+      <dxl:Relation Mdid="6.42167058.1.1" Name="test_row_number_step2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="ag" Attno="1" Mdid="0.21.1.0" Nullable="true" ColWidth="2">
             <dxl:DefaultValue/>
@@ -233,7 +233,7 @@ WHERE  sach_vsnr = 465132477;
       <dxl:ColumnStatistics Mdid="1.42167032.1.1.3" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.42167032.1.1.2" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.42167032.1.1" Name="test_row_number_step1" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.42167032.1.1" Name="test_row_number_step1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="8,2">
+      <dxl:Relation Mdid="6.42167032.1.1" Name="test_row_number_step1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="ag" Attno="1" Mdid="0.21.1.0" Nullable="true" ColWidth="2">
             <dxl:DefaultValue/>
@@ -276,7 +276,7 @@ WHERE  sach_vsnr = 465132477;
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalInsert InsertColumns="1,2,11">
-        <dxl:TableDescriptor Mdid="0.42167058.1.1" TableName="test_row_number_step2">
+        <dxl:TableDescriptor Mdid="6.42167058.1.1" TableName="test_row_number_step2">
           <dxl:Columns>
             <dxl:Column ColId="12" Attno="1" ColName="ag" TypeMdid="0.21.1.0"/>
             <dxl:Column ColId="13" Attno="2" ColName="sach_vsnr" TypeMdid="0.23.1.0"/>
@@ -319,7 +319,7 @@ WHERE  sach_vsnr = 465132477;
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="465132477"/>
               </dxl:Comparison>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.42167032.1.1" TableName="test_row_number_step1">
+                <dxl:TableDescriptor Mdid="6.42167032.1.1" TableName="test_row_number_step1">
                   <dxl:Columns>
                     <dxl:Column ColId="1" Attno="1" ColName="ag" TypeMdid="0.21.1.0"/>
                     <dxl:Column ColId="2" Attno="2" ColName="sach_vsnr" TypeMdid="0.23.1.0"/>
@@ -359,7 +359,7 @@ WHERE  sach_vsnr = 465132477;
             <dxl:Ident ColId="10" ColName="idx_lfd_053" TypeMdid="0.23.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="0.42167058.1.1" TableName="test_row_number_step2">
+        <dxl:TableDescriptor Mdid="6.42167058.1.1" TableName="test_row_number_step2">
           <dxl:Columns>
             <dxl:Column ColId="12" Attno="1" ColName="ag" TypeMdid="0.21.1.0"/>
             <dxl:Column ColId="13" Attno="2" ColName="sach_vsnr" TypeMdid="0.23.1.0"/>
@@ -468,7 +468,7 @@ WHERE  sach_vsnr = 465132477;
                       <dxl:ConstValue TypeMdid="0.23.1.0" Value="465132477"/>
                     </dxl:Comparison>
                   </dxl:Filter>
-                  <dxl:TableDescriptor Mdid="0.42167032.1.1" TableName="test_row_number_step1">
+                  <dxl:TableDescriptor Mdid="6.42167032.1.1" TableName="test_row_number_step1">
                     <dxl:Columns>
                       <dxl:Column ColId="0" Attno="1" ColName="ag" TypeMdid="0.21.1.0"/>
                       <dxl:Column ColId="1" Attno="2" ColName="sach_vsnr" TypeMdid="0.23.1.0"/>

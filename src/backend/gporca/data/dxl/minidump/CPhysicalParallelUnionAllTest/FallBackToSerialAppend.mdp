@@ -122,7 +122,7 @@ SELECT * FROM pp WHERE b=2 AND c=2;
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.2435227.1.1" Name="pp" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="3">
+      <dxl:Relation Mdid="6.2435227.1.1" Name="pp" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -294,7 +294,7 @@ SELECT * FROM pp WHERE b=2 AND c=2;
           </dxl:Comparison>
         </dxl:And>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.2435227.1.1" TableName="pp">
+          <dxl:TableDescriptor Mdid="6.2435227.1.1" TableName="pp">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -366,7 +366,7 @@ SELECT * FROM pp WHERE b=2 AND c=2;
                 <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:PartitionSelector RelationMdid="0.2435227.1.1" PartitionLevels="1" ScanId="1">
+            <dxl:PartitionSelector RelationMdid="6.2435227.1.1" PartitionLevels="1" ScanId="1">
               <dxl:Properties>
                 <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
               </dxl:Properties>
@@ -549,7 +549,7 @@ SELECT * FROM pp WHERE b=2 AND c=2;
                   </dxl:Comparison>
                 </dxl:IndexCondList>
                 <dxl:IndexDescriptor Mdid="0.2435371.1.0" IndexName="pp_1_prt_1_idx"/>
-                <dxl:TableDescriptor Mdid="0.2435227.1.1" TableName="pp">
+                <dxl:TableDescriptor Mdid="6.2435227.1.1" TableName="pp">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -592,7 +592,7 @@ SELECT * FROM pp WHERE b=2 AND c=2;
                   </dxl:Comparison>
                 </dxl:IndexCondList>
                 <dxl:IndexDescriptor Mdid="0.2435390.1.0" IndexName="pp_rest_1_idx"/>
-                <dxl:TableDescriptor Mdid="0.2435227.1.1" TableName="pp">
+                <dxl:TableDescriptor Mdid="6.2435227.1.1" TableName="pp">
                   <dxl:Columns>
                     <dxl:Column ColId="10" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

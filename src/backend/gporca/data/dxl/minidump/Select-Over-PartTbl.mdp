@@ -293,7 +293,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.559056.1.1" Name="lineitem" Rows="1536080000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.559056.1.1" Name="lineitem" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="21,22,16" PartitionColumns="10" PartitionTypes="r">
+      <dxl:Relation Mdid="6.559056.1.1" Name="lineitem" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="21,22,16" PartitionColumns="10" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="l_orderkey" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -2579,7 +2579,7 @@
           <dxl:ConstValue TypeMdid="0.1082.1.0" Value="BPb//w==" LintValue="-2556"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.559056.1.1" TableName="lineitem">
+          <dxl:TableDescriptor Mdid="6.559056.1.1" TableName="lineitem">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="l_orderkey" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="l_partkey" TypeMdid="0.23.1.0"/>
@@ -2720,7 +2720,7 @@
               <dxl:Ident ColId="15" ColName="l_comment" TypeMdid="0.1043.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
-          <dxl:PartitionSelector RelationMdid="0.559056.1.1" PartitionLevels="1" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.559056.1.1" PartitionLevels="1" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -2801,7 +2801,7 @@
                 <dxl:ConstValue TypeMdid="0.1082.1.0" Value="BPb//w==" LintValue="-2556"/>
               </dxl:Comparison>
             </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.559056.1.1" TableName="lineitem">
+            <dxl:TableDescriptor Mdid="6.559056.1.1" TableName="lineitem">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="l_orderkey" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="l_partkey" TypeMdid="0.23.1.0"/>

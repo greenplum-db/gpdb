@@ -403,7 +403,7 @@ OR
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.1260.1.1.18" Name="oid" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.2898.1.1" Name="pg_foreign_data_wrapper" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.2898.1.1" Name="pg_foreign_data_wrapper" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="12,5">
+      <dxl:Relation Mdid="6.2898.1.1" Name="pg_foreign_data_wrapper" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="12,5">
         <dxl:Columns>
           <dxl:Column Name="fdwname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="8">
             <dxl:DefaultValue/>
@@ -522,7 +522,7 @@ OR
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.1260.1.1.0" Name="rolname" Width="64.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.1260.1.1" Name="pg_authid" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1260.1.0" Name="pg_authid" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="24,17">
+      <dxl:Relation Mdid="6.1260.1.0" Name="pg_authid" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="24,17">
         <dxl:Columns>
           <dxl:Column Name="rolname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -610,7 +610,7 @@ OR
         </dxl:Triggers>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1260.1.1" Name="pg_authid" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="24,17">
+      <dxl:Relation Mdid="6.1260.1.1" Name="pg_authid" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="24,17">
         <dxl:Columns>
           <dxl:Column Name="rolname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -793,7 +793,7 @@ OR
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.1260.1.1" TableName="pg_authid">
+          <dxl:TableDescriptor Mdid="6.1260.1.1" TableName="pg_authid">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="rolname" TypeMdid="0.19.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="rolsuper" TypeMdid="0.16.1.0"/>
@@ -824,7 +824,7 @@ OR
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.1260.1.1" TableName="pg_authid">
+          <dxl:TableDescriptor Mdid="6.1260.1.1" TableName="pg_authid">
             <dxl:Columns>
               <dxl:Column ColId="26" Attno="1" ColName="rolname" TypeMdid="0.19.1.0"/>
               <dxl:Column ColId="27" Attno="2" ColName="rolsuper" TypeMdid="0.16.1.0"/>
@@ -855,7 +855,7 @@ OR
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.2898.1.1" TableName="pg_foreign_data_wrapper">
+          <dxl:TableDescriptor Mdid="6.2898.1.1" TableName="pg_foreign_data_wrapper">
             <dxl:Columns>
               <dxl:Column ColId="51" Attno="1" ColName="fdwname" TypeMdid="0.19.1.0"/>
               <dxl:Column ColId="52" Attno="2" ColName="fdwowner" TypeMdid="0.26.1.0"/>
@@ -897,7 +897,7 @@ OR
                     <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAACVVTQUdF" LintValue="34644846"/>
                   </dxl:FuncExpr>
                   <dxl:LogicalGet>
-                    <dxl:TableDescriptor Mdid="0.1260.1.1" TableName="pg_authid" ExecuteAsUser="10">
+                    <dxl:TableDescriptor Mdid="6.1260.1.1" TableName="pg_authid" ExecuteAsUser="10">
                       <dxl:Columns>
                         <dxl:Column ColId="64" Attno="1" ColName="rolname" TypeMdid="0.19.1.0"/>
                         <dxl:Column ColId="65" Attno="2" ColName="rolsuper" TypeMdid="0.16.1.0"/>
@@ -948,7 +948,7 @@ OR
                     <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAACVVTQUdF" LintValue="34644846"/>
                   </dxl:FuncExpr>
                   <dxl:LogicalGet>
-                    <dxl:TableDescriptor Mdid="0.1260.1.1" TableName="pg_authid" ExecuteAsUser="10">
+                    <dxl:TableDescriptor Mdid="6.1260.1.1" TableName="pg_authid" ExecuteAsUser="10">
                       <dxl:Columns>
                         <dxl:Column ColId="90" Attno="1" ColName="rolname" TypeMdid="0.19.1.0"/>
                         <dxl:Column ColId="91" Attno="2" ColName="rolsuper" TypeMdid="0.16.1.0"/>
@@ -1264,7 +1264,7 @@ OR
                             <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAACVVTQUdF" LintValue="34644846"/>
                           </dxl:FuncExpr>
                         </dxl:Filter>
-                        <dxl:TableDescriptor Mdid="0.1260.1.1" TableName="pg_authid" ExecuteAsUser="10">
+                        <dxl:TableDescriptor Mdid="6.1260.1.1" TableName="pg_authid" ExecuteAsUser="10">
                           <dxl:Columns>
                             <dxl:Column ColId="63" Attno="1" ColName="rolname" TypeMdid="0.19.1.0"/>
                             <dxl:Column ColId="80" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -1400,7 +1400,7 @@ OR
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.1260.1.1" TableName="pg_authid">
+              <dxl:TableDescriptor Mdid="6.1260.1.1" TableName="pg_authid">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="rolname" TypeMdid="0.19.1.0"/>
                   <dxl:Column ColId="1" Attno="2" ColName="rolsuper" TypeMdid="0.16.1.0"/>
@@ -1453,7 +1453,7 @@ OR
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.2898.1.1" TableName="pg_foreign_data_wrapper">
+            <dxl:TableDescriptor Mdid="6.2898.1.1" TableName="pg_foreign_data_wrapper">
               <dxl:Columns>
                 <dxl:Column ColId="50" Attno="1" ColName="fdwname" TypeMdid="0.19.1.0"/>
                 <dxl:Column ColId="51" Attno="2" ColName="fdwowner" TypeMdid="0.26.1.0"/>
@@ -1532,7 +1532,7 @@ OR
                           <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAACVVTQUdF" LintValue="34644846"/>
                         </dxl:FuncExpr>
                       </dxl:Filter>
-                      <dxl:TableDescriptor Mdid="0.1260.1.1" TableName="pg_authid" ExecuteAsUser="10">
+                      <dxl:TableDescriptor Mdid="6.1260.1.1" TableName="pg_authid" ExecuteAsUser="10">
                         <dxl:Columns>
                           <dxl:Column ColId="89" Attno="1" ColName="rolname" TypeMdid="0.19.1.0"/>
                           <dxl:Column ColId="106" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -1668,7 +1668,7 @@ OR
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.1260.1.1" TableName="pg_authid">
+            <dxl:TableDescriptor Mdid="6.1260.1.1" TableName="pg_authid">
               <dxl:Columns>
                 <dxl:Column ColId="25" Attno="1" ColName="rolname" TypeMdid="0.19.1.0"/>
                 <dxl:Column ColId="26" Attno="2" ColName="rolsuper" TypeMdid="0.16.1.0"/>

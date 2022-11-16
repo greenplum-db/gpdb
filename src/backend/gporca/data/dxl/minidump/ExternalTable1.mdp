@@ -137,7 +137,7 @@
       <dxl:ColumnStatistics Mdid="1.18324.1.1.1" Name="n_name" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.18324.1.1.0" Name="n_nationkey" Width="8.000000"/>
       <dxl:RelationStatistics Mdid="2.18324.1.1" Name="ext_1" Rows="1000000.000000"/>
-      <dxl:ExternalRelation Mdid="0.18324.1.1" Name="ext_1" DistributionPolicy="Random" Keys="10,4">
+      <dxl:ExternalRelation Mdid="6.18324.1.1" Name="ext_1" DistributionPolicy="Random" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="n_nationkey" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -191,7 +191,7 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalExternalGet>
-        <dxl:TableDescriptor Mdid="0.18324.1.1" TableName="ext_1">
+        <dxl:TableDescriptor Mdid="6.18324.1.1" TableName="ext_1">
           <dxl:Columns>
             <dxl:Column ColId="1" Attno="1" ColName="n_nationkey" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="2" Attno="2" ColName="n_name" TypeMdid="0.1042.1.0" ColWidth="25"/>
@@ -248,7 +248,7 @@
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:TableDescriptor Mdid="0.18324.1.1" TableName="ext_1">
+          <dxl:TableDescriptor Mdid="6.18324.1.1" TableName="ext_1">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="n_nationkey" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="n_name" TypeMdid="0.1042.1.0" ColWidth="25"/>

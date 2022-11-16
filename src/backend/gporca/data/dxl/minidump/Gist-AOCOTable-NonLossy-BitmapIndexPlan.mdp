@@ -122,7 +122,7 @@ Optimizer: Pivotal Optimizer (GPORCA)
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.566277.1.0" Name="aoco_gist_tbl" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.566277.1.0" Name="aoco_gist_tbl" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.566277.1.0" Name="aoco_gist_tbl" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -242,7 +242,7 @@ Optimizer: Pivotal Optimizer (GPORCA)
             <dxl:ConstValue TypeMdid="0.603.1.0" Value="AAAAAAAACEAAAAAAAAAQQAAAAAAAAPA/AAAAAAAAAEA="/>
           </dxl:Comparison>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.566277.1.0" TableName="aoco_gist_tbl">
+            <dxl:TableDescriptor Mdid="6.566277.1.0" TableName="aoco_gist_tbl">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="id" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.603.1.0" ColWidth="32"/>
@@ -311,7 +311,7 @@ Optimizer: Pivotal Optimizer (GPORCA)
               </dxl:IndexCondList>
               <dxl:IndexDescriptor Mdid="0.566300.1.0" IndexName="boxindex"/>
             </dxl:BitmapIndexProbe>
-            <dxl:TableDescriptor Mdid="0.566277.1.0" TableName="aoco_gist_tbl">
+            <dxl:TableDescriptor Mdid="6.566277.1.0" TableName="aoco_gist_tbl">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="id" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.603.1.0" ColWidth="32"/>

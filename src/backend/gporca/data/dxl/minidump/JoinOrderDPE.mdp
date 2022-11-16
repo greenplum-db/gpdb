@@ -84,7 +84,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.9432789.1.0" Name="jazz" Rows="600.000000" RelPages="0" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.9432789.1.0" Name="jazz" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="9">
+      <dxl:Relation Mdid="6.9432789.1.0" Name="jazz" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="9">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -637,7 +637,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.9432829.1.0" Name="foo" Rows="19.000000" RelPages="0" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.9432829.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="9">
+      <dxl:Relation Mdid="6.9432829.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="9">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1572,7 +1572,7 @@
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.9432869.1.0" Name="bar" Rows="1500.000000" RelPages="0" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.9432869.1.0" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="9">
+      <dxl:Relation Mdid="6.9432869.1.0" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="9">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1622,7 +1622,7 @@
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.9432829.1.0" TableName="foo">
+          <dxl:TableDescriptor Mdid="6.9432829.1.0" TableName="foo">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -1637,7 +1637,7 @@
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.9432869.1.0" TableName="bar">
+          <dxl:TableDescriptor Mdid="6.9432869.1.0" TableName="bar">
             <dxl:Columns>
               <dxl:Column ColId="10" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -1652,7 +1652,7 @@
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.9432789.1.0" TableName="jazz">
+          <dxl:TableDescriptor Mdid="6.9432789.1.0" TableName="jazz">
             <dxl:Columns>
               <dxl:Column ColId="19" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="20" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -1779,7 +1779,7 @@
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="4"/>
                 </dxl:Comparison>
               </dxl:Filter>
-              <dxl:TableDescriptor Mdid="0.9432789.1.0" TableName="jazz">
+              <dxl:TableDescriptor Mdid="6.9432789.1.0" TableName="jazz">
                 <dxl:Columns>
                   <dxl:Column ColId="18" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="19" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -1793,7 +1793,7 @@
                 </dxl:Columns>
               </dxl:TableDescriptor>
             </dxl:DynamicTableScan>
-            <dxl:PartitionSelector RelationMdid="0.9432789.1.0" PartitionLevels="1" ScanId="3">
+            <dxl:PartitionSelector RelationMdid="6.9432789.1.0" PartitionLevels="1" ScanId="3">
               <dxl:Properties>
                 <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
               </dxl:Properties>
@@ -1851,7 +1851,7 @@
                       <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
                     </dxl:ProjElem>
                   </dxl:ProjList>
-                  <dxl:PartitionSelector RelationMdid="0.9432829.1.0" PartitionLevels="1" ScanId="1">
+                  <dxl:PartitionSelector RelationMdid="6.9432829.1.0" PartitionLevels="1" ScanId="1">
                     <dxl:Properties>
                       <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                     </dxl:Properties>
@@ -1895,7 +1895,7 @@
                         <dxl:ConstValue TypeMdid="0.23.1.0" Value="4"/>
                       </dxl:Comparison>
                     </dxl:Filter>
-                    <dxl:TableDescriptor Mdid="0.9432829.1.0" TableName="foo">
+                    <dxl:TableDescriptor Mdid="6.9432829.1.0" TableName="foo">
                       <dxl:Columns>
                         <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                         <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -1940,7 +1940,7 @@
                 <dxl:Ident ColId="10" ColName="b" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:PartitionSelector RelationMdid="0.9432869.1.0" PartitionLevels="1" ScanId="2">
+            <dxl:PartitionSelector RelationMdid="6.9432869.1.0" PartitionLevels="1" ScanId="2">
               <dxl:Properties>
                 <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
               </dxl:Properties>
@@ -1984,7 +1984,7 @@
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="4"/>
                 </dxl:Comparison>
               </dxl:Filter>
-              <dxl:TableDescriptor Mdid="0.9432869.1.0" TableName="bar">
+              <dxl:TableDescriptor Mdid="6.9432869.1.0" TableName="bar">
                 <dxl:Columns>
                   <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="10" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>

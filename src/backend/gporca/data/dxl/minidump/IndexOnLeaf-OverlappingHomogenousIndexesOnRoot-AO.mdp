@@ -131,7 +131,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE d > 10;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.24606.1.0" Name="foo_1_prt_p2" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.24606.1.0" Name="foo_1_prt_p2" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.24606.1.0" Name="foo_1_prt_p2" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -164,7 +164,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE d > 10;
           <dxl:CheckConstraint Mdid="0.24608.1.0"/>
         </dxl:CheckConstraints>
       </dxl:Relation>
-      <dxl:CheckConstraint Mdid="0.24608.1.0" Name="foo_1_prt_p2_check" RelationMdid="0.24606.1.0">
+      <dxl:CheckConstraint Mdid="0.24608.1.0" Name="foo_1_prt_p2_check" RelationMdid="6.24606.1.0">
         <dxl:And>
           <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
             <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -198,7 +198,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE d > 10;
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.24606.1.0" TableName="foo_1_prt_p2">
+          <dxl:TableDescriptor Mdid="6.24606.1.0" TableName="foo_1_prt_p2">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -267,7 +267,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE d > 10;
             </dxl:IndexCondList>
             <dxl:IndexDescriptor Mdid="0.24718.1.0" IndexName="complete_idx_cd_1_prt_p2"/>
           </dxl:BitmapIndexProbe>
-          <dxl:TableDescriptor Mdid="0.24606.1.0" TableName="foo_1_prt_p2">
+          <dxl:TableDescriptor Mdid="6.24606.1.0" TableName="foo_1_prt_p2">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>

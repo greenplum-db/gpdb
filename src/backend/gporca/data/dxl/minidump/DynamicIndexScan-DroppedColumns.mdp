@@ -91,7 +91,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:MDCast Mdid="3.1043.1.0;25.1.0" Name="text" BinaryCoercible="true" SourceTypeId="0.1043.1.0" DestinationTypeId="0.25.1.0" CastFuncId="0.0.0.0"/>
-      <dxl:Relation Mdid="0.566955.1.0" Name="testbug_char5" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" PartitionColumns="0" PartitionTypes="l">
+      <dxl:Relation Mdid="6.566955.1.0" Name="testbug_char5" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" PartitionColumns="0" PartitionTypes="l">
         <dxl:Columns>
           <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
             <dxl:DefaultValue/>
@@ -308,7 +308,7 @@
         <dxl:ResultType Mdid="0.26.1.0"/>
       </dxl:GPDBFunc>
       <dxl:RelationStatistics Mdid="2.566955.1.1" Name="testbug_char5" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.566955.1.1" Name="testbug_char5" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" PartitionColumns="0" PartitionTypes="l">
+      <dxl:Relation Mdid="6.566955.1.1" Name="testbug_char5" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" PartitionColumns="0" PartitionTypes="l">
         <dxl:Columns>
           <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
             <dxl:DefaultValue/>
@@ -396,7 +396,7 @@
           <dxl:ConstValue TypeMdid="0.1042.1.0" Value="AAAABTE=" LintValue="161096236"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.566955.1.1" TableName="testbug_char5">
+          <dxl:TableDescriptor Mdid="6.566955.1.1" TableName="testbug_char5">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="timest" TypeMdid="0.1043.1.0" ColWidth="6"/>
               <dxl:Column ColId="2" Attno="2" ColName="user_id" TypeMdid="0.1700.1.0"/>
@@ -453,7 +453,7 @@
               <dxl:Ident ColId="3" ColName="tag2" TypeMdid="0.1042.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
-          <dxl:PartitionSelector RelationMdid="0.566955.1.1" PartitionLevels="1" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.566955.1.1" PartitionLevels="1" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -500,7 +500,7 @@
               </dxl:Comparison>
             </dxl:IndexCondList>
             <dxl:IndexDescriptor Mdid="0.567110.1.0" IndexName="testbug_char5_tag1_1_prt_part201203"/>
-            <dxl:TableDescriptor Mdid="0.566955.1.1" TableName="testbug_char5">
+            <dxl:TableDescriptor Mdid="6.566955.1.1" TableName="testbug_char5">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="timest" TypeMdid="0.1043.1.0" ColWidth="6"/>
                 <dxl:Column ColId="1" Attno="2" ColName="user_id" TypeMdid="0.1700.1.0"/>

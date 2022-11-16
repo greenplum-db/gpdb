@@ -38,7 +38,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.32768.1.0" Name="replicated_table" Rows="100.000000" RelPages="1" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.32768.1.0" Name="replicated_table" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32768.1.0" Name="replicated_table" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="val1" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="19">
             <dxl:DefaultValue/>
@@ -72,7 +72,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.32776.1.0" Name="distributed_table" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32776.1.0" Name="distributed_table" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="_etl_id" Attno="1" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
             <dxl:DefaultValue>
@@ -279,7 +279,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalInsert InsertColumns="10,1,2">
-        <dxl:TableDescriptor Mdid="0.32776.1.0" TableName="distributed_table" LockMode="3">
+        <dxl:TableDescriptor Mdid="6.32776.1.0" TableName="distributed_table" LockMode="3">
           <dxl:Columns>
             <dxl:Column ColId="11" Attno="1" ColName="_etl_id" TypeMdid="0.20.1.0" ColWidth="8"/>
             <dxl:Column ColId="12" Attno="2" ColName="val1" TypeMdid="0.1043.1.0" ColWidth="19"/>
@@ -302,7 +302,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.32768.1.0" TableName="replicated_table" LockMode="1">
+            <dxl:TableDescriptor Mdid="6.32768.1.0" TableName="replicated_table" LockMode="1">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="val1" TypeMdid="0.1043.1.0" ColWidth="19"/>
                 <dxl:Column ColId="2" Attno="2" ColName="val2" TypeMdid="0.1043.1.0" ColWidth="19"/>
@@ -336,7 +336,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
             <dxl:Ident ColId="1" ColName="val2" TypeMdid="0.1043.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="0.32776.1.0" TableName="distributed_table" LockMode="3">
+        <dxl:TableDescriptor Mdid="6.32776.1.0" TableName="distributed_table" LockMode="3">
           <dxl:Columns>
             <dxl:Column ColId="11" Attno="1" ColName="_etl_id" TypeMdid="0.20.1.0" ColWidth="8"/>
             <dxl:Column ColId="12" Attno="2" ColName="val1" TypeMdid="0.1043.1.0" ColWidth="19"/>
@@ -441,7 +441,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.32768.1.0" TableName="replicated_table" LockMode="1">
+                  <dxl:TableDescriptor Mdid="6.32768.1.0" TableName="replicated_table" LockMode="1">
                     <dxl:Columns>
                       <dxl:Column ColId="0" Attno="1" ColName="val1" TypeMdid="0.1043.1.0" ColWidth="19"/>
                       <dxl:Column ColId="1" Attno="2" ColName="val2" TypeMdid="0.1043.1.0" ColWidth="19"/>

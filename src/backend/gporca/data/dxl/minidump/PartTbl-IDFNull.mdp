@@ -132,7 +132,7 @@ EXPLAIN SELECT * FROM listfoo WHERE b IS DISTINCT FROM NULL;
       <dxl:ColumnStatistics Mdid="1.319609.1.0.1" Name="b" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.319609.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.319609.1.0" Name="listfoo" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.319609.1.0" Name="listfoo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="l" NumberLeafPartitions="5">
+      <dxl:Relation Mdid="6.319609.1.0" Name="listfoo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="l" NumberLeafPartitions="5">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -184,7 +184,7 @@ EXPLAIN SELECT * FROM listfoo WHERE b IS DISTINCT FROM NULL;
           <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
         </dxl:IsDistinctFrom>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.319609.1.0" TableName="listfoo">
+          <dxl:TableDescriptor Mdid="6.319609.1.0" TableName="listfoo">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -234,7 +234,7 @@ EXPLAIN SELECT * FROM listfoo WHERE b IS DISTINCT FROM NULL;
               <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
-          <dxl:PartitionSelector RelationMdid="0.319609.1.0" PartitionLevels="1" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.319609.1.0" PartitionLevels="1" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -283,7 +283,7 @@ EXPLAIN SELECT * FROM listfoo WHERE b IS DISTINCT FROM NULL;
                 <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
               </dxl:IsDistinctFrom>
             </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.319609.1.0" TableName="listfoo">
+            <dxl:TableDescriptor Mdid="6.319609.1.0" TableName="listfoo">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>

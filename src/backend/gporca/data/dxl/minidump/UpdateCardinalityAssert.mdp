@@ -139,7 +139,7 @@
       <dxl:ColumnStatistics Mdid="1.229435.1.1.2" Name="ctid" Width="6.000000"/>
       <dxl:MDCast Mdid="3.23.1.0;23.1.0" Name="int4" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.23.1.0" CastFuncId="0.0.0.0"/>
       <dxl:RelationStatistics Mdid="2.229458.1.1" Name="s" Rows="1.000000"/>
-      <dxl:Relation Mdid="0.229458.1.1" Name="s" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.229458.1.1" Name="s" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -178,7 +178,7 @@
       <dxl:ColumnStatistics Mdid="1.229435.1.1.5" Name="xmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.229435.1.1.4" Name="cmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.229435.1.1" Name="r" Rows="1.000000"/>
-      <dxl:Relation Mdid="0.229435.1.1" Name="r" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.229435.1.1" Name="r" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -223,7 +223,7 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalUpdate DeleteColumns="1,2" InsertColumns="11,2" CtidCol="3" SegmentIdCol="9" PreserveOids="false">
-        <dxl:TableDescriptor Mdid="0.229435.1.1" TableName="r">
+        <dxl:TableDescriptor Mdid="6.229435.1.1" TableName="r">
           <dxl:Columns>
             <dxl:Column ColId="19" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="20" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -238,7 +238,7 @@
         </dxl:TableDescriptor>
         <dxl:LogicalJoin JoinType="Inner">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.229435.1.1" TableName="r">
+            <dxl:TableDescriptor Mdid="6.229435.1.1" TableName="r">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -253,7 +253,7 @@
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.229458.1.1" TableName="s">
+            <dxl:TableDescriptor Mdid="6.229458.1.1" TableName="s">
               <dxl:Columns>
                 <dxl:Column ColId="10" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -288,7 +288,7 @@
             <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="0.229435.1.1" TableName="r">
+        <dxl:TableDescriptor Mdid="6.229435.1.1" TableName="r">
           <dxl:Columns>
             <dxl:Column ColId="20" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="21" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -447,7 +447,7 @@
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.229435.1.1" TableName="r">
+                    <dxl:TableDescriptor Mdid="6.229435.1.1" TableName="r">
                       <dxl:Columns>
                         <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                         <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -489,7 +489,7 @@
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.229458.1.1" TableName="s">
+                    <dxl:TableDescriptor Mdid="6.229458.1.1" TableName="s">
                       <dxl:Columns>
                         <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                         <dxl:Column ColId="10" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

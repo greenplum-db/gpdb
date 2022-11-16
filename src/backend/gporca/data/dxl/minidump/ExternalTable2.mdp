@@ -121,7 +121,7 @@
       <dxl:ColumnStatistics Mdid="1.18347.1.1.7" Name="gp_segment_id" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.18347.1.1.6" Name="tableoid" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.18347.1.1" Name="ext_2" Rows="1000000.000000"/>
-      <dxl:ExternalRelation Mdid="0.18347.1.1" Name="ext_2" DistributionPolicy="Random" Keys="7,1">
+      <dxl:ExternalRelation Mdid="6.18347.1.1" Name="ext_2" DistributionPolicy="Random" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="x" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -161,7 +161,7 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalExternalGet>
-        <dxl:TableDescriptor Mdid="0.18347.1.1" TableName="ext_2">
+        <dxl:TableDescriptor Mdid="6.18347.1.1" TableName="ext_2">
           <dxl:Columns>
             <dxl:Column ColId="1" Attno="1" ColName="x" TypeMdid="0.25.1.0"/>
             <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -197,7 +197,7 @@
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:TableDescriptor Mdid="0.18347.1.1" TableName="ext_2">
+          <dxl:TableDescriptor Mdid="6.18347.1.1" TableName="ext_2">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="x" TypeMdid="0.25.1.0"/>
               <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

@@ -74,7 +74,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.73740.1.1" Name="foo6" Rows="1000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.73740.1.1" Name="foo6" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.73740.1.1" Name="foo6" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="f1" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -390,7 +390,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.73895.1.1" Name="foo10" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.73895.1.1" Name="foo10" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.73895.1.1" Name="foo10" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="4,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="i1" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -413,7 +413,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.73771.1.1" Name="foo7" Rows="1000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.73771.1.1" Name="foo7" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="11,9" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.73771.1.1" Name="foo7" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="11,9" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="m1" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -770,7 +770,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
       </dxl:ColumnStatistics>
       <dxl:MDCast Mdid="3.1043.1.0;25.1.0" Name="text" BinaryCoercible="true" SourceTypeId="0.1043.1.0" DestinationTypeId="0.25.1.0" CastFuncId="0.0.0.0"/>
       <dxl:RelationStatistics Mdid="2.73802.1.1" Name="foo8" Rows="1000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.73802.1.1" Name="foo8" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.73802.1.1" Name="foo8" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="h1" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1332,7 +1332,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.73833.1.1" Name="foo9" Rows="1000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.73833.1.1" Name="foo9" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.73833.1.1" Name="foo9" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="g1" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1677,7 +1677,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
           <dxl:LogicalJoin JoinType="Inner">
             <dxl:LogicalJoin JoinType="Inner">
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.73740.1.1" TableName="foo6">
+                <dxl:TableDescriptor Mdid="6.73740.1.1" TableName="foo6">
                   <dxl:Columns>
                     <dxl:Column ColId="1" Attno="1" ColName="f1" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -1687,7 +1687,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
                 </dxl:TableDescriptor>
               </dxl:LogicalGet>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.73771.1.1" TableName="foo7">
+                <dxl:TableDescriptor Mdid="6.73771.1.1" TableName="foo7">
                   <dxl:Columns>
                     <dxl:Column ColId="5" Attno="1" ColName="m1" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="6" Attno="2" ColName="m2" TypeMdid="0.23.1.0"/>
@@ -1710,7 +1710,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
               </dxl:Comparison>
             </dxl:LogicalJoin>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.73802.1.1" TableName="foo8">
+              <dxl:TableDescriptor Mdid="6.73802.1.1" TableName="foo8">
                 <dxl:Columns>
                   <dxl:Column ColId="17" Attno="1" ColName="h1" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="18" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -1725,7 +1725,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
             </dxl:Comparison>
           </dxl:LogicalJoin>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.73833.1.1" TableName="foo9">
+            <dxl:TableDescriptor Mdid="6.73833.1.1" TableName="foo9">
               <dxl:Columns>
                 <dxl:Column ColId="21" Attno="1" ColName="g1" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="22" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -1747,7 +1747,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
             <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABkVO" LintValue="698204972"/>
           </dxl:Comparison>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.73895.1.1" TableName="foo10">
+            <dxl:TableDescriptor Mdid="6.73895.1.1" TableName="foo10">
               <dxl:Columns>
                 <dxl:Column ColId="25" Attno="1" ColName="i1" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="26" Attno="2" ColName="i2" TypeMdid="0.1043.1.0" ColWidth="60"/>
@@ -1977,7 +1977,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.73771.1.1" TableName="foo7">
+                        <dxl:TableDescriptor Mdid="6.73771.1.1" TableName="foo7">
                           <dxl:Columns>
                             <dxl:Column ColId="4" Attno="1" ColName="m1" TypeMdid="0.23.1.0"/>
                             <dxl:Column ColId="5" Attno="2" ColName="m2" TypeMdid="0.23.1.0"/>
@@ -2019,7 +2019,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
                               <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABkVO" LintValue="698204972"/>
                             </dxl:Comparison>
                           </dxl:Filter>
-                          <dxl:TableDescriptor Mdid="0.73895.1.1" TableName="foo10">
+                          <dxl:TableDescriptor Mdid="6.73895.1.1" TableName="foo10">
                             <dxl:Columns>
                               <dxl:Column ColId="24" Attno="1" ColName="i1" TypeMdid="0.23.1.0"/>
                               <dxl:Column ColId="25" Attno="2" ColName="i2" TypeMdid="0.1043.1.0" ColWidth="60"/>
@@ -2058,7 +2058,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:TableDescriptor Mdid="0.73740.1.1" TableName="foo6">
+                      <dxl:TableDescriptor Mdid="6.73740.1.1" TableName="foo6">
                         <dxl:Columns>
                           <dxl:Column ColId="0" Attno="1" ColName="f1" TypeMdid="0.23.1.0"/>
                           <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -2096,7 +2096,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.73802.1.1" TableName="foo8">
+                  <dxl:TableDescriptor Mdid="6.73802.1.1" TableName="foo8">
                     <dxl:Columns>
                       <dxl:Column ColId="16" Attno="1" ColName="h1" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="17" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -2134,7 +2134,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.73833.1.1" TableName="foo9">
+              <dxl:TableDescriptor Mdid="6.73833.1.1" TableName="foo9">
                 <dxl:Columns>
                   <dxl:Column ColId="20" Attno="1" ColName="g1" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="21" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

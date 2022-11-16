@@ -128,7 +128,7 @@ Optimizer status: PQO version 2.65.1
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.573684.1.0" Name="gist_tbl" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.573684.1.0" Name="gist_tbl" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.573684.1.0" Name="gist_tbl" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="b" Attno="1" Mdid="0.603.1.0" Nullable="true" ColWidth="32">
             <dxl:DefaultValue/>
@@ -239,7 +239,7 @@ Optimizer status: PQO version 2.65.1
           <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAaAQAAAAAAAAAAAAUQAAAAAAAABRAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#10;AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABRAAAAAAAAAFEAAAAAAAAAUQAAA&#10;AAAAABRAAAAAAAAAAAA="/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.573684.1.0" TableName="gist_tbl">
+          <dxl:TableDescriptor Mdid="6.573684.1.0" TableName="gist_tbl">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="b" TypeMdid="0.603.1.0" ColWidth="32"/>
               <dxl:Column ColId="2" Attno="2" ColName="p" TypeMdid="0.604.1.0" ColWidth="101"/>
@@ -290,7 +290,7 @@ Optimizer status: PQO version 2.65.1
             </dxl:Comparison>
           </dxl:IndexCondList>
           <dxl:IndexDescriptor Mdid="0.573703.1.0" IndexName="gist_tbl_point_index"/>
-          <dxl:TableDescriptor Mdid="0.573684.1.0" TableName="gist_tbl">
+          <dxl:TableDescriptor Mdid="6.573684.1.0" TableName="gist_tbl">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="2" ColName="p" TypeMdid="0.604.1.0" ColWidth="101"/>
               <dxl:Column ColId="3" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

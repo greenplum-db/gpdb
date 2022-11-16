@@ -181,7 +181,7 @@
       <dxl:ColumnStatistics Mdid="1.17306732.1.1.13" Name="value" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.17306732.1.1.12" Name="measurename" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.17306732.1.1" Name="mr_star1_deltas_dh" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.17306732.1.1" Name="mr_star1_deltas_dh" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17306732.1.1" Name="mr_star1_deltas_dh" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -337,7 +337,7 @@
         <dxl:IntermediateResultType Mdid="0.701.1.0"/>
       </dxl:GPDBAgg>
       <dxl:RelationStatistics Mdid="2.17327104.1.1" Name="mr_star1_gammas_dh" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.17327104.1.1" Name="mr_star1_gammas_dh" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17327104.1.1" Name="mr_star1_gammas_dh" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -488,7 +488,7 @@
       <dxl:ColumnStatistics Mdid="1.17306732.1.1.0" Name="riskrunid" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.17306732.1.1.9" Name="contractid" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.17298420.1.1" Name="mr_star1_cashflows_dh" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.17298420.1.1" Name="mr_star1_cashflows_dh" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17298420.1.1" Name="mr_star1_cashflows_dh" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -660,7 +660,7 @@
                 </dxl:Comparison>
               </dxl:And>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.17298420.1.1" TableName="mr_star1_cashflows_dh">
+                <dxl:TableDescriptor Mdid="6.17298420.1.1" TableName="mr_star1_cashflows_dh">
                   <dxl:Columns>
                     <dxl:Column ColId="1" Attno="1" ColName="riskrunid" TypeMdid="0.20.1.0"/>
                     <dxl:Column ColId="2" Attno="2" ColName="riskrunsubid" TypeMdid="0.23.1.0"/>
@@ -730,7 +730,7 @@
                 </dxl:Comparison>
               </dxl:And>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.17306732.1.1" TableName="mr_star1_deltas_dh">
+                <dxl:TableDescriptor Mdid="6.17306732.1.1" TableName="mr_star1_deltas_dh">
                   <dxl:Columns>
                     <dxl:Column ColId="34" Attno="1" ColName="riskrunid" TypeMdid="0.20.1.0"/>
                     <dxl:Column ColId="35" Attno="2" ColName="riskrunsubid" TypeMdid="0.23.1.0"/>
@@ -801,7 +801,7 @@
               </dxl:Comparison>
             </dxl:And>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.17327104.1.1" TableName="mr_star1_gammas_dh">
+              <dxl:TableDescriptor Mdid="6.17327104.1.1" TableName="mr_star1_gammas_dh">
                 <dxl:Columns>
                   <dxl:Column ColId="67" Attno="1" ColName="riskrunid" TypeMdid="0.20.1.0"/>
                   <dxl:Column ColId="68" Attno="2" ColName="riskrunsubid" TypeMdid="0.23.1.0"/>
@@ -1043,7 +1043,7 @@
                             <dxl:Ident ColId="28" ColName="bookname" TypeMdid="0.1043.1.0"/>
                           </dxl:ProjElem>
                         </dxl:ProjList>
-                        <dxl:PartitionSelector RelationMdid="0.17298420.1.1" PartitionLevels="1" ScanId="1">
+                        <dxl:PartitionSelector RelationMdid="6.17298420.1.1" PartitionLevels="1" ScanId="1">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                           </dxl:Properties>
@@ -1108,7 +1108,7 @@
                               </dxl:Comparison>
                             </dxl:And>
                           </dxl:Filter>
-                          <dxl:TableDescriptor Mdid="0.17298420.1.1" TableName="mr_star1_cashflows_dh">
+                          <dxl:TableDescriptor Mdid="6.17298420.1.1" TableName="mr_star1_cashflows_dh">
                             <dxl:Columns>
                               <dxl:Column ColId="2" Attno="3" ColName="businessdate" TypeMdid="0.1082.1.0"/>
                               <dxl:Column ColId="9" Attno="10" ColName="contractid" TypeMdid="0.1043.1.0" ColWidth="128"/>
@@ -1298,7 +1298,7 @@
                             <dxl:Ident ColId="61" ColName="bookname" TypeMdid="0.1043.1.0"/>
                           </dxl:ProjElem>
                         </dxl:ProjList>
-                        <dxl:PartitionSelector RelationMdid="0.17306732.1.1" PartitionLevels="1" ScanId="2">
+                        <dxl:PartitionSelector RelationMdid="6.17306732.1.1" PartitionLevels="1" ScanId="2">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                           </dxl:Properties>
@@ -1363,7 +1363,7 @@
                               </dxl:Comparison>
                             </dxl:And>
                           </dxl:Filter>
-                          <dxl:TableDescriptor Mdid="0.17306732.1.1" TableName="mr_star1_deltas_dh">
+                          <dxl:TableDescriptor Mdid="6.17306732.1.1" TableName="mr_star1_deltas_dh">
                             <dxl:Columns>
                               <dxl:Column ColId="35" Attno="3" ColName="businessdate" TypeMdid="0.1082.1.0"/>
                               <dxl:Column ColId="42" Attno="10" ColName="contractid" TypeMdid="0.1043.1.0" ColWidth="128"/>
@@ -1553,7 +1553,7 @@
                             <dxl:Ident ColId="94" ColName="bookname" TypeMdid="0.1043.1.0"/>
                           </dxl:ProjElem>
                         </dxl:ProjList>
-                        <dxl:PartitionSelector RelationMdid="0.17327104.1.1" PartitionLevels="1" ScanId="3">
+                        <dxl:PartitionSelector RelationMdid="6.17327104.1.1" PartitionLevels="1" ScanId="3">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                           </dxl:Properties>
@@ -1618,7 +1618,7 @@
                               </dxl:Comparison>
                             </dxl:And>
                           </dxl:Filter>
-                          <dxl:TableDescriptor Mdid="0.17327104.1.1" TableName="mr_star1_gammas_dh">
+                          <dxl:TableDescriptor Mdid="6.17327104.1.1" TableName="mr_star1_gammas_dh">
                             <dxl:Columns>
                               <dxl:Column ColId="68" Attno="3" ColName="businessdate" TypeMdid="0.1082.1.0"/>
                               <dxl:Column ColId="75" Attno="10" ColName="contractid" TypeMdid="0.1043.1.0" ColWidth="128"/>

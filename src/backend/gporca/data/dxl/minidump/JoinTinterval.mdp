@@ -175,7 +175,7 @@
           <dxl:Opfamily Mdid="0.12943.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:Relation Mdid="0.20910.1.0" Name="tinterval_tbl" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.20910.1.0" Name="tinterval_tbl" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="f1" Attno="1" Mdid="0.704.1.0" Nullable="true" ColWidth="12">
             <dxl:DefaultValue/>
@@ -270,7 +270,7 @@
           </dxl:ProjList>
           <dxl:LogicalJoin JoinType="Inner">
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.20910.1.0" TableName="tinterval_tbl">
+              <dxl:TableDescriptor Mdid="6.20910.1.0" TableName="tinterval_tbl">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="f1" TypeMdid="0.704.1.0" ColWidth="12"/>
                   <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -284,7 +284,7 @@
               </dxl:TableDescriptor>
             </dxl:LogicalGet>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.20910.1.0" TableName="tinterval_tbl">
+              <dxl:TableDescriptor Mdid="6.20910.1.0" TableName="tinterval_tbl">
                 <dxl:Columns>
                   <dxl:Column ColId="9" Attno="1" ColName="f1" TypeMdid="0.704.1.0" ColWidth="12"/>
                   <dxl:Column ColId="10" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -416,7 +416,7 @@
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.20910.1.0" TableName="tinterval_tbl">
+                  <dxl:TableDescriptor Mdid="6.20910.1.0" TableName="tinterval_tbl">
                     <dxl:Columns>
                       <dxl:Column ColId="0" Attno="1" ColName="f1" TypeMdid="0.704.1.0" ColWidth="12"/>
                       <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -456,7 +456,7 @@
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.20910.1.0" TableName="tinterval_tbl">
+                  <dxl:TableDescriptor Mdid="6.20910.1.0" TableName="tinterval_tbl">
                     <dxl:Columns>
                       <dxl:Column ColId="8" Attno="1" ColName="f1" TypeMdid="0.704.1.0" ColWidth="12"/>
                       <dxl:Column ColId="9" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

@@ -188,7 +188,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.18205.1.0" Name="t" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.18205.1.0" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.18205.1.0" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -250,7 +250,7 @@
       <dxl:CTEList>
         <dxl:LogicalCTEProducer CTEId="1" Columns="1">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.18205.1.0" TableName="t" ExecuteAsUser="10">
+            <dxl:TableDescriptor Mdid="6.18205.1.0" TableName="t" ExecuteAsUser="10">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -281,7 +281,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.18205.1.0" TableName="t" ExecuteAsUser="10">
+              <dxl:TableDescriptor Mdid="6.18205.1.0" TableName="t" ExecuteAsUser="10">
                 <dxl:Columns>
                   <dxl:Column ColId="10" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -299,7 +299,7 @@
         </dxl:LogicalCTEProducer>
         <dxl:LogicalCTEProducer CTEId="3" Columns="27">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.18205.1.0" TableName="t" ExecuteAsUser="10">
+            <dxl:TableDescriptor Mdid="6.18205.1.0" TableName="t" ExecuteAsUser="10">
               <dxl:Columns>
                 <dxl:Column ColId="27" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="28" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -330,7 +330,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.18205.1.0" TableName="t" ExecuteAsUser="10">
+              <dxl:TableDescriptor Mdid="6.18205.1.0" TableName="t" ExecuteAsUser="10">
                 <dxl:Columns>
                   <dxl:Column ColId="36" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="37" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -521,7 +521,7 @@
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.18205.1.0" TableName="t" ExecuteAsUser="10">
+                <dxl:TableDescriptor Mdid="6.18205.1.0" TableName="t" ExecuteAsUser="10">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                     <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -614,7 +614,7 @@
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:TableDescriptor Mdid="0.18205.1.0" TableName="t" ExecuteAsUser="10">
+                      <dxl:TableDescriptor Mdid="6.18205.1.0" TableName="t" ExecuteAsUser="10">
                         <dxl:Columns>
                           <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                           <dxl:Column ColId="11" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -856,7 +856,7 @@
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:TableDescriptor Mdid="0.18205.1.0" TableName="t" ExecuteAsUser="10">
+                      <dxl:TableDescriptor Mdid="6.18205.1.0" TableName="t" ExecuteAsUser="10">
                         <dxl:Columns>
                           <dxl:Column ColId="60" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                           <dxl:Column ColId="62" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -957,7 +957,7 @@
                                 </dxl:ProjElem>
                               </dxl:ProjList>
                               <dxl:Filter/>
-                              <dxl:TableDescriptor Mdid="0.18205.1.0" TableName="t" ExecuteAsUser="10">
+                              <dxl:TableDescriptor Mdid="6.18205.1.0" TableName="t" ExecuteAsUser="10">
                                 <dxl:Columns>
                                   <dxl:Column ColId="69" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                                   <dxl:Column ColId="71" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

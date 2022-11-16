@@ -123,7 +123,7 @@
       <dxl:GPDBFunc Mdid="0.17037.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:Relation Mdid="0.18534.1.1" Name="p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.18534.1.1" Name="p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -170,7 +170,7 @@
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.18534.1.1" TableName="p">
+          <dxl:TableDescriptor Mdid="6.18534.1.1" TableName="p">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -263,7 +263,7 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.18534.1.1" TableName="p">
+              <dxl:TableDescriptor Mdid="6.18534.1.1" TableName="p">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

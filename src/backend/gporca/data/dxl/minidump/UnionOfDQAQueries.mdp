@@ -172,7 +172,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.471019.1.1" Name="sale" Rows="12.000000"/>
-      <dxl:Relation Mdid="0.471019.1.1" Name="sale" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;12,6">
+      <dxl:Relation Mdid="6.471019.1.1" Name="sale" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;12,6">
         <dxl:Columns>
           <dxl:Column Name="cn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -353,7 +353,7 @@
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.471019.1.1" TableName="sale">
+            <dxl:TableDescriptor Mdid="6.471019.1.1" TableName="sale">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="cn" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="vn" TypeMdid="0.23.1.0"/>
@@ -387,7 +387,7 @@
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.471019.1.1" TableName="sale">
+            <dxl:TableDescriptor Mdid="6.471019.1.1" TableName="sale">
               <dxl:Columns>
                 <dxl:Column ColId="15" Attno="1" ColName="cn" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="16" Attno="2" ColName="vn" TypeMdid="0.23.1.0"/>
@@ -520,7 +520,7 @@
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.471019.1.1" TableName="sale">
+                    <dxl:TableDescriptor Mdid="6.471019.1.1" TableName="sale">
                       <dxl:Columns>
                         <dxl:Column ColId="0" Attno="1" ColName="cn" TypeMdid="0.23.1.0"/>
                         <dxl:Column ColId="1" Attno="2" ColName="vn" TypeMdid="0.23.1.0"/>
@@ -628,7 +628,7 @@
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.471019.1.1" TableName="sale">
+                        <dxl:TableDescriptor Mdid="6.471019.1.1" TableName="sale">
                           <dxl:Columns>
                             <dxl:Column ColId="14" Attno="1" ColName="cn" TypeMdid="0.23.1.0"/>
                             <dxl:Column ColId="15" Attno="2" ColName="vn" TypeMdid="0.23.1.0"/>

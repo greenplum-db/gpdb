@@ -933,7 +933,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.74486.1.0" Name="foo" Rows="83527200.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.74486.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="1,0" Keys="54,52" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.74486.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="1,0" Keys="54,52" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="pl" Attno="1" Mdid="0.1043.1.0" TypeModifier="10" Nullable="false" ColWidth="7">
             <dxl:DefaultValue/>
@@ -1205,7 +1205,7 @@
           </dxl:ArrayComp>
         </dxl:And>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.74486.1.0" TableName="foo">
+          <dxl:TableDescriptor Mdid="6.74486.1.0" TableName="foo">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="pl" TypeMdid="0.1043.1.0" TypeModifier="10" ColWidth="7"/>
               <dxl:Column ColId="2" Attno="2" ColName="pcd" TypeMdid="0.1114.1.0" ColWidth="8"/>
@@ -1645,7 +1645,7 @@
             </dxl:IndexCondList>
             <dxl:IndexDescriptor Mdid="0.74747.1.0" IndexName="idx_foo_ad"/>
           </dxl:BitmapIndexProbe>
-          <dxl:TableDescriptor Mdid="0.74486.1.0" TableName="foo">
+          <dxl:TableDescriptor Mdid="6.74486.1.0" TableName="foo">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="pl" TypeMdid="0.1043.1.0" TypeModifier="10" ColWidth="7"/>
               <dxl:Column ColId="1" Attno="2" ColName="pcd" TypeMdid="0.1114.1.0" ColWidth="8"/>

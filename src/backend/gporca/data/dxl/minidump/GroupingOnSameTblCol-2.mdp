@@ -1497,7 +1497,7 @@
       <dxl:MDCast Mdid="3.1114.1.0;1114.1.0" Name="timestamp" BinaryCoercible="true" SourceTypeId="0.1114.1.0" DestinationTypeId="0.1114.1.0" CastFuncId="0.0.0.0"/>
       <dxl:MDCast Mdid="3.1043.1.0;25.1.0" Name="text" BinaryCoercible="true" SourceTypeId="0.1043.1.0" DestinationTypeId="0.25.1.0" CastFuncId="0.0.0.0"/>
       <dxl:RelationStatistics Mdid="2.2284492.1.1" Name="coverage" Rows="3780020.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.2284492.1.1" Name="coverage" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="2" Keys="15,13">
+      <dxl:Relation Mdid="6.2284492.1.1" Name="coverage" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="2" Keys="15,13">
         <dxl:Columns>
           <dxl:Column Name="date" Attno="1" Mdid="0.1114.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -3307,7 +3307,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.2372852.1.1" Name="asset_records" Rows="43026700.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.2372852.1.1" Name="asset_records" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="5" Keys="25,26,24" PartitionColumns="23" PartitionTypes="r">
+      <dxl:Relation Mdid="6.2372852.1.1" Name="asset_records" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="5" Keys="25,26,24" PartitionColumns="23" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="parent" Attno="1" Mdid="0.16.1.0" Nullable="true" ColWidth="1">
             <dxl:DefaultValue/>
@@ -4022,7 +4022,7 @@
             </dxl:And>
             <dxl:LogicalJoin JoinType="Left">
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.2372852.1.1" TableName="asset_records">
+                <dxl:TableDescriptor Mdid="6.2372852.1.1" TableName="asset_records">
                   <dxl:Columns>
                     <dxl:Column ColId="1" Attno="1" ColName="parent" TypeMdid="0.16.1.0"/>
                     <dxl:Column ColId="2" Attno="2" ColName="uid" TypeMdid="0.1043.1.0" ColWidth="255"/>
@@ -4055,7 +4055,7 @@
                 </dxl:TableDescriptor>
               </dxl:LogicalGet>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.2284492.1.1" TableName="coverage">
+                <dxl:TableDescriptor Mdid="6.2284492.1.1" TableName="coverage">
                   <dxl:Columns>
                     <dxl:Column ColId="28" Attno="1" ColName="date" TypeMdid="0.1114.1.0"/>
                     <dxl:Column ColId="29" Attno="2" ColName="vendor" TypeMdid="0.1043.1.0" ColWidth="32"/>
@@ -4277,7 +4277,7 @@
                       <dxl:Ident ColId="3" ColName="active" TypeMdid="0.16.1.0"/>
                     </dxl:And>
                   </dxl:Filter>
-                  <dxl:TableDescriptor Mdid="0.2372852.1.1" TableName="asset_records">
+                  <dxl:TableDescriptor Mdid="6.2372852.1.1" TableName="asset_records">
                     <dxl:Columns>
                       <dxl:Column ColId="1" Attno="2" ColName="uid" TypeMdid="0.1043.1.0" ColWidth="255"/>
                       <dxl:Column ColId="3" Attno="4" ColName="active" TypeMdid="0.16.1.0"/>
@@ -4293,7 +4293,7 @@
                     </dxl:Columns>
                   </dxl:TableDescriptor>
                 </dxl:DynamicTableScan>
-                <dxl:PartitionSelector RelationMdid="0.2372852.1.1" PartitionLevels="1" ScanId="1">
+                <dxl:PartitionSelector RelationMdid="6.2372852.1.1" PartitionLevels="1" ScanId="1">
                   <dxl:Properties>
                     <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                   </dxl:Properties>
@@ -4358,7 +4358,7 @@
                           </dxl:IsNull>
                         </dxl:Not>
                       </dxl:Filter>
-                      <dxl:TableDescriptor Mdid="0.2284492.1.1" TableName="coverage">
+                      <dxl:TableDescriptor Mdid="6.2284492.1.1" TableName="coverage">
                         <dxl:Columns>
                           <dxl:Column ColId="27" Attno="1" ColName="date" TypeMdid="0.1114.1.0"/>
                           <dxl:Column ColId="29" Attno="3" ColName="hostname" TypeMdid="0.1043.1.0" ColWidth="64"/>

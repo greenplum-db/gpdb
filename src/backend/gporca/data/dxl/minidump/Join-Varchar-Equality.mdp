@@ -2405,7 +2405,7 @@
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.353643.1.1" Name="shop" Rows="100.000000"/>
       <dxl:RelationStatistics Mdid="2.353591.1.1" Name="products" Rows="10412.000000"/>
-      <dxl:Relation Mdid="0.353643.1.1" Name="shop" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
+      <dxl:Relation Mdid="6.353643.1.1" Name="shop" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
         <dxl:Columns>
           <dxl:Column Name="shop_code" Attno="1" Mdid="0.1043.1.0" Nullable="false" ColWidth="6">
             <dxl:DefaultValue/>
@@ -2454,7 +2454,7 @@
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.353591.1.1" Name="products" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="15,9">
+      <dxl:Relation Mdid="6.353591.1.1" Name="products" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="15,9">
         <dxl:Columns>
           <dxl:Column Name="prod_code" Attno="1" Mdid="0.1043.1.0" Nullable="false" ColWidth="10">
             <dxl:DefaultValue/>
@@ -3194,7 +3194,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.328293.1.1" Name="calendar" Rows="10683.000000"/>
-      <dxl:Relation Mdid="0.328293.1.1" Name="calendar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
+      <dxl:Relation Mdid="6.328293.1.1" Name="calendar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="ymd" Attno="1" Mdid="0.1082.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -3238,7 +3238,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.328475.1.1" Name="fact_sales" Rows="15255100416.000000"/>
-      <dxl:Relation Mdid="0.328475.1.1" Name="fact_sales" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7" PartitionColumns="0">
+      <dxl:Relation Mdid="6.328475.1.1" Name="fact_sales" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7" PartitionColumns="0">
         <dxl:Columns>
           <dxl:Column Name="sales_date" Attno="1" Mdid="0.1082.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -3729,7 +3729,7 @@
         </dxl:ProjList>
         <dxl:LogicalJoin JoinType="Inner">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.328475.1.1" TableName="fact_sales">
+            <dxl:TableDescriptor Mdid="6.328475.1.1" TableName="fact_sales">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="sales_date" TypeMdid="0.1082.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="shop_code" TypeMdid="0.1043.1.0" ColWidth="6"/>
@@ -3745,7 +3745,7 @@
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.353591.1.1" TableName="products">
+            <dxl:TableDescriptor Mdid="6.353591.1.1" TableName="products">
               <dxl:Columns>
                 <dxl:Column ColId="11" Attno="1" ColName="prod_code" TypeMdid="0.1043.1.0" ColWidth="10"/>
                 <dxl:Column ColId="12" Attno="2" ColName="prod_name" TypeMdid="0.1043.1.0" ColWidth="100"/>
@@ -3767,7 +3767,7 @@
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.328293.1.1" TableName="calendar">
+            <dxl:TableDescriptor Mdid="6.328293.1.1" TableName="calendar">
               <dxl:Columns>
                 <dxl:Column ColId="27" Attno="1" ColName="ymd" TypeMdid="0.1082.1.0"/>
                 <dxl:Column ColId="28" Attno="2" ColName="year" TypeMdid="0.1042.1.0" ColWidth="4"/>
@@ -3785,7 +3785,7 @@
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.353643.1.1" TableName="shop">
+            <dxl:TableDescriptor Mdid="6.353643.1.1" TableName="shop">
               <dxl:Columns>
                 <dxl:Column ColId="39" Attno="1" ColName="shop_code" TypeMdid="0.1043.1.0" ColWidth="6"/>
                 <dxl:Column ColId="40" Attno="2" ColName="shop_name" TypeMdid="0.1043.1.0" ColWidth="40"/>
@@ -4091,7 +4091,7 @@
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.328475.1.1" TableName="fact_sales">
+                        <dxl:TableDescriptor Mdid="6.328475.1.1" TableName="fact_sales">
                           <dxl:Columns>
                             <dxl:Column ColId="0" Attno="1" ColName="sales_date" TypeMdid="0.1082.1.0"/>
                             <dxl:Column ColId="1" Attno="2" ColName="shop_code" TypeMdid="0.1043.1.0" ColWidth="6"/>
@@ -4125,7 +4125,7 @@
                             </dxl:ProjElem>
                           </dxl:ProjList>
                           <dxl:Filter/>
-                          <dxl:TableDescriptor Mdid="0.353591.1.1" TableName="products">
+                          <dxl:TableDescriptor Mdid="6.353591.1.1" TableName="products">
                             <dxl:Columns>
                               <dxl:Column ColId="10" Attno="1" ColName="prod_code" TypeMdid="0.1043.1.0" ColWidth="10"/>
                               <dxl:Column ColId="19" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -4140,7 +4140,7 @@
                         </dxl:TableScan>
                       </dxl:BroadcastMotion>
                     </dxl:HashJoin>
-                    <dxl:PartitionSelector RelationMdid="0.328475.1.1" PartitionLevels="1" ScanId="1">
+                    <dxl:PartitionSelector RelationMdid="6.328475.1.1" PartitionLevels="1" ScanId="1">
                       <dxl:Properties>
                         <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                       </dxl:Properties>
@@ -4256,7 +4256,7 @@
                                 </dxl:ProjElem>
                               </dxl:ProjList>
                               <dxl:Filter/>
-                              <dxl:TableDescriptor Mdid="0.353643.1.1" TableName="shop">
+                              <dxl:TableDescriptor Mdid="6.353643.1.1" TableName="shop">
                                 <dxl:Columns>
                                   <dxl:Column ColId="38" Attno="1" ColName="shop_code" TypeMdid="0.1043.1.0" ColWidth="6"/>
                                   <dxl:Column ColId="39" Attno="2" ColName="shop_name" TypeMdid="0.1043.1.0" ColWidth="40"/>
@@ -4298,7 +4298,7 @@
                                 </dxl:Comparison>
                               </dxl:And>
                             </dxl:Filter>
-                            <dxl:TableDescriptor Mdid="0.328293.1.1" TableName="calendar">
+                            <dxl:TableDescriptor Mdid="6.328293.1.1" TableName="calendar">
                               <dxl:Columns>
                                 <dxl:Column ColId="26" Attno="1" ColName="ymd" TypeMdid="0.1082.1.0"/>
                                 <dxl:Column ColId="27" Attno="2" ColName="year" TypeMdid="0.1042.1.0" ColWidth="4"/>

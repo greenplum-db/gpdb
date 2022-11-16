@@ -130,7 +130,7 @@
       <dxl:ColumnStatistics Mdid="1.17029.1.1.5" Name="xmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.17029.1.1.4" Name="cmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.17029.1.1" Name="r" Rows="1000.000000"/>
-      <dxl:Relation Mdid="0.17029.1.1" Name="r" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.17029.1.1" Name="r" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -179,7 +179,7 @@
           <dxl:ConstValue TypeMdid="0.1007.1.0" Value="AAAAIAEAAAAAAAAAFwAAAAIAAAABAAAAAQAAAAIAAAA="/>
         </dxl:ArrayComp>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.17029.1.1" TableName="r">
+          <dxl:TableDescriptor Mdid="6.17029.1.1" TableName="r">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.1007.1.0"/>
@@ -228,7 +228,7 @@
               <dxl:ConstValue TypeMdid="0.1007.1.0" Value="AAAAIAEAAAAAAAAAFwAAAAIAAAABAAAAAQAAAAIAAAA="/>
             </dxl:ArrayComp>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.17029.1.1" TableName="r">
+          <dxl:TableDescriptor Mdid="6.17029.1.1" TableName="r">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.1007.1.0"/>

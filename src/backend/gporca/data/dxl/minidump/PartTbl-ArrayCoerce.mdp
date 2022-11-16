@@ -58,7 +58,7 @@ select * from pt where gender in ( 'F', 'FM');
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.33297.1.1" Name="pt" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.33297.1.1" Name="pt" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="l" NumberLeafPartitions="3">
+      <dxl:Relation Mdid="6.33297.1.1" Name="pt" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="l" NumberLeafPartitions="3">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -226,7 +226,7 @@ select * from pt where gender in ( 'F', 'FM');
           </dxl:ArrayCoerceExpr>
         </dxl:ArrayComp>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.33297.1.1" TableName="pt">
+          <dxl:TableDescriptor Mdid="6.33297.1.1" TableName="pt">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="gender" TypeMdid="0.1043.1.0" ColWidth="2"/>
@@ -269,7 +269,7 @@ select * from pt where gender in ( 'F', 'FM');
               <dxl:Ident ColId="1" ColName="gender" TypeMdid="0.1043.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
-          <dxl:PartitionSelector RelationMdid="0.33297.1.1" PartitionLevels="1" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.33297.1.1" PartitionLevels="1" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -339,7 +339,7 @@ select * from pt where gender in ( 'F', 'FM');
                 </dxl:ArrayCoerceExpr>
               </dxl:ArrayComp>
             </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.33297.1.1" TableName="pt">
+            <dxl:TableDescriptor Mdid="6.33297.1.1" TableName="pt">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="gender" TypeMdid="0.1043.1.0" ColWidth="2"/>

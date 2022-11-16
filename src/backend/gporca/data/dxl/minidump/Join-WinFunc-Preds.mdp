@@ -19,7 +19,7 @@ where e < 10;
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.19556034.1.1" Name="t" Rows="9.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.19556034.1.1" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.19556034.1.1" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -329,7 +329,7 @@ where e < 10;
       <dxl:ColumnStatistics Mdid="1.19556034.1.1.5" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.19556034.1.1.4" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.19556008.1.1" Name="bar" Rows="10.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.19556008.1.1" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.19556008.1.1" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -483,7 +483,7 @@ where e < 10;
           </dxl:ProjList>
           <dxl:LogicalJoin JoinType="Inner">
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.19556034.1.1" TableName="t">
+              <dxl:TableDescriptor Mdid="6.19556034.1.1" TableName="t">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -499,7 +499,7 @@ where e < 10;
               </dxl:TableDescriptor>
             </dxl:LogicalGet>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.19556008.1.1" TableName="bar">
+              <dxl:TableDescriptor Mdid="6.19556008.1.1" TableName="bar">
                 <dxl:Columns>
                   <dxl:Column ColId="11" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="12" Attno="2" ColName="d" TypeMdid="0.23.1.0"/>
@@ -517,7 +517,7 @@ where e < 10;
           </dxl:LogicalJoin>
         </dxl:LogicalWindow>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.19556034.1.1" TableName="t">
+          <dxl:TableDescriptor Mdid="6.19556034.1.1" TableName="t">
             <dxl:Columns>
               <dxl:Column ColId="21" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="22" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -693,7 +693,7 @@ where e < 10;
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.19556034.1.1" TableName="t">
+                    <dxl:TableDescriptor Mdid="6.19556034.1.1" TableName="t">
                       <dxl:Columns>
                         <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                         <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -748,7 +748,7 @@ where e < 10;
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:TableDescriptor Mdid="0.19556008.1.1" TableName="bar">
+                      <dxl:TableDescriptor Mdid="6.19556008.1.1" TableName="bar">
                         <dxl:Columns>
                           <dxl:Column ColId="10" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
                           <dxl:Column ColId="11" Attno="2" ColName="d" TypeMdid="0.23.1.0"/>
@@ -823,7 +823,7 @@ where e < 10;
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.19556034.1.1" TableName="t">
+                <dxl:TableDescriptor Mdid="6.19556034.1.1" TableName="t">
                   <dxl:Columns>
                     <dxl:Column ColId="20" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="21" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

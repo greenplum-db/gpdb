@@ -765,7 +765,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1259.1.1" Name="pg_class" Rows="337.000000"/>
-      <dxl:Relation Mdid="0.1259.1.1" Name="pg_class" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="37,30">
+      <dxl:Relation Mdid="6.1259.1.1" Name="pg_class" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="37,30">
         <dxl:Columns>
           <dxl:Column Name="relname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -890,7 +890,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.2615.1.1" Name="pg_namespace" Rows="7.000000"/>
-      <dxl:Relation Mdid="0.2615.1.1" Name="pg_namespace" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="10,3">
+      <dxl:Relation Mdid="6.2615.1.1" Name="pg_namespace" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="10,3">
         <dxl:Columns>
           <dxl:Column Name="nspname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -949,7 +949,7 @@
         </dxl:Comparison>
         <dxl:LogicalJoin JoinType="Left">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.1259.1.1" TableName="pg_class">
+            <dxl:TableDescriptor Mdid="6.1259.1.1" TableName="pg_class">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="relname" TypeMdid="0.19.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="relnamespace" TypeMdid="0.26.1.0"/>
@@ -993,7 +993,7 @@
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.2615.1.1" TableName="pg_namespace">
+            <dxl:TableDescriptor Mdid="6.2615.1.1" TableName="pg_namespace">
               <dxl:Columns>
                 <dxl:Column ColId="39" Attno="1" ColName="nspname" TypeMdid="0.19.1.0"/>
                 <dxl:Column ColId="40" Attno="2" ColName="nspowner" TypeMdid="0.26.1.0"/>
@@ -1061,7 +1061,7 @@
               <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABXg=" LintValue="160629292"/>
             </dxl:Comparison>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.1259.1.1" TableName="pg_class">
+          <dxl:TableDescriptor Mdid="6.1259.1.1" TableName="pg_class">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="relname" TypeMdid="0.19.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="relnamespace" TypeMdid="0.26.1.0"/>
@@ -1089,7 +1089,7 @@
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:TableDescriptor Mdid="0.2615.1.1" TableName="pg_namespace">
+          <dxl:TableDescriptor Mdid="6.2615.1.1" TableName="pg_namespace">
             <dxl:Columns>
               <dxl:Column ColId="38" Attno="1" ColName="nspname" TypeMdid="0.19.1.0"/>
               <dxl:Column ColId="41" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

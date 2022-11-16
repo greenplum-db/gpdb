@@ -256,7 +256,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.290141.1.1" Name="pt" Rows="100.000000"/>
-      <dxl:Relation Mdid="0.290141.1.1" Name="pt" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5" PartitionColumns="4" PartitionTypes="r">
+      <dxl:Relation Mdid="6.290141.1.1" Name="pt" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5" PartitionColumns="4" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="dist" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -302,7 +302,7 @@
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.290415.1.1" Name="t" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.290415.1.1" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
+      <dxl:Relation Mdid="6.290415.1.1" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="dist" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -494,7 +494,7 @@
                 </dxl:Comparison>
               </dxl:And>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.290415.1.1" TableName="t">
+                <dxl:TableDescriptor Mdid="6.290415.1.1" TableName="t">
                   <dxl:Columns>
                     <dxl:Column ColId="13" Attno="1" ColName="dist" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="14" Attno="2" ColName="tid" TypeMdid="0.23.1.0"/>
@@ -514,7 +514,7 @@
           </dxl:LogicalProject>
         </dxl:SubqueryExists>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.290141.1.1" TableName="pt">
+          <dxl:TableDescriptor Mdid="6.290141.1.1" TableName="pt">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="dist" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="pt1" TypeMdid="0.25.1.0"/>
@@ -614,7 +614,7 @@
                 </dxl:IsNull>
               </dxl:Not>
             </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.290141.1.1" TableName="pt">
+            <dxl:TableDescriptor Mdid="6.290141.1.1" TableName="pt">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="dist" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="pt1" TypeMdid="0.25.1.0"/>
@@ -631,7 +631,7 @@
               </dxl:Columns>
             </dxl:TableDescriptor>
           </dxl:DynamicTableScan>
-          <dxl:PartitionSelector RelationMdid="0.290141.1.1" PartitionLevels="1" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.290141.1.1" PartitionLevels="1" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -716,7 +716,7 @@
                         </dxl:OpExpr>
                       </dxl:Comparison>
                     </dxl:Filter>
-                    <dxl:TableDescriptor Mdid="0.290415.1.1" TableName="t">
+                    <dxl:TableDescriptor Mdid="6.290415.1.1" TableName="t">
                       <dxl:Columns>
                         <dxl:Column ColId="12" Attno="1" ColName="dist" TypeMdid="0.23.1.0"/>
                         <dxl:Column ColId="13" Attno="2" ColName="tid" TypeMdid="0.23.1.0"/>

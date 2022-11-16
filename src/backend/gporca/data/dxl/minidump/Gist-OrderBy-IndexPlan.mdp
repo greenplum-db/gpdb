@@ -236,7 +236,7 @@ Result  (cost=0.00..8.00 rows=2 width=36)
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.573456.1.0" Name="gist_tbl2" Rows="10.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.573456.1.0" Name="gist_tbl2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.573456.1.0" Name="gist_tbl2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -334,7 +334,7 @@ Result  (cost=0.00..8.00 rows=2 width=36)
               <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAWAMAAAAAAAAAAMBVQAAAAAAAwFVAAAAAAABAVUAAAAAAAEBVQAAAAAAA&#10;gFVAAAAAAACAVUAAAAAAAEBVQAAAAAAAwFVAAAAAAADAVUAAAAAAAEBVQA=="/>
             </dxl:Comparison>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.573456.1.0" TableName="gist_tbl2">
+              <dxl:TableDescriptor Mdid="6.573456.1.0" TableName="gist_tbl2">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="2" Attno="2" ColName="p" TypeMdid="0.604.1.0" ColWidth="101"/>
@@ -468,7 +468,7 @@ Result  (cost=0.00..8.00 rows=2 width=36)
                   </dxl:Comparison>
                 </dxl:IndexCondList>
                 <dxl:IndexDescriptor Mdid="0.573475.1.0" IndexName="poly"/>
-                <dxl:TableDescriptor Mdid="0.573456.1.0" TableName="gist_tbl2">
+                <dxl:TableDescriptor Mdid="6.573456.1.0" TableName="gist_tbl2">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                     <dxl:Column ColId="1" Attno="2" ColName="p" TypeMdid="0.604.1.0" ColWidth="101"/>

@@ -131,7 +131,7 @@ select b from foo_bool group by b;
       <dxl:ColumnStatistics Mdid="1.1474154.1.1.1" Name="b" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.1474154.1.1.0" Name="a" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.1474154.1.1" Name="foo_bool" Rows="99999.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1474154.1.1" Name="foo_bool" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.1474154.1.1" Name="foo_bool" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -179,7 +179,7 @@ select b from foo_bool group by b;
         </dxl:GroupingColumns>
         <dxl:ProjList/>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.1474154.1.1" TableName="foo_bool">
+          <dxl:TableDescriptor Mdid="6.1474154.1.1" TableName="foo_bool">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.16.1.0"/>
@@ -274,7 +274,7 @@ select b from foo_bool group by b;
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.1474154.1.1" TableName="foo_bool">
+                  <dxl:TableDescriptor Mdid="6.1474154.1.1" TableName="foo_bool">
                     <dxl:Columns>
                       <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.16.1.0"/>

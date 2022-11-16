@@ -12,7 +12,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.106508.1.1" Name="mpp_r6756" Rows="0.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.106508.1.1" Name="mpp_r6756" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Random" Keys="10,4" PartitionColumns="0" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.106508.1.1" Name="mpp_r6756" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Random" Keys="10,4" PartitionColumns="0" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -213,7 +213,7 @@
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
       <dxl:RelationStatistics Mdid="2.106604.1.1" Name="mpp_s6756" Rows="8.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.106604.1.1" Name="mpp_s6756" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.106604.1.1" Name="mpp_s6756" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -309,7 +309,7 @@
           </dxl:ProjList>
           <dxl:LogicalJoin JoinType="Inner">
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.106508.1.1" TableName="mpp_r6756">
+              <dxl:TableDescriptor Mdid="6.106508.1.1" TableName="mpp_r6756">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -326,7 +326,7 @@
               </dxl:TableDescriptor>
             </dxl:LogicalGet>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.106604.1.1" TableName="mpp_s6756">
+              <dxl:TableDescriptor Mdid="6.106604.1.1" TableName="mpp_s6756">
                 <dxl:Columns>
                   <dxl:Column ColId="12" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="13" Attno="2" ColName="d" TypeMdid="0.23.1.0"/>
@@ -342,7 +342,7 @@
               </dxl:TableDescriptor>
             </dxl:LogicalGet>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.106604.1.1" TableName="mpp_s6756">
+              <dxl:TableDescriptor Mdid="6.106604.1.1" TableName="mpp_s6756">
                 <dxl:Columns>
                   <dxl:Column ColId="22" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="23" Attno="2" ColName="d" TypeMdid="0.23.1.0"/>
@@ -358,7 +358,7 @@
               </dxl:TableDescriptor>
             </dxl:LogicalGet>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.106604.1.1" TableName="mpp_s6756">
+              <dxl:TableDescriptor Mdid="6.106604.1.1" TableName="mpp_s6756">
                 <dxl:Columns>
                   <dxl:Column ColId="32" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="33" Attno="2" ColName="d" TypeMdid="0.23.1.0"/>
@@ -423,7 +423,7 @@
             </dxl:ProjList>
             <dxl:LogicalJoin JoinType="Inner">
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.106508.1.1" TableName="mpp_r6756">
+                <dxl:TableDescriptor Mdid="6.106508.1.1" TableName="mpp_r6756">
                   <dxl:Columns>
                     <dxl:Column ColId="44" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="45" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -440,7 +440,7 @@
                 </dxl:TableDescriptor>
               </dxl:LogicalGet>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.106604.1.1" TableName="mpp_s6756">
+                <dxl:TableDescriptor Mdid="6.106604.1.1" TableName="mpp_s6756">
                   <dxl:Columns>
                     <dxl:Column ColId="55" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="56" Attno="2" ColName="d" TypeMdid="0.23.1.0"/>
@@ -456,7 +456,7 @@
                 </dxl:TableDescriptor>
               </dxl:LogicalGet>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.106604.1.1" TableName="mpp_s6756">
+                <dxl:TableDescriptor Mdid="6.106604.1.1" TableName="mpp_s6756">
                   <dxl:Columns>
                     <dxl:Column ColId="65" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="66" Attno="2" ColName="d" TypeMdid="0.23.1.0"/>
@@ -472,7 +472,7 @@
                 </dxl:TableDescriptor>
               </dxl:LogicalGet>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.106604.1.1" TableName="mpp_s6756">
+                <dxl:TableDescriptor Mdid="6.106604.1.1" TableName="mpp_s6756">
                   <dxl:Columns>
                     <dxl:Column ColId="75" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="76" Attno="2" ColName="d" TypeMdid="0.23.1.0"/>
@@ -729,7 +729,7 @@
                             <dxl:Ident ColId="3" ColName="y" TypeMdid="0.23.1.0"/>
                           </dxl:ProjElem>
                         </dxl:ProjList>
-                        <dxl:PartitionSelector RelationMdid="0.106508.1.1" PartitionLevels="1" ScanId="1">
+                        <dxl:PartitionSelector RelationMdid="6.106508.1.1" PartitionLevels="1" ScanId="1">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                           </dxl:Properties>
@@ -769,7 +769,7 @@
                             </dxl:ProjElem>
                           </dxl:ProjList>
                           <dxl:Filter/>
-                          <dxl:TableDescriptor Mdid="0.106508.1.1" TableName="mpp_r6756">
+                          <dxl:TableDescriptor Mdid="6.106508.1.1" TableName="mpp_r6756">
                             <dxl:Columns>
                               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                               <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -813,7 +813,7 @@
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.106604.1.1" TableName="mpp_s6756">
+                        <dxl:TableDescriptor Mdid="6.106604.1.1" TableName="mpp_s6756">
                           <dxl:Columns>
                             <dxl:Column ColId="11" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
                             <dxl:Column ColId="14" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -854,7 +854,7 @@
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:TableDescriptor Mdid="0.106604.1.1" TableName="mpp_s6756">
+                      <dxl:TableDescriptor Mdid="6.106604.1.1" TableName="mpp_s6756">
                         <dxl:Columns>
                           <dxl:Column ColId="22" Attno="2" ColName="d" TypeMdid="0.23.1.0"/>
                           <dxl:Column ColId="24" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -895,7 +895,7 @@
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.106604.1.1" TableName="mpp_s6756">
+                    <dxl:TableDescriptor Mdid="6.106604.1.1" TableName="mpp_s6756">
                       <dxl:Columns>
                         <dxl:Column ColId="33" Attno="3" ColName="e" TypeMdid="0.23.1.0"/>
                         <dxl:Column ColId="34" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -1092,7 +1092,7 @@
                               <dxl:Ident ColId="46" ColName="y" TypeMdid="0.23.1.0"/>
                             </dxl:ProjElem>
                           </dxl:ProjList>
-                          <dxl:PartitionSelector RelationMdid="0.106508.1.1" PartitionLevels="1" ScanId="2">
+                          <dxl:PartitionSelector RelationMdid="6.106508.1.1" PartitionLevels="1" ScanId="2">
                             <dxl:Properties>
                               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                             </dxl:Properties>
@@ -1129,7 +1129,7 @@
                               </dxl:ProjElem>
                             </dxl:ProjList>
                             <dxl:Filter/>
-                            <dxl:TableDescriptor Mdid="0.106508.1.1" TableName="mpp_r6756">
+                            <dxl:TableDescriptor Mdid="6.106508.1.1" TableName="mpp_r6756">
                               <dxl:Columns>
                                 <dxl:Column ColId="43" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                                 <dxl:Column ColId="45" Attno="3" ColName="x" TypeMdid="0.23.1.0"/>
@@ -1172,7 +1172,7 @@
                             </dxl:ProjElem>
                           </dxl:ProjList>
                           <dxl:Filter/>
-                          <dxl:TableDescriptor Mdid="0.106604.1.1" TableName="mpp_s6756">
+                          <dxl:TableDescriptor Mdid="6.106604.1.1" TableName="mpp_s6756">
                             <dxl:Columns>
                               <dxl:Column ColId="54" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
                               <dxl:Column ColId="57" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -1213,7 +1213,7 @@
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.106604.1.1" TableName="mpp_s6756">
+                        <dxl:TableDescriptor Mdid="6.106604.1.1" TableName="mpp_s6756">
                           <dxl:Columns>
                             <dxl:Column ColId="65" Attno="2" ColName="d" TypeMdid="0.23.1.0"/>
                             <dxl:Column ColId="67" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -1254,7 +1254,7 @@
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:TableDescriptor Mdid="0.106604.1.1" TableName="mpp_s6756">
+                      <dxl:TableDescriptor Mdid="6.106604.1.1" TableName="mpp_s6756">
                         <dxl:Columns>
                           <dxl:Column ColId="76" Attno="3" ColName="e" TypeMdid="0.23.1.0"/>
                           <dxl:Column ColId="77" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

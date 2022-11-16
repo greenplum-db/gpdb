@@ -175,7 +175,7 @@ EXPLAIN SELECT * FROM date_parts WHERE month BETWEEN 1 AND 4;
       <dxl:ColumnStatistics Mdid="1.3748460.1.0.7" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.3748460.1.0.6" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.3748460.1.0" Name="date_parts" Rows="3650.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.3748460.1.0" Name="date_parts" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="1,2,3" PartitionTypes="r,l,r" NumberLeafPartitions="45">
+      <dxl:Relation Mdid="6.3748460.1.0" Name="date_parts" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="1,2,3" PartitionTypes="r,l,r" NumberLeafPartitions="45">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -3284,7 +3284,7 @@ EXPLAIN SELECT * FROM date_parts WHERE month BETWEEN 1 AND 4;
           </dxl:Comparison>
         </dxl:And>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.3748460.1.0" TableName="date_parts">
+          <dxl:TableDescriptor Mdid="6.3748460.1.0" TableName="date_parts">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="year" TypeMdid="0.23.1.0"/>
@@ -3348,7 +3348,7 @@ EXPLAIN SELECT * FROM date_parts WHERE month BETWEEN 1 AND 4;
               <dxl:Ident ColId="4" ColName="region" TypeMdid="0.25.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
-          <dxl:PartitionSelector RelationMdid="0.3748460.1.0" PartitionLevels="3" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.3748460.1.0" PartitionLevels="3" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -3444,7 +3444,7 @@ EXPLAIN SELECT * FROM date_parts WHERE month BETWEEN 1 AND 4;
               </dxl:IndexCondList>
               <dxl:IndexDescriptor Mdid="0.3749921.1.0" IndexName="date_parts_ind_1_prt_outlying_years_2_prt_q1_3_prt_other_days"/>
             </dxl:BitmapIndexProbe>
-            <dxl:TableDescriptor Mdid="0.3748460.1.0" TableName="date_parts">
+            <dxl:TableDescriptor Mdid="6.3748460.1.0" TableName="date_parts">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="year" TypeMdid="0.23.1.0"/>

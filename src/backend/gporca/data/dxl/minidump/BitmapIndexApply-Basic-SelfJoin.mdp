@@ -168,7 +168,7 @@ explain SELECT * FROM t i1, t t2 where t2.c2 = i1.c2;
       <dxl:ColumnStatistics Mdid="1.29237539.1.1.5" Name="c6" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.29237539.1.1.4" Name="c5" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.29237539.1.1" Name="t" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.29237539.1.0" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
+      <dxl:Relation Mdid="6.29237539.1.0" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -235,7 +235,7 @@ explain SELECT * FROM t i1, t t2 where t2.c2 = i1.c2;
           <dxl:Opfamily Mdid="0.3040.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:Relation Mdid="0.29237539.1.1" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
+      <dxl:Relation Mdid="6.29237539.1.1" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -314,7 +314,7 @@ explain SELECT * FROM t i1, t t2 where t2.c2 = i1.c2;
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.29237539.1.1" TableName="t">
+          <dxl:TableDescriptor Mdid="6.29237539.1.1" TableName="t">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="c1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="c2" TypeMdid="0.25.1.0"/>
@@ -334,7 +334,7 @@ explain SELECT * FROM t i1, t t2 where t2.c2 = i1.c2;
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.29237539.1.1" TableName="t">
+          <dxl:TableDescriptor Mdid="6.29237539.1.1" TableName="t">
             <dxl:Columns>
               <dxl:Column ColId="15" Attno="1" ColName="c1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="16" Attno="2" ColName="c2" TypeMdid="0.25.1.0"/>
@@ -519,7 +519,7 @@ explain SELECT * FROM t i1, t t2 where t2.c2 = i1.c2;
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.29237539.1.1" TableName="t">
+              <dxl:TableDescriptor Mdid="6.29237539.1.1" TableName="t">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="c1" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="1" Attno="2" ColName="c2" TypeMdid="0.25.1.0"/>
@@ -582,7 +582,7 @@ explain SELECT * FROM t i1, t t2 where t2.c2 = i1.c2;
               </dxl:IndexCondList>
               <dxl:IndexDescriptor Mdid="0.29237567.1.0" IndexName="idx_t_2"/>
             </dxl:BitmapIndexProbe>
-            <dxl:TableDescriptor Mdid="0.29237539.1.1" TableName="t">
+            <dxl:TableDescriptor Mdid="6.29237539.1.1" TableName="t">
               <dxl:Columns>
                 <dxl:Column ColId="14" Attno="1" ColName="c1" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="15" Attno="2" ColName="c2" TypeMdid="0.25.1.0"/>

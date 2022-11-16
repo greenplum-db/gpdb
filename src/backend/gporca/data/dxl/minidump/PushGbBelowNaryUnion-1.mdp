@@ -59,7 +59,7 @@ select id from uav1 union select val from uav4 union select id from uav2;
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.425620.1.1" Name="uav1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.425620.1.1" Name="uav1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -160,7 +160,7 @@ select id from uav1 union select val from uav4 union select id from uav2;
       <dxl:ColumnStatistics Mdid="1.425646.1.1.5" Name="xmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.425646.1.1.4" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.425646.1.1" Name="uav2" Rows="99784.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.425646.1.1" Name="uav2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.425646.1.1" Name="uav2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -676,7 +676,7 @@ select id from uav1 union select val from uav4 union select id from uav2;
       <dxl:ColumnStatistics Mdid="1.425646.1.1.3" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.425646.1.1.2" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="99784.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
       <dxl:RelationStatistics Mdid="2.425805.1.1" Name="uav4" Rows="101808.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.425805.1.1" Name="uav4" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="8,2">
+      <dxl:Relation Mdid="6.425805.1.1" Name="uav4" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1645,7 +1645,7 @@ select id from uav1 union select val from uav4 union select id from uav2;
             <dxl:Column ColId="1" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
           </dxl:Columns>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.425620.1.1" TableName="uav1">
+            <dxl:TableDescriptor Mdid="6.425620.1.1" TableName="uav1">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="val" TypeMdid="0.23.1.0"/>
@@ -1660,7 +1660,7 @@ select id from uav1 union select val from uav4 union select id from uav2;
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.425805.1.1" TableName="uav4">
+            <dxl:TableDescriptor Mdid="6.425805.1.1" TableName="uav4">
               <dxl:Columns>
                 <dxl:Column ColId="10" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="11" Attno="2" ColName="val" TypeMdid="0.23.1.0"/>
@@ -1676,7 +1676,7 @@ select id from uav1 union select val from uav4 union select id from uav2;
           </dxl:LogicalGet>
         </dxl:Union>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.425646.1.1" TableName="uav2">
+          <dxl:TableDescriptor Mdid="6.425646.1.1" TableName="uav2">
             <dxl:Columns>
               <dxl:Column ColId="19" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="20" Attno="2" ColName="val" TypeMdid="0.23.1.0"/>
@@ -1750,7 +1750,7 @@ select id from uav1 union select val from uav4 union select id from uav2;
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.425620.1.1" TableName="uav1">
+                <dxl:TableDescriptor Mdid="6.425620.1.1" TableName="uav1">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -1787,7 +1787,7 @@ select id from uav1 union select val from uav4 union select id from uav2;
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.425805.1.1" TableName="uav4">
+                <dxl:TableDescriptor Mdid="6.425805.1.1" TableName="uav4">
                   <dxl:Columns>
                     <dxl:Column ColId="10" Attno="2" ColName="val" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="11" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -1824,7 +1824,7 @@ select id from uav1 union select val from uav4 union select id from uav2;
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.425646.1.1" TableName="uav2">
+                <dxl:TableDescriptor Mdid="6.425646.1.1" TableName="uav2">
                   <dxl:Columns>
                     <dxl:Column ColId="18" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="20" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

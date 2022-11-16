@@ -123,7 +123,7 @@ select * from s full join s s1 on s.a = s1.a where s.a is null;
       <dxl:ColumnStatistics Mdid="1.17311.1.1.5" Name="cmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.17311.1.1.4" Name="xmax" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.17311.1.1" Name="s" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.17311.1.1" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
+      <dxl:Relation Mdid="6.17311.1.1" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -169,7 +169,7 @@ select * from s full join s s1 on s.a = s1.a where s.a is null;
         </dxl:IsNull>
         <dxl:LogicalJoin JoinType="Full">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.17311.1.1" TableName="s">
+            <dxl:TableDescriptor Mdid="6.17311.1.1" TableName="s">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -183,7 +183,7 @@ select * from s full join s s1 on s.a = s1.a where s.a is null;
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.17311.1.1" TableName="s">
+            <dxl:TableDescriptor Mdid="6.17311.1.1" TableName="s">
               <dxl:Columns>
                 <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="10" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -309,7 +309,7 @@ select * from s full join s s1 on s.a = s1.a where s.a is null;
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.17311.1.1" TableName="s">
+                <dxl:TableDescriptor Mdid="6.17311.1.1" TableName="s">
                   <dxl:Columns>
                     <dxl:Column ColId="16" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="17" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -396,7 +396,7 @@ select * from s full join s s1 on s.a = s1.a where s.a is null;
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.17311.1.1" TableName="s">
+                  <dxl:TableDescriptor Mdid="6.17311.1.1" TableName="s">
                     <dxl:Columns>
                       <dxl:Column ColId="24" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="25" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

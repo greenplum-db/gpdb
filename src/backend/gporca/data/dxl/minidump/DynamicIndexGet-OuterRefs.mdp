@@ -357,7 +357,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.329377.1.0" Name="customer" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.329377.1.0" Name="customer" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;24,18" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.329377.1.0" Name="customer" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;24,18" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="c_customer_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -457,7 +457,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.329382.1.0" Name="customer_demographics" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.329382.1.0" Name="customer_demographics" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;15,9" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.329382.1.0" Name="customer_demographics" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;15,9" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="cd_demo_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -515,7 +515,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.329387.1.0" Name="date_dim" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.329387.1.0" Name="date_dim" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" PartitionColumns="6" PartitionTypes="r" NumberLeafPartitions="5">
+      <dxl:Relation Mdid="6.329387.1.0" Name="date_dim" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" PartitionColumns="6" PartitionTypes="r" NumberLeafPartitions="5">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -690,7 +690,7 @@
       <dxl:ColumnStatistics Mdid="1.329382.1.0.0" Name="cd_demo_sk" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.329387.1.0.6" Name="d_year" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.328897.1.0" Name="web_sales" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.328897.1.0" Name="web_sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34" PartitionColumns="0" PartitionTypes="r" NumberLeafPartitions="79">
+      <dxl:Relation Mdid="6.328897.1.0" Name="web_sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34" PartitionColumns="0" PartitionTypes="r" NumberLeafPartitions="79">
         <dxl:Columns>
           <dxl:Column Name="ws_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -857,7 +857,7 @@
       <dxl:MDCast Mdid="3.23.1.0;23.1.0" Name="int4" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.23.1.0" CastFuncId="0.0.0.0" CoercePathType="0"/>
       <dxl:ColumnStatistics Mdid="1.329387.1.0.0" Name="d_date_sk" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.328417.1.0" Name="catalog_sales" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.328417.1.0" Name="catalog_sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="15,17" Keys="15,17,0;39,40,34" PartitionColumns="0" PartitionTypes="r" NumberLeafPartitions="79">
+      <dxl:Relation Mdid="6.328417.1.0" Name="catalog_sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="15,17" Keys="15,17,0;39,40,34" PartitionColumns="0" PartitionTypes="r" NumberLeafPartitions="79">
         <dxl:Columns>
           <dxl:Column Name="cs_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1040,7 +1040,7 @@
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.329377.1.0" TableName="customer">
+          <dxl:TableDescriptor Mdid="6.329377.1.0" TableName="customer">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="c_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="2" ColName="c_customer_id" TypeMdid="0.1043.1.0" TypeModifier="20" ColWidth="16"/>
@@ -1071,7 +1071,7 @@
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.329382.1.0" TableName="customer_demographics">
+          <dxl:TableDescriptor Mdid="6.329382.1.0" TableName="customer_demographics">
             <dxl:Columns>
               <dxl:Column ColId="26" Attno="1" ColName="cd_demo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="27" Attno="2" ColName="cd_gender" TypeMdid="0.1042.1.0" TypeModifier="5" ColWidth="1"/>
@@ -1096,7 +1096,7 @@
           <dxl:SubqueryExists>
             <dxl:LogicalJoin JoinType="Inner">
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.328897.1.0" TableName="web_sales">
+                <dxl:TableDescriptor Mdid="6.328897.1.0" TableName="web_sales">
                   <dxl:Columns>
                     <dxl:Column ColId="42" Attno="1" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
                     <dxl:Column ColId="43" Attno="2" ColName="ws_sold_time_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -1143,7 +1143,7 @@
                 </dxl:TableDescriptor>
               </dxl:LogicalGet>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.329387.1.0" TableName="date_dim">
+                <dxl:TableDescriptor Mdid="6.329387.1.0" TableName="date_dim">
                   <dxl:Columns>
                     <dxl:Column ColId="83" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
                     <dxl:Column ColId="84" Attno="2" ColName="d_date_id" TypeMdid="0.1043.1.0" TypeModifier="20" ColWidth="16"/>
@@ -1202,7 +1202,7 @@
           <dxl:SubqueryExists>
             <dxl:LogicalJoin JoinType="Inner">
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.328417.1.0" TableName="catalog_sales">
+                <dxl:TableDescriptor Mdid="6.328417.1.0" TableName="catalog_sales">
                   <dxl:Columns>
                     <dxl:Column ColId="118" Attno="1" ColName="cs_sold_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
                     <dxl:Column ColId="119" Attno="2" ColName="cs_sold_time_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -1249,7 +1249,7 @@
                 </dxl:TableDescriptor>
               </dxl:LogicalGet>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.329387.1.0" TableName="date_dim">
+                <dxl:TableDescriptor Mdid="6.329387.1.0" TableName="date_dim">
                   <dxl:Columns>
                     <dxl:Column ColId="159" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
                     <dxl:Column ColId="160" Attno="2" ColName="d_date_id" TypeMdid="0.1043.1.0" TypeModifier="20" ColWidth="16"/>
@@ -1344,7 +1344,7 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.329382.1.0" TableName="customer_demographics">
+              <dxl:TableDescriptor Mdid="6.329382.1.0" TableName="customer_demographics">
                 <dxl:Columns>
                   <dxl:Column ColId="25" Attno="1" ColName="cd_demo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="26" Attno="2" ColName="cd_gender" TypeMdid="0.1042.1.0" TypeModifier="5" ColWidth="1"/>
@@ -1530,7 +1530,7 @@
                             </dxl:ProjElem>
                           </dxl:ProjList>
                           <dxl:Filter/>
-                          <dxl:TableDescriptor Mdid="0.329377.1.0" TableName="customer">
+                          <dxl:TableDescriptor Mdid="6.329377.1.0" TableName="customer">
                             <dxl:Columns>
                               <dxl:Column ColId="0" Attno="1" ColName="c_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
                               <dxl:Column ColId="18" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -1637,7 +1637,7 @@
                                           <dxl:Ident ColId="88" ColName="d_year" TypeMdid="0.23.1.0"/>
                                         </dxl:ProjElem>
                                       </dxl:ProjList>
-                                      <dxl:PartitionSelector RelationMdid="0.329387.1.0" PartitionLevels="1" ScanId="2">
+                                      <dxl:PartitionSelector RelationMdid="6.329387.1.0" PartitionLevels="1" ScanId="2">
                                         <dxl:Properties>
                                           <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                                         </dxl:Properties>
@@ -1683,7 +1683,7 @@
                                           </dxl:Comparison>
                                         </dxl:IndexCondList>
                                         <dxl:IndexDescriptor Mdid="0.329397.1.0" IndexName="date_dim_1_prt_1_pkey"/>
-                                        <dxl:TableDescriptor Mdid="0.329387.1.0" TableName="date_dim">
+                                        <dxl:TableDescriptor Mdid="6.329387.1.0" TableName="date_dim">
                                           <dxl:Columns>
                                             <dxl:Column ColId="82" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
                                             <dxl:Column ColId="88" Attno="7" ColName="d_year" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -1712,7 +1712,7 @@
                                       <dxl:Ident ColId="45" ColName="ws_bill_customer_sk" TypeMdid="0.23.1.0"/>
                                     </dxl:ProjElem>
                                   </dxl:ProjList>
-                                  <dxl:PartitionSelector RelationMdid="0.328897.1.0" PartitionLevels="1" ScanId="1">
+                                  <dxl:PartitionSelector RelationMdid="6.328897.1.0" PartitionLevels="1" ScanId="1">
                                     <dxl:Properties>
                                       <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                                     </dxl:Properties>
@@ -1757,7 +1757,7 @@
                                       </dxl:Comparison>
                                     </dxl:IndexCondList>
                                     <dxl:IndexDescriptor Mdid="0.328907.1.0" IndexName="web_sales_1_prt_1_pkey"/>
-                                    <dxl:TableDescriptor Mdid="0.328897.1.0" TableName="web_sales">
+                                    <dxl:TableDescriptor Mdid="6.328897.1.0" TableName="web_sales">
                                       <dxl:Columns>
                                         <dxl:Column ColId="41" Attno="1" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
                                         <dxl:Column ColId="44" Attno="4" ColName="ws_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -1850,7 +1850,7 @@
                                 <dxl:Ident ColId="124" ColName="cs_ship_customer_sk" TypeMdid="0.23.1.0"/>
                               </dxl:ProjElem>
                             </dxl:ProjList>
-                            <dxl:PartitionSelector RelationMdid="0.328417.1.0" PartitionLevels="1" ScanId="3">
+                            <dxl:PartitionSelector RelationMdid="6.328417.1.0" PartitionLevels="1" ScanId="3">
                               <dxl:Properties>
                                 <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                               </dxl:Properties>
@@ -1881,7 +1881,7 @@
                                 </dxl:ProjElem>
                               </dxl:ProjList>
                               <dxl:Filter/>
-                              <dxl:TableDescriptor Mdid="0.328417.1.0" TableName="catalog_sales">
+                              <dxl:TableDescriptor Mdid="6.328417.1.0" TableName="catalog_sales">
                                 <dxl:Columns>
                                   <dxl:Column ColId="117" Attno="1" ColName="cs_sold_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
                                   <dxl:Column ColId="124" Attno="8" ColName="cs_ship_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -1916,7 +1916,7 @@
                                   <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="1"/>
                                 </dxl:Properties>
                                 <dxl:ProjList/>
-                                <dxl:PartitionSelector RelationMdid="0.329387.1.0" PartitionLevels="1" ScanId="4">
+                                <dxl:PartitionSelector RelationMdid="6.329387.1.0" PartitionLevels="1" ScanId="4">
                                   <dxl:Properties>
                                     <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                                   </dxl:Properties>
@@ -1943,7 +1943,7 @@
                                   </dxl:Properties>
                                   <dxl:ProjList/>
                                   <dxl:Filter/>
-                                  <dxl:TableDescriptor Mdid="0.329387.1.0" TableName="date_dim">
+                                  <dxl:TableDescriptor Mdid="6.329387.1.0" TableName="date_dim">
                                     <dxl:Columns>
                                       <dxl:Column ColId="158" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
                                       <dxl:Column ColId="164" Attno="7" ColName="d_year" TypeMdid="0.23.1.0" ColWidth="4"/>

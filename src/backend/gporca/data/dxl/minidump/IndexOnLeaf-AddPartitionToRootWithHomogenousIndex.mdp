@@ -73,7 +73,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p3 WHERE c > 10;
       </dxl:GPDBScalarOp>
       <dxl:ColumnStatistics Mdid="1.829357.1.0.7" Name="xmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.829357.1.0.6" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:Relation Mdid="0.829268.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="3">
+      <dxl:Relation Mdid="6.829268.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -259,7 +259,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p3 WHERE c > 10;
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.829357.1.0" Name="foo_1_prt_p3" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.829357.1.0" Name="foo_1_prt_p3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.829357.1.0" Name="foo_1_prt_p3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -307,7 +307,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p3 WHERE c > 10;
       <dxl:ColumnStatistics Mdid="1.829357.1.0.8" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.829357.1.0.1" Name="b" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.829357.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:CheckConstraint Mdid="0.829360.1.0" Name="foo_1_prt_p3_check" RelationMdid="0.829357.1.0">
+      <dxl:CheckConstraint Mdid="0.829360.1.0" Name="foo_1_prt_p3_check" RelationMdid="6.829357.1.0">
         <dxl:And>
           <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
             <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -334,7 +334,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p3 WHERE c > 10;
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.829357.1.0" TableName="foo_1_prt_p3">
+          <dxl:TableDescriptor Mdid="6.829357.1.0" TableName="foo_1_prt_p3">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -399,7 +399,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p3 WHERE c > 10;
             </dxl:Comparison>
           </dxl:IndexCondList>
           <dxl:IndexDescriptor Mdid="0.829384.1.0" IndexName="foo_1_prt_p3_c_key"/>
-          <dxl:TableDescriptor Mdid="0.829357.1.0" TableName="foo_1_prt_p3">
+          <dxl:TableDescriptor Mdid="6.829357.1.0" TableName="foo_1_prt_p3">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

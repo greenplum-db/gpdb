@@ -670,7 +670,7 @@ EXPLAIN CREATE TABLE test AS
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.132001.1.0" Name="foo1" Rows="100.000000" RelPages="3" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.132001.1.0" Name="foo1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.132001.1.0" Name="foo1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1789,7 +1789,7 @@ EXPLAIN CREATE TABLE test AS
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.132001.1.0" TableName="foo1">
+              <dxl:TableDescriptor Mdid="6.132001.1.0" TableName="foo1">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -1973,7 +1973,7 @@ EXPLAIN CREATE TABLE test AS
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:TableDescriptor Mdid="0.132001.1.0" TableName="foo1">
+                      <dxl:TableDescriptor Mdid="6.132001.1.0" TableName="foo1">
                         <dxl:Columns>
                           <dxl:Column ColId="23" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                           <dxl:Column ColId="25" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -2100,7 +2100,7 @@ EXPLAIN CREATE TABLE test AS
                             </dxl:ProjElem>
                           </dxl:ProjList>
                           <dxl:Filter/>
-                          <dxl:TableDescriptor Mdid="0.132001.1.0" TableName="foo1">
+                          <dxl:TableDescriptor Mdid="6.132001.1.0" TableName="foo1">
                             <dxl:Columns>
                               <dxl:Column ColId="59" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                               <dxl:Column ColId="57" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -2228,7 +2228,7 @@ EXPLAIN CREATE TABLE test AS
                               </dxl:ProjElem>
                             </dxl:ProjList>
                             <dxl:Filter/>
-                            <dxl:TableDescriptor Mdid="0.132001.1.0" TableName="foo1">
+                            <dxl:TableDescriptor Mdid="6.132001.1.0" TableName="foo1">
                               <dxl:Columns>
                                 <dxl:Column ColId="93" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                                 <dxl:Column ColId="94" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>

@@ -112,7 +112,7 @@ select * from foo a full join foo b on false;
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.16603.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16603.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -152,7 +152,7 @@ select * from foo a full join foo b on false;
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Full">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.16603.1.0" TableName="foo">
+          <dxl:TableDescriptor Mdid="6.16603.1.0" TableName="foo">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -166,7 +166,7 @@ select * from foo a full join foo b on false;
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.16603.1.0" TableName="foo">
+          <dxl:TableDescriptor Mdid="6.16603.1.0" TableName="foo">
             <dxl:Columns>
               <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="10" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -270,7 +270,7 @@ select * from foo a full join foo b on false;
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.16603.1.0" TableName="foo">
+              <dxl:TableDescriptor Mdid="6.16603.1.0" TableName="foo">
                 <dxl:Columns>
                   <dxl:Column ColId="16" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="17" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -357,7 +357,7 @@ select * from foo a full join foo b on false;
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.16603.1.0" TableName="foo">
+                <dxl:TableDescriptor Mdid="6.16603.1.0" TableName="foo">
                   <dxl:Columns>
                     <dxl:Column ColId="24" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="25" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

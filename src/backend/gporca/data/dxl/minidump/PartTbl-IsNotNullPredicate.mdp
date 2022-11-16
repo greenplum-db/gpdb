@@ -113,7 +113,7 @@ explain select * from foo where b is not null;
       <dxl:ColumnStatistics Mdid="1.7292649.1.1.7" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.7292649.1.1.6" Name="xmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.7292649.1.1" Name="foo" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.7292649.1.1" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="l">
+      <dxl:Relation Mdid="6.7292649.1.1" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="l">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -184,7 +184,7 @@ explain select * from foo where b is not null;
           <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
         </dxl:IsNotNull>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.7292649.1.1" TableName="foo">
+          <dxl:TableDescriptor Mdid="6.7292649.1.1" TableName="foo">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -234,7 +234,7 @@ explain select * from foo where b is not null;
               <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
-          <dxl:PartitionSelector RelationMdid="0.7292649.1.1" PartitionLevels="1" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.7292649.1.1" PartitionLevels="1" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -284,7 +284,7 @@ explain select * from foo where b is not null;
                 </dxl:IsNull>
               </dxl:Not>
             </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.7292649.1.1" TableName="foo">
+            <dxl:TableDescriptor Mdid="6.7292649.1.1" TableName="foo">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

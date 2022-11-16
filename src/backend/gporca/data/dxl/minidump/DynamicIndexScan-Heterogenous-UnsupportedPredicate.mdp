@@ -264,7 +264,7 @@
       <dxl:ColumnStatistics Mdid="1.1637610.1.1.5" Name="c6" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.1637610.1.1.4" Name="c5" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.1637610.1.1" Name="heapaoco_list_part" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.1637610.1.0" Name="heapaoco_list_part" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="12,13,7" PartitionColumns="0" PartitionTypes="l">
+      <dxl:Relation Mdid="6.1637610.1.0" Name="heapaoco_list_part" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="12,13,7" PartitionColumns="0" PartitionTypes="l">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -424,7 +424,7 @@
           </dxl:Or>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1637610.1.1" Name="heapaoco_list_part" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="12,13,7" PartitionColumns="0" PartitionTypes="l">
+      <dxl:Relation Mdid="6.1637610.1.1" Name="heapaoco_list_part" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="12,13,7" PartitionColumns="0" PartitionTypes="l">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -686,7 +686,7 @@
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="50"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.1637610.1.1" TableName="heapaoco_list_part">
+          <dxl:TableDescriptor Mdid="6.1637610.1.1" TableName="heapaoco_list_part">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="c1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="c2" TypeMdid="0.25.1.0"/>
@@ -764,7 +764,7 @@
               <dxl:Ident ColId="6" ColName="c7" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
-          <dxl:PartitionSelector RelationMdid="0.1637610.1.1" PartitionLevels="1" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.1637610.1.1" PartitionLevels="1" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -827,7 +827,7 @@
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="50"/>
               </dxl:Comparison>
             </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.1637610.1.1" TableName="heapaoco_list_part">
+            <dxl:TableDescriptor Mdid="6.1637610.1.1" TableName="heapaoco_list_part">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="c1" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="c2" TypeMdid="0.25.1.0"/>

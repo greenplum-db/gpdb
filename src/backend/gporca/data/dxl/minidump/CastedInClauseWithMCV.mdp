@@ -24,7 +24,7 @@ explain select * from n1 where a in (1, (select count(*) from n1));
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.16391.1.0" Name="n1" Rows="20000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.16391.1.0" Name="n1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16391.1.0" Name="n1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="6">
             <dxl:DefaultValue/>
@@ -668,7 +668,7 @@ explain select * from n1 where a in (1, (select count(*) from n1));
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:LogicalGet>
-                    <dxl:TableDescriptor Mdid="0.16391.1.0" TableName="n1">
+                    <dxl:TableDescriptor Mdid="6.16391.1.0" TableName="n1">
                       <dxl:Columns>
                         <dxl:Column ColId="10" Attno="1" ColName="a" TypeMdid="0.1700.1.0" ColWidth="6"/>
                         <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.1700.1.0" ColWidth="6"/>
@@ -688,7 +688,7 @@ explain select * from n1 where a in (1, (select count(*) from n1));
           </dxl:Array>
         </dxl:ArrayComp>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.16391.1.0" TableName="n1">
+          <dxl:TableDescriptor Mdid="6.16391.1.0" TableName="n1">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.1700.1.0" ColWidth="6"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.1700.1.0" ColWidth="6"/>
@@ -805,7 +805,7 @@ explain select * from n1 where a in (1, (select count(*) from n1));
                     </dxl:Properties>
                     <dxl:ProjList/>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.16391.1.0" TableName="n1">
+                    <dxl:TableDescriptor Mdid="6.16391.1.0" TableName="n1">
                       <dxl:Columns>
                         <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.1700.1.0" ColWidth="6"/>
                         <dxl:Column ColId="11" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -835,7 +835,7 @@ explain select * from n1 where a in (1, (select count(*) from n1));
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.16391.1.0" TableName="n1">
+            <dxl:TableDescriptor Mdid="6.16391.1.0" TableName="n1">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.1700.1.0" ColWidth="6"/>
                 <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.1700.1.0" ColWidth="6"/>

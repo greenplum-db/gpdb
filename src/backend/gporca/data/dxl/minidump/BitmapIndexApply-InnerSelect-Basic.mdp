@@ -136,7 +136,7 @@ select * from x, y where x.i > y.j and y.k = 10;
       <dxl:ColumnStatistics Mdid="1.52975747.1.1.1" Name="j" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.52975747.1.1.0" Name="i" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.52975721.1.1" Name="x" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.52975721.1.1" Name="x" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
+      <dxl:Relation Mdid="6.52975721.1.1" Name="x" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -179,7 +179,7 @@ select * from x, y where x.i > y.j and y.k = 10;
       <dxl:ColumnStatistics Mdid="1.52975721.1.1.5" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.52975721.1.1.4" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.52975747.1.1" Name="y" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.52975747.1.0" Name="y" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
+      <dxl:Relation Mdid="6.52975747.1.0" Name="y" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -221,7 +221,7 @@ select * from x, y where x.i > y.j and y.k = 10;
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.52975747.1.1" Name="y" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
+      <dxl:Relation Mdid="6.52975747.1.1" Name="y" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -319,7 +319,7 @@ select * from x, y where x.i > y.j and y.k = 10;
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.52975721.1.1" TableName="x">
+          <dxl:TableDescriptor Mdid="6.52975721.1.1" TableName="x">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -336,7 +336,7 @@ select * from x, y where x.i > y.j and y.k = 10;
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.52975747.1.1" TableName="y">
+          <dxl:TableDescriptor Mdid="6.52975747.1.1" TableName="y">
             <dxl:Columns>
               <dxl:Column ColId="12" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="13" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -470,7 +470,7 @@ select * from x, y where x.i > y.j and y.k = 10;
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.52975721.1.1" TableName="x">
+              <dxl:TableDescriptor Mdid="6.52975721.1.1" TableName="x">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="1" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -526,7 +526,7 @@ select * from x, y where x.i > y.j and y.k = 10;
               </dxl:IndexCondList>
               <dxl:IndexDescriptor Mdid="0.52975773.1.0" IndexName="y_idx"/>
             </dxl:BitmapIndexProbe>
-            <dxl:TableDescriptor Mdid="0.52975747.1.1" TableName="y">
+            <dxl:TableDescriptor Mdid="6.52975747.1.1" TableName="y">
               <dxl:Columns>
                 <dxl:Column ColId="11" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="12" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>

@@ -180,7 +180,7 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=4)
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.573974.1.0" Name="part_gist_tbl" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.573974.1.0" Name="part_gist_tbl" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="0" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.573974.1.0" Name="part_gist_tbl" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="0" PartitionTypes="r" NumberLeafPartitions="2">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -298,7 +298,7 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=4)
           <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAWAMAAAAAAAAAAIBTQAAAAAAAAFNAAAAAAAAA8D8AAAAAAAAAQAAAAAAA&#10;APA/AAAAAAAAAEAAAAAAAAAIQAAAAAAAABBAAAAAAACAU0AAAAAAAABTQA=="/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.573974.1.0" TableName="part_gist_tbl">
+          <dxl:TableDescriptor Mdid="6.573974.1.0" TableName="part_gist_tbl">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="id" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.603.1.0" ColWidth="32"/>
@@ -351,7 +351,7 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=4)
                 <dxl:Ident ColId="2" ColName="p" TypeMdid="0.604.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:PartitionSelector RelationMdid="0.573974.1.0" PartitionLevels="1" ScanId="1">
+            <dxl:PartitionSelector RelationMdid="6.573974.1.0" PartitionLevels="1" ScanId="1">
               <dxl:Properties>
                 <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
               </dxl:Properties>
@@ -397,7 +397,7 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=4)
                 </dxl:Comparison>
               </dxl:IndexCondList>
               <dxl:IndexDescriptor Mdid="0.574046.1.0" IndexName="partpolyindex_1_prt_1"/>
-              <dxl:TableDescriptor Mdid="0.573974.1.0" TableName="part_gist_tbl">
+              <dxl:TableDescriptor Mdid="6.573974.1.0" TableName="part_gist_tbl">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="id" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="2" Attno="3" ColName="p" TypeMdid="0.604.1.0" ColWidth="8"/>

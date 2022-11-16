@@ -19,7 +19,7 @@ SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.660032.1.1" Name="inverse" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.660032.1.1" Name="inverse" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.660032.1.1" Name="inverse" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="cidr" Attno="1" Mdid="0.869.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -265,7 +265,7 @@ SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));
             <dxl:SubqueryAny OperatorName="&lt;&lt;=" OperatorMdid="0.932.1.0" ColId="9">
               <dxl:Ident ColId="1" ColName="cidr" TypeMdid="0.869.1.0"/>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.660032.1.1" TableName="inverse">
+                <dxl:TableDescriptor Mdid="6.660032.1.1" TableName="inverse">
                   <dxl:Columns>
                     <dxl:Column ColId="9" Attno="1" ColName="cidr" TypeMdid="0.869.1.0"/>
                     <dxl:Column ColId="10" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -281,7 +281,7 @@ SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));
             </dxl:SubqueryAny>
           </dxl:Not>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.660032.1.1" TableName="inverse">
+            <dxl:TableDescriptor Mdid="6.660032.1.1" TableName="inverse">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="cidr" TypeMdid="0.869.1.0"/>
                 <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -611,7 +611,7 @@ SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));
                                 </dxl:ProjElem>
                               </dxl:ProjList>
                               <dxl:Filter/>
-                              <dxl:TableDescriptor Mdid="0.660032.1.1" TableName="inverse">
+                              <dxl:TableDescriptor Mdid="6.660032.1.1" TableName="inverse">
                                 <dxl:Columns>
                                   <dxl:Column ColId="0" Attno="1" ColName="cidr" TypeMdid="0.869.1.0"/>
                                   <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -669,7 +669,7 @@ SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));
                                       </dxl:ProjElem>
                                     </dxl:ProjList>
                                     <dxl:Filter/>
-                                    <dxl:TableDescriptor Mdid="0.660032.1.1" TableName="inverse">
+                                    <dxl:TableDescriptor Mdid="6.660032.1.1" TableName="inverse">
                                       <dxl:Columns>
                                         <dxl:Column ColId="8" Attno="1" ColName="cidr" TypeMdid="0.869.1.0"/>
                                         <dxl:Column ColId="9" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

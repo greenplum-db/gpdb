@@ -197,7 +197,7 @@
       <dxl:ColumnStatistics Mdid="1.100193.1.1.7" Name="xmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.100193.1.1.6" Name="cmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.100193.1.1" Name="decodenum" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.100193.1.1" Name="decodenum" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="10,4" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.100193.1.1" Name="decodenum" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="10,4" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="numcol" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -273,7 +273,7 @@
                     <dxl:Ident ColId="1" ColName="numcol" TypeMdid="0.1700.1.0"/>
                   </dxl:Comparison>
                   <dxl:LogicalGet>
-                    <dxl:TableDescriptor Mdid="0.100193.1.1" TableName="decodenum">
+                    <dxl:TableDescriptor Mdid="6.100193.1.1" TableName="decodenum">
                       <dxl:Columns>
                         <dxl:Column ColId="12" Attno="1" ColName="numcol" TypeMdid="0.1700.1.0"/>
                         <dxl:Column ColId="13" Attno="2" ColName="distcol" TypeMdid="0.23.1.0"/>
@@ -295,7 +295,7 @@
           </dxl:ScalarSubquery>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.100193.1.1" TableName="decodenum">
+          <dxl:TableDescriptor Mdid="6.100193.1.1" TableName="decodenum">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="numcol" TypeMdid="0.1700.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="distcol" TypeMdid="0.23.1.0"/>
@@ -426,7 +426,7 @@
                                 <dxl:Ident ColId="11" ColName="numcol" TypeMdid="0.1700.1.0"/>
                               </dxl:ProjElem>
                             </dxl:ProjList>
-                            <dxl:PartitionSelector RelationMdid="0.100193.1.1" PartitionLevels="1" ScanId="2">
+                            <dxl:PartitionSelector RelationMdid="6.100193.1.1" PartitionLevels="1" ScanId="2">
                               <dxl:Properties>
                                 <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
                               </dxl:Properties>
@@ -457,7 +457,7 @@
                                 </dxl:ProjElem>
                               </dxl:ProjList>
                               <dxl:Filter/>
-                              <dxl:TableDescriptor Mdid="0.100193.1.1" TableName="decodenum">
+                              <dxl:TableDescriptor Mdid="6.100193.1.1" TableName="decodenum">
                                 <dxl:Columns>
                                   <dxl:Column ColId="11" Attno="1" ColName="numcol" TypeMdid="0.1700.1.0"/>
                                   <dxl:Column ColId="12" Attno="2" ColName="distcol" TypeMdid="0.23.1.0"/>
@@ -506,7 +506,7 @@
                 <dxl:Ident ColId="3" ColName="decodetxt" TypeMdid="0.25.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:PartitionSelector RelationMdid="0.100193.1.1" PartitionLevels="1" ScanId="1">
+            <dxl:PartitionSelector RelationMdid="6.100193.1.1" PartitionLevels="1" ScanId="1">
               <dxl:Properties>
                 <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
               </dxl:Properties>
@@ -546,7 +546,7 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.100193.1.1" TableName="decodenum">
+              <dxl:TableDescriptor Mdid="6.100193.1.1" TableName="decodenum">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="numcol" TypeMdid="0.1700.1.0"/>
                   <dxl:Column ColId="1" Attno="2" ColName="distcol" TypeMdid="0.23.1.0"/>
