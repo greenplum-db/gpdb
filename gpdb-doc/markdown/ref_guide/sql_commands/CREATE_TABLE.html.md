@@ -11,7 +11,7 @@ Defines a new table.
 CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP } | UNLOGGED] TABLE [IF NOT EXISTS] 
   <table_name> ( 
   [ { <column_name> <data_type> [ COLLATE <collation> ] [<column_constraint> [ ... ] ]
-[ ENCODING ( <aoco_column_encoding> [, ...] ) ]
+[ ENCODING ( <storage_directive> [, ...] ) ]
     | <table_constraint>
     | LIKE <source_table> [ <like_option> ... ] }
     | [ <column_reference_storage_directive> [, ...]
@@ -266,12 +266,16 @@ COLLATE collation
 DEFAULT default\_expr
 :   The `DEFAULT` clause assigns a default data value for the column whose column definition it appears within. The value is any variable-free expression \(subqueries and cross-references to other columns in the current table are not allowed\). The data type of the default expression must match the data type of the column. The default expression will be used in any insert operation that does not specify a value for the column. If there is no default for a column, then the default is null.
 
-ENCODING \( aoco_column_encoding \[, ...\] \)
+ENCODING \( storage_directive \[, ...\] \)
 :   For a column, the optional `ENCODING` clause specifies the type of compression and block size for the column data. See [storage\_options](#with_storage) for `compresstype`, `compresslevel`, and `blocksize` values.
 
 :   The clause is valid only for append-optimized, column-oriented tables.
 
 :   Column compression settings are inherited from the table level to the partition level to the subpartition level. The lowest-level settings have priority.
+
+:   The `column_level_storage_directive` parameter specifies a column along with its storage directive.
+
+For more information on storage directives, see [Adding Column Level Compression](../../admin_guide-ddl-ddl-storage.html#adding-column-level-compression).
 
 INHERITS \( parent\_table \[, …\]\)
 :   The optional `INHERITS` clause specifies a list of tables from which the new table automatically inherits all columns. Use of `INHERITS` creates a persistent relationship between the new child table and its parent table\(s\). Schema modifications to the parent\(s\) normally propagate to children as well, and by default the data of the child table is included in scans of the parent\(s\).

@@ -37,7 +37,7 @@ where <action> is one of:
   ADD [COLUMN] <column_name data_type> [ DEFAULT <default_expr> ]
       [<column_constraint> [ ... ]]
       [ COLLATE <collation> ]
-      [ ENCODING ( <aoco_column_encoding> [,...] ) ]
+      [ ENCODING ( <storage_directive [,...] ) ]
   DROP [COLUMN] [IF EXISTS] <column_name> [RESTRICT | CASCADE]
   ALTER [COLUMN] <column_name> [ SET DATA ] TYPE <type> [COLLATE <collation>] [USING <expression>]
   ALTER [COLUMN] <column_name> SET DEFAULT <expression>
@@ -46,7 +46,7 @@ where <action> is one of:
   ALTER [COLUMN] <column_name> SET STATISTICS <integer>
   ALTER [COLUMN] column SET ( <attribute_option> = <value> [, ... ] )
   ALTER [COLUMN] column RESET ( <attribute_option> [, ... ] )
-  ALTER [COLUMN] column SET ENCODNG ( aoco_column_encoding [, ...] )
+  ALTER [COLUMN] column SET ENCODNG ( storage_directive [, ...] )
   ADD <table_constraint> [NOT VALID]
   ADD <table_constraint_using_index>
   VALIDATE CONSTRAINT <constraint_name>
@@ -142,13 +142,14 @@ and subpartition\_element is:
 [ TABLESPACE <tablespace> ]
 ```
 
-where aoco_column_encoding is:
+where storage_directive is:
 
 ```
    blocksize={8192-2097152}
    compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
    compresslevel={0-9}
 ```
+where 
 
 where storage\_parameter when used with the `SET` command is:
 
