@@ -273,7 +273,7 @@ ENCODING \( storage_directive \[, ...\] \)
 
 :   Column compression settings are inherited from the table level to the partition level to the subpartition level. The lowest-level settings have priority.
 
-:   The `column_level_storage_directive` parameter specifies a column along with its storage directive.
+:   The `column_reference_storage_directive` parameter specifies a column along with its storage directive.
 
 For more information on storage directives, see [Adding Column Level Compression](../../admin_guide-ddl-ddl-storage.html#adding-column-level-compression).
 
