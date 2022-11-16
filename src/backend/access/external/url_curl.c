@@ -58,6 +58,17 @@ typedef struct curlhandle_t
 	struct curlhandle_t *prev;
 } curlhandle_t;
 
+#ifdef USE_ZSTD
+typedef struct zstdcontext_t
+{
+	ZSTD_DCtx	   *zstd_dctx;		/* The zstd context */
+
+	ResourceOwner owner;			/* owner of this handle */
+	struct zstdcontext_t *next;
+	struct zstdcontext_t *prev;
+} zstdcontext_t;
+#endif
+
 /*
  * Private state for a web external table, implemented with libcurl.
  *
@@ -1191,6 +1202,14 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		url_curl_resowner_callback_registered = true;
 	}
 
+#ifdef USE_ZSTD
+	if (!zstd_resowner_callback_registered)
+	{
+		RegisterResourceReleaseCallback(zstd_release_callback, NULL);
+		zstd_resowner_callback_registered = true;
+	}
+#endif
+
 	tmp = make_url(url, is_ipv6);
 
 	file = (URL_CURL_FILE *) palloc0(sizeof(URL_CURL_FILE));
@@ -1528,8 +1547,8 @@ url_curl_fclose(URL_FILE *fileg, bool failOnError, const char *relname)
 
 	pfree(file->common.url);
 #ifdef USE_ZSTD
-	if (file->zstd)
-		ZSTD_freeDCtx(file->zstd_dctx);
+	if(file->zstd && !file->for_write)
+		destroy_zstdcontext(file->zstd_ctx);
 #endif
 
 	pfree(file);
