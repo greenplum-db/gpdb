@@ -179,6 +179,7 @@ Doc Index
         - [gp\_sparse\_vector](./modules/gp_sparse_vector.md)
         - [hstore](./modules/hstore.md)
         - [ip4r](./modules/ip4r.md)
+        - [ltree](./modules/ltree.md)
         - [orafce](./modules/orafce_ref.md)
         - [pageinspect](./modules/pageinspect.md)
         - [pg\_trgm](./modules/pg_trgm.md)
