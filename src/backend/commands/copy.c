@@ -4297,6 +4297,39 @@ CopyFrom(CopyState cstate)
 				continue;
 		}
 
+		if (cstate->dispatch_mode != COPY_DISPATCH && is_check_distkey)
+		{
+			/*
+			 * In COPY FROM ON SEGMENT, check the distribution key in the
+			 * QE.
+			 * Note: For partitioned tables, the order of the root table's columns can be
+			 * inconsistent with the order of the partition's columns and Greenplum/PostgreSQL
+			 * allows such behavior. When they have different orders, we need to re-order the
+			 * TupleTableSlot (myslot) to make it match the partition's columns (see execute_attr_map_slot()
+			 * for details). We must perform this check before the re-ordering of TupleTableslot,
+			 * or the value of target_seg will be incorrect.
+			 */
+			if (distData->policy->nattrs != 0)
+			{
+				target_seg = GetTargetSeg(distData, myslot);
+				if (GpIdentity.segindex != target_seg)
+				{
+					PG_TRY();
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_INTEGRITY_CONSTRAINT_VIOLATION),
+								 errmsg("value of distribution key doesn't belong to segment with ID %d, it belongs to segment with ID %d",
+										GpIdentity.segindex, target_seg)));
+					}
+					PG_CATCH();
+					{
+						HandleCopyError(cstate);
+					}
+					PG_END_TRY();
+				}
+			}
+		}
+
 		/* Determine the partition to insert the tuple into */
 		if (proute && cstate->dispatch_mode != COPY_DISPATCH)
 		{
@@ -4458,37 +4491,7 @@ CopyFrom(CopyState cstate)
 		{
 			/* In QD, compute the target segment to send this row to. */
 			target_seg = GetTargetSeg(distData, myslot);
-		}
-		else if (is_check_distkey)
-		{
-			/*
-			 * In COPY FROM ON SEGMENT, check the distribution key in the
-			 * QE.
-			 */
-			if (distData->policy->nattrs != 0)
-			{
-				target_seg = GetTargetSeg(distData, myslot);
 
-				if (GpIdentity.segindex != target_seg)
-				{
-					PG_TRY();
-					{
-						ereport(ERROR,
-								(errcode(ERRCODE_INTEGRITY_CONSTRAINT_VIOLATION),
-								 errmsg("value of distribution key doesn't belong to segment with ID %d, it belongs to segment with ID %d",
-										GpIdentity.segindex, target_seg)));
-					}
-					PG_CATCH();
-					{
-						HandleCopyError(cstate);
-					}
-					PG_END_TRY();
-				}
-			}
-		}
-
-		if (cstate->dispatch_mode == COPY_DISPATCH)
-		{
 			bool send_to_all = distData &&
 							   GpPolicyIsReplicated(distData->policy);
 

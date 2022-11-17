@@ -1658,3 +1658,37 @@ select * from foo;
  database in COPY TO: funny copy"db'with\\quotes
 (3 rows)
 
+--
+-- Test copy a partitioned table whose columns' orders are not consistent between the root table and partitions.
+--
+-- 1. Test copy a partitioned table with a single distribution key on segment.
+CREATE TABLE issue_14353       (a integer, b integer, c text) PARTITION BY RANGE (a) DISTRIBUTED BY (a);
+CREATE TABLE issue_14353_prt_1 (b integer, a integer, c text) DISTRIBUTED BY (a);
+CREATE TABLE issue_14353_def   (a integer, b integer, c text) DISTRIBUTED BY (a);
+ALTER TABLE ONLY issue_14353 ATTACH PARTITION issue_14353_prt_1 FOR VALUES FROM (1) TO (2);
+ALTER TABLE ONLY issue_14353 ATTACH PARTITION issue_14353_def DEFAULT;
+INSERT INTO issue_14353 SELECT x, x%3, 'a' FROM generate_series(1, 20)x;
+-- Test that the data are successfully copied out and copied in on segment.
+COPY issue_14353 TO   '/tmp/issue_14353_<SEGID>.csv' WITH CSV DELIMITER ',' ON SEGMENT;
+COPY issue_14353 FROM '/tmp/issue_14353_<SEGID>.csv' WITH CSV DELIMITER ',' ON SEGMENT;
+-- Test that gpdb emits an error message saying the data distribution is malformed.
+\! cp /tmp/issue_14353_1.csv /tmp/issue_14353_0.csv
+COPY issue_14353 FROM '/tmp/issue_14353_<SEGID>.csv' WITH CSV DELIMITER ',' ON SEGMENT;
+ERROR:  value of distribution key doesn't belong to segment with ID 0, it belongs to segment with ID 1  (seg0 127.0.0.1:7002 pid=16166)
+CONTEXT:  COPY issue_14353, line 17: "1,1,a"
+-- 2. Test copy a partitioned table with multiple distribution keys on segment.
+CREATE TABLE issue_14353_multi_dist       (a integer, b integer, c text) PARTITION BY RANGE (a) DISTRIBUTED BY (a, c);
+CREATE TABLE issue_14353_multi_dist_prt_1 (b integer, a integer, c text) DISTRIBUTED BY (a, c);
+CREATE TABLE issue_14353_multi_dist_def   (a integer, b integer, c text) DISTRIBUTED BY (a, c);
+ALTER TABLE ONLY issue_14353_multi_dist ATTACH PARTITION issue_14353__multi_dist_prt_1 FOR VALUES FROM (1) TO (2);
+ERROR:  relation "issue_14353__multi_dist_prt_1" does not exist
+ALTER TABLE ONLY issue_14353_multi_dist ATTACH PARTITION issue_14353_multi_dist_def DEFAULT;
+INSERT INTO issue_14353_multi_dist SELECT x, x%3, 'a' || (x%5)::text FROM generate_series(1, 20)x;
+-- Test that the data are successfully copied out and copied in on segment.
+COPY issue_14353_multi_dist TO   '/tmp/issue_14353_multi_dist_<SEGID>.csv' WITH CSV DELIMITER ',' ON SEGMENT;
+COPY issue_14353_multi_dist FROM '/tmp/issue_14353_multi_dist_<SEGID>.csv' WITH CSV DELIMITER ',' ON SEGMENT;
+-- Test that gpdb emits an error message saying the data distribution is malformed.
+\! cp /tmp/issue_14353_multi_dist_1.csv /tmp/issue_14353_multi_dist_0.csv
+COPY issue_14353_multi_dist FROM '/tmp/issue_14353_multi_dist_<SEGID>.csv' WITH CSV DELIMITER ',' ON SEGMENT;
+ERROR:  value of distribution key doesn't belong to segment with ID 0, it belongs to segment with ID 1  (seg0 127.0.0.1:7002 pid=21933)
+CONTEXT:  COPY issue_14353_multi_dist, line 11: "1,1,a"
