@@ -520,11 +520,18 @@ Although you can specify the table's access method using <code>SET &lt;storage_p
 
 ### <a id="topic59"></a>Altering the Table Storage Model 
 
-You may dynamically update a table's storage model -- including whether the table is heap, AO or AOCO; the table's compression and blocksize settings; and the table's fillfactor; --  by setting a variety of storage parameters when you invoke `ALTER TABLE` with the `SET <storage_parameter>` clause. 
+You may dynamically update a table's storage model -- including whether the table is heap, AO or AOCO; the table's compression and blocksize settings; and the table's fillfactor; --  by setting a variety of storage parameters when you invoke `ALTER TABLE` with the `SET <storage_parameter>` clause. This is true for both regular tables and partitioned tables.
 
-### <a id="storage_model_partition"></a>Altering the Storage Model of a Partitioned Table
+#### <a id="storage_model_partition"></a>Inheritance Rules for a Partitioned Table's Storage Model
 
-See [Splitting a Partition](ddl-partition.html) to learn how to change the storage model of a partitioned table.
+The following inheritance rules apply to the storage model of a partitioned table:
+
+- Altering the storage model at the partition root changes the storage model for all existing children and all future children
+
+- Altering the storage model at the partition root with the `ONLY` keyword changes the storage model for all future children only
+
+- Altering the storage model at a leaf changes the storage model only for that leaf.
+
 
 #### <a id="topic60"></a>Adding a Compressed Column to Table 
 
