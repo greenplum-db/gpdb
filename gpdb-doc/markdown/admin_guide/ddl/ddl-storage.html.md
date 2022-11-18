@@ -522,7 +522,7 @@ Although you can specify the table's access method using <code>SET &lt;storage_p
 
 You may dynamically update a table's storage model -- including whether the table is heap, AO or AOCO; the table's compression and blocksize settings; and the table's fillfactor; --  by setting a variety of storage parameters when you invoke `ALTER TABLE` with the `SET <storage_parameter>` clause. This is true for both regular tables and partitioned tables.
 
-#### <a id="storage_model_partition"></a>Inheritance Rules for a Partitioned Table's Storage Model
+#### <a id="storage_model_partition"></a>Inheritance Rules for Altering a Partitioned Table's Storage Model
 
 The following inheritance rules apply to the storage model of a partitioned table:
 
