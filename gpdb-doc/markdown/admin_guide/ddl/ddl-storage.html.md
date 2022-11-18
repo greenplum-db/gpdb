@@ -526,9 +526,9 @@ You may dynamically update a table's storage model -- including whether the tabl
 
 The following inheritance rules apply to the storage model of a partitioned table:
 
-- Altering the storage model at the partition root changes the storage model for all existing children and all future children
+- Altering the storage model at the partition root changes the storage model for all existing children and all future children.
 
-- Altering the storage model at the partition root with the `ONLY` keyword changes the storage model for all future children only
+- Altering the storage model at the partition root with the `ONLY` keyword changes the storage model only for all future children.
 
 - Altering the storage model at a leaf changes the storage model only for that leaf.
 
