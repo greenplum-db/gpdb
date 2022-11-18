@@ -1080,9 +1080,18 @@ InsertPgAttributeTuple(Relation pg_attribute_rel,
 	heap_freetuple(tup);
 }
 
+/*
+ * ReinitializePgAttributeTuple
+ * Create and update a tuple in pg_attribute for a previously dropped attribute
+ *
+ * Caller has already opened and locked pg_attribute.  new_attribute is the
+ * attribute to insert.  attcacheoff is always initialized to -1, attacl and
+ * attoptions are always initialized to NULL.
+ *
+ */
 void
-UpdatePgAttributeTuple(Relation pg_attribute_rel,
-					   Form_pg_attribute new_attribute)
+ReinitializePgAttributeTuple(Relation pg_attribute_rel,
+							 Form_pg_attribute new_attribute)
 {
 	Datum		values[Natts_pg_attribute];
 	bool		nulls[Natts_pg_attribute];

@@ -70,6 +70,9 @@ test__aocs_addcol_init(void **state)
 	AOCSAddColumnDesc desc;
 	RelationData reldata;
 	int			nattr = 5;
+	List 		*new_attrnums = NIL;
+	ListCell 	*lc1;
+	ListCell 	*lc2;
 	StdRdOptions **opts =
 	(StdRdOptions **) palloc(sizeof(StdRdOptions *) * nattr);
 	wal_level = WAL_LEVEL_REPLICA;
@@ -83,10 +86,12 @@ test__aocs_addcol_init(void **state)
 	strcpy(opts[3]->compresstype, "rle_type");
 	opts[3]->compresslevel = 2;
 	opts[3]->blocksize = 8192;
+	new_attrnums = lappend_int(new_attrnums, 4);
 	opts[4] = (StdRdOptions *) palloc(sizeof(StdRdOptions));
 	strcpy(opts[4]->compresstype, "none");
 	opts[4]->compresslevel = 0;
 	opts[4]->blocksize = 8192 * 2;
+	new_attrnums = lappend_int(new_attrnums, 5);
 
 	/* One call to RelationGetAttributeOptions() */
 	expect_any(RelationGetAttributeOptions, rel);
@@ -128,8 +133,11 @@ test__aocs_addcol_init(void **state)
 	will_be_called(GetAppendOnlyEntryAttributes);
 
 	/* 3 existing columns, 2 new columns */
-	desc = aocs_addcol_init(&reldata, 2);
-	assert_int_equal(desc->num_newcols, 2);
+	desc = aocs_addcol_init(&reldata, new_attrnums);
+	forboth(lc1, desc->new_attrnums, lc2, new_attrnums)
+	{
+		assert_int_equal(lfirst_int(lc1), lfirst_int(lc2));
+	}
 	assert_int_equal(desc->cur_segno, -1);
 }
 

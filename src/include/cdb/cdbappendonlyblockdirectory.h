@@ -234,7 +234,6 @@ extern bool AppendOnlyBlockDirectory_InsertEntry(
 	int64 firstRowNum,
 	int64 fileOffset,
 	int64 rowCount,
-	bool addColAction,
 	int minipageIndex);
 extern void AppendOnlyBlockDirectory_End_forInsert(
 	AppendOnlyBlockDirectory *blockDirectory);

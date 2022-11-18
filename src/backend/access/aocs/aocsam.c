@@ -1000,7 +1000,7 @@ aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool *null, AOTupleId *aoTupl
 			void	   *toFree2;
 
 			/* write the block up to this one */
-			datumstreamwrite_block(idesc->ds[i], &idesc->blockDirectory, i, false, 0);
+			datumstreamwrite_block(idesc->ds[i], &idesc->blockDirectory, i, i);
 			if (itemCount > 0)
 			{
 				/*
@@ -1023,7 +1023,7 @@ aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool *null, AOTupleId *aoTupl
 										   datum,
 										   &idesc->blockDirectory,
 										   i,
-										   false, 0);
+										   i);
 				Assert(err >= 0);
 
 				/*
@@ -1074,7 +1074,7 @@ aocs_insert_finish(AOCSInsertDesc idesc)
 
 	for (i = 0; i < rel->rd_att->natts; ++i)
 	{
-		datumstreamwrite_block(idesc->ds[i], &idesc->blockDirectory, i, false, 0);
+		datumstreamwrite_block(idesc->ds[i], &idesc->blockDirectory, i, i);
 		datumstreamwrite_close_file(idesc->ds[i]);
 	}
 
@@ -1993,7 +1993,7 @@ aocs_addcol_closefiles(AOCSAddColumnDesc desc)
 	foreach(l, desc->new_attrnums)
 	{
 		colno = lfirst_int(l) - 1;
-		datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, colno, true, i);
+		datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, colno, i);
 		datumstreamwrite_close_file(desc->dsw[i]);
 		i++;
 	}
@@ -2029,7 +2029,7 @@ aocs_addcol_endblock(AOCSAddColumnDesc desc, int64 firstRowNum)
 	{
 		AttrNumber	colno = lfirst_int(l) - 1;
 
-		datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, colno, true, i);
+		datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, colno, i);
 
 		/*
 		 * Next block's first row number.  In this case, the block being ended
@@ -2078,7 +2078,7 @@ aocs_addcol_insert_datum(AOCSAddColumnDesc desc, Datum *d, bool *isnull)
 			 */
 			itemCount = datumstreamwrite_nth(desc->dsw[i]);
 			/* write the block up to this one */
-			datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, colno, true, i);
+			datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, colno, i);
 			if (itemCount > 0)
 			{
 				/* Next block's first row number */
@@ -2096,7 +2096,7 @@ aocs_addcol_insert_datum(AOCSAddColumnDesc desc, Datum *d, bool *isnull)
 										   datum,
 										   &desc->blockDirectory,
 										   colno,
-										   true, i);
+										   i);
 				Assert(err >= 0);
 
 				/*

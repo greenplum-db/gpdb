@@ -115,8 +115,8 @@ extern void InsertPgAttributeTuple(Relation pg_attribute_rel,
 								   Form_pg_attribute new_attribute,
 								   CatalogIndexState indstate);
 
-extern void UpdatePgAttributeTuple(Relation pg_attribute_rel,
-								   Form_pg_attribute new_attribute);
+extern void ReinitializePgAttributeTuple(Relation pg_attribute_rel,
+										 Form_pg_attribute new_attribute);
 
 extern void InsertPgClassTuple(Relation pg_class_desc,
 							   Relation new_rel_desc,

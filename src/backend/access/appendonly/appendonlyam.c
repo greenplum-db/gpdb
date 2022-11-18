@@ -1200,8 +1200,7 @@ getNextBlock(AppendOnlyScanDesc scan)
 											 scan->blockDirectory, 0,
 											 scan->executorReadBlock.blockFirstRowNum,
 											 scan->executorReadBlock.headerOffsetInFile,
-											 scan->executorReadBlock.rowCount,
-											 false, 0);
+											 scan->executorReadBlock.rowCount, 0);
 	}
 
 	AppendOnlyExecutorReadBlock_GetContents(
@@ -1391,8 +1390,7 @@ finishWriteBlock(AppendOnlyInsertDesc aoInsertDesc)
 										 0,
 										 aoInsertDesc->blockFirstRowNum,
 										 AppendOnlyStorageWrite_LogicalBlockStartOffset(&aoInsertDesc->storageWrite),
-										 itemCount,
-										 false, 0);
+										 itemCount, 0);
 
 	Assert(aoInsertDesc->nonCompressedData == NULL);
 	Assert(!AppendOnlyStorageWrite_IsBufferAllocated(&aoInsertDesc->storageWrite));

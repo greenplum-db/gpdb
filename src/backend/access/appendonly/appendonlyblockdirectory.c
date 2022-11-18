@@ -56,7 +56,6 @@ static bool insert_new_entry(AppendOnlyBlockDirectory *blockDirectory,
 				 int64 firstRowNum,
 				 int64 fileOffset,
 				 int64 rowCount,
-				 bool addColAction,
 				 int minipageIndex);
 static void clear_minipage(MinipagePerColumnGroup *minipagePerColumnGroup);
 static bool blkdir_entry_exists(AppendOnlyBlockDirectory *blockDirectory,
@@ -923,11 +922,10 @@ AppendOnlyBlockDirectory_InsertEntry(
 									 int64 firstRowNum,
 									 int64 fileOffset,
 									 int64 rowCount,
-									 bool addColAction,
 									 int minipageIndex)
 {
 	return insert_new_entry(blockDirectory, columnGroupNo, firstRowNum,
-							fileOffset, rowCount, addColAction, minipageIndex);
+							fileOffset, rowCount, minipageIndex);
 }
 
 /*
@@ -950,7 +948,6 @@ insert_new_entry(
 				 int64 firstRowNum,
 				 int64 fileOffset,
 				 int64 rowCount,
-				 bool addColAction,
 				 int minipageIndex)
 {
 	MinipageEntry *entry = NULL;
@@ -962,9 +959,6 @@ insert_new_entry(
 	if (blockDirectory->blkdirRel == NULL ||
 		blockDirectory->blkdirIdx == NULL)
 		return false;
-
-	if (!addColAction)
-		minipageIndex = columnGroupNo;
 
 	minipageInfo = &blockDirectory->minipages[minipageIndex];
 	Assert(minipageInfo->numMinipageEntries <= (uint32) NUM_MINIPAGE_ENTRIES);
@@ -1052,9 +1046,9 @@ AppendOnlyBlockDirectory_DeleteSegmentFile(Relation aoRel,
 }
 
 /*
- * AppendOnlyBlockDirectory_DeleteSegmentFile
+ * AppendOnlyBlockDirectory_DeleteColumnGroup
  *
- * Deletes all block directory entries for given segment file of an
+ * Deletes all block directory entries for given column of an
  * append-only relation.
  */
 void
@@ -1476,7 +1470,7 @@ AppendOnlyBlockDirectory_InsertPlaceholder(AppendOnlyBlockDirectory *blockDirect
 
 	/* insert placeholder entry with a max row count */
 	insert_new_entry(blockDirectory, columnGroupNo, firstRowNum, fileOffset,
-					 AOTupleId_MaxRowNum, false, 0);
+					 AOTupleId_MaxRowNum, columnGroupNo);
 	/* insert placeholder row containing placeholder entry */
 	write_minipage(blockDirectory, columnGroupNo, minipagePerColumnGroup);
 	/*

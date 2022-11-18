@@ -970,8 +970,7 @@ datumstreamwrite_block_dense(DatumStreamWrite * acc)
 int64
 datumstreamwrite_block(DatumStreamWrite *acc,
 					   AppendOnlyBlockDirectory *blockDirectory,
-					   int columnGroupNo,
-					   bool addColAction, int blkdirminipageIndex)
+					   int columnGroupNo, int blkdirminipageIndex)
 {
 	int64 writesz;
 	int itemCount = DatumStreamBlockWrite_Nth(&acc->blockWrite);
@@ -1006,8 +1005,7 @@ datumstreamwrite_block(DatumStreamWrite *acc,
 		columnGroupNo,
 		acc->blockFirstRowNum,
 		AppendOnlyStorageWrite_LogicalBlockStartOffset(&acc->ao_write),
-		itemCount,
-		addColAction, blkdirminipageIndex);
+		itemCount, blkdirminipageIndex);
 
 	return writesz;
 }
@@ -1025,8 +1023,7 @@ int64
 datumstreamwrite_lob(DatumStreamWrite * acc,
 					 Datum d,
 					 AppendOnlyBlockDirectory *blockDirectory,
-					 int colGroupNo,
-					 bool addColAction, int blkdirminipageIndex)
+					 int colGroupNo, int blkdirminipageIndex)
 {
 	uint8	   *p;
 	int32		varLen;
@@ -1085,7 +1082,7 @@ datumstreamwrite_lob(DatumStreamWrite * acc,
 		acc->blockFirstRowNum,
 		AppendOnlyStorageWrite_LogicalBlockStartOffset(&acc->ao_write),
 		1, /*itemCount -- always just the lob just inserted */
-		addColAction, blkdirminipageIndex);
+		blkdirminipageIndex);
 
 	return varLen;
 }
@@ -1363,7 +1360,7 @@ datumstreamread_block(DatumStreamRead * acc,
 											 acc->blockFirstRowNum,
 											 acc->blockFileOffset,
 											 acc->blockRowCount,
-											 false, 0);
+											 colGroupNo);
 	}
 
 	return 0;

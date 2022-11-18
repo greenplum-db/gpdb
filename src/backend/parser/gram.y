@@ -527,7 +527,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 
 %type <node>	TableElement TypedTableElement ConstraintElem TableFuncElement
 %type <node>	columnDef columnOptions
-%type <boolean> reuse_dropped_attnum_clause
+%type <boolean> opt_reuse_dropped_attnum_clause
 %type <defelt>	def_elem reloption_elem old_aggr_elem keyvalue_pair operator_def_elem
 %type <node>	ExtTableElement
 %type <node>	ExtcolumnDef
@@ -2829,7 +2829,7 @@ index_partition_cmd:
 
 alter_table_cmd:
 			/* ALTER TABLE <name> ADD <coldef> */
-			ADD_P columnDef reuse_dropped_attnum_clause
+			ADD_P columnDef opt_reuse_dropped_attnum_clause
 				{
 					AlterTableCmd *n = makeNode(AlterTableCmd);
 					n->subtype = AT_AddColumn;
@@ -2840,7 +2840,7 @@ alter_table_cmd:
 					$$ = (Node *)n;
 				}
 			/* ALTER TABLE <name> ADD IF NOT EXISTS <coldef> */
-			| ADD_P IF_P NOT EXISTS columnDef reuse_dropped_attnum_clause
+			| ADD_P IF_P NOT EXISTS columnDef opt_reuse_dropped_attnum_clause
 				{
 					AlterTableCmd *n = makeNode(AlterTableCmd);
 					n->subtype = AT_AddColumn;
@@ -2851,7 +2851,7 @@ alter_table_cmd:
 					$$ = (Node *)n;
 				}
 			/* ALTER TABLE <name> ADD COLUMN <coldef> */
-			| ADD_P COLUMN columnDef reuse_dropped_attnum_clause
+			| ADD_P COLUMN columnDef opt_reuse_dropped_attnum_clause
 				{
 					AlterTableCmd *n = makeNode(AlterTableCmd);
 					n->subtype = AT_AddColumn;
@@ -2862,7 +2862,7 @@ alter_table_cmd:
 					$$ = (Node *)n;
 				}
 			/* ALTER TABLE <name> ADD COLUMN IF NOT EXISTS <coldef> */
-			| ADD_P COLUMN IF_P NOT EXISTS columnDef reuse_dropped_attnum_clause
+			| ADD_P COLUMN IF_P NOT EXISTS columnDef opt_reuse_dropped_attnum_clause
 				{
 					AlterTableCmd *n = makeNode(AlterTableCmd);
 					n->subtype = AT_AddColumn;
@@ -5518,7 +5518,7 @@ table_access_method_clause:
 			| /*EMPTY*/							{ $$ = NULL; }
 		;
 
-reuse_dropped_attnum_clause:
+opt_reuse_dropped_attnum_clause:
 			REUSE_DROPPED  { $$ = true; }
 			| /* EMPTY */  { $$ = false; }
 		;

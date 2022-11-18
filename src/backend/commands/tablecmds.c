@@ -7260,6 +7260,10 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 	int16 relnatts = ((Form_pg_class) GETSTRUCT(reltup))->relnatts;
 	if (colDef->reuse_dropped)
 	{
+		/*
+		 * if the REUSE_DROPPED clause is used, try to find the first dropped attnum
+		 * if not, add a new attnum at the end
+		 */
 		if (RelationIsAoCols(rel))
 		{
 			newattnum = relnatts + 1;
@@ -7333,7 +7337,7 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 	if (newattnum > relnatts)
 		InsertPgAttributeTuple(attrdesc, &attribute, NULL);
 	else
-		UpdatePgAttributeTuple(attrdesc, &attribute);
+		ReinitializePgAttributeTuple(attrdesc, &attribute);
 
 	table_close(attrdesc, RowExclusiveLock);
 

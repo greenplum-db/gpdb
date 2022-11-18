@@ -312,6 +312,7 @@ typedef struct AOCSAddColumnDescData
 	/* array of datum stream write objects, one per new column */
 
 	List *new_attrnums;
+	/* List of all the new attribute numbers for columns to be added */
 
 	int32 cur_segno;
 
