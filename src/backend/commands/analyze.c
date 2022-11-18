@@ -683,8 +683,8 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 		}
 	}
 
-	sample_needed = needs_sample(vacattrstats, attr_cnt);
-	if (sample_needed)
+	sample_needed = needs_sample(onerel, vacattrstats, attr_cnt);
+	if (ctx || sample_needed)
 	{
 		if (ctx)
 			MemoryContextSwitchTo(caller_context);
@@ -763,6 +763,7 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 		for (i = 0; i < attr_cnt; i++)
 		{
 			VacAttrStats *stats = vacattrstats[i];
+			stats->tupDesc = onerel->rd_att;
 			/*
 			 * utilize hyperloglog and merge utilities to derive
 			 * root table statistics by directly calling merge_leaf_stats()
@@ -804,7 +805,6 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 			AttributeOpts *aopt =
 			get_attribute_options(onerel->rd_id, stats->attr->attnum);
 
-			stats->tupDesc = onerel->rd_att;
 			/*
 			 * get total length and number of too wide rows in the sample,
 			 * in case get wrong stawidth.
