@@ -293,7 +293,7 @@ ensureLocalEntriesSize(File file)
 	if (file < oldsize)
 		return;
 
-	newsize = file * 2 + 5;
+	newsize = oldsize * 2 + 5;
 	if (oldsize == 0)
 	{
 		localCtl.entries = (WorkFileLocalEntry *)
