@@ -240,3 +240,15 @@ index entries will still point to the segment being compacted. This will be the
 case up until the index entries are bulk deleted, but by then the new index
 entries along with new block directory rows would already have been written and
 would be able to answer uniqueness checks.
+
+Transaction isolation: Since uniqueness checks utilize the special dirty
+snapshot, these checks can cross transaction isolation boundaries. For instance,
+let us consider what will happen if we are in a repeatable read transaction and
+we insert a key that was inserted by a concurrent transaction. Further let's say
+that the repeatable read transaction's snapshot was taken before the concurrent
+transaction started. This means that the repeatable read transaction won't be
+able to see the conflicting key (for eg. with a SELECT). In spite of that
+conflicts will still be detected. Depending on whether the concurrent
+transaction committed or is still in progress, the repeatable read transaction
+will raise a conflict or enter into xwait respectively. This behavior is table
+AM agnostic.
