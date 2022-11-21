@@ -246,6 +246,8 @@ static void groupWaitQueuePush(ResGroupData *group, PGPROC *proc);
 static PGPROC *groupWaitQueuePop(ResGroupData *group);
 static void groupWaitQueueErase(ResGroupData *group, PGPROC *proc);
 static bool groupWaitQueueIsEmpty(const ResGroupData *group);
+static bool checkBypassWalker(Node *node, void *context);
+static bool shouldBypassSelectQuery(Node *node);
 static bool shouldBypassQuery(const char *query_string);
 static void lockResGroupForDrop(ResGroupData *group);
 static void unlockResGroupForDrop(ResGroupData *group);
@@ -2546,10 +2548,55 @@ groupWaitQueueFind(ResGroupData *group, const PGPROC *proc)
 #endif/* USE_ASSERT_CHECKING */
 
 /*
+ * Walk through the raw expression tree, if there is a RangeVar without
+ * `pg_catalog` prefix, terminate the process immediately to save the cpu
+ * resource.
+ */
+static bool
+checkBypassWalker(Node *node, void *context)
+{
+	bool *bypass = context;
+
+	if (node == NULL) return false;
+
+	if (IsA(node, RangeVar))
+	{
+		RangeVar *from = (RangeVar *)node;
+		if (from->schemaname == NULL ||
+			strcmp(from->schemaname, "pg_catalog") != 0)
+		{
+			*bypass = false;
+			return true;
+		}
+		else
+		{
+			/*
+			 * Make sure there is at least one RangeVar
+			 */
+			*bypass = true;
+		}
+	}
+
+	return raw_expression_tree_walker(node, checkBypassWalker, context);
+}
+
+static bool
+shouldBypassSelectQuery(Node *node)
+{
+	bool catalog_bypass = false;
+
+	if(gp_resource_group_bypass_catalog_query)
+		raw_expression_tree_walker(node, checkBypassWalker, &catalog_bypass);
+
+	return catalog_bypass;
+}
+
+/*
  * Parse the query and check if this query should
  * bypass the management of resource group.
  *
- * Currently, only SET/RESET/SHOW command can be bypassed
+ * Currently, only SET/RESET/SHOW command and SELECT with only catalog tables
+ * can be bypassed
  */
 static bool
 shouldBypassQuery(const char *query_string)
@@ -2598,7 +2645,8 @@ shouldBypassQuery(const char *query_string)
 	if (parsetree_list == NULL)
 		return false;
 
-	/* Only bypass SET/RESET/SHOW command for now */
+	/* Only bypass SET/RESET/SHOW command and SELECT with only catalog tables
+	 * for now */
 	bypass = true;
 	foreach(parsetree_item, parsetree_list)
 	{
@@ -2607,7 +2655,15 @@ shouldBypassQuery(const char *query_string)
 		if (nodeTag(parsetree) == T_RawStmt)
 			parsetree = ((RawStmt *)parsetree)->stmt;
 
-		if (nodeTag(parsetree) != T_VariableSetStmt &&
+		if (IsA(parsetree, SelectStmt))
+		{
+			if (!shouldBypassSelectQuery(parsetree))
+			{
+				bypass = false;
+				break;
+			}
+		}
+		else if (nodeTag(parsetree) != T_VariableSetStmt &&
 			nodeTag(parsetree) != T_VariableShowStmt)
 		{
 			bypass = false;

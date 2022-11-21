@@ -344,6 +344,14 @@ test__shouldBypassQuery__message_context_is_null(void **state)
 	assert_false(shouldBypassQuery("select 1"));
 }
 
+static void
+test__shouldBypassQuery__with_only_catalog(void **state)
+{
+	MessageContext = NULL;
+
+	assert_true(shouldBypassQuery("select * from pg_catalog.pg_rules"));
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -367,6 +375,7 @@ main(int argc, char *argv[])
 			test_with_setup_and_teardown(test__shouldBypassQuery__cmd_mixed),
 			test_with_setup_and_teardown(test__shouldBypassQuery__forced_bypass_mode),
 			test_with_setup_and_teardown(test__shouldBypassQuery__message_context_is_null),
+			test_with_setup_and_teardown(test__shouldBypassQuery__with_only_catalog),
 	};
 
 	MemoryContextInit();
