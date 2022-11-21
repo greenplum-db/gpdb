@@ -1577,8 +1577,10 @@ AppendOnlyBlockDirectory_End_forUniqueChecks(AppendOnlyBlockDirectory *blockDire
 	/* This must have been reset after each uniqueness check */
 	Assert(blockDirectory->appendOnlyMetaDataSnapshot == InvalidSnapshot);
 
-	if (blockDirectory->blkdirIdx)
-		index_close(blockDirectory->blkdirIdx, AccessShareLock);
+	Assert(RelationIsValid(blockDirectory->blkdirIdx));
+	Assert(RelationIsValid(blockDirectory->blkdirRel));
+
+	index_close(blockDirectory->blkdirIdx, AccessShareLock);
 	heap_close(blockDirectory->blkdirRel, AccessShareLock);
 
 	MemoryContextDelete(blockDirectory->memoryContext);
