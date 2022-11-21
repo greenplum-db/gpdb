@@ -907,6 +907,11 @@ void AppendOnlyVisimap_Init_forUniqueCheck(
 	if (!OidIsValid(visimaprelid) || !OidIsValid(visimapidxid))
 		elog(ERROR, "Could not find block directory for relation: %u", aoRel->rd_id);
 
+	ereportif(Debug_appendonly_print_visimap, LOG,
+			  (errmsg("Append-only visimap init for unique checks"),
+				  errdetail("(aoRel = %u, visimaprel = %u, visimapidxrel = %u)",
+							aoRel->rd_id, visimaprelid, visimapidxid)));
+
 	AppendOnlyVisimap_Init(visiMap,
 						   visimaprelid,
 						   visimapidxid,
@@ -918,11 +923,18 @@ void
 AppendOnlyVisimap_Finish_forUniquenessChecks(
 	AppendOnlyVisimap *visiMap)
 {
+	AppendOnlyVisimapStore *visimapStore = &visiMap->visimapStore;
 	/*
 	 * The snapshot was either reset to NULL in between calls or already cleaned
 	 * up (if this was part of an update command)
 	 */
-	Assert(visiMap->visimapStore.snapshot == InvalidSnapshot);
+	Assert(visimapStore->snapshot == InvalidSnapshot);
+
+	ereportif(Debug_appendonly_print_visimap, LOG,
+			  (errmsg("Append-only visimap finish for unique checks"),
+				  errdetail("(visimaprel = %u, visimapidxrel = %u)",
+							visimapStore->visimapRelation->rd_id,
+							visimapStore->visimapRelation->rd_id)));
 
 	AppendOnlyVisimapStore_Finish(&visiMap->visimapStore, AccessShareLock);
 	AppendOnlyVisimapEntry_Finish(&visiMap->visimapEntry);
