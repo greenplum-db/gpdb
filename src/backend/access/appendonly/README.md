@@ -185,8 +185,11 @@ to protect the scan over pg_aoseg.
 To answer uniqueness checks for AO/AOCO tables, we have a complication. Unlike
 heap, in AO/CO we don't store the xmin/xmax fields in the tuples. So, we have to
 rely on block directory rows that "cover" the data rows to satisfy index lookups.
-The xmin/xmax of the block directory row(s) help determine tuple visibility for
-uniqueness checks.
+Since the block directory is maintained as a heap table, visibility checks on it
+are identical to any other heap table: the xmin/xmax of the block directory
+row(s) will be leveraged. This means we don't have to write any special
+visibility checking code ourselves, nor do we need to worry about transactions
+vs subtransactions.
 
 Since block directory rows are written usually much after the data row has been
 inserted, there are windows in which there is no block  directory row on disk

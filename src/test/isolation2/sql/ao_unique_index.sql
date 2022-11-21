@@ -270,6 +270,39 @@ CREATE TABLE unique_index_ao_row (a INT unique) USING ao_row
 1: COPY unique_index_ao_row FROM PROGRAM 'seq 1 1';
 -- now that tx 1 was aborted, tx 2 is successful.
 2<:
+1: END;
 
 DROP TABLE unique_index_ao_row;
+
+--------------------------------------------------------------------------------
+-------------------- Smoke tests for subtransactions ---------------------------
+--------------------------------------------------------------------------------
+CREATE TABLE unique_index_ao_row (a INT unique) USING ao_row
+    DISTRIBUTED REPLICATED;
+
+1: BEGIN;
+1: SAVEPOINT a;
+1: INSERT INTO unique_index_ao_row VALUES(1);
+
+-- concurrent tx inserting conflicting row should block.
+2: BEGIN;
+2&: INSERT INTO unique_index_ao_row VALUES(1);
+-- concurrent tx inserting non-conflicting row should be successful.
+3: INSERT INTO unique_index_ao_row VALUES(2);
+
+-- conflict should be detected within the same subtx.
+1: INSERT INTO unique_index_ao_row VALUES(1);
+-- the concurrent tx should now succeed.
+2<:
+2: ABORT;
+
+-- after rolling back to the savepoint, we should be able to re-insert the key
+1: ROLLBACK TO SAVEPOINT a;
+1: INSERT INTO unique_index_ao_row VALUES(1);
+1: COMMIT;
+
+SELECT * FROM unique_index_ao_row;
+
+DROP TABLE unique_index_ao_row;
+
 RESET gp_appendonly_enable_unique_index;
