@@ -1,7 +1,6 @@
 create schema uao_dml_unique_index_update_@amname@;
 set search_path=uao_dml_unique_index_update_@amname@;
 set default_table_access_method=@amname@;
-SET gp_appendonly_enable_unique_index TO ON;
 -- Case 1: Inserting tx inserting a key affected by an update--------------------
 CREATE TABLE uao_unique_index_update (a INT unique);
 INSERT INTO uao_unique_index_update VALUES (1);

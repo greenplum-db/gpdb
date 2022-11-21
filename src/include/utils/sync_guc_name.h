@@ -13,7 +13,6 @@
 		"gin_fuzzy_search_limit",
 		"gin_pending_list_limit",
 		"gp_allow_date_field_width_5digits",
-		"gp_appendonly_enable_unique_index",
 		"gp_blockdirectory_entry_min_range",
 		"gp_blockdirectory_minipage_size",
 		"gp_debug_linger",

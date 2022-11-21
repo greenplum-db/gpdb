@@ -1,5 +1,4 @@
 -- Test cases to cover CREATE UNIQUE INDEX on AO/CO tables.
-SET gp_appendonly_enable_unique_index TO ON;
 SET default_table_access_method TO @amname@;
 -- To force index scans for smoke tests
 SET enable_seqscan TO off;
@@ -148,7 +147,6 @@ SELECT * FROM unique_index_build_@amname@ WHERE i = 6;
 (3 rows)
 
 DROP TABLE unique_index_build_@amname@;
-RESET gp_appendonly_enable_unique_index;
 RESET default_table_access_method;
 RESET enable_seqscan;
 RESET optimizer;

@@ -948,12 +948,6 @@ DefineIndex(Oid relationId,
 
 	if (stmt->unique && RelationIsAppendOptimized(rel))
 	{
-		/* XXX: Remove when unique indexes are fully supported on AO/CO tables. */
-		if (!gp_appendonly_enable_unique_index)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						errmsg("append-only tables do not support unique indexes")));
-
 		if (stmt->concurrent)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),

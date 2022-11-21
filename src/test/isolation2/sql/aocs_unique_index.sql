@@ -6,8 +6,6 @@
 -- us to predict block directory entries without having to worry about the
 -- table's distribution.
 
-SET gp_appendonly_enable_unique_index TO ON;
-
 -- Case 1: Conflict with committed transaction----------------------------------
 CREATE TABLE unique_index_ao_column (a bigint unique) USING ao_column
     DISTRIBUTED REPLICATED;
@@ -344,5 +342,3 @@ INSERT INTO unique_index_ao_column VALUES(2);
 2: ABORT;
 
 DROP TABLE unique_index_ao_column;
-
-RESET gp_appendonly_enable_unique_index;

@@ -1,7 +1,6 @@
 create schema uao_dml_unique_index_@amname@;
 set search_path=uao_dml_unique_index_@amname@;
 set default_table_access_method=@amname@;
-SET gp_appendonly_enable_unique_index TO ON;
 -- Case 1: Inserting tx inserting a deleted key---------------------------------
 CREATE TABLE uao_unique_index_delete (a INT unique);
 INSERT INTO uao_unique_index_delete VALUES (1);
