@@ -45,7 +45,7 @@ extern int	SS_assign_special_param(PlannerInfo *root);
 
 
 extern bool IsSubqueryCorrelated(Query *sq);
-extern bool IsSubqueryMultiLevelCorrelated(Query *sq);
+extern void check_multi_subquery_correlated(PlannerInfo *root, Var *var);
 
 extern List *generate_subquery_vars(PlannerInfo *root, List *tlist,
 					   Index varno);

@@ -103,6 +103,9 @@ assign_param_for_var(PlannerInfo *root, Var *var)
 	PlannerParamItem *pitem;
 	Index		levelsup;
 
+	/* check multi-level correlated subquery in GPDB planner */
+	check_multi_subquery_correlated(root, var);
+
 	/* Find the query level the Var belongs to */
 	for (levelsup = var->varlevelsup; levelsup > 0; levelsup--)
 		root = root->parent_root;
@@ -504,18 +507,53 @@ IsSubqueryCorrelated(Query *sq)
 	return (ctx.maxLevelsUpVar > 0 || ctx.maxLevelsUpPlaceHolderVar > 0);
 }
 
-/**
- * Returns true if subquery contains references to more than its immediate outer query.
+/*
+ * Check multi-level correlated subquery in Postgres legacy planner
+ *
+ * We could support one-level correlated subquery by adding
+ * broadcast + result(param filter). For multi-level scenario
+ * we should prevent planner from adding another motion above
+ * result node which is from one-level correlated subquery.
+ *
+ * In this function, firstly we find the top root which refer
+ * to Param, then check table distribution below current root
+ * Not support if any distributed table exist.
  */
-bool
-IsSubqueryMultiLevelCorrelated(Query *sq)
+void
+check_multi_subquery_correlated(PlannerInfo *root, Var *var)
 {
-	Assert(sq);
-	CorrelatedVarWalkerContext ctx;
-	ctx.maxLevelsUpVar = 0;
-	ctx.maxLevelsUpPlaceHolderVar = 0;
-	CorrelatedVarWalker((Node *) sq, &ctx);
-	return (ctx.maxLevelsUpVar > 1 || ctx.maxLevelsUpPlaceHolderVar > 1);
+	int levelsup;
+
+	if (Gp_role != GP_ROLE_DISPATCH)
+		return;
+	if (var->varlevelsup <= 1)
+		return;
+
+	if (list_length(root->parse->rtable) == 0)
+		return;
+
+	for (levelsup = var->varlevelsup; levelsup > 0; levelsup--)
+	{
+		PlannerInfo *parent_root = root->parent_root;
+
+		if (parent_root == NULL)
+			elog(ERROR, "not found parent root when checking skip-level correlations");
+
+		/*
+		 * Only check sublink not include subquery
+		 */
+		if(parent_root->parse->hasSubLinks &&
+			QueryHasDistributedRelation(root->parse, parent_root->is_correlated_subplan))
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					errmsg("correlated subquery with skip-level correlations is not supported")));
+		}
+
+		root = root->parent_root;
+	}
+
+	return;
 }
 
 /*
@@ -592,15 +630,6 @@ make_subplan(PlannerInfo *root, Query *orig_subquery, SubLinkType subLinkType,
 	Assert(root->plan_params == NIL);
 
 	PlannerConfig *config = CopyPlannerConfig(root->config);
-
-	if ((Gp_role == GP_ROLE_DISPATCH)
-			&& IsSubqueryMultiLevelCorrelated(subquery)
-			&& QueryHasDistributedRelation(subquery, root->is_correlated_subplan))
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("correlated subquery with skip-level correlations is not supported")));
-	}
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -1418,12 +1447,6 @@ convert_ANY_sublink_to_join(PlannerInfo *root, SubLink *sublink,
 	*/
 	cdbsubselect_drop_orderby(subselect);
 	cdbsubselect_drop_distinct(subselect);
-
-	/*
-	 * If deeply correlated, then don't pull it up
-	 */
-	if (IsSubqueryMultiLevelCorrelated(subselect))
-		return NULL;
 
 	/*
 	 * If there are CTEs, then the transformation does not work. Don't attempt
