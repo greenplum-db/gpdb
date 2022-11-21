@@ -113,8 +113,6 @@
 										queryDesc->ddesc->parallelCursorName &&	\
 										strlen(queryDesc->ddesc->parallelCursorName) > 0)
 
-extern CGroupOpsRoutine *cgroupOpsRoutine;
-
 /* Hooks for plugins to get control in ExecutorStart/Run/Finish/End */
 ExecutorStart_hook_type ExecutorStart_hook = NULL;
 ExecutorRun_hook_type ExecutorRun_hook = NULL;

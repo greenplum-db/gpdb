@@ -53,7 +53,6 @@
 #include "utils/session_state.h"
 #include "utils/vmem_tracker.h"
 #include "utils/cgroup-ops-v1.h"
-#include "utils/cgroup-ops-dummy.h"
 
 #define InvalidSlotId	(-1)
 #define RESGROUP_MAX_SLOTS	(MaxConnections)
@@ -410,38 +409,23 @@ AllocResGroupEntry(Oid groupId, const ResGroupCaps *caps)
 void
 initCgroup(void)
 {
-	bool probe_result;
-
 #ifdef __linux__
 	if (!gp_resource_group_enable_cgroup_version_two)
-		cgroup_handler_alpha();
+	{
+		cgroupOpsRoutine = get_group_routine_alpha();
+		cgroupSystemInfo = get_cgroup_sysinfo_alpha();
+	}
 #else
-	cgroup_handler_dummy();
+	elog(ERROR, "The resource group is not support on your operating system.");
 #endif
 
-	if (!IsUnderPostmaster)
-	{
-		/* If we are under postmaster, we should probe and init cgroup */
+	bool probe_result = cgroupOpsRoutine->probecgroup();
+	if (!probe_result)
+		elog(ERROR, "The control group is not well configured, please check your"
+					"system configuration.");
 
-		probe_result = cgroupOpsRoutine->probecgroup();
-		if (!probe_result)
-			elog(ERROR, "The control group is not well configured, please check your"
-						"system configuration.");
-
-		cgroupOpsRoutine->checkcgroup();
-		cgroupOpsRoutine->initcgroup();
-	}
-	else
-	{
-		/* In postgres, we should check the share memory */
-		probe_result = getCgroupMountDir();
-		if (!probe_result)
-			elog(ERROR, "The control group is not well configured, please check your"
-						"system configuration.");
-
-		if (cgroupSystemInfo->ncores == 0)
-			cgroupSystemInfo->ncores = getCPUCores();
-	}
+	cgroupOpsRoutine->checkcgroup();
+	cgroupOpsRoutine->initcgroup();
 }
 
 /*

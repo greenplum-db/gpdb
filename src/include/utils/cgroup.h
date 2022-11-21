@@ -230,9 +230,9 @@ typedef struct CGroupOpsRoutine
 } CGroupOpsRoutine;
 
 /* The global function handler. */
-CGroupOpsRoutine *cgroupOpsRoutine;
+extern CGroupOpsRoutine *cgroupOpsRoutine;
 
 /* The global system info. */
-CGroupSystemInfo *cgroupSystemInfo;
+extern CGroupSystemInfo *cgroupSystemInfo;
 
 #endif	/* CGROUP_H */

@@ -16,6 +16,7 @@
 
 #include "utils/cgroup.h"
 
-extern void cgroup_handler_alpha(void);
+extern CGroupOpsRoutine *get_group_routine_alpha(void);
+extern CGroupSystemInfo *get_cgroup_sysinfo_alpha(void);
 
 #endif   /* RES_GROUP_OPS_V1_H */

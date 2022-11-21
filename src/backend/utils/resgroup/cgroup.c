@@ -24,8 +24,8 @@
 #include <mntent.h>
 
 
-extern CGroupOpsRoutine *cgroupOpsRoutine;
-extern CGroupSystemInfo *cgroupSystemInfo;
+CGroupOpsRoutine *cgroupOpsRoutine;
+CGroupSystemInfo *cgroupSystemInfo;
 
 /* cgroup component names. */
 const char *component_names[CGROUP_COMPONENT_COUNT] =
@@ -128,7 +128,6 @@ buildPath(Oid group,
 							filename[0] ? "file" : "directory",
 							path);
 	}
-	return;
 }
 
 /*
