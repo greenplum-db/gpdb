@@ -355,7 +355,8 @@ fallback:
 		setComponentDir(component, FALLBACK_COMP_DIR);
 	}
 
-	fclose(f);
+	if (f)
+		fclose(f);
 }
 
 
