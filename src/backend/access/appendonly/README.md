@@ -252,3 +252,10 @@ conflicts will still be detected. Depending on whether the concurrent
 transaction committed or is still in progress, the repeatable read transaction
 will raise a conflict or enter into xwait respectively. This behavior is table
 AM agnostic.
+
+Partial unique indexes: We don't have to do anything special for partial indexes.
+Keys not satisfying the partial index predicate are never inserted into the
+index, and hence there are no uniqueness checks triggered (see
+ExecInsertIndexTuples()). Also during partial unique index builds, keys that
+don't satisfy the partial index predicate are never inserted into the index
+(see *_index_build_range_scan()).
