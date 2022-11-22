@@ -4623,8 +4623,9 @@ static int compress_zstd(request_t *r, block_t *blk, int buflen)
 	while(cursor < buflen){
 		int in_size = (buflen - cursor) > MAX_FRAME_SIZE ? MAX_FRAME_SIZE : (buflen - cursor);
 		ZSTD_inBuffer bin = {buf + cursor, in_size, 0};
+		int outpos = 0;
 		while(bin.pos < bin.size){
-			ZSTD_outBuffer bout = {blk->cdata + offset, OUT_BUFFER_SIZE, 0};
+			ZSTD_outBuffer bout = {blk->cdata + offset, OUT_BUFFER_SIZE - outpos, outpos};
 			size_t res = ZSTD_compressStream(r->zstd_cctx, &bout, &bin);
 
 			if (ZSTD_isError(res))
@@ -4634,6 +4635,7 @@ static int compress_zstd(request_t *r, block_t *blk, int buflen)
 				return -1;
 			}
 			offset += bout.pos;
+			outpos = bout.pos; 
 		}
 		cursor += in_size;
 	}
