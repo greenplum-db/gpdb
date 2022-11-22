@@ -14,6 +14,7 @@
 #include "optimizer/pathnode.h"
 #include "optimizer/planmain.h"
 #include "optimizer/restrictinfo.h"
+#include "tcop/pquery.h"
 
 #ifdef PG_MODULE_MAGIC
 PG_MODULE_MAGIC;
@@ -31,6 +32,11 @@ test_execute_spi_expression(const char *query)
 {
 	int			r;
 
+	/* Set up the global portal */
+	Portal saveActivePortal = ActivePortal;
+
+	ActivePortal = CreateNewPortal();
+
 	if (SPI_connect() != SPI_OK_CONNECT)
 		elog(ERROR, "Failed to connect to SPI");
 	PG_TRY();
@@ -42,10 +48,17 @@ test_execute_spi_expression(const char *query)
 	PG_CATCH();
 	{
 		SPI_finish();
+
+		/* Restore the global portal */
+		ActivePortal = saveActivePortal;
+
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
 	SPI_finish();
+
+	/* Restore the global portal */
+	ActivePortal = saveActivePortal;
 }
 
 static void
