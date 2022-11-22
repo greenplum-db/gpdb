@@ -117,3 +117,162 @@ Objects in extension "test_ext_cine"
  table ext_cine_tab3
 (3 rows)
 
+--
+-- Test cases from Issue: https://github.com/greenplum-db/gpdb/issues/6716
+--
+drop extension if exists gp_inject_fault;
+NOTICE:  extension "gp_inject_fault" does not exist, skipping
+create schema issue6716;
+create extension gp_inject_fault with schema issue6716;
+select issue6716.gp_inject_fault('issue6716', 'skip', 1);
+ gp_inject_fault 
+-----------------
+ Success:
+(1 row)
+
+select issue6716.gp_inject_fault('issue6716', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:
+(1 row)
+
+drop extension gp_inject_fault;
+--
+-- Another test cases for problem https://github.com/greenplum-db/gpdb/issues/6716.
+-- Segments of gpdb builed with `--enable-cassert` stops with error like
+-- FailedAssertion(""!(stack->state == GUC_SAVE)" at next cases. At gpdb builed
+-- without `--enable-cassert` segments won't stop with errors, but there may be
+-- incorrect search_path.
+--
+--
+-- create extension in the same schema
+--
+begin;
+set search_path=pg_catalog;
+create extension btree_gin;
+show search_path;
+ search_path 
+-------------
+ pg_catalog
+(1 row)
+
+rollback;
+--
+-- create extension in the different schema
+--
+begin;
+set search_path=issue6716;
+show search_path;
+ search_path 
+-------------
+ issue6716
+(1 row)
+
+create extension btree_gin with schema pg_catalog;
+show search_path;
+ search_path 
+-------------
+ issue6716
+(1 row)
+
+end;
+-- check search_path after transaction commit
+show search_path;
+ search_path 
+-------------
+ issue6716
+(1 row)
+
+drop extension btree_gin;
+--
+-- Test case for create extension from unpackaged
+--
+-- Create extension functions at existing schema (issue6716). Code copied from from test_ext_cau--1.0.sql
+create function test_func1(a int, b int) returns int
+as $$
+begin
+	return a + b;
+end;
+$$
+LANGUAGE plpgsql;
+create function test_func2(a int, b int) returns int
+as $$
+begin
+	return a - b;
+end;
+$$
+LANGUAGE plpgsql;
+-- restore search path
+reset search_path;
+begin;
+-- change search_path
+set search_path=pg_catalog;
+show search_path;
+ search_path 
+-------------
+ pg_catalog
+(1 row)
+
+-- create extension in schema issue6716
+create extension test_ext_cau with schema issue6716 version '1.1' from unpackaged;
+-- check that search path doesn't changed after create extension
+show search_path;
+ search_path 
+-------------
+ pg_catalog
+(1 row)
+
+-- show that functions belong to schema issue6716 (check that create extension works correctly)
+set search_path=issue6716;
+\df
+                             List of functions
+  Schema   |    Name    | Result data type | Argument data types  |  Type  
+-----------+------------+------------------+----------------------+--------
+ issue6716 | test_func1 | integer          | a integer, b integer | normal
+ issue6716 | test_func2 | integer          | a integer, b integer | normal
+(2 rows)
+
+SELECT e.extname, ne.nspname AS extschema, p.proname, np.nspname AS proschema
+FROM pg_catalog.pg_extension AS e
+    INNER JOIN pg_catalog.pg_depend AS d ON (d.refobjid = e.oid)
+    INNER JOIN pg_catalog.pg_proc AS p ON (p.oid = d.objid)
+    INNER JOIN pg_catalog.pg_namespace AS ne ON (ne.oid = e.extnamespace)
+    INNER JOIN pg_catalog.pg_namespace AS np ON (np.oid = p.pronamespace)
+WHERE d.deptype = 'e' and e.extname = 'test_ext_cau'
+ORDER BY 1, 3;
+   extname    | extschema |  proname   | proschema 
+--------------+-----------+------------+-----------
+ test_ext_cau | issue6716 | test_func2 | issue6716
+(1 row)
+
+end;
+-- check search_path after transaction commit
+show search_path;
+ search_path 
+-------------
+ issue6716
+(1 row)
+
+reset search_path;
+drop function issue6716.test_func1(int,int);
+drop extension test_ext_cau;
+--
+-- check that alter extension (with search_path is set) won't fail (on gpdb builded with --enable-cassert)
+--
+create extension test_ext_cau with version '1.0' schema issue6716;
+begin;
+set search_path=issue6716;
+alter extension test_ext_cau update to '1.1';
+end;
+-- check search_path after transaction commit
+show search_path;
+ search_path 
+-------------
+ issue6716
+(1 row)
+
+reset search_path;
+drop schema issue6716 cascade;
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function issue6716.test_func1(integer,integer)
+drop cascades to extension test_ext_cau
