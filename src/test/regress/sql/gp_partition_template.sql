@@ -16,7 +16,7 @@ CREATE TABLE subpart_range_templ (id int, year date, letter char(1))
         );
 
 -- Subpartition template should be stored in catalog
-SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_templ'::regclass;
+SELECT level, strategy, partparams, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_templ'::regclass;
 SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
 
 -- ADD PARTITION should create subpartitions
@@ -26,7 +26,7 @@ SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range
 ALTER TABLE subpart_range_templ ADD PARTITION d VALUES ('D') (SUBPARTITION r3 START (date '2003-01-01') END (date '2005-01-01'));
 -- Remove subpartition template
 ALTER TABLE subpart_range_templ SET SUBPARTITION TEMPLATE();
-SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_templ'::regclass;
+SELECT level, strategy, partparams, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_templ'::regclass;
 -- ADD PARTITION with subpartition definition spec now should work
 ALTER TABLE subpart_range_templ ADD PARTITION d VALUES ('D') (SUBPARTITION r3 START (date '2003-01-01') END (date '2005-01-01'));
 SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
@@ -44,7 +44,7 @@ ALTER TABLE subpart_range_templ SET SUBPARTITION TEMPLATE
     subpartition r5 START (date '2021-01-01') EXCLUSIVE END (date '2023-01-01') INCLUSIVE EVERY (interval '1 year'),
     DEFAULT SUBPARTITION yet_another_year
 );
-SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_templ'::regclass;
+SELECT level, strategy, partparams, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_templ'::regclass;
 -- ADD PARTITION should create subpartitions according to the new template
 ALTER TABLE subpart_range_templ ADD PARTITION e VALUES ('E');
 SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
@@ -55,7 +55,7 @@ ALTER TABLE subpart_range_templ SET SUBPARTITION TEMPLATE
     subpartition r4 END (date '2020-01-01') WITH (appendonly=true, compresslevel=5),
     DEFAULT SUBPARTITION yet_another_year
     );
-SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_templ'::regclass;
+SELECT level, strategy, partparams, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_templ'::regclass;
 ALTER TABLE subpart_range_templ ADD PARTITION f VALUES ('F');
 SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
 
@@ -64,7 +64,7 @@ ALTER TABLE subpart_range_templ SET SUBPARTITION TEMPLATE
     subpartition r4 START (date '2020-01-01') EXCLUSIVE WITH (appendonly=true, orientation=column, compresslevel=5),
     DEFAULT SUBPARTITION yet_another_year
     );
-SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_templ'::regclass;
+SELECT level, strategy, partparams, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_templ'::regclass;
 ALTER TABLE subpart_range_templ ADD PARTITION g VALUES ('G');
 SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
 
@@ -83,20 +83,20 @@ CREATE TABLE subpart_range_templ_multilevel (id int, year int, month int, day in
             DEFAULT SUBPARTITION other_days )
         ( START (2022) END (2023) EVERY (1));
 
-SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_templ_multilevel'::regclass;
+SELECT level, strategy, partparams, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_templ_multilevel'::regclass;
 SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ_multilevel') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
 -- ADD PARTITION should create subpartitions according to the templates
 ALTER TABLE subpart_range_templ_multilevel ADD PARTITION new_part START (2023) END (2024);
 SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ_multilevel') As t, pg_class As c WHERE relid = oid AND t.relid::regclass::text like '%new_part%' ORDER BY 1,5;
 -- Remove level 1 subpartition template
 ALTER TABLE subpart_range_templ_multilevel SET SUBPARTITION TEMPLATE();
-SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_templ_multilevel'::regclass;
+SELECT level, strategy, partparams, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_templ_multilevel'::regclass;
 -- ADD PARTITION should create subpartitions according to the level 1 partition definition spec and level 2 subpartition templates
 ALTER TABLE subpart_range_templ_multilevel Add partition oct START (10) END (11) (SUBPARTITION new_days START (15) END (30));
 SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ_multilevel') As t, pg_class As c WHERE relid = oid AND t.relid::regclass::text LIKE '%oct%' ORDER BY 1,5;
 -- Remove level 2 subpartition template, this works but no syntax will be available to add new partitions at any level
 ALTER TABLE subpart_range_templ_multilevel ALTER PARTITION new_part SET SUBPARTITION TEMPLATE();
-SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_templ_multilevel'::regclass;
+SELECT level, strategy, partparams, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_templ_multilevel'::regclass;
 -- Can't ADD PARTITION because subpartition template at the last level is missing
 ALTER TABLE subpart_range_templ_multilevel Add partition oct START (10) END (11) (SUBPARTITION new_days START (15) END (30));
 
@@ -123,7 +123,7 @@ CREATE TABLE subpart_range_mixedtempl (a int, dropped int, b int, c int, d int)
             )
         );
 -- Subpartition template should be stored in catalog
-SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_mixedtempl'::regclass;
+SELECT level, strategy, partparams, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_range_mixedtempl'::regclass;
 SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_mixedtempl') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
 -- ADD PARTITION without subpartition definition spec for level 2 should fail
 ALTER TABLE subpart_range_mixedtempl ADD PARTITION b_high START (6) END (9);
@@ -151,7 +151,7 @@ CREATE TABLE subpart_list_templ (trans_id int, date date, amount
         EVERY (INTERVAL '1 year'),
         DEFAULT PARTITION outlying_dates );
 
-SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_list_templ'::regclass;
+SELECT level, strategy, partparams, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_list_templ'::regclass;
 SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_list_templ') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
 ALTER TABLE subpart_list_templ ADD PARTITION year_2023 START (date '2022-01-01') EXCLUSIVE END (date '2023-01-01') INCLUSIVE;
 -- ADD PARTITION should create subpartitions according to the template
@@ -176,7 +176,7 @@ CREATE TABLE notemplate (a int, dropped int, b int, c int, d int)
             )
         );
 
-SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'notemplate'::regclass;
+SELECT level, strategy, partparams, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'notemplate'::regclass;
 -- This should fail due to missing subpartition definition spec
 ALTER TABLE notemplate ADD partition b_hi START (6) END (9);
 -- This should work
@@ -207,7 +207,7 @@ create table subpart_templ_encoding (i int, j int, k int, l int)
 (   partition p1 start(1) end(10),
     partition p2 start(10) end(20)
 );
-SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_templ_encoding'::regclass;
+SELECT level, strategy, partparams, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_templ_encoding'::regclass;
 SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_templ_encoding') AS t, pg_class AS c WHERE relid = oid ORDER BY 1,5;
 EXECUTE encoding_check;
 -- FIXME: the new partitions should have the encodings specified in the template
@@ -230,7 +230,7 @@ create table subpart_templ_encoding (i int, j int, k int, l int)
 (   partition p1 start(1) end(10),
     partition p2 start(10) end(20)
 );
-SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_templ_encoding'::regclass;
+SELECT level, strategy, partparams, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'subpart_templ_encoding'::regclass;
 SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_templ_encoding') AS t, pg_class AS c WHERE relid = oid ORDER BY 1,5;
 EXECUTE encoding_check;
 -- FIXME: the new partitions should have the encodings specified in the template
@@ -294,7 +294,7 @@ ALTER TABLE set_templ_test SET SUBPARTITION TEMPLATE(
     subpartition r1 START (date '2001-01-01') END (date '2003-01-01'),
     subpartition r2 START (date '2003-01-01') END (date '2005-01-01') EVERY (interval '1 year')
     );
-SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'set_templ_test'::regclass;
+SELECT level, strategy, partparams, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'set_templ_test'::regclass;
 SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('set_templ_test') AS t, pg_class AS c WHERE relid = oid ORDER BY 1,5;
 -- ADD PARTITION should created subpartitions according to the template
 ALTER TABLE set_templ_test ADD PARTITION e VALUES ('E');
@@ -317,7 +317,7 @@ CREATE TABLE set_templ_test_a_sp2 PARTITION OF set_templ_test_a
     FOR VALUES FROM (date '2022-01-01', 'A') TO (date '2022-01-01', 'K');
 -- Can't ADD PARTITION because the boundary spec in the stored partition template
 -- doesn't match the first level 1 partition's partition key
-ALTER TABLE set_templ_test ADD PARTITION f VALUES ('F');
+ALTER TABLE set_templ_test ADD PARTITION g VALUES ('G');
 -- Drop the FIRST level 1 partition
 DROP TABLE set_templ_test_a;
 -- Add a level 1 partition who's partition key is an expression
@@ -326,7 +326,7 @@ CREATE TABLE set_templ_test_a PARTITION OF set_templ_test FOR VALUES IN ('A')
 CREATE TABLE set_templ_test_a_sp3 PARTITION OF set_templ_test_a
     FOR VALUES FROM (1) TO (10);
 -- Can't ADD PARTITION because level 1 first partition's partition key has expression
-ALTER TABLE set_templ_test ADD PARTITION f VALUES ('F');
+ALTER TABLE set_templ_test ADD PARTITION h VALUES ('H');
 -- Reset SUBPARTITION TEMPLATE
 ALTER TABLE set_templ_test SET SUBPARTITION TEMPLATE();
 ALTER TABLE set_templ_test SET SUBPARTITION TEMPLATE(

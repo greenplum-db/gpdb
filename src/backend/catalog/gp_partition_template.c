@@ -23,7 +23,7 @@
 #include "utils/fmgroids.h"
 
 void
-StoreGpPartitionTemplate(Oid relid, int32 level,
+StoreGpPartitionTemplate(Oid relid, int32 level, char strategy, List* partParams,
 						 GpPartitionDefinition *gpPartDef)
 {
 	Relation	gp_template;
@@ -36,6 +36,8 @@ StoreGpPartitionTemplate(Oid relid, int32 level,
 	memset(nulls, 0, sizeof(nulls));
 	values[Anum_gp_partition_template_relid - 1] = relid;
 	values[Anum_gp_partition_template_level - 1] = level;
+	values[Anum_gp_partition_template_strategy - 1] = CharGetDatum(strategy);
+	values[Anum_gp_partition_template_partparams - 1] = CStringGetTextDatum(nodeToString(partParams));
 	values[Anum_gp_partition_template_template - 1] = CStringGetTextDatum(nodeToString(gpPartDef));
 
 	gp_template = table_open(PartitionTemplateRelationId, RowExclusiveLock);
@@ -58,6 +60,8 @@ StoreGpPartitionTemplate(Oid relid, int32 level,
 		bool doreplace[Natts_gp_partition_template];
 		memset(doreplace, false, sizeof(doreplace));
 
+		doreplace[Anum_gp_partition_template_strategy - 1] = true;
+		doreplace[Anum_gp_partition_template_partparams - 1] = true;
 		doreplace[Anum_gp_partition_template_template - 1] = true;
 		tuple = heap_modify_tuple(tuple, RelationGetDescr(gp_template),
 									values, nulls, doreplace);
@@ -76,14 +80,14 @@ StoreGpPartitionTemplate(Oid relid, int32 level,
 	table_close(gp_template, RowExclusiveLock);
 }
 
-GpPartitionDefinition *
+PartitionSpec *
 GetGpPartitionTemplate(Oid relid, int32 level)
 {
 	Relation	gp_template;
 	ScanKeyData key[2];
 	SysScanDesc scan;
 	HeapTuple	tuple;
-	GpPartitionDefinition *def = NULL;
+	PartitionSpec* subpart = NULL;
 
 	gp_template = table_open(PartitionTemplateRelationId, RowExclusiveLock);
 	ScanKeyInit(&key[0],
@@ -104,14 +108,45 @@ GetGpPartitionTemplate(Oid relid, int32 level)
 		Datum       datum;
 		bool        isnull;
 
+		subpart = makeNode(PartitionSpec);
+
+		datum = heap_getattr(tuple, Anum_gp_partition_template_strategy,
+							 RelationGetDescr(gp_template), &isnull);
+		if (!isnull)
+		{
+			char strategy = DatumGetChar(datum);
+			switch (strategy)
+			{
+				case PARTITION_STRATEGY_RANGE:
+					subpart->strategy = psprintf("range");
+					break;
+				case PARTITION_STRATEGY_LIST:
+					subpart->strategy = psprintf("list");
+					break;
+			}
+		}
+
+		subpart->location = -1;
+
+		/* But use the hard way to retrieve further variable-length attributes */
+		/* Operator class */
+		datum = heap_getattr(tuple, Anum_gp_partition_template_partparams,
+							 RelationGetDescr(gp_template), &isnull);
+		if (!isnull)
+		{
+			char *paramStr = TextDatumGetCString(datum);
+			subpart->partParams = stringToNode(paramStr);
+			pfree(paramStr);
+		}
+
 		datum = heap_getattr(tuple, Anum_gp_partition_template_template,
 							 RelationGetDescr(gp_template), &isnull);
 
 		if (!isnull)
 		{
 			char *defStr = TextDatumGetCString(datum);
-			def = stringToNode(defStr);
-			def->fromCatalog = true;
+			subpart->gpPartDef = stringToNode(defStr);
+			subpart->gpPartDef->fromCatalog = true;
 			pfree(defStr);
 		}
 	}
@@ -119,7 +154,7 @@ GetGpPartitionTemplate(Oid relid, int32 level)
 	systable_endscan(scan);
 	table_close(gp_template, RowExclusiveLock);
 
-	return def;
+	return subpart;
 }
 
 /*

@@ -1196,7 +1196,8 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 			/*
 			 * Populate PARTITION BY spec for each level of the parents
 			 * in the partitioning hierarchy. The PartitionSpec or a chain of
-			 * PartitionSpecs if subpartitioning exists, are generated based on
+			 * PartitionSpecs if subpartitioning exists, are retrieved from
+			 * subpartition template if exists, or generated based on
 			 * the first existing partition of each partition depth.
 			 */
 			do
@@ -1226,10 +1227,11 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 
 				temprel = table_open(firstchildoid, AccessShareLock);
 
-				temptempsubpart = generatePartitionSpec(temprel);
-
-				temptempsubpart->gpPartDef = GetGpPartitionTemplate(
+				temptempsubpart = GetGpPartitionTemplate(
 					ancestors ? llast_oid(ancestors) : RelationGetRelid(rel), level);
+				if (!temptempsubpart)
+					temptempsubpart = generatePartitionSpec(temprel);
+
 				level++;
 
 				if (tempsubpart == NULL)
@@ -1344,6 +1346,8 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 				Relation firstrel;
 				Oid firstchildoid;
 				PartitionDesc partdesc = RelationGetPartitionDesc(rel);
+				PartitionSpec *partspec;
+				char strategy;
 
 				if (partdesc->nparts == 0)
 					ereport(ERROR,
@@ -1383,9 +1387,21 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 				templateDef = transformGpPartitionDefinition(firstchildoid, cmd->queryString, templateDef);
 				generatePartitions(firstchildoid, templateDef, NULL, cmd->queryString,
 								   NIL, NULL, NULL, false);
+				partspec = generatePartitionSpec(firstrel);
 				table_close(firstrel, AccessShareLock);
 
-				StoreGpPartitionTemplate(topParentrelid, level, templateDef);
+				/* Parse partitioning strategy name */
+				if (pg_strcasecmp(partspec->strategy, "list") == 0)
+					strategy = PARTITION_STRATEGY_LIST;
+				else if (pg_strcasecmp(partspec->strategy, "range") == 0)
+					strategy = PARTITION_STRATEGY_RANGE;
+				else
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+								errmsg("supported partitioning strategy for subpartition template: \"%s\"",
+									   partspec->strategy)));
+
+				StoreGpPartitionTemplate(topParentrelid, level, strategy, partspec->partParams, templateDef);
 			}
 			else
 			{
