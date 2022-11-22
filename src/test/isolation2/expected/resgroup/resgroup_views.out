@@ -22,10 +22,10 @@ select rsgname , groupid , segment_id , cpu , memory_used , memory_shared_used f
  default_group | 6437    | -1         | 0.00 | 0           | 0                  
 (1 row)
 
-select * from gp_toolkit.gp_resgroup_role where rrrolname='postgres';
+select * from gp_toolkit.gp_resgroup_role where rrrolname='gpadmin';
  rrrolname | rrrsgname   
 -----------+-------------
- postgres  | admin_group 
+ gpadmin   | admin_group 
 (1 row)
 
 -- also log the raw output of the views, if any of above tests failed it is
