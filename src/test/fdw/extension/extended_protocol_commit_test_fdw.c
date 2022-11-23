@@ -37,10 +37,11 @@ test_execute_spi_expression(const char *query)
 
 	ActivePortal = CreateNewPortal();
 
-	if (SPI_connect() != SPI_OK_CONNECT)
-		elog(ERROR, "Failed to connect to SPI");
 	PG_TRY();
 	{
+		if (SPI_connect() != SPI_OK_CONNECT)
+			elog(ERROR, "Failed to connect to SPI");
+
 		r = SPI_execute(query, false, 0);
 		if (r < 0)
 			elog(ERROR, "Failed to execute '%s' via SPI: %s [%d]", query, SPI_result_code_string(r), r);
@@ -55,6 +56,7 @@ test_execute_spi_expression(const char *query)
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
+
 	SPI_finish();
 
 	/* Restore the global portal */
