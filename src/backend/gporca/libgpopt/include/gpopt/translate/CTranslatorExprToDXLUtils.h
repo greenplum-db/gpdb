@@ -93,7 +93,8 @@ private:
 
 	// check if the given constant value for a particular distribution column can be used
 	// to identify which segment to direct dispatch to.
-	static BOOL FDirectDispatchable(const CColRef *pcrDistrCol,
+	static BOOL FDirectDispatchable(CMDAccessor *md_accessor,
+									const CColRef *pcrDistrCol,
 									const CDXLDatum *dxl_datum);
 
 public:

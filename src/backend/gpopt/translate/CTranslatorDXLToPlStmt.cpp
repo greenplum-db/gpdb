@@ -196,7 +196,12 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
 	// collect oids from rtable
 	List *oids_list = NIL;
 
+	// collect unique RTE in FROM Clause
+	List *oids_list_unique = NIL;
+
 	ListCell *lc_rte = nullptr;
+
+	RangeTblEntry *pRTEHashFuncCal = nullptr;
 
 	ForEach(lc_rte, m_dxl_to_plstmt_context->GetRTableEntriesList())
 	{
@@ -205,7 +210,30 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
 		if (pRTE->rtekind == RTE_RELATION)
 		{
 			oids_list = gpdb::LAppendOid(oids_list, pRTE->relid);
+			if (pRTE->inFromCl || (CMD_INSERT == m_cmd_type))
+			{
+				// If we have only one RTE in the FROM clause,
+				// then we use it to extract information
+				// about the distribution policy, which gives info about the
+				// typeOid used for direct dispatch. This helps to perform
+				// direct dispatch based on the distribution column type
+				// inplace of the constant in the filter.
+				pRTEHashFuncCal = (RangeTblEntry *) lfirst(lc_rte);
+
+				// collecting only unique RTE in FROM clause
+				oids_list_unique =
+					list_append_unique_oid(oids_list_unique, pRTE->relid);
+			}
 		}
+	}
+
+	if (gpdb::ListLength(oids_list_unique) > 1)
+	{
+		// If we have a scenario with multiple unique RTE
+		// in "from" clause, then the hash function selection
+		// based on distribution policy of relation will not work
+		// and we switch back to selection based on constant type
+		pRTEHashFuncCal = nullptr;
 	}
 
 	// assemble planned stmt
@@ -245,8 +273,8 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
 	if (CMD_SELECT == m_cmd_type &&
 		nullptr != dxlnode->GetDXLDirectDispatchInfo())
 	{
-		List *direct_dispatch_segids =
-			TranslateDXLDirectDispatchInfo(dxlnode->GetDXLDirectDispatchInfo());
+		List *direct_dispatch_segids = TranslateDXLDirectDispatchInfo(
+			dxlnode->GetDXLDirectDispatchInfo(), pRTEHashFuncCal);
 
 		if (direct_dispatch_segids != NIL)
 		{
@@ -268,7 +296,7 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
 			CDXLPhysicalDML::Cast(dxlnode->GetOperator());
 
 		List *direct_dispatch_segids = TranslateDXLDirectDispatchInfo(
-			phy_dml_dxlop->GetDXLDirectDispatchInfo());
+			phy_dml_dxlop->GetDXLDirectDispatchInfo(), pRTEHashFuncCal);
 		if (direct_dispatch_segids != NIL)
 		{
 			topslice->directDispatch.isDirectDispatch = true;
@@ -4369,7 +4397,8 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 //---------------------------------------------------------------------------
 List *
 CTranslatorDXLToPlStmt::TranslateDXLDirectDispatchInfo(
-	CDXLDirectDispatchInfo *dxl_direct_dispatch_info)
+	CDXLDirectDispatchInfo *dxl_direct_dispatch_info,
+	RangeTblEntry *pRTEHashFuncCal)
 {
 	if (!optimizer_enable_direct_dispatch ||
 		nullptr == dxl_direct_dispatch_info)
@@ -4424,14 +4453,14 @@ CTranslatorDXLToPlStmt::TranslateDXLDirectDispatchInfo(
 		return segids_list;
 	}
 
-	ULONG hash_code = GetDXLDatumGPDBHash(dxl_datum_array);
+	ULONG hash_code = GetDXLDatumGPDBHash(dxl_datum_array, pRTEHashFuncCal);
 	for (ULONG ul = 0; ul < length; ul++)
 	{
 		CDXLDatumArray *dispatch_identifier_datum_array =
 			(*dispatch_identifier_datum_arrays)[ul];
 		GPOS_ASSERT(0 < dispatch_identifier_datum_array->Size());
-		ULONG hash_code_new =
-			GetDXLDatumGPDBHash(dispatch_identifier_datum_array);
+		ULONG hash_code_new = GetDXLDatumGPDBHash(
+			dispatch_identifier_datum_array, pRTEHashFuncCal);
 
 		if (hash_code != hash_code_new)
 		{
@@ -4453,25 +4482,63 @@ CTranslatorDXLToPlStmt::TranslateDXLDirectDispatchInfo(
 //
 //---------------------------------------------------------------------------
 ULONG
-CTranslatorDXLToPlStmt::GetDXLDatumGPDBHash(CDXLDatumArray *dxl_datum_array)
+CTranslatorDXLToPlStmt::GetDXLDatumGPDBHash(CDXLDatumArray *dxl_datum_array,
+											RangeTblEntry *pRTEHashFuncCal)
 {
 	List *consts_list = NIL;
 	Oid *hashfuncs;
 
 	const ULONG length = dxl_datum_array->Size();
 
-	hashfuncs = (Oid *) gpdb::GPDBAlloc(length * sizeof(Oid));
-
-	for (ULONG ul = 0; ul < length; ul++)
+	if (pRTEHashFuncCal != nullptr)
 	{
-		CDXLDatum *datum_dxl = (*dxl_datum_array)[ul];
+		// If we have one unique RTE in FROM clause,
+		// then we do direct dispatch based on the distribution policy
 
-		Const *const_expr =
-			(Const *) m_translator_dxl_to_scalar->TranslateDXLDatumToScalar(
-				datum_dxl);
-		consts_list = gpdb::LAppend(consts_list, const_expr);
-		hashfuncs[ul] = m_dxl_to_plstmt_context->GetDistributionHashFuncForType(
-			const_expr->consttype);
+		gpdb::RelationWrapper rel = gpdb::GetRelation(pRTEHashFuncCal->relid);
+		GPOS_ASSERT(rel);
+		GpPolicy *policy = rel->rd_cdbpolicy;
+		int policy_nattrs = policy->nattrs;
+		TupleDesc desc = rel->rd_att;
+		Oid *opclasses = policy->opclasses;
+		hashfuncs = (Oid *) gpdb::GPDBAlloc(policy_nattrs * sizeof(Oid));
+
+		for (int i = 0; i < policy_nattrs; i++)
+		{
+			AttrNumber attnum = policy->attrs[i];
+			Oid typeoid = desc->attrs[attnum - 1].atttypid;
+			Oid opfamily;
+
+			opfamily = gpdb::GetOpclassFamily(opclasses[i]);
+			hashfuncs[i] = gpdb::GetHashProcInOpfamily(opfamily, typeoid);
+		}
+		for (ULONG ul = 0; ul < length; ul++)
+		{
+			CDXLDatum *datum_dxl = (*dxl_datum_array)[ul];
+			Const *const_expr =
+				(Const *) m_translator_dxl_to_scalar->TranslateDXLDatumToScalar(
+					datum_dxl);
+			consts_list = gpdb::LAppend(consts_list, const_expr);
+		}
+	}
+	else
+	{
+		// If we have multiple tables in the "from" clause,
+		// we calculate hashfunction based on the consttype
+
+		hashfuncs = (Oid *) gpdb::GPDBAlloc(length * sizeof(Oid));
+		for (ULONG ul = 0; ul < length; ul++)
+		{
+			CDXLDatum *datum_dxl = (*dxl_datum_array)[ul];
+
+			Const *const_expr =
+				(Const *) m_translator_dxl_to_scalar->TranslateDXLDatumToScalar(
+					datum_dxl);
+			consts_list = gpdb::LAppend(consts_list, const_expr);
+			hashfuncs[ul] =
+				m_dxl_to_plstmt_context->GetDistributionHashFuncForType(
+					const_expr->consttype);
+		}
 	}
 
 	ULONG hash =

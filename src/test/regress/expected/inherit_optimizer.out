@@ -1930,9 +1930,9 @@ explain (costs off) select * from list_parted where a = 'ab' or a in (null, 'cd'
 (5 rows)
 
 explain (costs off) select * from list_parted where a = 'ab';
-                   QUERY PLAN                   
-------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
+                     QUERY PLAN                     
+----------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
    ->  Dynamic Seq Scan on list_parted
          Number of partitions to scan: 1 (out of 3)
          Filter: ((a)::text = 'ab'::text)

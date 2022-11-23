@@ -3058,7 +3058,7 @@ SELECT * FROM
 WHERE depname = 'sales';
                                    QUERY PLAN                                    
 ---------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
+ Gather Motion 1:1  (slice1; segments: 1)
    ->  WindowAgg
          Partition By: (((depname)::text || 'A'::text)), depname
          ->  Sort
@@ -3137,7 +3137,7 @@ SELECT * FROM
 WHERE depname = 'sales';
                                 QUERY PLAN                                 
 ---------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
+ Gather Motion 1:1  (slice1; segments: 1)
    ->  WindowAgg
          Partition By: depname, empno
          Order By: enroll_date
