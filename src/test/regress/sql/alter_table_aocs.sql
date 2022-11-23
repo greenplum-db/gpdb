@@ -482,3 +482,23 @@ RESET gp_default_storage_options;
 ALTER TABLE aocs_alter_add_col_reorganize ADD COLUMN d int;
 \d+ aocs_alter_add_col_reorganize
 DROP TABLE aocs_alter_add_col_reorganize;
+
+--
+-- Test case: validate pg_aocsseg consistency after alter table
+-- add column with rollback.
+--
+-- pg_aocsseg stores vpinfo structure with serialized EOF information
+-- for every column in AOCS table. If transaction adds new columns,
+-- spawns new pg_aocsseg entries and rollbacks, check there is no
+-- inconsistency in pg_aocsseg after it (with vacuum).
+--
+
+CREATE TABLE aocs_addcol_abort_test(a int, b int, c int) USING ao_column;
+INSERT INTO aocs_addcol_abort_test SELECT i,i,i from generate_series(1,10)i;
+BEGIN;
+ALTER TABLE aocs_addcol_abort_test ADD COLUMN d int;
+INSERT INTO aocs_addcol_abort_test SELECT i,i,i,i from generate_series(1,10)i;
+ABORT;
+SELECT * FROM aocs_addcol_abort_test;
+VACUUM aocs_addcol_abort_test;
+DROP TABLE aocs_addcol_abort_test;
