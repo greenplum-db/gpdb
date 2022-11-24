@@ -370,7 +370,7 @@ header_callback(void *ptr_, size_t size, size_t nmemb, void *userp)
 		}
 	}
 
-	if (len > zstd_len && *ptr == 'X' && 0 == strncmp("X-GP-ZSTD", ptr, zstd_len))
+	if (len > zstd_len && 0 == strncmp("X-GP-ZSTD", ptr, zstd_len))
 	{
 		ptr += zstd_len;
 		len -= zstd_len;
