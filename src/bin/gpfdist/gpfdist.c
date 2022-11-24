@@ -300,9 +300,9 @@ struct request_t
 #ifdef USE_ZSTD
 	ZSTD_CCtx*		zstd_cctx;	/* zstd context */
 #endif	
-	int				zstd;			/* request use zstd compress */
+	int				zstd;		/* request use zstd compress */
 	int				zstd_err_len; 	/* space allocate for zstd_error string */
-	char*			zstd_error;		/* string contains zstd error*/
+	char*				zstd_error;	/* string contains zstd error*/
 #ifdef USE_SSL
 	/* SSL related */
 	BIO			*io;		/* for the i.o. */
