@@ -44,6 +44,8 @@ const CHAR *rgszMultilevel[] = {
 	"../data/dxl/multilevel-partitioning/Multilevel-JoinPred-Level1.mdp",
 	"../data/dxl/multilevel-partitioning/Multilevel-JoinPred-Level2.mdp",
 	"../data/dxl/multilevel-partitioning/Multilevel-JoinPred-AllLevels.mdp",
+	"../data/dxl/multilevel-partitioning/RangePartition-Date-TimeStamp.mdp",
+	"../data/dxl/multilevel-partitioning/ListPartition-Date-TimeStamp.mdp",
 	"../data/dxl/multilevel-partitioning/Multilevel-Nary-Join.mdp",
 };
 

@@ -4036,16 +4036,17 @@ selectListPartition(PartitionNode *partnode, Datum *values, bool *isnull,
 	Partition  *part = partnode->part;
 	MemoryContext oldcxt = NULL;
 	PartitionListState *ls;
-        int	natts = partnode->part->parnatts;
+	int natts = partnode->part->parnatts;
 	if (accessMethods && accessMethods->amstate[partnode->part->parlevel])
-        {
+	{
 		ls = (PartitionListState *) accessMethods->amstate[partnode->part->parlevel];
-                // setting the following condition, to ensure correct access function is selected
-                //every time in a scenario with multiple predicates of different type in a partition table query.
-                for (int j=0;j< natts;j++)
-                {
-                        ls->eqinit[j]=false;
-                }
+                /* setting the following condition, to ensure correct access function is selected
+                 * every time in a scenario with multiple predicates of different type in a partition table query
+                 */
+		for (int j=0;j< natts;j++)
+		{
+			ls->eqinit[j]=false;
+		}
         }
 	else
 	{
@@ -4087,7 +4088,7 @@ selectListPartition(PartitionNode *partnode, Datum *values, bool *isnull,
 		 */
 		foreach(lc2, vals)
 		{
-                        ListCell   *lc3;
+			ListCell   *lc3;
 			List	   *colvals = (List *) lfirst(lc2);
 			int			i = 0;
 
@@ -4379,19 +4380,20 @@ selectRangePartition(PartitionNode *partnode, Datum *values, bool *isnull,
 	MemoryContext oldcxt = NULL;
 
 	Assert(partnode->part->parkind == 'r');
-        int	natts = partnode->part->parnatts;
+	int	natts = partnode->part->parnatts;
 	if (accessMethods && accessMethods->amstate[partnode->part->parlevel])
         {
-                rs = (PartitionRangeState *) accessMethods->amstate[partnode->part->parlevel];
-                // invalidating the fn_oid, to ensure correct access function is selected
-                // every time in a scenario with multiple predicates of different type in a partition table query.
-                for (int keyno = 0; keyno < natts; keyno++)
-                {
-                        rs->lefuncs_direct[keyno].fn_oid = InvalidOid;
-                        rs->ltfuncs_direct[keyno].fn_oid = InvalidOid;
-                        rs->lefuncs_inverse[keyno].fn_oid = InvalidOid;
-                        rs->lefuncs_inverse[keyno].fn_oid = InvalidOid;
-                }
+		rs = (PartitionRangeState *) accessMethods->amstate[partnode->part->parlevel];
+                /*invalidating the fn_oid, to ensure correct access function is selected
+                 *every time in a scenario with multiple predicates of different type in a partition table query.
+                 */
+		for (int keyno = 0; keyno < natts; keyno++)
+		{
+			rs->lefuncs_direct[keyno].fn_oid = InvalidOid;
+			rs->ltfuncs_direct[keyno].fn_oid = InvalidOid;
+			rs->lefuncs_inverse[keyno].fn_oid = InvalidOid;
+			rs->ltfuncs_inverse[keyno].fn_oid = InvalidOid;
+		}
         }
         else
 	{
@@ -4413,10 +4415,10 @@ selectRangePartition(PartitionNode *partnode, Datum *values, bool *isnull,
 		 */
 		for (int keyno = 0; keyno < natts; keyno++)
 		{
-                        rs->lefuncs_direct[keyno].fn_oid = InvalidOid;
+			rs->lefuncs_direct[keyno].fn_oid = InvalidOid;
 			rs->ltfuncs_direct[keyno].fn_oid = InvalidOid;
 			rs->lefuncs_inverse[keyno].fn_oid = InvalidOid;
-			rs->lefuncs_inverse[keyno].fn_oid = InvalidOid;
+			rs->ltfuncs_inverse[keyno].fn_oid = InvalidOid;
 		}
 
 		/*
@@ -4425,7 +4427,7 @@ selectRangePartition(PartitionNode *partnode, Datum *values, bool *isnull,
 		 */
 		if (partnode->part->parlevel == 0)
 		{
-			int     i = 0;
+			int	i = 0;
 			ListCell   *lc;
 
 			rs->rules = palloc(sizeof(PartitionRule *) * list_length(rules));
