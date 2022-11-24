@@ -3207,13 +3207,13 @@ static void handle_post_request(request_t *r, int header_end)
 			want = r->in.davailable;
 
 		/* read from socket into data buf */
-		if (r->zstd && !r->in.cflag)
-		{
-			n = gpfdist_receive(r, r->in.cbuf + r->in.cbuftop, want);
-		}
-		else
+		if (!r->zstd) 
 		{
 			n = gpfdist_receive(r, r->in.dbuf + r->in.dbuftop, want);
+		} 
+		else if (!r->in.cflag)
+		{
+			n = gpfdist_receive(r, r->in.cbuf + r->in.cbuftop, want);
 		}
 
 		if (n < 0)
