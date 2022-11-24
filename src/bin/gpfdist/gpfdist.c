@@ -906,7 +906,7 @@ static void http_error(request_t* r, int code, const char* msg)
 static void http_empty(request_t* r)
 {
 	gprintln(r, "HTTP EMPTY: %s %s %s - OK", r->peer, r->in.req->argv[0], r->in.req->argv[1]);
-	local_send(r, EMPTY_HTTP_RES, strlen (EMPTY_HTTP_RES) - 1);
+	local_send(r, EMPTY_HTTP_RES, strlen (EMPTY_HTTP_RES));
 }
 
 /* send a Continue response */
