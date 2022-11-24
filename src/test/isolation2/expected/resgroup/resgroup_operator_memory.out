@@ -34,7 +34,7 @@ CREATE
 -- - rg1's memory quota is 682 * 1% = 6;
 -- - per-xact quota is 6/3=2;
 -- - spill memory is 2 * 60% = 1;
-CREATE RESOURCE GROUP rg1_opmem_test WITH (cpu_rate_limit=10, memory_limit=1, memory_shared_quota=0, concurrency=3, memory_spill_ratio=60);
+CREATE RESOURCE GROUP rg1_opmem_test WITH (cpu_hard_quota_limit=10, memory_limit=1, memory_shared_quota=0, concurrency=3, memory_spill_ratio=60);
 CREATE
 
 CREATE ROLE r1_opmem_test RESOURCE GROUP rg1_opmem_test;
@@ -56,7 +56,7 @@ SET
 SET ROLE TO r1_opmem_test;
 SET
 SELECT * FROM many_ops;
- groupid | groupname | concurrency | cpu_rate_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset 
+ groupid | groupname | concurrency | cpu_hard_quota_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset
 ---------+-----------+-------------+----------------+--------------+---------------------+--------------------+----------------+--------
 (0 rows)
 RESET role;
@@ -67,7 +67,7 @@ SET
 SET ROLE TO r1_opmem_test;
 SET
 SELECT * FROM many_ops;
- groupid | groupname | concurrency | cpu_rate_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset 
+ groupid | groupname | concurrency | cpu_hard_quota_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset
 ---------+-----------+-------------+----------------+--------------+---------------------+--------------------+----------------+--------
 (0 rows)
 RESET role;
@@ -78,7 +78,7 @@ SET
 SET ROLE TO r1_opmem_test;
 SET
 SELECT * FROM many_ops;
- groupid | groupname | concurrency | cpu_rate_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset 
+ groupid | groupname | concurrency | cpu_hard_quota_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset
 ---------+-----------+-------------+----------------+--------------+---------------------+--------------------+----------------+--------
 (0 rows)
 RESET role;
@@ -90,7 +90,7 @@ RESET
 
 -- rg1 has no group level shared memory, and most memory are granted to rg2,
 -- there is only very little global shared memory due to integer rounding.
-CREATE RESOURCE GROUP rg2_opmem_test WITH (cpu_rate_limit=10, memory_limit=59);
+CREATE RESOURCE GROUP rg2_opmem_test WITH (cpu_hard_quota_limit=10, memory_limit=59);
 CREATE
 
 -- this query can execute but will raise OOM error.
@@ -143,7 +143,7 @@ SET
 SET ROLE TO r1_opmem_test;
 SET
 SELECT * FROM many_ops;
- groupid | groupname | concurrency | cpu_rate_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset 
+ groupid | groupname | concurrency | cpu_hard_quota_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset
 ---------+-----------+-------------+----------------+--------------+---------------------+--------------------+----------------+--------
 (0 rows)
 RESET role;
@@ -154,7 +154,7 @@ SET
 SET ROLE TO r1_opmem_test;
 SET
 SELECT * FROM many_ops;
- groupid | groupname | concurrency | cpu_rate_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset 
+ groupid | groupname | concurrency | cpu_hard_quota_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset
 ---------+-----------+-------------+----------------+--------------+---------------------+--------------------+----------------+--------
 (0 rows)
 RESET role;
@@ -165,7 +165,7 @@ SET
 SET ROLE TO r1_opmem_test;
 SET
 SELECT * FROM many_ops;
- groupid | groupname | concurrency | cpu_rate_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset 
+ groupid | groupname | concurrency | cpu_hard_quota_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset
 ---------+-----------+-------------+----------------+--------------+---------------------+--------------------+----------------+--------
 (0 rows)
 RESET role;
@@ -191,7 +191,7 @@ SET
 SET ROLE TO r1_opmem_test;
 SET
 SELECT * FROM many_ops;
- groupid | groupname | concurrency | cpu_rate_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset 
+ groupid | groupname | concurrency | cpu_hard_quota_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset
 ---------+-----------+-------------+----------------+--------------+---------------------+--------------------+----------------+--------
 (0 rows)
 RESET role;
@@ -202,7 +202,7 @@ SET
 SET ROLE TO r1_opmem_test;
 SET
 SELECT * FROM many_ops;
- groupid | groupname | concurrency | cpu_rate_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset 
+ groupid | groupname | concurrency | cpu_hard_quota_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset
 ---------+-----------+-------------+----------------+--------------+---------------------+--------------------+----------------+--------
 (0 rows)
 RESET role;
@@ -213,7 +213,7 @@ SET
 SET ROLE TO r1_opmem_test;
 SET
 SELECT * FROM many_ops;
- groupid | groupname | concurrency | cpu_rate_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset 
+ groupid | groupname | concurrency | cpu_hard_quota_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset
 ---------+-----------+-------------+----------------+--------------+---------------------+--------------------+----------------+--------
 (0 rows)
 RESET role;
@@ -231,7 +231,7 @@ SET
 SET ROLE TO r1_opmem_test;
 SET
 SELECT * FROM many_ops;
- groupid | groupname | concurrency | cpu_rate_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset 
+ groupid | groupname | concurrency | cpu_hard_quota_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset
 ---------+-----------+-------------+----------------+--------------+---------------------+--------------------+----------------+--------
 (0 rows)
 SELECT f1_opmem_test();
@@ -247,7 +247,7 @@ SET
 SET ROLE TO r1_opmem_test;
 SET
 SELECT * FROM many_ops;
- groupid | groupname | concurrency | cpu_rate_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset 
+ groupid | groupname | concurrency | cpu_hard_quota_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset
 ---------+-----------+-------------+----------------+--------------+---------------------+--------------------+----------------+--------
 (0 rows)
 SELECT f1_opmem_test();
@@ -263,7 +263,7 @@ SET
 SET ROLE TO r1_opmem_test;
 SET
 SELECT * FROM many_ops;
- groupid | groupname | concurrency | cpu_rate_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset 
+ groupid | groupname | concurrency | cpu_hard_quota_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset
 ---------+-----------+-------------+----------------+--------------+---------------------+--------------------+----------------+--------
 (0 rows)
 SELECT f1_opmem_test();

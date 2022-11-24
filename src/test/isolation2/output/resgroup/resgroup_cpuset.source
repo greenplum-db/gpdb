@@ -100,8 +100,8 @@ select pg_sleep(2);
 11: END;
 END
 
--- change to cpu_rate_limit while the transaction is running
-ALTER RESOURCE GROUP rg1_cpuset_test SET cpu_rate_limit 10;
+-- change to cpu_hard_quota_limit while the transaction is running
+ALTER RESOURCE GROUP rg1_cpuset_test SET cpu_hard_quota_limit 10;
 ALTER
 
 -- cancel the transaction
@@ -118,7 +118,7 @@ ERROR:  canceling statement due to user request
 11q: ... <quitting>
 -- end_ignore
 
--- test whether the cpu_rate_limit had taken effect
+-- test whether the cpu_hard_quota_limit had taken effect
 10: SET ROLE TO role1_cpuset_test;
 SET
 10: BEGIN;
@@ -209,7 +209,7 @@ SELECT check_rules();
 -------------
  t           
 (1 row)
-ALTER RESOURCE GROUP rg1_test_group SET cpu_rate_limit 1;
+ALTER RESOURCE GROUP rg1_test_group SET cpu_hard_quota_limit 1;
 ALTER
 SELECT check_rules();
  check_rules 
@@ -223,7 +223,7 @@ SELECT check_rules();
 -------------
  t           
 (1 row)
-ALTER RESOURCE GROUP rg1_test_group SET cpu_rate_limit 1;
+ALTER RESOURCE GROUP rg1_test_group SET cpu_hard_quota_limit 1;
 ALTER
 SELECT check_rules();
  check_rules 

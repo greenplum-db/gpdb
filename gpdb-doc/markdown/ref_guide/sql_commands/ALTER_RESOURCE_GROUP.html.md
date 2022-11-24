@@ -12,7 +12,7 @@ where group\_attribute is one of:
 
 ```
 CONCURRENCY <integer>
-CPU_RATE_LIMIT <integer> 
+cpu_hard_quota_limit <integer> 
 CPUSET <tuple> 
 MEMORY_LIMIT <integer>
 MEMORY_SHARED_QUOTA <integer>
@@ -46,16 +46,16 @@ CONCURRENCY integer
 :   **Note:** You cannot set the `CONCURRENCY` value for the `admin_group` to zero \(0\).
 
 CPU\_RATE\_LIMIT integer
-:   The percentage of CPU resources to allocate to this resource group. The minimum CPU percentage for a resource group is 1. The maximum is 100. The sum of the `CPU_RATE_LIMIT`s of all resource groups defined in the Greenplum Database cluster must not exceed 100.
+:   The percentage of CPU resources to allocate to this resource group. The minimum CPU percentage for a resource group is 1. The maximum is 100. The sum of the `cpu_hard_quota_limit`s of all resource groups defined in the Greenplum Database cluster must not exceed 100.
 
-:   If you alter the `CPU_RATE_LIMIT` of a resource group in which you previously configured a `CPUSET`, `CPUSET` is deactivated, the reserved CPU cores are returned to Greenplum Database, and `CPUSET` is set to -1.
+:   If you alter the `cpu_hard_quota_limit` of a resource group in which you previously configured a `CPUSET`, `CPUSET` is deactivated, the reserved CPU cores are returned to Greenplum Database, and `CPUSET` is set to -1.
 
 CPUSET tuple
 :   The CPU cores to reserve for this resource group. The CPU cores that you specify in tuple must be available in the system and cannot overlap with any CPU cores that you specify for other resource groups.
 
 :   tuple is a comma-separated list of single core numbers or core intervals. You must enclose tuple in single quotes, for example, '1,3-4'.
 
-:   If you alter the `CPUSET` value of a resource group for which you previously configured a `CPU_RATE_LIMIT`, `CPU_RATE_LIMIT` is deactivated, the reserved CPU resources are returned to Greenplum Database, and `CPU_RATE_LIMIT` is set to -1.
+:   If you alter the `CPUSET` value of a resource group for which you previously configured a `cpu_hard_quota_limit`, `cpu_hard_quota_limit` is deactivated, the reserved CPU resources are returned to Greenplum Database, and `cpu_hard_quota_limit` is set to -1.
 
 :   You can alter `CPUSET` for a resource group only after you have enabled resource group-based resource management for your Greenplum Database cluster.
 
@@ -89,7 +89,7 @@ ALTER RESOURCE GROUP rgroup1 SET CONCURRENCY 13;
 Update the CPU limit for a resource group:
 
 ```
-ALTER RESOURCE GROUP rgroup2 SET CPU_RATE_LIMIT 45;
+ALTER RESOURCE GROUP rgroup2 SET cpu_hard_quota_limit 45;
 ```
 
 Update the memory limit for a resource group:

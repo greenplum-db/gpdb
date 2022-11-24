@@ -3,7 +3,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 -- start_ignore
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
-CREATE RESOURCE GROUP rg_concurrency_test WITH(concurrency=1, cpu_rate_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH(concurrency=1, cpu_hard_quota_limit=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 
 -- After a 'q' command the client connection is disconnected but the
@@ -117,7 +117,7 @@ SELECT pg_sleep(1);
 --
 DROP ROLE role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
-CREATE RESOURCE GROUP rg_concurrency_test WITH(concurrency=0, cpu_rate_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH(concurrency=0, cpu_hard_quota_limit=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 
 11:SET ROLE role_concurrency_test;
@@ -197,7 +197,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_rate_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_hard_quota_limit=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 61:SET ROLE role_concurrency_test;
 61&:BEGIN;
@@ -215,7 +215,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_rate_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_hard_quota_limit=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 61:SET ROLE role_concurrency_test;
 61&:BEGIN;

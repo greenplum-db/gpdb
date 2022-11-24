@@ -1708,8 +1708,8 @@ CREATE VIEW gp_toolkit.gp_resgroup_config AS
     SELECT G.oid       AS groupid
          , G.rsgname   AS groupname
          , T1.value    AS concurrency
-         , T2.value    AS cpu_rate_limit
-         , T3.value    AS cpu_shares
+         , T2.value    AS cpu_hard_quota_limit
+         , T3.value    AS cpu_soft_priority
          , T4.value    AS cpuset
     FROM pg_resgroup G
          JOIN pg_resgroupcapability T1 ON G.oid = T1.resgroupid AND T1.reslimittype = 1

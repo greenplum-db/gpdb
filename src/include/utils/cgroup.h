@@ -43,7 +43,7 @@
  */
 #define DEFAULT_CPUSET_GROUP_ID 1
 /*
- * If cpu_rate_limit is set to this value, it means this feature is disabled
+ * If cpu_hard_quota_limit is set to this value, it means this feature is disabled
  */
 #define CPU_RATE_LIMIT_DISABLED (-1)
 
@@ -89,10 +89,10 @@ typedef enum
 #define DEFAULT_CPUSET_GROUP_ID 1
 
 /*
- * If cpu_rate_limit or cpu_shares is set to this value, it means this feature is disabled
+ * If cpu_hard_quota_limit is set to this value, it means this feature is disabled.
+ * And meanwhile, it also means the process can use CPU resource infinitely.
  */
-#define CPU_RATE_LIMIT_DISABLED (-1)
-#define CPU_SHARES_DISABLED (-1)
+#define CPU_HARD_QUOTA_LIMIT_DISABLED (-1)
 
 
 typedef struct CGroupSystemInfo
@@ -180,9 +180,9 @@ typedef int (*lockcgroup_function) (Oid group, CGroupComponentType component, bo
 typedef void (*unlockcgroup_function) (int fd);
 
 /* Set the cpu limit. */
-typedef void (*setcpulimit_function) (Oid group, int cpu_rate_limit);
+typedef void (*setcpulimit_function) (Oid group, int cpu_hard_quota_limit);
 /* Set the cpu share. */
-typedef void (*setcpushare_function) (Oid group, int cpu_share);
+typedef void (*setcpupriority_function) (Oid group, int cpu_soft_priority);
 
 /* Get the cpu usage of the OS group. */
 typedef int64 (*getcpuusage_function) (Oid group);
@@ -219,7 +219,7 @@ typedef struct CGroupOpsRoutine
 
 	setcpulimit_function 	setcpulimit;
 
-	setcpushare_function 	setcpushare;
+	setcpupriority_function	setcpupriority;
 
 	getcpuusage_function 	getcpuusage;
 

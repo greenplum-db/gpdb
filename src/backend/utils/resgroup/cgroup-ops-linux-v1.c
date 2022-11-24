@@ -190,7 +190,7 @@ static void detachcgroup_v1(Oid group, CGroupComponentType component, int fd_dir
 static void destroycgroup_v1(Oid group, bool migrate);
 static int lockcgroup_v1(Oid group, CGroupComponentType component, bool block);
 static void unlockcgroup_v1(int fd);
-static void setcpulimit_v1(Oid group, int cpu_rate_limit);
+static void setcpulimit_v1(Oid group, int cpu_hard_limit);
 static int64 getcpuusage_v1(Oid group);
 static void getcpuset_v1(Oid group, char *cpuset, int len);
 static void setcpuset_v1(Oid group, const char *cpuset);
@@ -1083,33 +1083,39 @@ unlockcgroup_v1(int fd)
 }
 
 /*
- * Set the cpu rate limit for the OS group.
+ * Set the cpu hard limit for the OS group.
  *
- * cpu_rate_limit should be within [0, 100].
+ * cpu_hard_quota_limit should be within [-1, 100].
  */
 static void
-setcpulimit_v1(Oid group, int cpu_rate_limit)
+setcpulimit_v1(Oid group, int cpu_hard_limit)
 {
 	CGroupComponentType component = CGROUP_COMPONENT_CPU;
 
-	/* group.shares := gpdb.shares * cpu_rate_limit */
-
-	int64 shares = readInt64(CGROUP_ROOT_ID, BASEDIR_GPDB, component,
-							 "cpu.shares");
-	writeInt64(group, BASEDIR_GPDB, component,
-			   "cpu.shares", shares * cpu_rate_limit / 100);
-
-	/* set cpu.cfs_quota_us if hard CPU enforcement is enabled */
-	if (gp_resource_group_cpu_ceiling_enforcement)
+	if (cpu_hard_limit > 0)
 	{
 		int64 periods = get_cfs_period_us_alpha(component);
 		writeInt64(group, BASEDIR_GPDB, component, "cpu.cfs_quota_us",
-				   periods * cgroupSystemInfoAlpha.ncores * cpu_rate_limit / 100);
+				   periods * cgroupSystemInfoAlpha.ncores * cpu_hard_limit / 100);
 	}
 	else
 	{
-		writeInt64(group, BASEDIR_GPDB, component, "cpu.cfs_quota_us", -1);
+		writeInt64(group, BASEDIR_GPDB, component, "cpu.cfs_quota_us", cpu_hard_limit);
 	}
+}
+
+/*
+ * Set the cpu soft priority for the OS group.
+ *
+ * For version 1, the default value of cpu.shares is 1024, corresponding to
+ * our cpu_soft_priority, which default value is 100, so we need to adjust it.
+ */
+static void
+setcpupriority_v1(Oid group, int shares)
+{
+	CGroupComponentType component = CGROUP_COMPONENT_CPU;
+	writeInt64(group, BASEDIR_GPDB, component,
+			   "cpu.shares", (int64)(shares * 1024 / 100));
 }
 
 /*
@@ -1231,6 +1237,7 @@ static CGroupOpsRoutine cGroupOpsRoutineAlpha = {
 
 		.setcpulimit = setcpulimit_v1,
 		.getcpuusage = getcpuusage_v1,
+		.setcpupriority = setcpupriority_v1,
 		.getcpuset = getcpuset_v1,
 		.setcpuset = setcpuset_v1,
 

@@ -11,7 +11,7 @@ CREATE RESOURCE GROUP <name> WITH (<group_attribute>=<value> [, ... ])
 where group\_attribute is:
 
 ```
-CPU_RATE_LIMIT=<integer> | CPUSET=<tuple>
+cpu_hard_quota_limit=<integer> | CPUSET=<tuple>
 [ MEMORY_LIMIT=<integer> ]
 [ CONCURRENCY=<integer> ]
 [ MEMORY_SHARED_QUOTA=<integer> ]
@@ -51,9 +51,9 @@ CONCURRENCY integer
 
 CPU\_RATE\_LIMIT integer
 CPUSET tuple
-:   Required. You must specify only one of `CPU_RATE_LIMIT` or `CPUSET` when you create a resource group.
+:   Required. You must specify only one of `cpu_hard_quota_limit` or `CPUSET` when you create a resource group.
 
-:   `CPU_RATE_LIMIT` is the percentage of CPU resources to allocate to this resource group. The minimum CPU percentage you can specify for a resource group is 1. The maximum is 100. The sum of the `CPU_RATE_LIMIT` values specified for all resource groups defined in the Greenplum Database cluster must be less than or equal to 100.
+:   `cpu_hard_quota_limit` is the percentage of CPU resources to allocate to this resource group. The minimum CPU percentage you can specify for a resource group is 1. The maximum is 100. The sum of the `cpu_hard_quota_limit` values specified for all resource groups defined in the Greenplum Database cluster must be less than or equal to 100.
 
 :   `CPUSET` identifies the CPU cores to reserve for this resource group. The CPU cores that you specify in tuple must be available in the system and cannot overlap with any CPU cores that you specify for other resource groups.
 
@@ -94,20 +94,20 @@ SELECT * FROM gp_toolkit.gp_resgroup_config;
 Create a resource group with CPU and memory limit percentages of 35:
 
 ```
-CREATE RESOURCE GROUP rgroup1 WITH (CPU_RATE_LIMIT=35, MEMORY_LIMIT=35);
+CREATE RESOURCE GROUP rgroup1 WITH (cpu_hard_quota_limit=35, MEMORY_LIMIT=35);
 ```
 
 Create a resource group with a concurrent transaction limit of 20, a memory limit of 15, and a CPU limit of 25:
 
 ```
 CREATE RESOURCE GROUP rgroup2 WITH (CONCURRENCY=20, 
-  MEMORY_LIMIT=15, CPU_RATE_LIMIT=25);
+  MEMORY_LIMIT=15, cpu_hard_quota_limit=25);
 ```
 
 Create a resource group to manage PL/Container resources specifying a memory limit of 10, and a CPU limit of 10:
 
 ```
-CREATE RESOURCE GROUP plc_run1 WITH (MEMORY_LIMIT=10, CPU_RATE_LIMIT=10,
+CREATE RESOURCE GROUP plc_run1 WITH (MEMORY_LIMIT=10, cpu_hard_quota_limit=10,
   CONCURRENCY=0, MEMORY_AUDITOR=cgroup);
 ```
 

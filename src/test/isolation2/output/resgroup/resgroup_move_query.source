@@ -43,7 +43,7 @@ DROP
 DROP RESOURCE GROUP rg_move_query;
 ERROR:  resource group "rg_move_query" does not exist
 -- end_ignore
-CREATE RESOURCE GROUP rg_move_query WITH (concurrency=1, cpu_rate_limit=20);
+CREATE RESOURCE GROUP rg_move_query WITH (concurrency=1, cpu_hard_quota_limit=20);
 CREATE
 CREATE ROLE role_move_query RESOURCE GROUP rg_move_query;
 CREATE

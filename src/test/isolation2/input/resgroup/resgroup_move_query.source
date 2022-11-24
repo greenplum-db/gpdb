@@ -52,7 +52,7 @@ DROP ROLE IF EXISTS role_move_query;
 -- start_ignore
 DROP RESOURCE GROUP rg_move_query;
 -- end_ignore
-CREATE RESOURCE GROUP rg_move_query WITH (concurrency=1, cpu_rate_limit=20);
+CREATE RESOURCE GROUP rg_move_query WITH (concurrency=1, cpu_hard_quota_limit=20);
 CREATE ROLE role_move_query RESOURCE GROUP rg_move_query;
 
 -- test1: cannot move IDLE sessions

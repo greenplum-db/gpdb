@@ -773,16 +773,15 @@ dumpResGroups(PGconn *conn)
 	PGresult   *res;
 	int		i;
 	int		i_groupname,
-			i_cpu_rate_limit,
+			i_cpu_hard_quota_limit,
 			i_concurrency,
-			i_cpu_shares,
+			i_cpu_soft_priority,
 			i_cpuset;
 
-	/* RG FIXME: reorder this SQL after we add cpu-shares. */
 	printfPQExpBuffer(buf, "SELECT g.rsgname AS groupname, "
 					  "t1.value AS concurrency, "
-					  "t2.value AS cpu_rate_limit, "
-					  "t3.value AS cpu_shares, "
+					  "t2.value AS cpu_hard_quota_limit, "
+					  "t3.value AS cpu_soft_priority, "
 					  "t4.value AS cpuset "
 					  "FROM pg_resgroup g "
 					  "     JOIN pg_resgroupcapability t1 ON g.oid = t1.resgroupid AND t1.reslimittype = 1 "
@@ -793,32 +792,26 @@ dumpResGroups(PGconn *conn)
 	res = executeQuery(conn, buf->data);
 
 	i_groupname = PQfnumber(res, "groupname");
-	i_cpu_rate_limit = PQfnumber(res, "cpu_rate_limit");
 	i_concurrency = PQfnumber(res, "concurrency");
-	i_cpu_shares = PQfnumber(res, "cpu_shares");
+	i_cpu_hard_quota_limit = PQfnumber(res, "cpu_hard_quota_limit");
+	i_cpu_soft_priority = PQfnumber(res, "cpu_soft_priority");
 	i_cpuset = PQfnumber(res, "cpuset");
 
 	if (PQntuples(res) > 0)
 		fprintf(OPF, "--\n-- Resource Group\n--\n\n");
 
-	/*
-	 * total cpu_rate_limit and memory_limit should less than 100, so clean
-	 * them before we seting new memory_limit and cpu_rate_limit.
-	 */
-	fprintf(OPF, "ALTER RESOURCE GROUP \"admin_group\" SET cpu_rate_limit 1;\n");
-	fprintf(OPF, "ALTER RESOURCE GROUP \"default_group\" SET cpu_rate_limit 1;\n");
-	fprintf(OPF, "ALTER RESOURCE GROUP \"system_group\" SET cpu_rate_limit 1;\n");
-
 	for (i = 0; i < PQntuples(res); i++)
 	{
 		const char *groupname;
-		const char *cpu_rate_limit;
 		const char *concurrency;
+		const char *cpu_hard_quota_limit;
+		const char *cpu_soft_priority;
 		const char *cpuset;
 
 		groupname = PQgetvalue(res, i, i_groupname);
-		cpu_rate_limit = PQgetvalue(res, i, i_cpu_rate_limit);
 		concurrency = PQgetvalue(res, i, i_concurrency);
+		cpu_hard_quota_limit = PQgetvalue(res, i, i_cpu_hard_quota_limit);
+		cpu_soft_priority = PQgetvalue(res, i, i_cpu_soft_priority);
 		cpuset = PQgetvalue(res, i, i_cpuset);
 
 		resetPQExpBuffer(buf);
@@ -830,40 +823,37 @@ dumpResGroups(PGconn *conn)
 			 * We can't emit CREATE statements for the built-in groups as they
 			 * will already exist in the target cluster. So emit ALTER
 			 * statements instead.
-			 *
-			 * Default resource groups must have memory_auditor == "vmtracker",
-			 * no need to ALTER it, and we do not support ALTER memory_auditor
-			 * at all.
 			 */
 			appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET concurrency %s;\n",
 							  fmtId(groupname), concurrency);
-			if (atoi(cpu_rate_limit) >= 0)
-				appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET cpu_rate_limit %s;\n",
-								  fmtId(groupname), cpu_rate_limit);
+
+			if (atoi(cpu_hard_quota_limit) > 0) {
+				appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET cpu_hard_quota_limit %s;\n",
+								  fmtId(groupname), cpu_hard_quota_limit);
+				appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET cpu_soft_priority %s;\n",
+								  fmtId(groupname), cpu_soft_priority);
+			}
 			else
 				appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET cpuset '%s';\n",
 								  fmtId(groupname), cpuset);
 		}
 		else
 		{
-			const char *cpu_prop;
-			char cpu_setting[1024];
+			/* For other groups, we just create it directly. */
 
-			/* RG FIXME: Add the data of cpu_shares. */
-			if (atoi(cpu_rate_limit) >= 0)
+			if (atoi(cpu_hard_quota_limit) > 0)
 			{
-				cpu_prop = "cpu_rate_limit";
-				snprintf(cpu_setting, sizeof(cpu_setting), "%s", cpu_rate_limit);
+				printfPQExpBuffer(buf, "CREATE RESOURCE GROUP %s WITH ("
+									   "concurrency=%s, cpu_hard_quota_limit=%s, cpu_soft_priority=%s);\n",
+								  fmtId(groupname), concurrency, cpu_hard_quota_limit, cpu_soft_priority);
 			}
 			else
 			{
-				cpu_prop = "cpuset";
-				snprintf(cpu_setting, sizeof(cpu_setting), "'%s'", cpuset);
+				printfPQExpBuffer(buf, "CREATE RESOURCE GROUP %s WITH ("
+									   "concurrency=%s, cpu_set=%s);\n",
+								  fmtId(groupname), concurrency, cpuset);
 			}
 
-			printfPQExpBuffer(buf, "CREATE RESOURCE GROUP %s WITH ("
-							  "concurrency=%s, %s=%s);\n",
-							  fmtId(groupname), concurrency, cpu_prop, cpu_setting);
 		}
 
 		fprintf(OPF, "%s", buf->data);

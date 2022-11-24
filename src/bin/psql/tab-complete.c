@@ -2715,7 +2715,7 @@ psql_completion(const char *text, int start, int end)
 	else if (TailMatches("RESOURCE", "GROUP", MatchAny, "WITH", "("))
 	{
 		static const char *const list_CREATERESOURCEGROUP[] =
-		{"CONCURRENCY", "CPU_RATE_LIMIT", "MEMORY_LIMIT", "MEMORY_REDZONE_LIMIT", NULL};
+		{"CONCURRENCY", "cpu_hard_quota_limit", "MEMORY_LIMIT", "MEMORY_REDZONE_LIMIT", NULL};
 
 		COMPLETE_WITH_LIST(list_CREATERESOURCEGROUP);
 	}

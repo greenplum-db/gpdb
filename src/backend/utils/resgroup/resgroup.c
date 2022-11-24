@@ -492,19 +492,18 @@ InitResGroups(void)
 	{
 		Oid			groupId = ((Form_pg_resgroup) GETSTRUCT(tuple))->oid;
 		ResGroupData	*group;
-		int cpuRateLimit;
 
 		GetResGroupCapabilities(relResGroupCapability, groupId, &caps);
-		cpuRateLimit = caps.cpuRateLimit;
 
 		group = createGroup(groupId, &caps);
 		Assert(group != NULL);
 
 		cgroupOpsRoutine->createcgroup(groupId);
 
-		if (caps.cpuRateLimit != CPU_RATE_LIMIT_DISABLED)
+		if (CpusetIsEmpty(caps.cpuset))
 		{
-			cgroupOpsRoutine->setcpulimit(groupId, caps.cpuRateLimit);
+			cgroupOpsRoutine->setcpulimit(groupId, caps.cpuHardQuotaLimit);
+			cgroupOpsRoutine->setcpupriority(groupId, caps.cpuSoftPriority);
 		}
 		else
 		{
@@ -526,7 +525,7 @@ InitResGroups(void)
 								 "please refer to the Greenplum Documentations for details")));
 			}
 
-			Assert(caps.cpuRateLimit == CPU_RATE_LIMIT_DISABLED);
+			Assert(caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
 
 			if (bms_is_empty(bmsMissing))
 			{
@@ -776,7 +775,12 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 		if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CPU)
 		{
 			cgroupOpsRoutine->setcpulimit(callbackCtx->groupid,
-										callbackCtx->caps.cpuRateLimit);
+										callbackCtx->caps.cpuHardQuotaLimit);
+		}
+		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CPU_SHARES)
+		{
+			cgroupOpsRoutine->setcpupriority(callbackCtx->groupid,
+										  callbackCtx->caps.cpuSoftPriority);
 		}
 		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CPUSET)
 		{
@@ -1393,9 +1397,9 @@ SerializeResGroupInfo(StringInfo str)
 
 	itmp = htonl(caps->concurrency);
 	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
-	itmp = htonl(caps->cpuRateLimit);
+	itmp = htonl(caps->cpuHardQuotaLimit);
 	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
-	itmp = htonl(caps->cpuShares);
+	itmp = htonl(caps->cpuSoftPriority);
 	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
 
 	cpuset_len = strlen(caps->cpuset);
@@ -1430,9 +1434,9 @@ DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
 	capsOut->concurrency = ntohl(itmp);
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
-	capsOut->cpuRateLimit = ntohl(itmp);
+	capsOut->cpuHardQuotaLimit = ntohl(itmp);
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
-	capsOut->cpuShares = ntohl(itmp);
+	capsOut->cpuSoftPriority = ntohl(itmp);
 
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
 	cpuset_len = ntohl(itmp);
@@ -1529,7 +1533,7 @@ AssignResGroupOnMaster(void)
 
 		/* Add into cgroup */
 		cgroupOpsRoutine->attachcgroup(bypassedGroup->groupId, MyProcPid,
-									  bypassedGroup->caps.cpuRateLimit == CPU_RATE_LIMIT_DISABLED);
+									   bypassedGroup->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
 
 		return;
 	}
@@ -1556,7 +1560,7 @@ AssignResGroupOnMaster(void)
 
 		/* Add into cgroup */
 		cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
-									  self->caps.cpuRateLimit == CPU_RATE_LIMIT_DISABLED);
+									   self->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
 	}
 	PG_CATCH();
 	{
@@ -1676,7 +1680,7 @@ SwitchResGroupOnSegment(const char *buf, int len)
 		/* it's not the first dispatch in the same transaction */
 		Assert(self->groupId == newGroupId);
 		Assert(self->caps.concurrency == caps.concurrency);
-		Assert(self->caps.cpuRateLimit == caps.cpuRateLimit);
+		Assert(self->caps.cpuHardQuotaLimit == caps.cpuHardQuotaLimit);
 		Assert(!strcmp(self->caps.cpuset, caps.cpuset));
 		return;
 	}
@@ -1716,7 +1720,7 @@ SwitchResGroupOnSegment(const char *buf, int len)
 
 	/* Add into cgroup */
 	cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
-								  self->caps.cpuRateLimit == CPU_RATE_LIMIT_DISABLED);
+								   self->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
 }
 
 /*
@@ -3132,7 +3136,7 @@ HandleMoveResourceGroup(void)
 
 			/* Add into cgroup */
 			cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
-										  self->caps.cpuRateLimit == CPU_RATE_LIMIT_DISABLED);
+										   self->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
 		}
 		PG_CATCH();
 		{
@@ -3185,7 +3189,7 @@ HandleMoveResourceGroup(void)
 
 		/* Add into cgroup */
 		cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
-									  self->caps.cpuRateLimit == CPU_RATE_LIMIT_DISABLED);
+									   self->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
 	}
 }
 

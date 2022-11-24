@@ -57,7 +57,7 @@ return validate(json_obj, n)
 
 $$ LANGUAGE plpython3u;
 
-CREATE RESOURCE GROUP rg_dumpinfo_test WITH (concurrency=2, cpu_rate_limit=20);
+CREATE RESOURCE GROUP rg_dumpinfo_test WITH (concurrency=2, cpu_hard_quota_limit=20);
 CREATE ROLE role_dumpinfo_test RESOURCE GROUP rg_dumpinfo_test;
 
 2:SET ROLE role_dumpinfo_test;

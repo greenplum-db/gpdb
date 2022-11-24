@@ -1,5 +1,5 @@
 select * from gp_toolkit.gp_resgroup_config where groupname='default_group';
- groupid | groupname     | concurrency | cpu_rate_limit | cpu_shares | cpuset 
+ groupid | groupname     | concurrency | cpu_hard_quota_limit | cpu_shares | cpuset
 ---------+---------------+-------------+----------------+------------+--------
  6437    | default_group | 20          | 20             | 100        | -1     
 (1 row)
@@ -27,7 +27,7 @@ select rsgname , groupid , segment_id , cpu from gp_toolkit.gp_resgroup_status_p
 
 -- start_ignore
 select * from gp_toolkit.gp_resgroup_config;
- groupid | groupname     | concurrency | cpu_rate_limit | cpu_shares | cpuset 
+ groupid | groupname     | concurrency | cpu_hard_quota_limit | cpu_shares | cpuset
 ---------+---------------+-------------+----------------+------------+--------
  6437    | default_group | 20          | 20             | 100        | -1     
  6441    | system_group  | 0           | 10             | 100        | -1     

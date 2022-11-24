@@ -7,11 +7,9 @@ DROP TABLE IF EXISTS bigtable;
 
 CREATE LANGUAGE plpython3u;
 
-CREATE RESOURCE GROUP rg1_cpuset_test WITH (cpuset='0');
-CREATE ROLE role1_cpuset_test RESOURCE GROUP rg1_cpuset_test;
 
--- check whether the queries running in the specific group on the specific core set
--- @param grp: the resource group queries running in
+-- check whether the queries running on the specific core set
+-- @param grp: the resource group name queries running in
 -- @param cpuset: cpu cores which the queries should only be run on them, e.g. 0,1
 -- @return bool: true/false indicating whether it corresponds to the rule
 CREATE FUNCTION check_cpuset(grp TEXT, cpuset TEXT) RETURNS BOOL AS $$
@@ -24,6 +22,8 @@ conn = pg.connect(dbname="isolation2resgrouptest")
 pt = re.compile(r'con(\d+)')
 
 def check(expect_cpus, sess_ids):
+    # use ps -eF to find all processes which belongs to postgres and in the given sessions
+
 	procs = subprocess.check_output(['ps', '-eF']).decode().split('\n')
 	head, proc_stats = procs[0], procs[1:]
 	PSR = [id for id, attr in enumerate(head.split()) if attr.strip() == 'PSR'][0]
@@ -31,7 +31,7 @@ def check(expect_cpus, sess_ids):
 			for proc_stat in proc_stats
 			if 'postgres' in proc_stat and
 			pt.findall(proc_stat) and
-			set(pt.findall(proc_stat)).issubset(sess_ids)]
+			sess_ids.issubset(set(pt.findall(proc_stat)))]
 	return set(cpus).issubset(set(expect_cpus))	
 
 def get_all_sess_ids_in_group(group_name):
@@ -39,7 +39,6 @@ def get_all_sess_ids_in_group(group_name):
 	result = conn.query(sql).getresult()
 	return set([str(r[0]) for r in result])
 
-expect_cpu = []
 conf = cpuset
 if conf == '':
 	fd = open("@cgroup_mnt_point@/cpuset/gpdb/cpuset.cpus")
@@ -48,6 +47,9 @@ if conf == '':
 	conf = line.strip('\n')
 
 tokens = conf.split(",")
+
+expect_cpu = []
+
 for token in tokens:
 	if token.find('-') != -1:
 		interval = token.split("-")
@@ -131,6 +133,7 @@ def get_cgroup_cpuset(group):
 conn = pg.connect(dbname="isolation2resgrouptest")
 config_groups = get_all_group_which_cpuset_is_set()
 groups_cpuset = set([])
+
 # check whether cpuset in config and cgroup are same, and have no overlap
 for config_group in config_groups:
 	groupid = config_group[0]
@@ -142,6 +145,7 @@ for config_group in config_groups:
 	groups_cpuset |= cgroup_cpuset
 	if not(config_cpuset.issubset(cgroup_cpuset) and cgroup_cpuset.issubset(config_cpuset)):
 		return False
+
 # check whether cpuset in resource group union default group is universal set
 default_cpuset = get_cgroup_cpuset(1)
 all_cpuset = get_cgroup_cpuset(0)
@@ -182,6 +186,9 @@ CREATE VIEW cancel_all AS
     FROM pg_stat_activity
     WHERE query LIKE 'SELECT * FROM busy%';
 
+CREATE RESOURCE GROUP rg1_cpuset_test WITH (cpuset='0');
+CREATE ROLE role1_cpuset_test RESOURCE GROUP rg1_cpuset_test;
+
 GRANT ALL ON busy TO role1_cpuset_test;
 
 -- we suppose core 0 & 1 are available
@@ -206,8 +213,8 @@ select pg_sleep(2);
 11: SELECT check_cpuset('rg1_cpuset_test', '0,1');
 11: END;
 
--- change to cpu_rate_limit while the transaction is running
-ALTER RESOURCE GROUP rg1_cpuset_test SET cpu_rate_limit 10;
+-- change to cpu_hard_quota_limit while the transaction is running
+ALTER RESOURCE GROUP rg1_cpuset_test SET cpu_hard_quota_limit 70;
 
 -- cancel the transaction
 -- start_ignore
@@ -218,7 +225,7 @@ select * from cancel_all;
 11q:
 -- end_ignore
 
--- test whether the cpu_rate_limit had taken effect
+-- test whether the cpu_hard_quota_limit had taken effect
 10: SET ROLE TO role1_cpuset_test;
 10: BEGIN;
 10&: SELECT * FROM busy;
@@ -263,11 +270,11 @@ CREATE RESOURCE GROUP rg1_test_group WITH (cpuset='0');
 SELECT check_rules();
 CREATE RESOURCE GROUP rg2_test_group WITH (cpuset='1');
 SELECT check_rules();
-ALTER RESOURCE GROUP rg1_test_group SET cpu_rate_limit 1;
+ALTER RESOURCE GROUP rg1_test_group SET cpu_hard_quota_limit 1;
 SELECT check_rules();
 ALTER RESOURCE GROUP rg1_test_group SET cpuset '0';
 SELECT check_rules();
-ALTER RESOURCE GROUP rg1_test_group SET cpu_rate_limit 1;
+ALTER RESOURCE GROUP rg1_test_group SET cpu_hard_quota_limit 1;
 SELECT check_rules();
 DROP RESOURCE GROUP rg1_test_group;
 SELECT check_rules();

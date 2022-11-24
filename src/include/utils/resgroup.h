@@ -37,6 +37,11 @@
 #define DefaultCpuset "-1"
 
 /*
+ * Default value of cpu soft priority
+ */
+#define DefaultCPUSoftPriority 100
+
+/*
  * Resource group capability.
  */
 typedef int32 ResGroupCap;
@@ -62,8 +67,8 @@ typedef struct ResGroupCaps
 {
 	ResGroupCap		__unknown;			/* placeholder, do not use it */
 	ResGroupCap		concurrency;
-	ResGroupCap		cpuRateLimit;
-	ResGroupCap		cpuShares;
+	ResGroupCap		cpuHardQuotaLimit;
+	ResGroupCap		cpuSoftPriority;
 	char			cpuset[MaxCpuSetLength];
 } ResGroupCaps;
 
@@ -79,7 +84,6 @@ extern bool						gp_resgroup_debug_wait_queue;
 
 extern int gp_resource_group_cpu_priority;
 extern double gp_resource_group_cpu_limit;
-extern bool gp_resource_group_cpu_ceiling_enforcement;
 extern bool gp_resource_group_bypass;
 extern int gp_resource_group_queuing_timeout;
 

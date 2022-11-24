@@ -71,7 +71,7 @@ DO
 
 -- verify the default settings
 0: SELECT * from gp_toolkit.gp_resgroup_config;
- groupid | groupname     | concurrency | cpu_rate_limit | cpu_shares | cpuset 
+ groupid | groupname     | concurrency | cpu_hard_quota_limit | cpu_shares | cpuset
 ---------+---------------+-------------+----------------+------------+--------
  6437    | default_group | 20          | 20             | 100        | -1     
  6438    | admin_group   | 10          | 10             | 100        | -1     
