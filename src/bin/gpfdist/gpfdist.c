@@ -906,7 +906,7 @@ static void http_error(request_t* r, int code, const char* msg)
 static void http_empty(request_t* r)
 {
 	gprintln(r, "HTTP EMPTY: %s %s %s - OK", r->peer, r->in.req->argv[0], r->in.req->argv[1]);
-	local_send(r, EMPTY_HTTP_RES, strlen (EMPTY_HTTP_RES) - 1);
+	local_send(r, EMPTY_HTTP_RES, strlen (EMPTY_HTTP_RES));
 }
 
 /* send a Continue response */
@@ -4634,7 +4634,7 @@ static int compress_zstd(request_t *r, block_t *blk, int buflen)
 		ZSTD_inBuffer bin = {buf + cursor, in_size, 0};
 		int outpos = 0;
 		while(bin.pos < bin.size){
-			ZSTD_outBuffer bout = {blk->cdata + offset, OUT_BUFFER_SIZE - outpos, outpos};
+			ZSTD_outBuffer bout = {blk->cdata + offset, OUT_BUFFER_SIZE - outpos, 0};
 			size_t res = ZSTD_compressStream(r->zstd_cctx, &bout, &bin);
 
 			if (ZSTD_isError(res))
