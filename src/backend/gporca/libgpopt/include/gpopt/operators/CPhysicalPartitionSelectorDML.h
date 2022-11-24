@@ -29,17 +29,13 @@ namespace gpopt
 class CPhysicalPartitionSelectorDML : public CPhysicalPartitionSelector
 {
 private:
-	// oid column - holds the OIDs for leaf parts
-	CColRef *m_pcrOid;
-
 	// private copy ctor
 	CPhysicalPartitionSelectorDML(const CPhysicalPartitionSelectorDML &);
 
 public:
 	// ctor
 	CPhysicalPartitionSelectorDML(CMemoryPool *mp, IMDId *mdid,
-								  UlongToExprMap *phmulexprEqPredicates,
-								  CColRef *pcrOid);
+								  UlongToExprMap *phmulexprEqPredicates);
 
 	// ident accessors
 	virtual EOperatorId
@@ -53,13 +49,6 @@ public:
 	SzId() const
 	{
 		return "CPhysicalPartitionSelectorDML";
-	}
-
-	// oid column
-	CColRef *
-	PcrOid() const
-	{
-		return m_pcrOid;
 	}
 
 	// match function

@@ -86,8 +86,7 @@ CXformImplementPartitionSelector::Transform(CXformContext *pxfctxt,
 
 	// assemble physical operator
 	CPhysicalPartitionSelectorDML *popPhysicalPartitionSelector =
-		GPOS_NEW(mp) CPhysicalPartitionSelectorDML(mp, mdid, phmulexprFilter,
-												   popSelector->PcrOid());
+		GPOS_NEW(mp) CPhysicalPartitionSelectorDML(mp, mdid, phmulexprFilter);
 
 	CExpression *pexprPartitionSelector = GPOS_NEW(mp)
 		CExpression(mp, popPhysicalPartitionSelector, pexprRelational);

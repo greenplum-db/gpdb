@@ -44,9 +44,6 @@ private:
 	// action column id
 	ULONG m_action_colid;
 
-	// oid column id
-	ULONG m_oid_colid;
-
 	// ctid column id
 	ULONG m_ctid_colid;
 
@@ -58,9 +55,6 @@ private:
 
 	// tuple oid column id
 	ULONG m_tuple_oid_col_oid;
-
-	// needs data to be sorted
-	BOOL m_input_sort_req;
 
 	// private copy ctor
 	CParseHandlerPhysicalDML(const CParseHandlerPhysicalDML &);
