@@ -93,7 +93,7 @@ struct block_t
 
 static long REQUEST_SEQ = 0;		/*  sequence number for request */
 static long SESSION_SEQ = 0;		/*  sequence number for session */
-static long OUT_BUFFER_SIZE = 0;    /* zstd out buffer size */
+static long OUT_BUFFER_SIZE = 0;	/* zstd out buffer size */
 
 static bool base16_decode(char* data);
 
@@ -182,7 +182,7 @@ static struct
 	struct transform* trlist; /* transforms from config file */
 	const char* ssl; /* path to certificates in case we use gpfdist with ssl */
 	int			w; /* The time used for session timeout in seconds */
-	int			compress;
+	int			compress; /* The flag to indicate whether comopression transmission is open */
 } opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 32768, 0, 256, 0, 0, 0, 0, 0};
 
 
@@ -300,9 +300,9 @@ struct request_t
 #ifdef USE_ZSTD
 	ZSTD_CCtx*		zstd_cctx;	/* zstd context */
 #endif	
-	int				zstd;		/* request use zstd compress */
-	int				zstd_err_len; /* space allocate for zstd_error string */
-	char*			zstd_error;	  /* string contains zstd error*/
+	int				zstd;			/* request use zstd compress */
+	int				zstd_err_len; 	/* space allocate for zstd_error string */
+	char*			zstd_error;		/* string contains zstd error*/
 #ifdef USE_SSL
 	/* SSL related */
 	BIO			*io;		/* for the i.o. */
@@ -363,7 +363,9 @@ static int session_active_segs_isempty(session_t* session);
 static int request_validate(request_t *r);
 static int request_set_path(request_t *r, const char* d, char* p, char* pp, char* path);
 static int request_path_validate(request_t *r, const char* path);
+#ifdef USE_ZSTD
 static int compress_zstd(request_t *r, block_t *blk, int buflen);
+#endif
 static int request_parse_gp_headers(request_t *r, int opt_g);
 static void free_session_cb(int fd, short event, void* arg);
 #ifdef GPFXDIST
@@ -925,11 +927,13 @@ static apr_status_t http_ok(request_t* r)
 	const char* fmt = NULL;
 	char buf[1024];
 	int m, n;
-	if(r->zstd){
+	if (r->zstd)
+	{
 		fmt = HTTP_RESPONSE_ZSTD;
 		n = apr_snprintf(buf, sizeof(buf), fmt, r->gp_proto, r->zstd);
 	}
-	else{
+	else
+	{
 		fmt = HTTP_RESPONSE;
 		n = apr_snprintf(buf, sizeof(buf), fmt, r->gp_proto);
 	}
@@ -1398,7 +1402,8 @@ session_get_block(const request_t* r, block_t* retblock, char* line_delim_str, i
 	block_fill_header(r, retblock, &fos);
 
 #ifdef USE_ZSTD
-	if(r->zstd){
+	if (r->zstd)
+	{
 		int res = compress_zstd(r, retblock, size);
 		
 		if (res < 0)
@@ -1884,12 +1889,15 @@ static void do_write(int fd, short event, void* arg)
 		 * write out the block data
 		 */
 		n = datablock->top - datablock->bot;
-		if(r->zstd){
+		if (r->zstd)
+		{
 			n = local_send(r, datablock->cdata + datablock->bot, n);
 		}
-		else{
+		else
+		{
 			n = local_send(r, datablock->data + datablock->bot, n);
 		}
+
 		if (n < 0)
 		{
 			/*
@@ -3441,7 +3449,8 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 			r->totalsegs = atoi(r->in.req->hvalue[i]);
 		else if (0 == strcasecmp("X-GP-SEGMENT-ID", r->in.req->hname[i]))
 			r->segid = atoi(r->in.req->hvalue[i]);
-		else if (0 == strcasecmp("X-GP-ZSTD", r->in.req->hname[i])){
+		else if (0 == strcasecmp("X-GP-ZSTD", r->in.req->hname[i]))
+		{
 			r->zstd = atoi(r->in.req->hvalue[i]);
 			r->zstd = opt.compress ? r->zstd : 0;
 		}
@@ -3483,7 +3492,7 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 		r->zstd_err_len = 1024;
 		r->outblock.cdata = palloc_safe(r, r->pool, opt.m, "out of memory when allocating buffer for compressed data: %d bytes", opt.m);
 		r->zstd_error = palloc_safe(r, r->pool, r->zstd_err_len, "out of memory when allocating error buffer for compressed data: %d bytes", r->zstd_err_len);
-		if	(r->is_get)
+		if (r->is_get)
 			r->zstd_cctx = ZSTD_createCStream();
 	}
 #endif

@@ -1553,7 +1553,8 @@ decompress_zstd_data(ZSTD_DCtx* ctx, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout)
 	 */
 	ret = ZSTD_decompressStream(ctx, bout, bin);
 
-	if(ZSTD_isError(ret)){
+	if (ZSTD_isError(ret))
+	{
 		ereport(ERROR,
 				(errcode(ERRCODE_CONNECTION_FAILURE),
 				errmsg("ZSTD_decompressStream failed, error is %s", ZSTD_getErrorName(ret))));
@@ -1778,7 +1779,8 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 		n = bufsz;
 
 #ifdef USE_ZSTD
-	if(file->zstd && file->curl->zstd_dctx && !file->eof){
+	if (file->zstd && file->curl->zstd_dctx && !file->eof)
+	{
 		int ret;
 		/* It is absolutely to put the decompression code in a loop.
 		 * Since not every call of decompress_zstd_data will get data into bout.
@@ -1788,20 +1790,23 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 		 * So the loop ensures that we push forward the decompression until there 
 		 * is data in bout.
 		 */
-		do{
+		do
+		{
 			ZSTD_inBuffer bin = {file->in.ptr + file->in.bot, file->lastsize, 0};
 			ZSTD_outBuffer bout = {buf, obufsz, 0};
 			ret = decompress_zstd_data(file->curl->zstd_dctx, &bin, &bout);
 			n = bout.pos; 
 			file->in.bot += bin.pos;
 			file->lastsize = ret;
-			if(!ret){
+			if (!ret)
+			{
 				file->lastsize = ZSTD_initDStream(file->curl->zstd_dctx);
 				break;
 			}		
-		}while(n == 0);
+		} while (n == 0);
 	}
-	else{
+	else
+	{
 		memcpy(buf, file->in.ptr + file->in.bot, n);
 		file->in.bot += n;
 	}
