@@ -43,3 +43,27 @@ select gp_inject_fault('winagg_after_spool_tuples', 'reset', dbid)
 reset statement_mem;
 drop table misc_jiras.t1;
 drop schema misc_jiras;
+
+-- test for issue https://github.com/greenplum-db/gpdb/issues/14539
+-- the \c command to renew the session to make sure the global var
+-- NextRecordTypmod is 0. For details please refer to the issue.
+create table t_record_type_param_dispatch (a int, b int) distributed by (a);
+
+explain (costs off)
+with cte as (
+  select * from t_record_type_param_dispatch order by random() limit
+  ( select count(*) /2 from t_record_type_param_dispatch )
+)
+select *, case when t in (select t from cte t) then 'a' else 'b' end
+from t_record_type_param_dispatch t;
+
+\c
+
+with cte as (
+  select * from t_record_type_param_dispatch order by random() limit
+  ( select count(*) /2 from t_record_type_param_dispatch )
+)
+select *, case when t in (select t from cte t) then 'a' else 'b' end
+from t_record_type_param_dispatch t;
+
+drop table t_record_type_param_dispatch;

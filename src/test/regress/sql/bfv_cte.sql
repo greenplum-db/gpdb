@@ -186,7 +186,8 @@ GROUP BY cup.d, cup.e, t.d, t.b
 ORDER BY 1,2,3
 LIMIT 10;
 
-
+DROP TABLE IF EXISTS bfv_cte_foo;
+DROP TABLE IF EXISTS bfv_cte_bar;
 reset optimizer_cte_inlining;
 reset optimizer_cte_inlining_bound;
 
@@ -201,18 +202,3 @@ SELECT cup.* FROM
 SELECT sum(t.b) OVER(PARTITION BY t.a ) AS e FROM (select 1 as a, 2 as b from pg_class limit 1)foo,t
 ) as cup
 GROUP BY cup.e;
-
-\c
-truncate bfv_cte_foo;
-with cte as
-    (
-        select * from bfv_cte_foo order by Random() limit
-        (
-            select count(*)/2 from bfv_cte_foo
-        )
-    )
-select *, case when t in ( select t from cte t ) Then 'a' else 'b' end
-from bfv_cte_foo t;
-
-DROP TABLE IF EXISTS bfv_cte_foo;
-DROP TABLE IF EXISTS bfv_cte_bar;
