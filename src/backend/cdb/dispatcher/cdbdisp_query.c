@@ -1368,7 +1368,11 @@ serializeParamListInfo(ParamListInfo paramLI, int *len_p)
 	 * If there were any record types, include the transient record type cache.
 	 */
 	if (found_records)
-		sparams = lcons(build_tuple_node_list(0), sparams);
+	{
+		List *transientTypeList = build_tuple_node_list(0);
+		if (transientTypeList != NULL)
+			sparams = lcons(transientTypeList, sparams);
+	}
 
 	return nodeToBinaryStringFast(sparams, len_p);
 }

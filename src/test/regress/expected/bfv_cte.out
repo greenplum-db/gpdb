@@ -290,8 +290,6 @@ LIMIT 10;
  1 | 3 | 162
 (10 rows)
 
-DROP TABLE IF EXISTS bfv_cte_foo;
-DROP TABLE IF EXISTS bfv_cte_bar;
 reset optimizer_cte_inlining;
 reset optimizer_cte_inlining_bound;
 --
@@ -310,3 +308,20 @@ GROUP BY cup.e;
  2
 (1 row)
 
+\c
+truncate bfv_cte_foo;
+with cte as
+    (
+        select * from bfv_cte_foo order by Random() limit
+        (
+            select count(*)/2 from bfv_cte_foo
+        )
+    )
+select *, case when t in ( select t from cte t ) Then 'a' else 'b' end
+from bfv_cte_foo t;
+ a | b | case
+---+---+------
+(0 rows)
+
+DROP TABLE IF EXISTS bfv_cte_foo;
+DROP TABLE IF EXISTS bfv_cte_bar;
