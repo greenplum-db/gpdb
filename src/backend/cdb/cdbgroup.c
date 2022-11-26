@@ -3178,6 +3178,32 @@ void generate_dqa_pruning_tlists(MppGroupContext *ctx,
 	}
 }
 
+/*
+ * Constructing the target list for the preliminary Agg node by
+ * placing targets for the grouping attributes on the grps_tlist
+ * temporary. Make sure ressortgroupref matches the original. Copying the
+ * expression may be overkill, but it is safe.
+ */
+static TargetEntry *
+construct_prelim_tle(TargetEntry *sub_tle, MppGroupContext *ctx)
+{
+	char *resname;
+	TargetEntry *prelim_tle;
+	if (sub_tle->resname)
+		resname = pstrdup(sub_tle->resname);
+	else
+		resname = psprintf("prelim_aggref_%d", sub_tle->ressortgroupref);
+
+	prelim_tle = makeTargetEntry(copyObject(sub_tle->expr),
+								 list_length(ctx->grps_tlist) + 1,
+								 resname,
+								 false);
+	prelim_tle->ressortgroupref = sub_tle->ressortgroupref;
+	prelim_tle->resjunk = false;
+	ctx->grps_tlist = lappend(ctx->grps_tlist, prelim_tle);
+	return prelim_tle;
+}
+
 /* Function: deconstruct_agg_info
  *
  * Top-level deconstruction of the target list and having qual of an
@@ -3202,26 +3228,12 @@ void deconstruct_agg_info(MppGroupContext *ctx)
 	ctx->fin_tlist = NIL;
 	ctx->fin_hqual = NIL;
 	
-	/*
-	 * Begin constructing the target list for the preliminary Agg node
-	 * by placing targets for the grouping attributes on the grps_tlist
-	 * temporary. Make sure ressortgroupref matches the original. Copying
-	 * the expression may be overkill, but it is safe.
-	 */
 	for ( i = 0; i < ctx->numGroupCols; i++ )
 	{
 		TargetEntry *sub_tle, *prelim_tle;
 		
 		sub_tle = get_tle_by_resno(ctx->sub_tlist, ctx->groupColIdx[i]);
-		prelim_tle = makeTargetEntry(copyObject(sub_tle->expr),
-									list_length(ctx->grps_tlist) + 1,
-									(sub_tle->resname == NULL) ?
-											NULL :
-											pstrdup(sub_tle->resname),
-									false);
-		prelim_tle->ressortgroupref = sub_tle->ressortgroupref;
-		prelim_tle->resjunk = false;
-		ctx->grps_tlist = lappend(ctx->grps_tlist, prelim_tle);
+		construct_prelim_tle(sub_tle, ctx);
 	}
 
 	/*
@@ -3521,6 +3533,24 @@ Node* deconstruct_expr_mutator(Node *node, MppGroupContext *ctx)
 										relabeltypeNode->relabelformat);
 		}
 		return (Node*) var;
+	}
+
+	if (IsA(node, Var))
+	{
+		TargetEntry *sub_tle;
+
+		sub_tle = tlist_member_ignore_relabel(node, ctx->sub_tlist);
+		if (sub_tle != NULL)
+		{
+			TargetEntry *prelim_tle;
+			Var *var;
+			prelim_tle = construct_prelim_tle(sub_tle, ctx);
+			var = makeVar(grp_varno, prelim_tle->resno,
+						  exprType((Node *) prelim_tle->expr),
+						  exprTypmod((Node *) prelim_tle->expr),
+						  0);
+			return (Node*) var;
+		}
 	}
 
 	return expression_tree_mutator(node, deconstruct_expr_mutator, (void*)ctx);

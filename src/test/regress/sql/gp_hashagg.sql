@@ -89,3 +89,59 @@ set enable_sort=off;
 -- use a Sort + Group, because nohash_int type is not hashable.
 select normal_int from hashagg_test2 group by normal_int;
 select nohash_int from hashagg_test2 group by nohash_int;
+
+-- Test multi-phase aggregate with an expression as the group key
+create table multiagg_expr_group_tbl (i int, j int) distributed by (i);
+insert into multiagg_expr_group_tbl values(-1, -2), (-1, -1), (0, 1), (1, 2);
+select j >= 0, not j >= 0 from multiagg_expr_group_tbl group by 1;
+explain select j >= 0, not j >= 0 from multiagg_expr_group_tbl group by 1;
+select j >= 0,
+		case when not j >= 0 then
+			'not greater than 0'
+		end
+		from multiagg_expr_group_tbl group by 1;
+
+drop table multiagg_expr_group_tbl;
+
+create table t1(a int, b int, c int, d int, e int);
+create table t2(a int, b int, c int, d int, e int);
+insert into t1 values(1, 1, 1, 1, 1);
+insert into t1 values(2, 2, 2, 2, 2);
+insert into t2 values(1, 1, 1, 1, 1);
+insert into t2 values(2, 2, 2, 2, 2);
+explain SELECT
+	(case
+         when num1 >= 1 then
+          '是'
+         else
+          '否'
+       end) tn1,
+      COUNT(DISTINCT(a)) tn2
+from (
+  select a,
+         (select count(*)
+            from t2
+           where t2.e = t1.a and t2.d = t1.d) num1
+    from t1
+   ) tt
+group by tt.num1;
+
+SELECT
+	(case
+         when num1 >= 1 then
+          '是'
+         else
+          '否'
+       end) tn1,
+      COUNT(DISTINCT(a)) tn2
+from (
+  select a,
+         (select count(*)
+            from t2
+           where t2.e = t1.a and t2.d = t1.d) num1
+    from t1
+   ) tt
+group by tt.num1;
+
+drop table t1;
+drop table t2;
