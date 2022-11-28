@@ -54,7 +54,7 @@ private:
 	BOOL m_preserve_oids;
 
 	// tuple oid column id
-	ULONG m_tuple_oid_col_oid;
+	ULONG m_tuple_oid_colid;
 
 	// private copy ctor
 	CParseHandlerPhysicalDML(const CParseHandlerPhysicalDML &);

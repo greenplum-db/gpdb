@@ -43,7 +43,7 @@ CParseHandlerPhysicalDML::CParseHandlerPhysicalDML(
 	  m_ctid_colid(0),
 	  m_segid_colid(0),
 	  m_preserve_oids(false),
-	  m_tuple_oid_col_oid(0)
+	  m_tuple_oid_colid(0)
 {
 }
 
@@ -120,7 +120,7 @@ CParseHandlerPhysicalDML::StartElement(const XMLCh *const,	// element_uri,
 
 	if (m_preserve_oids)
 	{
-		m_tuple_oid_col_oid =
+		m_tuple_oid_colid =
 			CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
 				m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
 				EdxltokenTupleOidColId, EdxltokenPhysicalDMLUpdate);
@@ -226,7 +226,7 @@ CParseHandlerPhysicalDML::EndElement(const XMLCh *const,  // element_uri,
 	CDXLPhysicalDML *dxl_op = GPOS_NEW(m_mp) CDXLPhysicalDML(
 		m_mp, m_dxl_dml_type, table_descr, m_src_colids_array, m_action_colid,
 		m_ctid_colid, m_segid_colid, m_preserve_oids,
-		m_tuple_oid_col_oid, dxl_direct_dispatch_info);
+		m_tuple_oid_colid, dxl_direct_dispatch_info);
 	m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
 
 	// set statistics and physical properties
