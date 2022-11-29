@@ -289,11 +289,7 @@ cdb_create_multistage_grouping_paths(PlannerInfo *root,
 	/*
 	 * Is the input hashable / sortable? This is largely the same logic as in
 	 * upstream create_grouping_paths(), but we can do hashing in limited ways
-	 * even if there are DISTINCT aggs or grouping setst.
-	 *
-	 * GPDB_12_MERGE:FIXME: the similar rules in planner.c got more complicated.
-	 * Does this need to be more fine-grained too? See GROUPING_CAN_USE_SORT and
-	 * GROUPING_CAN_USE_HASH.
+	 * even if there are DISTINCT aggs or grouping sets.
 	 */
 	can_sort = grouping_is_sortable(parse->groupClause);
 	can_hash = (parse->groupClause != NIL &&
