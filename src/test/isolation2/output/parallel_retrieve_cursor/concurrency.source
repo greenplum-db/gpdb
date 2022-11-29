@@ -60,7 +60,7 @@ DECLARE
 1: COMMIT;
 COMMIT
 
-ALTER SYSTEM SET gp_max_parallel_cursors TO -1;
+ALTER SYSTEM RESET gp_max_parallel_cursors;
 ALTER
 SELECT pg_reload_conf();
  pg_reload_conf 
