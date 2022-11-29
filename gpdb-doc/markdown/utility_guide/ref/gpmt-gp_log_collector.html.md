@@ -7,7 +7,7 @@ This tool collects Greenplum and system log files, along with the relevant confi
 ```
 gpmt gp_log_collector [-failed-segs | -c <ID1,ID2,...>| -hostfile <file> | -h <host1, host2,...>]
 [ -start <YYYY-MM-DD> ] [ -end <YYYY-MM-DD> ]
-[ -dir <path> ] [ -segdir <path> ] [ -a ] [-skip-master] [-with-gpbackup] [-with-gptext] [-with-gptext-only] [-with-pxf] [-with-pxf-only] [-with-gpupgrade]
+[ -dir <path> ] [ -segdir <path> ] [ -a ] [-skip-master] [-with-gpbackup] [-with-gptext] [-with-gptext-only] [-with-gpcc] [-with-pxf] [-with-pxf-only] [-with-gpupgrade] 
 ```
 
 ## <a id="opts"></a>Options 
@@ -71,6 +71,15 @@ Also, the `pg_log` file is collected from the master and segment hosts.
 
 -with-gptext-only
 :   Collect only GPText logs.
+
+-with-gpcc
+:   Collect log files related to Greenplum Command Center. Log files are collected from the following locations:
+
+- `$GPCC_HOME/logs/*`
+- `$GPCC_HOME/conf/app.conf`
+- `$HOME/gpmetrics/*` (Greenplum Command Center 6.8.0+ on Greenplum Database 6.x or Greenplum Command Center 4.16.0+ on Greenplum Database 5.x)
+- `$MASTER_DATA_DIRECTORY/gpmetrics` (Greenplum Command Center 6.7.0- on Greenplum Database 6.x or Greenplum Command Center 4.15.0- on Greenplum Database 5.x)
+- The output of the `gppkg -q --all` command
 
 -with-pxf
 :   Collect all PXF logs along with Greenplum logs.
