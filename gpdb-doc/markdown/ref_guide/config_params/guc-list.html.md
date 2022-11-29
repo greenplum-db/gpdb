@@ -1130,6 +1130,17 @@ Sets the Postgres Planner cost estimate for a Motion operator to transfer a row 
 |-----------|-------|-------------------|
 |floating point|0|master, session, reload|
 
+## <a id="gp_print_create_gang_time"></a>gp\_print\_create\_gang\_time 
+
+Controls the display of additional information about gang creation, including gang reuse status and the shortest and longest connection establishment time to the segment.
+
+The default value is `false`, Greenplum Database does not display the additional gang creation information.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|false|master, session, reload|
+
+
 ## <a id="gp_recursive_cte"></a>gp\_recursive\_cte 
 
 Controls the availability of the `RECURSIVE` keyword in the `WITH` clause of a `SELECT [INTO]` command, or a `DELETE`, `INSERT` or `UPDATE` command. The keyword allows a subquery in the `WITH` clause of a command to reference itself. The default value is `true`, the `RECURSIVE` keyword is allowed in the `WITH` clause of a command.
