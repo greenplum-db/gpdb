@@ -214,6 +214,15 @@ private:
 													   CColRef *pcolref,
 													   CExpression *pprojExpr);
 
+
+	static CExpression *PexprJoinPruningScalar(CMemoryPool *mp,
+											   CExpression *pexprScalar);
+
+	static CExpression *PexprJoinPruning(CMemoryPool *mp, CExpression *pexpr,
+										 CColRefSet *pcrsOutput);
+
+
+
 public:
 	CExpressionPreprocessor() = delete;
 

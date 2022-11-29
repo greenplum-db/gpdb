@@ -50,8 +50,10 @@
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/operators/CScalarProjectList.h"
 #include "gpopt/operators/CScalarSubquery.h"
+#include "gpopt/operators/CScalarSubqueryAll.h"
 #include "gpopt/operators/CScalarSubqueryAny.h"
 #include "gpopt/operators/CScalarSubqueryExists.h"
+#include "gpopt/operators/CScalarSubqueryNotExists.h"
 #include "gpopt/operators/CScalarSubqueryQuantified.h"
 #include "gpopt/operators/CWindowPreprocessor.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
@@ -3040,6 +3042,472 @@ CExpressionPreprocessor::ConvertSplitUpdateToInPlaceUpdate(CMemoryPool *mp,
 	return pexpr;
 }
 
+CExpression *
+CExpressionPreprocessor::PexprJoinPruningScalar(CMemoryPool *mp,
+												CExpression *pexprScalar)
+{
+	GPOS_ASSERT(nullptr != pexprScalar);
+	GPOS_ASSERT(pexprScalar->Pop()->FScalar());
+
+	if (COperator::EopScalarSubqueryExists == pexprScalar->Pop()->Eopid() ||
+		COperator::EopScalarSubqueryNotExists == pexprScalar->Pop()->Eopid())
+	{
+		pexprScalar->AddRef();
+		return pexprScalar;
+	}
+
+	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
+	CExpression *pexprPrunedChild = nullptr;
+
+	if (pexprScalar->DeriveHasSubquery())
+	{
+		if (COperator::EopScalarSubquery == pexprScalar->Pop()->Eopid() ||
+			COperator::EopScalarSubqueryAny == pexprScalar->Pop()->Eopid() ||
+			COperator::EopScalarSubqueryAll == pexprScalar->Pop()->Eopid())
+		{
+			CColRefSet *subquery_colrefset = GPOS_NEW(mp) CColRefSet(mp);
+			const CColRef *subquery_colref = nullptr;
+
+			if (COperator::EopScalarSubquery == pexprScalar->Pop()->Eopid())
+			{
+				CScalarSubquery *subquery_pop =
+					CScalarSubquery::PopConvert(pexprScalar->Pop());
+
+
+				subquery_colref = subquery_pop->Pcr();
+			}
+
+			if (COperator::EopScalarSubqueryAny == pexprScalar->Pop()->Eopid())
+			{
+				CScalarSubqueryAny *subquery_pop =
+					CScalarSubqueryAny::PopConvert(pexprScalar->Pop());
+
+
+				subquery_colref = subquery_pop->Pcr();
+			}
+			if (COperator::EopScalarSubqueryAll == pexprScalar->Pop()->Eopid())
+			{
+				CScalarSubqueryAll *subquery_pop =
+					CScalarSubqueryAll::PopConvert(pexprScalar->Pop());
+
+
+				subquery_colref = subquery_pop->Pcr();
+			}
+
+			subquery_colrefset->Include(subquery_colref);
+
+			ULONG arity = pexprScalar->Arity();
+
+			for (ULONG ul = 0; ul < arity; ul++)
+			{
+				CExpression *pexprChild = (*pexprScalar)[ul];
+				if (pexprChild->Pop()->FLogical())
+				{
+					pexprPrunedChild = PexprJoinPruning(mp, (*pexprScalar)[0],
+														subquery_colrefset);
+
+					pdrgpexpr->Append(pexprPrunedChild);
+				}
+				else
+				{
+					pexprPrunedChild = PexprJoinPruningScalar(mp, pexprChild);
+
+					pdrgpexpr->Append(pexprPrunedChild);
+				}
+			}
+
+			COperator *pop = pexprScalar->Pop();
+			pop->AddRef();
+			subquery_colrefset->Release();
+			return GPOS_NEW(mp) CExpression(mp, pop, pdrgpexpr);
+		}
+
+		else
+		{
+			ULONG arity = pexprScalar->Arity();
+			for (ULONG ul = 0; ul < arity; ul++)
+			{
+				CExpression *pexprChild = (*pexprScalar)[ul];
+				pexprPrunedChild = PexprJoinPruningScalar(mp, pexprChild);
+				pdrgpexpr->Append(pexprPrunedChild);
+			}
+			COperator *pop = pexprScalar->Pop();
+			pop->AddRef();
+			return GPOS_NEW(mp) CExpression(mp, pop, pdrgpexpr);
+		}
+	}
+
+	else
+	{
+		pdrgpexpr->Release();
+		pexprScalar->AddRef();
+		return pexprScalar;
+	}
+}
+
+CExpression *
+CExpressionPreprocessor::PexprJoinPruning(CMemoryPool *mp, CExpression *pexpr,
+										  CColRefSet *pcrsOutput)
+{
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != pexpr);
+
+	if (nullptr == pcrsOutput)
+	{
+		pexpr->AddRef();
+		return pexpr;
+	}
+
+	// Derived output columns of the current CExpression
+	CColRefSet *derived_output_columns = pexpr->DeriveOutputColumns();
+
+	// Columns which are output by the current CExpression
+	CColRefSet *output_columns = GPOS_NEW(mp) CColRefSet(mp);
+
+	// Columns which are output by the childs of the current CExpression
+	CColRefSet *childs_output_columns = GPOS_NEW(mp) CColRefSet(mp);
+
+	// Computing the output columns of the current CExpression
+	CColRefSetIter iter_derived_output_columns(*derived_output_columns);
+	while (iter_derived_output_columns.Advance())
+	{
+		CColRef *pcr = iter_derived_output_columns.Pcr();
+		if (pcrsOutput->FMember(pcr))
+		{
+			output_columns->Include(pcr);
+		}
+	}
+
+
+	// Computing the columns output by the childs of the current CExpression
+	ULONG arity = pexpr->Arity();
+	for (ULONG ul = 0; ul < arity; ul++)
+	{
+		CExpression *pexpr_child = (*pexpr)[ul];
+		if (pexpr_child->Pop()->FScalar())
+		{
+			CColRefSet *derived_used_columns_scalar =
+				pexpr_child->DeriveUsedColumns();
+			childs_output_columns->Include(output_columns);
+			childs_output_columns->Include(derived_used_columns_scalar);
+		}
+	}
+
+
+	// Pruning the join
+	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
+
+	ULONG number_of_childs = pexpr->Arity();
+
+	for (ULONG ul = 0; ul < number_of_childs; ul++)
+	{
+		CExpression *pexpr_child = (*pexpr)[ul];
+		if (pexpr_child->Pop()->FLogical())
+		{
+			CExpression *pexprLogicalJoinPrunedChild =
+				PexprJoinPruning(mp, pexpr_child, childs_output_columns);
+			pdrgpexpr->Append(pexprLogicalJoinPrunedChild);
+		}
+		else
+		{
+			CExpression *pexprScalarJoinPrunedChild =
+				PexprJoinPruningScalar(mp, pexpr_child);
+			pdrgpexpr->Append(pexprScalarJoinPrunedChild);
+		}
+	}
+
+	COperator *pop = pexpr->Pop();
+	pop->AddRef();
+	CExpression *pexprNew = GPOS_NEW(mp) CExpression(mp, pop, pdrgpexpr);
+
+
+	// Checking if the join is a left join then pruning the join if possible
+	if (CPredicateUtils::FLeftOuterJoin(pexprNew))
+	{
+		CExpression *inner_rel = (*pexprNew)[1];
+		CColRefSet *derive_output_columns_inner_rel =
+			inner_rel->DeriveOutputColumns();
+		if (output_columns->FIntersects(derive_output_columns_inner_rel))
+		{
+			output_columns->Release();
+			childs_output_columns->Release();
+			return pexprNew;
+		}
+
+		CColRefSet *result = GPOS_NEW(mp) CColRefSet(mp);
+
+		// Unique keys of inner relation
+		CColRefSet *inner_rel_unique_keys = GPOS_NEW(mp) CColRefSet(mp);
+
+		// Outer relation of the left join
+		CExpression *outer_rel = (*pexprNew)[0];
+
+		// Join condtions of left join
+		CExpression *join_cond = (*pexprNew)[2];
+
+		// Derived output columns of the outer relation of the left join
+		CColRefSet *outer_rel_columns = outer_rel->DeriveOutputColumns();
+
+		// Unique key collection of the inner relation of left join
+		CKeyCollection *inner_rel_key_sets = inner_rel->DeriveKeyCollection();
+
+		if (nullptr == inner_rel_key_sets)
+		{
+			output_columns->Release();
+			childs_output_columns->Release();
+			result->Release();
+			inner_rel_unique_keys->Release();
+			return pexprNew;
+		}
+
+		ULONG num_keys = inner_rel_key_sets->Keys();
+
+		for (ULONG ul = 0; ul < num_keys; ul++)
+		{
+			CColRefSet *pdrgpcrKey = inner_rel_key_sets->PcrsKey(mp, ul);
+			inner_rel_unique_keys->Include(pdrgpcrKey);
+			pdrgpcrKey->Release();
+		}
+
+		if (CPredicateUtils::IsEqualityOp(join_cond))
+		{
+			// Contains columns from a join condition that are present in the inner relation
+			CColRefSet *present_in_inner_rel = GPOS_NEW(mp) CColRefSet(mp);
+
+			// Columns used in a join condition
+			CColRefSet *usedColumns = join_cond->DeriveUsedColumns();
+
+			// If the used columns of the scalar equality operator is 0 then we will not prune the join.
+			if (usedColumns->Size() == 0)
+			{
+				output_columns->Release();
+				childs_output_columns->Release();
+				present_in_inner_rel->Release();
+				result->Release();
+				inner_rel_unique_keys->Release();
+				return pexprNew;
+			}
+
+			// If the used column count is 1 then we need to check if that column is a part of the inner relation unique key
+			else if (usedColumns->Size() == 1)
+			{
+				CColRef *pcr = usedColumns->PcrFirst();
+				if (inner_rel_unique_keys->FMember(pcr))
+				{
+					result->Include(pcr);
+				}
+				present_in_inner_rel->Release();
+			}
+
+			// If the used column count is 2 then we need to check for each column whether it belongs to inner or outer relation
+			else
+			{
+				CColRefSetIter it(*usedColumns);
+
+				while (it.Advance())
+				{
+					CColRef *pcr = it.Pcr();
+					if (!outer_rel_columns->FMember(pcr))
+					{
+						present_in_inner_rel->Include(pcr);
+					}
+				}
+
+				// If both the columns are not present in the inner relation we can't prune the join
+				if (present_in_inner_rel->Size() == 0)
+				{
+					output_columns->Release();
+					childs_output_columns->Release();
+					present_in_inner_rel->Release();
+					result->Release();
+					inner_rel_unique_keys->Release();
+					return pexprNew;
+				}
+
+				// This case means we have one column from the outer relation and one column from the inner relation
+				// We need to check if the column from the inner relation is a part of the unique key or not.
+				else if (present_in_inner_rel->Size() == 1)
+				{
+					if (inner_rel_unique_keys->FMember(
+							present_in_inner_rel->PcrFirst()))
+					{
+						result->Include(present_in_inner_rel->PcrFirst());
+					}
+					present_in_inner_rel->Release();
+				}
+
+				// This case means both the columns are from the inner relation.So we can't prune the join.
+				else
+				{
+					output_columns->Release();
+					childs_output_columns->Release();
+					present_in_inner_rel->Release();
+					result->Release();
+					inner_rel_unique_keys->Release();
+					return pexprNew;
+				}
+			}
+		}
+		else if (COperator::EopScalarBoolOp == join_cond->Pop()->Eopid() &&
+				 CScalarBoolOp::EboolopAnd ==
+					 CScalarBoolOp::PopConvert(join_cond->Pop())->Eboolop())
+		{
+			ULONG arity_join = join_cond->Arity();
+
+			for (ULONG ul = 0; ul < arity_join; ul++)
+			{
+				CExpression *join_cond_child = (*join_cond)[ul];
+				if (COperator::EopScalarCmp == join_cond_child->Pop()->Eopid())
+				{
+					if (CPredicateUtils::IsEqualityOp(join_cond_child))
+					{
+						// Contains columns from a join condition that are present in the inner relation
+						CColRefSet *present_in_inner_rel =
+							GPOS_NEW(mp) CColRefSet(mp);
+
+						// Columns used in a join condition
+						CColRefSet *usedColumns =
+							join_cond_child->DeriveUsedColumns();
+
+						// If the used column count for the ScalarCmp is 0 then continue search
+						// for the next ScalarCmp columns.
+						if (usedColumns->Size() == 0)
+						{
+							present_in_inner_rel->Release();
+							continue;
+						}
+
+						// If the used column count is 1 then we need to check if that column is a part of the inner relation unique key
+						else if (usedColumns->Size() == 1)
+						{
+							CColRef *pcr = usedColumns->PcrFirst();
+							if (inner_rel_unique_keys->FMember(pcr))
+							{
+								result->Include(pcr);
+							}
+							present_in_inner_rel->Release();
+						}
+
+						else
+						{
+							CColRefSetIter it(*usedColumns);
+
+							while (it.Advance())
+							{
+								CColRef *pcr = it.Pcr();
+								if (!outer_rel_columns->FMember(pcr))
+								{
+									present_in_inner_rel->Include(pcr);
+								}
+							}
+
+							// If both the columns are not present in the inner relation continue for next child
+							if (present_in_inner_rel->Size() == 0)
+							{
+								present_in_inner_rel->Release();
+								continue;
+							}
+
+							// This case means we have one column from the outer relation and one column from the inner relation
+							// We need to check if the column from the inner relation is a part of the unique key or not.
+							else if (present_in_inner_rel->Size() == 1)
+							{
+								if (inner_rel_unique_keys->FMember(
+										present_in_inner_rel->PcrFirst()))
+								{
+									result->Include(
+										present_in_inner_rel->PcrFirst());
+								}
+								present_in_inner_rel->Release();
+							}
+
+							// This case means both the columns are from the inner relation.
+							else
+							{
+								output_columns->Release();
+								childs_output_columns->Release();
+								present_in_inner_rel->Release();
+								result->Release();
+								inner_rel_unique_keys->Release();
+								return pexprNew;
+							}
+						}
+					}
+				}
+
+				else
+				{
+					output_columns->Release();
+					childs_output_columns->Release();
+					result->Release();
+					inner_rel_unique_keys->Release();
+					return pexprNew;
+				}
+			}
+		}
+
+		else
+		{
+			output_columns->Release();
+			childs_output_columns->Release();
+			result->Release();
+			inner_rel_unique_keys->Release();
+			return pexprNew;
+		}
+
+		// The result set contains all the unique keys from the inner relation and are part of the join condition
+		// which are either constant or equal to some column from outer relation.
+		// Searching for a complete unique key set in the result set
+		ULONG ulKeys = inner_rel_key_sets->Keys();
+		BOOL are_all_unique_keys_present;
+		for (ULONG ul = 0; ul < ulKeys; ul++)
+		{
+			CColRefSet *pdrgpcrKey = inner_rel_key_sets->PcrsKey(mp, ul);
+			CColRefSetIter it(*pdrgpcrKey);
+			are_all_unique_keys_present = true;
+			while (it.Advance())
+			{
+				CColRef *pcr = it.Pcr();
+				if (!result->FMember(pcr))
+				{
+					are_all_unique_keys_present = false;
+					break;
+				}
+			}
+			pdrgpcrKey->Release();
+			if (are_all_unique_keys_present)
+			{
+				break;
+			}
+		}
+
+		if (are_all_unique_keys_present)
+		{
+			CExpression *outer_child = (*pexprNew)[0];
+			outer_child->AddRef();
+			pexprNew->Release();
+			output_columns->Release();
+			childs_output_columns->Release();
+			result->Release();
+			inner_rel_unique_keys->Release();
+			return outer_child;
+		}
+
+		else
+		{
+			output_columns->Release();
+			childs_output_columns->Release();
+			result->Release();
+			inner_rel_unique_keys->Release();
+			return pexprNew;
+		}
+	}
+
+	output_columns->Release();
+	childs_output_columns->Release();
+	return pexprNew;
+}
+
 // main driver, pre-processing of input logical expression
 CExpression *
 CExpressionPreprocessor::PexprPreprocess(
@@ -3126,122 +3594,128 @@ CExpressionPreprocessor::PexprPreprocess(
 		pexprUnnested->Release();
 	}
 
-	// (10) infer predicates from constraints
-	CExpression *pexprInferredPreds = PexprInferPredicates(mp, pexprConvert2In);
+	// (10) Pruning Left Join
+	CExpression *pexprJoinPruned =
+		PexprJoinPruning(mp, pexprConvert2In, pcrsOutputAndOrderCols);
 	GPOS_CHECK_ABORT;
 	pexprConvert2In->Release();
 
-	// (11) eliminate self comparisons
+	// (11) infer predicates from constraints
+	CExpression *pexprInferredPreds = PexprInferPredicates(mp, pexprJoinPruned);
+	GPOS_CHECK_ABORT;
+	pexprJoinPruned->Release();
+
+	// (12) eliminate self comparisons
 	CExpression *pexprSelfCompEliminated =
 		PexprEliminateSelfComparison(mp, pexprInferredPreds);
 	GPOS_CHECK_ABORT;
 	pexprInferredPreds->Release();
 
-	// (12) remove duplicate AND/OR children
+	// (13) remove duplicate AND/OR children
 	CExpression *pexprDeduped =
 		CExpressionUtils::PexprDedupChildren(mp, pexprSelfCompEliminated);
 	GPOS_CHECK_ABORT;
 	pexprSelfCompEliminated->Release();
 
-	// (13) factorize common expressions
+	// (14) factorize common expressions
 	CExpression *pexprFactorized =
 		CExpressionFactorizer::PexprFactorize(mp, pexprDeduped);
 	GPOS_CHECK_ABORT;
 	pexprDeduped->Release();
 
-	// (14) infer filters out of components of disjunctive filters
+	// (15) infer filters out of components of disjunctive filters
 	CExpression *pexprPrefiltersExtracted =
 		CExpressionFactorizer::PexprExtractInferredFilters(mp, pexprFactorized);
 	GPOS_CHECK_ABORT;
 	pexprFactorized->Release();
 
-	// (15) pre-process ordered agg functions
+	// (16) pre-process ordered agg functions
 	CExpression *pexprOrderedAggPreprocessed =
 		COrderedAggPreprocessor::PexprPreprocess(mp, pexprPrefiltersExtracted);
 	GPOS_CHECK_ABORT;
 	pexprPrefiltersExtracted->Release();
 
-	// (16) pre-process window functions
+	// (17) pre-process window functions
 	CExpression *pexprWindowPreprocessed =
 		CWindowPreprocessor::PexprPreprocess(mp, pexprOrderedAggPreprocessed);
 	GPOS_CHECK_ABORT;
 	pexprOrderedAggPreprocessed->Release();
 
-	// (17) eliminate unused computed columns
+	// (18) eliminate unused computed columns
 	CExpression *pexprNoUnusedPrEl = PexprPruneUnusedComputedCols(
 		mp, pexprWindowPreprocessed, pcrsOutputAndOrderCols);
 	GPOS_CHECK_ABORT;
 	pexprWindowPreprocessed->Release();
 
-	// (18) normalize expression
+	// (19) normalize expression
 	CExpression *pexprNormalized1 =
 		CNormalizer::PexprNormalize(mp, pexprNoUnusedPrEl);
 	GPOS_CHECK_ABORT;
 	pexprNoUnusedPrEl->Release();
 
-	// (19) transform outer join into inner join whenever possible
+	// (20) transform outer join into inner join whenever possible
 	CExpression *pexprLOJToIJ = PexprOuterJoinToInnerJoin(mp, pexprNormalized1);
 	GPOS_CHECK_ABORT;
 	pexprNormalized1->Release();
 
-	// (20) collapse cascaded inner and left outer joins
+	// (21) collapse cascaded inner and left outer joins
 	CExpression *pexprCollapsed = PexprCollapseJoins(mp, pexprLOJToIJ);
 	GPOS_CHECK_ABORT;
 	pexprLOJToIJ->Release();
 
-	// (21) after transforming outer joins to inner joins, we may be able to generate more predicates from constraints
+	// (22) after transforming outer joins to inner joins, we may be able to generate more predicates from constraints
 	CExpression *pexprWithPreds =
 		PexprAddPredicatesFromConstraints(mp, pexprCollapsed);
 	GPOS_CHECK_ABORT;
 	pexprCollapsed->Release();
 
-	// (22) eliminate empty subtrees
+	// (23) eliminate empty subtrees
 	CExpression *pexprPruned = PexprPruneEmptySubtrees(mp, pexprWithPreds);
 	GPOS_CHECK_ABORT;
 	pexprWithPreds->Release();
 
-	// (23) collapse cascade of projects
+	// (24) collapse cascade of projects
 	CExpression *pexprCollapsedProjects =
 		PexprCollapseProjects(mp, pexprPruned);
 	GPOS_CHECK_ABORT;
 	pexprPruned->Release();
 
-	// (24) insert dummy project when the scalar subquery is under a project and returns an outer reference
+	// (25) insert dummy project when the scalar subquery is under a project and returns an outer reference
 	CExpression *pexprSubquery = PexprProjBelowSubquery(
 		mp, pexprCollapsedProjects, false /* fUnderPrList */);
 	GPOS_CHECK_ABORT;
 	pexprCollapsedProjects->Release();
 
-	// (25) reorder the children of scalar cmp operator to ensure that left child is scalar ident and right child is scalar const
+	// (26) reorder the children of scalar cmp operator to ensure that left child is scalar ident and right child is scalar const
 	CExpression *pexrReorderedScalarCmpChildren =
 		PexprReorderScalarCmpChildren(mp, pexprSubquery);
 	GPOS_CHECK_ABORT;
 	pexprSubquery->Release();
 
-	// (26) rewrite IN subquery to EXIST subquery with a predicate
+	// (27) rewrite IN subquery to EXIST subquery with a predicate
 	CExpression *pexprExistWithPredFromINSubq =
 		PexprExistWithPredFromINSubq(mp, pexrReorderedScalarCmpChildren);
 	GPOS_CHECK_ABORT;
 	pexrReorderedScalarCmpChildren->Release();
 
-	// (27) prune partitions
+	// (28) prune partitions
 	CExpression *pexprPrunedPartitions =
 		PrunePartitions(mp, pexprExistWithPredFromINSubq);
 	GPOS_CHECK_ABORT;
 	pexprExistWithPredFromINSubq->Release();
 
-	// (28) swap logical select over logical project
+	// (29) swap logical select over logical project
 	CExpression *pexprTransposeSelectAndProject =
 		PexprTransposeSelectAndProject(mp, pexprPrunedPartitions);
 	pexprPrunedPartitions->Release();
 
-	// (29) convert split update to inplace update
+	// (30) convert split update to inplace update
 	CExpression *pexprSplitUpdateToInplace =
 		ConvertSplitUpdateToInPlaceUpdate(mp, pexprTransposeSelectAndProject);
 	GPOS_CHECK_ABORT;
 	pexprTransposeSelectAndProject->Release();
 
-	// (30) normalize expression again
+	// (31) normalize expression again
 	CExpression *pexprNormalized2 =
 		CNormalizer::PexprNormalize(mp, pexprSplitUpdateToInplace);
 	GPOS_CHECK_ABORT;
