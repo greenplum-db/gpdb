@@ -233,8 +233,6 @@ SELECT (gp_toolkit.__gp_aoblkdir('ao_blkdir_test')).* FROM gp_dist_random('gp_id
 -- Unique index white box tests
 DROP TABLE ao_blkdir_test;
 DROP
-SET gp_appendonly_enable_unique_index TO ON;
-SET
 CREATE TABLE ao_blkdir_test(i int UNIQUE, j int) USING ao_row DISTRIBUTED BY (i);
 CREATE
 
@@ -316,8 +314,6 @@ COMMIT
 
 DROP TABLE ao_blkdir_test;
 DROP
-RESET gp_appendonly_enable_unique_index;
-RESET
 
 --------------------------------------------------------------------------------
 -- AOCO tables
@@ -721,8 +717,6 @@ SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test')).* FROM gp_dist_random('gp_
 -- Unique index white box tests
 DROP TABLE aoco_blkdir_test;
 DROP
-SET gp_appendonly_enable_unique_index TO ON;
-SET
 CREATE TABLE aoco_blkdir_test(h int, i int UNIQUE, j int) USING ao_column DISTRIBUTED BY (i);
 CREATE
 
@@ -823,5 +817,3 @@ DETAIL:  Key (i)=(2) already exists.
 
 DROP TABLE aoco_blkdir_test;
 DROP
-RESET gp_appendonly_enable_unique_index;
-RESET

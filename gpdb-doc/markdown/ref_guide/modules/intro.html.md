@@ -17,6 +17,7 @@ The following Greenplum Database and PostgreSQL `contrib` modules are installed;
 -   [gp\_sparse\_vector](gp_sparse_vector.html) - Implements a Greenplum Database data type that uses compressed storage of zeros to make vector computations on floating point numbers faster.
 -   [hstore](hstore.html) - Provides a data type for storing sets of key/value pairs within a single PostgreSQL value.
 -   [ip4r](ip4r.html) - Provides data types for operations on IPv4 and IPv6 IP addresses.
+-   [ltree](ltree.html) - Provides data types for representing labels of data stored in a hierarchical tree-like structure.
 -   [orafce](orafce_ref.html) - Provides Greenplum Database-specific Oracle SQL compatibility functions.
 -   [pageinspect](pageinspect.html) - Provides functions for low level inspection of the contents of database pages; available to superusers only.
 -   [pg\_trgm](pg_trgm.html) - Provides functions and operators for determining the similarity of alphanumeric text based on trigram matching. The module also provides index operator classes that support fast searching for similar strings.
@@ -25,4 +26,5 @@ The following Greenplum Database and PostgreSQL `contrib` modules are installed;
 -   [postgresql-hll](postgresql-hll.html) - Provides HyperLogLog data types for PostgreSQL and Greenplum Database.
 -   [sslinfo](sslinfo.html) - Provides information about the SSL certificate that the current client provided when connecting to Greenplum.
 -   [timestamp9](timestamp9.html) - Provides an efficient nanosecond-precision timestamp data type for Greenplum Database.
+-   [uuid-ossp](uuid-ossp.html) - Provides functions to generate universally unique identifiers (UUIDs).
 

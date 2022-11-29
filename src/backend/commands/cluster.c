@@ -53,6 +53,7 @@
 #include "storage/lmgr.h"
 #include "storage/predicate.h"
 #include "utils/acl.h"
+#include "utils/builtins.h"
 #include "utils/faultinjector.h"
 #include "utils/fmgroids.h"
 #include "utils/inval.h"
@@ -683,6 +684,15 @@ rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
 					 relpersistence);
 }
 
+static char *
+make_column_name(char *prefix, char *colname)
+{
+	StringInfoData namebuf;
+
+	initStringInfo(&namebuf);
+	appendStringInfo(&namebuf, "%s%s", prefix, colname);
+	return namebuf.data;
+}
 
 /*
  * Create the transient table that will be filled with new data during
@@ -691,16 +701,20 @@ rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
  * specified physical storage properties NewTableSpace, NewAccessMethod, and
  * relpersistence.
  *
+ * Specify a colprefix can create a table with different colname, incase
+ * column conflict issue happens in REFRESH MATERIALIZED VIEW operation.
+ *
  * After this, the caller should load the new heap with transferred/modified
  * data, then call finish_heap_swap to complete the operation.
  */
 Oid
-make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
+make_new_heap_with_colname(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
 			  List *NewEncodings,
 			  char relpersistence,
 			  LOCKMODE lockmode,
 			  bool createAoBlockDirectory,
-			  bool makeCdbPolicy)
+			  bool makeCdbPolicy,
+			  char *colprefix)
 {
 	TupleDesc	OldHeapDesc;
 	char		NewHeapName[NAMEDATALEN];
@@ -715,6 +729,16 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
 	OldHeap = table_open(OIDOldHeap, lockmode);
 	OldHeapDesc = RelationGetDescr(OldHeap);
 
+	if (colprefix != NULL)
+	{
+		for (int i = 0; i < OldHeapDesc->natts; i++)
+		{
+			Form_pg_attribute attr = TupleDescAttr(OldHeapDesc, i);
+			char *attname = make_column_name(colprefix, NameStr(attr->attname));
+			namestrcpy(&(attr->attname), attname);
+			pfree(attname);
+		}
+	}
 	/*
 	 * Note that the NewHeap will not receive any of the defaults or
 	 * constraints associated with the OldHeap; we don't need 'em, and there's
@@ -905,6 +929,20 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
 	table_close(OldHeap, NoLock);
 
 	return OIDNewHeap;
+}
+
+Oid
+make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
+			  List *NewEncodings,
+			  char relpersistence,
+			  LOCKMODE lockmode,
+			  bool createAoBlockDirectory,
+			  bool makeCdbPolicy)
+{
+	return make_new_heap_with_colname(OIDOldHeap, NewTableSpace, NewAccessMethod,
+						NewEncodings, relpersistence, lockmode, createAoBlockDirectory, makeCdbPolicy,
+						NULL);
+
 }
 
 /*

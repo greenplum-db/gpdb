@@ -1,5 +1,7 @@
 -- Check changing table access method
 
+\set HIDE_TABLEAM off
+
 -- Scenario 1: Changing to the same AM: it should have no effect but
 -- make sure it doesn't rewrite table or blow up existing reloptions:
 CREATE TABLE sameam_heap(a int, b int) WITH (fillfactor=70) DISTRIBUTED BY (a);
@@ -52,26 +54,19 @@ CREATE TEMP TABLE relfilebeforeao AS
     UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
     WHERE relname in ('heap2ao', 'heap2ao2', 'heapi') ORDER BY segid;
 
--- Altering a heap table with a unique index to AO should error out
--- as unique indexes aren't supported on AO tables
-ALTER TABLE heap2ao2 SET ACCESS METHOD ao_row;
-ALTER TABLE heap2ao2 DROP CONSTRAINT unique_constraint;
-
 -- Set default storage options for the table to inherit from
 SET gp_default_storage_options = 'blocksize=65536, compresstype=zlib, compresslevel=5, checksum=true';
 
--- Alter table heap to AO should work
+-- Alter table heap to AO should work, even if heap table has unique indexes.
 ALTER TABLE heap2ao SET ACCESS METHOD ao_row;
 ALTER TABLE heap2ao2 SET WITH (appendoptimized=true);
 
 -- The altered tables should have AO AM
-SELECT c.relname, a.amname FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'heap2ao%';
-
 -- The altered tables should inherit storage options from gp_default_storage_options
--- And, the original heap reloptions are gone (in this case, 'fillfactor'). 
-SELECT blocksize,compresslevel,checksum,compresstype,columnstore
-FROM pg_appendonly WHERE relid in ('heap2ao'::regclass::oid, 'heap2ao2'::regclass::oid);
-SELECT reloptions from pg_class where relname in ('heap2ao', 'heap2ao2');
+-- And, the original heap reloptions are gone (in this case, 'fillfactor').
+-- Also, equivalent indexes have been created
+\d+ heap2ao
+\d+ heap2ao2
 
 -- Check data is intact
 SELECT * FROM heap2ao;

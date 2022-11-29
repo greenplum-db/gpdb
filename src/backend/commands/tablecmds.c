@@ -14242,19 +14242,6 @@ ATPrepSetAccessMethod(AlteredTableInfo *tab, Relation rel, const char *amname)
 	if (rel->rd_rel->relam == amoid)
 		return;
 
-	/*
-	 * Since we don't support unique indexes for AO/AOCO tables, ban
-	 * heap->AO/AOCO in case the heap table has a unique index.
-	 */
-	if (rel->rd_rel->relam == HEAP_TABLE_AM_OID &&
-		(amoid == AO_ROW_TABLE_AM_OID || amoid == AO_COLUMN_TABLE_AM_OID))
-	{
-		if (relationHasUniqueIndex(rel))
-				ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("append-only tables do not support unique indexes"),
-					errdetail("heap table \"%s\" being altered contains unique index", RelationGetRelationName(rel))));
-	}
-
 	/* Save info for Phase 3 to do the real work */
 	tab->rewrite |= AT_REWRITE_ACCESS_METHOD;
 	tab->newAccessMethod = amoid;

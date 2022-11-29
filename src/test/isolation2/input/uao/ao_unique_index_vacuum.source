@@ -1,8 +1,6 @@
 -- Test cases to cover VACUUM and concurrent INSERT behavior on append-optimized
 -- tables with unique indexes.
 
-SET gp_appendonly_enable_unique_index TO ON;
-
 -- Case 1: Basic case with a few deleted tuples---------------------------------
 CREATE TABLE unique_index_vacuum_@amname@(i int UNIQUE) USING @amname@
     DISTRIBUTED REPLICATED;

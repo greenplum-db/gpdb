@@ -285,7 +285,6 @@ extern bool Debug_bitmap_print_insert;
 extern bool enable_checksum_on_tables;
 extern int  gp_max_local_distributed_cache;
 extern bool gp_local_distributed_cache_stats;
-extern bool gp_appendonly_enable_unique_index;
 extern bool gp_appendonly_verify_block_checksums;
 extern bool gp_appendonly_verify_write_block;
 extern bool gp_appendonly_compaction;

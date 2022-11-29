@@ -31,6 +31,13 @@ extern Oid make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
 						 LOCKMODE lockmode,
 						 bool createAoBlockDirectory,
 						 bool makeCdbPolicy);
+extern Oid make_new_heap_with_colname(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
+									  List *NewEncodings,
+									  char relpersistence,
+									  LOCKMODE lockmode,
+									  bool createAoBlockDirectory,
+									  bool makeCdbPolicy,
+									  char *colprefix);
 extern void finish_heap_swap(Oid OIDOldHeap, Oid OIDNewHeap,
 							 bool is_system_catalog,
 							 bool swap_toast_by_content,

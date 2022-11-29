@@ -150,36 +150,6 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 804)
 		new_9_0_populate_pg_largeobject_metadata(&old_cluster, true);
 
-	/* 
-	 * GPDB: 9.5 removed the support for 8.3, we need to keep it to support upgrading
-	 * from GPDB 5
-	 */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) == 803)
-	{
-		old_8_3_check_for_name_data_type_usage(&old_cluster);
-		old_8_3_check_for_tsquery_usage(&old_cluster);
-		old_8_3_check_ltree_usage(&old_cluster);
-		check_hash_partition_usage();
-		if (user_opts.check)
-		{
-			old_8_3_rebuild_tsvector_tables(&old_cluster, true);
-			old_8_3_invalidate_hash_gin_indexes(&old_cluster, true);
-			old_8_3_invalidate_bpchar_pattern_ops_indexes(&old_cluster, true);
-		}
-		else
-		{
-			/*
-			 * While we have the old server running, create the script to
-			 * properly restore its sequence values but we report this at the
-			 * end.
-			 */
-			*sequence_script_file_name =
-				old_8_3_create_sequence_script(&old_cluster);
-		}
-
-		old_GPDB5_check_for_unsupported_distribution_key_data_types();
-	}
-
 	/* For now, the issue exists only for Greenplum 6.x/PostgreSQL 9.4 */
 	if (GET_MAJOR_VERSION(old_cluster.major_version) == 904)
 	{
@@ -265,26 +235,6 @@ issue_warnings_and_set_wal_level(char *sequence_script_file_name)
 	 * WAL record showing wal_level as 'replica'.
 	 */
 	start_postmaster(&new_cluster, true);
-
-	if (GET_MAJOR_VERSION(old_cluster.major_version) == 803)
-	{
-		/* restore proper sequence values using file created from old server */
-		if (sequence_script_file_name)
-		{
-			prep_status("Adjusting sequences");
-			exec_prog(UTILITY_LOG_FILE, NULL, true, true,
-					  "%s \"%s/psql\" " EXEC_PSQL_ARGS " %s -f \"%s\"",
-					  PG_OPTIONS_UTILITY_MODE_VERSION(new_cluster.major_version),
-					  new_cluster.bindir, cluster_conn_opts(&new_cluster),
-					  sequence_script_file_name);
-			unlink(sequence_script_file_name);
-			check_ok();
-		}
-
-		old_8_3_rebuild_tsvector_tables(&new_cluster, false);
-		old_8_3_invalidate_hash_gin_indexes(&new_cluster, false);
-		old_8_3_invalidate_bpchar_pattern_ops_indexes(&new_cluster, false);
-	}
 
 	/* GPDB_90_MERGE_FIXME: See earlier comment on large objects */
 	/* Create dummy large object permissions for old < PG 9.0? */

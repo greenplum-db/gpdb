@@ -43,7 +43,6 @@ WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
 
 -- Unique index white box tests
 DROP TABLE ao_blkdir_test;
-SET gp_appendonly_enable_unique_index TO ON;
 CREATE TABLE ao_blkdir_test(i int UNIQUE, j int) USING ao_row DISTRIBUTED BY (i);
 
 SELECT gp_inject_fault('appendonly_insert', 'suspend', '', '', 'ao_blkdir_test', 1, 1, 0, dbid)
@@ -94,7 +93,6 @@ WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
 WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
 
 DROP TABLE ao_blkdir_test;
-RESET gp_appendonly_enable_unique_index;
 
 --------------------------------------------------------------------------------
 -- AOCO tables
@@ -139,7 +137,6 @@ WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
 
 -- Unique index white box tests
 DROP TABLE aoco_blkdir_test;
-SET gp_appendonly_enable_unique_index TO ON;
 CREATE TABLE aoco_blkdir_test(h int, i int UNIQUE, j int) USING ao_column DISTRIBUTED BY (i);
 
 SELECT gp_inject_fault('appendonly_insert', 'suspend', '', '', 'aoco_blkdir_test', 1, 1, 0, dbid)
@@ -202,4 +199,3 @@ FROM gp_segment_configuration WHERE role = 'p' AND content = 0;
 4: INSERT INTO aoco_blkdir_test VALUES (2, 2);
 
 DROP TABLE aoco_blkdir_test;
-RESET gp_appendonly_enable_unique_index;

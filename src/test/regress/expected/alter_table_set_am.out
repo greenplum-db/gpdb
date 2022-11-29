@@ -1,4 +1,5 @@
 -- Check changing table access method
+\set HIDE_TABLEAM off
 -- Scenario 1: Changing to the same AM: it should have no effect but
 -- make sure it doesn't rewrite table or blow up existing reloptions:
 CREATE TABLE sameam_heap(a int, b int) WITH (fillfactor=70) DISTRIBUTED BY (a);
@@ -68,41 +69,46 @@ CREATE TEMP TABLE relfilebeforeao AS
     WHERE relname in ('heap2ao', 'heap2ao2', 'heapi') ORDER BY segid;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'segid' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
--- Altering a heap table with a unique index to AO should error out
--- as unique indexes aren't supported on AO tables
-ALTER TABLE heap2ao2 SET ACCESS METHOD ao_row;
-ERROR:  append-only tables do not support unique indexes
-DETAIL:  heap table "heap2ao2" being altered contains unique index
-ALTER TABLE heap2ao2 DROP CONSTRAINT unique_constraint;
 -- Set default storage options for the table to inherit from
 SET gp_default_storage_options = 'blocksize=65536, compresstype=zlib, compresslevel=5, checksum=true';
--- Alter table heap to AO should work
+-- Alter table heap to AO should work, even if heap table has unique indexes.
 ALTER TABLE heap2ao SET ACCESS METHOD ao_row;
 ALTER TABLE heap2ao2 SET WITH (appendoptimized=true);
 -- The altered tables should have AO AM
-SELECT c.relname, a.amname FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'heap2ao%';
- relname  | amname 
-----------+--------
- heap2ao  | ao_row
- heap2ao2 | ao_row
-(2 rows)
-
 -- The altered tables should inherit storage options from gp_default_storage_options
--- And, the original heap reloptions are gone (in this case, 'fillfactor'). 
-SELECT blocksize,compresslevel,checksum,compresstype,columnstore
-FROM pg_appendonly WHERE relid in ('heap2ao'::regclass::oid, 'heap2ao2'::regclass::oid);
- blocksize | compresslevel | checksum | compresstype | columnstore 
------------+---------------+----------+--------------+-------------
-     65536 |             5 | t        | zlib         | f
-     65536 |             5 | t        | zlib         | f
-(2 rows)
+-- And, the original heap reloptions are gone (in this case, 'fillfactor').
+-- Also, equivalent indexes have been created
+\d+ heap2ao
+                                  Table "public.heap2ao"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer |           |          |         | plain   |              | 
+ b      | integer |           |          |         | plain   |              | 
+Compression Type: zlib
+Compression Level: 5
+Block Size: 65536
+Checksum: t
+Indexes:
+    "heapi" btree (b)
+Distributed by: (a)
+Access method: ao_row
+Options: blocksize=65536, compresslevel=5
 
-SELECT reloptions from pg_class where relname in ('heap2ao', 'heap2ao2');
-            reloptions             
------------------------------------
- {blocksize=65536,compresslevel=5}
- {blocksize=65536,compresslevel=5}
-(2 rows)
+\d+ heap2ao2
+                                 Table "public.heap2ao2"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer |           |          |         | plain   |              | 
+ b      | integer |           |          |         | plain   |              | 
+Compression Type: zlib
+Compression Level: 5
+Block Size: 65536
+Checksum: t
+Indexes:
+    "unique_constraint" UNIQUE CONSTRAINT, btree (a)
+Distributed by: (a)
+Access method: ao_row
+Options: blocksize=65536, compresslevel=5
 
 -- Check data is intact
 SELECT * FROM heap2ao;

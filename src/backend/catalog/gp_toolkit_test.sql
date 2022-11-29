@@ -96,4 +96,6 @@ select * from gp_toolkit.gp_size_of_partition_and_indexes_disk;
 select * from gp_toolkit.gp_size_of_schema_disk;
 select * from gp_toolkit.gp_size_of_database;
 
+select * from gp_toolkit.gp_resgroup_role;
+
 

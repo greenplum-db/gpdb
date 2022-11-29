@@ -258,6 +258,11 @@ AppendOnlyBlockDirectory_Init_forUniqueChecks(
 	if (!OidIsValid(blkdirrelid) || !OidIsValid(blkdiridxid))
 		elog(ERROR, "Could not find block directory for relation: %u", aoRel->rd_id);
 
+	ereportif(Debug_appendonly_print_blockdirectory, LOG,
+			  (errmsg("Append-only block directory init for unique checks"),
+			   errdetail("(aoRel = %u, blkdirrel = %u, blkdiridxrel = %u, numColumnGroups = %d)",
+						 aoRel->rd_id, blkdirrelid, blkdiridxid, numColumnGroups)));
+
 	blockDirectory->aoRel = aoRel;
 	blockDirectory->isAOCol = RelationIsAoCols(aoRel);
 
@@ -1577,8 +1582,17 @@ AppendOnlyBlockDirectory_End_forUniqueChecks(AppendOnlyBlockDirectory *blockDire
 	/* This must have been reset after each uniqueness check */
 	Assert(blockDirectory->appendOnlyMetaDataSnapshot == InvalidSnapshot);
 
-	if (blockDirectory->blkdirIdx)
-		index_close(blockDirectory->blkdirIdx, AccessShareLock);
+	Assert(RelationIsValid(blockDirectory->blkdirIdx));
+	Assert(RelationIsValid(blockDirectory->blkdirRel));
+
+	ereportif(Debug_appendonly_print_blockdirectory, LOG,
+			  (errmsg("Append-only block directory end for unique checks"),
+				  errdetail("(aoRel = %u, blkdirrel = %u, blkdiridxrel = %u)",
+							blockDirectory->aoRel->rd_id,
+							blockDirectory->blkdirRel->rd_id,
+							blockDirectory->blkdirIdx->rd_id)));
+
+	index_close(blockDirectory->blkdirIdx, AccessShareLock);
 	heap_close(blockDirectory->blkdirRel, AccessShareLock);
 
 	MemoryContextDelete(blockDirectory->memoryContext);

@@ -3001,36 +3001,6 @@ do_connect(enum trivalue reuse_previous_specification,
 		connstr.data = NULL;
 
 	/*
-	 * Any change in the parameters read above makes us discard the password.
-	 * We also discard it if we're to use a conninfo rather than the
-	 * positional syntax.  Note that currently, PQhost() can return NULL for a
-	 * default Unix-socket connection, so we have to allow NULL for host.
-	 */
-	if (has_connection_string)
-		keep_password = false;
-	else
-		keep_password =
-			(user && PQuser(o_conn) && strcmp(user, PQuser(o_conn)) == 0) &&
-			((host && PQhost(o_conn) && strcmp(host, PQhost(o_conn)) == 0) ||
-			 (host == NULL && PQhost(o_conn) == NULL)) &&
-			(port && PQport(o_conn) && strcmp(port, PQport(o_conn)) == 0);
-
-	/*
-	 * Grab missing dbname from old connection.  No password discard if this
-	 * changes: passwords aren't (usually) database-specific.
-	 */
-	if (!dbname && reuse_previous)
-	{
-		initPQExpBuffer(&connstr);
-		appendPQExpBuffer(&connstr, "dbname=");
-		appendConnStrVal(&connstr, PQdb(o_conn));
-		dbname = connstr.data;
-		/* has_connection_string=true would be a dead store */
-	}
-	else
-		connstr.data = NULL;
-
-	/*
 	 * If the user asked to be prompted for a password, ask for one now. If
 	 * not, use the password from the old connection, provided the username
 	 * etc have not changed. Otherwise, try to connect without a password

@@ -140,7 +140,6 @@ static const char *authmethodhost = NULL;
 static const char *authmethodlocal = NULL;
 static bool debug = false;
 static bool noclean = false;
-
 static bool do_sync = true;
 static bool sync_only = false;
 static bool show_setting = false;
@@ -227,7 +226,7 @@ static const char *const subdirs[] = {
 	"pg_logical",
 	"pg_logical/snapshots",
 	"pg_logical/mappings",
-/* GPDB needs these directories */
+	/* GPDB needs these directories */
 	"pg_distributedlog",
 	"log"
 };
@@ -1237,6 +1236,12 @@ setup_config(void)
 							  "#effective_io_concurrency = 0");
 #endif
 
+#ifdef WIN32
+	conflines = replace_token(conflines,
+							  "#update_process_title = on",
+							  "#update_process_title = off");
+#endif
+
 	if (strcmp(authmethodlocal, "scram-sha-256") == 0 ||
 		strcmp(authmethodhost, "scram-sha-256") == 0)
 	{
@@ -1257,16 +1262,6 @@ setup_config(void)
 								  "#log_file_mode = 0600",
 								  "log_file_mode = 0640");
 	}
-
-#ifdef WIN32
-	conflines = replace_token(conflines,
-							  "#update_process_title = on",
-							  "#update_process_title = off");
-#endif
-
-	snprintf(repltok, sizeof(repltok), "include = '%s'",
-			 GP_INTERNAL_AUTO_CONF_FILE_NAME);
-	conflines = replace_token(conflines, "#include = 'special.conf'", repltok);
 
 	snprintf(path, sizeof(path), "%s/postgresql.conf", pg_data);
 
@@ -1754,6 +1749,7 @@ setup_description(FILE *cmdfd)
 				" SELECT t.objoid, c.oid, t.description "
 				"  FROM tmp_pg_shdescription t, pg_class c "
 				"   WHERE c.relname = t.classname;\n\n");
+
 	/* Create default descriptions for operator implementation functions */
 	PG_CMD_PUTS("WITH funcdescs AS ( "
 				"SELECT p.oid as p_oid, o.oid as o_oid, oprname "
@@ -3233,6 +3229,11 @@ initialize_data_directory(void)
 	setup_auth(cmdfd);
 
 	setup_depend(cmdfd);
+
+	/*
+	 * Note that no objects created after setup_depend() will be "pinned".
+	 * They are all droppable at the whim of the DBA.
+	 */
 
 	setup_sysviews(cmdfd);
 
