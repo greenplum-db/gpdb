@@ -33,6 +33,7 @@
 #include "commands/matview.h"
 #include "commands/prepare.h"
 #include "commands/tablecmds.h"
+#include "commands/queue.h"
 #include "commands/view.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
@@ -59,6 +60,7 @@
 #include "cdb/cdbvars.h"
 #include "cdb/memquota.h"
 #include "utils/metrics_utils.h"
+#include "utils/resscheduler.h"
 
 typedef struct
 {
@@ -417,6 +419,17 @@ ExecCreateTableAs(CreateTableAsStmt *stmt, const char *queryString,
 	queryDesc = CreateQueryDesc(plan, queryString,
 								GetActiveSnapshot(), InvalidSnapshot,
 								dest, params, 0);
+
+	if (gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
+	{
+		Assert(queryString);
+		gpmon_qlog_query_submit(queryDesc->gpmon_pkt);
+		gpmon_qlog_query_text(queryDesc->gpmon_pkt,
+				queryString,
+				application_name,
+				GetResqueueName(GetResQueueId()),
+				GetResqueuePriority(GetResQueueId()));
+	}
 
 	/* GPDB hook for collecting query info */
 	if (query_info_collect_hook)
