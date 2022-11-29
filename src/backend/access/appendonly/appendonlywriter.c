@@ -403,7 +403,7 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 	int			ncandidates = 0;
 	SysScanDesc aoscan;
 	HeapTuple	tuple;
-	Snapshot	snapshot;
+	SnapshotData snap;
 	Oid			segrelid;
 	bool		tried_creating_new_segfile = false;
 
@@ -426,23 +426,21 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 	LockRelationForExtension(rel, ExclusiveLock);
 
 	/*
-	 * Obtain the snapshot that is taken at the beginning of the transaction.
-	 * If a tuple is visible to this snapshot, and it hasn't been updated since
-	 * (that's checked implicitly by heap_lock_tuple()), it's visible to any
-	 * snapshot in this backend, and can be used as insertion target. We can't
+	 * Obtain a SNAPSHOT_DIRTY, to see all tuples in concurrent transactions.
+	 * If a tuple is simple_heap_insert'ed in another concurrent transaction,
+	 * we would see that tuple in the scan, and get another segno. We can't
 	 * simply call GetTransactionSnapshot() here because it will create a new
 	 * distributed snapshot for non-serializable transaction isolation level,
 	 * and it may be too late.
 	 */
-	snapshot = GetOldestSnapshot();
-	if (snapshot == NULL)
-		snapshot = GetTransactionSnapshot();
+
+	InitDirtySnapshot(snap);
 
 	if (Debug_appendonly_print_segfile_choice)
 	{
 		elog(LOG, "choose_segno_internal: TransactionXmin = %u, xmin = %u, xmax = %u, myxid = %u",
-			 TransactionXmin, snapshot->xmin, snapshot->xmax, GetCurrentTransactionIdIfAny());
-		LogDistributedSnapshotInfo(snapshot, "Used snapshot: ");
+			 TransactionXmin, snap.xmin, snap.xmax, GetCurrentTransactionIdIfAny());
+		LogDistributedSnapshotInfo(&snap, "Used snapshot: ");
 	}
 
 	GetAppendOnlyEntryAuxOids(rel->rd_id, NULL,
@@ -459,7 +457,7 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 	 * Scan through all the pg_aoseg (or pg_aocs) entries, and make note of
 	 * all "candidates".
 	 */
-	aoscan = systable_beginscan(pg_aoseg_rel, InvalidOid, false, snapshot, 0, NULL);
+	aoscan = systable_beginscan(pg_aoseg_rel, InvalidOid, false, &snap, 0, NULL);
 	while ((tuple = systable_getnext(aoscan)) != NULL)
 	{
 		int32		segno;
