@@ -186,7 +186,7 @@ CTranslatorRelcacheToDXL::RetrieveObjectGPDB(CMemoryPool *mp, IMDId *mdid,
 
 	OID oid = CMDIdGPDB::CastMdid(mdid)->Oid();
 
-	GPOS_ASSERT(0 != oid);
+	GPOS_RTL_ASSERT(0 != oid);
 
 	switch (mdtype)
 	{
