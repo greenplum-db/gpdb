@@ -14,7 +14,7 @@ This topic includes the following sections:
 -   [Using the diskquota Module](#using)
 -   [Known Issues and Limitations](#limits)
 -   [Notes](#topic_sfb_gb1_b3b)
--   [Upgrading the Module to Version 2.0](#upgrade)
+-   [Upgrading the Module](#upgrade)
 -   [Examples](#topic_v2z_jrv_b3b)
 
 ## <a id="topic_ofb_gb1_b3b"></a>Installing and Registering the Module \(First Use\) 
@@ -37,7 +37,7 @@ Before you can use the module, you must perform these steps:
     GUC              : shared_preload_libraries
     Coordinator value: auto_explain
     Segment     value: auto_explain
-    $ gpconfig -c shared_preload_libraries -v 'auto_explain,diskquota-2.0'
+    $ gpconfig -c shared_preload_libraries -v 'auto_explain,diskquota-2.1'
     $ gpstop -ar
     ```
 
@@ -60,7 +60,7 @@ Before you can use the module, you must perform these steps:
 
 The disk usage for a table includes the table data, indexes, toast tables, and free space map. For append-optimized tables, the calculation includes the visibility map and index, and the block directory table.
 
-The `diskquota` module allows a Greenplum Database administrator to limit the amount of disk space used by tables in schemas or owned by roles in up to 10 databases. The administrator can also use the module to limit the amount of disk space used by schemas and roles on a per-tablespace basis, as well as to limit the disk space used per Greenplum Database segment for a tablespace.
+The `diskquota` module allows a Greenplum Database administrator to limit the amount of disk space used by tables in schemas or owned by roles in up to 50 databases. The administrator can also use the module to limit the amount of disk space used by schemas and roles on a per-tablespace basis, as well as to limit the disk space used per Greenplum Database segment for a tablespace.
 
 **Note:** A role-based disk quota cannot be set for the Greenplum Database system owner \(the user that creates the Greenplum cluster\).
 
@@ -87,8 +87,14 @@ Diskquota can enforce both *soft limits* and *hard limits* for disk usage:
 
     Administrators can enable enforcement of a disk usage hard limit by setting the `diskquota.hard_limit` server configuration parameter as described in [Activating/Deactivating Hard Limit Disk Usage Enforcement](#hardlimit).
 
-
 There is some delay after a quota has been reached before the schema or role is added to the denylist. Other queries could add more data during the delay. The delay occurs because `diskquota` processes that calculate the disk space used by each table run periodically with a pause between executions \(two seconds by default\). The delay also occurs when disk usage falls beneath a quota, due to operations such as `DROP`, `TRUNCATE`, or `VACUUM FULL` that remove data. Administrators can change the amount of time between disk space checks by setting the `diskquota.naptime` server configuration parameter as described in [Setting the Delay Between Disk Usage Updates](#naptime).
+
+Diskquota can operate in both *static* and *dynamic* modes:
+
+-   When the number of databases in which the `diskquota` extension is registered is less than or equal to the maximum number of `diskquota` worker processes, `diskquota` operates in static mode; it assigns a background worker \(bgworker\) process to monitor each database, and the bgworker process exits only when the `diskquota` extension is dropped from the database.
+-   When the number of databases in which the `diskquota` extension is registered is greater than the maximum number of `diskquota` worker processes, `diskquota` operates in dynamic mode. In dynamic mode, for every monitored database every `diskquota.naptime` seconds, `diskquota` creates a bgworker process to collect disk usage information for the database, and then stops the bgworker process immediately after data collection completes. In this mode, `diskquota` dynamically starts and stops bgworker processes as needed for all monitored databases.
+
+    Administrators can change the maximum number of worker processes configured for `diskquota` by setting the `diskquota.max_workers` server configuration parameter as described in [Specifying the Maximum Number of Active diskquota Worker Processes](#maxworkers).
 
 If a query is unable to run because the tablespace, schema, or role has been denylisted, an administrator can increase the exceeded quota to allow the query to run. The module provides views that you can use to find the tablespaces, schemas, or roles that have exceeded their limits.
 
@@ -132,6 +138,8 @@ Views available in the `diskquota` module include:
 -   [diskquota.naptime](#naptime) - Controls how frequently \(in seconds\) that `diskquota` recalculates the table sizes.
 -   [diskquota.max\_active\_tables](#shmem) - Identifies the maximum number of relations \(including tables, indexes, etc.\) that the `diskquota` module can monitor at the same time.
 -   [diskquota.hard\_limit](#hardlimit) -  Activates or deactivates  the hard limit enforcement of disk usage.
+-   [diskquota.max\_workers](#maxworkers) -  Specifies the maximum number of diskquota worker processes that may be running at any one time.
+-   [diskquota.max\_table\_segments](#maxtableseg) -  Specifies the maximum number of *table segments* in the cluster.
 
 You use the `gpconfig` command to set these parameters in the same way that you would set any Greenplum Database server configuration parameter.
 
@@ -152,7 +160,7 @@ The denylist shared memory can hold up to one million database objects that exce
 
 Active table shared memory holds up to one million of active tables by default. Active tables are tables that may have changed sizes since `diskquota` last recalculated the table sizes. `diskquota` hook functions are called when the storage manager on each Greenplum Database segment creates, extends, or truncates a table file. The hook functions store the identity of the file in shared memory so that its file size can be recalculated the next time the table size data is refreshed.
 
-The `diskquota.max_active_tables` server configuration parameter identifies the maximum number of relations \(including tables, indexes, etc.\) that the `diskquota` module can monitor at the same time. The default value is `1 * 1024 * 1024`. This value should be sufficient for most Greenplum Database installations. Should you change the value of this configuration parameter, you must restart the Greenplum Database server.
+The `diskquota.max_active_tables` server configuration parameter identifies the maximum number of relations \(including tables, indexes, etc.\) that the `diskquota` module can monitor at the same time. The default value is `300 * 1024`. This value should be sufficient for most Greenplum Database installations. Should you change the value of this configuration parameter, you must restart the Greenplum Database server.
 
 ### <a id="hardlimit"></a>Activating/Deactivating Hard Limit Disk Usage Enforcement 
 
@@ -170,6 +178,21 @@ Run the following query to view the hard limit enforcement setting:
 ```
 SELECT * from diskquota.status();
 ```
+
+### <a id="maxworkers"></a>Specifying the Maximum Number of Active diskquota Worker Processes
+
+The `diskquota.max_workers` server configuration parameter specifies the maximum number of diskquota worker processes \(not including the `diskquota` launcher process\) that may be running at any one time. The default number of maximum worker processes is `10`, and the maximum value that you can specify is `20`.
+
+You must set this parameter at Greenplum Database server start time.
+
+**Note:** Setting `diskquota.max_workers` to a value that is larger than `max_worker_processes` has no effect; `diskquota` workers are taken from the pool of worker processes established by that Greenplum Database server configuration parameter setting.
+
+### <a id="maxtableseg"></a>Specifying the Maximum Number of Table Segments (Shards)
+
+A Greenplum table \(including a partitioned table’s child tables\) is distributed to all segments as a shard. `diskquota` counts each table shard as a *table segment*. The `diskquota.max_table_segments` server configuration parameter identifies the maximum number of *table segments* in the Greenplum Database cluster, which in turn can gate the maximum number of tables that `diskquota` can monitor.
+
+The runtime value of `diskquota.max_table_segments` equals the maximum number of tables multiplied by \(number\_of\_segments + 1\). The default value is `10 * 1024 * 1024`.
+
 
 ## <a id="using"></a>Using the diskquota Module 
 
@@ -207,6 +230,8 @@ SELECT diskquota.pause();
 -- when a disk quota exceeded
 SELECT diskquota.resume(); 
 ```
+
+**Note:** The pause operation does not persist through a Greenplum Database cluster restart; you must invoke `diskquota.pause()` again when the cluster is back up and running.
 
 ### <a id="schema_or_role_quota"></a>Setting a Schema or Role Disk Quota 
 
@@ -298,6 +323,16 @@ SELECT tablespace_name, per_seg_quota_ratio
  tspaced1          |                   2
 (1 rows)
 
+```
+
+### <a id="dbs_monitored"></a>Identifying the diskquota-Monitored Databases
+
+Run the following SQL commands to obtain a list of the `diskquota`-monitored databases in your Greenplum Database cluster:
+
+``` sql
+\c diskquota
+SELECT d.datname FROM diskquota_namespace.database_list q, pg_database d
+    WHERE q.dbid = d.oid ORDER BY d.datname;
 ```
 
 ### <a id="quotas_usage"></a>Displaying Disk Quotas and Disk Usage 
@@ -406,6 +441,8 @@ The `diskquota` module has the following limitations and known issues:
     -   Hard limit enforcement of disk usage is deactivated.
     -   A long-running query in a session has consumed the full disk quota.
     `diskquota` does update the denylist in this scenario, but the `diskquota.show_fast_role_quota_view` may not represent the actual used quota because the long-running query is not yet committed. If you execute a new query while the original is still running, the new query will trigger a quota exceeded error.
+-   When `diskquota` is operating in *static mode*, it may fail to monitor some databases when `diskquota.max_workers` is greater than the available number of bgworker processes. In *dynamic mode*, `diskquota` works correctly when there is at least one available bgworker process.
+-   When `diskquota` is enforcing a *hard limit* for disk usage and data is inserted into a partition table, `diskquota` can not block the query even when `nspsize_in_bytes`, `rolsize_in_bytes`, and `nspsize_tablespace_in_bytes` in `show_fast_schema_quota_view` have exceeded the quota limit. `diskquota` cannot detect when data has been inserted into many children partition tables that each table file doesn’t need to extend.
 
 
 ## <a id="topic_sfb_gb1_b3b"></a>Notes 
@@ -416,13 +453,67 @@ Deleting rows or running `VACUUM` on a table does not release disk space, so the
 
 The `diskquota` module supports high availability features provided by the background worker framework. The `diskquota` launcher process only runs on the active coordinator node. The postmaster on the standby coordinator does not start the `diskquota` launcher process when it is in standby mode. When the coordinator is down and the administrator runs the [gpactivatestandby](../../utility_guide/ref/gpactivatestandby.html) command, the standby coordinator changes its role to coordinator and the `diskquota` launcher process is forked automatically. Using the `diskquota`-enabled database list in the `diskquota` database, the `diskquota` launcher creates the `diskquota` worker processes that manage disk quotas for each database.
 
-## <a id="upgrade"></a>Upgrading the Module to Version 2.0 
+When you expand the Greenplum Database cluster, each table consumes more table segments, which may then reduce the maximum number of tables that `diskquota` can support. If you encounter the following warning, try increasing the `diskquota.max_table_segments` value, and then restart Greenplum Database:
 
-The `diskquota` 2.0 module is installed when you install or upgrade Greenplum Database. Version 1.x of the module will continue to work after you upgrade Greenplum.
+```
+[diskquota] the number of tables exceeds the limit, please increase the GUC value for diskquota.max_table_segments.
+```
 
-If you are using version 1.x of the module and you want to upgrade to `diskquota` version 2.0, you must perform the following procedure:
 
-**Note:** `diskquota` will be paused during the upgrade procedure and will be automatically resumed when the upgrade completes.
+## <a id="upgrade"></a>Upgrading the Module
+
+The `diskquota` 2.1 module is installed when you install or upgrade Greenplum Database. Versions 1.x and 2.0.x of the module will continue to work after you upgrade Greenplum.
+
+> **Note**
+> `diskquota` will be paused during the upgrade procedure and will be automatically resumed when the upgrade completes.
+
+*If you are upgrading from `diskquota` version 2.0.x*, perform the procedure in [Upgrading from Version 2.0.x](#upgrade_20to21).
+
+*If you are upgrading from `diskquota` version 1.x*, there are two steps in the upgrade procedure:
+
+1. You must first [Upgrade the Module from Version 1.x to Version 2.0.x](#upgrade_1to2).
+1. And then you must [Upgrade the Module from Version 2.0.x](#upgrade_20to21) to version 2.1.
+
+
+### <a id="upgrade_20to21"></a>Upgrading from Version 2.0.x
+
+If you are using version 2.0.x of the module and you want to upgrade to `diskquota` version 2.1, you must perform the following procedure:
+
+1.  Replace the `diskquota-2.0` shared library in the Greenplum Database `shared_preload_libraries` server configuration parameter setting and restart Greenplum Database. Be sure to retain the other libraries. For example:
+
+    ```
+    $ gpconfig -s shared_preload_libraries
+    Values on all segments are consistent
+    GUC              : shared_preload_libraries
+    Coordinator value: auto_explain,diskquota-2.0
+    Segment     value: auto_explain,diskquota-2.0
+    $ gpconfig -c shared_preload_libraries -v 'auto_explain,diskquota-2.1'
+    $ gpstop -ar
+    ```
+
+2.  Update the `diskquota` extension in every database in which you registered the module:
+
+    ```
+    $ psql -d testdb -c "ALTER EXTENSION diskquota UPDATE TO '2.1'";
+    ```
+
+3.  Re-initialize `diskquota` table size data:
+
+    ```
+    =# SELECT diskquota.init_table_size_table();
+    ```
+
+4.  Restart Greenplum Database:
+
+    ```
+    $ gpstop -ar
+    ```
+
+After upgrade, your existing disk quota rules continue to be enforced, and you can define new tablespace or per-segment rules. You can also utilize the new pause/resume disk quota enforcement functions.
+
+## <a id="upgrade_1to2"></a>Upgrading From Version 1.x to Version 2.0.x
+
+If you are using version 1.x of the module and you want to upgrade to `diskquota` version 2.x, you must first perform the following procedure to upgrade to version 2.0.x :
 
 1.  Replace the `diskquota` shared library in the Greenplum Database `shared_preload_libraries` server configuration parameter setting and restart Greenplum Database. Be sure to retain the other libraries. For example:
 
@@ -453,7 +544,6 @@ If you are using version 1.x of the module and you want to upgrade to `diskquota
     ```
     $ gpstop -ar
     ```
-
 
 After upgrade, your existing disk quota rules continue to be enforced, and you can define new tablespace or per-segment rules. You can also utilize the new pause/resume disk quota enforcement functions.
 
