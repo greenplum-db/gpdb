@@ -2136,12 +2136,9 @@ select * from dedup_func_volatile() r(a) where r.a in (select t.a/10 from dedup_
                                  ->  Seq Scan on dedup_tab t
                                  ->  Hash
                                        ->  Broadcast Motion 1:3  (slice3; segments: 1)
-                                             ->  Subquery Scan on r
-                                                   ->  Result
-                                                         InitPlan 1 (returns $0)  (slice4)
-                                                           ->  Result
+                                             ->  Function Scan on r
  Optimizer: Postgres query optimizer
-(18 rows)
+(15 rows)
 
 select * from dedup_func_volatile() r(a) where r.a in (select t.a/10 from dedup_tab t);
  a 

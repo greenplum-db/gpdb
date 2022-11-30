@@ -27,6 +27,10 @@
 #include "parser/parse_relation.h"
 #include "utils/fmgroids.h"
 
+#define IS_DML_QUERY(q) (q->commandType != CMD_SELECT \
+						 || q->intoPolicy != NULL \
+						 || q->parentStmtType == PARENTSTMTTYPE_CTAS)
+
 /**
  * Static declarations
  */
@@ -60,7 +64,7 @@ normalize_query(Query *query)
 	 * queries like "SELECT function()", which would be executed on the QD
 	 * anyway.
 	 */
-	if (res->commandType != CMD_SELECT || res->parentStmtType != PARENTSTMTTYPE_NONE)
+	if (IS_DML_QUERY(res) || res->parentStmtType != PARENTSTMTTYPE_NONE)
 	{
 		if (safe_to_replace_sirvf_tle(res))
 		{
@@ -77,8 +81,8 @@ normalize_query(Query *query)
 	}
 
 	/*
-	 * Find sirv functions in the range table entries and replace them
-	 */
+	* Find sirv functions in the range table entries and replace them
+	*/
 	if (safe_to_replace_sirvf_rte(res))
 	{
 		ListCell   *lc;
@@ -93,7 +97,10 @@ normalize_query(Query *query)
 		{
 			RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
 
-			replace_sirvf_rte(res, rte);
+			if (IS_DML_QUERY(res) || IsReplicatedTable(rte->relid))
+			{
+				replace_sirvf_rte(res, rte);
+			}		 
 		}
 	}
 
