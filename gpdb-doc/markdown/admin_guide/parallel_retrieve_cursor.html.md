@@ -264,7 +264,7 @@ Refer to the [gp_segment_endpoints](../ref_guide/system_catalogs/gp_segment_endp
 
 ## <a id="topic_cfg"></a>Limiting the Number of Concurrently Open Cursors
 
-By default, Greenplum Database allows an unlimited number of parallel retrieve cursors to be active in the cluster. Should you wish to limit the number of open cursors, the Greenplum Database superuser can set the [gp\_max\_parallel\_cursors](../ref_guide/config_params/guc-list.html#gp_max_parallel_cursors) server configuration parameter to the desired maximum.
+By default, Greenplum Database allows an unlimited number of parallel retrieve cursors to be active in the cluster. The Greenplum Database superuser can set the [gp\_max\_parallel\_cursors](../ref_guide/config_params/guc-list.html#gp_max_parallel_cursors) server configuration parameter to limit the number of open cursors.
 
 
 ## <a id="topic_limits"></a>Known Issues and Limitations
