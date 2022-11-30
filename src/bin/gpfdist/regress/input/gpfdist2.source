@@ -48,6 +48,9 @@ select * from gpfdist2_start;
 drop table if exists lineitem;
 drop external table if exists ext_lineitem;
 drop external table if exists ext_simple;
+DROP EXTERNAL TABLE IF EXISTS gz_multi_chunk_2;
+DROP EXTERNAL TABLE IF EXISTS gz_multi_chunk;
+DROP EXTERNAL TABLE IF EXISTS full_csvopt;
 -- end_ignore
 
 -- test 1 using a .gz file
