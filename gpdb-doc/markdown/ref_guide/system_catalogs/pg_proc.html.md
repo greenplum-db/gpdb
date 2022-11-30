@@ -6,7 +6,7 @@ For compiled functions, both built-in and dynamically loaded, `prosrc` contains 
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`oid`|oid| |Row identifier \(hidden attribute; ust be explicitly selected\)|
+|`oid`|oid| |Row identifier \(hidden attribute; must be explicitly selected\)|
 |`proname`|name| |Name of the function|
 |`pronamespace`|oid|pg\_namespace.oid|The OID of the namespace that contains this function|
 |`proowner`|oid|pg\_authid.oid|Owner of the function|
