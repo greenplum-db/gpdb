@@ -2163,3 +2163,49 @@ reset enable_hashjoin;
 reset enable_nestloop;
 reset enable_seqscan;
 reset enable_bitmapscan;
+
+--
+-- Left Join Pruning
+--
+-- Cases when join will be pruned
+--
+create table fooJoinPruning (a int primary key,b int,c int);
+create table barJoinPruning (p int primary key,q int,r int);
+create table t1JoinPruning(m int primary key,n int);
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=100  where fooJoinPruning.b>300;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=(select t1JoinPruning.n from t1JoinPruning)  where fooJoinPruning.b>300;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.c=barJoinPruning.p  where fooJoinPruning.b>300;
+drop table fooJoinPruning;
+drop table barJoinPruning;
+drop table t1JoinPruning;
+create table fooJoinPruning (a int, b int, c int,d int,e int,f int,g int,constraint idx1 unique(a,b),constraint idx2 unique(a,c,d));
+create table barJoinPruning (p int, q int, r int,s int,t int,u int,v int,constraint idx3 unique(p,q),constraint idx4 unique(p,r,s));
+create table t1JoinPruning(m int primary key,n int);
+create table t2JoinPruning(x int primary key,y int);
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=100 and barJoinPruning.q=200 where fooJoinPruning.e >300 and fooJoinPruning.f!=10;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and fooJoinPruning.a=barJoinPruning.q where fooJoinPruning.e >300 and fooJoinPruning.f!=10;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and barJoinPruning.q=100 where fooJoinPruning.e >300 and fooJoinPruning.f!=10;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and barJoinPruning.r=100 and fooJoinPruning.b=barJoinPruning.s where fooJoinPruning.f!=10;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and (select t1joinpruning.n from t1joinpruning left join t2joinpruning on t1joinpruning.n=t2joinpruning.x)=barJoinPruning.q where fooJoinPruning.f!=10;
+explain select t1JoinPruning.n from t1JoinPruning where t1JoinPruning.m in (select fooJoinPruning.a from fooJoinPruning left join barJoinPruning on barJoinPruning.p=100 and barJoinPruning.q=200);
+drop table fooJoinPruning;
+drop table barJoinPruning;
+drop table t1JoinPruning;
+drop table t2JoinPruning;
+--
+-- Cases where join will not be pruned
+--
+create table fooJoinPruning (a int primary key,b int,c int);
+create table barJoinPruning (p int primary key,q int,r int);
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=100  where barJoinPruning.q!=10;
+explain select barJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=100  where fooJoinPruning.b>1000;
+drop table fooJoinPruning;
+drop table barJoinPruning;
+create table fooJoinPruning (a int, b int, c int,d int,e int,f int,g int,constraint idx1 unique(a,b),constraint idx2 unique(a,c,d));
+create table barJoinPruning (p int, q int, r int,s int,t int,u int,v int,constraint idx3 unique(p,q),constraint idx4 unique(p,r,s));
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=100 and barJoinPruning.r=200;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p and fooJoinPruning.b=barJoinPruning.r;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p and fooJoinPruning.c=barJoinPruning.r or fooJoinPruning.d=barJoinPruning.s;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p and barJoinPruning.r=barJoinPruning.s;
+drop table fooJoinPruning;
+drop table barJoinPruning;
