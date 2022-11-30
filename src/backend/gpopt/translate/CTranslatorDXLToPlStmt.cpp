@@ -2610,16 +2610,23 @@ CTranslatorDXLToPlStmt::TranslateDXLAgg(
 
 	// Set the aggsplit for the agg node
 	ListCell *lc;
+	INT aggsplit = 0;
 	foreach (lc, plan->targetlist)
 	{
 		TargetEntry *te = (TargetEntry *) lfirst(lc);
 		if (IsA(te->expr, Aggref))
 		{
 			Aggref *aggref = (Aggref *) te->expr;
-			agg->aggsplit = aggref->aggsplit;
-			break;
+
+			aggsplit |= aggref->aggsplit;
+
+			if (AGGSPLIT_INTERMEDIATE == aggsplit)
+			{
+				break;
+			}
 		}
 	}
+	agg->aggsplit = (AggSplit) aggsplit;
 
 	plan->lefttree = child_plan;
 

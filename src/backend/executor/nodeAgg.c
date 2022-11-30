@@ -4191,7 +4191,7 @@ build_pertrans_for_aggref(AggStatePerTrans pertrans,
 	 * transfn and transfn_oid fields of pertrans refer to the combine
 	 * function rather than the transition function.
 	 */
-	if (DO_AGGSPLIT_COMBINE(aggref->aggsplit))
+	if (DO_AGGSPLIT_COMBINE(pertrans->aggref->aggsplit))
 	{
 		Expr	   *combinefnexpr;
 		size_t		numTransArgs;

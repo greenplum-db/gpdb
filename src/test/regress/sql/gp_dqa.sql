@@ -413,4 +413,42 @@ explain (verbose, costs off) select count(distinct b), sum(c) from multiagg2;
 select count(distinct b), sum(c) from multiagg2;
 drop table multiagg1;
 drop table multiagg2;
+
+-- Support Multi-stage DQA with ride along aggregation in ORCA
+-- Historically, Agg aggsplit is identically equal to Aggref aggsplit
+-- In ORCA's attempt to support intermediate aggregation
+-- The two are allowed to differ
+-- Now Agg aggsplit is derived as bitwise OR of its children Aggref aggsplit
+-- The plan is to eventually make Agg aggsplit a dummy
+-- And use Aggref aggsplit to build trans/combine functions
+set optimizer_force_multistage_agg=on;
+create table num_table(id int, a bigint, b int, c numeric);
+insert into num_table values(1,1,1,1),(2,2,2,2),(3,3,3,3);
+
+-- count(distinct a) is a simple aggregation
+-- sum(b) is a split aggregation
+-- Before the fix, in the final aggregation of sum(b)
+-- the executor mistakenly built a trans func instead of a combine func
+-- The trans func building process errored out due to mismatch between
+-- the input type (int) and trans type (bigint), and caused missing plan
+explain select count(distinct a), sum(b) from num_table;
+select count(distinct a), sum(b) from num_table;
+
+explain select count(distinct a), sum(b) from num_table group by id;
+select count(distinct a), sum(b) from num_table group by id;
+
+-- count(distinct a) is a simple aggregation
+-- sum(c) is a split aggregation
+-- Before the fix, the final aggregation of sum(c) was mistakenly
+-- treated as simple aggregation, and led to the missing 
+-- deserialization step in the aggregation execution prep
+-- Numeric aggregation serializes partial aggregation states
+-- The executor then evaluated the aggregation state without deserializing it first
+-- This led to the creation of garbage NaN count, and caused NaN output
+explain select count(distinct a), sum(c) from num_table;
+select count(distinct a), sum(c) from num_table;
+
+explain select id, count(distinct a), avg(b), sum(c) from num_table group by grouping sets ((id,c));
+select id, count(distinct a), avg(b), sum(c) from num_table group by grouping sets ((id,c));
+
 reset optimizer_force_multistage_agg;
