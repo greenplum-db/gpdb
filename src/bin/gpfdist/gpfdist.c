@@ -55,6 +55,9 @@
 #include <pg_config.h>
 #include <pg_config_manual.h>
 #include "gpfdist_helper.h"
+#ifdef USE_ZSTD
+#include <zstd.h>
+#endif
 #ifdef USE_SSL
 #include <openssl/ssl.h>
 #include <openssl/rand.h>
@@ -444,6 +447,31 @@ static apr_time_t shutdown_time;
 static void* watchdog_thread(void*);
 #endif
 
+static const char *EMPTY_HTTP_RES = "HTTP/1.0 200 ok\r\n"
+		"Content-type: text/plain\r\n"
+		"Content-length: 0\r\n"
+		"Expires: 0\r\n"
+		"X-GPFDIST-VERSION: " GP_VERSION "\r\n"
+		"Cache-Control: no-cache\r\n"
+		"Connection: close\r\n\r\n";
+
+static const char *HTTP_RESPONSE_ZSTD = "HTTP/1.0 200 ok\r\n"
+		"Content-type: text/plain\r\n"
+		"Expires: 0\r\n"
+		"X-GPFDIST-VERSION: " GP_VERSION "\r\n"
+		"X-GP-PROTO: %d\r\n"
+		"Cache-Control: no-cache\r\n"
+		"Connection: close\r\n"
+		"X-GP-ZSTD: %d\r\n\r\n";
+
+static const char *HTTP_RESPONSE = "HTTP/1.0 200 ok\r\n"
+		"Content-type: text/plain\r\n"
+		"Expires: 0\r\n"
+		"X-GPFDIST-VERSION: " GP_VERSION "\r\n"
+		"X-GP-PROTO: %d\r\n"
+		"Cache-Control: no-cache\r\n"
+		"Connection: close\r\n\r\n";
+
 /*
  * block_fill_header
  *
@@ -763,10 +791,7 @@ static void parse_command_line(int argc, const char* const argv[],
 			break;
 		case 259:
 			usage_error("Multi-thread transmission relies on zstd, but zstd is not supported by this build", 0);
-			break;
 #endif
-		}
-	}
 
 	if (e != APR_EOF)
 		usage_error("Error: illegal arguments", 1);
@@ -960,15 +985,8 @@ static void http_error(request_t* r, int code, const char* msg)
 /* send an empty response */
 static void http_empty(request_t* r)
 {
-	static const char buf[] = "HTTP/1.0 200 ok\r\n"
-		"Content-type: text/plain\r\n"
-		"Content-length: 0\r\n"
-		"Expires: 0\r\n"
-		"X-GPFDIST-VERSION: " GP_VERSION "\r\n"
-		"Cache-Control: no-cache\r\n"
-		"Connection: close\r\n\r\n";
 	gprintln(r, "HTTP EMPTY: %s %s %s - OK", r->peer, r->in.req->argv[0], r->in.req->argv[1]);
-	local_send(r, buf, sizeof buf -1);
+	local_send(r, EMPTY_HTTP_RES, strlen (EMPTY_HTTP_RES));
 }
 
 /* send a Continue response */
@@ -985,17 +1003,22 @@ static void http_continue(request_t* r)
 /* send an OK response */
 static apr_status_t http_ok(request_t* r)
 {
-	const char* fmt = "HTTP/1.0 200 ok\r\n"
-		"Content-type: text/plain\r\n"
-		"Expires: 0\r\n"
-		"X-GPFDIST-VERSION: " GP_VERSION "\r\n"
-		"X-GP-PROTO: %d\r\n"
-		"Cache-Control: no-cache\r\n"
-		"Connection: close\r\n\r\n";
+
+	const char* fmt = NULL;
 	char buf[1024];
 	int m, n;
+	if (r->zstd)
+	{
+		fmt = HTTP_RESPONSE_ZSTD;
+		n = apr_snprintf(buf, sizeof(buf), fmt, r->gp_proto, r->zstd);
+	}
+	else
+	{
+		fmt = HTTP_RESPONSE;
+		n = apr_snprintf(buf, sizeof(buf), fmt, r->gp_proto);
+	}
 
-	n = apr_snprintf(buf, sizeof(buf), fmt, r->gp_proto);
+	
 	if (n >= sizeof(buf) - 1)
 		gfatal(r, "internal error - buffer overflow during http_ok");
 
@@ -1605,9 +1628,22 @@ session_get_block(const request_t* r, block_t* retblock, char* line_delim_str, i
 	}
 
 	retblock->top = size;
-
 	/* fill the block header with meta data for the client to parse and use */
 	block_fill_header(r, retblock, &fos);
+
+#ifdef USE_ZSTD
+	if (r->zstd)
+	{
+		int res = compress_zstd(r, retblock, size);
+		
+		if (res < 0)
+		{
+			return r->zstd_error;
+		}
+
+		retblock->top = res;
+	}
+#endif
 
 	return 0;
 }
