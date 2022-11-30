@@ -67,4 +67,20 @@ WHERE nspname ~ 'test_schema_[12]';
 
 SELECT rolname
 FROM pg_authid a
-WHERE rolname ~ 'tmp_test_schema_role'
+WHERE rolname ~ 'tmp_test_schema_role';
+
+SET from_collapse_limit = 1;
+SET join_collapse_limit = 1;
+EXPLAIN ANALYSE SELECT nspname, nspacl, privilege_type, rolname FROM pg_namespace
+JOIN lateral  
+(SELECT * FROM aclexplode(nspacl) x 
+JOIN pg_authid  ON x.grantee = pg_authid.oid) 
+z ON true;
+
+SET from_collapse_limit = 8;
+SET join_collapse_limit = 8;
+EXPLAIN ANALYSE SELECT nspname, nspacl, privilege_type, rolname FROM pg_namespace
+JOIN lateral  
+(SELECT * FROM aclexplode(nspacl) x 
+JOIN pg_authid  ON x.grantee = pg_authid.oid) 
+z ON true;

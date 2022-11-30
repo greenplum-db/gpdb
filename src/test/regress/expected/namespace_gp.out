@@ -96,8 +96,100 @@ WHERE nspname ~ 'test_schema_[12]';
 
 SELECT rolname
 FROM pg_authid a
-WHERE rolname ~ 'tmp_test_schema_role'
+WHERE rolname ~ 'tmp_test_schema_role';
  rolname 
 ---------
 (0 rows)
+
+SET from_collapse_limit = 1;
+SET join_collapse_limit = 1;
+EXPLAIN ANALYSE SELECT nspname, nspacl, privilege_type, rolname FROM pg_namespace
+JOIN lateral  
+(SELECT * FROM aclexplode(nspacl) x 
+JOIN pg_authid  ON x.grantee = pg_authid.oid) 
+z ON true;
+QUERY PLAN
+___________
+{
+  'child' => [
+    {
+      'id' => 2,
+      'parent' => 1,
+      'short' => 'Seq Scan on pg_namespace'
+    },
+    {
+      'child' => [
+        {
+          'id' => 4,
+          'parent' => 3,
+          'short' => 'Function Scan on aclexplode x'
+        },
+        {
+          'child' => [
+            {
+              'id' => 6,
+              'parent' => 5,
+              'short' => 'Seq Scan on pg_authid'
+            }
+          ],
+          'id' => 5,
+          'parent' => 3,
+          'short' => 'Hash'
+        }
+      ],
+      'id' => 3,
+      'parent' => 1,
+      'short' => 'Hash Join'
+    }
+  ],
+  'id' => 1,
+  'short' => 'Nested Loop'
+}
+GP_IGNORE:(14 rows)
+
+SET from_collapse_limit = 8;
+SET join_collapse_limit = 8;
+EXPLAIN ANALYSE SELECT nspname, nspacl, privilege_type, rolname FROM pg_namespace
+JOIN lateral  
+(SELECT * FROM aclexplode(nspacl) x 
+JOIN pg_authid  ON x.grantee = pg_authid.oid) 
+z ON true;
+QUERY PLAN
+___________
+{
+  'child' => [
+    {
+      'child' => [
+        {
+          'id' => 3,
+          'parent' => 2,
+          'short' => 'Seq Scan on pg_namespace'
+        },
+        {
+          'id' => 4,
+          'parent' => 2,
+          'short' => 'Function Scan on aclexplode x'
+        }
+      ],
+      'id' => 2,
+      'parent' => 1,
+      'short' => 'Nested Loop'
+    },
+    {
+      'child' => [
+        {
+          'id' => 6,
+          'parent' => 5,
+          'short' => 'Seq Scan on pg_authid'
+        }
+      ],
+      'id' => 5,
+      'parent' => 1,
+      'short' => 'Hash'
+    }
+  ],
+  'id' => 1,
+  'short' => 'Hash Join'
+}
+GP_IGNORE:(14 rows)
 
