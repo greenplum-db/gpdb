@@ -220,10 +220,7 @@ bool		gp_debug_resqueue_priority = false;
 /* Resource group GUCs */
 int			gp_resource_group_cpu_priority;
 double		gp_resource_group_cpu_limit;
-double		gp_resource_group_memory_limit;
 bool		gp_resource_group_bypass;
-bool		gp_resource_group_cpu_ceiling_enforcement;
-bool		gp_resource_group_enable_recalculate_query_mem;
 bool		gp_resource_group_enable_cgroup_version_two;
 
 /* Metrics collector debug GUC */
@@ -1631,18 +1628,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-
-		{"gp_log_resgroup_memory", PGC_USERSET, LOGGING_WHAT,
-			gettext_noop("Prints out messages related to resource group's memory management."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_log_resgroup_memory,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gp_resqueue_print_operator_memory_limits", PGC_USERSET, LOGGING_WHAT,
 			gettext_noop("Prints out the memory limit for operators (in explain) assigned by resource queue's "
 						 "memory management."),
@@ -1650,18 +1635,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_resqueue_print_operator_memory_limits,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_resgroup_print_operator_memory_limits", PGC_USERSET, LOGGING_WHAT,
-			gettext_noop("Prints out the memory limit for operators (in explain) assigned by resource group's "
-						 "memory management."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_resgroup_print_operator_memory_limits,
 		false,
 		NULL, NULL, NULL
 	},
@@ -2754,25 +2727,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_resource_group_cpu_ceiling_enforcement", PGC_POSTMASTER, RESOURCES,
-			gettext_noop("If the value is true, ceiling enforcement of CPU usage will be enabled"),
-			NULL
-		},
-		&gp_resource_group_cpu_ceiling_enforcement,
-		false, NULL, NULL
-	},
-
-	{
-		{"gp_resource_group_enable_recalculate_query_mem", PGC_USERSET, RESOURCES,
-		 	gettext_noop("Enable resource group re-calculate the query_mem on QE"),
-		 	NULL
-		},
-		&gp_resource_group_enable_recalculate_query_mem,
-		true,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gp_resource_group_enable_cgroup_version_two", PGC_POSTMASTER, RESOURCES,
 			gettext_noop("Enable linux cgroup version 2"),
 			NULL
@@ -3034,16 +2988,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		128000, 1000, INT_MAX,
 #endif
 		gpvars_check_statement_mem, NULL, NULL
-	},
-
-	{
-		{"memory_spill_ratio", PGC_USERSET, RESOURCES_MEM,
-			gettext_noop("Sets the memory_spill_ratio for resource group."),
-			NULL
-		},
-		&memory_spill_ratio,
-		20, 0, 100,
-		NULL, NULL, NULL
 	},
 
 	{
@@ -3879,17 +3823,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_resgroup_memory_policy_auto_fixed_mem", PGC_USERSET, RESOURCES_MEM,
-			gettext_noop("Sets the fixed amount of memory reserved for non-memory intensive operators in the AUTO policy."),
-			NULL,
-			GUC_UNIT_KB | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_resgroup_memory_policy_auto_fixed_mem,
-		100, 50, INT_MAX,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gp_global_deadlock_detector_period", PGC_SIGHUP, LOCK_MANAGEMENT,
 			gettext_noop("Sets the executing period of global deadlock detector backend."),
 			NULL,
@@ -4217,16 +4150,6 @@ struct config_real ConfigureNamesReal_gp[] =
 		},
 		&gp_resource_group_cpu_limit,
 		0.9, 0.1, 1.0,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_resource_group_memory_limit", PGC_POSTMASTER, RESOURCES,
-			gettext_noop("Maximum percentage of memory resources assigned to a cluster."),
-			NULL
-		},
-		&gp_resource_group_memory_limit,
-		0.7, 0.0001, 1.0,
 		NULL, NULL, NULL
 	},
 
@@ -4687,15 +4610,6 @@ struct config_enum ConfigureNamesEnum_gp[] =
 		&gp_resqueue_memory_policy,
 		RESMANAGER_MEMORY_POLICY_NONE, gp_resqueue_memory_policies,
 		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_resgroup_memory_policy", PGC_SUSET, RESOURCES_MGM,
-			gettext_noop("Sets the policy for memory allocation of queries."),
-			gettext_noop("Valid values are AUTO, EAGER_FREE.")
-		},
-		&gp_resgroup_memory_policy,
-		RESMANAGER_MEMORY_POLICY_EAGER_FREE, gp_resqueue_memory_policies, NULL, NULL
 	},
 
 	{

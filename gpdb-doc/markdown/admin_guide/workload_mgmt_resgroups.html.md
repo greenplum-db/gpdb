@@ -110,7 +110,7 @@ You can set the server configuration parameter [gp\_resource\_group\_queuing\_ti
 
 ## <a id="topic833971717"></a>CPU Limits 
 
-You configure the share of CPU resources to reserve for a resource group on a segment host by assigning specific CPU core\(s\) to the group, or by identifying the percentage of segment CPU resources to allocate to the group. Greenplum Database uses the `CPUSET` and `CPU_RATE_LIMIT` resource group limits to identify the CPU resource allocation mode. You must specify only one of these limits when you configure a resource group.
+You configure the share of CPU resources to reserve for a resource group on a segment host by assigning specific CPU core\(s\) to the group, or by identifying the percentage of segment CPU resources to allocate to the group. Greenplum Database uses the `CPUSET` and `cpu_hard_quota_limit` resource group limits to identify the CPU resource allocation mode. You must specify only one of these limits when you configure a resource group.
 
 You may employ both modes of CPU resource allocation simultaneously in your Greenplum Database cluster. You may also change the CPU resource allocation mode for a resource group at runtime.
 
@@ -136,34 +136,34 @@ When you assign CPU cores to `CPUSET` groups, consider the following:
 
 Resource groups that you configure with `CPUSET` have a higher priority on CPU resources. The maximum CPU resource usage percentage for all resource groups configured with `CPUSET` on a segment host is the number of CPU cores reserved divided by the number of all CPU cores, multiplied by 100.
 
-When you configure `CPUSET` for a resource group, Greenplum Database deactivates `CPU_RATE_LIMIT` for the group and sets the value to -1.
+When you configure `CPUSET` for a resource group, Greenplum Database deactivates `cpu_hard_quota_limit` for the group and sets the value to -1.
 
 **Note:** You must configure `CPUSET` for a resource group *after* you have enabled resource group-based resource management for your Greenplum Database cluster.
 
-### <a id="cpu_rate_limit"></a>Assigning CPU Resources by Percentage 
+### <a id="cpu_hard_quota_limit"></a>Assigning CPU Resources by Percentage 
 
-The Greenplum Database node CPU percentage is divided equally among each segment on the Greenplum node. Each resource group that you configure with a `CPU_RATE_LIMIT` reserves the specified percentage of the segment CPU for resource management.
+The Greenplum Database node CPU percentage is divided equally among each segment on the Greenplum node. Each resource group that you configure with a `cpu_hard_quota_limit` reserves the specified percentage of the segment CPU for resource management.
 
-The minimum `CPU_RATE_LIMIT` percentage you can specify for a resource group is 1, the maximum is 100.
+The minimum `cpu_hard_quota_limit` percentage you can specify for a resource group is 1, the maximum is 100.
 
-The sum of `CPU_RATE_LIMIT`s specified for all resource groups that you define in your Greenplum Database cluster must not exceed 100.
+The sum of `cpu_hard_quota_limit`s specified for all resource groups that you define in your Greenplum Database cluster must not exceed 100.
 
-The maximum CPU resource usage for all resource groups configured with a `CPU_RATE_LIMIT` on a segment host is the minimum of:
+The maximum CPU resource usage for all resource groups configured with a `cpu_hard_quota_limit` on a segment host is the minimum of:
 
 -   The number of non-reserved CPU cores divided by the number of all CPU cores, multiplied by 100, and
 -   The `gp_resource_group_cpu_limit` value.
 
-When you configure `CPU_RATE_LIMIT` for a resource group, Greenplum Database deactivates `CPUSET` for the group and sets the value to -1.
+When you configure `cpu_hard_quota_limit` for a resource group, Greenplum Database deactivates `CPUSET` for the group and sets the value to -1.
 
 There are two different ways of assigning CPU resources by percentage, determined by the value of the configuration parameter `gp_resource_group_cpu_ceiling_enforcement`:
 
 #### <a id="elasmod"></a>Elastic mode 
 
-This mode is active when `gp_resource_group_cpu_ceiling_enforcement` is set to `false` \(default\). It is elastic in that Greenplum Database may allocate the CPU resources of an idle resource group to a busier one\(s\). In such situations, CPU resources are re-allocated to the previously idle resource group when that resource group next becomes active. If multiple resource groups are busy, they are allocated the CPU resources of any idle resource groups based on the ratio of their `CPU_RATE_LIMIT`s. For example, a resource group created with a `CPU_RATE_LIMIT` of 40 will be allocated twice as much extra CPU resource as a resource group that you create with a `CPU_RATE_LIMIT` of 20.
+This mode is active when `gp_resource_group_cpu_ceiling_enforcement` is set to `false` \(default\). It is elastic in that Greenplum Database may allocate the CPU resources of an idle resource group to a busier one\(s\). In such situations, CPU resources are re-allocated to the previously idle resource group when that resource group next becomes active. If multiple resource groups are busy, they are allocated the CPU resources of any idle resource groups based on the ratio of their `cpu_hard_quota_limit`s. For example, a resource group created with a `cpu_hard_quota_limit` of 40 will be allocated twice as much extra CPU resource as a resource group that you create with a `cpu_hard_quota_limit` of 20.
 
 #### <a id="enfmod"></a>Ceiling Enforcement mode 
 
-This mode is active when `gp_resource_group_cpu_ceiling_enforcement` is set to `true`. The resource group is enforced to not use more CPU resources than the defined value `CPU_RATE_LIMIT`, avoiding the use of the CPU burst feature.
+This mode is active when `gp_resource_group_cpu_ceiling_enforcement` is set to `true`. The resource group is enforced to not use more CPU resources than the defined value `cpu_hard_quota_limit`, avoiding the use of the CPU burst feature.
 
 ## <a id="topic8339717"></a>Memory Limits 
 
@@ -429,24 +429,24 @@ The default resource groups `admin_group` and `default_group` are created with t
 |MEMORY\_SPILL\_RATIO|0|0|
 |MEMORY\_AUDITOR|vmtracker|vmtracker|
 
-Keep in mind that the `CPU_RATE_LIMIT` and `MEMORY_LIMIT` values for the default resource groups `admin_group` and `default_group` contribute to the total percentages on a segment host. You may find that you need to adjust these limits for `admin_group` and/or `default_group` as you create and add new resource groups to your Greenplum Database deployment.
+Keep in mind that the `cpu_hard_quota_limit` and `MEMORY_LIMIT` values for the default resource groups `admin_group` and `default_group` contribute to the total percentages on a segment host. You may find that you need to adjust these limits for `admin_group` and/or `default_group` as you create and add new resource groups to your Greenplum Database deployment.
 
 ## <a id="topic10"></a>Creating Resource Groups 
 
 *When you create a resource group for a role*, you provide a name and a CPU resource allocation mode. You can optionally provide a concurrent transaction limit and memory limit, shared quota, and spill ratio values. Use the [CREATE RESOURCE GROUP](../ref_guide/sql_commands/CREATE_RESOURCE_GROUP.html) command to create a new resource group.
 
-When you create a resource group for a role, you must provide a `CPU_RATE_LIMIT` or `CPUSET` limit value. These limits identify the percentage of Greenplum Database CPU resources to allocate to this resource group. You may specify a `MEMORY_LIMIT` to reserve a fixed amount of memory for the resource group. If you specify a `MEMORY_LIMIT` of 0, Greenplum Database uses global shared memory to fulfill all memory requirements for the resource group.
+When you create a resource group for a role, you must provide a `cpu_hard_quota_limit` or `CPUSET` limit value. These limits identify the percentage of Greenplum Database CPU resources to allocate to this resource group. You may specify a `MEMORY_LIMIT` to reserve a fixed amount of memory for the resource group. If you specify a `MEMORY_LIMIT` of 0, Greenplum Database uses global shared memory to fulfill all memory requirements for the resource group.
 
 For example, to create a resource group named *rgroup1* with a CPU limit of 20, a memory limit of 25, and a memory spill ratio of 20:
 
 ```
-=# CREATE RESOURCE GROUP rgroup1 WITH (CPU_RATE_LIMIT=20, MEMORY_LIMIT=25, MEMORY_SPILL_RATIO=20);
+=# CREATE RESOURCE GROUP rgroup1 WITH (cpu_hard_quota_limit=20, MEMORY_LIMIT=25, MEMORY_SPILL_RATIO=20);
 
 ```
 
 The CPU limit of 20 is shared by every role to which `rgroup1` is assigned. Similarly, the memory limit of 25 is shared by every role to which `rgroup1` is assigned. `rgroup1` utilizes the default `MEMORY_AUDITOR` `vmtracker` and the default `CONCURRENCY` setting of 20.
 
-*When you create a resource group for an external component*, you must provide `CPU_RATE_LIMIT` or `CPUSET` and `MEMORY_LIMIT` limit values. You must also provide the `MEMORY_AUDITOR` and explicitly set `CONCURRENCY` to zero \(0\). For example, to create a resource group named *rgroup\_extcomp* for which you reserve CPU core 1 and assign a memory limit of 15:
+*When you create a resource group for an external component*, you must provide `cpu_hard_quota_limit` or `CPUSET` and `MEMORY_LIMIT` limit values. You must also provide the `MEMORY_AUDITOR` and explicitly set `CONCURRENCY` to zero \(0\). For example, to create a resource group named *rgroup\_extcomp* for which you reserve CPU core 1 and assign a memory limit of 15:
 
 ```
 =# CREATE RESOURCE GROUP rgroup_extcomp WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
@@ -638,15 +638,15 @@ After Greenplum moves the query, there is no way to guarantee that a query curre
 
 ### <a id="topic791"></a>CPU 
 
--   **Why is CPU usage lower than the `CPU_RATE_LIMIT` configured for the resource group?**
+-   **Why is CPU usage lower than the `cpu_hard_quota_limit` configured for the resource group?**
 
     You may run into this situation when a low number of queries and slices are running in the resource group, and these processes are not utilizing all of the cores on the system.
 
--   **Why is CPU usage for the resource group higher than the configured `CPU_RATE_LIMIT`?**
+-   **Why is CPU usage for the resource group higher than the configured `cpu_hard_quota_limit`?**
 
     This situation can occur in the following circumstances:
 
-    -   A resource group may utilize more CPU than its `CPU_RATE_LIMIT` when other resource groups are idle. In this situation, Greenplum Database allocates the CPU resource of an idle resource group to a busier one. This resource group feature is called CPU burst.
+    -   A resource group may utilize more CPU than its `cpu_hard_quota_limit` when other resource groups are idle. In this situation, Greenplum Database allocates the CPU resource of an idle resource group to a busier one. This resource group feature is called CPU burst.
     -   The operating system CPU scheduler may cause CPU usage to spike, then drop down. If you believe this might be occurring, calculate the average CPU usage within a given period of time \(for example, 5 seconds\) and use that average to determine if CPU usage is higher than the configured limit.
 
 ### <a id="topic795"></a>Memory 

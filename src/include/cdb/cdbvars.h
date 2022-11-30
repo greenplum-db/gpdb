@@ -673,8 +673,14 @@ extern int gp_workfile_bytes_to_checksum;
 
 extern bool coredump_on_memerror;
 
-/* Greenplum resource group query_mem re-calculate on QE */
-extern bool gp_resource_group_enable_recalculate_query_mem;
+/* Greenplum linux cgroup version, is enable version 2 */
+extern bool gp_resource_group_enable_cgroup_version_two;
+
+/* Greenplum linux cgroup version, is enable version 2 */
+extern bool gp_resource_group_enable_cgroup_version_two;
+
+/* Greenplum linux cgroup version, is enable version 2 */
+extern bool gp_resource_group_enable_cgroup_version_two;
 
 /* Greenplum linux cgroup version, is enable version 2 */
 extern bool gp_resource_group_enable_cgroup_version_two;

@@ -105,6 +105,7 @@
 
 #include "utils/session_state.h"
 #include "utils/vmem_tracker.h"
+#include "utils/resgroup.h"
 
 /* ----------------
  *		global variables
@@ -4864,6 +4865,9 @@ PostgresMain(int argc, char *argv[],
 #else
 	InitProcess();
 #endif
+
+	if (IsResGroupEnabled())
+		initCgroup();
 
 	/* We need to allow SIGINT, etc during the initial transaction */
 	PG_SETMASK(&UnBlockSig);

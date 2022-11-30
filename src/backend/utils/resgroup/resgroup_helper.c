@@ -32,7 +32,6 @@ typedef struct ResGroupStat
 	Datum groupId;
 
 	StringInfo cpuUsage;
-	StringInfo memUsage;
 } ResGroupStat;
 
 typedef struct ResGroupStatCtx
@@ -104,7 +103,7 @@ getResUsage(ResGroupStatCtx *ctx, Oid inGroupId)
 
 		initStringInfo(&buffer);
 		appendStringInfo(&buffer,
-						 "SELECT groupid, cpu_usage, memory_usage "
+						 "SELECT groupid, cpu_usage "
 						 "FROM pg_resgroup_get_status(%u)",
 						 inGroupId);
 
@@ -137,14 +136,8 @@ getResUsage(ResGroupStatCtx *ctx, Oid inGroupId)
 
 				Assert(groupId == row->groupId);
 
-				if (row->memUsage->len == 0)
+				if (row->cpuUsage->len == 0)
 				{
-					Datum d = ResGroupGetStat(groupId, RES_GROUP_STAT_MEM_USAGE);
-
-					row->groupId = groupId;
-					appendStringInfo(row->memUsage, "{\"%d\":%s",
-									 GpIdentity.segindex, DatumGetCString(d));
-
 					appendStringInfo(row->cpuUsage, "{");
 					calcCpuUsage(row->cpuUsage, usages[j], timestamps[j],
 								 cgroupOpsRoutine->getcpuusage(groupId),
@@ -154,14 +147,8 @@ getResUsage(ResGroupStatCtx *ctx, Oid inGroupId)
 				result = PQgetvalue(pg_result, j, 1);
 				appendStringInfo(row->cpuUsage, ", %s", result);
 
-				result = PQgetvalue(pg_result, j, 2);
-				appendStringInfo(row->memUsage, ", %s", result);
-
 				if (i == cdb_pgresults.numResults - 1)
-				{
 					appendStringInfoChar(row->cpuUsage, '}');
-					appendStringInfoChar(row->memUsage, '}');
-				}
 			}
 		}
 
@@ -175,10 +162,6 @@ getResUsage(ResGroupStatCtx *ctx, Oid inGroupId)
 		{
 			ResGroupStat *row = &ctx->groups[j];
 			Oid groupId = DatumGetObjectId(row->groupId);
-			Datum d = ResGroupGetStat(groupId, RES_GROUP_STAT_MEM_USAGE);
-
-			appendStringInfo(row->memUsage, "\"%d\":%s",
-							 GpIdentity.segindex, DatumGetCString(d));
 
 			calcCpuUsage(row->cpuUsage, usages[j], timestamps[j],
 						 cgroupOpsRoutine->getcpuusage(groupId),
@@ -209,7 +192,7 @@ pg_resgroup_get_status(PG_FUNCTION_ARGS)
 	{
 		MemoryContext oldcontext;
 		TupleDesc	tupdesc;
-		int			nattr = 8;
+		int			nattr = 7;
 
 		funcctx = SRF_FIRSTCALL_INIT();
 
@@ -223,7 +206,6 @@ pg_resgroup_get_status(PG_FUNCTION_ARGS)
 		TupleDescInitEntry(tupdesc, (AttrNumber) 5, "num_executed", INT4OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 6, "total_queue_duration", INTERVALOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 7, "cpu_usage", JSONOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 8, "memory_usage", JSONOID, -1, 0);
 
 		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
 
@@ -257,7 +239,6 @@ pg_resgroup_get_status(PG_FUNCTION_ARGS)
 				{
 					Assert(funcctx->max_calls < MaxResourceGroups);
 					ctx->groups[funcctx->max_calls].cpuUsage = makeStringInfo();
-					ctx->groups[funcctx->max_calls].memUsage = makeStringInfo();
 					ctx->groups[funcctx->max_calls++].groupId = oid;
 
 					if (inGroupId != InvalidOid)
@@ -317,7 +298,6 @@ pg_resgroup_get_status(PG_FUNCTION_ARGS)
 		}
 
 		values[6] = CStringGetTextDatum(row->cpuUsage->data);
-		values[7] = CStringGetTextDatum(row->memUsage->data);
 
 		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
 
@@ -460,30 +440,6 @@ dumpResGroupInfo(StringInfo str)
 		ResGroupDumpInfo(str);
 		LWLockRelease(ResGroupLock);
 	}
-}
-
-Datum
-pg_resgroup_check_move_query(PG_FUNCTION_ARGS)
-{
-	TupleDesc	tupdesc;
-	Datum		values[2];
-	bool		nulls[2];
-	HeapTuple	htup;
-	int sessionId = PG_GETARG_INT32(0);
-	Oid groupId = PG_GETARG_OID(1);
-	int32 sessionMem = ResGroupGetSessionMemUsage(sessionId);
-	int32 availMem = ResGroupGetGroupAvailableMem(groupId);
-
-	if (get_call_result_type(fcinfo, NULL, &tupdesc) != TYPEFUNC_COMPOSITE)
-		elog(ERROR, "return type must be a row type");
-	tupdesc = BlessTupleDesc(tupdesc);
-
-	MemSet(nulls, 0, sizeof(nulls));
-	values[0] = Int32GetDatum(sessionMem);
-	values[1] = Int32GetDatum(availMem);
-	htup = heap_form_tuple(tupdesc, values, nulls);
-
-	PG_RETURN_DATUM(HeapTupleGetDatum(htup));
 }
 
 /*

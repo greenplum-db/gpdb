@@ -146,20 +146,6 @@ static const PermItem perm_items_cpuset[] =
 	{ CGROUP_COMPONENT_CPUSET, "cpuset.mems", R_OK | W_OK },
 	{ CGROUP_COMPONENT_UNKNOWN, NULL, 0 }
 };
-static const PermItem perm_items_memory[] =
-{
-	{ CGROUP_COMPONENT_MEMORY, "", R_OK | W_OK | X_OK },
-	{ CGROUP_COMPONENT_MEMORY, "memory.limit_in_bytes", R_OK | W_OK },
-	{ CGROUP_COMPONENT_MEMORY, "memory.usage_in_bytes", R_OK },
-	{ CGROUP_COMPONENT_UNKNOWN, NULL, 0 }
-};
-static const PermItem perm_items_swap[] =
-{
-	{ CGROUP_COMPONENT_MEMORY, "", R_OK | W_OK | X_OK },
-	{ CGROUP_COMPONENT_MEMORY, "memory.memsw.limit_in_bytes", R_OK | W_OK },
-	{ CGROUP_COMPONENT_MEMORY, "memory.memsw.usage_in_bytes", R_OK },
-	{ CGROUP_COMPONENT_UNKNOWN, NULL, 0 }
-};
 
 /*
  * just for cpuset check, same as the cpuset Permlist in permlists
@@ -176,28 +162,6 @@ static const PermList cpusetPermList =
  */
 static const PermList permlists[] =
 {
-	/*
-	 * swap permissions are optional.
-	 *
-	 * cgroup/memory/memory.memsw.* is only available if
-	 * - CONFIG_MEMCG_SWAP_ENABLED=on in kernel config, or
-	 * - swapaccount=1 in kernel cmdline.
-	 *
-	 * Without these interfaces the swap usage can not be limited or accounted
-	 * via cgroup.
-	 */
-	{ perm_items_swap, true, &gp_resource_group_enable_cgroup_swap },
-
-	/*
-	 * memory permissions can be mandatory or optional depends on the switch.
-	 *
-	 * resgroup memory auditor is introduced in 6.0 devel and backport
-	 * to 5.x branch since 5.6.1.  To provide backward compatibilities' memory
-	 * permissions are optional on 5.x branch.
-	 */
-	{ perm_items_memory, CGROUP_MEMORY_IS_OPTIONAL,
-		&gp_resource_group_enable_cgroup_memory },
-
 	/* cpu/cpuacct permissions are mandatory */
 	{ perm_items_cpu, false, NULL },
 	{ perm_items_cpu_acct, false, NULL },
@@ -226,12 +190,8 @@ static void detachcgroup_v1(Oid group, CGroupComponentType component, int fd_dir
 static void destroycgroup_v1(Oid group, bool migrate);
 static int lockcgroup_v1(Oid group, CGroupComponentType component, bool block);
 static void unlockcgroup_v1(int fd);
-static void setcpulimit_v1(Oid group, int cpu_rate_limit);
-static void setmemorylimitbychunks_v1(Oid group, int32 memory_limit_chunks);
-static void setmemorylimit_v1(Oid group, int memory_limit);
+static void setcpulimit_v1(Oid group, int cpu_hard_limit);
 static int64 getcpuusage_v1(Oid group);
-static int32 getmemoryusage_v1(Oid group);
-static int32 getmemorylimitchunks_v1(Oid group);
 static void getcpuset_v1(Oid group, char *cpuset, int len);
 static void setcpuset_v1(Oid group, const char *cpuset);
 static float convertcpuusage_v1(int64 usage, int64 duration);
@@ -807,8 +767,6 @@ createcgroup_v1(Oid group)
 
 	if (!createDir(group, CGROUP_COMPONENT_CPU) ||
 		!createDir(group, CGROUP_COMPONENT_CPUACCT) ||
-		(gp_resource_group_enable_cgroup_memory &&
-		!createDir(group, CGROUP_COMPONENT_MEMORY)) ||
 		(gp_resource_group_enable_cgroup_cpuset &&
 		 !createDir(group, CGROUP_COMPONENT_CPUSET)))
 	{
@@ -1079,9 +1037,7 @@ destroycgroup_v1(Oid group, bool migrate)
 	if (!deleteDir(group, CGROUP_COMPONENT_CPU, "cpu.shares", migrate, detachcgroup_v1) ||
 		!deleteDir(group, CGROUP_COMPONENT_CPUACCT, NULL, migrate, detachcgroup_v1) ||
 		(gp_resource_group_enable_cgroup_cpuset &&
-		 !deleteDir(group, CGROUP_COMPONENT_CPUSET, NULL, migrate, detachcgroup_v1)) ||
-		(gp_resource_group_enable_cgroup_memory &&
-		 !deleteDir(group, CGROUP_COMPONENT_MEMORY, "memory.limit_in_bytes", migrate, detachcgroup_v1)))
+		 !deleteDir(group, CGROUP_COMPONENT_CPUSET, NULL, migrate, detachcgroup_v1)))
 	{
 		CGROUP_ERROR("can't remove cgroup for resource group '%d': %m", group);
 	}
@@ -1122,115 +1078,40 @@ unlockcgroup_v1(int fd)
 }
 
 /*
- * Set the cpu rate limit for the OS group.
+ * Set the cpu hard limit for the OS group.
  *
- * cpu_rate_limit should be within [0, 100].
+ * cpu_hard_quota_limit should be within [-1, 100].
  */
 static void
-setcpulimit_v1(Oid group, int cpu_rate_limit)
+setcpulimit_v1(Oid group, int cpu_hard_limit)
 {
 	CGroupComponentType component = CGROUP_COMPONENT_CPU;
 
-	/* group.shares := gpdb.shares * cpu_rate_limit */
-
-	int64 shares = readInt64(CGROUP_ROOT_ID, BASEDIR_GPDB, component,
-							 "cpu.shares");
-	writeInt64(group, BASEDIR_GPDB, component,
-			   "cpu.shares", shares * cpu_rate_limit / 100);
-
-	/* set cpu.cfs_quota_us if hard CPU enforcement is enabled */
-	if (gp_resource_group_cpu_ceiling_enforcement)
+	if (cpu_hard_limit > 0)
 	{
 		int64 periods = get_cfs_period_us_alpha(component);
 		writeInt64(group, BASEDIR_GPDB, component, "cpu.cfs_quota_us",
-				   periods * cgroupSystemInfoAlpha.ncores * cpu_rate_limit / 100);
+				   periods * cgroupSystemInfoAlpha.ncores * cpu_hard_limit / 100);
 	}
 	else
 	{
-		writeInt64(group, BASEDIR_GPDB, component, "cpu.cfs_quota_us", -1);
-	}
-}
-
-
-/*
- * Set the memory limit for the OS group by value.
- *
- * memory_limit is the limit value in chunks
- *
- * If cgroup supports memory swap, we will write the same limit to
- * memory.memsw.limit and memory.limit.
- */
-static void
-setmemorylimitbychunks_v1(Oid group, int32 memory_limit_chunks)
-{
-	CGroupComponentType component = CGROUP_COMPONENT_MEMORY;
-	int64 memory_limit_in_bytes;
-
-	if (!gp_resource_group_enable_cgroup_memory)
-		return;
-
-	memory_limit_in_bytes = VmemTracker_ConvertVmemChunksToBytes(memory_limit_chunks);
-
-	/* Is swap interfaces enabled? */
-	if (!gp_resource_group_enable_cgroup_swap)
-	{
-		/* No, then we only need to setup the memory limit */
-		writeInt64(group, BASEDIR_GPDB, component, "memory.limit_in_bytes",
-				   memory_limit_in_bytes);
-	}
-	else
-	{
-		/* Yes, then we have to setup both the memory and mem+swap limits */
-
-		int64 memory_limit_in_bytes_old;
-
-		/*
-		 * Memory limit should always <= mem+swap limit, then the limits
-		 * must be set in a proper order depending on the relation between
-		 * new and old limits.
-		 */
-		memory_limit_in_bytes_old = readInt64(group, BASEDIR_GPDB, component,
-											  "memory.limit_in_bytes");
-
-		if (memory_limit_in_bytes > memory_limit_in_bytes_old)
-		{
-			/* When new value > old memory limit, write mem+swap limit first */
-			writeInt64(group, BASEDIR_GPDB, component,
-					   "memory.memsw.limit_in_bytes", memory_limit_in_bytes);
-			writeInt64(group, BASEDIR_GPDB, component,
-					   "memory.limit_in_bytes", memory_limit_in_bytes);
-		}
-		else if (memory_limit_in_bytes < memory_limit_in_bytes_old)
-		{
-			/* When new value < old memory limit,  write memory limit first */
-			writeInt64(group, BASEDIR_GPDB, component,
-			"memory.limit_in_bytes", memory_limit_in_bytes);
-			writeInt64(group, BASEDIR_GPDB, component,
-					   "memory.memsw.limit_in_bytes", memory_limit_in_bytes);
-		}
+		writeInt64(group, BASEDIR_GPDB, component, "cpu.cfs_quota_us", cpu_hard_limit);
 	}
 }
 
 /*
- * Set the memory limit for the OS group by rate.
+ * Set the cpu soft priority for the OS group.
  *
- * memory_limit should be within [0, 100].
+ * For version 1, the default value of cpu.shares is 1024, corresponding to
+ * our cpu_soft_priority, which default value is 100, so we need to adjust it.
  */
 static void
-setmemorylimit_v1(Oid group, int memory_limit)
+setcpupriority_v1(Oid group, int shares)
 {
-	CGroupComponentType component = CGROUP_COMPONENT_MEMORY;
-	int fd;
-	int32 memory_limit_in_chunks;
-
-	memory_limit_in_chunks = ResGroupGetVmemLimitChunks() * memory_limit / 100;
-	memory_limit_in_chunks *= ResGroupGetHostPrimaryCount();
-
-	fd = lockcgroup_v1(group, component, true);
-	setmemorylimitbychunks_v1(group, memory_limit_in_chunks);
-	unlockcgroup_v1(fd);
+	CGroupComponentType component = CGROUP_COMPONENT_CPU;
+	writeInt64(group, BASEDIR_GPDB, component,
+			   "cpu.shares", (int64)(shares * 1024 / 100));
 }
-
 
 /*
  * Get the cpu usage of the OS group, that is the total cpu time obtained
@@ -1243,53 +1124,6 @@ getcpuusage_v1(Oid group)
 
 	return readInt64(group, BASEDIR_GPDB, component, "cpuacct.usage");
 }
-
-/*
- * Get the memory usage of the OS group
- *
- * memory usage is returned in chunks
- */
-static int32
-getmemoryusage_v1(Oid group)
-{
-	CGroupComponentType component = CGROUP_COMPONENT_MEMORY;
-	int64 	memory_usage_in_bytes;
-	char 	*filename;
-
-	/* Report 0 if cgroup memory is not enabled */
-	if (!gp_resource_group_enable_cgroup_memory)
-		return 0;
-
-	filename = gp_resource_group_enable_cgroup_swap
-		? "memory.memsw.usage_in_bytes"
-		: "memory.usage_in_bytes";
-
-	memory_usage_in_bytes = readInt64(group, BASEDIR_GPDB, component, filename);
-
-	return VmemTracker_ConvertVmemBytesToChunks(memory_usage_in_bytes);
-}
-
-/*
- * Get the memory limit of the OS group
- *
- * memory limit is returned in chunks
- */
-static int32
-getmemorylimitchunks_v1(Oid group)
-{
-	CGroupComponentType component = CGROUP_COMPONENT_MEMORY;
-	int64 memory_limit_in_bytes;
-
-	/* Report unlimited (max int32) if cgroup memory is not enabled */
-	if (!gp_resource_group_enable_cgroup_memory)
-		return (int32) ((1U << 31) - 1);
-
-	memory_limit_in_bytes = readInt64(group, BASEDIR_GPDB,
-									  component, "memory.limit_in_bytes");
-
-	return VmemTracker_ConvertVmemBytesToChunks(memory_limit_in_bytes);
-}
-
 
 /*
  * Get the cpuset of the OS group.
@@ -1398,13 +1232,9 @@ static CGroupOpsRoutine cGroupOpsRoutineAlpha = {
 
 		.setcpulimit = setcpulimit_v1,
 		.getcpuusage = getcpuusage_v1,
+		.setcpupriority = setcpupriority_v1,
 		.getcpuset = getcpuset_v1,
 		.setcpuset = setcpuset_v1,
-
-		.getmemoryusage = getmemoryusage_v1,
-		.setmemorylimit = setmemorylimit_v1,
-		.getmemorylimitchunks = getmemorylimitchunks_v1,
-		.setmemorylimitbychunks = setmemorylimitbychunks_v1,
 
 		.convertcpuusage = convertcpuusage_v1,
 };

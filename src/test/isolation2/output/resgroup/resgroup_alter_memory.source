@@ -28,7 +28,7 @@ CREATE
 CREATE OR REPLACE VIEW rg_mem_status AS SELECT groupname, memory_limit, memory_shared_quota FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg1_memory_test' OR groupname='rg2_memory_test' ORDER BY groupid;
 CREATE
 
-CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=60, memory_shared_quota=0, memory_spill_ratio=5);
+CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_hard_quota_limit=10, memory_limit=60, memory_shared_quota=0, memory_spill_ratio=5);
 CREATE
 CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
 CREATE
@@ -321,7 +321,7 @@ ALTER
 ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_SHARED_QUOTA 0;
 ALTER
 
-CREATE RESOURCE GROUP rg2_memory_test WITH (concurrency=3, cpu_rate_limit=10, memory_limit=30, memory_shared_quota=0, memory_spill_ratio=5);
+CREATE RESOURCE GROUP rg2_memory_test WITH (concurrency=3, cpu_hard_quota_limit=10, memory_limit=30, memory_shared_quota=0, memory_spill_ratio=5);
 CREATE
 CREATE ROLE role2_memory_test RESOURCE GROUP rg2_memory_test;
 CREATE
@@ -869,7 +869,7 @@ DROP
 --
 -- Test PrepareTransaction report an error
 --
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=5, memory_limit=5);
 CREATE
 CREATE ROLE rg_test_role RESOURCE GROUP rg_test_group;
 CREATE

@@ -78,12 +78,9 @@ LANGUAGE 'plpgsql';
 5:select dblink_connect('dblink_rg_test5', 'dbname=isolation2resgrouptest');
 6:select dblink_connect('dblink_rg_test6', 'dbname=isolation2resgrouptest');
 
-1>:select exec_commands_n('dblink_rg_test1','CREATE RESOURCE GROUP rg_test_g# WITH (concurrency=#, cpu_rate_limit=#, memory_limit=#)', 'DROP RESOURCE GROUP rg_test_g#', 'ALTER RESOURCE GROUP rg_test_g# set concurrency #', 60, '', '1-6', false);
-2>:select exec_commands_n('dblink_rg_test2','CREATE RESOURCE GROUP rg_test_g# WITH (concurrency=#, cpu_rate_limit=#, memory_limit=#)', 'DROP RESOURCE GROUP rg_test_g#', 'ALTER RESOURCE GROUP rg_test_g# set concurrency#', 60, '', '1-6', false);
-3>:select exec_commands_n('dblink_rg_test3','CREATE RESOURCE GROUP rg_test_g# WITH (concurrency=#, cpu_rate_limit=#, memory_limit=#)', 'DROP RESOURCE GROUP rg_test_g#', 'ALTER RESOURCE GROUP rg_test_g# set cpu_rate_limit #', 60, '', '1-6', false);
-4>:select exec_commands_n('dblink_rg_test4','CREATE RESOURCE GROUP rg_test_g# WITH (concurrency=#, cpu_rate_limit=#, memory_limit=#)', 'DROP RESOURCE GROUP rg_test_g#', 'ALTER RESOURCE GROUP rg_test_g# set memory_limit #', 60, '', '1-6', false);
-5>:select exec_commands_n('dblink_rg_test5','CREATE RESOURCE GROUP rg_test_g# WITH (concurrency=#, cpu_rate_limit=#, memory_limit=#)', 'DROP RESOURCE GROUP rg_test_g#', 'ALTER RESOURCE GROUP rg_test_g# set memory_shared_quota #', 60, '', '1-6', false);
-6>:select exec_commands_n('dblink_rg_test6','CREATE RESOURCE GROUP rg_test_g# WITH (concurrency=#, cpu_rate_limit=#, memory_limit=#)', 'DROP RESOURCE GROUP rg_test_g#', 'ALTER RESOURCE GROUP rg_test_g# set memory_limit #', 60, '', '1-6', false);
+1>:select exec_commands_n('dblink_rg_test1','CREATE RESOURCE GROUP rg_test_g# WITH (concurrency=#, cpu_hard_quota_limit=#)', 'DROP RESOURCE GROUP rg_test_g#', 'ALTER RESOURCE GROUP rg_test_g# set concurrency #', 60, '', '1-6', false);
+2>:select exec_commands_n('dblink_rg_test2','CREATE RESOURCE GROUP rg_test_g# WITH (concurrency=#, cpu_hard_quota_limit=#)', 'DROP RESOURCE GROUP rg_test_g#', 'ALTER RESOURCE GROUP rg_test_g# set concurrency#', 60, '', '1-6', false);
+3>:select exec_commands_n('dblink_rg_test3','CREATE RESOURCE GROUP rg_test_g# WITH (concurrency=#, cpu_hard_quota_limit=#)', 'DROP RESOURCE GROUP rg_test_g#', 'ALTER RESOURCE GROUP rg_test_g# set cpu_hard_quota_limit #', 60, '', '1-6', false);
 
 1<:
 2<:
@@ -122,14 +119,14 @@ select exec_commands_n('dblink_rg_test','DROP RESOURCE GROUP rg_test_g%', '', ''
 -- end_ignore
 
 -- create 6 roles and 6 resource groups
-select exec_commands_n('dblink_rg_test','CREATE RESOURCE GROUP rg_test_g% WITH (concurrency=9, cpu_rate_limit=1, memory_limit=7)', '', '', 6, '1-6', '', true);
+select exec_commands_n('dblink_rg_test','CREATE RESOURCE GROUP rg_test_g% WITH (concurrency=9, cpu_hard_quota_limit=1)', '', '', 6, '1-6', '', true);
 select exec_commands_n('dblink_rg_test','CREATE ROLE rg_test_r% login resource group rg_test_g%;', '', '', 6, '1-6', '', true);
 select exec_commands_n('dblink_rg_test','GRANT ALL ON rg_test_foo to rg_test_r%;', '', '', 6, '1-6', '',  true);
 select exec_commands_n('dblink_rg_test','GRANT ALL ON rg_test_bar to rg_test_r%;', '', '', 6, '1-6', '', true);
 
 select dblink_disconnect('dblink_rg_test');
 
-select groupname, concurrency, cpu_rate_limit from gp_toolkit.gp_resgroup_config where groupname like 'rg_test_g%' order by groupname;
+select groupname, concurrency, cpu_hard_quota_limit from gp_toolkit.gp_resgroup_config where groupname like 'rg_test_g%' order by groupname;
 
 --
 -- 2* : DMLs
@@ -161,17 +158,10 @@ select groupname, concurrency, cpu_rate_limit from gp_toolkit.gp_resgroup_config
 31: select dblink_connect('dblink_rg_test31', 'dbname=isolation2resgrouptest');
 31>: select exec_commands_n('dblink_rg_test31', 'alter resource group rg_test_g% set concurrency #', 'select 1 from pg_sleep(0.1)', '', 1000, '1-6', '0-5', true);
 
--- start a new session to alter cpu_rate_limit randomly
+-- start a new session to alter cpu_hard_quota_limit randomly
 32: select dblink_connect('dblink_rg_test32', 'dbname=isolation2resgrouptest');
-32>: select exec_commands_n('dblink_rg_test32', 'alter resource group rg_test_g% set cpu_rate_limit #', 'select 1 from pg_sleep(0.1)', '', 1000, '1-6', '1-6', true);
+32>: select exec_commands_n('dblink_rg_test32', 'alter resource group rg_test_g% set cpu_hard_quota_limit #', 'select 1 from pg_sleep(0.1)', '', 1000, '1-6', '1-6', true);
 
--- start a new session to alter memory_limit randomly
-33: select dblink_connect('dblink_rg_test33', 'dbname=isolation2resgrouptest');
-33>: select exec_commands_n('dblink_rg_test33', 'alter resource group rg_test_g% set memory_limit #', 'select 1 from pg_sleep(0.1)', '', 1000, '1-6', '1-7', true);
-
--- start a new session to alter memory_shared_quota randomly
-34: select dblink_connect('dblink_rg_test34', 'dbname=isolation2resgrouptest');
-34>: select exec_commands_n('dblink_rg_test34', 'alter resource group rg_test_g% set memory_shared_quota #', 'select 1 from pg_sleep(0.1)', '', 1000, '1-6', '1-80', true);
 
 --
 -- 4* : CREATE/DROP tables & groups
@@ -182,7 +172,7 @@ select groupname, concurrency, cpu_rate_limit from gp_toolkit.gp_resgroup_config
 
 -- start a new session to create & drop resource group 
 42: select dblink_connect('dblink_rg_test42', 'dbname=isolation2resgrouptest');
-42>: select exec_commands_n('dblink_rg_test42', 'create resource group rg_test_g7 with (cpu_rate_limit=1, memory_limit=1)', 'drop resource group rg_test_g7', '', 1000, '', '', true);
+42>: select exec_commands_n('dblink_rg_test42', 'create resource group rg_test_g7 with (cpu_hard_quota_limit=1)', 'drop resource group rg_test_g7', '', 1000, '', '', true);
 
 31<:
 31: select exec_commands_n('dblink_rg_test31', 'alter resource group rg_test_g% set concurrency #', 'select 1 from pg_sleep(0.1)', '', 6, '1-6', '1-5', true);
@@ -232,17 +222,10 @@ select groupname, concurrency, cpu_rate_limit from gp_toolkit.gp_resgroup_config
 41q:
 42q:
 
-select groupname, concurrency::int < 7, cpu_rate_limit::int < 7 from gp_toolkit.gp_resgroup_config where groupname like 'rg_test_g%' order by groupname;
+select groupname, concurrency::int < 7, cpu_hard_quota_limit::int < 7 from gp_toolkit.gp_resgroup_config where groupname like 'rg_test_g%' order by groupname;
 
 -- Beacuse concurrency of each resource group is changed between 1..6, so the num_queued must be larger than 0
 select num_queued > 0 from gp_toolkit.gp_resgroup_status where rsgname like 'rg_test_g%' order by rsgname;
-
--- After all queries finished in each resource group, the memory_usage should be zero, no memory leak
-with t_1 as
-(
-	select rsgname, row_to_json(json_each(memory_usage::json)) as j from gp_toolkit.gp_resgroup_status where rsgname like 'rg_test_g%' order by rsgname
-)
-select rsgname, sum(((j->'value')->>'used')::int) from t_1 group by rsgname ;
 
 -- start_ignore
 drop table rg_test_foo;
@@ -256,7 +239,7 @@ select dblink_disconnect('dblink_rg_test');
 --
 -- 5*: Test connections in utility mode are not governed by resource group
 --
-create resource group rg_test_g8 with (concurrency= 1, cpu_rate_limit=1, memory_limit=1);
+create resource group rg_test_g8 with (concurrency= 1, cpu_hard_quota_limit=1);
 create role rg_test_r8 login resource group rg_test_g8;
 51:select dblink_connect('dblink_rg_test51', 'dbname=isolation2resgrouptest user=rg_test_r8 options=''-c gp_role=utility''');
 52:select dblink_connect('dblink_rg_test52', 'dbname=isolation2resgrouptest user=rg_test_r8 options=''-c gp_role=utility''');

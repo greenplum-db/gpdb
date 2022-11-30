@@ -144,9 +144,6 @@ _copyPlannedStmt(const PlannedStmt *from)
 
 	COPY_SCALAR_FIELD(query_mem);
 
-	COPY_SCALAR_FIELD(total_memory_coordinator);
-	COPY_SCALAR_FIELD(nsegments_coordinator);
-
 	COPY_NODE_FIELD(intoClause);
 	COPY_NODE_FIELD(copyIntoClause);
 	COPY_NODE_FIELD(refreshClause);

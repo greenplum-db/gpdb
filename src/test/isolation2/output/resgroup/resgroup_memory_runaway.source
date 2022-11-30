@@ -67,7 +67,7 @@ CREATE
 --	rg1's shared quota: 20% - 20% => %0
 --	system free chunks: 100% - 10% - 30% - 20% => 40%
 --  global area safe threshold: 40% / 2 = 20%
-1: CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=20, memory_shared_quota=0);
+1: CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_hard_quota_limit=10, memory_limit=20, memory_shared_quota=0);
 CREATE
 1: CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
 CREATE
@@ -126,7 +126,7 @@ DROP
 --	rg1's shared quota: %20 - %10 => %10
 --	system free chunks: 100% - 10% - 30% - 20% => 40%
 --  safe threshold: 40% / 2 = 20%
-1: CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=20, memory_shared_quota=50);
+1: CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_hard_quota_limit=10, memory_limit=20, memory_shared_quota=50);
 CREATE
 1: CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
 CREATE
@@ -197,9 +197,9 @@ DROP
 --	rg2's expected: 100% * 20% => 20%
 --	system free chunks: 100% - 10% - 30% - 20% - 20%=> 20%
 --  safe threshold: 20% / 2 = 10%
-1: CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=20, memory_shared_quota=50);
+1: CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_hard_quota_limit=10, memory_limit=20, memory_shared_quota=50);
 CREATE
-1: CREATE RESOURCE GROUP rg2_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=20, memory_shared_quota=0);
+1: CREATE RESOURCE GROUP rg2_memory_test WITH (concurrency=2, cpu_hard_quota_limit=10, memory_limit=20, memory_shared_quota=0);
 CREATE
 1: CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
 CREATE
@@ -264,7 +264,7 @@ DROP
 ! gpstop -ari;
 -- end_ignore
 
-1: CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=60, memory_shared_quota=50);
+1: CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_hard_quota_limit=10, memory_limit=60, memory_shared_quota=50);
 CREATE
 1: CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
 CREATE

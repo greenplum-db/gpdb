@@ -5,7 +5,7 @@ DROP
 DROP RESOURCE GROUP rg_concurrency_test;
 ERROR:  resource group "rg_concurrency_test" does not exist
 -- end_ignore
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_rate_limit=20, memory_limit=60, memory_shared_quota=0, memory_spill_ratio=10);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_hard_quota_limit=20, memory_limit=60, memory_shared_quota=0, memory_spill_ratio=10);
 CREATE
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 CREATE
@@ -490,7 +490,7 @@ DROP ROLE role_concurrency_test;
 DROP
 DROP RESOURCE GROUP rg_concurrency_test;
 DROP
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_rate_limit=20, memory_limit=60, memory_shared_quota=0, memory_spill_ratio=10);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_hard_quota_limit=20, memory_limit=60, memory_shared_quota=0, memory_spill_ratio=10);
 CREATE
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 CREATE
@@ -640,7 +640,7 @@ DROP RESOURCE GROUP rg_concurrency_test;
 DROP
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_rate_limit=20, memory_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_hard_quota_limit=20, memory_limit=20);
 CREATE
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 CREATE
@@ -667,7 +667,7 @@ DROP RESOURCE GROUP rg_concurrency_test;
 ERROR:  resource group "rg_concurrency_test" does not exist
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_rate_limit=20, memory_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_hard_quota_limit=20, memory_limit=20);
 CREATE
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 CREATE

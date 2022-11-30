@@ -10849,16 +10849,6 @@
 { oid => 7154, descr => 'terminate a server process',
    proname => 'pg_terminate_backend', provolatile => 'v', prorettype => 'bool', proargtypes => 'int4 text', prosrc => 'pg_terminate_backend_msg' },
 
-
-{ oid => 6053, descr => 'get the memory used by a session and the available memory of the destination group',
-   proname => 'pg_resgroup_check_move_query', prorows => '1000', proisstrict => 'f',
-   proretset => 't', provolatile => 'v', proparallel => 'r', prorettype => 'record',
-   proargtypes => 'int4 oid',
-   proallargtypes => 'int4,oid,int4,int4',
-   proargmodes => '{i,i,o,o}',
-   proargnames => '{session_id,group_id,session_mem,available_mem}',
-   prosrc => 'pg_resgroup_check_move_query' },
-
 { oid => 6064, descr => 'move query to a resource group',
    proname => 'pg_resgroup_move_query', provolatile => 'v', proparallel => 'r',
    prorettype => 'bool',
@@ -10871,7 +10861,7 @@
 
 { oid => 6066, descr => 'statistics: information about resource groups',
    proexeclocation => 'c',
-   proname => 'pg_resgroup_get_status', prorows => '1000', proisstrict => 'f', proretset => 't', provolatile => 'v', proparallel => 'r', prorettype => 'record', proargtypes => 'oid', proallargtypes => 'oid,oid,int4,int4,int4,int4,interval,json,json', proargmodes => '{i,o,o,o,o,o,o,o,o}', proargnames => '{groupid,groupid,num_running,num_queueing,num_queued,num_executed,total_queue_duration,cpu_usage,memory_usage}', prosrc => 'pg_resgroup_get_status' },
+   proname => 'pg_resgroup_get_status', prorows => '1000', proisstrict => 'f', proretset => 't', provolatile => 'v', proparallel => 'r', prorettype => 'record', proargtypes => 'oid', proallargtypes => 'oid,oid,int4,int4,int4,int4,interval,json', proargmodes => '{i,o,o,o,o,o,o,o}', proargnames => '{groupid,groupid,num_running,num_queueing,num_queued,num_executed,total_queue_duration,cpu_usage}', prosrc => 'pg_resgroup_get_status' },
 
 { oid => 6036, descr => 'waiting relation information',
    proname => 'gp_dist_wait_status', prorows => '1000', proisstrict => 'f',

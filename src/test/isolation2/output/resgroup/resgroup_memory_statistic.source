@@ -30,11 +30,11 @@ CREATE
 CREATE OR REPLACE VIEW memory_result AS SELECT rsgname, ismaster, round_test(avg(memory_usage), 10) AS avg_mem FROM( SELECT rsgname, CASE (j->'key')::text WHEN '"-1"'::text THEN 1 ELSE 0 END AS ismaster, ((j->'value')->>'used')::int AS memory_usage FROM( SELECT rsgname, row_to_json(json_each(memory_usage::json)) AS j FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg1_memory_test' OR rsgname='rg2_memory_test' )a )b GROUP BY (rsgname, ismaster) ORDER BY rsgname, ismaster;
 CREATE
 
-CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=30);
+CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_hard_quota_limit=10, memory_limit=30);
 CREATE
 CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
 CREATE
-CREATE RESOURCE GROUP rg2_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=30);
+CREATE RESOURCE GROUP rg2_memory_test WITH (concurrency=2, cpu_hard_quota_limit=10, memory_limit=30);
 CREATE
 CREATE ROLE role2_memory_test RESOURCE GROUP rg2_memory_test;
 CREATE

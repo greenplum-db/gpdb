@@ -26,17 +26,5 @@ SHOW gp_resource_manager;
 -- reset settings
 ALTER RESOURCE GROUP admin_group SET concurrency 10;
 ALTER
-ALTER RESOURCE GROUP admin_group SET memory_spill_ratio 0;
-ALTER
-ALTER RESOURCE GROUP admin_group SET memory_limit 10;
-ALTER
-ALTER RESOURCE GROUP admin_group SET memory_shared_quota 80;
-ALTER
 ALTER RESOURCE GROUP default_group SET concurrency 20;
-ALTER
-ALTER RESOURCE GROUP default_group SET memory_spill_ratio 0;
-ALTER
-ALTER RESOURCE GROUP default_group SET memory_limit 0;
-ALTER
-ALTER RESOURCE GROUP default_group SET memory_shared_quota 80;
 ALTER
