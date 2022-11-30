@@ -442,12 +442,6 @@ ProcArrayEndGxact(TMGXACT *tmGxact)
  * the caller to pass latestXid, instead of computing it from the PGPROC's
  * contents, because the subxid information in the PGPROC might be
  * incomplete.)
- *
- * GPDB: If this is a global transaction, we might need to do this action
- * later, rather than now. In that case, this function returns true for
- * needNotifyCommittedDtxTransaction, and does *not* change the state of the
- * PGPROC entry. This can only happen for commit; when !isCommit, this always
- * clears the PGPROC entry.
  */
 void
 ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid)
@@ -461,6 +455,7 @@ ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid)
 			MyProcPort ? MyProcPort->database_name : "",  // databaseName
 			""); // tableName
 #endif
+
 	if (TransactionIdIsValid(latestXid) || TransactionIdIsValid(tmGxact->gxid))
 	{
 		/*

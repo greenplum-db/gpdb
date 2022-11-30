@@ -18,6 +18,8 @@
 # required setup steps
 test: test_setup
 
+test: pg_dump_binary_upgrade
+
 test: gp_dispatch_keepalives
 
 # copy command
@@ -310,5 +312,11 @@ test: motion_socket
 test: subtrx_overflow
 
 test: dboptions
+
+# DML tests for AO/CO unique indexes.
+test: uao_dml/uao_dml_unique_index_delete_row uao_dml/uao_dml_unique_index_delete_column uao_dml/uao_dml_unique_index_update_row uao_dml/uao_dml_unique_index_update_column
+
+# test CREATE UNIQUE INDEX on AO/CO tables.
+test: uao_dml/ao_unique_index_build_row uao_dml/ao_unique_index_build_column
 
 # end of tests

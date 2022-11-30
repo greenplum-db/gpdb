@@ -237,6 +237,21 @@ heapam_tuple_satisfies_snapshot(Relation rel, TupleTableSlot *slot,
 	return res;
 }
 
+/*
+ * ------------------------------------------------------------------------
+ * GPDB: DML state manipulation functions (not implemented by heap AM)
+ * ------------------------------------------------------------------------
+ */
+
+static inline void
+heap_dml_init(Relation relation)
+{
+}
+
+static inline void
+heap_dml_finish(Relation relation)
+{
+}
 
 /* ----------------------------------------------------------------------------
  *  Functions for manipulations of physical tuples for heap AM.
@@ -2631,6 +2646,9 @@ static const TableAmRoutine heapam_methods = {
 	.parallelscan_estimate = table_block_parallelscan_estimate,
 	.parallelscan_initialize = table_block_parallelscan_initialize,
 	.parallelscan_reinitialize = table_block_parallelscan_reinitialize,
+
+	.dml_init = heap_dml_init,
+	.dml_finish = heap_dml_finish,
 
 	.index_fetch_begin = heapam_index_fetch_begin,
 	.index_fetch_reset = heapam_index_fetch_reset,

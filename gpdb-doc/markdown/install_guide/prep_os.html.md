@@ -637,7 +637,7 @@ The `gpadmin` user must have permission to access the services and directories r
 
 The `gpadmin` user on each Greenplum host must have an SSH key pair installed and be able to SSH from any host in the cluster to any other host in the cluster without entering a password or passphrase \(called "passwordless SSH"\). If you enable passwordless SSH from the coordinator host to every other host in the cluster \("1-*n* passwordless SSH"\), you can use the Greenplum Database `gpssh-exkeys` command-line utility later to enable passwordless SSH from every host to every other host \("*n*-*n* passwordless SSH"\).
 
-You can optionally give the `gpadmin` user sudo privilege, so that you can easily administer all hosts in the Greenplum Database cluster as `gpadmin` using the `sudo`, `ssh/scp`, and `gpssh/gpscp` commands.
+You can optionally give the `gpadmin` user sudo privilege, so that you can easily administer all hosts in the Greenplum Database cluster as `gpadmin` using the `sudo`, `ssh/rsync`, and `gpssh/gpsync` commands.
 
 The following steps show how to set up the `gpadmin` user on a host, set a password, create an SSH key pair, and \(optionally\) enable sudo capability. These steps must be performed as root on every Greenplum Database cluster host. \(For a large Greenplum Database cluster you will want to automate these steps using your system provisioning tools.\)
 

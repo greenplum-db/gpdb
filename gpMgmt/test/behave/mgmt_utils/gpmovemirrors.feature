@@ -26,9 +26,12 @@ Feature: Tests for gpmovemirrors
         Given a standard local demo cluster is created
         And a gpmovemirrors directory under '/tmp/gpmovemirrors' with mode '0700' is created
         And a 'good' gpmovemirrors file is created
+        And verify replication slot internal_wal_replication_slot is available on all the segments
         When the user runs gpmovemirrors
         Then gpmovemirrors should return a return code of 0
         And verify the database has mirrors
+        #gpmovemirrors triggers full recovery where old replication slot is dropped and new one is created
+        And verify replication slot internal_wal_replication_slot is available on all the segments
         And all the segments are running
         And the segments are synchronized
         And check segment conf: postgresql.conf
@@ -38,9 +41,12 @@ Feature: Tests for gpmovemirrors
         Given a standard local demo cluster is created
         And a gpmovemirrors directory under '/tmp/gpmovemirrors' with mode '0700' is created
         And a 'samedir' gpmovemirrors file is created
+        And verify replication slot internal_wal_replication_slot is available on all the segments
         When the user runs gpmovemirrors
         Then gpmovemirrors should return a return code of 0
         And verify the database has mirrors
+        #gpmovemirrors triggers full recovery where old replication slot is dropped and new one is created
+        And verify replication slot internal_wal_replication_slot is available on all the segments
         And all the segments are running
         And the segments are synchronized
         And verify that mirrors are recognized after a restart

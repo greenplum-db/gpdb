@@ -127,7 +127,7 @@ installdirs-tests: installdirs
 
 # Get some extra C modules from contrib/spi
 
-all: refint$(DLSUFFIX) autoinc$(DLSUFFIX) tablespace-setup hooktest query_info_hook_test
+all: refint$(DLSUFFIX) autoinc$(DLSUFFIX) hooktest query_info_hook_test
 
 refint$(DLSUFFIX): $(top_builddir)/contrib/spi/refint$(DLSUFFIX)
 	cp $< $@
@@ -193,10 +193,10 @@ check-tests: all tablespace-setup | temp-install
 #	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/serial_schedule $(EXTRA_TESTS)
 installcheck: installcheck-good
 
-installcheck-small: all
+installcheck-small: all tablespace-setup
 	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/parallel_schedule $(EXTRA_TESTS)
 
-installcheck-good: all twophase_pqexecparams hooktest query_info_hook_test
+installcheck-good: all tablespace-setup twophase_pqexecparams hooktest query_info_hook_test
 	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule $(EXTRA_TESTS)
 
 installcheck-parallel: all tablespace-setup

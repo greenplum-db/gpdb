@@ -563,8 +563,73 @@ def checkPartitionIntegrity():
     err = []
     db = connect()
 
-    # MPP-11120: check for child partitions with different
-    # distribution policies.
+    # Check for the numsegments value of parent and child partition from the gp_distribution_policy table
+    qry = '''
+    select inhparent::regclass, inhrelid::regclass, parent.numsegments as numsegments_parent, child.numsegments as numsegments_child
+    from pg_inherits inner join pg_partitioned_table on (pg_inherits.inhparent = pg_partitioned_table.partrelid)
+                     inner join gp_distribution_policy parent on (parent.localoid = inhparent)
+                     inner join gp_distribution_policy child on (child.localoid = inhrelid)
+    where parent.numsegments is distinct from child.numsegments
+          and not (inhrelid in (select ftrelid from pg_catalog.pg_foreign_table) and child.numsegments = NULL);
+    '''
+    try:
+        curs = db.query(qry)
+        cols = ('inhparent', 'inhrelid', 'numsegments_parent', 'numsegments_child')
+        col_names = {
+            'inhparent': 'table',
+            'inhrelid': 'affected child',
+            'numsegments_parent': 'parent numsegments value',
+            'numsegments_child': 'child numsegments value',
+        }
+
+        err = []
+        for row in curs.dictresult():
+            err.append([GV.cfg[GV.coordinator_dbid], cols, row])
+
+        if not err:
+            logger.info('[OK] partition numsegments check')
+        else:
+            err_count = len(err)
+            GV.checkStatus = False
+            setError(ERROR_REMOVE)
+            logger.info('[FAIL] partition numsegments check')
+            logger.error('partition numsegments check found %d issue(s)' % err_count)
+            if err_count > 100:
+                logger.error(qry)
+
+            myprint(
+                '[ERROR]: child partition(s) have different numsegments value '
+                'from the root partition. Check the gpcheckcat log for details.'
+            )
+            logger.error('The following tables have different numsegments value (showing at most 100 rows):')
+
+            # report at most 100 rows, for brevity
+            err = err[:100]
+
+            for index, e in enumerate(err):
+                cfg = e[0]
+                col = e[1]
+                row = e[2]
+
+                if index == 0:
+                    logger.error("--------")
+                    logger.error("  " + " | ".join(map(col_names.get, col)))
+                    logger.error("  " + "-+-".join(['-' * len(col_names[x]) for x in col]))
+
+                logger.error("  " + " | ".join([str(row[x]) for x in col]))
+
+            if err_count > 100:
+                logger.error(" ...")
+
+    except Exception as e:
+        setError(ERROR_NOREPAIR)
+        myprint('[ERROR] executing test: checkPartitionIntegrity')
+        myprint('  Execution error: ' + str(e))
+
+    # Check for the distribution policy of parent and child partitions based on the following conditions:
+    #   1. If a root is randomly distributed, then all middle, leaf level partitions must also be randomly distributed
+    #   2. If a root is hash distributed, then middle level should be same as root and
+    #      leaf level partition can be hash on same key or randomly distributed
     qry = '''
     select inhparent::regclass, inhrelid::regclass,
            pg_get_table_distributedby(inhparent) as dby_parent,
@@ -572,7 +637,9 @@ def checkPartitionIntegrity():
     from pg_inherits inner join pg_partitioned_table on (pg_inherits.inhparent = pg_partitioned_table.partrelid)
     where pg_get_table_distributedby(inhrelid) is distinct from pg_get_table_distributedby(inhparent)
           and not (pg_get_table_distributedby(inhparent) = 'DISTRIBUTED RANDOMLY' and pg_get_table_distributedby(inhrelid) = '')
-          and not (inhrelid in (select ftrelid from pg_catalog.pg_foreign_table) and pg_get_table_distributedby(inhrelid) = '');
+          and not (inhrelid in (select ftrelid from pg_catalog.pg_foreign_table) and pg_get_table_distributedby(inhrelid) = '')
+          and not (pg_get_table_distributedby(inhparent) like 'DISTRIBUTED BY%' and pg_get_table_distributedby(inhrelid) = 'DISTRIBUTED RANDOMLY'
+                   and (select isleaf from pg_partition_tree(inhparent) where relid = inhrelid));
     '''
     try:
         curs = db.query(qry)

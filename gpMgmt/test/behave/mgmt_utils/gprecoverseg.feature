@@ -255,6 +255,48 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And the cluster is rebalanced
 
+    Scenario: gprecoverseg should drop existing slot on full recovery
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And verify replication slot internal_wal_replication_slot is available on all the segments
+        And user stops all mirror processes
+        And user can start transactions
+        And the user waits until mirror on content 0,1,2 is down
+        When the user runs "gprecoverseg -a -F -v"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "Checking if slot internal_wal_replication_slot exists" to stdout
+        And gprecoverseg should print "Successfully dropped replication slot internal_wal_replication_slot" to stdout
+        And gprecoverseg should print "pg_basebackup: base backup completed" to stdout
+        And gprecoverseg should print "Segments successfully recovered" to stdout
+        And the user waits until mirror on content 0,1,2 is up
+        And verify replication slot internal_wal_replication_slot is available on all the segments
+        And all the segments are running
+        And the segments are synchronized
+        And the cluster is rebalanced
+
+    Scenario: gprecoverseg should not try to drop slot if slot does not exist
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And verify replication slot internal_wal_replication_slot is available on all the segments
+        And the mirror on content 0 is stopped
+        And user can start transactions
+        And the status of the mirror on content 0 should be "d"
+        And the user runs sql "select pg_drop_replication_slot('internal_wal_replication_slot');" in "postgres" on first primary segment
+        When the user runs "gprecoverseg -a -F -v"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "Checking if slot internal_wal_replication_slot exists" to stdout
+        And gprecoverseg should print "Slot internal_wal_replication_slot does not exist" to stdout
+        And gprecoverseg should not print "Successfully dropped replication slot internal_wal_replication_slot" to stdout
+        And gprecoverseg should print "pg_basebackup: base backup completed" to stdout
+        And gprecoverseg should print "Segments successfully recovered" to stdout
+        And the user waits until mirror on content 0 is up
+        And verify replication slot internal_wal_replication_slot is available on all the segments
+        And all the segments are running
+        And the segments are synchronized
+        And the cluster is rebalanced
+
     @backup_restore_bashrc
     Scenario: gprecoverseg should not return error when banner configured on host
         Given the database is running
@@ -1186,7 +1228,7 @@ Feature: gprecoverseg tests
     And the gp_configuration_history table should contain a backout entry for the primary segment for contents 0,1
 
     And the mode of all the created data directories is changed to 0700
-    When the user runs "gprecoverseg -a"
+    When the user runs "gprecoverseg -aF"
     Then gprecoverseg should return a return code of 0
     And user can start transactions
     And all the segments are running

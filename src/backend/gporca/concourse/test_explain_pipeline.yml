@@ -23,7 +23,7 @@ resources:
 - name: gp_workloads
   type: git-lfs
   source:
-    branch: master
+    branch: main
     private_key: ((qp/gp_workloads_deploy_key))
     uri: ((gp_workloads-git-remote))
 
@@ -77,7 +77,7 @@ resources:
 - name: gpdb_main_src  # used for yml task files
   type: git
   source:
-    branch: master
+    branch: main
     paths:
     - concourse/**
     - src/backend/gporca/concourse/**

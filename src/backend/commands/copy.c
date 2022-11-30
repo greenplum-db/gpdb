@@ -4213,16 +4213,8 @@ CopyFrom(CopyState cstate)
 
 	CopyInitDataParser(cstate);
 
-	/*
-	 * GPDB_12_MERGE_FIXME: We still have to perform the initialization
-	 * here for AO relations. It is preferreable by all means to perform the
-	 * initialization via the table AP API, however it simply does not
-	 * provide a good enough interface for this yet.
-	 */
-	if (RelationIsAoRows(resultRelInfo->ri_RelationDesc))
-		appendonly_dml_init(resultRelInfo->ri_RelationDesc, CMD_INSERT);
-	else if (RelationIsAoCols(resultRelInfo->ri_RelationDesc))
-		aoco_dml_init(resultRelInfo->ri_RelationDesc, CMD_INSERT);
+	if (resultRelInfo->ri_RelationDesc->rd_tableam)
+		table_dml_init(resultRelInfo->ri_RelationDesc);
 
 	for (;;)
 	{
@@ -4303,6 +4295,39 @@ CopyFrom(CopyState cstate)
 			/* Skip items that don't match COPY's WHERE clause */
 			if (!ExecQual(cstate->qualexpr, econtext))
 				continue;
+		}
+
+		if (cstate->dispatch_mode != COPY_DISPATCH && is_check_distkey)
+		{
+			/*
+			 * In COPY FROM ON SEGMENT, check the distribution key in the
+			 * QE.
+			 * Note: For partitioned tables, the order of the root table's columns can be
+			 * inconsistent with the order of the partition's columns and Greenplum/PostgreSQL
+			 * allows such behavior. When they have different orders, we need to re-order the
+			 * TupleTableSlot (myslot) to make it match the partition's columns (see execute_attr_map_slot()
+			 * for details). We must perform this check before the re-ordering of TupleTableslot,
+			 * or the value of target_seg will be incorrect.
+			 */
+			if (distData->policy->nattrs != 0)
+			{
+				target_seg = GetTargetSeg(distData, myslot);
+				if (GpIdentity.segindex != target_seg)
+				{
+					PG_TRY();
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_INTEGRITY_CONSTRAINT_VIOLATION),
+								 errmsg("value of distribution key doesn't belong to segment with ID %d, it belongs to segment with ID %d",
+										GpIdentity.segindex, target_seg)));
+					}
+					PG_CATCH();
+					{
+						HandleCopyError(cstate);
+					}
+					PG_END_TRY();
+				}
+			}
 		}
 
 		/* Determine the partition to insert the tuple into */
@@ -4466,37 +4491,7 @@ CopyFrom(CopyState cstate)
 		{
 			/* In QD, compute the target segment to send this row to. */
 			target_seg = GetTargetSeg(distData, myslot);
-		}
-		else if (is_check_distkey)
-		{
-			/*
-			 * In COPY FROM ON SEGMENT, check the distribution key in the
-			 * QE.
-			 */
-			if (distData->policy->nattrs != 0)
-			{
-				target_seg = GetTargetSeg(distData, myslot);
 
-				if (GpIdentity.segindex != target_seg)
-				{
-					PG_TRY();
-					{
-						ereport(ERROR,
-								(errcode(ERRCODE_INTEGRITY_CONSTRAINT_VIOLATION),
-								 errmsg("value of distribution key doesn't belong to segment with ID %d, it belongs to segment with ID %d",
-										GpIdentity.segindex, target_seg)));
-					}
-					PG_CATCH();
-					{
-						HandleCopyError(cstate);
-					}
-					PG_END_TRY();
-				}
-			}
-		}
-
-		if (cstate->dispatch_mode == COPY_DISPATCH)
-		{
 			bool send_to_all = distData &&
 							   GpPolicyIsReplicated(distData->policy);
 

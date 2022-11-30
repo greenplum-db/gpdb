@@ -80,6 +80,7 @@ typedef struct AlteredTableInfo
 	List	   *changedConstraintDefs;	/* string definitions of same */
 	List	   *changedIndexOids;	/* OIDs of indexes to rebuild */
 	List	   *changedIndexDefs;	/* string definitions of same */
+	List       *new_crsds; /* new column reference storage directives */
 } AlteredTableInfo;
 
 /* Struct describing one new constraint to check in Phase 3 scan */

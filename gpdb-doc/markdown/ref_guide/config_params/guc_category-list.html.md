@@ -394,6 +394,7 @@ The following parameters configure the external tables feature of Greenplum Data
 
 The following parameter configures default option settings for Greenplum Database tables.
 
+- [default_table_access_method](guc-list.html#default_table_access_method)
 - [gp_create_table_random_default_distribution](guc-list.html#gp_create_table_random_default_distribution)
 - [gp_default_storage_options](guc-list.html#gp_default_storage_options)
 - [gp_enable_exchange_default_partition](guc-list.html#gp_enable_exchange_default_partition)

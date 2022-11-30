@@ -28,6 +28,10 @@ select rsgname
  where rsgname='default_group'
    and segment_id=-1;
 
+select *
+  from gp_toolkit.gp_resgroup_role
+ where rrrolname='gpadmin';
+
 -- also log the raw output of the views, if any of above tests failed it is
 -- easier to find out the causes with these logs.
 

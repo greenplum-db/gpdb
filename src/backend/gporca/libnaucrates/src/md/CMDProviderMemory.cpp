@@ -228,7 +228,7 @@ CMDProviderMemory::MDId(CMemoryPool *mp, CSystemId sysid,
 // return the requested metadata object
 IMDCacheObject *
 CMDProviderMemory::GetMDObj(CMemoryPool *mp, CMDAccessor *md_accessor,
-							IMDId *mdid) const
+							IMDId *mdid, IMDCacheObject::Emdtype) const
 {
 	CAutoP<CWStringBase> a_pstr;
 	a_pstr = GetMDObjDXLStr(mp, md_accessor, mdid);

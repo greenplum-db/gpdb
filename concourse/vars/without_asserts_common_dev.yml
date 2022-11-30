@@ -1,5 +1,4 @@
 ---
-# usage: fly set-pipeline -p gpdb_master_without_asserts -l without_asserts_common_prod.yml
 aws-bucket: gpdb5-concourse-builds-dev
 google-project-id: data-sandbox-2
 google-zone: us-central1-a

@@ -133,5 +133,5 @@ $ gpssh -h sdw2 -h localhost -v -e 'ls -1 | wc -l'
 
 ## <a id="seealso"></a>See Also 
 
-[gpssh-exkeys](gpssh-exkeys.html), [gpscp](gpscp.html)
+[gpssh-exkeys](gpssh-exkeys.html), [gpsync](gpsync.html)
 

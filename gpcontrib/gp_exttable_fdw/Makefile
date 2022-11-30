@@ -1,5 +1,3 @@
-# contrib/pxf_fdw/Makefile
-
 MODULE_big = gp_exttable_fdw
 OBJS = gp_exttable_fdw.o extaccess.o
 

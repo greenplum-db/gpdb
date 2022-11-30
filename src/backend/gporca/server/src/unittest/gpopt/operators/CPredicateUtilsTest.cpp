@@ -292,7 +292,7 @@ CPredicateUtilsTest::EresUnittest_PlainEqualities()
 	// generate a non-equality predicate between two column reference
 	CExpression *pexprScIdentInequality = CUtils::PexprScalarCmp(
 		mp, pcrLeft, pcrRight, CWStringConst(GPOS_WSZ_LIT("<")),
-		GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_LT_OP));
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_LT_OP));
 
 	pexprScIdentInequality->AddRef();
 	pdrgpexprOriginal->Append(pexprScIdentInequality);
@@ -348,7 +348,8 @@ CPredicateUtilsTest::EresUnittest_Implication()
 
 	// generate a two cascaded joins
 	CWStringConst strName1(GPOS_WSZ_LIT("Rel1"));
-	CMDIdGPDB *pmdid1 = GPOS_NEW(mp) CMDIdGPDB(GPOPT_TEST_REL_OID1, 1, 1);
+	CMDIdGPDB *pmdid1 =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_TEST_REL_OID1, 1, 1);
 	CTableDescriptor *ptabdesc1 =
 		CTestUtils::PtabdescCreate(mp, 3, pmdid1, CName(&strName1));
 	CWStringConst strAlias1(GPOS_WSZ_LIT("Rel1"));
@@ -356,7 +357,8 @@ CPredicateUtilsTest::EresUnittest_Implication()
 		CTestUtils::PexprLogicalGet(mp, ptabdesc1, &strAlias1);
 
 	CWStringConst strName2(GPOS_WSZ_LIT("Rel2"));
-	CMDIdGPDB *pmdid2 = GPOS_NEW(mp) CMDIdGPDB(GPOPT_TEST_REL_OID2, 1, 1);
+	CMDIdGPDB *pmdid2 =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_TEST_REL_OID2, 1, 1);
 	CTableDescriptor *ptabdesc2 =
 		CTestUtils::PtabdescCreate(mp, 3, pmdid2, CName(&strName2));
 	CWStringConst strAlias2(GPOS_WSZ_LIT("Rel2"));
@@ -364,7 +366,8 @@ CPredicateUtilsTest::EresUnittest_Implication()
 		CTestUtils::PexprLogicalGet(mp, ptabdesc2, &strAlias2);
 
 	CWStringConst strName3(GPOS_WSZ_LIT("Rel3"));
-	CMDIdGPDB *pmdid3 = GPOS_NEW(mp) CMDIdGPDB(GPOPT_TEST_REL_OID3, 1, 1);
+	CMDIdGPDB *pmdid3 =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_TEST_REL_OID3, 1, 1);
 	CTableDescriptor *ptabdesc3 =
 		CTestUtils::PtabdescCreate(mp, 3, pmdid3, CName(&strName3));
 	CWStringConst strAlias3(GPOS_WSZ_LIT("Rel3"));

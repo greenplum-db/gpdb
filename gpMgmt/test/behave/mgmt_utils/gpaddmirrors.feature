@@ -5,6 +5,8 @@ Feature: Tests for gpaddmirrors
           And a tablespace is created with data
          When gpaddmirrors adds 3 mirrors
           And an FTS probe is triggered
+          #gpaddmirrors triggers full recovery where old replication slot is dropped and new one is created
+          And verify replication slot internal_wal_replication_slot is available on all the segments
           And the segments are synchronized
          Then verify the database has mirrors
           And the tablespace is valid
@@ -24,6 +26,8 @@ Feature: Tests for gpaddmirrors
         And an FTS probe is triggered
         And the segments are synchronized
         And verify the database has mirrors
+        #gpaddmirrors triggers full recovery where old replication slot is dropped and new one is created
+        And verify replication slot internal_wal_replication_slot is available on all the segments
         And the tablespace is valid
         And user stops all primary processes
         And user can start transactions

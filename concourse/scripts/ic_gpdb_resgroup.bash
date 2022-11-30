@@ -67,7 +67,7 @@ run_resgroup_test() {
             --without-zlib --without-rt --without-libcurl \
             --without-libedit-preferred --without-docdir --without-readline \
             --disable-gpcloud --disable-gpfdist --disable-orca \
-            --disable-pxf --without-python PKG_CONFIG_PATH="\${GPHOME}/lib/pkgconfig" ${CONFIGURE_FLAGS}
+            --without-python PKG_CONFIG_PATH="\${GPHOME}/lib/pkgconfig" ${CONFIGURE_FLAGS}
 
         make -C /home/gpadmin/gpdb_src/src/test/regress
         ssh sdw1 mkdir -p /home/gpadmin/gpdb_src/src/test/regress </dev/null

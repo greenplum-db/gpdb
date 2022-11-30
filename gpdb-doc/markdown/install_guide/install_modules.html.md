@@ -29,12 +29,13 @@ You can register the following modules in this manner:
 <li class="li"><a class="xref" href="../ref_guide/modules/diskquota.html">diskquota</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/fuzzystrmatch.html">fuzzystrmatch</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/gp_sparse_vector.html">gp_sparse_vector</a></li>
+<li class="li"><a class="xref" href="../ref_guide/modules/hstore.html">hstore</a></li>
+<li class="li"><a class="xref" href="../ref_guide/modules/ip4r.html">ip4r</a></li>
 </ul>
 </td>
 <td style="vertical-align:top;">
 <ul class="ul">
-<li class="li"><a class="xref" href="../ref_guide/modules/hstore.html">hstore</a></li>
-<li class="li"><a class="xref" href="../ref_guide/modules/ip4r.html">ip4r</a></li>
+<li class="li"><a class="xref" href="../ref_guide/modules/ltree.html">ltree</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/orafce_ref.html">orafce</a> (Tanzu Greenplum only)</li>
 <li class="li"><a class="xref" href="../ref_guide/modules/pageinspect.html">pageinspect</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/pg_trgm.html">pg_trgm</a></li>
@@ -42,6 +43,8 @@ You can register the following modules in this manner:
 <li class="li"><a class="xref" href="../ref_guide/modules/postgres_fdw.html">postgres_fdw</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/postgresql-hll.html">postgresql-hll</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/sslinfo.html">sslinfo</a></li>
+<li class="li"><a class="xref" href="../ref_guide/modules/timestamp9.html">timestamp9</a></li>
+<li class="li"><a class="xref" href="../ref_guide/modules/uuid-ossp.html">uuid-ossp</a></li>
 </ul>
 </td>
 </tr>

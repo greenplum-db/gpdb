@@ -317,7 +317,7 @@ When you install a Python module for development with PL/Python, the Greenplum D
 
 Greenplum Database provides a collection of data science-related Python modules that you can use to easily develop PL/Python functions in Greenplum. The modules are provided as two `.gppkg` format files that can be installed into a Greenplum cluster using the `gppkg` utility, with one package supporting development with Python 2.7 and the other supporting development with Python 3.9. See [Python Data Science Module Packages](/oss/install_guide/install_python_dsmod.html) for installation instructions and descriptions of the provided modules.
 
-To develop with modules that are not part of th Python Data Science Module packages, you can use Greenplum utilities such as `gpssh` and `gpscp` to run commands or copy files to all hosts in the Greenplum cluster. These sections describe how to use those utilities to install and use additional Python modules:
+To develop with modules that are not part of th Python Data Science Module packages, you can use Greenplum utilities such as `gpssh` and `gpsync` to run commands or copy files to all hosts in the Greenplum cluster. These sections describe how to use those utilities to install and use additional Python modules:
 
 -   [Verifying the Python Environment](#about_python_env)
 -   [Installing Python pip](#topic_yx3_yjq_rt)
@@ -488,7 +488,7 @@ If you are building a Python module, you must ensure that the build creates the 
 
 Before building a Python module to be installed, ensure that the appropriate software to build the module is installed and properly configured. The build environment is required only on the host where you build the module.
 
-You can use the Greenplum Database utilities `gpssh` and `gpscp` to run commands on Greenplum Database hosts and to copy files to the hosts.
+You can use the Greenplum Database utilities `gpssh` and `gpsync` to run commands on Greenplum Database hosts and to copy files to the hosts.
 
 ### <a id="topic_e4p_gcw_vt"></a>Testing Installed Python Modules 
 

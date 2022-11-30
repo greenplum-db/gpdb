@@ -547,19 +547,12 @@ getCgroupMountDir()
 	{
 		char * p;
 
-		if (gp_resource_group_enable_cgroup_version_two)
-		{
-			if (strcmp(me->mnt_type, "cgroup2"))
-				continue;
-		}
-		else
-		{
-			if (strcmp(me->mnt_type, "cgroup"))
-				continue;
-		}
-
 		if (!gp_resource_group_enable_cgroup_version_two)
 		{
+			/* For version 1, we need to find the mnt_type equals to "cgroup" */
+			if (strcmp(me->mnt_type, "cgroup"))
+				continue;
+
 			strncpy(cgroupSystemInfo->cgroup_dir, me->mnt_dir, sizeof(cgroupSystemInfo->cgroup_dir) - 1);
 
 			p = strrchr(cgroupSystemInfo->cgroup_dir, '/');
@@ -571,6 +564,10 @@ getCgroupMountDir()
 		}
 		else
 		{
+			/* For version 2, we need to find the mnt_type equals to "cgroup2" */
+			if (strcmp(me->mnt_type, "cgroup2"))
+				continue;
+
 			strncpy(cgroupSystemInfo->cgroup_dir, me->mnt_dir, sizeof(cgroupSystemInfo->cgroup_dir));
 		}
 

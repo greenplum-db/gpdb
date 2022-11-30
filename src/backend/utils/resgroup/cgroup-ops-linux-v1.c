@@ -54,12 +54,12 @@ static CGroupSystemInfo cgroupSystemInfoAlpha = {
 
 
 /*
- * cgroup memory permission is only mandatory on 6.x and master;
+ * cgroup memory permission is only mandatory on 6.x and main;
  * on 5.x we need to make it optional to provide backward compatibilities.
  */
 #define CGROUP_MEMORY_IS_OPTIONAL (GP_VERSION_NUM < 60000)
 /*
- * cpuset permission is only mandatory on 6.x and master;
+ * cpuset permission is only mandatory on 6.x and main;
  * on 5.x we need to make it optional to provide backward compatibilities.
  */
 #define CGROUP_CPUSET_IS_OPTIONAL (GP_VERSION_NUM < 60000)
@@ -402,7 +402,6 @@ perm_list_check_alpha(const PermList *permlist, Oid group, bool report)
  *
  * - if report is true then raise an error if any mandatory permission
  *   is not met;
- * - otherwise only return false;
  */
 static bool
 check_permission_alpha(Oid group, bool report)
@@ -421,8 +420,7 @@ check_permission_alpha(Oid group, bool report)
 }
 
 /*
- * Same as checkPermission, just check cpuset dir & interface files
- *
+ * Same as check_permission, just check cpuset dir & interface files.
  */
 static bool
 check_cpuset_permission_alpha(Oid group, bool report)
@@ -646,24 +644,20 @@ getcgroupname_v1(void)
  * Probe the configuration for the OS group implementation.
  *
  * Return true if everything is OK, or false is some requirements are not
- * satisfied.  Will not fail in either case.
+ * satisfied.
  */
 static bool
 probecgroup_v1(void)
 {
 	/*
 	 * Ignore the error even if cgroup mount point can not be successfully
-	 * probed, the error will be reported in Bless() later.
+	 * probed, the error will be reported in checkcgroup() later.
 	 */
 	if (!getCgroupMountDir())
 		return false;
 
 	detect_component_dirs_alpha();
 
-	/*
-	 * Probe for optional features like the 'cgroup' memory auditor,
-	 * do not raise any errors.
-	 */
 	if (!check_permission_alpha(CGROUP_ROOT_ID, false))
 		return false;
 
@@ -681,13 +675,12 @@ checkcgroup_v1(void)
 	 * We only have to do these checks and initialization once on each host,
 	 * so only let postmaster do the job.
 	 */
-	if (IsUnderPostmaster)
-		return;
+	Assert(!IsUnderPostmaster);
 
 	/*
-	 * We should have already detected for cgroup mount point in Probe(),
+	 * We should have already detected for cgroup mount point in probecgroup(),
 	 * it was not an error if the detection failed at that step.  But once
-	 * we call Bless() we know we want to make use of cgroup then we must
+	 * we call checkcgroup() we know we want to make use of cgroup then we must
 	 * know the mount point, otherwise it's a critical error.
 	 */
 	if (!cgroupSystemInfoAlpha.cgroup_dir[0])
@@ -701,8 +694,8 @@ checkcgroup_v1(void)
 	/*
  	 * Check if cpu and cpuset subsystems are mounted on the same hierarchy.
  	 * We do not allow they mount on the same hierarchy, because writing pid
- 	 * to DEFAULT_CPUSET_GROUP_ID in ResGroupOps_AssignGroup will cause the
- 	 * removal of the pid in group BASETYPE_GPDB, which will make cpu usage
+ 	 * to DEFAULT_CPUSET_GROUP_ID in attachcgroup will cause the
+ 	 * removal of the pid in group BASEDIR_GPDB, which will make cpu usage
  	 * out of control.
 	 */
 	if (!CGROUP_CPUSET_IS_OPTIONAL)
@@ -710,13 +703,13 @@ checkcgroup_v1(void)
 
 	/*
 	 * Dump the cgroup comp dirs to logs.
-	 * Check detectComponentDirs() to know why this is not done in that function.
+	 * Check detect_component_dirs() to know why this is not done in that function.
 	 */
 	dump_component_dirs_alpha();
 
 	/*
 	 * Get some necessary system information.
-	 * We can not do them in Probe() as failure is not allowed in that one.
+	 * We can not do them in probecgroup() as failure is not allowed in that one.
 	 */
 
 	/* get system cpu cores */
@@ -873,9 +866,11 @@ create_default_cpuset_group_alpha(void)
 static void
 attachcgroup_v1(Oid group, int pid, bool is_cpuset_enabled)
 {
-	/* needn't write to file if the pid has already been written in.
+	/*
+	 * needn't write to file if the pid has already been written in.
 	 * Unless it has not been written or the group has changed or
-	 * cpu control mechanism has changed */
+	 * cpu control mechanism has changed.
+	 */
 	if (IsUnderPostmaster && group == currentGroupIdInCGroup)
 		return;
 

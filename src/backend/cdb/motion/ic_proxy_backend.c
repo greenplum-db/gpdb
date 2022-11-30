@@ -456,7 +456,9 @@ void
 ic_proxy_backend_init_context(ChunkTransportState *state)
 {
 	ICProxyBackendContext *context;
-	
+
+	SIMPLE_FAULT_INJECTOR("ic_proxy_backend_init_context");
+
 	/* initialize backend context */
 	state->proxyContext = palloc0(sizeof(ICProxyBackendContext));
 	state->proxyContext->transportState = state;

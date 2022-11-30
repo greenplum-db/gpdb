@@ -155,4 +155,10 @@ s/\(dbsize\.c:\d+\)/\(dbsize\.c:XXX\)/
 m/ \(cdbdisp_async\.c.*\)/
 s/ \(cdbdisp_async\.c.*\)//
 
+# ignore establish time and segindex num
+m/ The shortest establish conn time: \d+\.\d+ ms, segindex: \d+,/
+s/ The shortest establish conn time: \d+\.\d+ ms, segindex: \d+,/ The shortest establish conn time: xx\.xx ms, segindex: xx,/
+m/ The longest  establish conn time: \d+\.\d+ ms, segindex: \d+/
+s/ The longest  establish conn time: \d+\.\d+ ms, segindex: \d+/ The longest  establish conn time: xx\.xx ms, segindex: xx/
+
 -- end_matchsubs

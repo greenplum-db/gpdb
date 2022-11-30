@@ -890,6 +890,10 @@ _bt_vacuum_needs_cleanup(IndexVacuumInfo *info)
 	BTMetaPageData *metad;
 	bool		result = false;
 
+	/* Return true directly on QE for stats collection from QD. */
+	if (gp_vacuum_needs_update_stats())
+		return true;
+
 	metabuf = _bt_getbuf(info->index, BTREE_METAPAGE, BT_READ);
 	metapg = BufferGetPage(metabuf);
 	metad = BTPageGetMeta(metapg);

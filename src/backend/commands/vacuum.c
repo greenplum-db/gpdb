@@ -74,7 +74,8 @@
 
 typedef struct VacuumStatsContext
 {
-	List	   *updated_stats;
+	List		*updated_stats;
+	int			nsegs;
 } VacuumStatsContext;
 
 /*
@@ -107,7 +108,7 @@ static void dispatchVacuum(VacuumParams *params, Oid relid,
 static List *vacuum_params_to_options_list(VacuumParams *params);
 static void vacuum_combine_stats(VacuumStatsContext *stats_context,
 								 CdbPgResults *cdb_pgresults);
-static void vac_update_relstats_from_list(List *updated_stats);
+static void vac_update_relstats_from_list(VacuumStatsContext *stats_context);
 
 /*
  * Primary entry point for manual VACUUM and ANALYZE commands
@@ -2446,7 +2447,7 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 
 		stats_context.updated_stats = NIL;
 		dispatchVacuum(params, relid, &stats_context);
-		vac_update_relstats_from_list(stats_context.updated_stats);
+		vac_update_relstats_from_list(&stats_context);
 
 		/* Also update pg_stat_last_operation */
 		if (IsAutoVacuumWorkerProcess())
@@ -2763,6 +2764,8 @@ vacuum_combine_stats(VacuumStatsContext *stats_context, CdbPgResults *cdb_pgresu
 	if (cdb_pgresults == NULL || cdb_pgresults->numResults <= 0)
 		return;
 
+	stats_context->nsegs = cdb_pgresults->numDispatches;
+
 	/*
 	 * Process the dispatch results from the primary. Note that the QE
 	 * processes also send back the new stats info, such as stats on
@@ -2775,9 +2778,7 @@ vacuum_combine_stats(VacuumStatsContext *stats_context, CdbPgResults *cdb_pgresu
 	 *
 	 */
 	for(result_no = 0; result_no < cdb_pgresults->numResults; result_no++)
-	{
-		VPgClassStats *pgclass_stats = NULL;
-		ListCell *lc = NULL;
+	{		
 		struct pg_result *pgresult = cdb_pgresults->pg_results[result_no];
 
 		if (pgresult->extras == NULL || pgresult->extraType != PGExtraTypeVacuumStats)
@@ -2789,30 +2790,38 @@ vacuum_combine_stats(VacuumStatsContext *stats_context, CdbPgResults *cdb_pgresu
 		 * Process the stats for pg_class. We simply compute the maximum
 		 * number of rel_tuples and rel_pages.
 		 */
-		pgclass_stats = (VPgClassStats *) pgresult->extras;
+		VPgClassStatsCombo *pgclass_stats_combo = (VPgClassStatsCombo *) pgresult->extras;
+		ListCell *lc = NULL;
+
 		foreach (lc, stats_context->updated_stats)
 		{
-			VPgClassStats *tmp_stats = (VPgClassStats *) lfirst(lc);
+			VPgClassStatsCombo *tmp_stats_combo = (VPgClassStatsCombo *) lfirst(lc);
 
-			if (tmp_stats->relid == pgclass_stats->relid)
+			if (tmp_stats_combo->relid == pgclass_stats_combo->relid)
 			{
-				tmp_stats->rel_pages += pgclass_stats->rel_pages;
-				tmp_stats->rel_tuples += pgclass_stats->rel_tuples;
-				tmp_stats->relallvisible += pgclass_stats->relallvisible;
+				tmp_stats_combo->rel_pages += pgclass_stats_combo->rel_pages;
+				tmp_stats_combo->rel_tuples += pgclass_stats_combo->rel_tuples;
+				tmp_stats_combo->relallvisible += pgclass_stats_combo->relallvisible;
+				/* 
+				 * Accumulate the number of QEs, assuming sending only once
+				 * per QE for each relid in the VACUUM scenario.
+				 */
+				tmp_stats_combo->count++;
 				break;
 			}
 		}
 
-		if (lc == NULL)
+		if (lc == NULL) /* get the first stats result of the current relid */
 		{
 			Assert(pgresult->extraslen == sizeof(VPgClassStats));
 
 			old_context = MemoryContextSwitchTo(vac_context);
-			pgclass_stats = palloc(sizeof(VPgClassStats));
-			memcpy(pgclass_stats, pgresult->extras, pgresult->extraslen);
+			pgclass_stats_combo = palloc(sizeof(VPgClassStatsCombo));
+			memcpy(pgclass_stats_combo, pgresult->extras, pgresult->extraslen);
+			pgclass_stats_combo->count = 1;
 
 			stats_context->updated_stats =
-				lappend(stats_context->updated_stats, pgclass_stats);
+				lappend(stats_context->updated_stats, pgclass_stats_combo);
 			MemoryContextSwitchTo(old_context);
 		}
 	}
@@ -2822,8 +2831,9 @@ vacuum_combine_stats(VacuumStatsContext *stats_context, CdbPgResults *cdb_pgresu
  * Update relpages/reltuples of all the relations in the list.
  */
 static void
-vac_update_relstats_from_list(List *updated_stats)
+vac_update_relstats_from_list(VacuumStatsContext *stats_context)
 {
+	List *updated_stats = stats_context->updated_stats;
 	ListCell *lc;
 
 	/*
@@ -2834,30 +2844,70 @@ vac_update_relstats_from_list(List *updated_stats)
 
 	foreach (lc, updated_stats)
 	{
-		VPgClassStats *stats = (VPgClassStats *) lfirst(lc);
+		VPgClassStatsCombo *stats = (VPgClassStatsCombo *) lfirst(lc);
 		Relation	rel;
 
 		rel = relation_open(stats->relid, AccessShareLock);
 
 		if (GpPolicyIsReplicated(rel->rd_cdbpolicy))
 		{
+			Assert(stats->count == rel->rd_cdbpolicy->numsegments);
+
 			stats->rel_pages = stats->rel_pages / rel->rd_cdbpolicy->numsegments;
 			stats->rel_tuples = stats->rel_tuples / rel->rd_cdbpolicy->numsegments;
 			stats->relallvisible = stats->relallvisible / rel->rd_cdbpolicy->numsegments;
 		}
 
 		/*
-		 * Pass 'false' for isvacuum, so that the stats are
-		 * actually updated.
+		 * Update QD stats only when receiving all dispatched QEs' stats, to
+		 * avoid being overwritten by a partial accumulated value (i.e., index->reltuples)
+		 * in case when not receiving all QEs' stats.
 		 */
-		vac_update_relstats(rel,
-							stats->rel_pages, stats->rel_tuples,
-							stats->relallvisible,
-							rel->rd_rel->relhasindex,
-							InvalidTransactionId,
-							InvalidMultiXactId,
-							false,
-							false /* isvacuum */);
+		if (stats_context->nsegs > 0 && stats->count == stats_context->nsegs)
+		{
+			/*
+			 * Pass 'false' for isvacuum, so that the stats are
+			 * actually updated.
+			 */
+			vac_update_relstats(rel,
+								stats->rel_pages, stats->rel_tuples,
+								stats->relallvisible,
+								rel->rd_rel->relhasindex,
+								InvalidTransactionId,
+								InvalidMultiXactId,
+								false,
+								false /* isvacuum */);
+		}
+		else
+		{
+			/*
+			 * We do have chance to enter this branch in the case when in compact phase.
+			 * For example, in compact phase, some QEs may need to drop dead segfiles,
+			 * while others may not. Only the QEs which dropping dead segfiles could go to
+			 * vacuum indexes path then update and send the statistics to QD, QD just
+			 * collected part of QEs' stats hence should not be as the final result to
+			 * overwrite QD's stats. 
+			 * 
+			 * One may think why not having the stats update only happens in the final
+			 * phase (POST_CLEANUP_PHASE), yes that's an alternative to get a final stats
+			 * accurately for QD. 
+			 * 
+			 * Given the AO/CO VACUUM is a multi-phases process which may have an interval
+			 * between each phase. In real circumstance, concurrent VACUUM is mostly a heavy
+			 * job and this interval could get longer than normal cases, hence it seems
+			 * better to collect and update QD's stats timely. So current strategy is, QD always 
+			 * collect QE's stats across phases, once we collected the expected number (means
+			 * same as dispatched QE number) of QE's stats, we update QD's stats subsequently,
+			 * instead of updating at the final phase.
+			 * 
+			 * Set the logging level to LOG as skipping sending stats here is not considered as
+			 * a real issue, displaying it in log may be helpful to hint.
+			 */
+			elog(LOG, "Vacuum update stats oid=%u pages=%d tuples=%f was skipped because "
+				 "collected segment number %d didn't match the expected %d.", stats->relid,
+				 stats->rel_pages, stats->rel_tuples, stats->count, stats_context->nsegs);
+		}
+
 		relation_close(rel, AccessShareLock);
 	}
 }
@@ -2922,4 +2972,19 @@ vacuumStatement_IsTemporary(Relation onerel)
 	if (!bTemp)
 		bTemp = isAnyTempNamespace(RelationGetNamespace(onerel));
 	return bTemp;
+}
+
+/*
+ * GPDB: Check whether needs to update or send stats from QE to QD.
+ * This is GPDB specific check in vacuum-index scenario for collecting
+ * QEs' stats (such as index->relpages and index->reltuples) on QD.
+ * GPDB needs accumulating all QEs' stats for updating corresponding 
+ * statistics into QD's pg_class correctly. So if current instance is
+ * acting as QE, it should scan and send its current stats to QD instead
+ * of skipping them for cost saving.
+ */
+bool
+gp_vacuum_needs_update_stats(void)
+{
+	return (Gp_role == GP_ROLE_EXECUTE);
 }

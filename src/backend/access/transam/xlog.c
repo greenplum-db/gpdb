@@ -8425,7 +8425,9 @@ ReadCheckpointRecord(XLogReaderState *xlogreader, XLogRecPtr RecPtr,
 	uint8		info;
 	bool sizeOk;
 	uint32 chkpt_len;
-	uint32 chkpt_tot_len;
+	uint32 chkpt_hdr_len_short;
+	uint32 chkpt_hdr_len_long;
+	bool length_match;
 
 	if (!XRecOffIsValid(RecPtr))
 	{
@@ -8506,16 +8508,24 @@ ReadCheckpointRecord(XLogReaderState *xlogreader, XLogRecPtr RecPtr,
 	/*
 	 * GPDB: Verify the Checkpoint record length. For an extended Checkpoint
 	 * record (when record total length is greater than regular checkpoint
-	 * record total length), compare the difference between the regular
-	 * checkpoint size and the extended variable size.
+	 * record total length, e.g. in the case of containing DTX info), compare
+	 * the difference between the regular checkpoint size and the extended
+	 * variable size.
 	 */
 	sizeOk = false;
 	chkpt_len = XLogRecGetDataLen(xlogreader);
-	chkpt_tot_len = SizeOfXLogRecord + SizeOfXLogRecordDataHeaderShort + sizeof(CheckPoint);
-	if ((chkpt_len == sizeof(CheckPoint) && record->xl_tot_len == chkpt_tot_len) ||
+	chkpt_hdr_len_short = SizeOfXLogRecord + SizeOfXLogRecordDataHeaderShort + sizeof(CheckPoint);
+	chkpt_hdr_len_long = SizeOfXLogRecord + SizeOfXLogRecordDataHeaderLong + sizeof(CheckPoint);
+
+	if (chkpt_len > 255) /* for XLR_BLOCK_ID_DATA_LONG */
+		length_match = ((chkpt_len - sizeof(CheckPoint)) == (record->xl_tot_len - chkpt_hdr_len_long));
+	else /* for XLR_BLOCK_ID_DATA_SHORT */
+		length_match = ((chkpt_len - sizeof(CheckPoint)) == (record->xl_tot_len - chkpt_hdr_len_short));
+
+	if ((chkpt_len == sizeof(CheckPoint) && record->xl_tot_len == chkpt_hdr_len_short) ||
 		((chkpt_len > sizeof(CheckPoint) &&
-		  record->xl_tot_len > chkpt_tot_len &&
-		  ((chkpt_len - sizeof(CheckPoint)) == (record->xl_tot_len - chkpt_tot_len)))))
+		  record->xl_tot_len > chkpt_hdr_len_short &&
+		  length_match)))
 		sizeOk = true;
 
 	if (!sizeOk)

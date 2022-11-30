@@ -204,7 +204,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.417862.1.0" Name="touter" Rows="10.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.417862.1.0" Name="touter" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.417862.1.0" Name="touter" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -241,7 +241,7 @@
         </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.417865.1.0" Name="tinner" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.417865.1.0" Name="tinner" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.417865.1.0" Name="tinner" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -279,11 +279,11 @@
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
         </dxl:DistrOpfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.417865001.1.0"/>
-          <dxl:Partition Mdid="0.417865002.1.0"/>
+          <dxl:Partition Mdid="6.417865001.1.0"/>
+          <dxl:Partition Mdid="6.417865002.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.417865001.1.0" Name="tinner_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.417865001.1.0" Name="tinner_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -336,7 +336,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.417865002.1.0" Name="tinner_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.417865002.1.0" Name="tinner_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -394,8 +394,8 @@
           <dxl:Opfamily Mdid="0.7027.1.0"/>
         </dxl:Opfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.417881001.1.0"/>
-          <dxl:Partition Mdid="0.417881002.1.0"/>
+          <dxl:Partition Mdid="6.417881001.1.0"/>
+          <dxl:Partition Mdid="6.417881002.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
       <dxl:ColumnStatistics Mdid="1.417865.1.0.1" Name="b" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
@@ -439,7 +439,7 @@
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Left">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.417862.1.0" TableName="touter">
+          <dxl:TableDescriptor Mdid="6.417862.1.0" TableName="touter">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -454,7 +454,7 @@
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.417865.1.0" TableName="tinner">
+          <dxl:TableDescriptor Mdid="6.417865.1.0" TableName="tinner">
             <dxl:Columns>
               <dxl:Column ColId="10" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -539,7 +539,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.417862.1.0" TableName="touter">
+            <dxl:TableDescriptor Mdid="6.417862.1.0" TableName="touter">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>

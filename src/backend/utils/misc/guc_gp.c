@@ -137,7 +137,6 @@ bool        Test_print_prefetch_joinqual = false;
 bool		Test_copy_qd_qe_split = false;
 bool		gp_permit_relation_node_change = false;
 int			gp_max_local_distributed_cache = 1024;
-bool		gp_appendonly_enable_unique_index = false;
 bool		gp_appendonly_verify_block_checksums = true;
 bool		gp_appendonly_verify_write_block = false;
 bool		gp_appendonly_compaction = true;
@@ -155,6 +154,7 @@ bool		Debug_datumstream_read_print_varlena_info = false;
 bool		Debug_datumstream_write_use_small_initial_buffers = false;
 bool		gp_create_table_random_default_distribution = true;
 bool		gp_allow_non_uniform_partitioning_ddl = true;
+bool		gp_print_create_gang_time = false;
 int			dtx_phase2_retry_second = 0;
 
 bool gp_log_suboverflow_statement = false;
@@ -231,7 +231,6 @@ bool		execute_pruned_plan = false;
 bool		gp_maintenance_mode;
 bool		gp_maintenance_conn;
 bool		allow_segment_DML;
-bool		gp_allow_rename_relation_without_lock = false;
 
 /* Time based authentication GUC */
 char	   *gp_auth_time_override_str = NULL;
@@ -594,16 +593,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		NULL, NULL, NULL
 	},
 	{
-		{"gp_allow_rename_relation_without_lock", PGC_USERSET, CUSTOM_OPTIONS,
-			gettext_noop("Allow ALTER TABLE RENAME without AccessExclusiveLock"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_allow_rename_relation_without_lock,
-		false,
-		NULL, NULL, NULL
-	},
-	{
 		{"enable_groupagg", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enables the planner's use of grouping aggregation plans."),
 			NULL
@@ -842,17 +831,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_debug_pgproc,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_appendonly_enable_unique_index", PGC_USERSET, DEVELOPER_OPTIONS,
-		 gettext_noop("Enable unique indexes on AO/CO tables (experimental)."),
-		 NULL,
-		 GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&gp_appendonly_enable_unique_index,
 		false,
 		NULL, NULL, NULL
 	},
@@ -1734,6 +1712,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_allow_non_uniform_partitioning_ddl,
 		true,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_print_create_gang_time", PGC_USERSET, CUSTOM_OPTIONS,
+			gettext_noop("Allow print information about create gang time."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&gp_print_create_gang_time,
+		false,
 		NULL, NULL, NULL
 	},
 

@@ -30,33 +30,13 @@ class FullRecovery(Command):
         cmd = PgBaseBackup(self.recovery_info.target_datadir,
                            self.recovery_info.source_hostname,
                            str(self.recovery_info.source_port),
-                           create_slot=False,
+                           create_slot=True,
                            replication_slot_name=self.replicationSlotName,
                            forceoverwrite=self.forceoverwrite,
                            target_gp_dbid=self.recovery_info.target_segment_dbid,
                            progress_file=self.recovery_info.progress_file)
         self.logger.info("Running pg_basebackup with progress output temporarily in %s" % self.recovery_info.progress_file)
-        try:
-            cmd.run(validateAfter=True)
-        except Exception as e: #TODO should this be ExecutionError?
-            self.logger.info("Running pg_basebackup failed: {}".format(str(e)))
-
-            #  If the cluster never has mirrors, cmd will fail
-            #  quickly because the internal slot doesn't exist.
-            #  Re-run with `create_slot`.
-            #  GPDB_12_MERGE_FIXME could we check it before? or let
-            #  pg_basebackup create slot if not exists.
-            cmd = PgBaseBackup(self.recovery_info.target_datadir,
-                               self.recovery_info.source_hostname,
-                               str(self.recovery_info.source_port),
-                               create_slot=True,
-                               replication_slot_name=self.replicationSlotName,
-                               forceoverwrite=True,
-                               target_gp_dbid=self.recovery_info.target_segment_dbid,
-                               progress_file=self.recovery_info.progress_file)
-            self.logger.info("Re-running pg_basebackup, creating the slot this time")
-            cmd.run(validateAfter=True)
-
+        cmd.run(validateAfter=True)
         self.error_type = RecoveryErrorType.DEFAULT_ERROR
         self.logger.info("Successfully ran pg_basebackup for dbid: {}".format(
             self.recovery_info.target_segment_dbid))

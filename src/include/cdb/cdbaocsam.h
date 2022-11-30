@@ -235,11 +235,36 @@ typedef struct AOCSFetchDescData
 
 typedef AOCSFetchDescData *AOCSFetchDesc;
 
+/*
+ * AOCSDeleteDescData is used for delete data from AOCS relations.
+ * It serves an equivalent purpose as AppendOnlyScanDescData
+ * (relscan.h) only that the later is used for scanning append-only
+ * relations.
+ */
+typedef struct AOCSDeleteDescData
+{
+	/*
+	 * Relation to delete from
+	 */
+	Relation	aod_rel;
+
+	/*
+	 * visibility map
+	 */
+	AppendOnlyVisimap visibilityMap;
+
+	/*
+	 * Visimap delete support structure. Used to handle out-of-order deletes
+	 */
+	AppendOnlyVisimapDelete visiMapDelete;
+
+}			AOCSDeleteDescData;
 typedef struct AOCSDeleteDescData *AOCSDeleteDesc;
 
 typedef struct AOCSUniqueCheckDescData
 {
 	AppendOnlyBlockDirectory *blockDirectory;
+	AppendOnlyVisimap 		 *visimap;
 } AOCSUniqueCheckDescData;
 
 typedef struct AOCSUniqueCheckDescData *AOCSUniqueCheckDesc;
@@ -351,7 +376,7 @@ extern void aocs_addcol_emptyvpe(
 extern void aocs_addcol_setfirstrownum(AOCSAddColumnDesc desc,
 		int64 firstRowNum);
 
-extern void aoco_dml_init(Relation relation, CmdType operation);
-extern void aoco_dml_finish(Relation relation, CmdType operation);
+extern void aoco_dml_init(Relation relation);
+extern void aoco_dml_finish(Relation relation);
 
 #endif   /* AOCSAM_H */

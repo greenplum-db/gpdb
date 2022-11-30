@@ -218,6 +218,14 @@ Sets the default statistics sampling target \(the number of values that are stor
 |-----------|-------|-------------------|
 |0 \> Integer \> 10000|100|master, session, reload|
 
+## <a id="default_table_access_method"></a>default_table_access_method
+
+Sets the default table access method when a `CREATE TABLE` command does not explicitly specify an access method.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|heap, ao_row, ao_column|heap|master, session|
+
 ## <a id="default_tablespace"></a>default\_tablespace 
 
 The default tablespace in which to create objects \(tables and indexes\) when a `CREATE` command does not explicitly specify a tablespace.
@@ -1225,11 +1233,11 @@ Identifies the maximum percentage of system memory resources to allocate to reso
 
 **Note:** When resource group-based resource management is active, the memory allotted to a segment host is equally shared by active primary segments. Greenplum Database assigns memory to primary segments when the segment takes the primary role. The initial memory allotment to a primary segment does not change, even in a failover situation. This may result in a segment host utilizing more memory than the `gp_resource_group_memory_limit` setting permits.
 
-For example, suppose your Greenplum Database cluster is utilizing the default `gp_resource_group_memory_limit` of `0.7` and a segment host named `seghost1` has 4 primary segments and 4 mirror segments. Greenplum Database assigns each primary segment on `seghost1` `(0.7 / 4 = 0.175%)` of overall system memory. If failover occurs and two mirrors on `seghost1` fail over to become primary segments, each of the original 4 primaries retain their memory allotment of `0.175`, and the two new primary segments are each allotted `(0.7 / 6 = 0.116%)` of system memory. `seghost1`'s overall memory allocation in this scenario is
+For example, suppose your Greenplum Database cluster is utilizing the default `gp_resource_group_memory_limit` of `0.7` and a segment host named `seghost1` has 4 primary segments and 4 mirror segments. Greenplum Database assigns each primary segment on `seghost1` `(0.7 / 4 = 0.175)` of overall system memory. If failover occurs and two mirrors on `seghost1` fail over to become primary segments, each of the original 4 primaries retain their memory allotment of `0.175`, and the two new primary segments are each allotted `(0.7 / 6 = 0.116)` of system memory. `seghost1`'s overall memory allocation in this scenario is
 
 ```
 
-0.7 + (0.116 * 2) = 0.932%
+0.7 + (0.116 * 2) = 0.932
 ```
 
 which is above the percentage configured in the `gp_resource_group_memory_limit` setting.

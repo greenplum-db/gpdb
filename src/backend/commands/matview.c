@@ -334,8 +334,8 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 	 * it against access by any other process until commit (by which time it
 	 * will be gone).
 	 */
-	OIDNewHeap = make_new_heap(matviewOid, tableSpace, matviewRel->rd_rel->relam, relpersistence,
-							   ExclusiveLock, false, true);
+	OIDNewHeap = make_new_heap_with_colname(matviewOid, tableSpace, matviewRel->rd_rel->relam, NULL, relpersistence,
+							   ExclusiveLock, false, true, "_$");
 	LockRelationOid(OIDNewHeap, AccessExclusiveLock);
 	dest = CreateTransientRelDestReceiver(OIDNewHeap, matviewOid, concurrent, relpersistence,
 										  stmt->skipData);
@@ -444,7 +444,7 @@ refresh_matview_datafill(DestReceiver *dest, Query *query,
 	 *
 	 * See Github Issue for details: https://github.com/greenplum-db/gpdb/issues/11956
 	 */
-	List       *saved_dispatch_oids = GetAssignedOidsForDispatch();
+	List       *saved_dispatch_oids = SaveOidAssignments();
 
 	/* Lock and rewrite, using a copy to preserve the original query. */
 	copied_query = copyObject(query);
@@ -576,7 +576,7 @@ transientrel_init(QueryDesc *queryDesc)
 	 * will be gone).
 	 */
 	OIDNewHeap = make_new_heap(matviewOid, tableSpace, matviewRel->rd_rel->relam,
-							   relpersistence,
+							   NULL, relpersistence,
 							   ExclusiveLock, false, false);
 	LockRelationOid(OIDNewHeap, AccessExclusiveLock);
 
@@ -613,10 +613,8 @@ transientrel_startup(DestReceiver *self, int operation, TupleDesc typeinfo)
 	myState->bistate = GetBulkInsertState();
 	myState->processed = 0;
 
-	if (RelationIsAoRows(myState->transientrel))
-		appendonly_dml_init(myState->transientrel, CMD_INSERT);
-	else if (RelationIsAoCols(myState->transientrel))
-		aoco_dml_init(myState->transientrel, CMD_INSERT);
+	if (myState->transientrel->rd_tableam)
+		table_dml_init(myState->transientrel);
 
 	/* Not using WAL requires smgr_targblock be initially invalid */
 	Assert(RelationGetTargetBlock(transientrel) == InvalidBlockNumber);
@@ -762,6 +760,7 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 	char	   *tempname;
 	char	   *diffname;
 	TupleDesc	tupdesc;
+	TupleDesc       newHeapDesc;
 	bool		foundUniqueIndex;
 	List	   *indexoidlist;
 	ListCell   *indexoidscan;
@@ -830,7 +829,7 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 
 	/* Get distribute key of matview */
 	distributed =  TextDatumGetCString(DirectFunctionCall1(pg_get_table_distributedby,
-														   ObjectIdGetDatum(matviewOid)));
+														   ObjectIdGetDatum(tempOid)));
 
 	/* Start building the query for creating the diff table. */
 	resetStringInfo(&querybuf);
@@ -848,6 +847,7 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 	 * include all rows.
 	 */
 	tupdesc = matviewRel->rd_att;
+	newHeapDesc = tempRel->rd_att;
 	opUsedForQual = (Oid *) palloc0(sizeof(Oid) * relnatts);
 	foundUniqueIndex = false;
 
@@ -882,6 +882,7 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 				int			attnum = indexStruct->indkey.values[i];
 				Oid			opclass = indclass->values[i];
 				Form_pg_attribute attr = TupleDescAttr(tupdesc, attnum - 1);
+				Form_pg_attribute newattr = TupleDescAttr(newHeapDesc, attnum - 1);
 				Oid			attrtype = attr->atttypid;
 				HeapTuple	cla_ht;
 				Form_pg_opclass cla_tup;
@@ -932,7 +933,7 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 					appendStringInfoString(&querybuf, " AND ");
 
 				leftop = quote_qualified_identifier("newdata",
-													NameStr(attr->attname));
+													NameStr(newattr->attname));
 				rightop = quote_qualified_identifier("mv",
 													 NameStr(attr->attname));
 
@@ -963,8 +964,8 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 
 
 	appendStringInfoString(&querybuf,
-						   " AND newdata OPERATOR(pg_catalog.*=) mv) "
-						   "WHERE newdata IS NULL OR mv IS NULL "
+						   " AND newdata.* OPERATOR(pg_catalog.*=) mv.*) "
+						   "WHERE newdata.* IS NULL OR mv.* IS NULL "
 						   "ORDER BY tid ");
 	appendStringInfoString(&querybuf, distributed);
 
@@ -1002,10 +1003,10 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 	/* Inserts go last. */
 	resetStringInfo(&querybuf);
 	appendStringInfo(&querybuf, "INSERT INTO %s SELECT", matviewname);
-	for (int i = 0; i < tupdesc->natts; ++i)
+	for (int i = 0; i < newHeapDesc->natts; ++i)
 	{
-		Form_pg_attribute attr = TupleDescAttr(tupdesc, i);
-		if (i == tupdesc->natts - 1)
+		Form_pg_attribute attr = TupleDescAttr(newHeapDesc, i);
+		if (i == newHeapDesc->natts - 1)
 			appendStringInfo(&querybuf, " %s", NameStr(attr->attname));
 		else
 			appendStringInfo(&querybuf, " %s,", NameStr(attr->attname));

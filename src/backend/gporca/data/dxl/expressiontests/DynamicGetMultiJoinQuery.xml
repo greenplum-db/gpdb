@@ -23,7 +23,7 @@
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalJoin JoinType="Inner">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.25647.1.0" TableName="foo1">
+            <dxl:TableDescriptor Mdid="6.25647.1.0" TableName="foo1">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -39,7 +39,7 @@
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.26031.1.0" TableName="foo2">
+            <dxl:TableDescriptor Mdid="6.26031.1.0" TableName="foo2">
               <dxl:Columns>
                 <dxl:Column ColId="11" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="12" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -60,7 +60,7 @@
           </dxl:Comparison>
         </dxl:LogicalJoin>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.26054.1.0" TableName="foo3">
+          <dxl:TableDescriptor Mdid="6.26054.1.0" TableName="foo3">
             <dxl:Columns>
               <dxl:Column ColId="21" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="22" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>

@@ -5959,7 +5959,7 @@ getExtProtocols(Archive *fout, int *numExtProtocols)
 	int			i_ptcvalidid;
 
 	/* find all user-defined external protocol */
-	if (fout->remoteVersion >= 90200)
+	if (fout->remoteVersion >= 90600)
 	{
 		appendPQExpBuffer(query, "SELECT tableoid, "
 								 "oid, "
@@ -16182,7 +16182,20 @@ dumpExternal(Archive *fout, const TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer 
 				appendPQExpBuffer(q, "%s ", fmtId(tbinfo->attnames[j]));
 
 				/* Attribute type */
-				appendPQExpBufferStr(q, tbinfo->atttypnames[j]);
+				if (tbinfo->attisdropped[j])
+				{
+					/*
+					 * ALTER TABLE DROP COLUMN clears
+					 * pg_attribute.atttypid, so we will not have gotten a
+					 * valid type name; insert INTEGER as a stopgap. We'll
+					 * clean things up later.
+					*/
+					appendPQExpBufferStr(q, " INTEGER /* dummy */");
+				}
+				else
+				{
+					appendPQExpBufferStr(q, tbinfo->atttypnames[j]);
+				}
 
 				actual_atts++;
 			}

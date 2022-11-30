@@ -1,0 +1,6 @@
+---
+aws-bucket: gpdb5-assert-concourse-builds-dev
+google-project-id: data-gpdb-cm
+gcs-bucket: pivotal-gpdb-concourse-resources-dev
+gcs-bucket-intermediates: pivotal-gpdb-concourse-resources-intermediates-dev
+gcs-bucket-coverage: pivotal-gpdb-cli-coverage-dev

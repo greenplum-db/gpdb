@@ -80,21 +80,6 @@ typedef enum
 
 #define CGROUP_ROOT_ID (InvalidOid)
 
-/*
- * Default cpuset group is a group manages the cpu cores which not belong to
- * any other cpuset group. All the processes which not belong to any cpuset
- * group will be run on cores in default cpuset group. It is a virtual group,
- * can't be seen in gpdb.
- */
-#define DEFAULT_CPUSET_GROUP_ID 1
-
-/*
- * If cpu_hard_quota_limit is set to this value, it means this feature is disabled.
- * And meanwhile, it also means the process can use CPU resource infinitely.
- */
-#define CPU_HARD_QUOTA_LIMIT_DISABLED (-1)
-
-
 typedef struct CGroupSystemInfo
 {
 	/* The number of CPU cores on this machine */

@@ -2749,10 +2749,8 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 			ExecInitExtraTupleSlot(mtstate->ps.state, ExecGetResultType(mtstate->mt_plans[i]),
 								   table_slot_callbacks(resultRelInfo->ri_RelationDesc));
 
-		if (RelationIsAoRows(resultRelInfo->ri_RelationDesc))
-			appendonly_dml_init(resultRelInfo->ri_RelationDesc, operation);
-		else if (RelationIsAoCols(resultRelInfo->ri_RelationDesc))
-			aoco_dml_init(resultRelInfo->ri_RelationDesc, operation);
+		if (resultRelInfo->ri_RelationDesc->rd_tableam)
+			table_dml_init(resultRelInfo->ri_RelationDesc);
 
 		/* Also let FDWs init themselves for foreign-table result rels */
 		if (!resultRelInfo->ri_usesFdwDirectModify &&
@@ -2980,7 +2978,6 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 	{
 		PlanRowMark *rc = lfirst_node(PlanRowMark, l);
 		ExecRowMark *erm;
-		bool		isdistributed = false;
 
 		/* ignore "parent" rowmarks; they are irrelevant at runtime */
 		if (rc->isParent)
@@ -2989,21 +2986,13 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 		/*
 		 * Like in preprocess_targetlist, ignore distributed tables.
 		 */
-		/*
-		 * GPDB_91_MERGE_FIXME: we are largely just ignoring locking altogether.
-		 * Perhaps that's OK as long as we take a full table lock on any UPDATEs
-		 * or DELETEs. But sure doesn't seem right. Can we do better?
-		 */
 		{
 			RangeTblEntry *rte = rt_fetch(rc->rti, estate->es_plannedstmt->rtable);
 
 			if (rte->rtekind == RTE_RELATION)
 			{
-				Relation relation = heap_open(rte->relid, NoLock);
-				if (GpPolicyIsPartitioned(relation->rd_cdbpolicy))
-					isdistributed = true;
-				heap_close(relation, NoLock);
-				if (isdistributed)
+				GpPolicy *policy = GpPolicyFetch(rte->relid);
+				if (GpPolicyIsPartitioned(policy))
 					continue;
 			}
 		}
@@ -3202,11 +3191,8 @@ ExecEndModifyTable(ModifyTableState *node)
 			resultRelInfo->ri_FdwRoutine->EndForeignModify != NULL)
 			resultRelInfo->ri_FdwRoutine->EndForeignModify(node->ps.state,
 														   resultRelInfo);
-		if (RelationIsAoRows(resultRelInfo->ri_RelationDesc))
-			appendonly_dml_finish(resultRelInfo->ri_RelationDesc,
-								  node->operation);
-		else if(RelationIsAoCols(resultRelInfo->ri_RelationDesc))
-			aoco_dml_finish(resultRelInfo->ri_RelationDesc, node->operation);
+		if (resultRelInfo->ri_RelationDesc->rd_tableam)
+			table_dml_finish(resultRelInfo->ri_RelationDesc);
 	}
 
 	/*

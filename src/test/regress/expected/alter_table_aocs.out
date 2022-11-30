@@ -527,11 +527,6 @@ select attstattarget from pg_attribute where attrelid = 'aocs_addcol.addcol1'::r
 -- test alter distribution policy
 alter table addcol1 set distributed randomly;
 alter table addcol1 set distributed by (a);
--- test some constraints (unique indexes do not work for unique and pkey)
-alter table addcol1 add constraint tunique unique(a);
-ERROR:  append-only tables do not support unique indexes
-alter table addcol1 add constraint tpkey primary key(a);
-ERROR:  append-only tables do not support unique indexes
 alter table addcol1 add constraint tcheck check (a is not null);
 -- test changing the storage type of a column
 alter table addcol1 alter column f_renamed type varchar(7);
@@ -573,11 +568,11 @@ alter table alter_aocs_part_table split default partition start(6) inclusive end
 ERROR:  partition "alter_aocs_part_table_1_prt_11" would overlap partition "alter_aocs_part_table_1_prt_1"
 alter table alter_aocs_part_table split default partition start(7) inclusive end(8) exclusive;
 \d+ alter_aocs_part_table
-                  Partitioned table "aocs_addcol.alter_aocs_part_table"
- Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
---------+---------+-----------+----------+---------+---------+--------------+-------------
- a      | integer |           |          |         | plain   |              | 
- b      | integer |           |          |         | plain   |              | 
+                                            Partitioned table "aocs_addcol.alter_aocs_part_table"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+---------+-----------+----------+---------+---------+--------------+------------------+-------------------+------------+-------------
+ a      | integer |           |          |         | plain   |              | none             | 0                 | 32768      | 
+ b      | integer |           |          |         | plain   |              | none             | 0                 | 32768      | 
 Partition key: RANGE (b)
 Partitions: alter_aocs_part_table_1_prt_1 FOR VALUES FROM (6) TO (7),
             alter_aocs_part_table_1_prt_11 FOR VALUES FROM (7) TO (8),

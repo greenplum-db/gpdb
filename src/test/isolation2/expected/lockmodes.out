@@ -2355,3 +2355,63 @@ COMMIT
 DROP
 1q: ... <quitting>
 2q: ... <quitting>
+
+-- Check that concurrent DROP on leaf partition won't impact analyze on the
+-- parent since analyze will hold a ShareUpdateExclusiveLock and DROP will
+-- require an AccessExclusiveLock.
+-- Case 1. The analyze result is expected when there's concurrent drop on child.
+1:create table analyzedrop(a int) partition by range(a);
+CREATE
+1:create table analyzedrop_1 partition of analyzedrop for values from (0) to (10);
+CREATE
+1:create table analyzedrop_2 partition of analyzedrop for values from (10) to (20);
+CREATE
+1:insert into analyzedrop select * from generate_series(0,19);
+INSERT 20
+1:select gp_inject_fault_infinite('merge_leaf_stats_after_find_children', 'suspend', dbid) from gp_segment_configuration where content = -1 and role = 'p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+1&: analyze analyzedrop;  <waiting ...>
+2&: drop table analyzedrop_1;  <waiting ...>
+3:select gp_inject_fault_infinite('merge_leaf_stats_after_find_children', 'reset', dbid) from gp_segment_configuration where content = -1 and role = 'p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+1<:  <... completed>
+ANALYZE
+2<:  <... completed>
+DROP
+3:select * from pg_stats where tablename like 'analyzedrop%';
+ schemaname | tablename     | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds                                 | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
+------------+---------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+--------------------------------------------------+-------------+-------------------+------------------------+----------------------
+ public     | analyzedrop   | a       | t         | 0         | 4         | -1         |                  |                   | {0,1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19} |             |                   |                        |                      
+ public     | analyzedrop_2 | a       | f         | 0         | 4         | -1         |                  |                   | {10,11,12,13,14,15,16,17,18,19}                  | -0.345455   |                   |                        |                      
+(2 rows)
+-- Case 2. No failure should happen when there's concurrent drop on parent as well.
+1:select gp_inject_fault_infinite('merge_leaf_stats_after_find_children', 'suspend', dbid) from gp_segment_configuration where content = -1 and role = 'p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+1&: analyze analyzedrop;  <waiting ...>
+2&: drop table analyzedrop_2;  <waiting ...>
+3&: drop table analyzedrop;  <waiting ...>
+4:select gp_inject_fault_infinite('merge_leaf_stats_after_find_children', 'reset', dbid) from gp_segment_configuration where content = -1 and role = 'p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+1<:  <... completed>
+ANALYZE
+2<:  <... completed>
+DROP
+3<:  <... completed>
+DROP
+--empty as table is dropped
+4:select * from pg_stats where tablename like 'analyzedrop%';
+ schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
+------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
+(0 rows)

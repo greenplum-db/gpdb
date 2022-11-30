@@ -6,9 +6,6 @@
 -- us to predict block directory entries without having to worry about the
 -- table's distribution.
 
-SET gp_appendonly_enable_unique_index TO ON;
-SET
-
 -- Case 1: Conflict with committed transaction----------------------------------
 CREATE TABLE unique_index_ao_row (a INT unique) USING ao_row DISTRIBUTED REPLICATED;
 CREATE
@@ -405,8 +402,121 @@ CONTEXT:  COPY unique_index_ao_row, line 1
 -- now that tx 1 was aborted, tx 2 is successful.
 2<:  <... completed>
 COPY 3
+1: END;
+END
 
 DROP TABLE unique_index_ao_row;
 DROP
-RESET gp_appendonly_enable_unique_index;
-RESET
+
+--------------------------------------------------------------------------------
+-------------------- Smoke tests for subtransactions ---------------------------
+--------------------------------------------------------------------------------
+CREATE TABLE unique_index_ao_row (a INT unique) USING ao_row DISTRIBUTED REPLICATED;
+CREATE
+
+1: BEGIN;
+BEGIN
+1: SAVEPOINT a;
+SAVEPOINT
+1: INSERT INTO unique_index_ao_row VALUES(1);
+INSERT 1
+
+-- concurrent tx inserting conflicting row should block.
+2: BEGIN;
+BEGIN
+2&: INSERT INTO unique_index_ao_row VALUES(1);  <waiting ...>
+-- concurrent tx inserting non-conflicting row should be successful.
+3: INSERT INTO unique_index_ao_row VALUES(2);
+INSERT 1
+
+-- conflict should be detected within the same subtx.
+1: INSERT INTO unique_index_ao_row VALUES(1);
+ERROR:  duplicate key value violates unique constraint "unique_index_ao_row_a_key"  (seg2 192.168.0.148:7004 pid=3396954)
+DETAIL:  Key (a)=(1) already exists.
+-- the concurrent tx should now succeed.
+2<:  <... completed>
+INSERT 1
+2: ABORT;
+ABORT
+
+-- after rolling back to the savepoint, we should be able to re-insert the key
+1: ROLLBACK TO SAVEPOINT a;
+ROLLBACK
+1: INSERT INTO unique_index_ao_row VALUES(1);
+INSERT 1
+1: COMMIT;
+COMMIT
+
+SELECT * FROM unique_index_ao_row;
+ a 
+---
+ 1 
+ 2 
+(2 rows)
+
+DROP TABLE unique_index_ao_row;
+DROP
+
+--------------------------------------------------------------------------------
+-------------------- Smoke tests for repeatable read ---------------------------
+--------------------------------------------------------------------------------
+
+-- Test that shows that unique index checks transcend transaction isolation
+-- boundaries.
+
+CREATE TABLE unique_index_ao_row (a INT unique) USING ao_row DISTRIBUTED REPLICATED;
+CREATE
+
+-- Begin two txs with tx level snapshot taken early.
+1: BEGIN ISOLATION LEVEL REPEATABLE READ;
+BEGIN
+1: SELECT * FROM unique_index_ao_row;
+ a 
+---
+(0 rows)
+2: BEGIN ISOLATION LEVEL REPEATABLE READ;
+BEGIN
+2: SELECT * FROM unique_index_ao_row;
+ a 
+---
+(0 rows)
+
+-- Now begin a concurrent transaction which inserts a key.
+3: BEGIN;
+BEGIN
+3: INSERT INTO unique_index_ao_row VALUES(1);
+INSERT 1
+
+-- And another transaction inserts a key and commits.
+INSERT INTO unique_index_ao_row VALUES(2);
+INSERT 1
+
+-- Tx should block on insert of conflicting key, even though it can't "see" the
+-- conflicting key due to its isolation level.
+1: SELECT * FROM unique_index_ao_row;
+ a 
+---
+(0 rows)
+1&: INSERT INTO unique_index_ao_row VALUES(1);  <waiting ...>
+
+3: ABORT;
+ABORT
+1<:  <... completed>
+INSERT 1
+1: ABORT;
+ABORT
+
+-- Tx should raise a conflict, even though it can't "see" the conflicting key
+-- due to its isolation level.
+2: SELECT * FROM unique_index_ao_row;
+ a 
+---
+(0 rows)
+2: INSERT INTO unique_index_ao_row VALUES(2);
+ERROR:  duplicate key value violates unique constraint "unique_index_ao_row_a_key"  (seg1 192.168.0.148:7003 pid=3417060)
+DETAIL:  Key (a)=(2) already exists.
+2: ABORT;
+ABORT
+
+DROP TABLE unique_index_ao_row;
+DROP

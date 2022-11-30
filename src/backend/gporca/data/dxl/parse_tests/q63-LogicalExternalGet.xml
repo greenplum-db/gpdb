@@ -9,7 +9,7 @@
     </dxl:OutputColumns>
     <dxl:CTEList/>
     <dxl:LogicalExternalGet>
-      <dxl:TableDescriptor Mdid="0.1565413.1.1" TableName="ext_nation">
+      <dxl:TableDescriptor Mdid="6.1565413.1.1" TableName="ext_nation">
         <dxl:Columns>
           <dxl:Column ColId="1" Attno="1" ColName="n_nationkey" TypeMdid="0.23.1.0"/>
           <dxl:Column ColId="2" Attno="2" ColName="n_name" TypeMdid="0.1042.1.0" ColWidth="25"/>

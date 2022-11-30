@@ -1810,6 +1810,30 @@ CREATE VIEW gp_toolkit.gp_resgroup_status_per_segment AS
 GRANT SELECT ON gp_toolkit.gp_resgroup_status_per_segment TO public;
 
 --------------------------------------------------------------------------------
+-- @view:
+--        gp_toolkit.gp_resgroup_role
+--
+-- @doc:
+--        Assigned resource group to roles
+--
+--------------------------------------------------------------------------------
+
+CREATE VIEW gp_toolkit.gp_resgroup_role
+AS
+    SELECT
+        pgr.rolname AS rrrolname,
+		pgrg.rsgname AS rrrsgname
+	FROM
+		pg_catalog.pg_roles pgr
+	JOIN
+		pg_catalog.pg_resgroup pgrg
+	ON
+		pgr.rolresgroup = pgrg.oid
+	;
+
+GRANT SELECT ON gp_toolkit.gp_resgroup_role TO public;
+
+--------------------------------------------------------------------------------
 -- AO/CO diagnostics functions
 --------------------------------------------------------------------------------
 

@@ -18,7 +18,7 @@
 # under the License.
 # ----------------------------------------------------------------------
 
-"""Generate pipeline (default: gpdb_master-generated.yml) from template (default:
+"""Generate pipeline (default: gpdb_main-generated.yml) from template (default:
 templates/gpdb-tpl.yml).
 
 Python module requirements:
@@ -48,7 +48,7 @@ TEMPLATE_ENVIRONMENT = Environment(
     extensions=['jinja2.ext.loopcontrols']
 )
 
-BASE_BRANCH = "master"  # when branching gpdb update to 7X_STABLE, 6X_STABLE, etc.
+BASE_BRANCH = "main"  # when branching gpdb update to 7X_STABLE, 6X_STABLE, etc.
 
 CI_VARS_PATH = os.path.join(os.getcwd(), '..', 'vars')
 
@@ -68,12 +68,8 @@ JOBS_THAT_ARE_GATES = [
 JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = (
     [
         'combine_cli_coverage',
-        'compile_gpdb_binary_swap_centos7',
         'compile_gpdb_clients_windows',
         'walrep_2',
-        'madlib_build_gppkg',
-        'MADlib_Test_planner_centos7',
-        'MADlib_Test_orca_centos7',
         'Publish Server Builds',
     ] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
 )
@@ -99,7 +95,7 @@ def suggested_git_remote():
 def suggested_git_branch():
     """Try to guess the current git branch"""
     branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"]).decode('utf-8').rstrip()
-    if branch == "master" or is_a_base_branch(branch):
+    if branch == "main" or is_a_base_branch(branch):
         return "<branch-name>"
     return branch
 
@@ -156,10 +152,7 @@ def create_pipeline(args, git_remote, git_branch):
     else:
         test_trigger = "false"
 
-    if args.pipeline_target == 'prod':
-        variables_type = "prod"
-    else:
-        variables_type = "dev"
+    variables_type = args.pipeline_target
 
     context = {
         'template_filename': args.template_filename,
@@ -255,16 +248,16 @@ def print_fly_commands(args, git_remote, git_branch):
         return
     if args.pipeline_target == 'prod':
         print('NOTE: You can set the production pipelines with the following:\n')
-        pipeline_name = "gpdb_%s" % BASE_BRANCH if BASE_BRANCH == "master" else BASE_BRANCH
+        pipeline_name = "gpdb_%s" % BASE_BRANCH if BASE_BRANCH == "main" else BASE_BRANCH
         print(gen_pipeline(args, pipeline_name, ["common_prod.yml"],
                            "https://github.com/greenplum-db/gpdb.git", BASE_BRANCH))
         print(gen_pipeline(args, "%s_without_asserts" % pipeline_name, ["common_prod.yml", "without_asserts_common_prod.yml"],
                            "https://github.com/greenplum-db/gpdb.git", BASE_BRANCH))
         return
 
-    print('NOTE: You can set the developer pipeline with the following:\n')
-    print(gen_pipeline(args, pipeline_name, ["common_prod.yml", "common_dev.yml"], git_remote, git_branch))
-
+    else:
+        print('NOTE: You can set the developer pipeline with the following:\n')
+        print(gen_pipeline(args, pipeline_name, ["common_prod.yml", "common_" + args.pipeline_target + ".yml"], git_remote, git_branch))
 
 def main():
     """main: parse args and create pipeline"""
@@ -297,8 +290,8 @@ def main():
         '--os_types',
         action='store',
         dest='os_types',
-        default=['centos7'],
-        choices=['centos7', 'rhel8', 'ubuntu18.04', 'win'],
+        default=['rhel8'],
+        choices=['rhel8', 'win'],
         nargs='+',
         help='List of OS values to support'
     )
@@ -309,8 +302,9 @@ def main():
         action='store',
         dest='pipeline_target',
         default='dev',
-        help='Concourse target to use either: prod, dev, or <team abbreviation> '
-             'where abbreviation is found from the team\'s ccp secrets file name ending.'
+        help='Concourse target supported: prod, dev, dev2, cm, ud, or dp. '
+             'The Pipeline target value is also used to identify the CI '
+             'project specific common file in the vars directory.'
     )
 
     parser.add_argument(
@@ -411,7 +405,7 @@ def main():
         args.use_ICW_workers = True
 
     if args.pipeline_configuration == 'prod' or args.pipeline_configuration == 'full' or args.directed_release:
-        args.os_types = ['centos6', 'centos7', 'rhel8', 'ubuntu18.04', 'win']
+        args.os_types = ['rhel8', 'win']
         args.test_sections = [
             'ICW',
             'Replication',
@@ -426,7 +420,7 @@ def main():
     git_branch = suggested_git_branch()
 
     # if generating a dev pipeline but didn't specify an output,
-    # don't overwrite the master pipeline
+    # don't overwrite the main pipeline
     if args.pipeline_target != 'prod' and not output_path_is_set:
         pipeline_file_suffix = suggested_git_branch()
         if args.user != os.getlogin():

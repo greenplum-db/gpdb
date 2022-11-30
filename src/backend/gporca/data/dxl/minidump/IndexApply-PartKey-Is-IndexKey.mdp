@@ -66,12 +66,12 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.41881168001.1.0"/>
-          <dxl:Partition Mdid="0.41881168002.1.0"/>
+          <dxl:Partition Mdid="6.41881168001.1.0"/>
+          <dxl:Partition Mdid="6.41881168002.1.0"/>
         </dxl:Partitions>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.41881168001.1.0"/>
-          <dxl:Partition Mdid="0.41881168002.1.0"/>
+          <dxl:Partition Mdid="6.41881168001.1.0"/>
+          <dxl:Partition Mdid="6.41881168002.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -173,16 +173,16 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.41880949001.1.0"/>
-          <dxl:Partition Mdid="0.41880949002.1.0"/>
+          <dxl:Partition Mdid="6.41880949001.1.0"/>
+          <dxl:Partition Mdid="6.41880949002.1.0"/>
         </dxl:Partitions>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.41880949001.1.0"/>
-          <dxl:Partition Mdid="0.41880949002.1.0"/>
+          <dxl:Partition Mdid="6.41880949001.1.0"/>
+          <dxl:Partition Mdid="6.41880949002.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
       <dxl:RelationStatistics Mdid="2.41880825.1.1" Name="tt_p" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.41880825.1.0" Name="tt_p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.41880825.1.0" Name="tt_p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -217,11 +217,11 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.41880825001.1.0"/>
-          <dxl:Partition Mdid="0.41880825002.1.0"/>
+          <dxl:Partition Mdid="6.41880825001.1.0"/>
+          <dxl:Partition Mdid="6.41880825002.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.41880825001.1.0" Name="tt_p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.41880825001.1.0" Name="tt_p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -271,7 +271,7 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.41880825002.1.0" Name="tt_p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.41880825002.1.0" Name="tt_p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -321,7 +321,7 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.41880825.1.1" Name="tt_p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.41880825.1.1" Name="tt_p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -356,11 +356,11 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.41880825001.1.1"/>
-          <dxl:Partition Mdid="0.41880825002.1.1"/>
+          <dxl:Partition Mdid="6.41880825001.1.1"/>
+          <dxl:Partition Mdid="6.41880825002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.41880825001.1.1" Name="tt_p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.41880825001.1.1" Name="tt_p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -410,7 +410,7 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.41880825002.1.1" Name="tt_p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.41880825002.1.1" Name="tt_p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -469,16 +469,16 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.41881111001.1.0"/>
-          <dxl:Partition Mdid="0.41881111002.1.0"/>
+          <dxl:Partition Mdid="6.41881111001.1.0"/>
+          <dxl:Partition Mdid="6.41881111002.1.0"/>
         </dxl:Partitions>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.41881111001.1.0"/>
-          <dxl:Partition Mdid="0.41881111002.1.0"/>
+          <dxl:Partition Mdid="6.41881111001.1.0"/>
+          <dxl:Partition Mdid="6.41881111002.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
       <dxl:RelationStatistics Mdid="2.41880987.1.1" Name="z_p" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.41880987.1.0" Name="z_p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.41880987.1.0" Name="z_p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -517,11 +517,11 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.41880987001.1.0"/>
-          <dxl:Partition Mdid="0.41880987002.1.0"/>
+          <dxl:Partition Mdid="6.41880987001.1.0"/>
+          <dxl:Partition Mdid="6.41880987002.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.41880987001.1.0" Name="z_p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.41880987001.1.0" Name="z_p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -575,7 +575,7 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.41880987002.1.0" Name="z_p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.41880987002.1.0" Name="z_p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -629,7 +629,7 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.41880987.1.1" Name="z_p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.41880987.1.1" Name="z_p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -668,11 +668,11 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.41880987001.1.1"/>
-          <dxl:Partition Mdid="0.41880987002.1.1"/>
+          <dxl:Partition Mdid="6.41880987001.1.1"/>
+          <dxl:Partition Mdid="6.41880987002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.41880987001.1.1" Name="z_p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.41880987001.1.1" Name="z_p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -726,7 +726,7 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.41880987002.1.1" Name="z_p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.41880987002.1.1" Name="z_p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -822,7 +822,7 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.41880987.1.1" TableName="z_p">
+          <dxl:TableDescriptor Mdid="6.41880987.1.1" TableName="z_p">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -838,7 +838,7 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.41880825.1.1" TableName="tt_p">
+          <dxl:TableDescriptor Mdid="6.41880825.1.1" TableName="tt_p">
             <dxl:Columns>
               <dxl:Column ColId="11" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="12" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -923,10 +923,10 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
                 </dxl:Comparison>
               </dxl:IndexCondList>
               <dxl:Partitions>
-                <dxl:Partition Mdid="0.-1068685959.1.1"/>
+                <dxl:Partition Mdid="6.-1068685959.1.1"/>
               </dxl:Partitions>
               <dxl:IndexDescriptor Mdid="0.41881111.1.0" IndexName="idx_z_p_i_1_prt_z_p1"/>
-              <dxl:TableDescriptor Mdid="0.41880987.1.1" TableName="z_p">
+              <dxl:TableDescriptor Mdid="6.41880987.1.1" TableName="z_p">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="1" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -958,11 +958,11 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
               </dxl:Comparison>
             </dxl:IndexCondList>
             <dxl:Partitions>
-              <dxl:Partition Mdid="0.-1068847959.1.1"/>
-              <dxl:Partition Mdid="0.-1068847958.1.1"/>
+              <dxl:Partition Mdid="6.-1068847959.1.1"/>
+              <dxl:Partition Mdid="6.-1068847958.1.1"/>
             </dxl:Partitions>
             <dxl:IndexDescriptor Mdid="0.41880949.1.0" IndexName="idx_tt_p_i_1_prt_tt_p1"/>
-            <dxl:TableDescriptor Mdid="0.41880825.1.1" TableName="tt_p">
+            <dxl:TableDescriptor Mdid="6.41880825.1.1" TableName="tt_p">
               <dxl:Columns>
                 <dxl:Column ColId="10" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="12" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

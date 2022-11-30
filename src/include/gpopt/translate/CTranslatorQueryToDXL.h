@@ -217,6 +217,10 @@ private:
 	// check if the argument of a DQA has already being used by another DQA
 	static BOOL IsDuplicateDqaArg(List *dqa_list, Aggref *aggref);
 
+	void CheckNoDuplicateAliasGroupingColumn(List *target_list,
+											 List *group_clause,
+											 List *grouping_set);
+
 	// translate a query with grouping sets
 	CDXLNode *TranslateGroupingSets(
 		FromExpr *from_expr, List *target_list, List *group_clause,

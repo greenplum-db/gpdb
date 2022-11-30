@@ -14,6 +14,7 @@
 #include "optimizer/pathnode.h"
 #include "optimizer/planmain.h"
 #include "optimizer/restrictinfo.h"
+#include "utils/snapmgr.h"
 
 #ifdef PG_MODULE_MAGIC
 PG_MODULE_MAGIC;
@@ -31,10 +32,13 @@ test_execute_spi_expression(const char *query)
 {
 	int			r;
 
-	if (SPI_connect() != SPI_OK_CONNECT)
-		elog(ERROR, "Failed to connect to SPI");
+	PushActiveSnapshot(GetTransactionSnapshot());
+
 	PG_TRY();
 	{
+		if (SPI_connect() != SPI_OK_CONNECT)
+			elog(ERROR, "Failed to connect to SPI");
+
 		r = SPI_execute(query, false, 0);
 		if (r < 0)
 			elog(ERROR, "Failed to execute '%s' via SPI: %s [%d]", query, SPI_result_code_string(r), r);
@@ -42,10 +46,16 @@ test_execute_spi_expression(const char *query)
 	PG_CATCH();
 	{
 		SPI_finish();
+
+		PopActiveSnapshot();
+
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
+
 	SPI_finish();
+
+	PopActiveSnapshot();
 }
 
 static void

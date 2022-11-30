@@ -22,11 +22,15 @@ all:
 	$(MAKE) -C contrib/indexscan all
 	$(MAKE) -C contrib/pageinspect all  # needed by src/test/isolation
 	$(MAKE) -C contrib/hstore all
+	$(MAKE) -C contrib/ltree all
 	$(MAKE) -C contrib/pgcrypto all
 	$(MAKE) -C contrib/btree_gin all
 	$(MAKE) -C contrib/pg_trgm all
 ifeq ($(with_openssl), yes)
 	$(MAKE) -C contrib/sslinfo all
+endif
+ifneq ($(with_uuid),no)
+	$(MAKE) -C contrib/uuid-ossp all
 endif
 	$(MAKE) -C gpMgmt all
 	$(MAKE) -C gpcontrib all
@@ -57,11 +61,15 @@ install:
 	$(MAKE) -C contrib/indexscan $@
 	$(MAKE) -C contrib/pageinspect $@  # needed by src/test/isolation
 	$(MAKE) -C contrib/hstore $@
+	$(MAKE) -C contrib/ltree $@
 	$(MAKE) -C contrib/pgcrypto $@
 	$(MAKE) -C contrib/btree_gin $@
 	$(MAKE) -C contrib/pg_trgm $@
 ifeq ($(with_openssl), yes)
 	$(MAKE) -C contrib/sslinfo $@
+endif
+ifneq ($(with_uuid),no)
+	$(MAKE) -C contrib/uuid-ossp $@
 endif
 	$(MAKE) -C gpMgmt $@
 	$(MAKE) -C gpcontrib $@
@@ -151,10 +159,13 @@ ICW_TARGETS  = src/test src/pl src/interfaces/gppc
 ICW_TARGETS += contrib/auto_explain contrib/citext contrib/btree_gin
 ICW_TARGETS += contrib/file_fdw contrib/formatter_fixedwidth
 ICW_TARGETS += contrib/extprotocol contrib/dblink contrib/pg_trgm
-ICW_TARGETS += contrib/indexscan contrib/hstore contrib/pgcrypto
+ICW_TARGETS += contrib/indexscan contrib/hstore contrib/ltree contrib/pgcrypto
 # sslinfo depends on openssl
 ifeq ($(with_openssl), yes)
 ICW_TARGETS += contrib/sslinfo
+endif
+ifneq ($(with_uuid),no)
+ICW_TARGETS += contrib/uuid-ossp
 endif
 ICW_TARGETS += gpcontrib src/bin gpMgmt/bin
 

@@ -9,10 +9,10 @@ create database column_compression;
 \c column_compression
 
 prepare ccddlcheck as
-select attrelid::regclass as relname,
-attnum, attoptions from pg_class c, pg_attribute_encoding e
-where c.relname like 'ccddl%' and c.oid=e.attrelid
-order by relname, attnum;
+select e.attrelid::regclass as relname,
+a.attname, e.attoptions from pg_class c, pg_attribute_encoding e, pg_attribute a
+where c.relname like 'ccddl%' and c.oid=e.attrelid and e.attrelid=a.attrelid and e.attnum = a.attnum
+order by relname, e.attnum;
 
 -- default encoding clause
 create table ccddl (
@@ -287,6 +287,7 @@ partition by range(j)
 );
 
 execute ccddlcheck;
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ccddl'::regclass;
 
 insert into ccddl select 1, (i % 19) + 1, ((i+3) % 5) + 1, i+3 from generate_series(1, 100) i;
 
@@ -367,6 +368,7 @@ subpartition template (subpartition sp1 start(1) end(20),
 (partition p1 start(1) end(20));
 
 execute ccddlcheck;
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ccddl'::regclass;
 
 alter table ccddl alter partition p1 split partition sp1 at (10) into (partition sp2, partition sp3);
 execute ccddlcheck;
@@ -400,6 +402,7 @@ CREATE TABLE ccddl (id int, year int, month int, day int, region text)
 		)
 	( START (2008) END (2010) );
 execute ccddlcheck;
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ccddl'::regclass;
 
 -- Ensure we can read and write
 insert into ccddl select 1, 2008, 1, 2, 'usa' from generate_series(1, 100);
@@ -452,6 +455,30 @@ partition by range(i) subpartition by range(j)
 execute ccddlcheck;
 drop table ccddl;
 
+-- multi level partitioning with column encoding inheritance
+create table ccddl (a int ENCODING (compresslevel=1),
+                    b int ENCODING (compresslevel=1),
+                    c int ENCODING (compresslevel=1),
+                    d int ENCODING (compresslevel=1),
+                    e int, f int, g int, h int)
+    with (appendonly = true, orientation=column, compresslevel=5)
+    partition by range(a) subpartition by range(b)
+        (partition p1 start(1) end(10)
+            (subpartition sp1 start(1) end(5)
+             column a encoding(compresslevel=3),
+             column d encoding(compresslevel=3),
+             column f encoding(compresslevel=3),
+             column g encoding(compresslevel=3)),
+       column a encoding(compresslevel=2),
+       column b encoding(compresslevel=2),
+       column e encoding(compresslevel=2),
+       column g encoding(compresslevel=2));
+
+execute ccddlcheck;
+
+insert into ccddl select 2,3 from generate_series(1, 100);
+select * from ccddl limit 5;
+drop table ccddl;
 
 -- Precedence test: c3 in the partition child must be zlib, not RLE_TYPE
 CREATE TABLE ccddl ( c1 int ENCODING (compresstype=zlib),
@@ -512,6 +539,8 @@ alter table ccddl add partition newp
 	with (appendonly=true, orientation=column);
 
 execute ccddlcheck;
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ccddl'::regclass;
+
 drop table ccddl;
 
 -----------------------------------------------------------------------
@@ -527,8 +556,9 @@ create table gg (i int, k int) with (appendonly=true, orientation=column)
 partition by range(k) (partition p1 start(1) end(2), column i
 encoding(compresstype=sdf2sdf));
 
--- We don't support partition element specific encoding clauses in subpartition
--- templates as we have no place to store them.
+-- Historically we don't support partition element specific encoding clauses in
+-- subpartition templates as we didn't have place to store them. We now have
+-- place to store them if we want to, but for now we keep this door closed
 create table a (i int, j int) with (appendonly=true, orientation=column)
       partition by range(i) subpartition by range(j)
       subpartition template(start(1) end(10) default column encoding (compresstype=zlib),

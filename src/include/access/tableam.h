@@ -372,6 +372,15 @@ typedef struct TableAmRoutine
 													 int nitems);
 
 
+	/*
+	 * ------------------------------------------------------------------------
+	 * GPDB: DML state manipulation functions
+	 * ------------------------------------------------------------------------
+	 */
+	void		(*dml_init) (Relation rel);
+
+	void		(*dml_finish) (Relation rel);
+
 	/* ------------------------------------------------------------------------
 	 * Manipulations of physical tuples.
 	 * ------------------------------------------------------------------------
@@ -1163,6 +1172,36 @@ table_compute_xid_horizon_for_tuples(Relation rel,
 	return rel->rd_tableam->compute_xid_horizon_for_tuples(rel, items, nitems);
 }
 
+/*
+ * ------------------------------------------------------------------------
+ * GPDB: DML state manipulation functions
+ * ------------------------------------------------------------------------
+ */
+
+/*
+ * Gives an opportunity to the table AM to create some state to be used across
+ * the lifecycle of a DML or DML-like command. It is called once for every
+ * relation involved in the command (there can be multiple relations when there
+ * are partitioned tables are involved). It is called at the beginning of the
+ * command's execution.
+ */
+static inline void
+table_dml_init(Relation rel)
+{
+	rel->rd_tableam->dml_init(rel);
+}
+
+/*
+ * Gives an opportunity to the table AM to clean up any state allocated by
+ * table_dml_init(). It is called once for every relation involved in a DML
+ * or DML-like command (there can be multiple relations when there are partitioned
+ * tables are involved). It is called at the end of the command's execution.
+ */
+static inline void
+table_dml_finish(Relation rel)
+{
+	rel->rd_tableam->dml_finish(rel);
+}
 
 /* ----------------------------------------------------------------------------
  *  Functions for manipulations of physical tuples.
