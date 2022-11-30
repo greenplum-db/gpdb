@@ -42,10 +42,12 @@
  * can't be seen in gpdb.
  */
 #define DEFAULT_CPUSET_GROUP_ID 1
+
 /*
- * If cpu_hard_quota_limit is set to this value, it means this feature is disabled
+ * If cpu_hard_quota_limit is set to this value, it means this feature is disabled.
+ * And meanwhile, it also means the process can use CPU resource infinitely.
  */
-#define CPU_RATE_LIMIT_DISABLED (-1)
+#define CPU_HARD_QUOTA_LIMIT_DISABLED (-1)
 
 /* This is the default value about Linux Control Group */
 #define DEFAULT_CPU_PERIOD_US 100000LL
