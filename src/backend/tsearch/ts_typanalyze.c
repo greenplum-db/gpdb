@@ -302,7 +302,7 @@ compute_tsvector_stats(VacAttrStats *stats,
 		stats->stats_valid = true;
 		/* Do the simple null-frac and average width stats */
 		stats->stanullfrac = (double) null_cnt / (double) samplerows;
-		stats->stawidth = (total_width + stats->totalwidelength) / (double) (nonnull_cnt + stats->widerow_num);
+		stats->stawidth = total_width / (double) nonnull_cnt;
 
 		/* Assume it's a unique column (see notes above) */
 		stats->stadistinct = -1.0 * (1.0 - stats->stanullfrac);

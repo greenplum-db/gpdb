@@ -1532,9 +1532,9 @@ ANALYZE foo;
 SELECT * FROM pg_stats WHERE tablename like 'foo%' and attname = 'c' ORDER BY attname,tablename;
  schemaname |  tablename  | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
 ------------+-------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
- public     | foo         | c       | t         |         0 |      4591 |          0 |                  |                   |                  |             |                   |                        | 
- public     | foo_1_prt_1 | c       | f         |         0 |      4591 |          0 |                  |                   |                  |             |                   |                        | 
- public     | foo_1_prt_2 | c       | f         |         0 |      4591 |          0 |                  |                   |                  |             |                   |                        | 
+ public     | foo         | c       | t         |         0 |      1024 |          0 |                  |                   |                  |             |                   |                        | 
+ public     | foo_1_prt_1 | c       | f         |         0 |      1024 |          0 |                  |                   |                  |             |                   |                        | 
+ public     | foo_1_prt_2 | c       | f         |         0 |      1024 |          0 |                  |                   |                  |             |                   |                        | 
 (3 rows)
 
 -- Test ANALYZE full scan HLL
