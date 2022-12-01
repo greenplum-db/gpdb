@@ -49,10 +49,10 @@ allowconn
 :   If `false`, then no one can connect to this database.
 
 connlimit
-:   The maximum number of concurrent connections allowed to this database. The default is `-1`, no limit.
+:   The maximum number of concurrent connections allowed to this database. The default is `-1`, no limit. Greenplum Database superusers are exempt from this limit.
 
 istemplate
-:   If `true`, then this database can be cloned by any user with `CREATEDB` privileges; if `false`, then only superusers or the owner of the database can clone it.
+:   If `true`, then this database can be cloned by any user with `CREATEDB` privileges; if `false`, then only superusers or the owner of the database can clone it. Note that template databases cannot be dropped.
 
 new_name
 :   The new name of the database.
