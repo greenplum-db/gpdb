@@ -18,8 +18,6 @@ The following list includes the Greenplum Database 6 deprecated relations.
 
 -   gp\_toolkit.\_\_gp\_localid
 -   gp\_toolkit.\_\_gp\_masterid
--   gp\_toolkit.\_\_gp\_masterid
--   pg\_catalog.gp\_configuration
 -   pg\_catalog.gp\_configuration
 -   pg\_catalog.gp\_db\_interfaces
 -   pg\_catalog.gp\_fault\_strategy
