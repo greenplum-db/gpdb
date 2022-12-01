@@ -3149,7 +3149,8 @@ static void handle_post_request(request_t *r, int header_end)
 	r->in.dbuftop = 0;
 	r->in.cbuftop = 0;
 	r->in.dbuf = palloc_safe(r, r->pool, r->in.dbufmax, "out of memory when allocating r->in.dbuf: %d bytes", r->in.dbufmax);
-	if(r->zstd)  r->in.cbuf = palloc_safe(r, r->pool, r->in.dbufmax, "out of memory when allocating r->in.cbuf: %d bytes", r->in.dbufmax);
+	if(r->zstd)  
+		r->in.cbuf = palloc_safe(r, r->pool, r->in.dbufmax, "out of memory when allocating r->in.cbuf: %d bytes", r->in.dbufmax);
 
 	/* if some data come along with the request, copy it first */
 	data_start = strstr(r->in.hbuf, "\r\n\r\n");
@@ -3174,7 +3175,7 @@ static void handle_post_request(request_t *r, int header_end)
 		r->in.davailable -= data_bytes_in_req;
 
 		/* only write it out if no more data is expected */
-		if(r->in.davailable == 0)
+		if(r->in.davailable == 0 && !r->zstd)
 		{
 			wrote = fstream_write(session->fstream, r->in.dbuf, data_bytes_in_req, 1, r->line_delim_str, r->line_delim_length);
 			delay_watchdog_timer();
@@ -3233,7 +3234,7 @@ static void handle_post_request(request_t *r, int header_end)
 				return;
 			}
 		}
-		else if (n == 0)
+		else if (n == 0 && !r->in.cflag)
 		{
 			/* socket close by peer will return 0 */
 			gwarning(r, "handle_post_request socket closed by peer");
@@ -4540,7 +4541,7 @@ static void request_cleanup(request_t *r)
 	}
 	if ( r->zstd && !r->is_get )
 	{
-		ZSTD_freeDCtx(r->zstd_cctx);
+		ZSTD_freeDCtx(r->zstd_dctx);
 	}
 #endif
 }
@@ -4683,7 +4684,7 @@ static int decompress_zstd(request_t* r, ZSTD_inBuffer* bin, ZSTD_outBuffer* bou
 
 static int decompress_data(request_t* r){
 	ZSTD_inBuffer inbuf = {r->in.cbuf, r->in.cbuftop, r->in.cflag};
-	ZSTD_outBuffer obuf = {r->in.dbuf, r->in.dbufmax, 0};
+	ZSTD_outBuffer obuf = {r->in.dbuf + r->in.dbuftop, r->in.dbufmax - r->in.dbuftop, 0};
 	
 	if(!r->zstd_dctx) {
 		gwarning(stderr, "Out of memory when ZSTD_createDCtx");

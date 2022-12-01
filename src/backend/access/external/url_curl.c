@@ -58,18 +58,6 @@ typedef struct curlhandle_t
 	struct curlhandle_t *prev;
 } curlhandle_t;
 
-#ifdef USE_ZSTD
-typedef struct zstdcontext_t
-{
-	ZSTD_DCtx	   *zstd_dctx;		/* The zstd decompression context */
-	ZSTD_CCtx	   *zstd_cctx;		/* The zstd decompression context */
-
-	ResourceOwner owner;			/* owner of this handle */
-	struct zstdcontext_t *next;
-	struct zstdcontext_t *prev;
-} zstdcontext_t;
-#endif
-
 /*
  * Private state for a web external table, implemented with libcurl.
  *
@@ -203,94 +191,6 @@ static curlhandle_t *open_curl_handles;
 
 static bool url_curl_resowner_callback_registered;
 
-#ifdef USE_ZSTD
-static zstdcontext_t *open_zstd_context;
-static bool zstd_resowner_callback_registered;
-
-static int
-compress_zstd_data(URL_CURL_FILE *file)
-{
-	int comlen = ZSTD_compressCCtx(file->curl->zstd_cctx, file->out.cptr, file->out.top, file->out.ptr, file->out.top, file->zstd);
-
-	return comlen;
-}
-
-static zstdcontext_t *
-create_zstdcontext(void)
-{
-	zstdcontext_t *ctx;
-
-	ctx = MemoryContextAlloc(TopMemoryContext, sizeof(zstdcontext_t));
-	ctx->zstd_dctx = NULL;
-	ctx->zstd_cctx = NULL;
-
-	ctx->owner = CurrentResourceOwner;
-	ctx->prev = NULL;
-	ctx->next = open_zstd_context;
-	if (open_zstd_context)
-		open_zstd_context->prev = ctx;
-	open_zstd_context = ctx;
-
-	return ctx;
-}
-
-static void
-destroy_zstdcontext(zstdcontext_t *ctx)
-{
-	/* unlink from linked list first */
-	if (ctx->prev)
-		ctx->prev->next = ctx->next;
-	else
-		open_zstd_context = open_zstd_context->next;
-	if (ctx->next)
-		ctx->next->prev = ctx->prev;
-
-	if (ctx->zstd_dctx)
-	{
-		/* cleanup */
-		ZSTD_freeDCtx(ctx->zstd_dctx);
-		ctx->zstd_dctx = NULL;
-	}
-
-	if (ctx->zstd_cctx)
-	{
-		/* cleanup */
-		ZSTD_freeCCtx(ctx->zstd_cctx);
-		ctx->zstd_cctx = NULL;
-	}
-
-
-	pfree(ctx);
-}
-
-static void
-zstd_release_callback(ResourceReleasePhase phase,
-						bool isCommit,
-						bool isTopLevel,
-						void *arg)
-{
-	zstdcontext_t *curr;
-	zstdcontext_t *next;
-
-	if (phase != RESOURCE_RELEASE_AFTER_LOCKS)
-		return;
-
-	next = open_zstd_context;
-	while (next)
-	{
-		curr = next;
-		next = curr->next;
-
-		if (curr->owner == CurrentResourceOwner)
-		{
-			if (isCommit)
-				elog(LOG, "zstd reference leak: %p still referenced", curr);
-
-			destroy_zstdcontext(curr);
-		}
-	}
-}
-#endif
 
 static curlhandle_t *
 create_curlhandle(void)
@@ -304,6 +204,7 @@ create_curlhandle(void)
 
 #ifdef USE_ZSTD
 	h->zstd_dctx = NULL;
+	h->zstd_cctx = NULL;
 #endif
 
 	h->owner = CurrentResourceOwner;
@@ -1282,14 +1183,6 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		url_curl_resowner_callback_registered = true;
 	}
 
-#ifdef USE_ZSTD
-	if (!zstd_resowner_callback_registered)
-	{
-		RegisterResourceReleaseCallback(zstd_release_callback, NULL);
-		zstd_resowner_callback_registered = true;
-	}
-#endif
-
 	tmp = make_url(url, is_ipv6);
 
 	file = (URL_CURL_FILE *) palloc0(sizeof(URL_CURL_FILE));
@@ -1696,6 +1589,12 @@ decompress_zstd_data(ZSTD_DCtx* ctx, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout)
 				errmsg("ZSTD_decompressStream failed, error is %s", ZSTD_getErrorName(ret))));
 	}
 	return ret;
+}
+
+static int
+compress_zstd_data(URL_CURL_FILE *file)
+{
+	return ZSTD_compressCCtx(file->curl->zstd_cctx, file->out.cptr, file->out.top, file->out.ptr, file->out.top, file->zstd);
 }
 #endif
 
