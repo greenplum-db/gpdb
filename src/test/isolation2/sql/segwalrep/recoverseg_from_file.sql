@@ -47,6 +47,10 @@ update gp_segment_configuration set dbid=9 where content=0 and role='p';
 -- trigger failover
 select gp_request_fts_probe_scan();
 
+-- If we are running with ic-proxy, we need to reset the
+-- gp_interconnect_proxy_addresses GUC, due to the change in dbid.
+!\retcode bash ../icproxy_setup.bash;
+
 -- wait for content 0 (earlier mirror, now primary) to finish the promotion
 0U: select 1;
 -- Quit this utility mode session, as need to start fresh one below
@@ -69,6 +73,10 @@ where role='m' and content=1;
 select dbid from gp_segment_configuration where dbid=2;
 
 update gp_segment_configuration set dbid=2 where dbid=9;
+
+-- Reset the gp_interconnect_proxy_addresses GUC now that the original dbid is restored.
+!\retcode bash ../icproxy_setup.bash;
+
 set allow_system_table_mods to false;
 
 -- we manually change dbid from 2 to 9, which causes the
