@@ -170,9 +170,9 @@ CXformUpdate2DML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	pdrgpcrDelete->AddRef();
 	CExpression *pexprDML = GPOS_NEW(mp) CExpression(
 		mp,
-		GPOS_NEW(mp) CLogicalDML(
-			mp, CLogicalDML::EdmlUpdate, ptabdesc, pdrgpcrDelete, pbsModified,
-			pcrAction, pcrCtid, pcrSegmentId, pcrTupleOid),
+		GPOS_NEW(mp) CLogicalDML(mp, CLogicalDML::EdmlUpdate, ptabdesc,
+								 pdrgpcrDelete, pbsModified, pcrAction, pcrCtid,
+								 pcrSegmentId, pcrTupleOid),
 		pexprProject);
 
 	// TODO:  - Oct 30, 2012; detect and handle AFTER triggers on update

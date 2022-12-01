@@ -97,9 +97,9 @@ CXformImplementDML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	// create physical DML
 	CExpression *pexprAlt = GPOS_NEW(mp) CExpression(
 		mp,
-		GPOS_NEW(mp) CPhysicalDML(mp, edmlop, ptabdesc, pdrgpcrSource,
-								  pbsModified, pcrAction, pcrCtid,
-								  pcrSegmentId, pcrTupleOid),
+		GPOS_NEW(mp)
+			CPhysicalDML(mp, edmlop, ptabdesc, pdrgpcrSource, pbsModified,
+						 pcrAction, pcrCtid, pcrSegmentId, pcrTupleOid),
 		pexprChild);
 	// add alternative to transformation result
 	pxfres->Add(pexprAlt);

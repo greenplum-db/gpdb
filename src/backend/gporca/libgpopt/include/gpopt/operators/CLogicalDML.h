@@ -77,8 +77,8 @@ public:
 	// ctor
 	CLogicalDML(CMemoryPool *mp, EDMLOperator edmlop,
 				CTableDescriptor *ptabdesc, CColRefArray *colref_array,
-				CBitSet *pbsModified, CColRef *pcrAction,
-				CColRef *pcrCtid, CColRef *pcrSegmentId, CColRef *pcrTupleOid);
+				CBitSet *pbsModified, CColRef *pcrAction, CColRef *pcrCtid,
+				CColRef *pcrSegmentId, CColRef *pcrTupleOid);
 
 	// dtor
 	virtual ~CLogicalDML();

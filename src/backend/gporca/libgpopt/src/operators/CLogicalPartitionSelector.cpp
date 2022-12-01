@@ -44,9 +44,7 @@ CLogicalPartitionSelector::CLogicalPartitionSelector(CMemoryPool *mp)
 //---------------------------------------------------------------------------
 CLogicalPartitionSelector::CLogicalPartitionSelector(
 	CMemoryPool *mp, IMDId *mdid, CExpressionArray *pdrgpexprFilters)
-	: CLogical(mp),
-	  m_mdid(mdid),
-	  m_pdrgpexprFilters(pdrgpexprFilters)
+	: CLogical(mp), m_mdid(mdid), m_pdrgpexprFilters(pdrgpexprFilters)
 {
 	GPOS_ASSERT(mdid->IsValid());
 	GPOS_ASSERT(NULL != pdrgpexprFilters);
@@ -121,8 +119,7 @@ CLogicalPartitionSelector::PopCopyWithRemappedColumns(
 
 	m_mdid->AddRef();
 
-	return GPOS_NEW(mp)
-		CLogicalPartitionSelector(mp, m_mdid, pdrgpexpr);
+	return GPOS_NEW(mp) CLogicalPartitionSelector(mp, m_mdid, pdrgpexpr);
 }
 
 //---------------------------------------------------------------------------

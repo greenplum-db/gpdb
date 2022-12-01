@@ -1301,8 +1301,8 @@ CXformUtils::PexprLogicalPartitionSelector(CMemoryPool *mp,
 	CExpressionArray *pdrgpexprFilters =
 		PdrgpexprPartEqFilters(mp, ptabdesc, colref_array);
 
-	CLogicalPartitionSelector *popSelector = GPOS_NEW(mp)
-		CLogicalPartitionSelector(mp, rel_mdid, pdrgpexprFilters);
+	CLogicalPartitionSelector *popSelector =
+		GPOS_NEW(mp) CLogicalPartitionSelector(mp, rel_mdid, pdrgpexprFilters);
 
 	return GPOS_NEW(mp) CExpression(mp, popSelector, pexprChild);
 }

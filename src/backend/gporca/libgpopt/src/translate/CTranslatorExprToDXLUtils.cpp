@@ -1290,9 +1290,8 @@ CTranslatorExprToDXLUtils::PdxlnProjListFromChildProjList(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorExprToDXLUtils::PdxlnPrLPartitionSelector(
-	CMemoryPool *mp, CColumnFactory *col_factory,
-	ColRefToDXLNodeMap *phmcrdxln, BOOL fUseChildProjList,
-	CDXLNode *pdxlnPrLChild)
+	CMemoryPool *mp, CColumnFactory *col_factory, ColRefToDXLNodeMap *phmcrdxln,
+	BOOL fUseChildProjList, CDXLNode *pdxlnPrLChild)
 {
 	GPOS_ASSERT_IMP(fUseChildProjList, NULL != pdxlnPrLChild);
 

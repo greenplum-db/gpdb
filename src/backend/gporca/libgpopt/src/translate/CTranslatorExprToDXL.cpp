@@ -4995,8 +4995,8 @@ CTranslatorExprToDXL::PdxlnPartitionSelectorExpand(
 	IMDId *mdid = popSelector->MDId();
 	const IMDRelation *pmdrel = (IMDRelation *) m_pmda->RetrieveRel(mdid);
 	CDXLNode *pdxlnPrL = CTranslatorExprToDXLUtils::PdxlnPrLPartitionSelector(
-		m_mp, m_pcf, m_phmcrdxln,
-		false /*fUseChildProjList*/, NULL /*pdxlnPrLchild*/);
+		m_mp, m_pcf, m_phmcrdxln, false /*fUseChildProjList*/,
+		NULL /*pdxlnPrLchild*/);
 
 	// translate filters
 	CDXLNode *pdxlnEqFilters = NULL;
@@ -5788,9 +5788,8 @@ CTranslatorExprToDXL::PdxlnDML(CExpression *pexpr,
 	CDXLDirectDispatchInfo *dxl_direct_dispatch_info =
 		GetDXLDirectDispatchInfo(pexpr);
 	CDXLPhysicalDML *pdxlopDML = GPOS_NEW(m_mp) CDXLPhysicalDML(
-		m_mp, dxl_dml_type, table_descr, pdrgpul, action_colid,
-		ctid_colid, segid_colid, preserve_oids, tuple_oid,
-		dxl_direct_dispatch_info);
+		m_mp, dxl_dml_type, table_descr, pdrgpul, action_colid, ctid_colid,
+		segid_colid, preserve_oids, tuple_oid, dxl_direct_dispatch_info);
 
 	// project list
 	CColRefSet *pcrsOutput = pexpr->Prpp()->PcrsRequired();

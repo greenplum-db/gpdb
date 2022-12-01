@@ -79,8 +79,8 @@ public:
 	// ctor
 	CPhysicalDML(CMemoryPool *mp, CLogicalDML::EDMLOperator edmlop,
 				 CTableDescriptor *ptabdesc, CColRefArray *pdrgpcrSource,
-				 CBitSet *pbsModified, CColRef *pcrAction,
-				 CColRef *pcrCtid, CColRef *pcrSegmentId, CColRef *pcrTupleOid);
+				 CBitSet *pbsModified, CColRef *pcrAction, CColRef *pcrCtid,
+				 CColRef *pcrSegmentId, CColRef *pcrTupleOid);
 
 	// dtor
 	virtual ~CPhysicalDML();

@@ -77,8 +77,8 @@ public:
 	CDXLPhysicalDML(CMemoryPool *mp, const EdxlDmlType dxl_dml_type,
 					CDXLTableDescr *table_descr,
 					ULongPtrArray *src_colids_array, ULONG action_colid,
-					ULONG ctid_colid, ULONG segid_colid,
-					BOOL preserve_oids, ULONG tuple_oid,
+					ULONG ctid_colid, ULONG segid_colid, BOOL preserve_oids,
+					ULONG tuple_oid,
 					CDXLDirectDispatchInfo *dxl_direct_dispatch_info);
 
 	// dtor
