@@ -191,7 +191,7 @@ INSERT INTO t VALUES (11),(12),(13);
       </dxl:LogicalInsert>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="0">
-      <dxl:DMLInsert Columns="0" ActionCol="3" OidCol="0" CtidCol="0" SegmentIdCol="0">
+      <dxl:DMLInsert Columns="0" ActionCol="3" CtidCol="0" SegmentIdCol="0">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="0.031272" Rows="3.000000" Width="4"/>
         </dxl:Properties>

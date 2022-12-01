@@ -302,7 +302,7 @@ EXPLAIN INSERT INTO snackbox SELECT a FROM (SELECT c FROM hottoast LIMIT 3) hott
       </dxl:LogicalInsert>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="6">
-      <dxl:DMLInsert Columns="8" ActionCol="16" OidCol="0" CtidCol="0" SegmentIdCol="0">
+      <dxl:DMLInsert Columns="8" ActionCol="16" CtidCol="0" SegmentIdCol="0">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.031910" Rows="3.000000" Width="4"/>
         </dxl:Properties>

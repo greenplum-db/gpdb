@@ -394,8 +394,7 @@ COptTasks::CreateOptimizerConfig(CMemoryPool *mp, ICostModel *cost_model)
 							  damping_factor_groupby, MAX_STATS_BUCKETS),
 		GPOS_NEW(mp) CCTEConfig(cte_inlining_cutoff), cost_model,
 		GPOS_NEW(mp)
-			CHint(gpos::int_max /* optimizer_parts_to_force_sort_on_insert */,
-				  join_arity_for_associativity_commutativity,
+			CHint(join_arity_for_associativity_commutativity,
 				  array_expansion_threshold, join_order_threshold,
 				  broadcast_threshold,
 				  false, /* don't create Assert nodes for constraints, we'll

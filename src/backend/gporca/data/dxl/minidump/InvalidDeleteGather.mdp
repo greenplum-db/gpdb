@@ -939,7 +939,7 @@ DELETE FROM dml_heap_r USING dml_heap_s,dml_heap_p WHERE dml_heap_r.a = dml_heap
       </dxl:LogicalDelete>
     </dxl:Query>
     <dxl:Plan Id="1" SpaceSize="429">
-      <dxl:DMLDelete Columns="0,1,2" ActionCol="32" OidCol="33" CtidCol="3" SegmentIdCol="9">
+      <dxl:DMLDelete Columns="0,1,2" ActionCol="32" CtidCol="3" SegmentIdCol="9">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1293.129056" Rows="1.000000" Width="1"/>
         </dxl:Properties>
