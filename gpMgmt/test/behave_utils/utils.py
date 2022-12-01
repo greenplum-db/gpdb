@@ -861,7 +861,7 @@ def wait_for_desired_query_result(dburl, query, desired_result, utility=False):
                 actual_result = rows[0][0]
         except Exception as e:
             print('could not query (%s:%s) %s' % (dburl.pghost, dburl.pgport, e))
-        time.sleep(1)
+        time.sleep(2)
 
     if attempt == num_retries:
         raise Exception('Timed out after %s retries' % num_retries)

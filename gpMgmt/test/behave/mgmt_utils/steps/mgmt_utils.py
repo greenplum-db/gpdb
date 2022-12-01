@@ -449,7 +449,7 @@ def impl(context, logdir):
                     return
                 else:
                     raise Exception('File present but incorrect format line "{}"'.format(line))
-        time.sleep(0.01)
+        time.sleep(0.1)
         if attempt == num_retries:
             raise Exception('Timed out after {} retries'.format(num_retries))
 
