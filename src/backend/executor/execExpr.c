@@ -3194,7 +3194,6 @@ ExecBuildAggTrans(AggState *aggstate, AggStatePerPhase phase,
 	ExprEvalStep scratch = {0};
 	int			transno = 0;
 	int			setoff = 0;
-	bool		isCombine = DO_AGGSPLIT_COMBINE(aggstate->aggsplit);
 	LastAttnumInfo deform = {0, 0, 0};
 
 	state->expr = (Expr *) aggstate;
@@ -3243,6 +3242,7 @@ ExecBuildAggTrans(AggState *aggstate, AggStatePerPhase phase,
 		NullableDatum *strictargs = NULL;
 		bool	   *strictnulls = NULL;
 
+		bool isCombine = DO_AGGSPLIT_COMBINE(pertrans->aggref->aggsplit);
 		/*
 		 * If filter present, emit. Do so before evaluating the input, to
 		 * avoid potentially unneeded computations, or even worse, unintended
