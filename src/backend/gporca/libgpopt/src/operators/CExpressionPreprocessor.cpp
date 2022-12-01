@@ -3042,6 +3042,51 @@ CExpressionPreprocessor::ConvertSplitUpdateToInPlaceUpdate(CMemoryPool *mp,
 	return pexpr;
 }
 
+/*
+  This method is called by PexprJoinPruning method whenever a scalar operator is encountered during the tree traversal.
+  This method checks if any scalar subquery is present in the tree and if a CLogicalLeftOuterJoin operator is found
+  within that subquery it calls back PexprJoinPruning method to prune the join if possible.
+  example:
+  create table foo (a int,b int,c int, d int,e int,constraint idx1 unique(a,b),constraint idx2 unique(a,c,d));
+  create table bar (p int,q int,r int, s int,t int,constraint idx3 unique(p,q),constraint idx4 unique(p,r,s));
+  create table t1(a int, b int);
+  Query :  explain select * from t1 where t1.a in (select foo.d from foo left join bar on foo.a=bar.p and foo.c=bar.r and bar.s=200 where foo.e>100);
+
+  Algebrized query:
+	   +--CLogicalSelect
+		  |--CLogicalGet "t1" ("t1")
+		  +--CScalarSubqueryAny(=)["d" (12)]
+			 |--CLogicalSelect
+			 |  |--CLogicalLeftOuterJoin
+			 |  |  |--CLogicalGet "foo" ("foo"), Key sets: {[0,1], [0,2,3], [5,11]}
+			 |  |  |--CLogicalGet "bar" ("bar"), Key sets: {[0,1], [0,2,3], [5,11]}
+			 |  |  +--CScalarBoolOp (EboolopAnd)
+			 |  |     |--CScalarCmp (=)
+			 |  |     |  |--CScalarIdent "a" (9)
+			 |  |     |  +--CScalarIdent "p" (21)
+			 |  |     |--CScalarCmp (=)
+			 |  |     |  |--CScalarIdent "c" (11)
+			 |  |     |  +--CScalarIdent "r" (23)
+			 |  |     +--CScalarCmp (=)
+			 |  |        |--CScalarIdent "s" (24)
+			 |  |        +--CScalarConst (200)
+			 |  +--CScalarCmp (>)
+			 |     |--CScalarIdent "e" (13)
+			 |     +--CScalarConst (100)
+			 +--CScalarIdent "a" (0)
+
+  Algebrized preprocessed query:
+         +--CLogicalSelect
+            |--CLogicalGet "t1"
+            +--CScalarSubqueryAny(=)["d" (12)]
+               |--CLogicalSelect
+               |  |--CLogicalGet "foo" Key sets: {[0,1], [0,2,3], [5,11]}
+               |  +--CScalarCmp (>)
+               |     |--CScalarIdent "e" (13)
+               |     +--CScalarConst (100)
+               +--CScalarIdent "a" (0)
+
+ */
 CExpression *
 CExpressionPreprocessor::PexprJoinPruningScalar(CMemoryPool *mp,
 												CExpression *pexprScalar)
@@ -3145,6 +3190,51 @@ CExpressionPreprocessor::PexprJoinPruningScalar(CMemoryPool *mp,
 	}
 }
 
+/*
+ This method is used to prune the CLogicalLeftOuterJoin operator in a bottom up approach
+ based on the following conditions
+ 1. The output columns and the WHERE clause should only contain columns from the outer relation.
+ 2. All the unique/primary keys from a particular key set collection of the inner relation should be present in the join condition.
+ 3. The unique keys of the inner relation should either be constant or equal to a column from the outer relation.
+ example:
+     create table foo (a int,b int,c int, d int,e int,constraint idx1 unique(a,b),constraint idx2 unique(a,c,d));
+     create table bar (p int,q int,r int, s int,t int,constraint idx3 unique(p,q),constraint idx4 unique(p,r,s));
+     Keyset Collection of foo: [a,b],[a,c,d]
+     KeySet Collection of bar: [p,q],[p,r,s]
+
+     Query: explain select foo.* from foo left join bar on foo.a=bar.p and foo.c=bar.r and bar.s=200 where foo.e>100;
+     Since the o/p columns and the WHERE clause use columns from the outer table foo and the keyset collection [p,r,s]
+     of the inner table is present in the join condition which is a constant or equal to a column of outer relation,
+     the join can be pruned. When the join is pruned the outer child of the CLogicalLeftOuterJoin is returned to the parent operator.
+
+     Algebrized query:
+     +--CLogicalSelect
+	   |--CLogicalLeftOuterJoin
+	   |  |--CLogicalGet "foo" ("foo"),  Key sets: {[0,1], [0,2,3], [5,11]}
+	   |  |--CLogicalGet "bar" ("bar"),  Key sets: {[0,1], [0,2,3], [5,11]}
+	   |  +--CScalarBoolOp (EboolopAnd)
+	   |     |--CScalarCmp (=)
+	   |     |  |--CScalarIdent "a" (0)
+	   |     |  +--CScalarIdent "p" (12)
+	   |     |--CScalarCmp (=)
+	   |     |  |--CScalarIdent "c" (2)
+	   |     |  +--CScalarIdent "r" (14)
+	   |     +--CScalarCmp (=)
+	   |        |--CScalarIdent "s" (15)
+	   |        +--CScalarConst (200)
+	   +--CScalarCmp (>)
+		  |--CScalarIdent "e" (4)
+		  +--CScalarConst (100)
+
+	 Algebrized preprocessed query:
+	 +--CLogicalSelect
+		|--CLogicalGet "foo" ("foo"), Key sets: {[0,1], [0,2,3], [5,11]}
+		+--CScalarCmp (>)
+		   |--CScalarIdent "e" (4)
+           +--CScalarConst (100)
+
+*/
+
 CExpression *
 CExpressionPreprocessor::PexprJoinPruning(CMemoryPool *mp, CExpression *pexpr,
 										  CColRefSet *pcrsOutput)
@@ -3219,6 +3309,7 @@ CExpressionPreprocessor::PexprJoinPruning(CMemoryPool *mp, CExpression *pexpr,
 	COperator *pop = pexpr->Pop();
 	pop->AddRef();
 	CExpression *pexprNew = GPOS_NEW(mp) CExpression(mp, pop, pdrgpexpr);
+	childs_output_columns->Release();
 
 
 	// Checking if the join is a left join then pruning the join if possible
@@ -3227,10 +3318,20 @@ CExpressionPreprocessor::PexprJoinPruning(CMemoryPool *mp, CExpression *pexpr,
 		CExpression *inner_rel = (*pexprNew)[1];
 		CColRefSet *derive_output_columns_inner_rel =
 			inner_rel->DeriveOutputColumns();
+
 		if (output_columns->FIntersects(derive_output_columns_inner_rel))
 		{
 			output_columns->Release();
-			childs_output_columns->Release();
+			return pexprNew;
+		}
+
+		output_columns->Release();
+
+		// Unique key collection of the inner relation of left join
+		CKeyCollection *inner_rel_key_sets = inner_rel->DeriveKeyCollection();
+
+		if (nullptr == inner_rel_key_sets)
+		{
 			return pexprNew;
 		}
 
@@ -3248,17 +3349,7 @@ CExpressionPreprocessor::PexprJoinPruning(CMemoryPool *mp, CExpression *pexpr,
 		// Derived output columns of the outer relation of the left join
 		CColRefSet *outer_rel_columns = outer_rel->DeriveOutputColumns();
 
-		// Unique key collection of the inner relation of left join
-		CKeyCollection *inner_rel_key_sets = inner_rel->DeriveKeyCollection();
-
-		if (nullptr == inner_rel_key_sets)
-		{
-			output_columns->Release();
-			childs_output_columns->Release();
-			result->Release();
-			inner_rel_unique_keys->Release();
-			return pexprNew;
-		}
+		BOOL join_pruning_not_possible = false;
 
 		ULONG num_keys = inner_rel_key_sets->Keys();
 
@@ -3280,23 +3371,23 @@ CExpressionPreprocessor::PexprJoinPruning(CMemoryPool *mp, CExpression *pexpr,
 			// If the used columns of the scalar equality operator is 0 then we will not prune the join.
 			if (usedColumns->Size() == 0)
 			{
-				output_columns->Release();
-				childs_output_columns->Release();
-				present_in_inner_rel->Release();
-				result->Release();
-				inner_rel_unique_keys->Release();
-				return pexprNew;
+				join_pruning_not_possible = true;
 			}
 
-			// If the used column count is 1 then we need to check if that column is a part of the inner relation unique key
+			// If the used column count is 1 then we need to check if that column is a part of the inner relation unique key.
+			// If the column is not a unique key join pruning is not possible
 			else if (usedColumns->Size() == 1)
 			{
 				CColRef *pcr = usedColumns->PcrFirst();
+
 				if (inner_rel_unique_keys->FMember(pcr))
 				{
 					result->Include(pcr);
 				}
-				present_in_inner_rel->Release();
+				else
+				{
+					join_pruning_not_possible = true;
+				}
 			}
 
 			// If the used column count is 2 then we need to check for each column whether it belongs to inner or outer relation
@@ -3313,44 +3404,26 @@ CExpressionPreprocessor::PexprJoinPruning(CMemoryPool *mp, CExpression *pexpr,
 					}
 				}
 
-				// If both the columns are not present in the inner relation we can't prune the join
-				if (present_in_inner_rel->Size() == 0)
-				{
-					output_columns->Release();
-					childs_output_columns->Release();
-					present_in_inner_rel->Release();
-					result->Release();
-					inner_rel_unique_keys->Release();
-					return pexprNew;
-				}
-
 				// This case means we have one column from the outer relation and one column from the inner relation
 				// We need to check if the column from the inner relation is a part of the unique key or not.
-				else if (present_in_inner_rel->Size() == 1)
+				// if it's not a unique key, join pruning is not possible
+				if (present_in_inner_rel->Size() == 1 &&
+					inner_rel_unique_keys->FMember(
+						present_in_inner_rel->PcrFirst()))
 				{
-					if (inner_rel_unique_keys->FMember(
-							present_in_inner_rel->PcrFirst()))
-					{
-						result->Include(present_in_inner_rel->PcrFirst());
-					}
-					present_in_inner_rel->Release();
+					result->Include(present_in_inner_rel->PcrFirst());
 				}
 
-				// This case means both the columns are from the inner relation.So we can't prune the join.
+				// If both the columns are not present in the inner relation or both the columns are from the inner relation,
+				// join pruning is not possible
 				else
 				{
-					output_columns->Release();
-					childs_output_columns->Release();
-					present_in_inner_rel->Release();
-					result->Release();
-					inner_rel_unique_keys->Release();
-					return pexprNew;
+					join_pruning_not_possible = true;
 				}
 			}
+			present_in_inner_rel->Release();
 		}
-		else if (COperator::EopScalarBoolOp == join_cond->Pop()->Eopid() &&
-				 CScalarBoolOp::EboolopAnd ==
-					 CScalarBoolOp::PopConvert(join_cond->Pop())->Eboolop())
+		else if (CPredicateUtils::FAnd(join_cond))
 		{
 			ULONG arity_join = join_cond->Arity();
 
@@ -3422,38 +3495,43 @@ CExpressionPreprocessor::PexprJoinPruning(CMemoryPool *mp, CExpression *pexpr,
 							}
 
 							// This case means both the columns are from the inner relation.
+							// So join pruning is not possible.
 							else
 							{
-								output_columns->Release();
-								childs_output_columns->Release();
+								join_pruning_not_possible = true;
 								present_in_inner_rel->Release();
-								result->Release();
-								inner_rel_unique_keys->Release();
-								return pexprNew;
+								break;
 							}
 						}
 					}
 				}
 
+				// If any child of ScalarBool operator is other than a ScalarCmp,
+				// join pruning is not possible
 				else
 				{
-					output_columns->Release();
-					childs_output_columns->Release();
-					result->Release();
-					inner_rel_unique_keys->Release();
-					return pexprNew;
+					join_pruning_not_possible = true;
+					break;
 				}
 			}
 		}
 
+		// If we get any operator other than equality or boolean AND then
+		// join pruning is not possible
 		else
 		{
-			output_columns->Release();
-			childs_output_columns->Release();
+			join_pruning_not_possible = true;
+		}
+
+		inner_rel_unique_keys->Release();
+
+		// If join pruning is not possible then return the current CExpression
+		if (join_pruning_not_possible)
+		{
 			result->Release();
-			inner_rel_unique_keys->Release();
 			return pexprNew;
 		}
+
 
 		// The result set contains all the unique keys from the inner relation and are part of the join condition
 		// which are either constant or equal to some column from outer relation.
@@ -3481,30 +3559,22 @@ CExpressionPreprocessor::PexprJoinPruning(CMemoryPool *mp, CExpression *pexpr,
 			}
 		}
 
+		result->Release();
+
 		if (are_all_unique_keys_present)
 		{
 			CExpression *outer_child = (*pexprNew)[0];
 			outer_child->AddRef();
 			pexprNew->Release();
-			output_columns->Release();
-			childs_output_columns->Release();
-			result->Release();
-			inner_rel_unique_keys->Release();
 			return outer_child;
 		}
-
 		else
 		{
-			output_columns->Release();
-			childs_output_columns->Release();
-			result->Release();
-			inner_rel_unique_keys->Release();
 			return pexprNew;
 		}
 	}
 
 	output_columns->Release();
-	childs_output_columns->Release();
 	return pexprNew;
 }
 
