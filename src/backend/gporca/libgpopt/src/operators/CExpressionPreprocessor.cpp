@@ -3227,7 +3227,7 @@ CExpressionPreprocessor::PexprJoinPruningScalar(CMemoryPool *mp,
 		  +--CScalarConst (100)
 
 	 Algebrized preprocessed query:
-	 +--CLogicalSelect
+        +--CLogicalSelect
 		|--CLogicalGet "foo" ("foo"), Key sets: {[0,1], [0,2,3], [5,11]}
 		+--CScalarCmp (>)
 		   |--CScalarIdent "e" (4)
