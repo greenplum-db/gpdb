@@ -3234,7 +3234,7 @@ static void handle_post_request(request_t *r, int header_end)
 		r->in.davailable -= data_bytes_in_req;
 
 		/* only write it out if no more data is expected */
-		if(r->in.davailable == 0)
+		if(r->in.davailable == 0 && !r->zstd)
 		{
 #ifdef USE_ZSTD
 			if(r->zstd)
@@ -3304,7 +3304,7 @@ static void handle_post_request(request_t *r, int header_end)
 				return;
 			}
 		}
-		else if (n == 0)
+		else if (n == 0 && !r->in.cflag)
 		{
 			/* socket close by peer will return 0 */
 			gwarning(r, "handle_post_request socket closed by peer");
