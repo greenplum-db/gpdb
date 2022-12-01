@@ -56,21 +56,21 @@ delete from s;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
 explain update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
-                                                           QUERY PLAN                                                            
----------------------------------------------------------------------------------------------------------------------------------
- Update  (cost=0.00..869.57 rows=34 width=1)
-   ->  Result  (cost=0.00..862.80 rows=67 width=26)
-         ->  Split  (cost=0.00..862.80 rows=67 width=22)
-               ->  Result  (cost=0.00..862.80 rows=34 width=22)
-                     ->  Hash Semi Join  (cost=0.00..862.80 rows=34 width=18)
-                           Hash Cond: s.a = r.b
-                           ->  Seq Scan on s  (cost=0.00..431.00 rows=34 width=18)
-                           ->  Hash  (cost=431.15..431.15 rows=3334 width=4)
-                                 ->  Result  (cost=0.00..431.15 rows=3334 width=4)
-                                       ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.14 rows=3334 width=4)
-                                             Hash Key: r.b
-                                             ->  Seq Scan on r  (cost=0.00..431.07 rows=3334 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Update  (cost=0.00..868.53 rows=34 width=1)
+   ->  Split  (cost=0.00..862.80 rows=67 width=22)
+         ->  Result  (cost=0.00..862.80 rows=34 width=22)
+               ->  Hash Semi Join  (cost=0.00..862.80 rows=34 width=18)
+                     Hash Cond: (s.a = r.b)
+                     ->  Seq Scan on s  (cost=0.00..431.00 rows=34 width=18)
+                           Filter: (NOT (a IS NULL))
+                     ->  Hash  (cost=431.15..431.15 rows=3334 width=4)
+                           ->  Result  (cost=0.00..431.15 rows=3334 width=4)
+                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.14 rows=3334 width=4)
+                                       Hash Key: r.b
+                                       ->  Seq Scan on r  (cost=0.00..431.07 rows=3334 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
 (13 rows)
 
 update s set b = b + 1 where exists (select 1 from r where s.a = r.b);

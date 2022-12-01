@@ -57,15 +57,14 @@ DETAIL:  Feature not supported: UPDATE with constraints
 
 set optimizer_enable_dml_constraints=on;
 explain update constr_tab set b = 10;
-                                     QUERY PLAN                                      
--------------------------------------------------------------------------------------
- Update  (cost=0.00..431.09 rows=1 width=1)
-   ->  Result  (cost=0.00..431.00 rows=1 width=34)
-         ->  Split  (cost=0.00..431.00 rows=1 width=30)
-               ->  Result  (cost=0.00..431.00 rows=1 width=30)
-                     ->  Seq Scan on constr_tab  (cost=0.00..431.00 rows=1 width=26)
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
-(6 rows)
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Update  (cost=0.00..431.08 rows=1 width=1)
+   ->  Split  (cost=0.00..431.00 rows=1 width=30)
+         ->  Result  (cost=0.00..431.00 rows=1 width=30)
+               ->  Seq Scan on constr_tab  (cost=0.00..431.00 rows=1 width=26)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 -- Same, with NOT NULL constraint.
 DROP TABLE IF EXISTS constr_tab;
@@ -113,17 +112,16 @@ INSERT INTO constr_tab VALUES(1,5,3,4);
 INSERT INTO constr_tab VALUES(1,5,3,4);
 set optimizer_enable_dml_constraints=off;
 explain update constr_tab set a = 10;
-                                           QUERY PLAN                                            
--------------------------------------------------------------------------------------------------
- Update  (cost=0.00..431.09 rows=1 width=1)
-   ->  Result  (cost=0.00..431.00 rows=1 width=34)
-         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=30)
-               Hash Key: constr_tab.a
-               ->  Split  (cost=0.00..431.00 rows=1 width=30)
-                     ->  Result  (cost=0.00..431.00 rows=1 width=30)
-                           ->  Seq Scan on constr_tab  (cost=0.00..431.00 rows=1 width=26)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.39.0
-(8 rows)
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Update  (cost=0.00..431.08 rows=1 width=1)
+   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=30)
+         Hash Key: constr_tab.a
+         ->  Split  (cost=0.00..431.00 rows=1 width=30)
+               ->  Result  (cost=0.00..431.00 rows=1 width=30)
+                     ->  Seq Scan on constr_tab  (cost=0.00..431.00 rows=1 width=26)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
 
 -- Test ORCA fallback on "FROM ONLY"
 CREATE TABLE homer (a int, b int, c int)

@@ -14581,26 +14581,25 @@ update window_agg_test t
 set i = tt.i 
 from (select (min(i) over (order by j)) as i, j from window_agg_test) tt
 where t.j = tt.j;
-                                                               QUERY PLAN                                                                
------------------------------------------------------------------------------------------------------------------------------------------
- Update  (cost=0.00..862.07 rows=1 width=1)
-   ->  Result  (cost=0.00..862.00 rows=1 width=26)
-         ->  Explicit Redistribute Motion 1:3  (slice3; segments: 1)  (cost=0.00..862.00 rows=2 width=22)
-               ->  Split  (cost=0.00..862.00 rows=1 width=22)
-                     ->  Hash Join  (cost=0.00..862.00 rows=1 width=22)
-                           Hash Cond: (window_agg_test.j = window_agg_test_1.j)
-                           ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=18)
-                                 ->  Seq Scan on window_agg_test  (cost=0.00..431.00 rows=1 width=18)
-                           ->  Hash  (cost=431.00..431.00 rows=1 width=8)
-                                 ->  WindowAgg  (cost=0.00..431.00 rows=1 width=8)
-                                       Order By: window_agg_test_1.j
-                                       ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                             Merge Key: window_agg_test_1.j
-                                             ->  Sort  (cost=0.00..431.00 rows=1 width=8)
-                                                   Sort Key: window_agg_test_1.j
-                                                   ->  Seq Scan on window_agg_test window_agg_test_1  (cost=0.00..431.00 rows=1 width=8)
+                                                            QUERY PLAN                                                             
+-----------------------------------------------------------------------------------------------------------------------------------
+ Update  (cost=0.00..862.06 rows=1 width=1)
+   ->  Explicit Redistribute Motion 1:3  (slice3; segments: 1)  (cost=0.00..862.00 rows=2 width=22)
+         ->  Split  (cost=0.00..862.00 rows=1 width=22)
+               ->  Hash Join  (cost=0.00..862.00 rows=1 width=22)
+                     Hash Cond: (window_agg_test.j = window_agg_test_1.j)
+                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=18)
+                           ->  Seq Scan on window_agg_test  (cost=0.00..431.00 rows=1 width=18)
+                     ->  Hash  (cost=431.00..431.00 rows=1 width=8)
+                           ->  WindowAgg  (cost=0.00..431.00 rows=1 width=8)
+                                 Order By: window_agg_test_1.j
+                                 ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                       Merge Key: window_agg_test_1.j
+                                       ->  Sort  (cost=0.00..431.00 rows=1 width=8)
+                                             Sort Key: window_agg_test_1.j
+                                             ->  Seq Scan on window_agg_test window_agg_test_1  (cost=0.00..431.00 rows=1 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(17 rows)
+(16 rows)
 
 ----------------------------------
 -- Test ORCA support for const TVF
