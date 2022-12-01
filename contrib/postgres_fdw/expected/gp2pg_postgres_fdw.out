@@ -214,12 +214,12 @@ ERROR:  parameter "extensions" must be a list of extension names
 ALTER SERVER testserver1 OPTIONS (ADD extensions 'foo, bar');
 WARNING:  extension "foo" is not installed
 WARNING:  extension "bar" is not installed
-WARNING:  extension "foo" is not installed  (seg0 127.0.0.1:7002 pid=25167)
-WARNING:  extension "bar" is not installed  (seg0 127.0.0.1:7002 pid=25167)
-WARNING:  extension "foo" is not installed  (seg1 127.0.0.1:7003 pid=25168)
-WARNING:  extension "bar" is not installed  (seg1 127.0.0.1:7003 pid=25168)
-WARNING:  extension "foo" is not installed  (seg2 127.0.0.1:7004 pid=25169)
-WARNING:  extension "bar" is not installed  (seg2 127.0.0.1:7004 pid=25169)
+WARNING:  extension "foo" is not installed  (seg1 127.0.0.1:7003 pid=14202)
+WARNING:  extension "foo" is not installed  (seg2 127.0.0.1:7004 pid=14201)
+WARNING:  extension "bar" is not installed  (seg2 127.0.0.1:7004 pid=14201)
+WARNING:  extension "foo" is not installed  (seg0 127.0.0.1:7002 pid=14200)
+WARNING:  extension "bar" is not installed  (seg0 127.0.0.1:7002 pid=14200)
+WARNING:  extension "bar" is not installed  (seg1 127.0.0.1:7003 pid=14202)
 ALTER SERVER testserver1 OPTIONS (DROP extensions);
 ALTER USER MAPPING FOR public SERVER testserver1
 	OPTIONS (DROP user, DROP password);
@@ -1605,12 +1605,14 @@ SELECT t1.c1, ss.a, ss.b FROM (SELECT c1 FROM "S 1"."T 3" WHERE c1 = 50) t1 INNE
                                        ->  Foreign Scan on public.ft5
                                              Output: ft5.c1, ft5.*
                                              Remote SQL: SELECT c1, c2, c3 FROM "S 1"."T 4" WHERE ((c1 >= 50)) AND ((c1 <= 60))
-         ->  Seq Scan on "S 1"."T 3"
+         ->  Materialize
                Output: "T 3".c1, "T 3".ctid
-               Filter: ("T 3".c1 = 50)
+               ->  Seq Scan on "S 1"."T 3"
+                     Output: "T 3".c1, "T 3".ctid
+                     Filter: ("T 3".c1 = 50)
  Optimizer: Postgres query optimizer
  Settings: optimizer = 'off'
-(32 rows)
+(34 rows)
 
 SELECT t1.c1, ss.a, ss.b FROM (SELECT c1 FROM "S 1"."T 3" WHERE c1 = 50) t1 INNER JOIN (SELECT t2.c1, t3.c1 FROM (SELECT c1 FROM ft4 WHERE c1 between 50 and 60) t2 FULL JOIN (SELECT c1 FROM ft5 WHERE c1 between 50 and 60) t3 ON (t2.c1 = t3.c1) WHERE t2.c1 IS NULL OR t2.c1 IS NOT NULL) ss(a, b) ON (TRUE) ORDER BY t1.c1, ss.a, ss.b FOR UPDATE OF t1;
  c1 | a  | b  
@@ -1628,17 +1630,15 @@ SELECT t1.c1, ss.a, ss.b FROM (SELECT c1 FROM "S 1"."T 3" WHERE c1 = 50) t1 INNE
 -- full outer join + inner join
 EXPLAIN (VERBOSE, COSTS OFF)
 SELECT t1.c1, t2.c1, t3.c1 FROM ft4 t1 INNER JOIN ft5 t2 ON (t1.c1 = t2.c1 + 1 and t1.c1 between 50 and 60) FULL JOIN ft4 t3 ON (t2.c1 = t3.c1) ORDER BY t1.c1, t2.c1, t3.c1 LIMIT 10;
-                                                                                                                                                                     QUERY PLAN                                                                                                                                                                      
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Limit
+                                                                                                                                                                           QUERY PLAN                                                                                                                                                                           
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Foreign Scan
    Output: t1.c1, t2.c1, t3.c1
-   ->  Foreign Scan
-         Output: t1.c1, t2.c1, t3.c1
-         Relations: ((public.ft4 t1) INNER JOIN (public.ft5 t2)) FULL JOIN (public.ft4 t3)
-         Remote SQL: SELECT r1.c1, r2.c1, r4.c1 FROM (("S 1"."T 3" r1 INNER JOIN "S 1"."T 4" r2 ON (((r1.c1 = (r2.c1 + 1))) AND (((r2.c1 + 1) >= 50)) AND (((r2.c1 + 1) <= 60)) AND ((r1.c1 >= 50)) AND ((r1.c1 <= 60)))) FULL JOIN "S 1"."T 3" r4 ON (((r2.c1 = r4.c1)))) ORDER BY r1.c1 ASC NULLS LAST, r2.c1 ASC NULLS LAST, r4.c1 ASC NULLS LAST
+   Relations: ((public.ft4 t1) INNER JOIN (public.ft5 t2)) FULL JOIN (public.ft4 t3)
+   Remote SQL: SELECT r1.c1, r2.c1, r4.c1 FROM (("S 1"."T 3" r1 INNER JOIN "S 1"."T 4" r2 ON (((r1.c1 = (r2.c1 + 1))) AND (((r2.c1 + 1) >= 50)) AND (((r2.c1 + 1) <= 60)) AND ((r1.c1 >= 50)) AND ((r1.c1 <= 60)))) FULL JOIN "S 1"."T 3" r4 ON (((r2.c1 = r4.c1)))) ORDER BY r1.c1 ASC NULLS LAST, r2.c1 ASC NULLS LAST, r4.c1 ASC NULLS LAST LIMIT 10::bigint
  Optimizer: Postgres query optimizer
  Settings: optimizer = 'off'
-(8 rows)
+(6 rows)
 
 SELECT t1.c1, t2.c1, t3.c1 FROM ft4 t1 INNER JOIN ft5 t2 ON (t1.c1 = t2.c1 + 1 and t1.c1 between 50 and 60) FULL JOIN ft4 t3 ON (t2.c1 = t3.c1) ORDER BY t1.c1, t2.c1, t3.c1 LIMIT 10;
  c1 | c1 | c1 
@@ -2174,27 +2174,24 @@ SELECT t1.c1, t2.c1 FROM ft1 t1 CROSS JOIN ft2 t2 ORDER BY t1.c1, t2.c1 OFFSET 1
 -- different server, not pushed down. No result expected.
 EXPLAIN (VERBOSE, COSTS OFF)
 SELECT t1.c1, t2.c1 FROM ft5 t1 JOIN ft6 t2 ON (t1.c1 = t2.c1) ORDER BY t1.c1, t2.c1 OFFSET 100 LIMIT 10;
-                                         QUERY PLAN                                          
----------------------------------------------------------------------------------------------
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
  Limit
    Output: t1.c1, t2.c1
-   ->  Sort
+   ->  Merge Join
          Output: t1.c1, t2.c1
-         Sort Key: t1.c1
-         ->  Hash Join
-               Output: t1.c1, t2.c1
-               Hash Cond: (t2.c1 = t1.c1)
-               ->  Foreign Scan on public.ft6 t2
-                     Output: t2.c1, t2.c2, t2.c3
-                     Remote SQL: SELECT c1 FROM "S 1"."T 4"
-               ->  Hash
-                     Output: t1.c1
-                     ->  Foreign Scan on public.ft5 t1
-                           Output: t1.c1
-                           Remote SQL: SELECT c1 FROM "S 1"."T 4" ORDER BY c1 ASC NULLS LAST
+         Merge Cond: (t2.c1 = t1.c1)
+         ->  Foreign Scan on public.ft6 t2
+               Output: t2.c1, t2.c2, t2.c3
+               Remote SQL: SELECT c1 FROM "S 1"."T 4" ORDER BY c1 ASC NULLS LAST
+         ->  Materialize
+               Output: t1.c1, t1.c2, t1.c3
+               ->  Foreign Scan on public.ft5 t1
+                     Output: t1.c1, t1.c2, t1.c3
+                     Remote SQL: SELECT c1 FROM "S 1"."T 4" ORDER BY c1 ASC NULLS LAST
  Optimizer: Postgres query optimizer
  Settings: enable_mergejoin = 'on', optimizer = 'off'
-(18 rows)
+(15 rows)
 
 SELECT t1.c1, t2.c1 FROM ft5 t1 JOIN ft6 t2 ON (t1.c1 = t2.c1) ORDER BY t1.c1, t2.c1 OFFSET 100 LIMIT 10;
  c1 | c1 
@@ -3807,26 +3804,28 @@ ORDER BY ref_0."C 1";
 -- Check with placeHolderVars
 explain (verbose, costs off)
 select sum(q.a), count(q.b) from ft4 left join (select 13, avg(ft1.c1), sum(ft2.c1) from ft1 right join ft2 on (ft1.c1 = ft2.c1)) q(a, b, c) on (ft4.c1 <= q.b);
-                                                                     QUERY PLAN                                                                     
-----------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                        QUERY PLAN                                                                        
+----------------------------------------------------------------------------------------------------------------------------------------------------------
  Aggregate
-   Output: sum((13)), count((avg(ft1.c1)))
+   Output: sum(q.a), count(q.b)
    ->  Nested Loop Left Join
-         Output: (13), (avg(ft1.c1))
+         Output: q.a, q.b
          Inner Unique: true
-         Join Filter: ((ft4.c1)::numeric <= (avg(ft1.c1)))
+         Join Filter: ((ft4.c1)::numeric <= q.b)
          ->  Foreign Scan on public.ft4
                Output: ft4.c1, ft4.c2, ft4.c3
                Remote SQL: SELECT c1 FROM "S 1"."T 3"
          ->  Materialize
-               Output: (13), (avg(ft1.c1)), (NULL::bigint)
-               ->  Foreign Scan
-                     Output: 13, (avg(ft1.c1)), NULL::bigint
-                     Relations: Aggregate on ((public.ft2) LEFT JOIN (public.ft1))
-                     Remote SQL: SELECT 13, avg(r1."C 1"), NULL::bigint FROM ("S 1"."T 1" r2 LEFT JOIN "S 1"."T 1" r1 ON (((r1."C 1" = r2."C 1"))))
+               Output: q.a, q.b
+               ->  Subquery Scan on q
+                     Output: q.a, q.b
+                     ->  Foreign Scan
+                           Output: 13, (avg(ft1.c1)), NULL::bigint
+                           Relations: Aggregate on ((public.ft2) LEFT JOIN (public.ft1))
+                           Remote SQL: SELECT 13, avg(r1."C 1"), NULL::bigint FROM ("S 1"."T 1" r2 LEFT JOIN "S 1"."T 1" r1 ON (((r1."C 1" = r2."C 1"))))
  Optimizer: Postgres query optimizer
  Settings: optimizer = 'off'
-(17 rows)
+(19 rows)
 
 select sum(q.a), count(q.b) from ft4 left join (select 13, avg(ft1.c1), sum(ft2.c1) from ft1 right join ft2 on (ft1.c1 = ft2.c1)) q(a, b, c) on (ft4.c1 <= q.b);
  sum | count 
@@ -6873,7 +6872,7 @@ INSERT INTO rw_view VALUES (0, 5);
 (5 rows)
 
 INSERT INTO rw_view VALUES (0, 5); -- should fail
-ERROR:  new row violates check option for view "rw_view"  (seg1 127.0.0.1:7003 pid=25168)
+ERROR:  new row violates check option for view "rw_view"  (seg1 127.0.0.1:7003 pid=14202)
 DETAIL:  Failing row contains (10, 5).
 EXPLAIN (VERBOSE, COSTS OFF)
 INSERT INTO rw_view VALUES (0, 15);
@@ -6908,7 +6907,7 @@ UPDATE rw_view SET b = b + 5;
 (8 rows)
 
 UPDATE rw_view SET b = b + 5; -- should fail
-ERROR:  new row violates check option for view "rw_view"  (seg1 127.0.0.1:7003 pid=25168)
+ERROR:  new row violates check option for view "rw_view"  (seg1 127.0.0.1:7003 pid=14202)
 DETAIL:  Failing row contains (20, 20).
 EXPLAIN (VERBOSE, COSTS OFF)
 UPDATE rw_view SET b = b + 15;
@@ -7625,9 +7624,9 @@ INSERT INTO b(aa) VALUES('bbbbb');
 SELECT tableoid::regclass, * FROM a;
  tableoid |  aa   
 ----------+-------
+ a        | aaa
  a        | aaaa
  a        | aaaaa
- a        | aaa
  b        | bbb
  b        | bbbb
  b        | bbbbb
@@ -7644,9 +7643,9 @@ SELECT tableoid::regclass, * FROM b;
 SELECT tableoid::regclass, * FROM ONLY a;
  tableoid |  aa   
 ----------+-------
+ a        | aaa
  a        | aaaa
  a        | aaaaa
- a        | aaa
 (3 rows)
 
 -- Greenplum don't support that ModifyTable mixes distributed and entry-only tables.
@@ -7661,9 +7660,9 @@ UPDATE b SET aa = 'new';
 SELECT tableoid::regclass, * FROM a;
  tableoid |  aa   
 ----------+-------
+ a        | aaa
  a        | aaaa
  a        | aaaaa
- a        | aaa
  b        | new
  b        | new
  b        | new
@@ -7680,9 +7679,9 @@ SELECT tableoid::regclass, * FROM b;
 SELECT tableoid::regclass, * FROM ONLY a;
  tableoid |  aa   
 ----------+-------
+ a        | aaa
  a        | aaaa
  a        | aaaaa
- a        | aaa
 (3 rows)
 
 -- Greenplum don't support that ModifyTable mixes distributed and entry-only tables.
@@ -7784,8 +7783,8 @@ select * from bar where f1 in (select f1 from foo) for update;
 select * from bar where f1 in (select f1 from foo) for update;
  f1 | f2 
 ----+----
-  1 | 11
   2 | 22
+  1 | 11
   3 | 33
   4 | 44
 (4 rows)
@@ -8224,15 +8223,15 @@ insert into itrtest values (2, 'qux') returning *;
 insert into itrtest values (1, 'test1'), (2, 'test2') returning *;
  a |         b         
 ---+-------------------
- 1 | test1 triggered !
  2 | test2 triggered !
+ 1 | test1 triggered !
 (2 rows)
 
 with result as (insert into itrtest values (1, 'test1'), (2, 'test2') returning *) select * from result;
  a |         b         
 ---+-------------------
- 1 | test1 triggered !
  2 | test2 triggered !
+ 1 | test1 triggered !
 (2 rows)
 
 \! env PGOPTIONS='' psql -p ${PG_PORT} contrib_regression -c 'drop trigger loct1_br_insert_trigger on loct1;'
@@ -9068,14 +9067,14 @@ SELECT t1.wr, t2.wr FROM (SELECT t1 wr, a FROM fprt1 t1 WHERE t1.a % 25 = 0) t1 
  Sort
    Sort Key: ((t1.*)::fprt1), ((t2.*)::fprt2)
    ->  Hash Full Join
-         Hash Cond: (t2.b = t1.a)
+         Hash Cond: (t1.a = t2.b)
          ->  Append
-               ->  Foreign Scan on ftprt2_p1 t2
-               ->  Foreign Scan on ftprt2_p2 t2_1
+               ->  Foreign Scan on ftprt1_p1 t1
+               ->  Foreign Scan on ftprt1_p2 t1_1
          ->  Hash
                ->  Append
-                     ->  Foreign Scan on ftprt1_p1 t1
-                     ->  Foreign Scan on ftprt1_p2 t1_1
+                     ->  Foreign Scan on ftprt2_p1 t2
+                     ->  Foreign Scan on ftprt2_p2 t2_1
  Optimizer: Postgres query optimizer
 (12 rows)
 
@@ -9136,10 +9135,10 @@ SELECT t1.a, t1.phv, t2.b, t2.phv FROM (SELECT 't1_phv' phv, * FROM fprt1 WHERE 
                ->  Hash
                      ->  Foreign Scan on ftprt2_p1
          ->  Hash Full Join
-               Hash Cond: (ftprt2_p2.b = ftprt1_p2.a)
-               ->  Foreign Scan on ftprt2_p2
+               Hash Cond: (ftprt1_p2.a = ftprt2_p2.b)
+               ->  Foreign Scan on ftprt1_p2
                ->  Hash
-                     ->  Foreign Scan on ftprt1_p2
+                     ->  Foreign Scan on ftprt2_p2
  Optimizer: Postgres query optimizer
 (14 rows)
 
