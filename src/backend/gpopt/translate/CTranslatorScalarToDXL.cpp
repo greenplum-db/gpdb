@@ -2112,7 +2112,11 @@ CTranslatorScalarToDXL::TranslateGenericDatumToDXL(CMemoryPool *mp,
 	LINT lint_value = 0;
 	if (CMDTypeGenericGPDB::HasByte2IntMapping(md_type))
 	{
-		lint_value = ExtractLintValueFromDatum(md_type, is_null, bytes, length);
+		IMDId *base_mdid = GPOS_NEW(mp)
+			CMDIdGPDB(IMDId::EmdidGeneral, gpdb::GetBaseType(mdid->Oid()));
+		// base_mdid is used for text related domain types
+		lint_value = ExtractLintValueFromDatum(md_type, is_null, bytes, length,
+											   base_mdid);
 	}
 
 	return CMDTypeGenericGPDB::CreateDXLDatumVal(
@@ -2355,7 +2359,8 @@ CTranslatorScalarToDXL::ExtractByteArrayFromDatum(CMemoryPool *mp,
 LINT
 CTranslatorScalarToDXL::ExtractLintValueFromDatum(const IMDType *md_type,
 												  BOOL is_null, BYTE *bytes,
-												  ULONG length)
+												  ULONG length,
+												  IMDId *base_mdid)
 {
 	IMDId *mdid = md_type->MDId();
 	GPOS_ASSERT(CMDTypeGenericGPDB::HasByte2IntMapping(md_type));
@@ -2389,15 +2394,21 @@ CTranslatorScalarToDXL::ExtractLintValueFromDatum(const IMDType *md_type,
 			{
 				hash = gpdb::UUIDHash((Datum) bytes);
 			}
-			else if (mdid->Equals(&CMDIdGPDB::m_mdid_bpchar))
+			else if (mdid->Equals(&CMDIdGPDB::m_mdid_bpchar) ||
+					 (base_mdid->IsValid() &&
+					  base_mdid->Equals(&CMDIdGPDB::m_mdid_bpchar)))
 			{
 				hash = gpdb::HashBpChar((Datum) bytes);
 			}
-			else if (mdid->Equals(&CMDIdGPDB::m_mdid_char))
+			else if (mdid->Equals(&CMDIdGPDB::m_mdid_char) ||
+					 (base_mdid->IsValid() &&
+					  base_mdid->Equals(&CMDIdGPDB::m_mdid_char)))
 			{
 				hash = gpdb::HashChar((Datum) bytes);
 			}
-			else if (mdid->Equals(&CMDIdGPDB::m_mdid_name))
+			else if (mdid->Equals(&CMDIdGPDB::m_mdid_name) ||
+					 (base_mdid->IsValid() &&
+					  base_mdid->Equals(&CMDIdGPDB::m_mdid_name)))
 			{
 				hash = gpdb::HashName((Datum) bytes);
 			}

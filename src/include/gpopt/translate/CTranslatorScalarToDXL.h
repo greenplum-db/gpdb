@@ -325,7 +325,8 @@ public:
 
 	// extract the long int value of a datum
 	static LINT ExtractLintValueFromDatum(const IMDType *md_type, BOOL is_null,
-										  BYTE *bytes, ULONG len);
+										  BYTE *bytes, ULONG len,
+										  IMDId *base_mdid);
 
 	// pair of DXL datum type and translator function
 	struct SDXLDatumTranslatorElem

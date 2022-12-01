@@ -2375,6 +2375,22 @@ gpdb::GetMergeJoinOpFamilies(Oid opno)
 }
 
 
+// get the OID of base elementtype for a given typid
+// eg.: CREATE DOMAIN text_domain as text;
+// SELECT oid, typbasetype from pg_type where typname = 'text_domain';
+// oid         | XXXXX  --> Oid for text_domain
+// typbasetype | 25     --> Oid for base element ie, TEXT
+Oid
+gpdb::GetBaseType(Oid typid)
+{
+	GP_WRAP_START;
+	{
+		return getBaseType(typid);
+	}
+	GP_WRAP_END;
+	return InvalidOid;
+}
+
 // Evaluates 'expr' and returns the result as an Expr.
 // Caller keeps ownership of 'expr' and takes ownership of the result
 Expr *
