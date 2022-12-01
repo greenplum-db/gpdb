@@ -109,6 +109,9 @@
 #include "cdb/cdbutil.h"
 #include "cdb/cdbendpoint.h"
 
+extern CGroupOpsRoutine *cgroupOpsRoutine;
+extern CGroupSystemInfo *cgroupSystemInfo;
+
 #define IS_PARALLEL_RETRIEVE_CURSOR(queryDesc)	(queryDesc->ddesc &&	\
 										queryDesc->ddesc->parallelCursorName &&	\
 										strlen(queryDesc->ddesc->parallelCursorName) > 0)
@@ -275,7 +278,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 					should_skip_operator_memory_assign = false;
 
 					/* Get total system memory on the QE in MB */
-					int 	total_memory_segment = getTotalMemory();
+					int 	total_memory_segment = cgroupOpsRoutine->gettotalmemory();
 					int 	nsegments_segment = ResGroupGetHostPrimaryCount();
 					uint64	coordinator_query_mem = queryDesc->plannedstmt->query_mem;
 

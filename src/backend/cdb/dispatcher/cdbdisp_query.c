@@ -50,6 +50,9 @@
 #include "cdb/cdbcopy.h"
 #include "executor/execUtils.h"
 
+extern CGroupOpsRoutine *cgroupOpsRoutine;
+extern CGroupSystemInfo *cgroupSystemInfo;
+
 #define QUERY_STRING_TRUNCATE_SIZE (1024)
 
 extern bool Test_print_direct_dispatch_info;
@@ -279,7 +282,7 @@ CdbDispatchPlan(struct QueryDesc *queryDesc,
 		 * We enable resource group re-calculate the query_mem on QE, and we are not in
 		 * fall back mode (use statement_mem).
 		 */
-		stmt->total_memory_coordinator = getTotalMemory();
+		stmt->total_memory_coordinator = cgroupOpsRoutine->gettotalmemory();
 		stmt->nsegments_coordinator = ResGroupGetHostPrimaryCount();
 	}
 

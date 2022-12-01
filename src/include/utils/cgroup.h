@@ -132,7 +132,6 @@ extern bool deleteDir(Oid group, CGroupComponentType component, const char *file
 
 extern int getCPUCores(void);
 extern bool getCgroupMountDir(void);
-extern int getTotalMemory(void);
 
 /*
  * Interfaces for OS dependent operations
@@ -174,6 +173,7 @@ typedef void (*setcpushare_function) (Oid group, int cpu_share);
 /* Get the cpu usage of the OS group. */
 typedef int64 (*getcpuusage_function) (Oid group);
 
+typedef int32 (*gettotalmemory_function) (void);
 typedef int32 (*getmemoryusage_function) (Oid group);
 typedef int32 (*getmemorylimitchunks_function) (Oid group);
 typedef void (*setmemorylimit_function) (Oid group, int memory_limit);
@@ -215,6 +215,7 @@ typedef struct CGroupOpsRoutine
 
 	getcpuusage_function 	getcpuusage;
 
+	gettotalmemory_function gettotalmemory;
 	getmemoryusage_function getmemoryusage;
 	setmemorylimit_function setmemorylimit;
 	getmemorylimitchunks_function getmemorylimitchunks;
@@ -227,9 +228,9 @@ typedef struct CGroupOpsRoutine
 } CGroupOpsRoutine;
 
 /* The global function handler. */
-extern CGroupOpsRoutine *cgroupOpsRoutine;
+CGroupOpsRoutine *cgroupOpsRoutine;
 
 /* The global system info. */
-extern CGroupSystemInfo *cgroupSystemInfo;
+CGroupSystemInfo *cgroupSystemInfo;
 
 #endif	/* CGROUP_H */

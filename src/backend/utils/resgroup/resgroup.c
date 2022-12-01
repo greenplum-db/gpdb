@@ -74,6 +74,10 @@
 #include "utils/session_state.h"
 #include "utils/vmem_tracker.h"
 #include "utils/cgroup-ops-v1.h"
+#include "utils/cgroup-ops-dummy.h"
+
+extern CGroupOpsRoutine *cgroupOpsRoutine;
+extern CGroupSystemInfo *cgroupSystemInfo;
 
 #define InvalidSlotId	(-1)
 #define RESGROUP_MAX_SLOTS	(MaxConnections)
@@ -548,7 +552,8 @@ initCgroup(void)
 		cgroupSystemInfo = get_cgroup_sysinfo_alpha();
 	}
 #else
-	elog(ERROR, "The resource group is not support on your operating system.");
+	cgroupOpsRoutine = get_cgroup_routine_dummy();
+	cgroupSystemInfo = get_cgroup_sysinfo_dummy();
 #endif
 
 	bool probe_result = cgroupOpsRoutine->probecgroup();
@@ -2144,7 +2149,7 @@ decideTotalChunks(int32 *totalChunks, int32 *chunkSizeInBits)
 	nsegments = Gp_role == GP_ROLE_EXECUTE ? host_primary_segment_count : pResGroupControl->segmentsOnMaster;
 	Assert(nsegments > 0);
 
-	tmptotalChunks = getTotalMemory() * gp_resource_group_memory_limit / nsegments;
+	tmptotalChunks = cgroupOpsRoutine->gettotalmemory() * gp_resource_group_memory_limit / nsegments;
 
 	/*
 	 * If vmem is larger than 16GB (i.e., 16K MB), we make the chunks bigger
