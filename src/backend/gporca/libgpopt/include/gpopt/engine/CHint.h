@@ -36,8 +36,6 @@ using namespace gpos;
 class CHint : public CRefCount
 {
 private:
-	ULONG m_ulMinNumOfPartsToRequireSortOnInsert;
-
 	ULONG m_ulJoinArityForAssociativityCommutativity;
 
 	ULONG m_ulArrayExpansionThreshold;
@@ -57,14 +55,11 @@ private:
 
 public:
 	// ctor
-	CHint(ULONG min_num_of_parts_to_require_sort_on_insert,
-		  ULONG join_arity_for_associativity_commutativity,
+	CHint(ULONG join_arity_for_associativity_commutativity,
 		  ULONG array_expansion_threshold, ULONG ulJoinOrderDPLimit,
 		  ULONG broadcast_threshold, BOOL enforce_constraint_on_dml,
 		  ULONG push_group_by_below_setop_threshold, ULONG xform_bind_threshold)
-		: m_ulMinNumOfPartsToRequireSortOnInsert(
-			  min_num_of_parts_to_require_sort_on_insert),
-		  m_ulJoinArityForAssociativityCommutativity(
+		: m_ulJoinArityForAssociativityCommutativity(
 			  join_arity_for_associativity_commutativity),
 		  m_ulArrayExpansionThreshold(array_expansion_threshold),
 		  m_ulJoinOrderDPLimit(ulJoinOrderDPLimit),
@@ -74,14 +69,6 @@ public:
 			  push_group_by_below_setop_threshold),
 		  m_ulXform_bind_threshold(xform_bind_threshold)
 	{
-	}
-
-	// Minimum number of partitions required for sorting tuples during
-	// insertion in an append only row-oriented partitioned table
-	ULONG
-	UlMinNumOfPartsToRequireSortOnInsert() const
-	{
-		return m_ulMinNumOfPartsToRequireSortOnInsert;
 	}
 
 	// Maximum number of relations in an n-ary join operator where ORCA will
@@ -151,7 +138,6 @@ public:
 	PhintDefault(CMemoryPool *mp)
 	{
 		return GPOS_NEW(mp) CHint(
-			gpos::int_max, /* min_num_of_parts_to_require_sort_on_insert */
 			gpos::int_max, /* join_arity_for_associativity_commutativity */
 			gpos::int_max, /* array_expansion_threshold */
 			JOIN_ORDER_DP_THRESHOLD,			 /*ulJoinOrderDPLimit*/

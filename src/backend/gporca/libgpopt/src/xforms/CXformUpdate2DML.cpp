@@ -142,7 +142,7 @@ CXformUpdate2DML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	}
 
 	// generate oid column and project operator
-	CExpression *pexprProject = NULL;
+	CExpression *pexprProject = pexprAssertConstraints;
 	if (ptabdesc->IsPartitioned())
 	{
 		// generate a partition selector

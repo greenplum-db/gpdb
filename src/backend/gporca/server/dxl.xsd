@@ -533,7 +533,6 @@
 			<xsd:element name="Array" type="dxl:ScalarArrayType"/>
 			<xsd:element name="ArrayRef" type="dxl:ScalarArrayRefType"/>
 			<xsd:element name="BitmapIndexProbe" type="dxl:BitmapIndexProbeType"/>			
-			<xsd:element name="PartOid" type="dxl:ScalarPartOidType"/>
 			<xsd:element name="PartBound" type="dxl:ScalarPartBoundType"/>
 			<xsd:element name="PartBoundInclusion" type="dxl:ScalarPartBoundInclusionType"/>
 			<xsd:group ref="dxl:ScalarBoolOp"/>
@@ -1515,10 +1514,6 @@
 		<xsd:sequence>
 			<xsd:group ref="dxl:ScalarOp" minOccurs="0" maxOccurs="1"/>
 		</xsd:sequence>
-	</xsd:complexType>
-
-	<xsd:complexType name="ScalarPartOidType">
-		<xsd:attribute name="Level" type="xsd:string" use="required"/>
 	</xsd:complexType>
 
 	<xsd:complexType name="ScalarPartBoundType">

@@ -392,11 +392,6 @@ private:
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 		CParseHandlerBase *parse_handler_root);
 
-	// construct a scalar part oid
-	static CParseHandlerBase *CreateScPartOidParseHandler(
-		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-		CParseHandlerBase *parse_handler_root);
-
 	// construct a scalar part default
 	static CParseHandlerBase *CreateScPartDefaultParseHandler(
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,

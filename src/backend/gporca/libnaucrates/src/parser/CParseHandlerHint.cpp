@@ -75,10 +75,6 @@ CParseHandlerHint::StartElement(const XMLCh *const,	 //element_uri,
 	}
 
 	// parse hint configuration options
-	ULONG min_num_of_parts_to_require_sort_on_insert =
-		CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
-			m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
-			EdxltokenMinNumOfPartsToRequireSortOnInsert, EdxltokenHint);
 	ULONG join_arity_for_associativity_commutativity =
 		CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
@@ -115,7 +111,6 @@ CParseHandlerHint::StartElement(const XMLCh *const,	 //element_uri,
 			XFORM_BIND_THRESHOLD);
 
 	m_hint = GPOS_NEW(m_mp) CHint(
-		min_num_of_parts_to_require_sort_on_insert,
 		join_arity_for_associativity_commutativity, array_expansion_threshold,
 		join_order_dp_threshold, broadcast_threshold, enforce_constraint_on_dml,
 		push_group_by_below_setop_threshold, xform_bind_threshold);

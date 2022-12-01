@@ -116,7 +116,6 @@ enum Edxlopid
 
 	EdxlopScalarDMLAction,
 	EdxlopScalarOpList,
-	EdxlopScalarPartOid,
 	EdxlopScalarPartDefault,
 	EdxlopScalarPartBound,
 	EdxlopScalarPartBoundInclusion,

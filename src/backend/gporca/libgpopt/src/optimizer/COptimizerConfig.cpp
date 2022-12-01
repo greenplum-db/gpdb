@@ -186,9 +186,6 @@ COptimizerConfig::Serialize(CMemoryPool *mp, CXMLSerializer *xml_serializer,
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
 		CDXLTokens::GetDXLTokenStr(EdxltokenHint));
 	xml_serializer->AddAttribute(
-		CDXLTokens::GetDXLTokenStr(EdxltokenMinNumOfPartsToRequireSortOnInsert),
-		m_hint->UlMinNumOfPartsToRequireSortOnInsert());
-	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(
 			EdxltokenJoinArityForAssociativityCommutativity),
 		m_hint->UlJoinArityForAssociativityCommutativity());

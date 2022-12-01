@@ -500,7 +500,7 @@ CPhysicalDML::PosComputeRequired(CMemoryPool *mp, CTableDescriptor *ptabdesc)
 		// the action column, see explanation in function's comment
 		const ULONG ulKeySets = pdrgpbsKeys->Size();
 		BOOL fNeedsSort = false;
-		for (ULONG ul = 0; ul < ulKeySets && !fNeedsSort; ul++)
+		for (ULONG ul = 0; ul < ulKeySets; ul++)
 		{
 			CBitSet *pbs = (*pdrgpbsKeys)[ul];
 			if (!pbs->IsDisjoint(m_pbsModified))

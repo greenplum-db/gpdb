@@ -294,7 +294,7 @@
       </dxl:LogicalUpdate>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="2">
-      <dxl:DMLUpdate Columns="0,1,2,3" ActionCol="12" OidCol="13" CtidCol="4" SegmentIdCol="10" InputSorted="false" PreserveOids="false">
+      <dxl:DMLUpdate Columns="0,1,2,3" ActionCol="12" OidCol="13" CtidCol="4" SegmentIdCol="10" PreserveOids="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="431.133042" Rows="1.000000" Width="1"/>
         </dxl:Properties>
