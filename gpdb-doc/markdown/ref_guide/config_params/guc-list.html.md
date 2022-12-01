@@ -1132,7 +1132,7 @@ Sets the Postgres Planner cost estimate for a Motion operator to transfer a row 
 
 ## <a id="gp_print_create_gang_time"></a>gp\_print\_create\_gang\_time 
 
-Controls the display of additional information about gang creation, including gang reuse status and the shortest and longest connection establishment time to the segment.
+When a user starts a session with Greenplum Database and issues a query, the system creates groups or 'gangs' of worker processes on each segment to do the work. `gp_print_create_gang_time` controls the display of additional information about gang creation, including gang reuse status and the shortest and longest connection establishment time to the segment.
 
 The default value is `false`, Greenplum Database does not display the additional gang creation information.
 
