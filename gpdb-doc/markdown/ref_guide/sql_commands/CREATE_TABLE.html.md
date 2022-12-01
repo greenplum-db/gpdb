@@ -485,7 +485,7 @@ SUBPARTITION TEMPLATE
 
     A primary key constraint is simply a combination of a unique constraint and a not-null constraint.
 
-    Greenplum Database automatically creates a `UNIQUE` index for each `UNIQUE` or `PRIMARY KEY` constraint to enforce uniqueness. Thus, it is not necessary to create an index explicitly for primary key columns. `UNIQUE` and `PRIMARY KEY` constraints are not allowed on append-optimized tables because the `UNIQUE` indexes that are created by the constraints are not allowed on append-optimized tables.
+    Greenplum Database automatically creates a `UNIQUE` index for each `UNIQUE` or `PRIMARY KEY` constraint to enforce uniqueness. Thus, it is not necessary to create an index explicitly for primary key columns.
 
     Foreign key constraints are not supported in Greenplum Database.
 
