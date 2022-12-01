@@ -1106,7 +1106,7 @@ Sets the tuple-serialization chunk size for the Greenplum Database interconnect.
 
 Specifies the maximum number of active parallel retrieve cursors allowed on a Greenplum Database cluster. A parallel retrieve cursor is considered active after it has been `DECLARE`d, but before it is `CLOSE`d.
 
-The default value is `-1`, there is no limit on the number of open parallel retrieve cursors that may be concurrently active in the cluster.
+The default value is `-1`; there is no limit on the number of open parallel retrieve cursors that may be concurrently active in the cluster \(up to the maximum value of 1024\).
 
 You must be a superuser to change the `gp_max_parallel_cursors` setting.
 
