@@ -81,20 +81,19 @@ select gp_segment_id, * from tab1;
 explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
  QUERY PLAN                                                                
 ---------------------------------------------------------------------------
- Delete                                                                    
-   ->  Result                                                              
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)                
-               Hash Key: tab1.b                                            
-               ->  Hash Join                                               
-                     Hash Cond: (tab2.a = tab1.a)                          
-                     ->  Seq Scan on tab2                                  
-                     ->  Hash                                              
-                           ->  Broadcast Motion 3:3  (slice1; segments: 3) 
-                                 ->  Hash Join                             
-                                       Hash Cond: (tab3.b = tab1.b)        
-                                       ->  Seq Scan on tab3                
-                                       ->  Hash                            
-                                             ->  Seq Scan on tab1          
+ Delete                                                                                                                                 
+   ->  Redistribute Motion 3:3  (slice2; segments: 3)
+         Hash Key: tab1.b
+         ->  Hash Join
+               Hash Cond: (tab2.a = tab1.a)
+               ->  Seq Scan on tab2
+               ->  Hash
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                           ->  Hash Join
+                                 Hash Cond: (tab3.b = tab1.b)
+                                 ->  Seq Scan on tab3
+                                 ->  Hash
+                                       ->  Seq Scan on tab1
  Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0                      
 (15 rows)
 begin;
@@ -109,22 +108,21 @@ ABORT
 explain (costs off) update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
  QUERY PLAN                                                                            
 ---------------------------------------------------------------------------------------
- Update                                                                                
-   ->  Result                                                                          
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)                            
-               Hash Key: tab1.b                                                        
-               ->  Split                                                               
-                     ->  Result                                                        
-                           ->  Hash Join                                               
-                                 Hash Cond: (tab2.a = tab1.a)                          
-                                 ->  Seq Scan on tab2                                  
-                                 ->  Hash                                              
-                                       ->  Broadcast Motion 3:3  (slice1; segments: 3) 
-                                             ->  Hash Join                             
-                                                   Hash Cond: (tab3.b = tab1.b)        
-                                                   ->  Seq Scan on tab3                
-                                                   ->  Hash                            
-                                                         ->  Seq Scan on tab1          
+ Update                                                                                                                                                      
+   ->  Redistribute Motion 3:3  (slice2; segments: 3)
+         Hash Key: tab1.b
+         ->  Split
+               ->  Result
+                     ->  Hash Join
+                           Hash Cond: (tab2.a = tab1.a)
+                           ->  Seq Scan on tab2
+                           ->  Hash
+                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                       ->  Hash Join
+                                             Hash Cond: (tab3.b = tab1.b)
+                                             ->  Seq Scan on tab3
+                                             ->  Hash
+                                                   ->  Seq Scan on tab1
  Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0                                  
 (17 rows)
 begin;
@@ -138,21 +136,20 @@ ABORT
 explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
  QUERY PLAN                                                                                  
 ---------------------------------------------------------------------------------------------
- Delete                                                                                      
-   ->  Result                                                                                
-         ->  Redistribute Motion 3:3  (slice3; segments: 3)                                  
-               Hash Key: tab1.b                                                              
-               ->  Hash Join                                                                 
-                     Hash Cond: (tab3.a = tab1.b)                                            
-                     ->  Seq Scan on tab3                                                    
-                     ->  Hash                                                                
-                           ->  Broadcast Motion 3:3  (slice2; segments: 3)                   
-                                 ->  Hash Join                                               
-                                       Hash Cond: (tab2.a = tab1.a)                          
-                                       ->  Seq Scan on tab2                                  
-                                       ->  Hash                                              
-                                             ->  Broadcast Motion 3:3  (slice1; segments: 3) 
-                                                   ->  Seq Scan on tab1                      
+ Delete                                                                                                                                                                    
+   ->  Redistribute Motion 3:3  (slice3; segments: 3)
+         Hash Key: tab1.b
+         ->  Hash Join
+               Hash Cond: (tab3.a = tab1.b)
+               ->  Seq Scan on tab3
+               ->  Hash
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                           ->  Hash Join
+                                 Hash Cond: (tab2.a = tab1.a)
+                                 ->  Seq Scan on tab2
+                                 ->  Hash
+                                       ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                             ->  Seq Scan on tab1
  Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0                                        
 (16 rows)
 begin;
@@ -166,23 +163,22 @@ ABORT
 explain (costs off) update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
  QUERY PLAN                                                                                              
 ---------------------------------------------------------------------------------------------------------
- Update                                                                                                  
-   ->  Result                                                                                            
-         ->  Redistribute Motion 3:3  (slice3; segments: 3)                                              
-               Hash Key: tab1.b                                                                          
-               ->  Split                                                                                 
-                     ->  Result                                                                          
-                           ->  Hash Join                                                                 
-                                 Hash Cond: (tab3.a = tab1.b)                                            
-                                 ->  Seq Scan on tab3                                                    
-                                 ->  Hash                                                                
-                                       ->  Broadcast Motion 3:3  (slice2; segments: 3)                   
-                                             ->  Hash Join                                               
-                                                   Hash Cond: (tab2.a = tab1.a)                          
-                                                   ->  Seq Scan on tab2                                  
-                                                   ->  Hash                                              
-                                                         ->  Broadcast Motion 3:3  (slice1; segments: 3) 
-                                                               ->  Seq Scan on tab1                      
+ Update                                                                                                                                                                                            
+   ->  Redistribute Motion 3:3  (slice3; segments: 3)
+         Hash Key: tab1.b
+         ->  Split
+               ->  Result
+                     ->  Hash Join
+                           Hash Cond: (tab3.a = tab1.b)
+                           ->  Seq Scan on tab3
+                           ->  Hash
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Hash Join
+                                             Hash Cond: (tab2.a = tab1.a)
+                                             ->  Seq Scan on tab2
+                                             ->  Hash
+                                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                                         ->  Seq Scan on tab1
  Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0                                                    
 (18 rows)
 begin;
@@ -197,13 +193,12 @@ ABORT
 explain (costs off) update tab1 set b = b + 1;
  QUERY PLAN                                                 
 ------------------------------------------------------------
- Update                                                     
-   ->  Result                                               
-         ->  Redistribute Motion 3:3  (slice1; segments: 3) 
-               Hash Key: tab1.b                             
-               ->  Split                                    
-                     ->  Result                             
-                           ->  Seq Scan on tab1             
+ Update                                                                                                  
+   ->  Redistribute Motion 3:3  (slice1; segments: 3)
+         Hash Key: tab1.b
+         ->  Split
+               ->  Result
+                     ->  Seq Scan on tab1
  Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0       
 (8 rows)
 begin;
