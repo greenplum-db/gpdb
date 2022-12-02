@@ -214,12 +214,12 @@ ERROR:  parameter "extensions" must be a list of extension names
 ALTER SERVER testserver1 OPTIONS (ADD extensions 'foo, bar');
 WARNING:  extension "foo" is not installed
 WARNING:  extension "bar" is not installed
-WARNING:  extension "foo" is not installed  (seg1 127.0.0.1:7003 pid=14202)
-WARNING:  extension "foo" is not installed  (seg2 127.0.0.1:7004 pid=14201)
-WARNING:  extension "bar" is not installed  (seg2 127.0.0.1:7004 pid=14201)
-WARNING:  extension "foo" is not installed  (seg0 127.0.0.1:7002 pid=14200)
-WARNING:  extension "bar" is not installed  (seg0 127.0.0.1:7002 pid=14200)
-WARNING:  extension "bar" is not installed  (seg1 127.0.0.1:7003 pid=14202)
+WARNING:  extension "foo" is not installed  (seg1 127.0.0.1:7003 pid=6929)
+WARNING:  extension "bar" is not installed  (seg1 127.0.0.1:7003 pid=6929)
+WARNING:  extension "foo" is not installed  (seg2 127.0.0.1:7004 pid=6928)
+WARNING:  extension "bar" is not installed  (seg2 127.0.0.1:7004 pid=6928)
+WARNING:  extension "foo" is not installed  (seg0 127.0.0.1:7002 pid=6927)
+WARNING:  extension "bar" is not installed  (seg0 127.0.0.1:7002 pid=6927)
 ALTER SERVER testserver1 OPTIONS (DROP extensions);
 ALTER USER MAPPING FOR public SERVER testserver1
 	OPTIONS (DROP user, DROP password);
@@ -2588,20 +2588,10 @@ DROP TABLE local_tbl;
 CREATE ROLE regress_view_owner SUPERUSER;
 CREATE USER MAPPING FOR regress_view_owner SERVER pgserver;
 GRANT SELECT ON ft4 TO regress_view_owner;
-WARNING:  could not dump unrecognized node type: 778
-WARNING:  could not dump unrecognized node type: 791
-WARNING:  could not dump unrecognized node type: 778
-WARNING:  could not dump unrecognized node type: 791
 GRANT SELECT ON ft5 TO regress_view_owner;
-WARNING:  could not dump unrecognized node type: 778
-WARNING:  could not dump unrecognized node type: 791
-WARNING:  could not dump unrecognized node type: 778
-WARNING:  could not dump unrecognized node type: 791
 CREATE VIEW v4 AS SELECT * FROM ft4;
 CREATE VIEW v5 AS SELECT * FROM ft5;
 ALTER VIEW v5 OWNER TO regress_view_owner;
-WARNING:  could not dump unrecognized node type: 791
-WARNING:  could not dump unrecognized node type: 791
 EXPLAIN (VERBOSE, COSTS OFF)
 SELECT t1.c1, t2.c2 FROM v4 t1 LEFT JOIN v5 t2 ON (t1.c1 = t2.c1) ORDER BY t1.c1, t2.c1 OFFSET 10 LIMIT 10;  -- can't be pushed down, different view owners
                               QUERY PLAN                              
@@ -2642,8 +2632,6 @@ SELECT t1.c1, t2.c2 FROM v4 t1 LEFT JOIN v5 t2 ON (t1.c1 = t2.c1) ORDER BY t1.c1
 (10 rows)
 
 ALTER VIEW v4 OWNER TO regress_view_owner;
-WARNING:  could not dump unrecognized node type: 791
-WARNING:  could not dump unrecognized node type: 791
 EXPLAIN (VERBOSE, COSTS OFF)
 SELECT t1.c1, t2.c2 FROM v4 t1 LEFT JOIN v5 t2 ON (t1.c1 = t2.c1) ORDER BY t1.c1, t2.c1 OFFSET 10 LIMIT 10;  -- can be pushed down
                                                                                               QUERY PLAN                                                                                               
@@ -2711,8 +2699,6 @@ SELECT t1.c1, t2.c2 FROM v4 t1 LEFT JOIN ft5 t2 ON (t1.c1 = t2.c1) ORDER BY t1.c
 (10 rows)
 
 ALTER VIEW v4 OWNER TO CURRENT_USER;
-WARNING:  could not dump unrecognized node type: 791
-WARNING:  could not dump unrecognized node type: 791
 EXPLAIN (VERBOSE, COSTS OFF)
 SELECT t1.c1, t2.c2 FROM v4 t1 LEFT JOIN ft5 t2 ON (t1.c1 = t2.c1) ORDER BY t1.c1, t2.c1 OFFSET 10 LIMIT 10;  -- can be pushed down
                                                                                               QUERY PLAN                                                                                               
@@ -2741,13 +2727,9 @@ SELECT t1.c1, t2.c2 FROM v4 t1 LEFT JOIN ft5 t2 ON (t1.c1 = t2.c1) ORDER BY t1.c
 (10 rows)
 
 ALTER VIEW v4 OWNER TO regress_view_owner;
-WARNING:  could not dump unrecognized node type: 791
-WARNING:  could not dump unrecognized node type: 791
 -- cleanup
 DROP OWNED BY regress_view_owner;
 DROP ROLE regress_view_owner;
-WARNING:  could not dump unrecognized node type: 791
-WARNING:  could not dump unrecognized node type: 791
 -- ===================================================================
 -- Aggregate and grouping queries
 -- ===================================================================
@@ -6872,7 +6854,7 @@ INSERT INTO rw_view VALUES (0, 5);
 (5 rows)
 
 INSERT INTO rw_view VALUES (0, 5); -- should fail
-ERROR:  new row violates check option for view "rw_view"  (seg1 127.0.0.1:7003 pid=14202)
+ERROR:  new row violates check option for view "rw_view"  (seg1 127.0.0.1:7003 pid=6929)
 DETAIL:  Failing row contains (10, 5).
 EXPLAIN (VERBOSE, COSTS OFF)
 INSERT INTO rw_view VALUES (0, 15);
@@ -6907,7 +6889,7 @@ UPDATE rw_view SET b = b + 5;
 (8 rows)
 
 UPDATE rw_view SET b = b + 5; -- should fail
-ERROR:  new row violates check option for view "rw_view"  (seg1 127.0.0.1:7003 pid=14202)
+ERROR:  new row violates check option for view "rw_view"  (seg1 127.0.0.1:7003 pid=6929)
 DETAIL:  Failing row contains (20, 20).
 EXPLAIN (VERBOSE, COSTS OFF)
 UPDATE rw_view SET b = b + 15;
@@ -7660,9 +7642,9 @@ UPDATE b SET aa = 'new';
 SELECT tableoid::regclass, * FROM a;
  tableoid |  aa   
 ----------+-------
- a        | aaa
  a        | aaaa
  a        | aaaaa
+ a        | aaa
  b        | new
  b        | new
  b        | new
@@ -7679,9 +7661,9 @@ SELECT tableoid::regclass, * FROM b;
 SELECT tableoid::regclass, * FROM ONLY a;
  tableoid |  aa   
 ----------+-------
- a        | aaa
  a        | aaaa
  a        | aaaaa
+ a        | aaa
 (3 rows)
 
 -- Greenplum don't support that ModifyTable mixes distributed and entry-only tables.
@@ -7783,8 +7765,8 @@ select * from bar where f1 in (select f1 from foo) for update;
 select * from bar where f1 in (select f1 from foo) for update;
  f1 | f2 
 ----+----
-  2 | 22
   1 | 11
+  2 | 22
   3 | 33
   4 | 44
 (4 rows)
@@ -8120,8 +8102,8 @@ insert into itrtest values (2, 'qux') returning *;
 insert into itrtest values (1, 'test1'), (2, 'test2') returning *;
  a |   b   
 ---+-------
- 2 | test2
  1 | test1
+ 2 | test2
 (2 rows)
 
 select tableoid::regclass, * FROM itrtest;
