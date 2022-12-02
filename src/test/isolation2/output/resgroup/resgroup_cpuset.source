@@ -288,40 +288,17 @@ SELECT gp_inject_fault('create_resource_group_fail', 'reset', 1);
 (1 row)
 
 -- test segment/master cpuset
-CREATE RESOURCE GROUP rg_multi_cpuset1 WITH (concurrency=2, cpuset='0;1-2');
+CREATE RESOURCE GROUP rg_multi_cpuset1 WITH (concurrency=2, cpuset='0;0');
 CREATE
-
-CREATE RESOURCE GROUP rg_multi_cpuset WITH (concurrency=2, cpuset='0;1-2');
-ERROR:  cpu cores 0 are used by resource group rg_multi_cpuset1
-CREATE RESOURCE GROUP rg_multi_cpuset WITH (concurrency=2, cpuset='0');
-ERROR:  cpu cores 0 are used by resource group rg_multi_cpuset1
-
-CREATE RESOURCE GROUP rg_multi_cpuset2 WITH (concurrency=2, cpuset='3;4-5');
-CREATE
-
-ALTER RESOURCE GROUP rg_multi_cpuset2 set CPUSET '0;1-3';
-ERROR:  cpu cores 0 are used by resource group rg_multi_cpuset1
-ALTER RESOURCE GROUP rg_multi_cpuset2 set CPUSET '6';
+ALTER RESOURCE GROUP rg_multi_cpuset1 set CPUSET '1;1';
 ALTER
-ALTER RESOURCE GROUP rg_multi_cpuset1 set CPUSET '3;4-5';
-ALTER
-ALTER RESOURCE GROUP rg_multi_cpuset2 set CPUSET '0;1-2';
-ALTER
-
 select groupname,cpuset from gp_toolkit.gp_resgroup_config where groupname='rg_multi_cpuset1';
  groupname        | cpuset 
 ------------------+--------
- rg_multi_cpuset1 | 3;4-5  
-(1 row)
-select groupname,cpuset from gp_toolkit.gp_resgroup_config where groupname='rg_multi_cpuset2';
- groupname        | cpuset 
-------------------+--------
- rg_multi_cpuset2 | 0;1-2  
+ rg_multi_cpuset1 | 1;1    
 (1 row)
 
 DROP RESOURCE GROUP rg_multi_cpuset1;
-DROP
-DROP RESOURCE GROUP rg_multi_cpuset2;
 DROP
 
 REVOKE ALL ON busy FROM role1_cpuset_test;
