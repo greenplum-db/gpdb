@@ -3311,7 +3311,6 @@ CExpressionPreprocessor::PexprJoinPruning(CMemoryPool *mp, CExpression *pexpr,
 	CExpression *pexprNew = GPOS_NEW(mp) CExpression(mp, pop, pdrgpexpr);
 	childs_output_columns->Release();
 
-
 	// Checking if the join is a left join then pruning the join if possible
 	if (CPredicateUtils::FLeftOuterJoin(pexprNew))
 	{
@@ -3324,21 +3323,21 @@ CExpressionPreprocessor::PexprJoinPruning(CMemoryPool *mp, CExpression *pexpr,
 			output_columns->Release();
 			return pexprNew;
 		}
-
 		output_columns->Release();
 
 		// Unique key collection of the inner relation of left join
 		CKeyCollection *inner_rel_key_sets = inner_rel->DeriveKeyCollection();
-
 		if (nullptr == inner_rel_key_sets)
 		{
 			return pexprNew;
 		}
 
+		// Set to contain the unique keys of inner relation used in the join condition
+		// which are either a constant or equal to some other column from the outer relation
 		CColRefSet *result = GPOS_NEW(mp) CColRefSet(mp);
 
 		// Unique keys of inner relation
-		CColRefSet *inner_rel_unique_keys = GPOS_NEW(mp) CColRefSet(mp);
+		CColRefSet *inner_unique_keys = GPOS_NEW(mp) CColRefSet(mp);
 
 		// Outer relation of the left join
 		CExpression *outer_rel = (*pexprNew)[0];
@@ -3349,192 +3348,202 @@ CExpressionPreprocessor::PexprJoinPruning(CMemoryPool *mp, CExpression *pexpr,
 		// Derived output columns of the outer relation of the left join
 		CColRefSet *outer_rel_columns = outer_rel->DeriveOutputColumns();
 
-		BOOL join_pruning_not_possible = false;
+		// Is join pruning possible?
+		BOOL join_prunable = true;
 
 		ULONG num_keys = inner_rel_key_sets->Keys();
 
 		for (ULONG ul = 0; ul < num_keys; ul++)
 		{
 			CColRefSet *pdrgpcrKey = inner_rel_key_sets->PcrsKey(mp, ul);
-			inner_rel_unique_keys->Include(pdrgpcrKey);
+			inner_unique_keys->Include(pdrgpcrKey);
 			pdrgpcrKey->Release();
+		}
+
+		// Join Pruning is done only when the join condition is a ScalarCmp or
+		// BOOLEAN AND
+		if (!CPredicateUtils::IsEqualityOp(join_cond) &&
+			!CPredicateUtils::FAnd(join_cond))
+		{
+			result->Release();
+			inner_unique_keys->Release();
+			return pexprNew;
 		}
 
 		if (CPredicateUtils::IsEqualityOp(join_cond))
 		{
-			// Contains columns from a join condition that are present in the inner relation
-			CColRefSet *present_in_inner_rel = GPOS_NEW(mp) CColRefSet(mp);
+			// Contains columns from a join condition that are present in the
+			// inner relation
+			CColRefSet *inner_columns = GPOS_NEW(mp) CColRefSet(mp);
 
 			// Columns used in a join condition
 			CColRefSet *usedColumns = join_cond->DeriveUsedColumns();
 
-			// If the used columns of the scalar equality operator is 0 then we will not prune the join.
+			// If the used columns of the scalar equality operator is 0 then we
+			// will not prune the join.
 			if (usedColumns->Size() == 0)
 			{
-				join_pruning_not_possible = true;
+				join_prunable = false;
 			}
-
-			// If the used column count is 1 then we need to check if that column is a part of the inner relation unique key.
-			// If the column is not a unique key join pruning is not possible
 			else if (usedColumns->Size() == 1)
 			{
+				// If the used column count is 1 then we need to check if that
+				// column is a part of the inner relation unique key.
+				// If the column is not a unique key join pruning is not possible
 				CColRef *pcr = usedColumns->PcrFirst();
 
-				if (inner_rel_unique_keys->FMember(pcr))
+				if (inner_unique_keys->FMember(pcr))
 				{
 					result->Include(pcr);
 				}
 				else
 				{
-					join_pruning_not_possible = true;
+					join_prunable = false;
 				}
 			}
-
-			// If the used column count is 2 then we need to check for each column whether it belongs to inner or outer relation
 			else
 			{
+				// If the used column count is 2 then we need to check for each
+				// column whether it belongs to inner or outer relation
 				CColRefSetIter it(*usedColumns);
-
 				while (it.Advance())
 				{
 					CColRef *pcr = it.Pcr();
 					if (!outer_rel_columns->FMember(pcr))
 					{
-						present_in_inner_rel->Include(pcr);
+						inner_columns->Include(pcr);
 					}
 				}
 
-				// This case means we have one column from the outer relation and one column from the inner relation
-				// We need to check if the column from the inner relation is a part of the unique key or not.
-				// if it's not a unique key, join pruning is not possible
-				if (present_in_inner_rel->Size() == 1 &&
-					inner_rel_unique_keys->FMember(
-						present_in_inner_rel->PcrFirst()))
+				// This case means we have one column from the outer relation
+				// and one column from the inner relation
+				// We need to check if the column from the inner relation is a
+				// part of the unique key or not.
+				// If it's not a unique key, join pruning is not possible
+				if (inner_columns->Size() == 1 &&
+					inner_unique_keys->FMember(inner_columns->PcrFirst()))
 				{
-					result->Include(present_in_inner_rel->PcrFirst());
+					result->Include(inner_columns->PcrFirst());
 				}
-
-				// If both the columns are not present in the inner relation or both the columns are from the inner relation,
-				// join pruning is not possible
 				else
 				{
-					join_pruning_not_possible = true;
+					// If both the columns are not present in the inner relation
+					// or both the columns are from the inner relation,
+					// join pruning is not possible
+					join_prunable = false;
 				}
 			}
-			present_in_inner_rel->Release();
+			inner_columns->Release();
 		}
-		else if (CPredicateUtils::FAnd(join_cond))
+
+		if (CPredicateUtils::FAnd(join_cond))
 		{
 			ULONG arity_join = join_cond->Arity();
 
 			for (ULONG ul = 0; ul < arity_join; ul++)
 			{
 				CExpression *join_cond_child = (*join_cond)[ul];
-				if (COperator::EopScalarCmp == join_cond_child->Pop()->Eopid())
+
+				// If the child of the ScalarBoolAnd is not a ScalarCmp then join pruning
+				// is not possible
+				if (COperator::EopScalarCmp != join_cond_child->Pop()->Eopid())
 				{
-					if (CPredicateUtils::IsEqualityOp(join_cond_child))
-					{
-						// Contains columns from a join condition that are present in the inner relation
-						CColRefSet *present_in_inner_rel =
-							GPOS_NEW(mp) CColRefSet(mp);
-
-						// Columns used in a join condition
-						CColRefSet *usedColumns =
-							join_cond_child->DeriveUsedColumns();
-
-						// If the used column count for the ScalarCmp is 0 then continue search
-						// for the next ScalarCmp columns.
-						if (usedColumns->Size() == 0)
-						{
-							present_in_inner_rel->Release();
-							continue;
-						}
-
-						// If the used column count is 1 then we need to check if that column is a part of the inner relation unique key
-						else if (usedColumns->Size() == 1)
-						{
-							CColRef *pcr = usedColumns->PcrFirst();
-							if (inner_rel_unique_keys->FMember(pcr))
-							{
-								result->Include(pcr);
-							}
-							present_in_inner_rel->Release();
-						}
-
-						else
-						{
-							CColRefSetIter it(*usedColumns);
-
-							while (it.Advance())
-							{
-								CColRef *pcr = it.Pcr();
-								if (!outer_rel_columns->FMember(pcr))
-								{
-									present_in_inner_rel->Include(pcr);
-								}
-							}
-
-							// If both the columns are not present in the inner relation continue for next child
-							if (present_in_inner_rel->Size() == 0)
-							{
-								present_in_inner_rel->Release();
-								continue;
-							}
-
-							// This case means we have one column from the outer relation and one column from the inner relation
-							// We need to check if the column from the inner relation is a part of the unique key or not.
-							else if (present_in_inner_rel->Size() == 1)
-							{
-								if (inner_rel_unique_keys->FMember(
-										present_in_inner_rel->PcrFirst()))
-								{
-									result->Include(
-										present_in_inner_rel->PcrFirst());
-								}
-								present_in_inner_rel->Release();
-							}
-
-							// This case means both the columns are from the inner relation.
-							// So join pruning is not possible.
-							else
-							{
-								join_pruning_not_possible = true;
-								present_in_inner_rel->Release();
-								break;
-							}
-						}
-					}
+					join_prunable = false;
+					break;
 				}
 
-				// If any child of ScalarBool operator is other than a ScalarCmp,
-				// join pruning is not possible
+				// If the child is a ScalarCmp but not an Equality then continue
+				if (COperator::EopScalarCmp ==
+						join_cond_child->Pop()->Eopid() &&
+					!CPredicateUtils::IsEqualityOp(join_cond_child))
+				{
+					continue;
+				}
+
+				// Contains columns from a join condition that are present in
+				// the inner relation
+				CColRefSet *inner_columns = GPOS_NEW(mp) CColRefSet(mp);
+
+				// Columns used in a join condition
+				CColRefSet *usedColumns = join_cond_child->DeriveUsedColumns();
+
+				// If the used column count for the ScalarCmp is 0 then continue
+				// search for the next ScalarCmp columns.
+				if (usedColumns->Size() == 0)
+				{
+					inner_columns->Release();
+					continue;
+				}
+				else if (usedColumns->Size() == 1)
+				{
+					//If the used column count is 1 then we need to check if that
+					// column is a part of the inner relation unique key
+					CColRef *pcr = usedColumns->PcrFirst();
+					if (inner_unique_keys->FMember(pcr))
+					{
+						result->Include(pcr);
+					}
+					inner_columns->Release();
+				}
 				else
 				{
-					join_pruning_not_possible = true;
-					break;
+					// If the used column count is 2, we need to check from those
+					// two columns which one belong to inner relation
+					CColRefSetIter it(*usedColumns);
+
+					while (it.Advance())
+					{
+						CColRef *pcr = it.Pcr();
+						if (!outer_rel_columns->FMember(pcr))
+						{
+							inner_columns->Include(pcr);
+						}
+					}
+
+					// If both the columns are not present in the inner relation
+					// continue for next child
+					if (inner_columns->Size() == 0)
+					{
+						inner_columns->Release();
+						continue;
+					}
+					else if (inner_columns->Size() == 1)
+					{
+						// This case means we have one column from the outer relation
+						// and one column from the inner relation.We need to check if
+						// the column from the inner relation is a part of the unique key or not.
+						if (inner_unique_keys->FMember(
+								inner_columns->PcrFirst()))
+						{
+							result->Include(inner_columns->PcrFirst());
+						}
+						inner_columns->Release();
+					}
+					else
+					{
+						// This case means both the columns are from the inner relation.
+						// So join pruning is not possible.
+						join_prunable = false;
+						inner_columns->Release();
+						break;
+					}
 				}
 			}
 		}
 
-		// If we get any operator other than equality or boolean AND then
-		// join pruning is not possible
-		else
-		{
-			join_pruning_not_possible = true;
-		}
-
-		inner_rel_unique_keys->Release();
+		inner_unique_keys->Release();
 
 		// If join pruning is not possible then return the current CExpression
-		if (join_pruning_not_possible)
+		if (!join_prunable)
 		{
 			result->Release();
 			return pexprNew;
 		}
 
 
-		// The result set contains all the unique keys from the inner relation and are part of the join condition
-		// which are either constant or equal to some column from outer relation.
+		// The result set contains all the unique keys from the inner relation and
+		// are part of the join condition which are either constant or equal to
+		// some column from outer relation.
 		// Searching for a complete unique key set in the result set
 		ULONG ulKeys = inner_rel_key_sets->Keys();
 		BOOL are_all_unique_keys_present;
