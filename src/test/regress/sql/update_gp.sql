@@ -325,9 +325,10 @@ explain (costs off)
 update into_table set d=from_table.d, e=from_table.e, f=from_table.f from from_table
 where into_table.a=from_table.a and into_table.b=from_table.b and into_table.c=from_table.c;
 
+set optimizer=on; -- can't execute with planner, so always run this query with Orca on.
 update into_table set d=from_table.d, e=from_table.e, f=from_table.f from from_table
 where into_table.a=from_table.a and into_table.b=from_table.b and into_table.c=from_table.c;
-
+reset optimizer;
 select * from into_table order by a;
 
 -- start_ignore
