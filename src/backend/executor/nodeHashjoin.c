@@ -519,7 +519,7 @@ ExecHashJoin(HashJoinState *node)
 
 	result = ExecHashJoin_guts(node);
 
-	if (((PlanState *) node)->plan->nMotionNodes >0 && TupIsNull(result) && !node->reuse_hashtable)
+	if (TupIsNull(result) && !node->reuse_hashtable)
 	{
 		/*
 		 * CDB: We'll read no more from inner subtree. To keep our
