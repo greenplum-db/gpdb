@@ -93,8 +93,9 @@ struct block_t
 
 static long REQUEST_SEQ = 0;		/*  sequence number for request */
 static long SESSION_SEQ = 0;		/*  sequence number for session */
+#ifdef USE_ZSTD
 static long OUT_BUFFER_SIZE = 0;	/* zstd out buffer size */
-
+#endif
 static bool base16_decode(char* data);
 
 #ifdef USE_SSL
@@ -364,7 +365,7 @@ static int request_validate(request_t *r);
 static int request_set_path(request_t *r, const char* d, char* p, char* pp, char* path);
 static int request_path_validate(request_t *r, const char* path);
 #ifdef USE_ZSTD
-static int compress_zstd(request_t *r, block_t *blk, int buflen);
+static int compress_zstd(const request_t *r, block_t *blk, int buflen);
 #endif
 static int request_parse_gp_headers(request_t *r, int opt_g);
 static void free_session_cb(int fd, short event, void* arg);
@@ -4608,7 +4609,7 @@ static void delay_watchdog_timer()
  * It is for compress data in buffer. Return is the length of data after compression.
  */
 
-static int compress_zstd(request_t *r, block_t *blk, int buflen)
+static int compress_zstd(const request_t *r, block_t *blk, int buflen)
 {
 	char *buf = blk->data;
 	int offset = 0;
@@ -4617,7 +4618,7 @@ static int compress_zstd(request_t *r, block_t *blk, int buflen)
 	if (!r->zstd_cctx)
 	{
 		snprintf(r->zstd_error, r->zstd_err_len, "Creating compression context failed, out of memory.");
-		gprintln(NULL, r->zstd_error);
+		gprintln(NULL, "%s", r->zstd_error);
 		return -1;
 	}
 
@@ -4625,7 +4626,7 @@ static int compress_zstd(request_t *r, block_t *blk, int buflen)
 	if (ZSTD_isError(init_result)) 
 	{
 		snprintf(r->zstd_error, r->zstd_err_len, "Creating compression context initialization failed, error is %s.", ZSTD_getErrorName(init_result));
-		gprintln(NULL, r->zstd_error);
+		gprintln(NULL, "%s", r->zstd_error);
 		return -1;
 	}
 
@@ -4640,7 +4641,7 @@ static int compress_zstd(request_t *r, block_t *blk, int buflen)
 			if (ZSTD_isError(res))
 			{
 				snprintf(r->zstd_error, r->zstd_err_len, "Compression failed, error is %s.", ZSTD_getErrorName(res));
-				gprintln(NULL, r->zstd_error);
+				gprintln(NULL, "%s", r->zstd_error);
 				return -1;
 			}
 			offset += bout.pos;
@@ -4654,7 +4655,7 @@ static int compress_zstd(request_t *r, block_t *blk, int buflen)
 	if (remainingToFlush)
 	{
 		snprintf(r->zstd_error, r->zstd_err_len, "Compression failed, error is not fully flushed.");
-		gprintln(NULL, r->zstd_error);
+		gprintln(NULL, "%s", r->zstd_error);
 		return -1;
 	}
 	offset += output.pos;

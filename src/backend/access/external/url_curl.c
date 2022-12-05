@@ -159,7 +159,9 @@ static char curl_Error_Buffer[CURL_ERROR_SIZE];
 static void gp_proto0_write_done(URL_CURL_FILE *file);
 static void extract_http_domain(char* i_path, char* o_domain, int dlen);
 static char * make_url(const char *url, bool is_ipv6);
-
+#ifdef USE_ZSTD
+int decompress_zstd_data(ZSTD_DCtx* ctx, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout);
+#endif
 /* we use a global one for convenience */
 static CURLM *multi_handle = 0;
 
@@ -1577,7 +1579,6 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 {
 	char type;
 	int  n = 0, len = 0;
-	int obufsz = bufsz;
 
 	/*
 	 * Loop through and get all types of messages, until we get actual data,
@@ -1745,8 +1746,8 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 		if (file->lastsize > left_bytes || file->block.datalen == len)
 		{
 #ifdef USE_ZSTD
-			bufsz = ZSTD_DStreamInSize() - left_bytes;
-			fill_buffer(file, bufsz);
+			int wantsz = ZSTD_DStreamInSize() - left_bytes;
+			fill_buffer(file, wantsz);
 #endif
 		}
 	} 
@@ -1793,7 +1794,7 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 		do
 		{
 			ZSTD_inBuffer bin = {file->in.ptr + file->in.bot, file->lastsize, 0};
-			ZSTD_outBuffer bout = {buf, obufsz, 0};
+			ZSTD_outBuffer bout = {buf, bufsz, 0};
 			ret = decompress_zstd_data(file->curl->zstd_dctx, &bin, &bout);
 			n = bout.pos; 
 			file->in.bot += bin.pos;
