@@ -120,8 +120,6 @@ typedef struct
 #define HOST_NAME_SIZE 100
 #define FDIST_TIMEOUT  408
 #define MAX_TRY_WAIT_TIME 64
-#define MIN_BUFFER_SIZE 64
-
 /*
  * SSL support GUCs - should be added soon. Until then we will use stubs
  *
@@ -414,6 +412,8 @@ header_callback(void *ptr_, size_t size, size_t nmemb, void *userp)
 			if (url->for_write && url->zstd)
 			{	
 				url->curl->zstd_cctx = ZSTD_createCCtx();
+				// allocate out.cptr whose size equals to out.ptr
+				url->out.cptr = (char *) palloc(writable_external_table_bufsize * 1024);
 				url->lastsize = 0;
 			}
 			else if (url->zstd)
@@ -1289,17 +1289,13 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		set_httpheader(file, "X-GP-PROTO", "0");
 		set_httpheader(file, "X-GP-SEQ", "1");
 		set_httpheader(file, "Content-Type", "text/xml");
-#ifdef USE_ZSTD
 		set_httpheader(file, "X-GP-ZSTD", "1");
-#endif
 	}
 	else
 	{
 		/* read specific - (TODO: unclear why some of these are needed) */
 		set_httpheader(file, "X-GP-PROTO", "1");
-#ifdef USE_ZSTD
 		set_httpheader(file, "X-GP-ZSTD", "1");
-#endif
 		set_httpheader(file, "X-GP-MASTER_HOST", ev->GP_MASTER_HOST);
 		set_httpheader(file, "X-GP-MASTER_PORT", ev->GP_MASTER_PORT);
 		set_httpheader(file, "X-GP-CSVOPT", ev->GP_CSVOPT);
@@ -1429,7 +1425,6 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		int			bufsize = writable_external_table_bufsize * 1024;
 
 		file->out.ptr = (char *) palloc(bufsize);
-		file->out.cptr = (char *) palloc(bufsize);
 		file->out.max = bufsize;
 		file->out.bot = file->out.top = 0;
 	}
