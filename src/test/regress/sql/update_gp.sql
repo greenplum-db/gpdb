@@ -325,10 +325,13 @@ explain (costs off)
 update into_table set d=from_table.d, e=from_table.e, f=from_table.f from from_table
 where into_table.a=from_table.a and into_table.b=from_table.b and into_table.c=from_table.c;
 
-set optimizer=on; -- can't execute with planner, so always run this query with Orca on.
+-- start_matchsubs
+-- m/"into_table_1_prt_\d" to partition "into_table_1_prt_\d"/
+-- s/"into_table_1_prt_\d" to partition "into_table_1_prt_\d"/"XXX" to partition "YYY"/g
+-- end_matchsubs
 update into_table set d=from_table.d, e=from_table.e, f=from_table.f from from_table
 where into_table.a=from_table.a and into_table.b=from_table.b and into_table.c=from_table.c;
-reset optimizer;
+
 select * from into_table order by a;
 
 -- start_ignore

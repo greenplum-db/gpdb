@@ -141,7 +141,6 @@ CXformUpdate2DML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		pexprAssertConstraints = pexprSplit;
 	}
 
-	// generate oid column and project operator
 	CExpression *pexprProject = pexprAssertConstraints;
 	if (ptabdesc->IsPartitioned())
 	{
