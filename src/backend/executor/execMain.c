@@ -109,9 +109,6 @@
 #include "cdb/cdbutil.h"
 #include "cdb/cdbendpoint.h"
 
-extern CGroupOpsRoutine *cgroupOpsRoutine;
-extern CGroupSystemInfo *cgroupSystemInfo;
-
 #define IS_PARALLEL_RETRIEVE_CURSOR(queryDesc)	(queryDesc->ddesc &&	\
 										queryDesc->ddesc->parallelCursorName &&	\
 										strlen(queryDesc->ddesc->parallelCursorName) > 0)

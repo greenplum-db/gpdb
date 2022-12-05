@@ -50,9 +50,6 @@
 #include "cdb/cdbcopy.h"
 #include "executor/execUtils.h"
 
-extern CGroupOpsRoutine *cgroupOpsRoutine;
-extern CGroupSystemInfo *cgroupSystemInfo;
-
 #define QUERY_STRING_TRUNCATE_SIZE (1024)
 
 extern bool Test_print_direct_dispatch_info;
