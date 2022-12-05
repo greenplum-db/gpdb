@@ -27,10 +27,10 @@ extern "C" {
 #include "nodes/nodes.h"
 #include "nodes/plannodes.h"
 #include "nodes/primnodes.h"
-#include "optimizer/tlist.h"
 #include "partitioning/partdesc.h"
 #include "storage/lmgr.h"
 #include "utils/partcache.h"
+
 
 #if 0
 #include "cdb/partitionselection.h"
@@ -3223,8 +3223,7 @@ ContainsLowLevelSetReturningFunc(const CDXLNode *scalar_expr_dxlnode)
 // Here we have a FuncExpr which returns a set on top.So we don't require a result node on
 // top of ProjectSet node.
 static bool
-RequiresResultNode(const CDXLNode *project_list_dxlnode,
-				   CMDAccessor *md_accessor)
+RequiresResultNode(const CDXLNode *project_list_dxlnode)
 {
 	const ULONG arity = project_list_dxlnode->Arity();
 	for (ULONG ul = 0; ul < arity; ++ul)
@@ -3367,31 +3366,30 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	result->resconstantqual = (Node *) one_time_quals_list;
 	SetParamIds(plan);
 	PathTarget *complete_result_pathtarget =
-		make_pathtarget_from_tlist(plan->targetlist);
+		gpdb::MakePathtargetFromTlist(plan->targetlist);
 
 	// Split given PathTarget into multiple levels to position SRFs safely
-	split_pathtarget_at_srfs(nullptr, complete_result_pathtarget, nullptr,
-							 &targets_with_srf, &targets_with_srf_bool);
+	gpdb::SplitPathtargetAtSrfs(nullptr, complete_result_pathtarget, nullptr,
+								&targets_with_srf, &targets_with_srf_bool);
 
 	// If the PathTarget does not contain any set returning functions then
 	// split_pathtarget_at_srfs method will return the same PathTarget back.
 	// In this case a ProjectSet node is not required.
-	if (1 == list_length(targets_with_srf))
+	if (1 == gpdb::ListLength(targets_with_srf))
 	{
 		result->plan.lefttree = child_plan;
 		child_contexts->Release();
 		return (Plan *) result;
 	}
 
-	if (RequiresResultNode((*result_dxlnode)[EdxlresultIndexProjList],
-						   m_md_accessor))
+	if (RequiresResultNode((*result_dxlnode)[EdxlresultIndexProjList]))
 	{
 		will_require_result_node = true;
 	}
 
 	ListCell *lc;
 	ULONG list_cell_pos = 1;
-	int targets_with_srf_list_length = list_length(targets_with_srf);
+	ULONG targets_with_srf_list_length = gpdb::ListLength(targets_with_srf);
 	ForEach(lc, targets_with_srf)
 	{
 		// The first element of the PathTarget list created by split_pathtarget_at_srfs
@@ -3409,7 +3407,7 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 
 		list_cell_pos++;
 		List *target_list_entry =
-			make_tlist_from_pathtarget((PathTarget *) lfirst(lc));
+			gpdb::MakeTlistFromPathtarget((PathTarget *) lfirst(lc));
 		Plan *temp_plan_project_set = TranslateDXLProjectSet(result_dxlnode);
 		temp_plan_project_set->targetlist = target_list_entry;
 		temp_plan_project_set->qual = plan->qual;
@@ -3464,7 +3462,9 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	while (it_set_upper_ref->lefttree != nullptr &&
 		   it_set_upper_ref->lefttree->type == T_ProjectSet)
 	{
-		set_upper_references(nullptr, it_set_upper_ref, 0);
+		// Update the targetlist of an upper-level plan node
+		// to refer to the tuples returned by its lefttree subplan.
+		gpdb::SetUpperReferences(nullptr, it_set_upper_ref, 0);
 		it_set_upper_ref = it_set_upper_ref->lefttree;
 	}
 

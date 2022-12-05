@@ -2576,4 +2576,49 @@ gpdb::GPDBLockRelationOid(Oid reloid, LOCKMODE lockmode)
 	GP_WRAP_END;
 }
 
+PathTarget *
+gpdb::MakePathtargetFromTlist(List *tlist)
+{
+	GP_WRAP_START;
+	{
+		return make_pathtarget_from_tlist(tlist);
+	}
+	GP_WRAP_END;
+}
+
+void
+gpdb::SplitPathtargetAtSrfs(PlannerInfo *root, PathTarget *target,
+							PathTarget *input_target, List **targets,
+							List **targets_contain_srfs)
+{
+	GP_WRAP_START;
+	{
+		return split_pathtarget_at_srfs(root, target, input_target, targets,
+										targets_contain_srfs);
+	}
+	GP_WRAP_END;
+}
+
+List *
+gpdb::MakeTlistFromPathtarget(PathTarget *target)
+{
+	GP_WRAP_START;
+	{
+		return make_tlist_from_pathtarget(target);
+	}
+	GP_WRAP_END;
+}
+
+void
+gpdb::SetUpperReferences(PlannerInfo *root, Plan *plan, int rtoffset)
+{
+	GP_WRAP_START;
+	{
+		return set_upper_references(root, plan, rtoffset);
+	}
+	GP_WRAP_END;
+}
+
+
+
 // EOF

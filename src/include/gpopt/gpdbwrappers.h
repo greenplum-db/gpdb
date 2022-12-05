@@ -663,6 +663,18 @@ List *GetRelChildIndexes(Oid reloid);
 
 void GPDBLockRelationOid(Oid reloid, int lockmode);
 
+// Construct a PathTarget equivalent to the given targetlist.
+PathTarget *MakePathtargetFromTlist(List *tlist);
+
+void SplitPathtargetAtSrfs(PlannerInfo *root, PathTarget *target,
+						   PathTarget *input_target, List **targets,
+						   List **targets_contain_srfs);
+
+// Construct a targetList equivalent to the given PathTarget.
+List *MakeTlistFromPathtarget(PathTarget *target);
+
+void SetUpperReferences(PlannerInfo *root, Plan *plan, int rtoffset);
+
 }  //namespace gpdb
 
 #define ForEach(cell, l) \
