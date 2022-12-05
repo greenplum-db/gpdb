@@ -3268,9 +3268,6 @@ static void handle_post_request(request_t *r, int header_end)
 		size_t want;
 		ssize_t n = 0;
 		size_t buf_space_left = r->in.dbufmax - r->in.dbuftop;
-		if(r->zstd){
-			buf_space_left = r->in.dbufmax - r->in.cbuftop;
-		}
 
 		if (r->in.davailable > buf_space_left)
 			want = buf_space_left;
@@ -3278,14 +3275,7 @@ static void handle_post_request(request_t *r, int header_end)
 			want = r->in.davailable;
 
 		/* read from socket into data buf */
-		if (!r->zstd) 
-		{
-			n = gpfdist_receive(r, r->in.dbuf + r->in.dbuftop, want);
-		} 
-		else if (!r->in.cflag)
-		{
-			n = gpfdist_receive(r, r->in.cbuf + r->in.cbuftop, want);
-		}
+		n = gpfdist_receive(r, r->in.dbuf + r->in.dbuftop, want);
 
 		if (n < 0)
 		{
@@ -3318,15 +3308,7 @@ static void handle_post_request(request_t *r, int header_end)
 			r->bytes += n;
 			r->last = apr_time_now();
 			r->in.davailable -= n;
-			if (!r->zstd) 
-			{
-				r->in.dbuftop += n;
-			}
-			else
-			{
-				r->in.cbuftop += n;
-			}
-			
+			r->in.dbuftop += n;
 
 			/* success is a flag to check whether data is written into file successfully.
 			 * There is no need to do anything when success is less than 0, since all
@@ -3335,8 +3317,7 @@ static void handle_post_request(request_t *r, int header_end)
 			int success = 0;
 
 			/* if filled our buffer or no more data expected, write it */
-			if (r->in.dbufmax == r->in.dbuftop || r->in.davailable == 0 || 
-				(r->zstd && r->in.dbufmax == r->in.cbuftop))
+			if (r->in.dbufmax == r->in.dbuftop || r->in.davailable == 0)
 			{
 #ifdef USE_ZSTD
 				/* only write up to end of last row */
