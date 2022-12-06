@@ -9,11 +9,11 @@ Feature: expand the cluster by adding more segments
         And the user runs command "rm -rf ~/gpAdminLogs/gpinitsystem*"
 	And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And a cluster is created with no mirrors on "cdw" and "sdw1"
         And the master pid has been saved
         And database "gptest" exists
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw,sdw1"
+        And the cluster is setup for an expansion on hosts "cdw,sdw1"
         When the user runs gpexpand interview to add 2 new segment and 0 new host "ignored.host"
         Then the number of segments have been saved
         And user has created expansiontest tables
@@ -37,11 +37,11 @@ Feature: expand the cluster by adding more segments
         And the user runs command "rm -rf ~/gpAdminLogs/gpinitsystem*"
         And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And a cluster is created with no mirrors on "cdw" and "sdw1"
         And the user runs gpinitstandby with options " "
         And database "gptest" exists
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw,sdw1"
+        And the cluster is setup for an expansion on hosts "cdw,sdw1"
         When the user runs gpexpand interview to add 2 new segment and 0 new host "ignored.host"
         Then user has created expansiontest tables
         And 4000000 rows are inserted into table "expansiontest0" in schema "public" with column type list "int"
@@ -59,10 +59,10 @@ Feature: expand the cluster by adding more segments
         And the user runs command "rm -rf ~/gpAdminLogs/gpinitsystem*"
         And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And a cluster is created with no mirrors on "cdw" and "sdw1"
         And database "gptest" exists
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw,sdw1"
+        And the cluster is setup for an expansion on hosts "cdw,sdw1"
         When the user runs gpexpand interview to add 2 new segment and 0 new host "ignored.host"
         Then the number of segments have been saved
         And user has created expansiontest tables
@@ -84,10 +84,10 @@ Feature: expand the cluster by adding more segments
         And the user runs command "rm -rf ~/gpAdminLogs/gpinitsystem*"
         And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And a cluster is created with no mirrors on "cdw" and "sdw1"
         And database "gptest" exists
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw,sdw1"
+        And the cluster is setup for an expansion on hosts "cdw,sdw1"
         When the user runs gpexpand interview to add 2 new segment and 0 new host "ignored.host"
         Then the number of segments have been saved
         When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
@@ -101,10 +101,10 @@ Feature: expand the cluster by adding more segments
         And the user runs command "rm -rf ~/gpAdminLogs/gpinitsystem*"
         And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And a cluster is created with no mirrors on "cdw" and "sdw1"
         And database "gptest" exists
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw,sdw1,sdw2"
+        And the cluster is setup for an expansion on hosts "cdw,sdw1,sdw2"
         And the new host "sdw2" is ready to go
         When the user runs gpexpand interview to add 0 new segment and 1 new host "sdw2"
         Then the number of segments have been saved
@@ -119,10 +119,10 @@ Feature: expand the cluster by adding more segments
         And the user runs command "rm -rf ~/gpAdminLogs/gpinitsystem*"
         And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And a cluster is created with no mirrors on "cdw" and "sdw1"
         And database "gptest" exists
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw,sdw1,sdw2"
+        And the cluster is setup for an expansion on hosts "cdw,sdw1,sdw2"
         And the new host "sdw2" is ready to go
         When the user runs gpexpand interview to add 1 new segment and 1 new host "sdw2"
         Then the number of segments have been saved
@@ -137,10 +137,10 @@ Feature: expand the cluster by adding more segments
         And the user runs command "rm -rf ~/gpAdminLogs/gpinitsystem*"
         And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with mirrors on "mdw" and "sdw1"
+        And a cluster is created with mirrors on "cdw" and "sdw1"
         And database "gptest" exists
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw,sdw1"
+        And the cluster is setup for an expansion on hosts "cdw,sdw1"
         And the number of segments have been saved
         When the user runs gpexpand with a static inputfile for a single-node cluster with mirrors
         Then verify that the cluster has 4 new segments
@@ -153,9 +153,9 @@ Feature: expand the cluster by adding more segments
         And the user runs command "rm -rf ~/gpAdminLogs/gpinitsystem*"
         And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with mirrors on "mdw" and "sdw1"
+        And a cluster is created with mirrors on "cdw" and "sdw1"
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw,sdw1"
+        And the cluster is setup for an expansion on hosts "cdw,sdw1"
         And the user runs gpexpand with a static inputfile for a two-node cluster with mirrors
         And expanded preferred primary on segment "3" has failed
         When the user runs "gprecoverseg -a"
@@ -175,10 +175,10 @@ Feature: expand the cluster by adding more segments
         And the user runs command "rm -rf ~/gpAdminLogs/gpinitsystem*"
         And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with mirrors on "mdw" and "sdw1"
+        And a cluster is created with mirrors on "cdw" and "sdw1"
         And database "gptest" exists
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw,sdw1,sdw2,sdw3"
+        And the cluster is setup for an expansion on hosts "cdw,sdw1,sdw2,sdw3"
         And the new host "sdw2,sdw3" is ready to go
         When the user runs gpexpand interview to add 0 new segment and 2 new host "sdw2,sdw3"
         Then the number of segments have been saved
@@ -194,11 +194,11 @@ Feature: expand the cluster by adding more segments
         And the user runs command "rm -rf ~/gpAdminLogs/gpinitsystem*"
         And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with mirrors on "mdw" and "sdw1"
+        And a cluster is created with mirrors on "cdw" and "sdw1"
         And the user runs gpinitstandby with options " "
         And database "gptest" exists
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw,sdw1,sdw2,sdw3"
+        And the cluster is setup for an expansion on hosts "cdw,sdw1,sdw2,sdw3"
         And the new host "sdw2,sdw3" is ready to go
         When the user runs gpexpand interview to add 1 new segment and 2 new host "sdw2,sdw3"
        Then the number of segments have been saved
@@ -214,13 +214,13 @@ Feature: expand the cluster by adding more segments
         And the user runs command "rm -rf ~/gpAdminLogs/gpinitsystem*"
         And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with mirrors on "mdw" and "sdw1"
+        And a cluster is created with mirrors on "cdw" and "sdw1"
         And the user runs gpinitstandby with options " "
         And database "gptest" exists
 	And a tablespace is created with data
 	And another tablespace is created with data
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw,sdw1,sdw2,sdw3"
+        And the cluster is setup for an expansion on hosts "cdw,sdw1,sdw2,sdw3"
         And the new host "sdw2,sdw3" is ready to go
         When the user runs gpexpand interview to add 1 new segment and 2 new host "sdw2,sdw3"
         Then the number of segments have been saved
@@ -279,11 +279,11 @@ Feature: expand the cluster by adding more segments
         And the user runs command "rm -rf ~/gpAdminLogs/gpinitsystem*"
         And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with mirrors on "mdw" and "sdw1"
+        And a cluster is created with mirrors on "cdw" and "sdw1"
         And database "gptest" exists
         And the user runs psql with "-f /home/gpadmin/sqldump/dump.sql" against database "gptest"
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw,sdw1,sdw2,sdw3"
+        And the cluster is setup for an expansion on hosts "cdw,sdw1,sdw2,sdw3"
         And the new host "sdw2,sdw3" is ready to go
         And the user runs gpexpand interview to add 1 new segment and 2 new host "sdw2,sdw3"
         And the number of segments have been saved
@@ -300,11 +300,11 @@ Feature: expand the cluster by adding more segments
         And a working directory of the test as '/data/gpdata/gpexpand'
         And the user runs command "rm -rf /data/gpdata/gpexpand/*"
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And a cluster is created with no mirrors on "cdw" and "sdw1"
         And the master pid has been saved
         And database "gptest" exists
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw,sdw1"
+        And the cluster is setup for an expansion on hosts "cdw,sdw1"
         And the user runs gpexpand interview to add 2 new segment and 0 new host "ignored.host"
         And the number of segments have been saved
         And user has created test table
@@ -326,11 +326,11 @@ Feature: expand the cluster by adding more segments
         And a working directory of the test as '/data/gpdata/gpexpand'
         And the user runs command "rm -rf /data/gpdata/gpexpand/*"
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And a cluster is created with no mirrors on "cdw" and "sdw1"
         And the master pid has been saved
         And database "gptest" exists
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw"
+        And the cluster is setup for an expansion on hosts "cdw"
         And the user runs gpexpand interview to add 1 new segment and 0 new host "ignore.host"
         And the number of segments have been saved
         When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
@@ -350,14 +350,14 @@ Feature: expand the cluster by adding more segments
         And a working directory of the test as '/data/gpdata/gpexpand'
         And the user runs command "rm -rf /data/gpdata/gpexpand/*"
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And a cluster is created with no mirrors on "cdw" and "sdw1"
         And the master pid has been saved
         And database "gptest" exists
         And user has created test table
         And 20 rows are inserted into table "test" in schema "public" with column type list "int"
         And a long-run read-only transaction exists on "test"
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw"
+        And the cluster is setup for an expansion on hosts "cdw"
         And the user runs gpexpand interview to add 1 new segment and 0 new host "ignore.host"
         And the number of segments have been saved
         When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
@@ -377,12 +377,12 @@ Feature: expand the cluster by adding more segments
         And a working directory of the test as '/data/gpdata/gpexpand'
         And the user runs command "rm -rf /data/gpdata/gpexpand/*"
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And a cluster is created with no mirrors on "cdw" and "sdw1"
         And the master pid has been saved
         And database "gptest" exists
         And a long-run transaction starts
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw"
+        And the cluster is setup for an expansion on hosts "cdw"
         And the user runs gpexpand interview to add 1 new segment and 0 new host "ignore.host"
         And the number of segments have been saved
         When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
@@ -402,11 +402,11 @@ Feature: expand the cluster by adding more segments
         And a working directory of the test as '/data/gpdata/gpexpand'
         And the user runs command "rm -rf /data/gpdata/gpexpand/*"
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And a cluster is created with no mirrors on "cdw" and "sdw1"
         And the master pid has been saved
         And database "gptest" exists
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw"
+        And the cluster is setup for an expansion on hosts "cdw"
         And the user runs gpexpand interview to add 1 new segment and 0 new host "ignore.host"
         And the number of segments have been saved
         And the transactions are started for dml
@@ -430,11 +430,11 @@ Feature: expand the cluster by adding more segments
         And a working directory of the test as '/data/gpdata/gpexpand'
         And the user runs command "rm -rf /data/gpdata/gpexpand/*"
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with mirrors on "mdw" and "sdw1"
+        And a cluster is created with mirrors on "cdw" and "sdw1"
         And the user runs gpinitstandby with options " "
         And database "gptest" exists
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw,sdw1"
+        And the cluster is setup for an expansion on hosts "cdw,sdw1"
         And the gp_segment_configuration have been saved
         And set fault inject "gpexpand rollback test fault injection"
         When the user runs gpexpand with a static inputfile for a single-node cluster with mirrors without ret code check
@@ -459,11 +459,11 @@ Feature: expand the cluster by adding more segments
         And a working directory of the test as '/tmp/gpexpand_behave'
         And the user runs command "rm -rf /tmp/gpexpand_behave/*"
         And a temporary directory under "/tmp/gpexpand_behave/expandedData" to expand into
-        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And a cluster is created with no mirrors on "cdw" and "sdw1"
         And database "gptest" exists
         And create database schema table with special character
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw,sdw1"
+        And the cluster is setup for an expansion on hosts "cdw,sdw1"
         And the number of segments have been saved
         And the user runs gpexpand interview to add 1 new segment and 0 new host "ignored.host"
         When the user runs gpexpand with the latest gpexpand_inputfile without ret code check
@@ -481,11 +481,11 @@ Feature: expand the cluster by adding more segments
         And a working directory of the test as '/data/gpdata/gpexpand'
         And the user runs command "rm -rf /data/gpdata/gpexpand/*"
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with mirrors on "mdw" and "sdw1"
+        And a cluster is created with mirrors on "cdw" and "sdw1"
         And the user runs gpinitstandby with options " "
         And database "gptest" exists
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw,sdw1"
+        And the cluster is setup for an expansion on hosts "cdw,sdw1"
         And set fault inject "gpexpand retry after releaseing catalog lock fault injection"
         When the user runs gpexpand with a static inputfile for a single-node cluster with mirrors without ret code check
         Then gpexpand should return a return code of 3
@@ -554,11 +554,11 @@ Feature: expand the cluster by adding more segments
         Given the database is not running
         And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with mirrors on "mdw" and "sdw1"
+        And a cluster is created with mirrors on "cdw" and "sdw1"
         And the user runs gpinitstandby with options " "
         And database "gptest" exists
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw,sdw1"
+        And the cluster is setup for an expansion on hosts "cdw,sdw1"
         And the primary on content 0 is stopped
         And user can start transactions
         And an FTS probe is triggered
@@ -572,11 +572,11 @@ Feature: expand the cluster by adding more segments
         Given the database is not running
         And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with mirrors on "mdw" and "sdw1"
+        And a cluster is created with mirrors on "cdw" and "sdw1"
         And the user runs gpinitstandby with options " "
         And database "gptest" exists
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw,sdw1"
+        And the cluster is setup for an expansion on hosts "cdw,sdw1"
         And the primary on content 0 is stopped
         And user can start transactions
         And an FTS probe is triggered

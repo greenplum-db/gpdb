@@ -68,12 +68,12 @@ EOF
 }
 
 run_resgroup_test() {
-    local gpdb_master_alias=$1
+    local gpdb_coordinator_alias=$1
 
-    ssh $gpdb_master_alias bash -ex <<EOF
+    ssh $gpdb_coordinator_alias bash -ex <<EOF
         source /usr/local/greenplum-db-devel/greenplum_path.sh
         export PGPORT=5432
-        export MASTER_DATA_DIRECTORY=/data/gpdata/master/gpseg-1
+        export MASTER_DATA_DIRECTORY=/data/gpdata/coordinator/gpseg-1
         export LDFLAGS="-L\${GPHOME}/lib"
         export CPPFLAGS="-I\${GPHOME}/include"
 
@@ -109,10 +109,10 @@ EOF
 }
 
 keep_minimal_cgroup_dirs() {
-    local gpdb_master_alias=$1
+    local gpdb_coordinator_alias=$1
     local basedir=$CGROUP_BASEDIR
 
-    ssh -t $gpdb_master_alias sudo bash -ex <<EOF
+    ssh -t $gpdb_coordinator_alias sudo bash -ex <<EOF
         rmdir $basedir/memory/gpdb/*/ || :
         rmdir $basedir/memory/gpdb
         rmdir $basedir/cpuset/gpdb/*/ || :
@@ -121,31 +121,31 @@ EOF
 }
 
 setup_binary_swap_test() {
-    local gpdb_master_alias=$1
+    local gpdb_coordinator_alias=$1
 
     if [ "${TEST_BINARY_SWAP}" != "true" ]; then
         return 0
     fi
 
-    ssh $gpdb_master_alias mkdir -p /tmp/local/greenplum-db-devel
-    ssh $gpdb_master_alias tar -zxf - -C /tmp/local/greenplum-db-devel \
+    ssh $gpdb_coordinator_alias mkdir -p /tmp/local/greenplum-db-devel
+    ssh $gpdb_coordinator_alias tar -zxf - -C /tmp/local/greenplum-db-devel \
         < binary_swap_gpdb/bin_gpdb.tar.gz
-    ssh $gpdb_master_alias sed -i -e "s@/usr/local@/tmp/local@" \
+    ssh $gpdb_coordinator_alias sed -i -e "s@/usr/local@/tmp/local@" \
         /tmp/local/greenplum-db-devel/greenplum_path.sh
 }
 
 run_binary_swap_test() {
-    local gpdb_master_alias=$1
+    local gpdb_coordinator_alias=$1
 
     if [ "${TEST_BINARY_SWAP}" != "true" ]; then
         return 0
     fi
 
-    scp -r /tmp/build/*/binary_swap_gpdb/ $gpdb_master_alias:/home/gpadmin/
-    ssh $gpdb_master_alias bash -ex <<EOF
+    scp -r /tmp/build/*/binary_swap_gpdb/ $gpdb_coordinator_alias:/home/gpadmin/
+    ssh $gpdb_coordinator_alias bash -ex <<EOF
         source /usr/local/greenplum-db-devel/greenplum_path.sh
         export PGPORT=5432
-        export MASTER_DATA_DIRECTORY=/data/gpdata/master/gpseg-1
+        export MASTER_DATA_DIRECTORY=/data/gpdata/coordinator/gpseg-1
         export BINARY_SWAP_VARIANT=_resgroup
 
         cd /home/gpadmin
@@ -157,7 +157,7 @@ mount_cgroups ccp-${CLUSTER_NAME}-0
 mount_cgroups ccp-${CLUSTER_NAME}-1
 make_cgroups_dir ccp-${CLUSTER_NAME}-0
 make_cgroups_dir ccp-${CLUSTER_NAME}-1
-run_resgroup_test mdw
+run_resgroup_test cdw
 
 #
 # below is for binary swap test
@@ -170,4 +170,4 @@ keep_minimal_cgroup_dirs ccp-${CLUSTER_NAME}-1
 # deploy the binaries for binary swap test
 setup_binary_swap_test sdw1
 # run it
-run_binary_swap_test mdw
+run_binary_swap_test cdw

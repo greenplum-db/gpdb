@@ -12,11 +12,11 @@ Feature: Tests for a cross_subnet cluster
     Scenario: gpinitstandby works across subnets
         Given the database is not running
           And a working directory of the test as '/tmp/gpinitstandby'
-          And a cross-subnet cluster without a standby is created with mirrors on "mdw-1" and "sdw1-1,sdw1-2"
+          And a cross-subnet cluster without a standby is created with mirrors on "cdw-1" and "sdw1-1,sdw1-2"
          Then the primaries and mirrors excluding masterStandby are on different subnets
 
         Given the standby is not initialized
-         When running gpinitstandby on host "mdw-1" to create a standby on host "mdw-2"
+         When running gpinitstandby on host "cdw-1" to create a standby on host "cdw-2"
          Then gpinitstandby should return a return code of 0
           And verify the standby master entries in catalog
           And the primaries and mirrors including masterStandby are on different subnets
@@ -25,7 +25,7 @@ Feature: Tests for a cross_subnet cluster
     Scenario: gpmovemirrors can move mirrors between subnets
         Given the database is not running
           And a working directory of the test as '/tmp/gpmovemirrors'
-          And a cross-subnet cluster without a standby is created with mirrors on "mdw-1" and "sdw1-1,sdw1-2"
+          And a cross-subnet cluster without a standby is created with mirrors on "cdw-1" and "sdw1-1,sdw1-2"
          Then the primaries and mirrors excluding masterStandby are on different subnets
 
         Given a gpmovemirrors cross_subnet input file is created
@@ -41,7 +41,7 @@ Feature: Tests for a cross_subnet cluster
      Scenario Outline: gpaddmirrors works cross-subnet with pg_hba.conf using HBA_HOSTNAMES: <hba_hostnames>
         Given the database is not running
           And a working directory of the test as '/tmp/gpaddmirrors'
-         When with HBA_HOSTNAMES "<hba_hostnames>" a cross-subnet cluster without a standby is created with no mirrors on "mdw-1" and "sdw1-1, sdw1-2"
+         When with HBA_HOSTNAMES "<hba_hostnames>" a cross-subnet cluster without a standby is created with no mirrors on "cdw-1" and "sdw1-1, sdw1-2"
 
          When gpaddmirrors adds mirrors with options "<options>"
          Then verify the database has mirrors

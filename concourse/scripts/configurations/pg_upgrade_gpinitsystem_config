@@ -24,14 +24,14 @@ PORT_BASE=20000
 #### the specified interface addresses).
 declare -a DATA_DIRECTORY=(/data/gpdata/primary /data/gpdata/primary)
 
-#### OS-configured hostname or IP address of the master host.
-MASTER_HOSTNAME=mdw
+#### OS-configured hostname or IP address of the coordinator host.
+MASTER_HOSTNAME=cdw
 
-#### File system location where the master data directory
+#### File system location where the coordinator data directory
 #### will be created.
-MASTER_DIRECTORY=/data/gpdata/master
+MASTER_DIRECTORY=/data/gpdata/coordinator
 
-#### Port number for the master instance.
+#### Port number for the coordinator instance.
 MASTER_PORT=5432
 
 #### Shell utility used to connect to remote hosts.

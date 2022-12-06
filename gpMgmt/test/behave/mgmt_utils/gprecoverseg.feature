@@ -1009,7 +1009,7 @@ Feature: gprecoverseg tests
          When user kills a "mirror" process with the saved information
           And user can start transactions
          Then the saved "mirror" segment is marked down in config
-         When the user runs "gprecoverseg -a -p mdw"
+         When the user runs "gprecoverseg -a -p cdw"
          Then gprecoverseg should return a return code of 0
          When user kills a "primary" process with the saved information
           And user can start transactions
@@ -1059,7 +1059,7 @@ Feature: gprecoverseg tests
       And all the segments are running
       And the segments are synchronized
       And the information of contents 0,1,2 is saved
-      And all files in gpAdminLogs directory are deleted on hosts mdw,sdw1,sdw2
+      And all files in gpAdminLogs directory are deleted on hosts cdw,sdw1,sdw2
       And the "primary" segment information is saved
 
       And the primary on content 0 is stopped

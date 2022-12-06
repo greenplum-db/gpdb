@@ -60,7 +60,7 @@ cat > /etc/krb5.conf <<EOF
  gpdb.krb = ${DEFAULT_REALM}
 EOF
 
-# Start KDC on master node
+# Start KDC on coordinator node
 kdb5_util create -s -r ${DEFAULT_REALM} -P changeme
 
 kadmin.local -q "addprinc -pw changeme root/admin"

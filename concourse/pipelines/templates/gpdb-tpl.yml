@@ -1669,7 +1669,7 @@ jobs:
             params:
               {% if test.sudo_access_on_hosts %}
               SUDO_ACCESS_ON_HOSTS: 1
-              SUDO_MDW_USERNAME: [[ os_username ]]
+              SUDO_CDW_USERNAME: [[ os_username ]]
               {% endif %}
               BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster
               [[ test.env ]]
@@ -1817,11 +1817,11 @@ jobs:
               cp cluster_2/.ssh/*.pem cluster_env_files/.ssh
               cat cluster_2/.ssh/known_hosts >> cluster_env_files/.ssh/known_hosts
               cat cluster_2/.ssh/config >> cluster_env_files/.ssh/config
-              sed -i '/^Host mdw-1/ s/$/ mdw/' cluster_env_files/.ssh/config
+              sed -i '/^Host cdw-1/ s/$/ cdw/' cluster_env_files/.ssh/config
     - task: gpinitsystem
       file: ccp_src/ci/tasks/gpinitsystem.yml
       params:
-        GPINIT_STANDBY_MASTER: '-s mdw-2'
+        GPINIT_STANDBY_COORDINATOR: '-s cdw-2'
     - task: cross_subnet_tests
       file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
       image: ccp-image
@@ -1916,12 +1916,12 @@ jobs:
     image: ccp-image
     input_mapping: {sqldump: icw_planner_[[ os_type ]]_dump}
     params:
-      SUDO_MDW_USERNAME: [[ os_username ]]
+      SUDO_CDW_USERNAME: [[ os_username ]]
   - task: run_tests
     file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
     params:
       BEHAVE_FLAGS: --tags=gpexpand
-      SUDO_MDW_USERNAME: [[ os_username ]]
+      SUDO_CDW_USERNAME: [[ os_username ]]
     image: ccp-image
     on_success:
       <<: *ccp_destroy
