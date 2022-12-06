@@ -46,21 +46,23 @@ CREATE TABLE tenk_aocs3 (like tenk_heap_for_aocs) with (appendonly=true, orienta
 CREATE TABLE tenk_aocs4 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=1, compresstype=zlib) distributed by(unique1);
 CREATE TABLE tenk_aocs5 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=6, compresstype=zlib) distributed by(unique1);
 CREATE TABLE tenk_aocs6 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=6, compresstype=zlib, blocksize=1048576, checksum=true) distributed by(unique1);
+CREATE TABLE tenk_aocs7 (like tenk_heap_for_aocs) with (appendonly, orientation=column, compresslevel=6, checksum) distributed by(unique1);
+CREATE TABLE tenk_aocs8 (like tenk_heap_for_aocs) with (appendoptimized, orientation=column, compresslevel=6, checksum) distributed by(unique1);
 -- invalid combinations
 -- col instead of column
-CREATE TABLE tenk_aocs7 (like tenk_heap_for_aocs) with (appendonly=true, orientation=col) distributed by(unique1);
+CREATE TABLE tenk_aocs_bad (like tenk_heap_for_aocs) with (appendonly=true, orientation=col) distributed by(unique1);
 -- no parentheses surrounding storage options
-CREATE TABLE tenk_aocs8 (like tenk_heap_for_aocs) with appendonly=true, orientation=column distributed by(unique1);
+CREATE TABLE tenk_aocs_bad (like tenk_heap_for_aocs) with appendonly=true, orientation=column distributed by(unique1);
 -- no comma separating storage options
-CREATE TABLE tenk_aocs9 (like tenk_heap_for_aocs) with (appendonly=true orientation=column) distributed by(unique1);
+CREATE TABLE tenk_aocs_bad (like tenk_heap_for_aocs) with (appendonly=true orientation=column) distributed by(unique1);
 -- appendonly=false with orientation=column should not work
-CREATE TABLE tenk_aocs10 (like tenk_heap_for_aocs) with (appendonly=false, orientation=column, compresslevel=6, checksum=true) distributed by(unique1);
+CREATE TABLE tenk_aocs_bad (like tenk_heap_for_aocs) with (appendonly=false, orientation=column, compresslevel=6, checksum=true) distributed by(unique1);
 -- block size must be between 8KB and 2MB w/ 8KB multiple
-CREATE TABLE tenk_aocs11 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, blocksize=100) distributed by(unique1);
+CREATE TABLE tenk_aocs_bad (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, blocksize=100) distributed by(unique1);
 -- cannot have compresslevel 0
-CREATE TABLE tenk_aocs12 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=0, compresstype=zlib) distributed by(unique1);
+CREATE TABLE tenk_aocs_bad (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=0, compresstype=zlib) distributed by(unique1);
 -- orientation=column must be combined with appendonly=true
-CREATE TABLE tenk_aocs13 (like tenk_heap_for_aocs) with (orientation=column) distributed by(unique1);
+CREATE TABLE tenk_aocs_bad (like tenk_heap_for_aocs) with (orientation=column) distributed by(unique1);
 
 
 --------------------
@@ -69,6 +71,7 @@ CREATE TABLE tenk_aocs13 (like tenk_heap_for_aocs) with (orientation=column) dis
 
 -- check pg_appendonly
 SELECT c.relname, a.blocksize, a.compresstype, a.compresslevel, a.checksum FROM pg_class c, pg_appendonly a WHERE c.relname LIKE 'tenk_aocs%' AND c.oid=a.relid ORDER BY c.relname;
+SELECT c.relname, count(a.attnum) FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'tenk_aocs%' GROUP BY c.relname;
 
 --------------------
 -- supported sql

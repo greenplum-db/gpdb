@@ -571,6 +571,8 @@ def impl(context):
     if len(dirs) > 0:
         raise Exception("One or more backout directories exist: %s" % dirs)
 
+@given('the gprecoverseg lock directory is removed')
+@when('the gprecoverseg lock directory is removed')
 @then('the gprecoverseg lock directory is removed')
 def impl(context):
     lock_dir = "%s/gprecoverseg.lock" % os.environ["MASTER_DATA_DIRECTORY"]

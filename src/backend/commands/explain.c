@@ -601,7 +601,21 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 
 		/* Wait for completion of all qExec processes. */
 		if (queryDesc->estate->dispatcherState && queryDesc->estate->dispatcherState->primaryResults)
+		{
 			cdbdisp_checkDispatchResult(queryDesc->estate->dispatcherState, DISPATCH_WAIT_NONE);
+			/*
+			 * If some QE throw errors, we might not receive stats from QEs,
+			 * In ExecutorEnd we will reThrow QE's error, In this situation,
+			 * there is no need to execute ExplainPrintPlan. reThrow error in advance.
+			 */
+			ErrorData  *qeError = NULL;
+			cdbdisp_getDispatchResults(queryDesc->estate->dispatcherState, &qeError);
+			if (qeError)
+			{
+				FlushErrorState();
+				ReThrowError(qeError);
+			}
+		}
 
 		/* run cleanup too */
 		ExecutorFinish(queryDesc);
@@ -2663,6 +2677,9 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 		return;
 
 	ns = ((PlanState *) sortstate)->instrument->cdbNodeSummary;
+	/* Might not have received stats from qExecs if they hit errors. */
+	if (!ns)
+		return;
 	for (i = 0; i < NUM_SORT_METHOD; i++)
 	{
 		CdbExplain_Agg	*agg;

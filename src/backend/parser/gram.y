@@ -3193,7 +3193,16 @@ reloption_elem:
 				}
 			| ColLabel
 				{
-					$$ = makeDefElem($1, NULL);
+					/*
+					 * Similarly to the above, translate 'appendoptimized' to
+					 * 'appendonly'. Also, adding the implicit 'true' in case 
+					 * we don't handle that properly in parse analysis.
+					 * See: https://github.com/greenplum-db/gpdb/issues/14510.
+					 */
+					if (strcmp($1, "appendonly") == 0 || strcmp($1, "appendoptimized") == 0)
+						$$ = makeDefElem("appendonly", (Node *) makeString(pstrdup("true")));
+					else
+						$$ = makeDefElem($1, NULL);
 				}
 			| ColLabel '.' ColLabel '=' def_arg
 				{

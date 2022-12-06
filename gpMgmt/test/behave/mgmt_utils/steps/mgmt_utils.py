@@ -12,6 +12,7 @@ import socket
 import tempfile
 import thread
 import time
+from contextlib import closing
 try:
     from subprocess32 import check_output, Popen, PIPE
 except:
@@ -27,6 +28,7 @@ from os import path
 from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR
 from gppylib.commands.gp import SegmentStart, GpStandbyStart, MasterStop
 from gppylib.commands import gp
+from gppylib.commands.pg import PgBaseBackup
 from gppylib.commands.unix import findCmdInPath, Scp
 from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
 from gppylib.operations.buildMirrorSegments import get_recovery_progress_pattern
@@ -426,6 +428,8 @@ def impl(context, content):
     dburl = dbconn.DbURL(hostname=host, port=port, dbname='template1')
     wait_for_desired_query_result(dburl, query, desired_result, utility=True)
 
+@given('the user waits until recovery_progress.file is created in {logdir} and verifies its format')
+@when('the user waits until recovery_progress.file is created in {logdir} and verifies its format')
 @then('the user waits until recovery_progress.file is created in {logdir} and verifies its format')
 def impl(context, logdir):
     attempt = 0
@@ -612,7 +616,9 @@ def impl(context, kill_process_name, log_msg, logfile_name):
     run_async_command(context, command)
 
 
+@given('the user asynchronously sets up to end {process_name} process with SIGINT')
 @when('the user asynchronously sets up to end {process_name} process with SIGINT')
+@then('the user asynchronously sets up to end {process_name} process with SIGINT')
 def impl(context, process_name):
     command = "ps ux | grep bin/%s | awk '{print $2}' | xargs kill -2" % (process_name)
     run_async_command(context, command)
@@ -1461,7 +1467,8 @@ def impl(context):
 
     return
 
-
+@given('verify that mirror on content {content_ids} is {expected_status}')
+@when('verify that mirror on content {content_ids} is {expected_status}')
 @then('verify that mirror on content {content_ids} is {expected_status}')
 def impl(context, content_ids, expected_status):
     if content_ids == 'None':
@@ -3793,3 +3800,55 @@ def impl(context, content, desired_state):
 
     if len(rows) == 0:
         raise Exception("Expected content %s to be %s." % (content, desired_state))
+
+
+
+@given('the user asynchronously runs pg_basebackup with {segment} of content {contentid} as source and the process is saved')
+@when('the user asynchronously runs pg_basebackup with {segment} of content {contentid} as source and the process is saved')
+@then('the user asynchronously runs pg_basebackup with {segment} of content {contentid} as source and the process is saved')
+def impl(context, segment, contentid):
+    if segment == 'mirror':
+        role = 'm'
+    elif segment == 'primary':
+        role = 'p'
+
+    all_segments = GpArray.initFromCatalog(dbconn.DbURL()).getDbList()
+
+    basebackup_target = all_segments[0]
+    basebackup_source = all_segments[0]
+    for seg in all_segments:
+        if role == seg.role and str(seg.content) == contentid:
+            basebackup_source = seg
+        elif str(seg.content) == contentid:
+            basebackup_target = seg
+
+    make_temp_dir(context, '/tmp')
+
+    cmd = PgBaseBackup(target_datadir=context.temp_base_dir,
+                       source_host=basebackup_source.getSegmentHostName(),
+                       source_port=str(basebackup_source.getSegmentPort()),
+                       replication_slot_name="replication_slot",
+                       forceoverwrite=True,
+                       target_gp_dbid=basebackup_target.getSegmentDbId())
+    asyncproc = cmd.runNoWait()
+    context.asyncproc = asyncproc
+
+
+@given('gp_stat_replication table has pg_basebackup entry for content {contentid}')
+@when('gp_stat_replication table has pg_basebackup entry for content {contentid}')
+@then('gp_stat_replication table has pg_basebackup entry for content {contentid}')
+def impl(context, contentid):
+    sql = "select gp_segment_id from gp_stat_replication where application_name = 'pg_basebackup'"
+
+    try:
+        with closing(dbconn.connect(dbconn.DbURL())) as conn:
+            res = dbconn.execSQL(conn, sql)
+            rows = res.fetchall()
+    except Exception as e:
+        raise Exception("Failed to query gp_stat_replication: %s" % str(e))
+
+    segments_with_running_basebackup = {str(row[0]) for row in rows}
+
+    if str(contentid) not in segments_with_running_basebackup:
+        raise Exception("pg_basebackup entry was not found for content %s in gp_stat_replication" % contentid)
+    

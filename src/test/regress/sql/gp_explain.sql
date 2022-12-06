@@ -306,3 +306,19 @@ from get_explain_analyze_xml_output($$
 
 reset optimizer_enable_dynamictablescan;
 reset enable_seqscan;
+reset search_path;
+
+-- If all QEs hit errors when executing sort, we might not receive stat data for sort.
+-- rethrow error before print explain info.
+create extension if not exists gp_inject_fault;
+create table sort_error_test1(tc1 int, tc2 int);
+create table sort_error_test2(tc1 int, tc2 int);
+insert into sort_error_test1 select i,i from generate_series(1,20) i;
+select gp_inject_fault('explain_analyze_sort_error', 'error', dbid)
+    from gp_segment_configuration where role = 'p' and content > -1;
+EXPLAIN analyze insert into sort_error_test2 select * from sort_error_test1 order by 1;
+select count(*) from sort_error_test2;
+select gp_inject_fault('explain_analyze_sort_error', 'reset', dbid)
+    from gp_segment_configuration where role = 'p' and content > -1;
+drop table sort_error_test1;
+drop table sort_error_test2;

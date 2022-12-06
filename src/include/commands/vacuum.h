@@ -94,10 +94,6 @@ typedef struct VacAttrStats
 	int			minrows;		/* Minimum # of rows wanted for stats */
 	void	   *extra_data;		/* for extra type-specific data */
 
-	/* These fields are used to compute stawidth during the compute_stats routine. */
-	double                  totalwidelength;/* total length of toowide row */
-	int                     widerow_num;    /* # of toowide row */
-
 	/*
 	 * These fields are to be filled in by the compute_stats routine. (They
 	 * are initialized to zero when the struct is created.)

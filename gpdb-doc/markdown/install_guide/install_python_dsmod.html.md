@@ -48,7 +48,6 @@ Packages required for Deep Learning features of MADlib are now included. Note th
 |future|Compatibility layer between Python 2 and Python 3|
 |futures|Backport of the `concurrent.futures` package from Python 3|
 |Gensim|Topic modeling and document indexing|
-|GluonTS \(Python 3 only\)|Probabilistic time series modeling|
 |h5py|Read and write HDF5 files|
 |idna|Internationalized Domain Names in Applications \(IDNA\)|
 |importlib-metadata|Read metadata from Python packages|
@@ -59,7 +58,7 @@ Packages required for Deep Learning features of MADlib are now included. Note th
 |Keras \(RHEL/CentOS 7 only\)|Deep learning|
 |Keras Applications|Reference implementations of popular deep learning models|
 |Keras Preprocessing|Easy data preprocessing and data augmentation for deep learning models|
-|Kiwi|A fast implementation of the Cassowary constraint solver|
+| kiwisolver | A fast implementation of the Cassowary constraint solver |
 |Lifelines|Survival analysis|
 |lxml|XML and HTML processing|
 |MarkupSafe|Safely add untrusted strings to HTML/XML markup|

@@ -146,7 +146,7 @@ def after_scenario(context, scenario):
         return
 
     tags_to_cleanup = ['gpmovemirrors', 'gpssh-exkeys']
-    if set(context.feature.tags).intersection(tags_to_cleanup):
+    if set(context.feature.tags).intersection(tags_to_cleanup) and "skip_cleanup" not in scenario.effective_tags:
         if 'temp_base_dir' in context and os.path.exists(context.temp_base_dir):
             os.chmod(context.temp_base_dir, 0o700)
             shutil.rmtree(context.temp_base_dir)

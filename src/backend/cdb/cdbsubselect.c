@@ -474,12 +474,6 @@ safe_to_convert_EXPR(SubLink *sublink, ConvertSubqueryToJoinContext *ctx1)
 		return false;
 
 	/**
-	 * If deeply correlated, don't bother.
-	 */
-	if (IsSubqueryMultiLevelCorrelated(subselect))
-		return false;
-
-	/**
 	 * If there are correlations in a func expr in the from clause, then don't bother.
 	 */
 	if (has_correlation_in_funcexpr_rte(subselect->rtable))

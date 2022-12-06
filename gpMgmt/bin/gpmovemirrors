@@ -371,12 +371,12 @@ try:
                     PgHbaEntriesToUpdate.append((segment.getSegmentDataDirectory(), segment.getSegmentHostName(), newMirror.address))
 
     """ Prepare common execution steps for running commands on segments """
-    mirrorsToDelete = [mirror for mirror in newConfig.oldMirrorList if not mirror.inPlace]
-    totalDirsToDelete = len(mirrorsToDelete)
+    oldMirrorsToMove = [mirror for mirror in newConfig.oldMirrorList if not mirror.inPlace]
+    totalDirsToDelete = len(oldMirrorsToMove)
     numberOfWorkers = min(totalDirsToDelete, options.batch_size)
 
     """ Fetch tablespace locations before mirror move """
-    for mirror in mirrorsToDelete:
+    for mirror in oldMirrorsToMove:
         mirror_tablespace_locations[mirror.dataDirectory] = get_tablespace_locations(False, mirror.dataDirectory)
 
     """ Update pg_hba.conf on primary segments with new mirror information """
@@ -398,6 +398,13 @@ try:
     """ Reinitialize gparray after the new mirrors are in place. """
     gpArrayInstance = GpArray.initFromCatalog(dburl, utility=True)
     mirrorDirectories = set((seg.getSegmentHostName(),seg.getSegmentContentId()) for seg in gpArrayInstance.getDbList() if seg.isSegmentMirror())
+    newMirrorAddressDir = set(
+        (seg.getSegmentAddress(), seg.getSegmentDataDirectory()) for seg in gpArrayInstance.getDbList() if
+        seg.isSegmentMirror())
+
+    """If mirror has not moved to new location due to any reason, skip deletion of old mirror directory"""
+    mirrorsToDelete = [mirror for mirror in oldMirrorsToMove if
+                       (mirror.address, mirror.dataDirectory) not in newMirrorAddressDir]
 
     """ Delete old mirror directories. """
     if numberOfWorkers > 0:

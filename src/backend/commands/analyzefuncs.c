@@ -66,11 +66,11 @@ typedef struct
  * the actual sample rows.
  *
  * To make things even more complicated, each sample row contains one extra
- * column too: oversized_cols_length. It's an array indicating which attributes
- * on the sample row were omitted and stores these omitted attributes' length,
- * because they were "too large". The omitted attributes are returned as NULLs,
- * and the array can be used to distinguish real NULLs from values that were
- * too large to be included in the sample.
+ * column too: oversized_cols_bitmap. It's a bitmap indicating which attributes
+ * on the sample row were omitted, because they were "too large". The omitted
+ * attributes are returned as NULLs, and the bitmap can be used to distinguish
+ * real NULLs from values that were too large to be included in the sample. The
+ * bitmap is represented as a text column, with '0' or '1' for every column.
  *
  * So overall, this returns a result set like this:
  *
@@ -78,16 +78,16 @@ typedef struct
  *     -- special columns
  *     totalrows pg_catalog.float8,
  *     totaldeadrows pg_catalog.float8,
- *     oversized_cols_length pg_catalog._float8,
+ *     oversized_cols_bitmap pg_catalog.text,
  *     -- columns matching the table
  *     id int4,
  *     t text
  *  );
- *  totalrows | totaldeadrows | oversized_cols_length | id  |    t
+ *  totalrows | totaldeadrows | oversized_cols_bitmap | id  |    t    
  * -----------+---------------+-----------------------+-----+---------
  *            |               |                       |   1 | foo
  *            |               |                       |   2 | bar
- *            |               | {0,3004}              |  50 |
+ *            |               | 01                    |  50 | 
  *            |               |                       | 100 | foo 100
  *          2 |             0 |                       |     | 
  *          1 |             0 |                       |     | 
@@ -95,7 +95,7 @@ typedef struct
  * (7 rows)
  *
  * The first four rows form the actual sample. One of the columns contained
- * an oversized array datum. The function is marked as EXECUTE ON SEGMENTS in
+ * an oversized text datum. The function is marked as EXECUTE ON SEGMENTS in
  * the catalog so you get one summary row *for each segment*.
  */
 Datum
@@ -171,8 +171,8 @@ gp_acquire_sample_rows(PG_FUNCTION_ARGS)
 		/* extra column to indicate oversize cols */
 		TupleDescInitEntry(outDesc,
 						   3,
-						   "oversized_cols_length",
-						   FLOAT8ARRAYOID,
+						   "oversized_cols_bitmap",
+						   TEXTOID,
 						   -1,
 						   0);
 
@@ -253,17 +253,17 @@ gp_acquire_sample_rows(PG_FUNCTION_ARGS)
 		HeapTuple	relTuple = ctx->sample_rows[ctx->index];
 		int			attno;
 		int			outattno;
-		bool		has_toolarge = false;
+		Bitmapset  *toolarge = NULL;
 		Datum	   *relvalues = (Datum *) palloc(relDesc->natts * sizeof(Datum));
 		bool	   *relnulls = (bool *) palloc(relDesc->natts * sizeof(bool));
-		Datum      *oversized_cols_length = (Datum *) palloc0(relDesc->natts * sizeof(Datum));
 
 		heap_deform_tuple(relTuple, relDesc, relvalues, relnulls);
 
 		outattno = NUM_SAMPLE_FIXED_COLS + 1;
 		for (attno = 1; attno <= relDesc->natts; attno++)
 		{
-			Form_pg_attribute relatt = TupleDescAttr(relDesc, attno - 1);
+			Form_pg_attribute relatt = (Form_pg_attribute) relDesc->attrs[attno - 1];
+			bool		is_toolarge = false;
 			Datum		relvalue;
 			bool		relnull;
 
@@ -279,8 +279,8 @@ gp_acquire_sample_rows(PG_FUNCTION_ARGS)
 
 				if (toasted_size > WIDTH_THRESHOLD)
 				{
-					oversized_cols_length[attno - 1] = Float8GetDatum((double)toasted_size);
-					has_toolarge = true;
+					toolarge = bms_add_member(toolarge, outattno - NUM_SAMPLE_FIXED_COLS);
+					is_toolarge = true;
 					relvalue = (Datum) 0;
 					relnull = true;
 				}
@@ -294,10 +294,18 @@ gp_acquire_sample_rows(PG_FUNCTION_ARGS)
 		 * If any of the attributes were oversized, construct the text datum
 		 * to represent the bitmap.
 		 */
-		if (has_toolarge)
+		if (toolarge)
 		{
-			outvalues[2] = PointerGetDatum(construct_array(oversized_cols_length, relDesc->natts,
-														FLOAT8OID, 8, true, 'd'));
+			char	   *toolarge_str;
+			int			i;
+			int			live_natts = outDesc->natts - NUM_SAMPLE_FIXED_COLS;
+
+			toolarge_str = palloc((live_natts + 1) * sizeof(char));
+			for (i = 0; i < live_natts; i++)
+				toolarge_str[i] = bms_is_member(i + 1, toolarge) ? '1' : '0';
+			toolarge_str[i] = '\0';
+
+			outvalues[2] = CStringGetTextDatum(toolarge_str);
 			outnulls[2] = false;
 		}
 		else

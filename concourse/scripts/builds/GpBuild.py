@@ -18,6 +18,7 @@ class GpBuild:
                                     "--with-perl",
                                     "--with-libxml",
                                     "--with-python",
+                                    "--with-uuid=e2fs",
                                     # TODO: Remove this line as soon as zstd is built into Ubuntu docker image
                                     "--without-zstd",
                                     "--prefix={0}".format(INSTALL_DIR)

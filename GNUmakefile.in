@@ -39,6 +39,9 @@ endif
 ifeq ($(with_openssl), yes)
 	$(MAKE) -C contrib/sslinfo all
 endif
+ifneq ($(with_uuid),no)
+	$(MAKE) -C contrib/uuid-ossp all
+endif
 	$(MAKE) -C gpAux/extensions all
 	$(MAKE) -C gpAux/gpperfmon all
 	$(MAKE) -C gpAux/platform all
@@ -84,6 +87,9 @@ endif
 	$(MAKE) -C contrib/pgcrypto $@
 ifeq ($(with_openssl), yes)
 	$(MAKE) -C contrib/sslinfo $@
+endif
+ifneq ($(with_uuid),no)
+	$(MAKE) -C contrib/uuid-ossp $@
 endif
 	$(MAKE) -C gpMgmt $@
 	$(MAKE) -C gpAux/extensions $@
@@ -174,6 +180,9 @@ ICW_TARGETS += contrib/indexscan contrib/hstore contrib/ltree contrib/pgcrypto
 # sslinfo depends on openssl
 ifeq ($(with_openssl), yes)
 ICW_TARGETS += contrib/sslinfo
+endif
+ifneq ($(with_uuid),no)
+ICW_TARGETS += contrib/uuid-ossp
 endif
 ICW_TARGETS += gpcontrib src/bin gpMgmt/bin
 

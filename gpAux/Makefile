@@ -124,13 +124,13 @@ DEFPORT=5432
 
 ORCA_CONFIG=--enable-orca
 
-rhel6_x86_64_CONFIGFLAGS=--with-quicklz  --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --with-libxml --with-pythonsrc-ext
-rhel7_x86_64_CONFIGFLAGS=--with-quicklz  --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --with-libxml --with-pythonsrc-ext
-rhel8_x86_64_CONFIGFLAGS=--with-quicklz  --disable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --with-libxml --with-pythonsrc-ext
-linux_x86_64_CONFIGFLAGS=${ORCA_CONFIG} --with-libxml --with-pythonsrc-ext
-ubuntu18.04_x86_64_CONFIGFLAGS=--with-quicklz --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --with-libxml --with-pythonsrc-ext
-sles12_x86_64_CONFIGFLAGS=--with-quicklz --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --with-libxml --with-pythonsrc-ext
-photon3_x86_64_CONFIGFLAGS=--with-quicklz --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --with-libxml --with-pythonsrc-ext
+rhel6_x86_64_CONFIGFLAGS=--with-quicklz  --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --with-libxml --with-pythonsrc-ext --with-uuid=e2fs
+rhel7_x86_64_CONFIGFLAGS=--with-quicklz  --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --with-libxml --with-pythonsrc-ext --with-uuid=e2fs
+rhel8_x86_64_CONFIGFLAGS=--with-quicklz  --disable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --with-libxml --with-pythonsrc-ext --with-uuid=e2fs
+linux_x86_64_CONFIGFLAGS=${ORCA_CONFIG} --with-libxml --with-pythonsrc-ext --with-uuid=e2fs
+ubuntu18.04_x86_64_CONFIGFLAGS=--with-quicklz --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --with-libxml --with-pythonsrc-ext --with-uuid=e2fs
+sles12_x86_64_CONFIGFLAGS=--with-quicklz --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --with-libxml --with-pythonsrc-ext --with-uuid=e2fs
+photon3_x86_64_CONFIGFLAGS=--with-quicklz --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --with-libxml --with-pythonsrc-ext --with-uuid=e2fs
 BLD_CONFIGFLAGS=$($(BLD_ARCH)_CONFIGFLAGS)
 
 CONFIGFLAGS=$(strip $(BLD_CONFIGFLAGS) --with-pgport=$(DEFPORT) $(BLD_DEPLOYMENT_SETTING))

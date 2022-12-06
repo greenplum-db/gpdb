@@ -12,6 +12,8 @@ CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 -- s/^DETAIL:  Internal error: No motion listener port \(seg\d.*:.*\)/DETAIL:  Internal error: No motion listener port/
 -- m/WARNING:.*Any temporary tables for this session have been dropped because the gang was disconnected/
 -- s/session id \=\s*\d+/session id \= DUMMY/gm
+-- m/WARNING:  Connection \(seg\d.*:.*\) is broken/
+-- s/WARNING:  Connection \(seg\d.*:.*\) is broken/WARNING:  Connection seg0 slice1 is broken/
 -- end_matchsubs
 
 -- skip FTS probes always
@@ -19,11 +21,15 @@ select gp_inject_fault_infinite('fts_probe', 'skip', 1);
 select gp_request_fts_probe_scan();
 select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 
--- Test cdbdisp_getDispatchResults() fail in CdbDispatchCopyStart()
-
 create table dispatch_tbl (a int) distributed by (a);
 insert into dispatch_tbl values (2),(1),(5);
 
+-- Test invalid sock in checkDispatchResult()
+select gp_inject_fault('inject_invalid_sock_for_checkDispatchResult', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+select count(*) from dispatch_tbl;
+select gp_inject_fault('inject_invalid_sock_for_checkDispatchResult', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+
+-- Test cdbdisp_getDispatchResults() fail in CdbDispatchCopyStart()
 -- fault on seg1 to block insert command into the dispatch_tbl table
 select gp_inject_fault('DoCopyToFail', 'error', '', '', '',
    1, 1, 0, dbid) from gp_segment_configuration

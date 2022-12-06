@@ -58,3 +58,49 @@ select gp_inject_fault('winagg_after_spool_tuples', 'reset', dbid)
 reset statement_mem;
 drop table misc_jiras.t1;
 drop schema misc_jiras;
+-- test for issue https://github.com/greenplum-db/gpdb/issues/14539
+-- the \c command to renew the session to make sure the global var
+-- NextRecordTypmod is 0. For details please refer to the issue.
+create table t_record_type_param_dispatch (a int, b int) distributed by (a);
+explain (costs off)
+with cte as (
+  select * from t_record_type_param_dispatch order by random() limit
+  ( select count(*) /2 from t_record_type_param_dispatch )
+)
+select *, case when t in (select t from cte t) then 'a' else 'b' end
+from t_record_type_param_dispatch t;
+                                                           QUERY PLAN                                                            
+---------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)
+   ->  Seq Scan on t_record_type_param_dispatch t
+         SubPlan 2  (slice4; segments: 3)
+           ->  Materialize
+                 ->  Broadcast Motion 1:3  (slice3; segments: 1)
+                       ->  Subquery Scan on t_1
+                             ->  Limit
+                                   InitPlan 1 (returns $0)  (slice5)
+                                     ->  Aggregate
+                                           ->  Gather Motion 3:1  (slice2; segments: 3)
+                                                 ->  Aggregate
+                                                       ->  Seq Scan on t_record_type_param_dispatch
+                                   ->  Gather Motion 3:1  (slice1; segments: 3)
+                                         Merge Key: (random())
+                                         ->  Limit
+                                               ->  Sort
+                                                     Sort Key: (random())
+                                                     ->  Seq Scan on t_record_type_param_dispatch t_record_type_param_dispatch_1
+ Optimizer: Postgres query optimizer
+(19 rows)
+
+\c
+with cte as (
+  select * from t_record_type_param_dispatch order by random() limit
+  ( select count(*) /2 from t_record_type_param_dispatch )
+)
+select *, case when t in (select t from cte t) then 'a' else 'b' end
+from t_record_type_param_dispatch t;
+ a | b | case 
+---+---+------
+(0 rows)
+
+drop table t_record_type_param_dispatch;

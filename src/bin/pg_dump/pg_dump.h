@@ -62,7 +62,6 @@ typedef struct SimpleOidList
 	SimpleOidListCell *tail;
 } SimpleOidList;
 
-
 /*
  * The data structures used to store system catalog information.  Every
  * dumpable object is a subclass of DumpableObject.
@@ -144,7 +143,8 @@ typedef struct _binaryupgradeinfo
 typedef struct _namespaceInfo
 {
 	DumpableObject dobj;
-	char	   *rolname;		/* name of owner, or empty string */
+	Oid			nspowner;		/* OID of owner */
+	const char *rolname;		/* name of owner */
 	char	   *nspacl;
 } NamespaceInfo;
 
@@ -152,6 +152,7 @@ typedef struct _extensionInfo
 {
 	DumpableObject dobj;
 	char	   *namespace;		/* schema containing extension's objects */
+	const char *rolname;
 	bool		relocatable;
 	char	   *extversion;
 	char	   *extconfig;		/* info about configuration tables */
@@ -163,10 +164,12 @@ typedef struct _typeInfo
 	DumpableObject dobj;
 
 	/*
-	 * Note: dobj.name is the pg_type.typname entry.  format_type() might
-	 * produce something different than typname
+	 * Note: dobj.name is the raw pg_type.typname entry.  ftypname is the
+	 * result of format_type(), which will be quoted if needed, and might be
+	 * schema-qualified too.
 	 */
-	char	   *rolname;		/* name of owner, or empty string */
+	char	   *ftypname;
+	const char *rolname;
 	char	   *typacl;
 	Oid			typelem;
 	Oid			typrelid;
@@ -196,7 +199,7 @@ typedef struct _shellTypeInfo
 typedef struct _funcInfo
 {
 	DumpableObject dobj;
-	char	   *rolname;		/* name of owner, or empty string */
+	const char *rolname;
 	Oid			lang;
 	int			nargs;
 	Oid		   *argtypes;
@@ -216,7 +219,7 @@ typedef struct _ptcInfo
 	DumpableObject dobj;
 	char	   *ptcreadfn;
 	char	   *ptcwritefn;
-	char	   *ptcowner;
+	const char *rolname;
 	char	   *ptcacl;
 	bool	   ptctrusted;
 	Oid		   ptcreadid;
@@ -227,7 +230,7 @@ typedef struct _ptcInfo
 typedef struct _oprInfo
 {
 	DumpableObject dobj;
-	char	   *rolname;
+	const char *rolname;
 	char		oprkind;
 	Oid			oprcode;
 } OprInfo;
@@ -235,25 +238,25 @@ typedef struct _oprInfo
 typedef struct _opclassInfo
 {
 	DumpableObject dobj;
-	char	   *rolname;
+	const char *rolname;
 } OpclassInfo;
 
 typedef struct _opfamilyInfo
 {
 	DumpableObject dobj;
-	char	   *rolname;
+	const char *rolname;
 } OpfamilyInfo;
 
 typedef struct _collInfo
 {
 	DumpableObject dobj;
-	char	   *rolname;
+	const char *rolname;
 } CollInfo;
 
 typedef struct _convInfo
 {
 	DumpableObject dobj;
-	char	   *rolname;
+	const char *rolname;
 } ConvInfo;
 
 typedef struct _tableInfo
@@ -262,7 +265,7 @@ typedef struct _tableInfo
 	 * These fields are collected for every table in the database.
 	 */
 	DumpableObject dobj;
-	char	   *rolname;		/* name of owner, or empty string */
+	const char *rolname;
 	char	   *relacl;
 	char		relkind;
 	char		relstorage;
@@ -336,7 +339,8 @@ typedef struct _tableInfo
 	struct _aotableInfo	*aotbl; /* AO auxilliary table metadata */
 	Oid			reltype;		/* OID of table's composite type, if any */
 	char	*distclause; /* distributed by clause */
-
+	char	*partclause;	/* partition definition, if table is partition parent */
+	char	*parttemplate;	/* subpartition template */
 } TableInfo;
 
 /* AO auxilliary table metadata */
@@ -429,7 +433,7 @@ typedef struct _evttriggerInfo
 	DumpableObject dobj;
 	char	   *evtname;
 	char	   *evtevent;
-	char	   *evtowner;
+	const char *evtowner;
 	char	   *evttags;
 	char	   *evtfname;
 	char		evtenabled;
@@ -466,7 +470,7 @@ typedef struct _procLangInfo
 	Oid			laninline;
 	Oid			lanvalidator;
 	char	   *lanacl;
-	char	   *lanowner;		/* name of owner, or empty string */
+	const char *lanowner;
 } ProcLangInfo;
 
 typedef struct _castInfo
@@ -499,7 +503,7 @@ typedef struct _prsInfo
 typedef struct _dictInfo
 {
 	DumpableObject dobj;
-	char	   *rolname;
+	const char *rolname;
 	Oid			dicttemplate;
 	char	   *dictinitoption;
 } TSDictInfo;
@@ -514,14 +518,14 @@ typedef struct _tmplInfo
 typedef struct _cfgInfo
 {
 	DumpableObject dobj;
-	char	   *rolname;
+	const char *rolname;
 	Oid			cfgparser;
 } TSConfigInfo;
 
 typedef struct _fdwInfo
 {
 	DumpableObject dobj;
-	char	   *rolname;
+	const char *rolname;
 	char	   *fdwhandler;
 	char	   *fdwvalidator;
 	char	   *fdwoptions;
@@ -531,7 +535,7 @@ typedef struct _fdwInfo
 typedef struct _foreignServerInfo
 {
 	DumpableObject dobj;
-	char	   *rolname;
+	const char *rolname;
 	Oid			srvfdw;
 	char	   *srvtype;
 	char	   *srvversion;
@@ -542,7 +546,7 @@ typedef struct _foreignServerInfo
 typedef struct _defaultACLInfo
 {
 	DumpableObject dobj;
-	char	   *defaclrole;
+	const char *defaclrole;
 	char		defaclobjtype;
 	char	   *defaclacl;
 } DefaultACLInfo;
@@ -550,7 +554,7 @@ typedef struct _defaultACLInfo
 typedef struct _blobInfo
 {
 	DumpableObject dobj;
-	char	   *rolname;
+	const char *rolname;
 	char	   *blobacl;
 } BlobInfo;
 
@@ -614,9 +618,6 @@ extern void parseOidArray(const char *str, Oid *array, int arraysize);
 extern void sortDumpableObjects(DumpableObject **objs, int numObjs,
 					DumpId preBoundaryId, DumpId postBoundaryId);
 extern void sortDumpableObjectsByTypeName(DumpableObject **objs, int numObjs);
-#if 0 /* GPDB_100_MERGE_FIXME: we don't support pre-7.3 dumps. */
-extern void sortDumpableObjectsByTypeOid(DumpableObject **objs, int numObjs);
-#endif
 extern void sortDataAndIndexObjectsBySize(DumpableObject **objs, int numObjs);
 
 /*

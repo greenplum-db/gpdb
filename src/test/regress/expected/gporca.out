@@ -8799,10 +8799,22 @@ select (select sum(foo.a + bar.d) + 1 from bar) from foo group by a, b;
 
 -- aggrefs with multiple agglevelsup
 select (select (select sum(foo.a + bar.d) from jazz) from bar) from foo group by a, b;
-ERROR:  correlated subquery with skip-level correlations is not supported
+ sum 
+-----
+   9
+  15
+  12
+(3 rows)
+
 -- aggrefs with multiple agglevelsup in an expression
 select (select (select sum(foo.a + bar.d) * 2 from jazz) from bar) from foo group by a, b;
-ERROR:  correlated subquery with skip-level correlations is not supported
+ ?column? 
+----------
+       30
+       24
+       18
+(3 rows)
+
 -- nested group by
 select (select max(f) from bar where d = 1 group by a, e) from foo group by a;
  max 
@@ -8901,7 +8913,13 @@ SELECT  foo.b+1, avg (( SELECT bar.f FROM bar WHERE bar.d = foo.b)) AS t FROM fo
 (3 rows)
 
 SELECT foo.b+1, sum( 1 + (SELECT bar.f FROM bar WHERE bar.d = ANY (SELECT jazz.g FROM jazz WHERE jazz.h = foo.b))) AS t FROM foo GROUP BY foo.b;
-ERROR:  correlated subquery with skip-level correlations is not supported
+ ?column? | t 
+----------+---
+        3 | 3
+        4 |  
+        2 |  
+(3 rows)
+
 select foo.b+1, sum((with cte as (select * from jazz) select 1 from cte where cte.h = foo.b)) as t FROM foo GROUP BY foo.b;
  ?column? | t 
 ----------+---
@@ -12568,7 +12586,28 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
                                              from tcorr2
                                              where tcorr2.b = out.b
                                              group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
-ERROR:  correlated subquery with skip-level correlations is not supported
+                                                      QUERY PLAN                                                      
+----------------------------------------------------------------------------------------------------------------------
+ Nested Loop Semi Join  (cost=10000000001.07..10000000003.21 rows=4 width=8)
+   Join Filter: ("out".b = COALESCE((count(*)), 99::bigint))
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
+         ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=8)
+   ->  Materialize  (cost=1.07..2.16 rows=2 width=8)
+         ->  Hash Left Join  (cost=1.07..2.14 rows=4 width=8)
+               Hash Cond: (tcorr1.a = tcorr2.a)
+               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+                     ->  Seq Scan on tcorr1  (cost=0.00..1.01 rows=1 width=4)
+               ->  Hash  (cost=1.06..1.06 rows=1 width=12)
+                     ->  HashAggregate  (cost=1.04..1.05 rows=1 width=12)
+                           Group Key: tcorr2.a
+                           ->  Result  (cost=0.00..1.03 rows=1 width=8)
+                                 Filter: (tcorr2.b = "out".b)
+                                 ->  Materialize  (cost=0.00..1.03 rows=1 width=8)
+                                       ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
+                                             ->  Seq Scan on tcorr2  (cost=0.00..1.01 rows=1 width=8)
+ Optimizer: Postgres query optimizer
+(18 rows)
+
 -- expect 1 row
 select *
 from tcorr1 out
@@ -12577,7 +12616,11 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
                                              from tcorr2
                                              where tcorr2.b = out.b
                                              group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
-ERROR:  correlated subquery with skip-level correlations is not supported
+ a | b  
+---+----
+ 1 | 99
+(1 row)
+
 -- expect 1 row
 -- FIXME: A process terminates during execution, see https://github.com/greenplum-db/gpdb/issues/10791
 -- select *
@@ -12659,7 +12702,28 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
                                              from tcorr2
                                              where tcorr2.b = out.b
                                              group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
-ERROR:  correlated subquery with skip-level correlations is not supported
+                                                      QUERY PLAN                                                      
+----------------------------------------------------------------------------------------------------------------------
+ Nested Loop Semi Join  (cost=10000000001.07..10000000003.21 rows=4 width=8)
+   Join Filter: ("out".b = COALESCE((count(*)), 99::bigint))
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
+         ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=8)
+   ->  Materialize  (cost=1.07..2.16 rows=2 width=8)
+         ->  Hash Left Join  (cost=1.07..2.14 rows=4 width=8)
+               Hash Cond: (tcorr1.a = tcorr2.a)
+               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+                     ->  Seq Scan on tcorr1  (cost=0.00..1.01 rows=1 width=4)
+               ->  Hash  (cost=1.06..1.06 rows=1 width=12)
+                     ->  HashAggregate  (cost=1.04..1.05 rows=1 width=12)
+                           Group Key: tcorr2.a
+                           ->  Result  (cost=0.00..1.03 rows=1 width=8)
+                                 Filter: (tcorr2.b = "out".b)
+                                 ->  Materialize  (cost=0.00..1.03 rows=1 width=8)
+                                       ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
+                                             ->  Seq Scan on tcorr2  (cost=0.00..1.01 rows=1 width=8)
+ Optimizer: Postgres query optimizer
+(18 rows)
+
 -- expect 1 row
 select *
 from tcorr1 out
@@ -12668,7 +12732,11 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
                                              from tcorr2
                                              where tcorr2.b = out.b
                                              group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
-ERROR:  correlated subquery with skip-level correlations is not supported
+ a | b  
+---+----
+ 1 | 99
+(1 row)
+
 -- expect 1 row
 -- FIXME: A process terminates during execution, see https://github.com/greenplum-db/gpdb/issues/10791
 -- select *
@@ -13134,7 +13202,23 @@ from foo l1 where b in (select ab
                                     on l2.a=tbtree_derived.a and l2.b=tbtree_derived.b
                         where l2.c = 1
                        );
-ERROR:  correlated subquery with skip-level correlations is not supported
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Nested Loop Semi Join
+         Join Filter: ((l1.a + tbtree.b) = l1.b)
+         ->  Seq Scan on foo l1
+         ->  Materialize
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                     ->  Hash Join
+                           Hash Cond: ((tbtree.a = l2.a) AND (tbtree.b = l2.b))
+                           ->  Seq Scan on tbtree
+                           ->  Hash
+                                 ->  Seq Scan on foo l2
+                                       Filter: (c = 1)
+ Optimizer: Postgres query optimizer
+(13 rows)
+
 -- 16 group by columns are not a superset of the distribution columns - no index scan
 explain (costs off)
 select * from foo join (select b, count(*) as cnt from tbtree group by b) grby on foo.a=grby.cnt;

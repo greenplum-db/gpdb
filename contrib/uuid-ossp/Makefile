@@ -1,12 +1,14 @@
 # contrib/uuid-ossp/Makefile
 
 MODULE_big = uuid-ossp
-OBJS = uuid-ossp.o $(UUID_EXTRA_OBJS)
+OBJS = uuid-ossp.o $(UUID_EXTRA_OBJS) $(WIN32RES)
 
 EXTENSION = uuid-ossp
 DATA = uuid-ossp--1.0.sql uuid-ossp--unpackaged--1.0.sql
+PGFILEDESC = "uuid-ossp - UUID generation"
 
-REGRESS = uuid_ossp
+REGRESS = uuid_ossp batch_generate
+REGRESS_OPTS += --init-file=$(top_builddir)/src/test/regress/init_file
 
 SHLIB_LINK += $(UUID_LIBS)
 

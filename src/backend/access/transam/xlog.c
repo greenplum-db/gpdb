@@ -1637,30 +1637,50 @@ CopyXLogRecordToWAL(int write_len, bool isLogSwitch, XLogRecData *rdata,
 
 	/*
 	 * If this was an xlog-switch, it's not enough to write the switch record,
-	 * we also have to consume all the remaining space in the WAL segment. We
-	 * have already reserved it for us, but we still need to make sure it's
-	 * allocated and zeroed in the WAL buffers so that when the caller (or
-	 * someone else) does XLogWrite(), it can really write out all the zeros.
+	 * we also have to consume all the remaining space in the WAL segment.  We
+	 * have already reserved that space, but we need to actually fill it.
 	 */
 	if (isLogSwitch && CurrPos % XLOG_SEG_SIZE != 0)
 	{
 		/* An xlog-switch record doesn't contain any data besides the header */
 		Assert(write_len == SizeOfXLogRecord);
 
-		/*
-		 * We do this one page at a time, to make sure we don't deadlock
-		 * against ourselves if wal_buffers < XLOG_SEG_SIZE.
-		 */
+		/* Assert that we did reserve the right amount of space */
 		Assert(EndPos % XLogSegSize == 0);
 
-		/* Use up all the remaining space on the first page */
+		/* Use up all the remaining space on the current page */
 		CurrPos += freespace;
 
+		/*
+		 * Cause all remaining pages in the segment to be flushed, leaving the
+		 * XLog position where it should be, at the start of the next segment.
+		 * We do this one page at a time, to make sure we don't deadlock
+		 * against ourselves if wal_buffers < wal_segment_size.
+		 */
 		while (CurrPos < EndPos)
 		{
-			/* initialize the next page (if not initialized already) */
-			WALInsertLockUpdateInsertingAt(CurrPos);
-			AdvanceXLInsertBuffer(CurrPos, false);
+			/*
+			 * The minimal action to flush the page would be to call
+			 * WALInsertLockUpdateInsertingAt(CurrPos) followed by
+			 * AdvanceXLInsertBuffer(...).  The page would be left initialized
+			 * mostly to zeros, except for the page header (always the short
+			 * variant, as this is never a segment's first page).
+			 *
+			 * The large vistas of zeros are good for compressibility, but the
+			 * headers interrupting them every XLOG_BLCKSZ (with values that
+			 * differ from page to page) are not.  The effect varies with
+			 * compression tool, but bzip2 for instance compresses about an
+			 * order of magnitude worse if those headers are left in place.
+			 *
+			 * Rather than complicating AdvanceXLInsertBuffer itself (which is
+			 * called in heavily-loaded circumstances as well as this lightly-
+			 * loaded one) with variant behavior, we just use GetXLogBuffer
+			 * (which itself calls the two methods we need) to get the pointer
+			 * and zero most of the page.  Then we just zero the page header.
+			 */
+			currpos = GetXLogBuffer(CurrPos);
+			MemSet(currpos, 0, SizeOfXLogShortPHD);
+
 			CurrPos += XLOG_BLCKSZ;
 		}
 	}
@@ -7034,7 +7054,7 @@ StartupXLOG(void)
 		CheckRequiredParameterValues();
 
 		UtilityModeFindOrCreateDtmRedoFile();
-		
+
 		/*
 		 * We're in recovery, so unlogged relations may be trashed and must be
 		 * reset.  This should be done BEFORE allowing Hot Standby
@@ -7357,7 +7377,7 @@ StartupXLOG(void)
 				/* Now apply the WAL record itself */
 				RmgrTable[record->xl_rmid].rm_redo(ReadRecPtr, EndRecPtr, record);
 
-				/* 
+				/*
 				 * Verify once if there's a conrecord being overwritten.
 				 * We do it here instead of xlog_redo like 7X because we need
 				 * xlogreader in this function.

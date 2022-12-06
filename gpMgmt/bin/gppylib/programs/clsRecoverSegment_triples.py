@@ -1,11 +1,36 @@
 import abc
 
+from contextlib import closing
+from gppylib.db import dbconn
+from gppylib import gplog
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts
 from gppylib.parseutils import line_reader, check_values, canonicalize_address
 from gppylib.utils import checkNotNone, normalizeAndValidateInputPath
 from gppylib.gparray import GpArray, Segment
 
+logger = gplog.get_default_logger()
+
+def get_segments_with_running_basebackup():
+    """
+    Returns a list of contentIds of source segments of running pg_basebackup processes
+    At present gp_stat_replication table does not contain any info about datadir and dbid of the target of running pg_basebackup
+    """
+
+    sql = "select gp_segment_id from gp_stat_replication where application_name = 'pg_basebackup'"
+
+    try:
+        with closing(dbconn.connect(dbconn.DbURL())) as conn:
+            res = dbconn.execSQL(conn, sql)
+            rows = res.fetchall()
+    except Exception as e:
+        raise Exception("Failed to query gp_stat_replication: %s" %str(e))
+
+    segments_with_running_basebackup = {row[0] for row in rows}
+
+    if len(segments_with_running_basebackup) == 0:
+        logger.debug("No basebackup running")
+    return segments_with_running_basebackup
 
 class RecoveryTriplet:
     """
@@ -144,7 +169,15 @@ class RecoveryTriplets:
         triplets = []
 
         dbIdToPeerMap = self.gpArray.getDbIdToPeerMap()
+
+        failed_segments_with_running_basebackup = []
+        segments_with_running_basebackup = get_segments_with_running_basebackup()
+
         for req in requests:
+            if req.failed.getSegmentContentId() in segments_with_running_basebackup:
+                failed_segments_with_running_basebackup.append(req.failed.getSegmentContentId())
+                continue
+
             # TODO: These 2 cases have different behavior which might be confusing to the user.
             # "<failed_address>|<failed_port>|<failed_data_dir> <failed_address>|<failed_port>|<failed_data_dir>" does full recovery
             # "<failed_address>|<failed_port>|<failed_data_dir>" does incremental recovery
@@ -171,6 +204,11 @@ class RecoveryTriplets:
             peer = dbIdToPeerMap.get(req.failed.getSegmentDbId())
 
             triplets.append(RecoveryTriplet(req.failed, peer, failover))
+
+        if len(failed_segments_with_running_basebackup) > 0:
+            logger.warning(
+                "Found pg_basebackup running for segments with contentIds %s, skipping recovery of these segments" % (
+                    failed_segments_with_running_basebackup))
 
         return triplets
 
