@@ -961,7 +961,7 @@ externalgettup_custom(FileScanDesc scan)
 			if (bytesread > 0)
 			{
 				appendBinaryStringInfo(&formatter->fmt_databuf, pstate->raw_buf, bytesread);
-				pstate->raw_buf_len bytesread;
+				pstate->raw_buf_len = bytesread;
 			}
 
 			/* HEADER not yet supported ... */
