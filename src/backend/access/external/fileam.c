@@ -159,12 +159,6 @@ external_beginscan(Relation relation, uint32 scancounter,
 	scan->fs_scancounter = scancounter;
 	scan->fs_noop = false;
 	scan->fs_file = NULL;
-	/*
-	 * GPDB_91_MERGE_FIXME: scan->raw_buf_done is used for custom external
-	 * table only now. Maybe we could refactor externalgettup_custom() to
-	 * remove it.
-	 */
-	scan->raw_buf_done = true; /* true so we will read data in first run */
 	scan->fs_formatter = NULL;
 	scan->fs_constraintExprs = NULL;
 	if (relation->rd_att->constr != NULL && relation->rd_att->constr->num_check > 0)
@@ -353,7 +347,6 @@ external_rescan(FileScanDesc scan)
 	scan->fs_pstate->fe_eof = false;
 	scan->fs_pstate->cur_lineno = 0;
 	scan->fs_pstate->cur_attname = NULL;
-	scan->raw_buf_done = true; /* true so we will read data in first run */
 	scan->fs_pstate->raw_buf_len = 0;
 }
 
@@ -957,17 +950,18 @@ externalgettup_custom(FileScanDesc scan)
 	Assert(formatter);
 
 	/* while didn't finish processing the entire file */
-	while (!(scan->raw_buf_done && pstate->fe_eof))
+	/* raw_buf_len was set to 0 in BeginCopyFrom() or external_rescan() */
+	while (pstate->raw_buf_len != 0 || !pstate->fe_eof)
 	{
 		/* need to fill our buffer with data? */
-		if (scan->raw_buf_done)
+		if (pstate->raw_buf_len == 0)
 		{
 			int			bytesread = external_getdata(scan->fs_file, pstate, pstate->raw_buf, RAW_BUF_SIZE);
 
 			if (bytesread > 0)
 			{
 				appendBinaryStringInfo(&formatter->fmt_databuf, pstate->raw_buf, bytesread);
-				scan->raw_buf_done = false;
+				pstate->raw_buf_len bytesread;
 			}
 
 			/* HEADER not yet supported ... */
@@ -976,7 +970,7 @@ externalgettup_custom(FileScanDesc scan)
 		}
 
 		/* while there is still data in our buffer */
-		while (!scan->raw_buf_done)
+		while (pstate->raw_buf_len != 0)
 		{
 			bool		error_caught = false;
 
@@ -1065,7 +1059,7 @@ externalgettup_custom(FileScanDesc scan)
 						 * Callee consumed all data in the buffer. Prepare
 						 * to read more data into it.
 						 */
-						scan->raw_buf_done = true;
+						pstate->raw_buf_len = 0;
 						justifyDatabuf(&formatter->fmt_databuf);
 						continue;
 
@@ -1091,8 +1085,6 @@ externalgettup_custom(FileScanDesc scan)
 				(ERRCODE_DATA_EXCEPTION,
 				 errmsg("unexpected end of file")));
 	}
-
-
 
 	/*
 	 * if we got here we finished reading all the data.

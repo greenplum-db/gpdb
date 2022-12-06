@@ -558,7 +558,7 @@ doNotifyingOnePhaseCommit(void)
 static void
 doNotifyingCommitPrepared(void)
 {
-	bool		succeeded;
+	volatile bool		succeeded;
 	int			retry = 0;
 	volatile int savedInterruptHoldoffCount;
 	MemoryContext oldcontext = CurrentMemoryContext;;
@@ -680,7 +680,7 @@ static void
 retryAbortPrepared(void)
 {
 	int			retry = 0;
-	bool		succeeded = false;
+	volatile bool		succeeded = false;
 	volatile int savedInterruptHoldoffCount;
 	MemoryContext oldcontext = CurrentMemoryContext;;
 
