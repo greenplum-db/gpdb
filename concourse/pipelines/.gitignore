@@ -3,3 +3,4 @@ gpdb-*.yml
 # negate the match on gpdb-tpl.yml so that tools like `ag` don't ignore it
 # when searching for matches
 !gpdb-tpl.yml
+!gpdb-tpl-rocky8
