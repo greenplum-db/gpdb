@@ -6687,6 +6687,15 @@ explain select t1JoinPruning.n from t1JoinPruning where t1JoinPruning.m in (sele
  Optimizer: Postgres query optimizer
 (9 rows)
 
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p and fooJoinPruning.b=barJoinPruning.r and fooJoinPruning.c=barJoinPruning.s and barJoinPruning.s=barJoinPruning.t where fooJoinPruning.b>300;
+                                    QUERY PLAN
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..519.67 rows=18800 width=28)
+   ->  Seq Scan on foojoinpruning  (cost=0.00..269.00 rows=6267 width=28)
+         Filter: (b > 300)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
 drop table fooJoinPruning;
 drop table barJoinPruning;
 drop table t1JoinPruning;
@@ -6696,6 +6705,8 @@ drop table t2JoinPruning;
 --
 create table fooJoinPruning (a int primary key,b int,c int);
 create table barJoinPruning (p int primary key,q int,r int);
+create table t1JoinPruning(m int primary key,n int);
+create table t2JoinPruning(x int primary key,y int);
 explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=100  where barJoinPruning.q!=10;
                                                  QUERY PLAN                                                 
 ------------------------------------------------------------------------------------------------------------
@@ -6723,10 +6734,111 @@ explain select barJoinPruning.* from fooJoinPruning left join barJoinPruning on 
  Optimizer: Postgres query optimizer
 (9 rows)
 
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on (select t1JoinPruning.n from t1JoinPruning)=(select t2JoinPruning.y from t2JoinPruning) where fooJoinPruning.c>100;
+                                               QUERY PLAN
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000002938.00..10019990699.70 rows=2022803 width=12)
+   InitPlan 1 (returns $0)  (slice3)
+     ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..1469.00 rows=86100 width=4)
+           ->  Seq Scan on t1joinpruning  (cost=0.00..321.00 rows=28700 width=4)
+   InitPlan 2 (returns $1)  (slice5)
+     ->  Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1469.00 rows=86100 width=4)
+           ->  Seq Scan on t2joinpruning  (cost=0.00..321.00 rows=28700 width=4)
+   ->  Nested Loop Left Join  (cost=10000000000.00..10019960790.99 rows=674268 width=12)
+         Join Filter: ($0 = $1)
+         ->  Seq Scan on foojoinpruning  (cost=0.00..358.58 rows=8656 width=12)
+               Filter: (c > 100)
+         ->  Materialize  (cost=0.00..1721.83 rows=77900 width=0)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1332.33 rows=77900 width=0)
+                     ->  Seq Scan on barjoinpruning  (cost=0.00..293.67 rows=25967 width=0)
+ Optimizer: Postgres query optimizer
+(15 rows)
+
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.q=100  where fooJoinPruning.c>100;
+                                              QUERY PLAN
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10003146800.17 rows=2022803 width=12)
+   ->  Nested Loop Left Join  (cost=10000000000.00..10003119829.46 rows=674268 width=12)
+         ->  Seq Scan on foojoinpruning  (cost=0.00..358.58 rows=8656 width=12)
+               Filter: (c > 100)
+         ->  Materialize  (cost=0.00..360.01 rows=78 width=0)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..359.62 rows=78 width=0)
+                     ->  Seq Scan on barjoinpruning  (cost=0.00..358.58 rows=26 width=0)
+                           Filter: (q = 100)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=barJoinPruning.q  where fooJoinPruning.b>300;
+                                              QUERY PLAN
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10003146800.17 rows=2022803 width=12)
+   ->  Nested Loop Left Join  (cost=10000000000.00..10003119829.46 rows=674268 width=12)
+         ->  Seq Scan on foojoinpruning  (cost=0.00..358.58 rows=8656 width=12)
+               Filter: (b > 300)
+         ->  Materialize  (cost=0.00..360.01 rows=78 width=0)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..359.62 rows=78 width=0)
+                     ->  Seq Scan on barjoinpruning  (cost=0.00..358.58 rows=26 width=0)
+                           Filter: (p = q)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
 drop table fooJoinPruning;
 drop table barJoinPruning;
+drop table t1JoinPruning;
+drop table t2JoinPruning;
 create table fooJoinPruning (a int, b int, c int,d int,e int,f int,g int,constraint idx1 unique(a,b),constraint idx2 unique(a,c,d));
 create table barJoinPruning (p int, q int, r int,s int,t int,u int,v int,constraint idx3 unique(p,q),constraint idx4 unique(p,r,s));
+create table t1JoinPruning(m int primary key,n int);
+create table t2JoinPruning(x int primary key,y int);
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p or fooJoinPruning.b=barJoinPruning.q  where fooJoinPruning.b>300;
+                                              QUERY PLAN
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10011433863.40 rows=2119580 width=28)
+   ->  Nested Loop Left Join  (cost=10000000000.00..10011405602.33 rows=706527 width=28)
+         Join Filter: ((foojoinpruning.a = barjoinpruning.p) OR (foojoinpruning.b = barjoinpruning.q))
+         ->  Seq Scan on foojoinpruning  (cost=0.00..269.00 rows=6267 width=28)
+               Filter: (b > 300)
+         ->  Materialize  (cost=0.00..1256.00 rows=56400 width=8)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..974.00 rows=56400 width=8)
+                     ->  Seq Scan on barjoinpruning  (cost=0.00..222.00 rows=18800 width=8)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on (select t1JoinPruning.n from t1JoinPruning)=(select t2JoinPruning.y from t2JoinPruning) and barJoinPruning.t=100  where fooJoinPruning.b>300;
+                                             QUERY PLAN
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000002938.00..10001698321.53 rows=18800 width=28)
+   InitPlan 1 (returns $0)  (slice3)
+     ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..1469.00 rows=86100 width=4)
+           ->  Seq Scan on t1joinpruning  (cost=0.00..321.00 rows=28700 width=4)
+   InitPlan 2 (returns $1)  (slice5)
+     ->  Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1469.00 rows=86100 width=4)
+           ->  Seq Scan on t2joinpruning  (cost=0.00..321.00 rows=28700 width=4)
+   ->  Nested Loop Left Join  (cost=10000000000.00..10001695132.87 rows=6267 width=28)
+         Join Filter: ($0 = $1)
+         ->  Seq Scan on foojoinpruning  (cost=0.00..269.00 rows=6267 width=28)
+               Filter: (b > 300)
+         ->  Materialize  (cost=0.00..270.03 rows=56 width=0)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..269.75 rows=56 width=0)
+                     ->  Seq Scan on barjoinpruning  (cost=0.00..269.00 rows=19 width=0)
+                           Filter: (t = 100)
+ Optimizer: Postgres query optimizer
+(16 rows)
+
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p>100 and barJoinPruning.q>200  where fooJoinPruning.b>300;
+                                               QUERY PLAN
+---------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10006288441.12 rows=204058679 width=28)
+   ->  Nested Loop Left Join  (cost=10000000000.00..10003567658.73 rows=68019560 width=28)
+         ->  Seq Scan on foojoinpruning  (cost=0.00..269.00 rows=6267 width=28)
+               Filter: (b > 300)
+         ->  Materialize  (cost=0.00..514.99 rows=10854 width=0)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..460.72 rows=10854 width=0)
+                     ->  Seq Scan on barjoinpruning  (cost=0.00..316.00 rows=3618 width=0)
+                           Filter: ((p > 100) AND (q > 200))
+ Optimizer: Postgres query optimizer
+(9 rows)
+
 explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=100 and barJoinPruning.r=200;
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
@@ -6778,5 +6890,21 @@ explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on 
  Optimizer: Postgres query optimizer
 (8 rows)
 
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p and fooJoinPruning.b=barJoinPruning.r and barJoinPruning.s=barJoinPruning.t where fooJoinPruning.b>300;
+                                              QUERY PLAN
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=269.28..882.98 rows=18800 width=28)
+   ->  Hash Left Join  (cost=269.28..632.31 rows=6267 width=28)
+         Hash Cond: ((foojoinpruning.a = barjoinpruning.p) AND (foojoinpruning.b = barjoinpruning.r))
+         ->  Seq Scan on foojoinpruning  (cost=0.00..269.00 rows=6267 width=28)
+               Filter: (b > 300)
+         ->  Hash  (cost=269.00..269.00 rows=19 width=8)
+               ->  Seq Scan on barjoinpruning  (cost=0.00..269.00 rows=19 width=8)
+                     Filter: (s = t)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
 drop table fooJoinPruning;
 drop table barJoinPruning;
+drop table t1JoinPruning;
+drop table t2JoinPruning;

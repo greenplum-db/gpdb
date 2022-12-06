@@ -6658,6 +6658,15 @@ explain select t1JoinPruning.n from t1JoinPruning where t1JoinPruning.m in (sele
  Optimizer: Pivotal Optimizer (GPORCA)
 (11 rows)
 
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p and fooJoinPruning.b=barJoinPruning.r and fooJoinPruning.c=barJoinPruning.s and barJoinPruning.s=barJoinPruning.t where fooJoinPruning.b>300;
+                                    QUERY PLAN
+----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=28)
+   ->  Index Scan using idx1 on foojoinpruning  (cost=0.00..6.00 rows=1 width=28)
+         Index Cond: (b > 300)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
 drop table fooJoinPruning;
 drop table barJoinPruning;
 drop table t1JoinPruning;
@@ -6667,6 +6676,8 @@ drop table t2JoinPruning;
 --
 create table fooJoinPruning (a int primary key,b int,c int);
 create table barJoinPruning (p int primary key,q int,r int);
+create table t1JoinPruning(m int primary key,n int);
+create table t2JoinPruning(x int primary key,y int);
 explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=100  where barJoinPruning.q!=10;
                                                     QUERY PLAN                                                    
 ------------------------------------------------------------------------------------------------------------------
@@ -6697,10 +6708,136 @@ explain select barJoinPruning.* from fooJoinPruning left join barJoinPruning on 
  Optimizer: Pivotal Optimizer (GPORCA)
 (10 rows)
 
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on (select t1JoinPruning.n from t1JoinPruning)=(select t2JoinPruning.y from t2JoinPruning) where fooJoinPruning.c>100;
+                                                          QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1357132863.70 rows=2 width=12)
+   ->  Nested Loop Left Join  (cost=0.00..1357132863.70 rows=1 width=12)
+         Join Filter: true
+         ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=12)
+               Filter: (c > 100)
+         ->  Materialize  (cost=0.00..1324463.06 rows=1 width=1)
+               ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..1324463.06 rows=1 width=1)
+                     ->  Hash Join  (cost=0.00..1324463.06 rows=1 width=1)
+                           Hash Cond: (t1joinpruning.n = t2joinpruning.y)
+                           ->  Nested Loop  (cost=0.00..1324032.06 rows=1 width=4)
+                                 Join Filter: true
+                                 ->  Assert  (cost=0.00..431.00 rows=1 width=4)
+                                       Assert Cond: ((row_number() OVER (?)) = 1)
+                                       ->  WindowAgg  (cost=0.00..431.00 rows=1 width=12)
+                                             ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                                   ->  Seq Scan on t1joinpruning  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
+                                       ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
+                                             ->  Seq Scan on barjoinpruning  (cost=0.00..431.00 rows=1 width=1)
+                           ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                                 ->  Assert  (cost=0.00..431.00 rows=1 width=4)
+                                       Assert Cond: ((row_number() OVER (?)) = 1)
+                                       ->  WindowAgg  (cost=0.00..431.00 rows=1 width=12)
+                                             ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                                   ->  Seq Scan on t2joinpruning  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(26 rows)
+
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.q=100  where fooJoinPruning.c>100;
+                                            QUERY PLAN
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.10 rows=2 width=12)
+   ->  Nested Loop Left Join  (cost=0.00..1324032.10 rows=1 width=12)
+         Join Filter: true
+         ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=12)
+               Filter: (c > 100)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
+                     ->  Seq Scan on barjoinpruning  (cost=0.00..431.00 rows=1 width=1)
+                           Filter: (q = 100)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
+
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=barJoinPruning.q  where fooJoinPruning.b>300;
+                                            QUERY PLAN
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.17 rows=2 width=12)
+   ->  Nested Loop Left Join  (cost=0.00..1324032.17 rows=1 width=12)
+         Join Filter: true
+         ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=12)
+               Filter: (b > 300)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
+                     ->  Seq Scan on barjoinpruning  (cost=0.00..431.00 rows=1 width=1)
+                           Filter: (p = q)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
+
 drop table fooJoinPruning;
 drop table barJoinPruning;
+drop table t1JoinPruning;
+drop table t2JoinPruning;
 create table fooJoinPruning (a int, b int, c int,d int,e int,f int,g int,constraint idx1 unique(a,b),constraint idx2 unique(a,c,d));
 create table barJoinPruning (p int, q int, r int,s int,t int,u int,v int,constraint idx3 unique(p,q),constraint idx4 unique(p,r,s));
+create table t1JoinPruning(m int primary key,n int);
+create table t2JoinPruning(x int primary key,y int);
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p or fooJoinPruning.b=barJoinPruning.q  where fooJoinPruning.b>300;
+                                              QUERY PLAN
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..888833.66 rows=1 width=28)
+   ->  Nested Loop Left Join  (cost=0.00..888833.66 rows=1 width=28)
+         Join Filter: ((foojoinpruning.a = barjoinpruning.p) OR (foojoinpruning.b = barjoinpruning.q))
+         ->  Index Scan using idx1 on foojoinpruning  (cost=0.00..6.00 rows=1 width=28)
+               Index Cond: (b > 300)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                     ->  Seq Scan on barjoinpruning  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on (select t1JoinPruning.n from t1JoinPruning)=(select t2JoinPruning.y from t2JoinPruning) and barJoinPruning.t=100  where fooJoinPruning.b>300;
+                                                          QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1356697680.44 rows=2 width=28)
+   ->  Nested Loop Left Join  (cost=0.00..1356697680.44 rows=1 width=28)
+         Join Filter: true
+         ->  Index Scan using idx1 on foojoinpruning  (cost=0.00..6.00 rows=1 width=28)
+               Index Cond: (b > 300)
+         ->  Materialize  (cost=0.00..1324463.08 rows=1 width=1)
+               ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..1324463.08 rows=1 width=1)
+                     ->  Hash Join  (cost=0.00..1324463.08 rows=1 width=1)
+                           Hash Cond: (t1joinpruning.n = t2joinpruning.y)
+                           ->  Nested Loop  (cost=0.00..1324032.08 rows=1 width=4)
+                                 Join Filter: true
+                                 ->  Assert  (cost=0.00..431.00 rows=1 width=4)
+                                       Assert Cond: ((row_number() OVER (?)) = 1)
+                                       ->  WindowAgg  (cost=0.00..431.00 rows=1 width=12)
+                                             ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                                   ->  Seq Scan on t1joinpruning  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
+                                       ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
+                                             ->  Seq Scan on barjoinpruning  (cost=0.00..431.00 rows=1 width=1)
+                                                   Filter: (t = 100)
+                           ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                                 ->  Assert  (cost=0.00..431.00 rows=1 width=4)
+                                       Assert Cond: ((row_number() OVER (?)) = 1)
+                                       ->  WindowAgg  (cost=0.00..431.00 rows=1 width=12)
+                                             ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                                   ->  Seq Scan on t2joinpruning  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(27 rows)
+
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p>100 and barJoinPruning.q>200  where fooJoinPruning.b>300;
+                                            QUERY PLAN
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..453632.48 rows=2 width=28)
+   ->  Nested Loop Left Join  (cost=0.00..453632.48 rows=1 width=28)
+         Join Filter: true
+         ->  Index Scan using idx1 on foojoinpruning  (cost=0.00..6.00 rows=1 width=28)
+               Index Cond: (b > 300)
+         ->  Materialize  (cost=0.00..6.00 rows=1 width=1)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..6.00 rows=1 width=1)
+                     ->  Index Scan using idx3 on barjoinpruning  (cost=0.00..6.00 rows=1 width=1)
+                           Index Cond: ((p > 100) AND (q > 200))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
+
 explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=100 and barJoinPruning.r=200;
                                             QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
@@ -6755,5 +6892,21 @@ explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on 
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p and fooJoinPruning.b=barJoinPruning.r and barJoinPruning.s=barJoinPruning.t where fooJoinPruning.b>300;
+                                       QUERY PLAN
+----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..12.00 rows=2 width=28)
+   ->  Nested Loop Left Join  (cost=0.00..12.00 rows=1 width=28)
+         Join Filter: true
+         ->  Index Scan using idx1 on foojoinpruning  (cost=0.00..6.00 rows=1 width=28)
+               Index Cond: (b > 300)
+         ->  Index Scan using idx3 on barjoinpruning  (cost=0.00..6.00 rows=1 width=1)
+               Index Cond: (p = foojoinpruning.a)
+               Filter: ((foojoinpruning.b = r) AND (s = t) AND (r > 300))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
 drop table fooJoinPruning;
 drop table barJoinPruning;
+drop table t1JoinPruning;
+drop table t2JoinPruning;

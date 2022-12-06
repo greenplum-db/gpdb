@@ -221,6 +221,12 @@ private:
 	static CExpression *PexprJoinPruning(CMemoryPool *mp, CExpression *pexpr,
 										 CColRefSet *pcrsOutput);
 
+	static void CheckUniqueKeyInJoinCond(CColRefSet *inner_columns,
+										 CColRefSet *usedColumns,
+										 CColRefSet *result,
+										 CColRefSet *inner_unique_keys,
+										 CColRefSet *outer_rel_columns);
+
 
 
 public:
