@@ -1451,7 +1451,7 @@ dumpTablespaces(PGconn *conn)
 	 * Greenplum, and the dump format should vary depending on if the dump is
 	 * --gp-syntax or --no-gp-syntax.
 	 */
-	if (server_version == GPDB5_MAJOR_PGVERSION)
+	if (server_version < GPDB6_MAJOR_PGVERSION)
 	{
 		filespace_to_tablespace = true;
 		/*
