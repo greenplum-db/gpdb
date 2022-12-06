@@ -986,10 +986,12 @@ PQprocessAoTupCounts(struct HTAB *ht, void *aotupcounts, int naotupcounts)
 				if (!ht)
 				{
 					HASHCTL	ctl;
+					MemSet(&ctl, 0, sizeof(ctl));
 
+					ctl.hash = oid_hash;
 					ctl.keysize = sizeof(Oid);
 					ctl.entrysize = sizeof(*entry);
-					ht = hash_create("AO hash map", 10, &ctl, HASH_ELEM);
+					ht = hash_create("AO hash map", 10, &ctl, HASH_ELEM | HASH_FUNCTION);
 				}
 
 				entry = hash_search(ht, &(ao->aorelid), HASH_ENTER, &found);
