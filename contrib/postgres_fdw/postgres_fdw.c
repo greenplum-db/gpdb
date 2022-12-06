@@ -4419,6 +4419,15 @@ postgresAnalyzeForeignTable(Relation relation,
 
 		if (PQntuples(res) != 1 || PQnfields(res) != 1)
 			elog(ERROR, "unexpected result from deparseAnalyzeSizeSql query");
+
+        /* In GPDB, BLCKSZ is 32k by default. And in postgres, BLCKSZ is 8k by default. 
+         * When computing the totalpages of foreign table, postgres_fdw uses relSize / local BLCKSZ. 
+         * So when GPDB connects to remote postgres using postgres_fdw, 
+         * if the relSize of foreign table is smaller than GPDB BLCKSZ, the case that totalpages = 0 && totaltuples > 0 will arise. 
+         * And totalpages = 0 && titaltuples > 0 will violate GPDB's Assert and might cause GPDB crashing.
+         *
+         * So here we handle totalpages = 0 && relSize > 0 specifically to fix the issue above. 
+         */
 		unsigned long int relSize = strtoul(PQgetvalue(res, 0, 0), NULL, 10);
 		*totalpages = relSize / BLCKSZ;
 		if(*totalpages == 0 && relSize > 0)
