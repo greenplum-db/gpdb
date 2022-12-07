@@ -529,13 +529,6 @@ CPhysicalDML::OsPrint(IOstream &os) const
 	m_pcrAction->OsPrint(os);
 	os << ")";
 
-	if (m_pcrTableOid != nullptr)
-	{
-		os << ", Oid: (";
-		m_pcrTableOid->OsPrint(os);
-		os << ")";
-	}
-
 	if (CLogicalDML::EdmlDelete == m_edmlop ||
 		CLogicalDML::EdmlUpdate == m_edmlop)
 	{

@@ -182,7 +182,6 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 		 &CreateScSubPlanParamListParseHandler},
 		{EdxltokenScalarSubPlanParam, &CreateScSubPlanParamParseHandler},
 		{EdxltokenScalarOpList, &CreateScOpListParseHandler},
-		{EdxltokenScalarPartOid, &CreateScPartOidParseHandler},
 		{EdxltokenScalarPartDefault, &CreateScPartDefaultParseHandler},
 		{EdxltokenScalarPartBound, &CreateScPartBoundParseHandler},
 		{EdxltokenScalarPartBoundInclusion, &CreateScPartBoundInclParseHandler},
@@ -320,7 +319,6 @@ CParseHandlerFactory::GetParseHandler(CMemoryPool *mp,
 	// did not find the physical operator in the table
 	CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
 		&dxl_memory_manager, token_identifier_str);
-	;
 
 	GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnrecognizedOperator,
 			   str->GetBuffer());
@@ -923,16 +921,6 @@ CParseHandlerFactory::CreateScOpListParseHandler(
 {
 	return GPOS_NEW(mp)
 		CParseHandlerScalarOpList(mp, parse_handler_mgr, parse_handler_root);
-}
-
-// creates a parse handler for parsing a scalar part OID
-CParseHandlerBase *
-CParseHandlerFactory::CreateScPartOidParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp)
-		CParseHandlerScalarPartOid(mp, parse_handler_mgr, parse_handler_root);
 }
 
 // creates a parse handler for parsing a scalar part default

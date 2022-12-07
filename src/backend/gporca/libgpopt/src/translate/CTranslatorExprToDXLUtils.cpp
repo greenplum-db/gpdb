@@ -41,7 +41,6 @@
 #include "naucrates/dxl/operators/CDXLScalarPartBoundOpen.h"
 #include "naucrates/dxl/operators/CDXLScalarPartDefault.h"
 #include "naucrates/dxl/operators/CDXLScalarPartListValues.h"
-#include "naucrates/dxl/operators/CDXLScalarPartOid.h"
 #include "naucrates/dxl/operators/CDXLScalarProjElem.h"
 #include "naucrates/dxl/operators/CDXLScalarProjList.h"
 #include "naucrates/dxl/operators/CDXLScalarValuesList.h"
