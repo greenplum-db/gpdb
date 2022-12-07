@@ -713,57 +713,6 @@ CTranslatorExprToDXLUtils::PdxlnProjListFromChildProjList(
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorExprToDXLUtils::PdxlnPrLPartitionSelector
-//
-//	@doc:
-//		Construct the project list of a partition selector
-//
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorExprToDXLUtils::PdxlnPrLPartitionSelector(
-	CMemoryPool *mp, CMDAccessor *md_accessor, CColumnFactory *col_factory,
-	ColRefToDXLNodeMap *phmcrdxln, BOOL fUseChildProjList,
-	CDXLNode *pdxlnPrLChild, CColRef *pcrOid, ULONG ulPartLevels,
-	BOOL fGeneratePartOid)
-{
-	GPOS_ASSERT_IMP(fUseChildProjList, nullptr != pdxlnPrLChild);
-
-	CDXLNode *pdxlnPrL = nullptr;
-	if (fUseChildProjList)
-	{
-		pdxlnPrL = PdxlnProjListFromChildProjList(mp, col_factory, phmcrdxln,
-												  pdxlnPrLChild);
-	}
-	else
-	{
-		pdxlnPrL =
-			GPOS_NEW(mp) CDXLNode(mp, GPOS_NEW(mp) CDXLScalarProjList(mp));
-	}
-
-	if (fGeneratePartOid)
-	{
-		// add to it the Oid column
-		if (nullptr == pcrOid)
-		{
-			const IMDTypeOid *pmdtype = md_accessor->PtMDType<IMDTypeOid>();
-			pcrOid = col_factory->PcrCreate(pmdtype, default_type_modifier);
-		}
-
-		CMDName *mdname = GPOS_NEW(mp) CMDName(mp, pcrOid->Name().Pstr());
-		CDXLScalarProjElem *pdxlopPrEl =
-			GPOS_NEW(mp) CDXLScalarProjElem(mp, pcrOid->Id(), mdname);
-		CDXLNode *pdxlnPrEl = GPOS_NEW(mp) CDXLNode(mp, pdxlopPrEl);
-		CDXLNode *pdxlnPartOid = GPOS_NEW(mp)
-			CDXLNode(mp, GPOS_NEW(mp) CDXLScalarPartOid(mp, ulPartLevels - 1));
-		pdxlnPrEl->AddChild(pdxlnPartOid);
-		pdxlnPrL->AddChild(pdxlnPrEl);
-	}
-
-	return pdxlnPrL;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CTranslatorExprToDXLUtils::PdxlnProjElem
 //
 //	@doc:

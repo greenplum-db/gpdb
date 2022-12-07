@@ -4866,7 +4866,6 @@ CTranslatorExprToDXL::PdxlnDML(CExpression *pexpr,
 	GPOS_ASSERT(1 == pexpr->Arity());
 
 	ULONG action_colid = 0;
-	ULONG oid_colid = 0;
 	ULONG ctid_colid = 0;
 	ULONG segid_colid = 0;
 
@@ -4888,12 +4887,6 @@ CTranslatorExprToDXL::PdxlnDML(CExpression *pexpr,
 	GPOS_ASSERT(nullptr != pcrAction);
 	action_colid = pcrAction->Id();
 
-	CColRef *pcrOid = popDML->PcrTableOid();
-	if (pcrOid != nullptr)
-	{
-		oid_colid = pcrOid->Id();
-	}
-
 	CColRef *pcrCtid = popDML->PcrCtid();
 	CColRef *pcrSegmentId = popDML->PcrSegmentId();
 	if (nullptr != pcrCtid)
@@ -4914,9 +4907,8 @@ CTranslatorExprToDXL::PdxlnDML(CExpression *pexpr,
 	CDXLDirectDispatchInfo *dxl_direct_dispatch_info =
 		GetDXLDirectDispatchInfo(pexpr);
 	CDXLPhysicalDML *pdxlopDML = GPOS_NEW(m_mp) CDXLPhysicalDML(
-		m_mp, dxl_dml_type, table_descr, pdrgpul, action_colid, oid_colid,
-		ctid_colid, segid_colid, dxl_direct_dispatch_info,
-		popDML->IsInputSortReq(), popDML->FSplit());
+		m_mp, dxl_dml_type, table_descr, pdrgpul, action_colid, ctid_colid,
+		segid_colid, dxl_direct_dispatch_info, popDML->FSplit());
 
 	// project list
 	CColRefSet *pcrsOutput = pexpr->Prpp()->PcrsRequired();

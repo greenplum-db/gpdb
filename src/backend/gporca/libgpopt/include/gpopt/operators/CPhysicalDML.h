@@ -49,9 +49,6 @@ private:
 	// action column
 	CColRef *m_pcrAction;
 
-	// table oid column
-	CColRef *m_pcrTableOid;
-
 	// ctid column
 	CColRef *m_pcrCtid;
 
@@ -67,14 +64,8 @@ private:
 	// required columns by local members
 	CColRefSet *m_pcrsRequiredLocal;
 
-	// needs the data to be sorted or not
-	BOOL m_input_sort_req;
-
 	// Split Update
 	BOOL m_fSplit;
-
-	// do we need to sort on insert
-	BOOL FInsertSortOnRows(COptimizerConfig *optimizer_config);
 
 	// compute required order spec
 	COrderSpec *PosComputeRequired(CMemoryPool *mp, CTableDescriptor *ptabdesc);
@@ -88,8 +79,8 @@ public:
 	// ctor
 	CPhysicalDML(CMemoryPool *mp, CLogicalDML::EDMLOperator edmlop,
 				 CTableDescriptor *ptabdesc, CColRefArray *pdrgpcrSource,
-				 CBitSet *pbsModified, CColRef *pcrAction, CColRef *pcrTableOid,
-				 CColRef *pcrCtid, CColRef *pcrSegmentId, BOOL fSplit);
+				 CBitSet *pbsModified, CColRef *pcrAction, CColRef *pcrCtid,
+				 CColRef *pcrSegmentId, BOOL fSplit);
 
 	// dtor
 	~CPhysicalDML() override;
@@ -127,13 +118,6 @@ public:
 	PcrAction() const
 	{
 		return m_pcrAction;
-	}
-
-	// table oid column
-	CColRef *
-	PcrTableOid() const
-	{
-		return m_pcrTableOid;
 	}
 
 	// ctid column
@@ -175,13 +159,6 @@ public:
 	FInputOrderSensitive() const override
 	{
 		return false;
-	}
-
-	// needs the data to be sorted or not
-	virtual BOOL
-	IsInputSortReq() const
-	{
-		return m_input_sort_req;
 	}
 
 	//-------------------------------------------------------------------------------------
