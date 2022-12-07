@@ -87,11 +87,22 @@ function make_cluster() {
 	if [[ "$MAKE_TEST_COMMAND" =~ gp_interconnect_type=proxy ]]; then
 		# generate the addresses for proxy mode
 		su gpadmin -c bash -- -e <<EOF
-      source /usr/local/greenplum-db-devel/greenplum_path.sh
-      source $PWD/gpdemo-env.sh
+			source /usr/local/greenplum-db-devel/greenplum_path.sh
+			source $PWD/gpdemo-env.sh
 
-      bash $PWD/../../src/test/icproxy_setup.bash
+			delta=-3000
 
+			psql -tqA -d postgres -P pager=off -F: -R, \
+					-c "select dbid, content, address, port+\$delta as port
+								from gp_segment_configuration
+								order by 1" \
+			| xargs -rI'{}' \
+				gpconfig --skipvalidation -c gp_interconnect_proxy_addresses -v "'{}'"
+
+			# also have to enlarge gp_interconnect_tcp_listener_backlog
+			gpconfig -c gp_interconnect_tcp_listener_backlog -v 1024
+
+			gpstop -u
 EOF
 	fi
 
