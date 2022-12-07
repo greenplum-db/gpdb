@@ -794,6 +794,10 @@ class SQLIsolationExecutor(object):
                     pass
         elif flag == "M":
             self.get_process(output_file, process_name, con_mode, dbname=dbname).query(sql.strip(), post_run_cmd, global_sh_executor)
+        elif flag == "Mq":
+            if len(sql) > 0:
+                raise Exception("No query should be given on quit Mq")
+            self.quit_process(output_file, process_name, con_mode, dbname=dbname)
         else:
             raise Exception("Invalid isolation flag")
 
@@ -816,7 +820,7 @@ class SQLIsolationExecutor(object):
                     command_part = line
                 if command_part == "" or command_part == "\n":
                     print >>output_file
-                elif command_part.endswith(";\n") or re.match(r"^\d+[q\\<]:$", line) or re.match(r"^\*Rq:$", line) or re.match(r"^-?\d+[SUR][q\\<]:$", line):
+                elif command_part.endswith(";\n") or re.match(r"^\d+[q\\<]:$", line) or re.match(r"^\*Rq:$", line) or re.match(r"^-?\d+[SUMR][q\\<]:$", line):
                     command += command_part
                     try:
                         self.process_command(command, output_file, shell_executor)
