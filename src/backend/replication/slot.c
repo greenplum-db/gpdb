@@ -1131,6 +1131,10 @@ SaveSlotToPath(ReplicationSlot *slot, const char *dir, int elevel)
 	ReplicationSlotOnDisk cp;
 	bool		was_dirty;
 
+	ereport(DEBUG2,
+			(errmsg("saving replication slot to path. slot's restart_lsn is %X/%X",
+					(uint32) (slot->data.restart_lsn >> 32), (uint32) slot->data.restart_lsn)));
+
 	/* first check whether there's something to write out */
 	{
 		volatile ReplicationSlot *vslot = slot;

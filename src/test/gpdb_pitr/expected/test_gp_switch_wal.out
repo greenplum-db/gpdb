@@ -76,5 +76,5 @@ SELECT gp_segment_id, substring(pg_walfile_name, 1, 8) FROM gp_switch_wal() ORDE
 -- test simple gp_switch_wal() error scenarios
 SELECT gp_switch_wal() FROM gp_dist_random('gp_id');
 ERROR:  function with EXECUTE ON restrictions cannot be used in the SELECT list of a query with FROM
-CREATE TABLE this_ctas_should_fail AS SELECT gp_segment_id AS contentid, pg_switch_wal, pg_walfile_name FROM gp_switch_wal();
+CREATE TABLE this_ctas_should_fail AS SELECT gp_segment_id AS contentid, pg_switch_xlog, pg_walfile_name FROM gp_switch_wal();
 ERROR:  cannot use gp_switch_wal() when not in QD mode (xlogfuncs_gp.c:LINE_NUM)

@@ -846,7 +846,7 @@ static void LocalSetXLogInsertAllowed(void);
 static void CreateEndOfRecoveryRecord(void);
 static XLogRecPtr CreateOverwriteContrecordRecord(XLogRecPtr aborted_lsn);
 static void CheckPointGuts(XLogRecPtr checkPointRedo, int flags);
-static void KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo);
+static void KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo, bool* keep_old_wals);
 static XLogRecPtr XLogGetReplicationSlotMinimumLSN(void);
 
 static bool XLogCheckBuffer(XLogRecData *rdata, bool holdsExclusiveLock,
@@ -7030,7 +7030,7 @@ StartupXLOG(void)
 		CheckRequiredParameterValues();
 
 		UtilityModeFindOrCreateDtmRedoFile();
-		
+
 		/*
 		 * We're in recovery, so unlogged relations may be trashed and must be
 		 * reset.  This should be done BEFORE allowing Hot Standby
@@ -7353,7 +7353,7 @@ StartupXLOG(void)
 				/* Now apply the WAL record itself */
 				RmgrTable[record->xl_rmid].rm_redo(ReadRecPtr, EndRecPtr, record);
 
-				/* 
+				/*
 				 * Verify once if there's a conrecord being overwritten.
 				 * We do it here instead of xlog_redo like 7X because we need
 				 * xlogreader in this function.
@@ -8710,6 +8710,7 @@ CreateCheckPoint(int flags)
 	XLogRecPtr	curInsert;
 	VirtualTransactionId *vxids;
 	int			nvxids;
+	bool		keep_old_wals = false;
 
 	/*
 	 * An end-of-recovery checkpoint is really a shutdown checkpoint, just
@@ -9125,6 +9126,10 @@ CreateCheckPoint(int flags)
 		XLByteToSeg(ptrd_oldest, _logSegNo);
 	else
 		XLByteToSeg(ControlFile->checkPointCopy.redo, _logSegNo);
+	ereport(DEBUG2,
+			(errmsg("remembered the prior checkpoint's redo ptr [%X/%X]",
+					(uint32) (ControlFile->checkPointCopy.redo >> 32),
+					(uint32) ControlFile->checkPointCopy.redo)));
 
 	/*
 	 * Update the control file.
@@ -9156,6 +9161,9 @@ CreateCheckPoint(int flags)
 	ControlFile->unloggedLSN = XLogCtl->unloggedLSN;
 	SpinLockRelease(&XLogCtl->ulsn_lck);
 
+	ereport(DEBUG2,
+			(errmsg("updating control file checkpoint to [%X/%X]",
+					(uint32) (ControlFile->checkPoint >> 32), (uint32) ControlFile->checkPoint)));
 	UpdateControlFile();
 	LWLockRelease(ControlFileLock);
 
@@ -9175,6 +9183,7 @@ CreateCheckPoint(int flags)
 	 * have trouble while fooling with old log segments.
 	 */
 	END_CRIT_SECTION();
+	SIMPLE_FAULT_INJECTOR("checkpoint_control_file_updated");
 
 	/*
 	 * Now that the checkpoint is safely on disk, we can update the point to
@@ -9193,10 +9202,11 @@ CreateCheckPoint(int flags)
 	 */
 	if (gp_keep_all_xlog == false && _logSegNo)
 	{
-		KeepLogSeg(recptr, &_logSegNo);
+		KeepLogSeg(recptr, &_logSegNo, &keep_old_wals);
 		InvalidateObsoleteReplicationSlots(_logSegNo);
 		_logSegNo--;
-		RemoveOldXlogFiles(_logSegNo, recptr);
+		if (!keep_old_wals)
+			RemoveOldXlogFiles(_logSegNo, recptr);
 	}
 
 	/*
@@ -9436,6 +9446,7 @@ CreateRestartPoint(int flags)
 	CheckPoint	lastCheckPoint;
 	XLogSegNo	_logSegNo;
 	TimestampTz xtime;
+	bool		keep_old_wals = false;
 
 	/* use volatile pointer to prevent code rearrangement */
 	volatile XLogCtlData *xlogctl = XLogCtl;
@@ -9616,7 +9627,7 @@ CreateRestartPoint(int flags)
 		replayPtr = GetXLogReplayRecPtr(&replayTLI);
 		endptr = (receivePtr < replayPtr) ? replayPtr : receivePtr;
 
-		KeepLogSeg(endptr, &_logSegNo);
+		KeepLogSeg(endptr, &_logSegNo, &keep_old_wals);
 		InvalidateObsoleteReplicationSlots(_logSegNo);
 		_logSegNo--;
 
@@ -9716,7 +9727,7 @@ CreateRestartPoint(int flags)
  * from recptr.
  */
 static void
-KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo)
+KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo, bool* keep_old_wals)
 {
 	XLogSegNo	currSegNo;
 	XLogSegNo	segno;
@@ -9737,6 +9748,14 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo)
 		WalSndCtlGetXLogCleanUpTo() :
 		XLogGetReplicationSlotMinimumLSN();
 
+	ereport(DEBUG2,
+			(errmsg("Calculating wal files to keep using recptr [%X/%X], PriorRedoPtr [%X/%X], replication slot's MinLSN [%X/%X], CkptRedoBeforeMinLSN [%X/%X], and wal_keep_segment [%u]",
+					(uint32) (recptr >> 32), (uint32) recptr,
+					(uint32) (ControlFileOldCheckpointCopyRedo >> 32), (uint32) ControlFileOldCheckpointCopyRedo,
+					(uint32) (keep >> 32), (uint32) keep,
+					(uint32) (CkptRedoBeforeMinLSN >> 32), (uint32) CkptRedoBeforeMinLSN,
+					wal_keep_segments)));
+
 #ifdef FAULT_INJECTOR
 	/*
 	 * Let the WAL still needed be removed.  This is used to test if WAL sender
@@ -9756,18 +9775,49 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo)
 			/*
 			 * basically with this logic, GPDB never uses restart_lsn as
 			 * lowest cut-off point. Instead always will use Checkpoint redo
-			 * location prior to restart_lsn as cut-off point.
+			 * location prior to restart_lsn as cut-off point. If the Checkpoint redo location prior to restart_lsn is not
+		 * available, which usually happens when the database is just started,
+		 * we will be conservative and skip the operation of removing wals. We
+		 * need to do this because otherwise incremental recovery (pg_rewind)
+		 * could fail due to missing wals.
+		 *
+		 * NB: upstream commit 0d5c3875 added --config-file option to pg_rewind,
+		 * which could be an alternative solution for missing wals in the target
+		 * PGDATA directory. We could cherry-pick this commit and consider
+		 * modifying gprecoverseg to leverage the same to avoid maintaining
+		 * divergence from upstream.
 			 */
 			if (ControlFileOldCheckpointCopyRedo < keep)
 			{
+				ereport(DEBUG2,
+						(errmsg("updating keep [%X/%X] and CkptRedoBeforeMinLSN [%X/%X] to PriorRedoPtr [%X/%X]",
+								(uint32) (keep >> 32), (uint32) keep,
+								(uint32) (CkptRedoBeforeMinLSN >> 32), (uint32) CkptRedoBeforeMinLSN,
+								(uint32) (ControlFileOldCheckpointCopyRedo >> 32), (uint32) ControlFileOldCheckpointCopyRedo)));
 				keep = ControlFileOldCheckpointCopyRedo;
 				CkptRedoBeforeMinLSN = ControlFileOldCheckpointCopyRedo;
 			}
 			else if (!XLogRecPtrIsInvalid(CkptRedoBeforeMinLSN))
+			{
+				ereport(DEBUG2,
+						(errmsg("updating keep [%X/%X] to CkptRedoBeforeMinLSN [%X/%X]",
+								(uint32) (keep >> 32), (uint32) keep,
+								(uint32) (CkptRedoBeforeMinLSN >> 32), (uint32) CkptRedoBeforeMinLSN)));
 				keep = CkptRedoBeforeMinLSN;
+			}
+			else
+			{
+				ereport(DEBUG2,
+						(errmsg("checkpoint prior to replication slot's minimum LSN [%X/%X] not available, old wals will be kept",
+								(uint32) (keep >> 32), (uint32) keep)));
+				*keep_old_wals = true;
+			}
 		}
 
 		XLByteToSeg(keep, segno);
+		ereport(DEBUG2,
+				(errmsg("segno is %lu, currSegNo is %lu, logSegNo is %lu",
+						segno, currSegNo, *logSegNo)));
 
 		/* Cap by max_slot_wal_keep_size ... */
 		if (max_slot_wal_keep_size_mb >= 0)
