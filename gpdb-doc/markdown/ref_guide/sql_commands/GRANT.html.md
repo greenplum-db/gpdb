@@ -7,13 +7,13 @@ Defines access privileges.
 ``` {#sql_command_synopsis}
 GRANT { {SELECT | INSERT | UPDATE | DELETE | REFERENCES | 
 TRIGGER | TRUNCATE } [, ...] | ALL [PRIVILEGES] }
-    ON { [TABLE] <table_name> [, ...]
+    ON { { [ONLY <table_name>] | [TABLE] <table_name> [, ...] }
          | ALL TABLES IN SCHEMA <schema_name> [, ...] }
     TO <role_specification> [, ...] [ WITH GRANT OPTION ]
 
 GRANT { { SELECT | INSERT | UPDATE | REFERENCES } ( <column_name> [, ...] )
     [, ...] | ALL [ PRIVILEGES ] ( <column_name> [, ...] ) }
-    ON [ TABLE ] <table_name> [, ...]
+    ON { [ ONLY <table_name> ] | [ TABLE ] <table_name> [, ...] }
     TO <role_specification> [, ...] [ WITH GRANT OPTION ]
 
 GRANT { {USAGE | SELECT | UPDATE} [, ...] | ALL [PRIVILEGES] }
@@ -120,6 +120,10 @@ If `WITH ADMIN OPTION` is specified, the member may in turn grant membership in 
 If `GRANTED BY` is specified, the grant is recorded as having been done by the specified role. Only database superusers may use this option, except when it names the same role executing the command.
 
 Unlike the case with privileges, membership in a role cannot be granted to `PUBLIC`. Note also that this form of the command does not allow the noise word `GROUP` in role\_specification.
+
+**GRANT on Partitioned Tables**
+
+By default, when you grant privileges to a partitioned table, Greenplum Database recurses the operation to it's child partition tables. To direct Greenplum to perform the `GRANT` on the partitioned table only, specify the `ONLY <table_name>` clause.
 
 **GRANT on Protocols**
 

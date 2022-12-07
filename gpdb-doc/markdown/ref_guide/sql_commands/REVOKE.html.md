@@ -8,7 +8,7 @@ Removes access privileges.
 REVOKE [GRANT OPTION FOR]
        { {SELECT | INSERT | UPDATE | DELETE | REFERENCES | TRIGGER | TRUNCATE }
        [, ...] | ALL [PRIVILEGES] }
-       ON { [TABLE] <table_name> [, ...]
+       ON { { [ONLY <table_name>] | [TABLE] <table_name> [, ...] }
           | ALL TABLES IN SCHEMA schema_name [, ...] }
        FROM <role_specification> [, ...]
        [CASCADE | RESTRICT]
@@ -16,7 +16,7 @@ REVOKE [GRANT OPTION FOR]
 REVOKE [ GRANT OPTION FOR ]
        { { SELECT | INSERT | UPDATE | REFERENCES } ( <column_name> [, ...] )
        [, ...] | ALL [ PRIVILEGES ] ( <column_name> [, ...] ) }
-       ON [ TABLE ] <table_name> [, ...]
+       ON { [ ONLY <table_name> ] | [ TABLE ] <table_name> [, ...] }
        FROM <role_specification> [, ...]
        [ CASCADE | RESTRICT ]
 
@@ -104,6 +104,8 @@ If `GRANT OPTION FOR` is specified, only the grant option for the privilege is r
 If a role holds a privilege with grant option and has granted it to other roles then the privileges held by those other roles are called dependent privileges. If the privilege or the grant option held by the first role is being revoked and dependent privileges exist, those dependent privileges are also revoked if `CASCADE` is specified, else the revoke action will fail. This recursive revocation only affects privileges that were granted through a chain of roles that is traceable to the role that is the subject of this `REVOKE` command. Thus, the affected roles may effectively keep the privilege if it was also granted through other roles.
 
 When you revoke privileges on a table, Greenplum Database revokes the corresponding column privileges \(if any\) on each column of the table, as well. On the other hand, if a role has been granted privileges on a table, then revoking the same privileges from individual columns will have no effect.
+
+By default, when you revoke privileges on a partitioned table, Greenplum Database recurses the operation to it's child partition tables. To direct Greenplum to perform the `REVOKE` on the partitioned table only, specify the `ONLY <table_name>` clause.
 
 When revoking membership in a role, `GRANT OPTION` is instead called `ADMIN OPTION`, but the behavior is similar. This form of the command also allows a `GRANTED BY` option, but that option is currently ignored \(except for checking the existence of the named role\). Note also that this form of the command does not allow the noise word `GROUP` in role\_specification.
 
