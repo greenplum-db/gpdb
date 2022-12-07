@@ -408,7 +408,7 @@
       </dxl:LogicalUpdate>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="2">
-      <dxl:DMLUpdate Columns="0,10,2" ActionCol="11" OidCol="12" CtidCol="3" SegmentIdCol="9" InputSorted="false" IsSplitUpdate="false">
+      <dxl:DMLUpdate Columns="0,10,2" ActionCol="11" CtidCol="3" SegmentIdCol="9" IsSplitUpdate="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="0.000000" Rows="0.000000" Width="1"/>
         </dxl:Properties>
