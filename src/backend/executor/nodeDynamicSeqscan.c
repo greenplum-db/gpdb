@@ -67,7 +67,6 @@ ExecInitDynamicSeqScan(DynamicSeqScan *node, EState *estate, int eflags)
 	reloid = getrelid(node->seqscan.scanrelid, estate->es_range_table);
 	Assert(OidIsValid(reloid));
 
-	state->firstPartition = true;
 
 	/* lastRelOid is used to remap varattno for heterogeneous partitions */
 	state->lastRelOid = reloid;
@@ -166,30 +165,8 @@ initNextTableToScan(DynamicSeqScanState *node)
 		 * the new varnos correspond to
 		 */
 		node->lastRelOid = *pid;
-	}
-
-	/*
-	 * For the very first partition, the targetlist of planstate is set to null. So, we must
-	 * initialize quals and targetlist, regardless of remapping requirements. For later
-	 * partitions, we only initialize quals and targetlist if a column re-mapping is necessary.
-	 */
-	if (attMap || node->firstPartition)
-	{
-		node->firstPartition = false;
-		MemoryContextReset(node->partitionMemoryContext);
-		MemoryContext oldCxt = MemoryContextSwitchTo(node->partitionMemoryContext);
-
-		/* Initialize child expressions */
-		scanState->ps.qual = (List *) ExecInitExpr((Expr *) scanState->ps.plan->qual,
-												   (PlanState *) scanState);
-		scanState->ps.targetlist = (List *) ExecInitExpr((Expr *) scanState->ps.plan->targetlist,
-														 (PlanState *) scanState);
-
-		MemoryContextSwitchTo(oldCxt);
-	}
-
-	if (attMap)
 		pfree(attMap);
+	}
 
 	DynamicScan_SetTableOid(&node->ss, *pid);
 

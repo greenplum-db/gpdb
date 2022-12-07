@@ -11687,7 +11687,7 @@ SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f =
 ---+---+---+---+---
 (0 rows)
 
-explain SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f = 10 AND a IN ( SELECT b + 1 FROM non_part1);
+explain analyze SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f = 10 AND a IN ( SELECT b + 1 FROM non_part1);
                                                      QUERY PLAN                                                     
 --------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..1324481.28 rows=1000 width=20)
