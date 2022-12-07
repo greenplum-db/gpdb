@@ -3,7 +3,7 @@ set -e
 # setup toolchain
 source /opt/gcc_env.sh
 source /usr/local/greenplum-db-devel/greenplum_path.sh
-export MASTER_DATA_DIRECTORY=/data/gpdata/master/gpseg-1
+export MASTER_DATA_DIRECTORY=/data/gpdata/coordinator/gpseg-1
 
 # prepare source tree for make installcheck
 pushd gpdb_src

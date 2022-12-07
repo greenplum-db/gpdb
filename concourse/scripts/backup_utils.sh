@@ -20,7 +20,7 @@ destroy_gpdb() {
     # Setup environment
     source /usr/local/greenplum-db-devel/greenplum_path.sh;
     export PGPORT=5432;
-    export MASTER_DATA_DIRECTORY=/data/gpdata/master/gpseg-1;
+    export MASTER_DATA_DIRECTORY=/data/gpdata/coordinator/gpseg-1;
 
     yes|gpdeletesystem -f -d $MASTER_DATA_DIRECTORY
     rm -rf $GPHOME/*
@@ -28,9 +28,9 @@ destroy_gpdb() {
 }
 
 setup_ddboost() {
-    ssh centos@mdw "sudo rpm -ivh /tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm"
-    ssh centos@mdw "echo \"$DD_SOURCE_HOST source-dd\" | sudo tee -a /etc/hosts"
-    ssh centos@mdw "echo \"$DD_DEST_HOST dest-dd\" | sudo tee -a /etc/hosts"
+    ssh centos@cdw "sudo rpm -ivh /tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm"
+    ssh centos@cdw "echo \"$DD_SOURCE_HOST source-dd\" | sudo tee -a /etc/hosts"
+    ssh centos@cdw "echo \"$DD_DEST_HOST dest-dd\" | sudo tee -a /etc/hosts"
 
     ssh centos@sdw1 "sudo rpm -ivh /tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm"
     ssh centos@sdw1 "echo \"$DD_SOURCE_HOST source-dd\" | sudo tee -a /etc/hosts"
@@ -86,8 +86,8 @@ send "\$clientname\n"
 expect eof
 EOF
   source /usr/local/greenplum-db-devel/greenplum_path.sh
-  gpscp -h mdw -h sdw1 -u centos /tmp/install_client.sh =:/tmp/install_client.sh
-  gpssh -h mdw -h sdw1 -u centos "bash -c \"\
+  gpscp -h cdw -h sdw1 -u centos /tmp/install_client.sh =:/tmp/install_client.sh
+  gpssh -h cdw -h sdw1 -u centos "bash -c \"\
     sudo yum install -y expect
     cd /data/gpdata
     sudo tar -xvf NetBackup_7.7.3_CLIENTS_RHEL_2.6.18.tar.gz

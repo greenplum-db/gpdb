@@ -2445,8 +2445,8 @@ jobs:
         - |
           set -ex
           ccp_src/scripts/setup_ssh_to_cluster.sh
-          scp cluster_env_files/terraform/name mdw:/tmp/terraform_name
-          scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm mdw:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
+          scp cluster_env_files/terraform/name cdw:/tmp/terraform_name
+          scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm cdw:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
           scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm sdw1:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
           export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}};
           source gpdb_src/concourse/scripts/backup_utils.sh; setup_ddboost
@@ -2525,8 +2525,8 @@ jobs:
         - |
           set -ex
           ccp_src/scripts/setup_ssh_to_cluster.sh
-          scp cluster_env_files/terraform/name mdw:/tmp/terraform_name
-          scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm mdw:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
+          scp cluster_env_files/terraform/name cdw:/tmp/terraform_name
+          scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm cdw:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
           scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm sdw1:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
           export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}};
           source gpdb_src/concourse/scripts/backup_utils.sh; setup_ddboost
@@ -2605,8 +2605,8 @@ jobs:
         - |
           set -ex
           ccp_src/scripts/setup_ssh_to_cluster.sh
-          scp cluster_env_files/terraform/name mdw:/tmp/terraform_name
-          scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm mdw:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
+          scp cluster_env_files/terraform/name cdw:/tmp/terraform_name
+          scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm cdw:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
           scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm sdw1:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
           export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}};
           source gpdb_src/concourse/scripts/backup_utils.sh; setup_ddboost
@@ -2727,7 +2727,7 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       BEHAVE_FLAGS: --tags=gptransfer --tags=-skip_source_43
-      CUSTOM_ENV: export GPTRANSFER_DEST_HOST=mdw; export GPTRANSFER_DEST_PORT=5432; export GPTRANSFER_DEST_USER=gpadmin; export GPTRANSFER_MAP_FILE=/tmp/source_map_file; export GPTRANSFER_SOURCE_HOST=mdw-2; export GPTRANSFER_SOURCE_PORT=5432; export GPTRANSFER_SOURCE_USER=gpadmin;
+      CUSTOM_ENV: export GPTRANSFER_DEST_HOST=cdw; export GPTRANSFER_DEST_PORT=5432; export GPTRANSFER_DEST_USER=gpadmin; export GPTRANSFER_MAP_FILE=/tmp/source_map_file; export GPTRANSFER_SOURCE_HOST=cdw-2; export GPTRANSFER_SOURCE_PORT=5432; export GPTRANSFER_SOURCE_USER=gpadmin;
     on_success:
       <<: *ccp_destroy_two_clusters
   ensure:
@@ -2833,7 +2833,7 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       BEHAVE_FLAGS: --tags=gptransfer --tags=-skip_source_5
-      CUSTOM_ENV: export GPTRANSFER_DEST_HOST=mdw; export GPTRANSFER_DEST_PORT=5432; export GPTRANSFER_DEST_USER=gpadmin; export GPTRANSFER_MAP_FILE=/tmp/source_map_file; export GPTRANSFER_SOURCE_HOST=mdw-2; export GPTRANSFER_SOURCE_PORT=5432; export GPTRANSFER_SOURCE_USER=gpadmin;
+      CUSTOM_ENV: export GPTRANSFER_DEST_HOST=cdw; export GPTRANSFER_DEST_PORT=5432; export GPTRANSFER_DEST_USER=gpadmin; export GPTRANSFER_MAP_FILE=/tmp/source_map_file; export GPTRANSFER_SOURCE_HOST=cdw-2; export GPTRANSFER_SOURCE_PORT=5432; export GPTRANSFER_SOURCE_USER=gpadmin;
     on_success:
       <<: *ccp_destroy_two_clusters
   ensure:

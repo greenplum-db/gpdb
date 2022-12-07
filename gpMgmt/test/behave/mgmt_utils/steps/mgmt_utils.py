@@ -3865,7 +3865,7 @@ def impl(context, seg):
         if not hasattr(context, 'pseg_hostname'):
             raise Exception("primary seg host is not saved in the context")
         hostname = context.pseg_hostname
-    elif seg == "smdw":
+    elif seg == "scdw":
         if not hasattr(context, 'standby_host'):
             raise Exception("Standby host is not saved in the context")
         hostname = context.standby_host
@@ -3899,7 +3899,7 @@ def impl(context, seg):
         if not hasattr(context, 'pseg_hostname'):
             raise Exception("primary seg host is not saved in the context")
         hostname = context.pseg_hostname
-    elif seg == "smdw":
+    elif seg == "scdw":
         if not hasattr(context, 'standby_host'):
             raise Exception("Standby host is not saved in the context")
         hostname = context.standby_host
@@ -3920,7 +3920,7 @@ def impl(context, seg):
             raise Exception("primary seg host is not saved in the context")
         hostname = context.pseg_hostname
         data_dir = context.pseg_data_dir
-    elif seg == "smdw":
+    elif seg == "scdw":
         if not hasattr(context, 'standby_host'):
             raise Exception("Standby host is not saved in the context")
         hostname = context.standby_host
@@ -3957,7 +3957,7 @@ def impl(context, seg):
     elif seg == "mirror":
         data_dir = context.mseg_data_dir
         hostname = context.mseg_hostname
-    elif seg == "smdw":
+    elif seg == "scdw":
         if not hasattr(context, 'standby_host'):
             raise Exception("Standby host is not saved in the context")
         hostname = context.standby_host
@@ -4028,7 +4028,7 @@ def impl(context, seg):
     elif seg == "mirror":
         data_dir = context.mseg_data_dir
         hostname = context.mseg_hostname
-    elif seg == "smdw":
+    elif seg == "scdw":
         if not hasattr(context, 'standby_host'):
             raise Exception("Standby host is not saved in the context")
         hostname = context.standby_host
@@ -4049,7 +4049,7 @@ def impl(context, seg):
     elif seg == "mirror":
         data_dir = context.mseg_data_dir
         hostname = context.mseg_hostname
-    elif seg == "smdw":
+    elif seg == "scdw":
         data_dir = context.standby_host_data_dir
         hostname = context.standby_host
 

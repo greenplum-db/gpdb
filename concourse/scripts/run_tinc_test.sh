@@ -7,7 +7,7 @@ TINCDIR=/home/gpadmin/gpdb_src/src/test/tinc
 cat > ~/gpdb-env.sh << EOF
   source /usr/local/greenplum-db-devel/greenplum_path.sh
   export PGPORT=5432
-  export MASTER_DATA_DIRECTORY=/data/gpdata/master/gpseg-1
+  export MASTER_DATA_DIRECTORY=/data/gpdata/coordinator/gpseg-1
   export PGDATABASE=gptest
 
   alias mdd='cd \$MASTER_DATA_DIRECTORY'

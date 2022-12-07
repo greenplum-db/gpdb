@@ -1,10 +1,10 @@
 #!/bin/bash
 
 allow_connections_from_all_hosts() {
-    echo host    all     all     0.0.0.0/0       trust >> /data/gpdata/master/gpseg-1/pg_hba.conf
+    echo host    all     all     0.0.0.0/0       trust >> /data/gpdata/coordinator/gpseg-1/pg_hba.conf
     source /usr/local/greenplum-db-devel/greenplum_path.sh
     export PGPORT=5432
-    export MASTER_DATA_DIRECTORY=/data/gpdata/master/gpseg-1
+    export MASTER_DATA_DIRECTORY=/data/gpdata/coordinator/gpseg-1
     gpstop -u
 }
 
@@ -36,6 +36,6 @@ setup_gptransfer() {
     yum install -y -d1 openssh openssh-clients epel-release
     setup_ssh_to_both_clusters
     exchange_keys
-    ssh -t mdw "source /home/gpadmin/gpdb_src/concourse/scripts/transfer_utils.sh; create_map_file"
-    ssh -t mdw-2 "source /home/gpadmin/gpdb_src/concourse/scripts/transfer_utils.sh; allow_connections_from_all_hosts"
+    ssh -t cdw "source /home/gpadmin/gpdb_src/concourse/scripts/transfer_utils.sh; create_map_file"
+    ssh -t cdw-2 "source /home/gpadmin/gpdb_src/concourse/scripts/transfer_utils.sh; allow_connections_from_all_hosts"
 }
