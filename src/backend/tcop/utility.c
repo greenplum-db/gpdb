@@ -1229,8 +1229,28 @@ ProcessUtilitySlow(ParseState *pstate,
 								{
 									gpPartDef = transformGpPartitionDefinition(parentrelid, queryString, gpPartDef);
 									if (gpPartDef->isTemplate)
+									{
+										char strategy;
+
+										/*
+										 * The Parse partitioning strategy name.
+										 * At this point we have already transformed cstmt->partspec
+										 * as part of DefineRelation()
+										 */
+										if (pg_strcasecmp(cstmt->partspec->strategy, "list") == 0)
+											strategy = PARTITION_STRATEGY_LIST;
+										else if (pg_strcasecmp(cstmt->partspec->strategy, "range") == 0)
+											strategy = PARTITION_STRATEGY_RANGE;
+										else
+											ereport(ERROR,
+													(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+														errmsg("\"%s\" partitioning strategy is not supported for subpartition template",
+															   cstmt->partspec->strategy)));
+
 										StoreGpPartitionTemplate(ancestors ? llast_oid(ancestors) : parentrelid,
-																 list_length(ancestors), gpPartDef);
+																 list_length(ancestors), strategy, cstmt->partspec->partParams, gpPartDef);
+									}
+
 								}
 
 								parts = generatePartitions(parentrelid,

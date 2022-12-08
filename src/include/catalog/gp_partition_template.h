@@ -35,6 +35,8 @@ CATALOG(gp_partition_template,5022,PartitionTemplateRelationId)
 	int16       level;
 
 #ifdef CATALOG_VARLEN
+	char		strategy;	/* partitioning strategy ('r' or 'l') */
+	pg_node_tree partparams;		/* List of PartitionElems */
 	pg_node_tree template;
 #endif
 } FormData_gp_partition_template;
@@ -48,9 +50,9 @@ FOREIGN_KEY(relid REFERENCES pg_class(oid));
  */
 typedef FormData_gp_partition_template *Form_gp_partition_template;
 
-extern void StoreGpPartitionTemplate(Oid relid, int32 level,
+extern void StoreGpPartitionTemplate(Oid relid, int32 level, char strategy, List *partParams,
 									 GpPartitionDefinition *gpPartDef);
-extern GpPartitionDefinition *GetGpPartitionTemplate(Oid relid, int32 level);
+extern PartitionSpec *GetGpPartitionTemplate(Oid relid, int32 level);
 extern void RemoveGpPartitionTemplateByRelId(Oid relid);
 extern bool RemoveGpPartitionTemplate(Oid relid, int32 level);
 
