@@ -485,12 +485,6 @@ You cannot exchange a partition with a replicated table. Exchanging a partition 
 
 **Warning:** If you specify the `WITHOUT VALIDATION` clause, you must ensure that the data in table that you are exchanging for an existing partition is valid against the constraints on the partition. Otherwise, queries against the partitioned table might return incorrect results.
 
-The Greenplum Database server configuration parameter `gp_enable_exchange_default_partition` controls availability of the `EXCHANGE DEFAULT PARTITION` clause. The default value for the parameter is `off`, the clause is not available and Greenplum Database returns an error if the clause is specified in an `ALTER TABLE` command.
-
-For information about the parameter, see "Server Configuration Parameters" in the *Greenplum Database Reference Guide*.
-
-**Warning:** Before you exchange the default partition, you must ensure the data in the table to be exchanged, the new default partition, is valid for the default partition. For example, the data in the new default partition must not contain data that would be valid in other leaf child partitions of the partitioned table. Otherwise, queries against the partitioned table with the exchanged default partition that are run by GPORCA might return incorrect results.
-
 ### <a id="topic84"></a>Splitting a Partition 
 
 Splitting a partition divides a partition into two partitions. You can split a partition using the `ALTER TABLE` command. You can split partitions only at the lowest level of your partition hierarchy \(partitions that contain data\). For a multi-level partition, only range partitions can be split, not list partitions. The split value you specify goes into the *latter* partition.

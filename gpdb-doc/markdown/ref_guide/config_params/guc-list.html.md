@@ -344,6 +344,15 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 |-----------|-------|-------------------|
 |Boolean|off|master, session, reload|
 
+## <a id="enable_partition_pruning"></a>enable_partition_pruning 
+
+ Enables or disables the query planner's ability to eliminate a partitioned table's partitions from query plans. This also controls the planner's ability to generate query plans which allow the query executor to remove (ignore) partitions during query execution. 
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|on|master, session, reload|
+
+
 ## <a id="enable_seqscan"></a>enable\_seqscan 
 
  Activates or deactivates  the use of sequential scan plan types by the Postgres Planner. It's not possible to suppress sequential scans entirely, but turning this variable off discourages the Postgres Planner from using one if there are other methods available.
@@ -696,18 +705,6 @@ The default value is `off`; the Planner chooses the best aggregate path for a qu
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |Boolean|on|master, session, reload|
-
-## <a id="gp_enable_exchange_default_partition"></a>gp\_enable\_exchange\_default\_partition 
-
-Controls availability of the `EXCHANGE DEFAULT PARTITION` clause for `ALTER TABLE`. The default value for the parameter is `off`. The clause is not available and Greenplum Database returns an error if the clause is specified in an `ALTER TABLE` command.
-
-If the value is `on`, Greenplum Database returns a warning stating that exchanging the default partition might result in incorrect results due to invalid data in the default partition.
-
-**Warning:** Before you exchange the default partition, you must ensure the data in the table to be exchanged, the new default partition, is valid for the default partition. For example, the data in the new default partition must not contain data that would be valid in other leaf child partitions of the partitioned table. Otherwise, queries against the partitioned table with the exchanged default partition that are run by GPORCA might return incorrect results.
-
-|Value Range|Default|Set Classifications|
-|-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
 
 ## <a id="gp_enable_fast_sri"></a>gp\_enable\_fast\_sri 
 
@@ -1859,22 +1856,6 @@ Specifies the maximum amount of memory to be used in maintenance operations, suc
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |Integer|16|local, system, reload|
-
-## <a id="max_appendonly_tables"></a>max\_appendonly\_tables 
-
-Sets the maximum number of concurrent transactions that can write to or update append-optimized tables. Transactions that exceed the maximum return an error.
-
-Operations that are counted are `INSERT`, `UPDATE`, `COPY`, and `VACUUM` operations. The limit is only for in-progress transactions. Once a transaction ends \(either aborted or committed\), it is no longer counted against this limit.
-
-**Note:** Greenplum Database limits the maximum number of concurrent inserts into an append-only table to 127.
-
-For operations against a partitioned table, each subpartition \(child table\) that is an append-optimized table and is changed counts as a single table towards the maximum. For example, a partitioned table `p_tbl` is defined with three subpartitions that are append-optimized tables `p_tbl_ao1`, `p_tbl_ao2`, and `p_tbl_ao3`. An `INSERT` or `UPDATE` command against the partitioned table `p_tbl` that changes append-optimized tables `p_tbl_ao1` and `p_tbl_ao2` is counted as two transactions.
-
-Increasing the limit allocates more shared memory on the master host at server start.
-
-|Value Range|Default|Set Classifications|
-|-----------|-------|-------------------|
-|integer \> 0|10000|master, system, restart|
 
 ## <a id="max_connections"></a>max\_connections 
 

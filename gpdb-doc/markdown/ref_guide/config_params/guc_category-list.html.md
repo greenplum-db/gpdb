@@ -145,6 +145,7 @@ The following parameters control the types of plan operations the Postgres Plann
 - [enable_indexscan](guc-list.html#enable_indexscan)
 - [enable_mergejoin](guc-list.html#enable_mergejoin)
 - [enable_nestloop](guc-list.html#enable_nestloop)
+- [enable_partition_pruning](guc-list.html#enable_partition_pruning)
 - [enable_seqscan](guc-list.html#enable_seqscan)
 - [enable_sort](guc-list.html#enable_sort)
 - [enable_tidscan](guc-list.html#enable_tidscan)
@@ -397,7 +398,6 @@ The following parameter configures default option settings for Greenplum Databas
 - [default_table_access_method](guc-list.html#default_table_access_method)
 - [gp_create_table_random_default_distribution](guc-list.html#gp_create_table_random_default_distribution)
 - [gp_default_storage_options](guc-list.html#gp_default_storage_options)
-- [gp_enable_exchange_default_partition](guc-list.html#gp_enable_exchange_default_partition)
 - [gp_enable_segment_copy_checking](guc-list.html#gp_enable_segment_copy_checking)
 - [gp_use_legacy_hashops](guc-list.html#gp_use_legacy_hashops)
 
@@ -405,7 +405,6 @@ The following parameter configures default option settings for Greenplum Databas
 
 The following parameters configure the append-optimized tables feature of Greenplum Database.
 
-- [max_appendonly_tables](guc-list.html#max_appendonly_tables)
 - [gp_appendonly_compaction](guc-list.html#gp_appendonly_compaction)
 - [gp_appendonly_compaction_threshold](guc-list.html#gp_appendonly_compaction_threshold)
 - [validate_previous_free_tid](guc-list.html#validate_previous_free_tid)
