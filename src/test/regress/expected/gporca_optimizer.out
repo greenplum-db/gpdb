@@ -14485,8 +14485,8 @@ from (select (min(i) over (order by j)) as i, j from window_agg_test) tt
 where t.j = tt.j;
                                                             QUERY PLAN                                                             
 -----------------------------------------------------------------------------------------------------------------------------------
- Update on window_agg_test  (cost=0.00..862.03 rows=1 width=1)
-   ->  Result  (cost=0.00..862.00 rows=1 width=22)
+ Update on window_agg_test  (cost=0.00..862.02 rows=1 width=1)
+   ->  Result  (cost=0.00..0.00 rows=0 width=0)
          ->  Explicit Redistribute Motion 1:3  (slice1; segments: 1)  (cost=0.00..862.00 rows=1 width=18)
                ->  Hash Join  (cost=0.00..862.00 rows=1 width=18)
                      Hash Cond: (window_agg_test_1.j = window_agg_test_2.j)
