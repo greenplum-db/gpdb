@@ -487,13 +487,13 @@ ANALYZE functional_dependencies;
 SELECT * FROM check_estimated_rows('SELECT * FROM functional_dependencies WHERE a = 1 AND b = ''1''');
  estimated | actual 
 -----------+--------
-         2 |     50
+        50 |     50
 (1 row)
 
 SELECT * FROM check_estimated_rows('SELECT * FROM functional_dependencies WHERE a = 1 AND b = ''1'' AND c = 1');
  estimated | actual 
 -----------+--------
-         1 |     50
+        50 |     50
 (1 row)
 
 -- check change of column type doesn't break it
@@ -503,14 +503,14 @@ NOTICE:  One or more columns in the following table(s) do not have statistics: f
 HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For partitioned tables, run analyze rootpartition <table_name>(<column_list>). See log for columns missing statistics.
  estimated | actual 
 -----------+--------
-         2 |     50
+        50 |     50
 (1 row)
 
 ANALYZE functional_dependencies;
 SELECT * FROM check_estimated_rows('SELECT * FROM functional_dependencies WHERE a = 1 AND b = ''1'' AND c = 1');
  estimated | actual 
 -----------+--------
-         1 |     50
+        50 |     50
 (1 row)
 
 -- MCV lists
