@@ -267,7 +267,7 @@ Refer to the [gp_segment_endpoints](../ref_guide/system_catalogs/gp_segment_endp
 
 The parallel retrieve cursor implementation has the following limitations:
 
-- The Tanzu Greenplum Query Optimizer (GPORCA) does not support queries on a parallel retrieve cursor.
+- The VMware Greenplum Query Optimizer (GPORCA) does not support queries on a parallel retrieve cursor.
 - Greenplum Database ignores the `BINARY` clause when you declare a parallel retrieve cursor.
 - Parallel retrieve cursors cannot be declared `WITH HOLD`.
 - Parallel retrieve cursors do not support the `FETCH` and `MOVE` cursor operations.

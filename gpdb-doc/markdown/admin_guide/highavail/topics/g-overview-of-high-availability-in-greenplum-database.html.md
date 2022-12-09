@@ -88,7 +88,7 @@ Using a Greenplum Database storage plugin with the `gpbackup` and `gprestore` ut
 
 Using the Backup/Restore Storage Plugin API you can create a custom plugin that the `gpbackup` and `gprestore` utilities can use to integrate a custom backup storage system with the Greenplum Database.
 
-For information about using `gpbackup` and `gprestore`, see [VMware Tanzu Greenplum Backup and Restore Documentation](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/index.html).
+For information about using `gpbackup` and `gprestore`, see [VMware Greenplum Backup and Restore Documentation](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/index.html).
 
 -   **[Overview of Segment Mirroring](../../highavail/topics/g-overview-of-segment-mirroring.html)**  
 

@@ -106,7 +106,7 @@ Finally, through native API integration, Greenplum Database can stream backups d
 -   If backups are saved to local cluster storage, move the files to a safe, off-cluster location when the backup is complete. Backup files and database files that reside on the same storage can be lost simultaneously.
 -   If backups are saved to NFS mounts, use a scale-out NFS solution such as Dell EMC Isilon to prevent IO bottlenecks.
 
--   Tanzuy Greenplum customers should consider streaming backups to the Dell EMC Data Domain enterprise backup platform.
+-   VMware Greenplum customers should consider streaming backups to the Dell EMC Data Domain enterprise backup platform.
 
 ## <a id="topic_wlw_wxc_54"></a>Detecting Failed Master and Segment Instances 
 

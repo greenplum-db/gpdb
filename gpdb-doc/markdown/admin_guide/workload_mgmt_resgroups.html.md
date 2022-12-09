@@ -18,7 +18,7 @@ This topic includes the following subtopics:
     -   [Transaction Concurrency Limit](#topic8339717179)
     -   [CPU Limits](#topic833971717)
     -   [Memory Limits](#topic8339717)
--   [Using VMware Tanzu Greenplum Command Center to Manage Resource Groups](#topic999)
+-   [Using VMware Greenplum Command Center to Manage Resource Groups](#topic999)
 -   [Configuring and Using Resource Groups](#topic71717999)
     -   [Enabling Resource Groups](#topic8)
     -   [Creating Resource Groups](#topic10)
@@ -264,9 +264,9 @@ To reduce the risk of OOM for a query running in an important resource group, co
 
 Resource groups for roles track all Greenplum Database memory allocated via the `palloc()` function. Memory that you allocate using the Linux `malloc()` function is not managed by these resource groups. To ensure that resource groups for roles are accurately tracking memory usage, avoid using `malloc()` to allocate large amounts of memory in custom Greenplum Database user-defined functions.
 
-## <a id="topic999"></a>Using VMware Tanzu Greenplum Command Center to Manage Resource Groups 
+## <a id="topic999"></a>Using VMware Greenplum Command Center to Manage Resource Groups 
 
-Using Tanzu Greenplum Command Center, an administrator can create and manage resource groups, change roles' resource groups, and create workload management rules.
+Using VMware Greenplum Command Center, an administrator can create and manage resource groups, change roles' resource groups, and create workload management rules.
 
 Workload management assignment rules assign transactions to different resource groups based on user-defined criteria. If no assignment rule is matched, Greenplum Database assigns the transaction to the role's default resource group.
 

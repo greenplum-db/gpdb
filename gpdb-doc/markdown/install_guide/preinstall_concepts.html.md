@@ -10,7 +10,7 @@ Greenplum Database stores and processes large amounts of data by distributing th
 
 Greenplum Database is a software-only solution; the hardware and database software are not coupled. Greenplum Database runs on a variety of commodity server platforms from Greenplum-certified hardware vendors. Performance depends on the hardware on which it is installed. Because the database is distributed across multiple machines in a Greenplum Database system, proper selection and configuration of hardware is vital to achieving the best possible performance.
 
-This chapter describes the major components of a Greenplum Database system and the hardware considerations and concepts associated with each component: [The Greenplum Coordinator](#topic2), [The Segments](#topic4) and [The Interconnect](#topic9). Additionally, a system may have optional [ETL Hosts for Data Loading](#topic13) and [Tanzu Greenplum Performance Monitoring](#topic_e5t_whm_kbb) for monitoring query workload and performance.
+This chapter describes the major components of a Greenplum Database system and the hardware considerations and concepts associated with each component: [The Greenplum Coordinator](#topic2), [The Segments](#topic4) and [The Interconnect](#topic9). Additionally, a system may have optional [ETL Hosts for Data Loading](#topic13) and [VMware Greenplum Performance Monitoring](#topic_e5t_whm_kbb) for monitoring query workload and performance.
 
 -   **[The Greenplum Coordinator](preinstall_concepts.html)**  
 
@@ -20,7 +20,7 @@ This chapter describes the major components of a Greenplum Database system and t
 
 -   **[ETL Hosts for Data Loading](preinstall_concepts.html)**  
 
--   **[Tanzu Greenplum Performance Monitoring](preinstall_concepts.html)**  
+-   **[VMware Greenplum Performance Monitoring](preinstall_concepts.html)**  
 
 
 **Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
@@ -137,9 +137,9 @@ The `gpfdist` program can serve data to the segment instances at an average rate
 
 **Parent topic:** [Introduction to Greenplum](preinstall_concepts.html)
 
-## <a id="topic_e5t_whm_kbb"></a>Tanzu Greenplum Performance Monitoring 
+## <a id="topic_e5t_whm_kbb"></a>VMware Greenplum Performance Monitoring 
 
-Tanzu Greenplum Greenplum Command Center is an optional web-based performance monitoring and management tool for Greenplum Database. Administrators can install Command Center separately from Greenplum Database.
+VMware Greenplum Command Center is an optional web-based performance monitoring and management tool for Greenplum Database. Administrators can install Command Center separately from Greenplum Database.
 
 ![Greenplum with Command Center](graphics/cc_arch_gpdb.png "Greenplum Performance Monitoring Architecture")
 
