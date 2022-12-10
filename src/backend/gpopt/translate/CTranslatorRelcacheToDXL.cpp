@@ -2480,6 +2480,13 @@ CTranslatorRelcacheToDXL::RetrieveRelStorageType(Relation rel)
 			}
 			else if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
 			{
+				if (!optimizer_enable_foreign_table)
+				{
+					GPOS_RAISE(
+						gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+						GPOS_WSZ_LIT(
+							"Use optimizer_enable_foreign_table to enable Orca with foreign tables"));
+				}
 				rel_storage_type = IMDRelation::ErelstorageForeign;
 			}
 			else
