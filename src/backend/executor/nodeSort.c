@@ -59,6 +59,7 @@ ExecSort(PlanState *pstate)
 
 	CHECK_FOR_INTERRUPTS();
 
+	SIMPLE_FAULT_INJECTOR("explain_analyze_sort_error");
 	/*
 	 * get state info from node
 	 */

@@ -18,6 +18,7 @@
 
 #include "utils/cgroup.h"
 
-extern void cgroup_handler_dummy(void);
+extern CGroupOpsRoutine *get_cgroup_routine_dummy(void);
+extern CGroupSystemInfo *get_cgroup_sysinfo_dummy(void);
 
 #endif   /* RES_GROUP_OPS_DUMMY_H */

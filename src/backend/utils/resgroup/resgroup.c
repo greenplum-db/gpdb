@@ -53,6 +53,7 @@
 #include "utils/session_state.h"
 #include "utils/vmem_tracker.h"
 #include "utils/cgroup-ops-v1.h"
+#include "utils/cgroup-ops-dummy.h"
 
 #define InvalidSlotId	(-1)
 #define RESGROUP_MAX_SLOTS	(MaxConnections)
@@ -167,6 +168,9 @@ struct ResGroupControl
 };
 
 bool gp_resource_group_enable_cgroup_cpuset = false;
+
+CGroupOpsRoutine *cgroupOpsRoutine = NULL;
+CGroupSystemInfo *cgroupSystemInfo = NULL;
 
 /* hooks */
 resgroup_assign_hook_type resgroup_assign_hook = NULL;
@@ -416,7 +420,8 @@ initCgroup(void)
 		cgroupSystemInfo = get_cgroup_sysinfo_alpha();
 	}
 #else
-	elog(ERROR, "The resource group is not support on your operating system.");
+	cgroupOpsRoutine = get_cgroup_routine_dummy();
+	cgroupSystemInfo = get_cgroup_sysinfo_dummy();
 #endif
 
 	bool probe_result = cgroupOpsRoutine->probecgroup();
@@ -493,6 +498,8 @@ InitResGroups(void)
 		Oid			groupId = ((Form_pg_resgroup) GETSTRUCT(tuple))->oid;
 		ResGroupData	*group;
 
+		Bitmapset *bmsCurrent;
+
 		GetResGroupCapabilities(relResGroupCapability, groupId, &caps);
 
 		group = createGroup(groupId, &caps);
@@ -507,8 +514,9 @@ InitResGroups(void)
 		}
 		else
 		{
-			Bitmapset *bmsCurrent = CpusetToBitset(caps.cpuset,
-												   MaxCpuSetLength);
+			char *cpuset = getCpuSetByRole(caps.cpuset);
+			bmsCurrent = CpusetToBitset(cpuset, MaxCpuSetLength);
+
 			Bitmapset *bmsCommon = bms_intersect(bmsCurrent, bmsUnused);
 			Bitmapset *bmsMissing = bms_difference(bmsCurrent, bmsCommon);
 
@@ -533,7 +541,8 @@ InitResGroups(void)
 				 * write cpus to corresponding file
 				 * if all the cores are available
 				 */
-				cgroupOpsRoutine->setcpuset(groupId, caps.cpuset);
+				char *cpuset= getCpuSetByRole(caps.cpuset);
+				cgroupOpsRoutine->setcpuset(groupId, cpuset);
 				bmsUnused = bms_del_members(bmsUnused, bmsCurrent);
 			}
 			else
@@ -785,8 +794,11 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CPUSET)
 		{
 			if (gp_resource_group_enable_cgroup_cpuset)
+			{
+				char *cpuset = getCpuSetByRole(callbackCtx->caps.cpuset);
 				cgroupOpsRoutine->setcpuset(callbackCtx->groupid,
-									  callbackCtx->caps.cpuset);
+									        cpuset);
+			}
 		}
 		/* reset default group if cpuset has changed */
 		if (strcmp(callbackCtx->oldCaps.cpuset, callbackCtx->caps.cpuset) &&
@@ -799,12 +811,14 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 								  MaxCpuSetLength);
 			/* Add old value to default group
 			 * sub new value from default group */
+			char *cpuset= getCpuSetByRole(callbackCtx->caps.cpuset);
+			char *oldcpuset = getCpuSetByRole(callbackCtx->oldCaps.cpuset);
 			CpusetUnion(defaultCpusetGroup,
-							callbackCtx->oldCaps.cpuset,
-							MaxCpuSetLength);
+						oldcpuset,
+						MaxCpuSetLength);
 			CpusetDifference(defaultCpusetGroup,
-							callbackCtx->caps.cpuset,
-							MaxCpuSetLength);
+						cpuset,
+						MaxCpuSetLength);
 			cgroupOpsRoutine->setcpuset(DEFAULT_CPUSET_GROUP_ID, defaultCpusetGroup);
 		}
 	}

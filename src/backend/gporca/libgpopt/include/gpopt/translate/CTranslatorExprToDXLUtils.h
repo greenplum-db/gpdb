@@ -165,13 +165,6 @@ public:
 		CMemoryPool *mp, CColumnFactory *col_factory,
 		ColRefToDXLNodeMap *phmcrdxln, const CDXLNode *pdxlnProjListChild);
 
-	// construct the project list of a partition selector
-	static CDXLNode *PdxlnPrLPartitionSelector(
-		CMemoryPool *mp, CMDAccessor *md_accessor, CColumnFactory *col_factory,
-		ColRefToDXLNodeMap *phmcrdxln, BOOL fUseChildProjList,
-		CDXLNode *pdxlnPrLChild, CColRef *pcrOid, ULONG ulPartLevels,
-		BOOL fGeneratePartOid);
-
 	// create a DXL project elem node from as a scalar identifier for the
 	// child project element node
 	static CDXLNode *PdxlnProjElem(CMemoryPool *mp, CColumnFactory *col_factory,

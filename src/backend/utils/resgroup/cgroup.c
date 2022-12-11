@@ -23,10 +23,6 @@
 #include <stdio.h>
 #include <mntent.h>
 
-
-CGroupOpsRoutine *cgroupOpsRoutine;
-CGroupSystemInfo *cgroupSystemInfo;
-
 /* cgroup component names. */
 const char *component_names[CGROUP_COMPONENT_COUNT] =
 {

@@ -11523,7 +11523,7 @@ SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f =
 ---+---+---+---+---
 (0 rows)
 
-explain SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f = 10 AND a IN ( SELECT b + 1 FROM non_part1);
+explain analyze SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f = 10 AND a IN ( SELECT b + 1 FROM non_part1);
                                                      QUERY PLAN                                                     
 --------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324481.18 rows=1 width=20)
@@ -14485,8 +14485,8 @@ from (select (min(i) over (order by j)) as i, j from window_agg_test) tt
 where t.j = tt.j;
                                                             QUERY PLAN                                                             
 -----------------------------------------------------------------------------------------------------------------------------------
- Update on window_agg_test  (cost=0.00..862.03 rows=1 width=1)
-   ->  Result  (cost=0.00..862.00 rows=1 width=22)
+ Update on window_agg_test  (cost=0.00..862.02 rows=1 width=1)
+   ->  Result  (cost=0.00..0.00 rows=0 width=0)
          ->  Explicit Redistribute Motion 1:3  (slice1; segments: 1)  (cost=0.00..862.00 rows=1 width=18)
                ->  Hash Join  (cost=0.00..862.00 rows=1 width=18)
                      Hash Cond: (window_agg_test_1.j = window_agg_test_2.j)

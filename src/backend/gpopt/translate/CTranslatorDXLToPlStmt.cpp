@@ -4278,10 +4278,8 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 	dml_target_list = target_list_with_dropped_cols;
 
 	// Add junk columns to the target list for the 'action', 'ctid',
-	// 'gp_segment_id', and tuple's 'oid'. The ModifyTable node will find
-	// these based on the resnames. ORCA also includes a similar column for
-	// partition Oid in the child's target list, but we don't use it for
-	// anything in GPDB.
+	// 'gp_segment_id'. The ModifyTable node will find these based
+	// on the resnames.
 	if (m_cmd_type == CMD_UPDATE && isSplit)
 	{
 		(void) AddJunkTargetEntryForColId(&dml_target_list, &child_context,
@@ -4304,7 +4302,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 	// needed, as the child node could do the projection, but we don't have
 	// the information to determine that here. There's a step in the
 	// backend optimize_query() function to eliminate unnecessary Results
-	// throught the plan, hopefully this Result gets eliminated there.
+	// through the plan, hopefully this Result gets eliminated there.
 	Result *result = MakeNode(Result);
 	Plan *result_plan = &(result->plan);
 

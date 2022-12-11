@@ -5659,49 +5659,6 @@ flatten_join_alias_var_optimizer(Query *query, int queryLevel)
 }
 
 /**
- * Returns true if the equality operator with the given opno
- *   values is a true equality operator (unlike some of the
- *   box/rectangle/etc. types which implement 'goofy' operators).
- *
- * This function currently only knows about built-in types, and is
- *   conservative with regard to which it returns true for (only
- *     ones which have been verified to work the right way).
- */
-bool is_builtin_true_equality_between_same_type(int opno)
-{
-	switch (opno)
-	{
-	case BitEqualOperator:
-	case BooleanEqualOperator:
-	case BPCharEqualOperator:
-	case CashEqualOperator:
-	case CharEqualOperator:
-	case CidEqualOperator:
-	case DateEqualOperator:
-	case Float4EqualOperator:
-	case Float8EqualOperator:
-	case Int2EqualOperator:
-	case Int4EqualOperator:
-	case Int8EqualOperator:
-	case IntervalEqualOperator:
-	case NameEqualOperator:
-	case NumericEqualOperator:
-	case OidEqualOperator:
-	case TextEqualOperator:
-	case TIDEqualOperator:
-	case TimeEqualOperator:
-	case TimestampEqualOperator:
-	case TimestampTZEqualOperator:
-	case TimeTZEqualOperator:
-	case XidEqualOperator:
-		return true;
-
-	default:
-		return false;
-	}
-}
-
-/**
  * Structs and Methods to support searching of matching subexpressions.
  */
 

@@ -44,17 +44,11 @@ private:
 	// action column id
 	ULONG m_action_colid;
 
-	// oid column id
-	ULONG m_oid_colid;
-
 	// ctid column id
 	ULONG m_ctid_colid;
 
 	// segmentId column id
 	ULONG m_segid_colid;
-
-	// needs data to be sorted
-	BOOL m_input_sort_req;
 
 	// Split Update
 	BOOL m_fSplit;

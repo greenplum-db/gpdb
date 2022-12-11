@@ -1535,8 +1535,8 @@ jobs:
       - get: bin_gpdb_clients_rhel8
         trigger: true
         passed: [gate_release_candidate_start]
-      - get: gpdb7-rhel8-build
 {% endif %}
+      - get: gpdb7-rhel8-build
   - in_parallel:
       steps:
 {% if not directed_release %}

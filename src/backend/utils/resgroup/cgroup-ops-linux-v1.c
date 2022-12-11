@@ -1125,6 +1125,86 @@ getcpuusage_v1(Oid group)
 	return readInt64(group, BASEDIR_GPDB, component, "cpuacct.usage");
 }
 
+/* get cgroup ram and swap (in Byte) */
+static void
+get_cgroup_memory_info(uint64 *cgram, uint64 *cgmemsw)
+{
+	CGroupComponentType component = CGROUP_COMPONENT_MEMORY;
+
+	*cgram = readInt64(CGROUP_ROOT_ID, BASEDIR_PARENT,
+					   component, "memory.limit_in_bytes");
+
+	if (gp_resource_group_enable_cgroup_swap)
+	{
+		*cgmemsw = readInt64(CGROUP_ROOT_ID, BASEDIR_PARENT,
+							 component, "memory.memsw.limit_in_bytes");
+	}
+	else
+	{
+		elog(DEBUG1, "swap memory is unlimited");
+		*cgmemsw = (uint64) -1LL;
+	}
+}
+
+/* get total ram and total swap (in Byte) from sysinfo */
+static void
+get_memory_info(unsigned long *ram, unsigned long *swap)
+{
+	struct sysinfo info;
+	if (sysinfo(&info) < 0)
+		elog(ERROR, "can't get memory information: %m");
+	*ram = info.totalram;
+	*swap = info.totalswap;
+}
+
+/* get vm.overcommit_ratio */
+static int
+getOvercommitRatio(void)
+{
+	int ratio;
+	char data[MAX_INT_STRING_LEN];
+	size_t datasize = sizeof(data);
+	const char *path = "/proc/sys/vm/overcommit_ratio";
+
+	readData(path, data, datasize);
+
+	if (sscanf(data, "%d", &ratio) != 1)
+		elog(ERROR, "invalid number '%s' in '%s'", data, path);
+
+	return ratio;
+}
+
+static int
+gettotalmemory_v1(void)
+{
+	unsigned long ram, swap, total;
+	int overcommitRatio;
+	uint64 cgram, cgmemsw;
+	uint64 memsw;
+	uint64 outTotal;
+
+	overcommitRatio = getOvercommitRatio();
+	get_memory_info(&ram, &swap);
+	/* Get sysinfo total ram and swap size. */
+	memsw = ram + swap;
+	outTotal = swap + ram * overcommitRatio / 100;
+	get_cgroup_memory_info(&cgram, &cgmemsw);
+	ram = Min(ram, cgram);
+	/*
+	 * In the case that total ram and swap read from sysinfo is larger than
+	 * from cgroup, ram and swap must both be limited, otherwise swap must
+	 * not be limited(we can safely use the value from sysinfo as swap size).
+	 */
+	if (cgmemsw < memsw)
+		swap = cgmemsw - ram;
+	/*
+	 * If it is in container, the total memory is limited by both the total
+	 * memoery outside and the memsw of the container.
+	 */
+	total = Min(outTotal, swap + ram);
+	return total >> BITS_IN_MB;
+}
+
 /*
  * Get the cpuset of the OS group.
  * @param group: the destination group

@@ -30,6 +30,10 @@
 #include "utils/guc.h"
 #include "utils/resowner.h"
 #include "utils/uri.h"
+#ifdef USE_ZSTD
+#include <zstd.h>
+#include <zstd_errors.h>
+#endif
 
 /*
  * This struct encapsulates the libcurl resources that need to be explicitly
@@ -40,7 +44,10 @@
  */
 typedef struct curlhandle_t
 {
-	CURL	   *handle;		/* The curl handle */
+	CURL			*handle;		/* The curl handle */
+#ifdef USE_ZSTD
+	ZSTD_DCtx		*zstd_dctx;		/* The zstd context */
+#endif
 	struct curl_slist *x_httpheader;	/* list of headers */
 	bool		in_multi_handle;	/* T, if the handle is in global
 									 * multi_handle */
@@ -88,8 +95,11 @@ typedef struct
 	int			error,
 				eof;			/* error & eof flags */
 	int			gp_proto;
-	char	   *http_response;
-
+	
+	int 			zstd;			/* if gpfdist zstd compress is enabled, it equals 1 */
+	int 			lastsize;		/* Recording the compressed data size */
+	
+	char	   		*http_response;
 	struct
 	{
 		int			datalen;	/* remaining datablock length */
@@ -149,7 +159,9 @@ static char curl_Error_Buffer[CURL_ERROR_SIZE];
 static void gp_proto0_write_done(URL_CURL_FILE *file);
 static void extract_http_domain(char* i_path, char* o_domain, int dlen);
 static char * make_url(const char *url, bool is_ipv6);
-
+#ifdef USE_ZSTD
+int decompress_zstd_data(ZSTD_DCtx* ctx, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout);
+#endif
 /* we use a global one for convenience */
 static CURLM *multi_handle = 0;
 
@@ -185,6 +197,10 @@ create_curlhandle(void)
 	h->handle = NULL;
 	h->x_httpheader = NULL;
 	h->in_multi_handle = false;
+
+#ifdef USE_ZSTD
+	h->zstd_dctx = NULL;
+#endif
 
 	h->owner = CurrentResourceOwner;
 	h->prev = NULL;
@@ -229,7 +245,13 @@ destroy_curlhandle(curlhandle_t *h)
 		curl_easy_cleanup(h->handle);
 		h->handle = NULL;
 	}
-
+#ifdef USE_ZSTD
+	if (h->zstd_dctx) 
+	{
+		ZSTD_freeDCtx(h->zstd_dctx);
+		h->zstd_dctx = NULL;
+	}
+#endif
 	pfree(h);
 }
 
@@ -285,6 +307,8 @@ header_callback(void *ptr_, size_t size, size_t nmemb, void *userp)
 	int 		i;
 	char 		buf[20];
 
+	int proto_len = strlen("X-GP-PROTO"), zstd_len = strlen("X-GP-ZSTD");
+
 	Assert(size == 1);
 
 	/*
@@ -318,10 +342,10 @@ header_callback(void *ptr_, size_t size, size_t nmemb, void *userp)
 	/*
 	 * extract the GP-PROTO value from the HTTP header.
 	 */
-	if (len > 10 && *ptr == 'X' && 0 == strncmp("X-GP-PROTO", ptr, 10))
+	if (len > proto_len && 0 == strncmp("X-GP-PROTO", ptr, proto_len))
 	{
-		ptr += 10;
-		len -= 10;
+		ptr += proto_len;
+		len -= proto_len;
 
 		while (len > 0 && (*ptr == ' ' || *ptr == '\t'))
 		{
@@ -345,6 +369,43 @@ header_callback(void *ptr_, size_t size, size_t nmemb, void *userp)
 
 			buf[i] = 0;
 			url->gp_proto = strtol(buf, 0, 0);
+		}
+	}
+
+	if (len > zstd_len && 0 == strncmp("X-GP-ZSTD", ptr, zstd_len))
+	{
+		ptr += zstd_len;
+		len -= zstd_len;
+
+		while (len > 0 && (*ptr == ' ' || *ptr == '\t'))
+		{
+			ptr++;
+			len--;
+		}
+
+		if (len > 0 && *ptr == ':')
+		{
+			ptr++;
+			len--;
+
+			while (len > 0 && (*ptr == ' ' || *ptr == '\t'))
+			{
+				ptr++;
+				len--;
+			}
+
+			for (i = 0; i < sizeof(buf) - 1 && i < len; i++)
+				buf[i] = ptr[i];
+
+			buf[i] = 0;
+#ifdef USE_ZSTD
+			url->zstd = strtol(buf, 0, 0);
+			if (!url->for_write && url->zstd)
+			{
+				url->curl->zstd_dctx = ZSTD_createDCtx();
+				url->lastsize = ZSTD_initDStream(url->curl->zstd_dctx);
+			}
+#endif
 		}
 	}
 
@@ -1217,6 +1278,9 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 	{
 		/* read specific - (TODO: unclear why some of these are needed) */
 		set_httpheader(file, "X-GP-PROTO", "1");
+#ifdef USE_ZSTD
+		set_httpheader(file, "X-GP-ZSTD", "1");
+#endif
 		set_httpheader(file, "X-GP-MASTER_HOST", ev->GP_MASTER_HOST);
 		set_httpheader(file, "X-GP-MASTER_PORT", ev->GP_MASTER_PORT);
 		set_httpheader(file, "X-GP-CSVOPT", ev->GP_CSVOPT);
@@ -1478,6 +1542,29 @@ gp_proto0_read(char *buf, int bufsz, URL_CURL_FILE *file)
 	return n;
 }
 
+#ifdef USE_ZSTD
+int 
+decompress_zstd_data(ZSTD_DCtx* ctx, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout)
+{
+	
+	size_t ret;
+	/* Ret indicates the number of bytes of next data frame to be decompressed.
+	 * And if an error occur in ZSTD_decompressStream, ret will be a error number.
+	 * If ZSTD_isError is true, the ret is a error number.
+	 * The content of the error can be got by ZSTD_getErrorName..
+	 */
+	ret = ZSTD_decompressStream(ctx, bout, bin);
+
+	if (ZSTD_isError(ret))
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_CONNECTION_FAILURE),
+				errmsg("ZSTD_decompressStream failed, error is %s", ZSTD_getErrorName(ret))));
+	}
+	return ret;
+}
+#endif
+
 /*
  * gp_proto1_read
  *
@@ -1491,7 +1578,7 @@ static size_t
 gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char *buf2)
 {
 	char type;
-	int  n, len;
+	int  n = 0, len = 0;
 
 	/*
 	 * Loop through and get all types of messages, until we get actual data,
@@ -1638,11 +1725,41 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 		elog(ERROR, "gpfdist error: unknown meta type %d", type);
 	}
 
-	/* read data block */
-	if (bufsz > file->block.datalen)
-		bufsz = file->block.datalen;
+	int left_bytes = file->in.top - file->in.bot;
 
-	fill_buffer(file, bufsz);
+	if (file->zstd)
+	{
+		/* 'lastsize' is the number of bytes required for next decompression.
+		 * 'left_bytes' is the number of bytes remained in 'file->in.ptr'.
+		 * If left_bytes is less than 'lastsize', the next decompression
+		 * can't complete in a decompression operation. Thus, when 
+		 * 'file->lastsize > left_bytes', we need more bytes and fill_buffer is called.
+		 * 
+		 * When the condition 'file->block.datalen == len' is met, a new
+		 * request just start. In this case lastsize is an init value, and 
+		 * cannot provide the information about how many bytes required
+		 * to finish the first frame decompression. In this case, enough
+		 * bytes(more than ZSTD_DStreamInSize() returning) should be filled
+		 * into 'file->in.ptr' to ensure that the first decompression 
+		 * completing.
+		 */
+		if (file->lastsize > left_bytes || file->block.datalen == len)
+		{
+#ifdef USE_ZSTD
+			int wantsz = ZSTD_DStreamInSize() - left_bytes;
+			fill_buffer(file, wantsz);
+#endif
+		}
+	} 
+	else 
+	{
+		/* read data block */
+		if (bufsz > file->block.datalen)
+			bufsz = file->block.datalen;
+
+		fill_buffer(file, bufsz);
+	}
+
 	n = file->in.top - file->in.bot;
 
 	/* if gpfdist closed connection prematurely or died catch it here */
@@ -1662,13 +1779,46 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 	if (n > bufsz)
 		n = bufsz;
 
+#ifdef USE_ZSTD
+	if (file->zstd && file->curl->zstd_dctx && !file->eof)
+	{
+		int ret;
+		/* It is absolutely to put the decompression code in a loop.
+		 * Since not every call of decompress_zstd_data will get data into bout.
+		 * However, even thought there is no data in bout, the call of 
+		 * decompress_zstd_data is neccersary for following decompression.
+		 * If a empty buf is returned to gpdb, the error will occur. 
+		 * So the loop ensures that we push forward the decompression until there 
+		 * is data in bout.
+		 */
+		do
+		{
+			ZSTD_inBuffer bin = {file->in.ptr + file->in.bot, file->lastsize, 0};
+			ZSTD_outBuffer bout = {buf, bufsz, 0};
+			ret = decompress_zstd_data(file->curl->zstd_dctx, &bin, &bout);
+			n = bout.pos; 
+			file->in.bot += bin.pos;
+			file->lastsize = ret;
+			if (!ret)
+			{
+				file->lastsize = ZSTD_initDStream(file->curl->zstd_dctx);
+				break;
+			}		
+		} while (n == 0);
+	}
+	else
+	{
+		memcpy(buf, file->in.ptr + file->in.bot, n);
+		file->in.bot += n;
+	}
+#else
 	memcpy(buf, file->in.ptr + file->in.bot, n);
-
 	file->in.bot += n;
+#endif
 	file->block.datalen -= n;
+
 	return n;
 }
-
 /*
  * gp_proto0_write
  *
@@ -1820,7 +1970,6 @@ url_curl_fflush(URL_FILE *file, CopyState pstate)
 {
 	gp_proto0_write((URL_CURL_FILE *) file, pstate);
 }
-
 #else /* USE_CURL */
 
 
