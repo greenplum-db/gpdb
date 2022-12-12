@@ -11,14 +11,6 @@
 --
 -- end_matchsubs
 
-CREATE OR REPLACE FUNCTION resGroupPalloc(float) RETURNS int AS '@abs_builddir@/../regress/regress@DLSUFFIX@', 'resGroupPalloc' LANGUAGE C READS SQL DATA;
-CREATE
-
-CREATE OR REPLACE FUNCTION hold_memory_by_percent(int, float) RETURNS int AS $$ SELECT * FROM resGroupPalloc($2) $$ LANGUAGE sql;
-CREATE
-
-CREATE OR REPLACE FUNCTION hold_memory_by_percent_on_qe(int, float) RETURNS int AS $$ SELECT resGroupPalloc($2) FROM gp_dist_random('gp_id') $$ LANGUAGE sql;
-CREATE
 -- check whether a query running in the specific group
 -- @param pid: the pid of QD
 -- @param groupname: resource group id

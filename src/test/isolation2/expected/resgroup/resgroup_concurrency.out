@@ -18,6 +18,7 @@ SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_to
 ---------------------+-------------+--------------+------------+--------------
  rg_concurrency_test | 0           | 0            | 0          | 0            
 (1 row)
+
 2:SET ROLE role_concurrency_test;
 SET
 2:BEGIN;
@@ -36,6 +37,7 @@ SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_to
 ---------------------+-------------+--------------+------------+--------------
  rg_concurrency_test | 2           | 1            | 1          | 2            
 (1 row)
+
 SELECT wait_event from pg_stat_activity where query = 'BEGIN;' and state = 'active' and rsgname = 'rg_concurrency_test' and wait_event_type='ResourceGroup';
  wait_event          
 ---------------------
@@ -64,7 +66,8 @@ DROP
 
 -- test2: test alter concurrency
 -- Create a resource group with concurrency=2. Prepare 2 running transactions and 1 queueing transactions.
--- Alter concurrency 2->3, the queueing transaction will be woken up, the 'value' of pg_resgroupcapability will be set to 3.
+-- Alter concurrency 2->3, the queueing transaction will be woken up, the 'value' of pg_resgroupcapability
+-- will be set to 3.
 DROP ROLE IF EXISTS role_concurrency_test;
 DROP
 -- start_ignore
@@ -91,6 +94,7 @@ SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_to
 ---------------------+-------------+--------------+------------+--------------
  rg_concurrency_test | 2           | 1            | 1          | 2            
 (1 row)
+
 SELECT concurrency FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_concurrency_test';
  concurrency 
 -------------

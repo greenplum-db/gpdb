@@ -383,13 +383,13 @@ DROP
 -- does not support single quotation marks around the name
 CREATE RESOURCE GROUP 'must_fail' WITH (cpu_hard_quota_limit=10);
 ERROR:  syntax error at or near "'must_fail'"
-LINE 1: CREATE RESOURCE GROUP 'must_fail' WITH (cpu_hard_quota_limit=10);
+LINE 1: CREATE RESOURCE GROUP 'must_fail' WITH (cpu_hard_quota_limit...
                               ^
 
 -- does not support leading numbers
 CREATE RESOURCE GROUP 0_must_fail WITH (cpu_hard_quota_limit=10);
 ERROR:  syntax error at or near "0"
-LINE 1: CREATE RESOURCE GROUP 0_must_fail WITH (cpu_hard_quota_limit=10);
+LINE 1: CREATE RESOURCE GROUP 0_must_fail WITH (cpu_hard_quota_limit...
                               ^
 
 -- reserved names are not allowed even with double quotation marks

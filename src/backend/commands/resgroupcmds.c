@@ -1158,7 +1158,6 @@ validateCapabilities(Relation rel,
 		ResGroupLimitType	reslimittype;
 		Oid					resgroupid;
 		char				*valueStr;
-		int					value;
 		bool				isNull;
 
 		groupIdDatum = heap_getattr(tuple, Anum_pg_resgroupcapability_resgroupid,

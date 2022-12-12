@@ -317,19 +317,8 @@ SELECT * FROM cancel_all;
 
 
 -- Test hard quota limit
-
-DROP ROLE role1_cpu_test;
-DROP ROLE role2_cpu_test;
-DROP RESOURCE GROUP rg1_cpu_test;
-DROP RESOURCE GROUP rg2_cpu_test;
-
-CREATE RESOURCE GROUP rg1_cpu_test WITH (concurrency=5, cpu_hard_quota_limit=10);
-CREATE RESOURCE GROUP rg2_cpu_test WITH (concurrency=5, cpu_hard_quota_limit=20);
-
-CREATE ROLE role1_cpu_test RESOURCE GROUP rg1_cpu_test;
-CREATE ROLE role2_cpu_test RESOURCE GROUP rg2_cpu_test;
-GRANT ALL ON FUNCTION busy() TO role1_cpu_test;
-GRANT ALL ON FUNCTION busy() TO role2_cpu_test;
+ALTER RESOURCE GROUP rg1_cpu_test set cpu_hard_quota_limit 10;
+ALTER RESOURCE GROUP rg2_cpu_test set cpu_hard_quota_limit 20;
 
 -- prepare parallel queries in the two groups
 10: SET ROLE TO role1_cpu_test;

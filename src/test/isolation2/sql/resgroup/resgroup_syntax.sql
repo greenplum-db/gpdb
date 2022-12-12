@@ -137,7 +137,7 @@ CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0');
 SELECT groupname,concurrency,cpu_hard_quota_limit,cpu_soft_priority FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
 DROP RESOURCE GROUP rg_test_group;
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0;0-1');
-SELECT groupname,concurrency,cpu_rate_limit,memory_limit,memory_shared_quota,memory_spill_ratio
+SELECT groupname,concurrency,cpu_hard_quota_limit,cpu_soft_priority,cpuset
 FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
 DROP RESOURCE GROUP rg_test_group;
 -- ----------------------------------------------------------------------

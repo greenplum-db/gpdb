@@ -23,8 +23,8 @@ ERROR:  CREATE RESOURCE GROUP cannot run inside a transaction block
 END;
 END
 SELECT * FROM rg_test_monitor;
- groupname | concurrency | cpu_hard_quota_limit
------------+-------------+----------------
+ groupname | concurrency | cpu_hard_quota_limit 
+-----------+-------------+----------------------
 (0 rows)
 
 -- ALTER RESOURCE GROUP cannot run inside a transaction block
@@ -37,9 +37,9 @@ ERROR:  ALTER RESOURCE GROUP cannot run inside a transaction block
 END;
 END
 SELECT * FROM rg_test_monitor;
- groupname     | concurrency | cpu_hard_quota_limit
----------------+-------------+----------------
- rg_test_group | 20          | 5              
+ groupname     | concurrency | cpu_hard_quota_limit 
+---------------+-------------+----------------------
+ rg_test_group | 20          | 5                    
 (1 row)
 
 -- DROP RESOURCE GROUP cannot run inside a transaction block
@@ -50,9 +50,9 @@ ERROR:  DROP RESOURCE GROUP cannot run inside a transaction block
 END;
 END
 SELECT * FROM rg_test_monitor;
- groupname     | concurrency | cpu_hard_quota_limit
----------------+-------------+----------------
- rg_test_group | 20          | 5              
+ groupname     | concurrency | cpu_hard_quota_limit 
+---------------+-------------+----------------------
+ rg_test_group | 20          | 5                    
 (1 row)
 
 DROP RESOURCE GROUP rg_test_group;
@@ -76,8 +76,8 @@ ERROR:  CREATE RESOURCE GROUP cannot run inside a transaction block
 END;
 END
 SELECT * FROM rg_test_monitor;
- groupname | concurrency | cpu_hard_quota_limit
------------+-------------+----------------
+ groupname | concurrency | cpu_hard_quota_limit 
+-----------+-------------+----------------------
 (0 rows)
 
 -- ALTER RESOURCE GROUP cannot run inside a transaction block
@@ -95,9 +95,9 @@ ERROR:  ALTER RESOURCE GROUP cannot run inside a transaction block
 END;
 END
 SELECT * FROM rg_test_monitor;
- groupname     | concurrency | cpu_hard_quota_limit
----------------+-------------+----------------
- rg_test_group | 20          | 5              
+ groupname     | concurrency | cpu_hard_quota_limit 
+---------------+-------------+----------------------
+ rg_test_group | 20          | 5                    
 (1 row)
 
 -- DROP RESOURCE GROUP cannot run inside a transaction block
@@ -113,9 +113,9 @@ ERROR:  DROP RESOURCE GROUP cannot run inside a transaction block
 END;
 END
 SELECT * FROM rg_test_monitor;
- groupname     | concurrency | cpu_hard_quota_limit
----------------+-------------+----------------
- rg_test_group | 20          | 5              
+ groupname     | concurrency | cpu_hard_quota_limit 
+---------------+-------------+----------------------
+ rg_test_group | 20          | 5                    
 (1 row)
 
 DROP RESOURCE GROUP rg_test_group;
@@ -138,8 +138,8 @@ ROLLBACK
 ABORT;
 ABORT
 SELECT * FROM rg_test_monitor;
- groupname | concurrency | cpu_hard_quota_limit
------------+-------------+----------------
+ groupname | concurrency | cpu_hard_quota_limit 
+-----------+-------------+----------------------
 (0 rows)
 
 -- ALTER RESOURCE GROUP cannot run inside a subtransaction
@@ -156,9 +156,9 @@ ROLLBACK
 ABORT;
 ABORT
 SELECT * FROM rg_test_monitor;
- groupname     | concurrency | cpu_hard_quota_limit
----------------+-------------+----------------
- rg_test_group | 20          | 5              
+ groupname     | concurrency | cpu_hard_quota_limit 
+---------------+-------------+----------------------
+ rg_test_group | 20          | 5                    
 (1 row)
 
 -- DROP RESOURCE GROUP cannot run inside a subtransaction
@@ -173,9 +173,9 @@ ROLLBACK
 ABORT;
 ABORT
 SELECT * FROM rg_test_monitor;
- groupname     | concurrency | cpu_hard_quota_limit
----------------+-------------+----------------
- rg_test_group | 20          | 5              
+ groupname     | concurrency | cpu_hard_quota_limit 
+---------------+-------------+----------------------
+ rg_test_group | 20          | 5                    
 (1 row)
 
 DROP RESOURCE GROUP rg_test_group;
@@ -199,8 +199,8 @@ SELECT * FROM rg_create_func();
 ERROR:  CREATE RESOURCE GROUP cannot be executed from a function
 CONTEXT:  SQL function "rg_create_func" statement 1
 SELECT * FROM rg_test_monitor;
- groupname | concurrency | cpu_hard_quota_limit
------------+-------------+----------------
+ groupname | concurrency | cpu_hard_quota_limit 
+-----------+-------------+----------------------
 (0 rows)
 
 -- ALTER RESOURCE GROUP cannot run inside a function call
@@ -210,9 +210,9 @@ SELECT * FROM rg_alter_func();
 ERROR:  ALTER RESOURCE GROUP cannot be executed from a function
 CONTEXT:  SQL function "rg_alter_func" statement 1
 SELECT * FROM rg_test_monitor;
- groupname     | concurrency | cpu_hard_quota_limit
----------------+-------------+----------------
- rg_test_group | 20          | 5              
+ groupname     | concurrency | cpu_hard_quota_limit 
+---------------+-------------+----------------------
+ rg_test_group | 20          | 5                    
 (1 row)
 
 -- DROP RESOURCE GROUP cannot run inside a function call
@@ -220,9 +220,9 @@ SELECT * FROM rg_drop_func();
 ERROR:  DROP RESOURCE GROUP cannot be executed from a function
 CONTEXT:  SQL function "rg_drop_func" statement 1
 SELECT * FROM rg_test_monitor;
- groupname     | concurrency | cpu_hard_quota_limit
----------------+-------------+----------------
- rg_test_group | 20          | 5              
+ groupname     | concurrency | cpu_hard_quota_limit 
+---------------+-------------+----------------------
+ rg_test_group | 20          | 5                    
 (1 row)
 
 DROP RESOURCE GROUP rg_test_group;
