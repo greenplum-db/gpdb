@@ -515,6 +515,40 @@ replace_sirvf_rte(Query *query, RangeTblEntry *rte)
 				 */
 				rte->rtekind = RTE_SUBQUERY;
 				rte->subquery = subquery;
+
+				/**
+				 * For composite type, update the target list according to the
+				 * field selectors in subquery
+				 */
+				Oid	typid = fe->funcresulttype;
+				if (type_is_rowtype(typid))
+				{
+					RowExpr *nd = makeNode(RowExpr);
+					Oid	base_typid = getBaseType(typid);
+					nd->row_typeid = base_typid;
+					nd->row_format = COERCE_EXPLICIT_CAST;
+
+					ListCell *lc;
+					int i = 0;
+
+					foreach_with_count (lc, fe->args, i)
+					{
+						FuncExpr *subfe = (FuncExpr *)lfirst(lc);
+						Var *var = makeVar(1, i + 1, subfe->funcresulttype, -1, 0, 0);
+						nd->args = lappend(nd->args, var);
+					}
+				
+					TargetEntry *te = makeTargetEntry(nd, 1, rte->eref->aliasname, false);
+
+					i = 0;
+					foreach_with_count (lc, query->targetList, i)
+					{
+						TargetEntry *entry = (TargetEntry *)lfirst(lc);
+						Oid typid = exprType(entry->expr);
+						if (typid == fe->funcresulttype)
+							list_nth_replace(query->targetList, i, te);
+					}
+				}
 			}
 		}
 	}
