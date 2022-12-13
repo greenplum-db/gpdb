@@ -612,7 +612,6 @@ InitResGroups(void)
 	{
 		ResGroupData	*group;
 		int cpuRateLimit;
-		Bitmapset *bmsCurrent;
 
         Oid groupId = HeapTupleGetOid(tuple);
 		GetResGroupCapabilities(relResGroupCapability, groupId, &caps);
@@ -631,7 +630,7 @@ InitResGroups(void)
 		else
 		{
 			char *cpuset = getCpuSetByRole(caps.cpuset);
-			bmsCurrent = CpusetToBitset(cpuset, MaxCpuSetLength);
+			Bitmapset *bmsCurrent = CpusetToBitset(cpuset, MaxCpuSetLength);
 
 			Bitmapset *bmsCommon = bms_intersect(bmsCurrent, bmsUnused);
 			Bitmapset *bmsMissing = bms_difference(bmsCurrent, bmsCommon);
