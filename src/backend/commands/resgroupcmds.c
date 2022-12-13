@@ -1584,70 +1584,83 @@ checkCpusetSyntax(const char *cpuset)
 extern void
 checkCpuSetByRole(const char *cpuset)
 {
-	char **arraycpuset = (char **)palloc0(sizeof(char *) * CpuSetArrayLength);
-	char *copycpuset = (char *)palloc0(sizeof(char) * MaxCpuSetLength);
-	strcpy(copycpuset, cpuset);
+	char *first = NULL;
+	char *last = NULL;
 
-	int cnt = 0;
-	for (int i = 0; i < sizeof(cpuset); i++)
+	if (cpuset == NULL)
 	{
-		if (cpuset[i] == ';')
-			cnt++;
-	}
-
-	if (cnt == 0)
-	{
-		checkCpusetSyntax(copycpuset);
-		arraycpuset[0] = copycpuset;
-	}
-	else if (cnt == 1)
-	{
-		int iter = 0;
-		char *nextcpuset = strtok(copycpuset, ";");
-		while (nextcpuset != NULL)
-		{
-			arraycpuset[iter++] = nextcpuset;
-			nextcpuset = strtok(NULL, ";");
-		}
-		checkCpusetSyntax(arraycpuset[0]);
-		checkCpusetSyntax(arraycpuset[1]);
-	}
-	else
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				errmsg("cpuset invalid")));
+	}
 
-	pfree(copycpuset);
-	pfree(arraycpuset);
+	first = strchr(cpuset, ';');
+	last = strrchr(cpuset, ';');
+	/*
+	 * If point first not equal last, that means
+	 * ';' character exceed limit numbers.
+	 */
+	if (last != first)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				errmsg("cpuset invalid")));
+	}
+
+	if (first == NULL)
+		checkCpusetSyntax(cpuset);
+	else
+	{
+		char mcpu[MaxCpuSetLength] = {0};
+		strncpy(mcpu, cpuset, first - cpuset);
+
+		checkCpusetSyntax(mcpu);
+		checkCpusetSyntax(first + 1);
+	}
+
 	return;
 }
 
 /*
  * Seperate cpuset by coordinator and segment
  * Return as splitcpuset
+ *
+ * ex:
+ * cpuset = "1;4"
+ * then we should assign '1' to corrdinator and '4' to segment
+ * 
+ * cpuset = "1"
+ * assign '1' to both coordinator and segment
  */
 extern char *
 getCpuSetByRole(const char *cpuset)
 {
-	int iter = 0;
 	char *splitcpuset = NULL;
 
-	char **arraycpuset = (char **)palloc0(sizeof(char *) * CpuSetArrayLength);
-	char *copycpuset = (char *)palloc0(sizeof(char) * MaxCpuSetLength);
-	strcpy(copycpuset, cpuset);
-
-	char *nextcpuset = strtok(copycpuset, ";");
-	while (nextcpuset != NULL)
+	if (cpuset == NULL)
 	{
-		arraycpuset[iter++] = nextcpuset;
-		nextcpuset = strtok(NULL, ";");
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				errmsg("Unexpected cpuset invalid in getCpuSetByRole")));
 	}
 
-	/* Get result cpuset by gprole, on master or segment */
-	if (Gp_role == GP_ROLE_EXECUTE && arraycpuset[1] != NULL)
-		splitcpuset = arraycpuset[1];
+	char *first = strchr(cpuset, ';');
+	if (first == NULL)
+		splitcpuset = (char *)cpuset;
 	else
-		splitcpuset = arraycpuset[0];
+	{
+		char *scpu = first + 1;
+
+		/* Get result cpuset by IS_QUERY_DISPATCHER(), on master or segment */
+		if (IS_QUERY_DISPATCHER())
+			splitcpuset = scpu;
+		else
+		{
+			char *mcpu = (char *)palloc0(sizeof(char) * MaxCpuSetLength);
+			strncpy(mcpu, cpuset, first - cpuset);
+			splitcpuset = mcpu;
+		}
+	}
 
 	return splitcpuset;
 }
