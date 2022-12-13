@@ -991,6 +991,19 @@ CCostModelGPDB::CostHashJoin(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	CDouble skew_ratio = 1;
 	ULONG arity = exprhdl.Arity();
 
+	if (GPOS_FTRACE(EopttraceDisableRedistributeHashJoin))
+	{
+		for (ULONG ul = 0; ul < arity - 1; ul++)
+		{
+			COperator *popChild = exprhdl.Pop(ul);
+			if (nullptr != popChild &&
+				COperator::EopPhysicalMotionHashDistribute == popChild->Eopid())
+			{
+				return CCost(GPOS_FP_ABS_MAX);
+			}
+		}
+	}
+
 	// Hashjoin with skewed HashRedistribute below them are expensive
 	// find out if there is a skewed redistribute child of this HashJoin.
 	if (!GPOS_FTRACE(EopttracePenalizeSkewedHashJoin))
