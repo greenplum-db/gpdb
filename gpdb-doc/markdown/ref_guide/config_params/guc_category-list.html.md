@@ -8,7 +8,7 @@ Configuration parameters affect categories of server behaviors, such as resource
 -   [Query Tuning Parameters](#topic21)
 -   [Error Reporting and Logging Parameters](#topic29)
 -   [Runtime Statistics Collection Parameters](#topic37)
--   [Automatic Vacuum Parameters](#automatic-vacuum-parameters)
+-   [Automatic Vacuum Parameters](#automatic-vacuum)
 -   [Automatic Statistics Collection Parameters](#topic38)
 -   [Client Connection Default Parameters](#topic39)
 -   [Lock Management Parameters](#topic43)
