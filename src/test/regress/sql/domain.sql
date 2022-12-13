@@ -165,6 +165,7 @@ select makedcomp(1,2);
 select makedcomp(2,1);  -- fail
 select * from makedcomp(1,2) m;
 select m, m is not null from makedcomp(1,2) m;
+create table t as select m, m is not null from makedcomp(1,2) m; -- ctas
 
 drop function makedcomp(float8, float8);
 drop table dcomptable;
