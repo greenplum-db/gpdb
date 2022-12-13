@@ -26,6 +26,14 @@ Maximum time to complete client authentication. This prevents hung clients from 
 |-----------|-------|-------------------|
 |Any valid time expression \(number and unit\)|1min|local, system, restart|
 
+## <a id="autovacuum"></a>autovacuum 
+
+When enabled, Greenplum Database starts up the autovacuum daemon -- which operates at the database level. Once the daemon is running, all databases have their catalog tables automatically vacuumed and their catalog and user tables automatically analyzed.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|on|master, system, restart|
+
 ## <a id="backslash_quote"></a>backslash\_quote 
 
 This controls whether a quote mark can be represented by \\' in a string literal. The preferred, SQL-standard way to represent a quote mark is by doubling it \(''\) but PostgreSQL has historically also accepted \\'. However, use of \\' creates security risks because in some client character set encodings, there are multibyte characters in which the last byte is numerically equivalent to ASCII \\.

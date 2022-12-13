@@ -8,6 +8,7 @@ Configuration parameters affect categories of server behaviors, such as resource
 -   [Query Tuning Parameters](#topic21)
 -   [Error Reporting and Logging Parameters](#topic29)
 -   [Runtime Statistics Collection Parameters](#topic37)
+-   [Automatic Vacuum Parameters](#automatic-vacuum-parameters)
 -   [Automatic Statistics Collection Parameters](#topic38)
 -   [Client Connection Default Parameters](#topic39)
 -   [Lock Management Parameters](#topic43)
@@ -266,6 +267,13 @@ These configuration parameters control Greenplum Database logging.
 - [gp_debug_linger](guc-list.html#gp_debug_linger)
 - [gp_log_format](guc-list.html#gp_log_format)
 - [gp_reraise_signal](guc-list.html#gp_reraise_signal)
+
+
+## <a id="automatic_vacuum"></a>Automatic Vacuum Parameters 
+
+These parameters pertain to auto-vacuuming databases.
+
+- [autovacuum](guc-list.html#autovacuum)
 
 ## <a id="query-metrics"></a>Query Metrics Collection Parameters 
 
