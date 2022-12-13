@@ -2499,7 +2499,8 @@ DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet nod
 insert into multiagg2 values(generate_series(1, 10), generate_series(1, 10), 555.55);
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
-analyze;
+analyze multiagg1;
+analyze multiagg2;
 explain (verbose, costs off) select count(distinct b), sum(c) from multiagg1;
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------

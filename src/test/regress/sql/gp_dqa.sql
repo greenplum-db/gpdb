@@ -404,7 +404,8 @@ create table multiagg1(a int, b bigint, c int);
 create table multiagg2(a int, b bigint, c numeric(8, 4));
 insert into multiagg1 values(generate_series(1, 10), generate_series(1, 10), generate_series(1, 10));
 insert into multiagg2 values(generate_series(1, 10), generate_series(1, 10), 555.55);
-analyze;
+analyze multiagg1;
+analyze multiagg2;
 
 explain (verbose, costs off) select count(distinct b), sum(c) from multiagg1;
 select count(distinct b), sum(c) from multiagg1;
