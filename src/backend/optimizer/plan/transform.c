@@ -25,6 +25,7 @@
 #include "parser/parse_oper.h"
 #include "parser/parse_coerce.h"
 #include "parser/parse_relation.h"
+#include "parser/parsetree.h"
 #include "utils/fmgroids.h"
 
 #define IS_DML_QUERY(q) (q->commandType != CMD_SELECT \
@@ -456,6 +457,71 @@ static bool safe_to_replace_sirvf_rte(Query *query)
 	return single_row_query(query);
 }
 
+/*
+ * Fix up a target list, by replacing outer-Vars with the exprs from
+ * the child target list, which we get from make_sirvf_subquery().
+ */
+static Node *
+replace_sirvf_target_list_mutator(Node *node, List *rtable)
+{
+	if (!node)
+		return NULL;
+
+	TargetEntry *te = (TargetEntry *) node;
+
+	if (!te->resjunk && IsA(te->expr, Var))
+	{
+		Var		   *var = (Var *) te->expr;
+
+		/**
+		 * For composite type, update the target list according to the
+		 * field selectors in subquery
+		 */
+		Oid typid = var->vartype;
+		int rti = var->varno;
+		RangeTblEntry *rte = rt_fetch(rti, rtable);
+		bool match = true;
+
+		/* Whole-row var reference for row type */
+		if (rte->rtekind == RTE_SUBQUERY &&
+			type_is_rowtype(typid) &&
+			var->varattno == 0)
+		{
+			List *targetList = rte->subquery->targetList;
+			RowExpr *rowexpr = makeNode(RowExpr);
+			Oid typid = var->vartype;
+			Oid     base_typid = getBaseType(typid);
+			rowexpr->row_typeid = base_typid;
+			rowexpr->row_format = COERCE_EXPLICIT_CAST;
+
+			ListCell *lc;
+			int index = 0;
+			foreach_with_count (lc, targetList, index)
+			{
+				TargetEntry *tle = (TargetEntry *) lfirst(lc);
+				FieldSelect *fs = (FieldSelect *) tle->expr;
+				Var *subvar = (Var *) fs->arg;
+				if (typid != subvar->vartype)
+				{
+					match = false;
+					break;
+				}
+				Var *var = makeVar(1, index + 1, fs->resulttype, -1, 0, 0);
+				rowexpr->args = lappend(rowexpr->args, var);
+			}
+
+			if (match)
+			{
+				TargetEntry *te = makeTargetEntry(rowexpr, 1, rte->eref->aliasname, false);
+
+				return (Node *) te;
+			}
+		}
+	}
+
+	return expression_tree_mutator(node, replace_sirvf_target_list_mutator, rtable);
+}
+
 /**
  * If a range table entry contains a sirv function, this must be replaced
  * with a derived table (subquery) with a sublink - this will eventually be
@@ -516,37 +582,17 @@ replace_sirvf_rte(Query *query, RangeTblEntry *rte)
 				rte->rtekind = RTE_SUBQUERY;
 				rte->subquery = subquery;
 
-				/**
-				 * For composite type, update the target list according to the
-				 * field selectors in subquery
-				 */
-				Oid	typid = fe->funcresulttype;
-				if (type_is_rowtype(typid))
+				ListCell *lc;
+				int index = 0;
+				foreach_with_count(lc, query->targetList, index)
 				{
-					RowExpr *nd = makeNode(RowExpr);
-					Oid	base_typid = getBaseType(typid);
-					nd->row_typeid = base_typid;
-					nd->row_format = COERCE_EXPLICIT_CAST;
-
-					ListCell *lc;
-					int i = 0;
-
-					foreach_with_count (lc, fe->args, i)
+					TargetEntry *tle = (TargetEntry *) lfirst(lc);
+					Oid typid = exprType(tle->expr);
+					if (typid == fe->funcresulttype)
 					{
-						FuncExpr *subfe = (FuncExpr *)lfirst(lc);
-						Var *var = makeVar(1, i + 1, subfe->funcresulttype, -1, 0, 0);
-						nd->args = lappend(nd->args, var);
-					}
-				
-					TargetEntry *te = makeTargetEntry(nd, 1, rte->eref->aliasname, false);
-
-					i = 0;
-					foreach_with_count (lc, query->targetList, i)
-					{
-						TargetEntry *entry = (TargetEntry *)lfirst(lc);
-						Oid typid = exprType(entry->expr);
-						if (typid == fe->funcresulttype)
-							list_nth_replace(query->targetList, i, te);
+						tle = (TargetEntry *) replace_sirvf_target_list_mutator((Node *) tle, 
+																				query->rtable);
+						list_nth_replace(query->targetList, index, tle);
 					}
 				}
 			}
