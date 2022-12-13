@@ -7,10 +7,8 @@ CREATE TABLE ao (a INT) USING @amname@;
 2: BEGIN;
 1: INSERT INTO AO VALUES (1);
 -- Segment file 1 should be created
-3: SELECT segno FROM gp_ao_or_aocs_seg('ao');
 2: INSERT INTO AO VALUES (1);
 -- Segment file 2 should be created
-3: SELECT segno FROM gp_ao_or_aocs_seg('ao');
 2: COMMIT;
 -- Transaction 2 should commit before 1.  It validates that
 -- transaction 2 chose a different segfile than transaction 1.

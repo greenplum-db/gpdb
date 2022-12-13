@@ -440,7 +440,7 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 	{
 		elog(LOG, "choose_segno_internal: TransactionXmin = %u, xmin = %u, xmax = %u, myxid = %u",
 			 TransactionXmin, snap.xmin, snap.xmax, GetCurrentTransactionIdIfAny());
-		LogDistributedSnapshotInfo(&snap, "Used snapshot: ");
+//		LogDistributedSnapshotInfo(&snap, "Used snapshot: ");
 	}
 
 	GetAppendOnlyEntryAuxOids(rel->rd_id, NULL,

@@ -236,7 +236,7 @@ UPDATE 1
 1:SELECT sum(tupcount) FROM gp_toolkit.__gp_aocsseg('crash_vacuum_in_appendonly_insert') where segno = 2;
  sum 
 -----
- 0   
+     
 (1 row)
 1:VACUUM crash_vacuum_in_appendonly_insert;
 VACUUM

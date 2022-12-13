@@ -12,20 +12,9 @@ BEGIN
 1: INSERT INTO AO VALUES (1);
 INSERT 1
 -- Segment file 1 should be created
-3: SELECT segno FROM gp_ao_or_aocs_seg('ao');
- segno 
--------
- 1     
-(1 row)
 2: INSERT INTO AO VALUES (1);
 INSERT 1
 -- Segment file 2 should be created
-3: SELECT segno FROM gp_ao_or_aocs_seg('ao');
- segno 
--------
- 1     
- 2     
-(2 rows)
 2: COMMIT;
 COMMIT
 -- Transaction 2 should commit before 1.  It validates that
