@@ -467,11 +467,15 @@ replace_sirvf_target_list_mutator(Node *node, List *rtable)
 	if (!node)
 		return NULL;
 
-	TargetEntry *te = (TargetEntry *) node;
-
-	if (!te->resjunk && IsA(te->expr, Var))
+	if (IsA(node, TargetEntry))
 	{
+		TargetEntry *te = (TargetEntry *) node;
 		Var		   *var = (Var *) te->expr;
+
+		if (te->resjunk || var->varattno != 0)
+		{
+			return node;
+		}
 
 		/**
 		 * For composite type, update the target list according to the
@@ -484,13 +488,12 @@ replace_sirvf_target_list_mutator(Node *node, List *rtable)
 
 		/* Whole-row var reference for row type */
 		if (rte->rtekind == RTE_SUBQUERY &&
-			type_is_rowtype(typid) &&
-			var->varattno == 0)
+			type_is_rowtype(typid))
 		{
 			List *targetList = rte->subquery->targetList;
 			RowExpr *rowexpr = makeNode(RowExpr);
 			Oid typid = var->vartype;
-			Oid     base_typid = getBaseType(typid);
+			Oid	base_typid = getBaseType(typid);
 			rowexpr->row_typeid = base_typid;
 			rowexpr->row_format = COERCE_EXPLICIT_CAST;
 
@@ -498,8 +501,8 @@ replace_sirvf_target_list_mutator(Node *node, List *rtable)
 			int index = 0;
 			foreach_with_count (lc, targetList, index)
 			{
-				TargetEntry *tle = (TargetEntry *) lfirst(lc);
-				FieldSelect *fs = (FieldSelect *) tle->expr;
+				TargetEntry *subTe = (TargetEntry *) lfirst(lc);
+				FieldSelect *fs = (FieldSelect *) subTe->expr;
 				Var *subvar = (Var *) fs->arg;
 				if (typid != subvar->vartype)
 				{
@@ -512,9 +515,9 @@ replace_sirvf_target_list_mutator(Node *node, List *rtable)
 
 			if (match)
 			{
-				TargetEntry *te = makeTargetEntry(rowexpr, 1, rte->eref->aliasname, false);
+				TargetEntry *newTe = makeTargetEntry(rowexpr, 1, rte->eref->aliasname, false);
 
-				return (Node *) te;
+				return (Node *) newTe;
 			}
 		}
 	}
@@ -582,19 +585,8 @@ replace_sirvf_rte(Query *query, RangeTblEntry *rte)
 				rte->rtekind = RTE_SUBQUERY;
 				rte->subquery = subquery;
 
-				ListCell *lc;
-				int index = 0;
-				foreach_with_count(lc, query->targetList, index)
-				{
-					TargetEntry *tle = (TargetEntry *) lfirst(lc);
-					Oid typid = exprType(tle->expr);
-					if (typid == fe->funcresulttype)
-					{
-						tle = (TargetEntry *) replace_sirvf_target_list_mutator((Node *) tle, 
-																				query->rtable);
-						list_nth_replace(query->targetList, index, tle);
-					}
-				}
+				query->targetList = replace_sirvf_target_list_mutator((Node *) query->targetList, 
+																		query->rtable);
 			}
 		}
 	}
