@@ -55,13 +55,9 @@ CI_VARS_PATH = os.path.join(os.getcwd(), '..', 'vars')
 # Variables that govern pipeline validation
 RELEASE_VALIDATOR_JOB = ['Release_Candidate', 'Build_Release_Candidate_RPMs']
 JOBS_THAT_ARE_GATES = [
-    'gate_icw_start',
     'gate_icw_end',
-    'gate_replication_start',
     'gate_resource_groups_start',
     'gate_cli_start',
-    'gate_ud_start',
-    'gate_advanced_analytics_start',
     'gate_release_candidate_start'
 ]
 
@@ -69,7 +65,6 @@ JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = (
     [
         'combine_cli_coverage',
         'compile_gpdb_clients_windows',
-        'walrep_2',
         'Publish Server Builds',
     ] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
 )
@@ -325,12 +320,9 @@ def main():
         dest='test_sections',
         choices=[
             'ICW',
-            'Replication',
             'ResourceGroups',
             'Interconnect',
             'CLI',
-            'UD',
-            'AA',
             'Extensions'
         ],
         default=[],
@@ -408,11 +400,9 @@ def main():
         args.os_types = ['rhel8', 'win']
         args.test_sections = [
             'ICW',
-            'Replication',
             'ResourceGroups',
             'Interconnect',
             'CLI',
-            'UD',
             'Extensions'
         ]
 
