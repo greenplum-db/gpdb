@@ -28,7 +28,7 @@ Maximum time to complete client authentication. This prevents hung clients from 
 
 ## <a id="autovacuum"></a>autovacuum 
 
-When enabled, Greenplum Database starts up the autovacuum daemon -- which operates at the database level. Once the daemon is running, all databases have their catalog tables automatically vacuumed and their catalog and user tables automatically analyzed.
+When enabled, Greenplum Database starts up the autovacuum daemon, which operates at the database level. After the daemon is running, all databases have their catalog tables automatically vacuumed and their catalog and user tables automatically analyzed.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
