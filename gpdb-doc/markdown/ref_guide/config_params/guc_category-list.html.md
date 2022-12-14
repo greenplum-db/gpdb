@@ -99,6 +99,11 @@ You can configure the execution cost of `VACUUM` and `ANALYZE` commands to reduc
 - [xid_stop_limit](guc-list.html#xid_stop_limit)
 - [xid_warn_limit](guc-list.html#xid_warn_limit)
 
+### <a id="topic20other"></a>Other Parameters 
+
+- [gp\_max\_parallel\_cursors](guc-list.html#gp_max_parallel_cursors)
+
+
 ## <a id="topic57"></a>GPORCA Parameters 
 
 These parameters control the usage of GPORCA by Greenplum Database. For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html) in the *Greenplum Database Administrator Guide*.

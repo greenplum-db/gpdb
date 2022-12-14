@@ -1204,6 +1204,18 @@ Sets the tuple-serialization chunk size for the Greenplum Database interconnect.
 |-----------|-------|-------------------|
 |512-65536|8192|master, system, reload|
 
+## <a id="gp_max_parallel_cursors"></a>gp\_max\_parallel\_cursors
+
+Specifies the maximum number of active parallel retrieve cursors allowed on a Greenplum Database cluster. A parallel retrieve cursor is considered active after it has been `DECLARE`d, but before it is `CLOSE`d or returns an error.
+
+The default value is `-1`; there is no limit on the number of open parallel retrieve cursors that may be concurrently active in the cluster \(up to the maximum value of 1024\).
+
+You must be a superuser to change the `gp_max_parallel_cursors` setting.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|-1 - 1024 | -1 | master, superuser, session, reload|
+
 ## <a id="gp_max_plan_size"></a>gp\_max\_plan\_size 
 
 Specifies the total maximum uncompressed size of a query execution plan multiplied by the number of Motion operators \(slices\) in the plan. If the size of the query plan exceeds the value, the query is cancelled and an error is returned. A value of 0 means that the size of the plan is not monitored.

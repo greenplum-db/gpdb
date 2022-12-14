@@ -19,7 +19,7 @@ This topic includes the following sections:
 
 ## <a id="topic_reg"></a>Installing and Registering the Module 
 
-The `greenplum_fdw` module is installed when you install Greenplum Database. Before you can use this FDW, you must register the `greenplum_fdw` extension in each database in the source Greenplum Database cluster in which you plan to use it:
+The `greenplum_fdw` module is installed when you install Greenplum Database. Before you can use this FDW, you must register the `greenplum_fdw` extension in each database in the local Greenplum Database cluster in which you plan to use it:
 
 ```
 CREATE EXTENSION greenplum_fdw;
@@ -35,7 +35,7 @@ Refer to [Installing Additional Supplied Modules](../../install_guide/install_mo
 
 ## <a id="topic_about"></a>About the greenplum\_fdw Module 
 
-`greenplum_fdw` is an MPP version of the [postgres\_fdw](https://www.postgresql.org/docs/9.4/postgres-fdw.html) foreign-data wrapper. While it behaves similarly to `postgres_fdw` in many respects, `greenplum_fdw` uses a Greenplum Database parallel retrieve cursor to pull data directly from the segments of a remote Greenplum cluster to the segments in the source Greenplum cluster, in parallel.
+`greenplum_fdw` is an MPP version of the [postgres\_fdw](https://www.postgresql.org/docs/9.4/postgres-fdw.html) foreign-data wrapper. While it behaves similarly to `postgres_fdw` in many respects, `greenplum_fdw` uses a Greenplum Database parallel retrieve cursor to pull data directly from the segments of a remote Greenplum cluster to the segments in the local Greenplum cluster, in parallel.
 
 By supporting predicate pushdown, `greenplum_fdw` minimizes the amount of data transferred between the Greenplum clusters by sending a query filter condition to the remote Greenplum server where it is applied there.
 
@@ -44,7 +44,7 @@ By supporting predicate pushdown, `greenplum_fdw` minimizes the amount of data t
 You will perform the following tasks when you use `greenplum_fdw` to access data that resides in a remote Greenplum Database cluster\(s\):
 
 1.  [Create a server](#create_server) to represent each remote Greenplum database to which you want to connect.
-2.  [Create a user mapping](#user_mapping) for each \(source\) Greenplum Database user that you want to allow to access each server.
+2.  [Create a user mapping](#user_mapping) for each \(local\) Greenplum Database user that you want to allow to access each server.
 3.  [Create a foreign table](#create_ftable) for each remote Greenplum table that you want to access.
 4.  [Construct and run queries](#query_ftable).
 
@@ -72,7 +72,7 @@ in the `OPTIONS` clause when you create the server. Set num to the number of seg
 num_segments
 ```
 
-option, the default value is the number of segments on the local/source Greenplum Database cluster.
+option, the default value is the number of segments on the local Greenplum Database cluster.
 
 The following example command creates a server named `gpc1_testdb` that will be used to access tables residing in the database named `testdb` on the remote `8`-segment Greenplum Database cluster whose master is running on the host `gpc1_master`, port `5432`:
 
@@ -83,18 +83,18 @@ CREATE SERVER gpc1_testdb FOREIGN DATA WRAPPER greenplum_fdw
 
 ### <a id="user_mapping"></a>Creating a User Mapping 
 
-After you identify which users you will allow to access the remote Greenplum Database cluster, you must create one or more mappings between a source Greenplum user and a user on the remote Greenplum cluster. You create these mappings with the [CREATE USER MAPPING](../sql_commands/CREATE_USER_MAPPING.html) command.
+After you identify which users you will allow to access the remote Greenplum Database cluster, you must create one or more mappings between a local Greenplum user and a user on the remote Greenplum cluster. You create these mappings with the [CREATE USER MAPPING](../sql_commands/CREATE_USER_MAPPING.html) command.
 
 User mappings that you create may include the following `OPTIONS`:
 
 |Option Name|Description|Default Value|
 |-----------|-----------|-------------|
-|user|The name of the remote Greenplum Database user to connect as.|The name of the current Greenplum Database user.|
+|user|The name of the remote Greenplum Database user to connect as.|The name of the current \(local\) Greenplum Database user.|
 |password|The password for user on the remote Greenplum Database system.|No default value.|
 
 Only a Greenplum Database superuser may connect to a Greenplum foreign server without password authentication. Always specify the `password` option for user mappings that you create for non-superusers.
 
-The following command creates a default user mapping on the source Greenplum cluster to the user named `bill` on the remote Greenplum cluster that allows access to the database identified by the `gpc1_testdb` server. Specifying the `PUBLIC` source user name creates a mapping for all current and future users when no user-specific mapping is applicable.
+The following command creates a default user mapping on the local Greenplum cluster to the user named `bill` on the remote Greenplum cluster that allows access to the database identified by the `gpc1_testdb` server. Specifying the `PUBLIC` user name creates a mapping for all current and future users when no user-specific mapping is applicable.
 
 ```
 CREATE USER MAPPING FOR PUBLIC SERVER gpc1_testdb
@@ -168,7 +168,7 @@ Setting this option at the foreign table-level overrides a foreign server-level 
 
 The `greenplum_fdw` module has the following known issues and limitations:
 
--   The Tanzu Greenplum Query Optimizer \(GPORCA\) does not support queries on foreign tables that you create with the `greenplum_fdw` foreign-data wrapper.
+-   The Greenplum Query Optimizer \(GPORCA\) does not support queries on foreign tables that you create with the `greenplum_fdw` foreign-data wrapper.
 -   `greenplum_fdw` does not support `UPDATE` and `DELETE` operations on foreign tables.
 
 ## <a id="topic_compat"></a>Compatibility 
@@ -192,7 +192,7 @@ In this example, you query data residing in a database named `rdb` on the remote
     ```
 
 3.  Exit the session.
-4.  Initiate a `psql` session to the database named `testdb` on the source \(local in this case\) Greenplum Database master host:
+4.  Initiate a `psql` session to the database named `testdb` on the local Greenplum Database master host:
 
     ```
     $ psql -d testdb

@@ -11,6 +11,7 @@ This topic includes the following sections:
 -   [Installing and Registering the Module](#topic_reg)
 -   [About the gp\_parallel\_retrieve\_cursor Module](#topic_about)
 -   [Using the gp\_parallel\_retrieve\_cursor Module](#topic_using)
+-   [Limiting the Number of Concurrently Open Cursors](#topic_cfg)
 -   [Known Issues and Limitations](#topic_limits)
 -   [Additional Module Documentation](#topic_addtldocs)
 -   [Example](#topic_examples)
@@ -259,11 +260,15 @@ The commands return endpoint and retrieve session information in a table with th
 
 Refer to the [gp\_segment\_endpoints](../system_catalogs/gp_segment_endpoints.html#topic1) view reference page for more information about the endpoint attributes returned by these commands.
 
+## <a id="topic_cfg"></a>Limiting the Number of Concurrently Open Cursors
+
+By default, Greenplum Database does not limit the number of parallel retrieve cursors that are active in the cluster \(up to the maximum value of 1024\). The Greenplum Database superuser can set the [gp\_max\_parallel\_cursors](../ref_guide/config_params/guc-list.html#gp_max_parallel_cursors) server configuration parameter to limit the number of open cursors.
+
 ## <a id="topic_limits"></a>Known Issues and Limitations 
 
 The `gp_parallel_retrieve_cursor` module has the following limitations:
 
--   The Tanzu Greenplum Query Optimizer \(GPORCA\) does not support queries on a parallel retrieve cursor.
+-   The Greenplum Query Optimizer \(GPORCA\) does not support queries on a parallel retrieve cursor.
 -   Greenplum Database ignores the `BINARY` clause when you declare a parallel retrieve cursor.
 -   Parallel retrieve cursors cannot be declared `WITH HOLD`.
 -   Parallel retrieve cursors do not support the `FETCH` and `MOVE` cursor operations.
