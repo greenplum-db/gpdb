@@ -9,13 +9,13 @@
 # Configure-generated files
 /GPTest.pm
 
-
 # ignore test tablespaces
 /testtablespace_default_tablespace/
 /testtablespace_temp_tablespace/
 
 twophase_pqexecparams
 
+data/part_ext.tbl
 data/wet_csv?.tbl
 data/wet_text?.tbl
 data/wet_syntax?.tbl
@@ -25,12 +25,6 @@ data/gpsd-without-hll.sql
 data/gpsd-with-hll.sql
 data/minirepro.sql
 
-regression.diffs
-regression.out
-
-stdin
-stdout
-=======
 # Note: regreesion.* are only left behind on a failure; that's why they're not ignored
 #/regression.diffs
 #/regression.out
