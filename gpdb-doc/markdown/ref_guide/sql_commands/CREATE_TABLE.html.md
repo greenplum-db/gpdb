@@ -276,7 +276,7 @@ ENCODING \( storage_directive \[, ...\] \)
 
 :   The `column_reference_storage_directive` parameter specifies a column along with its storage directive.
 
-For more information on storage directives, see [Adding Column Level Compression](../../admin_guide-ddl-ddl-storage.html#adding-column-level-compression).
+For more information on storage directives, see [Adding Column Level Compression](../../admin_guide/ddl/ddl-storage.html#topic43).
 
 INHERITS \( parent\_table \[, …\]\)
 :   The optional `INHERITS` clause specifies a list of tables from which the new table automatically inherits all columns. Use of `INHERITS` creates a persistent relationship between the new child table and its parent table\(s\). Schema modifications to the parent\(s\) normally propagate to children as well, and by default the data of the child table is included in scans of the parent\(s\).
