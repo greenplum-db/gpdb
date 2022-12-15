@@ -601,15 +601,15 @@ ExecSupportsBackwardScan(Plan *node)
 void
 ExecSquelchNode(PlanState *node)
 {
-	// If the whole plan does not have any motions, then we do not execute squelch at all.
-	if (((PlanState *) node)->plan->nMotionNodes < 1)
-		return;
-
 	ListCell   *lc;
 
 	if (!node)
 		return;
 
+	// If the whole plan does not have any motions, then we do not execute squelch at all.
+	if (!(node->state->es_sliceTable) || (node->state->es_sliceTable && node->state->es_sliceTable->nMotions < 1))
+		return;
+	
 	if (node->squelched)
 		return;
 
