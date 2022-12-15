@@ -168,6 +168,8 @@ INSERT INTO tst_missing_tbl values(2),(1),(5);
 
 -- Start again. Start from a clean shutdown does not perform CHECKPOINT
 2: SELECT pg_ctl_start(datadir, port) from gp_segment_configuration where role = 'm' and content = 0;
+-- Wait for a few seconds for the mirror to be ready to accept connections
+2: SELECT pg_sleep(5);
 
 -- Perform CHECKPOINT. Previously this causes the checkpoint.redo wal
 -- file before the oldest replication slot LSN is recycled/removed.
