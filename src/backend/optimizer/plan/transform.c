@@ -28,7 +28,7 @@
 #include "parser/parsetree.h"
 #include "utils/fmgroids.h"
 
-#define IS_DML_QUERY(q) (q->commandType != CMD_SELECT \
+#define IS_DML_OR_CTAS(q) (q->commandType != CMD_SELECT \
 						 || q->intoPolicy != NULL \
 						 || q->parentStmtType == PARENTSTMTTYPE_CTAS)
 
@@ -65,7 +65,7 @@ normalize_query(Query *query)
 	 * queries like "SELECT function()", which would be executed on the QD
 	 * anyway.
 	 */
-	if (IS_DML_QUERY(res) || res->parentStmtType != PARENTSTMTTYPE_NONE)
+	if (IS_DML_OR_CTAS(res) || res->parentStmtType != PARENTSTMTTYPE_NONE)
 	{
 		if (safe_to_replace_sirvf_tle(res))
 		{
@@ -82,8 +82,8 @@ normalize_query(Query *query)
 	}
 
 	/*
-	* Find sirv functions in the range table entries and replace them
-	*/
+	 * Find sirv functions in the range table entries and replace them
+	 */
 	if (safe_to_replace_sirvf_rte(res))
 	{
 		ListCell   *lc;
@@ -98,7 +98,7 @@ normalize_query(Query *query)
 		{
 			RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
 
-			if (IS_DML_QUERY(res) || IsReplicatedTable(rte->relid))
+			if (IS_DML_OR_CTAS(res))
 			{
 				replace_sirvf_rte(res, rte);
 			}		 
@@ -470,6 +470,12 @@ replace_sirvf_target_list_mutator(Node *node, List *rtable)
 	if (IsA(node, TargetEntry))
 	{
 		TargetEntry *te = (TargetEntry *) node;
+
+		if (!IsA(te->expr, Var))
+		{
+			return node;
+		}
+
 		Var		   *var = (Var *) te->expr;
 
 		if (te->resjunk || var->varattno != 0)
@@ -477,7 +483,7 @@ replace_sirvf_target_list_mutator(Node *node, List *rtable)
 			return node;
 		}
 
-		/**
+		/*
 		 * For composite type, update the target list according to the
 		 * field selectors in subquery
 		 */
