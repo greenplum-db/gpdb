@@ -19,8 +19,6 @@ When this parameter is enabled, these changes occur:
 -   FIPS mode is initialized in the OpenSSL library
 -   The functions `digest()` and `hmac()` allow only the SHA encryption algorithm \(MD5 is not allowed\)
 -   The functions for the crypt and gen\_salt algorithms are disabled
--   PGP encryption and decryption functions support only AES and 3DES encryption algorithms \(other algorithms such as blowfish are not allowed\)
--   RAW encryption and decryption functions support only AES and 3DES \(other algorithms such as blowfish are not allowed\)
 
 **To enable `pgcrypto.fips`**
 
