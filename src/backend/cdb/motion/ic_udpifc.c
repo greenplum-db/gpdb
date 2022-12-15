@@ -1190,7 +1190,7 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 	{
 		Assert(interconnect_address && strlen(interconnect_address) > 0);
 		hints.ai_flags |= AI_NUMERICHOST;
-		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG2, LOG,
 				  (errmsg("getaddrinfo called with unicast address: %s",
 						  interconnect_address)));
 	}
@@ -1198,7 +1198,7 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 	{
 		Assert(interconnect_address == NULL);
 		hints.ai_flags |= AI_PASSIVE;
-		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG2, LOG,
 				  (errmsg("getaddrinfo called with wildcard address")));
 	}
 
@@ -1234,13 +1234,13 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 			continue;
 #endif
 
-		ereportif(++tries > 1 && gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		ereportif(++tries > 1 && gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG2, LOG,
 				  errmsg("trying another address for UDP interconnect socket"));
 
 		ic_socket = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
 		if (ic_socket == PGINVALID_SOCKET)
 		{
-			ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+			ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG2, LOG,
 					(errcode_for_socket_access(),
 						errmsg("could not create UDP interconnect socket: %m")));
 			continue;
@@ -1252,7 +1252,7 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 		 */
 		if (bind(ic_socket, addr->ai_addr, addr->ai_addrlen) < 0)
 		{
-			ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+			ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG2, LOG,
 					(errcode_for_socket_access(),
 						errmsg("could not bind UDP interconnect socket: %m")));
 			closesocket(ic_socket);
@@ -1263,7 +1263,7 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 		/* Call getsockname() to eventually obtain the assigned ephemeral port */
 		if (getsockname(ic_socket, (struct sockaddr *) &listenerAddr, &listenerAddrlen) < 0)
 		{
-			ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+			ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG2, LOG,
 					(errcode_for_socket_access(),
 						errmsg("could not get address of socket for UDP interconnect: %m")));
 			closesocket(ic_socket);
@@ -2132,7 +2132,7 @@ setUDPSocketBufferSize(int ic_socket, int buffer_type)
 	option_len = sizeof(curr_size);
 	while (setsockopt(ic_socket, SOL_SOCKET, buffer_type, (const char *) &curr_size, option_len) < 0)
 	{
-		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG2, LOG,
 				  (errmsg("UDP-IC: setsockopt %s failed to set buffer size = %d bytes: %m",
 						  buffer_type == SO_SNDBUF ? "send": "receive",
 						  curr_size)));
@@ -2141,7 +2141,7 @@ setUDPSocketBufferSize(int ic_socket, int buffer_type)
 			return -1;
 	}
 
-	ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+	ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG2, LOG,
 			  (errmsg("UDP-IC: socket %s current buffer size = %d bytes",
 					  buffer_type == SO_SNDBUF ? "send": "receive",
 					  curr_size)));
@@ -5976,7 +5976,7 @@ handleDataPacket(MotionConn *conn, icpkthdr *pkt, struct sockaddr_storage *peer,
 
 	if (conn->stopRequested && conn->stillActive)
 	{
-		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG && DEBUG5 >= log_min_messages)
+		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG3)
 			write_log("rx_thread got packet on active connection marked stopRequested. "
 					  "(flags 0x%x) node %d route %d pkt seq %d conn seq %d",
 					  pkt->flags, pkt->motNodeId, conn->route, pkt->seq, conn->conn_info.seq);

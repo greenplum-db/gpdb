@@ -343,7 +343,7 @@ ic_proxy_obuf_push(ICProxyOBuf *obuf,
 		/* TODO: should we flush if no data in the packet? */
 		if (obuf->len == obuf->header_size)
 		{
-			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 				   "ic-proxy: no data to flush");
 		}
 		else

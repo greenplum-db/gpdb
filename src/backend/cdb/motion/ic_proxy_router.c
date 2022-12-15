@@ -104,7 +104,7 @@ ic_proxy_router_loopback_on_check(uv_check_t *handle)
 		ic_proxy_key_from_p2c_pkt(&key, delay->pkt);
 		client = ic_proxy_client_blessed_lookup(handle->loop, &key);
 
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG3, LOG,
 			   "ic-proxy: router: looped back %s to %s",
 					 ic_proxy_pkt_to_str(delay->pkt),
 					 ic_proxy_client_get_name(client));
@@ -132,7 +132,7 @@ ic_proxy_router_loopback_push(ICProxyPkt *pkt,
 {
 	ICProxyDelay *delay;
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG3, LOG,
 		   "ic-proxy: router: looping back %s",
 				 ic_proxy_pkt_to_str(pkt));
 
@@ -223,7 +223,7 @@ ic_proxy_router_route(uv_loop_t *loop, ICProxyPkt *pkt,
 		ic_proxy_key_from_p2c_pkt(&key, pkt);
 		client = ic_proxy_client_blessed_lookup(loop, &key);
 
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG3, LOG,
 			   "ic-proxy: router: routing %s to %s",
 					 ic_proxy_pkt_to_str(pkt),
 					 ic_proxy_client_get_name(client));
@@ -237,7 +237,7 @@ ic_proxy_router_route(uv_loop_t *loop, ICProxyPkt *pkt,
 		peer = ic_proxy_peer_blessed_lookup(loop,
 											pkt->dstContentId, pkt->dstDbid);
 
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG3, LOG,
 			   "ic-proxy: router: routing %s to %s",
 					 ic_proxy_pkt_to_str(pkt), peer->name);
 
@@ -256,13 +256,13 @@ ic_proxy_router_on_write(uv_write_t *req, int status)
 
 	if (status < 0)
 	{
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG3, LOG,
 			   "ic-proxy: router: fail to send %s: %s",
 					 ic_proxy_pkt_to_str(pkt), uv_strerror(status));
 	}
 	else
 	{
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG3, LOG,
 			   "ic-proxy: router: sent %s",
 					 ic_proxy_pkt_to_str(pkt));
 	}
@@ -299,7 +299,7 @@ ic_proxy_router_write(uv_stream_t *stream, ICProxyPkt *pkt, int32 offset,
 	ICProxyWriteReq *wreq;
 	uv_buf_t	wbuf;
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG3, LOG,
 		   "ic-proxy: router: sending %s", ic_proxy_pkt_to_str(pkt));
 
 	wreq = ic_proxy_new(ICProxyWriteReq);

@@ -531,6 +531,8 @@ static const struct config_enum_entry gp_log_verbosity[] = {
 	{"off", GPVARS_VERBOSITY_OFF},
 	{"verbose", GPVARS_VERBOSITY_VERBOSE},
 	{"debug", GPVARS_VERBOSITY_DEBUG},
+	{"debug2", GPVARS_VERBOSITY_DEBUG2},
+	{"debug3", GPVARS_VERBOSITY_DEBUG3},
 	{NULL, 0}
 };
 
@@ -4693,7 +4695,7 @@ struct config_enum ConfigureNamesEnum_gp[] =
 	{
 		{"gp_log_interconnect", PGC_USERSET, LOGGING_WHAT,
 			gettext_noop("Sets the verbosity of logged messages pertaining to connections between worker processes."),
-			gettext_noop("Valid values are \"off\", \"terse\", \"verbose\" and \"debug\"."),
+			gettext_noop("Valid values are \"off\", \"terse\", \"verbose\" , \"debug\" , \"debug2\" and \"debug3\"."),
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_log_interconnect,

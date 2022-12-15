@@ -293,7 +293,7 @@ ic_proxy_client_register(ICProxyClient *client)
 		}
 
 		/* it's a placeholder, this happens if the pkts arrived before me */
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 			   "ic-proxy: %s: replace my placeholder %s",
 					 ic_proxy_client_get_name(client),
 					 ic_proxy_client_get_name(placeholder));
@@ -304,7 +304,7 @@ ic_proxy_client_register(ICProxyClient *client)
 		 * it really happens, don't panic, nothing serious.
 		 */
 		if (placeholder->pkts == NIL)
-			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 				   "ic-proxy: %s: no cached pkts in the placeholder %s",
 						 ic_proxy_client_get_name(client),
 						 ic_proxy_client_get_name(placeholder));
@@ -324,7 +324,7 @@ ic_proxy_client_register(ICProxyClient *client)
 			 * itself, so free it directly.
 			 */
 			ic_proxy_free(placeholder);
-			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG3, LOG,
 				   "%s: freed my placeholder",
 						 ic_proxy_client_get_name(client));
 		}
@@ -379,7 +379,7 @@ ic_proxy_client_unregister(ICProxyClient *client)
 
 		if (client->pkts)
 		{
-			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 				   "%s: transfer %d unhandled pkts to my successor",
 						 ic_proxy_client_get_name(client),
 						 list_length(client->pkts));
@@ -406,7 +406,7 @@ ic_proxy_client_unregister(ICProxyClient *client)
 	{
 		ICProxyClient *placeholder;
 
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 			   "%s: transfer %d unhandled pkts to my placeholder",
 					 ic_proxy_client_get_name(client),
 					 list_length(client->pkts));
@@ -449,7 +449,7 @@ ic_proxy_client_blessed_lookup(uv_loop_t *loop, const ICProxyKey *key)
 		client->key = *key;
 		ic_proxy_client_register(client);
 
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 			   "ic-proxy: %s: registered as a placeholder",
 					 ic_proxy_client_get_name(client));
 	}
@@ -480,7 +480,7 @@ ic_proxy_client_on_c2p_data_pkt(void *opaque, const void *data, uint16 size)
 {
 	ICProxyClient *client = opaque;
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG3, LOG,
 		   "ic-proxy: %s: received B2C PKT [%d bytes] from the backend",
 				 ic_proxy_client_get_name(client), size);
 
@@ -564,7 +564,7 @@ ic_proxy_client_on_c2p_data(uv_stream_t *stream,
 					 "ic-proxy: %s: paused already, but still received DATA[%zd bytes] from the backend, state is 0x%08x",
 					 ic_proxy_client_get_name(client), nread, client->state);
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG3, LOG,
 		   "%s: received DATA[%zd bytes] from the backend",
 				 ic_proxy_client_get_name(client), nread);
 
@@ -590,7 +590,7 @@ ic_proxy_client_maybe_start_read_data(ICProxyClient *client)
 		 */
 		return;
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "ic-proxy: %s: start receiving DATA",
 				 ic_proxy_client_get_name(client));
 
@@ -675,7 +675,7 @@ ic_proxy_client_on_hello_pkt(void *opaque, const void *data, uint16 size)
 		return;
 	}
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "%s: received %s from the backend",
 				 ic_proxy_client_get_name(client), ic_proxy_pkt_to_str(pkt));
 
@@ -866,7 +866,7 @@ ic_proxy_client_new(uv_loop_t *loop, bool placeholder)
 static void
 ic_proxy_client_free(ICProxyClient *client)
 {
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG3, LOG,
 		   "ic-proxy: %s: freeing", ic_proxy_client_get_name(client));
 
 	/*
@@ -1134,7 +1134,7 @@ ic_proxy_client_on_p2c_message(ICProxyClient *client, const ICProxyPkt *pkt,
 {
 	if (ic_proxy_pkt_is(pkt, IC_PROXY_MESSAGE_BYE))
 	{
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 			   "ic-proxy: %s: received %s",
 					 ic_proxy_client_get_name(client),
 					 ic_proxy_pkt_to_str(pkt));
@@ -1145,7 +1145,7 @@ ic_proxy_client_on_p2c_message(ICProxyClient *client, const ICProxyPkt *pkt,
 	}
 	else if (ic_proxy_pkt_is(pkt, IC_PROXY_MESSAGE_DATA_ACK))
 	{
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 			   "ic-proxy: %s: received %s, with %d existing unack packets",
 					 ic_proxy_client_get_name(client),
 					 ic_proxy_pkt_to_str(pkt),
@@ -1199,7 +1199,7 @@ ic_proxy_client_on_p2c_data(ICProxyClient *client, ICProxyPkt *pkt,
 	{
 		if (ic_proxy_pkt_is_out_of_date(pkt, &client->key))
 		{
-			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 				   "%s: drop out-of-date %s",
 						 ic_proxy_client_get_name(client),
 						 ic_proxy_pkt_to_str(pkt));
@@ -1210,7 +1210,7 @@ ic_proxy_client_on_p2c_data(ICProxyClient *client, ICProxyPkt *pkt,
 		{
 			Assert(ic_proxy_pkt_is_in_the_future(pkt, &client->key));
 
-			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 				   "ic-proxy: %s: future %s",
 						 ic_proxy_client_get_name(client),
 						 ic_proxy_pkt_to_str(pkt));
@@ -1261,7 +1261,7 @@ ic_proxy_client_cache_p2c_pkt(ICProxyClient *client, ICProxyPkt *pkt)
 
 	client->pkts = lappend(client->pkts, pkt);
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "ic-proxy: %s: cached a %s for future use, %d in the list",
 				 ic_proxy_client_get_name(client), ic_proxy_pkt_to_str(pkt),
 				 list_length(client->pkts));
@@ -1281,7 +1281,7 @@ ic_proxy_client_cache_p2c_pkts(ICProxyClient *client, List *pkts)
 
 	client->pkts = list_concat(client->pkts, pkts);
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 				 "ic-proxy: %s: cached %d pkts for future use, %d in the list",
 				 ic_proxy_client_get_name(client),
 				 list_length(pkts), list_length(client->pkts));
@@ -1334,7 +1334,7 @@ ic_proxy_client_handle_p2c_cache(ICProxyClient *client)
 	if (client->pkts == NIL)
 		return;
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "ic-proxy: %s: trying to consume the %d cached pkts",
 				 ic_proxy_client_get_name(client), list_length(client->pkts));
 
@@ -1359,7 +1359,7 @@ ic_proxy_client_handle_p2c_cache(ICProxyClient *client)
 		ic_proxy_client_on_p2c_data(client, pkt, NULL, NULL);
 	}
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "ic-proxy: %s: consumed %d cached pkts",
 				 ic_proxy_client_get_name(client), count);
 }
@@ -1370,7 +1370,7 @@ ic_proxy_client_handle_p2c_cache(ICProxyClient *client)
 static void
 ic_proxy_client_maybe_send_ack_message(ICProxyClient *client)
 {
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "ic-proxy: %s: %d unconsumed packets to the backend",
 				 ic_proxy_client_get_name(client), client->unconsumed);
 
@@ -1410,7 +1410,7 @@ ic_proxy_client_maybe_pause(ICProxyClient *client)
 		client->state |= IC_PROXY_CLIENT_STATE_PAUSED;
 		uv_read_stop((uv_stream_t *) &client->pipe);
 
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 			   "ic-proxy: %s: paused", ic_proxy_client_get_name(client));
 	}
 }
@@ -1428,7 +1428,7 @@ ic_proxy_client_maybe_resume(ICProxyClient *client)
 
 		client->state &= ~IC_PROXY_CLIENT_STATE_PAUSED;
 
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 			   "ic-proxy: %s: resumed", ic_proxy_client_get_name(client));
 	}
 }

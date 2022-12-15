@@ -470,10 +470,9 @@ show_gp_role(void)
  * "OFF"	 -> only errors are logged
  * "TERSE"	 -> terse logging of routine events, e.g. creation of new qExecs
  * "VERBOSE" -> gang allocation per command is logged
- * "DEBUG"	 -> additional events are logged at severity level DEBUG1 to DEBUG5
+ * "DEBUG"	 -> additional events are logged
  *
- * The messages that are enabled by the TERSE and VERBOSE settings are
- * written with a severity level of LOG.
+ * All messages enabled by these settings have severity level of LOG.
  */
 int gp_log_gang;
 
@@ -484,10 +483,9 @@ int gp_log_gang;
  * "OFF"	 -> only errors are logged
  * "TERSE"	 -> terse logging of routine events
  * "VERBOSE" -> gang allocation per command is logged
- * "DEBUG"	 -> additional events are logged at severity level DEBUG1 to DEBUG5
+ * "DEBUG"	 -> additional events are logged
  *
- * The messages that are enabled by the TERSE and VERBOSE settings are
- * written with a severity level of LOG.
+ * All messages enabled by these settings have severity level of LOG.
  */
 int gp_log_fts;
 
@@ -498,10 +496,11 @@ int gp_log_fts;
  * "OFF"	 -> connection errors are logged
  * "TERSE"	 -> terse logging of routine events, e.g. successful connections
  * "VERBOSE" -> most interconnect setup events are logged
- * "DEBUG"	 -> additional events are logged at severity level DEBUG1 to DEBUG5.
+ * "DEBUG"	 -> additional events are logged
+ * "DEBUG2"   -> more additional events are logged
+ * "DEBUG3"   -> full additional events are logged
  *
- * The messages that are enabled by the TERSE and VERBOSE settings are
- * written with a severity level of LOG.
+ * All messages enabled by these settings have severity level of LOG.
  */
 int gp_log_interconnect;
 

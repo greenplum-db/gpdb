@@ -436,6 +436,8 @@ typedef enum GpVars_Verbosity
 	GPVARS_VERBOSITY_TERSE,
 	GPVARS_VERBOSITY_VERBOSE,
     GPVARS_VERBOSITY_DEBUG,
+	GPVARS_VERBOSITY_DEBUG2,
+	GPVARS_VERBOSITY_DEBUG3
 } GpVars_Verbosity;
 
 /* Enable single-slice single-row inserts. */
@@ -447,46 +449,8 @@ extern bool gp_enable_direct_dispatch;
 /* Name of pseudo-function to access any table as if it was randomly distributed. */
 #define GP_DIST_RANDOM_NAME "GP_DIST_RANDOM"
 
-/*
- * gp_log_gang
- *
- * Should creation, reallocation and cleanup of gangs of QE processes be logged?
- * "OFF"     -> only errors are logged
- * "TERSE"   -> terse logging of routine events, e.g. creation of new qExecs
- * "VERBOSE" -> gang allocation per command is logged
- * "DEBUG"   -> additional events are logged at severity level DEBUG1 to DEBUG5
- *
- * The messages that are enabled by the TERSE and VERBOSE settings are
- * written with a severity level of LOG.
- */
 extern int gp_log_gang;
-
-/*
- * gp_log_fts
- *
- * What kind of messages should be logged by the fault-prober
- * "OFF"     -> only errors are logged
- * "TERSE"   -> terse logging of routine events
- * "VERBOSE" -> more messages
- * "DEBUG"   -> additional events are logged at severity level DEBUG1 to DEBUG5
- *
- * The messages that are enabled by the TERSE and VERBOSE settings are
- * written with a severity level of LOG.
- */
 extern int gp_log_fts;
-
-/*
- * gp_log_interconnect
- *
- * Should connections between internal processes be logged?  (qDisp/qExec/etc)
- * "OFF"     -> connection errors are logged
- * "TERSE"   -> terse logging of routine events, e.g. successful connections
- * "VERBOSE" -> most interconnect setup events are logged
- * "DEBUG"   -> additional events are logged at severity level DEBUG1 to DEBUG5.
- *
- * The messages that are enabled by the TERSE and VERBOSE settings are
- * written with a severity level of LOG.
- */
 extern int gp_log_interconnect;
 
 /* --------------------------------------------------------------------------------------------------

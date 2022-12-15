@@ -316,7 +316,7 @@ ic_proxy_server_client_listener_init(uv_loop_t *loop)
 	ic_proxy_build_server_sock_path(path, sizeof(path));
 
 	/* FIXME: do not unlink here */
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG3, LOG,
 		   "ic-proxy: unlink(%s) ...", path);
 	unlink(path);
 
@@ -591,7 +591,7 @@ ic_proxy_server_main(void)
 
 	ic_proxy_build_server_sock_path(path, sizeof(path));
 #if 0
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG5, LOG, "unlink(%s) ...", path);
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG3, LOG, "unlink(%s) ...", path);
 	unlink(path);
 #endif
 

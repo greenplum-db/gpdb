@@ -161,7 +161,7 @@ setupTCPListeningSocket(int backlog, int *listenerSocketFd, uint16 *listenerPort
 	{
 		Assert(interconnect_address && strlen(interconnect_address) > 0);
 		hints.ai_flags |= AI_NUMERICHOST;
-		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG2, LOG,
 				  (errmsg("getaddrinfo called with unicast address: %s",
 						  interconnect_address)));
 	}
@@ -169,7 +169,7 @@ setupTCPListeningSocket(int backlog, int *listenerSocketFd, uint16 *listenerPort
 	{
 		Assert(interconnect_address == NULL);
 		hints.ai_flags |= AI_PASSIVE;
-		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG2, LOG,
 				  (errmsg("getaddrinfo called with wildcard address")));
 	}
 

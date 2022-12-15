@@ -331,7 +331,7 @@ void FtsLoop()
 		}
 		else
 		{
-			elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
+			elogif(gp_log_fts >= GPVARS_VERBOSITY_DEBUG, LOG,
 				   "FTS: starting scan with %d segments and %d contents",
 				   cdbs->total_segment_dbs,
 				   cdbs->total_segments);

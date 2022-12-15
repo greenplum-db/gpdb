@@ -112,7 +112,7 @@ ic_proxy_pkt_cache_alloc(size_t *pkt_size)
 	memset(cpkt, 0, ic_proxy_pkt_cache.pkt_size);
 #endif
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG3, LOG,
 		   "ic-proxy: pkt-cache: allocated, %d free, %d total",
 				 ic_proxy_pkt_cache.n_free, ic_proxy_pkt_cache.n_total);
 	return cpkt;
@@ -159,7 +159,7 @@ ic_proxy_pkt_cache_free(void *pkt)
 		ic_proxy_pkt_cache.freelist = cpkt;
 		ic_proxy_pkt_cache.n_free++;
 
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG3, LOG,
 			   "ic-proxy: pkt-cache: recycled, %d free, %d total",
 					 ic_proxy_pkt_cache.n_free, ic_proxy_pkt_cache.n_total);
 	}

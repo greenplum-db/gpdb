@@ -298,7 +298,7 @@ ftsConnect(fts_context *context)
 	for (i = 0; i < context->num_pairs; i++)
 	{
 		fts_segment_info *ftsInfo = &context->perSegInfos[i];
-		elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
+		elogif(gp_log_fts >= GPVARS_VERBOSITY_DEBUG, LOG,
 			   "FTS: ftsConnect (content=%d, dbid=%d) state=%d, "
 			   "retry_count=%d, conn->status=%d",
 			   ftsInfo->primary_cdbinfo->config->segindex,
@@ -336,7 +336,7 @@ ftsConnect(fts_context *context)
 							 * completed.  Next step should now be able to send
 							 * the appropriate FTS message.
 							 */
-							elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
+							elogif(gp_log_fts >= GPVARS_VERBOSITY_DEBUG, LOG,
 								   "FTS: established libpq connection "
 								   "(content=%d, dbid=%d) state=%d, "
 								   "retry_count=%d, conn->status=%d",
@@ -461,7 +461,7 @@ ftsPoll(fts_context *context)
 	{
 		if (errno == EINTR)
 		{
-			elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
+			elogif(gp_log_fts >= GPVARS_VERBOSITY_DEBUG, LOG,
 				   "FTS: ftsPoll() interrupted, nfds %d", nfds);
 		}
 		else
@@ -469,11 +469,11 @@ ftsPoll(fts_context *context)
 	}
 	else if (nready == 0)
 	{
-		elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
+		elogif(gp_log_fts >= GPVARS_VERBOSITY_DEBUG, LOG,
 			   "FTS: ftsPoll() timed out, nfds %d", nfds);
 	}
 
-	elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
+	elogif(gp_log_fts >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "FTS: ftsPoll() found %d out of %d sockets ready",
 		   nready, nfds);
 
@@ -543,7 +543,7 @@ ftsSend(fts_context *context)
 	for (i = 0; i < context->num_pairs; i++)
 	{
 		ftsInfo = &context->perSegInfos[i];
-		elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
+		elogif(gp_log_fts >= GPVARS_VERBOSITY_DEBUG, LOG,
 			   "FTS: ftsSend (content=%d, dbid=%d) state=%d, "
 			   "retry_count=%d, conn->asyncStatus=%d",
 			   ftsInfo->primary_cdbinfo->config->segindex,
@@ -661,7 +661,7 @@ ftsReceive(fts_context *context)
 	for (i = 0; i < context->num_pairs; i++)
 	{
 		ftsInfo = &context->perSegInfos[i];
-		elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
+		elogif(gp_log_fts >= GPVARS_VERBOSITY_DEBUG, LOG,
 			   "FTS: ftsReceive (content=%d, dbid=%d) state=%d, "
 			   "retry_count=%d, conn->asyncStatus=%d",
 			   ftsInfo->primary_cdbinfo->config->segindex,
@@ -800,7 +800,7 @@ retryForFtsFailed(fts_segment_info *ftsInfo, pg_time_t now)
 	else
 		ftsInfo->state = FTS_PROMOTE_RETRY_WAIT;
 	ftsInfo->retryStartTime = now;
-	elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
+	elogif(gp_log_fts >= GPVARS_VERBOSITY_DEBUG, LOG,
 		"FTS initialized retry start time to now "
 		"(content=%d, dbid=%d) state=%d",
 		ftsInfo->primary_cdbinfo->config->segindex,
