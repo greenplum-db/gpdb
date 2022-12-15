@@ -432,3 +432,16 @@ with recursive the_cte_here(n) as (
   select n+1 from the_cte_here join t_rand_test_rcte
 	              on t_rand_test_rcte.c = the_cte_here.n)
 select * from the_cte_here;
+
+-- WTIH RECURSIVE and subquery
+with recursive cte (n) as
+(
+  select 1
+  union all
+  select * from
+  (
+    with x(n) as (select n from cte)
+    select n + 1 from x where n < 10
+  ) q
+)
+select * from cte;
