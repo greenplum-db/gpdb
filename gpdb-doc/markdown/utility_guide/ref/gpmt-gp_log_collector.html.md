@@ -82,7 +82,7 @@ Also, the `pg_log` file is collected from the coordinator and segment hosts.
 - The output of the `gppkg -q --all` command
 
 -with-gpss 
-:  Collect log files related to Greenplum Streaming Server. If you do not specify a directory with the `-gpsslogdir` option the logs directory gpmt collects logs from the `gpAdminLogs` directory. Log files are of the format `gpss_<date>.log`.
+:  Collect log files related to Greenplum Streaming Server. If you do not specify a directory with the `-gpsslogdir` option, gpmt collects logs from the `gpAdminLogs` directory. Log files are of the format `gpss_<date>.log`.
 
 -with-pxf
 :   Collect all PXF logs along with Greenplum logs.
