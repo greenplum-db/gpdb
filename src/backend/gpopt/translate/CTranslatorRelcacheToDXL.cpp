@@ -2340,6 +2340,11 @@ CTranslatorRelcacheToDXL::RetrieveRelStorageType(Relation rel)
 			{
 				rel_storage_type = IMDRelation::ErelstorageForeign;
 			}
+			else
+			{
+				GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+						   GPOS_WSZ_LIT("Unsupported table AM"));
+			}
 			break;
 		default:
 			GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
