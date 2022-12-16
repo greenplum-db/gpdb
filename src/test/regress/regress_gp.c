@@ -2010,7 +2010,8 @@ test_consume_xids(PG_FUNCTION_ARGS)
 
 	xid = ReadNewTransactionId();
 
-	targetxid = xid + nxids;
+	/* xid is the "next xid" now, so minus one here */
+	targetxid = xid + nxids - 1;
 	while (targetxid < FirstNormalTransactionId)
 		targetxid++;
 
