@@ -35,6 +35,7 @@
 #include "naucrates/md/IMDCast.h"
 #include "naucrates/md/IMDCheckConstraint.h"
 #include "naucrates/md/IMDColStats.h"
+#include "naucrates/md/IMDExtStatsInfo.h"
 #include "naucrates/md/IMDFunction.h"
 #include "naucrates/md/IMDIndex.h"
 #include "naucrates/md/IMDProvider.h"
@@ -610,6 +611,35 @@ CMDAccessor::GetImdObj(IMDId *mdid, IMDCacheObject::Emdtype mdtype)
 
 	return pimdobj;
 }
+
+const IMDExtStats *
+CMDAccessor::RetrieveExtStats(IMDId *mdid)
+{
+	const IMDCacheObject *pmdobj =
+		GetImdObj(mdid, IMDCacheObject::EmdtExtStats);
+	if (IMDCacheObject::EmdtExtStats != pmdobj->MDType())
+	{
+		GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDCacheEntryNotFound,
+				   mdid->GetBuffer());
+	}
+
+	return dynamic_cast<const IMDExtStats *>(pmdobj);
+}
+
+const IMDExtStatsInfo *
+CMDAccessor::RetrieveExtStatsInfo(IMDId *mdid)
+{
+	const IMDCacheObject *pmdobj =
+		GetImdObj(mdid, IMDCacheObject::EmdtExtStatsInfo);
+	if (IMDCacheObject::EmdtExtStatsInfo != pmdobj->MDType())
+	{
+		GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDCacheEntryNotFound,
+				   mdid->GetBuffer());
+	}
+
+	return dynamic_cast<const IMDExtStatsInfo *>(pmdobj);
+}
+
 
 //---------------------------------------------------------------------------
 //	@function:

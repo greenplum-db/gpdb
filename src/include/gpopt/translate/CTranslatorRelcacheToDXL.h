@@ -36,6 +36,8 @@ extern "C" {
 #include "naucrates/md/CMDPartConstraintGPDB.h"
 #include "naucrates/md/CMDRelationGPDB.h"
 #include "naucrates/md/CMDScalarOpGPDB.h"
+#include "naucrates/md/IMDExtStats.h"
+#include "naucrates/md/IMDExtStatsInfo.h"
 #include "naucrates/md/IMDFunction.h"
 #include "naucrates/md/IMDId.h"
 #include "naucrates/md/IMDIndex.h"
@@ -320,6 +322,10 @@ public:
 	static IMDCacheObject *RetrieveObject(CMemoryPool *mp,
 										  CMDAccessor *md_accessor, IMDId *mdid,
 										  IMDCacheObject::Emdtype mdtype);
+
+	static IMDCacheObject *RetrieveExtStats(CMemoryPool *mp, IMDId *mdid);
+
+	static IMDCacheObject *RetrieveExtStatsInfo(CMemoryPool *mp, IMDId *mdid);
 
 	// retrieve a relation from the relcache
 	static IMDRelation *RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
