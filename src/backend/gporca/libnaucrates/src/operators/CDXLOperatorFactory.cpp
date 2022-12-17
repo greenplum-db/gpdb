@@ -2288,6 +2288,8 @@ CDXLOperatorFactory::MakeMdIdFromStr(CDXLMemoryManager *dxl_memory_manager,
 		case IMDId::EmdidRel:
 		case IMDId::EmdidInd:
 		case IMDId::EmdidCheckConstraint:
+		case IMDId::EmdidExtStatsInfo:
+		case IMDId::EmdidExtStats:
 			mdid = GetGPDBMdId(dxl_memory_manager, remaining_tokens,
 							   target_attr, target_elem, typ);
 			break;
@@ -2930,6 +2932,18 @@ CDXLOperatorFactory::ExtractConvertValuesToArray(
 
 	return ExtractIntsToUlongArray(dxl_memory_manager, xml_val, target_attr,
 								   target_elem);
+}
+
+IntPtrArray *
+CDXLOperatorFactory::ExtractConvertValuesToIntArray(
+	CDXLMemoryManager *dxl_memory_manager, const Attributes &attrs,
+	Edxltoken target_attr, Edxltoken target_elem)
+{
+	const XMLCh *xml_val =
+		CDXLOperatorFactory::ExtractAttrValue(attrs, target_attr, target_elem);
+
+	return ExtractIntsToIntArray(dxl_memory_manager, xml_val, target_attr,
+								 target_elem);
 }
 
 //---------------------------------------------------------------------------

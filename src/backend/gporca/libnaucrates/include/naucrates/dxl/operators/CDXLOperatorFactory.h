@@ -523,6 +523,10 @@ public:
 		CDXLMemoryManager *dxl_memory_manager, const Attributes &attr,
 		Edxltoken target_attr, Edxltoken target_elem);
 
+	static IntPtrArray *ExtractConvertValuesToIntArray(
+		CDXLMemoryManager *dxl_memory_manager, const Attributes &attr,
+		Edxltoken target_attr, Edxltoken target_elem);
+
 	// parse a comma-separated list of integers numbers into a dynamic array
 	// will raise an exception if list is not well-formed
 	template <typename T, void (*CleanupFn)(T *),

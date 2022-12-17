@@ -162,6 +162,31 @@ private:
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 		CParseHandlerBase *parse_handler_root);
 
+	// construct a relation extended stats metadata parse handler
+	static CParseHandlerBase *CreateRelationExtStatsParseHandler(
+		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+		CParseHandlerBase *parse_handler_root);
+
+	// construct an extended stats parse handler
+	static CParseHandlerBase *CreateExtStatsParseHandler(
+		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+		CParseHandlerBase *parse_handler_root);
+
+	// construct an extended stats metadata parse handler
+	static CParseHandlerBase *CreateExtStatsInfoParseHandler(
+		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+		CParseHandlerBase *parse_handler_root);
+
+	// construct an extended stats dependencies parse handler
+	static CParseHandlerBase *CreateExtStatsDependenciesParseHandler(
+		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+		CParseHandlerBase *parse_handler_root);
+
+	// construct an extended stats dependency parse handler
+	static CParseHandlerBase *CreateExtStatsDependencyParseHandler(
+		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+		CParseHandlerBase *parse_handler_root);
+
 	// construct a column stats parse handler
 	static CParseHandlerBase *CreateColStatsParseHandler(
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
