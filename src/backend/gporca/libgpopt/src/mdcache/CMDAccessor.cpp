@@ -21,6 +21,7 @@
 
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColRefTable.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/exception.h"
 #include "gpopt/mdcache/CMDAccessorUtils.h"
 #include "naucrates/dxl/CDXLUtils.h"
@@ -1087,6 +1088,7 @@ CMDAccessor::Pstats(CMemoryPool *mp, IMDId *rel_mdid, CColRefSet *pcrsHist,
 	UlongToHistogramMap *col_histogram_mapping =
 		GPOS_NEW(mp) UlongToHistogramMap(mp);
 	UlongToDoubleMap *colid_width_mapping = GPOS_NEW(mp) UlongToDoubleMap(mp);
+	UlongToIntMap *colid_to_attno_mapping = GPOS_NEW(m_mp) UlongToIntMap(m_mp);
 
 	CColRefSetIter crsiHist(*pcrsHist);
 	while (crsiHist.Advance())
@@ -1104,7 +1106,18 @@ CMDAccessor::Pstats(CMemoryPool *mp, IMDId *rel_mdid, CColRefSet *pcrsHist,
 		RecordColumnStats(mp, rel_mdid, colid, ulPos, pcrtable->IsSystemCol(),
 						  fEmptyTable, col_histogram_mapping,
 						  colid_width_mapping, stats_config);
+		colid_to_attno_mapping->Insert(GPOS_NEW(m_mp) ULONG(colid),
+									   GPOS_NEW(m_mp) INT(attno));
 	}
+
+	CMDIdGPDB *pmdid = GPOS_NEW(mp) CMDIdGPDB(
+		IMDId::EmdidExtStatsInfo, CMDIdGPDB::CastMdid(rel_mdid)->Oid());
+
+	const COptCtxt *poctxt = COptCtxt::PoctxtFromTLS();
+	CMDAccessor *md_accessor = poctxt->Pmda();
+	const IMDExtStatsInfo *extstats_info =
+		md_accessor->RetrieveExtStatsInfo(pmdid);
+	pmdid->Release();
 
 	// extract column widths
 	CColRefSetIter crsiWidth(*pcrsWidth);
@@ -1130,7 +1143,8 @@ CMDAccessor::Pstats(CMemoryPool *mp, IMDId *rel_mdid, CColRefSet *pcrsHist,
 	return GPOS_NEW(mp) CStatistics(
 		mp, col_histogram_mapping, colid_width_mapping, rows, fEmptyTable,
 		pmdRelStats->RelPages(), pmdRelStats->RelAllVisible(),
-		1.0 /* default rebinds */, 0 /* default predicates*/);
+		1.0 /* default rebinds */, 0 /* default predicates*/, extstats_info,
+		colid_to_attno_mapping);
 }
 
 
