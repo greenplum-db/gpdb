@@ -9874,6 +9874,13 @@ CreateRestartPoint(int flags)
  * This is calculated by subtracting wal_keep_segments from the given xlog
  * location, recptr and by making sure that that result is below the
  * requirement of replication slots.
+ *
+ * Greenplum specific parameters:
+ * PriorRedoPtr: the previous checkpoint redo location, used to track the last
+ * checkpoint before the replication slot min lsn.
+ * keep_old_wals: if replication slots are used, keep_old_wals may be set true,
+ * in which case caller (specifically CreateCheckPoint()) should consider not
+ * removing any wals at all.
  */
 static void
 KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo, XLogRecPtr PriorRedoPtr, bool* keep_old_wals)
@@ -9881,18 +9888,18 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo, XLogRecPtr PriorRedoPtr, bool
 	XLogSegNo	segno;
 	XLogRecPtr	keep;
 	bool setvalue = false;
+	/* Last checkpoint before replication min LSN, GPDB cut-off point to keep. */
 	static XLogRecPtr CkptRedoBeforeMinLSN = InvalidXLogRecPtr;
+	/*
+	 * Smallest checkpoint since last time CkptRedoBeforeMinLSN was set. In case
+	 * replication slots advances slower than checkpoints, this makes sure
+	 * CkptRedoBeforeMinLSN to be set at some point and moves forward
+	 * periodically.
+	 */
+	static XLogRecPtr CkptRedoAfterPriorMinLSN = InvalidXLogRecPtr;
 
 	XLByteToSeg(recptr, segno, wal_segment_size);
 	keep = XLogGetReplicationSlotMinimumLSN();
-
-	ereport(DEBUG2,
-			(errmsg("Calculating wal files to keep using recptr [%X/%X], PriorRedoPtr [%X/%X], replication slot's MinLSN [%X/%X], CkptRedoBeforeMinLSN [%X/%X], and wal_keep_segment [%u]",
-					(uint32) (recptr >> 32), (uint32) recptr,
-					(uint32) (PriorRedoPtr >> 32), (uint32) PriorRedoPtr,
-					(uint32) (keep >> 32), (uint32) keep,
-					(uint32) (CkptRedoBeforeMinLSN >> 32), (uint32) CkptRedoBeforeMinLSN,
-					wal_keep_segments)));
 
 #ifdef FAULT_INJECTOR
 	/*
@@ -9936,10 +9943,14 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo, XLogRecPtr PriorRedoPtr, bool
 		 * which could be an alternative solution for missing wals in the target
 		 * PGDATA directory. We could cherry-pick this commit and consider
 		 * modifying gprecoverseg to leverage the same to avoid maintaining
-		 * divergence from upstream.
+		 * divergence from upstream. However, this option would only be helpful
+		 * if user has WAL archiving setup.
 		 */
 		if (!XLogRecPtrIsInvalid(PriorRedoPtr))
 		{
+			if (XLogRecPtrIsInvalid(CkptRedoAfterPriorMinLSN))
+				CkptRedoAfterPriorMinLSN = PriorRedoPtr;
+
 			if (PriorRedoPtr < keep)
 			{
 				ereport(DEBUG2,
@@ -9947,8 +9958,21 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo, XLogRecPtr PriorRedoPtr, bool
 								(uint32) (keep >> 32), (uint32) keep,
 								(uint32) (CkptRedoBeforeMinLSN >> 32), (uint32) CkptRedoBeforeMinLSN,
 								(uint32) (PriorRedoPtr >> 32), (uint32) PriorRedoPtr)));
-				keep = PriorRedoPtr;
 				CkptRedoBeforeMinLSN = PriorRedoPtr;
+				/* Advance the smallest checkpoint after CkptRedoBeforeMinLSN */
+				CkptRedoAfterPriorMinLSN = recptr;
+				keep = CkptRedoBeforeMinLSN;
+			}
+			else if (CkptRedoAfterPriorMinLSN < keep)
+			{
+				ereport(DEBUG2,
+						(errmsg("updating keep [%X/%X] to CkptRedoAfterPriorMinLSN [%X/%X]",
+								(uint32) (keep >> 32), (uint32) keep,
+								(uint32) (CkptRedoAfterPriorMinLSN >> 32), (uint32) CkptRedoAfterPriorMinLSN)));
+				CkptRedoBeforeMinLSN = CkptRedoAfterPriorMinLSN;
+				/* Advance the smallest checkpoint after CkptRedoBeforeMinLSN */
+				CkptRedoAfterPriorMinLSN = PriorRedoPtr;
+				keep = CkptRedoBeforeMinLSN;
 			}
 			else if (!XLogRecPtrIsInvalid(CkptRedoBeforeMinLSN))
 			{
