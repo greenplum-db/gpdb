@@ -3257,6 +3257,10 @@ static void handle_post_request(request_t *r, int header_end)
 				}
 			}
 		}
+		if (r->zstd) 
+		{
+			r->in.cflag = data_bytes_in_req;
+		}
 	}
 
 	/*
