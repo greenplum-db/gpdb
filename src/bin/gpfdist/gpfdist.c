@@ -294,8 +294,9 @@ struct request_t
 		int 	dbuftop; 	/* # bytes used in dbuf */
 		int 	dbufmax; 	/* size of dbuf[] */
 
-		char*  	cbuf;        /* data buf for decompressed data, its capacity equals to MAX_FRAME_SIZE. */
-		int 	cbuftop;     /* last index for compressed data */
+		char*  	wbuf;        /* data buf for decompressed data for writing into file,
+					         	its capacity equals to MAX_FRAME_SIZE. */
+		int 	wbuftop;     /* last index for decompressed data */
 		int 	cflag;       /* mark whether there is left data in compress ctx */
 	} in;
 
@@ -3058,8 +3059,8 @@ void check_output_to_file(request_t *r, int wrote)
 	int *buftop;
 	if (r->zstd) 
 	{
-		buf = r->in.cbuf;
-		buftop = &r->in.cbuftop;
+		buf = r->in.wbuf;
+		buftop = &r->in.wbuftop;
 	}
 	else
 	{
@@ -3186,10 +3187,10 @@ static void handle_post_request(request_t *r, int header_end)
 	/* create a buffer to hold the incoming raw data */
 	r->in.dbufmax = opt.m; /* size of max line size */
 	r->in.dbuftop = 0;
-	r->in.cbuftop = 0;
+	r->in.wbuftop = 0;
 	r->in.dbuf = palloc_safe(r, r->pool, r->in.dbufmax, "out of memory when allocating r->in.dbuf: %d bytes", r->in.dbufmax);
 	if(r->zstd)  
-		r->in.cbuf = palloc_safe(r, r->pool, MAX_FRAME_SIZE, "out of memory when allocating r->in.cbuf: %d bytes", MAX_FRAME_SIZE);
+		r->in.wbuf = palloc_safe(r, r->pool, MAX_FRAME_SIZE, "out of memory when allocating r->in.wbuf: %d bytes", MAX_FRAME_SIZE);
 
 	/* if some data come along with the request, copy it first */
 	data_start = strstr(r->in.hbuf, "\r\n\r\n");
@@ -3294,7 +3295,7 @@ static void handle_post_request(request_t *r, int header_end)
 							return;
 						}
 
-						wrote = fstream_write(session->fstream, r->in.cbuf, r->in.cbuftop, 1, r->line_delim_str, r->line_delim_length);
+						wrote = fstream_write(session->fstream, r->in.wbuf, r->in.wbuftop, 1, r->line_delim_str, r->line_delim_length);
 						gdebug(r, "wrote %d bytes to file", wrote);
 						delay_watchdog_timer();
 
@@ -4694,7 +4695,7 @@ static int decompress_zstd(request_t* r, ZSTD_inBuffer* bin, ZSTD_outBuffer* bou
 
 static int decompress_data(request_t* r){
 	ZSTD_inBuffer inbuf = {r->in.dbuf , r->in.dbuftop, 0};
-	ZSTD_outBuffer obuf = {r->in.cbuf + r->in.cbuftop, MAX_FRAME_SIZE - r->in.cbuftop, 0};
+	ZSTD_outBuffer obuf = {r->in.wbuf + r->in.wbuftop, MAX_FRAME_SIZE - r->in.wbuftop, 0};
 	
 	if(!r->zstd_dctx) {
 		gwarning(stderr, "Out of memory when ZSTD_createDCtx");
@@ -4706,7 +4707,7 @@ static int decompress_data(request_t* r){
 		return outSize;
 	}
 
-	r->in.cbuftop += outSize;
+	r->in.wbuftop += outSize;
 	if (inbuf.pos == inbuf.size) 
 	{
 		r->in.cflag = 0;
@@ -4715,7 +4716,7 @@ static int decompress_data(request_t* r){
 	{
 		r->in.cflag = inbuf.pos;
 	}
-	gdebug(NULL, "decompress_zstd finished, input size = %d, output size = %d.", r->in.cbuftop, r->in.dbuftop);
+	gdebug(NULL, "decompress_zstd finished, input size = %d, output size = %d.", r->in.wbuftop, r->in.dbuftop);
 	return outSize;
 }
 /*
