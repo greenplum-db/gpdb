@@ -173,6 +173,12 @@ EXPLAIN (ANALYZE) SELECT * FROM jit_explain_output LIMIT 10;
 -- s/\"Planning Time\": \d+\.\d+/\"Planning Time\": ###/
 -- m/\"Execution Time\": \d+\.\d+/
 -- s/\"Execution Time\": \d+\.\d+/\"Execution Time\": ###/
+-- m/\"Executor Memory\": \d+/
+-- s/\"Executor Memory\": \d+/\"Executor Memory\": ###/
+-- m/\"Average\": \d+/
+-- s/\"Average\": \d+/\"Average\": ###/
+-- m/\"Maximum Memory Used\": \d+/
+-- s/\"Maximum Memory Used\": \d+/\"Maximum Memory Used\": ###/
 -- m/\"slice\": \d+/
 -- s/\"slice\": \d+/"slice": ###/
 -- m/\"functions\": \d+\.\d+/
