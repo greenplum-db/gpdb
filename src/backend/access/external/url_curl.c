@@ -1897,8 +1897,6 @@ gp_proto0_write(URL_CURL_FILE *file, CopyState pstate)
 		buf = file->out.ptr;
 	 	nbytes = file->out.top;
 	}
-	
->>>>>>> add_gpdb7_to_gpfdist_compress
 
 	if (nbytes == 0)
 		return;
