@@ -132,6 +132,7 @@ These parameters control the usage of GPORCA by Greenplum Database. For informat
 - [optimizer_penalize_skew](guc-list.html#optimizer_penalize_skew)
 - [optimizer_print_missing_stats](guc-list.html#optimizer_print_missing_stats)
 - [optimizer_print_optimization_stats](guc-list.html#optimizer_print_optimization_stats)
+- [optimizer_skew_factor](guc-list.html#optimizer_skew_factor)
 - [optimizer_sort_factor](guc-list.html#optimizer_sort_factor)
 - [optimizer_use_gpdb_allocators](guc-list.html#optimizer_use_gpdb_allocators)
 - [optimizer_xform_bind_threshold](guc-list.html#optimizer_xform_bind_threshold)

@@ -2371,6 +2371,20 @@ This parameter can be set for a database system, an individual database, or a se
 |-----------|-------|-------------------|
 |Boolean|off|master, session, reload|
 
+## <a id="optimizer_skew_factor"></a>optimizer\_skew\_factor 
+
+When GPORCA is enabled \(the default\), `optimizer_skew_factor` controls skew ratio computation using sampled statistics. The sampling rate is proportional to the bucket frequency; the higher the frequency, the more data GPORCA samples for that bucket.
+
+The default value is `0`, skew computation is turned off for GPORCA. To enable skew computation, set `optimizer_skew_factor` to a value between `1` and `100`, inclusive.
+
+The final skewness that GPORCA uses for plan costing is the product of the `optimizer_skew_factor` \(coefficient\) and the skew ratio \(variable\). This parameter gives you additional control over plan motions \(broadcast/gather vs. redistribution\) if you choose to emphasize the data skew.
+
+The parameter can be set for a database system, an individual database, or a session or query.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|integer 0-100 |0|master, session, reload|
+
 ## <a id="optimizer_sort_factor"></a>optimizer\_sort\_factor 
 
 When GPORCA is enabled \(the default\), `optimizer_sort_factor` controls the cost factor to apply to sorting operations during query optimization. The default value `1` specifies the default sort cost factor. The value is a ratio of increase or decrease from the default factor. For example, a value of `2.0` sets the cost factor at twice the default, and a value of `0.5` sets the factor at half the default.
