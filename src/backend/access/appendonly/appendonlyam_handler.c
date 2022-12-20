@@ -812,20 +812,29 @@ appendonly_tuple_insert(Relation relation, TupleTableSlot *slot, CommandId cid,
 	appendonly_free_memtuple(mtuple);
 }
 
+/*
+ * We don't support speculative inserts on appendoptimized tables, i.e. we don't
+ * support INSERT ON CONFLICT DO NOTHING or INSERT ON CONFLICT DO UPDATE. Thus,
+ * the following functions are left unimplemented.
+ */
+
 static void
 appendonly_tuple_insert_speculative(Relation relation, TupleTableSlot *slot,
 								CommandId cid, int options,
 								BulkInsertState bistate, uint32 specToken)
 {
- 	/* GPDB_12_MERGE_FIXME: not supported. Can this function be left out completely? Or ereport()? */
-	elog(ERROR, "speculative insertion not supported on AO tables");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("speculative insert is not supported on appendoptimized relations")));
 }
 
 static void
 appendonly_tuple_complete_speculative(Relation relation, TupleTableSlot *slot,
 								  uint32 specToken, bool succeeded)
 {
-	elog(ERROR, "speculative insertion not supported on AO tables");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("speculative insert is not supported on appendoptimized relations")));
 }
 
 /*

@@ -672,6 +672,12 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt)
 	icolumns = checkInsertTargets(pstate, stmt->cols, &attrnos);
 	Assert(list_length(icolumns) == list_length(attrnos));
 
+	/* GPDB: We don't support speculative insert for AO/CO tables yet */
+	if (RelationIsAppendOptimized(pstate->p_target_relation) && stmt->onConflictClause)
+		ereport(ERROR,
+				errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("INSERT ON CONFLICT is not supported for appendoptimized relations"));
+
 	/*
 	 * Determine which variant of INSERT we have.
 	 */
