@@ -56,11 +56,14 @@ private:
 
 	CMDDependencyArray *m_dependency_array;
 
+	CMDNDistinctArray *m_ndistinct_array;
+
 public:
 	CDXLExtStats(const CDXLExtStats &) = delete;
 
 	CDXLExtStats(CMemoryPool *mp, IMDId *rel_stats_mdid, CMDName *mdname,
-				 CMDDependencyArray *extstats_dependency_array);
+				 CMDDependencyArray *extstats_dependency_array,
+				 CMDNDistinctArray *ndistinct_array);
 
 	~CDXLExtStats() override;
 
@@ -80,6 +83,12 @@ public:
 	GetDependencies() const override
 	{
 		return m_dependency_array;
+	}
+
+	CMDNDistinctArray *
+	GetNDistinctList() const override
+	{
+		return m_ndistinct_array;
 	}
 
 #ifdef GPOS_DEBUG

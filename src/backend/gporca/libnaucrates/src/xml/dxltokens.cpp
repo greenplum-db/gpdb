@@ -512,6 +512,8 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenExtendedStats, GPOS_WSZ_LIT("ExtendedStatistics")},
 		{EdxltokenMVDependencyList, GPOS_WSZ_LIT("MVDependencyList")},
 		{EdxltokenMVDependency, GPOS_WSZ_LIT("MVDependency")},
+		{EdxltokenMVNDistinctList, GPOS_WSZ_LIT("MVNDistinctList")},
+		{EdxltokenMVNDistinctItem, GPOS_WSZ_LIT("MVNDistinctItem")},
 		{EdxltokenMVNDistinct, GPOS_WSZ_LIT("MVNDistinct")},
 		{EdxltokenDegree, GPOS_WSZ_LIT("Degree")},
 		{EdxltokenFrom, GPOS_WSZ_LIT("From")},

@@ -76,6 +76,8 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 		{EdxltokenExtendedStatsInfo, &CreateExtStatsInfoParseHandler},
 		{EdxltokenMVDependencyList, &CreateExtStatsDependenciesParseHandler},
 		{EdxltokenMVDependency, &CreateExtStatsDependencyParseHandler},
+		{EdxltokenMVNDistinctList, &CreateExtStatsNDistinctListParseHandler},
+		{EdxltokenMVNDistinctItem, &CreateExtStatsNDistinctParseHandler},
 		{EdxltokenColumnStats, &CreateColStatsParseHandler},
 		{EdxltokenMetadataIdList, &CreateMDIdListParseHandler},
 		{EdxltokenIndexInfoList, &CreateMDIndexInfoListParseHandler},
@@ -533,6 +535,24 @@ CParseHandlerFactory::CreateExtStatsDependencyParseHandler(
 {
 	return GPOS_NEW(mp) CParseHandlerExtStatsDependency(mp, parse_handler_mgr,
 														parse_handler_root);
+}
+
+CParseHandlerBase *
+CParseHandlerFactory::CreateExtStatsNDistinctListParseHandler(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+{
+	return GPOS_NEW(mp) CParseHandlerExtStatsNDistinctList(
+		mp, parse_handler_mgr, parse_handler_root);
+}
+
+CParseHandlerBase *
+CParseHandlerFactory::CreateExtStatsNDistinctParseHandler(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+{
+	return GPOS_NEW(mp) CParseHandlerExtStatsNDistinct(mp, parse_handler_mgr,
+													   parse_handler_root);
 }
 
 // creates a parse handler for parsing column stats

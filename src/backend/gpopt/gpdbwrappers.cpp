@@ -773,6 +773,17 @@ gpdb::GetExtStatsName(Oid statOid)
 	return nullptr;
 }
 
+List *
+gpdb::GetExtStatsKinds(Oid statOid)
+{
+	GP_WRAP_START;
+	{
+		return GetExtStatisticsKinds(statOid);
+	}
+	GP_WRAP_END;
+	return nullptr;
+}
+
 Oid
 gpdb::GetCommutatorOp(Oid opno)
 {
@@ -1827,6 +1838,16 @@ gpdb::GetRelationIndexes(Relation relation)
 	}
 	GP_WRAP_END;
 	return NIL;
+}
+
+MVNDistinct *
+gpdb::GetMVNDistinct(Oid stat_oid)
+{
+	GP_WRAP_START;
+	{
+		return statext_ndistinct_load(stat_oid);
+	}
+	GP_WRAP_END;
 }
 
 MVDependencies *

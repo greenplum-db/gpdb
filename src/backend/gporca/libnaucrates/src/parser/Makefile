@@ -120,6 +120,8 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerExtStats.o \
               CParseHandlerExtStatsDependency.o \
               CParseHandlerExtStatsDependencies.o \
+              CParseHandlerExtStatsNDistinct.o \
+              CParseHandlerExtStatsNDistinctList.o \
               CParseHandlerResult.o \
               CParseHandlerRoutedMotion.o \
               CParseHandlerScalarAggref.o \

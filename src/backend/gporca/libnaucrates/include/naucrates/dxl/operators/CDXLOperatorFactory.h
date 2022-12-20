@@ -527,6 +527,10 @@ public:
 		CDXLMemoryManager *dxl_memory_manager, const Attributes &attr,
 		Edxltoken target_attr, Edxltoken target_elem);
 
+	static CBitSet *ExtractConvertValuesToIntBitSet(
+		CDXLMemoryManager *dxl_memory_manager, const Attributes &attr,
+		Edxltoken target_attr, Edxltoken target_elem);
+
 	// parse a comma-separated list of integers numbers into a dynamic array
 	// will raise an exception if list is not well-formed
 	template <typename T, void (*CleanupFn)(T *),
@@ -553,6 +557,33 @@ public:
 	{
 		return ExtractIntsToArray<INT, CleanupDelete, ConvertAttrValueToInt>(
 			dxl_memory_manager, xmlszUl, target_attr, target_elem);
+	}
+
+	static CBitSet *
+	ExtractIntsToIntBitSet(CDXLMemoryManager *dxl_memory_manager,
+						   const XMLCh *mdid_list_xml, Edxltoken target_attr,
+						   Edxltoken target_elem)
+	{
+		// get the memory pool from the memory manager
+		CMemoryPool *mp = dxl_memory_manager->Pmp();
+
+		CBitSet *pbs = GPOS_NEW(mp) CBitSet(mp);
+
+		XMLStringTokenizer mdid_components(
+			mdid_list_xml, CDXLTokens::XmlstrToken(EdxltokenComma));
+		const ULONG num_tokens = mdid_components.countTokens();
+
+		for (ULONG ul = 0; ul < num_tokens; ul++)
+		{
+			XMLCh *xmlszNext = mdid_components.nextToken();
+			GPOS_ASSERT(nullptr != xmlszNext);
+
+			INT attno = ConvertAttrValueToInt(dxl_memory_manager, xmlszNext,
+											  target_attr, target_elem);
+			pbs->ExchangeSet(attno);
+		}
+
+		return pbs;
 	}
 
 	// parse a comma-separated list of CHAR partition types into a dynamic array.

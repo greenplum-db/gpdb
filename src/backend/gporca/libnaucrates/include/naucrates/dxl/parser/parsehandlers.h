@@ -39,6 +39,8 @@
 #include "naucrates/dxl/parser/CParseHandlerExtStatsDependencies.h"
 #include "naucrates/dxl/parser/CParseHandlerExtStatsDependency.h"
 #include "naucrates/dxl/parser/CParseHandlerExtStatsInfo.h"
+#include "naucrates/dxl/parser/CParseHandlerExtStatsNDistinct.h"
+#include "naucrates/dxl/parser/CParseHandlerExtStatsNDistinctList.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFilter.h"
 #include "naucrates/dxl/parser/CParseHandlerForeignScan.h"

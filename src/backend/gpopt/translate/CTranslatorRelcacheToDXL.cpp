@@ -338,24 +338,49 @@ IMDCacheObject *
 CTranslatorRelcacheToDXL::RetrieveExtStats(CMemoryPool *mp, IMDId *mdid)
 {
 	OID stat_oid = CMDIdGPDB::CastMdid(mdid)->Oid();
-
-	MVDependencies *dependencies = gpdb::GetMVDependencies(stat_oid);
+	List *kinds = gpdb::GetExtStatsKinds(stat_oid);
 
 	CMDDependencyArray *deps = GPOS_NEW(mp) CMDDependencyArray(mp);
-	for (ULONG i = 0; i < dependencies->ndeps; i++)
+	if (list_member_int(kinds, STATS_EXT_DEPENDENCIES))
 	{
-		MVDependency *dep = dependencies->deps[i];
+		MVDependencies *dependencies = gpdb::GetMVDependencies(stat_oid);
 
-		// Note: MVDependency->attributes's last index is the dependent "to"
-		//       column.
-		IntPtrArray *from_attnos = GPOS_NEW(mp) IntPtrArray(mp);
-		for (INT j = 0; j < dep->nattributes - 1; j++)
+		for (ULONG i = 0; i < dependencies->ndeps; i++)
 		{
-			from_attnos->Append(GPOS_NEW(mp) INT(dep->attributes[j]));
+			MVDependency *dep = dependencies->deps[i];
+
+			// Note: MVDependency->attributes's last index is the dependent "to"
+			//       column.
+			IntPtrArray *from_attnos = GPOS_NEW(mp) IntPtrArray(mp);
+			for (INT j = 0; j < dep->nattributes - 1; j++)
+			{
+				from_attnos->Append(GPOS_NEW(mp) INT(dep->attributes[j]));
+			}
+			deps->Append(GPOS_NEW(mp) CMDDependency(
+				mp, dep->degree, from_attnos,
+				dep->attributes[dep->nattributes - 1]));
 		}
-		deps->Append(GPOS_NEW(mp)
-						 CMDDependency(mp, dep->degree, from_attnos,
-									   dep->attributes[dep->nattributes - 1]));
+	}
+
+	CMDNDistinctArray *md_ndistincts = GPOS_NEW(mp) CMDNDistinctArray(mp);
+	if (list_member_int(kinds, STATS_EXT_NDISTINCT))
+	{
+		MVNDistinct *ndistinct = gpdb::GetMVNDistinct(stat_oid);
+
+		for (ULONG i = 0; i < ndistinct->nitems; i++)
+		{
+			MVNDistinctItem item = ndistinct->items[i];
+
+			CBitSet *attnos = GPOS_NEW(mp) CBitSet(mp);
+
+			int attno = -1;
+			while ((attno = bms_next_member(item.attrs, attno)) >= 0)
+			{
+				attnos->ExchangeSet(attno);
+			}
+			md_ndistincts->Append(GPOS_NEW(mp)
+									  CMDNDistinct(mp, item.ndistinct, attnos));
+		}
 	}
 
 	const CWStringConst *statname =
@@ -364,7 +389,7 @@ CTranslatorRelcacheToDXL::RetrieveExtStats(CMemoryPool *mp, IMDId *mdid)
 									   ->GetBuffer());
 	CMDName *mdname = GPOS_NEW(mp) CMDName(mp, statname);
 
-	return GPOS_NEW(mp) CDXLExtStats(mp, mdid, mdname, deps);
+	return GPOS_NEW(mp) CDXLExtStats(mp, mdid, mdname, deps, md_ndistincts);
 }
 
 //---------------------------------------------------------------------------

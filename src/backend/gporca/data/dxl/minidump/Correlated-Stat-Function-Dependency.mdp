@@ -984,6 +984,7 @@
           <dxl:MVDependency Degree="1.000000" From="1" To="2"/>
           <dxl:MVDependency Degree="1.000000" From="2" To="1"/>
         </dxl:MVDependencyList>
+        <dxl:MVNDistinctList/>
       </dxl:ExtendedStatistics>
       <dxl:GPDBScalarOp Mdid="0.96.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
         <dxl:LeftType Mdid="0.23.1.0"/>
