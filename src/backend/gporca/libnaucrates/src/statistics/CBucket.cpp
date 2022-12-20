@@ -1360,11 +1360,11 @@ CBucket::SplitAndMergeBuckets(
 //		CBucket::GetSample
 //
 //	@doc:
-//		Generate a random data point within bucket boundaries
+//		Generate a data point within bucket boundaries
 //
 //---------------------------------------------------------------------------
 CDouble
-CBucket::GetSample(ULONG *seed) const
+CBucket::GetSample(DOUBLE ratio) const
 {
 	GPOS_ASSERT(CanSample());
 
@@ -1375,11 +1375,9 @@ CBucket::GetSample(ULONG *seed) const
 	}
 
 	DOUBLE upper_val = m_bucket_upper_bound->GetDatum()->GetValAsDouble().Get();
-	DOUBLE rand_val = ((DOUBLE) clib::Rand(seed)) / RAND_MAX;
 
-	return CDouble(lower_val + rand_val * (upper_val - lower_val));
+	return CDouble(lower_val + ratio * (upper_val - lower_val));
 }
-
 
 //---------------------------------------------------------------------------
 //	@function:

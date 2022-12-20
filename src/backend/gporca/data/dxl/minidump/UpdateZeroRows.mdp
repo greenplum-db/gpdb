@@ -409,8 +409,8 @@
         </dxl:LogicalProject>
       </dxl:LogicalUpdate>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="2">
-      <dxl:DMLUpdate Columns="0,1,2" ActionCol="11" OidCol="12" CtidCol="3" SegmentIdCol="9" InputSorted="false" PreserveOids="false">
+    <dxl:Plan Id="0" SpaceSize="1">
+      <dxl:DMLUpdate Columns="0,1,2" ActionCol="11" CtidCol="3" SegmentIdCol="9" PreserveOids="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="0.000000" Rows="0.000000" Width="1"/>
         </dxl:Properties>
@@ -428,21 +428,21 @@
         </dxl:ProjList>
         <dxl:TableDescriptor Mdid="6.795132.1.1" TableName="insert_tbl">
           <dxl:Columns>
-            <dxl:Column ColId="13" Attno="1" ColName="x" TypeMdid="0.23.1.0"/>
-            <dxl:Column ColId="14" Attno="2" ColName="y" TypeMdid="0.25.1.0"/>
-            <dxl:Column ColId="15" Attno="3" ColName="z" TypeMdid="0.23.1.0"/>
-            <dxl:Column ColId="16" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-            <dxl:Column ColId="17" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-            <dxl:Column ColId="18" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-            <dxl:Column ColId="19" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-            <dxl:Column ColId="20" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-            <dxl:Column ColId="21" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-            <dxl:Column ColId="22" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+            <dxl:Column ColId="12" Attno="1" ColName="x" TypeMdid="0.23.1.0"/>
+            <dxl:Column ColId="13" Attno="2" ColName="y" TypeMdid="0.25.1.0"/>
+            <dxl:Column ColId="14" Attno="3" ColName="z" TypeMdid="0.23.1.0"/>
+            <dxl:Column ColId="15" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+            <dxl:Column ColId="16" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+            <dxl:Column ColId="17" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+            <dxl:Column ColId="18" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+            <dxl:Column ColId="19" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+            <dxl:Column ColId="20" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+            <dxl:Column ColId="21" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
           </dxl:Columns>
         </dxl:TableDescriptor>
-        <dxl:Result>
+        <dxl:RedistributeMotion InputSegments="0" OutputSegments="0,1" DuplicateSensitive="true">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="0.000000" Rows="0.000000" Width="34"/>
+            <dxl:Cost StartupCost="0" TotalCost="0.000000" Rows="0.000000" Width="30"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="x">
@@ -463,13 +463,15 @@
             <dxl:ProjElem ColId="11" Alias="ColRef_0011">
               <dxl:Ident ColId="11" ColName="ColRef_0011" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
-            <dxl:ProjElem ColId="12" Alias="ColRef_0012">
-              <dxl:ConstValue TypeMdid="0.26.1.0" Value="795132"/>
-            </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:OneTimeFilter/>
-          <dxl:RedistributeMotion InputSegments="0" OutputSegments="0,1" DuplicateSensitive="true">
+          <dxl:SortingColumnList/>
+          <dxl:HashExprList>
+            <dxl:HashExpr>
+              <dxl:Ident ColId="0" ColName="x" TypeMdid="0.23.1.0"/>
+            </dxl:HashExpr>
+          </dxl:HashExprList>
+          <dxl:Assert ErrorCode="23514">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="0.000000" Rows="0.000000" Width="30"/>
             </dxl:Properties>
@@ -493,16 +495,44 @@
                 <dxl:Ident ColId="11" ColName="ColRef_0011" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:Filter/>
-            <dxl:SortingColumnList/>
-            <dxl:HashExprList>
-              <dxl:HashExpr>
-                <dxl:Ident ColId="0" ColName="x" TypeMdid="0.23.1.0"/>
-              </dxl:HashExpr>
-            </dxl:HashExprList>
-            <dxl:Assert ErrorCode="23514">
+            <dxl:AssertConstraintList>
+              <dxl:AssertConstraint ErrorMessage="Check constraint insert_tbl_check for table insert_tbl was violated">
+                <dxl:IsDistinctFrom OperatorMdid="0.91.1.0">
+                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                    <dxl:OpExpr OperatorName="+" OperatorMdid="0.551.1.0" OperatorType="0.23.1.0">
+                      <dxl:Ident ColId="0" ColName="x" TypeMdid="0.23.1.0"/>
+                      <dxl:Ident ColId="2" ColName="z" TypeMdid="0.23.1.0"/>
+                    </dxl:OpExpr>
+                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
+                  </dxl:Comparison>
+                  <dxl:ConstValue TypeMdid="0.16.1.0" Value="false"/>
+                </dxl:IsDistinctFrom>
+              </dxl:AssertConstraint>
+              <dxl:AssertConstraint ErrorMessage="Check constraint insert_con for table insert_tbl was violated">
+                <dxl:IsDistinctFrom OperatorMdid="0.91.1.0">
+                  <dxl:And>
+                    <dxl:And>
+                      <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+                        <dxl:Ident ColId="0" ColName="x" TypeMdid="0.23.1.0"/>
+                        <dxl:ConstValue TypeMdid="0.23.1.0" Value="3"/>
+                      </dxl:Comparison>
+                      <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.531.1.0">
+                        <dxl:Ident ColId="10" ColName="y" TypeMdid="0.25.1.0"/>
+                        <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAAEGNoZWNrIGZhaWxlZA==" LintValue="555254574"/>
+                      </dxl:Comparison>
+                    </dxl:And>
+                    <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+                      <dxl:Ident ColId="0" ColName="x" TypeMdid="0.23.1.0"/>
+                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="8"/>
+                    </dxl:Comparison>
+                  </dxl:And>
+                  <dxl:ConstValue TypeMdid="0.16.1.0" Value="false"/>
+                </dxl:IsDistinctFrom>
+              </dxl:AssertConstraint>
+            </dxl:AssertConstraintList>
+            <dxl:Split DeleteColumns="0,1,2" InsertColumns="0,10,2" ActionCol="11" CtidCol="3" SegmentIdCol="9" PreserveOids="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.000000" Rows="0.000000" Width="30"/>
+                <dxl:Cost StartupCost="0" TotalCost="0.000000" Rows="0.000000" Width="38"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="x">
@@ -520,48 +550,16 @@
                 <dxl:ProjElem ColId="9" Alias="gp_segment_id">
                   <dxl:Ident ColId="9" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                 </dxl:ProjElem>
+                <dxl:ProjElem ColId="10" Alias="y">
+                  <dxl:Ident ColId="10" ColName="y" TypeMdid="0.25.1.0"/>
+                </dxl:ProjElem>
                 <dxl:ProjElem ColId="11" Alias="ColRef_0011">
-                  <dxl:Ident ColId="11" ColName="ColRef_0011" TypeMdid="0.23.1.0"/>
+                  <dxl:DMLAction/>
                 </dxl:ProjElem>
               </dxl:ProjList>
-              <dxl:AssertConstraintList>
-                <dxl:AssertConstraint ErrorMessage="Check constraint insert_tbl_check for table insert_tbl was violated">
-                  <dxl:IsDistinctFrom OperatorMdid="0.91.1.0">
-                    <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                      <dxl:OpExpr OperatorName="+" OperatorMdid="0.551.1.0" OperatorType="0.23.1.0">
-                        <dxl:Ident ColId="0" ColName="x" TypeMdid="0.23.1.0"/>
-                        <dxl:Ident ColId="2" ColName="z" TypeMdid="0.23.1.0"/>
-                      </dxl:OpExpr>
-                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
-                    </dxl:Comparison>
-                    <dxl:ConstValue TypeMdid="0.16.1.0" Value="false"/>
-                  </dxl:IsDistinctFrom>
-                </dxl:AssertConstraint>
-                <dxl:AssertConstraint ErrorMessage="Check constraint insert_con for table insert_tbl was violated">
-                  <dxl:IsDistinctFrom OperatorMdid="0.91.1.0">
-                    <dxl:And>
-                      <dxl:And>
-                        <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-                          <dxl:Ident ColId="0" ColName="x" TypeMdid="0.23.1.0"/>
-                          <dxl:ConstValue TypeMdid="0.23.1.0" Value="3"/>
-                        </dxl:Comparison>
-                        <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.531.1.0">
-                          <dxl:Ident ColId="10" ColName="y" TypeMdid="0.25.1.0"/>
-                          <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAAEGNoZWNrIGZhaWxlZA==" LintValue="555254574"/>
-                        </dxl:Comparison>
-                      </dxl:And>
-                      <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
-                        <dxl:Ident ColId="0" ColName="x" TypeMdid="0.23.1.0"/>
-                        <dxl:ConstValue TypeMdid="0.23.1.0" Value="8"/>
-                      </dxl:Comparison>
-                    </dxl:And>
-                    <dxl:ConstValue TypeMdid="0.16.1.0" Value="false"/>
-                  </dxl:IsDistinctFrom>
-                </dxl:AssertConstraint>
-              </dxl:AssertConstraintList>
-              <dxl:Split DeleteColumns="0,1,2" InsertColumns="0,10,2" ActionCol="11" CtidCol="3" SegmentIdCol="9" PreserveOids="false">
+              <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="0.000000" Rows="0.000000" Width="38"/>
+                  <dxl:Cost StartupCost="0" TotalCost="0.000000" Rows="0.000000" Width="34"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="x">
@@ -573,94 +571,66 @@
                   <dxl:ProjElem ColId="2" Alias="z">
                     <dxl:Ident ColId="2" ColName="z" TypeMdid="0.23.1.0"/>
                   </dxl:ProjElem>
+                  <dxl:ProjElem ColId="10" Alias="y">
+                    <dxl:Ident ColId="10" ColName="y" TypeMdid="0.25.1.0"/>
+                  </dxl:ProjElem>
                   <dxl:ProjElem ColId="3" Alias="ctid">
                     <dxl:Ident ColId="3" ColName="ctid" TypeMdid="0.27.1.0"/>
                   </dxl:ProjElem>
                   <dxl:ProjElem ColId="9" Alias="gp_segment_id">
                     <dxl:Ident ColId="9" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                   </dxl:ProjElem>
-                  <dxl:ProjElem ColId="10" Alias="y">
-                    <dxl:Ident ColId="10" ColName="y" TypeMdid="0.25.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="11" Alias="ColRef_0011">
-                    <dxl:DMLAction/>
-                  </dxl:ProjElem>
                 </dxl:ProjList>
+                <dxl:Filter/>
+                <dxl:OneTimeFilter/>
                 <dxl:Result>
                   <dxl:Properties>
                     <dxl:Cost StartupCost="0" TotalCost="0.000000" Rows="0.000000" Width="34"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="0" Alias="x">
-                      <dxl:Ident ColId="0" ColName="x" TypeMdid="0.23.1.0"/>
+                      <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="1" Alias="y">
-                      <dxl:Ident ColId="1" ColName="y" TypeMdid="0.25.1.0"/>
+                      <dxl:ConstValue TypeMdid="0.25.1.0" IsNull="true" LintValue="0"/>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="2" Alias="z">
-                      <dxl:Ident ColId="2" ColName="z" TypeMdid="0.23.1.0"/>
+                      <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="10" Alias="y">
-                      <dxl:Ident ColId="10" ColName="y" TypeMdid="0.25.1.0"/>
+                      <dxl:ConstValue TypeMdid="0.25.1.0" IsNull="true" LintValue="0"/>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="3" Alias="ctid">
-                      <dxl:Ident ColId="3" ColName="ctid" TypeMdid="0.27.1.0"/>
+                      <dxl:ConstValue TypeMdid="0.27.1.0" IsNull="true"/>
+                    </dxl:ProjElem>
+                    <dxl:ProjElem ColId="4" Alias="xmin">
+                      <dxl:ConstValue TypeMdid="0.28.1.0" IsNull="true"/>
+                    </dxl:ProjElem>
+                    <dxl:ProjElem ColId="5" Alias="cmin">
+                      <dxl:ConstValue TypeMdid="0.29.1.0" IsNull="true"/>
+                    </dxl:ProjElem>
+                    <dxl:ProjElem ColId="6" Alias="xmax">
+                      <dxl:ConstValue TypeMdid="0.28.1.0" IsNull="true"/>
+                    </dxl:ProjElem>
+                    <dxl:ProjElem ColId="7" Alias="cmax">
+                      <dxl:ConstValue TypeMdid="0.29.1.0" IsNull="true"/>
+                    </dxl:ProjElem>
+                    <dxl:ProjElem ColId="8" Alias="tableoid">
+                      <dxl:ConstValue TypeMdid="0.26.1.0" IsNull="true"/>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="9" Alias="gp_segment_id">
-                      <dxl:Ident ColId="9" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                      <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:OneTimeFilter/>
-                  <dxl:Result>
-                    <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="0.000000" Rows="0.000000" Width="34"/>
-                    </dxl:Properties>
-                    <dxl:ProjList>
-                      <dxl:ProjElem ColId="0" Alias="x">
-                        <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="1" Alias="y">
-                        <dxl:ConstValue TypeMdid="0.25.1.0" IsNull="true" LintValue="0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="2" Alias="z">
-                        <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="10" Alias="y">
-                        <dxl:ConstValue TypeMdid="0.25.1.0" IsNull="true" LintValue="0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="3" Alias="ctid">
-                        <dxl:ConstValue TypeMdid="0.27.1.0" IsNull="true"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="4" Alias="xmin">
-                        <dxl:ConstValue TypeMdid="0.28.1.0" IsNull="true"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="5" Alias="cmin">
-                        <dxl:ConstValue TypeMdid="0.29.1.0" IsNull="true"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="6" Alias="xmax">
-                        <dxl:ConstValue TypeMdid="0.28.1.0" IsNull="true"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="7" Alias="cmax">
-                        <dxl:ConstValue TypeMdid="0.29.1.0" IsNull="true"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="8" Alias="tableoid">
-                        <dxl:ConstValue TypeMdid="0.26.1.0" IsNull="true"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="9" Alias="gp_segment_id">
-                        <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
-                      </dxl:ProjElem>
-                    </dxl:ProjList>
-                    <dxl:Filter/>
-                    <dxl:OneTimeFilter>
-                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="false"/>
-                    </dxl:OneTimeFilter>
-                  </dxl:Result>
+                  <dxl:OneTimeFilter>
+                    <dxl:ConstValue TypeMdid="0.16.1.0" Value="false"/>
+                  </dxl:OneTimeFilter>
                 </dxl:Result>
-              </dxl:Split>
-            </dxl:Assert>
-          </dxl:RedistributeMotion>
-        </dxl:Result>
+              </dxl:Result>
+            </dxl:Split>
+          </dxl:Assert>
+        </dxl:RedistributeMotion>
       </dxl:DMLUpdate>
     </dxl:Plan>
   </dxl:Thread>

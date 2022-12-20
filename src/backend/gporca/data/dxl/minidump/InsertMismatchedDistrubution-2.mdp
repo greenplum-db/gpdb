@@ -265,7 +265,7 @@ explain insert into pt2 select * from r;
       </dxl:LogicalInsert>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="2">
-      <dxl:DMLInsert Columns="0,1,2" ActionCol="11" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
+      <dxl:DMLInsert Columns="0,1,2" ActionCol="10" CtidCol="0" SegmentIdCol="0">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="431.031317" Rows="1.000000" Width="16"/>
         </dxl:Properties>
@@ -283,16 +283,16 @@ explain insert into pt2 select * from r;
         </dxl:ProjList>
         <dxl:TableDescriptor Mdid="6.1695223.1.1" TableName="pt2">
           <dxl:Columns>
-            <dxl:Column ColId="12" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
-            <dxl:Column ColId="13" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
-            <dxl:Column ColId="14" Attno="3" ColName="k" TypeMdid="0.23.1.0"/>
-            <dxl:Column ColId="15" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-            <dxl:Column ColId="16" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-            <dxl:Column ColId="17" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-            <dxl:Column ColId="18" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-            <dxl:Column ColId="19" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-            <dxl:Column ColId="20" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-            <dxl:Column ColId="21" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+            <dxl:Column ColId="11" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
+            <dxl:Column ColId="12" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
+            <dxl:Column ColId="13" Attno="3" ColName="k" TypeMdid="0.23.1.0"/>
+            <dxl:Column ColId="14" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+            <dxl:Column ColId="15" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+            <dxl:Column ColId="16" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+            <dxl:Column ColId="17" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+            <dxl:Column ColId="18" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+            <dxl:Column ColId="19" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+            <dxl:Column ColId="20" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
           </dxl:Columns>
         </dxl:TableDescriptor>
         <dxl:Result>
@@ -309,7 +309,7 @@ explain insert into pt2 select * from r;
             <dxl:ProjElem ColId="2" Alias="c">
               <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
-            <dxl:ProjElem ColId="11" Alias="ColRef_0011">
+            <dxl:ProjElem ColId="10" Alias="ColRef_0010">
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
             </dxl:ProjElem>
           </dxl:ProjList>

@@ -135,7 +135,6 @@ OBJS        = CDXLColDescr.o \
               CDXLScalarPartDefault.o \
               CDXLScalarPartListNullTest.o \
               CDXLScalarPartListValues.o \
-              CDXLScalarPartOid.o \
               CDXLScalarProjElem.o \
               CDXLScalarProjList.o \
               CDXLScalarRecheckCondFilter.o \

@@ -440,6 +440,7 @@
 		"optimizer_segments",
 		"optimizer_sort_factor",
 		"optimizer_trace_fallback",
+		"optimizer_skew_factor",
 		"optimizer_use_external_constant_expression_evaluation_for_ints",
 		"optimizer_use_gpdb_allocators",
 		"password_encryption",

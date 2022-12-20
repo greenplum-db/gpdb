@@ -187,7 +187,6 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 		{EdxltokenScalarSubPlanParam, &CreateScSubPlanParamParseHandler},
 		{EdxltokenScalarOpList, &CreateScOpListParseHandler},
 		{EdxltokenPartLevelEqFilterElemList, &CreateScOpListParseHandler},
-		{EdxltokenScalarPartOid, &CreateScPartOidParseHandler},
 		{EdxltokenScalarPartDefault, &CreateScPartDefaultParseHandler},
 		{EdxltokenScalarPartBound, &CreateScPartBoundParseHandler},
 		{EdxltokenScalarPartBoundInclusion, &CreateScPartBoundInclParseHandler},
@@ -939,16 +938,6 @@ CParseHandlerFactory::CreateScOpListParseHandler(
 {
 	return GPOS_NEW(mp)
 		CParseHandlerScalarOpList(mp, parse_handler_mgr, parse_handler_root);
-}
-
-// creates a parse handler for parsing a scalar part OID
-CParseHandlerBase *
-CParseHandlerFactory::CreateScPartOidParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp)
-		CParseHandlerScalarPartOid(mp, parse_handler_mgr, parse_handler_root);
 }
 
 // creates a parse handler for parsing a scalar part default

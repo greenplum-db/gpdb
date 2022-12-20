@@ -879,6 +879,10 @@ objectNamesToOids(GrantObjectType objtype, List *objnames)
 				/* partOids contains relOid so concat is enough */
 				expanded = list_concat(expanded, partOids);
 			}
+			else
+			{
+				expanded = lappend_oid(expanded, relOid);
+			}
 		}
 
 		if (expanded != NIL)

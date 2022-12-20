@@ -1298,16 +1298,11 @@ CXformUtils::PexprLogicalPartitionSelector(CMemoryPool *mp,
 	IMDId *rel_mdid = ptabdesc->MDId();
 	rel_mdid->AddRef();
 
-	// create an oid column
-	CColumnFactory *col_factory = COptCtxt::PoctxtFromTLS()->Pcf();
-	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	const IMDTypeOid *pmdtype = md_accessor->PtMDType<IMDTypeOid>();
-	CColRef *pcrOid = col_factory->PcrCreate(pmdtype, default_type_modifier);
 	CExpressionArray *pdrgpexprFilters =
 		PdrgpexprPartEqFilters(mp, ptabdesc, colref_array);
 
-	CLogicalPartitionSelector *popSelector = GPOS_NEW(mp)
-		CLogicalPartitionSelector(mp, rel_mdid, pdrgpexprFilters, pcrOid);
+	CLogicalPartitionSelector *popSelector =
+		GPOS_NEW(mp) CLogicalPartitionSelector(mp, rel_mdid, pdrgpexprFilters);
 
 	return GPOS_NEW(mp) CExpression(mp, popSelector, pexprChild);
 }
@@ -1340,7 +1335,6 @@ CXformUtils::PexprLogicalDMLOverProject(CMemoryPool *mp,
 	IMDId *rel_mdid = ptabdesc->MDId();
 	CExpression *pexprProject = NULL;
 	CColRef *pcrAction = NULL;
-	CColRef *pcrOid = NULL;
 
 	if (ptabdesc->IsPartitioned())
 	{
@@ -1348,11 +1342,6 @@ CXformUtils::PexprLogicalDMLOverProject(CMemoryPool *mp,
 		// on top of that to add the action column
 		CExpression *pexprSelector = PexprLogicalPartitionSelector(
 			mp, ptabdesc, colref_array, pexprChild);
-		if (CUtils::FGeneratePartOid(ptabdesc->MDId()))
-		{
-			pcrOid = CLogicalPartitionSelector::PopConvert(pexprSelector->Pop())
-						 ->PcrOid();
-		}
 		pexprProject = CUtils::PexprAddProjection(
 			mp, pexprSelector, CUtils::PexprScalarConstInt4(mp, val));
 		CExpression *pexprPrL = (*pexprProject)[1];
@@ -1362,16 +1351,8 @@ CXformUtils::PexprLogicalDMLOverProject(CMemoryPool *mp,
 	{
 		CExpressionArray *pdrgpexprProjected =
 			GPOS_NEW(mp) CExpressionArray(mp);
-		// generate one project node with two new columns: action, oid (based on the traceflag)
+		// generate one project node with new column: action
 		pdrgpexprProjected->Append(CUtils::PexprScalarConstInt4(mp, val));
-
-		BOOL fGeneratePartOid = CUtils::FGeneratePartOid(ptabdesc->MDId());
-		if (fGeneratePartOid)
-		{
-			OID oidTable = CMDIdGPDB::CastMdid(rel_mdid)->Oid();
-			pdrgpexprProjected->Append(
-				CUtils::PexprScalarConstOid(mp, oidTable));
-		}
 
 		pexprProject =
 			CUtils::PexprAddProjection(mp, pexprChild, pdrgpexprProjected);
@@ -1379,10 +1360,6 @@ CXformUtils::PexprLogicalDMLOverProject(CMemoryPool *mp,
 
 		CExpression *pexprPrL = (*pexprProject)[1];
 		pcrAction = CUtils::PcrFromProjElem((*pexprPrL)[0]);
-		if (fGeneratePartOid)
-		{
-			pcrOid = CUtils::PcrFromProjElem((*pexprPrL)[1]);
-		}
 	}
 
 	GPOS_ASSERT(NULL != pcrAction);
@@ -1411,7 +1388,7 @@ CXformUtils::PexprLogicalDMLOverProject(CMemoryPool *mp,
 		GPOS_NEW(mp)
 			CLogicalDML(mp, edmlop, ptabdesc, colref_array,
 						GPOS_NEW(mp) CBitSet(mp) /*pbsModified*/, pcrAction,
-						pcrOid, pcrCtid, pcrSegmentId, NULL /*pcrTupleOid*/),
+						pcrCtid, pcrSegmentId, NULL /*pcrTupleOid*/),
 		pexprProject);
 
 	CExpression *pexprOutput = pexprDML;

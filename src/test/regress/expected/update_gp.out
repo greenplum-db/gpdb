@@ -602,6 +602,86 @@ select * from t1_13265;
  1 | 2 | 1 | 1
 (1 row)
 
+-- test for update on partition table
+CREATE TABLE into_table (
+  a numeric(10,0) NOT NULL,
+  b numeric(10,0) NOT NULL,
+  c numeric(10,0) NOT NULL,
+  d character varying(4),
+  e character varying(10),
+  f int
+) DISTRIBUTED BY (a, b, c) PARTITION BY RANGE(f) (start (1) end(5) every(1));
+NOTICE:  CREATE TABLE will create partition "into_table_1_prt_1" for table "into_table"
+NOTICE:  CREATE TABLE will create partition "into_table_1_prt_2" for table "into_table"
+NOTICE:  CREATE TABLE will create partition "into_table_1_prt_3" for table "into_table"
+NOTICE:  CREATE TABLE will create partition "into_table_1_prt_4" for table "into_table"
+CREATE TABLE from_table (
+  a numeric(10,0) NOT NULL,
+  b numeric(10,0) NOT NULL,
+  c numeric(10,0) NOT NULL,
+  d character varying(4),
+  e character varying(10),
+  f int
+) DISTRIBUTED BY (a);
+insert into into_table select i*1.5,i*2,i*3,'dd'||i,'ee'||i, i from generate_series(1,4) i;
+insert into from_table select i*1.5,i*2,i*3,'xx'||i,'yy'||i, i+1 from generate_series(1,3) i;
+explain (costs off)
+update into_table set d=from_table.d, e=from_table.e, f=from_table.f from from_table
+where into_table.a=from_table.a and into_table.b=from_table.b and into_table.c=from_table.c;
+                                                                      QUERY PLAN                                                                      
+------------------------------------------------------------------------------------------------------------------------------------------------------
+ Update on into_table_1_prt_1
+   ->  Explicit Redistribute Motion 3:3  (slice2; segments: 3)
+         ->  Hash Join
+               Hash Cond: ((into_table_1_prt_1.a = from_table.a) AND (into_table_1_prt_1.b = from_table.b) AND (into_table_1_prt_1.c = from_table.c))
+               ->  Seq Scan on into_table_1_prt_1
+               ->  Hash
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: from_table.a, from_table.b, from_table.c
+                           ->  Seq Scan on from_table
+   ->  Explicit Redistribute Motion 3:3  (slice4; segments: 3)
+         ->  Hash Join
+               Hash Cond: ((into_table_1_prt_2.a = from_table.a) AND (into_table_1_prt_2.b = from_table.b) AND (into_table_1_prt_2.c = from_table.c))
+               ->  Seq Scan on into_table_1_prt_2
+               ->  Hash
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                           Hash Key: from_table.a, from_table.b, from_table.c
+                           ->  Seq Scan on from_table
+   ->  Explicit Redistribute Motion 3:3  (slice6; segments: 3)
+         ->  Hash Join
+               Hash Cond: ((into_table_1_prt_3.a = from_table.a) AND (into_table_1_prt_3.b = from_table.b) AND (into_table_1_prt_3.c = from_table.c))
+               ->  Seq Scan on into_table_1_prt_3
+               ->  Hash
+                     ->  Redistribute Motion 3:3  (slice5; segments: 3)
+                           Hash Key: from_table.a, from_table.b, from_table.c
+                           ->  Seq Scan on from_table
+   ->  Explicit Redistribute Motion 3:3  (slice8; segments: 3)
+         ->  Hash Join
+               Hash Cond: ((into_table_1_prt_4.a = from_table.a) AND (into_table_1_prt_4.b = from_table.b) AND (into_table_1_prt_4.c = from_table.c))
+               ->  Seq Scan on into_table_1_prt_4
+               ->  Hash
+                     ->  Redistribute Motion 3:3  (slice7; segments: 3)
+                           Hash Key: from_table.a, from_table.b, from_table.c
+                           ->  Seq Scan on from_table
+ Optimizer: Postgres query optimizer
+(34 rows)
+
+-- start_matchsubs
+-- m/"into_table_1_prt_\d" to partition "into_table_1_prt_\d"/
+-- s/"into_table_1_prt_\d" to partition "into_table_1_prt_\d"/"XXX" to partition "YYY"/g
+-- end_matchsubs
+update into_table set d=from_table.d, e=from_table.e, f=from_table.f from from_table
+where into_table.a=from_table.a and into_table.b=from_table.b and into_table.c=from_table.c;
+ERROR:  moving tuple from partition "XXX" to partition "YYY" not supported  (seg2 127.0.0.1:15536 pid=13665)
+select * from into_table order by a;
+ a | b | c  |  d  |  e  | f 
+---+---+----+-----+-----+---
+ 2 | 2 |  3 | dd1 | ee1 | 1
+ 3 | 4 |  6 | dd2 | ee2 | 2
+ 5 | 6 |  9 | dd3 | ee3 | 3
+ 6 | 8 | 12 | dd4 | ee4 | 4
+(4 rows)
+
 -- start_ignore
 drop table r;
 drop table s;
@@ -612,4 +692,6 @@ drop table nosplitupdate;
 drop table tsplit_entry;
 drop table t1_13265;
 drop table t2_13265;
+drop table into_table;
+drop table from_table;
 -- end_ignore

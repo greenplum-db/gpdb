@@ -76,6 +76,8 @@ setup_gpadmin_user() {
     *) echo "Unknown OS: $TEST_OS"; exit 1 ;;
   esac
   echo -e "password\npassword" | passwd gpadmin
+  # Add user to sudoers list required for gpinitsystem test
+  echo "gpadmin ALL = NOPASSWD : ALL" >> /etc/sudoers
   setup_ssh_for_user gpadmin
   transfer_ownership
   set_limits

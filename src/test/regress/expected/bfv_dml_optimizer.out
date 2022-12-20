@@ -183,15 +183,14 @@ drop table m;
 create table update_pk_test (a int primary key, b int) distributed by (a);
 insert into update_pk_test values(1,1);
 explain update update_pk_test set b = 5;
-                                       QUERY PLAN                                        
------------------------------------------------------------------------------------------
- Update  (cost=0.00..431.07 rows=1 width=1)
-   ->  Result  (cost=0.00..431.00 rows=1 width=26)
-         ->  Split  (cost=0.00..431.00 rows=1 width=22)
-               ->  Result  (cost=0.00..431.00 rows=1 width=22)
-                     ->  Seq Scan on update_pk_test  (cost=0.00..431.00 rows=1 width=18)
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Update  (cost=0.00..431.06 rows=1 width=1)
+   ->  Split  (cost=0.00..431.00 rows=1 width=22)
+         ->  Result  (cost=0.00..431.00 rows=1 width=22)
+               ->  Seq Scan on update_pk_test  (cost=0.00..431.00 rows=1 width=18)
  Optimizer: Pivotal Optimizer (GPORCA)
-(6 rows)
+(5 rows)
 
 update update_pk_test set b = 5;
 select * from update_pk_test order by 1,2;
@@ -201,19 +200,18 @@ select * from update_pk_test order by 1,2;
 (1 row)
 
 explain update update_pk_test set a = 5;
-                                              QUERY PLAN                                               
--------------------------------------------------------------------------------------------------------
- Update  (cost=0.00..431.07 rows=1 width=1)
-   ->  Result  (cost=0.00..431.00 rows=1 width=26)
-         ->  Sort  (cost=0.00..431.00 rows=1 width=22)
-               Sort Key: (DMLAction)
-               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=22)
-                     Hash Key: update_pk_test.a
-                     ->  Split  (cost=0.00..431.00 rows=1 width=22)
-                           ->  Result  (cost=0.00..431.00 rows=1 width=22)
-                                 ->  Seq Scan on update_pk_test  (cost=0.00..431.00 rows=1 width=18)
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Update  (cost=0.00..431.06 rows=1 width=1)
+   ->  Sort  (cost=0.00..431.00 rows=1 width=22)
+         Sort Key: (DMLAction)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=22)
+               Hash Key: update_pk_test.a
+               ->  Split  (cost=0.00..431.00 rows=1 width=22)
+                     ->  Result  (cost=0.00..431.00 rows=1 width=22)
+                           ->  Seq Scan on update_pk_test  (cost=0.00..431.00 rows=1 width=18)
  Optimizer: Pivotal Optimizer (GPORCA)
-(10 rows)
+(9 rows)
 
 update update_pk_test set a = 5;
 select * from update_pk_test order by 1,2;
@@ -598,20 +596,19 @@ create table bar (a int, b int) distributed randomly;
 insert into foo (a, b) values (1, 2);
 insert into bar (a, b) values (1, 2);
 explain update foo set a=4 from bar where foo.a=bar.a;
-                                                     QUERY PLAN                                                      
----------------------------------------------------------------------------------------------------------------------
- Update  (cost=0.00..862.07 rows=1 width=1)
-   ->  Result  (cost=0.00..862.00 rows=1 width=26)
-         ->  Split  (cost=0.00..862.00 rows=1 width=22)
-               ->  Result  (cost=0.00..862.00 rows=1 width=22)
-                     ->  Hash Join  (cost=0.00..862.00 rows=1 width=18)
-                           Hash Cond: (foo.a = bar.a)
-                           ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=18)
-                           ->  Hash  (cost=431.00..431.00 rows=1 width=4)
-                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                                       ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=4)
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Update  (cost=0.00..862.06 rows=1 width=1)
+   ->  Split  (cost=0.00..862.00 rows=1 width=22)
+         ->  Result  (cost=0.00..862.00 rows=1 width=22)
+               ->  Hash Join  (cost=0.00..862.00 rows=1 width=18)
+                     Hash Cond: (foo.a = bar.a)
+                     ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=18)
+                     ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=4)
  Optimizer: Pivotal Optimizer (GPORCA)
-(11 rows)
+(10 rows)
 
 update foo set a=4 from bar where foo.a=bar.a;
 select * from foo;

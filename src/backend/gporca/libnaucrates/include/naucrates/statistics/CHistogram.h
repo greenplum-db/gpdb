@@ -143,6 +143,10 @@ private:
 	// accessor for n-th bucket
 	CBucket *operator[](ULONG) const;
 
+	// Populate sample ratio within each bucket
+	void GetSampleRate(DOUBLE left, DOUBLE right, DOUBLE sample_rate[],
+					   ULONG index);
+
 	// compute skew estimate
 	void ComputeSkew();
 

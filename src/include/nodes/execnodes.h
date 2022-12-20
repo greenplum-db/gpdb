@@ -1966,11 +1966,6 @@ typedef struct DynamicBitmapHeapScanState
 	bool		shouldCallHashSeqTerm;
 
 	/*
-	 * The first partition requires initialization of expression states,
-	 * such as qual and targetlist, regardless of whether we need to re-map varattno
-	 */
-	bool		firstPartition;
-	/*
 	 * lastRelOid is the last relation that corresponds to the
 	 * varattno mapping of qual and target list. Each time we open a new partition, we will
 	 * compare the last relation with current relation by using varattnos_map()
@@ -2241,11 +2236,6 @@ typedef struct DynamicSeqScanState
 	 */
 	bool		shouldCallHashSeqTerm;
 
-	/*
-	 * The first partition requires initialization of expression states,
-	 * such as qual and targetlist, regardless of whether we need to re-map varattno
-	 */
-	bool		firstPartition;
 	/*
 	 * lastRelOid is the last relation that corresponds to the
 	 * varattno mapping of qual and target list. Each time we open a new partition, we will

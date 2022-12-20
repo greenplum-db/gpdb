@@ -4200,9 +4200,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 	}
 
 	// Extract column numbers of the action and ctid columns from the
-	// target list. ORCA also includes a third similar column for
-	// partition Oid to the target list, but we don't use it for anything
-	// in GPDB.
+	// target list.
 	dml->actionColIdx = AddTargetEntryForColId(&dml_target_list, &child_context,
 											   phy_dml_dxlop->ActionColId(),
 											   true /*is_resjunk*/);

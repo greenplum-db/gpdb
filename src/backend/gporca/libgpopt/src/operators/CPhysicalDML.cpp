@@ -37,23 +37,20 @@ using namespace gpopt;
 CPhysicalDML::CPhysicalDML(CMemoryPool *mp, CLogicalDML::EDMLOperator edmlop,
 						   CTableDescriptor *ptabdesc,
 						   CColRefArray *pdrgpcrSource, CBitSet *pbsModified,
-						   CColRef *pcrAction, CColRef *pcrTableOid,
-						   CColRef *pcrCtid, CColRef *pcrSegmentId,
-						   CColRef *pcrTupleOid)
+						   CColRef *pcrAction, CColRef *pcrCtid,
+						   CColRef *pcrSegmentId, CColRef *pcrTupleOid)
 	: CPhysical(mp),
 	  m_edmlop(edmlop),
 	  m_ptabdesc(ptabdesc),
 	  m_pdrgpcrSource(pdrgpcrSource),
 	  m_pbsModified(pbsModified),
 	  m_pcrAction(pcrAction),
-	  m_pcrTableOid(pcrTableOid),
 	  m_pcrCtid(pcrCtid),
 	  m_pcrSegmentId(pcrSegmentId),
 	  m_pcrTupleOid(pcrTupleOid),
 	  m_pds(NULL),
 	  m_pos(NULL),
-	  m_pcrsRequiredLocal(NULL),
-	  m_input_sort_req(false)
+	  m_pcrsRequiredLocal(NULL)
 {
 	GPOS_ASSERT(CLogicalDML::EdmlSentinel != edmlop);
 	GPOS_ASSERT(NULL != ptabdesc);
@@ -406,7 +403,6 @@ CPhysicalDML::HashValue() const
 	ULONG ulHash = gpos::CombineHashes(COperator::HashValue(),
 									   m_ptabdesc->MDId()->HashValue());
 	ulHash = gpos::CombineHashes(ulHash, gpos::HashPtr<CColRef>(m_pcrAction));
-	ulHash = gpos::CombineHashes(ulHash, gpos::HashPtr<CColRef>(m_pcrTableOid));
 	ulHash =
 		gpos::CombineHashes(ulHash, CUtils::UlHashColArray(m_pdrgpcrSource));
 
@@ -437,7 +433,6 @@ CPhysicalDML::Matches(COperator *pop) const
 		CPhysicalDML *popDML = CPhysicalDML::PopConvert(pop);
 
 		return m_pcrAction == popDML->PcrAction() &&
-			   m_pcrTableOid == popDML->PcrTableOid() &&
 			   m_pcrCtid == popDML->PcrCtid() &&
 			   m_pcrSegmentId == popDML->PcrSegmentId() &&
 			   m_pcrTupleOid == popDML->PcrTupleOid() &&
@@ -504,7 +499,7 @@ CPhysicalDML::PosComputeRequired(CMemoryPool *mp, CTableDescriptor *ptabdesc)
 		// the action column, see explanation in function's comment
 		const ULONG ulKeySets = pdrgpbsKeys->Size();
 		BOOL fNeedsSort = false;
-		for (ULONG ul = 0; ul < ulKeySets && !fNeedsSort; ul++)
+		for (ULONG ul = 0; ul < ulKeySets; ul++)
 		{
 			CBitSet *pbs = (*pdrgpbsKeys)[ul];
 			if (!pbs->IsDisjoint(m_pbsModified))
@@ -522,64 +517,8 @@ CPhysicalDML::PosComputeRequired(CMemoryPool *mp, CTableDescriptor *ptabdesc)
 			pos->Append(mdid, m_pcrAction, COrderSpec::EntAuto);
 		}
 	}
-	else if (m_ptabdesc->IsPartitioned())
-	{
-		COptimizerConfig *optimizer_config =
-			COptCtxt::PoctxtFromTLS()->GetOptimizerConfig();
-
-		BOOL fInsertSortOnParquet = FInsertSortOnParquet();
-		BOOL fInsertSortOnRows = FInsertSortOnRows(optimizer_config);
-
-		if (fInsertSortOnParquet || fInsertSortOnRows)
-		{
-			GPOS_ASSERT(CLogicalDML::EdmlInsert == m_edmlop);
-			m_input_sort_req = true;
-			// if this is an INSERT over a partitioned Parquet or Row-oriented table,
-			// sort tuples by their table oid
-			IMDId *mdid = m_pcrTableOid->RetrieveType()->GetMdidForCmpType(
-				IMDType::EcmptL);
-			mdid->AddRef();
-			pos->Append(mdid, m_pcrTableOid, COrderSpec::EntAuto);
-		}
-	}
 
 	return pos;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalDML::FInsertSortOnParquet
-//
-//	@doc:
-//		Do we need to sort on parquet table
-//
-//---------------------------------------------------------------------------
-BOOL
-CPhysicalDML::FInsertSortOnParquet()
-{
-	return !GPOS_FTRACE(EopttraceDisableSortForDMLOnParquet) &&
-		   (IMDRelation::ErelstorageAppendOnlyParquet ==
-			m_ptabdesc->RetrieveRelStorageType());
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalDML::FInsertSortOnRows
-//
-//	@doc:
-//		Do we need to sort on insert
-//
-//---------------------------------------------------------------------------
-BOOL
-CPhysicalDML::FInsertSortOnRows(COptimizerConfig *optimizer_config)
-{
-	GPOS_ASSERT(NULL != optimizer_config);
-
-	return (IMDRelation::ErelstorageAppendOnlyRows ==
-			m_ptabdesc->RetrieveRelStorageType()) &&
-		   (optimizer_config->GetHint()
-				->UlMinNumOfPartsToRequireSortOnInsert() <=
-			m_ptabdesc->PartitionCount());
 }
 
 //---------------------------------------------------------------------------
@@ -600,11 +539,6 @@ CPhysicalDML::ComputeRequiredLocalColumns(CMemoryPool *mp)
 	// include source columns
 	m_pcrsRequiredLocal->Include(m_pdrgpcrSource);
 	m_pcrsRequiredLocal->Include(m_pcrAction);
-
-	if (m_pcrTableOid != NULL)
-	{
-		m_pcrsRequiredLocal->Include(m_pcrTableOid);
-	}
 
 	if (CLogicalDML::EdmlDelete == m_edmlop ||
 		CLogicalDML::EdmlUpdate == m_edmlop)
@@ -643,13 +577,6 @@ CPhysicalDML::OsPrint(IOstream &os) const
 	os << "], Action: (";
 	m_pcrAction->OsPrint(os);
 	os << ")";
-
-	if (m_pcrTableOid != NULL)
-	{
-		os << ", Oid: (";
-		m_pcrTableOid->OsPrint(os);
-		os << ")";
-	}
 
 	if (CLogicalDML::EdmlDelete == m_edmlop ||
 		CLogicalDML::EdmlUpdate == m_edmlop)

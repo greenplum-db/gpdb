@@ -333,3 +333,19 @@ Feature: gpinitsystem tests
         Then gpinitsystem should return a return code of 0
         And gpinitsystem should not print "Start Function REMOTE_EXECUTE_AND_GET_OUTPUT" to stdout
         And gpinitsystem should not print "End Function REMOTE_EXECUTE_AND_GET_OUTPUT" to stdout
+
+     Scenario: gpinitsystem creates a cluster with for multi-nic setup and populates table entries correctly
+         Given the database is not running
+         And create demo cluster config
+         #Create hosts file with new host-name
+         And backup /etc/hosts file and update hostname entry for localhost
+         And update hostlist file with updated host-address
+         And update clusterConfig file with new port and host-address
+         And update the private keys for the new host address
+         When the user runs "gpinitsystem -a -c /tmp/clusterConfigFile-1 -h /tmp/hostfile--1"
+         Then gpinitsystem should return a return code of 0
+         #Verify entries in the gp_segment_configuration as expected
+         And verify that cluster config has host-name populated correctly
+         #restore hosts file
+         And restore /etc/hosts file and cleanup hostlist file
+

@@ -850,7 +850,7 @@ def wait_for_desired_query_result(dburl, query, desired_result, utility=False):
     Raises an Exception after failing <num_retries> times.
     """
     attempt = 0
-    num_retries = 150
+    num_retries = 600
     actual_result = None
     while (attempt < num_retries) and (actual_result != desired_result):
         attempt += 1

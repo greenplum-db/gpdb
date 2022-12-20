@@ -41,6 +41,34 @@ test__cdbdisp_makeResult__oom(void **state)
 	assert_true(result == NULL);
 }
 
+static void
+test__PQprocessAoTupCounts__uses_correct_hash_function(void **state)
+{
+	HTAB *ht = NULL;
+	int naotupcounts = 2;
+	PQaoRelTupCount *entry1;
+	PQaoRelTupCount *entry2;
+
+	PQaoRelTupCount *aotupcounts = (PQaoRelTupCount *) malloc(sizeof(PQaoRelTupCount) * naotupcounts);
+	/*
+	 * We purposely use aorelid's 16384 and 16640 since they collide when using
+	 * the default string_hash, which previously caused issues.
+	 */
+	aotupcounts[0].aorelid = 16384;
+	aotupcounts[0].tupcount = 0;
+
+	aotupcounts[1].aorelid = 16640;
+	aotupcounts[1].tupcount = 8;
+
+	ht = PQprocessAoTupCounts(ht, (void *) aotupcounts, naotupcounts);
+
+	entry1 = hash_search(ht, &(aotupcounts[0].aorelid), HASH_FIND, NULL);
+	entry2 = hash_search(ht, &(aotupcounts[1].aorelid), HASH_FIND, NULL);
+
+	assert_int_not_equal(entry1->tupcount, entry2->tupcount);
+	free(aotupcounts);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -48,7 +76,8 @@ main(int argc, char *argv[])
 
 	const		UnitTest tests[] =
 	{
-		unit_test(test__cdbdisp_makeResult__oom)
+		unit_test(test__cdbdisp_makeResult__oom),
+		unit_test(test__PQprocessAoTupCounts__uses_correct_hash_function)
 	};
 
 	Gp_role = GP_ROLE_DISPATCH;

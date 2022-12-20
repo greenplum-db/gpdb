@@ -643,14 +643,19 @@ tcp\_user\_timeout
 
 This section contains `key`=`value` pairs, where the `key` is a user name and the `value` is a `libpq` connect-string list of `key`=`value` pairs of configuration settings specific for this user. Only a few settings are available here.
 
-**Pool configuration**
-
 pool\_mode
 :   Set the pool mode for all connections from this user. If not set, the database or default `pool_mode` is used.
 
 max\_user\_connection
 :   Configure a maximum for the user (i.e. all pools with the user will not have more than this many server connections).
 
+For example:
+
+```
+[users]
+
+user1 = pool_mode=transaction max_user_connections=10
+```
 
 ## <a id="topic_xw4_dtc_gs"></a>Example Configuration Files 
 

@@ -336,17 +336,16 @@ SELECT gp_segment_id, * FROM tab5;
 (10 rows)
 
 EXPLAIN (COSTS OFF ) UPDATE tab3 SET C1 = C1 + 1, C5 = C5+1;
-                         QUERY PLAN                         
-------------------------------------------------------------
+                      QUERY PLAN                      
+------------------------------------------------------
  Update
-   ->  Result
-         ->  Redistribute Motion 3:3  (slice1; segments: 3)
-               Hash Key: tab3.c1, tab3.c2, tab3.c3
-               ->  Split
-                     ->  Result
-                           ->  Seq Scan on tab3
- Optimizer: Pivotal Optimizer (GPORCA) version 3.39.0
-(8 rows)
+   ->  Redistribute Motion 3:3  (slice1; segments: 3)
+         Hash Key: tab3.c1, tab3.c2, tab3.c3
+         ->  Split
+               ->  Result
+                     ->  Seq Scan on tab3
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
 
 -- clean up
 drop table tab3;

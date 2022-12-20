@@ -233,7 +233,7 @@
               <dxl:Ident ColId="2" ColName="t3" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
-          <dxl:DMLDelete Columns="0,1,2" ActionCol="10" OidCol="0" CtidCol="3" SegmentIdCol="9" InputSorted="false">
+          <dxl:DMLDelete Columns="0,1,2" ActionCol="10" CtidCol="3" SegmentIdCol="9">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.050887" Rows="1.000000" Width="12"/>
             </dxl:Properties>

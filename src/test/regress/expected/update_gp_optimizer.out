@@ -123,46 +123,45 @@ EXPLAIN (COSTS OFF) UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
                 (SELECT min (keo4.keo_para_budget_date) FROM keo4)))
     ) t1
 WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
-                                                                                       QUERY PLAN                                                                                        
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                                    QUERY PLAN                                                                                     
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Update
-   ->  Result
-         ->  Split
-               ->  Result
+   ->  Split
+         ->  Result
+               ->  Hash Join
+                     Hash Cond: ((keo1_1.user_vie_project_code_pk)::text = (keo2.projects_pk)::text)
                      ->  Hash Join
-                           Hash Cond: ((keo1_1.user_vie_project_code_pk)::text = (keo2.projects_pk)::text)
-                           ->  Hash Join
-                                 Hash Cond: ((keo1.user_vie_project_code_pk)::text = (keo1_1.user_vie_project_code_pk)::text)
-                                 ->  Seq Scan on keo1
-                                 ->  Hash
-                                       ->  Broadcast Motion 1:3  (slice5; segments: 1)
-                                             ->  Hash Join
-                                                   Hash Cond: ((keo1_1.user_vie_fiscal_year_period_sk)::text = (max((keo3.sky_per)::text)))
-                                                   ->  Gather Motion 3:1  (slice1; segments: 3)
-                                                         ->  Seq Scan on keo1 keo1_1
-                                                   ->  Hash
-                                                         ->  Aggregate
-                                                               ->  Hash Join
-                                                                     Hash Cond: ((keo3.bky_per)::text = (keo4.keo_para_required_period)::text)
-                                                                     ->  Gather Motion 3:1  (slice2; segments: 3)
-                                                                           ->  Seq Scan on keo3
-                                                                     ->  Hash
-                                                                           ->  Assert
-                                                                                 Assert Cond: ((row_number() OVER (?)) = 1)
-                                                                                 ->  WindowAgg
-                                                                                       ->  Hash Join
-                                                                                             Hash Cond: ((keo4.keo_para_budget_date)::text = (min((keo4_1.keo_para_budget_date)::text)))
-                                                                                             ->  Gather Motion 3:1  (slice3; segments: 3)
-                                                                                                   ->  Seq Scan on keo4
-                                                                                             ->  Hash
-                                                                                                   ->  Aggregate
-                                                                                                         ->  Gather Motion 3:1  (slice4; segments: 3)
-                                                                                                               ->  Seq Scan on keo4 keo4_1
+                           Hash Cond: ((keo1.user_vie_project_code_pk)::text = (keo1_1.user_vie_project_code_pk)::text)
+                           ->  Seq Scan on keo1
                            ->  Hash
-                                 ->  Broadcast Motion 3:3  (slice6; segments: 3)
-                                       ->  Seq Scan on keo2
+                                 ->  Broadcast Motion 1:3  (slice5; segments: 1)
+                                       ->  Hash Join
+                                             Hash Cond: ((keo1_1.user_vie_fiscal_year_period_sk)::text = (max((keo3.sky_per)::text)))
+                                             ->  Gather Motion 3:1  (slice1; segments: 3)
+                                                   ->  Seq Scan on keo1 keo1_1
+                                             ->  Hash
+                                                   ->  Aggregate
+                                                         ->  Hash Join
+                                                               Hash Cond: ((keo3.bky_per)::text = (keo4.keo_para_required_period)::text)
+                                                               ->  Gather Motion 3:1  (slice2; segments: 3)
+                                                                     ->  Seq Scan on keo3
+                                                               ->  Hash
+                                                                     ->  Assert
+                                                                           Assert Cond: ((row_number() OVER (?)) = 1)
+                                                                           ->  WindowAgg
+                                                                                 ->  Hash Join
+                                                                                       Hash Cond: ((keo4.keo_para_budget_date)::text = (min((keo4_1.keo_para_budget_date)::text)))
+                                                                                       ->  Gather Motion 3:1  (slice3; segments: 3)
+                                                                                             ->  Seq Scan on keo4
+                                                                                       ->  Hash
+                                                                                             ->  Aggregate
+                                                                                                   ->  Gather Motion 3:1  (slice4; segments: 3)
+                                                                                                         ->  Seq Scan on keo4 keo4_1
+                     ->  Hash
+                           ->  Broadcast Motion 3:3  (slice6; segments: 3)
+                                 ->  Seq Scan on keo2
  Optimizer: Pivotal Optimizer (GPORCA)
-(37 rows)
+(36 rows)
 
 UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
     ( SELECT a.user_vie_project_code_pk FROM keo1 a INNER JOIN keo2 b
@@ -497,17 +496,16 @@ select * from s;
 -- constraints in the planner.
 create table nosplitupdate (a int) distributed by (a);
 explain update nosplitupdate set a=0 where a=1 and a<1;
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
+                            QUERY PLAN                             
+-------------------------------------------------------------------
  Update  (cost=0.00..0.00 rows=0 width=1)
-   ->  Result  (cost=0.00..0.00 rows=0 width=22)
-         ->  Result  (cost=0.00..0.00 rows=0 width=18)
-               ->  Split  (cost=0.00..0.00 rows=0 width=18)
+   ->  Result  (cost=0.00..0.00 rows=0 width=18)
+         ->  Split  (cost=0.00..0.00 rows=0 width=18)
+               ->  Result  (cost=0.00..0.00 rows=0 width=18)
                      ->  Result  (cost=0.00..0.00 rows=0 width=18)
-                           ->  Result  (cost=0.00..0.00 rows=0 width=18)
-                                 One-Time Filter: false
- Optimizer: Pivotal Optimizer (GPORCA) version 3.39.0
-(8 rows)
+                           One-Time Filter: false
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
 
 -- test split-update when split-node's flow is entry
 create table tsplit_entry (c int);
@@ -605,6 +603,68 @@ select * from t1_13265;
  1 | 2 | 1 | 1
 (1 row)
 
+-- test for update on partition table
+CREATE TABLE into_table (
+  a numeric(10,0) NOT NULL,
+  b numeric(10,0) NOT NULL,
+  c numeric(10,0) NOT NULL,
+  d character varying(4),
+  e character varying(10),
+  f int
+) DISTRIBUTED BY (a, b, c) PARTITION BY RANGE(f) (start (1) end(5) every(1));
+NOTICE:  CREATE TABLE will create partition "into_table_1_prt_1" for table "into_table"
+NOTICE:  CREATE TABLE will create partition "into_table_1_prt_2" for table "into_table"
+NOTICE:  CREATE TABLE will create partition "into_table_1_prt_3" for table "into_table"
+NOTICE:  CREATE TABLE will create partition "into_table_1_prt_4" for table "into_table"
+CREATE TABLE from_table (
+  a numeric(10,0) NOT NULL,
+  b numeric(10,0) NOT NULL,
+  c numeric(10,0) NOT NULL,
+  d character varying(4),
+  e character varying(10),
+  f int
+) DISTRIBUTED BY (a);
+insert into into_table select i*1.5,i*2,i*3,'dd'||i,'ee'||i, i from generate_series(1,4) i;
+insert into from_table select i*1.5,i*2,i*3,'xx'||i,'yy'||i, i+1 from generate_series(1,3) i;
+explain (costs off)
+update into_table set d=from_table.d, e=from_table.e, f=from_table.f from from_table
+where into_table.a=from_table.a and into_table.b=from_table.b and into_table.c=from_table.c;
+                                                                   QUERY PLAN                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------
+ Update
+   ->  Redistribute Motion 3:3  (slice2; segments: 3)
+         Hash Key: into_table.a, into_table.b, into_table.c
+         ->  Result
+               ->  Partition Selector for into_table
+                     ->  Split
+                           ->  Hash Join
+                                 Hash Cond: ((into_table.a = from_table.a) AND (into_table.b = from_table.b) AND (into_table.c = from_table.c))
+                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                       Hash Key: into_table.a
+                                       ->  Sequence
+                                             ->  Partition Selector for into_table (dynamic scan id: 1)
+                                                   Partitions selected: 4 (out of 4)
+                                             ->  Dynamic Seq Scan on into_table (dynamic scan id: 1)
+                                 ->  Hash
+                                       ->  Seq Scan on from_table
+ Optimizer: Pivotal Optimizer (GPORCA)
+(17 rows)
+
+-- start_matchsubs
+-- m/"into_table_1_prt_\d" to partition "into_table_1_prt_\d"/
+-- s/"into_table_1_prt_\d" to partition "into_table_1_prt_\d"/"XXX" to partition "YYY"/g
+-- end_matchsubs
+update into_table set d=from_table.d, e=from_table.e, f=from_table.f from from_table
+where into_table.a=from_table.a and into_table.b=from_table.b and into_table.c=from_table.c;
+select * from into_table order by a;
+ a | b | c  |  d  |  e  | f 
+---+---+----+-----+-----+---
+ 2 | 2 |  3 | xx1 | yy1 | 2
+ 3 | 4 |  6 | xx2 | yy2 | 3
+ 5 | 6 |  9 | xx3 | yy3 | 4
+ 6 | 8 | 12 | dd4 | ee4 | 4
+(4 rows)
+
 -- start_ignore
 drop table r;
 drop table s;
@@ -615,4 +675,6 @@ drop table nosplitupdate;
 drop table tsplit_entry;
 drop table t1_13265;
 drop table t2_13265;
+drop table into_table;
+drop table from_table;
 -- end_ignore

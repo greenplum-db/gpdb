@@ -141,33 +141,13 @@ CXformUpdate2DML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		pexprAssertConstraints = pexprSplit;
 	}
 
-	// generate oid column and project operator
-	CExpression *pexprProject = NULL;
-	CColRef *pcrTableOid = NULL;
+	CExpression *pexprProject = pexprAssertConstraints;
 	if (ptabdesc->IsPartitioned())
 	{
 		// generate a partition selector
 		pexprProject = CXformUtils::PexprLogicalPartitionSelector(
 			mp, ptabdesc, pdrgpcrInsert, pexprAssertConstraints);
-		pcrTableOid = CLogicalPartitionSelector::PopConvert(pexprProject->Pop())
-						  ->PcrOid();
 	}
-	else
-	{
-		// generate a project operator
-		IMDId *pmdidTable = ptabdesc->MDId();
-
-		OID oidTable = CMDIdGPDB::CastMdid(pmdidTable)->Oid();
-		CExpression *pexprOid = CUtils::PexprScalarConstOid(mp, oidTable);
-
-		pexprProject =
-			CUtils::PexprAddProjection(mp, pexprAssertConstraints, pexprOid);
-
-		CExpression *pexprPrL = (*pexprProject)[1];
-		pcrTableOid = CUtils::PcrFromProjElem((*pexprPrL)[0]);
-	}
-
-	GPOS_ASSERT(NULL != pcrTableOid);
 
 	const ULONG num_cols = pdrgpcrInsert->Size();
 
@@ -189,9 +169,9 @@ CXformUpdate2DML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	pdrgpcrDelete->AddRef();
 	CExpression *pexprDML = GPOS_NEW(mp) CExpression(
 		mp,
-		GPOS_NEW(mp) CLogicalDML(
-			mp, CLogicalDML::EdmlUpdate, ptabdesc, pdrgpcrDelete, pbsModified,
-			pcrAction, pcrTableOid, pcrCtid, pcrSegmentId, pcrTupleOid),
+		GPOS_NEW(mp) CLogicalDML(mp, CLogicalDML::EdmlUpdate, ptabdesc,
+								 pdrgpcrDelete, pbsModified, pcrAction, pcrCtid,
+								 pcrSegmentId, pcrTupleOid),
 		pexprProject);
 
 	// TODO:  - Oct 30, 2012; detect and handle AFTER triggers on update

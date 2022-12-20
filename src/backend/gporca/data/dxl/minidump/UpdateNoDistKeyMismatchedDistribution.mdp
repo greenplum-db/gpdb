@@ -48,7 +48,7 @@
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
       <dxl:TraceFlags Value="102001,102002,102003,102074,102113,102120,102144,102147,103001,103014,103015,103022,103027,103029,103033,104003,104004,104005,104006,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -304,9 +304,9 @@
       </dxl:LogicalUpdate>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="1">
-      <dxl:DMLUpdate Columns="0,1,2" ActionCol="21" OidCol="22" CtidCol="3" SegmentIdCol="9" InputSorted="false" PreserveOids="false">
+      <dxl:DMLUpdate Columns="0,1,2" ActionCol="21" CtidCol="3" SegmentIdCol="9" PreserveOids="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1324057.850755" Rows="1.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="1324057.842941" Rows="1.000000" Width="1"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -322,21 +322,21 @@
         </dxl:ProjList>
         <dxl:TableDescriptor Mdid="6.24803.1.0" TableName="pt2">
           <dxl:Columns>
-            <dxl:Column ColId="23" Attno="1" ColName="i" TypeMdid="0.23.1.0" ColWidth="4"/>
-            <dxl:Column ColId="24" Attno="2" ColName="j" TypeMdid="0.23.1.0" ColWidth="4"/>
-            <dxl:Column ColId="25" Attno="3" ColName="k" TypeMdid="0.23.1.0" ColWidth="4"/>
-            <dxl:Column ColId="26" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-            <dxl:Column ColId="27" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-            <dxl:Column ColId="28" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-            <dxl:Column ColId="29" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-            <dxl:Column ColId="30" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-            <dxl:Column ColId="31" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-            <dxl:Column ColId="32" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+            <dxl:Column ColId="22" Attno="1" ColName="i" TypeMdid="0.23.1.0" ColWidth="4"/>
+            <dxl:Column ColId="23" Attno="2" ColName="j" TypeMdid="0.23.1.0" ColWidth="4"/>
+            <dxl:Column ColId="24" Attno="3" ColName="k" TypeMdid="0.23.1.0" ColWidth="4"/>
+            <dxl:Column ColId="25" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+            <dxl:Column ColId="26" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+            <dxl:Column ColId="27" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+            <dxl:Column ColId="28" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+            <dxl:Column ColId="29" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+            <dxl:Column ColId="30" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+            <dxl:Column ColId="31" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
           </dxl:Columns>
         </dxl:TableDescriptor>
         <dxl:PartitionSelector RelationMdid="6.24803.1.0" PartitionLevels="1" ScanId="0">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1324057.792162" Rows="2.000000" Width="30"/>
+            <dxl:Cost StartupCost="0" TotalCost="1324057.792160" Rows="2.000000" Width="26"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="i">

@@ -243,10 +243,10 @@ Feature: Tests for gpmovemirrors
     And user immediately stops all mirror processes for content 0,1,2
     And user can start transactions
     And the user suspend the walsender on the primary on content 0
-    And sql "DROP TABLE if exists test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,100000000) AS i" is executed in "postgres" db
-    And the "test_recoverseg" table row count in "postgres" is saved
     And the user asynchronously runs "gprecoverseg -aF" and the process is saved
-    And the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And the user just waits until recovery_progress.file is created in gpAdminLogs
+    And user waits until gp_stat_replication table has no pg_basebackup entries for content 1,2
+    And an FTS probe is triggered
     And the user waits until mirror on content 1,2 is up
     And verify that mirror on content 0 is down
     And the gprecoverseg lock directory is removed
@@ -284,10 +284,10 @@ Feature: Tests for gpmovemirrors
     And user can start transactions
     And the user suspend the walsender on the primary on content 0
     And the user suspend the walsender on the primary on content 1
-    And sql "DROP TABLE if exists test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,100000000) AS i" is executed in "postgres" db
-    And the "test_recoverseg" table row count in "postgres" is saved
     And the user asynchronously runs "gprecoverseg -aF" and the process is saved
-    And the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And the user just waits until recovery_progress.file is created in gpAdminLogs
+    And user waits until gp_stat_replication table has no pg_basebackup entries for content 2
+    And an FTS probe is triggered
     And the user waits until mirror on content 2 is up
     And verify that mirror on content 0,1 is down
     And the gprecoverseg lock directory is removed
@@ -327,10 +327,8 @@ Feature: Tests for gpmovemirrors
     And the user suspend the walsender on the primary on content 0
     And the user suspend the walsender on the primary on content 1
     And the user suspend the walsender on the primary on content 2
-    And sql "DROP TABLE if exists test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,100000000) AS i" is executed in "postgres" db
-    And the "test_recoverseg" table row count in "postgres" is saved
     And the user asynchronously runs "gprecoverseg -aF" and the process is saved
-    And the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And the user just waits until recovery_progress.file is created in gpAdminLogs
     And verify that mirror on content 0,1,2 is down
     And the gprecoverseg lock directory is removed
     Given a gpmovemirrors directory under '/tmp' with mode '0700' is created

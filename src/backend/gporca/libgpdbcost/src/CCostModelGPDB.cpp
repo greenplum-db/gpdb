@@ -1054,6 +1054,9 @@ CCostModelGPDB::CostHashJoin(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	CCost costChild =
 		CostChildren(mp, exprhdl, pci, pcmgpdb->GetCostModelParams());
 
+	COptimizerConfig *optimizer_config =
+		COptCtxt::PoctxtFromTLS()->GetOptimizerConfig();
+
 	CDouble skew_ratio = 1;
 	ULONG arity = exprhdl.Arity();
 
@@ -1093,14 +1096,39 @@ CCostModelGPDB::CostHashJoin(CMemoryPool *mp, CExpressionHandle &exprhdl,
 				skew_ratio = CDouble(std::max(sk.Get(), skew_ratio.Get()));
 			}
 
+			ULONG skew_factor = optimizer_config->GetHint()->UlSkewFactor();
+			if (skew_factor > 0)
+			{
+				// If user specified skew multiplier is larger than 0
+				// Compute skew
+				IStatistics *pcstats = pci->Pcstats(ul)->Pstats();
+				// User specified skew factor is fed to a power function,
+				// whose ouptut becomes the final skew multiplier.
+				// This allows fine tuning when the skew factor is small,
+				// and coarse tuning when the skew factor is big.
+				// The multiplier caps at 1.0307^(100-1) = 20
+				// The base 1.0307 is so chosen that if the data is slightly
+				// skewed, i.e., skew calculated from the histogram is a
+				// little above 1, we get a multiplier of 20 if we max out
+				// the skew factor at 100
+				skew_factor = pow(1.0307, (skew_factor - 1));
+				CDouble sk1 =
+					skew_factor * CPhysical::GetSkew(pcstats, motion->Pds());
+				skew_ratio = CDouble(std::max(sk1.Get(), skew_ratio.Get()));
+			}
+			else
+			{
+				// If user specified skew multiplier is 0
+				// Cap the skew
+				// To avoid gather motions
+				skew_ratio = CDouble(std::min(dPenalizeHJSkewUpperLimit.Get(),
+											  skew_ratio.Get()));
+			}
+
 			columns->Release();
 		}
 	}
 
-	// if we end up penalizing redistribute too much, we will start getting gather motions
-	// which are not necessarily a good idea. So we maintain a upper limit of skew.
-	skew_ratio =
-		CDouble(std::min(dPenalizeHJSkewUpperLimit.Get(), skew_ratio.Get()));
 	return costChild + CCost(costLocal.Get() * skew_ratio);
 }
 

@@ -43,7 +43,7 @@ WHERE buyer_name = 'ABC'
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="2147483647"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="2147483647"/>
       <dxl:TraceFlags Value="101013,102001,102002,102003,102144,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">

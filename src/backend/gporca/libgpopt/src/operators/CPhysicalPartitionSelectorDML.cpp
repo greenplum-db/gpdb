@@ -31,12 +31,9 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CPhysicalPartitionSelectorDML::CPhysicalPartitionSelectorDML(
-	CMemoryPool *mp, IMDId *mdid, UlongToExprMap *phmulexprEqPredicates,
-	CColRef *pcrOid)
-	: CPhysicalPartitionSelector(mp, mdid, phmulexprEqPredicates),
-	  m_pcrOid(pcrOid)
+	CMemoryPool *mp, IMDId *mdid, UlongToExprMap *phmulexprEqPredicates)
+	: CPhysicalPartitionSelector(mp, mdid, phmulexprEqPredicates)
 {
-	GPOS_ASSERT(NULL != pcrOid);
 }
 
 //---------------------------------------------------------------------------
@@ -59,7 +56,6 @@ CPhysicalPartitionSelectorDML::Matches(COperator *pop) const
 		CPhysicalPartitionSelectorDML::PopConvert(pop);
 
 	return popPartSelector->MDId()->Equals(m_mdid) &&
-		   popPartSelector->PcrOid() == m_pcrOid &&
 		   FMatchExprMaps(popPartSelector->m_phmulexprEqPredicates,
 						  m_phmulexprEqPredicates);
 }
@@ -112,32 +108,6 @@ CPhysicalPartitionSelectorDML::PdsRequired(CMemoryPool *mp,
 {
 	GPOS_ASSERT(0 == child_index);
 
-	// if required distribution uses any defined column, it has to be enforced on top,
-	// in this case, we request Any distribution from the child
-	CColRefSet *pcrs = NULL;
-	CDistributionSpec::EDistributionType edtRequired = pdsInput->Edt();
-	if (CDistributionSpec::EdtHashed == edtRequired)
-	{
-		CDistributionSpecHashed *pdshashed =
-			CDistributionSpecHashed::PdsConvert(pdsInput);
-		pcrs = pdshashed->PcrsUsed(m_mp);
-	}
-
-	if (CDistributionSpec::EdtRouted == edtRequired)
-	{
-		CDistributionSpecRouted *pdsrouted =
-			CDistributionSpecRouted::PdsConvert(pdsInput);
-		pcrs = GPOS_NEW(m_mp) CColRefSet(m_mp);
-		pcrs->Include(pdsrouted->Pcr());
-	}
-
-	BOOL fUsesDefinedCols = (NULL != pcrs && pcrs->FMember(m_pcrOid));
-	CRefCount::SafeRelease(pcrs);
-	if (fUsesDefinedCols)
-	{
-		return GPOS_NEW(mp) CDistributionSpecAny(this->Eopid());
-	}
-
 	return PdsPassThru(mp, exprhdl, pdsInput, child_index);
 }
 
@@ -159,19 +129,6 @@ CPhysicalPartitionSelectorDML::PosRequired(CMemoryPool *mp,
 ) const
 {
 	GPOS_ASSERT(0 == child_index);
-
-	CColRefSet *pcrsSort = posRequired->PcrsUsed(m_mp);
-	BOOL fUsesDefinedCols = pcrsSort->FMember(m_pcrOid);
-	pcrsSort->Release();
-
-	if (fUsesDefinedCols)
-	{
-		// if required order uses any column defined here, we cannot
-		// request it from child, and we pass an empty order spec;
-		// order enforcer function takes care of enforcing this order on top of
-		// this operator
-		return GPOS_NEW(mp) COrderSpec(mp);
-	}
 
 	// otherwise, we pass through required order
 	return PosPassThru(mp, exprhdl, posRequired, child_index);
@@ -195,8 +152,6 @@ CPhysicalPartitionSelectorDML::FProvidesReqdCols(CExpressionHandle &exprhdl,
 	GPOS_ASSERT(1 == exprhdl.Arity());
 
 	CColRefSet *pcrs = GPOS_NEW(m_mp) CColRefSet(m_mp);
-	// include the defined oid column
-	pcrs->Include(m_pcrOid);
 
 	// include output columns of the relational child
 	pcrs->Union(exprhdl.DeriveOutputColumns(0 /*child_index*/));
@@ -266,16 +221,6 @@ CPhysicalPartitionSelectorDML::EpetOrder(CExpressionHandle &exprhdl,
 	if (peo->FCompatible(pos))
 	{
 		return CEnfdProp::EpetUnnecessary;
-	}
-
-	// Sort has to go above if sort columns use any column
-	// defined here, otherwise, Sort can either go above or below
-	CColRefSet *pcrsSort = peo->PosRequired()->PcrsUsed(m_mp);
-	BOOL fUsesDefinedCols = pcrsSort->FMember(m_pcrOid);
-	pcrsSort->Release();
-	if (fUsesDefinedCols)
-	{
-		return CEnfdProp::EpetRequired;
 	}
 
 	return CEnfdProp::EpetOptional;

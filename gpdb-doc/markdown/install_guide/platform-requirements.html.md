@@ -103,7 +103,7 @@ On Ubuntu systems, Greenplum Database 6 requires the following software packages
 -   less
 -   iproute2
 
-Greenplum Database 6 uses Python 2.7.12, which is included with the product installation \(and not installed as a package dependency\).
+Greenplum Database 6 uses Python 2.7.18, which is included with the product installation \(and not installed as a package dependency\).
 
 **Important:** SSL is supported only on the Greenplum Database master host system. It cannot be used on the segment host systems.
 
@@ -248,7 +248,7 @@ This table lists the versions of the Greenplum Extensions that are compatible wi
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 ">PL/Container Images for Python </td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.1.2</td>
-<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">Python 2.7.12<p class="p">Python 3.7</p>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">Python 2.7.18<p class="p">Python 3.7</p>
 </td>
 </tr>
 <tr class="row">

@@ -605,3 +605,57 @@ from
          (select collname from pg_collation where oid = typcollation)
   from gp_dist_random('pg_type') where typname = 'testdomain_issue_12015'
 )x;
+
+--
+-- ORCA shouldn't fail for data corruption while translating query to DXL
+-- for a constant domain value of the following text related types:
+-- char, bpchar, name.
+-- github issue: https://github.com/greenplum-db/gpdb/issues/14155
+--
+
+create temp table test_table_14155(txtime timestamptz default now(), user_role text);
+
+create domain domainname as name;
+create function test_func_name(
+    i_msg text,
+    i_caller domainname = current_user
+) returns void language plpgsql as $$
+begin
+    insert into test_table_14155 (
+        txtime, user_role
+    )
+    select now(), i_caller;
+end
+$$;
+
+select * from test_func_name('test');
+
+create domain domainchar as char;
+create function test_func_char(
+    i_msg text,
+    i_caller domainchar = 'a'
+) returns void language plpgsql as $$
+begin
+    insert into test_table_14155 (
+        txtime, user_role
+    )
+    select now(), i_caller;
+end
+$$;
+
+select * from test_func_char('test');
+
+create domain domainbpchar as bpchar;
+create function test_func_bpchar(
+    i_msg text,
+    i_caller domainbpchar = 'test'
+) returns void language plpgsql as $$
+begin
+    insert into test_table_14155 (
+        txtime, user_role
+    )
+    select now(), i_caller;
+end
+$$;
+
+select * from test_func_bpchar('test');

@@ -366,7 +366,7 @@ explain insert into tbl_cds_buysell_orders_new (a,b,c)
       </dxl:LogicalInsert>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="2">
-      <dxl:DMLInsert Columns="0,1,2,10,11,12,13" ActionCol="14" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
+      <dxl:DMLInsert Columns="0,1,2,10,11,12,13" ActionCol="14" CtidCol="0" SegmentIdCol="0">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="42587.627692" Rows="1000000.000000" Width="12"/>
         </dxl:Properties>

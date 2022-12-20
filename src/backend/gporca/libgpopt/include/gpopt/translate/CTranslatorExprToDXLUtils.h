@@ -251,11 +251,11 @@ public:
 		ColRefToDXLNodeMap *phmcrdxln, const CDXLNode *pdxlnProjListChild);
 
 	// construct the project list of a partition selector
-	static CDXLNode *PdxlnPrLPartitionSelector(
-		CMemoryPool *mp, CMDAccessor *md_accessor, CColumnFactory *col_factory,
-		ColRefToDXLNodeMap *phmcrdxln, BOOL fUseChildProjList,
-		CDXLNode *pdxlnPrLChild, CColRef *pcrOid, ULONG ulPartLevels,
-		BOOL fGeneratePartOid);
+	static CDXLNode *PdxlnPrLPartitionSelector(CMemoryPool *mp,
+											   CColumnFactory *col_factory,
+											   ColRefToDXLNodeMap *phmcrdxln,
+											   BOOL fUseChildProjList,
+											   CDXLNode *pdxlnPrLChild);
 
 	// construct the propagation expression for a partition selector
 	static CDXLNode *PdxlnPropExprPartitionSelector(

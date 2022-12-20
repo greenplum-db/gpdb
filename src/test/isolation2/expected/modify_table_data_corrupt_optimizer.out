@@ -107,26 +107,25 @@ ABORT
 -- TODO: this case is for planner, it will not error out on 6X now,
 --       because 6x does not remove explicit motion yet.
 explain (costs off) update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
- QUERY PLAN                                                                            
----------------------------------------------------------------------------------------
- Update                                                                                
-   ->  Result                                                                          
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)                            
-               Hash Key: tab1.b                                                        
-               ->  Split                                                               
-                     ->  Result                                                        
-                           ->  Hash Join                                               
-                                 Hash Cond: (tab2.a = tab1.a)                          
-                                 ->  Seq Scan on tab2                                  
-                                 ->  Hash                                              
-                                       ->  Broadcast Motion 3:3  (slice1; segments: 3) 
-                                             ->  Hash Join                             
-                                                   Hash Cond: (tab3.b = tab1.b)        
-                                                   ->  Seq Scan on tab3                
-                                                   ->  Hash                            
-                                                         ->  Seq Scan on tab1          
- Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0                                  
-(17 rows)
+ QUERY PLAN                                                                      
+---------------------------------------------------------------------------------
+ Update                                                                          
+   ->  Redistribute Motion 3:3  (slice2; segments: 3)                            
+         Hash Key: tab1.b                                                        
+         ->  Split                                                               
+               ->  Result                                                        
+                     ->  Hash Join                                               
+                           Hash Cond: (tab2.a = tab1.a)                          
+                           ->  Seq Scan on tab2                                  
+                           ->  Hash                                              
+                                 ->  Broadcast Motion 3:3  (slice1; segments: 3) 
+                                       ->  Hash Join                             
+                                             Hash Cond: (tab3.b = tab1.b)        
+                                             ->  Seq Scan on tab3                
+                                             ->  Hash                            
+                                                   ->  Seq Scan on tab1          
+ Optimizer: Pivotal Optimizer (GPORCA)                                           
+(16 rows)
 begin;
 BEGIN
 update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
@@ -164,27 +163,26 @@ ABORT
 
 -- For orca, this will error out
 explain (costs off) update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
- QUERY PLAN                                                                                              
----------------------------------------------------------------------------------------------------------
- Update                                                                                                  
-   ->  Result                                                                                            
-         ->  Redistribute Motion 3:3  (slice3; segments: 3)                                              
-               Hash Key: tab1.b                                                                          
-               ->  Split                                                                                 
-                     ->  Result                                                                          
-                           ->  Hash Join                                                                 
-                                 Hash Cond: (tab3.a = tab1.b)                                            
-                                 ->  Seq Scan on tab3                                                    
-                                 ->  Hash                                                                
-                                       ->  Broadcast Motion 3:3  (slice2; segments: 3)                   
-                                             ->  Hash Join                                               
-                                                   Hash Cond: (tab2.a = tab1.a)                          
-                                                   ->  Seq Scan on tab2                                  
-                                                   ->  Hash                                              
-                                                         ->  Broadcast Motion 3:3  (slice1; segments: 3) 
-                                                               ->  Seq Scan on tab1                      
- Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0                                                    
-(18 rows)
+ QUERY PLAN                                                                                        
+---------------------------------------------------------------------------------------------------
+ Update                                                                                            
+   ->  Redistribute Motion 3:3  (slice3; segments: 3)                                              
+         Hash Key: tab1.b                                                                          
+         ->  Split                                                                                 
+               ->  Result                                                                          
+                     ->  Hash Join                                                                 
+                           Hash Cond: (tab3.a = tab1.b)                                            
+                           ->  Seq Scan on tab3                                                    
+                           ->  Hash                                                                
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)                   
+                                       ->  Hash Join                                               
+                                             Hash Cond: (tab2.a = tab1.a)                          
+                                             ->  Seq Scan on tab2                                  
+                                             ->  Hash                                              
+                                                   ->  Broadcast Motion 3:3  (slice1; segments: 3) 
+                                                         ->  Seq Scan on tab1                      
+ Optimizer: Pivotal Optimizer (GPORCA)                                                             
+(17 rows)
 begin;
 BEGIN
 update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
@@ -195,17 +193,16 @@ ABORT
 -- test splitupdate. 6X code, both orca and planner generate splitupdate with redistribute motion
 -- so they will both error out.
 explain (costs off) update tab1 set b = b + 1;
- QUERY PLAN                                                 
-------------------------------------------------------------
- Update                                                     
-   ->  Result                                               
-         ->  Redistribute Motion 3:3  (slice1; segments: 3) 
-               Hash Key: tab1.b                             
-               ->  Split                                    
-                     ->  Result                             
-                           ->  Seq Scan on tab1             
- Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0       
-(8 rows)
+ QUERY PLAN                                           
+------------------------------------------------------
+ Update                                               
+   ->  Redistribute Motion 3:3  (slice1; segments: 3) 
+         Hash Key: tab1.b                             
+         ->  Split                                    
+               ->  Result                             
+                     ->  Seq Scan on tab1             
+ Optimizer: Pivotal Optimizer (GPORCA)                
+(7 rows)
 begin;
 BEGIN
 update tab1 set b = b + 1;
