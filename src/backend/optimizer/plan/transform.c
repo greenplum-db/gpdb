@@ -32,12 +32,19 @@
 						 || q->intoPolicy != NULL \
 						 || q->parentStmtType == PARENTSTMTTYPE_CTAS)
 
+typedef struct
+{
+	Index rtindex;
+	List *rtable;
+} RTEI;
+
 /**
  * Static declarations
  */
 static Node *replace_sirv_functions_mutator(Node *node, void *context);
 static void replace_sirvf_tle(Query *query, int tleOffset);
-static RangeTblEntry *replace_sirvf_rte(Query *query, RangeTblEntry *rte);
+static RangeTblEntry *replace_sirvf_rte(Query *query, RangeTblEntry *rte, Index rti);
+static Node *replace_sirvf_target_list_mutator(Node *node, RTEI *rtei);
 static Node *replace_sirvf_tle_expr_mutator(Node *node, void *context);
 static SubLink *make_sirvf_subselect(FuncExpr *fe);
 static Query *make_sirvf_subquery(FuncExpr *fe);
@@ -87,6 +94,7 @@ normalize_query(Query *query)
 	if (safe_to_replace_sirvf_rte(res))
 	{
 		ListCell   *lc;
+		Index	rti;
 
 		if (!copied)
 		{
@@ -94,13 +102,13 @@ normalize_query(Query *query)
 			copied = true;
 		}
 
-		foreach(lc, res->rtable)
+		foreach_with_count(lc, res->rtable, rti)
 		{
 			RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
 
 			if (IS_DML_OR_CTAS(res))
 			{
-				replace_sirvf_rte(res, rte);
+				replace_sirvf_rte(res, rte, rti + 1);
 			}		 
 		}
 	}
@@ -157,12 +165,13 @@ static Node *replace_sirv_functions_mutator(Node *node, void *context)
 		if (safe_to_replace_sirvf_rte(query))
 		{
 			ListCell *lc;
+			Index rti;
 
-			foreach(lc, query->rtable)
+			foreach_with_count(lc, query->rtable, rti)
 			{
 				RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
 
-				rte = replace_sirvf_rte(query, rte);
+				rte = replace_sirvf_rte(query, rte, rti + 1);
 
 				lfirst(lc) = rte;
 			}
@@ -462,7 +471,7 @@ static bool safe_to_replace_sirvf_rte(Query *query)
  * the child target list, which we get from make_sirvf_subquery().
  */
 static Node *
-replace_sirvf_target_list_mutator(Node *node, List *rtable)
+replace_sirvf_target_list_mutator(Node *node, RTEI *rtei)
 {
 	if (!node)
 		return NULL;
@@ -473,14 +482,14 @@ replace_sirvf_target_list_mutator(Node *node, List *rtable)
 
 		if (!IsA(te->expr, Var))
 		{
-			return node;
+			goto descent;
 		}
 
 		Var		   *var = (Var *) te->expr;
 
-		if (te->resjunk || var->varattno != 0)
+		if (te->resjunk || var->varattno != 0 || var->varno != rtei->rtindex)
 		{
-			return node;
+			goto descent;
 		}
 
 		/*
@@ -489,8 +498,7 @@ replace_sirvf_target_list_mutator(Node *node, List *rtable)
 		 */
 		Oid typid = var->vartype;
 		int rti = var->varno;
-		RangeTblEntry *rte = rt_fetch(rti, rtable);
-		bool match = true;
+		RangeTblEntry *rte = rt_fetch(rti, rtei->rtable);
 
 		/* Whole-row var reference for row type */
 		if (rte->rtekind == RTE_SUBQUERY &&
@@ -498,8 +506,7 @@ replace_sirvf_target_list_mutator(Node *node, List *rtable)
 		{
 			List *targetList = rte->subquery->targetList;
 			RowExpr *rowexpr = makeNode(RowExpr);
-			Oid typid = var->vartype;
-			Oid	base_typid = getBaseType(typid);
+			Oid	base_typid = getBaseType(var->vartype);
 			rowexpr->row_typeid = base_typid;
 			rowexpr->row_format = COERCE_EXPLICIT_CAST;
 
@@ -509,26 +516,18 @@ replace_sirvf_target_list_mutator(Node *node, List *rtable)
 			{
 				TargetEntry *subTe = (TargetEntry *) lfirst(lc);
 				FieldSelect *fs = (FieldSelect *) subTe->expr;
-				Var *subvar = (Var *) fs->arg;
-				if (typid != subvar->vartype)
-				{
-					match = false;
-					break;
-				}
 				Var *var = makeVar(1, index + 1, fs->resulttype, -1, 0, 0);
 				rowexpr->args = lappend(rowexpr->args, var);
 			}
 
-			if (match)
-			{
-				TargetEntry *newTe = makeTargetEntry(rowexpr, 1, rte->eref->aliasname, false);
+			TargetEntry *newTe = makeTargetEntry((Expr *) rowexpr, 1, rte->eref->aliasname, false);
 
-				return (Node *) newTe;
-			}
+			return (Node *) newTe;
 		}
 	}
 
-	return expression_tree_mutator(node, replace_sirvf_target_list_mutator, rtable);
+descent:
+	return expression_tree_mutator(node, replace_sirvf_target_list_mutator, rtei);
 }
 
 /**
@@ -545,7 +544,7 @@ replace_sirvf_target_list_mutator(Node *node, List *rtable)
  * SELECT * FROM (SELECT FOO(1)) t1
  */
 static RangeTblEntry *
-replace_sirvf_rte(Query *query, RangeTblEntry *rte)
+replace_sirvf_rte(Query *query, RangeTblEntry *rte, Index rti)
 {
 	Assert(query);
 	Assert(safe_to_replace_sirvf_rte(query));
@@ -591,8 +590,11 @@ replace_sirvf_rte(Query *query, RangeTblEntry *rte)
 				rte->rtekind = RTE_SUBQUERY;
 				rte->subquery = subquery;
 
-				query->targetList = replace_sirvf_target_list_mutator((Node *) query->targetList, 
-																		query->rtable);
+				RTEI *rtei = (RTEI *) palloc0fast(sizeof(RTEI));
+				rtei->rtindex = rti;
+				rtei->rtable = query->rtable;
+				query->targetList = (List *) replace_sirvf_target_list_mutator((Node *) query->targetList, 
+																		rtei);
 			}
 		}
 	}
