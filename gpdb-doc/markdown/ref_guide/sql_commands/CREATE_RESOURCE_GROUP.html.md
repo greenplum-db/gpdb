@@ -111,7 +111,7 @@ CREATE RESOURCE GROUP plc_run1 WITH (MEMORY_LIMIT=10, CPU_RATE_LIMIT=10,
   CONCURRENCY=0, MEMORY_AUDITOR=cgroup);
 ```
 
-Create a resource group with a memory limit percentage of 11 to which you assign CPU on the coordinator host, and cores 1 to 3 on segment hosts:
+Create a resource group with a memory limit percentage of 11 to which you assign CPU core 1 on the coordinator host, and cores 1 to 3 on segment hosts:
 
 ```
 CREATE RESOURCE GROUP rgroup3 WITH (CPUSET='1;1-3', MEMORY_LIMIT=11);
