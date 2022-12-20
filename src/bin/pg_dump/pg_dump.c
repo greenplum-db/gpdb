@@ -4804,7 +4804,8 @@ getTables(Archive *fout, int *numTables)
 	 * composite type (pg_depend entries for columns of the composite type
 	 * link to the pg_class entry not the pg_type entry).
 	 */
-	appendPQExpBufferStr(query,
+	if (fout->remoteVersion >= GPDB6_MAJOR_PGVERSION)
+		appendPQExpBufferStr(query,
 						  "WHERE c.relkind IN ("
 						  CppAsString2(RELKIND_RELATION) ", "
 						  CppAsString2(RELKIND_SEQUENCE) ", "
@@ -4812,6 +4813,13 @@ getTables(Archive *fout, int *numTables)
 						  CppAsString2(RELKIND_COMPOSITE_TYPE) ", "
 						  CppAsString2(RELKIND_MATVIEW) ", "
 						  CppAsString2(RELKIND_FOREIGN_TABLE) ")\n");
+	else
+		appendPQExpBufferStr(query,
+						  "WHERE c.relkind IN ("
+						  CppAsString2(RELKIND_RELATION) ", "
+						  CppAsString2(RELKIND_SEQUENCE) ", "
+						  CppAsString2(RELKIND_VIEW) ", "
+						  CppAsString2(RELKIND_COMPOSITE_TYPE) ")\n");
 
   if (fout->remoteVersion >= 80400)
 		appendPQExpBufferStr(query,
