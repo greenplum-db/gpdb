@@ -2377,7 +2377,7 @@ When GPORCA is enabled \(the default\), `optimizer_skew_factor` controls skew ra
 
 The default value is `0`, skew computation is turned off for GPORCA. To enable skew computation, set `optimizer_skew_factor` to a value between `1` and `100`, inclusive.
 
-The larger the `optimizer_skew_factor` is, the larger the cost that GPORCA assigns to redistributed hash join, such that GPORCA favors more a broadcast hash join.
+The larger the `optimizer_skew_factor`, the larger the cost that GPORCA assigns to redistributed hash join, such that GPORCA favors more a broadcast hash join.
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
