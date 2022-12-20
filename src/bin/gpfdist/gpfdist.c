@@ -371,9 +371,10 @@ static int request_validate(request_t *r);
 static int request_set_path(request_t *r, const char* d, char* p, char* pp, char* path);
 static int request_path_validate(request_t *r, const char* path);
 #ifdef USE_ZSTD
-static int compress_zstd(request_t *r, block_t* block, int buflen);
+static int compress_zstd(const request_t *r, block_t* block, int buflen);
 static int decompress_data(request_t *r);
 static int decompress_zstd(request_t* r, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout);
+static void decompress_write_loop(request_t *r);
 #endif
 static int request_parse_gp_headers(request_t *r, int opt_g);
 static void free_session_cb(int fd, short event, void* arg);
@@ -3212,21 +3213,24 @@ static void handle_post_request(request_t *r, int header_end)
 		r->in.davailable -= data_bytes_in_req;
 
 		/* only write it out if no more data is expected */
-		if(r->in.davailable == 0 && !r->zstd)
+		if(r->in.davailable == 0)
 		{
-			wrote = fstream_write(session->fstream, r->in.dbuf, data_bytes_in_req, 1, r->line_delim_str, r->line_delim_length);
-			delay_watchdog_timer();
-			if(wrote == -1)
+#ifdef USE_ZSTD
+			if(r->zstd)
+				decompress_write_loop(r);
+			else
+#endif
 			{
-				/* write error */
-				http_error(r, FDIST_INTERNAL_ERROR, fstream_get_error(session->fstream));
-				request_end(r, 1, 0);
-				return;
+				wrote = fstream_write(session->fstream, r->in.dbuf, data_bytes_in_req, 1, r->line_delim_str, r->line_delim_length);
+				delay_watchdog_timer();
+				if(wrote == -1)
+				{
+					/* write error */
+					http_error(r, FDIST_INTERNAL_ERROR, fstream_get_error(session->fstream));
+					request_end(r, 1, 0);
+					return;
+				}
 			}
-		}
-		if (r->zstd) 
-		{
-			r->in.cflag = data_bytes_in_req;
 		}
 	}
 
@@ -3234,7 +3238,7 @@ static void handle_post_request(request_t *r, int header_end)
 	 * we've consumed all data that came in the first buffer (with the request)
 	 * if we're still expecting more data, get it from socket now and process it.
 	 */
-	while(r->in.davailable > 0 || r->in.cflag != 0)
+	while(r->in.davailable > 0)
 	{
 		size_t want;
 		ssize_t n = 0;
@@ -3265,7 +3269,7 @@ static void handle_post_request(request_t *r, int header_end)
 				return;
 			}
 		}
-		else if (n == 0 && !r->in.cflag)
+		else if (n == 0)
 		{
 			/* socket close by peer will return 0 */
 			gwarning(r, "handle_post_request socket closed by peer");
@@ -3288,23 +3292,7 @@ static void handle_post_request(request_t *r, int header_end)
 				/* only write up to end of last row */
 				if(r->zstd) 
 				{
-					do
-					{
-						int res = decompress_data(r);
-
-						if (res < 0) 
-						{
-							http_error(r, FDIST_INTERNAL_ERROR, r->zstd_error);
-							request_end(r, 1, 0);
-							return;
-						}
-
-						wrote = fstream_write(session->fstream, r->in.wbuf, r->in.wbuftop, 1, r->line_delim_str, r->line_delim_length);
-						gdebug(r, "wrote %d bytes to file", wrote);
-						delay_watchdog_timer();
-
-						check_output_to_file(r, wrote);
-					} while(r->in.cflag);
+					decompress_write_loop(r);
 				}
 				else
 #endif
@@ -4675,6 +4663,32 @@ static void delay_watchdog_timer()
 #endif
 
 #ifdef USE_ZSTD
+
+/* decompress the data and write data to the file.
+ * Finally, the function will check the write result,
+ * and change the related value about data buffer. 
+ */
+static void decompress_write_loop(request_t *r)
+{
+	session_t *session = r->session;
+	do
+	{
+		int res = decompress_data(r);
+
+		if (res < 0) 
+		{
+			http_error(r, FDIST_INTERNAL_ERROR, r->zstd_error);
+			request_end(r, 1, 0);
+			return;
+		}
+
+		int wrote = fstream_write(session->fstream, r->in.wbuf, r->in.wbuftop, 1, r->line_delim_str, r->line_delim_length);
+		gdebug(r, "wrote %d bytes to file", wrote);
+		delay_watchdog_timer();
+
+		check_output_to_file(r, wrote);
+	} while(r->in.cflag);
+}
 
 static int decompress_zstd(request_t* r, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout)
 {	

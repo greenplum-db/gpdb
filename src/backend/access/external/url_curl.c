@@ -1274,6 +1274,9 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 	set_httpheader(file, "X-GP-SEGMENT-COUNT", ev->GP_SEGMENT_COUNT);
 	set_httpheader(file, "X-GP-LINE-DELIM-STR", ev->GP_LINE_DELIM_STR);
 	set_httpheader(file, "X-GP-LINE-DELIM-LENGTH", ev->GP_LINE_DELIM_LENGTH);
+#ifdef USE_ZSTD
+		set_httpheader(file, "X-GP-ZSTD", "1");
+#endif
 
 	if (forwrite)
 	{
@@ -1289,13 +1292,11 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		set_httpheader(file, "X-GP-PROTO", "0");
 		set_httpheader(file, "X-GP-SEQ", "1");
 		set_httpheader(file, "Content-Type", "text/xml");
-		set_httpheader(file, "X-GP-ZSTD", "1");
 	}
 	else
 	{
 		/* read specific - (TODO: unclear why some of these are needed) */
 		set_httpheader(file, "X-GP-PROTO", "1");
-		set_httpheader(file, "X-GP-ZSTD", "1");
 		set_httpheader(file, "X-GP-MASTER_HOST", ev->GP_MASTER_HOST);
 		set_httpheader(file, "X-GP-MASTER_PORT", ev->GP_MASTER_PORT);
 		set_httpheader(file, "X-GP-CSVOPT", ev->GP_CSVOPT);
@@ -1870,7 +1871,6 @@ gp_proto0_write(URL_CURL_FILE *file, CopyState pstate)
 		buf = file->out.ptr;
 	 	nbytes = file->out.top;
 	}
-	
 
 	if (nbytes == 0)
 		return;
