@@ -3234,7 +3234,7 @@ static void handle_post_request(request_t *r, int header_end)
 		r->in.davailable -= data_bytes_in_req;
 
 		/* only write it out if no more data is expected */
-		if(r->in.davailable == 0 && !r->zstd)
+		if(r->in.davailable == 0)
 		{
 #ifdef USE_ZSTD
 			if(r->zstd)
@@ -3257,17 +3257,13 @@ static void handle_post_request(request_t *r, int header_end)
 				}
 			}
 		}
-		if (r->zstd) 
-		{
-			r->in.cflag = data_bytes_in_req;
-		}
 	}
 
 	/*
 	 * we've consumed all data that came in the first buffer (with the request)
 	 * if we're still expecting more data, get it from socket now and process it.
 	 */
-	while(r->in.davailable > 0 || r->in.cflag != 0)
+	while(r->in.davailable > 0)
 	{
 		size_t want;
 		ssize_t n = 0;
@@ -3298,7 +3294,7 @@ static void handle_post_request(request_t *r, int header_end)
 				return;
 			}
 		}
-		else if (n == 0 && !r->in.cflag)
+		else if (n == 0)
 		{
 			/* socket close by peer will return 0 */
 			gwarning(r, "handle_post_request socket closed by peer");

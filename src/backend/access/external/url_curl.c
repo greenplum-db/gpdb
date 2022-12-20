@@ -1300,7 +1300,6 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		set_httpheader(file, "X-GP-PROTO", "0");
 		set_httpheader(file, "X-GP-SEQ", "1");
 		set_httpheader(file, "Content-Type", "text/xml");
-		set_httpheader(file, "X-GP-ZSTD", "1");
 	}
 	else
 	{
