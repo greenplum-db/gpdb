@@ -384,8 +384,10 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 
 		if (!should_skip_operator_memory_assign)
 		{
-			switch(*gp_resmanager_memory_policy)
+			PG_TRY();
 			{
+				switch (*gp_resmanager_memory_policy)
+				{
 				case RESMANAGER_MEMORY_POLICY_AUTO:
 					PolicyAutoAssignOperatorMemoryKB(queryDesc->plannedstmt,
 													 queryDesc->plannedstmt->query_mem);
@@ -397,7 +399,17 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 				default:
 					Assert(IsResManagerMemoryPolicyNone());
 					break;
+				}
 			}
+			PG_CATCH();
+			{
+				/* GPDB hook for collecting query info */
+				if (query_info_collect_hook)
+					(*query_info_collect_hook)(QueryCancelCleanup ? METRICS_QUERY_CANCELED : METRICS_QUERY_ERROR, queryDesc);
+
+				PG_RE_THROW();
+			}
+			PG_END_TRY();
 		}
 	}
 
