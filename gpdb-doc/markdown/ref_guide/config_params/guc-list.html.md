@@ -2373,11 +2373,11 @@ This parameter can be set for a database system, an individual database, or a se
 
 ## <a id="optimizer_skew_factor"></a>optimizer\_skew\_factor 
 
-When GPORCA is enabled \(the default\), `optimizer_skew_factor` controls skew ratio computation using sampled statistics. The sampling rate is proportional to the bucket frequency; the higher the frequency, the more data GPORCA samples for that bucket.
+When GPORCA is enabled \(the default\), `optimizer_skew_factor` controls skew ratio computation.
 
 The default value is `0`, skew computation is turned off for GPORCA. To enable skew computation, set `optimizer_skew_factor` to a value between `1` and `100`, inclusive.
 
-The final skewness that GPORCA uses for plan costing is the product of the `optimizer_skew_factor` \(coefficient\) and the skew ratio \(variable\). This parameter gives you additional control over plan motions \(broadcast/gather vs. redistribution\) if you choose to emphasize the data skew.
+The larger the `optimizer_skew_factor` is, the larger the cost that GPORCA assigns to redistributed hash join, such that GPORCA favors more a broadcast hash join.
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
