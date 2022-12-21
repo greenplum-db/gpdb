@@ -442,7 +442,6 @@ The `diskquota` module has the following limitations and known issues:
     -   A long-running query in a session has consumed the full disk quota.
     `diskquota` does update the denylist in this scenario, but the `diskquota.show_fast_role_quota_view` may not represent the actual used quota because the long-running query is not yet committed. If you execute a new query while the original is still running, the new query will trigger a quota exceeded error.
 -   When `diskquota` is operating in *static mode*, it may fail to monitor some databases when `diskquota.max_workers` is greater than the available number of bgworker processes. In *dynamic mode*, `diskquota` works correctly when there is at least one available bgworker process.
--   When `diskquota` is enforcing a *hard limit* for disk usage and data is inserted into a partitioned table, `diskquota` cannot block the query even when `nspsize_in_bytes`, `rolsize_in_bytes`, and `nspsize_tablespace_in_bytes` in `show_fast_schema_quota_view` have exceeded the quota limit. `diskquota` cannot detect when data has been inserted into many children partition tables that each table file doesn’t need to extend.
 
 
 ## <a id="topic_sfb_gb1_b3b"></a>Notes 
