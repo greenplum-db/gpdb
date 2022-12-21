@@ -313,7 +313,7 @@ bool		optimizer_enable_multiple_distinct_aggs;
 bool		optimizer_enable_direct_dispatch;
 bool		optimizer_enable_hashjoin_redistribute_broadcast_children;
 bool		optimizer_enable_broadcast_nestloop_outer_child;
-bool		optimizer_enable_redistribute_hashjoin;
+bool		optimizer_discard_redistribute_hashjoin;
 bool		optimizer_enable_streaming_material;
 bool		optimizer_enable_gather_on_segment_for_dml;
 bool		optimizer_enable_assert_maxonerow;
@@ -2383,13 +2383,13 @@ struct config_bool ConfigureNamesBool_gp[] =
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_redistribute_hashjoin", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Enable hash join plans with redistribute motion in the optimizer."),
+		{"optimizer_discard_redistribute_hashjoin", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Discard hash join with redistribute motion in the optimizer."),
 			NULL,
 			GUC_NOT_IN_SAMPLE
 		},
-		&optimizer_enable_redistribute_hashjoin,
-		true,
+		&optimizer_discard_redistribute_hashjoin,
+		false,
 		NULL, NULL, NULL
 	},
 	{

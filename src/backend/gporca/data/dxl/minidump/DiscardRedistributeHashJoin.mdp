@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:Comment><![CDATA[
-    Make sure that optimizer picks a non-redistribute hashjoin plan
-    when the GUC `optimizer_enable_redistribute_hashjoin` is turned off.
+    Make sure that optimizer doesn't pick the redistribute hashjoin plan
+    when the GUC `optimizer_discard_redistribute_hashjoin` is turned on.
 
     create table foo(a int, b int, c int);
     create table bar(a int, b int, c int);
-	set optimizer_enable_redistribute_hashjoin=off;
-	explain select * from foo, bar where foo.b=bar.b;
+    set optimizer_discard_redistribute_hashjoin=on;
+    explain select * from foo, bar where foo.b=bar.b;
 	                                        QUERY PLAN
     -------------------------------------------------------------------------------------------
      Hash Join  (cost=0.00..862.00 rows=1 width=24)
