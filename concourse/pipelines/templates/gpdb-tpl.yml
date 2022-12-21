@@ -3526,8 +3526,6 @@ jobs:
         - icw_mirrorless_rhel8
         - resource_group_rhel8
         - interconnect_rhel8
-        - scram-sha-256_abi_test_server_rhel8
-        - scram-sha-256_abi_test_clients_rhel8
 {% for test in CLI_BEHAVE_TESTS %}
         - [[ test.name ]]_rhel8
 {% endfor %}
