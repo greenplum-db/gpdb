@@ -8155,7 +8155,8 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 									hashOpfamilies,
 									numHashSegments);
 	}
-	else if (CdbPathLocus_IsOuterQuery(path->path.locus))
+	else if (CdbPathLocus_IsOuterQuery(path->path.locus) &&
+			 !path->path.pathkeys)
 	{
 		motion = make_union_motion(subplan);
 		motion->motionType = MOTIONTYPE_OUTER_QUERY;

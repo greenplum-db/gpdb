@@ -1322,3 +1322,16 @@ drop table sublink_outer_table;
 drop table sublink_inner_table;
 reset optimizer;
 reset enable_hashagg;
+
+create table outer_foo(a int primary key, b int);
+create table inner_bar(a int, b int) distributed randomly;
+set optimizer to off;
+insert into outer_foo values (generate_series(1,20), generate_series(11,30));
+insert into inner_bar values (generate_series(1,20), generate_series(25,44));
+explain select t1.a from outer_foo t1,  LATERAL(SELECT  distinct t2.a from inner_bar t2 where t1.b=t2.b) q order by 1;
+explain select t1.a from outer_foo t1,  LATERAL(SELECT  distinct t2.a from inner_bar t2 where t1.b=t2.b) q;
+select t1.a from outer_foo t1,  LATERAL(SELECT  distinct t2.a from inner_bar t2 where t1.b=t2.b) q order by 1;
+reset optimizer;
+drop table outer_foo;
+drop table inner_bar;
+

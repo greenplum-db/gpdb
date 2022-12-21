@@ -3413,3 +3413,57 @@ drop table sublink_outer_table;
 drop table sublink_inner_table;
 reset optimizer;
 reset enable_hashagg;
+create table outer_foo(a int primary key, b int);
+create table inner_bar(a int, b int) distributed randomly;
+set optimizer to off;
+insert into outer_foo values (generate_series(1,20), generate_series(11,30));
+insert into inner_bar values (generate_series(1,20), generate_series(25,44));
+explain select t1.a from outer_foo t1,  LATERAL(SELECT  distinct t2.a from inner_bar t2 where t1.b=t2.b) q order by 1;
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
+ Nested Loop  (cost=10000002975.92..10258797476.67 rows=86100000 width=4)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.17..2401.67 rows=86100 width=8)
+         Merge Key: t1.a
+         ->  Index Scan using outer_foo_pkey on outer_foo t1  (cost=0.17..1253.67 rows=28700 width=8)
+   ->  Materialize  (cost=2975.75..3000.75 rows=1000 width=0)
+         ->  HashAggregate  (cost=2975.75..2985.75 rows=1000 width=4)
+               Group Key: t2.a
+               ->  Result  (cost=0.00..2760.50 rows=86100 width=4)
+                     Filter: (t1.b = t2.b)
+                     ->  Materialize  (cost=0.00..1899.50 rows=86100 width=8)
+                           ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=8)
+                                 ->  Seq Scan on inner_bar t2  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+explain select t1.a from outer_foo t1,  LATERAL(SELECT  distinct t2.a from inner_bar t2 where t1.b=t2.b) q;
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
+ Nested Loop  (cost=10000002975.75..10258796544.00 rows=86100000 width=4)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1469.00 rows=86100 width=8)
+         ->  Seq Scan on outer_foo t1  (cost=0.00..321.00 rows=28700 width=8)
+   ->  Materialize  (cost=2975.75..3000.75 rows=1000 width=0)
+         ->  HashAggregate  (cost=2975.75..2985.75 rows=1000 width=4)
+               Group Key: t2.a
+               ->  Result  (cost=0.00..2760.50 rows=86100 width=4)
+                     Filter: (t1.b = t2.b)
+                     ->  Materialize  (cost=0.00..1899.50 rows=86100 width=8)
+                           ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=8)
+                                 ->  Seq Scan on inner_bar t2  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+select t1.a from outer_foo t1,  LATERAL(SELECT  distinct t2.a from inner_bar t2 where t1.b=t2.b) q order by 1;
+ a  
+----
+ 15
+ 16
+ 17
+ 18
+ 19
+ 20
+(6 rows)
+
+reset optimizer;
+drop table outer_foo;
+drop table inner_bar;
