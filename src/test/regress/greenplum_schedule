@@ -340,4 +340,7 @@ test: resource_manager_restore_to_none
 # test dispatch and result handling of gp_log_memory_backend_contexts
 test: gp_log_mem_dispatch
 
+# test that distributing or hash partitioning by an enum field or expression is blocked
+test: enum_dist_part_ban
+
 # end of tests
