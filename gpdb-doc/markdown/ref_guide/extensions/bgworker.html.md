@@ -54,5 +54,5 @@ In some cases, a process which registers a background worker may wish to wait fo
 
 The `worker_spi` contrib module contains a working example, which demonstrates some useful techniques.
 
-The maximum number of registered background workers is limited by max-worker-processes.
+The maximum number of registered background workers is limited by the `max_worker_processes` server configuration parameter.
 
