@@ -1060,7 +1060,7 @@ CCostModelGPDB::CostHashJoin(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	CDouble skew_ratio = 1;
 	ULONG arity = exprhdl.Arity();
 
-	if (GPOS_FTRACE(EopttraceDisableRedistributeHashJoin))
+	if (GPOS_FTRACE(EopttraceDiscardRedistributeHashJoin))
 	{
 		for (ULONG ul = 0; ul < arity - 1; ul++)
 		{
