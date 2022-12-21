@@ -2,10 +2,10 @@ platform: linux
 image_resource:
   type: registry-image
 inputs:
-  - name: gpdb_rpm
+  - name: gpdb_package
   - name: gpdb_src
 
 outputs:
   - name: gpdb_artifacts
 run:
-  path: gpdb_src/concourse/scripts/extract_rpm.bash
+  path: gpdb_src/concourse/scripts/extract_package.bash
