@@ -426,6 +426,8 @@ bool		optimizer_replicated_table_insert;
 /* GUCs for slice table*/
 int			gp_max_slices;
 
+/* GUCs for partiton table*/
+int			gp_max_scan_partitions;
 /* System Information */
 static int	gp_server_version_num;
 static char *gp_server_version_string;

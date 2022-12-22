@@ -157,6 +157,8 @@ static void InitializeQueryPartsMetadata(PlannedStmt *plannedstmt, EState *estat
 static void AdjustReplicatedTableCounts(EState *estate);
 static void check_epq_safe_on_qes(Plan *plan);
 
+
+extern  void GetPlanPartitionCnt(PlanState *planstate,List*rtable,int *partition);
 /* end of local decls */
 
 /*
@@ -808,6 +810,21 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
+	
+	//get the scan partitions table count	
+	if(Gp_role == GP_ROLE_DISPATCH && (queryDesc->planstate != NULL))
+	{
+		int partitions = 0;	
+		GetPlanPartitionCnt(queryDesc->planstate,queryDesc->plannedstmt->rtable,&partitions);
+		if(gp_max_scan_partitions > 0 && partitions > gp_max_scan_partitions)
+		{
+			ereport(ERROR,
+				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
+				 errmsg("at most %d partition table are allowed in a query, current number: %d", gp_max_scan_partitions, partitions),
+				 errhint("rewrite your query or adjust GUC gp_max_scan_partitions")));
+		}
+	}
+
 
 	if (DEBUG1 >= log_min_messages)
 	{

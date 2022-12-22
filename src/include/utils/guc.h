@@ -558,6 +558,8 @@ extern bool optimizer_replicated_table_insert;
 /* GUCs for slice table*/
 extern int	gp_max_slices;
 
+/*max scan partition table*/
+extern int     gp_max_scan_partitions;
 /**
  * Enable logging of DPE match in optimizer.
  */
