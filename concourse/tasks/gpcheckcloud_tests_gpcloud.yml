@@ -1,9 +1,6 @@
 platform: linux
 image_resource:
   type: registry-image
-  source:
-    repository: gcr.io/data-gpdb-public-images/gpdb6-centos6-test
-    tag: latest
 inputs:
   - name: gpdb_src
   - name: bin_gpdb

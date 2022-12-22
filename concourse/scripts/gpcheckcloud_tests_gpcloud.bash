@@ -30,7 +30,6 @@ function setup_gpadmin_user() {
 function _main() {
 	time install_and_configure_gpdb
 	time setup_gpadmin_user
-	sed -i s/1024/unlimited/ /etc/security/limits.d/90-nproc.conf
 	time gen_env
 
 	time run_regression_gpcheckcloud
