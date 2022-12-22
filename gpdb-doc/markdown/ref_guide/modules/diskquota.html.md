@@ -496,12 +496,6 @@ If you are using version 2.0.x of the module and you want to upgrade to `diskquo
     $ psql -d testdb -c "ALTER EXTENSION diskquota UPDATE TO '2.1'";
     ```
 
-3.  Re-initialize `diskquota` table size data:
-
-    ```
-    =# SELECT diskquota.init_table_size_table();
-    ```
-
 4.  Restart Greenplum Database:
 
     ```
