@@ -1,0 +1,33 @@
+# This file must exist in the same directory that you execute gpinitsystem in
+MACHINE_LIST_FILE=/home/gpadmindev/gpdb/hostfile
+
+# This names the data directories for the Segment Instances and the Entry Postmaster
+SEG_PREFIX=demoDataDir
+
+# This is the port at which to contact the resulting Greenplum database, e.g.
+#   psql -p $PORT_BASE -d template1
+PORT_BASE=2
+
+# Array of data locations for each hosts Segment Instances, the number of directories in this array will
+# set the number of segment instances per host
+declare -a DATA_DIRECTORY=()
+
+# Name of host on which to setup the QD
+COORDINATOR_HOSTNAME=sdw1
+
+# Name of directory on that host in which to setup the QD
+COORDINATOR_DIRECTORY=/home/gpadmindev/gpdb/datadirs/qddir
+
+COORDINATOR_PORT=
+
+# Shell to use to execute commands on all hosts
+TRUSTED_SHELL="/home/gpadmindev/gpdb/lalshell"
+
+ENCODING=UNICODE
+
+# Keep max_connection settings to reasonable values for
+# installcheck good execution.
+
+DEFAULT_QD_MAX_CONNECT=25
+QE_CONNECT_FACTOR=5
+

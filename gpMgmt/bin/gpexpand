@@ -300,7 +300,8 @@ status_detail_table_sql = """CREATE TABLE gpexpand.status_detail
                           expansion_started timestamp,
                           expansion_finished timestamp,
                           source_bytes numeric,
-                          rel_storage text ) """
+                          rel_storage text )
+                          distributed by (table_oid) """
 # gpexpand views
 progress_view_simple_sql = """CREATE VIEW gpexpand.expansion_progress AS
 SELECT
