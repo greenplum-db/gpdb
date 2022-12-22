@@ -8,7 +8,7 @@ Ensure the following criteria are met:
 
 -   The table does not contain multi-column partition keys.
 -   The multi-level partitioned table is a uniform multi-level partitioned table. See [About Uniform Multi-level Partitioned Tables](query-piv-uniform-part-tbl.html).
--   The server configuration parameter `optimizer_enable_master_only_queries` is set to `on` when running against master only tables such as the system table *pg\_attribute*. For information about the parameter, see the *Greenplum Database Reference Guide*.
+-   The server configuration parameter `optimizer_enable_master_only_queries` is set to `on` when running against coordinator only tables such as the system table *pg\_attribute*. For information about the parameter, see the *Greenplum Database Reference Guide*.
 
     **Note:** Enabling this parameter decreases performance of short running catalog queries. To avoid this issue, set this parameter only for a session or a query.
 
@@ -39,7 +39,7 @@ These server configuration parameters control the display and logging of informa
 
 For information about the parameters, see the *Greenplum Database Reference Guide*.
 
-GPORCA generates minidumps to describe the optimization context for a given query. The minidump files are used by VMware support to analyze Greenplum Database issues. The information in the file is not in a format that can be easily used for debugging or troubleshooting. The minidump file is located under the master data directory and uses the following naming format:
+GPORCA generates minidumps to describe the optimization context for a given query. The minidump files are used by VMware support to analyze Greenplum Database issues. The information in the file is not in a format that can be easily used for debugging or troubleshooting. The minidump file is located under the coordinator data directory and uses the following naming format:
 
 `Minidump_date_time.mdp`
 

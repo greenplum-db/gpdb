@@ -19,7 +19,7 @@ A tablespace allows superusers to define an alternative host file system locatio
 
 A user with appropriate privileges can pass tablespace\_name to [CREATE DATABASE](CREATE_DATABASE.html), [CREATE TABLE](CREATE_TABLE.html), or [CREATE INDEX](CREATE_INDEX.html) to direct Greenplum Database to store the data files for these objects within the specified tablespace.
 
-In Greenplum Database, the file system location must exist on all hosts including the hosts running the master, standby mirror, each primary segment, and each mirror segment.
+In Greenplum Database, the file system location must exist on all hosts including the hosts running the coordinator, standby mirror, each primary segment, and each mirror segment.
 
 ## <a id="section4"></a>Parameters 
 
@@ -35,7 +35,7 @@ LOCATION 'directory'
 :   You can specify a different tablespace directory for any Greenplum Database segment instance in the `WITH` clause.
 
 contentID\_i='directory_i'
-:   The value ID\_i is the content ID for the segment instance. directory\_i is the absolute path to the host system file location that the segment instance uses as the root directory for the tablespace. You cannot specify the content ID of the master instance \(`-1`\). You can specify the same directory for multiple segments.
+:   The value ID\_i is the content ID for the segment instance. directory\_i is the absolute path to the host system file location that the segment instance uses as the root directory for the tablespace. You cannot specify the content ID of the coordinator instance \(`-1`\). You can specify the same directory for multiple segments.
 
 :   If a segment instance is not listed in the `WITH` clause, Greenplum Database uses the tablespace directory specified in the `LOCATION` clause.
 
@@ -46,7 +46,7 @@ tablespace\_option
 
 ## <a id="section5"></a>Notes 
 
-Because `CREATE TABLESPACE` creates symbolic links from the `pg_tblspc` directory in the master and segment instance data directory to the directories specified in the command, Greenplum Database supports tablespaces only on systems that support symbolic links.
+Because `CREATE TABLESPACE` creates symbolic links from the `pg_tblspc` directory in the coordinator and segment instance data directory to the directories specified in the command, Greenplum Database supports tablespaces only on systems that support symbolic links.
 
 You cannot run `CREATE TABLESPACE` inside a transaction block.
 
@@ -56,7 +56,7 @@ When creating tablespaces, ensure that file system locations have sufficient I/O
 
 ## <a id="section6"></a>Examples 
 
-Create a new tablespace and specify the file system location for the master and all segment instances:
+Create a new tablespace and specify the file system location for the coordinator and all segment instances:
 
 ```
 CREATE TABLESPACE mytblspace LOCATION '/gpdbtspc/mytestspace';
@@ -68,7 +68,7 @@ Create a tablespace `indexspace` at `/data/indexes` owned by user `genevieve`:
 CREATE TABLESPACE indexspace OWNER genevieve LOCATION '/data/indexes';
 ```
 
-Create a new tablespace and specify a location for segment instances with content ID 0 and 1. For the master and segment instances not listed in the `WITH` clause, the file system location for the tablespace is the directory specified in the `LOCATION` clause.
+Create a new tablespace and specify a location for segment instances with content ID 0 and 1. For the coordinator and segment instances not listed in the `WITH` clause, the file system location for the tablespace is the directory specified in the `LOCATION` clause.
 
 ```
 CREATE TABLESPACE mytblspace LOCATION '/gpdbtspc/mytestspace' WITH (content0='/temp/mytest', content1='/temp/mytest');

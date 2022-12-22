@@ -99,10 +99,10 @@ After you determine the equivalent PXF configuration properties, you will:
     1. [Install](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-installing_pxf.html) the newest version of the independent PXF distribution on your Greenplum Database hosts.
 
     1. Inform PXF of the $JAVA_HOME setting by specifying its value in the `pxf-env.sh` [configuration file](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-config_files.html).
-        - Edit the `pxf-env.sh` file on the Greenplum master node.
+        - Edit the `pxf-env.sh` file on the Greenplum coordinator node.
 
             ``` shell
-            gpadmin@gpmaster$ vi /usr/local/pxf-gp6/conf/pxf-env.sh
+            gpadmin@gpcoordinator$ vi /usr/local/pxf-gp6/conf/pxf-env.sh
             ```
         - Locate the `JAVA_HOME` setting in the `pxf-env.sh` file, uncomment if necessary, and set it to your `$JAVA_HOME` value. For example:
 
@@ -113,7 +113,7 @@ After you determine the equivalent PXF configuration properties, you will:
     1. Register the PXF extension with Greenplum Database:
 
         ```shell
-        gpadmin@gpmaster$ pxf cluster register
+        gpadmin@gpcoordinator$ pxf cluster register
         ```
 
     1. [Enable the PXF extension](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-using_pxf.html#enable-pxf-ext) and [grant users access to PXF](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-using_pxf.html#access_pxf).
@@ -123,7 +123,7 @@ After you determine the equivalent PXF configuration properties, you will:
 4. Start or restart PXF in your Greenplum Database cluster:
 
     ``` shell
-    gpadmin@gpmaster$ pxf cluster start
+    gpadmin@gpcoordinator$ pxf cluster start
     ```
 
 

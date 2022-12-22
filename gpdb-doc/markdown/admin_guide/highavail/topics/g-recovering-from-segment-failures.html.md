@@ -32,7 +32,7 @@ This topic is divided into the following sections:
 
 -   Mirroring is enabled for all segments.
 -   You've already identified which segments have failed. If necessary, see the topic [Checking for Failed Segments](g-checking-for-failed-segments.html).
--   The master host can connect to the segment host.
+-   The coordinator host can connect to the segment host.
 -   All networking or hardware issues that caused the segment to fail have been resolved.
 
 ## <a id="recovery_scenarios"></a>Recovery Scenarios 
@@ -159,7 +159,7 @@ The new host must:
 
 -   have sufficient disk space to accommodate the segments
 
--   be able to connect password-less with all other existing segments and Greenplum master.
+-   be able to connect password-less with all other existing segments and Greenplum coordinator.
 
 
 #### <a id="topic_yyj_4gb_yqb"></a>Steps to Recover to a New Host 

@@ -75,7 +75,7 @@ Ephemeral Storage is directly attached to VMs, but has many drawbacks:
 
 #### <a id="aws-recommend"></a>AWS Recommendations
 
-##### Master
+##### Coordinator
 | Instance Type | Memory | vCPUs | Data Disks |
 | ------------- | ------ | ----- | ---------- |
 | r5.xlarge     | 32     | 4     | 1          |
@@ -87,7 +87,7 @@ Ephemeral Storage is directly attached to VMs, but has many drawbacks:
 | ------------- | ------ | ----- | ---------- |
 | r5.4xlarge    | 128    | 16    | 3          |
 
-Performance testing has indicated that the Master node can be deployed on the smallest r5.xlarge instance type to save money without a measurable difference in performance.  Testing was performed using the TPC-DS benchmark.
+Performance testing has indicated that the Coordinator node can be deployed on the smallest r5.xlarge instance type to save money without a measurable difference in performance.  Testing was performed using the TPC-DS benchmark.
 
 The Segment instances run optimally on the r5.4xlarge instance type.  This provides the highest performance given the cost of the AWS resources.
 
@@ -115,7 +115,7 @@ Testing has revealed that _while using the same number of vCPUs_, a cluster usin
 
 The HighMem instance type is slightly faster for higher concurrency.  Furthermore, SSD disks are slightly faster also but come at a cost.
 
-##### Master and Segment Instances
+##### Coordinator and Segment Instances
 | Instance Type | Memory | vCPUs | Data Disks |
 | ------------- | ------ | ----- | ---------- |
 | n1-standard-8 | 30     | 8     | 1          |
@@ -157,7 +157,7 @@ Disks use the same network as the VMs so you start running into the Azure limits
 ### <a id="az-recommend"></a>Azure Recommendations
 The best instance type to use in Azure is "Standard_H8" which is one of the High Performance Compute instance types.  This instance series is the only one utilizing InfiniBand, but this does not include IP traffic. Because this instance type is n0t available in all regions, the "Standard_D13_v2" is also available.
 
-##### Master
+##### Coordinator
 | Instance Type | Memory | vCPUs | Data Disks |
 | ------------- | ------ | ----- | ---------- |
 | D13_v2        | 56     | 8     | 1          |

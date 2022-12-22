@@ -2,7 +2,7 @@
 title: Deactivating EXECUTE for Web or Writable External Tables 
 ---
 
-There is a security risk associated with allowing external tables to run OS commands or scripts. To deactivate the use of `EXECUTE` in web and writable external table definitions, set the `gp_external_enable_exec` server configuration parameter to off in your master postgresql.conf file:
+There is a security risk associated with allowing external tables to run OS commands or scripts. To deactivate the use of `EXECUTE` in web and writable external table definitions, set the `gp_external_enable_exec` server configuration parameter to off in your coordinator postgresql.conf file:
 
 ```
 gp_external_enable_exec = off

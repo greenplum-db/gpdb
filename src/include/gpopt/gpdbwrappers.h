@@ -485,9 +485,6 @@ bool IndexIsPartitioned(Oid relid);
 // check whether a relation is inherited
 bool HasSubclassSlow(Oid rel_oid);
 
-// check whether table with given oid is an external table
-bool RelIsExternalTable(Oid relid);
-
 // return the distribution policy of a relation; if the table is partitioned
 // and the parts are distributed differently, return Random distribution
 GpPolicy *GetDistributionPolicy(Relation rel);
@@ -520,12 +517,10 @@ void BuildRelationTriggers(Relation rel);
 // get relation with given oid
 RelationWrapper GetRelation(Oid rel_oid);
 
-// get external table entry with given oid
-ExtTableEntry *GetExternalTableEntry(Oid rel_oid);
-
-// get ForeignScan node to scan an external table
-ForeignScan *CreateForeignScanForExternalTable(Oid rel_oid, Index scanrelid,
-											   List *qual, List *targetlist);
+// get ForeignScan node to scan a foreign table
+ForeignScan *CreateForeignScan(Oid rel_oid, Index scanrelid, List *qual,
+							   List *targetlist, Query *query,
+							   RangeTblEntry *rte);
 
 // return the first member of the given targetlist whose expression is
 // equal to the given expression, or NULL if no such member exists

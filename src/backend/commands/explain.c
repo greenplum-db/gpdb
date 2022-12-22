@@ -47,6 +47,7 @@
 #include "utils/xml.h"
 
 #include "cdb/cdbgang.h"
+#include "cdb/cdbvars.h"
 #include "optimizer/tlist.h"
 #include "optimizer/optimizer.h"
 
@@ -715,8 +716,13 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 	 * depending on build options.  Might want to separate that out from COSTS
 	 * at a later stage.
 	 */
-	if (es->costs)
-		ExplainPrintJITSummary(es, queryDesc);
+	if (gp_explain_jit && es->costs)
+	{
+		if (queryDesc->estate->dispatcherState && queryDesc->estate->dispatcherState->primaryResults)
+			cdbexplain_printJITSummary(es, queryDesc);
+		else
+			ExplainPrintJITSummary(es,queryDesc);
+	}
 
 	/*
 	 * Close down the query and free resources.  Include time for this in the
@@ -1096,6 +1102,9 @@ ExplainPrintJIT(ExplainState *es, int jit_flags,
 
 	/* don't print information if no JITing happened */
 	if (!ji || ji->created_functions == 0)
+		return;
+
+	if (!gp_explain_jit)
 		return;
 
 	/* calculate total time */

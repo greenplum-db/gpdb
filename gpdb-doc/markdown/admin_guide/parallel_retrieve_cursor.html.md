@@ -29,7 +29,6 @@ You can use the following functions and views to examine and manage parallel ret
 
 <div class="note">Each of these functions and views is located in the <code>pg_catalog</code> schema, and each <code>RETURNS TABLE</code>.</div>
 
-
 ## <a id="topic_using"></a>Using a Parallel Retrieve Cursor
 
 You will perform the following tasks when you use a Greenplum Database parallel retrieve cursor to read query results in parallel from Greenplum segments:
@@ -263,11 +262,16 @@ The commands return endpoint and retrieve session information in a table with th
 Refer to the [gp_segment_endpoints](../ref_guide/system_catalogs/gp_segment_endpoints.html#topic1) view reference page for more information about the endpoint attributes returned by these commands.
 
 
+## <a id="topic_cfg"></a>Limiting the Number of Concurrently Open Cursors
+
+By default, Greenplum Database does not limit the number of parallel retrieve cursors that are active in the cluster \(up to the maximum value of 1024\). The Greenplum Database superuser can set the [gp\_max\_parallel\_cursors](../ref_guide/config_params/guc-list.html#gp_max_parallel_cursors) server configuration parameter to limit the number of open cursors.
+
+
 ## <a id="topic_limits"></a>Known Issues and Limitations
 
 The parallel retrieve cursor implementation has the following limitations:
 
-- The Tanzu Greenplum Query Optimizer (GPORCA) does not support queries on a parallel retrieve cursor.
+- The VMware Greenplum Query Optimizer (GPORCA) does not support queries on a parallel retrieve cursor.
 - Greenplum Database ignores the `BINARY` clause when you declare a parallel retrieve cursor.
 - Parallel retrieve cursors cannot be declared `WITH HOLD`.
 - Parallel retrieve cursors do not support the `FETCH` and `MOVE` cursor operations.
@@ -276,7 +280,7 @@ The parallel retrieve cursor implementation has the following limitations:
 
 ## <a id="topic_addtldocs"></a>Additional Documentation
 
-Refer to the [README](https://github.com/greenplum-db/gpdb/tree/master/src/backend/cdb/endpoint/README) in the Greenplum Database `github` repository for additional information about the parallel retrieve cursor implementation.  You can also find parallel retrieve cursor [programming examples](https://github.com/greenplum-db/gpdb/tree/master/src/test/examples/) in the repository.
+Refer to the [README](https://github.com/greenplum-db/gpdb/tree/main/src/backend/cdb/endpoint/README) in the Greenplum Database `github` repository for additional information about the parallel retrieve cursor implementation.  You can also find parallel retrieve cursor [programming examples](https://github.com/greenplum-db/gpdb/tree/main/src/test/examples/) in the repository.
 
 
 ## <a id="topic_examples"></a>Example

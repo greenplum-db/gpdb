@@ -903,6 +903,26 @@ select * from into_table order by a;
  6 | 8 | 12 | dd4 | ee4 | 4
 (4 rows)
 
+-- The following tests computing RETURNING when the source and the destination
+-- partitions of a SplitUpdate row movement operation have different tuple
+-- descriptors, which has been shown to be problematic in the cases where the
+-- RETURNING targetlist contains non-target relation attributes that are
+-- computed by referring to the source partition plan's output tuple.
+CREATE TABLE split_update(a text, b int) PARTITION BY RANGE (a,b);
+CREATE TABLE split_update_p1 (like split_update);
+ALTER TABLE split_update ATTACH PARTITION split_update_p1 FOR VALUES FROM ('a', 10) TO ('a', 20);
+CREATE TABLE split_update_p2 (LIKE split_update);
+ALTER TABLE split_update_p2 DROP a, ADD a text;
+ALTER TABLE split_update_p2 SET DISTRIBUTED BY (a);
+ALTER TABLE split_update ATTACH PARTITION split_update_p2 FOR VALUES FROM ('c', 1) TO ('c', 20);
+INSERT INTO split_update VALUES('a', 10);
+UPDATE split_update t SET a = 'c' FROM (VALUES ('a', 1), ('a', 10), ('b', 12)) s(x, y) WHERE s.x = t.a AND s.y = t.b RETURNING tableoid::regclass, *;
+    tableoid     | a | b  | x | y  
+-----------------+---+----+---+----
+ split_update_p2 | c | 10 | a | 10
+(1 row)
+
+DROP TABLE split_update;
 -- start_ignore
 drop table r;
 drop table s;

@@ -138,7 +138,7 @@ Also, even if the `dblink` connection requires a password, it is possible for th
 When you use `dblink` to connect to Greenplum Database over an encrypted connection, you must specify the `sslmode` property in the connection string. Set `sslmode` to at least `require` to disallow unencrypted transfers. For example:
 
 ```
-testdb=# SELECT dblink_connect('greenplum_con_sales', 'dbname=sales host=gpmaster user=gpadmin sslmode=require');
+testdb=# SELECT dblink_connect('greenplum_con_sales', 'dbname=sales host=gpcoordinator user=gpadmin sslmode=require');
 ```
 
 Refer to [SSL Client Authentication](../../security-guide/topics/Authenticate.html#ssl_postgresql) for information about configuring Greenplum Database to use SSL.

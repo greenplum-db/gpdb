@@ -14,9 +14,9 @@
                    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1350.88 rows=1 width=8)
                          ->  Aggregate  (cost=0.00..1350.88 rows=1 width=8)
                                ->  Append  (cost=0.00..1349.98 rows=1000000 width=8)
-                                     ->  External Scan on ext_expenses  (cost=0.00..442.37 rows=333334 width=8)
-                                     ->  External Scan on ext_expenses  (cost=0.00..442.37 rows=333334 width=8)
-                                     ->  External Scan on ext_expenses  (cost=0.00..442.37 rows=333334 width=8)
+                                     ->  Foreign Scan on ext_expenses  (cost=0.00..442.37 rows=333334 width=8)
+                                     ->  Foreign Scan on ext_expenses  (cost=0.00..442.37 rows=333334 width=8)
+                                     ->  Foreign Scan on ext_expenses  (cost=0.00..442.37 rows=333334 width=8)
                  Optimizer status: PQO version 3.35.0
   ]]>
   </dxl:Comment>
@@ -141,7 +141,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.196638.1.0" Name="ext_expenses" Rows="1000000.000000" EmptyRelation="false"/>
-      <dxl:ExternalRelation Mdid="6.196638.1.0" Name="ext_expenses" DistributionPolicy="Random" Keys="11,5">
+      <dxl:Relation Mdid="6.196638.1.0" Name="ext_expenses" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="name" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -182,7 +182,7 @@
         </dxl:Columns>
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
-      </dxl:ExternalRelation>
+      </dxl:Relation>
       <dxl:Type Mdid="0.1082.1.0" Name="date" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
         <dxl:EqualityOp Mdid="0.1093.1.0"/>
         <dxl:InequalityOp Mdid="0.1094.1.0"/>
@@ -246,7 +246,7 @@
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="name" TypeMdid="0.25.1.0"/>
             </dxl:Columns>
-            <dxl:LogicalExternalGet>
+            <dxl:LogicalForeignGet>
               <dxl:TableDescriptor Mdid="6.196638.1.0" TableName="ext_expenses">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="name" TypeMdid="0.25.1.0" ColWidth="8"/>
@@ -263,8 +263,8 @@
                   <dxl:Column ColId="12" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
                 </dxl:Columns>
               </dxl:TableDescriptor>
-            </dxl:LogicalExternalGet>
-            <dxl:LogicalExternalGet>
+            </dxl:LogicalForeignGet>
+            <dxl:LogicalForeignGet>
               <dxl:TableDescriptor Mdid="6.196638.1.0" TableName="ext_expenses">
                 <dxl:Columns>
                   <dxl:Column ColId="13" Attno="1" ColName="name" TypeMdid="0.25.1.0" ColWidth="8"/>
@@ -281,9 +281,9 @@
                   <dxl:Column ColId="24" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
                 </dxl:Columns>
               </dxl:TableDescriptor>
-            </dxl:LogicalExternalGet>
+            </dxl:LogicalForeignGet>
           </dxl:UnionAll>
-          <dxl:LogicalExternalGet>
+          <dxl:LogicalForeignGet>
             <dxl:TableDescriptor Mdid="6.196638.1.0" TableName="ext_expenses">
               <dxl:Columns>
                 <dxl:Column ColId="25" Attno="1" ColName="name" TypeMdid="0.25.1.0" ColWidth="8"/>
@@ -300,7 +300,7 @@
                 <dxl:Column ColId="36" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
               </dxl:Columns>
             </dxl:TableDescriptor>
-          </dxl:LogicalExternalGet>
+          </dxl:LogicalForeignGet>
         </dxl:UnionAll>
       </dxl:LogicalGroupBy>
     </dxl:Query>
@@ -362,7 +362,7 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:ExternalScan>
+              <dxl:ForeignScan>
                 <dxl:Properties>
                   <dxl:Cost StartupCost="0" TotalCost="442.366667" Rows="1000000.000000" Width="8"/>
                 </dxl:Properties>
@@ -384,8 +384,8 @@
                     <dxl:Column ColId="11" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
                   </dxl:Columns>
                 </dxl:TableDescriptor>
-              </dxl:ExternalScan>
-              <dxl:ExternalScan>
+              </dxl:ForeignScan>
+              <dxl:ForeignScan>
                 <dxl:Properties>
                   <dxl:Cost StartupCost="0" TotalCost="442.366667" Rows="1000000.000000" Width="8"/>
                 </dxl:Properties>
@@ -407,8 +407,8 @@
                     <dxl:Column ColId="23" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
                   </dxl:Columns>
                 </dxl:TableDescriptor>
-              </dxl:ExternalScan>
-              <dxl:ExternalScan>
+              </dxl:ForeignScan>
+              <dxl:ForeignScan>
                 <dxl:Properties>
                   <dxl:Cost StartupCost="0" TotalCost="442.366667" Rows="1000000.000000" Width="8"/>
                 </dxl:Properties>
@@ -430,7 +430,7 @@
                     <dxl:Column ColId="35" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
                   </dxl:Columns>
                 </dxl:TableDescriptor>
-              </dxl:ExternalScan>
+              </dxl:ForeignScan>
             </dxl:Append>
           </dxl:Aggregate>
         </dxl:GatherMotion>

@@ -395,8 +395,7 @@ explain (verbose, costs off) select count(distinct (b)::text) as b, count(distin
 -- column '(a)::integer::varchar' as part of hash-key in Redistribute-Motion.
 select count(distinct (b)::text) as b, count(distinct (a)::int::varchar) as a from dqa_f3;
 explain (verbose, costs off) select count(distinct (b)::text) as b, count(distinct (a)::int::varchar) as a from dqa_f3;
-
-
+drop table dqa_f3;
 
 -- fix dqa bug when optimizer_force_multistage_agg is on
 set optimizer_force_multistage_agg = on;
@@ -404,7 +403,8 @@ create table multiagg1(a int, b bigint, c int);
 create table multiagg2(a int, b bigint, c numeric(8, 4));
 insert into multiagg1 values(generate_series(1, 10), generate_series(1, 10), generate_series(1, 10));
 insert into multiagg2 values(generate_series(1, 10), generate_series(1, 10), 555.55);
-analyze;
+analyze multiagg1;
+analyze multiagg2;
 
 explain (verbose, costs off) select count(distinct b), sum(c) from multiagg1;
 select count(distinct b), sum(c) from multiagg1;
@@ -413,4 +413,131 @@ explain (verbose, costs off) select count(distinct b), sum(c) from multiagg2;
 select count(distinct b), sum(c) from multiagg2;
 drop table multiagg1;
 drop table multiagg2;
+
+-- Support Multi-stage DQA with ride along aggregation in ORCA
+-- Historically, Agg aggsplit is identically equal to Aggref aggsplit
+-- In ORCA's attempt to support intermediate aggregation
+-- The two are allowed to differ
+-- Now Agg aggsplit is derived as bitwise OR of its children Aggref aggsplit
+-- The plan is to eventually make Agg aggsplit a dummy
+-- And use Aggref aggsplit to build trans/combine functions
+set optimizer_force_multistage_agg=on;
+create table num_table(id int, a bigint, b int, c numeric);
+insert into num_table values(1,1,1,1),(2,2,2,2),(3,3,3,3);
+
+-- count(distinct a) is a simple aggregation
+-- sum(b) is a split aggregation
+-- Before the fix, in the final aggregation of sum(b)
+-- the executor mistakenly built a trans func instead of a combine func
+-- The trans func building process errored out due to mismatch between
+-- the input type (int) and trans type (bigint), and caused missing plan
+explain select count(distinct a), sum(b) from num_table;
+select count(distinct a), sum(b) from num_table;
+
+explain select count(distinct a), sum(b) from num_table group by id;
+select count(distinct a), sum(b) from num_table group by id;
+
+-- count(distinct a) is a simple aggregation
+-- sum(c) is a split aggregation
+-- Before the fix, the final aggregation of sum(c) was mistakenly
+-- treated as simple aggregation, and led to the missing 
+-- deserialization step in the aggregation execution prep
+-- Numeric aggregation serializes partial aggregation states
+-- The executor then evaluated the aggregation state without deserializing it first
+-- This led to the creation of garbage NaN count, and caused NaN output
+explain select count(distinct a), sum(c) from num_table;
+select count(distinct a), sum(c) from num_table;
+
+explain select id, count(distinct a), avg(b), sum(c) from num_table group by grouping sets ((id,c));
+select id, count(distinct a), avg(b), sum(c) from num_table group by grouping sets ((id,c));
+
 reset optimizer_force_multistage_agg;
+
+-- DQA with Agg(Intermediate Agg)
+set enable_hashagg=on;
+set enable_groupagg=off;
+
+create table dqa_f3(a int, b int, c int, d int, e int ) distributed by (a);
+insert into dqa_f3 select i % 17, i % 5 , i % 3, i %10, i % 7 from generate_series(1,1000) i;
+analyze dqa_f3;
+
+/*
+ * Test distinct or group by column is distributed key
+ *
+ * 1. If the input's locus matches the DISTINCT, but not GROUP BY:
+ *
+ *  HashAggregate
+ *     -> Redistribute (according to GROUP BY)
+ *         -> HashAggregate (to eliminate duplicates)
+ *             -> input (hashed by GROUP BY + DISTINCT)
+ *
+ * 2. If the input's locus matches the GROUP BY(don't care DISTINCT any more):
+ *
+ *  HashAggregate (to aggregate)
+ *     -> HashAggregate (to eliminate duplicates)
+ *           -> input (hashed by GROUP BY)
+ *
+ */
+explain (verbose on, costs off)select sum(Distinct a), count(b), sum(c) from dqa_f3 group by e;
+select sum(Distinct a), count(b), sum(c) from dqa_f3 group by e;
+
+explain (verbose on, costs off) select sum(Distinct e), count(b), sum(c) from dqa_f3 group by a;
+select sum(Distinct e), count(b), sum(c) from dqa_f3 group by a;
+
+/*
+ *  Test both distinct and group by column are not distributed key 
+ *
+ *  HashAgg (to aggregate)
+ *     -> HashAgg (to eliminate duplicates)
+ *          -> Redistribute (according to GROUP BY)
+ *               -> Streaming HashAgg (to eliminate duplicates)
+ *                    -> input
+ *
+ */
+explain (verbose on, costs off) select sum(Distinct c), count(a), sum(d) from dqa_f3 group by b;
+select sum(Distinct c), count(a), sum(d) from dqa_f3 group by b;
+
+explain (verbose on, costs off) select sum(Distinct c), count(a), sum(d) from dqa_f3 group by b order by b;
+select sum(Distinct c), count(a), sum(d) from dqa_f3 group by b order by b;
+
+explain (verbose on, costs off) select distinct sum(Distinct c), count(a), sum(d) from dqa_f3 group by b;
+select distinct sum(Distinct c), count(a), sum(d) from dqa_f3 group by b;
+
+explain (verbose on, costs off) select sum(Distinct c), count(a), sum(d) from dqa_f3 group by b having avg(e) > 3;
+select sum(Distinct c), count(a), sum(d) from dqa_f3 group by b having avg(e) > 3;
+
+explain (verbose on, costs off)
+select sum(Distinct sub.c), count(a), sum(d)
+            from dqa_f3 left join(select x, coalesce(y, 5) as c from dqa_f2) as sub
+            on sub.x = dqa_f3.e group by b;
+select sum(Distinct sub.c), count(a), sum(d)
+            from dqa_f3 left join(select x, coalesce(y, 5) as c from dqa_f2) as sub
+            on sub.x = dqa_f3.e group by b;
+
+-- Test gp_enable_agg_distinct_pruning is off on this branch
+set gp_enable_agg_distinct_pruning = off;
+explain (verbose on, costs off) select sum(Distinct c), count(a), sum(d) from dqa_f3 group by b;
+select sum(Distinct c), count(a), sum(d) from dqa_f3 group by b;
+reset gp_enable_agg_distinct_pruning;
+
+/*
+ * Test multistage through Gather Motion(grouplocus cannot hashed or not exist)
+ *
+ *  Finalize Aggregate
+ *     -> Gather Motion
+ *          -> Partial Aggregate
+ *              -> HashAggregate, to remove duplicates
+ *                  -> Redistribute Motion (according to DISTINCT arg)
+ *                      -> Streaming HashAgg (to eliminate duplicates)
+ *                          -> input
+ */
+explain (verbose on, costs off) select sum(Distinct b), count(c), sum(a) from dqa_f3;
+select sum(Distinct b), count(c), sum(a) from dqa_f3;
+
+explain (verbose on, costs off) select distinct sum(Distinct b), count(c), sum(a) from dqa_f3;
+select distinct sum(Distinct b), count(c), sum(a) from dqa_f3;
+
+explain (verbose on, costs off) select sum(Distinct b), count(c) filter(where c > 1), sum(a) from dqa_f3;
+select sum(Distinct b), count(c) filter(where c > 1), sum(a) from dqa_f3;
+
+drop table dqa_f3;

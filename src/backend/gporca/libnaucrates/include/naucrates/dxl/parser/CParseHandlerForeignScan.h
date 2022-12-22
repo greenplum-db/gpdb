@@ -3,18 +3,18 @@
 //	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
-//		CParseHandlerExternalScan.h
+//		CParseHandlerForeignScan.h
 //
 //	@doc:
-//		SAX parse handler class for parsing external scan operator
+//		SAX parse handler class for parsing foreign scan operator
 //---------------------------------------------------------------------------
 
-#ifndef GPDXL_CParseHandlerExternalScan_H
-#define GPDXL_CParseHandlerExternalScan_H
+#ifndef GPDXL_CParseHandlerForeignScan_H
+#define GPDXL_CParseHandlerForeignScan_H
 
 #include "gpos/base.h"
 
-#include "naucrates/dxl/operators/CDXLPhysicalExternalScan.h"
+#include "naucrates/dxl/operators/CDXLPhysicalForeignScan.h"
 #include "naucrates/dxl/parser/CParseHandlerTableScan.h"
 
 
@@ -26,13 +26,13 @@ XERCES_CPP_NAMESPACE_USE
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CParseHandlerExternalScan
+//		CParseHandlerForeignScan
 //
 //	@doc:
-//		Parse handler for parsing external scan operator
+//		Parse handler for parsing foreign scan operator
 //
 //---------------------------------------------------------------------------
-class CParseHandlerExternalScan : public CParseHandlerTableScan
+class CParseHandlerForeignScan : public CParseHandlerTableScan
 {
 private:
 	// process the start of an element
@@ -51,15 +51,15 @@ private:
 		) override;
 
 public:
-	CParseHandlerExternalScan(const CParseHandlerExternalScan &) = delete;
+	CParseHandlerForeignScan(const CParseHandlerForeignScan &) = delete;
 
 	// ctor
-	CParseHandlerExternalScan(CMemoryPool *mp,
-							  CParseHandlerManager *parse_handler_mgr,
-							  CParseHandlerBase *parse_handler_root);
+	CParseHandlerForeignScan(CMemoryPool *mp,
+							 CParseHandlerManager *parse_handler_mgr,
+							 CParseHandlerBase *parse_handler_root);
 };
 }  // namespace gpdxl
 
-#endif	// !GPDXL_CParseHandlerExternalScan_H
+#endif	// !GPDXL_CParseHandlerForeignScan_H
 
 // EOF

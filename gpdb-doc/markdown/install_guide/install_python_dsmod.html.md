@@ -13,7 +13,7 @@ This section contains the following information:
 
 For information about the Greenplum Database PL/Python Language, see [Greenplum PL/Python Language Extension](../analytics/pl_python.html).
 
-**Parent topic:** [Installing Optional Extensions \(Tanzu Greenplum\)](data_sci_pkgs.html)
+**Parent topic:** [Installing Optional Extensions \(VMware Greenplum\)](data_sci_pkgs.html)
 
 ## <a id="topic_pydatascimod"></a>Data Science Package for Python 2.7 Modules 
 

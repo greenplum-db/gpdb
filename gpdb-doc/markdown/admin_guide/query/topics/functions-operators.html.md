@@ -16,7 +16,7 @@ Description of user-defined and built-in functions and operators in Greenplum Da
 
 When you invoke a function in Greenplum Database, function attributes control the execution of the function. The volatility attributes \(`IMMUTABLE`, `STABLE`, `VOLATILE`\) and the `EXECUTE ON` attributes control two different aspects of function execution. In general, volatility indicates when the function is run, and `EXECUTE ON` indicates where it is run. The volatility attributes are PostgreSQL based attributes, the `EXECUTE ON` attributes are Greenplum Database attributes.
 
-For example, a function defined with the `IMMUTABLE` attribute can be run at query planning time, while a function with the `VOLATILE` attribute must be run for every row in the query. A function with the `EXECUTE ON MASTER` attribute runs only on the master instance, and a function with the `EXECUTE ON ALL SEGMENTS` attribute runs on all primary segment instances \(not the master\).
+For example, a function defined with the `IMMUTABLE` attribute can be run at query planning time, while a function with the `VOLATILE` attribute must be run for every row in the query. A function with the `EXECUTE ON MASTER` attribute runs only on the coordinator instance, and a function with the `EXECUTE ON ALL SEGMENTS` attribute runs on all primary segment instances \(not the coordinator\).
 
 These tables summarize what Greenplum Database assumes about function execution based on the attribute.
 
@@ -28,10 +28,10 @@ These tables summarize what Greenplum Database assumes about function execution 
 
 |Function Attribute|Description|Comments|
 |------------------|-----------|--------|
-|EXECUTE ON ANY|Indicates that the function can be run on the master, or any segment instance, and it returns the same result regardless of where it runs. This is the default attribute.|Greenplum Database determines where the function runs.|
-|EXECUTE ON MASTER|Indicates that the function must be run on the master instance.|Specify this attribute if the user-defined function runs queries to access tables.|
-|EXECUTE ON ALL SEGMENTS|Indicates that for each invocation, the function must be run on all primary segment instances, but not the master.| |
-|EXECUTE ON INITPLAN|Indicates that the function contains an SQL command that dispatches queries to the segment instances and requires special processing on the master instance by Greenplum Database when possible.| |
+|EXECUTE ON ANY|Indicates that the function can be run on the coordinator, or any segment instance, and it returns the same result regardless of where it runs. This is the default attribute.|Greenplum Database determines where the function runs.|
+|EXECUTE ON MASTER|Indicates that the function must be run on the coordinator instance.|Specify this attribute if the user-defined function runs queries to access tables.|
+|EXECUTE ON ALL SEGMENTS|Indicates that for each invocation, the function must be run on all primary segment instances, but not the coordinator.| |
+|EXECUTE ON INITPLAN|Indicates that the function contains an SQL command that dispatches queries to the segment instances and requires special processing on the coordinator instance by Greenplum Database when possible.| |
 
 You can display the function volatility and `EXECUTE ON` attribute information with the psql `\df+ function` command.
 
@@ -41,11 +41,11 @@ For more information about `EXECUTE ON` attributes, see [CREATE FUNCTION](../../
 
 In Greenplum Database, data is divided up across segments — each segment is a distinct PostgreSQL database. To prevent inconsistent or unexpected results, do not run functions classified as `VOLATILE` at the segment level if they contain SQL commands or modify the database in any way. For example, functions such as `setval()` are not allowed to run on distributed data in Greenplum Database because they can cause inconsistent data between segment instances.
 
-A function can run read-only queries on replicated tables \(`DISTRIBUTED REPLICATED`\) on the segments, but any SQL command that modifies data must run on the master instance.
+A function can run read-only queries on replicated tables \(`DISTRIBUTED REPLICATED`\) on the segments, but any SQL command that modifies data must run on the coordinator instance.
 
 **Note:** The hidden system columns \(`ctid`, `cmin`, `cmax`, `xmin`, `xmax`, and `gp_segment_id`\) cannot be referenced in user queries on replicated tables because they have no single, unambiguous value. Greenplum Database returns a `column does not exist` error for the query.
 
-To ensure data consistency, you can safely use `VOLATILE` and `STABLE` functions in statements that are evaluated on and run from the master. For example, the following statements run on the master \(statements without a `FROM` clause\):
+To ensure data consistency, you can safely use `VOLATILE` and `STABLE` functions in statements that are evaluated on and run from the coordinator. For example, the following statements run on the coordinator \(statements without a `FROM` clause\):
 
 ```
 SELECT setval('myseq', 201);
@@ -70,11 +70,11 @@ Greenplum Database supports user-defined functions. See [Extending SQL](https://
 
 Use the `CREATE FUNCTION` statement to register user-defined functions that are used as described in [Using Functions in Greenplum Database](#topic27). By default, user-defined functions are declared as `VOLATILE`, so if your user-defined function is `IMMUTABLE` or `STABLE`, you must specify the correct volatility level when you register your function.
 
-By default, user-defined functions are declared as `EXECUTE ON ANY`. A function that runs queries to access tables is supported only when the function runs on the master instance, except that a function can run `SELECT` commands that access only replicated tables on the segment instances. A function that accesses hash-distributed or randomly distributed tables must be defined with the `EXECUTE ON MASTER` attribute. Otherwise, the function might return incorrect results when the function is used in a complicated query. Without the attribute, planner optimization might determine it would be beneficial to push the function invocation to segment instances.
+By default, user-defined functions are declared as `EXECUTE ON ANY`. A function that runs queries to access tables is supported only when the function runs on the coordinator instance, except that a function can run `SELECT` commands that access only replicated tables on the segment instances. A function that accesses hash-distributed or randomly distributed tables must be defined with the `EXECUTE ON MASTER` attribute. Otherwise, the function might return incorrect results when the function is used in a complicated query. Without the attribute, planner optimization might determine it would be beneficial to push the function invocation to segment instances.
 
 When you create user-defined functions, avoid using fatal errors or destructive calls. Greenplum Database may respond to such errors with a sudden shutdown or restart.
 
-In Greenplum Database, the shared library files for user-created functions must reside in the same library path location on every host in the Greenplum Database array \(masters, segments, and mirrors\).
+In Greenplum Database, the shared library files for user-created functions must reside in the same library path location on every host in the Greenplum Database array \(coordinators, segments, and mirrors\).
 
 You can also create and run anonymous code blocks that are written in a Greenplum Database procedural language such as PL/pgSQL. The anonymous blocks run as transient anonymous functions. For information about creating and running anonymous blocks, see the [`DO`](../../../ref_guide/sql_commands/DO.html) command.
 

@@ -76,7 +76,7 @@ This checklist summarizes the tasks for a Greenplum Database system expansion.
                 <td class="entry">
                   <img class="image" id="topic4__image_ojd_t1m_2r" src="../graphics/green-checkbox.jpg" alt="Checkbox" width="29" height="28">
                 </td>
-                <td class="entry">Validate that the master data directory has no extremely large files in the
+                <td class="entry">Validate that the coordinator data directory has no extremely large files in the
                     <code class="ph codeph">log</code> directory.</td>
               </tr>
               <tr class="row">

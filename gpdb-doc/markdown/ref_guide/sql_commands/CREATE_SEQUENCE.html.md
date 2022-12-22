@@ -27,7 +27,7 @@ After a sequence is created, you use the `nextval()` function to operate on the 
 INSERT INTO distributors VALUES (nextval('myserial'), 'acme');
 ```
 
-You can also use the function `setval()` to operate on a sequence, but only for queries that do not operate on distributed data. For example, the following query is allowed because it resets the sequence counter value for the sequence generator process on the master:
+You can also use the function `setval()` to operate on a sequence, but only for queries that do not operate on distributed data. For example, the following query is allowed because it resets the sequence counter value for the sequence generator process on the coordinator:
 
 ```
 SELECT setval('myserial', 201);
@@ -39,13 +39,13 @@ But the following query will be rejected in Greenplum Database because it operat
 INSERT INTO product VALUES (setval('myserial', 201), 'gizmo');
 ```
 
-In a regular \(non-distributed\) database, functions that operate on the sequence go to the local sequence table to get values as they are needed. In Greenplum Database, however, keep in mind that each segment is its own distinct database process. Therefore the segments need a single point of truth to go for sequence values so that all segments get incremented correctly and the sequence moves forward in the right order. A sequence server process runs on the master and is the point-of-truth for a sequence in a Greenplum distributed database. Segments get sequence values at runtime from the master.
+In a regular \(non-distributed\) database, functions that operate on the sequence go to the local sequence table to get values as they are needed. In Greenplum Database, however, keep in mind that each segment is its own distinct database process. Therefore the segments need a single point of truth to go for sequence values so that all segments get incremented correctly and the sequence moves forward in the right order. A sequence server process runs on the coordinator and is the point-of-truth for a sequence in a Greenplum distributed database. Segments get sequence values at runtime from the coordinator.
 
 Because of this distributed sequence design, there are some limitations on the functions that operate on a sequence in Greenplum Database:
 
 -   `lastval()` and `currval()` functions are not supported.
--   `setval()` can only be used to set the value of the sequence generator on the master, it cannot be used in subqueries to update records on distributed table data.
--   `nextval()` sometimes grabs a block of values from the master for a segment to use, depending on the query. So values may sometimes be skipped in the sequence if all of the block turns out not to be needed at the segment level. Note that a regular PostgreSQL database does this too, so this is not something unique to Greenplum Database.
+-   `setval()` can only be used to set the value of the sequence generator on the coordinator, it cannot be used in subqueries to update records on distributed table data.
+-   `nextval()` sometimes grabs a block of values from the coordinator for a segment to use, depending on the query. So values may sometimes be skipped in the sequence if all of the block turns out not to be needed at the segment level. Note that a regular PostgreSQL database does this too, so this is not something unique to Greenplum Database.
 
 Although you cannot update a sequence directly, you can use a query like:
 
@@ -109,7 +109,7 @@ Insert a row into a table that gets the next value of the sequence named idseq:
 INSERT INTO distributors VALUES (nextval('idseq'), 'acme'); 
 ```
 
-Reset the sequence counter value on the master:
+Reset the sequence counter value on the coordinator:
 
 ```
 SELECT setval('myseq', 201);

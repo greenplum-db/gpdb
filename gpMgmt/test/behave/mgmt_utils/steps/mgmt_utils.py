@@ -3837,7 +3837,7 @@ def impl(context, contentid):
 @given('backup /etc/hosts file and update hostname entry for localhost')
 def impl(context):
      # Backup current /etc/hosts file
-     cmd = Command(name='backup the hosts file', cmdStr='sudo cp /etc/hosts /etc/hosts_orig')
+     cmd = Command(name='backup the hosts file', cmdStr='sudo cp /etc/hosts /tmp/hosts_orig')
      cmd.run(validateAfter=True)
      # Get the host-name
      cmd = Command(name='get hostname', cmdStr='hostname')
@@ -3847,6 +3847,11 @@ def impl(context):
      cmd = Command(name='update hostlist with new hostname', cmdStr="sudo sed 's/%s/%s__1 %s/g' </etc/hosts >> /tmp/hosts; sudo cp -f /tmp/hosts /etc/hosts;rm /tmp/hosts"
                                                         %(hostname, hostname, hostname))
      cmd.run(validateAfter=True)
+
+@then('restore /etc/hosts file and cleanup hostlist file')
+def impl(context):
+    cmd = "sudo mv -f /tmp/hosts_orig /etc/hosts; rm -f /tmp/clusterConfigFile-1; rm -f /tmp/hostfile--1"
+    context.execute_steps(u'''Then the user runs command "%s"''' % cmd)
 
 @given('update hostlist file with updated host-address')
 def impl(context):

@@ -35,7 +35,7 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerDynamicIndexScan.o \
               CParseHandlerDynamicTableScan.o \
               CParseHandlerEnumeratorConfig.o \
-              CParseHandlerExternalScan.o \
+              CParseHandlerForeignScan.o \
               CParseHandlerFactory.o \
               CParseHandlerFilter.o \
               CParseHandlerGatherMotion.o \
@@ -55,7 +55,7 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerLogicalCTEProducer.o \
               CParseHandlerLogicalConstTable.o \
               CParseHandlerLogicalDelete.o \
-              CParseHandlerLogicalExternalGet.o \
+              CParseHandlerLogicalForeignGet.o \
               CParseHandlerLogicalGet.o \
               CParseHandlerLogicalGroupBy.o \
               CParseHandlerLogicalInsert.o \
@@ -78,7 +78,6 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerMDIndexInfoList.o \
               CParseHandlerMDRelation.o \
               CParseHandlerMDRelationCtas.o \
-              CParseHandlerMDRelationExternal.o \
               CParseHandlerMDRequest.o \
               CParseHandlerMDScCmp.o \
               CParseHandlerMDType.o \

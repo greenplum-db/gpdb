@@ -32,11 +32,6 @@
 #define MaxCpuSetLength 1024
 
 /*
- * The max length of cpuset array
- */
-#define CpuSetArrayLength 2
-
-/*
  * Default value of cpuset
  */
 #define DefaultCpuset "-1"

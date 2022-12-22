@@ -50,7 +50,7 @@ To use PL/R on Ubuntu host systems, you must install and configure R on all Gree
     export R_HOME=/usr/lib/R
     ```
 
-3.  Source `$GPHOME/greenplum_path.sh` and restart Greenplum Database. For example, run these commands on the Greenplum Database master host.
+3.  Source `$GPHOME/greenplum_path.sh` and restart Greenplum Database. For example, run these commands on the Greenplum Database coordinator host.
 
     ```
     $ source $GPHOME/greenplum_path.sh
@@ -70,7 +70,7 @@ Before you install the PL/R extension, make sure that your Greenplum Database is
 
 1.  Download the PL/R extension package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb).
 2.  Follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the **Greenplum Procedural Languages PL/R** software.
-3.  Copy the PL/R package to the Greenplum Database master host.
+3.  Copy the PL/R package to the Greenplum Database coordinator host.
 4.  Install the software extension package by running the `gppkg` command. This example installs the PL/R extension on a Linux system:
 
     ```
@@ -251,7 +251,7 @@ Greenplum Database provides a collection of data science-related R libraries tha
 
     For the R installation included with the Greenplum Database PL/R extension, the required R packages are installed with the PL/R extension. However, the Matrix package requires a newer version.
 
-2.  From the command line, use the `wget` utility to download the `tar.gz` files for the arm package to the Greenplum Database master host:
+2.  From the command line, use the `wget` utility to download the `tar.gz` files for the arm package to the Greenplum Database coordinator host:
 
     ```
     wget https://cran.r-project.org/src/contrib/Archive/arm/arm_1.5-03.tar.gz

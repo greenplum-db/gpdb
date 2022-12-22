@@ -174,7 +174,7 @@
         <dxl:CheckConstraint Mdid="0.561000.1.0"/>
       </dxl:CheckConstraints>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.2669066.1.0" Name="intint" IsTemporary="false" StorageType="External" DistributionPolicy="MasterOnly" NumberLeafPartitions="0">
+    <dxl:Relation Mdid="6.2669066.1.0" Name="intint" IsTemporary="false" StorageType="Foreign" DistributionPolicy="MasterOnly" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -275,7 +275,7 @@
         </dxl:And>
       </dxl:PartConstraint>
     </dxl:Index>
-    <dxl:ExternalRelation Mdid="6.378383.1.0" Name="ext_1" DistributionPolicy="Random" Keys="10,4">
+    <dxl:Relation Mdid="6.378383.1.0" Name="ext_1" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="10,4" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="n_nationkey" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -313,8 +313,8 @@
       </dxl:Columns>
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
-    </dxl:ExternalRelation>
-    <dxl:ExternalRelation Mdid="6.378406.1.0" Name="ext_2" DistributionPolicy="Random" Keys="7,1">
+    </dxl:Relation>
+    <dxl:Relation Mdid="6.378406.1.0" Name="ext_2" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="7,1" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="x" Attno="1" Mdid="0.25.1.0" Nullable="true">
           <dxl:DefaultValue/>
@@ -343,8 +343,8 @@
       </dxl:Columns>
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
-    </dxl:ExternalRelation>
-    <dxl:ExternalRelation Mdid="6.378429.1.0" Name="ext_3" DistributionPolicy="MasterOnly" Keys="7,1">
+    </dxl:Relation>
+    <dxl:Relation Mdid="6.378429.1.0" Name="ext_3" IsTemporary="false" StorageType="Foreign" DistributionPolicy="MasterOnly" Keys="7,1" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="x" Attno="1" Mdid="0.25.1.0" Nullable="true">
           <dxl:DefaultValue/>
@@ -373,8 +373,8 @@
       </dxl:Columns>
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
-    </dxl:ExternalRelation>
-    <dxl:ExternalRelation Mdid="6.876377.1.0" Name="ext_4" DistributionPolicy="Random" Keys="8,2" RejectLimit="100" RejectLimitInRows="true" FormatErrorRelId="0.876352.1.0">
+    </dxl:Relation>
+    <dxl:Relation Mdid="6.876377.1.0" Name="ext_4" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="8,2" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -406,7 +406,7 @@
       </dxl:Columns>
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
-    </dxl:ExternalRelation>
+    </dxl:Relation>
     <dxl:Relation Mdid="6.363445.1.0" Name="S" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">

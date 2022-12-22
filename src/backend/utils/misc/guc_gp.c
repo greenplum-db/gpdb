@@ -310,6 +310,7 @@ bool		optimizer_enable_multiple_distinct_aggs;
 bool		optimizer_enable_direct_dispatch;
 bool		optimizer_enable_hashjoin_redistribute_broadcast_children;
 bool		optimizer_enable_broadcast_nestloop_outer_child;
+bool		optimizer_discard_redistribute_hashjoin;
 bool		optimizer_enable_streaming_material;
 bool		optimizer_enable_gather_on_segment_for_dml;
 bool		optimizer_enable_assert_maxonerow;
@@ -733,6 +734,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 			gettext_noop("Sort more efficiently when plan requires the first <n> rows at most.")
 		},
 		&gp_enable_sort_limit,
+		true,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_explain_jit", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enables JIT instrumentation output for EXPLAIN"),
+			NULL
+		},
+		&gp_explain_jit,
 		true,
 		NULL, NULL, NULL
 	},
@@ -2342,6 +2353,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&optimizer_enable_broadcast_nestloop_outer_child,
 		true,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_discard_redistribute_hashjoin", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Discard hash join with redistribute motion in the optimizer."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_discard_redistribute_hashjoin,
+		false,
 		NULL, NULL, NULL
 	},
 	{
@@ -4095,7 +4116,7 @@ struct config_int ConfigureNamesInt_gp[] =
 
 	{
 		{"gp_max_parallel_cursors", PGC_SUSET, RESOURCES,
-			gettext_noop("Parallel cursor concurrency control from the source cluster side, -1 means no limit, which is the default"),
+			gettext_noop("Parallel cursor concurrency control, -1 means no limit, which is the default"),
 			NULL, GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_max_parallel_cursors,

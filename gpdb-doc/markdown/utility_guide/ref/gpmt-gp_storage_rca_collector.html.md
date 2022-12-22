@@ -47,7 +47,7 @@ The tool also collects the following information:
 
 ## <a id="exs"></a>Examples 
 
-Collect storage root cause analysis artifacts only for master, database `postgres`, and table `test_table`:
+Collect storage root cause analysis artifacts only for coordinator, database `postgres`, and table `test_table`:
 
 ```
 gpmt storage_rca_collector -db postgres -t test_table

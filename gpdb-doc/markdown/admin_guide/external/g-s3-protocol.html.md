@@ -44,8 +44,17 @@ You must configure the `s3` protocol before you can use it. Perform these steps 
 
 2.  Declare the `s3` protocol and specify the read and write functions you created in the previous step:
 
+    To allow only Greenplum Database superusers to use the protocol, create it as follows:
+
     ```
     CREATE PROTOCOL s3 (writefunc = write_to_s3, readfunc = read_from_s3);
+    ```
+
+    If you want to permit non-superusers to use the `s3` protocol, create it as a `TRUSTED` protocol and `GRANT` access to those users. For example:
+
+    ```
+    CREATE TRUSTED PROTOCOL s3 (writefunc = write_to_s3, readfunc = read_from_s3);
+    GRANT ALL ON PROTOCOL s3 TO user1, user2;
     ```
 
     **Note:** The protocol name `s3` must be the same as the protocol of the URL specified for the external table that you create to access an S3 resource.

@@ -322,6 +322,9 @@ int			gp_autostats_on_change_threshold = 100000;
 bool		gp_autostats_allow_nonowner = false;
 bool		log_autostats = true;
 
+/* GUC to toggle JIT instrumentation output for EXPLAIN */
+bool		gp_explain_jit = true;
+
 /* --------------------------------------------------------------------------------------------------
  * Server debugging
  */

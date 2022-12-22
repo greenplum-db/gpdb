@@ -971,33 +971,36 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 		case T_Agg:
 			{
 				Agg		   *agg = (Agg *) plan;
+				int 		aggref_split = (int)agg->aggsplit;
 
 				if (DO_AGGSPLIT_DEDUPLICATED(agg->aggsplit))
 				{
 					plan->targetlist = (List *)
 						convert_deduplicated_aggrefs((Node *) plan->targetlist,
-													 NULL);
+													NULL);
 					plan->qual = (List *)
 						convert_deduplicated_aggrefs((Node *) plan->qual,
-													 NULL);
+													NULL);
 
 					agg->aggsplit &= ~AGGSPLITOP_DEDUPLICATED;
 				}
 
 				/*
-				 * If this node is combining partial-aggregation results, we
-				 * must convert its Aggrefs to contain references to the
-				 * partial-aggregate subexpressions that will be available
-				 * from the child plan node.
-				 */
+				* If this node is combining partial/intermedaite aggregation results,
+				* we must convert its Aggrefs to contain references to the
+				* partial-aggregate subexpressions that will be available
+				* from the child plan node.
+				* In order to ref subexpressions, child-aggref is always partial
+				* aggregate and parent-aggref is the same as aggregate in Aggplan. 
+				*/
 				if (DO_AGGSPLIT_COMBINE(agg->aggsplit))
 				{
 					plan->targetlist = (List *)
 						convert_combining_aggrefs((Node *) plan->targetlist,
-												  NULL);
+												&aggref_split);
 					plan->qual = (List *)
 						convert_combining_aggrefs((Node *) plan->qual,
-												  NULL);
+												&aggref_split);
 				}
 
 				set_upper_references(root, plan, rtoffset);
@@ -2279,7 +2282,7 @@ set_param_references(PlannerInfo *root, Plan *plan)
  * the plan node above the Agg has resolved its subplan references.
  */
 static Node *
-convert_combining_aggrefs(Node *node, void *context)
+convert_combining_aggrefs(Node *node, void *split)
 {
 	if (node == NULL)
 		return NULL;
@@ -2288,6 +2291,33 @@ convert_combining_aggrefs(Node *node, void *context)
 		Aggref	   *orig_agg = (Aggref *) node;
 		Aggref	   *child_agg;
 		Aggref	   *parent_agg;
+		int			aggsplit = *(int *)split;
+
+		/*
+		 * For AGGSPLIT_DQAWITHAGG final agg plan node, we should skip
+		 * aggdistinct Aggref like Count(distinct ..) because we have
+		 * eliminated duplicates, and just refer Vars instead of partial
+		 * Aggref.
+		 */
+		if (DO_AGGSPLIT_DQAWITHAGG(aggsplit))
+		{
+			if (orig_agg->aggdistinct != NULL)
+			{
+				Aggref	   *parent_agg = NULL;
+
+				parent_agg = makeNode(Aggref);
+				memcpy(parent_agg, orig_agg, sizeof(Aggref));
+
+				parent_agg->aggdistinct = NIL;
+				parent_agg->aggsplit = AGGSPLIT_SIMPLE;
+
+				return (Node *) parent_agg;
+			}
+			else
+			{
+				aggsplit = AGGSPLIT_FINAL_DESERIAL;
+			}
+		}
 
 		/* Assert we've not chosen to partial-ize any unsupported cases */
 		Assert(orig_agg->aggorder == NIL);
@@ -2331,7 +2361,7 @@ convert_combining_aggrefs(Node *node, void *context)
 		 */
 		parent_agg->args = list_make1(makeTargetEntry((Expr *) child_agg,
 													  1, NULL, false));
-		mark_partial_aggref(parent_agg, AGGSPLIT_FINAL_DESERIAL);
+		mark_partial_aggref(parent_agg, aggsplit);
 
 		/*
 		 * In GPDB two-stage aggregates with DISTINCT, the first stage
@@ -2343,7 +2373,7 @@ convert_combining_aggrefs(Node *node, void *context)
 		return (Node *) parent_agg;
 	}
 	return expression_tree_mutator(node, convert_combining_aggrefs,
-								   (void *) context);
+								   (void *)split);
 }
 
 static Node *

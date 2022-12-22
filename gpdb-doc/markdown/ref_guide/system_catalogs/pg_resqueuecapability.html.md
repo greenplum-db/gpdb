@@ -4,7 +4,7 @@
 
 The `pg_resqueuecapability` system catalog table contains information about the extended attributes, or capabilities, of existing Greenplum Database resource queues. Only resource queues that have been assigned an extended capability, such as a priority setting, are recorded in this table. This table is joined to the [pg\_resqueue](pg_resqueue.html) table by resource queue object ID, and to the [pg\_resourcetype](pg_resourcetype.html) table by resource type ID \(`restypid`\).
 
-This table is populated only on the master. This table is defined in the `pg_global` tablespace, meaning it is globally shared across all databases in the system.
+This table is populated only on the coordinator. This table is defined in the `pg_global` tablespace, meaning it is globally shared across all databases in the system.
 
 |column|type|references|description|
 |------|----|----------|-----------|

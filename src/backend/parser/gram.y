@@ -17644,11 +17644,11 @@ qualified_name_list_with_only:
 					$2->inh = false; 
 					$$ = list_make1($2);
 				}
-			| qualified_name_list ',' qualified_name
+			| qualified_name_list_with_only ',' qualified_name
 				{
 					$$ = lappend($1, $3);
 				}
-			| qualified_name_list ',' ONLY qualified_name
+			| qualified_name_list_with_only ',' ONLY qualified_name
 				{
 					$4->inh = false; 
 					$$ = lappend($1, $4);

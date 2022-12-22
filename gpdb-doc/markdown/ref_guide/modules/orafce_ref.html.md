@@ -86,10 +86,10 @@ ALTER DATABASE <db_name> SET <search_path> = "$user", public, oracle;
 Note the following differences when using the Oracle Compatibility Functions with PostgreSQL vs. using them with Greenplum Database:
 
 -   If you use validation scripts, the output may not be exactly the same as with the original `orafce` module implementation.
--   The functions in the Oracle Compatibility Functions `dbms_pipe` package run only on the Greenplum Database master host.
+-   The functions in the Oracle Compatibility Functions `dbms_pipe` package run only on the Greenplum Database coordinator host.
 -   The upgrade scripts in the Orafce project do not work with Greenplum Database.
 
 ## <a id="topic_info"></a>Additional Module Documentation 
 
-Refer to the [README](https://github.com/greenplum-db/gpdb/tree/master/gpcontrib/orafce/README.asciidoc) and [Greenplum Database orafce documentation](https://github.com/greenplum-db/gpdb/tree/master/gpcontrib/orafce/doc/orafce_documentation) in the Greenplum Database github repository for detailed information about the individual functions and supporting objects provided in this module.
+Refer to the [README](https://github.com/greenplum-db/gpdb/tree/main/gpcontrib/orafce/README.asciidoc) and [Greenplum Database orafce documentation](https://github.com/greenplum-db/gpdb/tree/main/gpcontrib/orafce/doc/orafce_documentation) in the Greenplum Database github repository for detailed information about the individual functions and supporting objects provided in this module.
 

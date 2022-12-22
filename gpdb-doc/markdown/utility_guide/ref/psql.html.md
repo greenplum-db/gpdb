@@ -159,7 +159,7 @@ An alternative way to specify connection parameters is in a `conninfo` string or
 
 ```
 $ psql "service=myservice sslmode=require"
-$ psql postgresql://gpmaster:5433/mydb?sslmode=require
+$ psql postgresql://gpcoordinator:5433/mydb?sslmode=require
 ```
 
 This way you can also use LDAP for connection parameter lookup as described in [LDAP Lookup of Connection Parameters](https://www.postgresql.org/docs/9.4/libpq-ldap.html) in the PostgreSQL documentation. See [Parameter Keywords](https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-PARAMKEYWORDS) in the PostgreSQL documentation for more information on all the available connection options.

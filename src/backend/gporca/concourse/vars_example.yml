@@ -1,5 +1,5 @@
 private-repo-key:  |
-      -----BEGIN RSA PRIVATE KEY-----
+      REPLACE-----BEGIN RSA PRIVATE KEY-----
       keygoeshere
       -----END RSA PRIVATE KEY-----
 

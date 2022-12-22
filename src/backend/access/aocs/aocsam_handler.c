@@ -940,20 +940,29 @@ aoco_tuple_insert(Relation relation, TupleTableSlot *slot, CommandId cid,
 	pgstat_count_heap_insert(relation, 1);
 }
 
+/*
+ * We don't support speculative inserts on appendoptimized tables, i.e. we don't
+ * support INSERT ON CONFLICT DO NOTHING or INSERT ON CONFLICT DO UPDATE. Thus,
+ * the following functions are left unimplemented.
+ */
+
 static void
 aoco_tuple_insert_speculative(Relation relation, TupleTableSlot *slot,
                                     CommandId cid, int options,
                                     BulkInsertState bistate, uint32 specToken)
 {
-	/* GPDB_12_MERGE_FIXME: not supported. Can this function be left out completely? Or ereport()? */
-	elog(ERROR, "speculative insertion not supported on AO_COLUMN tables");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("speculative insert is not supported on appendoptimized relations")));
 }
 
 static void
 aoco_tuple_complete_speculative(Relation relation, TupleTableSlot *slot,
                                       uint32 specToken, bool succeeded)
 {
-	elog(ERROR, "speculative insertion not supported on AO_COLUMN tables");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("speculative insert is not supported on appendoptimized relations")));
 }
 
 /*
@@ -1049,14 +1058,38 @@ aoco_tuple_update(Relation relation, ItemPointer otid, TupleTableSlot *slot,
 	return result;
 }
 
+/*
+ * This API is called for a variety of purposes, which are either not supported
+ * for AO/CO tables or not supported for GPDB in general:
+ *
+ * (1) UPSERT: ExecOnConflictUpdate() calls this, but clearly upsert is not
+ * supported for AO/CO tables.
+ *
+ * (2) DELETE and UPDATE triggers: GetTupleForTrigger() calls this, but clearly
+ * these trigger types are not supported for AO/CO tables.
+ *
+ * (3) Logical replication: RelationFindReplTupleByIndex() and
+ * RelationFindReplTupleSeq() calls this, but clearly we don't support logical
+ * replication yet for GPDB.
+ *
+ * (4) For DELETEs/UPDATEs, when a state of TM_Updated is returned from
+ * table_tuple_delete() and table_tuple_update() respectively, this API is invoked.
+ * However, that is impossible for AO/CO tables as an AO/CO tuple cannot be
+ * deleted/updated while another transaction is updating it (see CdbTryOpenTable()).
+ *
+ * (5) Row-level locking (SELECT FOR ..): ExecLockRows() calls this but a plan
+ * containing the LockRows plan node is never generated for AO/CO tables. In fact,
+ * we lock at the table level instead.
+ */
 static TM_Result
 aoco_tuple_lock(Relation relation, ItemPointer tid, Snapshot snapshot,
                       TupleTableSlot *slot, CommandId cid, LockTupleMode mode,
                       LockWaitPolicy wait_policy, uint8 flags,
                       TM_FailureData *tmfd)
 {
-	/* GPDB_12_MERGE_FIXME: not supported. Can this function be left out completely? Or ereport()? */
-	elog(ERROR, "speculative insertion not supported on AO tables");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("tuple locking is not supported on appendoptimized tables")));
 }
 
 static void
@@ -1144,8 +1177,17 @@ aoco_compute_xid_horizon_for_tuples(Relation rel,
                                           ItemPointerData *tids,
                                           int nitems)
 {
-	// GPDB_12_MERGE_FIXME: vacuum related call back.
-	elog(ERROR, "not implemented yet");
+	/*
+	 * This API is only useful for hot standby snapshot conflict resolution
+	 * (for eg. see btree_xlog_delete()), in the context of index page-level
+	 * vacuums (aka page-level cleanups). This operation is only done when
+	 * IndexScanDesc->kill_prior_tuple is true, which is never for AO/CO tables
+	 * (we always return all_dead = false in the index_fetch_tuple() callback
+	 * as we don't support HOT)
+	 */
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("feature not supported on appendoptimized relations")));
 }
 
 /* ------------------------------------------------------------------------

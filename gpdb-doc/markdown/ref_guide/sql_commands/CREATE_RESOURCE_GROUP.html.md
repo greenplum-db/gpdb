@@ -11,7 +11,7 @@ CREATE RESOURCE GROUP <name> WITH (<group_attribute>=<value> [, ... ])
 where group\_attribute is:
 
 ```
-cpu_hard_quota_limit=<integer> | CPUSET=<tuple>
+CPU_HARD_QUOTA_LIMIT=<integer> | CPUSET=<coordinator_cores>;<segment_cores>
 [ MEMORY_LIMIT=<integer> ]
 [ CONCURRENCY=<integer> ]
 [ MEMORY_SHARED_QUOTA=<integer> ]
@@ -50,14 +50,14 @@ CONCURRENCY integer
 :   **Note:** You cannot set the `CONCURRENCY` value for the `admin_group` to zero \(0\).
 
 CPU\_RATE\_LIMIT integer
-CPUSET tuple
-:   Required. You must specify only one of `cpu_hard_quota_limit` or `CPUSET` when you create a resource group.
+CPUSET <coordinator_cores>;<segment_cores>
+:   Required. You must specify only one of `CPU_RATE_LIMIT` or `CPUSET` when you create a resource group.
 
 :   `cpu_hard_quota_limit` is the percentage of CPU resources to allocate to this resource group. The minimum CPU percentage you can specify for a resource group is 1. The maximum is 100. The sum of the `cpu_hard_quota_limit` values specified for all resource groups defined in the Greenplum Database cluster must be less than or equal to 100.
 
-:   `CPUSET` identifies the CPU cores to reserve for this resource group. The CPU cores that you specify in tuple must be available in the system and cannot overlap with any CPU cores that you specify for other resource groups.
+:   `CPUSET` identifies the CPU cores to reserve for this resource group on the coordinator host and on segment hosts. The CPU cores that you specify must be available in the system and cannot overlap with any CPU cores that you specify for other resource groups.
 
-:   tuple is a comma-separated list of single core numbers or core number intervals. You must enclose tuple in single quotes, for example, '1,3-4'.
+:   Specify cores as a comma-separated list of single core numbers or core number intervals. Define the coordinator host cores first, followed by segment host cores, and separate the two with a semicolon. You must enclose the full core configuration in single quotes. For example, '1;1,3-4' configures core 1 for the coordinator host, and cores 1, 3, and 4 for the segment hosts.
 
 :   **Note:** You can configure `CPUSET` for a resource group only after you have enabled resource group-based resource management for your Greenplum Database cluster.
 
@@ -111,10 +111,10 @@ CREATE RESOURCE GROUP plc_run1 WITH (MEMORY_LIMIT=10, cpu_hard_quota_limit=10,
   CONCURRENCY=0, MEMORY_AUDITOR=cgroup);
 ```
 
-Create a resource group with a memory limit percentage of 11 to which you assign CPU cores 1 to 3:
+Create a resource group with a memory limit percentage of 11 to which you assign CPU core 1 on the coordinator host, and cores 1 to 3 on segment hosts:
 
 ```
-CREATE RESOURCE GROUP rgroup3 WITH (CPUSET='1-3', MEMORY_LIMIT=11);
+CREATE RESOURCE GROUP rgroup3 WITH (CPUSET='1;1-3', MEMORY_LIMIT=11);
 ```
 
 ## <a id="section7"></a>Compatibility 

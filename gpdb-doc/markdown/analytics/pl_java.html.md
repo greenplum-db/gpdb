@@ -96,7 +96,7 @@ See the *Greenplum Database Reference Guide* for information about the Greenplum
 
 ## <a id="topic_qx1_xcp_w3b"></a>Installing Java 
 
-PL/Java requires a Java runtime environment on each Greenplum Database host. Ensure that the same Java environment is at the same location on all hosts: masters and segments. The command `java -version` displays the Java version.
+PL/Java requires a Java runtime environment on each Greenplum Database host. Ensure that the same Java environment is at the same location on all hosts: coordinators and segments. The command `java -version` displays the Java version.
 
 The commands that you use to install Java depend on the host system operating system and Java version. This list describes how to install OpenJDK 8 or 11 \(Java 8 JDK or Java 11 JDK\) on RHEL/CentOS or Ubuntu.
 
@@ -168,7 +168,7 @@ To install and use PL/Java:
 
 Before you install the PL/Java extension, make sure that your Greenplum database is running, you have sourced `greenplum_path.sh`, and that the `$MASTER_DATA_DIRECTORY` and `$GPHOME` variables are set.
 
-1.  Download the PL/Java extension package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb) then copy it to the master host.
+1.  Download the PL/Java extension package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb) then copy it to the coordinator host.
 2.  Follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the **Greenplum Procedural Languages PL/Java** software.
 3.  Install the software extension package by running the `gppkg` command. This example installs the PL/Java extension package on a Linux system:
     ```
@@ -225,7 +225,7 @@ Perform the following steps as the Greenplum Database administrator `gpadmin`.
 
     The file `gphosts_file` contains a list of the Greenplum Database hosts.
 
-3.  Set the `pljava_classpath` server configuration parameter in the master `postgresql.conf` file. For this example, the parameter value is a colon \(:\) separated list of the JAR files. For example:
+3.  Set the `pljava_classpath` server configuration parameter in the coordinator `postgresql.conf` file. For this example, the parameter value is a colon \(:\) separated list of the JAR files. For example:
 
     ```
     $ gpconfig -c pljava_classpath -v 'examples.jar:myclasses.jar'
@@ -748,9 +748,9 @@ Create a JAR archive named analytics.jar that contains the class file and the ma
 jar cfm analytics.jar manifest.txt *.class
 ```
 
-Upload the jar file to the Greenplum master host.
+Upload the jar file to the Greenplum coordinator host.
 
-Run the `gpsync` utility to copy the jar file to the Greenplum Java directory. Use the `-f` option to specify the file that contains a list of the master and segment hosts.
+Run the `gpsync` utility to copy the jar file to the Greenplum Java directory. Use the `-f` option to specify the file that contains a list of the coordinator and segment hosts.
 
 ```
 gpsync -f gphosts_file analytics.jar 

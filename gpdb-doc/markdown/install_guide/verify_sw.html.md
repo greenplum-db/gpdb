@@ -1,5 +1,5 @@
 ---
-title: Verifying the VMware Tanzu Greenplum Software Download 
+title: Verifying the VMware Greenplum Software Download 
 ---
 
 Describes how to verify Greenplum Database software that you download from VMware Tanzu Network.
@@ -10,7 +10,7 @@ After you download a Greenplum Database server or component software package, yo
 
 1. On VMware Tanzu Network, navigate to the Greenplum Database version and package that you downloaded.
 
-2. On the VMware Tanzu Greenplum _Release Download Files_ page, click the i icon to the right of the Greenplum Database software package that you downloaded.
+2. On the VMware Greenplum _Release Download Files_ page, click the i icon to the right of the Greenplum Database software package that you downloaded.
 
     This action displays a dialog that contains information about the package file, including the **File** name and the **SHA256** fingerprint.
 

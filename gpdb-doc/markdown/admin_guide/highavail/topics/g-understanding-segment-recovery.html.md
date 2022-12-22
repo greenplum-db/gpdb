@@ -15,7 +15,7 @@ This topic is divided into the following sections:
 
 ## <a id="recovery_basics"></a>Segment Recovery Basics 
 
-If the master cannot connect to a segment instance, it marks that segment as down in the Greenplum Database `gp_segment_configuration` table. The segment instance remains offline until an administrator takes steps to bring the segment back online. The process for recovering a down segment instance or host depends on the cause of the failure and on whether or not mirroring is enabled. A segment instance can be marked as down for a number of reasons:
+If the coordinator cannot connect to a segment instance, it marks that segment as down in the Greenplum Database `gp_segment_configuration` table. The segment instance remains offline until an administrator takes steps to bring the segment back online. The process for recovering a down segment instance or host depends on the cause of the failure and on whether or not mirroring is enabled. A segment instance can be marked as down for a number of reasons:
 
 -   A segment host is unavailable; for example, due to network or hardware failures.
 -   A segment instance is not running; for example, there is no `postgres` database listener process.
@@ -93,5 +93,5 @@ By default, `gprecoverseg` performs an incremental recovery, placing the mirror 
 
 Whenever possible, you should perform an incremental recovery rather than a full recovery, as incremental recovery is substantially faster.
 
-For a more detailed explanation of the differences between incremental and full recovery, see the article ["VMware Tanzu Greenplum 6's gprecoverseg explained"](https://community.pivotal.io/s/article/5004y00001YA9fI1617805667833?language=en_US) in the VMware Tanzu Support Hub.
+For a more detailed explanation of the differences between incremental and full recovery, see the article ["VMware Greenplum 6's gprecoverseg explained"](https://community.pivotal.io/s/article/5004y00001YA9fI1617805667833?language=en_US) in the VMware Tanzu Support Hub.
 

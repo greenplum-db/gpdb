@@ -20,12 +20,12 @@ For additional information, refer to the [CREATE FOREIGN DATA WRAPPER](../../ref
 
 ## <a id="greenplum"></a>Using Foreign-Data Wrappers with Greenplum Database 
 
-Most PostgreSQL foreign-data wrappers should work with Greenplum Database. However, PostgreSQL foreign-data wrappers connect only through the Greenplum Database master by default and do not access the Greenplum Database segment instances directly.
+Most PostgreSQL foreign-data wrappers should work with Greenplum Database. However, PostgreSQL foreign-data wrappers connect only through the Greenplum Database coordinator by default and do not access the Greenplum Database segment instances directly.
 
 Greenplum Database adds an `mpp_execute` option to FDW-related SQL commands. If the foreign-data wrapper supports it, you can specify `mpp_execute '*value*'` in the `OPTIONS` clause when you create the FDW, server, or foreign table to identify the Greenplum host from which the foreign-data wrapper reads or writes data. Valid `*value*`s are:
 
--   `master` \(the default\)—Read or write data from the master host.
--   `any`—Read data from either the master host or any one segment, depending on which path costs less.
+-   `master` \(the default\)—Read or write data from the coordinator host.
+-   `any`—Read data from either the coordinator host or any one segment, depending on which path costs less.
 -   `all segments`—Read or write data from all segments. If a foreign-data wrapper supports this value, for correct results it should have a policy that matches segments to data.
 
 \(A PostgreSQL foreign-data wrapper may work with the various `mpp_execute` option settings, but the results are not guaranteed to be correct. For example, a segment may not be able to connect to the foriegn server, or segments may receive overlapping results resulting in duplicate rows.\)

@@ -212,7 +212,7 @@ DEFINE
     :   Required when [FUNCTION](#FUNCTION) is used. Specifies the implementation language used to interpret the function. This release has language support for `perl`, `python`, and `C`. If calling a built-in database function, `LANGUAGE` should not be specified.
 
     LIBRARY
-    :   Required when [LANGUAGE](#LANGUAGE) is C \(not allowed for other language functions\). To use this attribute, [VERSION](#VERSION) must be 1.0.0.2. The specified library file must be installed prior to running the MapReduce job, and it must exist in the same file system location on all Greenplum hosts \(master and segments\).
+    :   Required when [LANGUAGE](#LANGUAGE) is C \(not allowed for other language functions\). To use this attribute, [VERSION](#VERSION) must be 1.0.0.2. The specified library file must be installed prior to running the MapReduce job, and it must exist in the same file system location on all Greenplum hosts \(coordinator and segments\).
 
     PARAMETERS
     :   Optional. Function input parameters. The default type is `text`.

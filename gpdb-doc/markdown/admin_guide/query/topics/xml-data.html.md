@@ -6,7 +6,7 @@ Greenplum Database supports the `xml` data type that stores XML data.
 
 The `xml` data type checks the input values for well-formedness, providing an advantage over simply storing XML data in a text field. Additionally, support functions allow you to perform type-safe operations on this data; refer to [XML Function Reference](#topic_gn4_x3w_mq), below.
 
-Use of this data type requires the installation to have been built with `configure --with-libxml`. This is enabled by default for VMware Tanzu Greenplum builds.
+Use of this data type requires the installation to have been built with `configure --with-libxml`. This is enabled by default for VMware Greenplum builds.
 
 The `xml` type can store well-formed "documents", as defined by the XML standard, as well as "content" fragments, which are defined by reference to the more permissive [document node](https://www.w3.org/TR/2010/REC-xpath-datamodel-20101214/#DocumentNode) of the XQuery and XPath model. Roughly, this means that content fragments can have more than one top-level element or character node. The expression `xmlvalue IS DOCUMENT` can be used to evaluate whether a particular `xml` value is a full document or only a content fragment.
 

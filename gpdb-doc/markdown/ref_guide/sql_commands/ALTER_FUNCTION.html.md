@@ -82,15 +82,15 @@ EXECUTE ON ANY
 EXECUTE ON MASTER
 EXECUTE ON ALL SEGMENTS
 EXECUTE ON INITPLAN
-:   The `EXECUTE ON` attributes specify where \(master or segment instance\) a function runs when it is invoked during the query execution process.
+:   The `EXECUTE ON` attributes specify where \(coordinator or segment instance\) a function runs when it is invoked during the query execution process.
 
-:   `EXECUTE ON ANY` \(the default\) indicates that the function can be run on the master, or any segment instance, and it returns the same result regardless of where it is run. Greenplum Database determines where the function runs.
+:   `EXECUTE ON ANY` \(the default\) indicates that the function can be run on the coordinator, or any segment instance, and it returns the same result regardless of where it is run. Greenplum Database determines where the function runs.
 
-:   `EXECUTE ON MASTER` indicates that the function must run only on the master instance.
+:   `EXECUTE ON MASTER` indicates that the function must run only on the coordinator instance.
 
-:   `EXECUTE ON ALL SEGMENTS` indicates that the function must run on all primary segment instances, but not the master, for each invocation. The overall result of the function is the `UNION ALL` of the results from all segment instances.
+:   `EXECUTE ON ALL SEGMENTS` indicates that the function must run on all primary segment instances, but not the coordinator, for each invocation. The overall result of the function is the `UNION ALL` of the results from all segment instances.
 
-:   `EXECUTE ON INITPLAN` indicates that the function contains an SQL command that dispatches queries to the segment instances and requires special processing on the master instance by Greenplum Database when possible.
+:   `EXECUTE ON INITPLAN` indicates that the function contains an SQL command that dispatches queries to the segment instances and requires special processing on the coordinator instance by Greenplum Database when possible.
 
 :   For more information about the `EXECUTE ON` attributes, see [CREATE FUNCTION](CREATE_FUNCTION.html).
 

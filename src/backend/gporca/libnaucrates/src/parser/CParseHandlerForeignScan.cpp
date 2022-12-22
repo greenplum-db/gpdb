@@ -3,13 +3,13 @@
 //	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
-//		CParseHandlerExternalScan.cpp
+//		CParseHandlerForeignScan.cpp
 //
 //	@doc:
-//		Implementation of the SAX parse handler class for parsing external scan
+//		Implementation of the SAX parse handler class for parsing foreign scan
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerExternalScan.h"
+#include "naucrates/dxl/parser/CParseHandlerForeignScan.h"
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
@@ -21,13 +21,13 @@ XERCES_CPP_NAMESPACE_USE
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CParseHandlerExternalScan::CParseHandlerExternalScan
+//		CParseHandlerForeignScan::CParseHandlerForeignScan
 //
 //	@doc:
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CParseHandlerExternalScan::CParseHandlerExternalScan(
+CParseHandlerForeignScan::CParseHandlerForeignScan(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerTableScan(mp, parse_handler_mgr, parse_handler_root)
@@ -36,39 +36,39 @@ CParseHandlerExternalScan::CParseHandlerExternalScan(
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CParseHandlerExternalScan::StartElement
+//		CParseHandlerForeignScan::StartElement
 //
 //	@doc:
 //		Invoked by Xerces to process an opening tag
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerExternalScan::StartElement(const XMLCh *const,	 // element_uri,
-										const XMLCh *const element_local_name,
-										const XMLCh *const,	 // element_qname
-										const Attributes &	 // attrs
+CParseHandlerForeignScan::StartElement(const XMLCh *const,	// element_uri,
+									   const XMLCh *const element_local_name,
+									   const XMLCh *const,	// element_qname
+									   const Attributes &	// attrs
 )
 {
 	CParseHandlerTableScan::StartElement(element_local_name,
-										 EdxltokenPhysicalExternalScan);
+										 EdxltokenPhysicalForeignScan);
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CParseHandlerExternalScan::EndElement
+//		CParseHandlerForeignScan::EndElement
 //
 //	@doc:
 //		Invoked by Xerces to process a closing tag
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerExternalScan::EndElement(const XMLCh *const,  // element_uri,
-									  const XMLCh *const element_local_name,
-									  const XMLCh *const  // element_qname
+CParseHandlerForeignScan::EndElement(const XMLCh *const,  // element_uri,
+									 const XMLCh *const element_local_name,
+									 const XMLCh *const	 // element_qname
 )
 {
 	CParseHandlerTableScan::EndElement(element_local_name,
-									   EdxltokenPhysicalExternalScan);
+									   EdxltokenPhysicalForeignScan);
 }
 
 // EOF

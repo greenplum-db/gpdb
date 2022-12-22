@@ -16,7 +16,7 @@ For more information on compiling and linking dynamically-loaded functions and e
 
 The manual pages for the C compiler `cc` and the link editor `ld` for your operating system also contain information on compiling and linking source code on your system.
 
-The compiled code \(shared object file\) for the custom protocol must be placed in the same location on every host in your Greenplum Database array \(master and all segments\). This location must also be in the `LD_LIBRARY_PATH` so that the server can locate the files. It is recommended to locate shared libraries either relative to `$libdir` \(which is located at `$GPHOME/lib`\) or through the dynamic library path \(set by the `dynamic_library_path` server configuration parameter\) on all master segment instances in the Greenplum Database array. You can use the Greenplum Database utilities gpssh and `gpsync` to update segments.
+The compiled code \(shared object file\) for the custom protocol must be placed in the same location on every host in your Greenplum Database array \(coordinator and all segments\). This location must also be in the `LD_LIBRARY_PATH` so that the server can locate the files. It is recommended to locate shared libraries either relative to `$libdir` \(which is located at `$GPHOME/lib`\) or through the dynamic library path \(set by the `dynamic_library_path` server configuration parameter\) on all coordinator segment instances in the Greenplum Database array. You can use the Greenplum Database utilities gpssh and `gpsync` to update segments.
 
 -   **[gpextprotocal.c](../../load/topics/g-gpextprotocalc.html)**  
 

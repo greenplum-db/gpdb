@@ -314,7 +314,7 @@ GppcText  uname = GPPC_GETARG_TEXT(1);
 GppcReport(GPPC_ERROR, "Unknown user name: %s", GppcTextGetCString(uname));
 ```
 
-Refer to the [GPPC example code](https://github.com/greenplum-db/gpdb/tree/master/src/interfaces/gppc/test) for example report callback handlers.
+Refer to the [GPPC example code](https://github.com/greenplum-db/gpdb/tree/main/src/interfaces/gppc/test) for example report callback handlers.
 
 ### <a id="topic_spi"></a>SPI Functions 
 
@@ -589,7 +589,7 @@ The GPPC API does not support the following operators with Greenplum Database ve
 
 ### <a id="topic_samplecode"></a>Sample Code 
 
-The [gppc test](https://github.com/greenplum-db/gpdb/tree/master/src/interfaces/gppc/test) directory in the Greenplum Database github repository includes sample GPPC code:
+The [gppc test](https://github.com/greenplum-db/gpdb/tree/main/src/interfaces/gppc/test) directory in the Greenplum Database github repository includes sample GPPC code:
 
 -   `gppc_demo/` - sample code exercising GPPC SPI functions, error reporting, data type argument and return macros, set-returning functions, and encoding functions
 -   `tabfunc_gppc_demo/` - sample code exercising GPPC table and set-returning functions
@@ -664,7 +664,7 @@ You must package the GPPC shared library and SQL function registration script in
 When you construct the package and deployment instructions, take into account the following:
 
 -   Consider providing a shell script or program that the Greenplum Database administrator runs to both install the shared library to the desired file system location and register the GPPC functions.
--   The GPPC shared library must be installed to the same file system location on the master host and on every segment host in the Greenplum Database cluster.
+-   The GPPC shared library must be installed to the same file system location on the coordinator host and on every segment host in the Greenplum Database cluster.
 -   The `gpadmin` user must have permission to traverse the complete file system path to the GPPC shared library file.
 -   The file system location of your GPPC shared library after it is installed in the Greenplum Database deployment determines how you reference the shared library when you register a function in the library with the `CREATE FUNCTION ... AS` command.
 -   Create a `.sql` script file that registers a SQL UDF for each GPPC function in your GPPC shared library. The functions that you create in the `.sql` registration script must reference the deployment location of the GPPC shared library. Include this script in your GPPC deployment package.
@@ -676,28 +676,28 @@ When you construct the package and deployment instructions, take into account th
 
 In this example, you develop, build, and deploy a GPPC shared library and register and run a GPPC function named `concat_two_strings`. This function uses the GPPC API to concatenate two string arguments and return the result.
 
-You will develop the GPPC function on your Greenplum Database master host. Deploying the GPPC shared library that you create in this example requires administrative access to your Greenplum Database cluster.
+You will develop the GPPC function on your Greenplum Database coordinator host. Deploying the GPPC shared library that you create in this example requires administrative access to your Greenplum Database cluster.
 
 Perform the following procedure to run the example:
 
-1.  Log in to the Greenplum Database master host and set up your environment. For example:
+1.  Log in to the Greenplum Database coordinator host and set up your environment. For example:
 
     ```
-    $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
+    $ ssh gpadmin@<gpcoordinator>
+    gpadmin@gpcoordinator$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 2.  Create a work directory and navigate to the new directory. For example:
 
     ```
-    gpadmin@gpmaster$ mkdir gppc_work
-    gpadmin@gpmaster$ cd gppc_work
+    gpadmin@gpcoordinator$ mkdir gppc_work
+    gpadmin@gpcoordinator$ cd gppc_work
     ```
 
 3.  Prepare a file for GPPC source code by opening the file in the editor of your choice. For example, to open a file named `gppc_concat.c` using `vi`:
 
     ```
-    gpadmin@gpmaster$ vi gppc_concat.c
+    gpadmin@gpcoordinator$ vi gppc_concat.c
     ```
 
 4.  Copy/paste the following code into the file:
@@ -755,7 +755,7 @@ Perform the following procedure to run the example:
 8.  Build a GPPC shared library for the `concat_two_strings()` function. For example:
 
     ```
-    gpadmin@gpmaster$ make all
+    gpadmin@gpcoordinator$ make all
     ```
 
     The `make` command generates a shared library file named `gppc_concat.so` in the current working directory.
@@ -763,19 +763,19 @@ Perform the following procedure to run the example:
 9.  Copy the shared library to your Greenplum Database installation. You must have Greenplum Database administrative privileges to copy the file. For example:
 
     ```
-    gpadmin@gpmaster$ cp gppc_concat.so /usr/local/greenplum-db/lib/postgresql/
+    gpadmin@gpcoordinator$ cp gppc_concat.so /usr/local/greenplum-db/lib/postgresql/
     ```
 
 10. Copy the shared library to every host in your Greenplum Database installation. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
 
     ```
-    gpadmin@gpmaster$ gpsync -v -f seghostfile /usr/local/greenplum-db/lib/postgresql/gppc_concat.so =:/usr/local/greenplum-db/lib/postgresql/gppc_concat.so
+    gpadmin@gpcoordinator$ gpsync -v -f seghostfile /usr/local/greenplum-db/lib/postgresql/gppc_concat.so =:/usr/local/greenplum-db/lib/postgresql/gppc_concat.so
     ```
 
 11. Open a `psql` session. For example:
 
     ```
-    gpadmin@gpmaster$ psql -d testdb
+    gpadmin@gpcoordinator$ psql -d testdb
     ```
 
 12. Register the GPPC function named `concat_two_strings()` with Greenplum Database, For example, to map the Greenplum Database function `concat_with_gppc()` to the GPPC `concat_two_strings()` function:
@@ -802,28 +802,28 @@ Perform the following procedure to run the example:
 
 In this example, you develop, build, and deploy a GPPC shared library. You also create and run a `.sql` registration script for a GPPC function named `return_tbl()`. This function uses the GPPC API to take an input table with an integer and a text column, determine if the integer column is greater than 13, and returns a result table with the input integer column and a boolean column identifying whether or not the integer is greater than 13. `return_tbl()` utilizes GPPC API reporting and SRF functions and macros.
 
-You will develop the GPPC function on your Greenplum Database master host. Deploying the GPPC shared library that you create in this example requires administrative access to your Greenplum Database cluster.
+You will develop the GPPC function on your Greenplum Database coordinator host. Deploying the GPPC shared library that you create in this example requires administrative access to your Greenplum Database cluster.
 
 Perform the following procedure to run the example:
 
-1.  Log in to the Greenplum Database master host and set up your environment. For example:
+1.  Log in to the Greenplum Database coordinator host and set up your environment. For example:
 
     ```
-    $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
+    $ ssh gpadmin@<gpcoordinator>
+    gpadmin@gpcoordinator$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 2.  Create a work directory and navigate to the new directory. For example:
 
     ```
-    gpadmin@gpmaster$ mkdir gppc_work
-    gpadmin@gpmaster$ cd gppc_work
+    gpadmin@gpcoordinator$ mkdir gppc_work
+    gpadmin@gpcoordinator$ cd gppc_work
     ```
 
 3.  Prepare a source file for GPPC code by opening the file in the editor of your choice. For example, to open a file named `gppc_concat.c` using `vi`:
 
     ```
-    gpadmin@gpmaster$ vi gppc_rettbl.c
+    gpadmin@gpcoordinator$ vi gppc_rettbl.c
     ```
 
 4.  Copy/paste the following code into the file:
@@ -934,7 +934,7 @@ Perform the following procedure to run the example:
 8.  Build a GPPC shared library for the `return_tbl()` function. For example:
 
     ```
-    gpadmin@gpmaster$ make all
+    gpadmin@gpcoordinator$ make all
     ```
 
     The `make` command generates a shared library file named `gppc_rettbl.so` in the current working directory.
@@ -942,7 +942,7 @@ Perform the following procedure to run the example:
 9.  Copy the shared library to your Greenplum Database installation. You must have Greenplum Database administrative privileges to copy the file. For example:
 
     ```
-    gpadmin@gpmaster$ cp gppc_rettbl.so /usr/local/greenplum-db/lib/postgresql/
+    gpadmin@gpcoordinator$ cp gppc_rettbl.so /usr/local/greenplum-db/lib/postgresql/
     ```
 
     This command copies the shared library to `$libdir`
@@ -950,7 +950,7 @@ Perform the following procedure to run the example:
 10. Copy the shared library to every host in your Greenplum Database installation. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
 
     ```
-    gpadmin@gpmaster$ gpsync -v -f seghostfile /usr/local/greenplum-db/lib/postgresql/gppc_rettbl.so =:/usr/local/greenplum-db/lib/postgresql/gppc_rettbl.so
+    gpadmin@gpcoordinator$ gpsync -v -f seghostfile /usr/local/greenplum-db/lib/postgresql/gppc_rettbl.so =:/usr/local/greenplum-db/lib/postgresql/gppc_rettbl.so
     ```
 
 11. Create a `.sql` file to register the GPPC `return_tbl()` function. Open a file named `gppc_rettbl_reg.sql` in the editor of your choice.
@@ -965,13 +965,13 @@ Perform the following procedure to run the example:
 13. Register the GPPC function by running the script you just created. For example, to register the function in a database named `testdb`:
 
     ```
-    gpadmin@gpmaster$ psql -d testdb -f gppc_rettbl_reg.sql
+    gpadmin@gpcoordinator$ psql -d testdb -f gppc_rettbl_reg.sql
     ```
 
 14. Open a `psql` session. For example:
 
     ```
-    gpadmin@gpmaster$ psql -d testdb
+    gpadmin@gpcoordinator$ psql -d testdb
     ```
 
 15. Create a table with some test data. For example:

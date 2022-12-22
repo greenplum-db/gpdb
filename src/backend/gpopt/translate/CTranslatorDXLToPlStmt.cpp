@@ -98,7 +98,6 @@ extern "C" {
 #include "naucrates/md/IMDAggregate.h"
 #include "naucrates/md/IMDFunction.h"
 #include "naucrates/md/IMDIndex.h"
-#include "naucrates/md/IMDRelationExternal.h"
 #include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDType.h"
 #include "naucrates/md/IMDTypeBool.h"
@@ -182,6 +181,7 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
 	topslice->directDispatch.contentIds = NIL;
 	topslice->directDispatch.haveProcessedAnyCalculations = false;
 
+	m_dxl_to_plstmt_context->m_orig_query = (Query *) orig_query;
 	m_dxl_to_plstmt_context->AddSlice(topslice);
 	m_dxl_to_plstmt_context->SetCurrentSlice(topslice);
 
@@ -320,7 +320,7 @@ CTranslatorDXLToPlStmt::TranslateDXLOperatorToPlan(
 					   dxlnode->GetOperator()->GetOpNameStr()->GetBuffer());
 		}
 		case EdxlopPhysicalTableScan:
-		case EdxlopPhysicalExternalScan:
+		case EdxlopPhysicalForeignScan:
 		{
 			plan = TranslateDXLTblScan(dxlnode, output_context,
 									   ctxt_translation_prev_siblings);
@@ -596,19 +596,20 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan(
 
 	Plan *plan = nullptr;
 	Plan *plan_return = nullptr;
-	if (IMDRelation::ErelstorageExternal == md_rel->RetrieveRelStorageType())
+
+	if (IMDRelation::ErelstorageForeign == md_rel->RetrieveRelStorageType())
 	{
 		OID oidRel = CMDIdGPDB::CastMdid(md_rel->MDId())->Oid();
 
-		// create foreign scan node
-		ForeignScan *foreign_scan = gpdb::CreateForeignScanForExternalTable(
-			oidRel, index, qual, targetlist);
+		ForeignScan *foreign_scan =
+			gpdb::CreateForeignScan(oidRel, index, qual, targetlist,
+									m_dxl_to_plstmt_context->m_orig_query, rte);
+		foreign_scan->scan.scanrelid = index;
 		plan = &(foreign_scan->scan.plan);
 		plan_return = (Plan *) foreign_scan;
 	}
 	else
 	{
-		// create seq scan node
 		SeqScan *seq_scan = MakeNode(SeqScan);
 		seq_scan->scanrelid = index;
 		plan = &(seq_scan->plan);
@@ -2610,16 +2611,23 @@ CTranslatorDXLToPlStmt::TranslateDXLAgg(
 
 	// Set the aggsplit for the agg node
 	ListCell *lc;
+	INT aggsplit = 0;
 	foreach (lc, plan->targetlist)
 	{
 		TargetEntry *te = (TargetEntry *) lfirst(lc);
 		if (IsA(te->expr, Aggref))
 		{
 			Aggref *aggref = (Aggref *) te->expr;
-			agg->aggsplit = aggref->aggsplit;
-			break;
+
+			aggsplit |= aggref->aggsplit;
+
+			if (AGGSPLIT_INTERMEDIATE == aggsplit)
+			{
+				break;
+			}
 		}
 	}
+	agg->aggsplit = (AggSplit) aggsplit;
 
 	plan->lefttree = child_plan;
 

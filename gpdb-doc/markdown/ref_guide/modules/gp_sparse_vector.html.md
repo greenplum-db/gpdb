@@ -71,7 +71,7 @@ SELECT vec_count_nonzero( a )::float8[] FROM listvecs;
 
 ## <a id="topic_info"></a>Additional Module Documentation 
 
-Refer to the `gp_sparse_vector` READMEs in the [Greenplum Database github repository](https://github.com/greenplum-db/gpdb/tree/master/gpcontrib/gp_sparse_vector/README) for additional information about this module.
+Refer to the `gp_sparse_vector` READMEs in the [Greenplum Database github repository](https://github.com/greenplum-db/gpdb/tree/main/gpcontrib/gp_sparse_vector/README) for additional information about this module.
 
 Apache MADlib includes an extended implementation of sparse vectors. See the [MADlib Documentation](http://madlib.apache.org/docs/latest/group__grp__svec.html) for a description of this MADlib module.
 

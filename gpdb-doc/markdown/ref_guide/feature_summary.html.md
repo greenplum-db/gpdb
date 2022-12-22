@@ -359,7 +359,7 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Limitations:</strong><p class="p">Functions defined as
         <code class="ph codeph">STABLE</code> or <code class="ph codeph">VOLATILE</code> can be run in
-      Greenplum Database provided that they are run on the master only.
+      Greenplum Database provided that they are run on the coordinator only.
         <code class="ph codeph">STABLE</code> and <code class="ph codeph">VOLATILE</code> functions cannot be used
       in statements that run at the segment level. </p>
 </td>

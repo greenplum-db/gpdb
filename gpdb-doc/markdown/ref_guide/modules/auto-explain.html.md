@@ -2,7 +2,7 @@
 
 The `auto_explain` module provides a means for logging execution plans of slow statements automatically, without having to run `EXPLAIN` by hand.
 
-The Greenplum Database `auto_explain` module was runs only on the Greenplum Database master segment host. It is otherwise equivalent in functionality to the PostgreSQL `auto_explain` module.
+The Greenplum Database `auto_explain` module was runs only on the Greenplum Database coordinator segment host. It is otherwise equivalent in functionality to the PostgreSQL `auto_explain` module.
 
 ## <a id="topic_reg"></a>Loading the Module 
 

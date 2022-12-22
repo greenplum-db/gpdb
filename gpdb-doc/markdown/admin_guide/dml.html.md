@@ -197,7 +197,7 @@ The Greenplum Database Global Deadlock Detector background worker process collec
 
 By default, the Global Deadlock Detector is deactivated and Greenplum Database runs the concurrent `UPDATE` and `DELETE` operations on a heap table serially. You can activate these concurrent updates and have the Global Deadlock Detector determine when a deadlock exists by setting the server configuration parameter [`gp_enable_global_deadlock_detector`](../ref_guide/config_params/guc-list.html).
 
-When the Global Deadlock Detector is enabled, the background worker process is automatically started on the master host when you start Greenplum Database. You configure the interval at which the Global Deadlock Detector collects and analyzes lock waiting data via the [gp\_global\_deadlock\_detector\_period](../ref_guide/config_params/guc-list.html) server configuration parameter.
+When the Global Deadlock Detector is enabled, the background worker process is automatically started on the coordinator host when you start Greenplum Database. You configure the interval at which the Global Deadlock Detector collects and analyzes lock waiting data via the [gp\_global\_deadlock\_detector\_period](../ref_guide/config_params/guc-list.html) server configuration parameter.
 
 If the Global Deadlock Detector determines that deadlock exists, it breaks the deadlock by cancelling one or more backend processes associated with the youngest transaction\(s\) involved.
 

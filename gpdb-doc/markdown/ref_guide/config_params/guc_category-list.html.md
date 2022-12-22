@@ -8,6 +8,7 @@ Configuration parameters affect categories of server behaviors, such as resource
 -   [Query Tuning Parameters](#topic21)
 -   [Error Reporting and Logging Parameters](#topic29)
 -   [Runtime Statistics Collection Parameters](#topic37)
+-   [Automatic Vacuum Parameters](#automatic_vacuum)
 -   [Automatic Statistics Collection Parameters](#topic38)
 -   [Client Connection Default Parameters](#topic39)
 -   [Lock Management Parameters](#topic43)
@@ -17,7 +18,7 @@ Configuration parameters affect categories of server behaviors, such as resource
 -   [Database Table Parameters](#topic46)
 -   [Past Version Compatibility Parameters](#topic48)
 -   [Greenplum Database Array Configuration Parameters](#topic49)
--   [Greenplum Mirroring Parameters for Master and Segments](#topic55)
+-   [Greenplum Mirroring Parameters for Coordinator and Segments](#topic55)
 -   [Greenplum PL/Java Parameters](#topic56)
 
 ## <a id="topic12"></a>Connection and Authentication Parameters 
@@ -50,6 +51,7 @@ These parameters control how clients connect and authenticate to Greenplum Datab
 - [krb_caseins_users](guc-list.html#krb_caseins_users)
 - [krb_server_keyfile](guc-list.html#krb_server_keyfile)
 - [password_encryption](guc-list.html#password_encryption)
+- [row_security](guc-list.html#row_security)
 - [ssl](guc-list.html#ssl)
 - [ssl_ciphers](guc-list.html#ssl_ciphers)
 
@@ -95,6 +97,10 @@ You can configure the execution cost of `VACUUM` and `ANALYZE` commands to reduc
 - [xid_stop_limit](guc-list.html#xid_stop_limit)
 - [xid_warn_limit](guc-list.html#xid_warn_limit)
 
+### <a id="topic20other"></a>Other Parameters 
+
+- [gp\_max\_parallel\_cursors](guc-list.html#gp_max_parallel_cursors)
+
 ## <a id="topic57"></a>GPORCA Parameters 
 
 These parameters control the usage of GPORCA by Greenplum Database. For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html) in the *Greenplum Database Administrator Guide*.
@@ -126,6 +132,7 @@ These parameters control the usage of GPORCA by Greenplum Database. For informat
 - [optimizer_penalize_skew](guc-list.html#optimizer_penalize_skew)
 - [optimizer_print_missing_stats](guc-list.html#optimizer_print_missing_stats)
 - [optimizer_print_optimization_stats](guc-list.html#optimizer_print_optimization_stats)
+- [optimizer_skew_factor](guc-list.html#optimizer_skew_factor)
 - [optimizer_sort_factor](guc-list.html#optimizer_sort_factor)
 - [optimizer_use_gpdb_allocators](guc-list.html#optimizer_use_gpdb_allocators)
 - [optimizer_xform_bind_threshold](guc-list.html#optimizer_xform_bind_threshold)
@@ -145,6 +152,7 @@ The following parameters control the types of plan operations the Postgres Plann
 - [enable_indexscan](guc-list.html#enable_indexscan)
 - [enable_mergejoin](guc-list.html#enable_mergejoin)
 - [enable_nestloop](guc-list.html#enable_nestloop)
+- [enable_partition_pruning](guc-list.html#enable_partition_pruning)
 - [enable_seqscan](guc-list.html#enable_seqscan)
 - [enable_sort](guc-list.html#enable_sort)
 - [enable_tidscan](guc-list.html#enable_tidscan)
@@ -255,6 +263,7 @@ These configuration parameters control Greenplum Database logging.
 - [log_hostname](guc-list.html#log_hostname)
 - [gp_log_endpoints](guc-list.html#gp_log_endpoints)
 - [gp_log_interconnect](guc-list.html#gp_log_interconnect)
+- [gp_print_create_gang_time](guc-list.html#gp_print_create_gang_time)
 - [log_parser_stats](guc-list.html#log_parser_stats)
 - [log_planner_stats](guc-list.html#log_planner_stats)
 - [log_statement](guc-list.html#log_statement)
@@ -264,9 +273,16 @@ These configuration parameters control Greenplum Database logging.
 - [gp_log_format](guc-list.html#gp_log_format)
 - [gp_reraise_signal](guc-list.html#gp_reraise_signal)
 
+
+## <a id="automatic_vacuum"></a>Automatic Vacuum Parameters 
+
+These parameters pertain to auto-vacuuming databases.
+
+- [autovacuum](guc-list.html#autovacuum)
+
 ## <a id="query-metrics"></a>Query Metrics Collection Parameters 
 
-These parameters enable and configure query metrics collection. When enabled, Greenplum Database saves metrics to shared memory during query execution. These metrics are used by Tanzu Greenplum Command Center, which is included with VMware's commercial version of Greenplum Database.
+These parameters enable and configure query metrics collection. When enabled, Greenplum Database saves metrics to shared memory during query execution. These metrics are used by VMware Greenplum Command Center, which is included with VMware's commercial version of Greenplum Database.
 
 - [gp_enable_query_metrics](guc-list.html#gp_enable_query_metrics)
 - [gp_instrument_shmem_size](guc-list.html#gp_instrument_shmem_size)
@@ -282,7 +298,7 @@ These parameters control the server statistics collection feature. When statisti
 
 ## <a id="topic38"></a>Automatic Statistics Collection Parameters 
 
-When automatic statistics collection is enabled, you can run `ANALYZE` automatically in the same transaction as an `INSERT`, `UPDATE`, `DELETE`, `COPY` or `CREATE TABLE...AS SELECT` statement when a certain threshold of rows is affected \(`on_change`\), or when a newly generated table has no statistics \(`on_no_stats`\). To enable this feature, set the following server configuration parameters in your Greenplum Database master `postgresql.conf` file and restart Greenplum Database:
+When automatic statistics collection is enabled, you can run `ANALYZE` automatically in the same transaction as an `INSERT`, `UPDATE`, `DELETE`, `COPY` or `CREATE TABLE...AS SELECT` statement when a certain threshold of rows is affected \(`on_change`\), or when a newly generated table has no statistics \(`on_no_stats`\). To enable this feature, set the following server configuration parameters in your Greenplum Database coordinator `postgresql.conf` file and restart Greenplum Database:
 
 - [gp_autostats_allow_nonowner](guc-list.html#gp_autostats_allow_nonowner)
 - [gp_autostats_mode](guc-list.html#gp_autostats_mode)
@@ -397,7 +413,6 @@ The following parameter configures default option settings for Greenplum Databas
 - [default_table_access_method](guc-list.html#default_table_access_method)
 - [gp_create_table_random_default_distribution](guc-list.html#gp_create_table_random_default_distribution)
 - [gp_default_storage_options](guc-list.html#gp_default_storage_options)
-- [gp_enable_exchange_default_partition](guc-list.html#gp_enable_exchange_default_partition)
 - [gp_enable_segment_copy_checking](guc-list.html#gp_enable_segment_copy_checking)
 - [gp_use_legacy_hashops](guc-list.html#gp_use_legacy_hashops)
 
@@ -405,7 +420,6 @@ The following parameter configures default option settings for Greenplum Databas
 
 The following parameters configure the append-optimized tables feature of Greenplum Database.
 
-- [max_appendonly_tables](guc-list.html#max_appendonly_tables)
 - [gp_appendonly_compaction](guc-list.html#gp_appendonly_compaction)
 - [gp_appendonly_compaction_threshold](guc-list.html#gp_appendonly_compaction_threshold)
 - [validate_previous_free_tid](guc-list.html#validate_previous_free_tid)
@@ -430,7 +444,7 @@ The following parameters provide compatibility with older PostgreSQL and Greenpl
 
 ## <a id="topic49"></a>Greenplum Database Array Configuration Parameters 
 
-The parameters in this topic control the configuration of the Greenplum Database array and its components: segments, master, distributed transaction manager, master mirror, and interconnect.
+The parameters in this topic control the configuration of the Greenplum Database array and its components: segments, coordinator, distributed transaction manager, coordinator mirror, and interconnect.
 
 ### <a id="topic50"></a>Interconnect Configuration Parameters 
 
@@ -477,9 +491,9 @@ The parameters in this topic control the configuration of the Greenplum Database
 - [gp_server_version](guc-list.html#gp_server_version)
 - [gp_server_version_num](guc-list.html#gp_server_version_num)
 
-## <a id="topic55"></a>Greenplum Mirroring Parameters for Master and Segments 
+## <a id="topic55"></a>Greenplum Mirroring Parameters for Coordinator and Segments 
 
-These parameters control the configuration of the replication between Greenplum Database primary master and standby master.
+These parameters control the configuration of the replication between Greenplum Database primary coordinator and standby coordinator.
 
 - [repl_catchup_within_range](guc-list.html#repl_catchup_within_range)
 - [replication_timeout](guc-list.html#replication_timeout)

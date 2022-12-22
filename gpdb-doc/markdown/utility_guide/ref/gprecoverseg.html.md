@@ -77,8 +77,8 @@ The recovery process marks the segment as up again in the Greenplum Database sys
 -B batch\_size
 :   The number of hosts to work on in parallel. If not specified, the utility will start working on up to 16 hosts in parallel. Valid values are `1` to `64`.
 
--d master\_data\_directory
-:   Optional. The master host data directory. If not specified, the value set for `$MASTER_DATA_DIRECTORY` will be used.
+-d coordinator\_data\_directory
+:   Optional. The coordinator host data directory. If not specified, the value set for `$MASTER_DATA_DIRECTORY` will be used.
 
 -F \(full recovery\)
 :   Optional. Perform a full copy of the active segment instance in order to recover the failed segment. The default is to only copy over the incremental changes that occurred while the segment was down.
@@ -141,7 +141,7 @@ The recovery process marks the segment as up again in the Greenplum Database sys
 -p new\_recover\_host\[,...\]
 :   Specifies a new host outside of the currently configured Greenplum Database array on which to recover invalid segments.
 
-:   The new host must have the Greenplum Database software installed and configured, and have the same hardware and OS configuration as the current segment hosts \(same OS version, locales, `gpadmin` user account, data directory locations created, ssh keys exchanged, number of network interfaces, network interface naming convention, and so on\). Specifically, the Greenplum Database binaries must be installed, the new host must be able to connect password-less with all segments including the Greenplum master, and any other Greenplum Database specific OS configuration parameters must be applied.
+:   The new host must have the Greenplum Database software installed and configured, and have the same hardware and OS configuration as the current segment hosts \(same OS version, locales, `gpadmin` user account, data directory locations created, ssh keys exchanged, number of network interfaces, network interface naming convention, and so on\). Specifically, the Greenplum Database binaries must be installed, the new host must be able to connect password-less with all segments including the Greenplum coordinator, and any other Greenplum Database specific OS configuration parameters must be applied.
 
 :   **Note:** In the case of multiple failed segment hosts, you can specify the hosts to recover with a comma-separated list. However, it is strongly recommended to recover one host at a time. If you must recover more than one host at a time, then it is critical to ensure that a double fault scenario does not occur, in which both the segment primary and corresponding mirror are offline.
 

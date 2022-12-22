@@ -193,6 +193,14 @@ clauselist_selectivity_simple(PlannerInfo *root,
 	int pos = 0;
 	int i = 0;
 
+	// if the PlannerInfo was created from Orca, we don't care about the selectivity/costing
+	// here and some of the necessary fields may not be populated (eg: glob). Instead return
+	// the default selectivity
+	if (root->is_from_orca)
+	{
+		return s1;
+	}
+
 	/* allocate array to hold all selectivity factors */
 	rgsel = (Selectivity *) palloc(sizeof(Selectivity) * list_length(clauses));
 

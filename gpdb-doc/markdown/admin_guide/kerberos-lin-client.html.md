@@ -23,15 +23,15 @@ The following are requirements to connect to a Greenplum Database that is enable
 
 ### <a id="topic14"></a>Prerequisites 
 
--   Kerberos must be installed and configured on the Greenplum Database master host.
+-   Kerberos must be installed and configured on the Greenplum Database coordinator host.
 
     **Important:** Greenplum Database must be configured so that a remote user can connect to Greenplum Database with Kerberos authentication. Authorization to access Greenplum Database is controlled by the `pg_hba.conf` file. For details, see "Editing the pg\_hba.conf File" in the *Greenplum Database Administration Guide*, and also see the *Greenplum Database Security Configuration Guide*.
 
--   The client system requires the Kerberos configuration file `krb5.conf` from the Greenplum Database master.
+-   The client system requires the Kerberos configuration file `krb5.conf` from the Greenplum Database coordinator.
 -   The client system requires a Kerberos keytab file that contains the authentication credentials for the Greenplum Database user that is used to log into the database.
--   The client machine must be able to connect to Greenplum Database master host.
+-   The client machine must be able to connect to Greenplum Database coordinator host.
 
-    If necessary, add the Greenplum Database master host name and IP address to the system `hosts` file. On Linux systems, the `hosts` file is in `/etc`.
+    If necessary, add the Greenplum Database coordinator host name and IP address to the system `hosts` file. On Linux systems, the `hosts` file is in `/etc`.
 
 
 ### <a id="topic15"></a>Required Software on the Client Machine 
@@ -55,7 +55,7 @@ Java applications require this additional software:
 
 To connect to Greenplum Database with Kerberos authentication requires a Kerberos ticket. On client systems, tickets are generated from Kerberos keytab files with the `kinit` utility and are stored in a cache file.
 
-1.  Install a copy of the Kerberos configuration file `krb5.conf` from the Greenplum Database master. The file is used by the Greenplum Database client software and the Kerberos utilities.
+1.  Install a copy of the Kerberos configuration file `krb5.conf` from the Greenplum Database coordinator. The file is used by the Greenplum Database client software and the Kerberos utilities.
 
     Install `krb5.conf` in the directory `/etc`.
 

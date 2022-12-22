@@ -12,7 +12,7 @@ Also, be sure to review [Recommended Monitoring and Maintenance Tasks](../monito
 
 ## <a id="topic2"></a>Monitoring Database Activity and Performance 
 
-Tanzu Greenplum Command Center, an optional web-based interface, provides cluster status information, graphical administrative tools, real-time query monitoring, and historical cluster and query data. Download the Greenplum Command Center package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb) and view the documentation at the [Greenplum Command Center Documentation](http://docs.vmware.com/en/VMware-Tanzu-Greenplum-Command-Center/index.html) web site.
+VMware Greenplum Command Center, an optional web-based interface, provides cluster status information, graphical administrative tools, real-time query monitoring, and historical cluster and query data. Download the Greenplum Command Center package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb) and view the documentation at the [Greenplum Command Center Documentation](http://docs.vmware.com/en/VMware-Tanzu-Greenplum-Command-Center/index.html) web site.
 
 ## <a id="topic3"></a>Monitoring System State 
 
@@ -27,9 +27,9 @@ As a Greenplum Database administrator, you must monitor the system for problem e
 
 ## <a id="topic12"></a>Checking System State 
 
-A Greenplum Database system is comprised of multiple PostgreSQL instances \(the master and segments\) spanning multiple machines. To monitor a Greenplum Database system, you need to know information about the system as a whole, as well as status information of the individual instances. The `gpstate` utility provides status information about a Greenplum Database system.
+A Greenplum Database system is comprised of multiple PostgreSQL instances \(the coordinator and segments\) spanning multiple machines. To monitor a Greenplum Database system, you need to know information about the system as a whole, as well as status information of the individual instances. The `gpstate` utility provides status information about a Greenplum Database system.
 
-### <a id="topic13"></a>Viewing Master and Segment Status and Configuration 
+### <a id="topic13"></a>Viewing Coordinator and Segment Status and Configuration 
 
 The default `gpstate` action is to check segment instances and show a brief status of the valid and failed segments. For example, to see a quick status of your Greenplum Database system:
 
@@ -61,7 +61,7 @@ $ gpstate -c
 
 ```
 
-To see the status of the standby master mirror:
+To see the status of the standby coordinator mirror:
 
 ```
 $ gpstate -f
@@ -70,7 +70,7 @@ $ gpstate -f
 
 ## <a id="topic15"></a>Checking Disk Space Usage 
 
-A database administrator's most important monitoring task is to make sure the file systems where the master and segment data directories reside do not grow to more than 70 percent full. A filled data disk will not result in data corruption, but it may prevent normal database activity from continuing. If the disk grows too full, it can cause the database server to shut down.
+A database administrator's most important monitoring task is to make sure the file systems where the coordinator and segment data directories reside do not grow to more than 70 percent full. A filled data disk will not result in data corruption, but it may prevent normal database activity from continuing. If the disk grows too full, it can cause the database server to shut down.
 
 You can use the `gp_disk_free` external table in the `gp_toolkit` administrative schema to check for remaining free space \(in kilobytes\) on the segment host file systems. For example:
 
@@ -282,7 +282,7 @@ For information about using *gp\_toolkit*, see [Using gp\_toolkit](#topic31).
 
 ## <a id="topic28"></a>Viewing the Database Server Log Files 
 
-Every database instance in Greenplum Database \(master and segments\) runs a PostgreSQL database server with its own server log file. Log files are created in the `log` directory of the master and each segment data directory.
+Every database instance in Greenplum Database \(coordinator and segments\) runs a PostgreSQL database server with its own server log file. Log files are created in the `log` directory of the coordinator and each segment data directory.
 
 ### <a id="topic29"></a>Log File Format 
 
@@ -297,13 +297,13 @@ The following fields are written to the log:
 |3|database\_name|varchar\(100\)|The database name|
 |4|process\_id|varchar\(10\)|The system process ID \(prefixed with "p"\)|
 |5|thread\_id|varchar\(50\)|The thread count \(prefixed with "th"\)|
-|6|remote\_host|varchar\(100\)|On the master, the hostname/address of the client machine. On the segment, the hostname/address of the master.|
-|7|remote\_port|varchar\(10\)|The segment or master port number|
+|6|remote\_host|varchar\(100\)|On the coordinator, the hostname/address of the client machine. On the segment, the hostname/address of the coordinator.|
+|7|remote\_port|varchar\(10\)|The segment or coordinator port number|
 |8|session\_start\_time|timestamp with time zone|Time session connection was opened|
-|9|transaction\_id|int|Top-level transaction ID on the master. This ID is the parent of any subtransactions.|
+|9|transaction\_id|int|Top-level transaction ID on the coordinator. This ID is the parent of any subtransactions.|
 |10|gp\_session\_id|text|Session identifier number \(prefixed with "con"\)|
 |11|gp\_command\_count|text|The command number within a session \(prefixed with "cmd"\)|
-|12|gp\_segment|text|The segment content identifier \(prefixed with "seg" for primaries or "mir" for mirrors\). The master always has a content ID of -1.|
+|12|gp\_segment|text|The segment content identifier \(prefixed with "seg" for primaries or "mir" for mirrors\). The coordinator always has a content ID of -1.|
 |13|slice\_id|text|The slice ID \(portion of the query plan being executed\)|
 |14|distr\_tranx\_id|text|Distributed transaction ID|
 |15|local\_tranx\_id|text|Local transaction ID|
@@ -325,7 +325,7 @@ The following fields are written to the log:
 
 ### <a id="topic30"></a>Searching the Greenplum Server Log Files 
 
-Greenplum Database provides a utility called `gplogfilter` can search through a Greenplum Database log file for entries matching the specified criteria. By default, this utility searches through the Greenplum Database master log file in the default logging location. For example, to display the last three lines of each of the log files under the master directory:
+Greenplum Database provides a utility called `gplogfilter` can search through a Greenplum Database log file for entries matching the specified criteria. By default, this utility searches through the Greenplum Database coordinator log file in the default logging location. For example, to display the last three lines of each of the log files under the coordinator directory:
 
 ```
 $ gplogfilter -n 3

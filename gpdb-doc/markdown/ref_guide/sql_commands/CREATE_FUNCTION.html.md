@@ -42,7 +42,7 @@ For more information about creating functions, see the [User Defined Functions](
 
 To prevent data from becoming out-of-sync across the segments in Greenplum Database, any function classified as `STABLE` or `VOLATILE` cannot be run at the segment level if it contains SQL or modifies the database in any way. For example, functions such as `random()` or `timeofday()` are not allowed to run on distributed data in Greenplum Database because they could potentially cause inconsistent data between the segment instances.
 
-To ensure data consistency, `VOLATILE` and `STABLE` functions can safely be used in statements that are evaluated on and run from the master. For example, the following statements are always run on the master \(statements without a `FROM` clause\):
+To ensure data consistency, `VOLATILE` and `STABLE` functions can safely be used in statements that are evaluated on and run from the coordinator. For example, the following statements are always run on the coordinator \(statements without a `FROM` clause\):
 
 ```
 SELECT setval('myseq', 201);
@@ -61,13 +61,13 @@ One exception to this rule are functions that return a table reference \(`rangeF
 
 Volatility attributes \(`IMMUTABLE`, `STABLE`, `VOLATILE`\) and `EXECUTE ON` attributes specify two different aspects of function execution. In general, volatility indicates when the function is run, and `EXECUTE ON` indicates where it is run.
 
-For example, a function defined with the `IMMUTABLE` attribute can be run at query planning time, while a function with the `VOLATILE` attribute must be run for every row in the query. A function with the `EXECUTE ON MASTER` attribute is run only on the master segment and a function with the `EXECUTE ON ALL SEGMENTS` attribute is run on all primary segment instances \(not the master\).
+For example, a function defined with the `IMMUTABLE` attribute can be run at query planning time, while a function with the `VOLATILE` attribute must be run for every row in the query. A function with the `EXECUTE ON MASTER` attribute is run only on the coordinator segment and a function with the `EXECUTE ON ALL SEGMENTS` attribute is run on all primary segment instances \(not the coordinator\).
 
 See [Using Functions and Operators](../../admin_guide/query/topics/functions-operators.html#topic26/in151167) in the *Greenplum Database Administrator Guide*.
 
 **Functions And Replicated Tables**
 
-A user-defined function that runs only `SELECT` commands on replicated tables can run on segments. Replicated tables, created with the `DISTRIBUTED REPLICATED` clause, store all of their rows on every segment. It is safe for a function to read them on the segments, but updates to replicated tables must run on the master instance.
+A user-defined function that runs only `SELECT` commands on replicated tables can run on segments. Replicated tables, created with the `DISTRIBUTED REPLICATED` clause, store all of their rows on every segment. It is safe for a function to read them on the segments, but updates to replicated tables must run on the coordinator instance.
 
 ## <a id="section5"></a>Parameters 
 
@@ -152,15 +152,15 @@ EXECUTE ON ANY
 EXECUTE ON MASTER
 EXECUTE ON ALL SEGMENTS
 EXECUTE ON INITPLAN
-:   The `EXECUTE ON` attributes specify where \(master or segment instance\) a function runs when it is invoked during the query execution process.
+:   The `EXECUTE ON` attributes specify where \(coordinator or segment instance\) a function runs when it is invoked during the query execution process.
 
-:   `EXECUTE ON ANY` \(the default\) indicates that the function can be run on the master, or any segment instance, and it returns the same result regardless of where it is run. Greenplum Database determines where the function runs.
+:   `EXECUTE ON ANY` \(the default\) indicates that the function can be run on the coordinator, or any segment instance, and it returns the same result regardless of where it is run. Greenplum Database determines where the function runs.
 
-:   `EXECUTE ON MASTER` indicates that the function must run only on the master instance.
+:   `EXECUTE ON MASTER` indicates that the function must run only on the coordinator instance.
 
-:   `EXECUTE ON ALL SEGMENTS` indicates that the function must run on all primary segment instances, but not the master, for each invocation. The overall result of the function is the `UNION ALL` of the results from all segment instances.
+:   `EXECUTE ON ALL SEGMENTS` indicates that the function must run on all primary segment instances, but not the coordinator, for each invocation. The overall result of the function is the `UNION ALL` of the results from all segment instances.
 
-:   `EXECUTE ON INITPLAN` indicates that the function contains an SQL command that dispatches queries to the segment instances and requires special processing on the master instance by Greenplum Database when possible.
+:   `EXECUTE ON INITPLAN` indicates that the function contains an SQL command that dispatches queries to the segment instances and requires special processing on the coordinator instance by Greenplum Database when possible.
 
     **Note:** `EXECUTE ON INITPLAN` is only supported in functions that are used in the `FROM` clause of a `CREATE TABLE AS` or `INSERT` command such as the `get_data()` function in these commands.
 
@@ -199,7 +199,7 @@ describe\_function
 
 ## <a id="section6"></a>Notes 
 
-Any compiled code \(shared library files\) for custom functions must be placed in the same location on every host in your Greenplum Database array \(master and all segments\). This location must also be in the `LD_LIBRARY_PATH` so that the server can locate the files. It is recommended to locate shared libraries either relative to `$libdir` \(which is located at `$GPHOME/lib`\) or through the dynamic library path \(set by the `dynamic_library_path` server configuration parameter\) on all master segment instances in the Greenplum array.
+Any compiled code \(shared library files\) for custom functions must be placed in the same location on every host in your Greenplum Database array \(coordinator and all segments\). This location must also be in the `LD_LIBRARY_PATH` so that the server can locate the files. It is recommended to locate shared libraries either relative to `$libdir` \(which is located at `$GPHOME/lib`\) or through the dynamic library path \(set by the `dynamic_library_path` server configuration parameter\) on all coordinator segment instances in the Greenplum array.
 
 The full SQL type syntax is allowed for input arguments and return value. However, some details of the type specification \(such as the precision field for type numeric\) are the responsibility of the underlying function implementation and are not recognized or enforced by the `CREATE FUNCTION` command.
 
@@ -254,13 +254,13 @@ The function is not supported for use in the query if all of the following condi
 
 If any of the conditions are not met, the function is supported. Specifically, the function is supported if any of the following conditions apply:
 
--   The function `func()` does not access data from distributed tables, or accesses data that is only on the Greenplum Database master.
--   The table `table1` is a master only table.
+-   The function `func()` does not access data from distributed tables, or accesses data that is only on the Greenplum Database coordinator.
+-   The table `table1` is a coordinator only table.
 -   The function `func()` returns only one row and only takes input arguments that are constant values. The function is supported if it can be changed to require no input arguments.
 
 **Using EXECUTE ON attributes**
 
-Most functions that run queries to access tables can only run on the master. However, functions that run only `SELECT` queries on replicated tables can run on segments. If the function accesses a hash-distributed table or a randomly distributed table, the function should be defined with the `EXECUTE ON MASTER` attribute. Otherwise, the function might return incorrect results when the function is used in a complicated query. Without the attribute, planner optimization might determine it would be beneficial to push the function invocation to segment instances.
+Most functions that run queries to access tables can only run on the coordinator. However, functions that run only `SELECT` queries on replicated tables can run on segments. If the function accesses a hash-distributed table or a randomly distributed table, the function should be defined with the `EXECUTE ON MASTER` attribute. Otherwise, the function might return incorrect results when the function is used in a complicated query. Without the attribute, planner optimization might determine it would be beneficial to push the function invocation to segment instances.
 
 These are limitations for functions defined with the `EXECUTE ON MASTER` or `EXECUTE ON ALL SEGMENTS` attribute:
 
@@ -269,10 +269,10 @@ These are limitations for functions defined with the `EXECUTE ON MASTER` or `EXE
 -   The function cannot be in the `SELECT` list of a query with a `FROM` clause.
 -   A query that includes the function falls back from GPORCA to the Postgres Planner.
 
-The attribute `EXECUTE ON INITPLAN` indicates that the function contains an SQL command that dispatches queries to the segment instances and requires special processing on the master instance by Greenplum Database. When possible, Greenplum Database handles the function on the master instance in the following manner.
+The attribute `EXECUTE ON INITPLAN` indicates that the function contains an SQL command that dispatches queries to the segment instances and requires special processing on the coordinator instance by Greenplum Database. When possible, Greenplum Database handles the function on the coordinator instance in the following manner.
 
-1.  First, Greenplum Database runs the function as part of an InitPlan node on the master instance and holds the function output temporarily.
-2.  Then, in the MainPlan of the query plan, the function is called in an EntryDB \(a special query executor \(QE\) that runs on the master instance\) and Greenplum Database returns the data that was captured when the function was run as part of the InitPlan node. The function is not run in the MainPlan.
+1.  First, Greenplum Database runs the function as part of an InitPlan node on the coordinator instance and holds the function output temporarily.
+2.  Then, in the MainPlan of the query plan, the function is called in an EntryDB \(a special query executor \(QE\) that runs on the coordinator instance\) and Greenplum Database returns the data that was captured when the function was run as part of the InitPlan node. The function is not run in the MainPlan.
 
 This simple example uses the function `get_data()` in a CTAS command to create a table using data from the table `country`. The function contains a `SELECT` command that retrieves data from the table `country` and uses the `EXECUTE ON INITPLAN` attribute.
 
@@ -302,7 +302,7 @@ If you view the query plan of the CTAS command with `EXPLAIN ANALYZE VERBOSE`, t
 
 If the function did not contain the `EXECUTE ON INITPLAN` attribute, the CTAS command returns the error `function cannot execute on a QE slice`.
 
-When a function uses the `EXECUTE ON INITPLAN` attribute, a command that uses the function such as `CREATE TABLE t AS SELECT * FROM get_data()` gathers the results of the function onto the master segment and then redistributes the results to segment instances when inserting the data. If the function returns a large amount of data, the master might become a bottleneck when gathering and redistributing data. Performance might improve if you rewrite the function to run the CTAS command in the user defined function and use the table name as an input parameter. In this example, the function runs a CTAS command and does not require the `EXECUTE ON INITPLAN` attribute. Running the `SELECT` command creates the table `t1` using the function that runs the CTAS command.
+When a function uses the `EXECUTE ON INITPLAN` attribute, a command that uses the function such as `CREATE TABLE t AS SELECT * FROM get_data()` gathers the results of the function onto the coordinator segment and then redistributes the results to segment instances when inserting the data. If the function returns a large amount of data, the coordinator might become a bottleneck when gathering and redistributing data. Performance might improve if you rewrite the function to run the CTAS command in the user defined function and use the table name as an input parameter. In this example, the function runs a CTAS command and does not require the `EXECUTE ON INITPLAN` attribute. Running the `SELECT` command creates the table `t1` using the function that runs the CTAS command.
 
 ```
 CREATE OR REPLACE FUNCTION my_ctas(_tbl text) RETURNS VOID AS
@@ -408,7 +408,7 @@ CREATE FUNCTION run_on_segs (text) returns setof text as $$
 SELECT run_on_segs('my test');
 ```
 
-This function looks up a part name in the parts table. The parts table is replicated, so the function can run on the master or on the primary segments.
+This function looks up a part name in the parts table. The parts table is replicated, so the function can run on the coordinator or on the primary segments.
 
 ```
 CREATE OR REPLACE FUNCTION get_part_name(partno int) RETURNS text AS
@@ -422,7 +422,7 @@ END;
 $$ LANGUAGE plpgsql;
 ```
 
-If you run `SELECT get_part_name(100);` at the master the function runs on the master. \(The master instance directs the query to a single primary segment.\) If orders is a distributed table and you run the following query, the `get_part_name()` function runs on the primary segments.
+If you run `SELECT get_part_name(100);` at the coordinator the function runs on the coordinator. \(The coordinator instance directs the query to a single primary segment.\) If orders is a distributed table and you run the following query, the `get_part_name()` function runs on the primary segments.
 
 ```
 `SELECT order_id, get_part_name(orders.part_no) FROM orders;`

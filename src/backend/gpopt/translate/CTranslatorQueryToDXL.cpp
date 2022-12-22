@@ -48,7 +48,7 @@ extern "C" {
 #include "naucrates/dxl/operators/CDXLLogicalCTEProducer.h"
 #include "naucrates/dxl/operators/CDXLLogicalConstTable.h"
 #include "naucrates/dxl/operators/CDXLLogicalDelete.h"
-#include "naucrates/dxl/operators/CDXLLogicalExternalGet.h"
+#include "naucrates/dxl/operators/CDXLLogicalForeignGet.h"
 #include "naucrates/dxl/operators/CDXLLogicalGet.h"
 #include "naucrates/dxl/operators/CDXLLogicalGroupBy.h"
 #include "naucrates/dxl/operators/CDXLLogicalInsert.h"
@@ -746,7 +746,11 @@ CTranslatorQueryToDXL::TranslateInsertQueryToDXL()
 	CDXLNode *query_dxlnode = TranslateSelectQueryToDXL();
 	const RangeTblEntry *rte = (RangeTblEntry *) gpdb::ListNth(
 		m_query->rtable, m_query->resultRelation - 1);
-
+	if (rte->relkind == 'f')
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				   GPOS_WSZ_LIT("Inserts with foreign tables"));
+	}
 	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(
 		m_mp, m_md_accessor, m_context->m_colid_counter, rte,
 		&m_context->m_has_distributed_tables);
@@ -1173,7 +1177,11 @@ CTranslatorQueryToDXL::TranslateDeleteQueryToDXL()
 	CDXLNode *query_dxlnode = TranslateSelectQueryToDXL();
 	const RangeTblEntry *rte = (RangeTblEntry *) gpdb::ListNth(
 		m_query->rtable, m_query->resultRelation - 1);
-
+	if (rte->relkind == 'f')
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				   GPOS_WSZ_LIT("Deletes with foreign tables"));
+	}
 	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(
 		m_mp, m_md_accessor, m_context->m_colid_counter, rte,
 		&m_context->m_has_distributed_tables);
@@ -1234,6 +1242,11 @@ CTranslatorQueryToDXL::TranslateUpdateQueryToDXL()
 	const RangeTblEntry *rte = (RangeTblEntry *) gpdb::ListNth(
 		m_query->rtable, m_query->resultRelation - 1);
 
+	if (rte->relkind == 'f')
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				   GPOS_WSZ_LIT("Updates with foreign tables"));
+	}
 	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(
 		m_mp, m_md_accessor, m_context->m_colid_counter, rte,
 		&m_context->m_has_distributed_tables);
@@ -3317,9 +3330,9 @@ CTranslatorQueryToDXL::TranslateRTEToDXLLogicalGet(const RangeTblEntry *rte,
 	CDXLLogicalGet *dxl_op = nullptr;
 	const IMDRelation *md_rel =
 		m_md_accessor->RetrieveRel(dxl_table_descr->MDId());
-	if (IMDRelation::ErelstorageExternal == md_rel->RetrieveRelStorageType())
+	if (IMDRelation::ErelstorageForeign == md_rel->RetrieveRelStorageType())
 	{
-		dxl_op = GPOS_NEW(m_mp) CDXLLogicalExternalGet(m_mp, dxl_table_descr);
+		dxl_op = GPOS_NEW(m_mp) CDXLLogicalForeignGet(m_mp, dxl_table_descr);
 	}
 	else
 	{
@@ -3342,7 +3355,7 @@ CTranslatorQueryToDXL::TranslateRTEToDXLLogicalGet(const RangeTblEntry *rte,
 		const IMDRelation *partrel = m_md_accessor->RetrieveRel(part_mdid);
 
 		if (partrel->RetrieveRelStorageType() ==
-			IMDRelation::ErelstorageExternal)
+			IMDRelation::ErelstorageForeign)
 		{
 			// Partitioned tables with external/foreign partitions
 			GPOS_RAISE(

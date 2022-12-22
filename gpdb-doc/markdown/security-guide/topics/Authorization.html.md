@@ -10,7 +10,7 @@ Greenplum Database manages database access permissions using *roles*. The concep
 
 Every Greenplum Database system contains a set of database roles \(users and groups\). Those roles are separate from the users and groups managed by the operating system on which the server runs. However, for convenience you may want to maintain a relationship between operating system user names and Greenplum Database role names, since many of the client applications use the current operating system user name as the default.
 
-In Greenplum Database, users log in and connect through the master instance, which verifies their role and access privileges. The master then issues out commands to the segment instances behind the scenes using the currently logged in role.
+In Greenplum Database, users log in and connect through the coordinator instance, which verifies their role and access privileges. The coordinator then issues out commands to the segment instances behind the scenes using the currently logged in role.
 
 Roles are defined at the system level, so they are valid for all databases in the system.
 

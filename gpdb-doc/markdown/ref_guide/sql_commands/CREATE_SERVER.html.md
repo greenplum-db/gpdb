@@ -44,8 +44,8 @@ OPTIONS \( option 'value' \[, ... \] \)
 mpp\_execute \{ 'master' \| 'any' \| 'all segments' \}
 :   A Greenplum Database-specific option that identifies the host from which the foreign-data wrapper reads or writes data:
 
-    -   `master` \(the default\)—Read or write data from the master host.
-    -   `any`—Read data from either the master host or any one segment, depending on which path costs less.
+    -   `master` \(the default\)—Read or write data from the coordinator host.
+    -   `any`—Read data from either the coordinator host or any one segment, depending on which path costs less.
     -   `all segments`—Read or write data from all segments. To support this option value, the foreign-data wrapper should have a policy that matches the segments to data.
 
     **Note:** Greenplum Database supports parallel writes to foreign tables only when you set `mpp_execute 'all segments'`.

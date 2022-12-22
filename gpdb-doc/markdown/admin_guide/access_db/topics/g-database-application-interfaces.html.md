@@ -19,7 +19,7 @@ General instructions for accessing a Greenplum Database with an API are:
 1.  Download your programming language platform and respective API from the appropriate source. For example, you can get the Java Development Kit \(JDK\) and JDBC API from Oracle.
 2.  Write your client application according to the API specifications. When programming your application, be aware of the SQL support in Greenplum Database so you do not include any unsupported SQL syntax.
 
-Download the appropriate driver and configure connectivity to your Greenplum Database master instance.
+Download the appropriate driver and configure connectivity to your Greenplum Database coordinator instance.
 
 **Parent topic:** [Accessing the Database](../../access_db/topics/g-accessing-the-database.html)
 

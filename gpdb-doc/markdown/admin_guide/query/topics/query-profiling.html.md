@@ -77,7 +77,7 @@ Gather Motion 2:1 (slice1) (cost=0.00..20.88 rows=1 width=13)
 
 Read the plan from the bottom to the top. To start, the query optimizer sequentially scans the *names* table. Notice the `WHERE` clause is applied as a *filter* condition. This means the scan operation checks the condition for each row it scans and outputs only the rows that satisfy the condition.
 
-The results of the scan operation are passed to a *gather motion* operation. In Greenplum Database, a gather motion is when segments send rows to the master. In this example, we have two segment instances that send to one master instance. This operation is working on `slice1` of the parallel query execution plan. A query plan is divided into *slices* so the segments can work on portions of the query plan in parallel.
+The results of the scan operation are passed to a *gather motion* operation. In Greenplum Database, a gather motion is when segments send rows to the coordinator. In this example, we have two segment instances that send to one coordinator instance. This operation is working on `slice1` of the parallel query execution plan. A query plan is divided into *slices* so the segments can work on portions of the query plan in parallel.
 
 The estimated startup cost for this plan is `00.00` \(no cost\) and a total cost of `20.88` disk page fetches. The optimizer estimates this query will return one row.
 
@@ -128,7 +128,7 @@ Statement statistics:
 
 Read the plan from the bottom to the top. The total elapsed time to run this query was *22.548* milliseconds.
 
-The *sequential scan* operation had only one segment \(*seg0*\) that returned rows, and it returned just *1 row*. It took *0.255* milliseconds to find the first row and *0.486* to scan all rows. This result is close to the optimizer's estimate: the query optimizer estimated it would return one row for this query. The *gather motion* \(segments sending data to the master\) received 1 row . The total elapsed time for this operation was *0.537* milliseconds.
+The *sequential scan* operation had only one segment \(*seg0*\) that returned rows, and it returned just *1 row*. It took *0.255* milliseconds to find the first row and *0.486* to scan all rows. This result is close to the optimizer's estimate: the query optimizer estimated it would return one row for this query. The *gather motion* \(segments sending data to the coordinator\) received 1 row . The total elapsed time for this operation was *0.537* milliseconds.
 
 #### <a id="topic_idt_2ll_gr"></a>Determining the Query Optimizer 
 

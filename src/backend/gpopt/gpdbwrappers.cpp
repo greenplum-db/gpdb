@@ -33,6 +33,7 @@
 extern "C" {
 #include "access/external.h"
 #include "catalog/pg_inherits.h"
+#include "foreign/fdwapi.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/optimizer.h"
@@ -1729,17 +1730,6 @@ gpdb::HasSubclassSlow(Oid rel_oid)
 	return false;
 }
 
-bool
-gpdb::RelIsExternalTable(Oid relid)
-{
-	GP_WRAP_START;
-	{
-		return rel_is_external_table(relid);
-	}
-	GP_WRAP_END;
-	return false;
-}
-
 GpPolicy *
 gpdb::GetDistributionPolicy(Relation rel)
 {
@@ -1825,26 +1815,14 @@ gpdb::GetRelation(Oid rel_oid)
 	GP_WRAP_END;
 }
 
-ExtTableEntry *
-gpdb::GetExternalTableEntry(Oid rel_oid)
-{
-	GP_WRAP_START;
-	{
-		return GetExtTableEntry(rel_oid);
-	}
-	GP_WRAP_END;
-	return nullptr;
-}
-
-
 ForeignScan *
-gpdb::CreateForeignScanForExternalTable(Oid rel_oid, Index scanrelid,
-										List *qual, List *targetlist)
+gpdb::CreateForeignScan(Oid rel_oid, Index scanrelid, List *qual,
+						List *targetlist, Query *query, RangeTblEntry *rte)
 {
 	GP_WRAP_START;
 	{
-		return BuildForeignScanForExternalTable(rel_oid, scanrelid, qual,
-												targetlist);
+		return BuildForeignScan(rel_oid, scanrelid, qual, targetlist, query,
+								rte);
 	}
 	GP_WRAP_END;
 	return nullptr;

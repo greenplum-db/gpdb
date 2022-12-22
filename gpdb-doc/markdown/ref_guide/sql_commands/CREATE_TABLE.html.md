@@ -276,7 +276,7 @@ ENCODING \( storage_directive \[, ...\] \)
 
 :   The `column_reference_storage_directive` parameter specifies a column along with its storage directive.
 
-For more information on storage directives, see [Adding Column Level Compression](../../admin_guide-ddl-ddl-storage.html#adding-column-level-compression).
+For more information on storage directives, see [Adding Column Level Compression](../../admin_guide/ddl/ddl-storage.html#topic43).
 
 INHERITS \( parent\_table \[, …\]\)
 :   The optional `INHERITS` clause specifies a list of tables from which the new table automatically inherits all columns. Use of `INHERITS` creates a persistent relationship between the new child table and its parent table\(s\). Schema modifications to the parent\(s\) normally propagate to children as well, and by default the data of the child table is included in scans of the parent\(s\).
@@ -382,7 +382,7 @@ WITH \( storage\_parameter=value \)
 
 :   **compresstype** — Set to `ZLIB` \(the default\), `ZSTD`, `RLE_TYPE`, or `QUICKLZ`1 to specify the type of compression used. The value `NONE` deactivates compression. Zstd provides for both speed or a good compression ratio, tunable with the `compresslevel` option. QuickLZ and zlib are provided for backwards-compatibility. Zstd outperforms these compression types on usual workloads. The `compresstype` option is only valid if `appendoptimized=TRUE`.
 
-    **Note:** 1QuickLZ compression is available only in the commercial release of Tanzu Greenplum.
+    **Note:** 1QuickLZ compression is available only in the commercial release of VMware Greenplum.
 
     The value `RLE_TYPE`, which is supported only if `orientation`=`column` is specified, enables the run-length encoding \(RLE\) compression algorithm. RLE compresses data better than the Zstd, zlib, or QuickLZ compression algorithms when the same data value occurs in many consecutive rows.
 
@@ -485,7 +485,7 @@ SUBPARTITION TEMPLATE
 
     A primary key constraint is simply a combination of a unique constraint and a not-null constraint.
 
-    Greenplum Database automatically creates a `UNIQUE` index for each `UNIQUE` or `PRIMARY KEY` constraint to enforce uniqueness. Thus, it is not necessary to create an index explicitly for primary key columns. `UNIQUE` and `PRIMARY KEY` constraints are not allowed on append-optimized tables because the `UNIQUE` indexes that are created by the constraints are not allowed on append-optimized tables.
+    Greenplum Database automatically creates a `UNIQUE` index for each `UNIQUE` or `PRIMARY KEY` constraint to enforce uniqueness. Thus, it is not necessary to create an index explicitly for primary key columns.
 
     Foreign key constraints are not supported in Greenplum Database.
 

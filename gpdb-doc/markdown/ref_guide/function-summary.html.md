@@ -14,7 +14,7 @@ Greenplum Database supports built-in functions and operators including analytic 
 
 ## <a id="topic27"></a>Greenplum Database Function Types 
 
-Greenplum Database evaluates functions and operators used in SQL expressions. Some functions and operators are only allowed to run on the master since they could lead to inconsistencies in Greenplum Database segment instances. This table describes the Greenplum Database Function Types.
+Greenplum Database evaluates functions and operators used in SQL expressions. Some functions and operators are only allowed to run on the coordinator since they could lead to inconsistencies in Greenplum Database segment instances. This table describes the Greenplum Database Function Types.
 
 |Function Type|Greenplum Support|Description|Comments|
 |-------------|-----------------|-----------|--------|
@@ -24,7 +24,7 @@ Greenplum Database evaluates functions and operators used in SQL expressions. So
 
 In Greenplum Database, data is divided up across segments — each segment is a distinct PostgreSQL database. To prevent inconsistent or unexpected results, do not run functions classified as `VOLATILE` at the segment level if they contain SQL commands or modify the database in any way. For example, functions such as `setval()` are not allowed to run on distributed data in Greenplum Database because they can cause inconsistent data between segment instances.
 
-To ensure data consistency, you can safely use `VOLATILE` and `STABLE` functions in statements that are evaluated on and run from the master. For example, the following statements run on the master \(statements without a `FROM` clause\):
+To ensure data consistency, you can safely use `VOLATILE` and `STABLE` functions in statements that are evaluated on and run from the coordinator. For example, the following statements run on the coordinator \(statements without a `FROM` clause\):
 
 ```
 SELECT setval('myseq', 201);

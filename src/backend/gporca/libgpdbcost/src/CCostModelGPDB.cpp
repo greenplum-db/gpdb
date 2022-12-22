@@ -991,6 +991,19 @@ CCostModelGPDB::CostHashJoin(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	CDouble skew_ratio = 1;
 	ULONG arity = exprhdl.Arity();
 
+	if (GPOS_FTRACE(EopttraceDiscardRedistributeHashJoin))
+	{
+		for (ULONG ul = 0; ul < arity - 1; ul++)
+		{
+			COperator *popChild = exprhdl.Pop(ul);
+			if (nullptr != popChild &&
+				COperator::EopPhysicalMotionHashDistribute == popChild->Eopid())
+			{
+				return CCost(GPOS_FP_ABS_MAX);
+			}
+		}
+	}
+
 	// Hashjoin with skewed HashRedistribute below them are expensive
 	// find out if there is a skewed redistribute child of this HashJoin.
 	if (!GPOS_FTRACE(EopttracePenalizeSkewedHashJoin))
@@ -1926,7 +1939,7 @@ CCostModelGPDB::CostScan(CMemoryPool *,	 // mp
 	COperator::EOperatorId op_id = pop->Eopid();
 	GPOS_ASSERT(COperator::EopPhysicalTableScan == op_id ||
 				COperator::EopPhysicalDynamicTableScan == op_id ||
-				COperator::EopPhysicalExternalScan == op_id);
+				COperator::EopPhysicalForeignScan == op_id);
 
 	const CDouble dInitScan =
 		pcmgpdb->GetCostModelParams()
@@ -1946,7 +1959,7 @@ CCostModelGPDB::CostScan(CMemoryPool *,	 // mp
 	{
 		case COperator::EopPhysicalTableScan:
 		case COperator::EopPhysicalDynamicTableScan:
-		case COperator::EopPhysicalExternalScan:
+		case COperator::EopPhysicalForeignScan:
 			// table scan cost considers only retrieving tuple cost,
 			// since we scan the entire table here, the cost is correlated with table rows and table width,
 			// since Scan's parent operator may be a filter that will be pushed into Scan node in GPDB plan,
@@ -2032,7 +2045,7 @@ CCostModelGPDB::Cost(
 		}
 		case COperator::EopPhysicalTableScan:
 		case COperator::EopPhysicalDynamicTableScan:
-		case COperator::EopPhysicalExternalScan:
+		case COperator::EopPhysicalForeignScan:
 		{
 			return CostScan(m_mp, exprhdl, this, pci);
 		}

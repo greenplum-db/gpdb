@@ -25,9 +25,9 @@ For additional information on `gpstate` and `gpcheckperf` refer to the *Greenplu
 
 ### <a id="gpstate"></a>gpstate 
 
-The `gpstate` utility program displays the status of the Greenplum system, including which segments are down, master and segment configuration information \(hosts, data directories, etc.\), the ports used by the system, and mapping of primary segments to their corresponding mirror segments.
+The `gpstate` utility program displays the status of the Greenplum system, including which segments are down, coordinator and segment configuration information \(hosts, data directories, etc.\), the ports used by the system, and mapping of primary segments to their corresponding mirror segments.
 
-Run `gpstate -Q` to get a list of segments that are marked "down" in the master system catalog.
+Run `gpstate -Q` to get a list of segments that are marked "down" in the coordinator system catalog.
 
 To get detailed status information for the Greenplum system, run `gpstate -s`.
 

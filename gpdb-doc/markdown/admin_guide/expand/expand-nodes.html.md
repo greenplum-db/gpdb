@@ -28,7 +28,7 @@ First perform the process as `root`, for administration convenience, and then as
 
 ### <a id="no160715"></a>To exchange SSH keys as root 
 
-1.  Create a host file with the existing host names in your array and a separate host file with the new expansion host names. For existing hosts, you can use the same host file used to set up SSH keys in the system. In the files, list all hosts \(master, backup master, and segment hosts\) with one name per line and no extra lines or spaces. Exchange SSH keys using the configured host names for a given host if you use a multi-NIC configuration. In this example, `mdw` is configured with a single NIC, and `sdw1`, `sdw2`, and `sdw3` are configured with 4 NICs:
+1.  Create a host file with the existing host names in your array and a separate host file with the new expansion host names. For existing hosts, you can use the same host file used to set up SSH keys in the system. In the files, list all hosts \(coordinator, backup coordinator, and segment hosts\) with one name per line and no extra lines or spaces. Exchange SSH keys using the configured host names for a given host if you use a multi-NIC configuration. In this example, `mdw` is configured with a single NIC, and `sdw1`, `sdw2`, and `sdw3` are configured with 4 NICs:
 
     ```
     mdw
@@ -46,7 +46,7 @@ First perform the process as `root`, for administration convenience, and then as
     sdw3-4
     ```
 
-2.  Log in as `root` on the master host, and source the `greenplum_path.sh` file from your Greenplum installation.
+2.  Log in as `root` on the coordinator host, and source the `greenplum_path.sh` file from your Greenplum installation.
 
     ```
     $ su - 

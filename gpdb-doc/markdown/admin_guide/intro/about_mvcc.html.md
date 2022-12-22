@@ -22,7 +22,7 @@ When a transaction inserts a row, the XID is saved with the row in the `xmin` sy
 
 Multi-statement transactions must also record which command within a transaction inserted a row \(`cmin`\) or deleted a row \(`cmax`\) so that the transaction can see changes made by previous commands in the transaction. The command sequence is only relevant during the transaction, so the sequence is reset to 0 at the beginning of a transaction.
 
-XID is a property of the database. Each segment database has its own XID sequence that cannot be compared to the XIDs of other segment databases. The master coordinates distributed transactions with the segments using a cluster-wide *session ID number*, called `gp_session_id`. The segments maintain a mapping of distributed transaction IDs with their local XIDs. The master coordinates distributed transactions across all of the segment with the two-phase commit protocol. If a transaction fails on any one segment, it is rolled back on all segments.
+XID is a property of the database. Each segment database has its own XID sequence that cannot be compared to the XIDs of other segment databases. The coordinator coordinates distributed transactions with the segments using a cluster-wide *session ID number*, called `gp_session_id`. The segments maintain a mapping of distributed transaction IDs with their local XIDs. The coordinator coordinates distributed transactions across all of the segment with the two-phase commit protocol. If a transaction fails on any one segment, it is rolled back on all segments.
 
 You can see the `xmin`, `xmax`, `cmin`, and `cmax` columns for any row with a `SELECT` statement:
 
@@ -30,7 +30,7 @@ You can see the `xmin`, `xmax`, `cmin`, and `cmax` columns for any row with a `S
 SELECT xmin, xmax, cmin, cmax, * FROM <tablename>;
 ```
 
-Because you run the `SELECT` command on the master, the XIDs are the distributed transactions IDs. If you could run the command in an individual segment database, the `xmin` and `xmax` values would be the segment's local XIDs.
+Because you run the `SELECT` command on the coordinator, the XIDs are the distributed transactions IDs. If you could run the command in an individual segment database, the `xmin` and `xmax` values would be the segment's local XIDs.
 
 **Note:** Greenplum Database distributes all of a replicated table's rows to every segment, so each row is duplicated on every segment. Each segment instance maintains its own values for the system columns `xmin`, `xmax`, `cmin`, and `cmax`, as well as for the `gp_segment_id` and `ctid` system columns. Greenplum Database does not permit user queries to access these system columns for replicated tables because they have no single, unambiguous value to evaluate in a query.
 

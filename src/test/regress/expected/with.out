@@ -1145,9 +1145,9 @@ WITH RECURSIVE foo(i) AS
           UNION ALL
        SELECT i+1 FROM foo WHERE i < 5) AS t
 ) SELECT * FROM foo;
-ERROR:  recursive reference to query "foo" must not appear within a subquery
-LINE 5:        (SELECT i+1 FROM foo WHERE i < 10
-                                ^
+ERROR:  recursive reference to query "foo" must not appear more than once
+LINE 7:        SELECT i+1 FROM foo WHERE i < 5) AS t
+                               ^
 WITH RECURSIVE foo(i) AS
     (values (1)
     UNION ALL

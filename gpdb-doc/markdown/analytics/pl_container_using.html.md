@@ -109,7 +109,7 @@ When PL/Container logging is enabled, you can set the log level with the Greenpl
 
 -   PL/Container logging is enabled or deactivated for each runtime ID with the `setting` attribute `use_container_logging`. The default is no logging.
 -   The PL/Container log information is the information from the UDF that is run in the Docker container. By default, the PL/Container log information is sent to a system service. On Red Hat 7 or CentOS 7 systems, the log information is sent to the `journald` service.
--   The Greenplum Database log information is sent to log file on the Greenplum Database master.
+-   The Greenplum Database log information is sent to log file on the Greenplum Database coordinator.
 -   When testing or troubleshooting a PL/Container UDF, you can change the Greenplum Database log level with the `SET` command. You can set the parameter in the session before you run your PL/Container UDF. This example sets the log level to `debug1`.
 
     ```
@@ -152,7 +152,7 @@ The PL/Container configuration file is read only on the first invocation of a PL
 SELECT * FROM plcontainer_refresh_config;
 ```
 
-The command runs a PL/Container function that updates the configuration on the master and segment instances and returns the status of the refresh.
+The command runs a PL/Container function that updates the configuration on the coordinator and segment instances and returns the status of the refresh.
 
 ```
  gp_segment_id | plcontainer_refresh_local_config
@@ -169,7 +169,7 @@ Also, you can show all the configurations in the session by performing a `SELECT
 SELECT * FROM plcontainer_show_config;
 ```
 
-Running the command executes a PL/Container function that displays configuration information from the master and segment instances. This is an example of the start and end of the view output.
+Running the command executes a PL/Container function that displays configuration information from the coordinator and segment instances. This is an example of the start and end of the view output.
 
 ```
 INFO:  plcontainer: Container 'plc_py_test' configuration
@@ -271,7 +271,7 @@ PL/Container does not support this Greenplum Database PL/Python feature:
 
 -   Multi-dimensional arrays.
 
-Also, the Python module has two global dictionary objects that retain the data between function calls. They are named GD and SD. GD is used to share the data between all the function running within the same container, while SD is used for sharing the data between multiple calls of each separate function. Be aware that accessing the data is possible only within the same session, when the container process lives on a segment or master. Be aware that for idle sessions Greenplum Database terminates segment processes, which means the related containers would be shut down and the data from GD and SD lost.
+Also, the Python module has two global dictionary objects that retain the data between function calls. They are named GD and SD. GD is used to share the data between all the function running within the same container, while SD is used for sharing the data between multiple calls of each separate function. Be aware that accessing the data is possible only within the same session, when the container process lives on a segment or coordinator. Be aware that for idle sessions Greenplum Database terminates segment processes, which means the related containers would be shut down and the data from GD and SD lost.
 
 For information about PL/Python, see [PL/Python Language](pl_python.html).
 
@@ -390,7 +390,7 @@ Record the name of the GPU device ID (0 in the above example) or the device UUID
 
 1. Connect to a Greenplum database where PL/Container is installed:
     ```
-    $ psql -d mytest -h master_host -p 5432 -U `gpadmin`
+    $ psql -d mytest -h coordinator_host -p 5432 -U `gpadmin`
     ```
 
 2. Create a sample PL/Container function that uses the container you customized (`plc_python_cuda_shared` in this example). This simple function multiplies randomized, single-precision numbers by sending them to the CUDA constructor of `pycuda.compiler.SourceModule`:

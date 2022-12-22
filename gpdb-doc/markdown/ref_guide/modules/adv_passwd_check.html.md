@@ -45,13 +45,13 @@ The `advanced_password_check` module defines server configuration parameters tha
 After you define your password policies, you run the `gpconfig` command for each configuration parameter that you must set. When you run the command, you must qualify the parameter with the module name. For example, to configure Greenplum Database to remove any requirements for a lower case letter in the password string, you run the following command:
 
 ```
-gpadmin@gpmaster$ gpconfig -c advanced_password_check.restrict_lower -v false
+gpadmin@gpcoordinator$ gpconfig -c advanced_password_check.restrict_lower -v false
 ```
 
 After you set or change module configuration in this manner, you must reload the Greenplum Database configuration:
 
 ```
-gpadmin@gpmaster$ gpstop -u
+gpadmin@gpcoordinator$ gpstop -u
 ```
 
 ## <a id="topic_example"></a>Example 
@@ -67,10 +67,10 @@ You would run the following commands to configure Greenplum Database to enforce 
 
 ```
 
-gpadmin@gpmaster$ gpconfig -c advanced_password_check.minimum_length -v 10
-gpadmin@gpmaster$ gpconfig -c advanced_password_check.maximum_length -v 18
-gpadmin@gpmaster$ gpconfig -c advanced_password_check.restrict_number -v false
-gpadmin@gpmaster$ gpstop -u
+gpadmin@gpcoordinator$ gpconfig -c advanced_password_check.minimum_length -v 10
+gpadmin@gpcoordinator$ gpconfig -c advanced_password_check.maximum_length -v 18
+gpadmin@gpcoordinator$ gpconfig -c advanced_password_check.restrict_number -v false
+gpadmin@gpcoordinator$ gpstop -u
 ```
 
 After loading the new configuration, passwords that the Greenplum superuser sets must now follow the policies, and Greenplum returns an error for every policy that is not met. Note that Greenplum checks the password string against all of the policies, and concatenates together the messages for any errors that it encounters. For example \(line breaks added for better viewability\):

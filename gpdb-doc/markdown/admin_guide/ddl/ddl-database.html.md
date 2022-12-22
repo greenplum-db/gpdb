@@ -31,7 +31,7 @@ To create a database, you must have privileges to create a database or be a Gree
 You can also use the client program `createdb` to create a database. For example, running the following command in a command line terminal connects to Greenplum Database using the provided host name and port and creates a database named *mydatabase*:
 
 ```
-$ createdb -h masterhost -p 5432 mydatabase
+$ createdb -h coordinator_host -p 5432 mydatabase
 ```
 
 The host name and port must match the host name and port of the installed Greenplum Database system.
@@ -86,7 +86,7 @@ The `DROP DATABASE` command drops \(or deletes\) a database. It removes the syst
 You can also use the client program `dropdb` to drop a database. For example, the following command connects to Greenplum Database using the provided host name and port and drops the database *mydatabase*:
 
 ```
-$ dropdb -h masterhost -p 5432 mydatabase
+$ dropdb -h coordinator_host -p 5432 mydatabase
 ```
 
 **Warning:** Dropping a database cannot be undone.
