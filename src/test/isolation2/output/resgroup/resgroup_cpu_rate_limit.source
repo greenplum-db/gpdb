@@ -57,14 +57,14 @@ CREATE
 --
 -- check gpdb cgroup configuration
 --
-DO LANGUAGE PLPYTHON3U $$ import subprocess 
+DO LANGUAGE PLPYTHON3U $$ import subprocess import os 
 cgroot = '@cgroup_mnt_point@' 
 def get_cgroup_prop(prop): fullpath = cgroot + '/' + prop return int(open(fullpath).readline()) 
 def run_command(cmd): return subprocess.check_output(cmd.split()).decode() 
 def show_guc(guc): return plpy.execute('SHOW {}'.format(guc))[0][guc] 
 # # check gpdb top-level cgroup configuration # 
 # get top-level cgroup props cfs_quota_us = get_cgroup_prop('/cpu/gpdb/cpu.cfs_quota_us') cfs_period_us = get_cgroup_prop('/cpu/gpdb/cpu.cfs_period_us') shares = get_cgroup_prop('/cpu/gpdb/cpu.shares') 
-# get system props ncores = int(run_command('nproc')) 
+# get system props ncores = os.cpu_count() 
 # get global gucs gp_resource_group_cpu_limit = float(show_guc('gp_resource_group_cpu_limit')) gp_resource_group_cpu_priority = int(show_guc('gp_resource_group_cpu_priority')) 
 # cfs_quota_us := cfs_period_us * ncores * gp_resource_group_cpu_limit assert cfs_quota_us == cfs_period_us * ncores * gp_resource_group_cpu_limit 
 # shares := 1024 * gp_resource_group_cpu_priority assert shares == 1024 * gp_resource_group_cpu_priority 

@@ -93,6 +93,7 @@ CREATE RESOURCE GROUP rg2_cpu_test WITH (concurrency=5, cpu_hard_quota_limit=-1,
 --
 DO LANGUAGE PLPYTHON3U $$
     import subprocess
+    import os
 
     cgroot = '@cgroup_mnt_point@'
 
@@ -116,7 +117,7 @@ DO LANGUAGE PLPYTHON3U $$
     shares = get_cgroup_prop('/cpu/gpdb/cpu.shares')
 
     # get system props
-    ncores = int(run_command('nproc'))
+    ncores = os.cpu_count()
 
     # get global gucs
     gp_resource_group_cpu_limit = float(show_guc('gp_resource_group_cpu_limit'))
