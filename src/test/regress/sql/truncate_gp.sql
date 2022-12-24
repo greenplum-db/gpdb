@@ -1,9 +1,5 @@
 -- Mask out segment file name
 -- start_matchsubs
--- m/\ +stat_table_segfile_size\ +/
--- s/\ +stat_table_segfile_size\ +/stat_table_segfile_size/
--- m/----------------------------+/
--- s/----------------------------+/---------------------------/
 -- m/segfile.*,/
 -- s/segfile:\d+\/\d+/segfile###/
 -- end_matchsubs
@@ -60,6 +56,9 @@ for dbid, datadir in db_instances.items():
         })
 return rows
 $fn$;
+
+-- switch to unaligned output mode
+\a
 
 -- test truncate table and create table are in the same transaction for ao table
 begin;
