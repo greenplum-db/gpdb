@@ -58,7 +58,7 @@ return rows
 $fn$;
 
 -- switch to unaligned output mode
-\a
+\pset format unaligned
 
 -- test truncate table and create table are in the same transaction for ao table
 begin;
