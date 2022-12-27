@@ -126,7 +126,6 @@ extern void AtSubAbort_Snapshot(int level);
 extern void AtEOXact_Snapshot(bool isCommit, bool resetXmin);
 
 extern void LogDistributedSnapshotInfo(Snapshot snapshot, const char *prefix);
-extern DistributedSnapshotWithLocalMapping *GetCurrentDistributedSnapshotWithLocalMapping(void);
 
 extern void ImportSnapshot(const char *idstr);
 extern bool XactHasExportedSnapshots(void);

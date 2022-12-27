@@ -2595,16 +2595,3 @@ XidInMVCCSnapshot_Local(TransactionId xid, Snapshot snapshot)
 
 	return false;
 }
-
-DistributedSnapshotWithLocalMapping *
-GetCurrentDistributedSnapshotWithLocalMapping()
-{
-	if (!FirstSnapshotSet)
-		return NULL;
-
-	Assert(CurrentSnapshot);
-	if (CurrentSnapshot->haveDistribSnapshot)
-		return &CurrentSnapshot->distribSnapshotWithLocalMapping;
-
-	return NULL;
-}
