@@ -92,14 +92,14 @@ open_datumstreamread_segfile(
  * the block directory.
  */
 static void
-open_all_datumstreamread_segfiles(Relation rel,
-								  AOCSFileSegInfo *segInfo,
-								  DatumStreamRead **ds,
-								  AttrNumber *proj_atts,
-								  AttrNumber num_proj_atts,
-								  AppendOnlyBlockDirectory *blockDirectory)
+open_all_datumstreamread_segfiles(AOCSScanDesc scan, AOCSFileSegInfo *segInfo)
 {
-	char	   *basepath = relpathbackend(rel->rd_node, rel->rd_backend, MAIN_FORKNUM);
+	Relation 		rel = scan->rs_base.rs_rd;
+	DatumStreamRead **ds = scan->columnScanInfo.ds;
+	AttrNumber 		*proj_atts = scan->columnScanInfo.proj_atts;
+	AttrNumber 		num_proj_atts = scan->columnScanInfo.num_proj_atts;
+	AppendOnlyBlockDirectory *blockDirectory = scan->blockDirectory;
+	char *basepath = relpathbackend(rel->rd_node, rel->rd_backend, MAIN_FORKNUM);
 
 	Assert(proj_atts);
 	for (AttrNumber i = 0; i < num_proj_atts; i++)
@@ -108,6 +108,8 @@ open_all_datumstreamread_segfiles(Relation rel,
 
 		open_datumstreamread_segfile(basepath, rel->rd_node, segInfo, ds[attno], attno);
 		datumstreamread_block(ds[attno], blockDirectory, attno);
+
+		AOCSScanDesc_UpdateTotalBytesRead(scan, attno);
 	}
 
 	pfree(basepath);
@@ -329,6 +331,8 @@ initscan_with_colinfo(AOCSScanDesc scan)
 
 	ItemPointerSet(&scan->cdb_fake_ctid, 0, 0);
 
+	scan->totalBytesRead = 0;
+
 	pgstat_count_heap_scan(scan->rs_base.rs_rd);
 }
 
@@ -388,12 +392,7 @@ open_next_scan_seg(AOCSScanDesc scan)
 															true);
 				}
 
-				open_all_datumstreamread_segfiles(scan->rs_base.rs_rd,
-												  curSegInfo,
-												  scan->columnScanInfo.ds,
-												  scan->columnScanInfo.proj_atts,
-												  scan->columnScanInfo.num_proj_atts,
-												  scan->blockDirectory);
+				open_all_datumstreamread_segfiles(scan, curSegInfo);
 
 				return scan->cur_seg;
 			}
@@ -763,6 +762,8 @@ ReadNext:
 					close_cur_scan_seg(scan);
 					goto ReadNext;
 				}
+
+				AOCSScanDesc_UpdateTotalBytesRead(scan, attno);
 
 				err = datumstreamread_advance(scan->columnScanInfo.ds[attno]);
 				Assert(err > 0);

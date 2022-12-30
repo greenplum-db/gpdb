@@ -29,6 +29,7 @@
 #include "catalog/storage_xlog.h"
 #include "cdb/cdbaocsam.h"
 #include "cdb/cdbvars.h"
+#include "commands/progress.h"
 #include "commands/vacuum.h"
 #include "executor/executor.h"
 #include "nodes/makefuncs.h"
@@ -1562,6 +1563,7 @@ aoco_index_build_range_scan(Relation heapRelation,
 	List	   *qual = indexInfo->ii_Predicate;
 	Oid			blkdirrelid;
 	Oid			blkidxrelid;
+	int64 		previous_blkno = -1;
 
 	/*
 	 * sanity checks
@@ -1701,27 +1703,35 @@ aoco_index_build_range_scan(Relation heapRelation,
 	}
 
 
-	/* GPDB_12_MERGE_FIXME */
-#if 0
 	/* Publish number of blocks to scan */
 	if (progress)
 	{
-		BlockNumber nblocks;
+		FileSegTotals	*fileSegTotals;
+		BlockNumber		totalBlocks;
 
-		if (aoscan->rs_base.rs_parallel != NULL)
-		{
-			ParallelBlockTableScanDesc pbscan;
+		/* XXX: How can we report for builds with parallel scans? */
+		Assert(!aocoscan->rs_base.rs_parallel);
 
-			pbscan = (ParallelBlockTableScanDesc) aoscan->rs_base.rs_parallel;
-			nblocks = pbscan->phs_nblocks;
-		}
+		/*
+		 * We will need to scan the entire table if we need to create a block
+		 * directory, otherwise we need to scan only the columns projected. So,
+		 * calculate the total blocks accordingly.
+		 */
+		if (need_create_blk_directory)
+			fileSegTotals = GetAOCSSSegFilesTotals(heapRelation,
+												   aocoscan->appendOnlyMetaDataSnapshot);
 		else
-			nblocks = aoscan->rs_nblocks;
+			fileSegTotals = GetAOCSSSegFilesTotalsWithProj(heapRelation,
+														   aocoscan->appendOnlyMetaDataSnapshot,
+														   aocoscan->columnScanInfo.proj_atts,
+														   aocoscan->columnScanInfo.num_proj_atts);
 
+		Assert(fileSegTotals->totalbytes >= 0);
+
+		totalBlocks = RelationGuessNumberOfBlocksFromSize(fileSegTotals->totalbytes);
 		pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_TOTAL,
-									 nblocks);
+									 totalBlocks);
 	}
-#endif
 
 	/* set our scan endpoints */
 	if (!allow_sync)
@@ -1755,21 +1765,23 @@ aoco_index_build_range_scan(Relation heapRelation,
 			(numblocks != InvalidBlockNumber && ItemPointerGetBlockNumber(&slot->tts_tid) >= numblocks))
 			continue;
 
-		/* GPDB_12_MERGE_FIXME */
-#if 0
 		/* Report scan progress, if asked to. */
 		if (progress)
 		{
-			BlockNumber blocks_done = appendonly_scan_get_blocks_done(aoscan);
+			int64 current_blkno =
+					  RelationGuessNumberOfBlocksFromSize(aocoscan->totalBytesRead);
 
-			if (blocks_done != previous_blkno)
+			/* XXX: How can we report for builds with parallel scans? */
+			Assert(!aocoscan->rs_base.rs_parallel);
+
+			/* As soon as a new block starts, report it as scanned */
+			if (current_blkno != previous_blkno)
 			{
 				pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_DONE,
-											 blocks_done);
-				previous_blkno = blocks_done;
+											 current_blkno);
+				previous_blkno = current_blkno;
 			}
 		}
-#endif
 
 		aoTupleId = (AOTupleId *) &slot->tts_tid;
 		/*
@@ -1825,28 +1837,6 @@ aoco_index_build_range_scan(Relation heapRelation,
 		         callback_state);
 
 	}
-
-	/* GPDB_12_MERGE_FIXME */
-#if 0
-	/* Report scan progress one last time. */
-	if (progress)
-	{
-		BlockNumber blks_done;
-
-		if (aoscan->rs_base.rs_parallel != NULL)
-		{
-			ParallelBlockTableScanDesc pbscan;
-
-			pbscan = (ParallelBlockTableScanDesc) aoscan->rs_base.rs_parallel;
-			blks_done = pbscan->phs_nblocks;
-		}
-		else
-			blks_done = aoscan->rs_nblocks;
-
-		pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_DONE,
-									 blks_done);
-	}
-#endif
 
 	table_endscan(scan);
 

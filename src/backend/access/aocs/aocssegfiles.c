@@ -433,8 +433,45 @@ GetAllAOCSFileSegInfo_pg_aocsseg_rel(int numOfColumns,
 	return allseg;
 }
 
+/*
+ * Summarize the pg_aocsseg metadata columns for a given AOCO relation using
+ * appendOnlyMetaDataSnapshot.
+ */
 FileSegTotals *
-GetAOCSSSegFilesTotals(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot)
+GetAOCSSSegFilesTotals(Relation parentrel,
+					   Snapshot appendOnlyMetaDataSnapshot)
+{
+	FileSegTotals 	*totals;
+	AttrNumber 		num_proj_atts = RelationGetNumberOfAttributes(parentrel);
+	AttrNumber 		*proj_atts = (AttrNumber *) palloc0(num_proj_atts * sizeof(AttrNumber));
+
+	/*
+	 * Construct a projection list containing all columns in the relation and
+	 * then call GetAOCSSSegFilesTotalsWithProj() with it, to obtain summarized
+	 * aocsseg values for all columns.
+	 */
+	for (AttrNumber attno = 0; attno < num_proj_atts; attno++)
+		proj_atts[attno] = attno;
+	totals = GetAOCSSSegFilesTotalsWithProj(parentrel,
+											appendOnlyMetaDataSnapshot,
+											proj_atts,
+											num_proj_atts);
+
+	pfree(proj_atts);
+
+	return totals;
+}
+
+/*
+ * Summarize the pg_aocsseg metadata columns for a given AOCO relation using
+ * appendOnlyMetaDataSnapshot. However, only consider the metadata values for
+ * columns that belong to the passed in projection list: "proj_atts".
+ */
+FileSegTotals *
+GetAOCSSSegFilesTotalsWithProj(Relation parentrel,
+							   Snapshot appendOnlyMetaDataSnapshot,
+							   AttrNumber *proj_atts,
+							   AttrNumber num_proj_atts)
 {
 	AOCSFileSegInfo **allseg;
 	int			totalseg;
@@ -445,22 +482,29 @@ GetAOCSSSegFilesTotals(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot)
 	Assert(RelationIsValid(parentrel));
 	Assert(RelationIsAoCols(parentrel));
 
+	/*
+	 * The projection list must be non-empty. If there are no columns projected,
+	 * i.e. all columns must be considered, then proj_atts should be an array
+	 * containing each and every column number.
+	 */
+	Assert(num_proj_atts > 0);
+	Assert(proj_atts);
+
 	totals = (FileSegTotals *) palloc0(sizeof(FileSegTotals));
 	memset(totals, 0, sizeof(FileSegTotals));
 
 	allseg = GetAllAOCSFileSegInfo(parentrel, appendOnlyMetaDataSnapshot, &totalseg, NULL);
 	for (s = 0; s < totalseg; s++)
 	{
-		int32		nEntry;
 		int			e;
 
 		vpinfo = &((allseg[s])->vpinfo);
-		nEntry = vpinfo->nEntry;
 
-		for (e = 0; e < nEntry; e++)
+		for (e = 0; e < num_proj_atts; e++)
 		{
-			totals->totalbytes += vpinfo->entry[e].eof;
-			totals->totalbytesuncompressed += vpinfo->entry[e].eof_uncompressed;
+			int col = proj_atts[e];
+			totals->totalbytes += vpinfo->entry[col].eof;
+			totals->totalbytesuncompressed += vpinfo->entry[col].eof_uncompressed;
 		}
 		if (allseg[s]->state != AOSEG_STATE_AWAITING_DROP)
 		{
