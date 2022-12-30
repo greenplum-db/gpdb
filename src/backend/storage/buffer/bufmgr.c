@@ -2987,19 +2987,6 @@ RelationGetNumberOfBlocksInFork(Relation relation, ForkNumber forkNum)
 }
 
 /*
- * GPDB: it is possible to need to calculate the number of blocks from the table
- * size. An example use case is when we are the dispatcher and we need to
- * acquire the number of blocks from all segments.
- *
- * Use the same calculation that RelationGetNumberOfBlocksInFork is using.
- */
-BlockNumber
-RelationGuessNumberOfBlocksFromSize(uint64 szbytes)
-{
-	return (szbytes + (BLCKSZ - 1)) / BLCKSZ;
-}
-
-/*
  * BufferIsPermanent
  *		Determines whether a buffer will potentially still be around after
  *		a crash.  Caller must hold a buffer pin.

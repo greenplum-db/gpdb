@@ -33,6 +33,7 @@
 #include "catalog/storage_xlog.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbvars.h"
+#include "commands/progress.h"
 #include "commands/vacuum.h"
 #include "executor/executor.h"
 #include "pgstat.h"
@@ -1366,6 +1367,7 @@ appendonly_index_build_range_scan(Relation heapRelation,
 	EState	   *estate;
 	ExprContext *econtext;
 	Snapshot	snapshot;
+	int64 previous_blkno = -1;
 
 	/*
 	 * sanity checks
@@ -1468,27 +1470,24 @@ appendonly_index_build_range_scan(Relation heapRelation,
 	relation_close(blkdir, NoLock);
 
 
-	/* GPDB_12_MERGE_FIXME */
-#if 0
 	/* Publish number of blocks to scan */
 	if (progress)
 	{
-		BlockNumber nblocks;
+		FileSegTotals	*fileSegTotals;
+		BlockNumber		totalBlocks;
 
-		if (aoscan->rs_base.rs_parallel != NULL)
-		{
-			ParallelBlockTableScanDesc pbscan;
+		/* XXX: How can we report for builds with parallel scans? */
+		Assert(!aoscan->rs_base.rs_parallel);
 
-			pbscan = (ParallelBlockTableScanDesc) aoscan->rs_base.rs_parallel;
-			nblocks = pbscan->phs_nblocks;
-		}
-		else
-			nblocks = aoscan->rs_nblocks;
+		fileSegTotals = GetSegFilesTotals(heapRelation, aoscan->appendOnlyMetaDataSnapshot);
 
+		Assert(fileSegTotals->totalbytes >= 0);
+
+		totalBlocks =
+			RelationGuessNumberOfBlocksFromSize((uint64) fileSegTotals->totalbytes);
 		pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_TOTAL,
-									 nblocks);
+									 totalBlocks);
 	}
-#endif
 
 	/* set our scan endpoints */
 	if (!allow_sync)
@@ -1522,21 +1521,23 @@ appendonly_index_build_range_scan(Relation heapRelation,
 			(numblocks != InvalidBlockNumber && ItemPointerGetBlockNumber(&slot->tts_tid) >= numblocks))
 			continue;
 
-	/* GPDB_12_MERGE_FIXME */
-#if 0
 		/* Report scan progress, if asked to. */
 		if (progress)
 		{
-			BlockNumber blocks_done = appendonly_scan_get_blocks_done(aoscan);
+			int64 current_blkno =
+				RelationGuessNumberOfBlocksFromSize(aoscan->totalBytesRead);
 
-			if (blocks_done != previous_blkno)
+			/* XXX: How can we report for builds with parallel scans? */
+			Assert(!aoscan->rs_base.rs_parallel);
+
+			/* As soon as a new block starts, report it as scanned */
+			if (current_blkno != previous_blkno)
 			{
 				pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_DONE,
-											 blocks_done);
-				previous_blkno = blocks_done;
+											 current_blkno);
+				previous_blkno = current_blkno;
 			}
 		}
-#endif
 
 		aoTupleId = (AOTupleId *) &slot->tts_tid;
 		/*
@@ -1592,28 +1593,6 @@ appendonly_index_build_range_scan(Relation heapRelation,
 				 callback_state);
 
 	}
-
-	/* GPDB_12_MERGE_FIXME */
-#if 0
-	/* Report scan progress one last time. */
-	if (progress)
-	{
-		BlockNumber blks_done;
-
-		if (aoscan->rs_base.rs_parallel != NULL)
-		{
-			ParallelBlockTableScanDesc pbscan;
-
-			pbscan = (ParallelBlockTableScanDesc) aoscan->rs_base.rs_parallel;
-			blks_done = pbscan->phs_nblocks;
-		}
-		else
-			blks_done = aoscan->rs_nblocks;
-
-		pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_DONE,
-									 blks_done);
-	}
-#endif
 
 	table_endscan(scan);
 
@@ -1688,7 +1667,10 @@ appendonly_index_validate_scan(Relation heapRelation,
 								 false);	/* syncscan not OK */
 	aoscan = (AppendOnlyScanDesc) scan;
 
-	/* GPDB_12_MERGE_FIXME */
+	/*
+	 * GPDB_12_MERGE_FIXME:
+	 * Refer to how we do reporting in appendonly_index_build_range_scan()
+	 */
 #if 0
 	pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_TOTAL,
 								 aoscan->rs_nblocks);
@@ -1707,7 +1689,10 @@ appendonly_index_validate_scan(Relation heapRelation,
 
 		state->htups += 1;
 
-	/* GPDB_12_MERGE_FIXME */
+		/*
+		 * GPDB_12_MERGE_FIXME:
+		 * Refer to how we do reporting in appendonly_index_build_range_scan()
+		 */
 #if 0
 		if ((previous_blkno == InvalidBlockNumber) ||
 			(aoscan->rs_cblock != previous_blkno))
