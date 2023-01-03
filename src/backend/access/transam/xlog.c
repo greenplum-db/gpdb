@@ -909,7 +909,7 @@ static void LocalSetXLogInsertAllowed(void);
 static void CreateEndOfRecoveryRecord(void);
 static XLogRecPtr CreateOverwriteContrecordRecord(XLogRecPtr aborted_lsn);
 static void CheckPointGuts(XLogRecPtr checkPointRedo, int flags);
-static void KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo, XLogRecPtr PriorRedoPtr, bool* keep_old_wals);
+static void KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo, XLogRecPtr PriorRedoPtr);
 static XLogRecPtr XLogGetReplicationSlotMinimumLSN(void);
 
 static void AdvanceXLInsertBuffer(XLogRecPtr upto, bool opportunistic);
@@ -8956,7 +8956,6 @@ CreateCheckPoint(int flags)
 	XLogRecPtr	last_important_lsn;
 	VirtualTransactionId *vxids;
 	int			nvxids;
-	bool		keep_old_wals = false;
 
 	/*
 	 * An end-of-recovery checkpoint is really a shutdown checkpoint, just
@@ -9350,10 +9349,6 @@ CreateCheckPoint(int flags)
 	 * UpdateCheckPointDistanceEstimate()
 	 */
 	PriorRedoPtr = ControlFile->checkPointCopy.redo;
-	ereport(DEBUG2,
-			(errmsg("remembered the prior checkpoint's redo ptr [%X/%X]",
-					(uint32) (ControlFile->checkPointCopy.redo >> 32),
-					(uint32) ControlFile->checkPointCopy.redo)));
 
 	/*
 	 * Update the control file.
@@ -9377,9 +9372,6 @@ CreateCheckPoint(int flags)
 	ControlFile->unloggedLSN = XLogCtl->unloggedLSN;
 	SpinLockRelease(&XLogCtl->ulsn_lck);
 
-	ereport(DEBUG2,
-			(errmsg("updating control file checkpoint to [%X/%X]",
-					(uint32) (ControlFile->checkPoint >> 32), (uint32) ControlFile->checkPoint)));
 	UpdateControlFile();
 	LWLockRelease(ControlFileLock);
 
@@ -9393,7 +9385,6 @@ CreateCheckPoint(int flags)
 	 * have trouble while fooling with old log segments.
 	 */
 	END_CRIT_SECTION();
-	SIMPLE_FAULT_INJECTOR("checkpoint_control_file_updated");
 
 	/*
 	 * Let smgr do post-checkpoint cleanup (eg, deleting old files).
@@ -9412,10 +9403,9 @@ CreateCheckPoint(int flags)
 	 * prevent the disk holding the xlog from growing full.
 	 */
 	XLByteToSeg(RedoRecPtr, _logSegNo, wal_segment_size);
-	KeepLogSeg(recptr, &_logSegNo, PriorRedoPtr, &keep_old_wals);
+	KeepLogSeg(recptr, &_logSegNo, PriorRedoPtr);
 	_logSegNo--;
-	if (!keep_old_wals)
-		RemoveOldXlogFiles(_logSegNo, RedoRecPtr, recptr);
+	RemoveOldXlogFiles(_logSegNo, RedoRecPtr, recptr);
 
 	/*
 	 * Make more log segments if needed.  (Do this after recycling old log
@@ -9635,7 +9625,6 @@ CreateRestartPoint(int flags)
 	XLogRecPtr	endptr;
 	XLogSegNo	_logSegNo;
 	TimestampTz xtime;
-	bool		keep_old_wals = false;
 
 	/*
 	 * Acquire CheckpointLock to ensure only one restartpoint or checkpoint
@@ -9798,7 +9787,7 @@ CreateRestartPoint(int flags)
 	receivePtr = GetWalRcvWriteRecPtr(NULL, NULL);
 	replayPtr = GetXLogReplayRecPtr(&replayTLI);
 	endptr = (receivePtr < replayPtr) ? replayPtr : receivePtr;
-	KeepLogSeg(endptr, &_logSegNo, InvalidXLogRecPtr, &keep_old_wals);
+	KeepLogSeg(endptr, &_logSegNo, InvalidXLogRecPtr);
 	_logSegNo--;
 
 	/*
@@ -9876,7 +9865,7 @@ CreateRestartPoint(int flags)
  * requirement of replication slots.
  */
 static void
-KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo, XLogRecPtr PriorRedoPtr, bool* keep_old_wals)
+KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo, XLogRecPtr PriorRedoPtr)
 {
 	XLogSegNo	segno;
 	XLogRecPtr	keep;
@@ -9885,14 +9874,6 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo, XLogRecPtr PriorRedoPtr, bool
 
 	XLByteToSeg(recptr, segno, wal_segment_size);
 	keep = XLogGetReplicationSlotMinimumLSN();
-
-	ereport(DEBUG2,
-			(errmsg("Calculating wal files to keep using recptr [%X/%X], PriorRedoPtr [%X/%X], replication slot's MinLSN [%X/%X], CkptRedoBeforeMinLSN [%X/%X], and wal_keep_segment [%u]",
-					(uint32) (recptr >> 32), (uint32) recptr,
-					(uint32) (PriorRedoPtr >> 32), (uint32) PriorRedoPtr,
-					(uint32) (keep >> 32), (uint32) keep,
-					(uint32) (CkptRedoBeforeMinLSN >> 32), (uint32) CkptRedoBeforeMinLSN,
-					wal_keep_segments)));
 
 #ifdef FAULT_INJECTOR
 	/*
@@ -9926,51 +9907,20 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo, XLogRecPtr PriorRedoPtr, bool
 		/*
 		 * GPDB never uses restart_lsn as lowest cut-off point. Instead always
 		 * will use Checkpoint redo location prior to restart_lsn as cut-off
-		 * point. If the Checkpoint redo location prior to restart_lsn is not
-		 * available, which usually happens when the database is just started,
-		 * we will be conservative and skip the operation of removing wals. We
-		 * need to do this because otherwise incremental recovery (pg_rewind)
-		 * could fail due to missing wals.
-		 *
-		 * NB: upstream commit 0d5c3875 added --config-file option to pg_rewind,
-		 * which could be an alternative solution for missing wals in the target
-		 * PGDATA directory. We could cherry-pick this commit and consider
-		 * modifying gprecoverseg to leverage the same to avoid maintaining
-		 * divergence from upstream.
+		 * point.
 		 */
 		if (!XLogRecPtrIsInvalid(PriorRedoPtr))
 		{
 			if (PriorRedoPtr < keep)
 			{
-				ereport(DEBUG2,
-						(errmsg("updating keep [%X/%X] and CkptRedoBeforeMinLSN [%X/%X] to PriorRedoPtr [%X/%X]",
-								(uint32) (keep >> 32), (uint32) keep,
-								(uint32) (CkptRedoBeforeMinLSN >> 32), (uint32) CkptRedoBeforeMinLSN,
-								(uint32) (PriorRedoPtr >> 32), (uint32) PriorRedoPtr)));
 				keep = PriorRedoPtr;
 				CkptRedoBeforeMinLSN = PriorRedoPtr;
 			}
 			else if (!XLogRecPtrIsInvalid(CkptRedoBeforeMinLSN))
-			{
-				ereport(DEBUG2,
-						(errmsg("updating keep [%X/%X] to CkptRedoBeforeMinLSN [%X/%X]",
-								(uint32) (keep >> 32), (uint32) keep,
-								(uint32) (CkptRedoBeforeMinLSN >> 32), (uint32) CkptRedoBeforeMinLSN)));
 				keep = CkptRedoBeforeMinLSN;
-			}
-			else
-			{
-				ereport(DEBUG2,
-						(errmsg("checkpoint prior to replication slot's minimum LSN [%X/%X] not available, old wals will be kept",
-								(uint32) (keep >> 32), (uint32) keep)));
-				*keep_old_wals = true;
-			}
 		}
 
 		XLByteToSeg(keep, slotSegNo, wal_segment_size);
-		ereport(DEBUG2,
-				(errmsg("slotSegNo is %lu, segno is %lu, logSegNo is %lu",
-						slotSegNo, segno, *logSegNo)));
 
 		if (slotSegNo <= 0)
 			segno = 1;
