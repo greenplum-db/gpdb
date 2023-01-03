@@ -214,12 +214,12 @@ ERROR:  parameter "extensions" must be a list of extension names
 ALTER SERVER testserver1 OPTIONS (ADD extensions 'foo, bar');
 WARNING:  extension "foo" is not installed
 WARNING:  extension "bar" is not installed
-WARNING:  extension "foo" is not installed  (seg1 127.0.0.1:7003 pid=6929)
-WARNING:  extension "bar" is not installed  (seg1 127.0.0.1:7003 pid=6929)
-WARNING:  extension "foo" is not installed  (seg2 127.0.0.1:7004 pid=6928)
-WARNING:  extension "bar" is not installed  (seg2 127.0.0.1:7004 pid=6928)
-WARNING:  extension "foo" is not installed  (seg0 127.0.0.1:7002 pid=6927)
-WARNING:  extension "bar" is not installed  (seg0 127.0.0.1:7002 pid=6927)
+WARNING:  extension "foo" is not installed  (seg1 127.0.0.1:7003 pid=3485)
+WARNING:  extension "bar" is not installed  (seg1 127.0.0.1:7003 pid=3485)
+WARNING:  extension "foo" is not installed  (seg2 127.0.0.1:7004 pid=3484)
+WARNING:  extension "bar" is not installed  (seg2 127.0.0.1:7004 pid=3484)
+WARNING:  extension "foo" is not installed  (seg0 127.0.0.1:7002 pid=3483)
+WARNING:  extension "bar" is not installed  (seg0 127.0.0.1:7002 pid=3483)
 ALTER SERVER testserver1 OPTIONS (DROP extensions);
 ALTER USER MAPPING FOR public SERVER testserver1
 	OPTIONS (DROP user, DROP password);
@@ -6854,7 +6854,7 @@ INSERT INTO rw_view VALUES (0, 5);
 (5 rows)
 
 INSERT INTO rw_view VALUES (0, 5); -- should fail
-ERROR:  new row violates check option for view "rw_view"  (seg1 127.0.0.1:7003 pid=6929)
+ERROR:  new row violates check option for view "rw_view"  (seg1 127.0.0.1:7003 pid=3485)
 DETAIL:  Failing row contains (10, 5).
 EXPLAIN (VERBOSE, COSTS OFF)
 INSERT INTO rw_view VALUES (0, 15);
@@ -6889,7 +6889,7 @@ UPDATE rw_view SET b = b + 5;
 (8 rows)
 
 UPDATE rw_view SET b = b + 5; -- should fail
-ERROR:  new row violates check option for view "rw_view"  (seg1 127.0.0.1:7003 pid=6929)
+ERROR:  new row violates check option for view "rw_view"  (seg1 127.0.0.1:7003 pid=3485)
 DETAIL:  Failing row contains (20, 20).
 EXPLAIN (VERBOSE, COSTS OFF)
 UPDATE rw_view SET b = b + 15;
@@ -7642,9 +7642,9 @@ UPDATE b SET aa = 'new';
 SELECT tableoid::regclass, * FROM a;
  tableoid |  aa   
 ----------+-------
+ a        | aaa
  a        | aaaa
  a        | aaaaa
- a        | aaa
  b        | new
  b        | new
  b        | new
@@ -7661,9 +7661,9 @@ SELECT tableoid::regclass, * FROM b;
 SELECT tableoid::regclass, * FROM ONLY a;
  tableoid |  aa   
 ----------+-------
+ a        | aaa
  a        | aaaa
  a        | aaaaa
- a        | aaa
 (3 rows)
 
 -- Greenplum don't support that ModifyTable mixes distributed and entry-only tables.
@@ -7765,8 +7765,8 @@ select * from bar where f1 in (select f1 from foo) for update;
 select * from bar where f1 in (select f1 from foo) for update;
  f1 | f2 
 ----+----
-  1 | 11
   2 | 22
+  1 | 11
   3 | 33
   4 | 44
 (4 rows)
@@ -8205,8 +8205,8 @@ insert into itrtest values (2, 'qux') returning *;
 insert into itrtest values (1, 'test1'), (2, 'test2') returning *;
  a |         b         
 ---+-------------------
- 2 | test2 triggered !
  1 | test1 triggered !
+ 2 | test2 triggered !
 (2 rows)
 
 with result as (insert into itrtest values (1, 'test1'), (2, 'test2') returning *) select * from result;
@@ -9322,6 +9322,21 @@ SELECT b, avg(a), max(a), count(*) FROM pagg_tab GROUP BY b HAVING sum(a) < 700 
                ->  Foreign Scan on fpagg_tab_p3
  Optimizer: Postgres query optimizer
 (15 rows)
+
+SELECT b, avg(a), max(a), count(*) FROM pagg_tab GROUP BY b HAVING sum(a) < 700 ORDER BY 1;
+ b  |         avg         | max | count 
+----+---------------------+-----+-------
+  0 | 10.0000000000000000 |  20 |    60
+  1 | 11.0000000000000000 |  21 |    60
+ 10 | 10.0000000000000000 |  20 |    60
+ 11 | 11.0000000000000000 |  21 |    60
+ 20 | 10.0000000000000000 |  20 |    60
+ 21 | 11.0000000000000000 |  21 |    60
+ 30 | 10.0000000000000000 |  20 |    60
+ 31 | 11.0000000000000000 |  21 |    60
+ 40 | 10.0000000000000000 |  20 |    60
+ 41 | 11.0000000000000000 |  21 |    60
+(10 rows)
 
 -- Clean-up
 RESET enable_partitionwise_aggregate;
