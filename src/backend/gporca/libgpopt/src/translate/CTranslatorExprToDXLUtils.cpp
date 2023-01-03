@@ -1870,25 +1870,64 @@ CTranslatorExprToDXLUtils::SetDirectDispatchInfo(
 	//			  |--CScalarIdent "non_dist_key"
 	//			  +--CScalarConst (5)
 
-	if (CDistributionSpec::EdtHashed == pds->Edt())
+	if (CDistributionSpec::EdtHashed == pds->Edt() ||
+		CDistributionSpec::EdtRandom == pds->Edt())
 	{
-		// direct dispatch only supported for scans over hash distributed tables
+		// direct dispatch supported for scans over
+		// hash & random distributed tables
 		for (ULONG i = 0; i < size; i++)
 		{
 			CExpression *pexprFilter = (*pexprFilterArray)[i];
 			CPropConstraint *ppc = pexprFilter->DerivePropertyConstraint();
+			CDXLDirectDispatchInfo *dxl_direct_dispatch_info = NULL;
 
 			if (NULL != ppc->Pcnstr())
 			{
 				GPOS_ASSERT(NULL != ppc->Pcnstr());
 
-				CDistributionSpecHashed *pdsHashed =
-					CDistributionSpecHashed::PdsConvert(pds);
-				CExpressionArray *pdrgpexprHashed = pdsHashed->Pdrgpexpr();
+				if (CDistributionSpec::EdtHashed == pds->Edt())
+				{
+					CDistributionSpecHashed *pdsHashed =
+						CDistributionSpecHashed::PdsConvert(pds);
+					CExpressionArray *pdrgpexprHashed = pdsHashed->Pdrgpexpr();
 
-				CDXLDirectDispatchInfo *dxl_direct_dispatch_info =
-					GetDXLDirectDispatchInfo(mp, md_accessor, pdrgpexprHashed,
-											 ppc->Pcnstr());
+					dxl_direct_dispatch_info = GetDXLDirectDispatchInfo(
+						mp, md_accessor, pdrgpexprHashed, ppc->Pcnstr());
+				}
+				else if (CDistributionSpec::EdtRandom == pds->Edt())
+				{
+					CConstraint *pcnstr = ppc->Pcnstr();
+
+					CDistributionSpecRandom *pdsRandom =
+						CDistributionSpecRandom::PdsConvert(pds);
+
+					// Extracting GpSegmentID for RandDist Table
+					const CColRef *pcrDistrCol = pdsRandom->GetGpSegmentId();
+
+					if (pcrDistrCol == NULL)
+					{
+						// Direct Dispatch not feasible for this scenario as
+						// pcrDistrCol might not exist if gp_segment_id is not defined
+						continue;
+					}
+
+					CConstraint *pcnstrDistrCol =
+						pcnstr->Pcnstr(mp, pcrDistrCol);
+
+					if (pcnstrDistrCol == NULL)
+					{
+						// Direct Dispatch not feasible for this scenario
+						// as no constraint found on the gp_segment_id
+						// Eg: In a query on a random distribute table, if we don't
+						// have a condition on gp_segment_id, but we have a condition
+						// on another column, in that case this condition
+						// shall arise.(select * from bar_randDistr where colm1=5;)
+						continue;
+					}
+
+					dxl_direct_dispatch_info = GetDXLDirectDispatchInfoRandDist(
+						mp, md_accessor, pcrDistrCol, pcnstrDistrCol);
+				}
 
 				if (NULL != dxl_direct_dispatch_info)
 				{
@@ -1899,7 +1938,60 @@ CTranslatorExprToDXLUtils::SetDirectDispatchInfo(
 		}
 	}
 }
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorExprToDXLUtils::GetDXLDirectDispatchInfoRandDist
+//
+//	@doc:
+//		Compute the direct dispatch info spec if the table is randomly
+//		distributed. Returns NULL if this is not possible
+//
+//---------------------------------------------------------------------------
+CDXLDirectDispatchInfo *
+CTranslatorExprToDXLUtils::GetDXLDirectDispatchInfoRandDist(
+	CMemoryPool *mp, CMDAccessor *md_accessor, const CColRef *pcrDistrCol,
+	CConstraint *pcnstrDistrCol)
+{
+	// For a random distributed table, we get direct gp_segment_id
+	// value in the expression, so we use it as it is.
+	const BOOL useRawValues = true;
 
+	CDXLDatum2dArray *pdrgpdrgpdxldatum = NULL;
+
+	if (CPredicateUtils::FConstColumn(pcnstrDistrCol, pcrDistrCol))
+	{
+		CDXLDatum *dxl_datum = PdxldatumFromPointConstraint(
+			mp, md_accessor, pcrDistrCol, pcnstrDistrCol);
+		GPOS_ASSERT(NULL != dxl_datum);
+
+		if (FDirectDispatchable(pcrDistrCol, dxl_datum))
+		{
+			CDXLDatumArray *pdrgpdxldatum = GPOS_NEW(mp) CDXLDatumArray(mp);
+
+			dxl_datum->AddRef();
+			pdrgpdxldatum->Append(dxl_datum);
+
+			pdrgpdrgpdxldatum = GPOS_NEW(mp) CDXLDatum2dArray(mp);
+			pdrgpdrgpdxldatum->Append(pdrgpdxldatum);
+		}
+
+		dxl_datum->Release();
+	}
+	else if (CPredicateUtils::FColumnDisjunctionOfConst(pcnstrDistrCol,
+														pcrDistrCol))
+	{
+		pdrgpdrgpdxldatum = PdrgpdrgpdxldatumFromDisjPointConstraint(
+			mp, md_accessor, pcrDistrCol, pcnstrDistrCol);
+	}
+
+	CRefCount::SafeRelease(pcnstrDistrCol);
+
+	if (NULL == pdrgpdrgpdxldatum)
+	{
+		return NULL;
+	}
+	return GPOS_NEW(mp) CDXLDirectDispatchInfo(pdrgpdrgpdxldatum, useRawValues);
+}
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorExprToDXLUtils::GetDXLDirectDispatchInfo
@@ -1921,6 +2013,7 @@ CTranslatorExprToDXLUtils::GetDXLDirectDispatchInfo(
 	const ULONG ulHashExpr = pdrgpexprHashed->Size();
 	GPOS_ASSERT(0 < ulHashExpr);
 
+	// If we have single distribution key for table
 	if (1 == ulHashExpr)
 	{
 		CExpression *pexprHashed = (*pdrgpexprHashed)[0];
@@ -1930,6 +2023,7 @@ CTranslatorExprToDXLUtils::GetDXLDirectDispatchInfo(
 	BOOL fSuccess = true;
 	CDXLDatumArray *pdrgpdxldatum = GPOS_NEW(mp) CDXLDatumArray(mp);
 
+	// If we have multiple distribution keys for the table
 	for (ULONG ul = 0; ul < ulHashExpr && fSuccess; ul++)
 	{
 		CExpression *pexpr = (*pdrgpexprHashed)[ul];

@@ -671,6 +671,177 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 drop table test_prepare;
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+-- Tests to check direct dispatch if the table is randomly distributed and the
+-- filter has condition on gp_segment_id
+-- NOTE: Only EXPLAIN query included, output of SELECT query is not shown.
+-- Since the table is distributed randomly, the output of SELECT query
+-- will differ everytime new table is created, and hence the during comparision
+-- the tests will fail.
+drop table if exists bar_randDistr;
+NOTICE:  table "bar_randdistr" does not exist, skipping
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
+create table bar_randDistr(col1 int, col2 int) distributed randomly;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+insert into bar_randDistr select i,i*2 from generate_series(1, 10)i;
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+-- Case 1 : simple conditions on gp_segment_id
+explain (costs off) select gp_segment_id, * from bar_randDistr where gp_segment_id=0;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Result
+         ->  Seq Scan on bar_randdistr
+               Filter: (gp_segment_id = 0)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+explain (costs off) select gp_segment_id, * from bar_randDistr where gp_segment_id=1 or gp_segment_id=2;
+                             QUERY PLAN                             
+--------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)
+   ->  Result
+         ->  Seq Scan on bar_randdistr
+               Filter: ((gp_segment_id = 1) OR (gp_segment_id = 2))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+explain (costs off) select gp_segment_id, count(*) from bar_randDistr group by gp_segment_id;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  GroupAggregate
+         Group Key: gp_segment_id
+         ->  Sort
+               Sort Key: gp_segment_id
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                     Hash Key: gp_segment_id
+                     ->  Seq Scan on bar_randdistr
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+-- Case2: Conjunction scenario with filter condition on gp_segment_id and column
+explain (costs off) select gp_segment_id, * from bar_randDistr where gp_segment_id=0 and col1 between 1 and 10;
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Result
+         ->  Seq Scan on bar_randdistr
+               Filter: ((gp_segment_id = 0) AND (col1 >= 1) AND (col1 <= 10))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+-- Case3: Disjunction scenario with filter condition on gp_segment_id and column
+explain (costs off) select gp_segment_id, * from bar_randDistr where gp_segment_id=1 or (col1=6 and gp_segment_id=2);
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Result
+         ->  Seq Scan on bar_randdistr
+               Filter: ((gp_segment_id = 1) OR ((col1 = 6) AND (gp_segment_id = 2)))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+-- Case4: Scenario with constant/variable column and constant/variable gp_segment_id
+explain (costs off) select gp_segment_id, * from bar_randDistr where col1 =3 and gp_segment_id in (0,1);
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)
+   ->  Result
+         ->  Seq Scan on bar_randdistr
+               Filter: ((col1 = 3) AND (gp_segment_id = ANY ('{0,1}'::integer[])))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+explain (costs off) select gp_segment_id, * from bar_randDistr where col1 =3 and gp_segment_id <>1;
+                      QUERY PLAN                       
+-------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Result
+         ->  Seq Scan on bar_randdistr
+               Filter: ((col1 = 3) AND (gp_segment_id <> 1))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+explain (costs off) select gp_segment_id, * from bar_randDistr where col1 between 1 and 5 and gp_segment_id =0;
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Result
+         ->  Seq Scan on bar_randdistr
+               Filter: ((col1 >= 1) AND (col1 <= 5) AND (gp_segment_id = 0))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+explain (costs off) select gp_segment_id, * from bar_randDistr where col1 in (1,5) and gp_segment_id <> 0;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Result
+         ->  Seq Scan on bar_randdistr
+               Filter: ((col1 = ANY ('{1,5}'::integer[])) AND (gp_segment_id <> 0))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+explain (costs off) select gp_segment_id, * from bar_randDistr where col1 in (1,5) and gp_segment_id in (0,1);
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)
+   ->  Result
+         ->  Seq Scan on bar_randdistr
+               Filter: ((col1 = ANY ('{1,5}'::integer[])) AND (gp_segment_id = ANY ('{0,1}'::integer[])))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+-- Case5: Scenarios with special conditions
+create function afunc() returns integer as $$ begin return 42; end; $$ language plpgsql;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+create function immutable_func() returns integer as $$ begin return 42; end; $$ language plpgsql immutable;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+explain (costs off) select * from bar_randDistr where col1 = 1;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on bar_randdistr
+         Filter: (col1 = 1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+explain (costs off) select * from bar_randDistr where gp_segment_id % 2 = 0;
+                QUERY PLAN                 
+-------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on bar_randdistr
+         Filter: ((gp_segment_id % 2) = 0)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+explain (costs off) select * from bar_randDistr where gp_segment_id=immutable_func();
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Seq Scan on bar_randdistr
+         Filter: (gp_segment_id = 42)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+explain (costs off) select * from bar_randDistr where gp_segment_id=afunc();
+                QUERY PLAN                 
+-------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on bar_randdistr
+         Filter: (gp_segment_id = afunc())
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+drop table if exists bar_randDistr;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 -- test direct dispatch via gp_segment_id qual
 create table t_test_dd_via_segid(id int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
@@ -977,7 +1148,7 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL cont
 explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=0;
                  QUERY PLAN                  
 ---------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
+ Gather Motion 1:1  (slice1; segments: 1)
    ->  Result
          ->  Seq Scan on t_test_dd_via_segid
                Filter: (gp_segment_id = 0)
@@ -987,7 +1158,7 @@ explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_s
 explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1;
                  QUERY PLAN                  
 ---------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
+ Gather Motion 1:1  (slice1; segments: 1)
    ->  Result
          ->  Seq Scan on t_test_dd_via_segid
                Filter: (gp_segment_id = 1)
@@ -997,7 +1168,7 @@ explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_s
 explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=2;
                  QUERY PLAN                  
 ---------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
+ Gather Motion 1:1  (slice1; segments: 1)
    ->  Result
          ->  Seq Scan on t_test_dd_via_segid
                Filter: (gp_segment_id = 2)
@@ -1007,7 +1178,7 @@ explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_s
 explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2;
                              QUERY PLAN                             
 --------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
+ Gather Motion 2:1  (slice1; segments: 2)
    ->  Result
          ->  Seq Scan on t_test_dd_via_segid
                Filter: ((gp_segment_id = 1) OR (gp_segment_id = 2))
@@ -1017,7 +1188,7 @@ explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_s
 explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2;
                              QUERY PLAN                             
 --------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
+ Gather Motion 2:1  (slice1; segments: 2)
    ->  Result
          ->  Seq Scan on t_test_dd_via_segid
                Filter: ((gp_segment_id = 1) OR (gp_segment_id = 2))
@@ -1027,7 +1198,7 @@ explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_s
 explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2 or gp_segment_id=3;
                                         QUERY PLAN                                         
 -------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
+ Gather Motion 2:1  (slice1; segments: 2)
    ->  Result
          ->  Seq Scan on t_test_dd_via_segid
                Filter: ((gp_segment_id = 1) OR (gp_segment_id = 2) OR (gp_segment_id = 3))

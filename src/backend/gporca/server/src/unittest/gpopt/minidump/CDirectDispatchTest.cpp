@@ -41,6 +41,8 @@ const CHAR *rgszDirectDispatchFileNames[] = {
 	"../data/dxl/minidump/DirectDispatch-IndexScan.mdp",
 	"../data/dxl/minidump/DirectDispatch-DynamicIndexScan.mdp",
 	"../data/dxl/minidump/InsertDirectedDispatchNullValue.mdp",
+	"../data/dxl/minidump/DirectDispatch-RandDistTable.mdp",
+	"../data/dxl/minidump/DirectDispatch-RandDistTable-Disjunction.mdp",
 };
 
 //---------------------------------------------------------------------------

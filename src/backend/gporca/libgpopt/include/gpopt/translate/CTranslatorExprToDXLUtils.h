@@ -162,6 +162,12 @@ private:
 		CMemoryPool *mp, CMDAccessor *md_accessor,
 		CExpressionArray *pdrgpexprHashed, CConstraint *pcnstr);
 
+	// compute the direct dispatch info  from the constraints
+	// for a randomly distributed table
+	static CDXLDirectDispatchInfo *GetDXLDirectDispatchInfoRandDist(
+		CMemoryPool *mp, CMDAccessor *md_accessor, const CColRef *pcrDistrCol,
+		CConstraint *pcnstrDistrCol);
+
 	// compute the direct dispatch info for a single distribution key from the constraints
 	// on the distribution key
 	static CDXLDirectDispatchInfo *PdxlddinfoSingleDistrKey(

@@ -289,6 +289,48 @@ execute p3(1);
 execute p3(1);
 drop table test_prepare;
 
+-- Tests to check direct dispatch if the table is randomly distributed and the
+-- filter has condition on gp_segment_id
+
+-- NOTE: Only EXPLAIN query included, output of SELECT query is not shown.
+-- Since the table is distributed randomly, the output of SELECT query
+-- will differ everytime new table is created, and hence the during comparision
+-- the tests will fail.
+
+drop table if exists bar_randDistr;
+create table bar_randDistr(col1 int, col2 int) distributed randomly;
+insert into bar_randDistr select i,i*2 from generate_series(1, 10)i;
+
+-- Case 1 : simple conditions on gp_segment_id
+explain (costs off) select gp_segment_id, * from bar_randDistr where gp_segment_id=0;
+explain (costs off) select gp_segment_id, * from bar_randDistr where gp_segment_id=1 or gp_segment_id=2;
+explain (costs off) select gp_segment_id, count(*) from bar_randDistr group by gp_segment_id;
+
+-- Case2: Conjunction scenario with filter condition on gp_segment_id and column
+explain (costs off) select gp_segment_id, * from bar_randDistr where gp_segment_id=0 and col1 between 1 and 10;
+
+-- Case3: Disjunction scenario with filter condition on gp_segment_id and column
+explain (costs off) select gp_segment_id, * from bar_randDistr where gp_segment_id=1 or (col1=6 and gp_segment_id=2);
+
+-- Case4: Scenario with constant/variable column and constant/variable gp_segment_id
+explain (costs off) select gp_segment_id, * from bar_randDistr where col1 =3 and gp_segment_id in (0,1);
+explain (costs off) select gp_segment_id, * from bar_randDistr where col1 =3 and gp_segment_id <>1;
+explain (costs off) select gp_segment_id, * from bar_randDistr where col1 between 1 and 5 and gp_segment_id =0;
+explain (costs off) select gp_segment_id, * from bar_randDistr where col1 in (1,5) and gp_segment_id <> 0;
+explain (costs off) select gp_segment_id, * from bar_randDistr where col1 in (1,5) and gp_segment_id in (0,1);
+
+-- Case5: Scenarios with special conditions
+create function afunc() returns integer as $$ begin return 42; end; $$ language plpgsql;
+create function immutable_func() returns integer as $$ begin return 42; end; $$ language plpgsql immutable;
+
+explain (costs off) select * from bar_randDistr where col1 = 1;
+explain (costs off) select * from bar_randDistr where gp_segment_id % 2 = 0;
+explain (costs off) select * from bar_randDistr where gp_segment_id=immutable_func();
+explain (costs off) select * from bar_randDistr where gp_segment_id=afunc();
+
+drop table if exists bar_randDistr;
+
+
 -- test direct dispatch via gp_segment_id qual
 create table t_test_dd_via_segid(id int);
 insert into t_test_dd_via_segid select * from generate_series(1, 6);
