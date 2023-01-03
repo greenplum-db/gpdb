@@ -9,7 +9,7 @@ The Greenplum Database `uuid-ossp` module is equivalent to the PostgreSQL `uuid-
 The `uuid-ossp` module is installed when you install Greenplum Database. Before you can use any of the functions defined in the module, you must register the `uuid-ossp` extension in each database in which you want to use the functions:
 
 ```
-CREATE EXTENSION uuid-ossp;
+CREATE EXTENSION "uuid-ossp";
 ```
 
 Refer to [Installing Additional Supplied Modules](../../install_guide/install_modules.html) for more information.
