@@ -10,7 +10,7 @@ Information about installing optional VMware Greenplum Database extensions and p
 
 -   **[R Data Science Library Package](install_r_dslib.html)**  
 
--   **[Greenplum Platform Extension Framework \(PXF\)](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-install_pxf.html)**  
+-   **[Greenplum Platform Extension Framework \(PXF\)](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.5/tanzu-greenplum-platform-extension-framework/GUID-installing_pxf.html)**  
 
 
 **Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
