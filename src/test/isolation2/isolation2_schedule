@@ -6,6 +6,7 @@ test: lockmodes
 # Put test prepare_limit near to test lockmodes since both of them reboot the
 # cluster during testing. Usually the 2nd reboot should be faster.
 test: prepare_limit
+test: pg_rewind_fail_missing_xlog
 test: prepared_xact_deadlock_pg_rewind
 test: ao_partition_lock query_gp_partitions_view
 test: dml_on_root_locks_all_parts

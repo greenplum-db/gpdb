@@ -200,3 +200,16 @@ begin
    return replstate;
 end;
 $$ language plpgsql;
+
+--
+-- pg_controldata_redo_lsn:
+--
+-- Perform pg_controldata and find out latest checkpoint's REDO location
+--   datadir: data directory of segment to target with `pg_controldata`
+--
+create or replace function pg_controldata_redo_lsn(datadir text)
+    returns pg_lsn as $$
+    import subprocess
+    cmd = 'pg_controldata %s | grep \"Latest checkpoint\'s REDO location\"' % datadir
+    return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).split(':')[1].strip()
+$$ language plpythonu;

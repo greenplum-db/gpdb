@@ -9187,6 +9187,7 @@ CreateCheckPoint(int flags)
 	 * have trouble while fooling with old log segments.
 	 */
 	END_CRIT_SECTION();
+	SIMPLE_FAULT_INJECTOR("checkpoint_control_file_updated");
 
 	/*
 	 * Now that the checkpoint is safely on disk, we can update the point to

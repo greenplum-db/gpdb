@@ -1589,6 +1589,17 @@ ProcessStandbyMessage(void)
 
 /*
  * Remember that a walreceiver just confirmed receipt of lsn `lsn`.
+ * Greenplum variation: we remember the confirmed receipt of lsn `lsn` iff the
+ * confirmed receipt location is behind the last checkpoint, otherwise we
+ * remember the checkpoint prior to the received lsn instead. Greenplum diverges
+ * from upstream this way because it helps pg_rewind to find all the WALs up
+ * until the last common checkpoint prior to the diverge point between source
+ * and target. Without this divergence gprecoverseg (internally uses pg_rewind)
+ * could hit issues of missing wal files. Upstream Postgres does face the same
+ * problem. However, upstream does not enforce replication slots whereas
+ * Greenplum always creates internal replication slots for primary/mirror pairs
+ * used by gprecoveseg, so having restart_lsn set properly to serve pg_rewind
+ * is more crucial for Greenplum.
  */
 static void
 PhysicalConfirmReceivedLocation(XLogRecPtr lsn)
@@ -1597,13 +1608,21 @@ PhysicalConfirmReceivedLocation(XLogRecPtr lsn)
 
 	/* use volatile pointer to prevent code rearrangement */
 	volatile ReplicationSlot *slot = MyReplicationSlot;
+	/*
+	 * GPDB: we have to retrieve the redo point from shared memory because the
+	 * walsender's local copy of RedoRecPtr doesn't get updated after the
+	 * process starts. For most cases in Greenplum each segment should only have
+	 * one (internally created) replication slot, so this should not introduce
+	 * much contention on acquiring the spin lock.
+	 */
+	XLogRecPtr	last_chkpt = GetRedoRecPtr();
 
 	Assert(lsn != InvalidXLogRecPtr);
 	SpinLockAcquire(&slot->mutex);
-	if (slot->data.restart_lsn != lsn)
+	if (slot->data.restart_lsn != lsn && slot->data.restart_lsn < last_chkpt)
 	{
 		changed = true;
-		slot->data.restart_lsn = lsn;
+		slot->data.restart_lsn = last_chkpt < lsn ? last_chkpt : lsn;
 	}
 	SpinLockRelease(&slot->mutex);
 
@@ -2945,7 +2964,7 @@ WalSndInitStoppingOneWalSender(WalSnd *walsnd)
 }
 
 /*
- * Wait the WAL senders have quit or reached the stopping state. 
+ * Wait the WAL senders have quit or reached the stopping state.
  *
  * Same as WalSndWaitStopping except it waits for one specific walsender
  */
