@@ -1354,14 +1354,6 @@ The role of this server process is set to *dispatch* for the coordinator and *ex
 |-----------|-------|-------------------|
 |dispatchexecute, utility| |read only|
 
-## <a id="gp_safefswritesize"></a>gp\_safefswritesize 
-
-Specifies a minimum size for safe write operations to append-optimized tables in a non-mature file system. When a number of bytes greater than zero is specified, the append-optimized writer adds padding data up to that number in order to prevent data corruption due to file system errors. Each non-mature file system has a known safe write size that must be specified here when using Greenplum Database with that type of file system. This is commonly set to a multiple of the extent size of the file system; for example, Linux ext3 is 4096 bytes, so a value of 32768 is commonly used.
-
-|Value Range|Default|Set Classifications|
-|-----------|-------|-------------------|
-|integer|0|local, system, reload|
-
 ## <a id="gp_segment_connect_timeout"></a>gp\_segment\_connect\_timeout 
 
 Time that the Greenplum interconnect will try to connect to a segment instance over the network before timing out. Controls the network connection timeout between coordinator and primary segments, and primary to mirror segment replication processes.

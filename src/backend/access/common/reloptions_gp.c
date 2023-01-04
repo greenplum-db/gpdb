@@ -1064,7 +1064,6 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
  */
 void
 validateAppendOnlyRelOptions(int blocksize,
-							 int safewrite,
 							 int complevel,
 							 char *comptype,
 							 bool checksum,
@@ -1152,18 +1151,6 @@ validateAppendOnlyRelOptions(int blocksize,
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("block size must be between 8KB and 2MB and be an 8KB multiple, got %d", blocksize)));
-
-	if (safewrite > MAX_APPENDONLY_BLOCK_SIZE || safewrite % 8 != 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("safefswrite size must be less than 8MB and be a multiple of 8")));
-
-	if (gp_safefswritesize > blocksize)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("block size (%d) is smaller gp_safefswritesize (%d)",
-						blocksize, gp_safefswritesize),
-				 errhint("Increase blocksize or decrease gp_safefswritesize if it is safe to do so on this file system.")));
 }
 
 /*
@@ -1378,7 +1365,6 @@ default_column_encoding_clause(Relation rel)
 	{
 		GetAppendOnlyEntryAttributes(RelationGetRelid(rel),
 									 &blocksize,
-									 NULL,
 									 &compresslevel,
 									 NULL,
 									 &compresstype_nd);
@@ -1555,7 +1541,6 @@ validateColumnStorageEncodingClauses(List *aocoColumnEncoding,
 																	RELOPT_KIND_APPENDOPTIMIZED);
 
 		validateAppendOnlyRelOptions(stdRdOptions->blocksize,
-									 gp_safefswritesize,
 									 stdRdOptions->compresslevel,
 									 stdRdOptions->compresstype,
 									 stdRdOptions->checksum,
@@ -1944,7 +1929,6 @@ build_ao_rel_storage_opts(List *opts, Relation rel)
 
 	GetAppendOnlyEntryAttributes(RelationGetRelid(rel),
 								 &blocksize,
-								 NULL,
 								 &compresslevel,
 								 &checksum,
 								 &compresstype_nd);

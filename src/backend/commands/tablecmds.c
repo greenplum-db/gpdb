@@ -854,7 +854,6 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 
 		/* Validate the StdRdOptions parsed or error out */
 		validateAppendOnlyRelOptions(stdRdOptions->blocksize,
-									 gp_safefswritesize,
 									 stdRdOptions->compresslevel,
 									 stdRdOptions->compresstype,
 									 stdRdOptions->checksum,
@@ -14949,7 +14948,6 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 																				 true,
 																				 RELOPT_KIND_APPENDOPTIMIZED);
 				validateAppendOnlyRelOptions(stdRdOptions->blocksize,
-											 gp_safefswritesize,
 											 stdRdOptions->compresslevel,
 											 stdRdOptions->compresstype,
 											 stdRdOptions->checksum,

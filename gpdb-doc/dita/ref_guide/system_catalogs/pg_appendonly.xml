@@ -41,17 +41,6 @@
           </row>
           <row>
             <entry colname="col1">
-              <codeph>safefswritesize</codeph>
-            </entry>
-            <entry colname="col2">integer</entry>
-            <entry colname="col3"/>
-            <entry colname="col4">Minimum size for safe write operations to append-optimized tables
-              in a non-mature file system. Commonly set to a multiple of the extent size of the file
-              system; for example, Linux ext3 is 4096 bytes, so a value of 32768 is commonly used.
-            </entry>
-          </row>
-          <row>
-            <entry colname="col1">
               <codeph>compresslevel</codeph>
             </entry>
             <entry colname="col2">smallint</entry>

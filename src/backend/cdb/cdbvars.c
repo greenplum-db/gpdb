@@ -77,8 +77,6 @@ bool		verify_gpfdists_cert; /* verifies gpfdist's certificate */
 
 int			gp_external_max_segs;	/* max segdbs per gpfdist/gpfdists URI */
 
-int			gp_safefswritesize; /* set for safe AO writes in non-mature fs */
-
 int			gp_cached_gang_threshold;	/* How many gangs to keep around from
 										 * stmt to stmt. */
 

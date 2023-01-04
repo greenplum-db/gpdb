@@ -719,10 +719,6 @@ gp_resqueue_memory_policy = 'eager_free'	# memory request based queueing.
 #---------------------------------------------------------------------------
 #gp_external_enable_exec = on   # enable external tables with EXECUTE.
 
-#---------------------------------------------------------------------------
-# APPEND ONLY TABLES
-#---------------------------------------------------------------------------
-#gp_safefswritesize = 0   # minimum size for safe AO writes in a non-mature fs
 #------------------------------------------------------------------------------
 # VERSION AND PLATFORM COMPATIBILITY
 #------------------------------------------------------------------------------

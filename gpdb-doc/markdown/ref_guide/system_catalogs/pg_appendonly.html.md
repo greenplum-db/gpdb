@@ -6,7 +6,6 @@ The `pg_appendonly` table contains information about the storage options and oth
 |------|----|----------|-----------|
 |`relid`|oid| |The table object identifier \(OID\) of the compressed table.|
 |`blocksize`|integer| |Block size used for compression of append-optimized tables. Valid values are 8K - 2M. Default is `32K`.|
-|`safefswritesize`|integer| |Minimum size for safe write operations to append-optimized tables in a non-mature file system. Commonly set to a multiple of the extent size of the file system; for example, Linux ext3 is 4096 bytes, so a value of 32768 is commonly used.|
 |`compresslevel`|smallint| |The compression level, with compression ratio increasing from 1 to 19. When `quicklz`<sup>1</sup> is specified for compresstype, valid values are 1 or 3. With `zlib` specified, valid values are 1-9. When `zstd` is specified, valid values are 1-19.|
 |`majorversion`|smallint| |The major version number of the pg\_appendonly table.|
 |`minorversion`|smallint| |The minor version number of the pg\_appendonly table.|

@@ -224,7 +224,6 @@
 		"gp_resqueue_priority_sweeper_interval",
 		"gp_retrieve_conn",
 		"gp_role",
-		"gp_safefswritesize",
 		"gp_segment_connect_timeout",
 		"gp_segments_for_planner",
 		"gp_segworker_relative_priority",

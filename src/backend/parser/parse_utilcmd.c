@@ -1255,15 +1255,13 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 
 		if (RelationIsAppendOptimized(relation))
 		{
-			int32 blocksize;
-			int32 safefswritersize;
-			int16 compresslevel;
-			bool  checksum;
-			NameData compresstype;
+			bool		checksum = true;
+			int32		blocksize = -1;
+			int16		compresslevel = 0;
+			NameData	compresstype;
 
-			GetAppendOnlyEntryAttributes(relation->rd_id, &blocksize,
-			                             &safefswritersize,&compresslevel,
-			                             &checksum,&compresstype);
+			GetAppendOnlyEntryAttributes(relation->rd_id,&blocksize,
+																	&compresslevel,&checksum,&compresstype);
 
 			stmt->accessMethod = get_am_name(relation->rd_rel->relam);
 
