@@ -80,9 +80,9 @@ class BuildMirrorsTestCase(GpTestCase):
 
         self.gpEnv = Mock()
         self.gpArray = GpArray([self.coordinator, self.primary, self.mirror])
-        self.recovery_info1 = RecoveryInfo('/datadir2', 7001, 2, 'source_host_for_dbid2', 7002, True, self.progress_file_dbid2)
-        self.recovery_info2 = RecoveryInfo('/datadir3', 7003, 3, 'source_host_for_dbid3', 7004, True, self.progress_file_dbid3)
-        self.recovery_info3 = RecoveryInfo('/datadir4', 7005, 4, 'source_host_for_dbid4', 7006, True, self.progress_file_dbid4)
+        self.recovery_info1 = RecoveryInfo('/datadir2', 7001, 2, 'source_host_for_dbid2', 7002, 'source_dir_for_dbid2', True, False, self.progress_file_dbid2)
+        self.recovery_info2 = RecoveryInfo('/datadir3', 7003, 3, 'source_host_for_dbid3', 7004, 'source_dir_for_dbid3', True, False, self.progress_file_dbid3)
+        self.recovery_info3 = RecoveryInfo('/datadir4', 7005, 4, 'source_host_for_dbid4', 7006, 'source_dir_for_dbid4', True, False, self.progress_file_dbid4)
 
     def tearDown(self):
         super(BuildMirrorsTestCase, self).tearDown()
@@ -237,7 +237,7 @@ class BuildMirrorsTestCase(GpTestCase):
 
                 mirrors_to_build = []
                 for test in tests:
-                    mirrors_to_build.append(GpMirrorToBuild(None, test["live"], test["failover"], test["forceFull"]))
+                    mirrors_to_build.append(GpMirrorToBuild(None, test["live"], test["failover"], test["forceFull"], test.get("diff", False)))
                 build_mirrors_obj = self._run_buildMirrors(mirrors_to_build, action)
 
                 self.assertEqual(2, self.mock_logger.info.call_count)
@@ -285,7 +285,7 @@ class BuildMirrorsTestCase(GpTestCase):
                 expected_segs_to_markdown = []
                 for test in tests:
                     mirrors_to_build.append(GpMirrorToBuild(test["failed"], test["live"], None,
-                                                            test["forceFull"]))
+                                                            test["forceFull"], test.get("diff", False)))
                     expected_segs_to_stop.append(test["failed"])
                     if 'is_failed_segment_up' in test and test["is_failed_segment_up"]:
                         expected_segs_to_markdown.append(test['failed'])
@@ -342,7 +342,7 @@ class BuildMirrorsTestCase(GpTestCase):
 
                 for test in tests:
                     mirrors_to_build.append(GpMirrorToBuild(test["failed"], test["live"], test["failover"],
-                                                            test["forceFull"]))
+                                                            test["forceFull"], test.get("diff", False)))
                     #TODO better way to check for this condition
                     if not test["failed"].unreachable:
                         expected_segs_to_stop.append(test["failed"])
@@ -373,7 +373,7 @@ class BuildMirrorsTestCase(GpTestCase):
                 failover = self._create_primary(host='sdw3')
 
                 build_mirrors_obj = GpMirrorListToBuild(
-                    toBuild=[GpMirrorToBuild(failed, live, failover, False)],
+                    toBuild=[GpMirrorToBuild(failed, live, failover, False, False)],
                     pool=None,
                     quiet=True,
                     parallelDegree=0,
@@ -421,7 +421,7 @@ class BuildMirrorsTestCase(GpTestCase):
             }
         ]
         for test in tests:
-            mirror_to_build = GpMirrorToBuild(test["failed"], test["live"], test["failover"], test["forceFull"])
+            mirror_to_build = GpMirrorToBuild(test["failed"], test["live"], test["failover"], test["forceFull"], test.get("diff", False))
             build_mirrors_obj = GpMirrorListToBuild(
                 toBuild=[mirror_to_build,],
                 pool=None,
@@ -451,10 +451,10 @@ class BuildMirrorsTestCase(GpTestCase):
         failed4 = self._create_primary(dbid='5')
         live4 = self._create_mirror(dbid='7')
 
-        inplace_full1 = GpMirrorToBuild(failed1, live1, None, True)
-        not_inplace_full = GpMirrorToBuild(failed2, live2, failover2, True)
-        inplace_full2 = GpMirrorToBuild(failed3, live3, None, True)
-        inplace_not_full = GpMirrorToBuild(failed4, live4, None, False)
+        inplace_full1 = GpMirrorToBuild(failed1, live1, None, True, False)
+        not_inplace_full = GpMirrorToBuild(failed2, live2, failover2, True, False)
+        inplace_full2 = GpMirrorToBuild(failed3, live3, None, True, False)
+        inplace_not_full = GpMirrorToBuild(failed4, live4, None, False, False)
 
         build_mirrors_obj = GpMirrorListToBuild(
             toBuild=[inplace_full1, not_inplace_full, inplace_full2, inplace_not_full],
@@ -479,8 +479,8 @@ class BuildMirrorsTestCase(GpTestCase):
         failed4 = self._create_primary(dbid='5')
         live4 = self._create_mirror(dbid='7')
 
-        not_inplace_full = GpMirrorToBuild(failed2, live2, failover2, True)
-        inplace_not_full = GpMirrorToBuild(failed4, live4, None, False)
+        not_inplace_full = GpMirrorToBuild(failed2, live2, failover2, True, False)
+        inplace_not_full = GpMirrorToBuild(failed4, live4, None, False, False)
 
         build_mirrors_obj = GpMirrorListToBuild(
             toBuild=[not_inplace_full, inplace_not_full],
@@ -539,7 +539,11 @@ class BuildMirrorsTestCase(GpTestCase):
         rm_progress_cmds = self.default_build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear.call_args_list[1][0][0]
 
         #TODO fix formatting
-        expected_recovery_cmd_strs = ["""$GPHOME/sbin/gpsegrecovery.py -c '[{"target_datadir": "/datadir2", "target_port": 7001, "target_segment_dbid": 2, "source_hostname": "source_host_for_dbid2", "source_port": 7002, "is_full_recovery": true, "progress_file": "/tmp/progress_file2"}]' -l /tmp/logdir -b 64 --era=dummy_era""", """$GPHOME/sbin/gpsegrecovery.py -c '[{"target_datadir": "/datadir3", "target_port": 7003, "target_segment_dbid": 3, "source_hostname": "source_host_for_dbid3", "source_port": 7004, "is_full_recovery": true, "progress_file": "/tmp/progress_file3"}, {"target_datadir": "/datadir4", "target_port": 7005, "target_segment_dbid": 4, "source_hostname": "source_host_for_dbid4", "source_port": 7006, "is_full_recovery": true, "progress_file": "/tmp/progress_file4"}]' -l /tmp/logdir -b 64 --era=dummy_era"""]
+        expected_recovery_cmd_strs = [
+            """$GPHOME/sbin/gpsegrecovery.py -c '[{"target_datadir": "/datadir2", "target_port": 7001, "target_segment_dbid": 2, "source_hostname": "source_host_for_dbid2", "source_port": 7002, "source_datadir": "source_dir_for_dbid2", "is_full_recovery": true, "is_diff_recovery": false, "progress_file": "/tmp/progress_file2"}]' -l /tmp/logdir -b 64 --era=dummy_era""",
+            """$GPHOME/sbin/gpsegrecovery.py -c '[{"target_datadir": "/datadir3", "target_port": 7003, "target_segment_dbid": 3, "source_hostname": "source_host_for_dbid3", "source_port": 7004, "source_datadir": "source_dir_for_dbid3", "is_full_recovery": true, "is_diff_recovery": false, "progress_file": "/tmp/progress_file3"}, {"target_datadir": "/datadir4", "target_port": 7005, "target_segment_dbid": 4, "source_hostname": "source_host_for_dbid4", "source_port": 7006, "source_datadir": "source_dir_for_dbid4", "is_full_recovery": true, "is_diff_recovery": false, "progress_file": "/tmp/progress_file4"}]' -l /tmp/logdir -b 64 --era=dummy_era"""]
+
+
         self.assertEqual(2, len(seg_recovery_cmds))
         self.assertEqual('host1', seg_recovery_cmds[0].remoteHost)
         self.assertEqual(sorted(expected_recovery_cmd_strs[0]), sorted(seg_recovery_cmds[0].cmdStr))

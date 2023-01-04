@@ -124,7 +124,7 @@ class GpRecoverSegmentProgram:
             return GpSegmentRebalanceOperation(gpEnv, gpArray, self.__options.parallelDegree, self.__options.parallelPerHost)
         else:
             instance = RecoveryTripletsFactory.instance(gpArray, self.__options.recoveryConfigFile, self.__options.newRecoverHosts, self.__options.parallelDegree)
-            segs = [GpMirrorToBuild(t.failed, t.live, t.failover, self.__options.forceFullResynchronization) for t in instance.getTriplets()]
+            segs = [GpMirrorToBuild(t.failed, t.live, t.failover, self.__options.forceFullResynchronization, self.__options.diffResynchronization) for t in instance.getTriplets()]
             return GpMirrorListToBuild(segs, self.__pool, self.__options.quiet,
                                        self.__options.parallelDegree,
                                        instance.getInterfaceHostnameWarnings(),
@@ -184,7 +184,7 @@ class GpRecoverSegmentProgram:
 
                 tabLog = TableLogger()
 
-                syncMode = "Full" if toRecover.isFullSynchronization() else "Incremental"
+                syncMode = "Full" if (toRecover.isFullSynchronization() or toRecover.isDiffSynchronization) else "Incremental"
                 tabLog.info(["Synchronization mode", "= " + syncMode])
                 programIoUtils.appendSegmentInfoForOutput("Failed", gpArray, toRecover.getFailedSegment(), tabLog)
                 programIoUtils.appendSegmentInfoForOutput("Recovery Source", gpArray, toRecover.getLiveSegment(),
@@ -260,6 +260,10 @@ class GpRecoverSegmentProgram:
             optionCnt += 1
         if optionCnt > 1:
             raise ProgramArgumentValidationException("Only one of -i, -p, and -r may be specified")
+
+        # verify "mode to recover" options
+        if self.__options.forceFullResynchronization and self.__options.diffResynchronization:
+            raise ProgramArgumentValidationException("Only one of -F and --diff may be specified")
 
         faultProberInterface.getFaultProber().initializeProber(gpEnv.getCoordinatorPort())
 
@@ -441,6 +445,10 @@ class GpRecoverSegmentProgram:
                          dest="forceFullResynchronization",
                          metavar="<forceFullResynchronization>",
                          help="Force full segment resynchronization")
+        addTo.add_option('--diff', None, default=False, action='store_true',
+                         dest="diffResynchronization",
+                         metavar="<diffResynchronization>",
+                         help="diff segment resynchronization")
         addTo.add_option("-B", None, type="int", default=gp.DEFAULT_COORDINATOR_NUM_WORKERS,
                          dest="parallelDegree",
                          metavar="<parallelDegree>",

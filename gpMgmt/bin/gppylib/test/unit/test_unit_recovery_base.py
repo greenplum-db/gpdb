@@ -31,9 +31,9 @@ class RecoveryBaseTestCase(GpTestCase):
         self.mock_enable_verbose_logging = self.get_mock_from_apply_patch('enable_verbose_logging')
 
         self.full_r1 = RecoveryInfo('target_data_dir1', 5001, 1, 'source_hostname1',
-                                    6001, True, '/tmp/progress_file1')
+                                    6001, 'source_datadir1', True, False, '/tmp/progress_file1')
         self.incr_r2 = RecoveryInfo('target_data_dir2', 5002, 2, 'source_hostname2',
-                                    6002, False, '/tmp/progress_file2')
+                                    6002, 'source_datadir2', False, False, '/tmp/progress_file2')
         self.confinfo = gppylib.recoveryinfo.serialize_list([self.full_r1,
                                                              self.incr_r2])
 
@@ -323,7 +323,7 @@ class SetCmdResultsTestCase(GpTestCase):
             cmd.error_type = 10
             raise Exception('running the cmd failed')
 
-        recovery_info = RecoveryInfo('/tmp/datadir2', 7002, 2, None, None, None, '/tmp/progress_file2')
+        recovery_info = RecoveryInfo('/tmp/datadir2', 7002, 2, None, None, None, None, None, '/tmp/progress_file2')
         test_cmd = FullRecovery('original name', recovery_info, True,None,None)
         test_decorator(test_cmd)
         self.assertEqual('new name', test_cmd.name)
@@ -338,7 +338,7 @@ class SetCmdResultsTestCase(GpTestCase):
             cmd.name = 'new name'
             cmd.error_type = None
             raise Exception('running the cmd failed')
-        recovery_info = RecoveryInfo('/tmp/datadir2', 7002, 2, None, None, None, '/tmp/progress_file2')
+        recovery_info = RecoveryInfo('/tmp/datadir2', 7002, 2, None, None, None, None, None, '/tmp/progress_file2')
         test_cmd = FullRecovery('original name', recovery_info, True,None,None)
         test_decorator(test_cmd)
         self.assertEqual('new name', test_cmd.name)

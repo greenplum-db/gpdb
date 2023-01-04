@@ -94,6 +94,7 @@ static int	compresslevel = 0;
 static IncludeWal includewal = STREAM_WAL;
 static bool fastcheckpoint = false;
 static bool writerecoveryconf = false;
+static bool justWriteConfFiles = false;
 static bool do_sync = true;
 static int	standby_message_timeout = 10 * 1000;	/* 10 sec = default */
 static pg_time_t last_progress_report = 0;
@@ -2222,6 +2223,7 @@ main(int argc, char **argv)
 		{"create-slot", no_argument, NULL, 'C'},
 		{"max-rate", required_argument, NULL, 'r'},
 		{"write-recovery-conf", no_argument, NULL, 'R'},
+		{"just-write-conf-files", no_argument, NULL, 'j'},
 		{"slot", required_argument, NULL, 'S'},
 		{"tablespace-mapping", required_argument, NULL, 'T'},
 		{"wal-method", required_argument, NULL, 'X'},
@@ -2297,6 +2299,9 @@ main(int argc, char **argv)
 								 optarg);
 					exit(1);
 				}
+				break;
+			case 'j':
+				justWriteConfFiles = true;
 				break;
 			case 'r':
 				maxrate = parse_max_rate(optarg);
@@ -2581,6 +2586,16 @@ main(int argc, char **argv)
 		exit(1);
 	}
 	atexit(disconnect_atexit);
+
+	/* To just write recovery.conf and internal.auto.conf files in case of
+	diff recovery */
+	 if (justWriteConfFiles)
+	{
+		WriteInternalConfFile();
+		WriteRecoveryConfig(conn, basedir, GenerateRecoveryConfig(conn, replication_slot));
+		success = true;
+		return 0;
+	}
 
 	/*
 	 * Set umask so that directories/files are created with the same

@@ -110,7 +110,7 @@ class GpMirrorBuildCalculator:
 
         primary.setSegmentMode(gparray.MODE_NOT_SYNC)
 
-        resultOut.append(GpMirrorToBuild(None, primary, mirror, True))
+        resultOut.append(GpMirrorToBuild(None, primary, mirror, True, False))
 
         self.__primariesUpdatedToHaveMirrorsByHost[primary.getSegmentHostName()] += 1
         self.__mirrorsAddedByHost[targetHost] = mirrorIndexOnTargetHost + 1

@@ -73,7 +73,7 @@ def get_recovery_progress_pattern():
 #   failoverSegment = segment to recover "to"
 # In other words, we are recovering the failedSegment to the failoverSegment using the liveSegment.
 class GpMirrorToBuild:
-    def __init__(self, failedSegment, liveSegment, failoverSegment, forceFullSynchronization):
+    def __init__(self, failedSegment, liveSegment, failoverSegment, forceFullSynchronization, diffSynchronization):
         checkNotNone("forceFullSynchronization", forceFullSynchronization)
 
         # We need to call this validate function here because addmirrors directly calls GpMirrorToBuild.
@@ -89,6 +89,13 @@ class GpMirrorToBuild:
            process on the server
         """
         self.__forceFullSynchronization = forceFullSynchronization
+
+        """
+        __diffSynchronization is true if diff resynchronization should be FORCED -- that is 
+        only diff of source and target datadir will be transferred to target server
+        """
+
+        self.__diffSynchronization = diffSynchronization
 
     def getFailedSegment(self):
         """
@@ -120,6 +127,15 @@ class GpMirrorToBuild:
 
         # if we are failing over to a new segment location then we must fully resync
         if self.__failoverSegment is not None:
+            return True
+
+        return False
+
+    def isDiffSynchronization(self):
+        """
+        Returns whether or not this segment to recover needs to recover using diff synchronization method
+        """
+        if self.__diffSynchronization:
             return True
 
         return False
@@ -402,7 +418,8 @@ class GpMirrorListToBuild:
                 output.append("\n")
 
                 if re.search(pattern, results):
-                    recovery_type = 'full' if os.path.basename(cmd.filePath).split('.')[0] == 'pg_basebackup' else 'incremental'
+                    recovery_type = 'full' if os.path.basename(cmd.filePath).split('.')[0] == 'pg_basebackup' \
+                        else 'diff' if os.path.basename(cmd.filePath).split('.')[0] == 'rsync' else 'incremental'
                     complete_progress_output.extend("%s:%d:%s\n" % (recovery_type, cmd.dbid, results))
 
             combined_progress_file.write("".join(complete_progress_output))
@@ -671,7 +688,7 @@ class GpMirrorListToBuild:
         segments_to_clean_up = []
         for toRecover in self.__mirrorsToBuild:
             is_in_place = toRecover.getFailedSegment() is not None and toRecover.getFailoverSegment() is None
-            if is_in_place and toRecover.isFullSynchronization():
+            if is_in_place and (toRecover.isFullSynchronization() or toRecover.isDiffSynchronization()):
                 segments_to_clean_up.append(toRecover.getFailedSegment())
 
         if len(segments_to_clean_up) == 0:

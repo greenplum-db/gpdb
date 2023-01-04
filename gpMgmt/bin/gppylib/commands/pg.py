@@ -13,7 +13,7 @@ from contextlib import closing
 from .base import *
 from .unix import *
 from gppylib.commands.base import *
-from gppylib.commands.gp import RECOVERY_REWIND_APPNAME
+from gppylib.commands.gp import RECOVERY_REWIND_APPNAME, RECOVERY_DIFF_APPNAME
 from pgdb import DatabaseError
 
 logger = get_default_logger()
@@ -156,7 +156,6 @@ def killPgProc(db,procname,signal):
     cmd=Kill.remote("kill "+procname,procPID,signal,hostname)
     return (parentPID,procPID)
 
-
 class PgReplicationSlot:
     """
     PgReplicationSlot have utility function related to replication slot
@@ -211,6 +210,27 @@ class PgReplicationSlot:
 
         return True
 
+    def create_slot(self):
+        logger.debug("Creating slot {} for host:{}, port:{}".format(self.name, self.host, self.port))
+        sql = "SELECT pg_create_physical_replication_slot('{}', true, false);".format(self.name)
+        try:
+            dburl = dbconn.DbURL(hostname=self.host, port=self.port)
+            with closing(dbconn.connect(dburl, utility=True, encoding='UTF8')) as conn:
+                dbconn.query(conn, sql)
+        except DatabaseError as e:
+            # one of the case cane be where slot is present but currently in active state
+            logger.exception("Failed to query pg_create_physical_replication_slot for host:{}, port:{}: {}".
+                             format(self.host, self.port, str(e)))
+            return False
+        except Exception as ex:
+            raise Exception("Failed to create replication slot for host:{}, port:{} : {}".
+                            format(self.host, self.port, str(ex)))
+
+        logger.debug("Successfully created replication slot {} for host:{}, port:{}".
+                     format(self.name, self.host, self.port))
+
+        return True
+
 
 class PgControlData(Command):
     def __init__(self, name, datadir, ctxt=LOCAL, remoteHost=None):
@@ -236,6 +256,50 @@ class PgControlData(Command):
     def get_datadir(self):
         return self.datadir
 
+
+class RsyncCopy(Command):
+    """
+    RsyncCopy is used to copy delta changes between source server and target server
+    """
+
+    def __init__(self, name, target_datadir, source_host, source_datadir, progress_file):
+
+        # List containing directories and files that should be excluded while doing rsync
+        RSYNC_EXCLUDE_LIST = [
+            "/pg_log",
+            "/log",
+            "pgsql_tmp",
+            "postgresql.auto.conf.tmp",
+            "current_logfiles.tmp",
+            "pg_internal.init",
+            "postmaster.pid",
+            "postmaster.opts",
+            "recovery.conf",  # will be created by pg_basebackup --justWriteConfFiles
+            "standby.signal",  # will be created later point of time
+            "pg_dynshmem",
+            "pg_notify/*",
+            "pg_replslot/*",
+            "pg_serial/*",
+            "pg_stat_tmp/*",
+            "pg_snapshots/*",
+            "pg_subtrans/*",
+            "/db_dumps",
+            "/promote",
+        ]
+
+        # Build rsync command
+        rsync_cmd = 'touch %s/standby.signal || rsync -aLKs -e "ssh -o BatchMode=yes -o StrictHostKeyChecking=no" ' \
+                    '%s:%s %s' % (
+        target_datadir, source_host, source_datadir, target_datadir)
+
+        if RSYNC_EXCLUDE_LIST:
+            for pattern in RSYNC_EXCLUDE_LIST:
+                rsync_cmd += " --exclude=%s" % (pattern)
+
+        rsync_cmd = rsync_cmd + " > {} 2>&1".format(pipes.quote(progress_file))
+        self.cmdStr = rsync_cmd
+
+        Command.__init__(self, name, self.cmdStr, LOCAL)
 
 class PgRewind(Command):
     """
@@ -268,8 +332,8 @@ class PgRewind(Command):
 
 class PgBaseBackup(Command):
     def __init__(self, target_datadir, source_host, source_port, create_slot=False, replication_slot_name=None,
-                 excludePaths=[], ctxt=LOCAL, remoteHost=None, forceoverwrite=False, target_gp_dbid=0,
-                 progress_file=None, recovery_mode=True):
+                 excludePaths=[], ctxt=LOCAL, remoteHost=None, justWriteConfFiles=False, forceoverwrite=False,
+                 target_gp_dbid=0, progress_file=None, recovery_mode=True):
         cmd_tokens = ['pg_basebackup', '-c', 'fast']
         cmd_tokens.append('-D')
         cmd_tokens.append(target_datadir)
@@ -279,9 +343,9 @@ class PgBaseBackup(Command):
         cmd_tokens.append(source_port)
 
         # if there is already slot present and create-slot arg is true it will give error,
-        # there is no option available in upstream postgres so that existing slot can be reuse
+        # there is no option available in upstream postgres so that existing slot can be reused
         # it's good choice to drop a existing available slot and recreate the new one
-        # if the slot is not already exist or drop slot is success we will create a new slot
+        # if the slot does not already exist or drop slot is success we will create a new slot
         # but if we are not able to drop the slot in that case,
         # we will consider it as an error and will avoid creating a new slot
         if create_slot:
@@ -299,6 +363,9 @@ class PgBaseBackup(Command):
         # appendoptimized tables. Enabling this results in basebackup
         # failures with appendoptimized tables.
         cmd_tokens.append('--no-verify-checksums')
+
+        if justWriteConfFiles:
+            cmd_tokens.append('--just-write-conf-files')
 
         if forceoverwrite:
             cmd_tokens.append('--force-overwrite')

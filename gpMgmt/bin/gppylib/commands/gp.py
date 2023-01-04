@@ -56,6 +56,7 @@ MAX_COORDINATOR_NUM_WORKERS=64
 # during incremental recovery. gpstate uses this to figure out when incremental
 # recovery is active.
 RECOVERY_REWIND_APPNAME = '__gprecoverseg_pg_rewind__'
+RECOVERY_DIFF_APPNAME = '__gprecoverseg_remote_sync__'
 
 PGDATABASE_FOR_COMMON_USE= 'postgres'
 

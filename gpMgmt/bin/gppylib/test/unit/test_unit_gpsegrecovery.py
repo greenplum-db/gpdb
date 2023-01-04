@@ -33,7 +33,8 @@ class IncrementalRecoveryTestCase(GpTestCase):
                                               m.getSegmentDbId(),
                                               p.getSegmentHostName(),
                                               p.getSegmentPort(),
-                                              False, '/tmp/test_progress_file')
+                                              p.getSegmentDataDirectory(),
+                                              False, False, '/tmp/test_progress_file')
         self.era = '1234_20211110'
 
         self.incremental_recovery_cmd = gpsegrecovery.IncrementalRecovery(
@@ -142,7 +143,8 @@ class FullRecoveryTestCase(GpTestCase):
                                               m.getSegmentDbId(),
                                               p.getSegmentHostName(),
                                               p.getSegmentPort(),
-                                              True, '/tmp/test_progress_file')
+                                              p.getSegmentDataDirectory(),
+                                              True, False, '/tmp/test_progress_file')
         self.era = '1234_20211110'
         self.full_recovery_cmd = gpsegrecovery.FullRecovery(
             name='test full recovery', recovery_info=self.seg_recovery_info,
@@ -276,13 +278,13 @@ class SegRecoveryTestCase(GpTestCase):
         self.maxDiff = None
         self.mock_logger = Mock(spec=['log', 'info', 'debug', 'error', 'warn', 'exception'])
         self.full_r1 = RecoveryInfo('target_data_dir1', 5001, 1, 'source_hostname1',
-                                    6001, True, '/tmp/progress_file1')
+                                    6001, 'source_datadair1', True, False, '/tmp/progress_file1')
         self.incr_r1 = RecoveryInfo('target_data_dir2', 5002, 2, 'source_hostname2',
-                                    6002, False, '/tmp/progress_file2')
+                                    6002, 'source_datadir2', False, False, '/tmp/progress_file2')
         self.full_r2 = RecoveryInfo('target_data_dir3', 5003, 3, 'source_hostname3',
-                                    6003, True, '/tmp/progress_file3')
+                                    6003, 'source_datadir3', True, False, '/tmp/progress_file3')
         self.incr_r2 = RecoveryInfo('target_data_dir4', 5004, 4, 'source_hostname4',
-                                    6004, False, '/tmp/progress_file4')
+                                    6004, 'source_datadir4', False, False, '/tmp/progress_file4')
         self.era = '1234_2021110'
 
         self.apply_patches([

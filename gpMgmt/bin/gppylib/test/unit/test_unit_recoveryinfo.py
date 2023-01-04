@@ -5,7 +5,7 @@ from gppylib.commands.base import CommandResult
 from gppylib.commands import gp
 from gppylib.gparray import Segment
 from gppylib.operations.buildMirrorSegments import GpMirrorToBuild
-from gppylib.recoveryinfo import  build_recovery_info, RecoveryInfo, RecoveryResult
+from gppylib.recoveryinfo import build_recovery_info, RecoveryInfo, RecoveryResult
 
 
 class BuildRecoveryInfoTestCase(GpTestCase):
@@ -43,84 +43,82 @@ class BuildRecoveryInfoTestCase(GpTestCase):
         tests = [
             {
                 "name": "single_target_host_suggest_full_and_incr",
-                "mirrors_to_build": [GpMirrorToBuild(self.m3, self.p3, None, True),
-                                     GpMirrorToBuild(self.m4, self.p4, None, False)],
-                "expected": {'sdw3': [RecoveryInfo('/data/mirror3', 7000, 7, 'sdw2', 3000,
-                                                   True, '/tmp/logdir/pg_basebackup.111.dbid7.out'),
-                                      RecoveryInfo('/data/mirror4', 8000, 8, 'sdw3', 4000,
-                                                   False, '/tmp/logdir/pg_rewind.111.dbid8.out')]}
+                "mirrors_to_build": [GpMirrorToBuild(self.m3, self.p3, None, True, False),
+                                     GpMirrorToBuild(self.m4, self.p4, None, False, False)],
+                "expected": {'sdw3': [RecoveryInfo('/data/mirror3', 7000, 7, 'sdw2', 3000, '/data/primary3',
+                                                    True, False, '/tmp/logdir/pg_basebackup.111.dbid7.out'),
+                                      RecoveryInfo('/data/mirror4', 8000, 8, 'sdw3', 4000, '/data/primary4',
+                                                    False, False, '/tmp/logdir/pg_rewind.111.dbid8.out')]}
             },
             {
                 "name": "single_target_hosts_suggest_full_and_incr_with_failover",
-                "mirrors_to_build": [GpMirrorToBuild(self.m1, self.p1, self.m5, True),
-                                     GpMirrorToBuild(self.m2, self.p2, self.m6, False)],
-                "expected": {'sdw4': [RecoveryInfo('/data/mirror5', 9000, 5, 'sdw1', 1000,
-                                                   True, '/tmp/logdir/pg_basebackup.111.dbid5.out'),
-                                      RecoveryInfo('/data/mirror6', 10000, 6, 'sdw2', 2000,
-                                                   True, '/tmp/logdir/pg_basebackup.111.dbid6.out')]}
+                "mirrors_to_build": [GpMirrorToBuild(self.m1, self.p1, self.m5, True, False),
+                                     GpMirrorToBuild(self.m2, self.p2, self.m6, False, False)],
+                "expected": {'sdw4': [RecoveryInfo('/data/mirror5', 9000, 5, 'sdw1', 1000, '/data/primary1',
+                                                    True, False, '/tmp/logdir/pg_basebackup.111.dbid5.out'),
+                                      RecoveryInfo('/data/mirror6', 10000, 6, 'sdw2', 2000, '/data/primary2',
+                                                    True, False, '/tmp/logdir/pg_basebackup.111.dbid6.out')]}
             },
             {
                 "name": "multiple_target_hosts_suggest_full",
-                "mirrors_to_build": [GpMirrorToBuild(self.m1, self.p1, None, True),
-                                     GpMirrorToBuild(self.m2, self.p2, None, True)],
-                "expected": {'sdw2': [RecoveryInfo('/data/mirror1', 5000, 5, 'sdw1', 1000,
-                                                  True, '/tmp/logdir/pg_basebackup.111.dbid5.out')],
-                             'sdw1': [RecoveryInfo('/data/mirror2', 6000, 6, 'sdw2', 2000,
-                                                  True, '/tmp/logdir/pg_basebackup.111.dbid6.out')]}
+                "mirrors_to_build": [GpMirrorToBuild(self.m1, self.p1, None, True, False),
+                                     GpMirrorToBuild(self.m2, self.p2, None, True, False)],
+                "expected": {'sdw2': [RecoveryInfo('/data/mirror1', 5000, 5, 'sdw1', 1000, '/data/primary1',
+                                                    True, False, '/tmp/logdir/pg_basebackup.111.dbid5.out')],
+                             'sdw1': [RecoveryInfo('/data/mirror2', 6000, 6, 'sdw2', 2000, '/data/primary2',
+                                                    True, False, '/tmp/logdir/pg_basebackup.111.dbid6.out')]}
             },
             {
                 "name": "multiple_target_hosts_suggest_full_and_incr",
-                "mirrors_to_build": [GpMirrorToBuild(self.m1, self.p1, None, True),
-                                     GpMirrorToBuild(self.m3, self.p3, None, False),
-                                     GpMirrorToBuild(self.m4, self.p4, None, True)],
-                "expected": {'sdw2': [RecoveryInfo('/data/mirror1', 5000, 5, 'sdw1', 1000,
-                                                   True, '/tmp/logdir/pg_basebackup.111.dbid5.out')],
-                             'sdw3': [RecoveryInfo('/data/mirror3', 7000, 7, 'sdw2', 3000,
-                                                   False, '/tmp/logdir/pg_rewind.111.dbid7.out'),
-                                      RecoveryInfo('/data/mirror4', 8000, 8, 'sdw3', 4000,
-                                                   True, '/tmp/logdir/pg_basebackup.111.dbid8.out')]}
+                "mirrors_to_build": [GpMirrorToBuild(self.m1, self.p1, None, True, False),
+                                     GpMirrorToBuild(self.m3, self.p3, None, False, False),
+                                     GpMirrorToBuild(self.m4, self.p4, None, True, False)],
+                "expected": {'sdw2': [RecoveryInfo('/data/mirror1', 5000, 5, 'sdw1', 1000, '/data/primary1',
+                                                    True, False, '/tmp/logdir/pg_basebackup.111.dbid5.out')],
+                             'sdw3': [RecoveryInfo('/data/mirror3', 7000, 7, 'sdw2', 3000, '/data/primary3',
+                                                    False, False, '/tmp/logdir/pg_rewind.111.dbid7.out'),
+                                      RecoveryInfo('/data/mirror4', 8000, 8, 'sdw3', 4000, '/data/primary4',
+                                                    True, False, '/tmp/logdir/pg_basebackup.111.dbid8.out')]}
             },
             {
                 "name": "multiple_target_hosts_suggest_incr_failover_same_as_failed",
-                "mirrors_to_build": [GpMirrorToBuild(self.m1, self.p1, self.m1, False),
-                                     GpMirrorToBuild(self.m2, self.p2, self.m2, False)],
-                "expected": {'sdw2': [RecoveryInfo('/data/mirror1', 5000, 5, 'sdw1', 1000,
-                                                  True, '/tmp/logdir/pg_basebackup.111.dbid5.out')],
-                             'sdw1': [RecoveryInfo('/data/mirror2', 6000, 6, 'sdw2', 2000,
-                                                  True, '/tmp/logdir/pg_basebackup.111.dbid6.out')]}
+                "mirrors_to_build": [GpMirrorToBuild(self.m1, self.p1, self.m1, False, False),
+                                     GpMirrorToBuild(self.m2, self.p2, self.m2, False, False)],
+                "expected": {'sdw2': [RecoveryInfo('/data/mirror1', 5000, 5, 'sdw1', 1000, '/data/primary1',
+                                                    True, False, '/tmp/logdir/pg_basebackup.111.dbid5.out')],
+                             'sdw1': [RecoveryInfo('/data/mirror2', 6000, 6, 'sdw2', 2000, '/data/primary2',
+                                                    True, False, '/tmp/logdir/pg_basebackup.111.dbid6.out')]}
             },
             {
                 "name": "multiple_target_hosts_suggest_full_failover_same_as_failed",
-                "mirrors_to_build": [GpMirrorToBuild(self.m1, self.p1, self.m1, True),
-                                     GpMirrorToBuild(self.m3, self.p3, self.m3, True),
-                                     GpMirrorToBuild(self.m4, self.p4, None, True)],
-                "expected": {'sdw2': [RecoveryInfo('/data/mirror1', 5000, 5, 'sdw1', 1000,
-                                                  True, '/tmp/logdir/pg_basebackup.111.dbid5.out')],
-                             'sdw3': [RecoveryInfo('/data/mirror3', 7000, 7, 'sdw2', 3000,
-                                                   True, '/tmp/logdir/pg_basebackup.111.dbid7.out'),
-                                      RecoveryInfo('/data/mirror4', 8000, 8, 'sdw3', 4000,
-                                                   True, '/tmp/logdir/pg_basebackup.111.dbid8.out')]}
+                "mirrors_to_build": [GpMirrorToBuild(self.m1, self.p1, self.m1, True, False),
+                                     GpMirrorToBuild(self.m3, self.p3, self.m3, True, False),
+                                     GpMirrorToBuild(self.m4, self.p4, None, True, False)],
+                "expected": {'sdw2': [RecoveryInfo('/data/mirror1', 5000, 5, 'sdw1', 1000, '/data/primary1',
+                                                    True, False, '/tmp/logdir/pg_basebackup.111.dbid5.out')],
+                             'sdw3': [RecoveryInfo('/data/mirror3', 7000, 7, 'sdw2', 3000, '/data/primary3',
+                                                    True, False, '/tmp/logdir/pg_basebackup.111.dbid7.out'),
+                                      RecoveryInfo('/data/mirror4', 8000, 8, 'sdw3', 4000, '/data/primary4',
+                                                    True, False, '/tmp/logdir/pg_basebackup.111.dbid8.out')]}
             },
             {
                 "name": "multiple_target_hosts_suggest_full_and_incr",
-                "mirrors_to_build": [GpMirrorToBuild(self.m1, self.p1, self.m5, True),
-                                     GpMirrorToBuild(self.m2, self.p2, None, False),
-                                     GpMirrorToBuild(self.m3, self.p3, self.m3, False),
-                                     GpMirrorToBuild(self.m4, self.p4, self.m8, True)],
-                "expected": {'sdw4': [RecoveryInfo('/data/mirror5', 9000, 5, 'sdw1', 1000,
-                                                   True, '/tmp/logdir/pg_basebackup.111.dbid5.out'),
+                "mirrors_to_build": [GpMirrorToBuild(self.m1, self.p1, self.m5, True, False),
+                                     GpMirrorToBuild(self.m2, self.p2, None, False, False),
+                                     GpMirrorToBuild(self.m3, self.p3, self.m3, False, False),
+                                     GpMirrorToBuild(self.m4, self.p4, self.m8, True, False)],
+                "expected": {'sdw4': [RecoveryInfo('/data/mirror5', 9000, 5, 'sdw1', 1000, '/data/primary1',
+                                                    True, False, '/tmp/logdir/pg_basebackup.111.dbid5.out'),
                                       ],
-                             'sdw1': [RecoveryInfo('/data/mirror2', 6000, 6,
-                                                   'sdw2', 2000, False,
-                                                   '/tmp/logdir/pg_rewind.111.dbid6.out'),
+                             'sdw1': [RecoveryInfo('/data/mirror2', 6000, 6, 'sdw2', 2000, '/data/primary2',
+                                                    False, False, '/tmp/logdir/pg_rewind.111.dbid6.out'),
                                       RecoveryInfo('/data/mirror8', 12000, 8,
-                                                   'sdw3', 4000, True,
-                                                   '/tmp/logdir/pg_basebackup.111.dbid8.out')],
-                             'sdw3': [RecoveryInfo('/data/mirror3', 7000, 7, 'sdw2', 3000,
-                                                   True, '/tmp/logdir/pg_basebackup.111.dbid7.out')]
+                                                    'sdw3', 4000, '/data/primary4', True, False,
+                                                    '/tmp/logdir/pg_basebackup.111.dbid8.out')],
+                             'sdw3': [RecoveryInfo('/data/mirror3', 7000, 7, 'sdw2', 3000, '/data/primary3',
+                                                     True, False, '/tmp/logdir/pg_basebackup.111.dbid7.out')]
                              }
             },
-
         ]
         self.run_tests(tests)
 

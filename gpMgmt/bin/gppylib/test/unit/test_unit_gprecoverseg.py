@@ -71,7 +71,7 @@ class GpRecoversegTestCase(GpTestCase):
 
         self.config_provider_mock.loadSystemConfig.return_value = self.gpArrayMock
 
-        self.mirror_to_build = GpMirrorToBuild(self.mirror0, self.primary0, None, False)
+        self.mirror_to_build = GpMirrorToBuild(self.mirror0, self.primary0, None, False, False)
         self.apply_patches([
             patch('os.environ', new=self.os_env),
             patch('gppylib.db.dbconn.connect', return_value=self.conn),
