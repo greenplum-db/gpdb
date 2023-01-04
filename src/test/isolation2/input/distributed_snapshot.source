@@ -353,12 +353,12 @@ select pg_ctl(datadir, 'restart') from gp_segment_configuration where role = 'p'
 
 
 -- test the distributed snapshot in the situation of direct dispatch
-create or replace language plpython3u;
+0: create or replace language plpython3u;
 
-create table direct_dispatch_snapshot_alpha(a int, b int);
-insert into direct_dispatch_snapshot_alpha select i, i from generate_series(1, 10) i;
+0: create table direct_dispatch_snapshot_alpha(a int, b int);
+0: insert into direct_dispatch_snapshot_alpha select i, i from generate_series(1, 10) i;
 
-create function distributed_snapshot_test(is_direct_dispatch boolean) returns boolean as $$
+0: create function distributed_snapshot_test(is_direct_dispatch boolean) returns boolean as $$
 import re
 from pg import DB
 from copy import deepcopy
@@ -389,6 +389,6 @@ return False
 
 $$ language plpython3u;
 
-select distributed_snapshot_test(true);
-select distributed_snapshot_test(false);
+0: select distributed_snapshot_test(true);
+0: select distributed_snapshot_test(false);
 
