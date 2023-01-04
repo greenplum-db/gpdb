@@ -421,50 +421,6 @@ FTSReplicationStatusRetrieveDisconnectTime(FTSReplicationStatus *replication_sta
 	return disconn_time;
 }
 
-/* FTSGetReplicationDisconnectTime - used in FTS probe process.
- *
- * Detect the primary-mirror replication attempt count.
- * If the replication keeps crash, we should consider mark
- * mirror down directly. Since the walsender keeps resarting,
- * walsender->replica_disconnected_at keeps updated.
- * So ignore it.
- *
- * The reason why we want mark mirror down for this case is because,
- * when current situation happens, and a transaction try to sync wal
- * to mirror at the same time, the transaction will block. If walsender
- * keeps fail, the transaction will block forever.
- * Please see more details in SyncRepWaitForLSN and SyncRepReleaseWaiters.
- *
- * If the FTSReplicationStatus for GP_WALRECEIVER_APPNAME is not exist,
- * it means the replication has already been stopped.
- */
-pg_time_t
-FTSGetReplicationDisconnectTime(const char *app_name)
-{
-	pg_time_t			walsender_replica_disconnected_at = 0;
-	uint32				attempt_replication_times = 0;
-	FTSReplicationStatus	   *replication_status = NULL;
-
-	LWLockAcquire(FTSReplicationStatusLock, LW_SHARED);
-	replication_status = RetrieveFTSReplicationStatus(app_name, true /* skip_warn */);
-	if (replication_status)
-	{
-		attempt_replication_times = FTSReplicationStatusRetrieveAttempts(replication_status);
-		if (attempt_replication_times <= gp_fts_replication_attempt_count)
-			walsender_replica_disconnected_at = FTSReplicationStatusRetrieveDisconnectTime(replication_status);
-		else
-		{
-			ereport(LOG,
-					(errmsg("Primary-mirror replication streaming already attempted %d times exceed"
-					" limit gp_fts_replication_attempt_count %d",
-					attempt_replication_times, gp_fts_replication_attempt_count)));
-		}
-	}
-	LWLockRelease(FTSReplicationStatusLock);
-
-	return walsender_replica_disconnected_at;
-}
-
 static bool
 is_mirror_up(WalSnd *walsender)
 {
@@ -483,17 +439,48 @@ is_mirror_up(WalSnd *walsender)
 	return walsender_has_pid && is_communicating_with_mirror;
 }
 
+/*
+ * This decides if we need to retry an FTS probe before we can safely mark a
+ * mirror as "down" in configuration. We don't want to mark it down too early!
+ * Whether we can depends on the following:
+ *
+ * (1) If the number of retries for replication connection (re)establishment has
+ * surpassed gp_fts_replication_attempt_count, we don't need another retry. The
+ * mirror can now be marked down safely.
+ *
+ * (2) If the number of retries haven't exceeded the limit, we check if time
+ * since the last retry has exceeded gp_fts_mark_mirror_down_grace_period. If
+ * yes, a retry is not deemed necessary (and the mirror can be marked down
+ * safely).
+ * On the other hand, if the primary just underwent crash recovery, or if a
+ * mirror was recently added (for e.g. by pg_rewind), we check the time elapsed
+ * from when the primary started to accept connections, against
+ * gp_fts_mark_mirror_down_grace_period.
+ */
 static bool
-is_probe_retry_needed()
+is_probe_retry_needed_for_mirror()
 {
-	pg_time_t			walsender_replica_disconnected_at = 0;
+	bool retry_needed;
+	FTSReplicationStatus *replication_status;
+	uint32    reconnect_attempts;
+	pg_time_t last_disconnect_time;
+	char      last_disconnect_str[128];
+	char      connections_allowed_since_str[128];
 
-	/*
-	 * Get the walsender disconnect time, if current replication failed too
-	 * many times continuously, the walsender_replica_disconnected_at should
-	 * not take into consider. See more details in FTSGetReplicationDisconnectTime.
-	 */
-	walsender_replica_disconnected_at = FTSGetReplicationDisconnectTime(GP_WALRECEIVER_APPNAME);
+	LWLockAcquire(FTSReplicationStatusLock, LW_SHARED);
+
+	replication_status = RetrieveFTSReplicationStatus(GP_WALRECEIVER_APPNAME,
+													  true /* skip_warn */);
+	if (!replication_status)
+	{
+		last_disconnect_time = 0;
+		reconnect_attempts = 0;
+		ereportif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
+				  (errmsg("replication status not found"),
+				   errhint("this means that replication was never initiated or was intentionally terminated")));
+	}
+	else
+		last_disconnect_time = FTSReplicationStatusRetrieveDisconnectTime(replication_status);
 
 	/*
 	 * PMAcceptingConnectionStartTime is process-local variable, set in
@@ -503,29 +490,75 @@ is_probe_retry_needed()
 	 * processes can be spawned.
 	 */
 	Assert(PMAcceptingConnectionsStartTime);
-	pg_time_t delta = ((pg_time_t) time(NULL)) -
-		Max(walsender_replica_disconnected_at, PMAcceptingConnectionsStartTime);
 
-	/*
-	 * Report mirror as down, only if it didn't connect for below
-	 * grace period to primary. This helps to avoid marking mirror
-	 * down unnecessarily when restarting primary or due to small n/w
-	 * glitch. During this period, request FTS to probe again.
-	 *
-	 * If the delta is negative, then it's overflowed, meaning it's
-	 * over gp_fts_mark_mirror_down_grace_period since either last
-	 * database accepting connections or last time wal sender
-	 * died. Then, we can safely mark the mirror is down.
-	 */
-	if (delta < gp_fts_mark_mirror_down_grace_period && delta >= 0)
+	pg_strftime(last_disconnect_str, sizeof(last_disconnect_str),
+				"%Y-%m-%d %H:%M:%S %Z",
+				pg_localtime(&last_disconnect_time, log_timezone));
+	pg_strftime(connections_allowed_since_str, sizeof(connections_allowed_since_str),
+				"%Y-%m-%d %H:%M:%S %Z",
+				pg_localtime(&PMAcceptingConnectionsStartTime, log_timezone));
+
+	reconnect_attempts = FTSReplicationStatusRetrieveAttempts(replication_status);
+
+	if (reconnect_attempts > gp_fts_replication_attempt_count)
 	{
-		ereport(LOG,
-				(errmsg("requesting fts retry as mirror didn't connect yet but in grace period: " INT64_FORMAT, delta),
-					errdetail("pid zero at time: " INT64_FORMAT " accept connections start time: " INT64_FORMAT,
-							walsender_replica_disconnected_at, PMAcceptingConnectionsStartTime)));
-		return true;
+		/*
+		 * If the number of retries have exceeded the limit, we can safely mark
+		 * the mirror as down in configuration (and no retry is necessary).
+		 */
+		ereportif(gp_log_fts >= GPVARS_VERBOSITY_TERSE, LOG,
+				  (errmsg("maximum number of retries %d elapsed for replication connection establishment",
+						  gp_fts_replication_attempt_count),
+				   errdetail("last attempt at %s, connections allowed since %s",
+							 last_disconnect_str, connections_allowed_since_str)));
+		retry_needed = false;
 	}
-	return false;
+	else
+	{
+		pg_time_t delta;
+
+		/*
+		 * We need to check if it has been too long since the last mirror
+		 * disconnection event. If yes, then we can safely mark the mirror as
+		 * down (and no retry is necessary).
+		 *
+		 * However, if the primary underwent crash recovery, or if the mirror
+		 * was added to the system recently (by pg_rewind for example), and
+		 * there has been no replication connection attempt so far, then the
+		 * last_disconnect_time will be 0. In such a case, we should check if it
+		 * has been more than gp_fts_mark_mirror_down_grace_period seconds since
+		 * this primary started accepting connections. If yes, then we can
+		 * safely mark the mirror as down (and no retry is necessary).
+		 */
+		if (last_disconnect_time)
+			delta = ((pg_time_t) time(NULL)) - last_disconnect_time;
+		else
+			delta = ((pg_time_t) time(NULL)) - PMAcceptingConnectionsStartTime;
+
+		if (delta <= gp_fts_mark_mirror_down_grace_period)
+		{
+			ereportif(gp_log_fts >= GPVARS_VERBOSITY_TERSE, LOG,
+					  (errmsg("requesting fts retry as replication is down within grace period"),
+					   errdetail("last attempt at %s, attempt count = %u, connections allowed since %s",
+								 last_disconnect_str,
+								 reconnect_attempts,
+								 connections_allowed_since_str)));
+			retry_needed = true;
+		}
+		else
+		{
+			ereportif(gp_log_fts >= GPVARS_VERBOSITY_TERSE, LOG,
+					  (errmsg("foregoing fts retry as replication has been down longer than grace period"),
+					   errdetail("last attempt at %s, attempt count = %u, connections allowed since %s",
+								 last_disconnect_str,
+								 reconnect_attempts,
+								 connections_allowed_since_str)));
+			retry_needed = false;
+		}
+	}
+
+	LWLockRelease(FTSReplicationStatusLock);
+	return retry_needed;
 }
 
 /*
@@ -577,7 +610,7 @@ GetMirrorStatus(FtsResponse *response, bool *ready_for_syncrep)
 	LWLockRelease(SyncRepLock);
 
 	if (!response->IsMirrorUp)
-		response->RequestRetry = is_probe_retry_needed();
+		response->RequestRetry = is_probe_retry_needed_for_mirror();
 }
 
 /*

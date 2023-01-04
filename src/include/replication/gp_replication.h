@@ -71,7 +71,9 @@ extern void FTSReplicationStatusDrop(const char* app_name);
 extern FTSReplicationStatus *RetrieveFTSReplicationStatus(const char *app_name, bool skip_warn);
 extern void FTSReplicationStatusUpdateForWalState(const char *app_name, WalSndState state);
 extern void FTSReplicationStatusMarkDisconnectForReplication(const char *app_name);
-extern pg_time_t FTSGetReplicationDisconnectTime(const char *app_name);
+extern bool FTSGetReplicationDisconnectInfo(const char *app_name,
+											pg_time_t *last_disconnected_at,
+											uint32 *reconnection_attempts);
 
 extern void GetMirrorStatus(FtsResponse *response, bool *ready_for_syncrep);
 extern void SetSyncStandbysDefined(void);
