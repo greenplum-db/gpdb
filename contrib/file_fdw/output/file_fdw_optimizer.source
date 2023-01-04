@@ -216,6 +216,8 @@ DETAIL:  Feature not supported: Deletes with foreign tables
 ERROR:  cannot delete from foreign table "agg_csv"
 -- but this should be allowed
 SELECT * FROM agg_csv FOR UPDATE;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Locking clause on foreign table
   a  |    b    
 -----+---------
  100 |  99.097

@@ -527,6 +527,23 @@ CTranslatorQueryToDXL::TranslateSelectQueryToDXL()
 	// We therefore need to check permissions before we go into optimization for all RTEs, including the ones not explicitly referred in the query, e.g. views.
 	CTranslatorUtils::CheckRTEPermissions(m_query->rtable);
 
+	if (m_query->hasForUpdate)
+	{
+		int rt_len = gpdb::ListLength(m_query->rtable);
+		for (int i = 0; i < rt_len; i++)
+		{
+			const RangeTblEntry *rte =
+				(RangeTblEntry *) gpdb::ListNth(m_query->rtable, i);
+
+			if (rte->relkind == 'f' && rte->rellockmode == ExclusiveLock)
+			{
+				GPOS_RAISE(gpdxl::ExmaDXL,
+						   gpdxl::ExmiQuery2DXLUnsupportedFeature,
+						   GPOS_WSZ_LIT("Locking clause on foreign table"));
+			}
+		}
+	}
+
 	// RETURNING is not supported yet.
 	if (m_query->returningList)
 	{
