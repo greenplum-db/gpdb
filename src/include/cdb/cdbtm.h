@@ -19,7 +19,6 @@
 #include "nodes/plannodes.h"
 
 struct Gang;
-struct PlanSlice;
 
 /**
  * DTX states, used to track the state of the distributed transaction
