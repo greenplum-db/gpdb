@@ -341,7 +341,6 @@
 		"max_wal_senders",
 		"max_wal_size",
 		"max_worker_processes",
-		"memory_spill_ratio",
 		"min_parallel_index_scan_size",
 		"min_parallel_table_scan_size",
 		"min_wal_size",

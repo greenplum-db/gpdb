@@ -46,7 +46,6 @@
 		"gp_interconnect_type",
 		"gp_log_endpoints",
 		"gp_log_interconnect",
-		"gp_log_resgroup_memory",
 		"gp_log_resqueue_memory",
 		"gp_log_stack_trace_lines",
 		"gp_log_suboverflow_statement",

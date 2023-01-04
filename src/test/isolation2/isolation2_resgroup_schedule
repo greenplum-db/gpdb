@@ -15,7 +15,7 @@ test: resgroup/resgroup_seg_down_2pc
 # functions
 test: resgroup/resgroup_concurrency
 test: resgroup/resgroup_bypass
-#test: resgroup/resgroup_alter_concurrency
+test: resgroup/resgroup_alter_concurrency
 test: resgroup/resgroup_cpu_rate_limit
 test: resgroup/resgroup_cpuset
 test: resgroup/resgroup_cpuset_empty_default
@@ -25,10 +25,6 @@ test: resgroup/resgroup_move_query
 # regression tests
 test: resgroup/resgroup_recreate
 test: resgroup/resgroup_functions
-
-# parallel tests
-#test: resgroup/restore_default_resgroup
-#test: resgroup/resgroup_parallel_queries
 
 # dump info
 test: resgroup/resgroup_dumpinfo

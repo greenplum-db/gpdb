@@ -290,13 +290,6 @@ static CGroupOpsRoutine cGroupOpsRoutineDummy = {
 
 		.setcpulimit = setcpulimit_dummy,
 		.getcpuusage = getcpuusage_dummy,
-
-		.gettotalmemory = gettotalmemory_dummy,
-		.getmemoryusage = getmemoryusage_dummy,
-		.setmemorylimit = setmemorylimit_dummy,
-		.getmemorylimitchunks = getmemorylimitchunks_dummy,
-		.setmemorylimitbychunks = setmemorylimitbychunks_dummy,
-
 		.getcpuset = getcpuset_dummy,
 		.setcpuset = setcpuset_dummy,
 

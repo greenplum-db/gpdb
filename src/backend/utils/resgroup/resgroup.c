@@ -800,6 +800,10 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 									        cpuset);
 			}
 		}
+		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CONCURRENCY)
+		{
+			wakeupSlots(group, true);
+		}
 		/* reset default group if cpuset has changed */
 		if (strcmp(callbackCtx->oldCaps.cpuset, callbackCtx->caps.cpuset) &&
 			gp_resource_group_enable_cgroup_cpuset)
@@ -1520,10 +1524,7 @@ AssignResGroupOnMaster(void)
 	if (shouldBypassQuery(debug_query_string))
 	{
 		/*
-		 * Although we decide to bypass this query we should load the
-		 * memory_spill_ratio setting from the resgroup, otherwise a
-		 * `SHOW memory_spill_ratio` command will output the default value 20
-		 * if it's the first query in the connection (make sure tab completion
+		 * If it's the first query in the connection (make sure tab completion
 		 * is not triggered otherwise it will run some implicit query before
 		 * you execute the SHOW command).
 		 *
