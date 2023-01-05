@@ -1296,8 +1296,8 @@ wait_for_thread_join(request_t *r, int *send_size)
 		*send_size = -1;
 }
 
-static int 
-send_compression_data (request_t *r)
+static 
+int send_compression_data (request_t *r)
 {
 	int osize = r->outblock.top;
 	block_t *outblock = &r->outblock;
@@ -1922,7 +1922,7 @@ static void do_write(int fd, short event, void* arg)
 		
 
 	/* Loop at most 3 blocks or until we choke on the socket */
-	for (i = 0; i < 1; i++)
+	for (i = 0; i < 3; i++)
 	{
 		/* get a block (or find a remaining block) */
 		if (r->outblock.top == r->outblock.bot)
@@ -2020,6 +2020,11 @@ static void do_write(int fd, short event, void* arg)
 		if (datablock->top != datablock->bot)
 		{ /* network chocked */
 			gdebug(r, "network full");
+			break;
+		}
+
+		if (r->multi_thread)
+		{ /* It is very essential judge!! Because local_send_with_zstd will start a thread, and loop will cause confliction */
 			break;
 		}
 	}
