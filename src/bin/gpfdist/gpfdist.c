@@ -91,7 +91,7 @@ struct block_t
 typedef struct zstd_buffer zstd_buffer;
 struct zstd_buffer
 {
-	char	*buf;
+	char		*buf;
 	int		size;
 	int		pos;	
 };
