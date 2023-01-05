@@ -2208,7 +2208,7 @@ exec_parse_message(const char *query_string,	/* string to execute */
 		if (parsetree_list)
 		{
 			Node	   *parsetree = (Node *) linitial(parsetree_list);
-			sourceTag = nodeTag(parsetree);
+			sourceTag = IsA(parsetree, RawStmt) ? nodeTag(((RawStmt *)parsetree)->stmt) : nodeTag(parsetree);
 		}
 
 		/* Done with the snapshot used for parsing */

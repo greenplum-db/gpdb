@@ -1,5 +1,6 @@
 # Local binaries
 /pg_regress
+/extended_protocol_resqueue
 
 # Generated subdirectories
 /tmp_check/
