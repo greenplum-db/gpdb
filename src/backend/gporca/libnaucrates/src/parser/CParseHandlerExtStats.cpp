@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2022 VMware Inc.
+//	Copyright (C) 2023 VMware Inc.
 //
 //	@filename:
 //		CParseHandlerExtStats.cpp
@@ -17,7 +17,6 @@
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
 #include "naucrates/md/CDXLExtStats.h"
-#include "naucrates/md/CMDExtStatInfo.h"
 
 using namespace gpdxl;
 using namespace gpmd;

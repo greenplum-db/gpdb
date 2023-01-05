@@ -346,6 +346,8 @@ CTranslatorRelcacheToDXL::RetrieveExtStats(CMemoryPool *mp, IMDId *mdid)
 	{
 		MVDependency *dep = dependencies->deps[i];
 
+		// Note: MVDependency->attributes's last index is the dependent "to"
+		//       column.
 		IntPtrArray *from_attnos = GPOS_NEW(mp) IntPtrArray(mp);
 		for (INT j = 0; j < dep->nattributes - 1; j++)
 		{
@@ -378,8 +380,8 @@ CTranslatorRelcacheToDXL::RetrieveExtStatsInfo(CMemoryPool *mp, IMDId *mdid)
 {
 	OID rel_oid = CMDIdGPDB::CastMdid(mdid)->Oid();
 
-	CMDExtStatInfoArray *extstats_info_array =
-		GPOS_NEW(mp) CMDExtStatInfoArray(mp);
+	CMDExtStatsInfoArray *extstats_info_array =
+		GPOS_NEW(mp) CMDExtStatsInfoArray(mp);
 
 	gpdb::RelationWrapper rel = gpdb::GetRelation(rel_oid);
 	List *extstats = gpdb::GetExtStats(rel.get());
@@ -397,22 +399,22 @@ CTranslatorRelcacheToDXL::RetrieveExtStatsInfo(CMemoryPool *mp, IMDId *mdid)
 			keys->ExchangeSet(attno);
 		}
 
-		CMDExtStatInfo::Estattype statkind = CMDExtStatInfo::EstatSentinel;
+		CMDExtStatsInfo::Estattype statkind = CMDExtStatsInfo::EstatSentinel;
 		switch (info->kind)
 		{
 			case STATS_EXT_DEPENDENCIES:
 			{
-				statkind = CMDExtStatInfo::EstatDependencies;
+				statkind = CMDExtStatsInfo::EstatDependencies;
 				break;
 			}
 			case STATS_EXT_NDISTINCT:
 			{
-				statkind = CMDExtStatInfo::EstatNDistinct;
+				statkind = CMDExtStatsInfo::EstatNDistinct;
 				break;
 			}
 			case STATS_EXT_MCV:
 			{
-				statkind = CMDExtStatInfo::EstatMCV;
+				statkind = CMDExtStatsInfo::EstatMCV;
 				break;
 			}
 			default:
@@ -427,7 +429,7 @@ CTranslatorRelcacheToDXL::RetrieveExtStatsInfo(CMemoryPool *mp, IMDId *mdid)
 							  ->GetBuffer());
 		CMDName *mdname = GPOS_NEW(mp) CMDName(mp, statname);
 
-		extstats_info_array->Append(GPOS_NEW(mp) CMDExtStatInfo(
+		extstats_info_array->Append(GPOS_NEW(mp) CMDExtStatsInfo(
 			mp, info->statOid, mdname, statkind, keys));
 	}
 

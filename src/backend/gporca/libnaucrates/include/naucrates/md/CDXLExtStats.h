@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2022 EMC Corp.
+//	Copyright (C) 2023 VMware Inc.
 //
 //	@filename:
 //		CDXLExtStats.h
@@ -18,7 +18,7 @@
 #include "gpos/common/CDouble.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/CMDExtStatInfo.h"
+#include "naucrates/md/CMDExtStatsInfo.h"
 #include "naucrates/md/IMDExtStats.h"
 
 namespace gpdxl
@@ -84,7 +84,10 @@ public:
 
 #ifdef GPOS_DEBUG
 	// debug print of the metadata ext stats
-	void DebugPrint(IOstream &os) const override;
+	void
+	DebugPrint(IOstream &os GPOS_UNUSED) const override
+	{
+	}
 #endif
 
 	// dummy relstats

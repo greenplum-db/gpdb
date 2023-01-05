@@ -1,16 +1,16 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2022 VMware Inc.
+//	Copyright (C) 2023 VMware Inc.
 //
 //	@filename:
-//		CMDExtStatInfo.cpp
+//		CMDExtStatsInfo.cpp
 //
 //	@doc:
 //		Implementation of the class for representing metadata cache ext stats
 //---------------------------------------------------------------------------
 
 
-#include "naucrates/md/CMDExtStatInfo.h"
+#include "naucrates/md/CMDExtStatsInfo.h"
 
 #include "gpos/common/CBitSetIter.h"
 #include "gpos/string/CWStringDynamic.h"
@@ -24,7 +24,7 @@ using namespace gpmd;
 
 
 CWStringDynamic *
-CMDExtStatInfo::KeysToStr(CMemoryPool *mp)
+CMDExtStatsInfo::KeysToStr(CMemoryPool *mp)
 {
 	CWStringDynamic *str = GPOS_NEW(mp) CWStringDynamic(mp);
 
@@ -54,7 +54,7 @@ CMDExtStatInfo::KeysToStr(CMemoryPool *mp)
 
 
 CWStringDynamic *
-CMDExtStatInfo::KindToStr(CMemoryPool *mp)
+CMDExtStatsInfo::KindToStr(CMemoryPool *mp)
 {
 	CWStringDynamic *str = GPOS_NEW(mp) CWStringDynamic(mp);
 
@@ -88,7 +88,7 @@ CMDExtStatInfo::KindToStr(CMemoryPool *mp)
 
 
 void
-CMDExtStatInfo::Serialize(CXMLSerializer *xml_serializer)
+CMDExtStatsInfo::Serialize(CXMLSerializer *xml_serializer)
 {
 	GPOS_CHECK_ABORT;
 

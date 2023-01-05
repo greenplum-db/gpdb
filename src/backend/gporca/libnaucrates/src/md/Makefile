@@ -22,7 +22,7 @@ OBJS        = CDXLBucket.o \
               CMDCastGPDB.o \
               CMDCheckConstraintGPDB.o \
               CMDColumn.o \
-              CMDExtStatInfo.o \
+              CMDExtStatsInfo.o \
               CMDFunctionGPDB.o \
               CMDIdCast.o \
               CMDIdColStats.o \

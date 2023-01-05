@@ -333,7 +333,8 @@ CFilterStatsProcessor::MakeHistHashMapConjFilter(
 	{
 		CStatsPred *child_pred_stats = conjunctive_pred_stats->GetPredStats(ul);
 
-		if (child_pred_stats->IsEstimated())
+		// Skip clauses we've already used in our estimate calculation
+		if (child_pred_stats->IsAlreadyUsedInScaleFactorEstimation())
 		{
 			continue;
 		}

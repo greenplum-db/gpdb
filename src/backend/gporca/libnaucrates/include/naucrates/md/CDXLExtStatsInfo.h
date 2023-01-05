@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2022 VMware Inc.
+//	Copyright (C) 2023 VMware Inc.
 //
 //	@filename:
 //		CDXLExtStatsInfo.h
@@ -18,7 +18,7 @@
 #include "gpos/common/CDouble.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/CMDExtStatInfo.h"
+#include "naucrates/md/CMDExtStatsInfo.h"
 #include "naucrates/md/IMDExtStatsInfo.h"
 
 namespace gpdxl
@@ -54,13 +54,13 @@ private:
 	// DXL string for object
 	CWStringDynamic *m_dxl_str;
 
-	CMDExtStatInfoArray *m_extstats_info_array;
+	CMDExtStatsInfoArray *m_extstats_info_array;
 
 public:
 	CDXLExtStatsInfo(const CDXLExtStatsInfo &) = delete;
 
 	CDXLExtStatsInfo(CMemoryPool *mp, IMDId *rel_stats_mdid, CMDName *mdname,
-					 CMDExtStatInfoArray *extstats_info_array);
+					 CMDExtStatsInfoArray *extstats_info_array);
 
 	~CDXLExtStatsInfo() override;
 
@@ -76,7 +76,7 @@ public:
 	// serialize relation stats in DXL format given a serializer object
 	void Serialize(gpdxl::CXMLSerializer *) const override;
 
-	CMDExtStatInfoArray *
+	CMDExtStatsInfoArray *
 	GetExtStatInfoArray() const override
 	{
 		return m_extstats_info_array;
@@ -84,7 +84,10 @@ public:
 
 #ifdef GPOS_DEBUG
 	// debug print of the metadata ext stats metadata
-	void DebugPrint(IOstream &os) const override;
+	void
+	DebugPrint(IOstream &os GPOS_UNUSED) const override
+	{
+	}
 #endif
 
 	// dummy relstats

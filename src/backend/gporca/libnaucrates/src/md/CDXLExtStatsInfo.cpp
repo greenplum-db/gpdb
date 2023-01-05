@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2022 VMware Inc.
+//	Copyright (C) 2023 VMware Inc.
 //
 //	@filename:
 //		CDXLExtStatsInfo.cpp
@@ -25,7 +25,7 @@ using namespace gpmd;
 
 CDXLExtStatsInfo::CDXLExtStatsInfo(CMemoryPool *mp, IMDId *mdid,
 								   CMDName *mdname,
-								   CMDExtStatInfoArray *extstats_info_array)
+								   CMDExtStatsInfoArray *extstats_info_array)
 	: m_mp(mp),
 	  m_mdid(mdid),
 	  m_mdname(mdname),
@@ -119,22 +119,6 @@ CDXLExtStatsInfo::Serialize(CXMLSerializer *xml_serializer) const
 	GPOS_CHECK_ABORT;
 }
 
-#ifdef GPOS_DEBUG
-//---------------------------------------------------------------------------
-//	@function:
-//		CDXLExtStatsInfo::DebugPrint
-//
-//	@doc:
-//		Prints a metadata cache ext stats info to the provided output
-//
-//---------------------------------------------------------------------------
-void
-CDXLExtStatsInfo::DebugPrint(IOstream &os GPOS_UNUSED) const
-{
-}
-
-#endif	// GPOS_DEBUG
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CDXLExtStatsInfo::CreateDXLDummyExtStatsInfo
@@ -152,8 +136,8 @@ CDXLExtStatsInfo::CreateDXLDummyExtStatsInfo(CMemoryPool *mp, IMDId *mdid)
 	mdname = GPOS_NEW(mp) CMDName(mp, str.Value());
 	CAutoRef<CDXLExtStatsInfo> ext_stats_info_dxl;
 
-	CMDExtStatInfoArray *extstats_info_array =
-		GPOS_NEW(mp) CMDExtStatInfoArray(mp);
+	CMDExtStatsInfoArray *extstats_info_array =
+		GPOS_NEW(mp) CMDExtStatsInfoArray(mp);
 
 	ext_stats_info_dxl = GPOS_NEW(mp)
 		CDXLExtStatsInfo(mp, mdid, mdname.Value(), extstats_info_array);

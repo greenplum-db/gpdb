@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2022 VMware Inc.
+//	Copyright (C) 2023 VMware Inc.
 //
 //	@filename:
 //		IMDExtStatsInfo.h
@@ -14,7 +14,7 @@
 #include "gpos/base.h"
 #include "gpos/common/CDouble.h"
 
-#include "naucrates/md/CMDExtStatInfo.h"
+#include "naucrates/md/CMDExtStatsInfo.h"
 #include "naucrates/md/IMDCacheObject.h"
 
 namespace gpmd
@@ -40,7 +40,7 @@ public:
 		return EmdtExtStatsInfo;
 	}
 
-	virtual CMDExtStatInfoArray *GetExtStatInfoArray() const = 0;
+	virtual CMDExtStatsInfoArray *GetExtStatInfoArray() const = 0;
 };
 }  // namespace gpmd
 

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2022 Greenplum, Inc.
+//	Copyright (C) 2023 VMware Inc.
 //
 //	@filename:
 //		IMDExtStats.h

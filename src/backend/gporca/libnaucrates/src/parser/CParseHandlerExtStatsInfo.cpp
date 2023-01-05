@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2022 VMware Inc.
+//	Copyright (C) 2023 VMware Inc.
 //
 //	@filename:
 //		CParseHandlerExtStatsInfo.cpp
@@ -17,7 +17,7 @@
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
 #include "naucrates/md/CDXLExtStatsInfo.h"
-#include "naucrates/md/CMDExtStatInfo.h"
+#include "naucrates/md/CMDExtStatsInfo.h"
 
 using namespace gpdxl;
 using namespace gpmd;
@@ -46,7 +46,7 @@ CParseHandlerExtStatsInfo::~CParseHandlerExtStatsInfo()
 //		The metadata (info) constructed by the parse handler
 //
 //---------------------------------------------------------------------------
-CMDExtStatInfo *
+CMDExtStatsInfo *
 CParseHandlerExtStatsInfo::GetInfo() const
 {
 	return m_extinfo;
@@ -102,8 +102,8 @@ CParseHandlerExtStatsInfo::StartElement(
 	keys->Release();
 
 	// TODO: parse kind..
-	m_extinfo = GPOS_NEW(m_mp) CMDExtStatInfo(
-		m_mp, stat_oid, stat_name, CMDExtStatInfo::EstatDependencies, bs_keys);
+	m_extinfo = GPOS_NEW(m_mp) CMDExtStatsInfo(
+		m_mp, stat_oid, stat_name, CMDExtStatsInfo::EstatDependencies, bs_keys);
 }
 
 //---------------------------------------------------------------------------

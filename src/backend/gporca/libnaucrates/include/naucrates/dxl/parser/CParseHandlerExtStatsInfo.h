@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2022 VMware Inc.
+//	Copyright (C) 2023 VMware Inc.
 //
 //	@filename:
 //		CParseHandlerExtStatsInfo.h
@@ -15,7 +15,7 @@
 #include "gpos/base.h"
 
 #include "naucrates/dxl/parser/CParseHandlerMetadataObject.h"
-#include "naucrates/md/CMDExtStatInfo.h"
+#include "naucrates/md/CMDExtStatsInfo.h"
 
 namespace gpdxl
 {
@@ -29,7 +29,7 @@ class CParseHandlerExtStatsInfo : public CParseHandlerBase
 {
 private:
 	// extstat infos list
-	CMDExtStatInfo *m_extinfo;
+	CMDExtStatsInfo *m_extinfo;
 
 	// process the start of an element
 	void StartElement(
@@ -58,7 +58,7 @@ public:
 	~CParseHandlerExtStatsInfo() override;
 
 	// returns the constructed bucket
-	CMDExtStatInfo *GetInfo() const;
+	CMDExtStatsInfo *GetInfo() const;
 };
 }  // namespace gpdxl
 

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2022 VMware Inc.
+//	Copyright (C) 2023 VMware Inc.
 //
 //	@filename:
 //		CDXLExtStats.cpp
@@ -123,22 +123,6 @@ CDXLExtStats::Serialize(CXMLSerializer *xml_serializer) const
 
 	GPOS_CHECK_ABORT;
 }
-
-#ifdef GPOS_DEBUG
-//---------------------------------------------------------------------------
-//	@function:
-//		CDXLExtStats::DebugPrint
-//
-//	@doc:
-//		Prints a metadata cache ext stats to the provided output
-//
-//---------------------------------------------------------------------------
-void
-CDXLExtStats::DebugPrint(IOstream &os GPOS_UNUSED) const
-{
-}
-
-#endif	// GPOS_DEBUG
 
 //---------------------------------------------------------------------------
 //	@function:

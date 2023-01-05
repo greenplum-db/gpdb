@@ -1,9 +1,9 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2022 VMware Inc.
+//	Copyright (C) 2023 VMware Inc.
 //
 //	@filename:
-//		CMDExtStatInfo.h
+//		CMDExtStatsInfo.h
 //
 //	@doc:
 //		Class representing MD extended stats metadata
@@ -13,8 +13,8 @@
 
 
 
-#ifndef GPMD_CMDExtStatInfo_H
-#define GPMD_CMDExtStatInfo_H
+#ifndef GPMD_CMDExtStatsInfo_H
+#define GPMD_CMDExtStatsInfo_H
 
 #include "gpos/base.h"
 #include "gpos/common/CBitSet.h"
@@ -34,7 +34,7 @@ using namespace gpos;
 using namespace gpdxl;
 
 
-class CMDExtStatInfo : public CRefCount
+class CMDExtStatsInfo : public CRefCount
 {
 public:
 	enum Estattype
@@ -57,8 +57,8 @@ private:
 	CBitSet *m_keys;
 
 public:
-	CMDExtStatInfo(CMemoryPool *mp, OID stat_oid, CMDName *stat_name,
-				   Estattype kind, CBitSet *keys)
+	CMDExtStatsInfo(CMemoryPool *mp, OID stat_oid, CMDName *stat_name,
+					Estattype kind, CBitSet *keys)
 		: m_mp(mp),
 		  m_stat_oid(stat_oid),
 		  m_stat_name(stat_name),
@@ -67,7 +67,7 @@ public:
 	{
 	}
 
-	~CMDExtStatInfo() override
+	~CMDExtStatsInfo() override
 	{
 		GPOS_DELETE(m_stat_name);
 		m_keys->Release();
@@ -99,12 +99,12 @@ public:
 };
 
 
-using CMDExtStatInfoArray = CDynamicPtrArray<CMDExtStatInfo, CleanupRelease>;
+using CMDExtStatsInfoArray = CDynamicPtrArray<CMDExtStatsInfo, CleanupRelease>;
 
 }  // namespace gpmd
 
 
 
-#endif	// !GPMD_CMDExtStatInfo_H
+#endif	// !GPMD_CMDExtStatsInfo_H
 
 // EOF

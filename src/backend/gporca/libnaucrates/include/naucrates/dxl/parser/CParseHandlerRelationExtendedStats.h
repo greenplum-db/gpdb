@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2022 VMware Inc.
+//	Copyright (C) 2023 VMware Inc.
 //
 //	@filename:
 //		CParseHandlerRelationExtendedStats.h
@@ -15,7 +15,7 @@
 #include "gpos/base.h"
 
 #include "naucrates/dxl/parser/CParseHandlerMetadataObject.h"
-#include "naucrates/md/CMDExtStatInfo.h"
+#include "naucrates/md/CMDExtStatsInfo.h"
 
 namespace gpdxl
 {
@@ -29,7 +29,7 @@ class CParseHandlerRelationExtendedStats : public CParseHandlerMetadataObject
 {
 private:
 	// dependency list values
-	CMDExtStatInfoArray *m_extinfos;
+	CMDExtStatsInfoArray *m_extinfos;
 
 	IMDId *m_mdid;
 	CMDName *m_mdname;
@@ -62,7 +62,7 @@ public:
 	~CParseHandlerRelationExtendedStats() override = default;
 
 	// returns the constructed bucket
-	CMDExtStatInfoArray *GetInfos() const;
+	CMDExtStatsInfoArray *GetInfos() const;
 };
 }  // namespace gpdxl
 

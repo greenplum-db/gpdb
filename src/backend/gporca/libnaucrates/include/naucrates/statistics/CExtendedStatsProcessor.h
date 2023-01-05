@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2022 VMware, Inc. or its affiliates.
+//	Copyright (C) 2023 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CExtendedStatsProcessor.h

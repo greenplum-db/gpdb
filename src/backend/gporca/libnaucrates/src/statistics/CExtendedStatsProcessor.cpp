@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright 2022 VMware, Inc. or its affiliates.
+//	Copyright 2023 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CExtendedStatsProcessor.cpp
@@ -20,7 +20,7 @@
 
 #include "gpos/common/CBitSet.h"
 
-#include "naucrates/md/CMDExtStatInfo.h"
+#include "naucrates/md/CMDExtStatsInfo.h"
 #include "naucrates/statistics/CFilterStatsProcessor.h"
 
 
@@ -47,18 +47,23 @@ IsDependencyCapablePredicate(CStatsPred *child_pred GPOS_UNUSED)
  * XXX If multiple statistics objects tie on both criteria, then which object
  * is chosen depends on the order that they appear in the stats list. Perhaps
  * further tiebreakers are needed.
+ *
+ * NB: This function is modified version of choose_best_statistics() in
+ *     dependencies.c.
  */
-CMDExtStatInfo *
-choose_best_statistics(CMemoryPool *mp, CMDExtStatInfoArray *md_statsinfo_array,
-					   CBitSet *attnums, CMDExtStatInfo::Estattype requiredkind)
+CMDExtStatsInfo *
+choose_best_statistics(CMemoryPool *mp,
+					   CMDExtStatsInfoArray *md_statsinfo_array,
+					   CBitSet *attnums,
+					   CMDExtStatsInfo::Estattype requiredkind)
 {
-	CMDExtStatInfo *best_match = nullptr;
+	CMDExtStatsInfo *best_match = nullptr;
 	int best_num_matched = 2;						  /* goal #1: maximize */
 	int best_match_keys = (STATS_MAX_DIMENSIONS + 1); /* goal #2: minimize */
 
 	for (ULONG i = 0; i < md_statsinfo_array->Size(); i++)
 	{
-		CMDExtStatInfo *info = (*md_statsinfo_array)[i];
+		CMDExtStatsInfo *info = (*md_statsinfo_array)[i];
 		int num_matched;
 		int numkeys;
 		CBitSet *matched;
@@ -101,6 +106,9 @@ choose_best_statistics(CMemoryPool *mp, CMDExtStatInfoArray *md_statsinfo_array,
 /*
  * dependency_implies_attribute
  *		check that the attnum matches is implied by the functional dependency
+ *
+ * NB: This function is modified version of dependency_implies_attribute() in
+ *     dependencies.c.
  */
 static bool
 dependency_implies_attribute(CMDDependency *dependency, INT attnum)
@@ -117,6 +125,9 @@ dependency_implies_attribute(CMDDependency *dependency, INT attnum)
  * dependency_is_fully_matched
  *		checks that a functional dependency is fully matched given clauses on
  *		attributes (assuming the clauses are suitable equality clauses)
+ *
+ * NB: This function is modified version of dependency_is_fully_matched() in
+ *     dependencies.c.
  */
 static bool
 dependency_is_fully_matched(CMDDependency *dependency, CBitSet *attnums)
@@ -153,10 +164,12 @@ dependency_is_fully_matched(CMDDependency *dependency, CBitSet *attnums)
  *
  * This guarantees that we eliminate the most redundant conditions first
  * (see the comment in dependencies_clauselist_selectivity).
+ *
+ * NB: This function is modified version of find_strongest_dependency() in
+ *     dependencies.c.
  */
 static CMDDependency *
-find_strongest_dependency(CMDExtStatInfo *stats GPOS_UNUSED,
-						  CMDDependencyArray *dependencies, CBitSet *attnums)
+find_strongest_dependency(CMDDependencyArray *dependencies, CBitSet *attnums)
 {
 	ULONG i;
 	CMDDependency *strongest = nullptr;
@@ -237,7 +250,7 @@ CExtendedStatsProcessor::ApplyExtendedStatistics(
 	}
 
 	DOUBLE s1 = 1.0;
-	CMDExtStatInfo *stat;
+	CMDExtStatsInfo *stat;
 	CMDDependencyArray *dependencies;
 
 	CBitSet *clauses_attnums = GPOS_NEW(mp) CBitSet(mp);
@@ -256,7 +269,7 @@ CExtendedStatsProcessor::ApplyExtendedStatistics(
 	for (ULONG ul = 0; ul < conjunctive_pred_stats->GetNumPreds(); ul++)
 	{
 		CStatsPred *child_pred = conjunctive_pred_stats->GetPredStats(ul);
-		if (!child_pred->IsEstimated() &&
+		if (!child_pred->IsAlreadyUsedInScaleFactorEstimation() &&
 			IsDependencyCapablePredicate(child_pred))
 		{
 			ULONG colid = child_pred->GetColId();
@@ -267,8 +280,7 @@ CExtendedStatsProcessor::ApplyExtendedStatistics(
 
 	/*
 	 * If there's not at least two distinct attnums then reject the whole list
-	 * of clauses. We must return 1.0 so the calling function's selectivity is
-	 * unaffected.
+	 * of clauses.
 	 */
 	if (clauses_attnums->Size() < 2)
 	{
@@ -278,7 +290,7 @@ CExtendedStatsProcessor::ApplyExtendedStatistics(
 	/* find the best suited statistics object for these attnums */
 	stat = choose_best_statistics(mp, md_statsinfo->GetExtStatInfoArray(),
 								  clauses_attnums,
-								  CMDExtStatInfo::EstatDependencies);
+								  CMDExtStatsInfo::EstatDependencies);
 
 	if (!stat)
 	{
@@ -308,8 +320,7 @@ CExtendedStatsProcessor::ApplyExtendedStatistics(
 		CMDDependency *dependency;
 
 		/* the widest/strongest dependency, fully matched by clauses */
-		dependency =
-			find_strongest_dependency(stat, dependencies, clauses_attnums);
+		dependency = find_strongest_dependency(dependencies, clauses_attnums);
 
 		/* if no suitable dependency was found, we're done */
 		if (!dependency)
@@ -330,7 +341,7 @@ CExtendedStatsProcessor::ApplyExtendedStatistics(
 			/*
 			 * Skip incompatible clauses, and ones we've already estimated on.
 			 */
-			if (child_pred->IsEstimated())
+			if (child_pred->IsAlreadyUsedInScaleFactorEstimation())
 			{
 				continue;
 			}

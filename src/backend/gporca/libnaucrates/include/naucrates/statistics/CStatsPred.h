@@ -89,7 +89,7 @@ public:
 	}
 
 	BOOL
-	IsEstimated() const
+	IsAlreadyUsedInScaleFactorEstimation() const
 	{
 		return m_is_estimated;
 	}

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2012 EMC Corp.
+//	Copyright (C) 2023 VMware Inc.
 //
 //	@filename:
 //		CParseHandlerRelationExtendedStats.cpp
@@ -17,7 +17,7 @@
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
 #include "naucrates/md/CDXLExtStatsInfo.h"
-#include "naucrates/md/CMDExtStatInfo.h"
+#include "naucrates/md/CMDExtStatsInfo.h"
 
 using namespace gpdxl;
 using namespace gpmd;
@@ -126,15 +126,15 @@ CParseHandlerRelationExtendedStats::EndElement(
 				   str->GetBuffer());
 	}
 
-	CMDExtStatInfoArray *extstatsinfo_array =
-		GPOS_NEW(m_mp) CMDExtStatInfoArray(m_mp);
+	CMDExtStatsInfoArray *extstatsinfo_array =
+		GPOS_NEW(m_mp) CMDExtStatsInfoArray(m_mp);
 
 
 	for (ULONG ul = 0; ul < this->Length(); ul++)
 	{
 		CParseHandlerExtStatsInfo *parse_handler_ext_stats_info =
 			dynamic_cast<CParseHandlerExtStatsInfo *>((*this)[ul]);
-		CMDExtStatInfo *info = parse_handler_ext_stats_info->GetInfo();
+		CMDExtStatsInfo *info = parse_handler_ext_stats_info->GetInfo();
 		info->AddRef();
 
 		extstatsinfo_array->Append(info);
