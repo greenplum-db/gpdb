@@ -88,16 +88,8 @@ struct block_t
 	char*		cdata;
 };
 
-typedef struct zstd_in zstd_in;
-struct zstd_in
-{
-	char	*buf;
-	int		size;	
-	int		pos;
-};
-
-typedef struct zstd_out zstd_out;
-struct zstd_out
+typedef struct zstd_buffer zstd_buffer;
+struct zstd_buffer
 {
 	char	*buf;
 	int		size;
@@ -313,8 +305,7 @@ struct request_t
 		char*  	wbuf;		/* data buf for decompressed data for writing into file,
 					         	its capacity equals to MAX_FRAME_SIZE. */
 		int 	wbuftop;	/* last index for decompressed data */
-		int 	cflag;		/* mark whether there is left data in compress ctx */
-		int		woffset;	/* record decompression inbuffer offset */
+		int 	woffset;		/* mark whether there is left data in compress ctx */
 	} in;
 
 	block_t	outblock;	/* next block to send out */
@@ -324,9 +315,9 @@ struct request_t
 	ZSTD_CCtx*		zstd_cctx;	/* zstd compression context */
 	ZSTD_DCtx*		zstd_dctx;	/* zstd decompression context */
 #endif	
-	int				zstd;		/* request use zstd compress */
-	int				zstd_err_len; 	/* space allocate for zstd_error string */
-	char*				zstd_error;	/* string contains zstd error*/
+	int		zstd;			/* request use zstd compress */
+	int		zstd_err_len;	/* space allocate for zstd_error string */
+	char*		zstd_error;	/* string contains zstd error*/
 #ifdef USE_SSL
 	/* SSL related */
 	BIO			*io;		/* for the i.o. */
@@ -389,7 +380,7 @@ static int request_set_path(request_t *r, const char* d, char* p, char* pp, char
 static int request_path_validate(request_t *r, const char* path);
 #ifdef USE_ZSTD
 static int compress_zstd(const request_t *r, block_t* block, int buflen);
-static int decompress_data(request_t *r, zstd_in *in, zstd_out *out);
+static int decompress_data(request_t *r, zstd_buffer *in, zstd_buffer *out);
 static int decompress_zstd(request_t* r, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout);
 static int decompress_write_loop(request_t *r);
 #endif
@@ -3235,19 +3226,23 @@ static void handle_post_request(request_t *r, int header_end)
 		{
 #ifdef USE_ZSTD
 			if(r->zstd)
+			{
 				wrote = decompress_write_loop(r);
+				if (wrote == -1)
+					return;
+			}
 			else
 #endif
 			{
 				wrote = fstream_write(session->fstream, r->in.dbuf, data_bytes_in_req, 1, r->line_delim_str, r->line_delim_length);
 				delay_watchdog_timer();
-			}
-			if(wrote == -1)
-			{
-				/* write error */
-				http_error(r, FDIST_INTERNAL_ERROR, fstream_get_error(session->fstream));
-				request_end(r, 1, 0);
-				return;
+				if (wrote == -1)
+				{
+					/* write error */
+					http_error(r, FDIST_INTERNAL_ERROR, fstream_get_error(session->fstream));
+					request_end(r, 1, 0);
+					return;
+				}
 			}
 		}
 	}
@@ -3303,7 +3298,7 @@ static void handle_post_request(request_t *r, int header_end)
 			r->in.davailable -= n;
 			r->in.dbuftop += n;
 
-			/* success is a flag to check whether data is wrote into file successfully.
+			/* success is a flag to check whether data is written into file successfully.
 			 * There is no need to do anything when success is less than 0, since all
 			 * error handling has been done in 'check_output_to_file' function.
 			 */
@@ -4698,14 +4693,15 @@ static
 int decompress_write_loop(request_t *r)
 {
 	session_t *session = r->session;
+	int wrote_total = 0;
 	do
 	{
 		int offset = 0;
-		if (r->in.cflag)
+		if (r->in.woffset)
 			offset = r->in.woffset;
 
-		zstd_in in = {r->in.dbuf, r->in.dbuftop, offset};
-		zstd_out out = {r->in.wbuf + r->in.wbuftop, MAX_FRAME_SIZE - r->in.wbuftop, 0};
+		zstd_buffer in = {r->in.dbuf, r->in.dbuftop, offset};
+		zstd_buffer out = {r->in.wbuf + r->in.wbuftop, MAX_FRAME_SIZE - r->in.wbuftop, 0};
 
 		int res = decompress_data(r, &in, &out);
 
@@ -4713,10 +4709,11 @@ int decompress_write_loop(request_t *r)
 		{
 			http_error(r, FDIST_INTERNAL_ERROR, r->zstd_error);
 			request_end(r, 1, 0);
-			return;
+			return res;
 		}
 
 		int wrote = fstream_write(session->fstream, r->in.wbuf, r->in.wbuftop, 0, r->line_delim_str, r->line_delim_length);
+		wrote_total += wrote;
 		gdebug(r, "wrote %d bytes to file", wrote);
 		delay_watchdog_timer();
 
@@ -4726,8 +4723,8 @@ int decompress_write_loop(request_t *r)
 			return -1;
 		}
 
-	} while(r->in.cflag);
-	return 0;
+	} while(r->in.woffset);
+	return wrote_total;
 }
 
 static int decompress_zstd(request_t* r, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout)
@@ -4745,18 +4742,18 @@ static int decompress_zstd(request_t* r, ZSTD_inBuffer* bin, ZSTD_outBuffer* bou
 	size_t const err = ret;                          
 	if(ZSTD_isError(err)){
 		snprintf(r->zstd_error, r->zstd_err_len, "zstd decompression error, error is %s", ZSTD_getErrorName(err));
-		gwarning(NULL, r->zstd_error);
+		gwarning(NULL, "%s", r->zstd_error);
 		return -1;
 	}
 	return bout->pos;
 }
 
-static int decompress_data(request_t* r, zstd_in *in, zstd_out *out){
+static int decompress_data(request_t* r, zstd_buffer *in, zstd_buffer *out){
 	ZSTD_inBuffer inbuf = {in->buf , in->size, in->pos};
 	ZSTD_outBuffer obuf = {out->buf, out->size, out->pos};
 	
 	if(!r->zstd_dctx) {
-		gwarning(stderr, "Out of memory when ZSTD_createDCtx");
+		gwarning(stderr, "%s", "Out of memory when ZSTD_createDCtx");
 		return -1;
 	}
 
@@ -4768,12 +4765,10 @@ static int decompress_data(request_t* r, zstd_in *in, zstd_out *out){
 	r->in.wbuftop += outSize;
 	if (inbuf.pos == inbuf.size) 
 	{
-		r->in.cflag = 0;
 		r->in.woffset = 0;
 	}
 	else
 	{
-		r->in.cflag = 1;
 		r->in.woffset = inbuf.pos;
 	}
 	gdebug(NULL, "decompress_zstd finished, input size = %d, output size = %d.", r->in.wbuftop, r->in.dbuftop);
