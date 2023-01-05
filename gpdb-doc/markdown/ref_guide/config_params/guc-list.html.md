@@ -2225,6 +2225,17 @@ The parameter can be set for a database system, an individual database, or a ses
 |-----------|-------|-------------------|
 |Boolean|true|master, session, reload|
 
+## <a id="optimizer_discard_redistribute_hashjoin"></a>optimizer\_discard\_redistribute\_hashjoin
+
+When GPORCA is enabled \(the default\), this parameter specifies whether the Query Optimizer should eliminate plans that include a HashJoin operator with a Redistribute Motion child. Eliminating such plans can improve performance in cases where the data being joined exhibits high skewness in the join keys.
+
+The default setting is `off`, GPORCA considers all plan alternatives, including those with a Redistribute Motion child, in the HashJoin operator. If you observe performance issues with queries that use a HashJoin with highly skewed data, you may want to consider setting `optimizer_discard_redistribute_hashjoin` to `on` to instruct GPORCA to discard such plans.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|off|master, session, reload|
+
+
 ## <a id="optimizer_enable_associativity"></a>optimizer\_enable\_associativity 
 
 When GPORCA is enabled \(the default\), this parameter controls whether the join associativity transform is enabled during query optimization. The transform analyzes join orders. For the default value `off`, only the GPORCA dynamic programming algorithm for analyzing join orders is enabled. The join associativity transform largely duplicates the functionality of the newer dynamic programming algorithm.

@@ -116,6 +116,7 @@ These parameters control the usage of GPORCA by Greenplum Database. For informat
 - [optimizer_cost_model](guc-list.html#optimizer_cost_model)
 - [optimizer_cte_inlining_bound](guc-list.html#optimizer_cte_inlining_bound)
 - [optimizer_dpe_stats](guc-list.html#optimizer_dpe_stats)
+- [optimizer_discard_redistribute_hashjoin](guc-list.html#optimizer_discard_redistribute_hashjoin)
 - [optimizer_enable_associativity](guc-list.html#optimizer_enable_associativity)
 - [optimizer_enable_dml](guc-list.html#optimizer_enable_dml)
 - [optimizer_enable_indexonlyscan](guc-list.html#optimizer_enable_indexonlyscan)
