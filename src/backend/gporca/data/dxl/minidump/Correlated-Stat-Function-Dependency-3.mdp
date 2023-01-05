@@ -12,10 +12,10 @@
         CREATE STATISTICS stts (dependencies) ON a, b FROM t; ANALYZE t;
         EXPLAIN (ANALYZE, TIMING OFF) SELECT * FROM t WHERE a = 1 AND b = 1;
 
-                                                       QUERY PLAN
-        ---------------------------------------------------------------------------------------------------------
-         Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.29 rows=90 width=8) (actual rows=100 loops=1)
-           ->  Seq Scan on t  (cost=0.00..431.29 rows=30 width=8) (actual rows=100 loops=1)
+                                                        QUERY PLAN
+        ----------------------------------------------------------------------------------------------------------
+         Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.29 rows=100 width=8) (actual rows=100 loops=1)
+           ->  Seq Scan on t  (cost=0.00..431.29 rows=34 width=8) (actual rows=100 loops=1)
                  Filter: ((a = 1) AND (b = 1))
                  Rows Removed by Filter: 3701
          Optimizer: Pivotal Optimizer (GPORCA)
@@ -1042,7 +1042,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.292136" Rows="89.340010" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.292506" Rows="99.999999" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -1056,7 +1056,7 @@
         <dxl:SortingColumnList/>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.289472" Rows="89.340010" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.289525" Rows="99.999999" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">

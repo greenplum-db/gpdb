@@ -360,22 +360,7 @@ CExtendedStatsProcessor::ApplyExtendedStatistics(
 			 */
 			if (dependency_implies_attribute(dependency, *attnum))
 			{
-				CDouble scale_factor = CDouble(1.0);
-				CBitSet *filter_colids = GPOS_NEW(mp) CBitSet(mp);
-				CHistogram *hist_before =
-					result_histograms->Find(&colid)->CopyHistogram();
-				ULONG idontcare;
-
-				CHistogram *result_histogram = nullptr;
-				result_histogram = CFilterStatsProcessor::MakeHistSimpleFilter(
-					mp, child_pred, filter_colids, hist_before, &scale_factor,
-					&idontcare);
-				filter_colids->Release();
-
-				s2 = scale_factor.Get();
-
-				GPOS_DELETE(result_histogram);
-				GPOS_DELETE(hist_before);
+				s2 = 1 / result_histograms->Find(&colid)->GetFrequency().Get();
 
 				/* mark this one as done, so we don't touch it again. */
 				child_pred->SetEstimated();

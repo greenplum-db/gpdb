@@ -23,7 +23,7 @@ namespace gpnaucrates
 {
 class CFilterStatsProcessor
 {
-public:
+private:
 	// create a new histogram after applying the filter that is not an AND/OR predicate
 	static CHistogram *MakeHistSimpleFilter(CMemoryPool *mp,
 											CStatsPred *pred_stats,
@@ -32,7 +32,6 @@ public:
 											CDouble *last_scale_factor,
 											ULONG *target_last_colid);
 
-private:
 	// create a new histogram after applying a point filter
 	static CHistogram *MakeHistPointFilter(CStatsPredPoint *pred_stats,
 										   CBitSet *filter_colids,
