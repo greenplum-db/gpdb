@@ -1050,7 +1050,7 @@ estimate_size(PlannerInfo *root, RelOptInfo *baserel,
 	 * baserestrictinfo quals.
 	 */
 	nrows = ntuples *
-		clauselist_selectivity(root,
+		clauselist_selectivity_use_damping(root,
 							   baserel->baserestrictinfo,
 							   0,
 							   JOIN_INNER,
