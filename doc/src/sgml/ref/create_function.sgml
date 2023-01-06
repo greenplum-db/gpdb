@@ -31,7 +31,7 @@ CREATE [ OR REPLACE ] FUNCTION
     | CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT
     | [ EXTERNAL ] SECURITY INVOKER | [ EXTERNAL ] SECURITY DEFINER
     | PARALLEL { UNSAFE | RESTRICTED | SAFE }
-    | EXECUTE ON { ANY | MASTER | ALL SEGMENTS }
+    | EXECUTE ON { ANY | MASTER | ALL SEGMENTS | INITPLAN }
     | COST <replaceable class="parameter">execution_cost</replaceable>
     | ROWS <replaceable class="parameter">result_rows</replaceable>
     | SUPPORT <replaceable class="parameter">support_function</replaceable>
