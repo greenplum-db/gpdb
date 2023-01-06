@@ -49,6 +49,7 @@ typedef struct vacuumingOptions
 	bool		skip_locked;
 	int			min_xid_age;
 	int			min_mxid_age;
+	bool		skip_database_stats;
 } vacuumingOptions;
 
 
@@ -436,6 +437,12 @@ vacuum_one_database(const ConnParams *cparams,
 		exit(1);
 	}
 
+	/*
+	 * skip_database_stats is used automatically if server supports it.
+	 * GPDB: This option was backported from PG16 to GPDB7 (PG12)
+	 */
+	vacopts->skip_database_stats = (PQserverVersion(conn) >= 120000);
+
 	if (!quiet)
 	{
 		if (stage != ANALYZE_NO_STAGE)
@@ -731,6 +738,14 @@ vacuum_one_database(const ConnParams *cparams,
 		}
 	}
 
+	/* If we used SKIP_DATABASE_STATS, mop up with ONLY_DATABASE_STATS */
+	if (vacopts->skip_database_stats && stage == ANALYZE_NO_STAGE)
+	{
+		resetPQExpBuffer(&sql);
+		appendPQExpBufferStr(&sql, "VACUUM (ONLY_DATABASE_STATS)");
+		run_vacuum_command(slots->connection, &sql, echo, NULL, progname, false);
+	}
+
 finish:
 	for (i = 0; i < concurrentCons; i++)
 		DisconnectDatabase(slots + i);
@@ -865,6 +880,13 @@ prepare_vacuum_command(PQExpBuffer sql, int serverVersion,
 				/* DISABLE_PAGE_SKIPPING is supported since v9.6 */
 				Assert(serverVersion >= 90600);
 				appendPQExpBuffer(sql, "%sDISABLE_PAGE_SKIPPING", sep);
+				sep = comma;
+			}
+			if (vacopts->skip_database_stats)
+			{
+				/* GPDB: SKIP_DATABASE_STATS is supported since GP7 (PG12) */
+				Assert(serverVersion >= 120000);
+				appendPQExpBuffer(sql, "%sSKIP_DATABASE_STATS", sep);
 				sep = comma;
 			}
 			if (vacopts->skip_locked)

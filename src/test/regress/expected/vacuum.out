@@ -218,6 +218,12 @@ RESET default_transaction_isolation;
 BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 ANALYZE vactst;
 COMMIT;
+-- SKIP_DATABASE_STATS option
+VACUUM (SKIP_DATABASE_STATS) vactst;
+-- ONLY_DATABASE_STATS option
+VACUUM (ONLY_DATABASE_STATS);
+VACUUM (ONLY_DATABASE_STATS) vactst;  -- error
+ERROR:  ONLY_DATABASE_STATS cannot be specified with a list of tables
 DROP TABLE vaccluster;
 DROP TABLE vactst;
 DROP TABLE vacparted;

@@ -19,15 +19,15 @@ $node->issues_sql_like(
 	'SQL VACUUM run');
 $node->issues_sql_like(
 	[ 'vacuumdb', '-f', 'postgres' ],
-	qr/statement: VACUUM \(FULL\).*;/,
+	qr/statement: VACUUM \(SKIP_DATABASE_STATS, FULL\).*;/,
 	'vacuumdb -f');
 $node->issues_sql_like(
 	[ 'vacuumdb', '-F', 'postgres' ],
-	qr/statement: VACUUM \(FREEZE\).*;/,
+	qr/statement: VACUUM \(SKIP_DATABASE_STATS, FREEZE\).*;/,
 	'vacuumdb -F');
 $node->issues_sql_like(
 	[ 'vacuumdb', '-zj2', 'postgres' ],
-	qr/statement: VACUUM \(ANALYZE\).*;/,
+	qr/statement: VACUUM \(SKIP_DATABASE_STATS, ANALYZE\).*;/,
 	'vacuumdb -zj2');
 $node->issues_sql_like(
 	[ 'vacuumdb', '-Z', 'postgres' ],
@@ -35,11 +35,11 @@ $node->issues_sql_like(
 	'vacuumdb -Z');
 $node->issues_sql_like(
 	[ 'vacuumdb', '--disable-page-skipping', 'postgres' ],
-	qr/statement: VACUUM \(DISABLE_PAGE_SKIPPING\).*;/,
+	qr/statement: VACUUM \(DISABLE_PAGE_SKIPPING, SKIP_DATABASE_STATS\).*;/,
 	'vacuumdb --disable-page-skipping');
 $node->issues_sql_like(
 	[ 'vacuumdb', '--skip-locked', 'postgres' ],
-	qr/statement: VACUUM \(SKIP_LOCKED\).*;/,
+	qr/statement: VACUUM \(SKIP_DATABASE_STATS, SKIP_LOCKED\).*;/,
 	'vacuumdb --skip-locked');
 $node->issues_sql_like(
 	[ 'vacuumdb', '--skip-locked', '--analyze-only', 'postgres' ],
@@ -83,7 +83,7 @@ $node->command_fails(
 	'incorrect column name with ANALYZE');
 $node->issues_sql_like(
 	[ 'vacuumdb', '--analyze', '--table', 'vactable(a, b)', 'postgres' ],
-	qr/statement: VACUUM \(ANALYZE\) public.vactable\(a, b\);/,
+	qr/statement: VACUUM \(SKIP_DATABASE_STATS, ANALYZE\) public.vactable\(a, b\);/,
 	'vacuumdb --analyze with complete column list');
 $node->issues_sql_like(
 	[ 'vacuumdb', '--analyze-only', '--table', 'vactable(b)', 'postgres' ],
