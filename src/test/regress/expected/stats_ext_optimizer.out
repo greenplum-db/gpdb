@@ -186,7 +186,7 @@ SELECT 1 FROM pg_statistic_ext WHERE stxrelid = 'stxdinp'::regclass;
 SELECT * FROM check_estimated_rows('SELECT a, b FROM stxdinp GROUP BY 1, 2');
  estimated | actual 
 -----------+--------
-        57 |     10
+        10 |     10
 (1 row)
 
 DROP TABLE stxdinp;
@@ -308,19 +308,19 @@ SELECT * FROM check_estimated_rows('SELECT COUNT(*) FROM ndistinct GROUP BY ctid
 SELECT * FROM check_estimated_rows('SELECT COUNT(*) FROM ndistinct GROUP BY a, b');
  estimated | actual 
 -----------+--------
-        69 |     11
+        11 |     11
 (1 row)
 
 SELECT * FROM check_estimated_rows('SELECT COUNT(*) FROM ndistinct GROUP BY b, c');
  estimated | actual 
 -----------+--------
-        69 |     11
+        11 |     11
 (1 row)
 
 SELECT * FROM check_estimated_rows('SELECT COUNT(*) FROM ndistinct GROUP BY a, b, c');
  estimated | actual 
 -----------+--------
-       316 |     11
+        11 |     11
 (1 row)
 
 -- last two plans keep using Group Aggregate, because 'd' is not covered
@@ -329,13 +329,13 @@ SELECT * FROM check_estimated_rows('SELECT COUNT(*) FROM ndistinct GROUP BY a, b
 SELECT * FROM check_estimated_rows('SELECT COUNT(*) FROM ndistinct GROUP BY a, b, c, d');
  estimated | actual 
 -----------+--------
-       316 |     11
+        11 |     11
 (1 row)
 
 SELECT * FROM check_estimated_rows('SELECT COUNT(*) FROM ndistinct GROUP BY b, c, d');
  estimated | actual 
 -----------+--------
-        69 |     11
+        11 |     11
 (1 row)
 
 TRUNCATE TABLE ndistinct;
@@ -358,7 +358,7 @@ SELECT s.stxkind, d.stxdndistinct
 SELECT * FROM check_estimated_rows('SELECT COUNT(*) FROM ndistinct GROUP BY a, b');
  estimated | actual 
 -----------+--------
-      1435 |   2550
+      2550 |   2550
 (1 row)
 
 SELECT * FROM check_estimated_rows('SELECT COUNT(*) FROM ndistinct GROUP BY a, b, c');
@@ -376,7 +376,7 @@ SELECT * FROM check_estimated_rows('SELECT COUNT(*) FROM ndistinct GROUP BY a, b
 SELECT * FROM check_estimated_rows('SELECT COUNT(*) FROM ndistinct GROUP BY b, c, d');
  estimated | actual 
 -----------+--------
-       918 |   1632
+      1632 |   1632
 (1 row)
 
 SELECT * FROM check_estimated_rows('SELECT COUNT(*) FROM ndistinct GROUP BY a, d');
