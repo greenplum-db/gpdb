@@ -539,7 +539,7 @@ var_type:	simple_type
 				$$.type_sizeof = NULL;
 			}
 		}
- 		| enum_type
+		| enum_type
 		{
 			$$.type_str = $1;
 			$$.type_enum = ECPGt_int;

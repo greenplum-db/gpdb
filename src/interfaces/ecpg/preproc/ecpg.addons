@@ -1,22 +1,6 @@
 /* src/interfaces/ecpg/preproc/ecpg.addons */
 ECPG: stmtClosePortalStmt block
-	{
-		if (INFORMIX_MODE)
-		{
-			if (pg_strcasecmp($1+strlen("close "), "database") == 0)
-			{
-				if (connection)
-					mmerror(PARSE_ERROR, ET_ERROR, "AT option not allowed in CLOSE DATABASE statement");
-
-				fprintf(base_yyout, "{ ECPGdisconnect(__LINE__, \"CURRENT\");");
-				whenever_action(2);
-				free($1);
-				break;
-			}
-		}
-
-		output_statement($1, 0, ECPGst_normal);
-	}
+	{ $$ = $1;}
 ECPG: stmtDeallocateStmt block
 	{
 		output_deallocate_prepare_statement($1);

@@ -192,20 +192,6 @@ main(int argc, char *const argv[])
 		}
 		if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0)
 		{
-			printf("ecpg (PostgreSQL) %s\n", PG_VERSION);
-			exit(0);
-		}
-	}
-
-	if (argc > 1)
-	{
-		if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
-		{
-			help(progname);
-			exit(0);
-		}
-		if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0)
-		{
 			printf("ecpg (PostgreSQL %s) %s\n", PG_VERSION, GP_VERSION);
 			exit(0);
 		}

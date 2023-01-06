@@ -20,11 +20,6 @@ SO_MINOR_VERSION= $(MAJORVERSION)
 
 override CPPFLAGS := -I../include -I$(top_srcdir)/src/interfaces/ecpg/include \
 	-I$(libpq_srcdir) -I$(top_builddir)/src/port -DFRONTEND $(CPPFLAGS)
-
-
-ifeq ($(GCC), yes)
-override CFLAGS += -Wno-error
-endif
 override CFLAGS += $(PTHREAD_CFLAGS)
 
 OBJS= execute.o typename.o descriptor.o sqlda.o data.o error.o prepare.o \

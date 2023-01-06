@@ -259,9 +259,6 @@ if (sqlca.sqlcode < 0) sqlprint();}
 if (sqlca.sqlcode < 0) sqlprint();}
 #line 89 "execute.pgc"
 
-if (sqlca.sqlcode < 0) sqlprint();}
-#line 108 "execute.pgc"
-
 
 	sprintf (command, "select * from test where amount = $1");
 
