@@ -202,8 +202,8 @@ pg_resgroup_get_status(PG_FUNCTION_ARGS)
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "groupid", OIDOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "num_running", INT4OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 3, "num_queueing", INT4OID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 4, "num_queued", INT4OID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 5, "num_executed", INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 4, "num_queued", INT8OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 5, "num_executed", INT8OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 6, "total_queue_duration", INTERVALOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 7, "cpu_usage", JSONOID, -1, 0);
 

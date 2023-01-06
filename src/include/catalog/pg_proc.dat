@@ -10861,7 +10861,7 @@
 
 { oid => 6066, descr => 'statistics: information about resource groups',
    proexeclocation => 'c',
-   proname => 'pg_resgroup_get_status', prorows => '1000', proisstrict => 'f', proretset => 't', provolatile => 'v', proparallel => 'r', prorettype => 'record', proargtypes => 'oid', proallargtypes => 'oid,oid,int4,int4,int4,int4,interval,json', proargmodes => '{i,o,o,o,o,o,o,o}', proargnames => '{groupid,groupid,num_running,num_queueing,num_queued,num_executed,total_queue_duration,cpu_usage}', prosrc => 'pg_resgroup_get_status' },
+   proname => 'pg_resgroup_get_status', prorows => '1000', proisstrict => 'f', proretset => 't', provolatile => 'v', proparallel => 'r', prorettype => 'record', proargtypes => 'oid', proallargtypes => 'oid,oid,int4,int4,int8,int8,interval,json', proargmodes => '{i,o,o,o,o,o,o,o}', proargnames => '{groupid,groupid,num_running,num_queueing,num_queued,num_executed,total_queue_duration,cpu_usage}', prosrc => 'pg_resgroup_get_status' },
 
 { oid => 6036, descr => 'waiting relation information',
    proname => 'gp_dist_wait_status', prorows => '1000', proisstrict => 'f',

@@ -138,8 +138,8 @@ struct ResGroupData
 
 	volatile int	nRunning;			/* number of running trans */
 	volatile int	nRunningBypassed;	/* number of running trans in bypass mode */
-	int				totalExecuted;		/* total number of executed trans */
-	int				totalQueued;		/* total number of queued trans	*/
+	int64			totalExecuted;		/* total number of executed trans */
+	int64			totalQueued;		/* total number of queued trans	*/
 	int64			totalQueuedTimeMs;	/* total queue time, in milliseconds */
 	PROC_QUEUE		waitProcs;			/* list of PGPROC objects waiting on this group */
 
@@ -896,10 +896,10 @@ ResGroupGetStat(Oid groupId, ResGroupStatType type)
 			result = Int32GetDatum(group->waitProcs.size);
 			break;
 		case RES_GROUP_STAT_TOTAL_EXECUTED:
-			result = Int32GetDatum(group->totalExecuted);
+			result = Int64GetDatum(group->totalExecuted);
 			break;
 		case RES_GROUP_STAT_TOTAL_QUEUED:
-			result = Int32GetDatum(group->totalQueued);
+			result = Int64GetDatum(group->totalQueued);
 			break;
 		case RES_GROUP_STAT_TOTAL_QUEUE_TIME:
 			/*
