@@ -309,8 +309,6 @@ SendTupleChunkToAMS(MotionLayerState *mlStates,
 	 * tcItem can actually be a chain of tcItems.  we need to send out all of
 	 * them.
 	 */
-	currItem = tcItem;
-
 	for (currItem = tcItem; currItem != NULL; currItem = currItem->p_next)
 	{
 #ifdef AMS_VERBOSE_LOGGING

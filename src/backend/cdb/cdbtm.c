@@ -781,18 +781,11 @@ doNotifyingAbort(void)
 		case DTX_STATE_NOTIFYING_ABORT_PREPARED:
 			{
 				DtxProtocolCommand dtxProtocolCommand;
-				char	   *abortString;
 
 				if (MyTmGxactLocal->state == DTX_STATE_NOTIFYING_ABORT_SOME_PREPARED)
-				{
 					dtxProtocolCommand = DTX_PROTOCOL_COMMAND_ABORT_SOME_PREPARED;
-					abortString = "Abort [Prepared]";
-				}
 				else
-				{
 					dtxProtocolCommand = DTX_PROTOCOL_COMMAND_ABORT_PREPARED;
-					abortString = "Abort Prepared";
-				}
 
 				savedInterruptHoldoffCount = InterruptHoldoffCount;
 

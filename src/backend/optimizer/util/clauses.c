@@ -4000,12 +4000,7 @@ simplify_or_arguments(List *args,
 			if (!unprocessed_args)
 				unprocessed_args = subargs;
 			else
-			{
-				List	   *oldhdr = unprocessed_args;
-
 				unprocessed_args = list_concat(subargs, unprocessed_args);
-				pfree(oldhdr);
-			}
 			continue;
 		}
 
@@ -4102,12 +4097,7 @@ simplify_and_arguments(List *args,
 			if (!unprocessed_args)
 				unprocessed_args = subargs;
 			else
-			{
-				List	   *oldhdr = unprocessed_args;
-
 				unprocessed_args = list_concat(subargs, unprocessed_args);
-				pfree(oldhdr);
-			}
 			continue;
 		}
 
@@ -5597,14 +5587,14 @@ flatten_join_alias_var_optimizer(Query *query, int queryLevel)
 	if (NIL != targetList)
 	{
 		queryNew->targetList = (List *) flatten_join_alias_vars(queryNew, (Node *) targetList);
-		pfree(targetList);
+		list_free(targetList);
 	}
 
 	List * returningList = queryNew->returningList;
 	if (NIL != returningList)
 	{
 		queryNew->returningList = (List *) flatten_join_alias_vars(queryNew, (Node *) returningList);
-		pfree(returningList);
+		list_free(returningList);
 	}
 
 	Node *havingQual = queryNew->havingQual;
@@ -5618,7 +5608,7 @@ flatten_join_alias_var_optimizer(Query *query, int queryLevel)
 	if (NIL != scatterClause)
 	{
 		queryNew->scatterClause = (List *) flatten_join_alias_vars(queryNew, (Node *) scatterClause);
-		pfree(scatterClause);
+		list_free(scatterClause);
 	}
 
 	Node *limitOffset = queryNew->limitOffset;

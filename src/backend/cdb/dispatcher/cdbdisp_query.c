@@ -630,11 +630,8 @@ cdbdisp_buildPlanQueryParms(struct QueryDesc *queryDesc,
 
 	int			splan_len,
 				splan_len_uncompressed,
-				sddesc_len,
-				rootIdx;
+				sddesc_len;
 	Oid			save_userid;
-
-	rootIdx = RootSliceIndex(queryDesc->estate);
 
 	DispatchCommandQueryParms *pQueryParms = (DispatchCommandQueryParms *) palloc0(sizeof(*pQueryParms));
 
