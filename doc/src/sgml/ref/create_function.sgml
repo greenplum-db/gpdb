@@ -29,7 +29,7 @@ CREATE [ OR REPLACE ] FUNCTION
     | IMMUTABLE | STABLE | VOLATILE | [ NOT ] LEAKPROOF
     | CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT
     | [ EXTERNAL ] SECURITY INVOKER | [ EXTERNAL ] SECURITY DEFINER
-    | EXECUTE ON { ANY | MASTER | ALL SEGMENTS }
+    | EXECUTE ON { ANY | MASTER | ALL SEGMENTS | INITPLAN }
     | COST <replaceable class="parameter">execution_cost</replaceable>
     | ROWS <replaceable class="parameter">result_rows</replaceable>
     | SET <replaceable class="parameter">configuration_parameter</replaceable> { TO <replaceable class="parameter">value</replaceable> | = <replaceable class="parameter">value</replaceable> | FROM CURRENT }
