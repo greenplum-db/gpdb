@@ -961,12 +961,10 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 	 */
 	Assert(foundUniqueIndex);
 
-
-
 	appendStringInfoString(&querybuf,
 						   " AND newdata.* OPERATOR(pg_catalog.*=) mv.*) "
 						   "WHERE newdata.* IS NULL OR mv.* IS NULL "
-						   "ORDER BY tid ");
+						   "ORDER BY tid "); /* GPDB: tailing space matters */
 	appendStringInfoString(&querybuf, distributed);
 
 	/* Create the temporary "diff" table. */

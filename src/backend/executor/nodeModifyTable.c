@@ -1770,7 +1770,8 @@ ExecSplitUpdate_Insert(ModifyTableState *mtstate,
 
 		slot = ExecInsert(mtstate, slot, planSlot,
 						  orig_slot, resultRelInfo,
-						  estate, mtstate->canSetTag,true /* splitUpdate */);
+						  estate, mtstate->canSetTag,
+						  true /* splitUpdate */);
 
 		/* Revert ExecPrepareTupleRouting's node change. */
 		estate->es_result_relation_info = resultRelInfo;
