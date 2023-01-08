@@ -69,6 +69,7 @@ JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = (
     ] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
 )
 
+default_os_type = 'rhel8'
 
 def suggested_git_remote():
     """Try to guess the current git remote"""
@@ -165,6 +166,7 @@ def create_pipeline(args, git_remote, git_branch):
         'generator_filename': os.path.basename(__file__),
         'timestamp': datetime.datetime.now(),
         'os_type': args.os_type,
+        'default_os_type': default_os_type,
         'os_username': os_username[args.os_type],
         'test_os': test_os[args.os_type],
         'test_sections': args.test_sections,
@@ -298,7 +300,7 @@ def main():
         '--os_type',
         action='store',
         dest='os_type',
-        default='rhel8',
+        default=default_os_type,
         choices=['rhel8', 'rocky8', 'oel8'],
         help='OS value to support'
     )
