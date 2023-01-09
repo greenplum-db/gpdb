@@ -700,6 +700,10 @@ old_8_3_invalidate_bpchar_pattern_ops_indexes(ClusterInfo *cluster,
  *	value and 'is_called' from the old database.  This is safe to run
  *	by pg_upgrade because sequence files are not transferred from the old
  *	server, even in link mode.
+ *
+ *	XXX: The below script is generated "and" automatically applied by
+ *  pg_upgrade. The script upgrades sequences and preserve their current
+ *  values. The command line output "Adjusting sequences" can confirm this.
  */
 char *
 old_8_3_create_sequence_script(ClusterInfo *cluster)
