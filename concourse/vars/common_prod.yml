@@ -19,8 +19,6 @@ rc-build-type: debug
 rc-build-type-gcs: ".debug"
 reduced-frequency-trigger-start: 1:00 AM
 reduced-frequency-trigger-stop: 0:59 AM
-reduced-frequency-trigger-flag: false
-gpdb_src-trigger-flag: true
 configure_flags: "--enable-cassert --enable-tap-tests"
 configure_flags_with_extensions: "--enable-cassert --enable-tap-tests --enable-debug-extensions"
 use_ccache: true

@@ -69,7 +69,7 @@ JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = (
     ] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
 )
 
-default_os_type = 'rhel8'
+default_os_type = 'rocky8'
 
 def suggested_git_remote():
     """Try to guess the current git remote"""
@@ -169,6 +169,7 @@ def create_pipeline(args, git_remote, git_branch):
         'default_os_type': default_os_type,
         'os_username': os_username[args.os_type],
         'test_os': test_os[args.os_type],
+        'pipeline_target': args.pipeline_target,
         'test_sections': args.test_sections,
         'pipeline_configuration': args.pipeline_configuration,
         'test_trigger': test_trigger,
@@ -259,6 +260,8 @@ def print_fly_commands(args, git_remote, git_branch):
     if args.pipeline_target == 'prod':
         print('NOTE: You can set the production pipelines with the following:\n')
         pipeline_name = "gpdb_%s" % BASE_BRANCH if BASE_BRANCH == "main" else BASE_BRANCH
+        if args.os_type != default_os_type:
+            pipeline_name += "_" + args.os_type
         print(gen_pipeline(args, pipeline_name, ["common_prod.yml"],
                            "https://github.com/greenplum-db/gpdb.git", BASE_BRANCH))
         print(gen_pipeline(args, "%s_without_asserts" % pipeline_name, ["common_prod.yml", "without_asserts_common_prod.yml"],

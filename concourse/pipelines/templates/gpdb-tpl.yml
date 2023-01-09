@@ -548,14 +548,15 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/bin_gpdb_clients_windows/greenplum-clients-x86_64.tar.gz
 
+{% if os_type != default_os_type and pipeline_target == "prod" %}
 - name: reduced-frequency-trigger
   type: time
   source:
     location: America/Los_Angeles
-    days: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday]
     start: ((reduced-frequency-trigger-start))
     stop: ((reduced-frequency-trigger-stop))
-
+    interval: 168h
+{% endif %}
 
 ## ======================================================================
 ##    _       _
@@ -603,12 +604,18 @@ jobs:
   plan:
   - in_parallel:
       steps:
+      {% if os_type != default_os_type and pipeline_target == "prod" %}
       - get: reduced-frequency-trigger
-        trigger: ((reduced-frequency-trigger-flag))
+        trigger: true
+      {% endif %}
       - get: gpdb_src
         passed:
           - check_format
-        trigger: ((gpdb_src-trigger-flag))
+        {% if os_type != default_os_type and pipeline_target == "prod" %}
+        trigger: false
+        {% else %}
+        trigger: true
+        {% endif %}
       - get: gpdb7-[[ os_type ]]-build
   - task: compile_gpdb
     image: gpdb7-[[ os_type ]]-build
