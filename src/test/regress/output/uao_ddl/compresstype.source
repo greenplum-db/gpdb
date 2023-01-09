@@ -68,12 +68,15 @@ not NULL AND visimapidxid is not NULL AND relid='uao_tab_compress_zlib1'::regcla
               1
 (1 row)
 
-SELECT 1 AS compression_present from pg_appendonly WHERE
-compresstype='zlib' AND compresslevel=1 AND relid='uao_tab_compress_zlib1'::regclass;
- compression_present 
----------------------
-                   1
-(1 row)
+SELECT reloption from pg_class, unnest(reloptions) as reloption
+where relname='uao_tab_compress_zlib1';
+     reloption     
+-------------------
+ blocksize=32768
+ checksum=true
+ compresstype=zlib
+ compresslevel=1
+(4 rows)
 
 -- create uao table with compress=zlib COMPRESSLEVEL=9
 CREATE TABLE uao_tab_compress_zlib9 (
@@ -125,12 +128,15 @@ not NULL AND visimapidxid is not NULL AND relid='uao_tab_compress_zlib9'::regcla
               1
 (1 row)
 
-SELECT 1 AS compression_present from pg_appendonly WHERE
-compresstype='zlib' AND compresslevel=9 AND relid='uao_tab_compress_zlib9'::regclass;
- compression_present 
----------------------
-                   1
-(1 row)
+SELECT reloption from pg_class, unnest(reloptions) as reloption
+where relname='uao_tab_compress_zlib9';
+     reloption     
+-------------------
+ blocksize=32768
+ checksum=true
+ compresstype=zlib
+ compresslevel=9
+(4 rows)
 
 COMMIT;
 -- Verify that RLE compression is not allowed for row oriented

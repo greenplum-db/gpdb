@@ -159,43 +159,43 @@ SELECT c.relname, c.reloptions FROM pg_class c WHERE c.relname LIKE 'part_relopt
 (6 rows)
 
 -- Check setting reloptions for AO and AOCO tables too.
--- Also, for these tables we check pg_appendonly and pg_attribute_encoding too.
+-- Also, for these tables we check pg_class and pg_attribute_encoding too.
 -- AO table:
 ALTER TABLE part_relopt SET ACCESS METHOD ao_row WITH (compresstype=zlib, compresslevel=5);
-SELECT c.relname, c.reloptions, a.blocksize, a.compresslevel FROM pg_class c LEFT JOIN pg_appendonly a ON a.relid = c.oid WHERE c.relname LIKE 'part_relopt%';
-     relname     |             reloptions              | blocksize | compresslevel 
------------------+-------------------------------------+-----------+---------------
- part_relopt     | {compresstype=zlib,compresslevel=5} |           |              
- part_relopt_1   | {compresstype=zlib,compresslevel=5} |     32768 |             5
- part_relopt_2   | {compresstype=zlib,compresslevel=5} |           |              
- part_relopt_2_1 | {compresstype=zlib,compresslevel=5} |     32768 |             5
- part_relopt_2_2 | {compresstype=zlib,compresslevel=5} |     32768 |             5
- part_relopt_3   | {compresstype=zlib,compresslevel=5} |     32768 |             5
+SELECT c.relname, am.amname, c.reloptions FROM pg_class c JOIN pg_am am on am.oid=c.relam WHERE c.relname LIKE 'part_relopt%';
+     relname     | amname |                            reloptions                             
+-----------------+--------+-------------------------------------------------------------------
+ part_relopt     | ao_row | {compresstype=zlib,compresslevel=5}
+ part_relopt_1   | ao_row | {compresstype=zlib,compresslevel=5,blocksize=32768,checksum=true}
+ part_relopt_2   | ao_row | {compresstype=zlib,compresslevel=5}
+ part_relopt_2_1 | ao_row | {compresstype=zlib,compresslevel=5,blocksize=32768,checksum=true}
+ part_relopt_2_2 | ao_row | {compresstype=zlib,compresslevel=5,blocksize=32768,checksum=true}
+ part_relopt_3   | ao_row | {compresstype=zlib,compresslevel=5,blocksize=32768,checksum=true}
 (6 rows)
 
 ALTER TABLE part_relopt SET (compresslevel=7);
-SELECT c.relname, c.reloptions, a.blocksize, a.compresslevel FROM pg_class c LEFT JOIN pg_appendonly a ON a.relid = c.oid WHERE c.relname LIKE 'part_relopt%';
-     relname     |             reloptions              | blocksize | compresslevel 
------------------+-------------------------------------+-----------+---------------
- part_relopt     | {compresstype=zlib,compresslevel=7} |           |              
- part_relopt_1   | {compresstype=zlib,compresslevel=7} |     32768 |             7
- part_relopt_2   | {compresstype=zlib,compresslevel=7} |           |              
- part_relopt_2_1 | {compresstype=zlib,compresslevel=7} |     32768 |             7
- part_relopt_2_2 | {compresstype=zlib,compresslevel=7} |     32768 |             7
- part_relopt_3   | {compresstype=zlib,compresslevel=7} |     32768 |             7
+SELECT c.relname, am.amname, c.reloptions FROM pg_class c JOIN pg_am am on am.oid=c.relam WHERE c.relname LIKE 'part_relopt%';
+     relname     | amname |                            reloptions                             
+-----------------+--------+-------------------------------------------------------------------
+ part_relopt     | ao_row | {compresstype=zlib,compresslevel=7}
+ part_relopt_1   | ao_row | {compresstype=zlib,blocksize=32768,checksum=true,compresslevel=7}
+ part_relopt_2   | ao_row | {compresstype=zlib,compresslevel=7}
+ part_relopt_2_1 | ao_row | {compresstype=zlib,blocksize=32768,checksum=true,compresslevel=7}
+ part_relopt_2_2 | ao_row | {compresstype=zlib,blocksize=32768,checksum=true,compresslevel=7}
+ part_relopt_3   | ao_row | {compresstype=zlib,blocksize=32768,checksum=true,compresslevel=7}
 (6 rows)
 
 --AOCO table: Also check setting column encoding
 ALTER TABLE part_relopt SET ACCESS METHOD ao_column WITH (compresstype=rle_type, compresslevel=1), ALTER COLUMN a SET ENCODING (compresstype=rle_type, compresslevel=2), ALTER COLUMN b SET ENCODING (compresstype=zlib, compresslevel=3);
-SELECT c.relname, c.reloptions, a.blocksize, a.compresslevel FROM pg_class c LEFT JOIN pg_appendonly a ON a.relid = c.oid WHERE c.relname LIKE 'part_relopt%';
-     relname     |               reloptions                | blocksize | compresslevel 
------------------+-----------------------------------------+-----------+---------------
- part_relopt     | {compresstype=rle_type,compresslevel=1} |           |              
- part_relopt_1   | {compresstype=rle_type,compresslevel=1} |     32768 |             1
- part_relopt_2   | {compresstype=rle_type,compresslevel=1} |           |              
- part_relopt_2_1 | {compresstype=rle_type,compresslevel=1} |     32768 |             1
- part_relopt_2_2 | {compresstype=rle_type,compresslevel=1} |     32768 |             1
- part_relopt_3   | {compresstype=rle_type,compresslevel=1} |     32768 |             1
+SELECT c.relname, am.amname, c.reloptions FROM pg_class c JOIN pg_am am on am.oid=c.relam WHERE c.relname LIKE 'part_relopt%';
+     relname     |  amname   |                              reloptions                               
+-----------------+-----------+-----------------------------------------------------------------------
+ part_relopt     | ao_column | {compresstype=rle_type,compresslevel=1}
+ part_relopt_1   | ao_column | {compresstype=rle_type,compresslevel=1,blocksize=32768,checksum=true}
+ part_relopt_2   | ao_column | {compresstype=rle_type,compresslevel=1}
+ part_relopt_2_1 | ao_column | {compresstype=rle_type,compresslevel=1,blocksize=32768,checksum=true}
+ part_relopt_2_2 | ao_column | {compresstype=rle_type,compresslevel=1,blocksize=32768,checksum=true}
+ part_relopt_3   | ao_column | {compresstype=rle_type,compresslevel=1,blocksize=32768,checksum=true}
 (6 rows)
 
 SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
@@ -217,15 +217,15 @@ WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND
 (12 rows)
 
 ALTER TABLE part_relopt SET (compresslevel=3);
-SELECT c.relname, c.reloptions, a.blocksize, a.compresslevel FROM pg_class c LEFT JOIN pg_appendonly a ON a.relid = c.oid WHERE c.relname LIKE 'part_relopt%';
-     relname     |               reloptions                | blocksize | compresslevel 
------------------+-----------------------------------------+-----------+---------------
- part_relopt     | {compresstype=rle_type,compresslevel=3} |           |              
- part_relopt_1   | {compresstype=rle_type,compresslevel=3} |     32768 |             3
- part_relopt_2   | {compresstype=rle_type,compresslevel=3} |           |              
- part_relopt_2_1 | {compresstype=rle_type,compresslevel=3} |     32768 |             3
- part_relopt_2_2 | {compresstype=rle_type,compresslevel=3} |     32768 |             3
- part_relopt_3   | {compresstype=rle_type,compresslevel=3} |     32768 |             3
+SELECT c.relname, am.amname, c.reloptions FROM pg_class c JOIN pg_am am on am.oid=c.relam WHERE c.relname LIKE 'part_relopt%';
+     relname     |  amname   |                              reloptions                               
+-----------------+-----------+-----------------------------------------------------------------------
+ part_relopt     | ao_column | {compresstype=rle_type,compresslevel=3}
+ part_relopt_1   | ao_column | {compresstype=rle_type,blocksize=32768,checksum=true,compresslevel=3}
+ part_relopt_2   | ao_column | {compresstype=rle_type,compresslevel=3}
+ part_relopt_2_1 | ao_column | {compresstype=rle_type,blocksize=32768,checksum=true,compresslevel=3}
+ part_relopt_2_2 | ao_column | {compresstype=rle_type,blocksize=32768,checksum=true,compresslevel=3}
+ part_relopt_3   | ao_column | {compresstype=rle_type,blocksize=32768,checksum=true,compresslevel=3}
 (6 rows)
 
 SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
@@ -406,26 +406,26 @@ HINT:  Alter tables individually or change the child's AM to be same as parent.
 ALTER TABLE part_relopt2_1 SET (fillfactor=70);
 ALTER TABLE part_relopt2_2_1 SET (blocksize=65536);
 SELECT c.relname, c.reloptions FROM pg_class c WHERE c.relname = 'part_relopt2_1' OR c.relname = 'part_relopt2_2_1';
-     relname      |    reloptions     
-------------------+-------------------
+     relname      |                            reloptions                             
+------------------+-------------------------------------------------------------------
  part_relopt2_1   | {fillfactor=70}
- part_relopt2_2_1 | {blocksize=65536}
+ part_relopt2_2_1 | {compresslevel=0,compresstype=none,checksum=true,blocksize=65536}
 (2 rows)
 
 ALTER TABLE part_relopt2 RESET(fillfactor);
 SELECT c.relname, c.reloptions FROM pg_class c WHERE c.relname = 'part_relopt2_1' OR c.relname = 'part_relopt2_2_1';
-     relname      |    reloptions     
-------------------+-------------------
+     relname      |                            reloptions                             
+------------------+-------------------------------------------------------------------
  part_relopt2_1   | 
- part_relopt2_2_1 | {blocksize=65536}
+ part_relopt2_2_1 | {compresslevel=0,compresstype=none,checksum=true,blocksize=65536}
 (2 rows)
 
 ALTER TABLE part_relopt2 RESET(blocksize);
 SELECT c.relname, c.reloptions FROM pg_class c WHERE c.relname = 'part_relopt2_1' OR c.relname = 'part_relopt2_2_1';
-     relname      | reloptions 
-------------------+------------
+     relname      |                            reloptions                             
+------------------+-------------------------------------------------------------------
  part_relopt2_1   | 
- part_relopt2_2_1 | 
+ part_relopt2_2_1 | {compresslevel=0,compresstype=none,checksum=true,blocksize=32768}
 (2 rows)
 
 DROP TABLE part_relopt2;

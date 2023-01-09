@@ -68,6 +68,9 @@ ALTER TABLE heap2ao2 SET WITH (appendoptimized=true);
 \d+ heap2ao
 \d+ heap2ao2
 
+-- Check reloptions
+SELECT relname, reloptions from pg_class where relname in ('heap2ao', 'heap2ao2');
+
 -- Check data is intact
 SELECT * FROM heap2ao;
 SELECT * FROM heap2ao2;
@@ -117,12 +120,8 @@ ALTER TABLE heapbase2 SET WITH (appendoptimized=true);
 
 -- The altered tables should inherit storage options from gp_default_storage_options
 show gp_default_storage_options;
-SELECT blocksize,compresslevel,checksum,compresstype
-FROM pg_appendonly WHERE relid in ('heapbase'::regclass::oid, 'heapbase2'::regclass::oid);
 SELECT reloptions from pg_class where relname in ('heapbase','heapbase2');
 
-SELECT blocksize,compresslevel,checksum,compresstype
-FROM pg_appendonly WHERE relid in ('heapchild'::regclass::oid, 'heapchild2'::regclass::oid);
 SELECT reloptions from pg_class where relname in ('heapchild','heapchild2');
 
 -- The altered parent tables should have AO AM but child tables are still heap
@@ -413,10 +412,6 @@ SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class 
 -- AM and reloptions changed accordingly
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ao2co%';
 
--- pg_appendonly should reflect the changes in reloptions
-SELECT c.relname,a.blocksize,a.compresslevel,a.checksum,a.compresstype
-FROM pg_appendonly a, pg_class c WHERE a.relid = c.oid AND relname like ('ao2co%');
-
 DROP TABLE ao2co;
 DROP TABLE ao2co2;
 DROP TABLE ao2co3;
@@ -519,8 +514,6 @@ INSERT INTO co2ao4 SELECT i,i FROM generate_series(1,5) i;
 -- Prior-ATSETAM checks:
 -- Check once that the AOCO tables have the custom reloptions
 SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2ao%';
--- Check once that pg_appendonly has expected entries.
-SELECT c.relname, p.compresstype, p.compresslevel, p.blocksize FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'co2ao%' AND c.oid = p.relid;
 -- Check once that the pg_attribute_encoding has entries for the AOCO tables.
 SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2ao%';
 -- Check once on the aoblkdirs
@@ -568,9 +561,6 @@ SELECT * FROM gp_toolkit.__gp_aoseg('co2ao3');
 SELECT * FROM gp_toolkit.__gp_aocsseg('co2ao3');
 SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('co2ao3')).* FROM gp_dist_random('gp_id');
 SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('co2ao3')).* FROM gp_dist_random('gp_id');
-
--- pg_appendonly entries should be still be there, but options has changed accordingly.
-SELECT c.relname, p.compresstype, p.compresslevel, p.blocksize FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'co2ao%' AND c.oid = p.relid;
 
 -- The altered tables should show AO AM.
 SELECT c.relname, a.amname FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'co2ao%';
@@ -649,10 +639,6 @@ SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class 
 
 -- AM and reloptions changed accordingly
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'heap2co%';
-
--- pg_appendonly should reflect the changes in reloptions
-SELECT c.relname,a.blocksize,a.compresslevel,a.checksum,a.compresstype
-FROM pg_appendonly a, pg_class c WHERE a.relid = c.oid AND relname like ('heap2co%');
 
 DROP TABLE heap2co;
 DROP TABLE heap2co2;

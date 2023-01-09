@@ -77,19 +77,19 @@ ALTER TABLE part_relopt RESET(fillfactor);
 SELECT c.relname, c.reloptions FROM pg_class c WHERE c.relname LIKE 'part_relopt%';
 
 -- Check setting reloptions for AO and AOCO tables too.
--- Also, for these tables we check pg_appendonly and pg_attribute_encoding too.
+-- Also, for these tables we check pg_class and pg_attribute_encoding too.
 -- AO table:
 ALTER TABLE part_relopt SET ACCESS METHOD ao_row WITH (compresstype=zlib, compresslevel=5);
-SELECT c.relname, c.reloptions, a.blocksize, a.compresslevel FROM pg_class c LEFT JOIN pg_appendonly a ON a.relid = c.oid WHERE c.relname LIKE 'part_relopt%';
+SELECT c.relname, am.amname, c.reloptions FROM pg_class c JOIN pg_am am on am.oid=c.relam WHERE c.relname LIKE 'part_relopt%';
 ALTER TABLE part_relopt SET (compresslevel=7);
-SELECT c.relname, c.reloptions, a.blocksize, a.compresslevel FROM pg_class c LEFT JOIN pg_appendonly a ON a.relid = c.oid WHERE c.relname LIKE 'part_relopt%';
+SELECT c.relname, am.amname, c.reloptions FROM pg_class c JOIN pg_am am on am.oid=c.relam WHERE c.relname LIKE 'part_relopt%';
 --AOCO table: Also check setting column encoding
 ALTER TABLE part_relopt SET ACCESS METHOD ao_column WITH (compresstype=rle_type, compresslevel=1), ALTER COLUMN a SET ENCODING (compresstype=rle_type, compresslevel=2), ALTER COLUMN b SET ENCODING (compresstype=zlib, compresslevel=3);
-SELECT c.relname, c.reloptions, a.blocksize, a.compresslevel FROM pg_class c LEFT JOIN pg_appendonly a ON a.relid = c.oid WHERE c.relname LIKE 'part_relopt%';
+SELECT c.relname, am.amname, c.reloptions FROM pg_class c JOIN pg_am am on am.oid=c.relam WHERE c.relname LIKE 'part_relopt%';
 SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
 WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt%';
 ALTER TABLE part_relopt SET (compresslevel=3);
-SELECT c.relname, c.reloptions, a.blocksize, a.compresslevel FROM pg_class c LEFT JOIN pg_appendonly a ON a.relid = c.oid WHERE c.relname LIKE 'part_relopt%';
+SELECT c.relname, am.amname, c.reloptions FROM pg_class c JOIN pg_am am on am.oid=c.relam WHERE c.relname LIKE 'part_relopt%';
 SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
 WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt%';
 ALTER TABLE part_relopt ALTER COLUMN a SET ENCODING (compresstype=rle_type, compresslevel=4), ALTER COLUMN b SET ENCODING (compresstype=zlib, compresslevel=5);
