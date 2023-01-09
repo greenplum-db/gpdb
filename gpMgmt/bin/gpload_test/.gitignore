@@ -2,6 +2,7 @@ query*.out
 query*.sql
 gpload/config
 gpload2/config
+gpload2/large_file.csv
 gpload2/setup.out
 gpload2/data_file.txt
 gpload2/data_file.tbl
@@ -10,8 +11,10 @@ gpload2/data_file1.txt
 gpload2/data_file1.txt.bz2
 gpload2/data_file2.txt
 gpload2/data_file.csv
+gpload2/data/data_file.tbl
 GPTest.pm
 gpstringsubs.pl
 gpdiff.pl
 atmsort.pm
 explain.pm
+
