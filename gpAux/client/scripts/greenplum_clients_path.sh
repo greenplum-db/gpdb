@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 if test -n "${ZSH_VERSION:-}"; then
     # zsh
     SCRIPT_PATH="${(%):-%x}"
@@ -44,5 +42,5 @@ else
 fi
 
 if [ "$1" != "-q" ]; then
-  command -v python >/dev/null || echo "Warning: Python not found, which is required to run gpload."
+  command -v python3 >/dev/null || echo "Warning: Python 3 not found, which is required to run gpload."
 fi
