@@ -71,15 +71,18 @@ $ ./gen_pipeline.py -t prod
 ======================================================================
 Validate Pipeline Release Jobs
 ----------------------------------------------------------------------
-all jobs accounted for
+Pipeline validated: all jobs accounted for
 
 ======================================================================
-  Generate Pipeline type: .. : prod
+  Pipeline target: ......... : prod
   Pipeline file ............ : gpdb_main-generated.yml
   Template file ............ : gpdb-tpl.yml
-  OS Types ................. : ['rhel8', 'win']
-  Test sections ............ : ['ICW', 'CS', 'MPP', 'MM', 'DPM', 'UD', 'FileRep']
+  OS Type .................. : rocky8
+  Test sections ............ : ['ICW', 'ResourceGroups', 'Interconnect', 'CLI', 'Extensions']
   test_trigger ............. : True
+  use_ICW_workers .......... : True
+  build_test_rc_rpm ........ : False
+  directed_release ......... : False
 ======================================================================
 
 NOTE: You can set the production pipelines with the following:
