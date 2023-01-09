@@ -612,7 +612,7 @@ PortalStart(Portal portal, ParamListInfo params,
 				 *
 				 * This could improve some efficiency on OLTP.
 				 */
-				if (!IsInTransactionBlock(true) && !snapshot)
+				if (Gp_role == GP_ROLE_DISPATCH && !IsInTransactionBlock(true) && !snapshot)
 				{
 					/* check whether we need to create distributed snapshot */
 					int 		determinedSliceIndex = 1;
