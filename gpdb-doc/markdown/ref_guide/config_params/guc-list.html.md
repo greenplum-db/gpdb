@@ -220,7 +220,7 @@ For each query run, prints the Greenplum query slice plan. *client\_min\_message
 
 ## <a id="default_statistics_target"></a>default\_statistics\_target 
 
-Sets the default statistics sampling target \(the number of values that are stored in the list of common values\) for table columns that have not had a column-specific target set via `ALTER TABLE SET STATISTICS`. Larger values may improve the quality of the Postgres Planner estimates.
+Sets the default statistics sampling target \(the number of values that are stored in the list of common values\) for table columns that have not had a column-specific target set via `ALTER TABLE SET STATISTICS`. Larger values may improve the quality of the Postgres Planner estimates, particularly for columns with irregular data distributions, at the expense of consuming more space in `pg_statistic` and slightly more time to compute the estimates. Conversely, a lower limit might be sufficient for columns with simple data distributions.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1420,11 +1420,13 @@ Set to on to deactivate writes to the database. Any in progress transactions mus
 
 ## <a id="gp_statistics_pullup_from_child_partition"></a>gp\_statistics\_pullup\_from\_child\_partition 
 
-Enables the use of statistics from child tables when planning queries on the parent table by the Postgres Planner.
+This parameter directs the Postgres Planner on where to obtain statistics when it plans a query on a partitioned table.
+
+The default value is `off`, the Postgres Planner uses the statistics of the root partitioned table when it plans a query. When set to `on`, the Planner attempts to use the statistics from the largest child partition when it plans a query on a partitioned table.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|off|master, session, reload|
 
 ## <a id="gp_statistics_use_fkeys"></a>gp\_statistics\_use\_fkeys 
 
