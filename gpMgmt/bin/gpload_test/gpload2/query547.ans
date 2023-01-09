@@ -1,0 +1,23 @@
+TODAYS_DATE1|INFO|gpload session started TODAYS_DATE2
+TODAYS_DATE1|INFO|setting schema 'public' for table 'testheaderreuse'
+TODAYS_DATE1|INFO|ports
+TODAYS_DATE1|INFO|running time: RUNNING_TIME seconds
+TODAYS_DATE1|INFO|rows Inserted          = 2
+TODAYS_DATE1|INFO|rows Updated           = 0
+TODAYS_DATE1|INFO|data formatting errors = 0
+TODAYS_DATE1|INFO|gpload succeeded
+TRUNCATE TABLE
+TODAYS_DATE1|INFO|gpload session started TODAYS_DATE2
+TODAYS_DATE1|INFO|setting schema 'public' for table 'texttable'
+TODAYS_DATE1|INFO|ports
+TODAYS_DATE1|INFO|did not find an external table to reuse. creating EXT_GPLOAD_REUSABLE
+TODAYS_DATE1|INFO|running time: RUNNING_TIME seconds
+TODAYS_DATE1|INFO|rows Inserted          = 9
+TODAYS_DATE1|INFO|rows Updated           = 0
+TODAYS_DATE1|INFO|data formatting errors = 0
+TODAYS_DATE1|INFO|gpload succeeded
+ count
+-------
+     9
+(1 row)
+

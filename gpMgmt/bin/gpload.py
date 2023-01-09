@@ -2636,7 +2636,14 @@ class gpload:
         sql = 'CREATE %sTABLE %s ' % (is_temp_table, self.staging_table_name)
         cols = ['"%s" %s' % (a[0], a[1]) for a in target_columns]
         sql += "(%s)" % ','.join(cols)
-        sql += distcols
+
+        # When the field selected as the DISTRIBUTION KEY does not exist when the table is created, 
+        # we need to ensure that the table is created successfully, so the CREATE TABLE statement 
+        # should not explicitly specify the DISTRIBUTED BY clause.
+        # Only the DISTRIBUTED BY clause can take effect if all selected fields 
+        # exist in the CREATE TABLE statement.
+        if set(distcols) <= set(element[0] for element in target_columns):
+            sql += distcols
         self.log(self.LOG, sql)
 
         if not self.options.D:
