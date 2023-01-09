@@ -1202,7 +1202,7 @@ jobs:
       - get: gpdb6-[[ os_type ]]-test
   - task: ic_gpdb
     {% if use_ICW_workers %}
-    tags: [icw-[[ os_type ]]]
+    tags: [icw-worker]
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb_binary_swap.yml
     image: gpdb6-[[ os_type ]]-test
@@ -1233,7 +1233,7 @@ jobs:
       - get: gpdb6-[[ os_type ]]-test
   - task: ic_gpdb
     {% if use_ICW_workers %}
-    tags: [icw-[[ os_type ]]]
+    tags: [icw-worker]
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-[[ os_type ]]-test
@@ -1259,7 +1259,7 @@ jobs:
       - get: gpdb6-[[ os_type ]]-test
   - task: ic_gpdb
     {% if use_ICW_workers %}
-    tags: [icw-[[ os_type ]]]
+    tags: [icw-worker]
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-[[ os_type ]]-test
@@ -1285,7 +1285,7 @@ jobs:
       - get: gpdb6-[[ os_type ]]-test
   - task: ic_gpdb
     {% if use_ICW_workers %}
-    tags: [icw-[[ os_type ]]]
+    tags: [icw-worker]
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-[[ os_type ]]-test
@@ -1311,7 +1311,7 @@ jobs:
       - get: gpdb6-[[ os_type ]]-test
   - task: ic_gpdb
     {% if use_ICW_workers %}
-    tags: [icw-[[ os_type ]]]
+    tags: [icw-worker]
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-[[ os_type ]]-test
@@ -1336,7 +1336,7 @@ jobs:
       - get: gpdb6-[[ os_type ]]-test
   - task: ic_gpdb
     {% if use_ICW_workers %}
-    tags: [icw-[[ os_type ]]]
+    tags: [icw-worker]
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-[[ os_type ]]-test
