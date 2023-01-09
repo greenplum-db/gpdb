@@ -572,8 +572,6 @@ PortalStart(Portal portal, ParamListInfo params,
     
 	portal->ddesc = ddesc;
 
-	needDistributedSnapshot = true;
-
 	/*
 	 * Set up global portal context pointers.  (Should we set QueryContext?)
 	 */
@@ -607,19 +605,19 @@ PortalStart(Portal portal, ParamListInfo params,
 		{
 			case PORTAL_ONE_SELECT:
 
-				if (!IsInTransactionBlock(true))
+				/*
+				 * GPDB: If we just have one motion and slices[1] can be direct dispatched,
+				 * we do not need to grab distributed snapshot on QD, the local snapshot on
+				 * QE is enough if we meet direct dispatch.
+				 *
+				 * This could improve some efficiency on OLTP.
+				 */
+				if (!IsInTransactionBlock(true) && !snapshot)
 				{
 					/* check whether we need to create distributed snapshot */
 					int 		determinedSliceIndex = 1;
 					PlannedStmt *pstmt = linitial_node(PlannedStmt, portal->stmts);
 
-					/*
-					 * If we just have one motion and slices[1] can be direct dispatched,
-					 * we do not need to grab distributed snapshot on QD, the local snapshot
-					 * on QE is enough if we meet direct dispatch.
-					 *
-					 * This could improve some efficiency on OLTP.
-					 */
 					if (pstmt->numSlices == 2 &&
 						pstmt->slices[determinedSliceIndex].directDispatch.isDirectDispatch)
 						needDistributedSnapshot = false;
@@ -630,6 +628,9 @@ PortalStart(Portal portal, ParamListInfo params,
 					PushActiveSnapshot(snapshot);
 				else
 					PushActiveSnapshot(GetTransactionSnapshot());
+
+				/* reset value */
+				needDistributedSnapshot = true;
 
 				/*
 				 * Create QueryDesc in portal's context; for the moment, set
