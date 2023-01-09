@@ -54,8 +54,9 @@ function gen_env() {
 		}
 
 		source /usr/local/greenplum-db-devel/greenplum_path.sh
-		source /usr/local/greenplum-clients-devel/greenplum_clients_path.sh
-		cp /usr/local/greenplum-clients-devel/bin/psql /usr/local/greenplum-db-devel/bin/
+		# greenplum_clients_path.sh gets it path via `pwd`, cd to workaround this issue.
+		cd /usr/local/greenplum-clients-devel && source /usr/local/greenplum-clients-devel/greenplum_clients_path.sh
+
 		source "\${1}/gpdb_src/gpAux/gpdemo/gpdemo-env.sh"
 
 		cd "\${1}/gpdb_src/src/test/regress"
