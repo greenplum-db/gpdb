@@ -1425,8 +1425,9 @@ class checkAOSegVpinfoThread(execThread):
 
     def run(self):
         aoseg_query = """
-           SELECT a.relname, a.relid, a.segrelid, cl.relname
-           FROM (SELECT p.relid, p.segrelid, c.relname FROM pg_appendonly p LEFT JOIN pg_class c ON p.relid = c.oid WHERE p.columnstore = true) a
+           SELECT a.relname, a.relid, a.segrelid, cl.relname 
+           FROM (SELECT p.relid, p.segrelid, c.relname FROM pg_appendonly p LEFT JOIN pg_class c ON p.relid = c.oid LEFT JOIN pg_am a ON (a.oid = c.relam) 
+           WHERE a.amname = 'ao_column') a 
            LEFT JOIN pg_class cl ON a.segrelid = cl.oid;
         """
 
