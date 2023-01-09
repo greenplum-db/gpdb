@@ -1714,10 +1714,11 @@ describeOneTableDetails(const char *schemaname,
 		char		relreplident;
 		char	   *relam;
 
-		char	   *compressionType;
-		char	   *compressionLevel;
-		char	   *blockSize;
-		char	   *checksum;
+		char	  *compressionType;
+		char	  *compressionLevel;
+		char	  *blockSize;
+		char	  *checksum;
+
 	}			tableinfo;
 	bool		show_column_details = false;
 
@@ -1742,17 +1743,16 @@ describeOneTableDetails(const char *schemaname,
 		printfPQExpBuffer(&buf,
 						  "SELECT c.relchecks, c.relkind, c.relhasindex, c.relhasrules, "
 						  "c.relhastriggers, c.relrowsecurity, c.relforcerowsecurity, "
-						  "false AS relhasoids, c.relispartition, %s, c.reltablespace, "
+						  "false AS relhasoids, c.relispartition, "
+						  "pg_catalog.array_to_string(c.reloptions || "
+						  "array(select 'toast.' || x from pg_catalog.unnest(tc.reloptions) x), ', '),"
+						  "c.reltablespace, "
 						  "CASE WHEN c.reloftype = 0 THEN '' ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text END, "
 						  "c.relpersistence, c.relreplident, am.amname\n"
 						  "FROM pg_catalog.pg_class c\n "
 						  "LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)\n"
 						  "LEFT JOIN pg_catalog.pg_am am ON (c.relam = am.oid)\n"
 						  "WHERE c.oid = '%s';",
-						  (verbose ?
-						   "pg_catalog.array_to_string(c.reloptions || "
-						   "array(select 'toast.' || x from pg_catalog.unnest(tc.reloptions) x), ', ')\n"
-						   : "''"),
 						  oid);
 	}
 	else if (pset.sversion >= 100000)
@@ -1760,16 +1760,15 @@ describeOneTableDetails(const char *schemaname,
 		printfPQExpBuffer(&buf,
 						  "SELECT c.relchecks, c.relkind, c.relhasindex, c.relhasrules, "
 						  "c.relhastriggers, c.relrowsecurity, c.relforcerowsecurity, "
-						  "c.relhasoids, c.relispartition, %s, c.reltablespace, "
+						  "c.relhasoids, c.relispartition, "
+						  "pg_catalog.array_to_string(c.reloptions || "
+						  "array(select 'toast.' || x from pg_catalog.unnest(tc.reloptions) x), ', '), "
+						  "c.reltablespace, "
 						  "CASE WHEN c.reloftype = 0 THEN '' ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text END, "
 						  "c.relpersistence, c.relreplident\n"
 						  "FROM pg_catalog.pg_class c\n "
 						  "LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)\n"
 						  "WHERE c.oid = '%s';",
-						  (verbose ?
-						   "pg_catalog.array_to_string(c.reloptions || "
-						   "array(select 'toast.' || x from pg_catalog.unnest(tc.reloptions) x), ', ')\n"
-						   : "''"),
 						  oid);
 	}
 	else if (pset.sversion >= 90500)
@@ -1777,17 +1776,16 @@ describeOneTableDetails(const char *schemaname,
 		printfPQExpBuffer(&buf,
 						  "SELECT c.relchecks, c.relkind, c.relhasindex, c.relhasrules, "
 						  "c.relhastriggers, c.relrowsecurity, c.relforcerowsecurity, "
-						  "c.relhasoids, false as relispartition, %s, c.reltablespace, "
+						  "c.relhasoids, false as relispartition, "
+						  "pg_catalog.array_to_string(c.reloptions || "
+						  "array(select 'toast.' || x from pg_catalog.unnest(tc.reloptions) x), ', '), "
+						  "c.reltablespace, "
 						  "CASE WHEN c.reloftype = 0 THEN '' ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text END, "
 						  "c.relpersistence, c.relreplident\n"
 						  ", %s as relstorage "
 						  "FROM pg_catalog.pg_class c\n "
 						  "LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)\n"
 						  "WHERE c.oid = '%s';",
-						  (verbose ?
-						   "pg_catalog.array_to_string(c.reloptions || "
-						   "array(select 'toast.' || x from pg_catalog.unnest(tc.reloptions) x), ', ')\n"
-						   : "''"),
 						  /* GPDB Only:  relstorage  */
 						  (isGPDB() ? "c.relstorage" : "'h'"),
 						  oid);
@@ -1797,17 +1795,16 @@ describeOneTableDetails(const char *schemaname,
 		printfPQExpBuffer(&buf,
 						  "SELECT c.relchecks, c.relkind, c.relhasindex, c.relhasrules, "
 						  "c.relhastriggers, false, false, c.relhasoids, "
-						  "false as relispartition, %s, c.reltablespace, "
+						  "false as relispartition, "
+						  "pg_catalog.array_to_string(c.reloptions || "
+						  "array(select 'toast.' || x from pg_catalog.unnest(tc.reloptions) x), ', '), "
+						  "c.reltablespace, "
 						  "CASE WHEN c.reloftype = 0 THEN '' ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text END, "
 						  "c.relpersistence, c.relreplident\n"
 						  ", %s as relstorage "
 						  "FROM pg_catalog.pg_class c\n "
 						  "LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)\n"
 						  "WHERE c.oid = '%s';",
-						  (verbose ?
-						   "pg_catalog.array_to_string(c.reloptions || "
-						   "array(select 'toast.' || x from pg_catalog.unnest(tc.reloptions) x), ', ')\n"
-						   : "''"),
 						  /* GPDB Only:  relstorage  */
 						  (isGPDB() ? "c.relstorage" : "'h'"),
 						  oid);
@@ -1817,17 +1814,16 @@ describeOneTableDetails(const char *schemaname,
 		printfPQExpBuffer(&buf,
 						  "SELECT c.relchecks, c.relkind, c.relhasindex, c.relhasrules, "
 						  "c.relhastriggers, false, false, c.relhasoids, "
-						  "false as relispartition, %s, c.reltablespace, "
+						  "false as relispartition, "
+						  "pg_catalog.array_to_string(c.reloptions || "
+						  "array(select 'toast.' || x from pg_catalog.unnest(tc.reloptions) x), ', '), "
+						  "c.reltablespace, "
 						  "CASE WHEN c.reloftype = 0 THEN '' ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text END, "
 						  "c.relpersistence\n"
 						  ", %s as relstorage "
 						  "FROM pg_catalog.pg_class c\n "
 						  "LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)\n"
 						  "WHERE c.oid = '%s';",
-						  (verbose ?
-						   "pg_catalog.array_to_string(c.reloptions || "
-						   "array(select 'toast.' || x from pg_catalog.unnest(tc.reloptions) x), ', ')\n"
-						   : "''"),
 						  /* GPDB Only:  relstorage  */
 						  (isGPDB() ? "c.relstorage" : "'h'"),
 						  oid);
@@ -1837,16 +1833,15 @@ describeOneTableDetails(const char *schemaname,
 		printfPQExpBuffer(&buf,
 						  "SELECT c.relchecks, c.relkind, c.relhasindex, c.relhasrules, "
 						  "c.relhastriggers, false, false, c.relhasoids, "
-						  "false as relispartition, %s, c.reltablespace, "
+						  "false as relispartition, "
+						  "pg_catalog.array_to_string(c.reloptions || "
+						  "array(select 'toast.' || x from pg_catalog.unnest(tc.reloptions) x), ', '), "
+							"c.reltablespace, "
 						  "CASE WHEN c.reloftype = 0 THEN '' ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text END\n"
 						  ", %s as relstorage "
 						  "FROM pg_catalog.pg_class c\n "
 						  "LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)\n"
 						  "WHERE c.oid = '%s';",
-						  (verbose ?
-						   "pg_catalog.array_to_string(c.reloptions || "
-						   "array(select 'toast.' || x from pg_catalog.unnest(tc.reloptions) x), ', ')\n"
-						   : "''"),
 						  /* GPDB Only:  relstorage  */
 						  (isGPDB() ? "c.relstorage" : "'h'"),
 						  oid);
@@ -1856,15 +1851,14 @@ describeOneTableDetails(const char *schemaname,
 		printfPQExpBuffer(&buf,
 						  "SELECT c.relchecks, c.relkind, c.relhasindex, c.relhasrules, "
 						  "c.relhastriggers, false, false, c.relhasoids, "
-						  "false as relispartition, %s, c.reltablespace\n"
+						  "false as relispartition,"
+						  "pg_catalog.array_to_string(c.reloptions || "
+						  "array(select 'toast.' || x from pg_catalog.unnest(tc.reloptions) x), ', '), "
+						  "c.reltablespace\n"
 						  ", %s as relstorage "
 						  "FROM pg_catalog.pg_class c\n "
 						  "LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)\n"
 						  "WHERE c.oid = '%s';",
-						  (verbose ?
-						   "pg_catalog.array_to_string(c.reloptions || "
-						   "array(select 'toast.' || x from pg_catalog.unnest(tc.reloptions) x), ', ')\n"
-						   : "''"),
 						  /* GPDB Only:  relstorage  */
 						  (isGPDB() ? "c.relstorage" : "'h'"),
 						  oid);
@@ -1874,11 +1868,9 @@ describeOneTableDetails(const char *schemaname,
 		printfPQExpBuffer(&buf,
 						  "SELECT relchecks, relkind, relhasindex, relhasrules, "
 						  "reltriggers <> 0, false, false, relhasoids, "
-						  "false as relispartition, %s, reltablespace\n"
+						  "false as relispartition, pg_catalog.array_to_string(reloptions, E', '), reltablespace\n"
 						  ", %s as relstorage "
 						  "FROM pg_catalog.pg_class WHERE oid = '%s';",
-						  (verbose ?
-						   "pg_catalog.array_to_string(reloptions, E', ')" : "''"),
 						  /* GPDB Only:  relstorage  */
 						  (isGPDB() ? "relstorage" : "'h'"),
 						  oid);
@@ -2071,34 +2063,29 @@ describeOneTableDetails(const char *schemaname,
 		goto error_return;		/* not an error, just return early */
 	}
 
+	/* if AO reloptions are specified for table, replace the default reloptions */
 	if (tableinfo.relkind != RELKIND_PARTITIONED_TABLE &&
 		(greenplum_is_ao_column(tableinfo.relstorage, tableinfo.relam)
 			|| greenplum_is_ao_row(tableinfo.relstorage, tableinfo.relam)))
 	{
-		PGresult *result = NULL;
-		/* Get Append Only information
-		 * always have 4 bits of info: blocksize, compresstype, compresslevel and checksum
-		 */
-		printfPQExpBuffer(&buf,
-				"SELECT a.compresstype, a.compresslevel, a.blocksize, a.checksum\n"
-					"FROM pg_catalog.pg_appendonly a, pg_catalog.pg_class c\n"
-					"WHERE c.oid = a.relid AND c.oid = '%s'", oid);
 
-		result = PSQLexec(buf.data);
-		if (!result)
-			goto error_return;
+		char *reloptions = pg_strdup(tableinfo.reloptions);
+		char *key = strtok(reloptions, ",=");
+		char *value = NULL;
 
-		if (PQgetisnull(result, 0, 0) || PQgetvalue(result, 0, 0)[0] == '\0')
+		while (key != NULL)
 		{
-			tableinfo.compressionType = pg_malloc(sizeof("None") + 1);
-			strcpy(tableinfo.compressionType, "None");
-		} else
-			tableinfo.compressionType = pg_strdup(PQgetvalue(result, 0, 0));
-		tableinfo.compressionLevel = pg_strdup(PQgetvalue(result, 0, 1));
-		tableinfo.blockSize = pg_strdup(PQgetvalue(result, 0, 2));
-		tableinfo.checksum = pg_strdup(PQgetvalue(result, 0, 3));
-		PQclear(res);
-		res = NULL;
+			value = strtok(NULL, ",=");
+			if (strcmp(key, "compresstype") == 0)
+				tableinfo.compressionType = value;
+			else if (strcmp(key, "compresslevel") == 0)
+				tableinfo.compressionLevel = value;
+			else if (strcmp(key, "blocksize") == 0)
+				tableinfo.blockSize = value;
+			else if (strcmp(key, "checksum") == 0)
+				tableinfo.checksum = strcmp(value, "true") == 0 ? psprintf("%c", 't') : psprintf("%c", 'f');
+			key = strtok(NULL, ",= ");
+		}
 	}
 
 	/* Identify whether we should print collation, nullable, default vals */
@@ -2190,6 +2177,7 @@ describeOneTableDetails(const char *schemaname,
 			attstattarget_col = cols++;
 		}
 
+
 		if (greenplum_is_ao_column(tableinfo.relstorage, tableinfo.relam))
 		{
 			if (isGE42 == true)
@@ -2215,14 +2203,14 @@ describeOneTableDetails(const char *schemaname,
 		}
 	}
 
-	appendPQExpBufferStr(&buf, "\nFROM pg_catalog.pg_attribute a");
-	if (isGE42 == true)
-	{
-		appendPQExpBufferStr(&buf, "\nLEFT OUTER JOIN pg_catalog.pg_attribute_encoding e");
-		appendPQExpBufferStr(&buf, "\nON   e.attrelid = a .attrelid AND e.attnum = a.attnum");
-	}
-	appendPQExpBuffer(&buf, "\nWHERE a.attrelid = '%s' AND a.attnum > 0 AND NOT a.attisdropped", oid);
-	appendPQExpBufferStr(&buf, "\nORDER BY a.attnum;");
+	appendPQExpBuffer(&buf,
+					  " FROM pg_catalog.pg_attribute a\n"
+					  " LEFT OUTER JOIN pg_catalog.pg_attribute_encoding e\n"
+					  " ON   e.attrelid = a .attrelid AND e.attnum = a.attnum\n"
+						" LEFT JOIN pg_catalog.pg_class c\n"
+						" ON c.oid=a.attrelid\n"
+					  " WHERE a.attrelid = '%s' AND a.attnum > 0 AND NOT a.attisdropped\n"
+					  " ORDER BY a.attnum;", oid);
 
 	res = PSQLexec(buf.data);
 	if (!res)
@@ -2665,24 +2653,6 @@ describeOneTableDetails(const char *schemaname,
 		/* external tables were marked in catalogs like this before GPDB 7 */
 		if (tableinfo.relkind == 'r' && tableinfo.relstorage == 'x')
 			add_external_table_footer(&cont, oid);
-
-		/* print append only table information */
-		if (tableinfo.relkind != RELKIND_PARTITIONED_TABLE &&
-			(greenplum_is_ao_row(tableinfo.relstorage, tableinfo.relam) ||
-			greenplum_is_ao_column(tableinfo.relstorage, tableinfo.relam)))
-		{
-			if (greenplum_is_ao_row(tableinfo.relstorage, tableinfo.relam))
-			{
-				printfPQExpBuffer(&buf, _("Compression Type: %s"), tableinfo.compressionType);
-				printTableAddFooter(&cont, buf.data);
-				printfPQExpBuffer(&buf, _("Compression Level: %s"), tableinfo.compressionLevel);
-				printTableAddFooter(&cont, buf.data);
-				printfPQExpBuffer(&buf, _("Block Size: %s"), tableinfo.blockSize);
-				printTableAddFooter(&cont, buf.data);
-			}
-			printfPQExpBuffer(&buf, _("Checksum: %s"), tableinfo.checksum);
-			printTableAddFooter(&cont, buf.data);
-		}
 
         /* print indexes */
 		if (tableinfo.hasindex)
@@ -3710,15 +3680,6 @@ error_return:
 
 	if (view_def)
 		free(view_def);
-
-	if (tableinfo.compressionType)
-		free(tableinfo.compressionType);
-	if (tableinfo.compressionLevel)
-		free(tableinfo.compressionLevel);
-	if (tableinfo.blockSize)
-		free(tableinfo.blockSize);
-	if (tableinfo.checksum)
-		free(tableinfo.checksum);
 
 	if (res)
 		PQclear(res);
