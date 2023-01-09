@@ -7,13 +7,13 @@ Defines access privileges.
 ``` {#sql_command_synopsis}
 GRANT { {SELECT | INSERT | UPDATE | DELETE | REFERENCES | 
 TRIGGER | TRUNCATE } [, ...] | ALL [PRIVILEGES] }
-    ON { { [ONLY <table_name>] | [TABLE] <table_name> [, ...] }
+    ON { [TABLE] [[[ONLY] <table_name> [, ...]] [, ...]]
          | ALL TABLES IN SCHEMA <schema_name> [, ...] }
     TO <role_specification> [, ...] [ WITH GRANT OPTION ]
 
 GRANT { { SELECT | INSERT | UPDATE | REFERENCES } ( <column_name> [, ...] )
     [, ...] | ALL [ PRIVILEGES ] ( <column_name> [, ...] ) }
-    ON { [ ONLY <table_name> ] | [ TABLE ] <table_name> [, ...] }
+    ON [TABLE] [[[ONLY] <table_name> [, ...]] [, ...]]
     TO <role_specification> [, ...] [ WITH GRANT OPTION ]
 
 GRANT { {USAGE | SELECT | UPDATE} [, ...] | ALL [PRIVILEGES] }
