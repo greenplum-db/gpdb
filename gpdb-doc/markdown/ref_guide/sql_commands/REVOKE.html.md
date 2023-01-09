@@ -8,7 +8,7 @@ Removes access privileges.
 REVOKE [GRANT OPTION FOR]
        { {SELECT | INSERT | UPDATE | DELETE | REFERENCES | TRIGGER | TRUNCATE }
        [, ...] | ALL [PRIVILEGES] }
-       ON { { [ONLY <table_name>] | [TABLE] <table_name> [, ...] }
+       ON { { [TABLE] [[[ONLY] <table_name> [, ...]] [, ...]] }
           | ALL TABLES IN SCHEMA schema_name [, ...] }
        FROM <role_specification> [, ...]
        [CASCADE | RESTRICT]
@@ -16,7 +16,7 @@ REVOKE [GRANT OPTION FOR]
 REVOKE [ GRANT OPTION FOR ]
        { { SELECT | INSERT | UPDATE | REFERENCES } ( <column_name> [, ...] )
        [, ...] | ALL [ PRIVILEGES ] ( <column_name> [, ...] ) }
-       ON { [ ONLY <table_name> ] | [ TABLE ] <table_name> [, ...] }
+       ON { [ [TABLE] [[[ONLY] <table_name> [, ...]] [, ...]] }
        FROM <role_specification> [, ...]
        [ CASCADE | RESTRICT ]
 
