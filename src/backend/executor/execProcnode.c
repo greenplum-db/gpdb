@@ -1298,9 +1298,6 @@ ExecEndNode(PlanState *node)
 	int			origSliceIdInPlan = estate->currentSliceIdInPlan;
 	int			origExecutingSliceId = estate->currentExecutingSliceId;
 
-	estate->currentSliceIdInPlan = origSliceIdInPlan;
-	estate->currentExecutingSliceId = origExecutingSliceId;
-
 	if (node->chgParam != NULL)
 	{
 		bms_free(node->chgParam);
