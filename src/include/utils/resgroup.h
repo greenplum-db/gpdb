@@ -29,6 +29,7 @@
  * The max length of cpuset
  */
 #define MaxCpuSetLength 1024
+#define MAX_CGROUP_CONTENTLEN 1024
 
 /*
  * Default value of cpuset

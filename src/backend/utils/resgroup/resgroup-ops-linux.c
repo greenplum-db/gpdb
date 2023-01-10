@@ -967,7 +967,7 @@ static void
 readStr(Oid group, BaseType base,
 		ResGroupCompType comp, const char *prop, char *str, int len)
 {
-	char data[MAX_INT_STRING_LEN];
+	char data[MAX_CGROUP_CONTENTLEN];
 	size_t datasize = sizeof(data);
 	char path[MAXPATHLEN];
 	size_t pathsize = sizeof(path);
