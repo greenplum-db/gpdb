@@ -1425,7 +1425,19 @@ ExecSetTupleBound(int64 tuples_needed, PlanState *child_node)
 		 * that condition succeeds it affects nothing, while if it fails, no
 		 * rows will be demanded from the Result child anyway.
 		 */
-		if (outerPlanState(child_node))
+
+		/*
+		* GPDB: The second condition ensures qual is empty.
+		* In case the RESULT node has a filter,
+		* we do not want to push down the tuple bound.
+		* This is because the bound will be applied before the filter,
+		* and could lead to a subset of the actual result being returned.
+		* Postgres doesn't create RESULT node with quals,
+		* whereas GPDB can, hence the deviation.
+		* See ExecResult() and create_projection_path_with_quals().
+		*/
+
+		if (outerPlanState(child_node) && child_node->plan->qual == NULL)
 			ExecSetTupleBound(tuples_needed, outerPlanState(child_node));
 	}
 	else if (IsA(child_node, SubqueryScanState))
