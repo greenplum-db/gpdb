@@ -6840,7 +6840,8 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 		int			i_conislocal;
 		int			i_convalidated;
 
-		write_msg(NULL, "finding table check constraints\n");
+		if (g_verbose)
+			write_msg(NULL, "finding table check constraints\n");
 
 		resetPQExpBuffer(q);
 		appendPQExpBufferStr(q,
