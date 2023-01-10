@@ -664,6 +664,9 @@ transientrel_shutdown(DestReceiver *self)
 
 	table_finish_bulk_insert(myState->transientrel, myState->ti_options);
 
+	if (myState->transientrel->rd_tableam)
+		table_dml_finish(myState->transientrel);
+
 	/* close transientrel, but keep lock until commit */
 	table_close(myState->transientrel, NoLock);
 	myState->transientrel = NULL;

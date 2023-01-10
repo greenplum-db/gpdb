@@ -4747,6 +4747,9 @@ CopyFrom(CopyState cstate)
 
 	ExecCloseIndices(target_resultRelInfo);
 
+	if (target_resultRelInfo->ri_RelationDesc->rd_tableam)
+		table_dml_finish(target_resultRelInfo->ri_RelationDesc);
+
 	/* Close all the partitioned tables, leaf partitions, and their indices */
 	if (proute)
 		ExecCleanupTupleRouting(mtstate, proute);
