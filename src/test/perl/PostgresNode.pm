@@ -1125,9 +1125,6 @@ sub _update_pid
 	my ($self, $is_running) = @_;
 	my $name = $self->name;
 
-	#GPDB_12_MERGE_FIXME: somehow without this fails to find the pid file
-	sleep(1);
-
 	# If we can open the PID file, read its first line and that's the PID we
 	# want.
 	if (open my $pidfile, '<', $self->data_dir . "/postmaster.pid")
