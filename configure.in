@@ -590,18 +590,6 @@ if test "$GCC" = yes -a "$ICC" = no; then
   if test -n "$NOT_THE_CFLAGS"; then
     CFLAGS="$CFLAGS -Wno-stringop-truncation"
   fi
-  # GPDB_12_MERGE_FIXME: there's a chance we can rearrange our #include's to
-  # avoid the specific headers that use "register" once we merge with Postgres
-  # 12
-
-  # Greenplum's ORCA translator includes a lot of C headers, and Clang will
-  # warn us about the use of the "register" keyword in Postgres' inline
-  # functions which we can do nothing about. Silence it.
-  NOT_THE_CXXFLAGS=""
-  PGAC_PROG_CXX_VAR_OPT(NOT_THE_CXXFLAGS, [-Wdeprecated-register])
-  if test -n "$NOT_THE_CXXFLAGS"; then
-    CXXFLAGS="$CXXFLAGS -Wno-deprecated-register"
-  fi
 elif test "$ICC" = yes; then
   # Intel's compiler has a bug/misoptimization in checking for
   # division by NAN (NaN == 0), -mp1 fixes it, so add it to the CFLAGS.
