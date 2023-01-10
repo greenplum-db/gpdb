@@ -12,7 +12,7 @@
 -- create FDW objects
 -- ===================================================================
 SET timezone = 'PST8PDT';
-set optimizer = off;
+set optimizer_trace_fallback = on;
 
 CREATE EXTENSION postgres_fdw;
 
