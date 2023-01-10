@@ -61,3 +61,22 @@ begin
   end loop;
 end;
 $$;
+
+
+-- TEMP TABLE WITH COMMENTS
+-- More details can be found at https://github.com/greenplum-db/gpdb/issues/14649
+CREATE TABLE t_comments_a (a integer);
+COMMENT ON COLUMN t_comments_a.a IS 'Airflow';
+CREATE TEMPORARY TABLE t_comments_b (LIKE t_comments_a INCLUDING COMMENTS);
+
+-- Verify the copied comment
+SELECT
+	c.column_name,
+	pgd.description
+FROM pg_catalog.pg_statio_all_tables st
+		inner join pg_catalog.pg_description pgd on (pgd.objoid=st.relid)
+		inner join information_schema.columns c on (pgd.objsubid=c.ordinal_position and c.table_schema=st.schemaname and c.table_name=st.relname)
+WHERE c.table_name = 't_comments_b';
+
+DROP TABLE t_comments_a;
+DROP TABLE t_comments_b;
