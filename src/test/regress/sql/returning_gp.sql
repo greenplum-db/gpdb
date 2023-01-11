@@ -64,7 +64,9 @@ UPDATE returning_disttest SET id = id + 1;
 
 SELECT * FROM returning_disttest;
 
+--
 -- Test returning ctid with trigger
+--
 CREATE TABLE returning_ctid (f1 serial, f2 text) DISTRIBUTED BY (f1);
 -- Create function used by trigger
 CREATE FUNCTION trig_row_before_insupdate() RETURNS TRIGGER AS $$
@@ -73,7 +75,7 @@ CREATE FUNCTION trig_row_before_insupdate() RETURNS TRIGGER AS $$
     RETURN NEW;
   END
 $$ language plpgsql;
--- Create trigger for each row insert
+-- Create trigger for each row insert or update
 CREATE TRIGGER trig_row_before BEFORE INSERT OR UPDATE ON returning_ctid
 FOR EACH ROW EXECUTE PROCEDURE trig_row_before_insupdate();
 
@@ -85,3 +87,27 @@ SELECT *, ctid FROM returning_ctid;
 DROP TRIGGER trig_row_before ON returning_ctid;
 DROP FUNCTION trig_row_before_insupdate() CASCADE;
 DROP TABLE returning_ctid;
+
+--
+-- Test returning ctid with trigger for AOCO table
+--
+CREATE TABLE returning_ctid_aoco (f1 serial, f2 text) WITH (appendonly=true, orientation=column) DISTRIBUTED BY (f1);
+-- Create function used by trigger
+CREATE FUNCTION trig_row_before_insupdate() RETURNS TRIGGER AS $$
+  BEGIN
+    NEW.f2 := NEW.f2 || ' triggered !';
+    RETURN NEW;
+  END
+$$ language plpgsql;
+-- Create trigger for each row insert
+CREATE TRIGGER trig_row_before BEFORE INSERT ON returning_ctid_aoco
+FOR EACH ROW EXECUTE PROCEDURE trig_row_before_insupdate();
+
+-- Check returning sys attribute on insert
+INSERT INTO returning_ctid_aoco(f2) VALUES ('test') RETURNING ctid;
+SELECT *, ctid FROM returning_ctid_aoco;
+
+-- Clean up
+DROP TRIGGER trig_row_before ON returning_ctid_aoco;
+DROP FUNCTION trig_row_before_insupdate() CASCADE;
+DROP TABLE returning_ctid_aoco;
