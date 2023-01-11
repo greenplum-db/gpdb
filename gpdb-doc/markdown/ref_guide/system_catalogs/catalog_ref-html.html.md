@@ -154,6 +154,8 @@ System catalog table and view definitions in alphabetical order.
 
 -   [pg\_policy](../system_catalogs/pg_policy.html)  
 
+-   [pg\_prepared\_statements](../system_catalogs/pg_prepared_statements.html)  
+
 -   [pg\_proc](../system_catalogs/pg_proc.html)  
 
 -   [pg\_resgroup](../system_catalogs/pg_resgroup.html)  

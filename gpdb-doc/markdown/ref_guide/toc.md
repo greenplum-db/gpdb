@@ -276,6 +276,7 @@ Doc Index
             - [pg\_pltemplate](./system_catalogs/pg_pltemplate.md)
             - [pg\_policies](./system_catalogs/pg_policies.md)
             - [pg\_policy](./system_catalogs/pg_policy.md)
+            - [pg\_prepared\_statements](./system_catalogs/pg_prepared_statements.md)
             - [pg\_proc](./system_catalogs/pg_proc.md)
             - [pg\_resgroup](./system_catalogs/pg_resgroup.md)
             - [pg\_resgroupcapability](./system_catalogs/pg_resgroupcapability.md)
