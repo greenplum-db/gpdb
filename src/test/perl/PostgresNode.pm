@@ -831,6 +831,11 @@ sub start
 	{
 		print "# pg_ctl start failed; logfile:\n";
 		print TestLib::slurp_file($self->logfile);
+
+		# pg_ctl could have timed out, so check to see if there's a pid file;
+		# otherwise our END block will fail to shut down the new postmaster.
+		$self->_update_pid(-1);
+
 		BAIL_OUT("pg_ctl start failed") unless $params{fail_ok};
 		return 0;
 	}
@@ -875,20 +880,35 @@ Note: if the node is already known stopped, this does nothing.
 However, if we think it's running and it's not, it's important for
 this to fail.  Otherwise, tests might fail to detect server crashes.
 
+With optional extra param fail_ok => 1, returns 0 for failure
+instead of bailing out.
+
 =cut
 
 sub stop
 {
-	my ($self, $mode) = @_;
-	my $port   = $self->port;
+	my ($self, $mode, %params) = @_;
 	my $pgdata = $self->data_dir;
 	my $name   = $self->name;
+	my $ret;
 	$mode = 'fast' unless defined $mode;
-	return unless defined $self->{_pid};
+	return 1 unless defined $self->{_pid};
 	print "### Stopping node \"$name\" using mode $mode\n";
-	TestLib::system_or_bail('pg_ctl', '-D', $pgdata, '-m', $mode, 'stop');
+	$ret = TestLib::system_log('pg_ctl', '-D', $pgdata,
+		'-m', $mode, 'stop');
+
+	if ($ret != 0)
+	{
+		print "# pg_ctl stop failed: $ret\n";
+
+		# Check to see if we still have a postmaster or not.
+		$self->_update_pid(-1);
+
+		BAIL_OUT("pg_ctl stop failed") unless $params{fail_ok};
+		return 0;
+	}
 	$self->_update_pid(0);
-	return;
+	return 1;
 }
 
 =pod
@@ -1096,7 +1116,10 @@ archive_command = '$copy_command'
 	return;
 }
 
-# Internal method
+# Internal method to update $self->{_pid}
+# $is_running = 1: pid file should be there
+# $is_running = 0: pid file should NOT be there
+# $is_running = -1: we aren't sure
 sub _update_pid
 {
 	my ($self, $is_running) = @_;
@@ -1113,8 +1136,20 @@ sub _update_pid
 		print "# Postmaster PID for node \"$name\" is $self->{_pid}\n";
 		close $pidfile;
 
+		# If we aren't sure what to expect, validate the PID using kill().
+		# This protects against stale PID files left by crashed postmasters.
+		if ($is_running == -1 && kill(0, $self->{_pid}) == 0)
+		{
+			print
+			  "# Stale postmaster.pid file for node \"$name\": PID $self->{_pid} no longer exists\n";
+			$self->{_pid} = undef;
+			return;
+		}
+
+		print "# Postmaster PID for node \"$name\" is $self->{_pid}\n";
+
 		# If we found a pidfile when there shouldn't be one, complain.
-		BAIL_OUT("postmaster.pid unexpectedly present") unless $is_running;
+		BAIL_OUT("postmaster.pid unexpectedly present") if $is_running == 0;
 		return;
 	}
 
@@ -1122,7 +1157,7 @@ sub _update_pid
 	print "# No postmaster PID for node \"$name\"\n";
 
 	# Complain if we expected to find a pidfile.
-	BAIL_OUT("postmaster.pid unexpectedly not present") if $is_running;
+	BAIL_OUT("postmaster.pid unexpectedly not present") if $is_running == 1;
 	return;
 }
 
