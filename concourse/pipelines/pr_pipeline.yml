@@ -24,16 +24,16 @@ resources:
     - gpdb-doc/*
     - README*
 
-- name: gpdb6-centos7-build
+- name: gpdb6-rocky8-build
   type: registry-image
   source:
-    repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-build
+    repository: gcr.io/data-gpdb-public-images/gpdb6-rocky8-build
     tag: latest
 
-- name: gpdb6-centos7-test
+- name: gpdb6-rocky8-test
   type: registry-image
   source:
-    repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-test
+    repository: gcr.io/data-gpdb-public-images/gpdb6-rocky8-test
     tag: latest
 
 - name: postgres_for_fdw
@@ -55,8 +55,8 @@ jobs:
     - get: postgres_for_fdw
       params:
         unpack: true
-    - get: gpdb6-centos7-build
-    - get: gpdb6-centos7-test
+    - get: gpdb6-rocky8-build
+    - get: gpdb6-rocky8-test
 
   - put: gpdb_pr
     params:
@@ -76,7 +76,7 @@ jobs:
         status: success
     do:
     - task: init gpdb_src  # Fetch tags and submodules, because the PR resource doesn't.
-      image: gpdb6-centos7-build
+      image: gpdb6-rocky8-build
       config:
         platform: linux
         run:
@@ -92,17 +92,17 @@ jobs:
         outputs: [{ name: gpdb_src }]
     - task: check_format
       file: gpdb_src/concourse/tasks/check_format.yml
-    - task: compile_gpdb_centos7
+    - task: compile_gpdb_rocky8
       file: gpdb_pr/concourse/tasks/compile_gpdb.yml
-      image: gpdb6-centos7-build
+      image: gpdb6-rocky8-build
       params:
         CONFIGURE_FLAGS: "--enable-cassert --enable-debug-extensions"
         BLD_TARGETS: "clients loaders"
       timeout: 30m
 
     - in_parallel:
-      - task: icw_planner_centos7
-        tags: [icw-centos7]
+      - task: icw_planner_rocky8
+        tags: [icw-worker]
         file: gpdb_pr/concourse/tasks/ic_gpdb.yml
         image: gpdb6-centos7-test
         input_mapping:
@@ -114,10 +114,10 @@ jobs:
           CONFIGURE_FLAGS: "--enable-cassert"
         timeout: 3h
 
-      - task: icw_gporca_centos7
-        tags: [icw-centos7]
+      - task: icw_gporca_rocky8
+        tags: [icw-worker]
         file: gpdb_pr/concourse/tasks/ic_gpdb.yml
-        image: gpdb6-centos7-test
+        image: gpdb6-rocky8-test
         input_mapping:
           gpdb_src: gpdb_pr
           bin_gpdb: gpdb_artifacts
@@ -126,9 +126,9 @@ jobs:
           TEST_OS: centos
           CONFIGURE_FLAGS: "--enable-cassert"
         timeout: 5h
-      - task: unit_tests_gporca_centos7
+      - task: unit_tests_gporca_rocky8
         file: gpdb_pr/concourse/tasks/unit_tests_gporca.yml
-        image: gpdb6-centos7-build
+        image: gpdb6-rocky8-build
         input_mapping:
           gpdb_src: gpdb_pr
         timeout: 1h
