@@ -20,7 +20,7 @@ if [ ! -d "${pgbin}" ] ; then
 	mkdir ${pgbin}
 	if [ ! -d postgresql-12.12 ]; then
 		wget https://ftp.postgresql.org/pub/source/v12.12/postgresql-12.12.tar.gz
-		tar -xvf postgresql-12.12.tar.gz
+		tar -xf postgresql-12.12.tar.gz
 	fi
 	pushd postgresql-12.12
 	./configure --prefix=${DIR}/testdata/${pgbin}
