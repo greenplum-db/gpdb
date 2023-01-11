@@ -104,7 +104,7 @@ jobs:
       - task: icw_planner_rocky8
         tags: [icw-worker]
         file: gpdb_pr/concourse/tasks/ic_gpdb.yml
-        image: gpdb6-centos7-test
+        image: gpdb6-rocky8-test
         input_mapping:
           gpdb_src: gpdb_pr
           bin_gpdb: gpdb_artifacts
