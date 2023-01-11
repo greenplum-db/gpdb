@@ -587,6 +587,7 @@ Feature: gprecoverseg tests
 #      | \S+     | [0-9]+ | incremental    | [0-9]+                 | [0-9]+             | [0-9]+\%             |
     And all files in gpAdminLogs directory are deleted on all hosts in the cluster
 
+    And the cluster is rebalanced
     And user immediately stops all primary processes for content 0,1,2
     And the user waits until mirror on content 0,1,2 is down
     And user can start transactions
