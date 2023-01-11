@@ -1135,7 +1135,6 @@ jobs:
       - get: gpdb_src
         trigger: true
         passed: [compile_gpdb_clients_windows]
-      - get: gpdb6-[[ os_type ]]-test
       - get: bin_gpdb_clients_windows
         passed: [compile_gpdb_clients_windows]
       - get: bin_gpdb
@@ -1152,7 +1151,6 @@ jobs:
       terraform_source: ccp_src/gpdb_windows_client_test/
   - task: run_tests
     file: gpdb_src/concourse/tasks/windows_remote_test.yml
-    image: gpdb6-[[ os_type ]]-test
     params:
       REMOTE_PORT: ((remote_win_port_test))
       REMOTE_USER: ((remote_win_user_test))
