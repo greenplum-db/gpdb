@@ -319,7 +319,7 @@ CFilterStatsProcessor::MakeHistHashMapConjFilter(
 	UlongToHistogramMap *result_histograms =
 		CStatisticsUtils::CopyHistHashMap(mp, input_histograms);
 
-	CExtendedStatsProcessor::ApplyExtendedStatistics(
+	CExtendedStatsProcessor::ApplyCorrelatedStatsToScaleFactorFilterCalculation(
 		scale_factors, conjunctive_pred_stats, input_stats->GetExtStatsInfo(),
 		input_stats->GetColidToAttnoMapping(), mp, result_histograms);
 

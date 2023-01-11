@@ -19,12 +19,11 @@ namespace gpnaucrates
 class CExtendedStatsProcessor
 {
 public:
-	static void ApplyExtendedStatistics(CDoubleArray *scale_factors,
-										CStatsPredConj *conjunctive_pred_stats,
-										const IMDExtStatsInfo *md_statsinfo,
-										UlongToIntMap *colid_to_attno_mapping,
-										CMemoryPool *mp,
-										UlongToHistogramMap *result_histograms);
+	static void ApplyCorrelatedStatsToScaleFactorFilterCalculation(
+		CDoubleArray *scale_factors, CStatsPredConj *conjunctive_pred_stats,
+		const IMDExtStatsInfo *md_statsinfo,
+		UlongToIntMap *colid_to_attno_mapping, CMemoryPool *mp,
+		UlongToHistogramMap *result_histograms);
 };
 }  // namespace gpnaucrates
 

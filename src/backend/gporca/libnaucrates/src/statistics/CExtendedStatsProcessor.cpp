@@ -227,7 +227,7 @@ find_strongest_dependency(CMDDependencyArray *dependencies, CBitSet *attnums)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CExtendedStatsProcessor::ApplyExtendedStatistics
+//		CExtendedStatsProcessor::ApplyCorrelatedStatsToScaleFactorFilterCalculation
 //
 //	@doc:
 //		This function is essentially an ORCA version of the dependencies.c
@@ -237,7 +237,7 @@ find_strongest_dependency(CMDDependencyArray *dependencies, CBitSet *attnums)
 //
 //---------------------------------------------------------------------------
 void
-CExtendedStatsProcessor::ApplyExtendedStatistics(
+CExtendedStatsProcessor::ApplyCorrelatedStatsToScaleFactorFilterCalculation(
 	CDoubleArray *scale_factors, CStatsPredConj *conjunctive_pred_stats,
 	const IMDExtStatsInfo *md_statsinfo, UlongToIntMap *colid_to_attno_mapping,
 	CMemoryPool *mp, UlongToHistogramMap *result_histograms)
