@@ -9,7 +9,7 @@ Like `pg_statistic`, `pg_statistic_ext_data` should not be readable by the publi
 |`stxoid`|oid|[pg\_statistic_ext](pg_statistic_ext.html).oid | The extended statistic object containing the definition for this data. |
 |`stxdndistinct`|pg\_ndistinct| | N-distinct counts, serialized as `pg_ndistinct` type. |
 |`stxddependencies`|pg\_dependencies| | Functional dependency statistics, serialized as `pg_dependencies` type. |
-|`stxdmcv`|pg\_mcv\_list|[pg\_authid](pg_authid.html).oid | MCV \(most-common values\) list statistics, serialized as `pg_mcv_list` type. |
+|`stxdmcv`|pg\_mcv\_list| | MCV \(most-common values\) list statistics, serialized as `pg_mcv_list` type. |
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 
