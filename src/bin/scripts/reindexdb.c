@@ -292,10 +292,6 @@ reindex_one_database(const char *name, const char *dbname, const char *type,
 	conn = connectDatabase(dbname, host, port, username, prompt_password,
 						   progname, echo, false, false);
 
-	/*
-	 * GPDB_12_MERGE_FIXME: do we still report this as PostgreSQL 12 or should
-	 * it say Greenplum 7?
-	 */
 	if (concurrently && PQserverVersion(conn) < 120000)
 	{
 		PQfinish(conn);
