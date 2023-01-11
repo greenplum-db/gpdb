@@ -143,7 +143,7 @@ class GpRecoversegTestCase(GpTestCase):
         with self.assertRaisesRegexp(Exception, "Heap checksum setting differences reported on segments"):
             self.subject.run()
 
-        self.mock_get_segments_checksum_settings.assert_called_with([self.primary0])
+        self.mock_get_segments_checksum_settings.assert_called_with([self.primary0, self.mirror0])
         self.subject.logger.fatal.assert_any_call('Heap checksum setting differences reported on segments')
         self.subject.logger.fatal.assert_any_call('Failed checksum consistency validation:')
         self.subject.logger.fatal.assert_any_call('sdw1 checksum set to 0 differs from master checksum set to 1')
@@ -158,7 +158,7 @@ class GpRecoversegTestCase(GpTestCase):
         with self.assertRaisesRegexp(Exception, "No segments responded to ssh query for heap checksum validation."):
             self.subject.run()
 
-        self.mock_get_segments_checksum_settings.assert_called_with([self.primary0])
+        self.mock_get_segments_checksum_settings.assert_called_with([self.primary0, self.mirror0])
         mock_heap_checksum_init.assert_called_with(self.gpArrayMock, logger=self.subject.logger, num_workers=1)
 
     @patch("os._exit")

@@ -55,6 +55,9 @@ class HeapChecksum:
             result = pg_control_data.get_results()
             gparray_gpdb = pg_control_data.gparray_gpdb
             if result.rc == 0:
+                self.logger.info("Successfully finished pg_controldata {} for dbid {}:\nstdout: {}\nstderr: {}".format(
+                    gparray_gpdb.getSegmentDataDirectory(), gparray_gpdb.getSegmentDbId(), result.stdout,
+                    result.stderr))
                 try:
                     checksum = pg_control_data.get_value('Data page checksum version')
                     gparray_gpdb.heap_checksum = checksum

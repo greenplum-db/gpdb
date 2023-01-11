@@ -113,6 +113,30 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And check segment conf: postgresql.conf
 
+  Scenario: gprecoverseg full recovery displays pg_controldata success info
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And user stops all mirror processes
+        When user can start transactions
+        And the user runs "gprecoverseg -F -a"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "Successfully finished pg_controldata.* for dbid.*" to stdout
+        And the segments are synchronized
+        And check segment conf: postgresql.conf
+
+  Scenario: gprecoverseg incremental recovery displays pg_controldata success info
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And user stops all mirror processes
+        When user can start transactions
+        And the user runs "gprecoverseg -a"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "Successfully finished pg_controldata.* for dbid.*" to stdout
+        And the segments are synchronized
+        And check segment conf: postgresql.conf
+
   Scenario: gprecoverseg mixed recovery displays pg_basebackup and rewind progress to the user
       Given the database is running
       And all the segments are running
