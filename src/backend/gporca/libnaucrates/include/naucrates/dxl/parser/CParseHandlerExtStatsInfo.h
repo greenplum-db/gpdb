@@ -46,6 +46,8 @@ private:
 		const XMLCh *const element_qname		// element's qname
 		) override;
 
+	CMDExtStatsInfo::Estattype ParseStatKind(const Attributes &attrs) const;
+
 public:
 	CParseHandlerExtStatsInfo(const CParseHandlerExtStatsInfo &) = delete;
 

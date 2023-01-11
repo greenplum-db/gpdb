@@ -62,17 +62,17 @@ CMDExtStatsInfo::KindToStr(CMemoryPool *mp)
 	{
 		case Estattype::EstatDependencies:
 		{
-			str->AppendFormat(GPOS_WSZ_LIT("FunctionalDependencies"));
+			str->AppendFormat(GPOS_WSZ_LIT("MVDependency"));
 			break;
 		}
 		case Estattype::EstatNDistinct:
 		{
-			str->AppendFormat(GPOS_WSZ_LIT("NDistinct"));
+			str->AppendFormat(GPOS_WSZ_LIT("MVNDistinct"));
 			break;
 		}
 		case Estattype::EstatMCV:
 		{
-			str->AppendFormat(GPOS_WSZ_LIT("MVC"));
+			str->AppendFormat(GPOS_WSZ_LIT("MVMCV"));
 			break;
 		}
 		default:

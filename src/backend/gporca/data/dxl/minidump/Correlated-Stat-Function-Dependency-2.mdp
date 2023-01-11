@@ -1382,7 +1382,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationExtendedStatistics Mdid="10.434194.1.0" Name="t">
-        <dxl:ExtendedStatisticsInfo Oid="434197" Name="stts" Keys="1,2,3" Kind="FunctionalDependencies"/>
+        <dxl:ExtendedStatisticsInfo Oid="434197" Name="stts" Keys="1,2,3" Kind="MVDependency"/>
       </dxl:RelationExtendedStatistics>
       <dxl:ExtendedStatistics Mdid="9.434197.1.0" Name="stts">
         <dxl:MVDependencyList>

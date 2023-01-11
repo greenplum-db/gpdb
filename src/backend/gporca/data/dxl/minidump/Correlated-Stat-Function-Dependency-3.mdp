@@ -978,7 +978,7 @@
         </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:RelationExtendedStatistics Mdid="10.434199.1.0" Name="t">
-        <dxl:ExtendedStatisticsInfo Oid="434202" Name="stts" Keys="1,2" Kind="FunctionalDependencies"/>
+        <dxl:ExtendedStatisticsInfo Oid="434202" Name="stts" Keys="1,2" Kind="MVDependency"/>
       </dxl:RelationExtendedStatistics>
       <dxl:ExtendedStatistics Mdid="9.434202.1.0" Name="stts">
         <dxl:MVDependencyList>

@@ -466,6 +466,7 @@ enum Edxltoken
 	EdxltokenExtendedStatsInfo,
 	EdxltokenMVDependencyList,
 	EdxltokenMVDependency,
+	EdxltokenMVNDistinct,
 	EdxltokenDegree,
 	EdxltokenFrom,
 	EdxltokenTo,
