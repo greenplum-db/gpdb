@@ -1422,7 +1422,9 @@ Set to on to deactivate writes to the database. Any in progress transactions mus
 
 This parameter directs the Postgres Planner on where to obtain statistics when it plans a query on a partitioned table.
 
-The default value is `off`, the Postgres Planner uses the statistics of the root partitioned table when it plans a query. When set to `on`, the Planner attempts to use the statistics from the largest child partition when it plans a query on a partitioned table.
+The default value is `off`, the Postgres Planner uses the statistics of the root partitioned table, if it has any, when it plans a query. If the root partitioned table has no statistics, the Planner attempts to use the statistics from the largest child partition.
+
+When set to `on`, the Planner attempts to use the statistics from the largest child partition when it plans a query on a partitioned table.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
