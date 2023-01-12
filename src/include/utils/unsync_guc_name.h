@@ -1,4 +1,5 @@
 /* items in this file should be ordered */
+		"application_name",
 		"archive_cleanup_command",
 		"archive_command",
 		"archive_mode",
@@ -522,6 +523,7 @@
 		"unix_socket_group",
 		"unix_socket_permissions",
 		"update_process_title",
+		"vacuum_cost_limit",
 		"vacuum_defer_cleanup_age",
 		"wait_for_replication_threshold",
 		"wal_block_size",
