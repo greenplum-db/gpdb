@@ -305,26 +305,5 @@ CTableDescriptor::IndexCount()
 	return ulIndices;
 }
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CTableDescriptor::PartitionCount
-//
-//	@doc:
-//		 Returns number of leaf partitions
-//
-//
-//---------------------------------------------------------------------------
-ULONG
-CTableDescriptor::PartitionCount() const
-{
-	GPOS_ASSERT(nullptr != m_mdid);
-
-	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	const IMDRelation *pmdrel = md_accessor->RetrieveRel(m_mdid);
-	const ULONG ulPartitions = pmdrel->PartitionCount();
-
-	return ulPartitions;
-}
-
 
 // EOF

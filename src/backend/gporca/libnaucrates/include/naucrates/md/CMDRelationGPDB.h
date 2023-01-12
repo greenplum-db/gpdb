@@ -85,9 +85,6 @@ private:
 	// partition types
 	CharPtrArray *m_str_part_types_array;
 
-	// number of partition
-	ULONG m_num_of_partitions;
-
 	// Child partition oids
 	IMdIdArray *m_partition_oids;
 
@@ -128,9 +125,9 @@ public:
 		Erelstoragetype rel_storage_type, Ereldistrpolicy rel_distr_policy,
 		CMDColumnArray *mdcol_array, ULongPtrArray *distr_col_array,
 		IMdIdArray *distr_opfamilies, ULongPtrArray *partition_cols_array,
-		CharPtrArray *str_part_types_array, ULONG num_of_partitions,
-		IMdIdArray *partition_oids, BOOL convert_hash_to_random,
-		ULongPtr2dArray *keyset_array, CMDIndexInfoArray *md_index_info_array,
+		CharPtrArray *str_part_types_array, IMdIdArray *partition_oids,
+		BOOL convert_hash_to_random, ULongPtr2dArray *keyset_array,
+		CMDIndexInfoArray *md_index_info_array,
 		IMdIdArray *mdid_check_constraint_array, CDXLNode *mdpart_constraint);
 
 	// dtor
@@ -207,9 +204,6 @@ public:
 
 	// number of partition keys
 	ULONG PartColumnCount() const override;
-
-	// number of partitions
-	ULONG PartitionCount() const override;
 
 	// retrieve the partition key column at the given position
 	const IMDColumn *PartColAt(ULONG pos) const override;

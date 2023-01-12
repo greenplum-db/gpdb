@@ -481,7 +481,6 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	CMDIndexInfoArray *md_index_info_array = nullptr;
 	ULongPtrArray *part_keys = nullptr;
 	CharPtrArray *part_types = nullptr;
-	ULONG num_leaf_partitions = 0;
 	BOOL convert_hash_to_random = false;
 	ULongPtr2dArray *keyset_array = nullptr;
 	IMdIdArray *check_constraint_mdids = nullptr;
@@ -529,9 +528,6 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	// get number of leaf partitions
 	if (gpdb::RelIsPartitioned(oid))
 	{
-		// FIXME_GPDB_12_MERGE_FIXME: misestimate (most likely underestimate) the number of leaf partitions
-		// ORCA doesn't really care, except to determine whether to sort before inserting
-		num_leaf_partitions = rel->rd_partdesc->nparts;
 		partition_oids = GPOS_NEW(mp) IMdIdArray(mp);
 
 		for (int i = 0; i < rel->rd_partdesc->nparts; ++i)
@@ -574,10 +570,9 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 
 	md_rel = GPOS_NEW(mp) CMDRelationGPDB(
 		mp, mdid, mdname, is_temporary, rel_storage_type, dist, mdcol_array,
-		distr_cols, distr_op_families, part_keys, part_types,
-		num_leaf_partitions, partition_oids, convert_hash_to_random,
-		keyset_array, md_index_info_array, check_constraint_mdids,
-		mdpart_constraint);
+		distr_cols, distr_op_families, part_keys, part_types, partition_oids,
+		convert_hash_to_random, keyset_array, md_index_info_array,
+		check_constraint_mdids, mdpart_constraint);
 
 	return md_rel;
 }
