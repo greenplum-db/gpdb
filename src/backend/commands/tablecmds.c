@@ -4864,7 +4864,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 		case AT_SetDistributedBy:	/* SET DISTRIBUTED BY */
 			ATSimplePermissions(rel, ATT_TABLE | ATT_FOREIGN_TABLE);
 
-			if ( !recursing ) /* MPP-5772, MPP-5784 */
+			if (!recursing) /* MPP-5772, MPP-5784 */
 			{
 				DistributedBy *ldistro;
 				GpPolicy   *policy;
@@ -4876,15 +4876,15 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 				{
 					ldistro->numsegments = rel->rd_cdbpolicy->numsegments;
 
-					policy =  getPolicyForDistributedBy(ldistro, rel->rd_att);
+					policy = getPolicyForDistributedBy(ldistro, rel->rd_att);
 					/* can't set the distribution policy of interior table */
 					if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE && rel->rd_rel->relispartition)
 					{
 						ereport(ERROR,
 								(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-								errmsg("can't set the distribution policy of \"%s\"",
-									   RelationGetRelationName(rel)),
-								errhint("Distribution policy can not be set for an interior branch.")));
+								 errmsg("can't set the distribution policy of \"%s\"",
+										RelationGetRelationName(rel)),
+								 errhint("Distribution policy can not be set for an interior branch.")));
 					}
 					if (!GpPolicyEqual(policy, rel->rd_cdbpolicy))
 					{
@@ -16937,6 +16937,16 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("%s not supported on non-distributed tables",
 						ldistro ? "SET DISTRIBUTED BY" : "SET WITH")));
+
+		if (rel_is_external_table(RelationGetRelid(rel)))
+		{
+			ExtTableEntry *e = GetExtTableEntry(RelationGetRelid(rel));
+			if (!e->iswritable)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("cannot set distribution policy of readable external table \"%s\"",
+								RelationGetRelationName(rel))));
+		}
 	}
 
 	if (Gp_role == GP_ROLE_DISPATCH)
@@ -16980,6 +16990,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 
 			lwith = nlist;
 		}
+
 		/* External tables cannot really be re-organized. Error out if we are instructed to do so.*/
 		if (force_reorg && rel_is_external_table(RelationGetRelid(rel)))
 			ereport(ERROR,
