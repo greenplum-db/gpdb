@@ -1300,9 +1300,6 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		set_httpheader(file, "X-GP-PROTO", "0");
 		set_httpheader(file, "X-GP-SEQ", "1");
 		set_httpheader(file, "Content-Type", "text/xml");
-#ifdef USE_ZSTD
-		set_httpheader(file, "X-GP-ZSTD", "1");
-#endif
 	}
 	else
 	{
@@ -1442,7 +1439,6 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		int			bufsize = writable_external_table_bufsize * 1024;
 
 		file->out.ptr = (char *) palloc(bufsize);
-		file->out.cptr = (char *) palloc(bufsize);
 		file->out.max = bufsize;
 		file->out.bot = file->out.top = 0;
 	}
@@ -1877,18 +1873,6 @@ gp_proto0_write(URL_CURL_FILE *file, CopyState pstate)
 {	
 	char*		buf;
 	int		nbytes;
-#ifdef USE_ZSTD
-	if(file->zstd){
-		nbytes = compress_zstd_data(file);
-		buf = file->out.cptr;
-	}
-	else
-#endif
-	{
-		buf = file->out.ptr;
-	 	nbytes = file->out.top;
-	}
-
 #ifdef USE_ZSTD
 	if(file->zstd){
 		nbytes = compress_zstd_data(file);

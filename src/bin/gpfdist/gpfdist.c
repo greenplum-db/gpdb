@@ -19,6 +19,8 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <semaphore.h>
+#include <sys/sysinfo.h>
 #ifndef WIN32
 #include <strings.h>
 #endif
@@ -67,6 +69,7 @@
 
 #define DEFAULT_COMPRESS_LEVEL 1
 #define MAX_FRAME_SIZE 65536
+#define MAX_THREAD_NUM 256
 
 /*  A data block */
 typedef struct blockhdr_t blockhdr_t;
@@ -83,7 +86,7 @@ typedef struct block_t block_t;
 struct block_t
 {
 	blockhdr_t 	hdr;
-	int 		bot, top, lastsize;
+	int 		bot, cbot, top, ctop, lastsize;
 	char*      	data;
 	char*		cdata;
 };
@@ -101,6 +104,7 @@ struct zstd_buffer
 
 static long REQUEST_SEQ = 0;		/*  sequence number for request */
 static long SESSION_SEQ = 0;		/*  sequence number for session */
+static sem_t THREAD_NUM;			/* limit total thread number */
 #ifdef USE_ZSTD
 static long OUT_BUFFER_SIZE = 0;	/* zstd out buffer size */
 #endif
@@ -191,8 +195,8 @@ static struct
 	struct transform* trlist; /* transforms from config file */
 	const char* ssl; /* path to certificates in case we use gpfdist with ssl */
 	int			w; /* The time used for session timeout in seconds */
-	int			compress;
-	int			multi_thread;
+	int			compress; /* The flag to indicate whether comopression transmission is open */
+	int			multi_thread; /* The number of working threads for compression transmission */
 } opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 32768, 0, 256, 0, 0, 0, 0, 0, 0};
 
 
@@ -318,8 +322,7 @@ struct request_t
 #endif	
 	int				zstd;			/* request use zstd compress */
 	int				zstd_err_len;	/* space allocate for zstd_error string */
-	char*			zstd_error;		/* string contains zstd error*/
-	bool			multi_thread;	/* If multi_thread equals true, multi-thread transmission begins. */	
+	char*			zstd_error;		/* string contains zstd error*/	
 	bool			is_running;		/* If is_running equals true, the thread for this request not end. 
 									 * Wait it ends and then startup new thread to transfer data. 
 									 */
@@ -391,7 +394,7 @@ static int decompress_data(request_t *r, zstd_buffer *in, zstd_buffer *out);
 static int decompress_zstd(request_t* r, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout);
 static int decompress_write_loop(request_t *r);
 static int local_send_with_zstd(request_t *r);
-static void wait_for_thread_join(request_t *r, int *send_size);
+static void wait_for_thread_join(request_t *r, size_t *send_size);
 #endif
 static int request_parse_gp_headers(request_t *r, int opt_g);
 static void free_session_cb(int fd, short event, void* arg);
@@ -597,6 +600,10 @@ static void usage_error(const char* msg, int print_usage)
 #ifdef GPFXDIST
 					    "        -c file    : configuration file for transformations\n"
 #endif
+#ifdef GPFXDIST
+					    "        --compress : open compression transmission\n"
+						"        --mthread num : the max number of working thread for compression transmission\n"
+#endif
 						"        --version  : print version information\n"
 						"        -w timeout : timeout in seconds before close target file\n\n");
 		}
@@ -662,7 +669,7 @@ static void parse_command_line(int argc, const char* const argv[],
 	{ "version", 256, 0, "print version number" },
 	{ NULL, 'w', 1, "wait for session timeout in seconds" },
 	{"compress", 258, 0, "turn on compressed transmission"},
-	{"mthread", 259, 0, "turn on multi-thread and compressed transmission"},
+	{"mthread", 259, 1, "turn on multi-thread and compressed transmission"},
 	{ 0 } };
 
 	status = apr_getopt_init(&os, pool, argc, argv);
@@ -757,7 +764,7 @@ static void parse_command_line(int argc, const char* const argv[],
 			break;
 #endif
 		case 259:
-			opt.multi_thread = 1;
+			opt.multi_thread = atoi(arg);
 			break;
 		}
 	}
@@ -822,6 +829,16 @@ static void parse_command_line(int argc, const char* const argv[],
 			usage_error(apr_psprintf(pool, "Error: cannot access directory '%s'\n"
 				"Please specify a valid directory for -d switch", opt.d), 0);
 		opt.d = p;
+	}
+
+	if (opt.multi_thread)
+	{
+		int num_thread = opt.multi_thread;
+		if (num_thread > MAX_THREAD_NUM)
+		{
+			num_thread = MAX_THREAD_NUM;
+		}
+		sem_init(&THREAD_NUM, 0, num_thread);
 	}
 
 	/* validate opt.l */
@@ -1283,13 +1300,10 @@ static int local_send(request_t *r, const char* buf, int buflen)
 
 #ifdef USE_ZSTD
 
-static void
-wait_for_thread_join(request_t *r, int *send_size)
+static 
+void wait_for_thread_join(request_t *r, size_t *send_size)
 {
-	if (!r->thread_id || !r->is_running)
-		return 0;
-	pthread_join(r->thread_id, send_size);
-	gdebug(NULL, "%s", "thread is blocking.");
+	pthread_join(r->thread_id, (void*)send_size);
 	r->is_running = 0;
 	r->thread_id = 0;
 	if (r->outblock.lastsize != *send_size)
@@ -1297,42 +1311,54 @@ wait_for_thread_join(request_t *r, int *send_size)
 }
 
 static 
-int send_compression_data (request_t *r)
+void * send_compression_data (void *req)
 {
-	int osize = r->outblock.top;
+	request_t *r = (request_t *)req;
+	int osize = r->outblock.top, res = 0;
 	block_t *outblock = &r->outblock;
+	char *buf = outblock->cdata;
 
-	int res = compress_zstd(r, outblock, osize);
-	
-	if (res < 0)
+	if(outblock->ctop == outblock->cbot)
 	{
-		return -2;  /* If the error come from compression, '-2' is returned */
+		res = compress_zstd(r, outblock, osize);
+		if (res < 0)
+		{
+			return (void *)(size_t)-2;  /* If the error come from compression, '-2' is returned */
+		}
+		outblock->cbot = 0;
+		outblock->ctop = res;
 	}
-	int sendbytes = 0;
-	while (sendbytes != res)
+	else
 	{
-		int send = local_send(r, outblock->cdata, res);
-		if(send < 0)
-			return send;
-		sendbytes += send;
+		res = outblock->ctop - outblock->cbot;
+		buf = outblock->cdata + outblock->cbot;
+		osize = 0;	/* This means that this transmission is for the data that isn't sent totally last time */
 	}
+
+	int send = local_send(r, buf, res);
+	if(send < 0)
+		return (void *)(size_t)send;
+	else
+		outblock->cbot += send;
 	
-	return osize;
+	sem_post(&THREAD_NUM);
+	return (void *)(size_t)osize;
 }
 
 static int 
 local_send_with_zstd(request_t *r)
 {
 	size_t send_size = 0;
-	if(r->multi_thread){
+	if(opt.multi_thread){
 		r->is_running = 1;
+		sem_wait(&THREAD_NUM);
 		pthread_create(&r->thread_id, 0, send_compression_data, r);
-		send_size = r->outblock.top;
-		r->outblock.lastsize = r->outblock.top;
+		send_size = r->outblock.top - r->outblock.bot;
+		r->outblock.lastsize = r->outblock.top - r->outblock.bot;
 	}
 	else
 	{
-		send_size = send_compression_data(r);
+		send_size = (size_t)send_compression_data(r);
 	}
 
 	return send_size;
@@ -1449,6 +1475,9 @@ session_get_block(const request_t* r, block_t* retblock, char* line_delim_str, i
 	int 		size;
 	const int 	whole_rows = 1; /* gpfdist must not read data with partial rows */
 	struct fstream_filename_and_offset fos;
+
+	if (retblock->cbot != retblock->ctop)
+		return 0;
 
 	session_t *session = r->session;
 
@@ -1887,6 +1916,30 @@ static int session_active_segs_isempty(session_t* session)
 	return 1; /* empty */
 }
 
+static 
+size_t recycle_thread(request_t *r)
+{
+	size_t last_send = 0;;
+	if (r->is_running)
+	{
+		wait_for_thread_join(r, &last_send);
+
+		if(last_send < 0) 
+		{	
+			/* zstd error occurs */
+			if (last_send == -2) 
+			{
+				request_end(r, 1, r->zstd_error);
+			}
+			else
+			{
+				request_end(r, 1, "gpfdist send data failure");
+			}
+		}
+	}
+	return last_send;
+}
+
 /*
  * do_write
  *
@@ -1905,21 +1958,22 @@ static void do_write(int fd, short event, void* arg)
 		gfatal(r, "internal error - non matching fd (%d) "
 					  "and socket (%d)", fd, r->sock);
 
+	/* It is essential to recycle threads before we read file.
+	 * Since session_get_block will change value of top and content
+	 * in outblock in request, main thread and sub thread will cause
+	 * data conflict in outblock. So when the thread servering this
+	 * request has not finished, main thread should be blocked and
+	 * waiting for recycling corresponding thread.
+	 */
 	int last_send = 0;
-	if (r->is_running)
+	if (opt.multi_thread)
 	{
-		wait_for_thread_join(r, &last_send);
-	}
-	if(last_send < 0) {
-		request_end(r, 1, "gpfdist send data failure");
-		
-		/* zstd error occurs */
-		if (last_send == -2) {
-			request_end(r, 1, r->zstd_error);
+		size_t res = recycle_thread(r);
+		if(last_send < 0)
+		{
+			return;
 		}
-		return;
 	}
-		
 
 	/* Loop at most 3 blocks or until we choke on the socket */
 	for (i = 0; i < 3; i++)
@@ -2023,7 +2077,7 @@ static void do_write(int fd, short event, void* arg)
 			break;
 		}
 
-		if (r->multi_thread)
+		if (opt.multi_thread)
 		{ /* It is very essential judge!! Because local_send_with_zstd will start a thread, and loop will cause confliction */
 			break;
 		}
@@ -3656,9 +3710,6 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 #ifdef USE_ZSTD
 	if (r->zstd)
 	{
-		if (!r->is_get)
-			r->zstd_dctx = ZSTD_createDCtx();
-
 		OUT_BUFFER_SIZE = ZSTD_CStreamOutSize();
 		r->zstd_err_len = 1024;
 		r->outblock.cdata = palloc_safe(r, r->pool, opt.m, "out of memory when allocating buffer for compressed data: %d bytes", opt.m);
@@ -3669,8 +3720,6 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 			r->zstd_cctx = ZSTD_createCStream();
 		else
 			r->zstd_dctx = ZSTD_createDCtx();
-		
-		r->multi_thread = opt.multi_thread;
 	}
 #endif
 
@@ -4660,7 +4709,7 @@ static void request_cleanup(request_t *r)
 	request_shutdown_sock(r);
 	setup_do_close(r);
 #ifdef USE_ZSTD
-	int tmp = 0;
+	size_t tmp = 0;
 	if(r->is_running)
 		wait_for_thread_join(r, &tmp);
 	if ( r->zstd && r->is_get )
@@ -4670,12 +4719,8 @@ static void request_cleanup(request_t *r)
 	}
 	if ( r->zstd && !r->is_get )
 	{
-		ZSTD_freeDCtx(r->zstd_cctx);
-		r->zstd_cctx = NULL;
-	}
-	if ( r->zstd && !r->is_get )
-	{
 		ZSTD_freeDCtx(r->zstd_dctx);
+		r->zstd_cctx = NULL;
 	}
 #endif
 }
