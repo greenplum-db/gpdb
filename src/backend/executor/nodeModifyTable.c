@@ -513,6 +513,7 @@ ExecInsert(TupleTableSlot *parentslot,
 
 			mtuple = ExecFetchSlotMemTuple(slot);
 			newId = appendonly_insert(resultRelInfo->ri_aoInsertDesc, mtuple, tuple_oid, (AOTupleId *) &lastTid);
+			slot_set_ctid(slot, (ItemPointer)&lastTid);
 			(resultRelInfo->ri_aoprocessed)++;
 		}
 		else if (rel_is_aocols)
