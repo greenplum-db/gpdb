@@ -25,7 +25,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.16388.1.0" Name="t" Rows="101.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.16388.1.0" Name="t" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16388.1.0" Name="t" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.18.1.0" Nullable="true" ColWidth="1">
             <dxl:DefaultValue/>

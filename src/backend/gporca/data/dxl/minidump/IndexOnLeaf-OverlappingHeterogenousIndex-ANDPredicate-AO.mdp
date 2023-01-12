@@ -154,7 +154,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE c < 10 AND d > 20;
         </dxl:And>
       </dxl:CheckConstraint>
       <dxl:RelationStatistics Mdid="2.29993.1.0" Name="foo_1_prt_p1" Rows="90000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.29993.1.0" Name="foo_1_prt_p1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.29993.1.0" Name="foo_1_prt_p1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

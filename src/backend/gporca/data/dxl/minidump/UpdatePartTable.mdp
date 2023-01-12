@@ -195,7 +195,7 @@
           <dxl:Partition Mdid="6.224805005.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.224805001.1.1" Name="p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.224805001.1.1" Name="p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="........pg.dropped.1........" Attno="1" Mdid="0.0.0.0" Nullable="true" IsDropped="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -246,7 +246,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.224805002.1.1" Name="p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.224805002.1.1" Name="p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="........pg.dropped.1........" Attno="1" Mdid="0.0.0.0" Nullable="true" IsDropped="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -297,7 +297,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.224805003.1.1" Name="p_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.224805003.1.1" Name="p_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="........pg.dropped.1........" Attno="1" Mdid="0.0.0.0" Nullable="true" IsDropped="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -348,7 +348,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.224805004.1.1" Name="p_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.224805004.1.1" Name="p_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="........pg.dropped.1........" Attno="1" Mdid="0.0.0.0" Nullable="true" IsDropped="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -399,7 +399,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.224805005.1.1" Name="p_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.224805005.1.1" Name="p_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="........pg.dropped.1........" Attno="1" Mdid="0.0.0.0" Nullable="true" IsDropped="true" ColWidth="8">
             <dxl:DefaultValue/>

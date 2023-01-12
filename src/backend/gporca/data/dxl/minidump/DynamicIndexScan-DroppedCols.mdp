@@ -165,7 +165,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.32956.1.0" Name="foo" Rows="30.000000" RelPages="0" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.32956.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,10,4" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="3">
+      <dxl:Relation Mdid="6.32956.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,10,4" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="........pg.dropped.1........" Attno="1" Mdid="0.0.0.0" Nullable="true" ColWidth="8" IsDropped="true">
             <dxl:DefaultValue/>
@@ -214,7 +214,7 @@
           <dxl:Partition Mdid="6.32959.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.32959.1.0" Name="foo_part1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32959.1.0" Name="foo_part1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="........pg.dropped.1........" Attno="1" Mdid="0.0.0.0" Nullable="true" ColWidth="8" IsDropped="true">
             <dxl:DefaultValue/>
@@ -273,7 +273,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.32964.1.0" Name="foo_part2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3" Keys="10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32964.1.0" Name="foo_part2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="pk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -452,7 +452,7 @@
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="19"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Relation Mdid="6.32968.1.0" Name="foo_part3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32968.1.0" Name="foo_part3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="dk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

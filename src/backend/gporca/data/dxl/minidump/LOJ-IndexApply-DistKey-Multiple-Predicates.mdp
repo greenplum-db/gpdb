@@ -48,7 +48,7 @@ explain select * from foo left join bar on bar.a=foo.a and bar.a<foo.b left oute
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.49159.1.0" Name="bar" Rows="0.000000" RelPages="0" RelAllVisible="0" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.49159.1.0" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.49159.1.0" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -88,7 +88,7 @@ explain select * from foo left join bar on bar.a=foo.a and bar.a<foo.b left oute
         </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.49153.1.0" Name="foo" Rows="0.000000" RelPages="0" RelAllVisible="0" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.49153.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.49153.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -126,7 +126,7 @@ explain select * from foo left join bar on bar.a=foo.a and bar.a<foo.b left oute
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.49165.1.0" Name="zoo" Rows="0.000000" RelPages="0" RelAllVisible="0" EmptyRelation="true"/>
       <dxl:ColumnStatistics Mdid="1.49159.1.0.0" Name="a" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:Relation Mdid="6.49165.1.0" Name="zoo" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.49165.1.0" Name="zoo" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>

@@ -291,7 +291,7 @@ union all
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1247.1.0" Name="pg_type" Rows="399.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.1247.1.0" Name="pg_type" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="35,28" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1247.1.0" Name="pg_type" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="35,28">
         <dxl:Columns>
           <dxl:Column Name="typname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -457,7 +457,7 @@ union all
         </dxl:Opfamilies>
       </dxl:Index>
       <dxl:RelationStatistics Mdid="2.1259.1.0" Name="pg_class" Rows="405.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.1259.1.0" Name="pg_class" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="33,26" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1259.1.0" Name="pg_class" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="33,26">
         <dxl:Columns>
           <dxl:Column Name="relname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -584,7 +584,7 @@ union all
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.2031667.1.0" Name="foo" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.2031667.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.2031667.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -618,7 +618,7 @@ union all
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.2031673.1.0" Name="bar" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.2031673.1.0" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.2031673.1.0" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>

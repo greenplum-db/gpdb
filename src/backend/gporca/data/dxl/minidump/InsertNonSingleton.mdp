@@ -156,7 +156,7 @@ EXPLAIN INSERT INTO snackbox SELECT a FROM (SELECT c FROM hottoast LIMIT 3) hott
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.16431.1.0" Name="hottoast" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.16431.1.0" Name="hottoast" IsTemporary="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16431.1.0" Name="hottoast" IsTemporary="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -187,7 +187,7 @@ EXPLAIN INSERT INTO snackbox SELECT a FROM (SELECT c FROM hottoast LIMIT 3) hott
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.16428.1.0" Name="snackbox" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.16428.1.0" Name="snackbox" IsTemporary="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16428.1.0" Name="snackbox" IsTemporary="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
