@@ -1,6 +1,4 @@
 # ignores only for this directory
-/ao_upgrade.out
-/ao_upgrade_optimizer.out
 /external_table.out
 /fts_manual_probe.out
 /gp_collation.out
