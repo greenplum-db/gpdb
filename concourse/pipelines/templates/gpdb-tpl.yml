@@ -585,13 +585,6 @@ resources:
     secret_access_key: ((aws-bucket-secret-access-key))
     versioned_file: bin_gpdb_[[ os_type ]]/gpdb_branch_6X_STABLE/icw_green/bin_gpdb.tar.gz
 
-- name: bin_gpdb_[[ os_type ]]_rc
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/gpdb6/server-rc-(.*)-[[ os_type ]]_x86_64((rc-build-type-gcs)).tar.gz
-
 - name: bin_gpdb_clients_[[ os_type ]]_rc
   type: gcs
   source:
@@ -636,6 +629,13 @@ resources:
 {% endif %}
 {% endif %}
 {% endif %}
+
+- name: bin_gpdb_[[ os_type ]]_rc
+  type: gcs
+  source:
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: server/published/gpdb6/server-rc-(.*)-[[ os_type ]]_x86_64((rc-build-type-gcs)).tar.gz
 
 {% if pipeline_configuration == "prod" or build_test_rc_rpm %}
 {% if os_type != "ubuntu18.04" %}
@@ -701,12 +701,14 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/bin_gpdb_clients_photon3/bin_gpdb_clients.tar.gz
 
+{% if pipeline_configuration == "prod" %}
 - name: server-build-photon3
   type: gcs
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: server/published/gpdb6/server-build-(.*)-photon3_x86_64((rc-build-type-gcs)).tar.gz
+{% endif %}
 
 - name: bin_gpdb_sles12
   type: gcs
@@ -751,7 +753,7 @@ resources:
 {% endif %}
 
 {% if not directed_release %}
-{% if os_type == default_os_type %}
+{% if os_type == default_os_type and pipeline_target == "prod" %}
 - name: bin_gpdb_clients_windows_rc
   type: gcs
   source:
