@@ -23,7 +23,7 @@ This topic describes the Greenplum Database 6 platform and operating system soft
 
 Greenplum Database 6 runs on the following operating system platforms:
 
--   Red Hat Enterprise Linux 64-bit 8.7 (As of Greenplum Database version 6.20. See the following [Note](#rhel-issues))
+-   Red Hat Enterprise Linux 64-bit 8.7 or later (As of Greenplum Database version 6.20. See the following [Note](#rhel-issues))
 -   Red Hat Enterprise Linux 64-bit 7.x \(See the following [Note](#rhel-issues).\)
 -   Red Hat Enterprise Linux 64-bit 6.x
 -   CentOS 64-bit 7.x
