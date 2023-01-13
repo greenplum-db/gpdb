@@ -105,7 +105,7 @@ If a role holds a privilege with grant option and has granted it to other roles 
 
 When you revoke privileges on a table, Greenplum Database revokes the corresponding column privileges \(if any\) on each column of the table, as well. On the other hand, if a role has been granted privileges on a table, then revoking the same privileges from individual columns will have no effect.
 
-By default, when you revoke privileges on a partitioned table, Greenplum Database recurses the operation to it's child partition tables. To direct Greenplum to perform the `REVOKE` on the partitioned table only, specify the `ONLY <table_name>` clause.
+By default, when you revoke privileges on a partitioned table, Greenplum Database recurses the operation to its child partition tables. To direct Greenplum to perform the `REVOKE` on the partitioned table only, specify the `ONLY <table_name>` clause.
 
 When revoking membership in a role, `GRANT OPTION` is instead called `ADMIN OPTION`, but the behavior is similar. This form of the command also allows a `GRANTED BY` option, but that option is currently ignored \(except for checking the existence of the named role\). Note also that this form of the command does not allow the noise word `GROUP` in role\_specification.
 
