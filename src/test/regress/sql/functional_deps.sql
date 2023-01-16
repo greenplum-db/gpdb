@@ -104,6 +104,10 @@ SELECT product_id, p.name, (sum(s.units) * p.price) AS sales
     FROM products p LEFT JOIN sales s USING (product_id)
     GROUP BY product_id;
 
+-- OK, test GPDB case
+set enable_groupagg = off;
+SELECT count(distinct name), price FROM products GROUP BY product_id;
+reset enable_groupagg;
 
 -- Drupal example, http://drupal.org/node/555530
 

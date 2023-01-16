@@ -125,6 +125,14 @@ SELECT product_id, p.name, (sum(s.units) * p.price) AS sales
 ------------+------+-------
 (0 rows)
 
+-- OK, test GPDB case
+set enable_groupagg = off;
+SELECT count(distinct name), price FROM products GROUP BY product_id;
+ count | price 
+-------+-------
+(0 rows)
+
+reset enable_groupagg;
 -- Drupal example, http://drupal.org/node/555530
 CREATE TEMP TABLE node (
     nid SERIAL,

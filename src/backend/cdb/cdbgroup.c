@@ -3640,6 +3640,58 @@ find_group_dependent_targets(Node *node, struct groupdep_ctx *ctx)
 }
 
 /*
+ * Fill groupColIdx and groupOperators for group functional dependency Var.
+ *
+ * We need to fill groupColIdx and groupOperators of group functional dependency
+ * Var which has been added into add_list before, for generating multi-agg path later.
+ * Get more details https://github.com/greenplum-db/gpdb/issues/14817
+ */
+static void
+construct_group_dependent_targets(MppGroupContext *ctx, struct groupdep_ctx *gctx)
+{
+	ListCell 	*lc = NULL;
+	int			idx = 0;
+	List		*srglist = NULL;
+
+	if (list_length(gctx->add_tlist) == 0)
+		return;
+
+	Query		*query = ctx->root->parse;
+	int 		depstart = ctx->numGroupCols - list_length(gctx->add_tlist);
+
+	ctx->groupColIdx = (AttrNumber *)repalloc(ctx->groupColIdx, sizeof(AttrNumber) * ctx->numGroupCols);
+	ctx->groupOperators = (Oid *)repalloc(ctx->groupOperators, sizeof(Oid) * ctx->numGroupCols);
+
+	foreach_with_count(lc, gctx->add_tlist, idx)
+	{
+		TargetEntry *te = (TargetEntry *)lfirst(lc);
+		TargetEntry *subte = NULL;
+		Oid 		eqop;
+		Oid			orderingop;
+
+		get_sort_group_operators(exprType((Node *) te->expr),
+								true, true, false,
+								&orderingop, &eqop, NULL, NULL);
+
+		SortGroupClause *gc = makeNode(SortGroupClause);
+		gc->tleSortGroupRef = te->ressortgroupref;
+		gc->eqop = eqop;
+		gc->sortop = orderingop;
+		srglist = lappend(srglist, gc);
+
+		subte = tlist_member((Node *)te->expr, ctx->sub_tlist);
+		if (subte == NULL)
+			elog(ERROR, "cannot find grouping dependency var in sub tlist.");
+
+		ctx->groupColIdx[depstart + idx] = subte->resno;
+		ctx->groupOperators[depstart + idx] = eqop;
+	}
+
+	query->groupClause = list_concat(query->groupClause, srglist);
+	return;
+}
+
+/*
  * Constructing the target list for the preliminary Agg node by
  * placing targets for the grouping attributes on the grps_tlist
  * temporary. Make sure ressortgroupref matches the original. Copying the
@@ -3724,6 +3776,8 @@ deconstruct_agg_info(MppGroupContext *ctx)
 		/* Add any dependent targets we found to grps_tlist. */
 		ctx->grps_tlist = list_concat(ctx->grps_tlist, gctx.add_tlist);
 		ctx->numGroupCols += list_length(gctx.add_tlist);
+
+		construct_group_dependent_targets(ctx, &gctx);
 	}
 
 	/*
