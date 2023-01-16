@@ -323,9 +323,12 @@ SendTupleChunkToAMS(MotionLayerState *mlStates,
 		}
 		else
 		{
+			if (targetRoute < 0 || targetRoute >= pEntry->numConns)
+			{
+				elog(FATAL, "SendTupleChunkToAMS: targetRoute is %d, must be between 0 and %d .",
+							targetRoute, pEntry->numConns);
+			}
 			/* handle pt-to-pt message. Primary */
-			Assert(targetRoute >= 0);
-			Assert(targetRoute < pEntry->numConns);
 			conn = pEntry->conns + targetRoute;
 			/* only send to interested connections */
 			if (conn->stillActive)
