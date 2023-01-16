@@ -2565,7 +2565,7 @@ class gpload:
         except Exception as e:
             self.log(self.ERROR, 'could not run SQL "%s": %s ' % (sql, str(e)))
 
-        if dk_text[0][0] == 'DISTRIBUTED RANDOMLY':
+        if not dk_text[0][0].startswith("DISTRIBUTED BY"):
             # target table doesn't have dk, we use match column
             dk = self.getconfig('gpload:output:match_columns', list)
             dk_text = " DISTRIBUTED BY (%s)" % ', '.join(dk)
@@ -2642,8 +2642,17 @@ class gpload:
         # should not explicitly specify the DISTRIBUTED BY clause.
         # Only the DISTRIBUTED BY clause can take effect if all selected fields 
         # exist in the CREATE TABLE statement.
-        if set(distcols) <= set(element[0] for element in target_columns):
-            sql += distcols
+        dist_column_list = re.match(".*\((.*)\).*", distcols).group(1).split(",")
+        target_column_set = set(element[0] for element in target_columns)
+        if set(dist_column_list) <= target_column_set:
+            quoted_dist_column = convertListToDelimited(dist_column_list)
+            sql += " DISTRIBUTED BY (" + ','.join(quoted_dist_column) + ")"
+        else:
+            match_columns = self.getconfig('gpload:output:match_columns', list)
+            if set(match_columns) <= target_column_set:
+                quoted_match_columns = convertListToDelimited(match_columns)
+                sql += " DISTRIBUTED BY (" + ','.join(quoted_match_columns) + ")"
+        
         self.log(self.LOG, sql)
 
         if not self.options.D:

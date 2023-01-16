@@ -893,21 +893,17 @@ def test_546_gpload_merge_staging_DK():
 
 @TestBase.prepare_before_test(num=547, times=1)
 def test_547_gpload_insert_staging_without_DK():
-    """547 test gpload insert partly columns without distribution key
+    """547 test gpload insert distribution key mismatch, use match column instead.
     """
-    base = 'data/column_match_05.txt'
-    target = 'data/column_match_target_01.txt'
-
-    append_sql(547, "TRUNCATE TABLE texttable;")
-    config_fd, config_path = tempfile.mkstemp()
-    
-    TestBase.write_config_file(
-        columns={
+    file = TestBase.mkpath('setup.sql')
+    TestBase.runfile(file)
+    TestBase.copy_data('column_match_05.txt', 'data_file.txt')
+    TestBase.write_config_file(columns={
                 's1': 'text', 's2': 'text', 's3': 'text', 'dt': 'timestamp',
                 'n2': 'integer', 'n3': 'bigint', 'n4': 'numeric',
                 'n5': 'numeric', 'n6': 'real', 'n7': 'double precision'},
-        mode='insert', config=config_path,
-        match_columns=["dt"], update_columns=['s3'],
-        file=target)
-    append_gpload_cmd(547, config_path)
-    append_sql(547, "SELECT COUNT(*) FROM texttable")
+                               mode='merge', file='data_file.txt', table='testtruncate', reuse_tables=True,
+                               match_columns=["dt"], update_columns=['s3'])
+    f = open(TestBase.mkpath('query547.sql'), 'a')
+    f.write("\\! psql -d reuse_gptest -c '\\d staging_gpload_reusable_*'")
+    f.close()
