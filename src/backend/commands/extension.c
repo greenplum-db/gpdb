@@ -892,7 +892,7 @@ execute_extension_script(Node *stmt,
 	/*
 	 * Set creating_extension and related variables so that
 	 * recordDependencyOnCurrentExtension and other functions do the right
-	 * things.  On failure, ensure we reset these variables.
+	 * things. On failure, ensure we reset these variables.
 	 */
 	creating_extension = true;
 	CurrentExtensionObject = extensionOid;
@@ -902,8 +902,8 @@ execute_extension_script(Node *stmt,
 	 */
 	if (Gp_role == GP_ROLE_EXECUTE)
 	{
-			segment_nestlevel = save_nestlevel;
-			return;
+		segment_nestlevel = save_nestlevel;
+		return;
 	}
 
 	PG_TRY();
@@ -1313,7 +1313,6 @@ CreateExtension(CreateExtensionStmt *stmt)
 	/*
 	 * We use global variables to track the extension being created, so we can
 	 * create only one extension at the same time.
-	 * Except that QE do CREATE_EXTENSION_BEGIN.
 	 */
 	if (creating_extension)
 		ereport(ERROR,
@@ -1578,7 +1577,7 @@ CreateExtension(CreateExtensionStmt *stmt)
 	/*
 	 * On the QD and the QE's updateVersions list is calculated
 	 * and this lists are the same. Thus ApplyExtensionUpdates
-	 * call for must be forbidden at QE. (It would be dispatchered
+	 * call must be forbidden at QE. (It would be dispatchered
 	 * from QD a bit later)
 	 */
 	if (Gp_role != GP_ROLE_EXECUTE)
@@ -3022,8 +3021,8 @@ ApplyExtensionUpdates(Oid extensionOid,
 		}
 
 		/*
-			* Finally, execute the update script file
-			*/
+		 * Finally, execute the update script file
+		 */
 		execute_extension_script(stmt, extensionOid, control,
 								 oldVersionName, versionName,
 								 requiredSchemas,
