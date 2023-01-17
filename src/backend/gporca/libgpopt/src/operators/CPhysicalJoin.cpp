@@ -23,6 +23,7 @@
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarCmp.h"
 #include "gpopt/operators/CScalarIsDistinctFrom.h"
+#include "naucrates/md/IMDCast.h"
 #include "naucrates/md/IMDScalarOp.h"
 
 using namespace gpopt;
@@ -366,10 +367,43 @@ CPhysicalJoin::PedInnerHashedFromOuterHashed(
 		{
 			GPOS_ASSERT(pdrgpexprMatching->Size() == pdrgpexprHashed->Size());
 
+			//			 In a case where two tables have distribution keys of different datatypes and a left outer
+			//			 NL join is performed, then adding a re-distribute motion on the inner relation,if the type
+			//			 of column of the inner relation used in the join condition is binary coercible to type of
+			//			 column of the outer relation used in the join condition. If the inner relation column type
+			//			 is not binary coercible to outer relation column type then a broadcast motion will be added.
+			IMdIdArray *opfamilies = pdshashed->Opfamilies();
+			if (nullptr != opfamilies)
+			{
+				for (ULONG ul = 0; ul < opfamilies->Size(); ul++)
+				{
+					IMDId *srcMDId =
+						CScalar::PopConvert((*pdrgpexprMatching)[ul]->Pop())
+							->MdidType();
+					IMDId *dstMDId =
+						CScalar::PopConvert((*pdrgpexprHashed)[ul]->Pop())
+							->MdidType();
+					if (!srcMDId->Equals(dstMDId))
+					{
+						CMDAccessor *md_accessor =
+							COptCtxt::PoctxtFromTLS()->Pmda();
+						const IMDCast *pmdcast =
+							md_accessor->Pmdcast(srcMDId, dstMDId);
+						if (!pmdcast->IsBinaryCoercible())
+						{
+							pdrgpexprMatching->Release();
+							return nullptr;
+						}
+					}
+				}
+				opfamilies->AddRef();
+			}
+
 			// create a matching hashed distribution request
 			BOOL fNullsColocated = pdshashed->FNullsColocated();
-			CDistributionSpecHashed *pdshashedEquiv = GPOS_NEW(mp)
-				CDistributionSpecHashed(pdrgpexprMatching, fNullsColocated);
+			CDistributionSpecHashed *pdshashedEquiv =
+				GPOS_NEW(mp) CDistributionSpecHashed(
+					pdrgpexprMatching, fNullsColocated, opfamilies);
 			pdshashedEquiv->ComputeEquivHashExprs(mp, exprhdl);
 			return GPOS_NEW(mp) CEnfdDistribution(pdshashedEquiv, dmatch);
 		}

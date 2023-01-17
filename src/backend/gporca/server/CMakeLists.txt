@@ -264,7 +264,8 @@ AnyPredicate-Over-UnionOfConsts EquivClassesUnion EquivClassesIntersect
 IndexScanWithNestedCTEAndSetOp Blocking-Spool-Parallel-Union-All;
 
 CEquivClassTest:
-Equiv-HashedDistr-1 Equiv-HashedDistr-2 EquivClassesAndOr EquivClassesLimit IndexNLJoin_Cast_NoMotion;
+Equiv-HashedDistr-1 Equiv-HashedDistr-2 EquivClassesAndOr EquivClassesLimit IndexNLJoin_Cast_NoMotion
+NLJoin_InnerBinaryCoercible_RedistributeMotion NLJoin_InnerNotBinaryCoercible_BroadcastMotion;
 
 COuterJoin1Test:
 ExpandNAryJoinGreedyWithLOJOnly NaryWithLojAndNonLojChilds LOJ_bb_mpph LOJ-Condition-False
