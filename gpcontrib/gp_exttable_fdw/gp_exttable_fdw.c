@@ -373,6 +373,25 @@ gp_exttable_permission_check(PG_FUNCTION_ARGS)
 {
 	List	   *options_list = untransformRelOptions(PG_GETARG_DATUM(0));
 
+	ListCell *lc;
+	bool has_execute_on_option = false;
+	foreach(lc, options_list)
+	{
+		DefElem    *def = (DefElem *) lfirst(lc);
+
+		if (pg_strcasecmp(def->defname, "execute_on") == 0)
+		{
+			has_execute_on_option = true;
+		}
+	}
+
+	if(!has_execute_on_option)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("must specify option: execute_on")));
+	}
+
 	if (!superuser() && Gp_role == GP_ROLE_DISPATCH)
 	{
 		/*----------
@@ -384,7 +403,6 @@ gp_exttable_permission_check(PG_FUNCTION_ARGS)
 		 *	 permissions for this role and for this type of table
 		 *----------
 		 */
-		ListCell *lc;
 		bool iswritable = false;
 		foreach(lc, options_list)
 		{
