@@ -2269,3 +2269,16 @@ reset enable_hashjoin;
 reset enable_nestloop;
 reset enable_seqscan;
 reset enable_bitmapscan;
+
+-- check motion is added to inner child
+set optimizer_enable_hashjoin to off;
+set enable_hashjoin to off;
+set enable_nestloop to on;
+reset enable_mergejoin;
+create table foo_nestloop ( a varchar(10)) distributed by (a);
+create table bar_nestloop ( p char(10)) distributed by (p);
+explain select foo_nestloop.a,bar_nestloop.p from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.p;
+explain select foo_nestloop.a,bar_nestloop.p from bar_nestloop left join foo_nestloop on foo_nestloop.a=bar_nestloop.p;
+set optimizer_enable_hashjoin to on;
+reset enable_hashjoin;
+reset enable_nestloop;
