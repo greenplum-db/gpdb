@@ -75,6 +75,7 @@ AggregateCreate(const char *aggName,
 				int32 aggmTransSpace,
 				const char *agginitval,
 				const char *aggminitval,
+				bool aggrepsafeexec,
 				char proparallel)
 {
 	Relation	aggdesc;
@@ -677,6 +678,7 @@ AggregateCreate(const char *aggName,
 	values[Anum_pg_aggregate_aggtransspace - 1] = Int32GetDatum(aggTransSpace);
 	values[Anum_pg_aggregate_aggmtranstype - 1] = ObjectIdGetDatum(aggmTransType);
 	values[Anum_pg_aggregate_aggmtransspace - 1] = Int32GetDatum(aggmTransSpace);
+	values[Anum_pg_aggregate_aggrepsafeexec - 1] = BoolGetDatum(aggrepsafeexec);
 	if (agginitval)
 		values[Anum_pg_aggregate_agginitval - 1] = CStringGetTextDatum(agginitval);
 	else
