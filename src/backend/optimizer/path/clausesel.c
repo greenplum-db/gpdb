@@ -78,6 +78,7 @@ cmpSelectivity
 /****************************************************************************
  *		ROUTINES TO COMPUTE SELECTIVITIES
  ****************************************************************************/
+
 /*
  * clauselist_selectivity -
  *	  Compute the selectivity of an implicitly-ANDed list of boolean
@@ -86,9 +87,10 @@ cmpSelectivity
  *	  or bare expression clauses --- the former is preferred since
  *	  it allows caching of results. 
  *
- * clauselist_selectivity is kept same as upstream here. 
- * Because this function is called by most fdw (Foreign Data Wrapper) extensions.
- * This functions just simply call clauselist_selectivity_use_damping() and set use_damping to false.
+ * clauselist_selectivity is kept same as upstream here. Because this 
+ * function is called by most fdw (Foreign Data Wrapper) extensions.
+ * This functions just simply call clauselist_selectivity_use_damping() 
+ * and set use_damping to false.
  * 
  * Greenplum specific behavior:
  * Greenplum calls clauselist_selectivity_use_damping() directly.
