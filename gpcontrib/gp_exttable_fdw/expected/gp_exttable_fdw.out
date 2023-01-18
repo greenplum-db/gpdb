@@ -1,0 +1,10 @@
+--
+-- Test foreign-data wrapper gp_exttable_fdw.
+--
+CREATE EXTENSION IF NOT EXISTS gp_exttable_fdw;
+NOTICE:  extension "gp_exttable_fdw" already exists, skipping
+CREATE SERVER IF NOT EXISTS gp_exttable_server FOREIGN DATA WRAPPER gp_exttable_fdw;
+NOTICE:  server "gp_exttable_server" already exists, skipping
+-- validator tests
+CREATE FOREIGN TABLE ext_without_execute_on_option (id int, category text) SERVER gp_exttable_server;  -- ERROR
+ERROR:  must specify option: execute_on  (seg0 127.0.0.1:7002 pid=8255)
