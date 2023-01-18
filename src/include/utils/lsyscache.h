@@ -156,6 +156,7 @@ extern char func_data_access(Oid funcid);
 extern char func_exec_location(Oid funcid);
 extern Oid get_agg_transtype(Oid aggid);
 extern bool is_agg_ordered(Oid aggid);
+extern bool is_agg_repsafe(Oid aggid);
 extern bool is_agg_partial_capable(Oid aggid);
 extern RegProcedure get_func_support(Oid funcid);
 extern Oid	get_relname_relid(const char *relname, Oid relnamespace);

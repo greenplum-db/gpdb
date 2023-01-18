@@ -566,7 +566,7 @@ COrderedAggPreprocessor::PexprFinalAgg(CMemoryPool *mp,
 	CScalarAggFunc *popNewAggFunc = CUtils::PopAggFunc(
 		mp, mdid, arg_col_ref->Name().Pstr(), false /*is_distinct*/,
 		EaggfuncstageGlobal /*eaggfuncstage*/, false /*fSplit*/, ret_type,
-		EaggfunckindNormal, argtypes);
+		EaggfunckindNormal, argtypes, popScAggFunc->FRepSafe());
 
 	return GPOS_NEW(mp) CExpression(mp, popNewAggFunc, pdrgpexpr);
 }

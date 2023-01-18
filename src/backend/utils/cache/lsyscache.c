@@ -1857,6 +1857,31 @@ is_agg_ordered(Oid aggid)
 }
 
 /*
+ * is_repsafe_agg
+ *		Given aggregate id, check if it is an safe replicate slice aggregate
+ */
+bool
+is_agg_repsafe(Oid aggid)
+{
+	HeapTuple	aggTuple;
+	bool		aggrepsafe;
+	bool		isnull = false;
+
+	aggTuple = SearchSysCache1(AGGFNOID,
+							   ObjectIdGetDatum(aggid));
+	if (!HeapTupleIsValid(aggTuple))
+		elog(ERROR, "cache lookup failed for aggregate %u", aggid);
+
+	aggrepsafe = DatumGetBool(SysCacheGetAttr(AGGFNOID, aggTuple,
+										   Anum_pg_aggregate_aggrepsafeexec, &isnull));
+	Assert(!isnull);
+
+	ReleaseSysCache(aggTuple);
+
+	return aggrepsafe;
+}
+
+/*
  * is_agg_partial_capable
  *		Given aggregate id, check if it can be used in 2-phase aggregation.
  *

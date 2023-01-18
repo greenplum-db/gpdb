@@ -3190,7 +3190,7 @@ CTranslatorDXLToExpr::PexprAggFunc(const CDXLNode *pdxlnAggref)
 		GPOS_NEW(m_mp)
 			CWStringConst(m_mp, (pmdagg->Mdname().GetMDName())->GetBuffer()),
 		dxl_op->IsDistinct(), agg_func_stage, fSplit, resolved_return_type_mdid,
-		agg_func_kind, dxl_op->GetArgTypes());
+		agg_func_kind, dxl_op->GetArgTypes(), pmdagg->IsAggRepSafe());
 
 	CExpression *pexprAggFunc = nullptr;
 

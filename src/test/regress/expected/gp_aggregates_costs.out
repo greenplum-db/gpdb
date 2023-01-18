@@ -111,3 +111,43 @@ explain (costs off) select b, sum(a) from t_planner_force_multi_stage group by b
 
 reset gp_eager_two_phase_agg;
 drop table t_planner_force_multi_stage;
+-- Test user-defined aggregate marked safe to execute on replicated slices without motion
+CREATE AGGREGATE my_unsafe_avg (float8)
+(
+    sfunc = float8_accum,
+    stype = float8[],
+    finalfunc = float8_avg,
+    initcond = '{0,0,0}'
+);
+CREATE AGGREGATE my_safe_avg (float8)
+(
+    sfunc = float8_accum,
+    stype = float8[],
+    finalfunc = float8_avg,
+    initcond = '{0,0,0}',
+    repsafe = true
+);
+CREATE TABLE a_reptable (a int) DISTRIBUTED REPLICATED;
+CREATE TABLE b_reptable (b int) DISTRIBUTED REPLICATED;
+EXPLAIN INSERT INTO a_reptable(a) SELECT my_unsafe_avg(b) FROM b_reptable;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Insert on a_reptable  (cost=1544.50..1544.55 rows=1 width=4)
+   ->  Broadcast Motion 1:3  (slice1; segments: 1)  (cost=1544.50..1544.55 rows=1 width=4)
+         ->  Subquery Scan on "*SELECT*"  (cost=1544.50..1544.53 rows=1 width=4)
+               ->  Aggregate  (cost=1544.50..1544.51 rows=1 width=8)
+                     ->  Seq Scan on b_reptable  (cost=0.00..1063.00 rows=96300 width=4)
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+EXPLAIN INSERT INTO a_reptable(a) SELECT my_safe_avg(b) FROM b_reptable;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Insert on a_reptable  (cost=1544.50..1544.55 rows=1 width=4)
+   ->  Broadcast Motion 1:3  (slice1; segments: 1)  (cost=1544.50..1544.55 rows=1 width=4)
+         ->  Subquery Scan on "*SELECT*"  (cost=1544.50..1544.53 rows=1 width=4)
+               ->  Aggregate  (cost=1544.50..1544.51 rows=1 width=8)
+                     ->  Seq Scan on b_reptable  (cost=0.00..1063.00 rows=96300 width=4)
+ Optimizer: Postgres query optimizer
+(6 rows)
+

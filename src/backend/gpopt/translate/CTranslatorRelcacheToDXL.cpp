@@ -1506,6 +1506,7 @@ CTranslatorRelcacheToDXL::RetrieveAgg(CMemoryPool *mp, IMDId *mdid)
 	mdid->AddRef();
 
 	BOOL is_ordered = gpdb::IsOrderedAgg(agg_oid);
+	BOOL is_repsafe = gpdb::IsRepSafeAgg(agg_oid);
 
 	// GPDB does not support splitting of ordered aggs and aggs without a
 	// combine function
@@ -1518,7 +1519,7 @@ CTranslatorRelcacheToDXL::RetrieveAgg(CMemoryPool *mp, IMDId *mdid)
 
 	CMDAggregateGPDB *pmdagg = GPOS_NEW(mp) CMDAggregateGPDB(
 		mp, mdid, mdname, result_type_mdid, intermediate_result_type_mdid,
-		is_ordered, is_splittable, is_hash_agg_capable);
+		is_ordered, is_splittable, is_hash_agg_capable, is_repsafe);
 	return pmdagg;
 }
 

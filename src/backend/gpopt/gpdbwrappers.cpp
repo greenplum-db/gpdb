@@ -691,6 +691,18 @@ gpdb::IsOrderedAgg(Oid aggid)
 }
 
 bool
+gpdb::IsRepSafeAgg(Oid aggid)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_aggregate */
+		return is_agg_repsafe(aggid);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
+bool
 gpdb::IsAggPartialCapable(Oid aggid)
 {
 	GP_WRAP_START;

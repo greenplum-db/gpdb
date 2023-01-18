@@ -187,6 +187,8 @@ Query *FlattenJoinAliasVar(Query *query, gpos::ULONG query_level);
 // is aggregate ordered
 bool IsOrderedAgg(Oid aggid);
 
+bool IsRepSafeAgg(Oid aggid);
+
 // does aggregate have a combine function (and serial/deserial functions, if needed)
 bool IsAggPartialCapable(Oid aggid);
 
