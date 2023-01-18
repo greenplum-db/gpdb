@@ -367,11 +367,11 @@ CPhysicalJoin::PedInnerHashedFromOuterHashed(
 		{
 			GPOS_ASSERT(pdrgpexprMatching->Size() == pdrgpexprHashed->Size());
 
-			//			 In a case where two tables have distribution keys of different datatypes and a left outer
-			//			 NL join is performed, then adding a re-distribute motion on the inner relation,if the type
-			//			 of column of the inner relation used in the join condition is binary coercible to type of
-			//			 column of the outer relation used in the join condition. If the inner relation column type
-			//			 is not binary coercible to outer relation column type then a broadcast motion will be added.
+			// In a case where two tables have distribution keys of different datatypes and a left outer
+			// NL join is performed, then adding a re-distribute motion on the inner relation,if the type
+			// of column of the inner relation used in the join condition is binary coercible to type of
+			// column of the outer relation used in the join condition. If the inner relation column type
+			// is not binary coercible to outer relation column type then a broadcast motion will be added.
 			IMdIdArray *opfamilies = pdshashed->Opfamilies();
 			if (nullptr != opfamilies)
 			{
