@@ -1433,7 +1433,7 @@ vac_update_relstats(Relation relation,
 		 * do for heap tables, too, because we don't have even a tuple count
 		 * for them. At least this is consistent.
 		 */
-		if (num_tuples >= 1.0)
+		if (get_rel_relkind(relid) != RELKIND_FOREIGN_TABLE && num_tuples >= 1.0)
 		{
 			Assert(Gp_role == GP_ROLE_UTILITY);
 			Assert(!IsSystemRelation(relation));
@@ -1441,7 +1441,6 @@ vac_update_relstats(Relation relation,
 			num_tuples = 0;
 		}
 
-		Assert(num_tuples < 1.0);
 		num_pages = 1.0;
 	}
 
