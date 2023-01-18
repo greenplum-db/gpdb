@@ -1004,3 +1004,24 @@ BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 SAVEPOINT my_savepoint;
 UPDATE foo SET b = 1 WHERE a < 4;
 ROLLBACK;
+
+--
+-- DELETE RETURNING is currently not supported on AO tables.
+--
+CREATE TEMP TABLE returning_aotab (id int4) WITH (appendonly=true);
+INSERT INTO returning_aotab VALUES (1);
+DELETE FROM returning_aotab RETURNING *;
+
+--
+-- Test returning ctid for AO table
+--
+CREATE TABLE returning_ctid_aotab (f1 serial, f2 text) WITH (appendonly=true) DISTRIBUTED BY (f1);
+INSERT INTO returning_ctid_aotab (f2) VALUES ('test1') RETURNING ctid;
+DROP TABLE returning_ctid_aotab;
+
+--
+-- Test returning ctid for AOCO table
+--
+CREATE TABLE returning_ctid_aocotab (f1 serial, f2 text) WITH (appendonly=true, orientation=column) DISTRIBUTED BY (f1);
+INSERT INTO returning_ctid_aocotab (f2) VALUES ('test1') RETURNING ctid;
+DROP TABLE returning_ctid_aocotab;

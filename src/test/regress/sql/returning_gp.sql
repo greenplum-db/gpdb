@@ -42,14 +42,6 @@ delete from returning_parttab where partkey = 14 returning *;
 select * from returning_parttab;
 
 --
--- DELETE RETURNING is currently not supported on AO tables.
---
-CREATE TEMP TABLE returning_aotab (id int4) WITH (appendonly=true);
-INSERT INTO returning_aotab VALUES (1);
-DELETE FROM returning_aotab RETURNING *;
-
-
---
 -- Test UPDATE RETURNING with a split update, i.e. an update of the distribution
 -- key.
 --
