@@ -309,7 +309,7 @@ extern LOCKMODE AlterTableGetRelOptionsLockLevel(List *defList);
 
 
 /* in reloptions_gp.c */
-extern Datum transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts);
+extern Datum transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts, bool hasStorage);
 
 extern bool relOptionsEquals(Datum oldOptions, Datum newOptions);
 

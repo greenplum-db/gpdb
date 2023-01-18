@@ -1708,15 +1708,7 @@ heap_create_with_catalog(const char *relname,
 	 */
 	if (RelationIsAppendOptimized(new_rel_desc))
 	{
-		StdRdOptions *stdRdOptions = (StdRdOptions *)default_reloptions(reloptions,
-																	 !valid_opts,
-																	 RELOPT_KIND_APPENDOPTIMIZED);
 		InsertAppendOnlyEntry(relid,
-							  stdRdOptions->blocksize,
-							  gp_safefswritesize,
-							  stdRdOptions->compresslevel,
-							  stdRdOptions->checksum,
-							  stdRdOptions->compresstype,
 							  InvalidOid,
 							  InvalidOid,
 							  InvalidOid,

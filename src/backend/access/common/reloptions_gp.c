@@ -523,12 +523,14 @@ parseAOStorageOpts(const char *opts_str)
  * appendonly storage option in opts.  This datum is used to populate
  * pg_class.reloptions during relation creation.
  *
- * To avoid catalog bloat, we only create "name=value" item for those
- * values in opts that are not specified in WITH clause and are
- * different from their initial defaults.
+ * If hasStorage is true, record all attributes to pg_class.reloptions
+ * even if not specified in withOpts since they are necessary to perform
+ * table scans. In cases where hasStorage is false and the reloption has
+ * been modified from server defaults, the parameter is recorded in
+ * pg_class.reloptions and used for inheritence purposes only.
  */
 Datum
-transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
+transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts, bool hasStorage)
 {
 	char	   *strval;
 	Datum	   *withDatums = NULL;
@@ -641,54 +643,43 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 		}
 	}
 
-	if ((opts->blocksize != AO_DEFAULT_BLOCKSIZE) && !foundBlksz)
+
+	/* Record AO storage parameters {blocksize,checksum,compresslevel,compresstype}
+	 * in pg_class.reloptions even if not provided in WITH clause IFF hasStorage=true
+	 * OR the paremeter has been modified from the server default value.
+	 */
+
+	if (!foundBlksz && (opts->blocksize != AO_DEFAULT_BLOCKSIZE || hasStorage))
 	{
 		d = CStringGetTextDatum(psprintf("%s=%d",
-										 SOPT_BLOCKSIZE,
-										 opts->blocksize));
+										SOPT_BLOCKSIZE,
+										opts->blocksize));
 		astate = accumArrayResult(astate, d, false, TEXTOID,
-								  CurrentMemoryContext);
+									CurrentMemoryContext);
 	}
-
-	/*
-	 * Record compression options only if compression is enabled.  No need to
-	 * check compresstype here as by the time we get here, "opts" should have
-	 * been set by default_reloptions() correctly.
-	 */
-	if (opts->compresslevel > AO_DEFAULT_COMPRESSLEVEL &&
-		opts->compresstype[0])
+	if (!foundComplevel && (opts->compresslevel != AO_DEFAULT_COMPRESSLEVEL || hasStorage))
 	{
-		if (!foundComptype && (
-							   (pg_strcasecmp(opts->compresstype, AO_DEFAULT_COMPRESSTYPE) == 0
-								&& opts->compresslevel == 1 && !foundComplevel) ||
-							   pg_strcasecmp(opts->compresstype,
-											 AO_DEFAULT_COMPRESSTYPE) != 0))
-		{
-			d = CStringGetTextDatum(psprintf("%s=%s",
-											 SOPT_COMPTYPE,
-											 opts->compresstype));
-			astate = accumArrayResult(astate, d, false, TEXTOID,
-									  CurrentMemoryContext);
-		}
-		/* When compression is enabled, default compresslevel is 1. */
-		if ((opts->compresslevel != 1) &&
-			!foundComplevel)
-		{
 			d = CStringGetTextDatum(psprintf("%s=%d",
-											 SOPT_COMPLEVEL,
-											 opts->compresslevel));
+												SOPT_COMPLEVEL,
+												(opts->compresslevel ? opts->compresslevel : AO_DEFAULT_COMPRESSLEVEL)));
 			astate = accumArrayResult(astate, d, false, TEXTOID,
-									  CurrentMemoryContext);
-		}
+										CurrentMemoryContext);
 	}
-
-	if ((opts->checksum != AO_DEFAULT_CHECKSUM) && !foundChecksum)
+	if (!foundComptype && ((opts->compresstype[0] && pg_strcasecmp(opts->compresstype, "none") != 0) || hasStorage))
 	{
 		d = CStringGetTextDatum(psprintf("%s=%s",
-										 SOPT_CHECKSUM,
-										 (opts->checksum ? "true" : "false")));
+							SOPT_COMPTYPE,
+							(opts->compresstype[0] ? opts->compresstype : "none")));
 		astate = accumArrayResult(astate, d, false, TEXTOID,
-								  CurrentMemoryContext);
+									CurrentMemoryContext);
+	}
+	if (!foundChecksum && (!opts->checksum || hasStorage))
+	{
+	d = CStringGetTextDatum(psprintf("%s=%s",
+									SOPT_CHECKSUM,
+									(opts->checksum ? "true" : "false")));
+	astate = accumArrayResult(astate, d, false, TEXTOID,
+								CurrentMemoryContext);
 	}
 	if ((opts->analyze_hll_non_part_table != ANALYZE_DEFAULT_HLL) && !foundAnalyzeHLL)
 	{

@@ -677,6 +677,7 @@ rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
 	/* Create the transient table that will receive the re-ordered data */
 	OIDNewHeap = make_new_heap(tableOid, tableSpace,
 							   accessMethod, NULL,
+							   (Datum)0, /* newoptions */
 							   relpersistence,
 							   AccessExclusiveLock,
 							   true /* createAoBlockDirectory */,
@@ -724,6 +725,7 @@ make_column_name(char *prefix, char *colname)
 Oid
 make_new_heap_with_colname(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
 			  List *NewEncodings,
+			  Datum newoptions,
 			  char relpersistence,
 			  LOCKMODE lockmode,
 			  bool createAoBlockDirectory,
@@ -735,7 +737,7 @@ make_new_heap_with_colname(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMetho
 	Oid			OIDNewHeap;
 	Oid			toastid;
 	Relation	OldHeap;
-	HeapTuple	tuple;
+	HeapTuple	tuple = NULL;
 	Datum		reloptions;
 	bool		isNull;
 	Oid			namespaceid;
@@ -761,81 +763,26 @@ make_new_heap_with_colname(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMetho
 	 */
 
 	/*
-	 * But we do want to use reloptions of the old heap for new heap.
+	 * When the caller passes reloptions to use for the new table, use that.
+	 * Otherwise, copy from the existing pg_class.reloptions of the old.
 	 */
-	tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(OIDOldHeap));
-	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "cache lookup failed for relation %u", OIDOldHeap);
-	reloptions = SysCacheGetAttr(RELOID, tuple, Anum_pg_class_reloptions,
-								 &isNull);
-	if (isNull)
-		reloptions = (Datum) 0;
-
-	/* 
-	 * Unless we are changing access method between heap and AO/CO, look further.
-	 */
-	/*
-	 * GPDB: some considerations when AM is going to change between heap and AO/CO:
-	 *
-	 * If user has also requested setting new reloptions, the new reloptions should have
-	 * replaced the old ones at this point. We just need to reuse those on the new table.
-	 *
-	 * If user does NOT request new reloptions, we should discard the existing reloptions.
-	 * And one more consideration if we are changing the table from heap to AO: we should
-	 * also pick up options from gp_default_storage_options, just like CREATE TABLE does.
-	 */
-	if (RelationIsHeap(OldHeap) && IsAccessMethodAO(NewAccessMethod))
+	if (newoptions != (Datum) 0)
 	{
-		/*
-		 * Heap to AO/CO: filter out any reloptions that belong to heap, 
-		 * and pick up from gp_default_storage_options.
-		 */
-		int 		numoptions;
-		relopt_value 	*options;
-
-		/* 
-		 * Process the reloptions as for AO tables. And validate=false will silently 
-		 * filter out any reloptions that belong to heap.
-		 */
-		StdRdOptions *stdRdOptions = (StdRdOptions *)default_reloptions(reloptions,
-																	false, /* validate */
-																	RELOPT_KIND_APPENDOPTIMIZED);
-
-		/* Pick up from gp_default_storage_options. */
-		options = parseRelOptions(reloptions, false, RELOPT_KIND_APPENDOPTIMIZED, &numoptions);
-		validate_and_refill_options(stdRdOptions, options, numoptions, RELOPT_KIND_APPENDOPTIMIZED, true);
-
-		/* Update the reloptions string. */
-		reloptions = transformAOStdRdOptions(stdRdOptions, reloptions);
-
-		free_options_deep(options, numoptions);
+		reloptions = newoptions;
 	}
-	else if (RelationIsAppendOptimized(OldHeap) && NewAccessMethod == HEAP_TABLE_AM_OID)
+	/* Shouldn't copy from existing pg_class.reloptions if AM changed */
+	else if (OldHeap->rd_rel->relam != NewAccessMethod)
 	{
-		/*
-		 * AO/CO to Heap: unfortunately we don't have a convenient routine to transform
-		 * heap StdRdOptions back to reloption string. So we take a slightly different
-		 * approach than the case of heap to AO/CO: we check if there is any AO reloptions:
-		 * 
-		 * (1) If there is, just discard them (AO options do not apply to heap). 
-		 * (2) If there is none, that means we either have replaced it with heap reloptions
-		 * or the reloptions field is just empty, and either way we will pass the existing
-		 * reloptions on to the new table.
-		 *
-		 * This is possible because at this point we only have either AO/AOCO reloptions or
-		 * heap reloptions, but we cannot have both (see ATExecSetRelOptions).
-		 */
-		Datum 	aoreloptions = (Datum) 0;
-		StdRdOptions *stdRdOptions = (StdRdOptions *)default_reloptions(reloptions,
-																	false, /* validate */
-																	RELOPT_KIND_APPENDOPTIMIZED);
-
-		/*
-		 * Transform the stdRdOptions to get a reloptions string, from which we will 
-		 * know if there is any AO reloptions.
-		 */
-		aoreloptions = transformAOStdRdOptions(stdRdOptions, aoreloptions);
-		if (aoreloptions != (Datum) 0)
+		reloptions = (Datum) 0;
+	}
+	else
+	{
+		tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(OIDOldHeap));
+		if (!HeapTupleIsValid(tuple))
+			elog(ERROR, "cache lookup failed for relation %u", OIDOldHeap);
+		reloptions = SysCacheGetAttr(RELOID, tuple, Anum_pg_class_reloptions,
+									 &isNull);
+		if (isNull)
 			reloptions = (Datum) 0;
 	}
 
@@ -883,7 +830,8 @@ make_new_heap_with_colname(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMetho
 										  true);
 	Assert(OIDNewHeap != InvalidOid);
 
-	ReleaseSysCache(tuple);
+	if (HeapTupleIsValid(tuple))
+		ReleaseSysCache(tuple);
 
 	/*
 	 * Advance command counter so that the newly-created relation's catalog
@@ -949,13 +897,14 @@ make_new_heap_with_colname(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMetho
 Oid
 make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
 			  List *NewEncodings,
+			  Datum newoptions,
 			  char relpersistence,
 			  LOCKMODE lockmode,
 			  bool createAoBlockDirectory,
 			  bool makeCdbPolicy)
 {
 	return make_new_heap_with_colname(OIDOldHeap, NewTableSpace, NewAccessMethod,
-						NewEncodings, relpersistence, lockmode, createAoBlockDirectory, makeCdbPolicy,
+						NewEncodings, newoptions, relpersistence, lockmode, createAoBlockDirectory, makeCdbPolicy,
 						NULL);
 
 }
@@ -1293,9 +1242,7 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 		relform2->relam == AO_ROW_TABLE_AM_OID || relform2->relam == AO_COLUMN_TABLE_AM_OID)
 		ATAOEntries(relform1, relform2);
 
-	/* Also swap reloptions if we are swaping between heap and AO/AOCO tables. */
-	if ((relform1->relam == HEAP_TABLE_AM_OID && IsAccessMethodAO(relform2->relam)) ||
-		(relform2->relam == HEAP_TABLE_AM_OID && IsAccessMethodAO(relform1->relam)))
+	/* Also swap reloptions */
 	{
 		Datum		val[Natts_pg_class] = {0};
 		bool		null[Natts_pg_class] = {0};

@@ -332,7 +332,7 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 	 * it against access by any other process until commit (by which time it
 	 * will be gone).
 	 */
-	OIDNewHeap = make_new_heap_with_colname(matviewOid, tableSpace, matviewRel->rd_rel->relam, NULL, relpersistence,
+	OIDNewHeap = make_new_heap_with_colname(matviewOid, tableSpace, matviewRel->rd_rel->relam, NULL, (Datum)0, relpersistence,
 							   ExclusiveLock, false, true, "_$");
 	LockRelationOid(OIDNewHeap, AccessExclusiveLock);
 	dest = CreateTransientRelDestReceiver(OIDNewHeap, matviewOid, concurrent, relpersistence,
@@ -569,7 +569,9 @@ transientrel_init(QueryDesc *queryDesc)
 	 * will be gone).
 	 */
 	OIDNewHeap = make_new_heap(matviewOid, tableSpace, matviewRel->rd_rel->relam,
-							   NULL, relpersistence,
+							   NULL,
+							   (Datum)0, /* newoptions */
+							   relpersistence,
 							   ExclusiveLock, false, false);
 	LockRelationOid(OIDNewHeap, AccessExclusiveLock);
 

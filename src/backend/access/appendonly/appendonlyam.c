@@ -1292,10 +1292,10 @@ appendonly_beginrangescan_internal(Relation relation,
 	AppendOnlyScanDesc scan;
 	AppendOnlyStorageAttributes *attr;
 	StringInfoData titleBuf;
-	int32 blocksize;
-	int16 compresslevel;
-	bool checksum;
-	NameData compresstype;
+	bool		checksum = true;
+	int32		blocksize = -1;
+	int16		compresslevel = 0;
+	NameData	compresstype;
 
 	GetAppendOnlyEntryAttributes(relation->rd_id, &blocksize, &compresslevel, &checksum, &compresstype);
 
@@ -1953,6 +1953,12 @@ appendonly_fetch_init(Relation relation,
 					 RelationGetRelationName(relation));
 	aoFetchDesc->title = titleBuf.data;
 
+	bool		checksum = true;
+	int32		blocksize = -1;
+	int16		compresslevel = 0;
+	NameData	compresstype;
+
+	GetAppendOnlyEntryAttributes(relation->rd_id, &blocksize, &compresslevel, &checksum, &compresstype);
 	/*
 	 * Fill in Append-Only Storage layer attributes.
 	 */
@@ -1961,8 +1967,8 @@ appendonly_fetch_init(Relation relation,
 	/*
 	 * These attributes describe the AppendOnly format to be scanned.
 	 */
-	if (strcmp(NameStr(aoFormData.compresstype), "") == 0 ||
-		pg_strcasecmp(NameStr(aoFormData.compresstype), "none") == 0)
+	if (strcmp(NameStr(compresstype), "") == 0 ||
+		pg_strcasecmp(NameStr(compresstype), "none") == 0)
 	{
 		attr->compress = false;
 		attr->compressType = "none";
@@ -1970,12 +1976,12 @@ appendonly_fetch_init(Relation relation,
 	else
 	{
 		attr->compress = true;
-		attr->compressType = NameStr(aoFormData.compresstype);
+		attr->compressType = pstrdup(NameStr(compresstype));
 	}
-	attr->compressLevel = aoFormData.compresslevel;
-	attr->checksum = aoFormData.checksum;
-	attr->safeFSWriteSize = aoFormData.safefswritesize;
-	aoFetchDesc->usableBlockSize = aoFormData.blocksize;
+
+	attr->compressLevel = compresslevel;
+	attr->checksum = checksum;
+	aoFetchDesc->usableBlockSize = blocksize;
 
 	/*
 	 * Get information about all the file segments we need to scan
@@ -2010,7 +2016,7 @@ appendonly_fetch_init(Relation relation,
 							   &aoFetchDesc->storageAttributes);
 
 
-	fns = get_funcs_for_compression(NameStr(aoFormData.compresstype));
+	fns = get_funcs_for_compression(attr->compressType);
 	aoFetchDesc->storageRead.compression_functions = fns;
 
 	if (fns)
@@ -2019,9 +2025,9 @@ appendonly_fetch_init(Relation relation,
 		CompressionState *cs;
 		StorageAttributes sa;
 
-		sa.comptype = NameStr(aoFormData.compresstype);
-		sa.complevel = aoFormData.compresslevel;
-		sa.blocksize = aoFormData.blocksize;
+		sa.comptype = attr->compressType;
+		sa.complevel = attr->compressLevel;
+		sa.blocksize = aoFetchDesc->usableBlockSize;
 
 
 		cs = callCompressionConstructor(cons, RelationGetDescr(relation),
@@ -2413,10 +2419,10 @@ appendonly_insert_init(Relation rel, int segno, int64 num_rows)
 	AppendOnlyStorageAttributes *attr;
 
 	StringInfoData titleBuf;
-	int32 blocksize;
-	int16 compresslevel;
-	bool checksum;
-	NameData compresstype;
+	bool		checksum = true;
+	int32		blocksize = -1;
+	int16		compresslevel = 0;
+	NameData	compresstype;
 
 	GetAppendOnlyEntryAttributes(rel->rd_id, &blocksize, &compresslevel, &checksum, &compresstype);
 

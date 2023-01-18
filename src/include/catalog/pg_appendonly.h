@@ -27,11 +27,6 @@
 CATALOG(pg_appendonly,6105,AppendOnlyRelationId)
 {
 	Oid				relid;				/* relation id */
-	int32			blocksize;			/* the max block size of this relation */
-	int32			safefswritesize;	/* min write size in bytes to prevent torn-write */
-	int16			compresslevel;		/* the (per seg) total number of varblocks */
-	bool			checksum;			/* true if checksum is stored with data and checked */
-	NameData		compresstype;		/* the compressor used (e.g. zlib) */
     Oid             segrelid;           /* OID of aoseg table; 0 if none */
     Oid             blkdirrelid;        /* OID of aoblkdir table; 0 if none */
     Oid             blkdiridxid;        /* if aoblkdir table, OID of aoblkdir index */
@@ -102,11 +97,6 @@ static inline void AORelationVersion_CheckValid(int version)
 
 extern void
 InsertAppendOnlyEntry(Oid relid,
-					  int blocksize,
-					  int safefswritesize,
-					  int compresslevel,
-					  bool checksum,
-					  char* compresstype,
 					  Oid segrelid,
 					  Oid blkdirrelid,
 					  Oid blkdiridxid,
