@@ -2279,6 +2279,8 @@ create table foo_nestloop ( a varchar(10)) distributed by (a);
 create table bar_nestloop ( p char(10)) distributed by (p);
 explain select foo_nestloop.a,bar_nestloop.p from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.p;
 explain select foo_nestloop.a,bar_nestloop.p from bar_nestloop left join foo_nestloop on foo_nestloop.a=bar_nestloop.p;
+DROP TABLE foo_nestloop;
+DROP TABLE bar_nestloop;
 set optimizer_enable_hashjoin to on;
 reset enable_hashjoin;
 reset enable_nestloop;

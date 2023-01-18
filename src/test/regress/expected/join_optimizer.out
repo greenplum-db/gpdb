@@ -6868,6 +6868,8 @@ explain select foo_nestloop.a,bar_nestloop.p from bar_nestloop left join foo_nes
  Optimizer: Pivotal Optimizer (GPORCA)
 (9 rows)
 
+DROP TABLE foo_nestloop;
+DROP TABLE bar_nestloop;
 set optimizer_enable_hashjoin to on;
 reset enable_hashjoin;
 reset enable_nestloop;
