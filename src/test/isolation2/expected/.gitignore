@@ -10,3 +10,4 @@ resgroup_bypass.out
 resgroup_bypass_optimizer.out
 resgroup_cpuset.out
 gp_collation.out
+distributed_snapshot.out
