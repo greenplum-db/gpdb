@@ -89,14 +89,14 @@ cmpSelectivity
  *
  * clauselist_selectivity is kept same as upstream here. Because this 
  * function is called by most fdw (Foreign Data Wrapper) extensions.
- * This functions just simply call clauselist_selectivity_use_damping() 
+ * This functions just simply call clauselist_selectivity_standard() 
  * and set use_damping to false.
  * 
  * Greenplum specific behavior:
- * Greenplum calls clauselist_selectivity_use_damping() directly.
+ * Greenplum calls clauselist_selectivity_standard() directly.
  * Function clauselist_selectivity() is kept for external fdw.
  *  
- * See clauselist_selectivity_use_damping() for more information.
+ * See clauselist_selectivity_standard() for more information.
  */
 Selectivity
 clauselist_selectivity(PlannerInfo *root,
@@ -105,13 +105,13 @@ clauselist_selectivity(PlannerInfo *root,
 					   JoinType jointype,
 					   SpecialJoinInfo *sjinfo)
 {
-	return clauselist_selectivity_use_damping(root, clauses, varRelid,
+	return clauselist_selectivity_standard(root, clauses, varRelid,
 											jointype, sjinfo, 
 											false);   /* use_damping, which is false by default */ 
 }
 
 /*
- * clauselist_selectivity_use_damping -
+ * clauselist_selectivity_standard -
  *	  Compute the selectivity of an implicitly-ANDed list of boolean
  *	  expression clauses.  The list can be empty, in which case 1.0
  *	  must be returned.  List elements may be either RestrictInfos
@@ -127,7 +127,7 @@ clauselist_selectivity(PlannerInfo *root,
  * clauselist_selectivity_simple.
  */
 Selectivity
-clauselist_selectivity_use_damping(PlannerInfo *root,
+clauselist_selectivity_standard(PlannerInfo *root,
 					   List *clauses,
 					   int varRelid,
 					   JoinType jointype,
@@ -838,8 +838,8 @@ clause_selectivity(PlannerInfo *root,
 	}
 	else if (is_andclause(clause))
 	{
-		/* share code with clauselist_selectivity_use_damping() */
-		s1 = clauselist_selectivity_use_damping(root,
+		/* share code with clauselist_selectivity_standard() */
+		s1 = clauselist_selectivity_standard(root,
 									((BoolExpr *) clause)->args,
 									varRelid,
 									jointype,

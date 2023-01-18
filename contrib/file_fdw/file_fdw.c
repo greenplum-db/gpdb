@@ -1050,12 +1050,11 @@ estimate_size(PlannerInfo *root, RelOptInfo *baserel,
 	 * baserestrictinfo quals.
 	 */
 	nrows = ntuples *
-		clauselist_selectivity_use_damping(root,
+		clauselist_selectivity(root,
 							   baserel->baserestrictinfo,
 							   0,
 							   JOIN_INNER,
-							   NULL,
-							   false);
+							   NULL);
 
 	nrows = clamp_row_est(nrows);
 
