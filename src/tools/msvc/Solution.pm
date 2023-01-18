@@ -752,12 +752,14 @@ sub AddProject
 		}
 		else
 		{
+			# The latest upstream Kerberos on Windows is installed
+			# under \lib\amd64, but our buildbot hasn't updated yet.
 			$proj->AddLibrary(
-				$self->{options}->{gss} . '\lib\amd64\krb5_64.lib');
+				$self->{options}->{gss} . '\lib\krb5_64.lib');
 			$proj->AddLibrary(
-				$self->{options}->{gss} . '\lib\amd64\comerr64.lib');
+				$self->{options}->{gss} . '\lib\comerr64.lib');
 			$proj->AddLibrary(
-				$self->{options}->{gss} . '\lib\amd64\gssapi64.lib');
+				$self->{options}->{gss} . '\lib\gssapi64.lib');
 		}
 	}
 	if ($self->{options}->{iconv})

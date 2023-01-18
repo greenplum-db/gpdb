@@ -20,7 +20,6 @@
 #include "pg_backup_db.h"
 #include "pg_backup_utils.h"
 #include "parallel.h"
-#include "libpq-int.h"
 
 #include <unistd.h>
 #include <ctype.h>
