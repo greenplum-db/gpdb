@@ -146,7 +146,12 @@ CPhysicalFilter::PrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 ) const
 {
 	GPOS_ASSERT(0 == child_index);
-
+	if (prsRequired->IsOriginNLJoin())
+	{
+		CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
+			CRewindabilitySpec::ErtNone, prsRequired->Emht());
+		return prs;
+	}
 	return PrsPassThru(mp, exprhdl, prsRequired, child_index);
 }
 
@@ -476,6 +481,11 @@ CEnfdProp::EPropEnforcingType
 CPhysicalFilter::EpetRewindability(CExpressionHandle &exprhdl,
 								   const CEnfdRewindability *per) const
 {
+	if (per->PrsRequired()->IsOriginNLJoin())
+	{
+		return CEnfdProp::EpetRequired;
+	}
+
 	// get rewindability delivered by the Filter node
 	CRewindabilitySpec *prs = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Prs();
 	if (per->FCompatible(prs))

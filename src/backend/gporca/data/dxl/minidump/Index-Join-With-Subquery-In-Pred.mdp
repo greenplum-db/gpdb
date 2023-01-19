@@ -349,7 +349,7 @@ Optimizer: Pivotal Optimizer (GPORCA)
         </dxl:LogicalJoin>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="460">
+    <dxl:Plan Id="0" SpaceSize="560">
       <dxl:Result>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="888832.304151" Rows="1.000000" Width="4"/>

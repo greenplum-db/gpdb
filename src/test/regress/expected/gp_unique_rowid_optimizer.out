@@ -174,17 +174,18 @@ where e.x in
    ->  Split
          ->  Result
                ->  Hash Semi Join
-                     Hash Cond: ("inner".x = t2_12512.b)
+                     Hash Cond: ("outer".x = t2_12512.b)
                      ->  Nested Loop
                            Join Filter: true
                            ->  Seq Scan on t_12512
-                           ->  Result
+                           ->  Materialize
                                  ->  Result
+                                       ->  Result
                      ->  Hash
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)
                                  ->  Seq Scan on t2_12512
  Optimizer: Pivotal Optimizer (GPORCA)
-(14 rows)
+(15 rows)
 
 update t_12512 set b = 1
     from

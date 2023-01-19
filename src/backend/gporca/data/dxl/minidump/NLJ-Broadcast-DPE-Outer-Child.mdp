@@ -397,7 +397,7 @@ select * from bmao_part as t1 join bmao_part as t2 on t1.a < t2.a where t1.a < 5
         </dxl:LogicalJoin>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="8">
+    <dxl:Plan Id="0" SpaceSize="7">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1463.291591" Rows="799200.000000" Width="16"/>

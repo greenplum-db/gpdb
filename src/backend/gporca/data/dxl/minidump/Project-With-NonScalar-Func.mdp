@@ -195,7 +195,7 @@
     <dxl:Plan Id="0" SpaceSize="16">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="441344.280304" Rows="1.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="441344.272112" Rows="1.000000" Width="1"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="3" Alias="?column?">
@@ -209,7 +209,7 @@
         <dxl:OneTimeFilter/>
         <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="441344.280303" Rows="2.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="441344.272111" Rows="2.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="9" Alias="ColRef_0009">
@@ -234,7 +234,7 @@
           </dxl:Result>
           <dxl:Assert ErrorCode="P0003">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.000182" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="0.000174" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="9" Alias="ColRef_0009">
@@ -251,7 +251,7 @@
             </dxl:AssertConstraintList>
             <dxl:Window PartitionColumns="">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.000174" Rows="1.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="0.000166" Rows="1.000000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="12" Alias="row_number">
@@ -262,44 +262,41 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:Result>
+              <dxl:Materialize Eager="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="0.000174" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="0.000166" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="9" Alias="ColRef_0009">
-                    <dxl:If TypeMdid="0.20.1.0">
-                      <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.410.1.0">
-                        <dxl:Ident ColId="7" ColName="ColRef_0007" TypeMdid="0.20.1.0"/>
-                        <dxl:ConstValue TypeMdid="0.20.1.0" Value="0"/>
-                      </dxl:Comparison>
-                      <dxl:ConstValue TypeMdid="0.20.1.0" Value="0"/>
-                      <dxl:If TypeMdid="0.20.1.0">
-                        <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.410.1.0">
-                          <dxl:Ident ColId="7" ColName="ColRef_0007" TypeMdid="0.20.1.0"/>
-                          <dxl:Ident ColId="8" ColName="ColRef_0008" TypeMdid="0.20.1.0"/>
-                        </dxl:Comparison>
-                        <dxl:ConstValue TypeMdid="0.20.1.0" Value="-1"/>
-                        <dxl:Ident ColId="7" ColName="ColRef_0007" TypeMdid="0.20.1.0"/>
-                      </dxl:If>
-                    </dxl:If>
+                    <dxl:Ident ColId="9" ColName="ColRef_0009" TypeMdid="0.20.1.0"/>
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:OneTimeFilter/>
-                <dxl:Materialize Eager="false">
+                <dxl:Result>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="0.000166" Rows="1.000000" Width="16"/>
+                    <dxl:Cost StartupCost="0" TotalCost="0.000158" Rows="1.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
-                    <dxl:ProjElem ColId="7" Alias="ColRef_0007">
-                      <dxl:Ident ColId="7" ColName="ColRef_0007" TypeMdid="0.20.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="8" Alias="ColRef_0008">
-                      <dxl:Ident ColId="8" ColName="ColRef_0008" TypeMdid="0.20.1.0"/>
+                    <dxl:ProjElem ColId="9" Alias="ColRef_0009">
+                      <dxl:If TypeMdid="0.20.1.0">
+                        <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.410.1.0">
+                          <dxl:Ident ColId="7" ColName="ColRef_0007" TypeMdid="0.20.1.0"/>
+                          <dxl:ConstValue TypeMdid="0.20.1.0" Value="0"/>
+                        </dxl:Comparison>
+                        <dxl:ConstValue TypeMdid="0.20.1.0" Value="0"/>
+                        <dxl:If TypeMdid="0.20.1.0">
+                          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.410.1.0">
+                            <dxl:Ident ColId="7" ColName="ColRef_0007" TypeMdid="0.20.1.0"/>
+                            <dxl:Ident ColId="8" ColName="ColRef_0008" TypeMdid="0.20.1.0"/>
+                          </dxl:Comparison>
+                          <dxl:ConstValue TypeMdid="0.20.1.0" Value="-1"/>
+                          <dxl:Ident ColId="7" ColName="ColRef_0007" TypeMdid="0.20.1.0"/>
+                        </dxl:If>
+                      </dxl:If>
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
+                  <dxl:OneTimeFilter/>
                   <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                     <dxl:Properties>
                       <dxl:Cost StartupCost="0" TotalCost="0.000150" Rows="1.000000" Width="16"/>
@@ -423,8 +420,8 @@
                       </dxl:Result>
                     </dxl:Aggregate>
                   </dxl:Aggregate>
-                </dxl:Materialize>
-              </dxl:Result>
+                </dxl:Result>
+              </dxl:Materialize>
               <dxl:WindowKeyList>
                 <dxl:WindowKey>
                   <dxl:SortingColumnList/>

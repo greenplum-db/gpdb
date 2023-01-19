@@ -3095,13 +3095,14 @@ where q1 = thousand or q2 = thousand;
                      Join Filter: true
                      ->  Result
                            ->  Result
-                     ->  Result
+                     ->  Materialize
                            ->  Result
+                                 ->  Result
                ->  Bitmap Heap Scan on tenk1
-                     Recheck Cond: ((thousand = "inner".q1) OR (thousand = "outer".q2))
+                     Recheck Cond: ((thousand = "outer".q1) OR (thousand = "outer".q2))
                      ->  BitmapOr
                            ->  Bitmap Index Scan on tenk1_thous_tenthous
-                                 Index Cond: (thousand = "inner".q1)
+                                 Index Cond: (thousand = "outer".q1)
                            ->  Bitmap Index Scan on tenk1_thous_tenthous
                                  Index Cond: (thousand = "outer".q2)
          ->  Hash
@@ -3127,10 +3128,11 @@ where thousand = (q1 + q2);
                      Join Filter: true
                      ->  Result
                            ->  Result
-                     ->  Result
+                     ->  Materialize
                            ->  Result
+                                 ->  Result
                ->  Index Scan using tenk1_thous_tenthous on tenk1
-                     Index Cond: (thousand = ("inner".q1 + "outer".q2))
+                     Index Cond: (thousand = ("outer".q1 + "outer".q2))
          ->  Hash
                ->  Broadcast Motion 3:3  (slice1; segments: 3)
                      ->  Seq Scan on int4_tbl

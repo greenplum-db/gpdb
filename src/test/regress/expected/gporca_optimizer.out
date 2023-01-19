@@ -13335,10 +13335,11 @@ select * from foo join (select a, a::bigint*a::bigint as aa from tbtree) proj on
    ->  Nested Loop
          Join Filter: ((foo.a = tbtree.a) AND (foo.b = (((tbtree.a)::bigint * (tbtree.a)::bigint))))
          ->  Seq Scan on foo
-         ->  Result
-               ->  Seq Scan on tbtree
+         ->  Materialize
+               ->  Result
+                     ->  Seq Scan on tbtree
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(8 rows)
 
 -- 14 join pred accesses a projected column - no index scan
 explain (costs off)
@@ -13376,12 +13377,13 @@ from foo l1 where b in (select ab
                  ->  Gather Motion 3:1  (slice3; segments: 3)
                        ->  Seq Scan on foo foo_1
                              Filter: (c = 1)
-           ->  Result
-                 ->  Materialize
-                       ->  Gather Motion 3:1  (slice2; segments: 3)
-                             ->  Seq Scan on tbtree
+           ->  Materialize
+                 ->  Result
+                       ->  Materialize
+                             ->  Gather Motion 3:1  (slice2; segments: 3)
+                                   ->  Seq Scan on tbtree
  Optimizer: Pivotal Optimizer (GPORCA)
-(16 rows)
+(17 rows)
 
 -- 16 group by columns are not a superset of the distribution columns - no index scan
 explain (costs off)

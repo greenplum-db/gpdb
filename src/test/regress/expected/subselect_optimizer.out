@@ -718,13 +718,15 @@ explain (verbose, costs off)
                Join Filter: true
                ->  Values Scan on "Values"
                      Output: column1
-               ->  Result
-                     Output: 'regression'::name
+               ->  Materialize
+                     Output: current_database
                      ->  Result
-                           Output: true
- Optimizer: Pivotal Optimizer (GPORCA) version 3.1.0
+                           Output: 'regression'::name
+                           ->  Result
+                                 Output: true
+ Optimizer: Pivotal Optimizer (GPORCA)
  Settings: optimizer=on
-(15 rows)
+(17 rows)
 
 explain (verbose, costs off)
   select x, x from
@@ -755,13 +757,15 @@ explain (verbose, costs off)
                Join Filter: ("Values".column1 = "Values".column1)
                ->  Values Scan on "Values"
                      Output: column1
-               ->  Result
-                     Output: 'regression'::name
+               ->  Materialize
+                     Output: current_database
                      ->  Result
-                           Output: true
- Optimizer: Pivotal Optimizer (GPORCA) version 3.1.0
+                           Output: 'regression'::name
+                           ->  Result
+                                 Output: true
+ Optimizer: Pivotal Optimizer (GPORCA)
  Settings: optimizer=on
-(15 rows)
+(17 rows)
 
 explain (verbose, costs off)
   select x, x from
@@ -837,14 +841,16 @@ select * from
                Join Filter: true
                ->  Result
                      Output: true
-               ->  Result
-                     Output: CASE WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))) > '0'::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) = '0'::bigint) THEN true ELSE false END
-                     ->  Aggregate
-                           Output: sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END)), sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))
-                           ->  Result
-                                 Output: CASE WHEN (3 = column1) THEN 1 ELSE 0 END, CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END
-                                 ->  Values Scan on "Values"
-                                       Output: column1
+               ->  Materialize
+                     Output: (CASE WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))) > '0'::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) = '0'::bigint) THEN true ELSE false END)
+                     ->  Result
+                           Output: CASE WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))) > '0'::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) = '0'::bigint) THEN true ELSE false END
+                           ->  Aggregate
+                                 Output: sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END)), sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))
+                                 ->  Result
+                                       Output: CASE WHEN (3 = column1) THEN 1 ELSE 0 END, CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END
+                                       ->  Values Scan on "Values"
+                                             Output: column1
    ->  Result
          Output: false
  Optimizer: Pivotal Optimizer (GPORCA)

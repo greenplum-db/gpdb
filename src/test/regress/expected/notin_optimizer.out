@@ -1219,8 +1219,8 @@ explain select c1 from t1 where c1::absint not in
                      ->  Nested Loop Left Join  (cost=0.00..1324035.88 rows=11 width=19)
                            Join Filter: (((t1.c1)::absint = ((t1n.c1n)::absint)) IS NOT FALSE)
                            ->  Seq Scan on t1  (cost=0.00..431.00 rows=4 width=14)
-                           ->  Result  (cost=0.00..431.00 rows=7 width=5)
-                                 ->  Materialize  (cost=0.00..431.00 rows=7 width=4)
+                           ->  Materialize  (cost=0.00..431.00 rows=7 width=5)
+                                 ->  Result  (cost=0.00..431.00 rows=7 width=5)
                                        ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=7 width=4)
                                              ->  Seq Scan on t1n  (cost=0.00..431.00 rows=3 width=4)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
