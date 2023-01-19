@@ -3797,20 +3797,23 @@ create table employee_table(timest date, user_id numeric(16,0) not null, tag1 ch
 -- We grant default SELECT permission to a new user, this new user should be
 -- able to SELECT from any partition table we create later.
 -- (https://github.com/greenplum-db/gpdb/issues/9524)
-DROP TABLE IF EXISTS public.t_part_acl;
+DROP TABLE IF EXISTS user_prt_acl.t_part_acl;
+DROP SCHEMA IF EXISTS user_prt_acl;
 DROP ROLE IF EXISTS user_prt_acl;
 
 CREATE ROLE user_prt_acl;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO user_prt_acl;
+CREATE SCHEMA schema_part_acl;
+GRANT USAGE ON SCHEMA schema_part_acl TO user_prt_acl;
+ALTER DEFAULT PRIVILEGES IN SCHEMA schema_part_acl GRANT SELECT ON TABLES TO user_prt_acl;
 
-CREATE TABLE public.t_part_acl (dt date)
+CREATE TABLE schema_part_acl.t_part_acl (dt date)
 PARTITION BY RANGE (dt)
 (
     START (date '2019-12-01') INCLUSIVE
     END (date '2020-02-01') EXCLUSIVE
     EVERY (INTERVAL '1 month')
 );
-INSERT INTO public.t_part_acl VALUES (date '2019-12-01'), (date '2020-01-31');
+INSERT INTO schema_part_acl.t_part_acl VALUES (date '2019-12-01'), (date '2020-01-31');
 
 -- check if parent and child table have same relacl
 SELECT relname FROM pg_class
@@ -3819,12 +3822,10 @@ WHERE relname LIKE 't_part_acl%'
 
 -- check if new user can SELECT all data
 SET ROLE user_prt_acl;
-SELECT * FROM public.t_part_acl;
+SELECT * FROM schema_part_acl.t_part_acl;
 
 RESET ROLE;
-DROP TABLE public.t_part_acl;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT ON TABLES FROM user_prt_acl;
-DROP ROLE user_prt_acl;
+-- we don't drop the table, schema and role here in order to test upgrade
 
 
 -- test on commit behavior used on partition table

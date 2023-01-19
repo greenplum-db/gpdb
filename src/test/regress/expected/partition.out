@@ -5968,13 +5968,15 @@ ERROR:  operator class "employee_incomplete_op_class" of access method btree is 
 -- We grant default SELECT permission to a new user, this new user should be
 -- able to SELECT from any partition table we create later.
 -- (https://github.com/greenplum-db/gpdb/issues/9524)
-DROP TABLE IF EXISTS public.t_part_acl;
-NOTICE:  table "t_part_acl" does not exist, skipping
+DROP TABLE IF EXISTS user_prt_acl.t_part_acl;
+DROP SCHEMA IF EXISTS user_prt_acl;
 DROP ROLE IF EXISTS user_prt_acl;
 CREATE ROLE user_prt_acl;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO user_prt_acl;
-CREATE TABLE public.t_part_acl (dt date)
+CREATE SCHEMA schema_part_acl;
+GRANT USAGE ON SCHEMA schema_part_acl TO user_prt_acl;
+ALTER DEFAULT PRIVILEGES IN SCHEMA schema_part_acl GRANT SELECT ON TABLES TO user_prt_acl;
+CREATE TABLE schema_part_acl.t_part_acl (dt date)
 PARTITION BY RANGE (dt)
 (
     START (date '2019-12-01') INCLUSIVE
@@ -5983,7 +5985,7 @@ PARTITION BY RANGE (dt)
 );
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'dt' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-INSERT INTO public.t_part_acl VALUES (date '2019-12-01'), (date '2020-01-31');
+INSERT INTO schema_part_acl.t_part_acl VALUES (date '2019-12-01'), (date '2020-01-31');
 -- check if parent and child table have same relacl
 SELECT relname FROM pg_class
 WHERE relname LIKE 't_part_acl%'
@@ -5997,7 +5999,7 @@ WHERE relname LIKE 't_part_acl%'
 
 -- check if new user can SELECT all data
 SET ROLE user_prt_acl;
-SELECT * FROM public.t_part_acl;
+SELECT * FROM schema_part_acl.t_part_acl;
      dt     
 ------------
  12-01-2019
@@ -6005,9 +6007,7 @@ SELECT * FROM public.t_part_acl;
 (2 rows)
 
 RESET ROLE;
-DROP TABLE public.t_part_acl;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT ON TABLES FROM user_prt_acl;
-DROP ROLE user_prt_acl;
+-- we don't drop the table, schema and role here in order to test upgrade
 -- test on commit behavior used on partition table
 -- test on commit delete rows
 begin;
