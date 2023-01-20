@@ -4861,7 +4861,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 
 			ATPartitionCheck(cmd->subtype, rel, false, recursing);
 
-			if (Gp_role == GP_ROLE_UTILITY)
+			if (Gp_role == GP_ROLE_UTILITY && !IsBinaryUpgrade)
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
  						 errmsg("EXCHANGE is not supported in utility mode")));
@@ -16446,7 +16446,7 @@ ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab, Relation *rel,
 			else if (prepExchange)
 			{
 				ATPartitionCheck(atc->subtype, *rel, false, false);
-				if (Gp_role == GP_ROLE_UTILITY)
+				if (Gp_role == GP_ROLE_UTILITY && !IsBinaryUpgrade)
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 							 errmsg("EXCHANGE is not supported in utility mode")));
@@ -16821,14 +16821,14 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 	List				*pcols = NIL; /* partitioned attributes of rel */
 	AlterPartitionIdType orig_pid_type = AT_AP_IDNone;	/* save for NOTICE msg at end... */
 
-	if (Gp_role == GP_ROLE_UTILITY)
+	if (Gp_role == GP_ROLE_UTILITY && !IsBinaryUpgrade)
 		return;
 
 	/* Exchange for SPLIT is different from user-requested EXCHANGE.  The special
 	 * coding to indicate SPLIT is obscure. */
 	is_split = ((AlterPartitionCmd *)pc->arg2)->arg2 != NULL;
 
-	if (Gp_role == GP_ROLE_DISPATCH)
+	if (Gp_role == GP_ROLE_DISPATCH || (Gp_role == GP_ROLE_UTILITY && IsBinaryUpgrade))
 	{
 		AlterPartitionId   *pid   = (AlterPartitionId *)pc->partid;
 		PgPartRule   	   *prule = NULL;
@@ -17132,7 +17132,7 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 		}
 
 		/* fix up partitioning rule if we're on the QD*/
-		if (Gp_role == GP_ROLE_DISPATCH)
+		if (Gp_role == GP_ROLE_DISPATCH || (Gp_role == GP_ROLE_UTILITY && IsBinaryUpgrade))
 		{
 			exchange_part_rule(oldrelid, newrelid);
 			CommandCounterIncrement();
@@ -20072,7 +20072,7 @@ ATPrepExchange(Relation rel, AlterPartitionCmd *pc)
 	Relation			 oldrel = NULL;
 	Relation			 newrel = NULL;
 
-	if (Gp_role == GP_ROLE_DISPATCH)
+	if (Gp_role == GP_ROLE_DISPATCH || (Gp_role == GP_ROLE_UTILITY && IsBinaryUpgrade))
 	{
 		AlterPartitionId *pid = (AlterPartitionId *) pc->partid;
 		bool				is_split;
