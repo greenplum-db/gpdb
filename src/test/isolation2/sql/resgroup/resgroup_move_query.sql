@@ -19,35 +19,6 @@
 CREATE LANGUAGE plpython3u;
 -- end_ignore
 
-CREATE OR REPLACE FUNCTION is_session_in_group(pid integer, groupname text) RETURNS BOOL AS $$
-import subprocess
-import pg
-import time
-import re 
-
-conn = pg.connect(dbname="isolation2resgrouptest")
-pt = re.compile(r'con(\d+)') 
-
-sql = "select sess_id from pg_stat_activity where pid = '%d'" % pid
-result = conn.query(sql).getresult()
-session_id = result[0][0] 
-
-sql = "select groupid from gp_toolkit.gp_resgroup_config where groupname='%s'" % groupname
-result = conn.query(sql).getresult()
-groupid = result[0][0] 
-
-process = subprocess.Popen("ps -ef | grep postgres | grep con%d | grep -v grep | awk '{print $2}'" % session_id, shell=True, stdout=subprocess.PIPE)
-session_pids = process.communicate()[0].decode().split('\n')[:-1] 
-
-cgroups_pids = []
-path = "@cgroup_mnt_point@/cpu/gpdb/%d/cgroup.procs" % groupid
-fd = open(path)
-for line in fd.readlines():
-    cgroups_pids.append(line.strip('\n'))
-
-return set(session_pids).issubset(set(cgroups_pids))
-$$ LANGUAGE plpython3u;
-
 DROP ROLE IF EXISTS role_move_query;
 -- start_ignore
 DROP RESOURCE GROUP rg_move_query;

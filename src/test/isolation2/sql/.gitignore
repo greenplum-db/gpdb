@@ -9,15 +9,4 @@
 
 # ignores including sub-directories
 autovacuum-analyze.sql
-disable_resgroup.sql
-enable_resgroup.sql
-enable_resgroup_validate.sql
-resgroup_alter_memory.sql
-resgroup_bypass.sql
-resgroup_cpu_rate_limit.sql
-resgroup_cpuset.sql
-resgroup_memory_limit.sql
-resgroup_memory_statistic.sql
-resgroup_memory_runaway.sql
-resgroup_move_query.sql
 workfile_mgr_test.sql

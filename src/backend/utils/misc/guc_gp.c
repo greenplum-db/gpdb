@@ -221,7 +221,6 @@ bool		gp_debug_resqueue_priority = false;
 int			gp_resource_group_cpu_priority;
 double		gp_resource_group_cpu_limit;
 bool		gp_resource_group_bypass;
-bool		gp_resource_group_enable_cgroup_version_two;
 
 /* Metrics collector debug GUC */
 bool		vmem_process_interrupt = false;
@@ -2746,15 +2745,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&gp_resource_group_bypass,
 		false,
 		check_gp_resource_group_bypass, NULL, NULL
-	},
-
-	{
-		{"gp_resource_group_enable_cgroup_version_two", PGC_POSTMASTER, RESOURCES,
-			gettext_noop("Enable linux cgroup version 2"),
-			NULL
-		},
-		&gp_resource_group_enable_cgroup_version_two,
-		false, NULL, NULL
 	},
 
 	{

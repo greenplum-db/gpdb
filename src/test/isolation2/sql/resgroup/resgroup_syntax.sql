@@ -124,13 +124,13 @@ DROP RESOURCE GROUP rg_test_group;
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpuset='0');
 SELECT groupname,concurrency,cpu_hard_quota_limit, cpu_soft_priority FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
 DROP RESOURCE GROUP rg_test_group;
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=1000);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=500);
 SELECT groupname,concurrency,cpu_hard_quota_limit, cpu_soft_priority FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
 DROP RESOURCE GROUP rg_test_group;
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=-1, cpu_soft_priority=1000);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=-1, cpu_soft_priority=500);
 SELECT groupname,concurrency,cpu_hard_quota_limit, cpu_soft_priority FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
 DROP RESOURCE GROUP rg_test_group;
-CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0', cpu_soft_priority=1000);
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0', cpu_soft_priority=500);
 SELECT groupname,concurrency,cpu_hard_quota_limit, cpu_soft_priority FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
 DROP RESOURCE GROUP rg_test_group;
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0');
@@ -157,10 +157,11 @@ CREATE RESOURCE GROUP rg_test_group1 WITH (cpuset='0');
 CREATE RESOURCE GROUP rg_test_group2 WITH (cpuset='0');
 DROP RESOURCE GROUP rg_test_group1;
 
--- negative: cpu_soft_priority should be in [1, +∞]
+-- negative: cpu_soft_priority should be in [1, 500]
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=0);
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=-1);
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=-1024);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=501);
 
 -- positive: cpu_hard_quota_limit should be in [1, 100]
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=60);
@@ -170,10 +171,10 @@ DROP RESOURCE GROUP rg_test_group;
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10);
 DROP RESOURCE GROUP rg_test_group;
 
--- positive: cpu_soft_priority should be in [1, +∞]
+-- positive: cpu_soft_priority should be in [1, 500]
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=100);
 DROP RESOURCE GROUP rg_test_group;
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=10000);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=500);
 DROP RESOURCE GROUP rg_test_group;
 
 -- positive: concurrency should be in [0, max_connections]

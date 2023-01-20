@@ -52,6 +52,7 @@
 #define RESGROUP_MIN_CPU_HARD_QUOTA_LIMIT	(1)
 
 #define RESGROUP_MIN_CPU_SOFT_PRIORITY	(1)
+#define RESGROUP_MAX_CPU_SOFT_PRIORITY	(500)
 
 static int str2Int(const char *str, const char *prop);
 static ResGroupLimitType getResgroupOptionType(const char* defname);
@@ -821,11 +822,12 @@ checkResgroupCapLimit(ResGroupLimitType type, int value)
 				break;
 
 			case RESGROUP_LIMIT_TYPE_CPU_SHARES:
-				if (value < RESGROUP_MIN_CPU_SOFT_PRIORITY)
+				if (value < RESGROUP_MIN_CPU_SOFT_PRIORITY ||
+					value > RESGROUP_MAX_CPU_SOFT_PRIORITY)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-									errmsg("cpu_soft_priority range is [%d, +∞]",
-										   RESGROUP_MIN_CPU_SOFT_PRIORITY)));
+									errmsg("cpu_soft_priority range is [%d, %d]",
+										   RESGROUP_MIN_CPU_SOFT_PRIORITY, RESGROUP_MAX_CPU_SOFT_PRIORITY)));
 				break;
 
 			default:

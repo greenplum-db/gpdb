@@ -90,67 +90,9 @@ CREATE RESOURCE GROUP rg2_cpu_test WITH (concurrency=5, cpu_hard_quota_limit=-1,
 
 --
 -- check gpdb cgroup configuration
+-- The implementation of check_cgroup_configuration() is in resgroup_auxiliary_tools_*.sql
 --
-DO LANGUAGE PLPYTHON3U $$
-    import subprocess
-    import os
-
-    cgroot = '@cgroup_mnt_point@'
-
-    def get_cgroup_prop(prop):
-        fullpath = cgroot + '/' + prop
-        return int(open(fullpath).readline())
-
-    def run_command(cmd):
-        return subprocess.check_output(cmd.split()).decode()
-
-    def show_guc(guc):
-        return plpy.execute('SHOW {}'.format(guc))[0][guc]
-
-    #
-    # check gpdb top-level cgroup configuration
-    #
-
-    # get top-level cgroup props
-    cfs_quota_us = get_cgroup_prop('/cpu/gpdb/cpu.cfs_quota_us')
-    cfs_period_us = get_cgroup_prop('/cpu/gpdb/cpu.cfs_period_us')
-    shares = get_cgroup_prop('/cpu/gpdb/cpu.shares')
-
-    # get system props
-    ncores = os.cpu_count()
-
-    # get global gucs
-    gp_resource_group_cpu_limit = float(show_guc('gp_resource_group_cpu_limit'))
-    gp_resource_group_cpu_priority = int(show_guc('gp_resource_group_cpu_priority'))
-
-    # cfs_quota_us := cfs_period_us * ncores * gp_resource_group_cpu_limit
-    assert cfs_quota_us == cfs_period_us * ncores * gp_resource_group_cpu_limit
-
-    # shares := 1024 * gp_resource_group_cpu_priority
-    assert shares == 1024 * gp_resource_group_cpu_priority
-
-    def check_group_shares(name):
-        cpu_soft_priority = int(plpy.execute('''
-            SELECT value
-              FROM pg_resgroupcapability c, pg_resgroup g
-             WHERE c.resgroupid=g.oid
-               AND reslimittype=3
-               AND g.rsgname='{}'
-        '''.format(name))[0]['value'])
-        oid = int(plpy.execute('''
-            SELECT oid FROM pg_resgroup WHERE rsgname='{}'
-        '''.format(name))[0]['oid'])
-        sub_shares = get_cgroup_prop('/cpu/gpdb/{}/cpu.shares'.format(oid))
-        assert sub_shares == int(cpu_soft_priority * 1024 / 100)
-
-    # check default groups
-    check_group_shares('default_group')
-    check_group_shares('admin_group')
-
-    # check user groups
-    check_group_shares('rg1_cpu_test')
-    check_group_shares('rg2_cpu_test')
-$$;
+select check_cgroup_configuration();
 
 -- lower admin_group's cpu_hard_quota_limit to minimize its side effect
 ALTER RESOURCE GROUP admin_group SET cpu_hard_quota_limit 1;
@@ -493,4 +435,3 @@ ALTER RESOURCE GROUP rg2_cpu_test set cpu_hard_quota_limit 20;
 2:DROP ROLE role2_cpu_test;
 2:DROP RESOURCE GROUP rg1_cpu_test;
 2:DROP RESOURCE GROUP rg2_cpu_test;
-2:DROP LANGUAGE plpython3u CASCADE;

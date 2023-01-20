@@ -516,7 +516,8 @@ gpvars_check_gp_resource_manager_policy(char **newval, void **extra, GucSource s
 	if (*newval == NULL ||
 		*newval[0] == 0 ||
 		!pg_strcasecmp("queue", *newval) ||
-		!pg_strcasecmp("group", *newval))
+		!pg_strcasecmp("group", *newval) ||
+		!pg_strcasecmp("group-v2", *newval))
 		return true;
 
 	GUC_check_errmsg("invalid value for resource manager policy: \"%s\"", *newval);
@@ -535,6 +536,11 @@ gpvars_assign_gp_resource_manager_policy(const char *newval, void *extra)
 		Gp_resource_manager_policy = RESOURCE_MANAGER_POLICY_GROUP;
 		gp_enable_resqueue_priority = false;
 	}
+	else if (!pg_strcasecmp("group-v2", newval))
+	{
+		Gp_resource_manager_policy = RESOURCE_MANAGER_POLICY_GROUP_V2;
+		gp_enable_resqueue_priority = false;
+	}
 	/*
 	 * No else should happen, since newval has been checked in check_hook.
 	 */
@@ -549,6 +555,8 @@ gpvars_show_gp_resource_manager_policy(void)
 			return "queue";
 		case RESOURCE_MANAGER_POLICY_GROUP:
 			return "group";
+		case RESOURCE_MANAGER_POLICY_GROUP_V2:
+			return "group-v2";
 		default:
 			Assert(!"unexpected resource manager policy");
 			return "unknown";
