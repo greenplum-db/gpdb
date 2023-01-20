@@ -4,7 +4,7 @@
 		
 		create table foo (a varchar(10)) distributed by (a);
 		create table bar (p char(10)) distributed by (p);
-
+		set optimizer_enable_hashjoin to off;
 		explain select foo.a,bar.p from foo left join bar  on foo.a=bar.p;
                                                         QUERY PLAN
             ---------------------------------------------------------------------------------------------------

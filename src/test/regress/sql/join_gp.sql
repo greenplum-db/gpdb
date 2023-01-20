@@ -768,3 +768,19 @@ full join ( select r.id1, r.id2 from t_issue_10315 r group by r.id1, r.id2 ) tq_
 on (coalesce(t.id1) = tq_all.id1  and t.id2 = tq_all.id2) ;
 
 drop table t_issue_10315;
+
+-- check motion is added to inner child when performing a NL Left Outer Join
+-- between relations which are distributed on columns of different data types
+-- and the join is performed on distribution columns
+set optimizer_enable_hashjoin to off;
+set enable_hashjoin to off;
+set enable_nestloop to on;
+create table foo_nestloop ( a varchar(10)) distributed by (a);
+create table bar_nestloop ( p char(10)) distributed by (p);
+explain select foo_nestloop.a,bar_nestloop.p from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.p;
+explain select foo_nestloop.a,bar_nestloop.p from bar_nestloop left join foo_nestloop on foo_nestloop.a=bar_nestloop.p;
+DROP TABLE foo_nestloop;
+DROP TABLE bar_nestloop;
+set optimizer_enable_hashjoin to on;
+reset enable_hashjoin;
+reset enable_nestloop;
