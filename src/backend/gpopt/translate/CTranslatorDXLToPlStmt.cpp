@@ -1158,7 +1158,7 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 		}
 
 		// retrieve index strategy and subtype
-		INT strategy_num = 0;
+		StrategyNumber strategy_num;
 		OID index_subtype_oid = InvalidOid;
 
 		OID cmp_operator_oid =
@@ -1172,8 +1172,8 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 
 		// create index qual
 		index_qual_info_array->Append(GPOS_NEW(m_mp) CIndexQualInfo(
-			attno, index_cond_expr, original_index_cond_expr,
-			(StrategyNumber) strategy_num, index_subtype_oid));
+			attno, index_cond_expr, original_index_cond_expr, strategy_num,
+			index_subtype_oid));
 	}
 
 	// the index quals much be ordered by attribute number

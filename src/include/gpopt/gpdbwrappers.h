@@ -594,7 +594,8 @@ void CheckRTPermissions(List *rtable);
 bool HasUpdateTriggers(Oid relid);
 
 // get index operator family properties
-void IndexOpProperties(Oid opno, Oid opfamily, int *strategy, Oid *righttype);
+void IndexOpProperties(Oid opno, Oid opfamily, StrategyNumber *strategynumber,
+					   Oid *righttype);
 
 // get oids of families this operator belongs to
 List *GetOpFamiliesForScOp(Oid opno);

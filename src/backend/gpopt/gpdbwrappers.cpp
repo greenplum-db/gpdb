@@ -22,6 +22,8 @@
 
 #include "gpopt/gpdbwrappers.h"
 
+#include <limits>  // std::numeric_limits
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoExceptionStack.h"
 #include "gpos/error/CException.h"
@@ -2101,7 +2103,8 @@ gpdb::HasUpdateTriggers(Oid relid)
 
 // get index op family properties
 void
-gpdb::IndexOpProperties(Oid opno, Oid opfamily, int *strategy, Oid *righttype)
+gpdb::IndexOpProperties(Oid opno, Oid opfamily, StrategyNumber *strategynumber,
+						Oid *righttype)
 {
 	GP_WRAP_START;
 	{
@@ -2110,9 +2113,15 @@ gpdb::IndexOpProperties(Oid opno, Oid opfamily, int *strategy, Oid *righttype)
 		// Only the right type is returned to the caller, the left
 		// type is simply ignored.
 		Oid lefttype;
+		INT strategy;
 
-		get_op_opfamily_properties(opno, opfamily, false, strategy, &lefttype,
+		get_op_opfamily_properties(opno, opfamily, false, &strategy, &lefttype,
 								   righttype);
+
+		// Ensure the value of strategy doesn't get truncated when converted to StrategyNumber
+		GPOS_ASSERT(strategy >= 0 &&
+					strategy <= std::numeric_limits<StrategyNumber>::max());
+		*strategynumber = static_cast<StrategyNumber>(strategy);
 		return;
 	}
 	GP_WRAP_END;
