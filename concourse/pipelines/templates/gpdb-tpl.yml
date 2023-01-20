@@ -233,6 +233,7 @@ groups:
   ## --------------------------------------------------------------------
   - gate_resource_groups_start
   - resource_group_[[ os_type ]]
+  - resource_group_v2_[[ os_type ]]
 {% endif %}
 {% if "CLI" in test_sections %}
   ## --------------------------------------------------------------------
@@ -321,6 +322,7 @@ groups:
   jobs:
   - gate_resource_groups_start
   - resource_group_[[ os_type ]]
+  - resource_group_v2_[[ os_type ]]
   - compile_gpdb_[[ os_type ]]
 
 {% endif %}
@@ -1036,6 +1038,45 @@ jobs:
   ensure:
     <<: *set_failed
 
+- name: resource_group_v2_[[ os_type ]]
+  plan:
+    - in_parallel:
+        steps:
+          - get: gpdb_src
+            passed: [gate_resource_groups_start]
+          - get: gpdb_binary
+            resource: bin_gpdb_[[ os_type ]]
+            passed: [gate_resource_groups_start]
+            trigger: [[ test_trigger ]]
+          - get: ccp_src
+          - get: ccp-image
+          - get: terraform.d
+            params:
+              unpack: true
+    - put: terraform
+      params:
+        <<: *ccp_default_params
+        vars:
+          <<: *ccp_default_vars
+          instance_type: n1-standard-2
+          PLATFORM: [[ os_type ]]-cgroup2-gpdb7
+    - task: gen_cluster
+      file: ccp_src/ci/tasks/gen_cluster.yml
+      params:
+        <<: *ccp_gen_cluster_default_params
+        PLATFORM: [[ os_type ]]-cgroup2-gpdb7
+    - task: gpinitsystem
+      file: ccp_src/ci/tasks/gpinitsystem.yml
+    - task: run_tests
+      file: gpdb_src/concourse/tasks/ic_gpdb_resgroup_v2.yml
+      image: ccp-image
+      params:
+        TEST_OS: [[ os_type ]]
+      on_success:
+        <<: *ccp_destroy
+  ensure:
+    <<: *set_failed
+
 {% endif %}
 
 {% if "CLI" in test_sections %}
@@ -1481,6 +1522,7 @@ jobs:
 {% for test in CLI_BEHAVE_TESTS %}
         - [[ test.name ]]_[[ os_type ]]
         - resource_group_[[ os_type ]]
+        - resource_group_v2_[[ os_type ]]
         - interconnect_[[ os_type ]]
 {% endfor %}
         - pg_upgrade_[[ os_type ]]
@@ -1500,6 +1542,7 @@ jobs:
         - icw_mirrorless_[[ os_type ]]
         - icw_extensions_gpcloud_[[ os_type ]]
         - resource_group_[[ os_type ]]
+        - resource_group_v2_[[ os_type ]]
         - interconnect_[[ os_type ]]
         - cli_cross_subnet
   {% for test in CLI_BEHAVE_TESTS %}

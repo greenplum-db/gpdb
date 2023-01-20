@@ -1,0 +1,19 @@
+platform: linux
+image_resource:
+  type: registry-image
+
+inputs:
+  - name: gpdb_src
+  - name: ccp_src
+  - name: cluster_env_files
+outputs:
+
+params:
+  MAKE_TEST_COMMAND: ""
+  BLDWRAP_POSTGRES_CONF_ADDONS: ""
+  TEST_OS: ""
+  TEST_BINARY_SWAP: false
+  CONFIGURE_FLAGS: ""
+
+run:
+  path: gpdb_src/concourse/scripts/ic_gpdb_resgroup_v2.bash
