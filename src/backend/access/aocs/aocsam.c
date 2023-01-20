@@ -1075,10 +1075,7 @@ fetchFromCurrentBlock(AOCSFetchDesc aocsFetchDesc,
 	{
 		Datum	   *values = slot->tts_values;
 		bool	   *nulls = slot->tts_isnull;
-		int			formatversion = datumStream->ao_read.formatVersion;
-
 		datumstreamread_get(datumStream, &(values[colno]), &(nulls[colno]));
-
 	}
 	else
 	{

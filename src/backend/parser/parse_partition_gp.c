@@ -1759,9 +1759,7 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 
 	foreach(lc, gpPartSpec->encClauses)
 	{
-		Node	   *n = lfirst(lc);
-
-		Assert(IsA(n, ColumnReferenceStorageDirective));
+		Assert(IsA(lfirst(lc), ColumnReferenceStorageDirective));
 		penc_cls = lappend(penc_cls, lfirst(lc));
 	}
 
