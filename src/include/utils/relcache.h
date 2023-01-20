@@ -51,6 +51,7 @@ extern List *RelationGetStatExtList(Relation relation);
 extern Oid	RelationGetPrimaryKeyIndex(Relation relation);
 extern Oid	RelationGetReplicaIndex(Relation relation);
 extern List *RelationGetIndexExpressions(Relation relation);
+extern List *RelationGetDummyIndexExpressions(Relation relation);
 extern List *RelationGetIndexPredicate(Relation relation);
 
 typedef enum IndexAttrBitmapKind
@@ -119,7 +120,7 @@ extern void RelationForgetRelation(Oid rid);
 
 extern void RelationCacheInvalidateEntry(Oid relationId);
 
-extern void RelationCacheInvalidate(void);
+extern void RelationCacheInvalidate(bool debug_discard);
 
 extern void RelationCloseSmgrByOid(Oid relationId);
 

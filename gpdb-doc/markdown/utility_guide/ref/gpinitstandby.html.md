@@ -20,7 +20,7 @@ The `gpinitstandby` utility adds a backup, standby coordinator instance to your 
 
 Before running this utility, make sure that the Greenplum Database software is installed on the standby coordinator host and that you have exchanged SSH keys between the hosts. It is recommended that the coordinator port is set to the same port number on the coordinator host and the standby coordinator host.
 
-This utility should be run on the currently active *primary* master host. See the *Greenplum Database Installation Guide* for instructions.
+This utility should be run on the currently active *primary* coordinator host. See the *Greenplum Database Installation Guide* for instructions.
 
 The utility performs the following steps:
 
@@ -34,7 +34,7 @@ A backup, standby coordinator instance serves as a 'warm standby' in the event o
 
 The activated standby coordinator effectively becomes the Greenplum Database coordinator, accepting client connections on the coordinator port and performing normal coordinator operations such as SQL command processing and resource management.
 
-**Important:** If the `gpinitstandby` utility previously failed to initialize the standby coordinator, you must delete the files in the standby coordinator data directory before running `gpinitstandby` again. The standby coordinator data directory is not cleaned up after an initialization failure because it contains log files that can help in determining the reason for the failure.
+> **Important** If the `gpinitstandby` utility previously failed to initialize the standby coordinator, you must delete the files in the standby coordinator data directory before running `gpinitstandby` again. The standby coordinator data directory is not cleaned up after an initialization failure because it contains log files that can help in determining the reason for the failure.
 
 If an initialization failure occurs, a summary report file is generated in the standby host directory `/tmp`. The report file lists the directories on the standby host that require clean up.
 
@@ -94,7 +94,7 @@ Start an existing standby coordinator instance and synchronize the data with the
 gpinitstandby -n
 ```
 
-**Note:** Do not specify the -n and -s options in the same command.
+> **Note** Do not specify the -n and -s options in the same command.
 
 Add a standby coordinator instance to your Greenplum Database system specifying a different port:
 

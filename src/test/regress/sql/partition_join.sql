@@ -101,6 +101,21 @@ SELECT t1.a, ss.t2a, ss.t2c FROM prt1 t1 LEFT JOIN LATERAL
 			  (SELECT t2.a AS t2a, t3.a AS t3a, t2.b t2b, t2.c t2c, least(t1.a,t2.a,t3.a) FROM prt1 t2 JOIN prt2 t3 ON (t2.a = t3.b)) ss
 			  ON t1.c = ss.t2c WHERE (t1.b + coalesce(ss.t2b, 0)) = 0 ORDER BY t1.a;
 
+-- bug with inadequate sort key representation
+SET enable_partitionwise_aggregate TO true;
+SET enable_hashjoin TO false;
+
+EXPLAIN (COSTS OFF)
+SELECT a, b FROM prt1 FULL JOIN prt2 p2(b,a,c) USING(a,b)
+  WHERE a BETWEEN 490 AND 510
+  GROUP BY 1, 2 ORDER BY 1, 2;
+SELECT a, b FROM prt1 FULL JOIN prt2 p2(b,a,c) USING(a,b)
+  WHERE a BETWEEN 490 AND 510
+  GROUP BY 1, 2 ORDER BY 1, 2;
+
+RESET enable_partitionwise_aggregate;
+RESET enable_hashjoin;
+
 --
 -- partitioned by expression
 --
@@ -427,19 +442,22 @@ SELECT t1.a, t1.c, t2.b, t2.c FROM prt1_m t1 LEFT JOIN prt2_m t2 ON t1.a = t2.b;
 EXPLAIN (COSTS OFF)
 SELECT t1.a, t1.c, t2.b, t2.c FROM prt1_m t1 LEFT JOIN prt2_m t2 ON t1.c = t2.c;
 
+-- partitionwise join can not be applied for a join between list and range
+-- partitioned tables
+EXPLAIN (COSTS OFF)
+SELECT t1.a, t1.c, t2.b, t2.c FROM prt1_n t1 LEFT JOIN prt2_n t2 ON (t1.c = t2.c);
+
 -- partitionwise join can not be applied between tables with different
 -- partition lists
 EXPLAIN (COSTS OFF)
-SELECT t1.a, t1.c, t2.b, t2.c FROM prt1_n t1 LEFT JOIN prt2_n t2 ON (t1.c = t2.c);
-EXPLAIN (COSTS OFF)
 SELECT t1.a, t1.c, t2.b, t2.c FROM prt1_n t1 JOIN prt2_n t2 ON (t1.c = t2.c) JOIN plt1 t3 ON (t1.c = t3.c);
 
--- partitionwise join can not be applied for a join between list and range
--- partitioned table
+-- partitionwise join can not be applied for a join between key column and
+-- non-key column
 EXPLAIN (COSTS OFF)
 SELECT t1.a, t1.c, t2.b, t2.c FROM prt1_n t1 FULL JOIN prt1 t2 ON (t1.c = t2.c);
 
--- partitionwise join can not be applied if only one of joining table has
+-- partitionwise join can not be applied if only one of joining tables has
 -- default partition
 ALTER TABLE prt2 DETACH PARTITION prt2_p3;
 ALTER TABLE prt2 ATTACH PARTITION prt2_p3 FOR VALUES FROM (500) TO (600);
@@ -447,3 +465,48 @@ ANALYZE prt2;
 
 EXPLAIN (COSTS OFF)
 SELECT t1.a, t1.c, t2.b, t2.c FROM prt1 t1, prt2 t2 WHERE t1.a = t2.b AND t1.b = 0 ORDER BY t1.a, t2.b;
+
+--
+-- Test some other plan types in a partitionwise join (unfortunately,
+-- we need larger tables to get the planner to choose these plan types)
+--
+create temp table prtx1 (a integer, b integer, c integer)
+  partition by range (a);
+create temp table prtx1_1 partition of prtx1 for values from (1) to (11);
+create temp table prtx1_2 partition of prtx1 for values from (11) to (21);
+create temp table prtx1_3 partition of prtx1 for values from (21) to (31);
+create temp table prtx2 (a integer, b integer, c integer)
+  partition by range (a);
+create temp table prtx2_1 partition of prtx2 for values from (1) to (11);
+create temp table prtx2_2 partition of prtx2 for values from (11) to (21);
+create temp table prtx2_3 partition of prtx2 for values from (21) to (31);
+insert into prtx1 select 1 + i%30, i, i
+  from generate_series(1,1000) i;
+insert into prtx2 select 1 + i%30, i, i
+  from generate_series(1,500) i, generate_series(1,10) j;
+create index on prtx2 (b);
+create index on prtx2 (c);
+analyze prtx1;
+analyze prtx2;
+
+explain (costs off)
+select * from prtx1
+where not exists (select 1 from prtx2
+                  where prtx2.a=prtx1.a and prtx2.b=prtx1.b and prtx2.c=123)
+  and a<20 and c=120;
+
+select * from prtx1
+where not exists (select 1 from prtx2
+                  where prtx2.a=prtx1.a and prtx2.b=prtx1.b and prtx2.c=123)
+  and a<20 and c=120;
+
+explain (costs off)
+select * from prtx1
+where not exists (select 1 from prtx2
+                  where prtx2.a=prtx1.a and (prtx2.b=prtx1.b+1 or prtx2.c=99))
+  and a<20 and c=91;
+
+select * from prtx1
+where not exists (select 1 from prtx2
+                  where prtx2.a=prtx1.a and (prtx2.b=prtx1.b+1 or prtx2.c=99))
+  and a<20 and c=91;

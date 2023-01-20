@@ -2203,9 +2203,9 @@ create table list_test(a int, b int, c int) distributed by (a)
   (partition b values(1));
 -- should fail
 alter table list_test drop column b;
-ERROR:  cannot drop column named in partition key
+ERROR:  cannot drop column "b" because it is part of the partition key of relation "list_test"
 alter table list_test drop column c;
-ERROR:  cannot drop column named in partition key
+ERROR:  cannot drop column "c" because it is part of the partition key of relation "list_test_1_prt_b"
 drop table list_test;
 -- MPP-3678: allow exchange and split on tables with subpartitioning
 CREATE TABLE rank_exc (
@@ -4530,8 +4530,8 @@ create table tc
         default partition d,
         start (0) inclusive end(100) inclusive every (50)
     );
+ERROR:  unique constraint on partitioned table must include all partitioning columns
 DETAIL:  PRIMARY KEY constraint on table "tc" lacks column "b" which is part of the partition key.
-ERROR:  insufficient columns in PRIMARY KEY constraint definition
 create table cc
     (a int primary key, b int, c int)
     distributed by (a)
@@ -4540,8 +4540,8 @@ create table cc
         default partition d,
         start (0) inclusive end(100) inclusive every (50)
     );
+ERROR:  unique constraint on partitioned table must include all partitioning columns
 DETAIL:  PRIMARY KEY constraint on table "cc" lacks column "b" which is part of the partition key.
-ERROR:  insufficient columns in PRIMARY KEY constraint definition
 create table at
     (a int, b int, c int)
     distributed by (a)
@@ -4552,14 +4552,14 @@ create table at
     );
 alter table at
     add primary key (a);
+ERROR:  unique constraint on partitioned table must include all partitioning columns
 DETAIL:  PRIMARY KEY constraint on table "at" lacks column "b" which is part of the partition key.
-ERROR:  insufficient columns in PRIMARY KEY constraint definition
 -- MPP-14471 end
 -- MPP-17606 (using table "at" from above)
 alter table at
     alter column b
 	type numeric;
-ERROR:  cannot alter type of column named in partition key
+ERROR:  cannot alter column "b" because it is part of the partition key of relation "at"
 	
 -- MPP-17606 end
 -- MPP-17707 start
@@ -6253,7 +6253,7 @@ WHERE c.relname LIKE 'part_inherit_1_prt_added%' AND
                  relname                 |    reloptions     |   am   | hasindex |       owner       |                                           acl                                            | numchecks | hasrules | hastriggers | rowsecurity 
 -----------------------------------------+-------------------+--------+----------+-------------------+------------------------------------------------------------------------------------------+-----------+----------+-------------+-------------
  part_inherit_1_prt_added                | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
- part_inherit_1_prt_added_2_prt_l2_child | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | f           | f
+ part_inherit_1_prt_added_2_prt_l2_child | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
 (2 rows)
 
 -- EXCHANGE PARTITION - same behavior as ATTACH PARTITION
@@ -6287,7 +6287,7 @@ WHERE (c.relname LIKE 'part_inherit_1_prt_l1_to_exchange%' OR c.relname = 'part_
                      relname                      |    reloptions     |   am   | hasindex |          owner          |                                                           acl                                                           | numchecks | hasrules | hastriggers | rowsecurity 
 --------------------------------------------------+-------------------+--------+----------+-------------------------+-------------------------------------------------------------------------------------------------------------------------+-----------+----------+-------------+-------------
  part_inherit_1_prt_l1_to_exchange                | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
- part_inherit_1_prt_l1_to_exchange_2_prt_l2_child | {fillfactor=30}   | heap   | t        | part_inherit_other_role | {part_inherit_other_role=arwdDxt/part_inherit_other_role,part_inherit_exchange_out_priv_role=w/part_inherit_other_role} |         2 | f        | f           | f
+ part_inherit_1_prt_l1_to_exchange_2_prt_l2_child | {fillfactor=30}   | heap   | t        | part_inherit_other_role | {part_inherit_other_role=arwdDxt/part_inherit_other_role,part_inherit_exchange_out_priv_role=w/part_inherit_other_role} |         2 | f        | t           | f
  part_inherit_exchange_out                        | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
 (3 rows)
 
@@ -6310,8 +6310,8 @@ WHERE c.relname LIKE 'part_inherit_1_prt_l1_to_split%' AND
                    relname                   |    reloptions     |   am   | hasindex |       owner       |                                           acl                                            | numchecks | hasrules | hastriggers | rowsecurity 
 ---------------------------------------------+-------------------+--------+----------+-------------------+------------------------------------------------------------------------------------------+-----------+----------+-------------+-------------
  part_inherit_1_prt_l1_to_split              | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
- part_inherit_1_prt_l1_to_split_2_prt_split1 | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | f           | f
- part_inherit_1_prt_l1_to_split_2_prt_split2 | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | f           | f
+ part_inherit_1_prt_l1_to_split_2_prt_split1 | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
+ part_inherit_1_prt_l1_to_split_2_prt_split2 | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
 (3 rows)
 
 -- Now print everything for comparison
@@ -6333,16 +6333,16 @@ WHERE c.relname LIKE 'part_inherit%' AND
 --------------------------------------------------+-------------------+--------+----------+-------------------------+-------------------------------------------------------------------------------------------------------------------------+-----------+----------+-------------+-------------
  part_inherit                                     | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | t        | t           | t
  part_inherit_1_prt_added                         | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
- part_inherit_1_prt_added_2_prt_l2_child          | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | f           | f
+ part_inherit_1_prt_added_2_prt_l2_child          | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
  part_inherit_1_prt_l1_child1                     | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
  part_inherit_1_prt_l1_child1_2_prt_l2_child      | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
  part_inherit_1_prt_l1_default                    | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
  part_inherit_1_prt_l1_default_2_prt_l2_child     | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
  part_inherit_1_prt_l1_to_exchange                | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
- part_inherit_1_prt_l1_to_exchange_2_prt_l2_child | {fillfactor=30}   | heap   | t        | part_inherit_other_role | {part_inherit_other_role=arwdDxt/part_inherit_other_role,part_inherit_exchange_out_priv_role=w/part_inherit_other_role} |         2 | f        | f           | f
+ part_inherit_1_prt_l1_to_exchange_2_prt_l2_child | {fillfactor=30}   | heap   | t        | part_inherit_other_role | {part_inherit_other_role=arwdDxt/part_inherit_other_role,part_inherit_exchange_out_priv_role=w/part_inherit_other_role} |         2 | f        | t           | f
  part_inherit_1_prt_l1_to_split                   | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
- part_inherit_1_prt_l1_to_split_2_prt_split1      | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | f           | f
- part_inherit_1_prt_l1_to_split_2_prt_split2      | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | f           | f
+ part_inherit_1_prt_l1_to_split_2_prt_split1      | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
+ part_inherit_1_prt_l1_to_split_2_prt_split2      | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
  part_inherit_attach                              | {fillfactor=30}   | heap   | t        | part_inherit_other_role | {part_inherit_other_role=arwdDxt/part_inherit_other_role,part_inherit_attach_priv_role=w/part_inherit_other_role}       |         2 | f        | t           | f
  part_inherit_exchange_out                        | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
  part_inherit_partof                              | {compresslevel=7} | ao_row | t        | part_inherit_other_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f

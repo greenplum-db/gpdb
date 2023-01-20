@@ -107,5 +107,5 @@ $ gpssh-exkeys -e hostfile_exkeys -x hostfile_gpexpand
 
 ## <a id="section6"></a>See Also 
 
-[gpssh](gpssh.html), [gpscp](gpscp.html)
+[gpssh](gpssh.html), [gpsync](gpsync.html)
 

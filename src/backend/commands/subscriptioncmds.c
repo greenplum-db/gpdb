@@ -40,6 +40,7 @@
 
 #include "replication/logicallauncher.h"
 #include "replication/origin.h"
+#include "replication/slot.h"
 #include "replication/walreceiver.h"
 #include "replication/walsender.h"
 #include "replication/worker_internal.h"
@@ -151,6 +152,8 @@ parse_subscription_options(List *options, bool *connect, bool *enabled_given,
 			/* Setting slot_name = NONE is treated as no slot name. */
 			if (strcmp(*slot_name, "none") == 0)
 				*slot_name = NULL;
+			else
+				ReplicationSlotValidateName(*slot_name, ERROR);
 		}
 		else if (strcmp(defel->defname, "copy_data") == 0 && copy_data)
 		{
@@ -558,6 +561,7 @@ AlterSubscription_refresh(Subscription *sub, bool copy_data)
 	List	   *subrel_states;
 	Oid		   *subrel_local_oids;
 	Oid		   *pubrel_local_oids;
+	WalReceiverConn *wrconn;
 	ListCell   *lc;
 	int			off;
 
@@ -904,7 +908,7 @@ DropSubscription(DropSubscriptionStmt *stmt, bool isTopLevel)
 	char		originname[NAMEDATALEN];
 	char	   *err = NULL;
 	RepOriginId originid;
-	WalReceiverConn *wrconn = NULL;
+	WalReceiverConn *wrconn;
 	StringInfoData cmd;
 	Form_pg_subscription form;
 

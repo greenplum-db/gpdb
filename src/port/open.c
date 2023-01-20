@@ -21,6 +21,7 @@
 
 #include <fcntl.h>
 #include <assert.h>
+#include <sys/stat.h>
 
 
 static int
@@ -111,17 +112,14 @@ pgwin32_open(const char *fileName, int fileFlags,...)
 	{
 		/*
 		 * Sharing violation or locking error can indicate antivirus, backup
-		 * or similar software that's locking the file. Try again for 30
-		 * seconds before giving up.
+		 * or similar software that's locking the file.  Wait a bit and try
+		 * again, giving up after 30 seconds.
 		 */
 		DWORD		err = GetLastError();
 
 		if (err == ERROR_SHARING_VIOLATION ||
 			err == ERROR_LOCK_VIOLATION)
 		{
-			pg_usleep(100000);
-			loops++;
-
 #ifndef FRONTEND
 			if (loops == 50)
 				ereport(LOG,
@@ -132,7 +130,42 @@ pgwin32_open(const char *fileName, int fileFlags,...)
 #endif
 
 			if (loops < 300)
+			{
+				pg_usleep(100000);
+				loops++;
 				continue;
+			}
+		}
+
+		/*
+		 * ERROR_ACCESS_DENIED is returned if the file is deleted but not yet
+		 * gone (Windows NT status code is STATUS_DELETE_PENDING).  In that
+		 * case we want to wait a bit and try again, giving up after 1 second
+		 * (since this condition should never persist very long).  However,
+		 * there are other commonly-hit cases that return ERROR_ACCESS_DENIED,
+		 * so care is needed.  In particular that happens if we try to open a
+		 * directory, or of course if there's an actual file-permissions
+		 * problem.  To distinguish these cases, try a stat().  In the
+		 * delete-pending case, it will either also get STATUS_DELETE_PENDING,
+		 * or it will see the file as gone and fail with ENOENT.  In other
+		 * cases it will usually succeed.  The only somewhat-likely case where
+		 * this coding will uselessly wait is if there's a permissions problem
+		 * with a containing directory, which we hope will never happen in any
+		 * performance-critical code paths.
+		 */
+		if (err == ERROR_ACCESS_DENIED)
+		{
+			if (loops < 10)
+			{
+				struct stat st;
+
+				if (stat(fileName, &st) != 0)
+				{
+					pg_usleep(100000);
+					loops++;
+					continue;
+				}
+			}
 		}
 
 		_dosmaperr(err);

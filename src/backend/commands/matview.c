@@ -193,6 +193,17 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 										  lockmode, 0,
 										  RangeVarCallbackOwnsTable, NULL);
 	matviewRel = table_open(matviewOid, NoLock);
+	relowner = matviewRel->rd_rel->relowner;
+
+	/*
+	 * Switch to the owner's userid, so that any functions are run as that
+	 * user.  Also lock down security-restricted operations and arrange to
+	 * make GUC variable changes local to this command.
+	 */
+	GetUserIdAndSecContext(&save_userid, &save_sec_context);
+	SetUserIdAndSecContext(relowner,
+						   save_sec_context | SECURITY_RESTRICTED_OPERATION);
+	save_nestlevel = NewGUCNestLevel();
 
 	/* Make sure it is a materialized view. */
 	if (matviewRel->rd_rel->relkind != RELKIND_MATVIEW)
@@ -304,19 +315,6 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 
 	dataQuery->parentStmtType = PARENTSTMTTYPE_REFRESH_MATVIEW;
 
-	relowner = matviewRel->rd_rel->relowner;
-
-	/*
-	 * Switch to the owner's userid, so that any functions are run as that
-	 * user.  Also arrange to make GUC variable changes local to this command.
-	 * Don't lock it down too tight to create a temporary table just yet.  We
-	 * will switch modes when we are about to execute user code.
-	 */
-	GetUserIdAndSecContext(&save_userid, &save_sec_context);
-	SetUserIdAndSecContext(relowner,
-						   save_sec_context | SECURITY_LOCAL_USERID_CHANGE);
-	save_nestlevel = NewGUCNestLevel();
-
 	/* Concurrent refresh builds new data in temp tablespace, and does diff. */
 	if (concurrent)
 	{
@@ -334,26 +332,21 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 	 * it against access by any other process until commit (by which time it
 	 * will be gone).
 	 */
-	OIDNewHeap = make_new_heap(matviewOid, tableSpace, matviewRel->rd_rel->relam, relpersistence,
-							   ExclusiveLock, false, true);
+	OIDNewHeap = make_new_heap_with_colname(matviewOid, tableSpace, matviewRel->rd_rel->relam, NULL, relpersistence,
+							   ExclusiveLock, false, true, "_$");
 	LockRelationOid(OIDNewHeap, AccessExclusiveLock);
 	dest = CreateTransientRelDestReceiver(OIDNewHeap, matviewOid, concurrent, relpersistence,
 										  stmt->skipData);
 
 	/*
-	 * Now lock down security-restricted operations.
-	 */
-	SetUserIdAndSecContext(relowner,
-						   save_sec_context | SECURITY_RESTRICTED_OPERATION);
-
-	refreshClause = MakeRefreshClause(concurrent, stmt->skipData, stmt->relation);
-
-	dataQuery->intoPolicy = matviewRel->rd_cdbpolicy;
-	/* Generate the data, if wanted. */
-	/*
+	 * Generate the data, if wanted.
+	 *
 	 * In GPDB, we call refresh_matview_datafill() even when WITH NO DATA was
 	 * specified, because it will dispatch the operation to the segments.
 	 */
+	refreshClause = MakeRefreshClause(concurrent, stmt->skipData, stmt->relation);
+	dataQuery->intoPolicy = matviewRel->rd_cdbpolicy;
+
 	processed = refresh_matview_datafill(dest, dataQuery, queryString, refreshClause);
 
 	/* Make the matview match the newly generated data. */
@@ -444,7 +437,7 @@ refresh_matview_datafill(DestReceiver *dest, Query *query,
 	 *
 	 * See Github Issue for details: https://github.com/greenplum-db/gpdb/issues/11956
 	 */
-	List       *saved_dispatch_oids = GetAssignedOidsForDispatch();
+	List       *saved_dispatch_oids = SaveOidAssignments();
 
 	/* Lock and rewrite, using a copy to preserve the original query. */
 	copied_query = copyObject(query);
@@ -576,7 +569,7 @@ transientrel_init(QueryDesc *queryDesc)
 	 * will be gone).
 	 */
 	OIDNewHeap = make_new_heap(matviewOid, tableSpace, matviewRel->rd_rel->relam,
-							   relpersistence,
+							   NULL, relpersistence,
 							   ExclusiveLock, false, false);
 	LockRelationOid(OIDNewHeap, AccessExclusiveLock);
 
@@ -664,6 +657,9 @@ transientrel_shutdown(DestReceiver *self)
 
 	table_finish_bulk_insert(myState->transientrel, myState->ti_options);
 
+	if (myState->transientrel->rd_tableam)
+		table_dml_finish(myState->transientrel);
+
 	/* close transientrel, but keep lock until commit */
 	table_close(myState->transientrel, NoLock);
 	myState->transientrel = NULL;
@@ -702,9 +698,12 @@ transientrel_destroy(DestReceiver *self)
 /*
  * Given a qualified temporary table name, append an underscore followed by
  * the given integer, to make a new table name based on the old one.
+ * The result is a palloc'd string.
  *
- * This leaks memory through palloc(), which won't be cleaned up until the
- * current memory context is freed.
+ * As coded, this would fail to make a valid SQL name if the given name were,
+ * say, "FOO"."BAR".  Currently, the table name portion of the input will
+ * never be double-quoted because it's of the form "pg_temp_NNN", cf
+ * make_new_heap().  But we might have to work harder someday.
  */
 static char *
 make_temptable_name_n(char *tempname, int n)
@@ -760,6 +759,7 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 	char	   *tempname;
 	char	   *diffname;
 	TupleDesc	tupdesc;
+	TupleDesc       newHeapDesc;
 	bool		foundUniqueIndex;
 	List	   *indexoidlist;
 	ListCell   *indexoidscan;
@@ -793,6 +793,14 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 	 * that in a way that allows showing the first duplicated row found.  Even
 	 * after we pass this test, a unique index on the materialized view may
 	 * find a duplicate key problem.
+	 *
+	 * Note: here and below, we use "tablename.*::tablerowtype" as a hack to
+	 * keep ".*" from being expanded into multiple columns in a SELECT list.
+	 * Compare ruleutils.c's get_variable().
+	 *
+	 * Greenplum doesn't use this hack since it needs to expand and get the
+	 * distribution columns.
+	 *
 	 */
 	resetStringInfo(&querybuf);
 	appendStringInfo(&querybuf,
@@ -827,12 +835,11 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 						   save_sec_context | SECURITY_LOCAL_USERID_CHANGE);
 
 	/* Get distribute key of matview */
-	distributed =  TextDatumGetCString(DirectFunctionCall1(pg_get_table_distributedby,
-														   ObjectIdGetDatum(matviewOid)));
+	distributed = TextDatumGetCString(DirectFunctionCall1(pg_get_table_distributedby,
+														   ObjectIdGetDatum(tempOid)));
 
 	/* Start building the query for creating the diff table. */
 	resetStringInfo(&querybuf);
-
 	appendStringInfo(&querybuf,
 					 "CREATE TEMP TABLE %s AS "
 					 "SELECT mv.ctid AS tid, mv.gp_segment_id as sid, newdata.* "
@@ -846,6 +853,7 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 	 * include all rows.
 	 */
 	tupdesc = matviewRel->rd_att;
+	newHeapDesc = tempRel->rd_att;
 	opUsedForQual = (Oid *) palloc0(sizeof(Oid) * relnatts);
 	foundUniqueIndex = false;
 
@@ -880,6 +888,7 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 				int			attnum = indexStruct->indkey.values[i];
 				Oid			opclass = indclass->values[i];
 				Form_pg_attribute attr = TupleDescAttr(tupdesc, attnum - 1);
+				Form_pg_attribute newattr = TupleDescAttr(newHeapDesc, attnum - 1);
 				Oid			attrtype = attr->atttypid;
 				HeapTuple	cla_ht;
 				Form_pg_opclass cla_tup;
@@ -930,7 +939,7 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 					appendStringInfoString(&querybuf, " AND ");
 
 				leftop = quote_qualified_identifier("newdata",
-													NameStr(attr->attname));
+													NameStr(newattr->attname));
 				rightop = quote_qualified_identifier("mv",
 													 NameStr(attr->attname));
 
@@ -958,12 +967,10 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 	 */
 	Assert(foundUniqueIndex);
 
-
-
 	appendStringInfoString(&querybuf,
-						   " AND newdata OPERATOR(pg_catalog.*=) mv) "
-						   "WHERE newdata IS NULL OR mv IS NULL "
-						   "ORDER BY tid ");
+						   " AND newdata.* OPERATOR(pg_catalog.*=) mv.*) "
+						   "WHERE newdata.* IS NULL OR mv.* IS NULL "
+						   "ORDER BY tid "); /* GPDB: tailing space matters */
 	appendStringInfoString(&querybuf, distributed);
 
 	/* Create the temporary "diff" table. */
@@ -991,8 +998,8 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 	appendStringInfo(&querybuf,
 					 "DELETE FROM %s mv WHERE ctid OPERATOR(pg_catalog.=) ANY "
 					 "(SELECT diff.tid FROM %s diff "
-					 "WHERE diff.tid = mv.ctid and diff.sid = mv.gp_segment_id and"
-	 				 " diff.tid IS NOT NULL)",
+					 "WHERE diff.tid IS NOT NULL "
+					 "AND diff.tid = mv.ctid AND diff.sid = mv.gp_segment_id)",
 					 matviewname, diffname);
 	if (SPI_exec(querybuf.data, 0) != SPI_OK_DELETE)
 		elog(ERROR, "SPI_exec failed: %s", querybuf.data);
@@ -1000,10 +1007,10 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 	/* Inserts go last. */
 	resetStringInfo(&querybuf);
 	appendStringInfo(&querybuf, "INSERT INTO %s SELECT", matviewname);
-	for (int i = 0; i < tupdesc->natts; ++i)
+	for (int i = 0; i < newHeapDesc->natts; ++i)
 	{
-		Form_pg_attribute attr = TupleDescAttr(tupdesc, i);
-		if (i == tupdesc->natts - 1)
+		Form_pg_attribute attr = TupleDescAttr(newHeapDesc, i);
+		if (i == newHeapDesc->natts - 1)
 			appendStringInfo(&querybuf, " %s", NameStr(attr->attname));
 		else
 			appendStringInfo(&querybuf, " %s,", NameStr(attr->attname));

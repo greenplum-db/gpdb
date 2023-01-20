@@ -673,8 +673,17 @@ extern int gp_workfile_bytes_to_checksum;
 
 extern bool coredump_on_memerror;
 
-/* Greenplum resource group query_mem re-calculate on QE */
-extern bool gp_resource_group_enable_recalculate_query_mem;
+/* Greenplum linux cgroup version, is enable version 2 */
+extern bool gp_resource_group_enable_cgroup_version_two;
+
+/* Greenplum linux cgroup version, is enable version 2 */
+extern bool gp_resource_group_enable_cgroup_version_two;
+
+/* Greenplum linux cgroup version, is enable version 2 */
+extern bool gp_resource_group_enable_cgroup_version_two;
+
+/* Greenplum linux cgroup version, is enable version 2 */
+extern bool gp_resource_group_enable_cgroup_version_two;
 
 /*
  * Autostats feature, whether or not to to automatically run ANALYZE after 
@@ -695,6 +704,8 @@ extern int	gp_autostats_mode_in_functions;
 extern int	gp_autostats_on_change_threshold;
 extern bool	gp_autostats_allow_nonowner;
 extern bool	log_autostats;
+
+extern bool	gp_explain_jit;
 
 
 /* --------------------------------------------------------------------------------------------------

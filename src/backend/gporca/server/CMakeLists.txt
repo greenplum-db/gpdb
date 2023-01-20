@@ -159,6 +159,9 @@ CStatsTest:
 Stat-Derivation-Leaf-Pattern MissingBoolColStats JoinColWithOnlyNDV UnsupportedStatsPredicate
 StatsFilter-AnyWithNewColStats EquiJoinOnExpr-Supported EquiJoinOnExpr-Unsupported;
 
+CCorrelatedStatsTest:
+Correlated-Stat-Function-Dependency Correlated-Stat-Function-Dependency-2 Correlated-Stat-Function-Dependency-3;
+
 CICGMiscTest:
 BroadcastSkewedHashjoin OrderByNullsFirst ConvertHashToRandomSelect ConvertHashToRandomInsert HJN-DeeperOuter CTAS CTAS-Random CheckAsUser
 CTAS-random-distributed-from-replicated-distributed-table
@@ -308,7 +311,7 @@ JOIN-NonRedistributableCol DQA-NonRedistributableCol
 MotionHazard-NoMaterializeHashAggUnderResult;
 
 CInvalidCostContextTest:
-SpoolShouldInvalidateUnresolvedDynamicScans;
+SpoolShouldInvalidateUnresolvedDynamicScans DiscardRedistributeHashJoin;
 
 CRandomDataInsertionTest:
 AddRedistributeBeforeInsert-1 AddRedistributeBeforeInsert-2 AddRedistributeBeforeInsert-3
@@ -356,13 +359,13 @@ Subq2PartialDecorrelate Subq2CorrSQInLOJOn Subq2NotInWhereLOJ Subq2OuterRef2InJo
 Index-Join-With-Subquery-In-Pred NestedSubqLimitBindings;
 
 CIndexOnlyScanTest:
-IndexOnlyScan-NoDistKeyInIndex;
+IndexOnlyScan-NoDistKeyInIndex IndexConstraintsMDidCache;
 
 CRightJoinTest:
 RightJoinHashed RightJoinRedistribute RightJoinReplicated RightJoinBothReplicated RightJoinNoDPSNonDistKey RightJoinTVF;
 
 CSqlFunctionTest:
-SqlFuncNullReject SqlFuncPredFactorize SqlFuncDmlScalar SqlFuncDmlTvf;
+SqlFuncNullReject SqlFuncPredFactorize SqlFuncDmlScalar SqlFuncDmlTvf CompositeTypeRelMdId;
 
 CScalarFuncPushDownTest:
 ScalarFuncPushedBelowGather ConstScalarFuncNotPushedBelowGather;

@@ -103,7 +103,7 @@
 #include "naucrates/dxl/operators/CDXLPhysicalDynamicBitmapTableScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalDynamicIndexScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalDynamicTableScan.h"
-#include "naucrates/dxl/operators/CDXLPhysicalExternalScan.h"
+#include "naucrates/dxl/operators/CDXLPhysicalForeignScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalGatherMotion.h"
 #include "naucrates/dxl/operators/CDXLPhysicalHashJoin.h"
 #include "naucrates/dxl/operators/CDXLPhysicalIndexOnlyScan.h"
@@ -338,7 +338,7 @@ CTranslatorExprToDXL::CreateDXLNode(CExpression *pexpr,
 	GPOS_ASSERT(nullptr != pexpr);
 	ULONG ulOpId = (ULONG) pexpr->Pop()->Eopid();
 	if (COperator::EopPhysicalTableScan == ulOpId ||
-		COperator::EopPhysicalExternalScan == ulOpId)
+		COperator::EopPhysicalForeignScan == ulOpId)
 	{
 		CDXLNode *dxlnode = PdxlnTblScan(
 			pexpr, nullptr /*pcrsOutput*/, colref_array, pdrgpdsBaseTables,
@@ -693,8 +693,8 @@ CTranslatorExprToDXL::PdxlnTblScan(CExpression *pexprTblScan,
 	}
 	else
 	{
-		GPOS_ASSERT(COperator::EopPhysicalExternalScan == op_id);
-		pdxlopTS = GPOS_NEW(m_mp) CDXLPhysicalExternalScan(m_mp, table_descr);
+		GPOS_ASSERT(COperator::EopPhysicalForeignScan == op_id);
+		pdxlopTS = GPOS_NEW(m_mp) CDXLPhysicalForeignScan(m_mp, table_descr);
 	}
 
 	CDXLNode *pdxlnTblScan = GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopTS);
@@ -1919,7 +1919,7 @@ CTranslatorExprToDXL::PdxlnFromFilter(CExpression *pexprFilter,
 	switch (eopidRelational)
 	{
 		case COperator::EopPhysicalTableScan:
-		case COperator::EopPhysicalExternalScan:
+		case COperator::EopPhysicalForeignScan:
 		{
 			// if there is a structure of the form
 			// 		filter->tablescan, or filter->CTG then
@@ -3914,7 +3914,7 @@ UlIndexFilter(Edxlopid edxlopid)
 	switch (edxlopid)
 	{
 		case EdxlopPhysicalTableScan:
-		case EdxlopPhysicalExternalScan:
+		case EdxlopPhysicalForeignScan:
 			return EdxltsIndexFilter;
 		case EdxlopPhysicalBitmapTableScan:
 		case EdxlopPhysicalDynamicBitmapTableScan:
@@ -3960,7 +3960,7 @@ CTranslatorExprToDXL::PdxlnResultFromNLJoinOuter(
 	switch (edxlopid)
 	{
 		case EdxlopPhysicalTableScan:
-		case EdxlopPhysicalExternalScan:
+		case EdxlopPhysicalForeignScan:
 		case EdxlopPhysicalBitmapTableScan:
 		case EdxlopPhysicalDynamicTableScan:
 		case EdxlopPhysicalIndexScan:
@@ -4866,7 +4866,6 @@ CTranslatorExprToDXL::PdxlnDML(CExpression *pexpr,
 	GPOS_ASSERT(1 == pexpr->Arity());
 
 	ULONG action_colid = 0;
-	ULONG oid_colid = 0;
 	ULONG ctid_colid = 0;
 	ULONG segid_colid = 0;
 
@@ -4888,12 +4887,6 @@ CTranslatorExprToDXL::PdxlnDML(CExpression *pexpr,
 	GPOS_ASSERT(nullptr != pcrAction);
 	action_colid = pcrAction->Id();
 
-	CColRef *pcrOid = popDML->PcrTableOid();
-	if (pcrOid != nullptr)
-	{
-		oid_colid = pcrOid->Id();
-	}
-
 	CColRef *pcrCtid = popDML->PcrCtid();
 	CColRef *pcrSegmentId = popDML->PcrSegmentId();
 	if (nullptr != pcrCtid)
@@ -4914,9 +4907,8 @@ CTranslatorExprToDXL::PdxlnDML(CExpression *pexpr,
 	CDXLDirectDispatchInfo *dxl_direct_dispatch_info =
 		GetDXLDirectDispatchInfo(pexpr);
 	CDXLPhysicalDML *pdxlopDML = GPOS_NEW(m_mp) CDXLPhysicalDML(
-		m_mp, dxl_dml_type, table_descr, pdrgpul, action_colid, oid_colid,
-		ctid_colid, segid_colid, dxl_direct_dispatch_info,
-		popDML->IsInputSortReq(), popDML->FSplit());
+		m_mp, dxl_dml_type, table_descr, pdrgpul, action_colid, ctid_colid,
+		segid_colid, dxl_direct_dispatch_info, popDML->FSplit());
 
 	// project list
 	CColRefSet *pcrsOutput = pexpr->Prpp()->PcrsRequired();

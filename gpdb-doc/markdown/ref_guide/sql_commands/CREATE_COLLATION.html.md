@@ -40,7 +40,7 @@ To be able to create a collation, you must have `CREATE` privilege on the destin
 
 Use `DROP COLLATION` to remove user-defined collations.
 
-See [Collation Support](https://www.postgresql.org/docs/9.4/collation.html) in the PostgreSQL documentation for more information about collation support in Greenplum Database.
+See [Collation Support](https://www.postgresql.org/docs/12/collation.html) in the PostgreSQL documentation for more information about collation support in Greenplum Database.
 
 ## <a id="section6"></a>Examples 
 

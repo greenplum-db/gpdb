@@ -258,6 +258,9 @@ public:
 	ULONG GetParamIdForSelector(OID oid_type, const ULONG selectorId);
 
 	Index FindRTE(Oid reloid);
+
+	// used by internal GPDB functions to build the RelOptInfo when creating foreign scans
+	Query *m_orig_query;
 };
 
 }  // namespace gpdxl

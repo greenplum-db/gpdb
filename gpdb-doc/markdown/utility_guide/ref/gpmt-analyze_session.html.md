@@ -15,7 +15,7 @@ gpmt analyze_session [-session <session_id> ] [-master-dir <directory>]
 :   Greenplum session ID which is referenced in `pg_stat_activity`.
 
 -master-dir
-:   Working directory for master process.
+:   Working directory for coordinator process.
 
 -segment-dir
 :   Working directory for segment processes.

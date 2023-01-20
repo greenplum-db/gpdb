@@ -180,6 +180,12 @@ typedef struct AOCSScanDescData
 	 */
 	AppendOnlyBlockDirectory *blockDirectory;
 	AppendOnlyVisimap visibilityMap;
+
+	/*
+	 * The total number of bytes read, compressed, across all segment files, and
+	 * across all columns projected, so far. It is used for scan progress reporting.
+	 */
+	int64		totalBytesRead;
 } AOCSScanDescData;
 
 typedef AOCSScanDescData *AOCSScanDesc;
@@ -378,5 +384,22 @@ extern void aocs_addcol_setfirstrownum(AOCSAddColumnDesc desc,
 
 extern void aoco_dml_init(Relation relation);
 extern void aoco_dml_finish(Relation relation);
+
+/*
+ * Update total bytes read for the entire scan. If the block was compressed,
+ * update it with the compressed length. If the block was not compressed, update
+ * it with the uncompressed length.
+ */
+static inline void
+AOCSScanDesc_UpdateTotalBytesRead(AOCSScanDesc scan, AttrNumber attno)
+{
+	Assert(scan->columnScanInfo.ds[attno]);
+	Assert(scan->columnScanInfo.ds[attno]->ao_read.isActive);
+
+	if (scan->columnScanInfo.ds[attno]->ao_read.current.isCompressed)
+		scan->totalBytesRead += scan->columnScanInfo.ds[attno]->ao_read.current.compressedLen;
+	else
+		scan->totalBytesRead += scan->columnScanInfo.ds[attno]->ao_read.current.uncompressedLen;
+}
 
 #endif   /* AOCSAM_H */

@@ -25,12 +25,12 @@ set optimizer_enable_hashjoin = off;
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
       <dxl:TraceFlags Value="102029,102046,102048,102053,102054,102074,102120,103001,103014,103015,103022,103027,104003,104004,104005,105000,106000,,102157,102158"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.32774.1.0" Name="zoo" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.32774.1.0" Name="zoo" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32774.1.0" Name="zoo" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -55,7 +55,7 @@ set optimizer_enable_hashjoin = off;
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.32768.1.0" Name="bar" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.32768.1.0" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32768.1.0" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -127,7 +127,7 @@ set optimizer_enable_hashjoin = off;
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.32791.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32791.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -317,7 +317,7 @@ set optimizer_enable_hashjoin = off;
       <dxl:LogicalJoin JoinType="Left">
         <dxl:LogicalJoin JoinType="Left">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.32791.1.0" TableName="foo">
+            <dxl:TableDescriptor Mdid="6.32791.1.0" TableName="foo">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="8"/>
                 <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.1043.1.0" ColWidth="8"/>
@@ -332,7 +332,7 @@ set optimizer_enable_hashjoin = off;
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.32768.1.0" TableName="bar">
+            <dxl:TableDescriptor Mdid="6.32768.1.0" TableName="bar">
               <dxl:Columns>
                 <dxl:Column ColId="10" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="8"/>
                 <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.1043.1.0" ColWidth="8"/>
@@ -372,7 +372,7 @@ set optimizer_enable_hashjoin = off;
           </dxl:And>
         </dxl:LogicalJoin>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.32774.1.0" TableName="zoo">
+          <dxl:TableDescriptor Mdid="6.32774.1.0" TableName="zoo">
             <dxl:Columns>
               <dxl:Column ColId="19" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="8"/>
               <dxl:Column ColId="20" Attno="2" ColName="b" TypeMdid="0.1043.1.0" ColWidth="8"/>
@@ -511,7 +511,7 @@ set optimizer_enable_hashjoin = off;
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.32791.1.0" TableName="foo">
+                <dxl:TableDescriptor Mdid="6.32791.1.0" TableName="foo">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="8"/>
                     <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.1043.1.0" ColWidth="8"/>
@@ -568,7 +568,7 @@ set optimizer_enable_hashjoin = off;
               </dxl:IndexCondList>
 	      <dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.32784.1.0" IndexName="bar_idx_a"/>
-              <dxl:TableDescriptor Mdid="0.32768.1.0" TableName="bar">
+              <dxl:TableDescriptor Mdid="6.32768.1.0" TableName="bar">
                 <dxl:Columns>
                   <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="8"/>
                   <dxl:Column ColId="10" Attno="2" ColName="b" TypeMdid="0.1043.1.0" ColWidth="8"/>
@@ -648,7 +648,7 @@ set optimizer_enable_hashjoin = off;
                 <dxl:IndexDescriptor Mdid="0.32790.1.0" IndexName="zoo_idx_b"/>
               </dxl:BitmapIndexProbe>
             </dxl:BitmapAnd>
-            <dxl:TableDescriptor Mdid="0.32774.1.0" TableName="zoo">
+            <dxl:TableDescriptor Mdid="6.32774.1.0" TableName="zoo">
               <dxl:Columns>
                 <dxl:Column ColId="18" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="8"/>
                 <dxl:Column ColId="19" Attno="2" ColName="b" TypeMdid="0.1043.1.0" ColWidth="8"/>

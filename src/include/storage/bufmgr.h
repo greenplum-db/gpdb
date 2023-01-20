@@ -195,7 +195,18 @@ extern void DropRelFileNodeBuffers(RelFileNodeBackend rnode,
 extern void DropRelFileNodesAllBuffers(RelFileNodeBackend *rnodes, int nnodes);
 extern void DropDatabaseBuffers(Oid dbid);
 
-extern BlockNumber RelationGuessNumberOfBlocksFromSize(uint64 szbytes);
+/*
+ * GPDB: it is possible to need to calculate the number of blocks from the table
+ * size. An example use case is when we are the dispatcher and we need to
+ * acquire the number of blocks from all segments.
+ *
+ * Use the same calculation that RelationGetNumberOfBlocksInFork is using.
+ */
+static inline BlockNumber
+RelationGuessNumberOfBlocksFromSize(uint64 szbytes)
+{
+	return (szbytes + (BLCKSZ - 1)) / BLCKSZ;
+}
 
 #define RelationGetNumberOfBlocks(reln) \
 	RelationGetNumberOfBlocksInFork(reln, MAIN_FORKNUM)

@@ -5,7 +5,7 @@ DROP RESOURCE GROUP rg1;
 ERROR:  resource group "rg1" does not exist
 -- end_ignore
 
-CREATE RESOURCE GROUP rg1 WITH (concurrency=2, cpu_rate_limit=10, memory_limit=50, memory_shared_quota=0);
+CREATE RESOURCE GROUP rg1 WITH (concurrency=2, cpu_hard_quota_limit=10);
 CREATE
 CREATE ROLE r1 RESOURCE GROUP rg1;
 CREATE
@@ -21,7 +21,7 @@ ALTER ROLE r1 RESOURCE GROUP none;
 ALTER
 DROP RESOURCE GROUP rg1;
 DROP
-CREATE RESOURCE GROUP rg1 WITH (concurrency=2, cpu_rate_limit=10, memory_limit=50, memory_shared_quota=0);
+CREATE RESOURCE GROUP rg1 WITH (concurrency=2, cpu_hard_quota_limit=10);
 CREATE
 ALTER ROLE r1 RESOURCE GROUP rg1;
 ALTER

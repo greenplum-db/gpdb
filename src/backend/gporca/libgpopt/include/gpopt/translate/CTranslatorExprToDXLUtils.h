@@ -93,7 +93,8 @@ private:
 
 	// check if the given constant value for a particular distribution column can be used
 	// to identify which segment to direct dispatch to.
-	static BOOL FDirectDispatchable(const CColRef *pcrDistrCol,
+	static BOOL FDirectDispatchable(CMDAccessor *md_accessor,
+									const CColRef *pcrDistrCol,
 									const CDXLDatum *dxl_datum);
 
 public:
@@ -164,13 +165,6 @@ public:
 	static CDXLNode *PdxlnProjListFromChildProjList(
 		CMemoryPool *mp, CColumnFactory *col_factory,
 		ColRefToDXLNodeMap *phmcrdxln, const CDXLNode *pdxlnProjListChild);
-
-	// construct the project list of a partition selector
-	static CDXLNode *PdxlnPrLPartitionSelector(
-		CMemoryPool *mp, CMDAccessor *md_accessor, CColumnFactory *col_factory,
-		ColRefToDXLNodeMap *phmcrdxln, BOOL fUseChildProjList,
-		CDXLNode *pdxlnPrLChild, CColRef *pcrOid, ULONG ulPartLevels,
-		BOOL fGeneratePartOid);
 
 	// create a DXL project elem node from as a scalar identifier for the
 	// child project element node

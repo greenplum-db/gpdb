@@ -92,7 +92,7 @@ GROUP BY 1;</code></pre></div>
 </tr>
                             
 <tr class="row">
-<td class="entry" headers="drr_5bg_rp__table_drr_5bg_rp__entry__1">Test the state of master mirroring on Greenplum Database. If
+<td class="entry" headers="drr_5bg_rp__table_drr_5bg_rp__entry__1">Test the state of coordinator mirroring on Greenplum Database. If
                                     the value is not "STREAMING", raise an alert or
                                         warning.<p class="p">Recommended frequency: run every 5 to 10
                                         minutes</p><p class="p">Severity: IMPORTANT</p></td>
@@ -101,15 +101,15 @@ GROUP BY 1;</code></pre></div>
                                         command:<pre class="pre codeblock"><code>psql &lt;dbname&gt; -c 'SELECT pid, state FROM pg_stat_replication;'</code></pre></div>
 </td>
 <td class="entry" headers="drr_5bg_rp__table_drr_5bg_rp__entry__3">
-<p class="p">Check the <span class="ph filepath">log</span> file from the master
-                                        and standby master for errors. If there are no unexpected
+<p class="p">Check the <span class="ph filepath">log</span> file from the coordinator
+                                        and standby coordinator for errors. If there are no unexpected
                                         errors and the machines are up, run the
 <code class="ph codeph">gpinitstandby</code> utility to bring the
                                         standby online. </p>
 </td>
 </tr>
 <tr class="row">
-<td class="entry" headers="drr_5bg_rp__table_drr_5bg_rp__entry__1">Perform a basic check to see if the master is up and
+<td class="entry" headers="drr_5bg_rp__table_drr_5bg_rp__entry__1">Perform a basic check to see if the coordinator is up and
                                         functioning.<p class="p">Recommended frequency: run every 5 to 10
                                         minutes</p><p class="p">Severity: CRITICAL</p></td>
 <td class="entry" headers="drr_5bg_rp__table_drr_5bg_rp__entry__2">
@@ -118,10 +118,10 @@ GROUP BY 1;</code></pre></div>
 <pre class="pre codeblock"><code>SELECT count(*) FROM gp_segment_configuration;</code></pre></div>
 </td>
 <td class="entry" headers="drr_5bg_rp__table_drr_5bg_rp__entry__3">
-<p class="p">If this query fails, the active master may be down. Try to
-                                        start the database on the original master if the server is
+<p class="p">If this query fails, the active coordinator may be down. Try to
+                                        start the database on the original coordinator if the server is
                                         up and running. If that fails, try to activate the standby
-                                        master as master.</p>
+                                        coordinator as coordinator.</p>
 </td>
 </tr>
 </tbody></table>
@@ -323,7 +323,7 @@ GROUP BY 1;</code></pre></div>
                                             CRITICAL</p></td>
 <td class="entry" headers="topic_dld_23h_rp__table_vxx_f3h_rp__entry__2">
 <span class="ph">Run the <code class="ph codeph">gpbackup</code>
-                                            utility to create a backup of the master and segment
+                                            utility to create a backup of the coordinator and segment
                                             databases in parallel.</span>
 </td>
 <td class="entry" headers="topic_dld_23h_rp__table_vxx_f3h_rp__entry__3">Best practice is to have a current backup ready in case

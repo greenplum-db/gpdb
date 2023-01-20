@@ -10,5 +10,5 @@ The `sslinfo` module is installed when you install Greenplum Database. Before yo
 
 ## <a id="topic_info"></a>Module Documentation 
 
-See [sslinfo](https://www.postgresql.org/docs/9.4/sslinfo.html) in the PostgreSQL documentation for detailed information about the individual functions in this module.
+See [sslinfo](https://www.postgresql.org/docs/12/sslinfo.html) in the PostgreSQL documentation for detailed information about the individual functions in this module.
 

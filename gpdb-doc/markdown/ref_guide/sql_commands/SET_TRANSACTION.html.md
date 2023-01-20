@@ -28,7 +28,7 @@ The `SET TRANSACTION` command sets the characteristics of the current transactio
 
 The available transaction characteristics are the transaction isolation level, the transaction access mode \(read/write or read-only\), and the deferrable mode.
 
-**Note:** Deferrable transactions require the transaction to be serializable. Greenplum Database does not support serializable transactions, so including the `DEFERRABLE` clause has no effect.
+> **Note** Deferrable transactions require the transaction to be serializable. Greenplum Database does not support serializable transactions, so including the `DEFERRABLE` clause has no effect.
 
 The isolation level of a transaction determines what data the transaction can see when other transactions are running concurrently.
 

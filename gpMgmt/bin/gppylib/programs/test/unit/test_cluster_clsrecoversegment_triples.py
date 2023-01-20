@@ -194,7 +194,7 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
             },
             {
                 "name": "failed_and_live_same_dbid",
-                "gparray": """1|-1|p|p|n|u|mdw|mdw|5432|/master/gpseg-1
+                "gparray": """1|-1|p|p|n|u|cdw|cdw|5432|/coordinator/gpseg-1
                                2|0|m|p|s|d|sdw1|sdw1|20000|/primary/gpseg0
                                3|1|p|p|s|u|sdw1|sdw1|20001|/primary/gpseg1
                                8|2|m|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2
@@ -208,7 +208,7 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
             },
             {
                 "name": "failover_unreachable",
-                "gparray": """1|-1|p|p|n|u|mdw|mdw|5432|/master/gpseg-1
+                "gparray": """1|-1|p|p|n|u|cdw|cdw|5432|/coordinator/gpseg-1
                                         2|0|m|p|s|d|sdw1|sdw1|20000|/primary/gpseg0
                                         3|1|p|p|s|u|sdw1|sdw1|20001|/primary/gpseg1
                                         8|2|m|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2
@@ -307,7 +307,7 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
             },
             {
                 "name": "failed_unreachable",
-                "gparray": """1|-1|p|p|n|u|mdw|mdw|5432|/master/gpseg-1
+                "gparray": """1|-1|p|p|n|u|mdw|mdw|5432|/coordinator/gpseg-1
                                2|0|m|p|s|d|sdw1|sdw1|20000|/primary/gpseg0
                                3|1|p|p|s|u|sdw1|sdw1|20001|/primary/gpseg1
                                8|2|m|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2
@@ -414,7 +414,7 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
             },
             {
             "name": "failed_and_live_same_dbid",
-            "gparray": """1|-1|p|p|n|u|mdw|mdw|5432|/master/gpseg-1
+            "gparray": """1|-1|p|p|n|u|mdw|mdw|5432|/coordinator/gpseg-1
                        2|0|m|p|s|d|sdw1|sdw1|20000|/primary/gpseg0
                        3|1|p|p|s|u|sdw1|sdw1|20001|/primary/gpseg1
                        8|2|m|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2
@@ -428,7 +428,7 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
             },
             {
                  "name": "failover_unreachable",
-                 "gparray": """1|-1|p|p|n|u|mdw|mdw|5432|/master/gpseg-1
+                 "gparray": """1|-1|p|p|n|u|mdw|mdw|5432|/coordinator/gpseg-1
                                 2|0|m|p|s|d|sdw1|sdw1|20000|/primary/gpseg0
                                 3|1|p|p|s|u|sdw1|sdw1|20001|/primary/gpseg1
                                 8|2|m|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2
@@ -505,7 +505,7 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
         super().__init__(arg)
 
         # It's possible to have no down segments, as gpmovemirrors also calls gprecoverseg.
-        self.all_up_gparray_str = '''1|-1|p|p|n|u|mdw|mdw|5432|/master/gpseg-1
+        self.all_up_gparray_str = '''1|-1|p|p|n|u|mdw|mdw|5432|/coordinator/gpseg-1
                                   2|0|p|p|s|u|sdw1|sdw1|20000|/primary/gpseg0
                                   3|1|p|p|s|u|sdw1|sdw1|20001|/primary/gpseg1
                                   16|6|m|m|s|u|sdw1|sdw1|21000|/mirror/gpseg6
@@ -524,7 +524,7 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
                                   9|7|p|p|s|u|sdw4|sdw4|20001|/primary/gpseg7'''
 
         # We include down segments, so that gprecoverseg can find them automatically
-        self.three_failedover_segs_gparray_str = '''1|-1|p|p|n|u|mdw|mdw|5432|/master/gpseg-1
+        self.three_failedover_segs_gparray_str = '''1|-1|p|p|n|u|mdw|mdw|5432|/coordinator/gpseg-1
                                   2|0|m|p|s|d|sdw1|sdw1|20000|/primary/gpseg0
                                   3|1|m|p|s|d|sdw1|sdw1|20001|/primary/gpseg1
                                   8|2|p|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2
@@ -534,7 +534,7 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
                                   4|2|m|p|s|d|sdw2|sdw2|20000|/primary/gpseg2
                                   5|3|p|p|s|u|sdw2|sdw2|20001|/primary/gpseg3'''
 
-        self.content0_no_peer_gparray_str = '''1|-1|p|p|n|u|mdw|mdw|5432|/master/gpseg-1
+        self.content0_no_peer_gparray_str = '''1|-1|p|p|n|u|mdw|mdw|5432|/coordinator/gpseg-1
                                   2|0|m|p|s|d|sdw1|sdw1|20000|/primary/gpseg0
                                   3|1|m|p|s|d|sdw1|sdw1|20001|/primary/gpseg1
                                   8|2|p|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2
@@ -543,7 +543,7 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
                                   4|2|m|p|s|d|sdw2|sdw2|20000|/primary/gpseg2
                                   5|3|p|p|s|u|sdw2|sdw2|20001|/primary/gpseg3'''
 
-        self.content0_mirror_and_its_peer_down_gparray_str = '''1|-1|p|p|n|u|mdw|mdw|5432|/master/gpseg-1
+        self.content0_mirror_and_its_peer_down_gparray_str = '''1|-1|p|p|n|u|mdw|mdw|5432|/coordinator/gpseg-1
                                   2|0|m|p|s|d|sdw1|sdw1|20000|/primary/gpseg0
                                   3|1|p|p|s|u|sdw1|sdw1|20001|/primary/gpseg1
                                   8|2|m|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2
@@ -553,7 +553,7 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
                                   4|2|p|p|s|u|sdw2|sdw2|20000|/primary/gpseg2
                                   5|3|p|p|s|u|sdw2|sdw2|20001|/primary/gpseg3'''
 
-        self.content0_mirror_and_its_peer_down_gparray_str2 = '''1|-1|p|p|n|u|mdw|mdw|5432|/master/gpseg-1
+        self.content0_mirror_and_its_peer_down_gparray_str2 = '''1|-1|p|p|n|u|mdw|mdw|5432|/coordinator/gpseg-1
                                   2|0|m|p|s|d|sdw2|sdw2|20000|/primary/gpseg0
                                   3|1|p|p|s|u|sdw1|sdw1|20001|/primary/gpseg1
                                   8|2|m|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2

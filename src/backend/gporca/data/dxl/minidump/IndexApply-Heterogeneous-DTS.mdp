@@ -66,7 +66,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.16033549.1.1" Name="my_tt_agg_small" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.16033549.1.1" Name="my_tt_agg_small" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
+      <dxl:Relation Mdid="6.16033549.1.1" Name="my_tt_agg_small" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="symbol" Attno="1" Mdid="0.1042.1.0" Nullable="true" ColWidth="16">
             <dxl:DefaultValue/>
@@ -255,7 +255,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
       <dxl:ColumnStatistics Mdid="1.16033575.1.1.8" Name="xmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.16033575.1.1.1" Name="sym" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.16033575.1.1.0" Name="ets" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
-      <dxl:Relation Mdid="0.16033575.1.0" Name="my_tq_agg_small_part" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.16033575.1.0" Name="my_tq_agg_small_part" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -300,12 +300,12 @@ WHERE tt.event_ts &gt;= tq.ets AND
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.16033575001.1.0"/>
-          <dxl:Partition Mdid="0.16033575002.1.0"/>
-          <dxl:Partition Mdid="0.16033575003.1.0"/>
+          <dxl:Partition Mdid="6.16033575001.1.0"/>
+          <dxl:Partition Mdid="6.16033575002.1.0"/>
+          <dxl:Partition Mdid="6.16033575003.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.16033575001.1.0" Name="my_tq_agg_small_part_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16033575001.1.0" Name="my_tq_agg_small_part_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -365,7 +365,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.16033575002.1.0" Name="my_tq_agg_small_part_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16033575002.1.0" Name="my_tq_agg_small_part_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -425,7 +425,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.16033575003.1.0" Name="my_tq_agg_small_part_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16033575003.1.0" Name="my_tq_agg_small_part_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -486,7 +486,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.16033575.1.1" Name="my_tq_agg_small_part" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.16033575.1.1" Name="my_tq_agg_small_part" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.16033575.1.1" Name="my_tq_agg_small_part" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -531,12 +531,12 @@ WHERE tt.event_ts &gt;= tq.ets AND
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.16033575001.1.1"/>
-          <dxl:Partition Mdid="0.16033575002.1.1"/>
-          <dxl:Partition Mdid="0.16033575003.1.1"/>
+          <dxl:Partition Mdid="6.16033575001.1.1"/>
+          <dxl:Partition Mdid="6.16033575002.1.1"/>
+          <dxl:Partition Mdid="6.16033575003.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.16033575001.1.1" Name="my_tq_agg_small_part_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16033575001.1.1" Name="my_tq_agg_small_part_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -596,7 +596,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.16033575002.1.1" Name="my_tq_agg_small_part_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16033575002.1.1" Name="my_tq_agg_small_part_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -656,7 +656,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.16033575003.1.1" Name="my_tq_agg_small_part_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16033575003.1.1" Name="my_tq_agg_small_part_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -724,14 +724,14 @@ WHERE tt.event_ts &gt;= tq.ets AND
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.16033719001.1.0"/>
-          <dxl:Partition Mdid="0.16033719002.1.0"/>
-          <dxl:Partition Mdid="0.16033719003.1.0"/>
+          <dxl:Partition Mdid="6.16033719001.1.0"/>
+          <dxl:Partition Mdid="6.16033719002.1.0"/>
+          <dxl:Partition Mdid="6.16033719003.1.0"/>
         </dxl:Partitions>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.16033719001.1.0"/>
-          <dxl:Partition Mdid="0.16033719002.1.0"/>
-          <dxl:Partition Mdid="0.16033719003.1.0"/>
+          <dxl:Partition Mdid="6.16033719001.1.0"/>
+          <dxl:Partition Mdid="6.16033719002.1.0"/>
+          <dxl:Partition Mdid="6.16033719003.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
       <dxl:ColumnStatistics Mdid="1.16033575.1.1.11" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -749,14 +749,14 @@ WHERE tt.event_ts &gt;= tq.ets AND
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.16033738001.1.0"/>
-          <dxl:Partition Mdid="0.16033738002.1.0"/>
-          <dxl:Partition Mdid="0.16033738003.1.0"/>
+          <dxl:Partition Mdid="6.16033738001.1.0"/>
+          <dxl:Partition Mdid="6.16033738002.1.0"/>
+          <dxl:Partition Mdid="6.16033738003.1.0"/>
         </dxl:Partitions>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.16033738001.1.0"/>
-          <dxl:Partition Mdid="0.16033738002.1.0"/>
-          <dxl:Partition Mdid="0.16033738003.1.0"/>
+          <dxl:Partition Mdid="6.16033738001.1.0"/>
+          <dxl:Partition Mdid="6.16033738002.1.0"/>
+          <dxl:Partition Mdid="6.16033738003.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
       <dxl:ColumnStatistics Mdid="1.16033549.1.1.9" Name="tableoid" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -805,7 +805,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.16033549.1.1" TableName="my_tt_agg_small">
+          <dxl:TableDescriptor Mdid="6.16033549.1.1" TableName="my_tt_agg_small">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="symbol" TypeMdid="0.1042.1.0" ColWidth="16"/>
               <dxl:Column ColId="2" Attno="2" ColName="event_ts" TypeMdid="0.23.1.0"/>
@@ -822,7 +822,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.16033575.1.1" TableName="my_tq_agg_small_part">
+          <dxl:TableDescriptor Mdid="6.16033575.1.1" TableName="my_tq_agg_small_part">
             <dxl:Columns>
               <dxl:Column ColId="12" Attno="1" ColName="ets" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="13" Attno="2" ColName="sym" TypeMdid="0.1043.1.0" ColWidth="16"/>
@@ -897,7 +897,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.16033549.1.1" TableName="my_tt_agg_small">
+              <dxl:TableDescriptor Mdid="6.16033549.1.1" TableName="my_tt_agg_small">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="symbol" TypeMdid="0.1042.1.0" ColWidth="16"/>
                   <dxl:Column ColId="1" Attno="2" ColName="event_ts" TypeMdid="0.23.1.0"/>
@@ -957,7 +957,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
               </dxl:IndexCondList>
 	<dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.-1146131183.1.0" IndexName="my_tq_agg_small_part_ets_end_ts_ix_2"/>
-              <dxl:TableDescriptor Mdid="0.-1146294183.1.1" TableName="my_tq_agg_small_part_prt_1">
+              <dxl:TableDescriptor Mdid="6.-1146294183.1.1" TableName="my_tq_agg_small_part_prt_1">
                 <dxl:Columns>
                   <dxl:Column ColId="23" Attno="1" ColName="ets" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="24" Attno="2" ColName="sym" TypeMdid="0.1043.1.0" ColWidth="16"/>
@@ -1006,7 +1006,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
               </dxl:IndexCondList>
 	<dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.-1146131182.1.0" IndexName="my_tq_agg_small_part_ets_end_ts_ix_2"/>
-              <dxl:TableDescriptor Mdid="0.-1146294182.1.1" TableName="my_tq_agg_small_part_prt_2">
+              <dxl:TableDescriptor Mdid="6.-1146294182.1.1" TableName="my_tq_agg_small_part_prt_2">
                 <dxl:Columns>
                   <dxl:Column ColId="35" Attno="1" ColName="ets" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="36" Attno="2" ColName="sym" TypeMdid="0.1043.1.0" ColWidth="16"/>
@@ -1055,7 +1055,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
               </dxl:IndexCondList>
 	<dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.-1146131181.1.0" IndexName="my_tq_agg_small_part_ets_end_ts_ix_2"/>
-              <dxl:TableDescriptor Mdid="0.-1146294181.1.1" TableName="my_tq_agg_small_part_prt_3">
+              <dxl:TableDescriptor Mdid="6.-1146294181.1.1" TableName="my_tq_agg_small_part_prt_3">
                 <dxl:Columns>
                   <dxl:Column ColId="47" Attno="1" ColName="ets" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="48" Attno="2" ColName="sym" TypeMdid="0.1043.1.0" ColWidth="16"/>

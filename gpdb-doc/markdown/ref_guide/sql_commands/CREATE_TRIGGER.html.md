@@ -15,7 +15,7 @@ CREATE TRIGGER <name> {BEFORE | AFTER} {<event> [OR ...]}
 `CREATE TRIGGER` creates a new trigger. The trigger will be associated with the specified table and will run the specified function when certain events occur. If multiple triggers of the same kind are defined for the same event, they will be fired in alphabetical order by name.
 
 >*Important* Due to the distributed nature of a Greenplum Database system, the use of triggers on data is very limited in Greenplum Database. The function used in the trigger must be `IMMUTABLE`, meaning it cannot use information not directly present in its argument list. The function specified in the trigger also cannot run any SQL or modify distributed database objects in any way. Given that triggers are most often used to alter tables \(for example, update these other rows when this row is updated\), these limitations offer very little practical use of triggers in Greenplum Database. For that reason, Greenplum does not support the use of user-defined triggers in Greenplum Database. Triggers cannot be used on append-optimized tables.
-> Event Triggers, which capture only DDL events, _are_ supported in Greenplum Database. See the PostgreSQL documentation for [Event Triggers](https://www.postgresql.org/docs/9.4/event-triggers.html) for additional information.
+> Event Triggers, which capture only DDL events, _are_ supported in Greenplum Database. See the PostgreSQL documentation for [Event Triggers](https://www.postgresql.org/docs/12/event-triggers.html) for additional information.
 
 [SELECT](SELECT.html) does not modify any rows so you can not create `SELECT` triggers. Rules and views are more appropriate in such cases.
 

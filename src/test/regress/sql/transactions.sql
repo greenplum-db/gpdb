@@ -458,6 +458,17 @@ SHOW transaction_deferrable;
 INSERT INTO abc VALUES (5);
 COMMIT;
 
+START TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ WRITE, DEFERRABLE;
+SHOW transaction_isolation;
+SHOW transaction_read_only;
+SHOW transaction_deferrable;
+SAVEPOINT x;
+COMMIT AND CHAIN;  -- TBLOCK_SUBCOMMIT
+SHOW transaction_isolation;
+SHOW transaction_read_only;
+SHOW transaction_deferrable;
+COMMIT;
+
 -- different mix of options just for fun
 START TRANSACTION ISOLATION LEVEL SERIALIZABLE, READ WRITE, NOT DEFERRABLE;
 SHOW transaction_isolation;
@@ -474,6 +485,10 @@ SHOW transaction_isolation;
 SHOW transaction_read_only;
 SHOW transaction_deferrable;
 ROLLBACK;
+
+-- not allowed outside a transaction block
+COMMIT AND CHAIN;  -- error
+ROLLBACK AND CHAIN;  -- error
 
 SELECT * FROM abc ORDER BY 1;
 
@@ -534,6 +549,45 @@ SELECT 2\; RELEASE SAVEPOINT sp\; SELECT 3;
 
 -- but this is OK, because the BEGIN converts it to a regular xact
 SELECT 1\; BEGIN\; SAVEPOINT sp\; ROLLBACK TO SAVEPOINT sp\; COMMIT;
+
+
+-- Tests for AND CHAIN in implicit transaction blocks
+
+SET TRANSACTION READ ONLY\; COMMIT AND CHAIN;  -- error
+SHOW transaction_read_only;
+
+SET TRANSACTION READ ONLY\; ROLLBACK AND CHAIN;  -- error
+SHOW transaction_read_only;
+
+CREATE TABLE abc (a int);
+
+-- COMMIT/ROLLBACK + COMMIT/ROLLBACK AND CHAIN
+INSERT INTO abc VALUES (7)\; COMMIT\; INSERT INTO abc VALUES (8)\; COMMIT AND CHAIN;  -- 7 commit, 8 error
+INSERT INTO abc VALUES (9)\; ROLLBACK\; INSERT INTO abc VALUES (10)\; ROLLBACK AND CHAIN;  -- 9 rollback, 10 error
+
+-- COMMIT/ROLLBACK AND CHAIN + COMMIT/ROLLBACK
+INSERT INTO abc VALUES (11)\; COMMIT AND CHAIN\; INSERT INTO abc VALUES (12)\; COMMIT;  -- 11 error, 12 not reached
+INSERT INTO abc VALUES (13)\; ROLLBACK AND CHAIN\; INSERT INTO abc VALUES (14)\; ROLLBACK;  -- 13 error, 14 not reached
+
+-- START TRANSACTION + COMMIT/ROLLBACK AND CHAIN
+START TRANSACTION ISOLATION LEVEL REPEATABLE READ\; INSERT INTO abc VALUES (15)\; COMMIT AND CHAIN;  -- 15 ok
+SHOW transaction_isolation;  -- transaction is active at this point
+COMMIT;
+
+START TRANSACTION ISOLATION LEVEL REPEATABLE READ\; INSERT INTO abc VALUES (16)\; ROLLBACK AND CHAIN;  -- 16 ok
+SHOW transaction_isolation;  -- transaction is active at this point
+ROLLBACK;
+
+-- START TRANSACTION + COMMIT/ROLLBACK + COMMIT/ROLLBACK AND CHAIN
+START TRANSACTION ISOLATION LEVEL REPEATABLE READ\; INSERT INTO abc VALUES (17)\; COMMIT\; INSERT INTO abc VALUES (18)\; COMMIT AND CHAIN;  -- 17 commit, 18 error
+SHOW transaction_isolation;  -- out of transaction block
+
+START TRANSACTION ISOLATION LEVEL REPEATABLE READ\; INSERT INTO abc VALUES (19)\; ROLLBACK\; INSERT INTO abc VALUES (20)\; ROLLBACK AND CHAIN;  -- 19 rollback, 20 error
+SHOW transaction_isolation;  -- out of transaction block
+
+SELECT * FROM abc ORDER BY 1;
+
+DROP TABLE abc;
 
 
 -- Test for successful cleanup of an aborted transaction at session exit.

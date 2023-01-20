@@ -11,7 +11,7 @@ DOCS= gpactivatestandby_help gpaddmirrors_help gpcheckperf_help \
 	gpconfig_help gpdeletesystem_help gpexpand_help gpfdist_help \
 	gpinitstandby_help gpinitsystem_help gpload_help gplogfilter_help \
 	gpmapreduce_help gppkg_help gprecoverseg_help \
-	gpreload_help gpscp_help gpssh-exkeys_help gpssh_help gpstart_help \
+	gpreload_help gpsync_help gpssh-exkeys_help gpssh_help gpstart_help \
 	gpstate_help gpstop_help
 
 installdirs:

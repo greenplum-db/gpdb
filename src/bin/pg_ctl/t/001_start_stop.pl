@@ -22,8 +22,10 @@ command_ok([ 'pg_ctl', 'initdb', '-D', "$tempdir/data", '-o', '-N'],
 	'pg_ctl initdb');
 command_ok([ $ENV{PG_REGRESS}, '--config-auth', "$tempdir/data" ],
 	'configure authentication');
+my $node_port = get_free_port();
 open my $conf, '>>', "$tempdir/data/postgresql.conf";
 print $conf "fsync = off\n";
+print $conf "port = $node_port\n";
 print $conf TestLib::slurp_file($ENV{TEMP_CONFIG})
   if defined $ENV{TEMP_CONFIG};
 
@@ -42,16 +44,7 @@ my $ctlcmd = [
 	"$TestLib::log_path/001_start_stop_server.log"
 	,'-o', '-c gp_role=utility --gp_dbid=-1 --gp_contentid=-1',
 ];
-if ($Config{osname} ne 'msys')
-{
-	command_like($ctlcmd, qr/done.*server started/s, 'pg_ctl start');
-}
-else
-{
-
-	# use the version of command_like that doesn't hang on Msys here
-	command_like_safe($ctlcmd, qr/done.*server started/s, 'pg_ctl start');
-}
+command_like($ctlcmd, qr/done.*server started/s, 'pg_ctl start');
 
 # sleep here is because Windows builds can't check postmaster.pid exactly,
 # so they may mistake a pre-existing postmaster.pid for one created by the

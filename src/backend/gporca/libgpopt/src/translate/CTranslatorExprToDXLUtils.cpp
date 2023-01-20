@@ -41,7 +41,6 @@
 #include "naucrates/dxl/operators/CDXLScalarPartBoundOpen.h"
 #include "naucrates/dxl/operators/CDXLScalarPartDefault.h"
 #include "naucrates/dxl/operators/CDXLScalarPartListValues.h"
-#include "naucrates/dxl/operators/CDXLScalarPartOid.h"
 #include "naucrates/dxl/operators/CDXLScalarProjElem.h"
 #include "naucrates/dxl/operators/CDXLScalarProjList.h"
 #include "naucrates/dxl/operators/CDXLScalarValuesList.h"
@@ -713,57 +712,6 @@ CTranslatorExprToDXLUtils::PdxlnProjListFromChildProjList(
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorExprToDXLUtils::PdxlnPrLPartitionSelector
-//
-//	@doc:
-//		Construct the project list of a partition selector
-//
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorExprToDXLUtils::PdxlnPrLPartitionSelector(
-	CMemoryPool *mp, CMDAccessor *md_accessor, CColumnFactory *col_factory,
-	ColRefToDXLNodeMap *phmcrdxln, BOOL fUseChildProjList,
-	CDXLNode *pdxlnPrLChild, CColRef *pcrOid, ULONG ulPartLevels,
-	BOOL fGeneratePartOid)
-{
-	GPOS_ASSERT_IMP(fUseChildProjList, nullptr != pdxlnPrLChild);
-
-	CDXLNode *pdxlnPrL = nullptr;
-	if (fUseChildProjList)
-	{
-		pdxlnPrL = PdxlnProjListFromChildProjList(mp, col_factory, phmcrdxln,
-												  pdxlnPrLChild);
-	}
-	else
-	{
-		pdxlnPrL =
-			GPOS_NEW(mp) CDXLNode(mp, GPOS_NEW(mp) CDXLScalarProjList(mp));
-	}
-
-	if (fGeneratePartOid)
-	{
-		// add to it the Oid column
-		if (nullptr == pcrOid)
-		{
-			const IMDTypeOid *pmdtype = md_accessor->PtMDType<IMDTypeOid>();
-			pcrOid = col_factory->PcrCreate(pmdtype, default_type_modifier);
-		}
-
-		CMDName *mdname = GPOS_NEW(mp) CMDName(mp, pcrOid->Name().Pstr());
-		CDXLScalarProjElem *pdxlopPrEl =
-			GPOS_NEW(mp) CDXLScalarProjElem(mp, pcrOid->Id(), mdname);
-		CDXLNode *pdxlnPrEl = GPOS_NEW(mp) CDXLNode(mp, pdxlopPrEl);
-		CDXLNode *pdxlnPartOid = GPOS_NEW(mp)
-			CDXLNode(mp, GPOS_NEW(mp) CDXLScalarPartOid(mp, ulPartLevels - 1));
-		pdxlnPrEl->AddChild(pdxlnPartOid);
-		pdxlnPrL->AddChild(pdxlnPrEl);
-	}
-
-	return pdxlnPrL;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CTranslatorExprToDXLUtils::PdxlnProjElem
 //
 //	@doc:
@@ -1363,7 +1311,8 @@ CTranslatorExprToDXLUtils::GetDXLDirectDispatchInfo(
 			mp, md_accessor, pcrDistrCol, pcnstrDistrCol);
 		CRefCount::SafeRelease(pcnstrDistrCol);
 
-		if (nullptr != dxl_datum && FDirectDispatchable(pcrDistrCol, dxl_datum))
+		if (nullptr != dxl_datum &&
+			FDirectDispatchable(md_accessor, pcrDistrCol, dxl_datum))
 		{
 			pdrgpdxldatum->Append(dxl_datum);
 		}
@@ -1440,7 +1389,8 @@ CTranslatorExprToDXLUtils::PdxlddinfoSingleDistrKey(CMemoryPool *mp,
 			mp, md_accessor, pcrDistrCol, pcnstrDistrCol);
 		GPOS_ASSERT(nullptr != dxl_datum);
 
-		if (FDirectDispatchable(pcrDistrCol, dxl_datum))
+		if (FDirectDispatchable(md_accessor, pcrDistrCol, dxl_datum))
+
 		{
 			CDXLDatumArray *pdrgpdxldatum = GPOS_NEW(mp) CDXLDatumArray(mp);
 
@@ -1481,7 +1431,8 @@ CTranslatorExprToDXLUtils::PdxlddinfoSingleDistrKey(CMemoryPool *mp,
 //
 //---------------------------------------------------------------------------
 BOOL
-CTranslatorExprToDXLUtils::FDirectDispatchable(const CColRef *pcrDistrCol,
+CTranslatorExprToDXLUtils::FDirectDispatchable(CMDAccessor *md_accessor,
+											   const CColRef *pcrDistrCol,
 											   const CDXLDatum *dxl_datum)
 {
 	GPOS_ASSERT(nullptr != pcrDistrCol);
@@ -1497,7 +1448,66 @@ CTranslatorExprToDXLUtils::FDirectDispatchable(const CColRef *pcrDistrCol,
 	BOOL fBothInt =
 		CUtils::FIntType(pmdidDistrCol) && CUtils::FIntType(pmdidDatum);
 
-	return fBothInt || (pmdidDatum->Equals(pmdidDistrCol));
+	if (fBothInt || (pmdidDatum->Equals(pmdidDistrCol)))
+	{
+		return true;
+	}
+	else
+	{
+		// if both the IMDId have different oids,
+		// then we check if a cast exist between them
+		// and if that cast is binary coercible.
+		// Eg if datum oid id 25(Text) and DistCol oid is 1043(VarChar)
+		// then since a cast is possible and
+		// cast is binary coercible, we go ahead with direct dispatch
+
+		const IMDCast *pmdcast_datumToDistrCol;
+		const IMDCast *pmdcast_distrColToDatum;
+
+		// Checking if cast exist from datum to distribution column
+		GPOS_TRY
+		{
+			// Pmdcast(,) generates an exception
+			// whenever cast is not possible.
+			pmdcast_datumToDistrCol =
+				md_accessor->Pmdcast(pmdidDatum, pmdidDistrCol);
+
+			if ((pmdcast_datumToDistrCol->IsBinaryCoercible()))
+			{
+				// cast exist and is between coercible type
+				return true;
+			}
+		}
+		GPOS_CATCH_EX(ex)
+		{
+			GPOS_RESET_EX;
+		}
+		GPOS_CATCH_END;
+
+		// Checking if cast exist from distribution column to datum
+		// eg:explain select gp_segment_id, * from t1_varchar
+		// where col1_varchar = 'a'::char;
+		GPOS_TRY
+		{
+			// Pmdcast(,) generates an exception
+			// whenever cast is not possible.
+			pmdcast_distrColToDatum =
+				md_accessor->Pmdcast(pmdidDistrCol, pmdidDatum);
+
+			if ((pmdcast_distrColToDatum->IsBinaryCoercible()))
+			{
+				// cast exist and is between coercible type
+				return true;
+			}
+		}
+		GPOS_CATCH_EX(ex)
+		{
+			GPOS_RESET_EX;
+		}
+		GPOS_CATCH_END;
+
+		return false;
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -1564,7 +1574,7 @@ CTranslatorExprToDXLUtils::PdrgpdrgpdxldatumFromDisjPointConstraint(
 		CDXLDatum *dxl_datum = PdxldatumFromPointConstraint(
 			mp, md_accessor, pcrDistrCol, pcnstrDistrCol);
 
-		if (FDirectDispatchable(pcrDistrCol, dxl_datum))
+		if (FDirectDispatchable(md_accessor, pcrDistrCol, dxl_datum))
 		{
 			CDXLDatumArray *pdrgpdxldatum = GPOS_NEW(mp) CDXLDatumArray(mp);
 
@@ -1598,7 +1608,7 @@ CTranslatorExprToDXLUtils::PdrgpdrgpdxldatumFromDisjPointConstraint(
 		CDXLDatum *dxl_datum = CTranslatorExprToDXLUtils::GetDatumVal(
 			mp, md_accessor, prng->PdatumLeft());
 
-		if (!FDirectDispatchable(pcrDistrCol, dxl_datum))
+		if (!FDirectDispatchable(md_accessor, pcrDistrCol, dxl_datum))
 		{
 			// clean up
 			dxl_datum->Release();
@@ -1617,7 +1627,7 @@ CTranslatorExprToDXLUtils::PdrgpdrgpdxldatumFromDisjPointConstraint(
 	{
 		CDXLDatum *dxl_datum = pcrDistrCol->RetrieveType()->GetDXLDatumNull(mp);
 
-		if (!FDirectDispatchable(pcrDistrCol, dxl_datum))
+		if (!FDirectDispatchable(md_accessor, pcrDistrCol, dxl_datum))
 		{
 			// clean up
 			dxl_datum->Release();

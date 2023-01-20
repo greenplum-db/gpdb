@@ -3536,7 +3536,7 @@ CopyMultiInsertBufferFlush(CopyMultiInsertInfo *miinfo,
 
 	/*
 	 * Print error context information correctly, if one of the operations
-	 * below fail.
+	 * below fails.
 	 */
 	cstate->line_buf_valid = false;
 	save_cur_lineno = cstate->cur_lineno;
@@ -3604,7 +3604,8 @@ CopyMultiInsertBufferFlush(CopyMultiInsertInfo *miinfo,
  * The buffer must be flushed before cleanup.
  */
 static inline void
-CopyMultiInsertBufferCleanup(CopyMultiInsertBuffer *buffer)
+CopyMultiInsertBufferCleanup(CopyMultiInsertInfo *miinfo,
+							 CopyMultiInsertBuffer *buffer)
 {
 	int			i;
 
@@ -3619,6 +3620,9 @@ CopyMultiInsertBufferCleanup(CopyMultiInsertBuffer *buffer)
 	/* Since we only create slots on demand, just drop the non-null ones. */
 	for (i = 0; i < MAX_BUFFERED_TUPLES && buffer->slots[i] != NULL; i++)
 		ExecDropSingleTupleTableSlot(buffer->slots[i]);
+
+	table_finish_bulk_insert(buffer->resultRelInfo->ri_RelationDesc,
+							 miinfo->ti_options);
 
 	pfree(buffer);
 }
@@ -3671,7 +3675,7 @@ CopyMultiInsertInfoFlush(CopyMultiInsertInfo *miinfo, ResultRelInfo *curr_rri)
 			buffer = (CopyMultiInsertBuffer *) linitial(miinfo->multiInsertBuffers);
 		}
 
-		CopyMultiInsertBufferCleanup(buffer);
+		CopyMultiInsertBufferCleanup(miinfo, buffer);
 		miinfo->multiInsertBuffers = list_delete_first(miinfo->multiInsertBuffers);
 	}
 }
@@ -3685,7 +3689,7 @@ CopyMultiInsertInfoCleanup(CopyMultiInsertInfo *miinfo)
 	ListCell   *lc;
 
 	foreach(lc, miinfo->multiInsertBuffers)
-		CopyMultiInsertBufferCleanup(lfirst(lc));
+		CopyMultiInsertBufferCleanup(miinfo, lfirst(lc));
 
 	list_free(miinfo->multiInsertBuffers);
 }
@@ -3952,6 +3956,7 @@ CopyFrom(CopyState cstate)
 	mtstate->ps.state = estate;
 	mtstate->operation = CMD_INSERT;
 	mtstate->resultRelInfo = estate->es_result_relations;
+	mtstate->rootResultRelInfo = estate->es_result_relations;
 
 	if (resultRelInfo->ri_FdwRoutine != NULL &&
 		resultRelInfo->ri_FdwRoutine->BeginForeignInsert != NULL)
@@ -4297,6 +4302,39 @@ CopyFrom(CopyState cstate)
 				continue;
 		}
 
+		if (cstate->dispatch_mode != COPY_DISPATCH && is_check_distkey)
+		{
+			/*
+			 * In COPY FROM ON SEGMENT, check the distribution key in the
+			 * QE.
+			 * Note: For partitioned tables, the order of the root table's columns can be
+			 * inconsistent with the order of the partition's columns and Greenplum/PostgreSQL
+			 * allows such behavior. When they have different orders, we need to re-order the
+			 * TupleTableSlot (myslot) to make it match the partition's columns (see execute_attr_map_slot()
+			 * for details). We must perform this check before the re-ordering of TupleTableslot,
+			 * or the value of target_seg will be incorrect.
+			 */
+			if (distData->policy->nattrs != 0)
+			{
+				target_seg = GetTargetSeg(distData, myslot);
+				if (GpIdentity.segindex != target_seg)
+				{
+					PG_TRY();
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_INTEGRITY_CONSTRAINT_VIOLATION),
+								 errmsg("value of distribution key doesn't belong to segment with ID %d, it belongs to segment with ID %d",
+										GpIdentity.segindex, target_seg)));
+					}
+					PG_CATCH();
+					{
+						HandleCopyError(cstate);
+					}
+					PG_END_TRY();
+				}
+			}
+		}
+
 		/* Determine the partition to insert the tuple into */
 		if (proute && cstate->dispatch_mode != COPY_DISPATCH)
 		{
@@ -4458,37 +4496,7 @@ CopyFrom(CopyState cstate)
 		{
 			/* In QD, compute the target segment to send this row to. */
 			target_seg = GetTargetSeg(distData, myslot);
-		}
-		else if (is_check_distkey)
-		{
-			/*
-			 * In COPY FROM ON SEGMENT, check the distribution key in the
-			 * QE.
-			 */
-			if (distData->policy->nattrs != 0)
-			{
-				target_seg = GetTargetSeg(distData, myslot);
 
-				if (GpIdentity.segindex != target_seg)
-				{
-					PG_TRY();
-					{
-						ereport(ERROR,
-								(errcode(ERRCODE_INTEGRITY_CONSTRAINT_VIOLATION),
-								 errmsg("value of distribution key doesn't belong to segment with ID %d, it belongs to segment with ID %d",
-										GpIdentity.segindex, target_seg)));
-					}
-					PG_CATCH();
-					{
-						HandleCopyError(cstate);
-					}
-					PG_END_TRY();
-				}
-			}
-		}
-
-		if (cstate->dispatch_mode == COPY_DISPATCH)
-		{
 			bool send_to_all = distData &&
 							   GpPolicyIsReplicated(distData->policy);
 
@@ -4648,9 +4656,6 @@ CopyFrom(CopyState cstate)
 	{
 		if (!CopyMultiInsertInfoIsEmpty(&multiInsertInfo))
 			CopyMultiInsertInfoFlush(&multiInsertInfo, NULL);
-
-		/* Tear down the multi-insert buffer data */
-		CopyMultiInsertInfoCleanup(&multiInsertInfo);
 	}
 
 	/* Done, clean up */
@@ -4742,6 +4747,13 @@ CopyFrom(CopyState cstate)
 		target_resultRelInfo->ri_FdwRoutine->EndForeignInsert(estate,
 															  target_resultRelInfo);
 
+	/* Tear down the multi-insert buffer data */
+	if (insertMethod != CIM_SINGLE)
+		CopyMultiInsertInfoCleanup(&multiInsertInfo);
+
+	if (target_resultRelInfo->ri_RelationDesc->rd_tableam)
+		table_dml_finish(target_resultRelInfo->ri_RelationDesc);
+
 	ExecCloseIndices(target_resultRelInfo);
 
 	/* Close all the partitioned tables, leaf partitions, and their indices */
@@ -4754,8 +4766,6 @@ CopyFrom(CopyState cstate)
 	FreeDistributionData(distData);
 
 	FreeExecutorState(estate);
-
-	table_finish_bulk_insert(cstate->rel, ti_options);
 
 	return processed;
 }
@@ -6586,8 +6596,15 @@ CopyReadLineText(CopyState cstate)
 				 * backslashes are not special, so we want to process the
 				 * character after the backslash just like a normal character,
 				 * so we don't increment in those cases.
+				 *
+				 * Set 'c' to skip whole character correctly in multi-byte
+				 * encodings.  If we don't have the whole character in the
+				 * buffer yet, we might loop back to process it, after all,
+				 * but that's OK because multi-byte characters cannot have any
+				 * special meaning.
 				 */
 				raw_buf_ptr++;
+				c = c2;
 			}
 		}
 		/*

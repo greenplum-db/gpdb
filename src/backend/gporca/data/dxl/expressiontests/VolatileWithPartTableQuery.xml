@@ -14,7 +14,7 @@
         </dxl:FuncExpr>
       </dxl:Comparison>
       <dxl:LogicalGet>
-        <dxl:TableDescriptor Mdid="0.74764.1.1" TableName="pt">
+        <dxl:TableDescriptor Mdid="6.74764.1.1" TableName="pt">
           <dxl:Columns>
             <dxl:Column ColId="1" Attno="1" ColName="pk" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="2" Attno="2" ColName="x" TypeMdid="0.23.1.0"/>

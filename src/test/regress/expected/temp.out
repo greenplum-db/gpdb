@@ -49,6 +49,8 @@ LINE 1: SELECT * FROM temptest;
                       ^
 -- Test ON COMMIT DELETE ROWS
 CREATE TEMP TABLE temptest(col int) ON COMMIT DELETE ROWS;
+-- while we're here, verify successful truncation of index with SQL function
+CREATE INDEX ON temptest(bit_length(''));
 BEGIN;
 INSERT INTO temptest VALUES (1);
 INSERT INTO temptest VALUES (2);
@@ -199,6 +201,21 @@ select pg_temp.whoami();
 (1 row)
 
 drop table public.whereami;
+-- types in temp schema
+set search_path = pg_temp, public;
+create domain pg_temp.nonempty as text check (value <> '');
+-- function-syntax invocation of types matches rules for functions
+select nonempty('');
+ERROR:  function nonempty(unknown) does not exist
+LINE 1: select nonempty('');
+               ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+select pg_temp.nonempty('');
+ERROR:  value for domain nonempty violates check constraint "nonempty_check"
+-- other syntax matches rules for tables
+select ''::nonempty;
+ERROR:  value for domain nonempty violates check constraint "nonempty_check"
+reset search_path;
 -- For partitioned temp tables, ON COMMIT actions ignore storage-less
 -- partitioned tables.
 begin;
@@ -231,7 +248,7 @@ create temp table temp_parted_oncommit_test2
 insert into temp_parted_oncommit_test values (1), (2);
 commit;
 -- no relations remain in this case.
-select relname from pg_class where relname like 'temp_parted_oncommit_test%';
+select relname from pg_class where relname ~ '^temp_parted_oncommit_test';
  relname 
 ---------
 (0 rows)
@@ -258,7 +275,8 @@ select * from temp_parted_oncommit_test;
 (1 row)
 
 -- two relations remain in this case.
-select relname from pg_class where relname like 'temp_parted_oncommit_test%';
+select relname from pg_class where relname ~ '^temp_parted_oncommit_test'
+  order by relname;
           relname           
 ----------------------------
  temp_parted_oncommit_test
@@ -275,7 +293,7 @@ create temp table temp_inh_oncommit_test1 ()
 insert into temp_inh_oncommit_test1 values (1);
 commit;
 -- no relations remain in this case
-select relname from pg_class where relname like 'temp_inh_oncommit_test%';
+select relname from pg_class where relname ~ '^temp_inh_oncommit_test';
  relname 
 ---------
 (0 rows)
@@ -294,7 +312,7 @@ select * from temp_inh_oncommit_test;
 (0 rows)
 
 -- one relation remains
-select relname from pg_class where relname like 'temp_inh_oncommit_test%';
+select relname from pg_class where relname ~ '^temp_inh_oncommit_test';
         relname         
 ------------------------
  temp_inh_oncommit_test

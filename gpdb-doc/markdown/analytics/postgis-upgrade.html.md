@@ -8,7 +8,7 @@ For Greenplum Database 6, you can upgrade from PostGIS 2.1.5 to 2.5.4, or from a
 -   [Upgrade a PostGIS 2.5.4 Package from pivotal.1 or pivotal.2 to pivotal.3](#topic_k4x_dp3_kmb)
 -   [Checking the PostGIS Version](#topic_yzz_l3h_kmb)
 
-**Note:** For Greenplum Database 6, you can upgrade from PostGIS 2.1.5 to 2.5.4, or from a PostGIS 2.5.4 package to a newer PostGIS 2.5.4 package using the `postgis_manager.sh` script described in the upgrade instructions.
+> **Note** For Greenplum Database 6, you can upgrade from PostGIS 2.1.5 to 2.5.4, or from a PostGIS 2.5.4 package to a newer PostGIS 2.5.4 package using the `postgis_manager.sh` script described in the upgrade instructions.
 
 Upgrading PostGIS using the `postgis_manager.sh` script does not require you to remove PostGIS support and re-enable it.
 

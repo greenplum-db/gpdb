@@ -94,6 +94,9 @@ static void AppendOnlyExecutorReadBlock_Finish(
 static void AppendOnlyExecutorReadBlock_ResetCounts(
 										AppendOnlyExecutorReadBlock *executorReadBlock);
 
+static void AppendOnlyScanDesc_UpdateTotalBytesRead(
+										AppendOnlyScanDesc scan);
+
 /* ----------------
  *		initscan - scan code common to appendonly_beginscan and appendonly_rescan
  * ----------------
@@ -738,141 +741,6 @@ AppendOnlyExecutorReadBlock_ResetCounts(AppendOnlyExecutorReadBlock *executorRea
 	executorReadBlock->totalRowsScannned = 0;
 }
 
-/*
- * Given a tuple in 'formatversion', convert it to a format that is
- * understood by the rest of the system.
- */
-static MemTuple
-upgrade_tuple(AppendOnlyExecutorReadBlock *executorReadBlock,
-			  MemTuple mtup, MemTupleBinding *pbind, int formatversion, bool *shouldFree)
-{
-	TupleDesc	tupdesc = pbind->tupdesc;
-	const int	natts = tupdesc->natts;
-	MemTuple	newtuple;
-	int			i;
-
-	static Datum *values = NULL;
-	static bool *isnull = NULL;
-	static int	nallocated = 0;
-
-	bool		convert_alignment = false;
-	bool		convert_numerics = false;
-
-	/*
-	 * MPP-7372: If the AO table was created before the fix for this issue, it
-	 * may contain tuples with misaligned bindings. Here we check if the
-	 * stored memtuple is problematic and then create a clone of the tuple
-	 * with properly aligned bindings to be used by the executor.
-	 */
-	if (formatversion < AORelationVersion_Aligned64bit &&
-		memtuple_has_misaligned_attribute(mtup, pbind))
-		convert_alignment = true;
-
-	if (PG82NumericConversionNeeded(formatversion))
-	{
-		/*
-		 * On first call, figure out which columns are numerics, or domains
-		 * over numerics.
-		 */
-		if (executorReadBlock->numericAtts == NULL)
-		{
-			int			n;
-
-			executorReadBlock->numericAtts = (int *) palloc(natts * sizeof(int));
-
-			n = 0;
-			for (i = 0; i < natts; i++)
-			{
-				Oid			typeoid;
-
-				typeoid = getBaseType(TupleDescAttr(tupdesc, i)->atttypid);
-				if (typeoid == NUMERICOID)
-					executorReadBlock->numericAtts[n++] = i;
-			}
-			executorReadBlock->numNumericAtts = n;
-		}
-
-		/* If there were any numeric columns, we need to convert them. */
-		if (executorReadBlock->numNumericAtts > 0)
-			convert_numerics = true;
-	}
-
-	if (!convert_alignment && !convert_numerics)
-	{
-		/* No conversion required. Return the original tuple unmodified. */
-		*shouldFree = false;
-		return mtup;
-	}
-
-	/* Conversion is needed. */
-
-	/* enlarge the arrays if needed */
-	if (natts > nallocated)
-	{
-		if (values)
-			pfree(values);
-		if (isnull)
-			pfree(isnull);
-		values = (Datum *) MemoryContextAlloc(TopMemoryContext, natts * sizeof(Datum));
-		isnull = (bool *) MemoryContextAlloc(TopMemoryContext, natts * sizeof(bool));
-		nallocated = natts;
-	}
-
-	if (convert_alignment)
-	{
-		/* get attribute values form mis-aligned tuple */
-		memtuple_deform_misaligned(mtup, pbind, values, isnull);
-		/* Form a new, properly-aligned, tuple */
-		newtuple = memtuple_form(pbind, values, isnull);
-	}
-	else
-	{
-		/*
-		 * make a modifiable copy
-		 */
-		newtuple = memtuple_copy(mtup);
-	}
-
-	/*
-	 * NOTE: we do this *after* creating the new tuple, so that we can modify
-	 * the new, copied, tuple in-place.
-	 */
-	if (convert_numerics)
-	{
-		int			i;
-
-		/*
-		 * Get pointers to the datums within the tuple
-		 */
-		memtuple_deform(newtuple, pbind, values, isnull);
-
-		for (i = 0; i < executorReadBlock->numNumericAtts; i++)
-		{
-			/*
-			 * Before PostgreSQL 8.3, the n_weight and n_sign_dscale fields
-			 * were the other way 'round. Swap them.
-			 */
-			Datum		datum;
-			char	   *numericdata;
-			uint16		tmp;
-
-			if (isnull[executorReadBlock->numericAtts[i]])
-				continue;
-
-			datum = values[executorReadBlock->numericAtts[i]];
-			numericdata = VARDATA_ANY(DatumGetPointer(datum));
-
-			memcpy(&tmp, &numericdata[0], 2);
-			memcpy(&numericdata[0], &numericdata[2], 2);
-			memcpy(&numericdata[2], &tmp, 2);
-		}
-	}
-
-	*shouldFree = true;
-	return newtuple;
-}
-
-
 static void
 AOExecutorReadBlockBindingInit(AppendOnlyExecutorReadBlock *executorReadBlock,
 									   TupleTableSlot *slot)
@@ -924,11 +792,6 @@ AppendOnlyExecutorReadBlock_ProcessTuple(AppendOnlyExecutorReadBlock *executorRe
 		bool		shouldFree = false;
 
 		Assert(executorReadBlock->mt_bind);
-
-		/* If the tuple is not in the latest format, convert it */
-		// GPDB_12_MERGE_FIXME: Is pg_upgrade from old versions still a thing? Can we drop this?
-		if (formatVersion < AORelationVersion_GetLatest())
-			tuple = upgrade_tuple(executorReadBlock, tuple, executorReadBlock->mt_bind, formatVersion, &shouldFree);
 
 		ExecClearTuple(slot);
 		memtuple_deform(tuple, executorReadBlock->mt_bind, slot->tts_values, slot->tts_isnull);
@@ -1206,6 +1069,8 @@ getNextBlock(AppendOnlyScanDesc scan)
 
 	AppendOnlyExecutorReadBlock_GetContents(
 											&scan->executorReadBlock);
+
+	AppendOnlyScanDesc_UpdateTotalBytesRead(scan);
 
 	return true;
 }
@@ -1535,6 +1400,9 @@ appendonly_beginrangescan_internal(Relation relation,
 							   AccessShareLock,
 							   appendOnlyMetaDataSnapshot);
 	}
+
+	scan->totalBytesRead = 0;
+
 	return scan;
 }
 

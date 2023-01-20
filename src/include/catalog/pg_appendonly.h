@@ -101,15 +101,6 @@ static inline void AORelationVersion_CheckValid(int version)
 	(version > AORelationVersion_Original) \
 )
 
-/*
- * Are numerics stored in old, pre-PostgreSQL 8.3 format, and need converting?
- */
-#define PG82NumericConversionNeeded(version) \
-( \
-	AORelationVersion_CheckValid(version), \
-	(version < AORelationVersion_PG83) \
-)
-
 extern void
 InsertAppendOnlyEntry(Oid relid,
 					  int blocksize,

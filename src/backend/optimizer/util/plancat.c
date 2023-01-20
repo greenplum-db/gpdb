@@ -296,6 +296,8 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 			info->amhasgettuple = (amroutine->amgettuple != NULL);
 			info->amhasgetbitmap = amroutine->amgetbitmap != NULL &&
 				relation->rd_tableam->scan_bitmap_next_block != NULL;
+			info->amcanmarkpos = (amroutine->ammarkpos != NULL &&
+								  amroutine->amrestrpos != NULL);
 			info->amcostestimate = amroutine->amcostestimate;
 			Assert(info->amcostestimate != NULL);
 
@@ -1515,6 +1517,37 @@ get_relation_constraints(PlannerInfo *root,
 	table_close(relation, NoLock);
 
 	return result;
+}
+
+/*
+ * GetExtStatisticsName
+ *		Retrieve the name of an extended statistic object
+ */
+char *
+GetExtStatisticsName(Oid statOid)
+{
+	Form_pg_statistic_ext staForm;
+	HeapTuple	htup;
+
+	htup = SearchSysCache1(STATEXTOID, ObjectIdGetDatum(statOid));
+	if (!HeapTupleIsValid(htup))
+		elog(ERROR, "cache lookup failed for statistics object %u", statOid);
+
+	staForm = (Form_pg_statistic_ext) GETSTRUCT(htup);
+	ReleaseSysCache(htup);
+	return NameStr(staForm->stxname);
+}
+
+/*
+ * GetRelationExtStatistics
+ *		GPDB: Interface to get_relation_statistics.
+ *
+ * Used by ORCA to access function without PLANNER objects (e.g. RelOptInfo).
+ */
+List *
+GetRelationExtStatistics(Relation relation)
+{
+	return get_relation_statistics(NULL, relation);
 }
 
 /*

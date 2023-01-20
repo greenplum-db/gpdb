@@ -7,18 +7,11 @@ CREATE TABLE TIMESTAMPTZ_TBL (d1 timestamp(2) with time zone);
 -- Test shorthand input values
 -- We can't just "select" the results since they aren't constants; test for
 -- equality instead.  We can do that by running the test inside a transaction
--- block, within which the value of 'now' shouldn't change.  We also check
--- that 'now' *does* change over a reasonable interval such as 100 msec.
--- NOTE: it is possible for this part of the test to fail if the transaction
--- block is entered exactly at local midnight; then 'now' and 'today' have
--- the same values and the counts will come out different.
-
-INSERT INTO TIMESTAMPTZ_TBL VALUES ('now');
-SELECT pg_sleep(0.1);
+-- block, within which the value of 'now' shouldn't change, and so these
+-- related values shouldn't either.
 
 BEGIN;
 
-INSERT INTO TIMESTAMPTZ_TBL VALUES ('now');
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('today');
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('yesterday');
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('tomorrow');
@@ -28,22 +21,29 @@ INSERT INTO TIMESTAMPTZ_TBL VALUES ('tomorrow zulu');
 SELECT count(*) AS One FROM TIMESTAMPTZ_TBL WHERE d1 = timestamp with time zone 'today';
 SELECT count(*) AS One FROM TIMESTAMPTZ_TBL WHERE d1 = timestamp with time zone 'tomorrow';
 SELECT count(*) AS One FROM TIMESTAMPTZ_TBL WHERE d1 = timestamp with time zone 'yesterday';
-SELECT count(*) AS One FROM TIMESTAMPTZ_TBL WHERE d1 = timestamp(2) with time zone 'now';
+SELECT count(*) AS One FROM TIMESTAMPTZ_TBL WHERE d1 = timestamp with time zone 'tomorrow EST';
+SELECT count(*) AS One FROM TIMESTAMPTZ_TBL WHERE d1 = timestamp with time zone 'tomorrow zulu';
 
 COMMIT;
 
 DELETE FROM TIMESTAMPTZ_TBL;
 
--- verify uniform transaction time within transaction block
+-- Verify that 'now' *does* change over a reasonable interval such as 100 msec,
+-- and that it doesn't change over the same interval within a transaction block
+
+INSERT INTO TIMESTAMPTZ_TBL VALUES ('now');
+SELECT pg_sleep(0.1);
+
 BEGIN;
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('now');
 SELECT pg_sleep(0.1);
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('now');
 SELECT pg_sleep(0.1);
 SELECT count(*) AS two FROM TIMESTAMPTZ_TBL WHERE d1 = timestamp(2) with time zone 'now';
+SELECT count(d1) AS three, count(DISTINCT d1) AS two FROM TIMESTAMPTZ_TBL;
 COMMIT;
 
-DELETE FROM TIMESTAMPTZ_TBL;
+TRUNCATE TIMESTAMPTZ_TBL;
 
 -- Special values
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('-infinity');
@@ -198,21 +198,36 @@ SELECT '' AS "54", d1 - timestamp with time zone '1997-01-02' AS diff
   FROM TIMESTAMPTZ_TBL
   WHERE d1 BETWEEN timestamp with time zone '1902-01-01' AND timestamp with time zone '2038-01-01';
 
-SELECT '' AS "54", d1 as timestamptz,
+-- DATE_PART (timestamptz_part)
+SELECT d1 as timestamptz,
    date_part( 'year', d1) AS year, date_part( 'month', d1) AS month,
    date_part( 'day', d1) AS day, date_part( 'hour', d1) AS hour,
    date_part( 'minute', d1) AS minute, date_part( 'second', d1) AS second
-   FROM TIMESTAMPTZ_TBL WHERE d1 BETWEEN '1902-01-01' AND '2038-01-01';
+   FROM TIMESTAMPTZ_TBL;
 
-SELECT '' AS "54", d1 as timestamptz,
+SELECT d1 as timestamptz,
    date_part( 'quarter', d1) AS quarter, date_part( 'msec', d1) AS msec,
    date_part( 'usec', d1) AS usec
-   FROM TIMESTAMPTZ_TBL WHERE d1 BETWEEN '1902-01-01' AND '2038-01-01';
+   FROM TIMESTAMPTZ_TBL;
 
-SELECT '' AS "54", d1 as timestamptz,
+SELECT d1 as timestamptz,
    date_part( 'isoyear', d1) AS isoyear, date_part( 'week', d1) AS week,
-   date_part( 'dow', d1) AS dow
-   FROM TIMESTAMPTZ_TBL WHERE d1 BETWEEN '1902-01-01' AND '2038-01-01';
+   date_part( 'isodow', d1) AS isodow, date_part( 'dow', d1) AS dow,
+   date_part( 'doy', d1) AS doy
+   FROM TIMESTAMPTZ_TBL;
+
+SELECT d1 as timestamptz,
+   date_part( 'decade', d1) AS decade,
+   date_part( 'century', d1) AS century,
+   date_part( 'millennium', d1) AS millennium,
+   round(date_part( 'julian', d1)) AS julian
+   FROM TIMESTAMPTZ_TBL;
+
+SELECT d1 as timestamptz,
+   date_part( 'timezone', d1) AS timezone,
+   date_part( 'timezone_hour', d1) AS timezone_hour,
+   date_part( 'timezone_minute', d1) AS timezone_minute
+   FROM TIMESTAMPTZ_TBL;
 
 -- TO_CHAR()
 SELECT '' AS to_char_1, to_char(d1, 'DAY Day day DY Dy dy MONTH Month month RM MON Mon mon')
@@ -335,6 +350,20 @@ insert into dttm_com values
      (2, current_timestamp, localtimestamp::date, current_date::date, date_in(date_out(current_date))),
      (3, now(), current_timestamp, now(), current_date);
 select id from dttm_com where d1 <> current_date;
+
+-- generate_series for timestamptz
+select * from generate_series('2020-01-01 00:00'::timestamptz,
+                              '2020-01-02 03:00'::timestamptz,
+                              '1 hour'::interval);
+-- the LIMIT should allow this to terminate in a reasonable amount of time
+-- (but that unfortunately doesn't work yet for SELECT * FROM ...)
+select generate_series('2022-01-01 00:00'::timestamptz,
+                       'infinity'::timestamptz,
+                       '1 month'::interval) limit 10;
+-- errors
+select * from generate_series('2020-01-01 00:00'::timestamptz,
+                              '2020-01-02 03:00'::timestamptz,
+                              '0 hour'::interval);
 
 --
 -- Test behavior with a dynamic (time-varying) timezone abbreviation.

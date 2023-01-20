@@ -2,7 +2,7 @@
 
 Sets constraint check timing for the current transaction.
 
-**Note:** Referential integrity syntax \(foreign key constraints\) is accepted but not enforced.
+> **Note** Referential integrity syntax \(foreign key constraints\) is accepted but not enforced.
 
 ## <a id="section2"></a>Synopsis 
 

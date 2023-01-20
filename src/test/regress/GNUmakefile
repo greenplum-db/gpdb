@@ -40,10 +40,12 @@ EXTRADEFS = '-DHOST_TUPLE="$(host_tuple)"' \
 
 # Build regression test driver
 
-all: pg_regress$(X)
+all: pg_regress$(X) extended_protocol_resqueue
 
 pg_regress$(X): pg_regress.o pg_regress_main.o $(WIN32RES) | submake-libpgport
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@
+extended_protocol_resqueue: extended_protocol_resqueue.c
+	$(CC) $(CPPFLAGS) -I../../../src/interfaces/libpq -L$(GPHOME)/lib -L../../../src/interfaces/libpq  -o $@ $< -lpq
 
 # dependencies ensure that path changes propagate
 pg_regress.o: pg_regress.c $(top_builddir)/src/port/pg_config_paths.h
@@ -117,8 +119,8 @@ regress_data_files = \
 
 install-tests: all install install-lib installdirs-tests
 	$(MAKE) -C $(top_builddir)/contrib/spi install
-	for file in $(regress_data_files); do \
-	  $(INSTALL_DATA) $$file '$(DESTDIR)$(pkglibdir)/regress/'$$file || exit; \
+	for file in $(subst $(srcdir)/,,$(regress_data_files)); do \
+		$(INSTALL_DATA) $(srcdir)/$$file '$(DESTDIR)$(pkglibdir)/regress/'$$file || exit; \
 	done
 
 installdirs-tests: installdirs

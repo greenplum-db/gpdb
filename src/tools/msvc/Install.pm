@@ -63,8 +63,16 @@ sub Install
 		do "./config.pl" if (-f "config.pl");
 	}
 
-	chdir("../../..")    if (-f "../../../configure");
-	chdir("../../../..") if (-f "../../../../configure");
+	# Move to the root path depending on the current location.
+	if (-f "../../../configure")
+	{
+		chdir("../../..");
+	}
+	elsif (-f "../../../../configure")
+	{
+		chdir("../../../..");
+	}
+
 	my $conf = "";
 	if (-d "debug")
 	{
@@ -379,7 +387,8 @@ sub GenerateTimezoneFiles
 	print "Generating timezone files...";
 
 	my @args =
-	  ("$conf/zic/zic", '-d', "$target/share/timezone", '-p', "$posixrules");
+	  ("$conf/zic/zic", '-d', "$target/share/timezone",
+	   '-p', "$posixrules", '-b', 'fat');
 	foreach (@tzfiles)
 	{
 		my $tzfile = $_;

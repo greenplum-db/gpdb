@@ -22,6 +22,7 @@
 
 #include "access/bitmap.h"
 #include "access/reloptions.h"
+#include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbvars.h"
@@ -1673,6 +1674,10 @@ find_crsd(const char *column, List *stenc)
  * 'colDefs' - list of ColumnDefs
  * 'stenc' - list of ColumnReferenceStorageDirectives
  * 'withOptions' - list of WITH options
+ * 'parentenc' - list of ColumnReferenceStorageDirectives explicitly defined for
+ * parent partition
+ * 'explicitOnly' - Only return explicitly defined column encoding values
+ *  to be used for child partitions
  *
  * ENCODING options can be attached to column definitions, like
  * "mycolumn integer ENCODING ..."; these go into ColumnDefs. They
@@ -1701,7 +1706,7 @@ find_crsd(const char *column, List *stenc)
  * This needs access to possible inherited columns, so it can only be done after
  * expanding them.
  */
-List* transformColumnEncoding(Relation rel, List *colDefs, List *stenc, List *withOptions, bool rootpartition, bool errorOnEncodingClause)
+List* transformColumnEncoding(Relation rel, List *colDefs, List *stenc, List *withOptions, List *parentenc, bool explicitOnly, bool errorOnEncodingClause)
 {
 	ColumnReferenceStorageDirective *deflt = NULL;
 	ListCell   *lc;
@@ -1776,7 +1781,8 @@ List* transformColumnEncoding(Relation rel, List *colDefs, List *stenc, List *wi
 		 * 1. An explicit encoding clause in the ColumnDef
 		 * 2. A column reference storage directive for this column
 		 * 3. A default column encoding in the statement
-		 * 4. A default for the type.
+		 * 4. Parent partition's column encoding values
+		 * 5. A default for the type.
 		 */
 		if (d->encoding)
 		{
@@ -1796,9 +1802,14 @@ List* transformColumnEncoding(Relation rel, List *colDefs, List *stenc, List *wi
 			{
 				if (deflt)
 					encoding = copyObject(deflt->encoding);
-				else if (!rootpartition)
+				else if (!explicitOnly)
 				{
-					if (d->typeName)
+					if (parentenc)
+					{
+						ColumnReferenceStorageDirective *parent_col_encoding = find_crsd(d->colname, parentenc);
+						encoding = transformStorageEncodingClause(parent_col_encoding->encoding, true);
+					}
+					else if (d->typeName)
 						encoding = get_type_encoding(d->typeName);
 					if (!encoding)
 						encoding = default_column_encoding_clause(rel);
@@ -1817,6 +1828,90 @@ List* transformColumnEncoding(Relation rel, List *colDefs, List *stenc, List *wi
 	}
 
 	return result;
+}
+
+/*
+ * Update the corresponding ColumnReferenceStorageDirective clause
+ * in a list of such clauses: current_encodings.
+ *
+ * return whether current_encodings was modified
+ * (either existing changed or new crsd added for new column)
+ */
+bool
+updateEncodingList(List *current_encodings, ColumnReferenceStorageDirective *new_crsd)
+{
+	ListCell *lc_current;
+	ColumnReferenceStorageDirective *crsd = NULL;
+	foreach(lc_current, current_encodings)
+	{
+		ColumnReferenceStorageDirective *current_crsd = (ColumnReferenceStorageDirective *) lfirst(lc_current);
+
+		if (current_crsd->deflt == false &&
+			strcmp(new_crsd->column, current_crsd->column) == 0)
+		{
+			crsd = current_crsd;
+			break;
+		}
+	}
+	if (crsd)
+	{
+		ListCell *lc1;
+		List *merged_encodings = NIL;
+		bool is_changed = false;
+
+		/*
+		 * Create a new list of encodings merging the existing and new values.
+		 *
+		 * Assuming crsd->encoding is complete list of all encoding attributes,
+		 * but new_crsd->encoding may or may not be complete list.
+		 */
+		foreach(lc1, crsd->encoding)
+		{
+			ListCell *lc2;
+			DefElem  *el1        = lfirst(lc1);
+			DefElem  *el2;
+			bool current_updated = false;
+			foreach (lc2, new_crsd->encoding)
+			{
+				el2 = lfirst(lc2);
+				if ((strcmp(el1->defname, el2->defname) == 0) &&
+					(strcmp(defGetString(el1), defGetString(el2)) != 0))
+				{
+					current_updated  = true;
+					is_changed       = true;
+					merged_encodings = lappend(merged_encodings, copyObject(el2));
+				}
+			}
+			if (!current_updated)
+				merged_encodings = lappend(merged_encodings, copyObject(el1));
+		}
+		/*
+		 * Validate the merged encodings to weed out duplicate parameters and/or
+		 * invalid parameter values.
+		 * We can have duplicate parameters if user enters for eg:
+		 * ALTER COLUMN a SET ENCODING (compresslevel=3, compresslevel=4);
+		 */
+		merged_encodings =
+			transformStorageEncodingClause(merged_encodings, true);
+
+		/*
+		 * Update current_encodings in place with the merged and validated merged_encodings
+		 */
+		list_free_deep(crsd->encoding);
+		crsd->encoding = merged_encodings;
+		return is_changed;
+	}
+	else
+	{
+		/*
+		 * new_crsd->column not found in current_encodings
+		 * Must be coming from a newly added column
+		 */
+
+		new_crsd->encoding = transformStorageEncodingClause(new_crsd->encoding, true);
+		lappend(current_encodings, new_crsd);
+		return true;
+	}
 }
 
 /*

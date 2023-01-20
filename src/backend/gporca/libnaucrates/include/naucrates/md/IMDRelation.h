@@ -50,7 +50,7 @@ public:
 		ErelstorageHeap,
 		ErelstorageAppendOnlyCols,
 		ErelstorageAppendOnlyRows,
-		ErelstorageExternal,
+		ErelstorageForeign,
 		ErelstorageMixedPartitioned,
 		ErelstorageCompositeType,
 		ErelstorageSentinel
@@ -147,9 +147,6 @@ public:
 
 	// number of partition columns
 	virtual ULONG PartColumnCount() const = 0;
-
-	// number of partitions
-	virtual ULONG PartitionCount() const = 0;
 
 	// retrieve the partition column at the given position
 	virtual const IMDColumn *PartColAt(ULONG pos) const = 0;

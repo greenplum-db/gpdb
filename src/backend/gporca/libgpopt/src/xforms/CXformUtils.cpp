@@ -34,7 +34,6 @@
 #include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
-#include "gpopt/operators/CLogicalPartitionSelector.h"
 #include "gpopt/operators/CLogicalSelect.h"
 #include "gpopt/operators/CLogicalSequenceProject.h"
 #include "gpopt/operators/CPhysicalInnerHashJoin.h"
@@ -1278,39 +1277,6 @@ CXformUtils::PexprNullIndicator(CMemoryPool *mp, CExpression *pexpr)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformUtils::PexprLogicalPartitionSelector
-//
-//	@doc:
-// 		Create a logical partition selector for the given table descriptor on top
-//		of the given child expression. The partition selection filters use columns
-//		from the given column array
-//
-//---------------------------------------------------------------------------
-CExpression *
-CXformUtils::PexprLogicalPartitionSelector(CMemoryPool *mp,
-										   CTableDescriptor *ptabdesc,
-										   CColRefArray *colref_array,
-										   CExpression *pexprChild)
-{
-	IMDId *rel_mdid = ptabdesc->MDId();
-	rel_mdid->AddRef();
-
-	// create an oid column
-	CColumnFactory *col_factory = COptCtxt::PoctxtFromTLS()->Pcf();
-	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	const IMDTypeOid *pmdtype = md_accessor->PtMDType<IMDTypeOid>();
-	CColRef *pcrOid = col_factory->PcrCreate(pmdtype, default_type_modifier);
-	CExpressionArray *pdrgpexprFilters =
-		PdrgpexprPartEqFilters(mp, ptabdesc, colref_array);
-
-	CLogicalPartitionSelector *popSelector = GPOS_NEW(mp)
-		CLogicalPartitionSelector(mp, rel_mdid, pdrgpexprFilters, pcrOid);
-
-	return GPOS_NEW(mp) CExpression(mp, popSelector, pexprChild);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CXformUtils::PexprLogicalDMLOverProject
 //
 //	@doc:
@@ -1336,7 +1302,6 @@ CXformUtils::PexprLogicalDMLOverProject(CMemoryPool *mp,
 	// new expressions to project
 	CExpression *pexprProject = nullptr;
 	CColRef *pcrAction = nullptr;
-	CColRef *pcrOid = nullptr;
 
 	CExpressionArray *pdrgpexprProjected = GPOS_NEW(mp) CExpressionArray(mp);
 	// generate one project node with new columns: action
@@ -1365,10 +1330,9 @@ CXformUtils::PexprLogicalDMLOverProject(CMemoryPool *mp,
 
 	CExpression *pexprDML = GPOS_NEW(mp) CExpression(
 		mp,
-		GPOS_NEW(mp)
-			CLogicalDML(mp, edmlop, ptabdesc, colref_array,
-						GPOS_NEW(mp) CBitSet(mp) /*pbsModified*/, pcrAction,
-						pcrOid, pcrCtid, pcrSegmentId, true),
+		GPOS_NEW(mp) CLogicalDML(mp, edmlop, ptabdesc, colref_array,
+								 GPOS_NEW(mp) CBitSet(mp) /*pbsModified*/,
+								 pcrAction, pcrCtid, pcrSegmentId, true),
 		pexprProject);
 
 	CExpression *pexprOutput = pexprDML;
@@ -2019,8 +1983,8 @@ CXformUtils::PexprRowNumber(CMemoryPool *mp)
 							 ->OidRowNumber();
 
 	CScalarWindowFunc *popRowNumber = GPOS_NEW(mp) CScalarWindowFunc(
-		mp, GPOS_NEW(mp) CMDIdGPDB(row_number_oid),
-		GPOS_NEW(mp) CMDIdGPDB(GPDB_INT8_OID),
+		mp, GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, row_number_oid),
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT8_OID),
 		GPOS_NEW(mp) CWStringConst(mp, GPOS_WSZ_LIT("row_number")),
 		CScalarWindowFunc::EwsImmediate, false /* is_distinct */,
 		false /* is_star_arg */, false /* is_simple_agg */
@@ -2388,7 +2352,7 @@ CXformUtils::FProcessGPDBAntiSemiHashJoin(
 			if (FExtractEquality(
 					pexprPred, &pexprEquality,
 					&pexprFalse) &&	 // extracted equality expression
-				IMDId::EmdidGPDB ==
+				IMDId::EmdidGeneral ==
 					CScalarConst::PopConvert(pexprFalse->Pop())
 						->GetDatum()
 						->MDId()

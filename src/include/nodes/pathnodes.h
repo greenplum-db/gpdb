@@ -329,7 +329,8 @@ struct PlannerInfo
 
 	List	   *init_plans;		/* init SubPlans for query */
 
-	List	   *cte_plan_ids;	/* per-CTE-item list of subplan IDs */
+	List	   *cte_plan_ids;	/* per-CTE-item list of subplan IDs (or -1 if
+								 * no subplan was made for that CTE) */
 
 	List	   *multiexpr_params;	/* List of Lists of Params for MULTIEXPR
 									 * subquery outputs */
@@ -463,6 +464,8 @@ struct PlannerInfo
 	bool		is_split_update;	/* true if UPDATE that modifies
 									 * distribution key columns */
 	bool		is_correlated_subplan; /* true for correlated subqueries nested within subplans */
+
+	bool		is_from_orca; /* true if this PlannerInfo was created from Orca*/
 };
 
 /*
@@ -1024,7 +1027,7 @@ struct IndexOptInfo
 	bool		amhasgettuple;	/* does AM have amgettuple interface? */
 	bool		amhasgetbitmap; /* does AM have amgetbitmap interface? */
 	bool		amcanparallel;	/* does AM support parallel scan? */
-
+	bool		amcanmarkpos;	/* does AM support mark/restore? */
 	/* Rather than include amapi.h here, we declare amcostestimate like this */
 	void		(*amcostestimate) ();	/* AM's cost estimator */
 };
@@ -1072,7 +1075,7 @@ typedef struct StatisticExtInfo
 
 	Oid			statOid;		/* OID of the statistics row */
 	RelOptInfo *rel;			/* back-link to statistic's table */
-	char		kind;			/* statistic kind of this entry */
+	char		kind;			/* statistics kind of this entry */
 	Bitmapset  *keys;			/* attnums of the columns covered */
 } StatisticExtInfo;
 

@@ -44,6 +44,7 @@
 -   [pg\_partition](pg_partition.html)
 -   [pg\_partition\_rule](pg_partition_rule.html)
 -   [pg\_pltemplate](pg_pltemplate.html)
+-   [pg\_policy](pg_policy.html)
 -   [pg\_proc](pg_proc.html)
 -   [pg\_resgroup](pg_resgroup.html)
 -   [pg\_resgroupcapability](pg_resgroupcapability.html)

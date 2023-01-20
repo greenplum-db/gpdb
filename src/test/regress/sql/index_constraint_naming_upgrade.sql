@@ -55,33 +55,33 @@ DROP TYPE table_collision_a_b_key;
 -- *************************************************************
 -- Exchange Partition Scenario
 
--- Create a partition table with a primary key constraint
+-- Create two partition tables with primary key constraints.
+-- One to drop in this test, and one to be testd druing upgrade.
 CREATE TABLE part_table_for_upgrade (a INT, b INT) DISTRIBUTED BY (a) PARTITION BY RANGE(b) (PARTITION alpha  END (3), PARTITION beta START (3));
+CREATE TABLE part_table_for_upgrade2 (a INT, b INT) DISTRIBUTED BY (a) PARTITION BY RANGE(b) (PARTITION alpha  END (3), PARTITION beta START (3));
 ALTER TABLE part_table_for_upgrade ADD PRIMARY KEY(a, b);
+ALTER TABLE part_table_for_upgrade2 ADD PRIMARY KEY(a, b);
 -- Create a table to be used as a partition exchange.
 CREATE TABLE like_table (like part_table_for_upgrade INCLUDING CONSTRAINTS INCLUDING INDEXES) DISTRIBUTED BY (a) ;
+CREATE TABLE like_table2 (like part_table_for_upgrade INCLUDING CONSTRAINTS INCLUDING INDEXES) DISTRIBUTED BY (a) ;
 
 -- show constraint and index names
-SELECT table_name,* FROM constraints_and_indices() WHERE table_name::text='part_table_for_upgrade';
-SELECT table_name,* FROM constraints_and_indices() WHERE table_name::text='like_table';
+SELECT table_name,* FROM constraints_and_indices() WHERE table_name::text IN ('part_table_for_upgrade', 'part_table_for_upgrade2');
+SELECT table_name,* FROM constraints_and_indices() WHERE table_name::text IN ('like_table', 'like_table2');
 
 -- Exchange the beta partition with like_table.
 -- Everything gets swapped, but the constraint index name of like_table does not match with part_table_for_upgrade_1_prt_beta.
 ALTER TABLE part_table_for_upgrade EXCHANGE PARTITION beta WITH TABLE like_table;
+ALTER TABLE part_table_for_upgrade2 EXCHANGE PARTITION beta WITH TABLE like_table2;
 
 -- show constraint and index names for each table
-SELECT table_name,* FROM constraints_and_indices() WHERE table_name::text='part_table_for_upgrade';
+SELECT table_name,* FROM constraints_and_indices() WHERE table_name::text IN ('part_table_for_upgrade', 'part_table_for_upgrade2');
 
--- GPDB_12_MERGE_FIXME: only tables are renamed in exchange partition,
--- constraints or indexes used to be renamed as well pre-GPDB7, not
--- any more. Does it surprise users (functionally it doesn't affect
--- anything)?
-SELECT table_name,* FROM constraints_and_indices() WHERE table_name::text='like_table';
+-- only tables are renamed in exchange partition
+SELECT table_name,* FROM constraints_and_indices() WHERE table_name::text IN ('like_table', 'like_table2');
 
--- Drop part_table_for_upgrade before upgrade since that is not where the issue is.
+-- Drop the first partition table, the constraint in like_table should NOT be dropped
 DROP TABLE part_table_for_upgrade CASCADE;
-
--- Verify that the constraint in like_table was NOT dropped
 SELECT table_name,* FROM constraints_and_indices() WHERE table_name::text='like_table';
 
 -- *************************************************************

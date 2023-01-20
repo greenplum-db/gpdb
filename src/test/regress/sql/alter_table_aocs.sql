@@ -308,9 +308,6 @@ select attstattarget from pg_attribute where attrelid = 'aocs_addcol.addcol1'::r
 alter table addcol1 set distributed randomly;
 alter table addcol1 set distributed by (a);
 
--- test some constraints (unique indexes do not work for unique and pkey)
-alter table addcol1 add constraint tunique unique(a);
-alter table addcol1 add constraint tpkey primary key(a);
 alter table addcol1 add constraint tcheck check (a is not null);
 
 -- test changing the storage type of a column

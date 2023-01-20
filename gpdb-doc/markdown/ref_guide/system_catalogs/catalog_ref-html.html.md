@@ -150,6 +150,10 @@ System catalog table and view definitions in alphabetical order.
 
 -   [pg\_pltemplate](../system_catalogs/pg_pltemplate.html)  
 
+-   [pg\_policies](../system_catalogs/pg_policies.html)  
+
+-   [pg\_policy](../system_catalogs/pg_policy.html)  
+
 -   [pg\_proc](../system_catalogs/pg_proc.html)  
 
 -   [pg\_resgroup](../system_catalogs/pg_resgroup.html)  

@@ -10,6 +10,9 @@ BEGIN
 END
 $$ language plpgsql;
 
+-- should fail, can't call it as a plain function
+SELECT test_event_trigger();
+
 -- should fail, event triggers cannot have declared arguments
 create function test_event_trigger_arg(name text)
 returns event_trigger as $$ BEGIN RETURN 1; END $$ language plpgsql;
@@ -281,6 +284,7 @@ DROP ROLE regress_evt_user;
 DROP EVENT TRIGGER regress_event_trigger_drop_objects;
 DROP EVENT TRIGGER undroppable;
 
+-- Event triggers on relations.
 CREATE OR REPLACE FUNCTION event_trigger_report_dropped()
  RETURNS event_trigger
  LANGUAGE plpgsql
@@ -299,10 +303,28 @@ BEGIN
 END; $$;
 CREATE EVENT TRIGGER regress_event_trigger_report_dropped ON sql_drop
     EXECUTE PROCEDURE event_trigger_report_dropped();
+CREATE OR REPLACE FUNCTION event_trigger_report_end()
+ RETURNS event_trigger
+ LANGUAGE plpgsql
+AS $$
+DECLARE r RECORD;
+BEGIN
+    FOR r IN SELECT * FROM pg_event_trigger_ddl_commands()
+    LOOP
+        RAISE NOTICE 'END: command_tag=% type=% identity=%',
+            r.command_tag, r.object_type, r.object_identity;
+    END LOOP;
+EXCEPTION WHEN SQLSTATE 'XX000' THEN
+	RAISE NOTICE 'END: got internal exception';
+END; $$;
+CREATE EVENT TRIGGER regress_event_trigger_report_end ON ddl_command_end
+  EXECUTE PROCEDURE event_trigger_report_end();
+
 CREATE SCHEMA evttrig
-	CREATE TABLE one (col_a SERIAL PRIMARY KEY, col_b text DEFAULT 'forty two')
+	CREATE TABLE one (col_a SERIAL PRIMARY KEY, col_b text DEFAULT 'forty two', col_c SERIAL)
 	CREATE INDEX one_idx ON one (col_b)
-	CREATE TABLE two (col_c INTEGER CHECK (col_c > 0) REFERENCES one DEFAULT 42);
+	CREATE TABLE two (col_c INTEGER CHECK (col_c > 0) REFERENCES one DEFAULT 42)
+	CREATE TABLE id (col_d int NOT NULL GENERATED ALWAYS AS IDENTITY);
 
 -- Partitioned tables with a partitioned index
 CREATE TABLE evttrig.parted (
@@ -320,11 +342,20 @@ CREATE TABLE evttrig.part_15_20 PARTITION OF evttrig.part_10_20 (id)
 ALTER TABLE evttrig.two DROP COLUMN col_c;
 ALTER TABLE evttrig.one ALTER COLUMN col_b DROP DEFAULT;
 ALTER TABLE evttrig.one DROP CONSTRAINT one_pkey;
+ALTER TABLE evttrig.one DROP COLUMN col_c;
+ALTER TABLE evttrig.id ALTER COLUMN col_d SET DATA TYPE bigint;
+ALTER TABLE evttrig.id ALTER COLUMN col_d DROP IDENTITY,
+  ALTER COLUMN col_d SET DATA TYPE int;
 DROP INDEX evttrig.one_idx;
 DROP SCHEMA evttrig CASCADE;
 DROP TABLE a_temp_tbl;
 
+-- CREATE OPERATOR CLASS without FAMILY clause should report
+-- both CREATE OPERATOR FAMILY and CREATE OPERATOR CLASS
+CREATE OPERATOR CLASS evttrigopclass FOR TYPE int USING btree AS STORAGE int;
+
 DROP EVENT TRIGGER regress_event_trigger_report_dropped;
+DROP EVENT TRIGGER regress_event_trigger_report_end;
 
 -- only allowed from within an event trigger function, should fail
 select pg_event_trigger_table_rewrite_oid();
@@ -433,6 +464,17 @@ CREATE POLICY p1 ON event_trigger_test USING (FALSE);
 ALTER POLICY p1 ON event_trigger_test USING (TRUE);
 ALTER POLICY p1 ON event_trigger_test RENAME TO p2;
 DROP POLICY p2 ON event_trigger_test;
+
+-- Check the object addresses of all the event triggers.
+SELECT
+    e.evtname,
+    pg_describe_object('pg_event_trigger'::regclass, e.oid, 0) as descr,
+    b.type, b.object_names, b.object_args,
+    pg_identify_object(a.classid, a.objid, a.objsubid) as ident
+  FROM pg_event_trigger as e,
+    LATERAL pg_identify_object_as_address('pg_event_trigger'::regclass, e.oid, 0) as b,
+    LATERAL pg_get_object_address(b.type, b.object_names, b.object_args) as a
+  ORDER BY e.evtname;
 
 DROP EVENT TRIGGER start_rls_command;
 DROP EVENT TRIGGER end_rls_command;

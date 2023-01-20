@@ -14,7 +14,7 @@ Greenplum Database supports built-in functions and operators including analytic 
 
 ## <a id="topic27"></a>Greenplum Database Function Types 
 
-Greenplum Database evaluates functions and operators used in SQL expressions. Some functions and operators are only allowed to run on the master since they could lead to inconsistencies in Greenplum Database segment instances. This table describes the Greenplum Database Function Types.
+Greenplum Database evaluates functions and operators used in SQL expressions. Some functions and operators are only allowed to run on the coordinator since they could lead to inconsistencies in Greenplum Database segment instances. This table describes the Greenplum Database Function Types.
 
 |Function Type|Greenplum Support|Description|Comments|
 |-------------|-----------------|-----------|--------|
@@ -24,7 +24,7 @@ Greenplum Database evaluates functions and operators used in SQL expressions. So
 
 In Greenplum Database, data is divided up across segments — each segment is a distinct PostgreSQL database. To prevent inconsistent or unexpected results, do not run functions classified as `VOLATILE` at the segment level if they contain SQL commands or modify the database in any way. For example, functions such as `setval()` are not allowed to run on distributed data in Greenplum Database because they can cause inconsistent data between segment instances.
 
-To ensure data consistency, you can safely use `VOLATILE` and `STABLE` functions in statements that are evaluated on and run from the master. For example, the following statements run on the master \(statements without a `FROM` clause\):
+To ensure data consistency, you can safely use `VOLATILE` and `STABLE` functions in statements that are evaluated on and run from the coordinator. For example, the following statements run on the coordinator \(statements without a `FROM` clause\):
 
 ```
 SELECT setval('myseq', 201);
@@ -43,32 +43,32 @@ Greenplum Database does not support functions that return a table reference \(`r
 
 ## <a id="topic29"></a>Built-in Functions and Operators 
 
-The following table lists the categories of built-in functions and operators supported by PostgreSQL. All functions and operators are supported in Greenplum Database as in PostgreSQL with the exception of `STABLE` and `VOLATILE` functions, which are subject to the restrictions noted in [Greenplum Database Function Types](#topic27). See the [Functions and Operators](https://www.postgresql.org/docs/9.4/functions.html) section of the PostgreSQL documentation for more information about these built-in functions and operators.
+The following table lists the categories of built-in functions and operators supported by PostgreSQL. All functions and operators are supported in Greenplum Database as in PostgreSQL with the exception of `STABLE` and `VOLATILE` functions, which are subject to the restrictions noted in [Greenplum Database Function Types](#topic27). See the [Functions and Operators](https://www.postgresql.org/docs/12/functions.html) section of the PostgreSQL documentation for more information about these built-in functions and operators.
 
 |Operator/Function Category|VOLATILE Functions|STABLE Functions|Restrictions|
 |--------------------------|------------------|----------------|------------|
-|[Logical Operators](https://www.postgresql.org/docs/9.4/functions-logical.html)| | | |
-|[Comparison Operators](https://www.postgresql.org/docs/9.4/functions-comparison.html)| | | |
-|[Mathematical Functions and Operators](https://www.postgresql.org/docs/9.4/functions-math.html)|random<br/><br/>setseed| | |
-|[String Functions and Operators](https://www.postgresql.org/docs/9.4/functions-string.html)|*All built-in conversion functions*|convert<br/><br/>pg\_client\_encoding| |
-|[Binary String Functions and Operators](https://www.postgresql.org/docs/9.4/functions-binarystring.html)| | | |
-|[Bit String Functions and Operators](https://www.postgresql.org/docs/9.4/functions-bitstring.html)| | | |
-|[Pattern Matching](https://www.postgresql.org/docs/9.4/functions-matching.html)| | | |
-|[Data Type Formatting Functions](https://www.postgresql.org/docs/9.4/functions-formatting.html)| |to\_char<br/><br/>to\_timestamp| |
-|[Date/Time Functions and Operators](https://www.postgresql.org/docs/9.4/functions-datetime.html)|timeofday|age<br/><br/>current\_date<br/><br/>current\_time<br/><br/>current\_timestamp<br/><br/>localtime<br/><br/>localtimestamp<br/><br/>now| |
-|[Enum Support Functions](https://www.postgresql.org/docs/9.4/functions-enum.html)| | | |
-|[Geometric Functions and Operators](https://www.postgresql.org/docs/9.4/functions-geometry.html)| | | |
-|[Network Address Functions and Operators](https://www.postgresql.org/docs/9.4/functions-net.html)| | | |
-|[Sequence Manipulation Functions](https://www.postgresql.org/docs/9.4/functions-sequence.html)|nextval\(\)<br/><br/>setval\(\)| | |
-|[Conditional Expressions](https://www.postgresql.org/docs/9.4/functions-conditional.html)| | | |
-|[Array Functions and Operators](https://www.postgresql.org/docs/9.4/functions-array.html)| |*All array functions*| |
-|[Aggregate Functions](https://www.postgresql.org/docs/9.4/functions-aggregate.html)| | | |
-|[Subquery Expressions](https://www.postgresql.org/docs/9.4/functions-subquery.html)| | | |
-|[Row and Array Comparisons](https://www.postgresql.org/docs/9.4/functions-comparisons.html)| | | |
-|[Set Returning Functions](https://www.postgresql.org/docs/9.4/functions-srf.html)|generate\_series| | |
-|[System Information Functions](https://www.postgresql.org/docs/9.4/functions-info.html)| |*All session information functions*<br/><br/>*All access privilege inquiry functions*<br/><br/>*All schema visibility inquiry functions*<br/><br/>*All system catalog information functions*<br/><br/>*All comment information functions*<br/><br/>*All transaction ids and snapshots*| |
-|[System Administration Functions](https://www.postgresql.org/docs/9.4/functions-admin.html)|set\_config<br/><br/>pg\_cancel\_backend<br/><br/>pg\_reload\_conf<br/><br/>pg\_rotate\_logfile<br/><br/>pg\_start\_backup<br/><br/>pg\_stop\_backup<br/><br/>pg\_size\_pretty<br/><br/>pg\_ls\_dir<br/><br/>pg\_read\_file<br/><br/>pg\_stat\_file<br/><br/>|current\_setting<br/><br/>*All database object size functions*|**Note:** The function `pg_column_size` displays bytes required to store the value, possibly with TOAST compression.|
-|[XML Functions](https://www.postgresql.org/docs/9.4/functions-xml.html) and function-like expressions| |cursor\_to\_xml\(cursor refcursor, count int, nulls boolean, tableforest boolean, targetns text\)<br/><br/> cursor\_to\_xmlschema\(cursor refcursor, nulls boolean, tableforest boolean, targetns text\)<br/><br/>database\_to\_xml\(nulls boolean, tableforest boolean, targetns text\)<br/><br/>database\_to\_xmlschema\(nulls boolean, tableforest boolean, targetns text\)<br/><br/>database\_to\_xml\_and\_xmlschema\(nulls boolean, tableforest boolean, targetns text\)<br/><br/>query\_to\_xml\(query text, nulls boolean, tableforest boolean, targetns text\)<br/><br/>query\_to\_xmlschema\(query text, nulls boolean, tableforest boolean, targetns text\)<br/><br/>query\_to\_xml\_and\_xmlschema\(query text, nulls boolean, tableforest boolean, targetns text\)<br/><br/> schema\_to\_xml\(schema name, nulls boolean, tableforest boolean, targetns text\)<br/><br/>schema\_to\_xmlschema\(schema name, nulls boolean, tableforest boolean, targetns text\)<br/><br/>schema\_to\_xml\_and\_xmlschema\(schema name, nulls boolean, tableforest boolean, targetns text\)<br/><br/>table\_to\_xml\(tbl regclass, nulls boolean, tableforest boolean, targetns text\)<br/><br/>table\_to\_xmlschema\(tbl regclass, nulls boolean, tableforest boolean, targetns text\)<br/><br/>table\_to\_xml\_and\_xmlschema\(tbl regclass, nulls boolean, tableforest boolean, targetns text\)<br/><br/>xmlagg\(xml\)<br/><br/>xmlconcat\(xml\[, ...\]\)<br/><br/>xmlelement\(name name \[, xmlattributes\(value \[AS attname\] \[, ... \]\)\] \[, content, ...\]\)<br/><br/>xmlexists\(text, xml\)<br/><br/>xmlforest\(content \[AS name\] \[, ...\]\)<br/><br/>xml\_is\_well\_formed\(text\)<br/><br/>xml\_is\_well\_formed\_document\(text\)<br/><br/>xml\_is\_well\_formed\_content\(text\)<br/><br/>xmlparse \( \{ DOCUMENT \| CONTENT \} value\)<br/><br/>xpath\(text, xml\)<br/><br/>xpath\(text, xml, text\[\]\)<br/><br/>xpath\_exists\(text, xml\)<br/><br/>xpath\_exists\(text, xml, text\[\]\)<br/><br/>xmlpi\(name target \[, content\]\)<br/><br/>xmlroot\(xml, version text \| no value \[, standalone yes\|no\|no value\]\)<br/><br/>xmlserialize \( \{ DOCUMENT \| CONTENT \} value AS type \)<br/><br/>xml\(text\)<br/><br/>text\(xml\)<br/><br/>xmlcomment\(xml\)<br/><br/>xmlconcat2\(xml, xml\)<br/><br/>| |
+|[Logical Operators](https://www.postgresql.org/docs/12/functions-logical.html)| | | |
+|[Comparison Operators](https://www.postgresql.org/docs/12/functions-comparison.html)| | | |
+|[Mathematical Functions and Operators](https://www.postgresql.org/docs/12/functions-math.html)|random<br/><br/>setseed| | |
+|[String Functions and Operators](https://www.postgresql.org/docs/12/functions-string.html)|*All built-in conversion functions*|convert<br/><br/>pg\_client\_encoding| |
+|[Binary String Functions and Operators](https://www.postgresql.org/docs/12/functions-binarystring.html)| | | |
+|[Bit String Functions and Operators](https://www.postgresql.org/docs/12/functions-bitstring.html)| | | |
+|[Pattern Matching](https://www.postgresql.org/docs/12/functions-matching.html)| | | |
+|[Data Type Formatting Functions](https://www.postgresql.org/docs/12/functions-formatting.html)| |to\_char<br/><br/>to\_timestamp| |
+|[Date/Time Functions and Operators](https://www.postgresql.org/docs/12/functions-datetime.html)|timeofday|age<br/><br/>current\_date<br/><br/>current\_time<br/><br/>current\_timestamp<br/><br/>localtime<br/><br/>localtimestamp<br/><br/>now| |
+|[Enum Support Functions](https://www.postgresql.org/docs/12/functions-enum.html)| | | |
+|[Geometric Functions and Operators](https://www.postgresql.org/docs/12/functions-geometry.html)| | | |
+|[Network Address Functions and Operators](https://www.postgresql.org/docs/12/functions-net.html)| | | |
+|[Sequence Manipulation Functions](https://www.postgresql.org/docs/12/functions-sequence.html)|nextval\(\)<br/><br/>setval\(\)| | |
+|[Conditional Expressions](https://www.postgresql.org/docs/12/functions-conditional.html)| | | |
+|[Array Functions and Operators](https://www.postgresql.org/docs/12/functions-array.html)| |*All array functions*| |
+|[Aggregate Functions](https://www.postgresql.org/docs/12/functions-aggregate.html)| | | |
+|[Subquery Expressions](https://www.postgresql.org/docs/12/functions-subquery.html)| | | |
+|[Row and Array Comparisons](https://www.postgresql.org/docs/12/functions-comparisons.html)| | | |
+|[Set Returning Functions](https://www.postgresql.org/docs/12/functions-srf.html)|generate\_series| | |
+|[System Information Functions](https://www.postgresql.org/docs/12/functions-info.html)| |*All session information functions*<br/><br/>*All access privilege inquiry functions*<br/><br/>*All schema visibility inquiry functions*<br/><br/>*All system catalog information functions*<br/><br/>*All comment information functions*<br/><br/>*All transaction ids and snapshots*| |
+|[System Administration Functions](https://www.postgresql.org/docs/12/functions-admin.html)|set\_config<br/><br/>pg\_cancel\_backend<br/><br/>pg\_reload\_conf<br/><br/>pg\_rotate\_logfile<br/><br/>pg\_start\_backup<br/><br/>pg\_stop\_backup<br/><br/>pg\_size\_pretty<br/><br/>pg\_ls\_dir<br/><br/>pg\_read\_file<br/><br/>pg\_stat\_file<br/><br/>|current\_setting<br/><br/>*All database object size functions*|> **Note** The function `pg_column_size` displays bytes required to store the value, possibly with TOAST compression.|
+|[XML Functions](https://www.postgresql.org/docs/12/functions-xml.html) and function-like expressions| |cursor\_to\_xml\(cursor refcursor, count int, nulls boolean, tableforest boolean, targetns text\)<br/><br/> cursor\_to\_xmlschema\(cursor refcursor, nulls boolean, tableforest boolean, targetns text\)<br/><br/>database\_to\_xml\(nulls boolean, tableforest boolean, targetns text\)<br/><br/>database\_to\_xmlschema\(nulls boolean, tableforest boolean, targetns text\)<br/><br/>database\_to\_xml\_and\_xmlschema\(nulls boolean, tableforest boolean, targetns text\)<br/><br/>query\_to\_xml\(query text, nulls boolean, tableforest boolean, targetns text\)<br/><br/>query\_to\_xmlschema\(query text, nulls boolean, tableforest boolean, targetns text\)<br/><br/>query\_to\_xml\_and\_xmlschema\(query text, nulls boolean, tableforest boolean, targetns text\)<br/><br/> schema\_to\_xml\(schema name, nulls boolean, tableforest boolean, targetns text\)<br/><br/>schema\_to\_xmlschema\(schema name, nulls boolean, tableforest boolean, targetns text\)<br/><br/>schema\_to\_xml\_and\_xmlschema\(schema name, nulls boolean, tableforest boolean, targetns text\)<br/><br/>table\_to\_xml\(tbl regclass, nulls boolean, tableforest boolean, targetns text\)<br/><br/>table\_to\_xmlschema\(tbl regclass, nulls boolean, tableforest boolean, targetns text\)<br/><br/>table\_to\_xml\_and\_xmlschema\(tbl regclass, nulls boolean, tableforest boolean, targetns text\)<br/><br/>xmlagg\(xml\)<br/><br/>xmlconcat\(xml\[, ...\]\)<br/><br/>xmlelement\(name name \[, xmlattributes\(value \[AS attname\] \[, ... \]\)\] \[, content, ...\]\)<br/><br/>xmlexists\(text, xml\)<br/><br/>xmlforest\(content \[AS name\] \[, ...\]\)<br/><br/>xml\_is\_well\_formed\(text\)<br/><br/>xml\_is\_well\_formed\_document\(text\)<br/><br/>xml\_is\_well\_formed\_content\(text\)<br/><br/>xmlparse \( \{ DOCUMENT \| CONTENT \} value\)<br/><br/>xpath\(text, xml\)<br/><br/>xpath\(text, xml, text\[\]\)<br/><br/>xpath\_exists\(text, xml\)<br/><br/>xpath\_exists\(text, xml, text\[\]\)<br/><br/>xmlpi\(name target \[, content\]\)<br/><br/>xmlroot\(xml, version text \| no value \[, standalone yes\|no\|no value\]\)<br/><br/>xmlserialize \( \{ DOCUMENT \| CONTENT \} value AS type \)<br/><br/>xml\(text\)<br/><br/>text\(xml\)<br/><br/>xmlcomment\(xml\)<br/><br/>xmlconcat2\(xml, xml\)<br/><br/>| |
 
 ## <a id="topic_gn4_x3w_mq"></a>JSON Functions and Operators 
 
@@ -100,7 +100,7 @@ This table describes the operators that are available for use with the `json` an
 |`#>`|`text[]`| `json` or `jsonb` | Get the JSON object at the specified path.|`'{"a": {"b":{"c": "foo"}}}'::json#>'{a,b}`'|`{"c": "foo"}`|
 |`#>>`|`text[]`| `text` | Get the JSON object at the specified path as `text`.|`'{"a":[1,2,3],"b":[4,5,6]}'::json#>>'{a,2}'`|`3`|
 
-**Note:** There are parallel variants of these operators for both the `json` and `jsonb` data types. The field/element/path extraction operators return the same data type as their left-hand input \(either `json` or `jsonb`\), except for those specified as returning `text`, which coerce the value to `text`. The field/element/path extraction operators return `NULL`, rather than failing, if the JSON input does not have the right structure to match the request; for example if no such element exists. The field/element/path extraction operators that accept integer JSON array subscripts all support negative subscripting from the end of arrays.
+> **Note** There are parallel variants of these operators for both the `json` and `jsonb` data types. The field/element/path extraction operators return the same data type as their left-hand input \(either `json` or `jsonb`\), except for those specified as returning `text`, which coerce the value to `text`. The field/element/path extraction operators return `NULL`, rather than failing, if the JSON input does not have the right structure to match the request; for example if no such element exists. The field/element/path extraction operators that accept integer JSON array subscripts all support negative subscripting from the end of arrays.
 
 These standard comparison operators are available for `jsonb`, but not for `json.` They follow the ordering rules for B-tree operations outlined at [jsonb Indexing](../admin_guide/query/topics/json-data.html#topic_aqt_1tw_mq).
 
@@ -113,7 +113,7 @@ These standard comparison operators are available for `jsonb`, but not for `json
 |`=`|equal|
 |`<>` or `!=`|not equal|
 
-**Note:** The `!=` operator is converted to `<>` in the parser stage. It is not possible to implement `!=` and `<>` operators that do different things.
+> **Note** The `!=` operator is converted to `<>` in the parser stage. It is not possible to implement `!=` and `<>` operators that do different things.
 
 Operators that require the `jsonb` data type as the left operand are described in the following table. Many of these operators can be indexed by `jsonb` operator classes. For a full description of `jsonb` containment and existence semantics, refer to [jsonb Containment and Existence](../admin_guide/query/topics/json-data.html#topic_isx_2tw_mq). [jsonb Indexing](../admin_guide/query/topics/json-data.html#topic_aqt_1tw_mq) describes how these operators can be used to effectively index `jsonb` data.
 
@@ -132,9 +132,9 @@ Operators that require the `jsonb` data type as the left operand are described i
 | `@?` | `jsonpath` | Does JSON path return any item for the specified JSON value?| `'{"a":[1,2,3,4,5]}'::jsonb @? '$.a[*] ? (@ > 2)'` |
 | `@@` | `jsonpath` | Returns the result of JSON path predicate check for the specified JSON value. Only the first item of the result is taken into account. If the result is not Boolean, then `null` is returned.| `'{"a":[1,2,3,4,5]}'::jsonb @@ '$.a[*] > 2'` |
 
-**Note:**  The `||` operator concatenates two JSON objects by generating an object containing the union of their keys, taking the second object's value when there are duplicate keys. All other cases produce a JSON array: first, any non-array input is converted into a single-element array, and then the two arrays are concatenated. It does not operate recursively; only the top-level array or object structure is merged.
+> **Note**  The `||` operator concatenates two JSON objects by generating an object containing the union of their keys, taking the second object's value when there are duplicate keys. All other cases produce a JSON array: first, any non-array input is converted into a single-element array, and then the two arrays are concatenated. It does not operate recursively; only the top-level array or object structure is merged.
 
-**Note:**  The `@?` and `@@` operators suppress the following errors: lacking object field or array element, unexpected JSON item type, and numeric errors. This behavior might be helpful while searching over JSON document collections of varying structure.
+> **Note**  The `@?` and `@@` operators suppress the following errors: lacking object field or array element, unexpected JSON item type, and numeric errors. This behavior might be helpful while searching over JSON document collections of varying structure.
 
 
 #### <a id="topic_u4s_wnw_2z"></a>JSON Creation Functions 
@@ -151,9 +151,9 @@ This table describes the functions that create `json` and `jsonb` data type valu
 |`json_object(text[])`<br>`jsonb_object(text[])`| Builds a JSON object out of a text array. The array must have either exactly one dimension with an even number of members, in which case they are taken as alternating key/value pairs, or two dimensions such that each inner array has exactly two elements, which are taken as a key/value pair. |`json_object('{a, 1, b, "def", c, 3.5}')`<br/><br/>`json_object('{{a, 1},{b, "def"},{c, 3.5}}')`|`{"a": "1", "b": "def", "c": "3.5"}`|
 |`json_object(keys text[], values text[])`<br>`jsonb_object(keys text[], values text[])`|Builds a JSON object out of a text array. This form of `json_object` takes keys and values pairwise from two separate arrays. In all other respects it is identical to the one-argument form.|`json_object('{a, b}', '{1,2}')`|`{"a": "1", "b": "2"}`|
 
-**Note:** `array_to_json()` and `row_to_json()` have the same behavior as `to_json()` except for offering a pretty-printing option. The behavior described for `to_json()` likewise applies to each individual value converted by the other JSON creation functions.
+> **Note** `array_to_json()` and `row_to_json()` have the same behavior as `to_json()` except for offering a pretty-printing option. The behavior described for `to_json()` likewise applies to each individual value converted by the other JSON creation functions.
 
-**Note:** The [hstore](modules/hstore.html) extension has a cast from `hstore` to `json`, so that `hstore` values converted via the JSON creation functions will be represented as JSON objects, not as primitive string values.
+> **Note** The [hstore](modules/hstore.html) extension has a cast from `hstore` to `json`, so that `hstore` values converted via the JSON creation functions will be represented as JSON objects, not as primitive string values.
 
 #### <a id="topic_rvp_lk3_sfb"></a>JSON Aggregate Functions 
 
@@ -1066,7 +1066,7 @@ The following are Greenplum Database built-in window functions. All window funct
 
 The following built-in advanced analytic functions are Greenplum extensions of the PostgreSQL database. Analytic functions are *immutable*.
 
-**Note:** The Greenplum MADlib Extension for Analytics provides additional advanced functions to perform statistical analysis and machine learning with Greenplum Database data. See [MADlib Extension for Analytics](../analytics/madlib.html#topic1).
+> **Note** The Greenplum MADlib Extension for Analytics provides additional advanced functions to perform statistical analysis and machine learning with Greenplum Database data. See [MADlib Extension for Analytics](../analytics/madlib.html#topic1).
 
 <div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic31__in2073121" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 10. </span>Advanced Aggregate Functions</span></caption><colgroup><col style="width:20.845288240441164%" /><col style="width:12.005779052967869%" /><col style="width:41.10249679506745%" /><col style="width:26.046435911523513%" /></colgroup><thead class="thead" style="text-align:left;">
 <tr class="row">
@@ -1188,7 +1188,7 @@ SELECT sum(myvalue) FROM mymatrix;
 <code class="ph codeph">unnest( array['one', 'row', 'per', 'item'])</code>
 </td>
 <td class="entry cellrowborder" style="vertical-align:top;" headers="d233567e3153 ">Transforms a one dimensional array into rows. Returns a set of
-<code class="ph codeph">anyelement</code>, a polymorphic <a class="xref" href="https://www.postgresql.org/docs/9.4/datatype-pseudo.html" target="_blank"><span class="ph">pseudotype in PostgreSQL</span></a>.</td>
+<code class="ph codeph">anyelement</code>, a polymorphic <a class="xref" href="https://www.postgresql.org/docs/12/datatype-pseudo.html" target="_blank"><span class="ph">pseudotype in PostgreSQL</span></a>.</td>
 </tr>
 </tbody>
 </table>
@@ -1209,7 +1209,7 @@ The following tables summarize the functions and operators that are provided for
 |`@>`|`tsquery` contains another ?|`'cat'::tsquery @> 'cat & rat'::tsquery`|`f`|
 |`<@`|`tsquery` is contained in ?|`'cat'::tsquery <@ 'cat & rat'::tsquery`|`t`|
 
-**Note:** The `tsquery` containment operators consider only the lexemes listed in the two queries, ignoring the combining operators.
+> **Note** The `tsquery` containment operators consider only the lexemes listed in the two queries, ignoring the combining operators.
 
 In addition to the operators shown in the table, the ordinary B-tree comparison operators \(=, <, etc\) are defined for types `tsvector` and `tsquery`. These are not very useful for text searching but allow, for example, unique indexes to be built on columns of these types.
 
@@ -1232,7 +1232,7 @@ In addition to the operators shown in the table, the ordinary B-tree comparison 
 |`tsvector_update_trigger()`|trigger|trigger function for automatic tsvector column update|CREATE TRIGGER ... tsvector\_update\_trigger\(tsvcol, 'pg\_catalog.swedish', title, body\)| |
 |`tsvector_update_trigger_column()`|trigger|trigger function for automatic tsvector column update|CREATE TRIGGER ... tsvector\_update\_trigger\_column\(tsvcol, configcol, title, body\)| |
 
-**Note:** All the text search functions that accept an optional `regconfig` argument will use the configuration specified by [default\_text\_search\_config](config_params/guc-list.html) when that argument is omitted.
+> **Note** All the text search functions that accept an optional `regconfig` argument will use the configuration specified by [default\_text\_search\_config](config_params/guc-list.html) when that argument is omitted.
 
 The functions in the following table are listed separately because they are not usually used in everyday text searching operations. They are helpful for development and debugging of new text search configurations.
 

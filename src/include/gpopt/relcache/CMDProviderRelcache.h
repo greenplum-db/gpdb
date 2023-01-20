@@ -63,7 +63,8 @@ public:
 
 	// return the requested metadata object
 	IMDCacheObject *GetMDObj(CMemoryPool *mp, CMDAccessor *md_accessor,
-							 IMDId *mdid) const override;
+							 IMDId *mdid,
+							 IMDCacheObject::Emdtype mdtype) const override;
 
 	// return the mdid for the requested type
 	IMDId *

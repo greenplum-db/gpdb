@@ -471,9 +471,10 @@ public:
 								  Edxltoken target_elem);
 
 	// parse a GPDB mdid object from an array of its components
-	static CMDIdGPDB *GetGPDBMdId(CDXLMemoryManager *dxl_memory_manager,
-								  XMLChArray *remaining_tokens,
-								  Edxltoken target_attr, Edxltoken target_elem);
+	static CMDIdGPDB *GetGPDBMdId(
+		CDXLMemoryManager *dxl_memory_manager, XMLChArray *remaining_tokens,
+		Edxltoken target_attr, Edxltoken target_elem,
+		IMDId::EMDIdType mdidType = IMDId::EmdidGeneral);
 
 	// parse a GPDB CTAS mdid object from an array of its components
 	static CMDIdGPDB *GetGPDBCTASMdId(CDXLMemoryManager *dxl_memory_manager,
@@ -519,6 +520,10 @@ public:
 	// parse a comma-separated list of unsigned long numbers into a dynamic array
 	// will raise an exception if list is not well-formed
 	static ULongPtrArray *ExtractConvertValuesToArray(
+		CDXLMemoryManager *dxl_memory_manager, const Attributes &attr,
+		Edxltoken target_attr, Edxltoken target_elem);
+
+	static IntPtrArray *ExtractConvertValuesToIntArray(
 		CDXLMemoryManager *dxl_memory_manager, const Attributes &attr,
 		Edxltoken target_attr, Edxltoken target_elem);
 

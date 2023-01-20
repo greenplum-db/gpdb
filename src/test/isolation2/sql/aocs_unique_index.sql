@@ -6,8 +6,6 @@
 -- us to predict block directory entries without having to worry about the
 -- table's distribution.
 
-SET gp_appendonly_enable_unique_index TO ON;
-
 -- Case 1: Conflict with committed transaction----------------------------------
 CREATE TABLE unique_index_ao_column (a bigint unique) USING ao_column
     DISTRIBUTED REPLICATED;
@@ -270,6 +268,77 @@ CREATE TABLE unique_index_ao_column (a INT unique) USING ao_column
 1: COPY unique_index_ao_column FROM PROGRAM 'seq 1 1';
 -- now that tx 1 was aborted, tx 2 is successful.
 2<:
+1: END;
 
 DROP TABLE unique_index_ao_column;
-RESET gp_appendonly_enable_unique_index;
+
+--------------------------------------------------------------------------------
+-------------------- Smoke tests for subtransactions ---------------------------
+--------------------------------------------------------------------------------
+CREATE TABLE unique_index_ao_column (a INT unique) USING ao_column
+    DISTRIBUTED REPLICATED;
+
+1: BEGIN;
+1: SAVEPOINT a;
+1: INSERT INTO unique_index_ao_column VALUES(1);
+
+-- concurrent tx inserting conflicting row should block.
+2: BEGIN;
+2&: INSERT INTO unique_index_ao_column VALUES(1);
+-- concurrent tx inserting non-conflicting row should be successful.
+3: INSERT INTO unique_index_ao_column VALUES(2);
+
+-- conflict should be detected within the same subtx.
+1: INSERT INTO unique_index_ao_column VALUES(1);
+-- the concurrent tx should now succeed.
+2<:
+2: ABORT;
+
+-- after rolling back to the savepoint, we should be able to re-insert the key
+1: ROLLBACK TO SAVEPOINT a;
+1: INSERT INTO unique_index_ao_column VALUES(1);
+1: COMMIT;
+
+SELECT * FROM unique_index_ao_column;
+
+DROP TABLE unique_index_ao_column;
+
+--------------------------------------------------------------------------------
+-------------------- Smoke tests for repeatable read ---------------------------
+--------------------------------------------------------------------------------
+
+-- Test that shows that unique index checks transcend transaction isolation
+-- boundaries.
+
+CREATE TABLE unique_index_ao_column (a INT unique) USING ao_column
+    DISTRIBUTED REPLICATED;
+
+-- Begin two txs with tx level snapshot taken early.
+1: BEGIN ISOLATION LEVEL REPEATABLE READ;
+1: SELECT * FROM unique_index_ao_column;
+2: BEGIN ISOLATION LEVEL REPEATABLE READ;
+2: SELECT * FROM unique_index_ao_column;
+
+-- Now begin a concurrent transaction which inserts a key.
+3: BEGIN;
+3: INSERT INTO unique_index_ao_column VALUES(1);
+
+-- And another transaction inserts a key and commits.
+INSERT INTO unique_index_ao_column VALUES(2);
+
+-- Tx should block on insert of conflicting key, even though it can't "see" the
+-- conflicting key due to its isolation level.
+1: SELECT * FROM unique_index_ao_column;
+1&: INSERT INTO unique_index_ao_column VALUES(1);
+
+3: ABORT;
+1<:
+1: ABORT;
+
+-- Tx should raise a conflict, even though it can't "see" the conflicting key
+-- due to its isolation level.
+2: SELECT * FROM unique_index_ao_column;
+2: INSERT INTO unique_index_ao_column VALUES(2);
+2: ABORT;
+
+DROP TABLE unique_index_ao_column;

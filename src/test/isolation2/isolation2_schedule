@@ -92,7 +92,6 @@ test: distributedlog-bug
 test: invalidated_toast_index
 test: distributed_snapshot
 test: gp_collation
-test: ao_upgrade
 test: ao_blkdir
 test: bitmap_index_concurrent
 test: bitmap_index_crash
@@ -119,6 +118,7 @@ test: uao/cursor_before_update_row
 test: uao/cursor_withhold_row
 test: uao/cursor_withhold2_row
 test: uao/delete_while_vacuum_row
+test: uao/index_build_reltuples_row
 test: uao/insert_policy_row
 test: uao/insert_while_vacuum_row
 test: uao/max_concurrency_row
@@ -173,6 +173,7 @@ test: uao/cursor_before_update_column
 test: uao/cursor_withhold_column
 test: uao/cursor_withhold2_column
 test: uao/delete_while_vacuum_column
+test: uao/index_build_reltuples_column
 test: uao/insert_policy_column
 test: uao/insert_while_vacuum_column
 test: uao/max_concurrency_column
@@ -226,6 +227,8 @@ test: pg_basebackup_large_database_oid
 test: enable_autovacuum
 test: idle_gang_cleaner
 # test idle_in_transaction_session_timeout
+
+test: ao_index_build_progress
 
 test: segwalrep/die_commit_pending_replication
 

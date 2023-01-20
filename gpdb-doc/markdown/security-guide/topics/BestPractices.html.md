@@ -57,7 +57,7 @@ Schemas can be used to enforce an additional layer of object permissions checkin
 
 ## <a id="password-strength-recommendations"></a>Operating System Users and File System 
 
-**Note:** Commands shown in this section should be run as the root user.
+> **Note** Commands shown in this section should be run as the root user.
 
 To protect the network from intrusion, system administrators should verify the passwords used within an organization are sufficiently strong. The following recommendations can strengthen a password:
 

@@ -18,7 +18,7 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <name>
 
 `CREATE LANGUAGE` registers a new procedural language with a Greenplum database. Subsequently, functions and procedures can be defined in this new language.
 
-**Note:** Procedural languages for Greenplum Database have been made into "extensions," and should therefore be installed with [CREATE EXTENSION](CREATE_EXTENSION.html), not `CREATE LANGUAGE`. Using `CREATE LANGUAGE` directly should be restricted to extension installation scripts. If you have a "bare" language in your database, perhaps as a result of an upgrade, you can convert it to an extension using `CREATE EXTENSION <langname> FROM unpackaged`.
+> **Note** Procedural languages for Greenplum Database have been made into "extensions," and should therefore be installed with [CREATE EXTENSION](CREATE_EXTENSION.html), not `CREATE LANGUAGE`. Using `CREATE LANGUAGE` directly should be restricted to extension installation scripts. If you have a "bare" language in your database, perhaps as a result of an upgrade, you can convert it to an extension using `CREATE EXTENSION <langname> FROM unpackaged`.
 
 `CREATE LANGUAGE` effectively associates the language name with handler function\(s\) that are responsible for executing functions written in the language.
 
@@ -53,7 +53,7 @@ VALIDATOR valfunction
 :   The name of a previously registered function that will be called when a new function in the language is created, to validate the new function. If no validator function is specified, then Greenplum Database will not check a new function when it is created. The validator function must take one argument of type `oid`, which will be the OID of the to-be-created function, and will typically return `void`.
 :   A validator function would typically inspect the function body for syntactical correctness, but it can also look at other properties of the function, for example if the language cannot handle certain argument types. To signal an error, the validator function should use the `ereport()` function. The return value of the function is ignored.
 
-**Note:**  The `TRUSTED` option and the support function name\(s\) are ignored if the server has an entry for the specified language name in `pg_pltemplate`.
+> **Note**  The `TRUSTED` option and the support function name\(s\) are ignored if the server has an entry for the specified language name in `pg_pltemplate`.
 
 ## <a id="section5"></a>Notes 
 

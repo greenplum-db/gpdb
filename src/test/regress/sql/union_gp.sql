@@ -1,4 +1,5 @@
 -- Additional GPDB-added tests for UNION
+SET optimizer_trace_fallback=on;
 
 create temp table t_union1 (a int, b int);
 select distinct a, null::integer as c from t_union1 union select a, b from t_union1;

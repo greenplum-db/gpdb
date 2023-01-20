@@ -185,8 +185,11 @@ to protect the scan over pg_aoseg.
 To answer uniqueness checks for AO/AOCO tables, we have a complication. Unlike
 heap, in AO/CO we don't store the xmin/xmax fields in the tuples. So, we have to
 rely on block directory rows that "cover" the data rows to satisfy index lookups.
-The xmin/xmax of the block directory row(s) help determine tuple visibility for
-uniqueness checks.
+Since the block directory is maintained as a heap table, visibility checks on it
+are identical to any other heap table: the xmin/xmax of the block directory
+row(s) will be leveraged. This means we don't have to write any special
+visibility checking code ourselves, nor do we need to worry about transactions
+vs subtransactions.
 
 Since block directory rows are written usually much after the data row has been
 inserted, there are windows in which there is no block  directory row on disk
@@ -237,3 +240,22 @@ index entries will still point to the segment being compacted. This will be the
 case up until the index entries are bulk deleted, but by then the new index
 entries along with new block directory rows would already have been written and
 would be able to answer uniqueness checks.
+
+Transaction isolation: Since uniqueness checks utilize the special dirty
+snapshot, these checks can cross transaction isolation boundaries. For instance,
+let us consider what will happen if we are in a repeatable read transaction and
+we insert a key that was inserted by a concurrent transaction. Further let's say
+that the repeatable read transaction's snapshot was taken before the concurrent
+transaction started. This means that the repeatable read transaction won't be
+able to see the conflicting key (for eg. with a SELECT). In spite of that
+conflicts will still be detected. Depending on whether the concurrent
+transaction committed or is still in progress, the repeatable read transaction
+will raise a conflict or enter into xwait respectively. This behavior is table
+AM agnostic.
+
+Partial unique indexes: We don't have to do anything special for partial indexes.
+Keys not satisfying the partial index predicate are never inserted into the
+index, and hence there are no uniqueness checks triggered (see
+ExecInsertIndexTuples()). Also during partial unique index builds, keys that
+don't satisfy the partial index predicate are never inserted into the index
+(see *_index_build_range_scan()).

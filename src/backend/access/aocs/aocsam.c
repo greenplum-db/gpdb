@@ -92,14 +92,14 @@ open_datumstreamread_segfile(
  * the block directory.
  */
 static void
-open_all_datumstreamread_segfiles(Relation rel,
-								  AOCSFileSegInfo *segInfo,
-								  DatumStreamRead **ds,
-								  AttrNumber *proj_atts,
-								  AttrNumber num_proj_atts,
-								  AppendOnlyBlockDirectory *blockDirectory)
+open_all_datumstreamread_segfiles(AOCSScanDesc scan, AOCSFileSegInfo *segInfo)
 {
-	char	   *basepath = relpathbackend(rel->rd_node, rel->rd_backend, MAIN_FORKNUM);
+	Relation 		rel = scan->rs_base.rs_rd;
+	DatumStreamRead **ds = scan->columnScanInfo.ds;
+	AttrNumber 		*proj_atts = scan->columnScanInfo.proj_atts;
+	AttrNumber 		num_proj_atts = scan->columnScanInfo.num_proj_atts;
+	AppendOnlyBlockDirectory *blockDirectory = scan->blockDirectory;
+	char *basepath = relpathbackend(rel->rd_node, rel->rd_backend, MAIN_FORKNUM);
 
 	Assert(proj_atts);
 	for (AttrNumber i = 0; i < num_proj_atts; i++)
@@ -108,6 +108,8 @@ open_all_datumstreamread_segfiles(Relation rel,
 
 		open_datumstreamread_segfile(basepath, rel->rd_node, segInfo, ds[attno], attno);
 		datumstreamread_block(ds[attno], blockDirectory, attno);
+
+		AOCSScanDesc_UpdateTotalBytesRead(scan, attno);
 	}
 
 	pfree(basepath);
@@ -329,6 +331,8 @@ initscan_with_colinfo(AOCSScanDesc scan)
 
 	ItemPointerSet(&scan->cdb_fake_ctid, 0, 0);
 
+	scan->totalBytesRead = 0;
+
 	pgstat_count_heap_scan(scan->rs_base.rs_rd);
 }
 
@@ -388,12 +392,7 @@ open_next_scan_seg(AOCSScanDesc scan)
 															true);
 				}
 
-				open_all_datumstreamread_segfiles(scan->rs_base.rs_rd,
-												  curSegInfo,
-												  scan->columnScanInfo.ds,
-												  scan->columnScanInfo.proj_atts,
-												  scan->columnScanInfo.num_proj_atts,
-												  scan->blockDirectory);
+				open_all_datumstreamread_segfiles(scan, curSegInfo);
 
 				return scan->cur_seg;
 			}
@@ -624,80 +623,6 @@ aocs_endscan(AOCSScanDesc scan)
 	pfree(scan);
 }
 
-/*
- * Upgrades a Datum value from a previous version of the AOCS page format. The
- * DatumStreamRead that is passed must correspond to the column being upgraded.
- */
-static void upgrade_datum_impl(DatumStreamRead *ds, int attno, Datum values[],
-							   bool isnull[], int formatversion)
-{
-	bool 	convert_numeric = false;
-
-	if (PG82NumericConversionNeeded(formatversion))
-	{
-		/*
-		 * On the first call for this DatumStream, figure out if this column is
-		 * a numeric, or a domain over numerics.
-		 *
-		 * TODO: consolidate this code with upgrade_tuple() in appendonlyam.c.
-		 */
-		if (!OidIsValid(ds->baseTypeOid))
-		{
-			ds->baseTypeOid = getBaseType(ds->typeInfo.typid);
-		}
-
-		/* If this Datum is a numeric, we need to convert it. */
-		convert_numeric = (ds->baseTypeOid == NUMERICOID) && !isnull[attno];
-	}
-
-	if (convert_numeric)
-	{
-		/*
-		 * Before PostgreSQL 8.3, the n_weight and n_sign_dscale fields were the
-		 * other way 'round. Swap them.
-		 */
-		Datum 		datum;
-		char	   *numericdata;
-		char	   *upgradedata;
-		size_t		datalen;
-		uint16		tmp;
-
-		/*
-		 * We need to make a copy of this data so that any other tuples pointing
-		 * to it won't be affected. Store it in the upgrade space for this
-		 * DatumStream.
-		 */
-		datum = values[attno];
-		datalen = VARSIZE_ANY(DatumGetPointer(datum));
-
-		upgradedata = datumstreamread_get_upgrade_space(ds, datalen);
-		memcpy(upgradedata, DatumGetPointer(datum), datalen);
-
-		/* Swap the fields. */
-		numericdata = VARDATA_ANY(upgradedata);
-
-		memcpy(&tmp, &numericdata[0], 2);
-		memcpy(&numericdata[0], &numericdata[2], 2);
-		memcpy(&numericdata[2], &tmp, 2);
-
-		/* Re-point the Datum to the upgraded numeric. */
-		values[attno] = PointerGetDatum(upgradedata);
-	}
-}
-
-static void upgrade_datum_scan(AOCSScanDesc scan, int attno, Datum values[],
-							   bool isnull[], int formatversion)
-{
-	upgrade_datum_impl(scan->columnScanInfo.ds[attno], attno, values, isnull, formatversion);
-}
-
-static void upgrade_datum_fetch(AOCSFetchDesc fetch, int attno, Datum values[],
-								bool isnull[], int formatversion)
-{
-	upgrade_datum_impl(fetch->datumStreamFetchDesc[attno]->datumStream, attno,
-					   values, isnull, formatversion);
-}
-
 bool
 aocs_getnext(AOCSScanDesc scan, ScanDirection direction, TupleTableSlot *slot)
 {
@@ -764,6 +689,8 @@ ReadNext:
 					goto ReadNext;
 				}
 
+				AOCSScanDesc_UpdateTotalBytesRead(scan, attno);
+
 				err = datumstreamread_advance(scan->columnScanInfo.ds[attno]);
 				Assert(err > 0);
 			}
@@ -773,15 +700,6 @@ ReadNext:
 			 * should still be hot in CPU data cache memory.
 			 */
 			datumstreamread_get(scan->columnScanInfo.ds[attno], &d[attno], &null[attno]);
-
-			/*
-			 * Perform any required upgrades on the Datum we just fetched.
-			 */
-			if (curseginfo->formatversion < AORelationVersion_GetLatest())
-			{
-				upgrade_datum_scan(scan, attno, d, null,
-								   curseginfo->formatversion);
-			}
 
 			if (rowNum == INT64CONST(-1) &&
 				scan->columnScanInfo.ds[attno]->blockFirstRowNum != INT64CONST(-1))
@@ -1161,14 +1079,6 @@ fetchFromCurrentBlock(AOCSFetchDesc aocsFetchDesc,
 
 		datumstreamread_get(datumStream, &(values[colno]), &(nulls[colno]));
 
-		/*
-		 * Perform any required upgrades on the Datum we just fetched.
-		 */
-		if (formatversion < AORelationVersion_GetLatest())
-		{
-			upgrade_datum_fetch(aocsFetchDesc, colno, values, nulls,
-								formatversion);
-		}
 	}
 	else
 	{

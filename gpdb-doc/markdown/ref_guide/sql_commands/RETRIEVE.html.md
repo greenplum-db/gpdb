@@ -20,7 +20,7 @@ If `RETRIEVE` runs off the end of the available rows then the cursor is left pos
 
 `RETRIEVE ALL` always leaves the parallel retrieve cursor positioned after the last row.
 
-**Note:** Greenplum Database does not support scrollable cursors; you can only move a cursor forward in position using the `RETRIEVE` command.
+> **Note** Greenplum Database does not support scrollable cursors; you can only move a cursor forward in position using the `RETRIEVE` command.
 
 **Outputs**
 
