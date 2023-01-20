@@ -52,14 +52,14 @@ OPTIONS (format 'csv', filename '@abs_srcdir@/data/text.csv', mpp_execute 'coord
 explain select word1 from text_csv_coordinator union all select word1 from text_csv_all;
                                            QUERY PLAN                                           
 ------------------------------------------------------------------------------------------------
- Append  (cost=0.00..550.56 rows=10442 width=32)
-   ->  Foreign Scan on text_csv_coordinator  (cost=0.00..1.15 rows=2 width=32)
+ Append  (cost=0.00..862.00 rows=1 width=8)
+   ->  Foreign Scan on text_csv_coordinator  (cost=0.00..431.00 rows=1 width=8)
          Foreign File: @abs_srcdir@/data/text.csv
          Foreign File Size: 86 b
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..497.20 rows=10440 width=32)
-         ->  Foreign Scan on text_csv_all  (cost=0.00..358.00 rows=3480 width=32)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+         ->  Foreign Scan on text_csv_all  (cost=0.00..431.00 rows=1 width=8)
                Foreign File: @abs_srcdir@/data/text<SEGID>.csv
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
 select word1 from text_csv_coordinator union all select word1 from text_csv_all;
@@ -78,15 +78,16 @@ select word1 from text_csv_coordinator union all select word1 from text_csv_all;
 explain select word1 from text_csv_all union all select word1 from text_csv_coordinator;
                                            QUERY PLAN                                           
 ------------------------------------------------------------------------------------------------
- Append  (cost=0.00..550.56 rows=10442 width=32)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..497.20 rows=10440 width=32)
-         ->  Foreign Scan on text_csv_all  (cost=0.00..358.00 rows=3480 width=32)
-               Foreign File: @abs_srcdir@/file_fdw/data/text<SEGID>.csv
-   ->  Foreign Scan on text_csv_coordinator  (cost=0.00..1.15 rows=2 width=32)
-         Foreign File: @abs_srcdir@/file_fdw/data/text.csv
-         Foreign File Size: 86 b
- Optimizer: Postgres query optimizer
-(8 rows)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
+   ->  Append  (cost=0.00..862.00 rows=1 width=8)
+         ->  Foreign Scan on text_csv_all  (cost=0.00..431.00 rows=1 width=8)
+               Foreign File: @abs_srcdir@/data/text<SEGID>.csv
+         ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=8)
+               ->  Foreign Scan on text_csv_coordinator  (cost=0.00..431.00 rows=1 width=8)
+                     Foreign File: @abs_srcdir@/data/text.csv
+                     Foreign File Size: 86 b
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
 
 select word1 from text_csv_all union all select word1 from text_csv_coordinator;
  word1 
@@ -110,17 +111,17 @@ analyze bar;
 explain  select word1 from text_csv_coordinator ft1, bar where ft1.word1 = bar.a;
                                           QUERY PLAN                                           
 -----------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=1.02..2.26 rows=3 width=32)
-   ->  Hash Join  (cost=1.02..2.22 rows=1 width=32)
-         Hash Cond: (ft1.word1 = bar.a)
-         ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..1.18 rows=1 width=32)
-               Hash Key: ft1.word1
-               ->  Foreign Scan on text_csv_coordinator ft1  (cost=0.00..1.15 rows=2 width=32)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
+         Hash Cond: (word1 = bar.a)
+         ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=8)
+               Hash Key: word1
+               ->  Foreign Scan on text_csv_coordinator  (cost=0.00..431.00 rows=1 width=8)
                      Foreign File: @abs_srcdir@/file_fdw/data/text.csv
                      Foreign File Size: 86 b
-         ->  Hash  (cost=1.01..1.01 rows=1 width=4)
-               ->  Seq Scan on bar  (cost=0.00..1.01 rows=1 width=4)
- Optimizer: Postgres query optimizer
+         ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+               ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
 (11 rows)
 
 select word1 from text_csv_coordinator ft1, bar where ft1.word1 = bar.a;
