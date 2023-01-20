@@ -132,9 +132,6 @@ private:
 	// CTAS distribution policy
 	GpPolicy *m_distribution_policy;
 
-	// FXIME: this uses NEW/DELETE, should we use palloc/pfree/memory pool?
-	std::vector<List *> m_static_prune_results;
-
 	UlongToUlongMap *m_part_selector_to_param_map;
 
 
@@ -251,9 +248,6 @@ public:
 	// based on decision made by DetermineDistributionHashOpclasses()
 	Oid GetDistributionHashOpclassForType(Oid typid);
 	Oid GetDistributionHashFuncForType(Oid typid);
-
-	List *GetStaticPruneResult(ULONG scanId);
-	void SetStaticPruneResult(ULONG scanId, List *static_prune_result);
 
 	ULONG GetParamIdForSelector(OID oid_type, const ULONG selectorId);
 

@@ -518,26 +518,6 @@ CContextDXLToPlStmt::GetDistributionHashFuncForType(Oid typid)
 	return hashproc;
 }
 
-List *
-CContextDXLToPlStmt::GetStaticPruneResult(ULONG scanId)
-{
-	// GPDB_12_MERGE_FIXME: we haven't seen the scan id yet, this scan id is likely for dynamic pruning.
-	// When we can, remove this check
-	if ((scanId - 1) >= m_static_prune_results.size())
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
-				   GPOS_WSZ_LIT("dynamic pruning"));
-	}
-	return m_static_prune_results[scanId - 1];
-}
-void
-CContextDXLToPlStmt::SetStaticPruneResult(ULONG scanId,
-										  List *static_prune_result)
-{
-	m_static_prune_results.resize(scanId);
-	m_static_prune_results[scanId - 1] = static_prune_result;
-}
-
 ULONG
 CContextDXLToPlStmt::GetParamIdForSelector(OID oid_type, ULONG selectorId)
 {
