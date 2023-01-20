@@ -595,7 +595,7 @@
         </dxl:LogicalProject>
       </dxl:Difference>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="177876000">
+    <dxl:Plan Id="0" SpaceSize="166212000">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="2592.974241" Rows="1.000000" Width="12"/>

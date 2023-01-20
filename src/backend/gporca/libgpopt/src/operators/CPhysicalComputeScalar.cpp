@@ -454,6 +454,11 @@ CEnfdProp::EPropEnforcingType
 CPhysicalComputeScalar::EpetRewindability(CExpressionHandle &exprhdl,
 										  const CEnfdRewindability *per) const
 {
+	if (per->PrsRequired()->IsOriginNLJoin())
+	{
+		return CEnfdProp::EpetRequired;
+	}
+
 	CColRefSet *pcrsUsed = exprhdl.DeriveUsedColumns(1);
 	CColRefSet *pcrsCorrelatedApply = exprhdl.DeriveCorrelatedApplyColumns();
 	if (!pcrsUsed->IsDisjoint(pcrsCorrelatedApply))

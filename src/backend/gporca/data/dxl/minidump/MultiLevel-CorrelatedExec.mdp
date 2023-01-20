@@ -761,7 +761,7 @@
                   <dxl:ProjElem ColId="28" Alias="sum">
                     <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
                       <dxl:ValuesList ParamType="aggargs">
-                      <dxl:Ident ColId="9" ColName="i" TypeMdid="0.23.1.0"/>
+                        <dxl:Ident ColId="9" ColName="i" TypeMdid="0.23.1.0"/>
                       </dxl:ValuesList>
                       <dxl:ValuesList ParamType="aggdirectargs"/>
                       <dxl:ValuesList ParamType="aggorder"/>
@@ -817,7 +817,7 @@
                         <dxl:ProjElem ColId="27" Alias="sum">
                           <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
                             <dxl:ValuesList ParamType="aggargs">
-                            <dxl:Ident ColId="18" ColName="i" TypeMdid="0.23.1.0"/>
+                              <dxl:Ident ColId="18" ColName="i" TypeMdid="0.23.1.0"/>
                             </dxl:ValuesList>
                             <dxl:ValuesList ParamType="aggdirectargs"/>
                             <dxl:ValuesList ParamType="aggorder"/>

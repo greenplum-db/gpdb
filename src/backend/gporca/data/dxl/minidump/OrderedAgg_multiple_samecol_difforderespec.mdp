@@ -441,7 +441,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
         </dxl:LogicalGet>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="197200">
+    <dxl:Plan Id="0" SpaceSize="106000">
       <dxl:Sequence>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="2712060345.624441" Rows="1.000000" Width="16"/>

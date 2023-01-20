@@ -111,7 +111,7 @@ CPhysicalNLJoin::PrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 		{
 			// for index nested loop joins, inner child is optimized first
 			return GPOS_NEW(mp) CRewindabilitySpec(
-				CRewindabilitySpec::ErtRewindable, prsRequired->Emht(), true);
+				CRewindabilitySpec::ErtRewindable, prsRequired->Emht(), false);
 		}
 
 		CRewindabilitySpec *prsOuter =

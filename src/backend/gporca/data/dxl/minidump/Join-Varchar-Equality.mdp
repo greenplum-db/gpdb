@@ -4276,7 +4276,7 @@
                           </dxl:Cast>
                         </dxl:Comparison>
                       </dxl:HashCondList>
-                      <dxl:DynamicTableScan PartIndexId="1" SelectorIds="10">
+                      <dxl:DynamicTableScan SelectorIds="10">
                         <dxl:Properties>
                           <dxl:Cost StartupCost="0" TotalCost="96421.988429" Rows="5288759693.059181" Width="26"/>
                         </dxl:Properties>
