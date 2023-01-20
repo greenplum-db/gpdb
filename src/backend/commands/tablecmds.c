@@ -5001,7 +5001,11 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 							PartitionByType t = (parkind == 'r') ?
 												 PARTTYP_RANGE : PARTTYP_LIST;
 
-							n = coerce_partition_value(NULL, n, typid, typmod, t);
+							n = coerce_partition_value_to_const(NULL,
+																n,
+																typid,
+																typmod,
+																t);
 
 							lfirst(lc2) = n;
 

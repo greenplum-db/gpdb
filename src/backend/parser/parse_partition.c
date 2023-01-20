@@ -2413,19 +2413,19 @@ preprocess_range_spec(partValidationState *vstate)
 
 						typenameTypeIdAndMod(pstate, typ, &typid, &typmod);
 
-						newnode = coerce_partition_value(pstate,
-														 lfirst(lcstart),
-														 typid, typmod,
-														 PARTTYP_RANGE);
+						newnode = coerce_partition_value_to_const(pstate,
+																  lfirst(lcstart),
+																  typid, typmod,
+																  PARTTYP_RANGE);
 
 						lfirst(lcstart) = newnode;
 
 						/* be sure we coerce the end value */
-						newnode = coerce_partition_value(pstate,
-														 lfirst(lcend),
-														 typid,
-														 typmod,
-														 PARTTYP_RANGE);
+						newnode = coerce_partition_value_to_const(pstate,
+																  lfirst(lcend),
+																  typid,
+																  typmod,
+																  PARTTYP_RANGE);
 
 						assign_expr_collations(pstate, newnode);
 
@@ -2466,11 +2466,11 @@ preprocess_range_spec(partValidationState *vstate)
 						ReleaseSysCache(newetyp);
 
 						/* we need to coerce */
-						e = coerce_partition_value(pstate,
-													e,
-													newrtypeId,
-													typmod,
-													PARTTYP_RANGE);
+						e = coerce_partition_value_to_const(pstate,
+															e,
+															newrtypeId,
+															typmod,
+															PARTTYP_RANGE);
 
 						lfirst(lcevery) = e;
 						rtypeId = newrtypeId;
@@ -2700,10 +2700,10 @@ preprocess_range_spec(partValidationState *vstate)
 
 					typenameTypeIdAndMod(pstate, typ, &typid, &typmod);
 
-					newnode = coerce_partition_value(pstate,
-													 mystart,
-													 typid, typmod,
-													 PARTTYP_RANGE);
+					newnode = coerce_partition_value_to_const(pstate,
+															  mystart,
+															  typid, typmod,
+															  PARTTYP_RANGE);
 
 					assign_expr_collations(pstate, newnode);
 
@@ -2728,10 +2728,10 @@ preprocess_range_spec(partValidationState *vstate)
 
 					typenameTypeIdAndMod(pstate, typ, &typid, &typmod);
 
-					newnode = coerce_partition_value(pstate,
-													 myend,
-													 typid, typmod,
-													 PARTTYP_RANGE);
+					newnode = coerce_partition_value_to_const(pstate,
+															  myend,
+															  typid, typmod,
+															  PARTTYP_RANGE);
 
 					assign_expr_collations(pstate, newnode);
 
@@ -4062,9 +4062,9 @@ validate_list_partition(partValidationState *vstate)
 				Oid			typid;
 
 				typenameTypeIdAndMod(pstate, type, &typid, &typmod);
-				node = coerce_partition_value(pstate,
-											  node, typid, typmod,
-											  PARTTYP_LIST);
+				node = coerce_partition_value_to_const(pstate,
+													   node, typid, typmod,
+													   PARTTYP_LIST);
 
 				tvals = lappend(tvals, node);
 
@@ -4340,9 +4340,15 @@ range_partition_walker(Node *node, void *context)
 	return raw_expression_tree_walker(node, range_partition_walker, ctx);
 }
 
+/*
+ * coerce_partition_value_to_const
+ *		Coerce a partition value to the given type and evaluate it as Const.
+ *
+ * Returns a Node of type Const.
+ */
 Node *
-coerce_partition_value(ParseState *pstate, Node *node, Oid typid, int32 typmod,
-					   PartitionByType partype)
+coerce_partition_value_to_const(ParseState *pstate, Node *node, Oid typid, int32 typmod,
+								PartitionByType partype)
 {
 	Oid			typcollation;
 	Node	   *out;
