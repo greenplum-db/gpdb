@@ -50,9 +50,6 @@ extern char *ChooseRelationNameWithCache(const char *name1, const char *name2,
 										 const char *label, Oid namespaceid,
 										 bool isconstraint,
 										 struct HTAB *cache);
-extern char *ChooseIndexName(const char *tabname, Oid namespaceId,
-				List *colnames, List *exclusionOpNames,
-				bool primary, bool isconstraint);
 extern List *ChooseIndexColumnNames(List *indexElems);
 extern bool CheckIndexCompatible(Oid oldId,
 								 const char *accessMethodName,

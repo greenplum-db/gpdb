@@ -182,7 +182,7 @@ The Greenplum Database R Data Science Modules are installed in the following dir
 $GPHOME/ext/DataScienceR/library
 ```
 
-**Note:** `rjags` libraries are installed in the `$GPHOME/ext/DataScienceR/extlib/lib` directory. If you want to use `rjags` and your `$GPHOME` is not `/usr/local/greenplum-db`, you must perform additional configuration steps to create a symbolic link from `$GPHOME` to `/usr/local/greenplum-db` on each node in your Greenplum Database cluster. For example:
+> **Note** `rjags` libraries are installed in the `$GPHOME/ext/DataScienceR/extlib/lib` directory. If you want to use `rjags` and your `$GPHOME` is not `/usr/local/greenplum-db`, you must perform additional configuration steps to create a symbolic link from `$GPHOME` to `/usr/local/greenplum-db` on each node in your Greenplum Database cluster. For example:
 
 ```
 $ gpssh -f all_hosts -e 'ln -s $GPHOME /usr/local/greenplum-db'
@@ -211,5 +211,5 @@ $ . /usr/local/greenplum-db/greenplum_path.sh
 $ gpstop -r 
 ```
 
-**Note:** When you uninstall the R Data Science Library package from your Greenplum Database cluster, any UDFs that you have created that use R libraries installed with this package will return an error.
+> **Note** When you uninstall the R Data Science Library package from your Greenplum Database cluster, any UDFs that you have created that use R libraries installed with this package will return an error.
 

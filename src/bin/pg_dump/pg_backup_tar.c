@@ -231,12 +231,6 @@ InitArchiveFmt_Tar(ArchiveHandle *AH)
 
 		ctx->hasSeek = checkSeek(ctx->tarFH);
 
-		/*
-		 * Forcibly unmark the header as read since we use the lookahead
-		 * buffer
-		 */
-		AH->readHeader = 0;
-
 		ctx->FH = (void *) tarOpen(AH, "toc.dat", 'r');
 		ReadHead(AH);
 		ReadToc(AH);
@@ -521,8 +515,11 @@ tarClose(ArchiveHandle *AH, TAR_MEMBER *th)
 	 * Close the GZ file since we dup'd. This will flush the buffers.
 	 */
 	if (AH->compression != 0)
+	{
+		errno = 0;				/* in case gzclose() doesn't set it */
 		if (GZCLOSE(th->zFH) != 0)
-			fatal("could not close tar member");
+			fatal("could not close tar member: %m");
+	}
 
 	if (th->mode == 'w')
 		_tarAddFile(AH, th);	/* This will close the temp file */
@@ -645,7 +642,7 @@ _tarReadRaw(ArchiveHandle *AH, void *buf, size_t len, TAR_MEMBER *th, FILE *fh)
 			}
 		}
 		else
-			fatal("internal error -- neither th nor fh specified in tarReadRaw()\n");
+			fatal("internal error -- neither th nor fh specified in tarReadRaw()");
 	}
 
 	ctx->tarFHpos += res + used;
@@ -1162,11 +1159,13 @@ _tarAddFile(ArchiveHandle *AH, TAR_MEMBER *th)
 	/*
 	 * Find file len & go back to start.
 	 */
-	fseeko(tmp, 0, SEEK_END);
+	if (fseeko(tmp, 0, SEEK_END) != 0)
+		fatal("error during file seek: %m");
 	th->fileLen = ftello(tmp);
 	if (th->fileLen < 0)
 		fatal("could not determine seek position in archive file: %m");
-	fseeko(tmp, 0, SEEK_SET);
+	if (fseeko(tmp, 0, SEEK_SET) != 0)
+		fatal("error during file seek: %m");
 
 	_tarWriteHeader(th);
 

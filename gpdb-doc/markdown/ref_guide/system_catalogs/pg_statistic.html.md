@@ -10,7 +10,8 @@ Since different kinds of statistics may be appropriate for different kinds of da
 
 `pg_statistic` should not be readable by the public, since even statistical information about a table's contents should be considered sensitive. \(Example: minimum and maximum values of a salary column\). [pg\_stats](pg_stats.html) is a publicly readable view on `pg_statistic` that only exposes information about those tables that are readable by the current user.
 
-XXX **Warning:** Diagnostic tools such as `gpsd` and `minirepro` collect sensitive information from `pg_statistic`, such as histogram boundaries, in a clear, readable form. Always review the output files of these utilities to ensure that the contents are acceptable for transport outside of the database in your organization.
+XXX
+> **Caution** Diagnostic tools such as `gpsd` and `minirepro` collect sensitive information from `pg_statistic`, such as histogram boundaries, in a clear, readable form. Always review the output files of these utilities to ensure that the contents are acceptable for transport outside of the database in your organization.
 
 |column|type|references|description|
 |------|----|----------|-----------|

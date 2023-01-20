@@ -12,7 +12,7 @@
 -- create FDW objects
 -- ===================================================================
 SET timezone = 'PST8PDT';
-set optimizer = off;
+set optimizer_trace_fallback = on;
 
 CREATE EXTENSION postgres_fdw;
 
@@ -382,6 +382,15 @@ EXPLAIN (VERBOSE, COSTS OFF)
   SELECT * FROM ft1 t1 WHERE t1.c1 === t1.c2 order by t1.c2 limit 1;
 SELECT * FROM ft1 t1 WHERE t1.c1 === t1.c2 order by t1.c2 limit 1;
 
+-- check schema-qualification of regconfig constant
+\! env PGOPTIONS='' psql -p ${PG_PORT} contrib_regression -c 'CREATE TEXT SEARCH CONFIGURATION public.custom_search (COPY = pg_catalog.english);'
+CREATE TEXT SEARCH CONFIGURATION public.custom_search
+  (COPY = pg_catalog.english);
+EXPLAIN (VERBOSE, COSTS OFF)
+SELECT c1, to_tsvector('custom_search'::regconfig, c3) FROM ft1
+WHERE c1 = 642 AND length(to_tsvector('custom_search'::regconfig, c3)) > 0;
+SELECT c1, to_tsvector('custom_search'::regconfig, c3) FROM ft1
+WHERE c1 = 642 AND length(to_tsvector('custom_search'::regconfig, c3)) > 0;
 
 -- ===================================================================
 -- JOIN queries
@@ -855,6 +864,10 @@ create operator class my_op_class for type int using btree family my_op_family a
 explain (verbose, costs off)
 select array_agg(c1 order by c1 using operator(public.<^)) from ft2 where c2 = 6 and c1 < 100 group by c2;
 
+-- This should not be pushed either.
+explain (verbose, costs off)
+select * from ft2 order by c1 using operator(public.<^);
+
 -- Update local stats on ft2
 ANALYZE ft2;
 
@@ -871,6 +884,10 @@ alter server pgserver options (set extensions 'postgres_fdw');
 explain (verbose, costs off)
 select array_agg(c1 order by c1 using operator(public.<^)) from ft2 where c2 = 6 and c1 < 100 group by c2;
 select array_agg(c1 order by c1 using operator(public.<^)) from ft2 where c2 = 6 and c1 < 100 group by c2;
+
+-- This should be pushed too.
+explain (verbose, costs off)
+select * from ft2 order by c1 using operator(public.<^);
 
 -- Remove from extension
 alter extension postgres_fdw drop operator class my_op_class using btree;
@@ -1113,10 +1130,13 @@ DROP TABLE reind_fdw_parent;
 -- conversion error
 -- ===================================================================
 ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 TYPE int;
-SELECT * FROM ft1 WHERE c1 = 1;  -- ERROR
-SELECT  ft1.c1,  ft2.c2, ft1.c8 FROM ft1, ft2 WHERE ft1.c1 = ft2.c1 AND ft1.c1 = 1; -- ERROR
-SELECT  ft1.c1,  ft2.c2, ft1 FROM ft1, ft2 WHERE ft1.c1 = ft2.c1 AND ft1.c1 = 1; -- ERROR
+SELECT * FROM ft1 ftx(x1,x2,x3,x4,x5,x6,x7,x8) WHERE x1 = 1;  -- ERROR
+SELECT ftx.x1, ft2.c2, ftx.x8 FROM ft1 ftx(x1,x2,x3,x4,x5,x6,x7,x8), ft2
+  WHERE ftx.x1 = ft2.c1 AND ftx.x1 = 1; -- ERROR
+SELECT ftx.x1, ft2.c2, ftx FROM ft1 ftx(x1,x2,x3,x4,x5,x6,x7,x8), ft2
+  WHERE ftx.x1 = ft2.c1 AND ftx.x1 = 1; -- ERROR
 SELECT sum(c2), array_agg(c8) FROM ft1 GROUP BY c8; -- ERROR
+ANALYZE ft1; -- ERROR
 ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 TYPE user_enum;
 
 -- ===================================================================
@@ -1223,6 +1243,26 @@ DELETE FROM ft2
   WHERE ft2.c1 > 1200 AND ft2.c1 % 10 = 0 AND ft2.c2 = ft4.c1
   RETURNING 100;
 DELETE FROM ft2 WHERE ft2.c1 > 1200;
+
+-- Test UPDATE with a MULTIEXPR sub-select
+-- (maybe someday this'll be remotely executable, but not today)
+EXPLAIN (verbose, costs off)
+UPDATE ft2 AS target SET (c2, c7) = (
+    SELECT c2 * 10, c7
+        FROM ft2 AS src
+        WHERE target.c1 = src.c1
+) WHERE c1 > 1100;
+UPDATE ft2 AS target SET (c2, c7) = (
+    SELECT c2 * 10, c7
+        FROM ft2 AS src
+        WHERE target.c1 = src.c1
+) WHERE c1 > 1100;
+
+UPDATE ft2 AS target SET (c2) = (
+    SELECT c2 / 10
+        FROM ft2 AS src
+        WHERE target.c1 = src.c1
+) WHERE c1 > 1100;
 
 -- Test UPDATE/DELETE with WHERE or JOIN/ON conditions containing
 -- user-defined operators/functions
@@ -1468,19 +1508,26 @@ select * from rem1;
 -- ===================================================================
 -- test generated columns
 -- ===================================================================
-\! env PGOPTIONS='' psql -p ${PG_PORT} contrib_regression -c 'create table gloc1 (a int, b int);'
+\! env PGOPTIONS='' psql -p ${PG_PORT} contrib_regression -c 'create table gloc1 (a int, b int generated always as (a * 2) stored);'
 \! env PGOPTIONS='' psql -p ${PG_PORT} contrib_regression -c 'alter table gloc1 set (autovacuum_enabled = 'false');'
--- create table gloc1 (a int, b int);
+-- create table gloc1 (
+--   a int,
+--   b int generated always as (a * 2) stored);
 -- alter table gloc1 set (autovacuum_enabled = 'false');
 create foreign table grem1 (
   a int,
   b int generated always as (a * 2) stored)
   server pgserver options(table_name 'gloc1');
+explain (verbose, costs off)
 insert into grem1 (a) values (1), (2);
+insert into grem1 (a) values (1), (2);
+explain (verbose, costs off)
+update grem1 set a = 22 where a = 2;
 update grem1 set a = 22 where a = 2;
 \! env PGOPTIONS='' psql -p ${PG_PORT} contrib_regression -c 'select * from gloc1;'
 -- select * from gloc1;
 select * from grem1;
+delete from grem1;
 
 -- ===================================================================
 -- test local triggers
@@ -1565,6 +1612,23 @@ DROP TRIGGER trig_row_after ON rem1;
 
 DELETE from rem1;
 
+-- Test multiple AFTER ROW triggers on a foreign table
+CREATE TRIGGER trig_row_after1
+AFTER INSERT OR UPDATE OR DELETE ON rem1
+FOR EACH ROW EXECUTE PROCEDURE trigger_data(23,'skidoo');
+
+CREATE TRIGGER trig_row_after2
+AFTER INSERT OR UPDATE OR DELETE ON rem1
+FOR EACH ROW EXECUTE PROCEDURE trigger_data(23,'skidoo');
+
+insert into rem1 values(1,'insert');
+update rem1 set f2  = 'update' where f1 = 1;
+update rem1 set f2 = f2 || f2;
+delete from rem1;
+
+-- cleanup
+DROP TRIGGER trig_row_after1 ON rem1;
+DROP TRIGGER trig_row_after2 ON rem1;
 
 -- Test WHEN conditions
 
@@ -1911,6 +1975,27 @@ select * from bar where f1 in (select f1 from foo) for share;
 -- Greenplum don't support that ModifyTable mixes distributed and entry-only tables.
 -- So SQLs below are disable here.
 /*
+-- Now check SELECT FOR UPDATE/SHARE with an inherited source table,
+-- where the parent is itself a foreign table
+create table loct4 (f1 int, f2 int, f3 int);
+create foreign table foo2child (f3 int) inherits (foo2)
+  server loopback options (table_name 'loct4');
+
+explain (verbose, costs off)
+select * from bar where f1 in (select f1 from foo2) for share;
+select * from bar where f1 in (select f1 from foo2) for share;
+
+drop foreign table foo2child;
+
+-- And with a local child relation of the foreign table parent
+create table foo2child (f3 int) inherits (foo2);
+
+explain (verbose, costs off)
+select * from bar where f1 in (select f1 from foo2) for share;
+select * from bar where f1 in (select f1 from foo2) for share;
+
+drop table foo2child;
+
 -- Check UPDATE with inherited target and an inherited source table
 explain (verbose, costs off)
 update bar set f2 = f2 + 100 where f1 in (select f1 from foo);
@@ -2457,6 +2542,7 @@ drop foreign table rem3;
 \! env PGOPTIONS='' psql -p ${PG_PORT} contrib_regression -c 'CREATE TABLE import_source."x 4" (c1 float8, "C 2" text, c3 varchar(42));'
 \! env PGOPTIONS='' psql -p ${PG_PORT} contrib_regression -c 'CREATE TABLE import_source."x 5" (c1 float8);'
 \! env PGOPTIONS='' psql -p ${PG_PORT} contrib_regression -c 'ALTER TABLE import_source."x 5" DROP COLUMN c1;'
+\! env PGOPTIONS='' psql -p ${PG_PORT} contrib_regression -c 'CREATE TABLE import_source."x 6" (c1 int, c2 int generated always as (c1 * 2) stored);'
 \! env PGOPTIONS='' psql -p ${PG_PORT} contrib_regression -c 'CREATE TABLE import_source.t4 (c1 int) PARTITION BY RANGE (c1);'
 \! env PGOPTIONS='' psql -p ${PG_PORT} contrib_regression -c 'CREATE TABLE import_source.t4_part PARTITION OF import_source.t4 FOR VALUES FROM (1) TO (100);'
 -- CREATE SCHEMA import_source;
@@ -2467,6 +2553,7 @@ drop foreign table rem3;
 -- CREATE TABLE import_source."x 4" (c1 float8, "C 2" text, c3 varchar(42));
 -- CREATE TABLE import_source."x 5" (c1 float8);
 -- ALTER TABLE import_source."x 5" DROP COLUMN c1;
+-- CREATE TABLE import_source."x 6" (c1 int, c2 int generated always as (c1 * 2) stored);
 -- CREATE TABLE import_source.t4 (c1 int) PARTITION BY RANGE (c1);
 -- CREATE TABLE import_source.t4_part PARTITION OF import_source.t4
 --  FOR VALUES FROM (1) TO (100);
@@ -2485,7 +2572,7 @@ IMPORT FOREIGN SCHEMA import_source FROM SERVER pgserver INTO import_dest2
 \d import_dest2.*
 CREATE SCHEMA import_dest3;
 IMPORT FOREIGN SCHEMA import_source FROM SERVER pgserver INTO import_dest3
-  OPTIONS (import_collate 'false', import_not_null 'false');
+  OPTIONS (import_collate 'false', import_generated 'false', import_not_null 'false');
 \det+ import_dest3.*
 \d import_dest3.*
 
@@ -2707,3 +2794,17 @@ SELECT b, avg(a), max(a), count(*) FROM pagg_tab GROUP BY b HAVING sum(a) < 700 
 
 -- Clean-up
 RESET enable_partitionwise_aggregate;
+
+-- ===================================================================
+-- test connection invalidation cases
+-- ===================================================================
+-- This test case is for closing the connection in pgfdw_xact_callback
+BEGIN;
+-- Connection xact depth becomes 1 i.e. the connection is in midst of the xact.
+SELECT 1 FROM ft1 LIMIT 1;
+-- Connection is not closed at the end of the alter statement in
+-- pgfdw_inval_callback. That's because the connection is in midst of this
+-- xact, it is just marked as invalid.
+ALTER SERVER pgserver OPTIONS (ADD use_remote_estimate 'off');
+-- The invalid connection gets closed in pgfdw_xact_callback during commit.
+COMMIT;

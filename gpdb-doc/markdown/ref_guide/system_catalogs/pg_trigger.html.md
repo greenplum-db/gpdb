@@ -2,7 +2,7 @@
 
 The `pg_trigger` system catalog table stores triggers on tables.
 
-**Note:** Greenplum Database does not support triggers.
+> **Note** Greenplum Database does not support triggers.
 
 |column|type|references|description|
 |------|----|----------|-----------|

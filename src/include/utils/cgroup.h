@@ -25,6 +25,7 @@
 #define GPDB_SYSTEM_CGROUP 		6441
 
 #define MAX_CGROUP_PATHLEN 256
+#define MAX_CGROUP_CONTENTLEN 1024  
 
 #define CGROUP_ERROR(...) elog(ERROR, __VA_ARGS__)
 #define CGROUP_CONFIG_ERROR(...) \

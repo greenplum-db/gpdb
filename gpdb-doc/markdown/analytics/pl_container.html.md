@@ -67,7 +67,7 @@ The following sections describe these tasks in detail.
 
 -   For PL/Container 2.1.x use Greenplum Database 6 on CentOS 7.x \(or later\), RHEL 7.x \(or later\), or Ubuntu 18.04.
 
-    **Note:** PL/Container 2.1.x supports Docker images with Python 3 installed.
+    > **Note** PL/Container 2.1.x supports Docker images with Python 3 installed.
 
 -   For PL/Container 3 Beta use Greenplum Database 6.1 or later on CentOS 7.x \(or later\), RHEL 7.x \(or later\), or Ubuntu 18.04.
 -   The minimum Linux OS kernel version supported is 3.10. To verify your kernel release use:
@@ -214,7 +214,7 @@ Install the PL/Container language extension using the `gppkg` utility.
 
 Install the Docker images that PL/Container will use to create language-specific containers to run the UDFs.
 
-**Note:** The PL/Container open source module contains dockerfiles to build Docker images that can be used with PL/Container. You can build a Docker image to run PL/Python UDFs and a Docker image to run PL/R UDFs. See the dockerfiles in the GitHub repository at [https://github.com/greenplum-db/plcontainer](https://github.com/greenplum-db/plcontainer).
+> **Note** The PL/Container open source module contains dockerfiles to build Docker images that can be used with PL/Container. You can build a Docker image to run PL/Python UDFs and a Docker image to run PL/R UDFs. See the dockerfiles in the GitHub repository at [https://github.com/greenplum-db/plcontainer](https://github.com/greenplum-db/plcontainer).
 
 -   Download the files that contain the Docker images from the [VMware Tanzu Network](https://network.pivotal.io). For example, for Greenplum 6.22, click on "PL/Container Image for Python 2.2.0" which downloads **plcontainer-python3-image-2.2.0-gp6.tar.gz** with Python 3.9 and the *Python 3.9 Data Science Module Package*.
 
@@ -241,10 +241,10 @@ Install the Docker images that PL/Container will use to create language-specific
     The utility displays progress information, similar to:
 
     ```
-    20200127:21:54:43:004607 plcontainer:mdw:gpadmin-[INFO]:-Checking whether docker is installed on all hosts...
-    20200127:21:54:43:004607 plcontainer:mdw:gpadmin-[INFO]:-Distributing image file /home/gpadmin/plcontainer-python-images-1.5.0.tar to all hosts...
-    20200127:21:54:55:004607 plcontainer:mdw:gpadmin-[INFO]:-Loading image on all hosts...
-    20200127:21:55:37:004607 plcontainer:mdw:gpadmin-[INFO]:-Removing temporary image files on all hosts...
+    20200127:21:54:43:004607 plcontainer:cdw:gpadmin-[INFO]:-Checking whether docker is installed on all hosts...
+    20200127:21:54:43:004607 plcontainer:cdw:gpadmin-[INFO]:-Distributing image file /home/gpadmin/plcontainer-python-images-1.5.0.tar to all hosts...
+    20200127:21:54:55:004607 plcontainer:cdw:gpadmin-[INFO]:-Loading image on all hosts...
+    20200127:21:55:37:004607 plcontainer:cdw:gpadmin-[INFO]:-Removing temporary image files on all hosts...
     ```
 
     By default, the `image-add` command copies the image to each Greenplum Database segment and standby coordinator host, and installs the image. When you specify the `[-ulc | --use_local_copy]` option, `plcontainer` installs the image only on the host on which you run the command. Use this option when the PL/Container image already resides on disk on a host.
@@ -373,9 +373,9 @@ For further details and examples about using PL/Container functions, see [PL/Con
 
 To upgrade PL/Container, you save the current configuration, upgrade PL/Container, and then restore the configuration after upgrade. There is no need to update the Docker images when you upgrade PL/Container.
 
-**Note:** Before you perform this upgrade procedure, ensure that you have migrated your PL/Container package from your previous Greenplum Database installation to your new Greenplum Database installation. Refer to the [gppkg](../utility_guide/ref/gppkg.html) command for package installation and migration information.
+> **Note** Before you perform this upgrade procedure, ensure that you have migrated your PL/Container package from your previous Greenplum Database installation to your new Greenplum Database installation. Refer to the [gppkg](../utility_guide/ref/gppkg.html) command for package installation and migration information.
 
-**Note:** You cannot upgrade to PL/Container 3 Beta. To install PL/Container 3 Beta, first save and then uninstall your existing PL/Container software. Then follow the instructions in [Install PL/Container](#install_pl_utility).
+> **Note** You cannot upgrade to PL/Container 3 Beta. To install PL/Container 3 Beta, first save and then uninstall your existing PL/Container software. Then follow the instructions in [Install PL/Container](#install_pl_utility).
 
 To upgrade, perform the following procedure:
 

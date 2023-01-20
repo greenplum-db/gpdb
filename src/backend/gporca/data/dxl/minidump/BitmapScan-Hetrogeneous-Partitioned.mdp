@@ -148,7 +148,7 @@ explain select * from t where b=3;
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="6.181437.1.0" Name="t_1_prt_p1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.181437.1.0" Name="t_1_prt_p1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -198,7 +198,7 @@ explain select * from t where b=3;
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.181434.1.0" Name="t" Rows="1000.000000" RelPages="0" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.181434.1.0" Name="t" IsTemporary="false" StorageType="MixedPartitioned" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="0" PartitionTypes="l" NumberLeafPartitions="3">
+      <dxl:Relation Mdid="6.181434.1.0" Name="t" IsTemporary="false" StorageType="MixedPartitioned" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="0" PartitionTypes="l">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -241,7 +241,7 @@ explain select * from t where b=3;
           <dxl:Partition Mdid="6.181451.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.181444.1.0" Name="t_1_prt_p2" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.181444.1.0" Name="t_1_prt_p2" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -300,7 +300,7 @@ explain select * from t where b=3;
           <dxl:Partition Mdid="6.181463.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
-      <dxl:Relation Mdid="6.181451.1.0" Name="t_1_prt_p3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.181451.1.0" Name="t_1_prt_p3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

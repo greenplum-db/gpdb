@@ -9528,8 +9528,6 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-default collation
-INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Queries on master-only tables
                            View "qp_with_clause.view_with_shared_scans"
        Column        |       Type       | Collation | Nullable | Default | Storage  | Description 

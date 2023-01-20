@@ -24,7 +24,7 @@ The Greenplum Database built-in `array` datatype utilizes a bitmap for null valu
 
 The Greenplum Database `gp_sparse_vector` module defines a data type and a simple RLE-based scheme that is biased toward being efficient for zero value bitmaps. This scheme uses only 6 bytes for bitmap storage.
 
-**Note:** The sparse vector data type defined by the `gp_sparse_vector` module is named `svec`. `svec` supports only `float8` vector values.
+> **Note** The sparse vector data type defined by the `gp_sparse_vector` module is named `svec`. `svec` supports only `float8` vector values.
 
 You can construct an `svec` directly from a float array as follows:
 

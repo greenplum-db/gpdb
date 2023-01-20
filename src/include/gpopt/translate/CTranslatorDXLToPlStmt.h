@@ -139,6 +139,9 @@ private:
 	static BOOL SetIndexVarAttnoWalker(
 		Node *node, SContextIndexVarAttno *ctxt_index_var_attno_walker);
 
+	// walker to set inner var to outer
+	static BOOL SetHashKeysVarnoWalker(Node *node, void *context);
+
 public:
 	// ctor
 	CTranslatorDXLToPlStmt(CMemoryPool *mp, CMDAccessor *md_accessor,
@@ -569,10 +572,12 @@ private:
 
 	// compute directed dispatch segment ids
 	List *TranslateDXLDirectDispatchInfo(
-		CDXLDirectDispatchInfo *dxl_direct_dispatch_info);
+		CDXLDirectDispatchInfo *dxl_direct_dispatch_info,
+		RangeTblEntry *pRTEHashFuncCal);
 
 	// hash a DXL datum with GPDB's hash function
-	ULONG GetDXLDatumGPDBHash(CDXLDatumArray *dxl_datum_array);
+	ULONG GetDXLDatumGPDBHash(CDXLDatumArray *dxl_datum_array,
+							  RangeTblEntry *pRTEHashFuncCal);
 
 	// translate nest loop colrefs to GPDB nestparams
 	static List *TranslateNestLoopParamList(

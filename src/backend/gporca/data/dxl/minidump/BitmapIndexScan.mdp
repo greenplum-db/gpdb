@@ -144,7 +144,7 @@ see sql/BitmapIndexScan.sql
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.24732.1.1" Name="inner_table" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.24732.1.1" Name="inner_table" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.24732.1.1" Name="inner_table" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,3">
         <dxl:Columns>
           <dxl:Column Name="flex_value_set_id" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
             <dxl:DefaultValue/>
@@ -221,7 +221,7 @@ see sql/BitmapIndexScan.sql
       <dxl:ColumnStatistics Mdid="1.24702.1.1.3" Name="last_updated_by" Width="0.000000" NullFreq="1.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="false"/>
       <dxl:ColumnStatistics Mdid="1.24702.1.1.2" Name="last_update_date" Width="4.000000" NullFreq="1.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="false"/>
       <dxl:RelationStatistics Mdid="2.24783.1.1" Name="foo" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.24783.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.24783.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="fid" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
             <dxl:DefaultValue/>
@@ -289,7 +289,7 @@ see sql/BitmapIndexScan.sql
       <dxl:ColumnStatistics Mdid="1.24732.1.1.1" Name="flex_value_id" Width="9.000000" NullFreq="0.000000" NdvRemain="1.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
       <dxl:ColumnStatistics Mdid="1.24732.1.1.0" Name="flex_value_set_id" Width="9.000000" NullFreq="0.000000" NdvRemain="1.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
       <dxl:RelationStatistics Mdid="2.24702.1.1" Name="outer_table" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.24702.1.1" Name="outer_table" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="16,14" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.24702.1.1" Name="outer_table" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="16,14">
         <dxl:Columns>
           <dxl:Column Name="flex_value_id" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
             <dxl:DefaultValue/>

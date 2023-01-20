@@ -2240,14 +2240,14 @@ select count(distinct (b)::text) as b, count(distinct (a)::text::varchar) as a f
 (1 row)
 
 explain (verbose, costs off) select count(distinct (b)::text) as b, count(distinct (a)::text::varchar) as a from dqa_f3;
-                                                QUERY PLAN
------------------------------------------------------------------------------------------------------------
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
  Finalize Aggregate
-   Output: count(DISTINCT ((b)::text)), count(DISTINCT (a)::character varying)
+   Output: count(DISTINCT ((b)::text)), count(DISTINCT a)
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         Output: (PARTIAL count(DISTINCT ((b)::text))), (PARTIAL count(DISTINCT (a)::character varying))
+         Output: (PARTIAL count(DISTINCT ((b)::text))), (PARTIAL count(DISTINCT a))
          ->  Partial Aggregate
-               Output: PARTIAL count(DISTINCT ((b)::text)), PARTIAL count(DISTINCT (a)::character varying)
+               Output: PARTIAL count(DISTINCT ((b)::text)), PARTIAL count(DISTINCT a)
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
                      Output: b, a, ((b)::text), (AggExprId)
                      Hash Key: ((b)::text), a, (AggExprId)

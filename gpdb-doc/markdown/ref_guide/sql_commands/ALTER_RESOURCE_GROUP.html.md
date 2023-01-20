@@ -43,7 +43,7 @@ CONCURRENCY integer
 
 :   The `CONCURRENCY` value must be an integer in the range \[0 .. `max_connections`\]. The default `CONCURRENCY` value for a resource group that you create for roles is 20.
 
-:   **Note:** You cannot set the `CONCURRENCY` value for the `admin_group` to zero \(0\).
+:   > **Note** You cannot set the `CONCURRENCY` value for the `admin_group` to zero \(0\).
 
 CPU\_RATE\_LIMIT integer
 :   The percentage of CPU resources to allocate to this resource group. The minimum CPU percentage for a resource group is 1. The maximum is 100. The sum of the `cpu_hard_quota_limit`s of all resource groups defined in the Greenplum Database cluster must not exceed 100.

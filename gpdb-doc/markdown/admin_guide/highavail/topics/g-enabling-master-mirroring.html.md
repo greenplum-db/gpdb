@@ -12,7 +12,7 @@ For information about the utilities [gpinitsystem](../../../utility_guide/ref/gp
 2.  Run the `gpinitstandby` utility on the currently active *primary* coordinator host to add a standby coordinator host to your Greenplum Database system. For example:
 
     ```
-    $ gpinitstandby -s smdw
+    $ gpinitstandby -s scdw
     ```
 
     Where `-s` specifies the standby coordinator host name.

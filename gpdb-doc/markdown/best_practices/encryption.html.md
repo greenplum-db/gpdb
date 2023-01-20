@@ -180,7 +180,7 @@ This section assumes you are installing Greenplum Database on a Linux machine wi
     ```
 
 
-See the [pgcrypto](https://www.postgresql.org/docs/9.4/pgcrypto.html) documentation for more information about PGP encryption functions.
+See the [pgcrypto](https://www.postgresql.org/docs/12/pgcrypto.html) documentation for more information about PGP encryption functions.
 
 ## <a id="section_emf_3kr_bs"></a>Encrypting Data in Tables using PGP 
 
@@ -315,7 +315,7 @@ This section shows how to encrypt data inserted into a column using the PGP keys
     
     ```
 
-    **Note:** Different keys may have the same ID. This is rare, but is a normal event. The client application should try to decrypt with each one to see which fits — like handling `ANYKEY`. See [pgp\_key\_id\(\)](https://www.postgresql.org/docs/9.4/pgcrypto.html) in the pgcrypto documentation.
+    > **Note** Different keys may have the same ID. This is rare, but is a normal event. The client application should try to decrypt with each one to see which fits — like handling `ANYKEY`. See [pgp\_key\_id\(\)](https://www.postgresql.org/docs/12/pgcrypto.html) in the pgcrypto documentation.
 
 6.  Decrypt the data using the private key.
 
@@ -377,7 +377,7 @@ When using gpfdists, the following client certificates must be located in the `$
 -   The client private key file, `client.key`
 -   The trusted certificate authorities, `root.crt`
 
-**Important:** Do not protect the private key with a passphrase. The server does not prompt for a passphrase for the private key, and loading data fails with an error if one is required.
+> **Important** Do not protect the private key with a passphrase. The server does not prompt for a passphrase for the private key, and loading data fails with an error if one is required.
 
 When using `gpload` with SSL you specify the location of the server certificates in the YAML control file. When using `gpfdist` with SSL, you specify the location of the server certificates with the --ssl option.
 

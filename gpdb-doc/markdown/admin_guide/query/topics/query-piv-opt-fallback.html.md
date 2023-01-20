@@ -27,7 +27,7 @@ You can examine the `EXPLAIN` query plan for the query to determine which query 
 
 The log file contains messages that indicate which query optimizer was used. If Greenplum Database falls back to the Postgres Planner, a message with `NOTICE` information is added to the log file that indicates the unsupported feature. Also, the label `Planner produced plan:` appears before the query in the query execution log message when Greenplum Database falls back to the Postgres optimizer.
 
-**Note:** You can configure Greenplum Database to display log messages on the psql command line by setting the Greenplum Database server configuration parameter `client_min_messages` to `LOG`. See the *Greenplum Database Reference Guide* for information about the parameter.
+> **Note** You can configure Greenplum Database to display log messages on the psql command line by setting the Greenplum Database server configuration parameter `client_min_messages` to `LOG`. See the *Greenplum Database Reference Guide* for information about the parameter.
 
 **Parent topic:** [About GPORCA](../../query/topics/query-piv-optimizer.html)
 

@@ -55,7 +55,7 @@ The R package for PivotalR can be found at [https://cran.r-project.org/web/packa
 
 ## <a id="topic3"></a>Installing MADlib 
 
-**Note**: MADlib requires the `m4` macro processor version 1.4.13 or later.
+> **Note** MADlib requires the `m4` macro processor version 1.4.13 or later.
 
 To install MADlib on Greenplum Database, you first install a compatible Greenplum MADlib package and then install the MADlib function libraries on all databases that will use MADlib.
 
@@ -91,10 +91,10 @@ After installing the MADlib package, run the `madpack` command to add MADlib fun
 $ madpack [-s <schema_name>] -p greenplum -c <user>@<host>:<port>/<database> install
 ```
 
-For example, this command creates MADlib functions in the Greenplum database `testdb` running on server `mdw` on port `5432`. The `madpack` command logs in as the user `gpadmin` and prompts for password. The target schema is `madlib`.
+For example, this command creates MADlib functions in the Greenplum database `testdb` running on server `cdw` on port `5432`. The `madpack` command logs in as the user `gpadmin` and prompts for password. The target schema is `madlib`.
 
 ```
-$ madpack -s madlib -p greenplum -c gpadmin@mdw:5432/testdb install
+$ madpack -s madlib -p greenplum -c gpadmin@cdw:5432/testdb install
 ```
 
 After installing the functions, The Greenplum Database `gpadmin` superuser role should grant all privileges on the target schema \(in the example `madlib`\) to users who will be accessing MADlib functions. Users without access to the functions will get the error `ERROR: permission denied for schema MADlib`.
@@ -102,10 +102,10 @@ After installing the functions, The Greenplum Database `gpadmin` superuser role 
 The madpack `install-check` option runs test using Madlib modules to check the MADlib installation:
 
 ```
-$ madpack -s madlib -p greenplum -c gpadmin@mdw:5432/testdb install-check
+$ madpack -s madlib -p greenplum -c gpadmin@cdw:5432/testdb install-check
 ```
 
-**Note:** The command `madpack -h` displays information for the utility.
+> **Note** The command `madpack -h` displays information for the utility.
 
 ## <a id="topic_eqm_klx_hw"></a>Upgrading MADlib 
 
@@ -125,12 +125,12 @@ $ gppkg -u madlib-1.18.0+2-gp6-rhel7-x86_64.gppkg
 
 After you upgrade the MADlib package from one major version to another, run `madpack upgrade` to upgrade the MADlib functions in a database schema.
 
-**Note:** Use `madpack upgrade` only if you upgraded a major MADlib package version, for example from 1.15 to 1.18.0. You do not need to update the functions within a patch version upgrade, for example from 1.16+1 to 1.16+3.
+> **Note** Use `madpack upgrade` only if you upgraded a major MADlib package version, for example from 1.15 to 1.18.0. You do not need to update the functions within a patch version upgrade, for example from 1.16+1 to 1.16+3.
 
 This example command upgrades the MADlib functions in the schema `madlib` of the Greenplum Database `test`.
 
 ```
-madpack -s madlib -p greenplum -c gpadmin@mdw:5432/testdb upgrade
+madpack -s madlib -p greenplum -c gpadmin@cdw:5432/testdb upgrade
 ```
 
 ## <a id="topic6"></a>Uninstalling MADlib 
@@ -145,7 +145,7 @@ When you remove MADlib support from a database, routines that you created in the
 Use the `madpack uninstall` command to remove MADlib objects from a Greenplum database. For example, this command removes MADlib objects from the database `testdb`.
 
 ```
-$ madpack  -s madlib -p greenplum -c gpadmin@mdw:5432/testdb uninstall
+$ madpack  -s madlib -p greenplum -c gpadmin@cdw:5432/testdb uninstall
 ```
 
 ### <a id="topic8"></a>Uninstall the Greenplum Database MADlib Package 
@@ -209,7 +209,7 @@ SELECT madlib.linregr_train (
 
 The `madlib.linregr_train()` function can have additional arguments to set grouping columns and to calculate the heteroskedasticity of the model.
 
-**Note:** The intercept is computed by setting one of the independent variables to a constant `1`, as shown in the preceding example.
+> **Note** The intercept is computed by setting one of the independent variables to a constant `1`, as shown in the preceding example.
 
 Running this query against the `regr_example` table creates the `regr_example_model` table with one row of data:
 

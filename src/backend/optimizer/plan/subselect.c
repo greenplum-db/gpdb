@@ -51,6 +51,9 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbutil.h"
 
+/* source-code-compatibility hacks for pull_varnos() API change */
+#define pull_varnos(a,b) pull_varnos_new(a,b)
+
 typedef struct convert_testexpr_context
 {
 	PlannerInfo *root;
@@ -73,7 +76,6 @@ typedef struct inline_cte_walker_context
 {
 	const char *ctename;		/* name and relative level of target CTE */
 	int			levelsup;
-	int			refcount;		/* number of remaining references */
 	Query	   *ctequery;		/* query to substitute */
 } inline_cte_walker_context;
 
@@ -81,14 +83,15 @@ typedef struct inline_cte_walker_context
 static Node *build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot,
 						   List *plan_params,
 						   SubLinkType subLinkType, int subLinkId,
-						   Node *testexpr, bool adjust_testexpr,
+						   Node *testexpr, List *testexpr_paramids,
 						   bool unknownEqFalse);
 static List *generate_subquery_params(PlannerInfo *root, List *tlist,
 									  List **paramIds);
 static Node *convert_testexpr_mutator(Node *node,
 									  convert_testexpr_context *context);
 static bool subplan_is_hashable(PlannerInfo *root, Plan *plan);
-static bool testexpr_is_hashable(Node *testexpr);
+static bool testexpr_is_hashable(Node *testexpr, List *param_ids);
+static bool test_opexpr_is_hashable(OpExpr *testexpr, List *param_ids);
 static bool hash_ok_operator(OpExpr *expr);
 #if 0
 /*
@@ -432,7 +435,7 @@ make_subplan(PlannerInfo *root, Query *orig_subquery,
 	/* And convert to SubPlan or InitPlan format. */
 	result = build_subplan(root, plan, subroot, plan_params,
 						   subLinkType, subLinkId,
-						   testexpr, true, isTopQual);
+						   testexpr, NIL, isTopQual);
 
 	/*
 	 * If it's a correlated EXISTS with an unimportant targetlist, we might be
@@ -491,12 +494,11 @@ make_subplan(PlannerInfo *root, Query *orig_subquery,
 												  plan_params,
 												  ANY_SUBLINK, 0,
 												  newtestexpr,
-												  false, true));
+												  paramIds,
+												  true));
 				/* Check we got what we expected */
 				Assert(hashplan->parParam == NIL);
 				Assert(hashplan->useHashTable);
-				/* build_subplan won't have filled in paramIds */
-				hashplan->paramIds = paramIds;
 
 				/* Leave it to the executor to decide which plan to use */
 				asplan = makeNode(AlternativeSubPlan);
@@ -519,7 +521,7 @@ static Node *
 build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot,
 			  List *plan_params,
 			  SubLinkType subLinkType, int subLinkId,
-			  Node *testexpr, bool adjust_testexpr,
+			  Node *testexpr, List *testexpr_paramids,
 			  bool unknownEqFalse)
 {
 	Node	   *result;
@@ -560,15 +562,17 @@ build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot,
 		Node	   *arg = pitem->item;
 
 		/*
-		 * The Var, PlaceHolderVar, or Aggref has already been adjusted to
-		 * have the correct varlevelsup, phlevelsup, or agglevelsup.
+		 * The Var, PlaceHolderVar, Aggref or GroupingFunc has already been
+		 * adjusted to have the correct varlevelsup, phlevelsup, or
+		 * agglevelsup.
 		 *
-		 * If it's a PlaceHolderVar or Aggref, its arguments might contain
-		 * SubLinks, which have not yet been processed (see the comments for
-		 * SS_replace_correlation_vars).  Do that now.
+		 * If it's a PlaceHolderVar, Aggref or GroupingFunc, its arguments
+		 * might contain SubLinks, which have not yet been processed (see the
+		 * comments for SS_replace_correlation_vars).  Do that now.
 		 */
 		if (IsA(arg, PlaceHolderVar) ||
-			IsA(arg, Aggref))
+			IsA(arg, Aggref) ||
+			IsA(arg, GroupingFunc))
 			arg = SS_process_sublinks(root, arg, false);
 
 		splan->parParam = lappend_int(splan->parParam, pitem->paramId);
@@ -705,10 +709,10 @@ build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot,
 	else
 	{
 		/*
-		 * Adjust the Params in the testexpr, unless caller said it's not
-		 * needed.
+		 * Adjust the Params in the testexpr, unless caller already took care
+		 * of it (as indicated by passing a list of Param IDs).
 		 */
-		if (testexpr && adjust_testexpr)
+		if (testexpr && testexpr_paramids == NIL)
 		{
 			List	   *params;
 
@@ -720,7 +724,10 @@ build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot,
 											   params);
 		}
 		else
+		{
 			splan->testexpr = testexpr;
+			splan->paramIds = testexpr_paramids;
+		}
 
 		splan->is_multirow = true; /* CDB: take note. */
 
@@ -737,7 +744,7 @@ build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot,
 		if (subLinkType == ANY_SUBLINK &&
 			splan->parParam == NIL &&
 			subplan_is_hashable(root, plan) &&
-			testexpr_is_hashable(splan->testexpr))
+			testexpr_is_hashable(splan->testexpr, splan->paramIds))
 			splan->useHashTable = true;
 
 		/*
@@ -960,24 +967,20 @@ subplan_is_hashable(PlannerInfo *root, Plan *plan)
 
 /*
  * testexpr_is_hashable: is an ANY SubLink's test expression hashable?
+ *
+ * To identify LHS vs RHS of the hash expression, we must be given the
+ * list of output Param IDs of the SubLink's subquery.
  */
 static bool
-testexpr_is_hashable(Node *testexpr)
+testexpr_is_hashable(Node *testexpr, List *param_ids)
 {
 	/*
 	 * The testexpr must be a single OpExpr, or an AND-clause containing only
-	 * OpExprs.
-	 *
-	 * The combining operators must be hashable and strict. The need for
-	 * hashability is obvious, since we want to use hashing. Without
-	 * strictness, behavior in the presence of nulls is too unpredictable.  We
-	 * actually must assume even more than plain strictness: they can't yield
-	 * NULL for non-null inputs, either (see nodeSubplan.c).  However, hash
-	 * indexes and hash joins assume that too.
+	 * OpExprs, each of which satisfy test_opexpr_is_hashable().
 	 */
 	if (testexpr && IsA(testexpr, OpExpr))
 	{
-		if (hash_ok_operator((OpExpr *) testexpr))
+		if (test_opexpr_is_hashable((OpExpr *) testexpr, param_ids))
 			return true;
 	}
 	else if (is_andclause(testexpr))
@@ -990,13 +993,47 @@ testexpr_is_hashable(Node *testexpr)
 
 			if (!IsA(andarg, OpExpr))
 				return false;
-			if (!hash_ok_operator((OpExpr *) andarg))
+			if (!test_opexpr_is_hashable((OpExpr *) andarg, param_ids))
 				return false;
 		}
 		return true;
 	}
 
 	return false;
+}
+
+static bool
+test_opexpr_is_hashable(OpExpr *testexpr, List *param_ids)
+{
+	/*
+	 * The combining operator must be hashable and strict.  The need for
+	 * hashability is obvious, since we want to use hashing.  Without
+	 * strictness, behavior in the presence of nulls is too unpredictable.  We
+	 * actually must assume even more than plain strictness: it can't yield
+	 * NULL for non-null inputs, either (see nodeSubplan.c).  However, hash
+	 * indexes and hash joins assume that too.
+	 */
+	if (!hash_ok_operator(testexpr))
+		return false;
+
+	/*
+	 * The left and right inputs must belong to the outer and inner queries
+	 * respectively; hence Params that will be supplied by the subquery must
+	 * not appear in the LHS, and Vars of the outer query must not appear in
+	 * the RHS.  (Ordinarily, this must be true because of the way that the
+	 * parser builds an ANY SubLink's testexpr ... but inlining of functions
+	 * could have changed the expression's structure, so we have to check.
+	 * Such cases do not occur often enough to be worth trying to optimize, so
+	 * we don't worry about trying to commute the clause or anything like
+	 * that; we just need to be sure not to build an invalid plan.)
+	 */
+	if (list_length(testexpr->args) != 2)
+		return false;
+	if (contain_exec_param((Node *) linitial(testexpr->args), param_ids))
+		return false;
+	if (contain_var_clause((Node *) lsecond(testexpr->args)))
+		return false;
+	return true;
 }
 
 /*
@@ -1328,13 +1365,9 @@ inline_cte(PlannerInfo *root, CommonTableExpr *cte)
 	context.ctename = cte->ctename;
 	/* Start at levelsup = -1 because we'll immediately increment it */
 	context.levelsup = -1;
-	context.refcount = cte->cterefcount;
 	context.ctequery = castNode(Query, cte->ctequery);
 
 	(void) inline_cte_walker((Node *) root->parse, &context);
-
-	/* Assert we replaced all references */
-	Assert(context.refcount == 0);
 }
 
 static bool
@@ -1397,9 +1430,6 @@ inline_cte_walker(Node *node, inline_cte_walker_context *context)
 			rte->coltypes = NIL;
 			rte->coltypmods = NIL;
 			rte->colcollations = NIL;
-
-			/* Count the number of replacements we've done */
-			context->refcount--;
 		}
 
 		return false;
@@ -1508,7 +1538,7 @@ convert_ANY_sublink_to_join(PlannerInfo *root, SubLink *sublink,
 	 * else it's not gonna be a join.  (Note that it won't have Vars
 	 * referring to the subquery, rather Params.)
 	 */
-	upper_varnos = pull_varnos(sublink->testexpr);
+	upper_varnos = pull_varnos(root, sublink->testexpr);
 	if (bms_is_empty(upper_varnos))
 		return NULL;
 
@@ -1691,7 +1721,7 @@ convert_EXISTS_sublink_to_join(PlannerInfo *root, SubLink *sublink,
 	 * The ones <= rtoffset belong to the upper query; the ones > rtoffset do
 	 * not.
 	 */
-	clause_varnos = pull_varnos(whereClause);
+	clause_varnos = pull_varnos(root, whereClause);
 	upper_varnos = NULL;
 	while ((varno = bms_first_member(clause_varnos)) >= 0)
 	{
@@ -2317,10 +2347,11 @@ process_sublinks_mutator(Node *node, process_sublinks_context *context)
 	}
 
 	/*
-	 * Don't recurse into the arguments of an outer PHV or aggregate here. Any
-	 * SubLinks in the arguments have to be dealt with at the outer query
-	 * level; they'll be handled when build_subplan collects the PHV or Aggref
-	 * into the arguments to be passed down to the current subplan.
+	 * Don't recurse into the arguments of an outer PHV, Aggref or
+	 * GroupingFunc here.  Any SubLinks in the arguments have to be dealt with
+	 * at the outer query level; they'll be handled when build_subplan
+	 * collects the PHV, Aggref or GroupingFunc into the arguments to be
+	 * passed down to the current subplan.
 	 */
 	if (IsA(node, PlaceHolderVar))
 	{
@@ -2330,6 +2361,11 @@ process_sublinks_mutator(Node *node, process_sublinks_context *context)
 	else if (IsA(node, Aggref))
 	{
 		if (((Aggref *) node)->agglevelsup > 0)
+			return node;
+	}
+	else if (IsA(node, GroupingFunc))
+	{
+		if (((GroupingFunc *) node)->agglevelsup > 0)
 			return node;
 	}
 
@@ -2449,7 +2485,7 @@ SS_identify_outer_params(PlannerInfo *root)
 	outer_params = NULL;
 	for (proot = root->parent_root; proot != NULL; proot = proot->parent_root)
 	{
-		/* Include ordinary Var/PHV/Aggref params */
+		/* Include ordinary Var/PHV/Aggref/GroupingFunc params */
 		foreach(l, proot->plan_params)
 		{
 			PlannerParamItem *pitem = (PlannerParamItem *) lfirst(l);
@@ -2712,6 +2748,8 @@ finalize_plan(PlannerInfo *root, Plan *plan,
 
 		case T_IndexOnlyScan:
 			finalize_primnode((Node *) ((IndexOnlyScan *) plan)->indexqual,
+							  &context);
+			finalize_primnode((Node *) ((IndexOnlyScan *) plan)->recheckqual,
 							  &context);
 			finalize_primnode((Node *) ((IndexOnlyScan *) plan)->indexorderby,
 							  &context);

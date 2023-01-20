@@ -164,12 +164,20 @@ extern ObjectAddress CreateTrigger(CreateTrigStmt *stmt, const char *queryString
 								   Oid relOid, Oid refRelOid, Oid constraintOid, Oid indexOid,
 								   Oid funcoid, Oid parentTriggerOid, Node *whenClause,
 								   bool isInternal, bool in_partition);
+extern ObjectAddress CreateTriggerFiringOn(CreateTrigStmt *stmt, const char *queryString,
+										   Oid relOid, Oid refRelOid, Oid constraintOid,
+										   Oid indexOid, Oid funcoid, Oid parentTriggerOid,
+										   Node *whenClause, bool isInternal, bool in_partition,
+										   char trigger_fires_when);
 
 extern void RemoveTriggerById(Oid trigOid);
 extern Oid	get_trigger_oid(Oid relid, const char *name, bool missing_ok);
 
 extern ObjectAddress renametrig(RenameStmt *stmt);
 
+extern void EnableDisableTriggerNew(Relation rel, const char *tgname,
+									char fires_when, bool skip_system, bool recurse,
+									LOCKMODE lockmode);
 extern void EnableDisableTrigger(Relation rel, const char *tgname,
 								 char fires_when, bool skip_system, LOCKMODE lockmode);
 

@@ -36,7 +36,7 @@ Greenplum Database provides multiple lock modes to control concurrent access to 
 |EXCLUSIVE|`DELETE`, `UPDATE`, `SELECT...FOR lock_strength`, `REFRESH MATERIALIZED VIEW CONCURRENTLY`|ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE|
 |ACCESS EXCLUSIVE|`ALTER TABLE`, `DROP TABLE`, `TRUNCATE`, `REINDEX`, `CLUSTER`, `REFRESH MATERIALIZED VIEW` \(without `CONCURRENTLY`\), `VACUUM FULL`|ACCESS SHARE, ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE|
 
-**Note:** By default, the Global Deadlock Detector is deactivated, and Greenplum Database acquires the more restrictive `EXCLUSIVE` lock \(rather than `ROW EXCLUSIVE` in PostgreSQL\) for `UPDATE`, `DELETE`, and `SELECT` queries with a locking clause \(`FOR lock_strength`\).
+> **Note** By default, the Global Deadlock Detector is deactivated, and Greenplum Database acquires the more restrictive `EXCLUSIVE` lock \(rather than `ROW EXCLUSIVE` in PostgreSQL\) for `UPDATE`, `DELETE`, and `SELECT` queries with a locking clause \(`FOR lock_strength`\).
 
 When the Global Deadlock Detector is enabled:
 
@@ -207,9 +207,9 @@ When the Global Deadlock Detector determines a deadlock exists for the following
 -   Concurrent update transactions on the same distribution key of a heap table that are run by the Postgres Planner.
 -   Concurrent update transactions on the same row of a hash table that are run by the GPORCA optimizer.
 
-**Note:** Greenplum Database uses the interval specified in the [deadlock\_timeout](../ref_guide/config_params/guc-list.html) server configuration parameter for local deadlock detection. Because the local and global deadlock detection algorithms differ, the cancelled process\(es\) may differ depending upon which detector \(local or global\) Greenplum Database triggers first.
+> **Note** Greenplum Database uses the interval specified in the [deadlock\_timeout](../ref_guide/config_params/guc-list.html) server configuration parameter for local deadlock detection. Because the local and global deadlock detection algorithms differ, the cancelled process\(es\) may differ depending upon which detector \(local or global\) Greenplum Database triggers first.
 
-**Note:** If the [lock\_timeout](../ref_guide/config_params/guc-list.html) server configuration parameter is turned on and set to a value smaller than `deadlock_timeout` and `gp_global_deadlock_detector_period`, Greenplum Database will cancel a statement before it would ever trigger a deadlock check in that session.
+> **Note** If the [lock\_timeout](../ref_guide/config_params/guc-list.html) server configuration parameter is turned on and set to a value smaller than `deadlock_timeout` and `gp_global_deadlock_detector_period`, Greenplum Database will cancel a statement before it would ever trigger a deadlock check in that session.
 
 To view lock waiting information for all segments, run the `gp_dist_wait_status()` user-defined function. You can use the output of this function to determine which transactions are waiting on locks, which transactions are holding locks, the lock types and mode, the waiter and holder session identifiers, and which segments are running the transactions. Sample output of the `gp_dist_wait_status()` function follows:
 
@@ -314,7 +314,7 @@ VACUUM mytable;
 
 The `VACUUM` command collects table-level statistics such as the number of rows and pages. Vacuum all tables after loading data, including append-optimized tables. For information about recommended routine vacuum operations, see [Routine Vacuum and Analyze](managing/maintain.html).
 
-**Important:** The `VACUUM`, `VACUUM FULL`, and `VACUUM ANALYZE` commands should be used to maintain the data in a Greenplum database especially if updates and deletes are frequently performed on your database data. See the `VACUUM` command in the *Greenplum Database Reference Guide* for information about using the command.
+> **Important** The `VACUUM`, `VACUUM FULL`, and `VACUUM ANALYZE` commands should be used to maintain the data in a Greenplum database especially if updates and deletes are frequently performed on your database data. See the `VACUUM` command in the *Greenplum Database Reference Guide* for information about using the command.
 
 ## <a id="topic11"></a>Running Out of Locks 
 
@@ -327,7 +327,7 @@ When Greenplum Database runs out of locks, the error message that you may observ
 ... "ERROR","53200","out of shared memory",,"You might need to increase max_locks_per_transaction.",,,,"LOCK TABLE ...
 ```
 
-**Note:** "shared memory" in this context refers to the shared memory of the internal object: the lock slots. "Out of shared memory" does *not* refer to exhaustion of system- or Greenplum-level memory resources.
+> **Note** "shared memory" in this context refers to the shared memory of the internal object: the lock slots. "Out of shared memory" does *not* refer to exhaustion of system- or Greenplum-level memory resources.
 
 As the hint describes, consider increasing the [`max_locks_per_transaction`](../ref_guide/config_params/guc-list.html) server configuration parameter when you encounter this error.
 

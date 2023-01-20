@@ -394,7 +394,7 @@ void
 readStr(Oid group, BaseDirType base, CGroupComponentType component,
 		const char *filename, char *str, int len)
 {
-	char data[MAX_INT_STRING_LEN];
+	char data[MAX_CGROUP_CONTENTLEN];
 	size_t data_size = sizeof(data);
 	char path[MAX_CGROUP_PATHLEN];
 	size_t path_size = sizeof(path);

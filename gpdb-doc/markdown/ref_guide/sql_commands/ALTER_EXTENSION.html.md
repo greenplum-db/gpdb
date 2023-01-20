@@ -62,7 +62,7 @@ ADD member\_object
 DROP member\_object
 :   This form removes a member object from the extension. This is mainly useful in extension update scripts. The object is not dropped, only disassociated from the extension.
 
-See [Packaging Related Objects into an Extension](https://www.postgresql.org/docs/9.6/extend-extensions.html) for more information about these operations.
+See [Packaging Related Objects into an Extension](https://www.postgresql.org/docs/12/extend-extensions.html) for more information about these operations.
 
 You must own the extension to use `ALTER EXTENSION`. The `ADD` and `DROP` forms also require ownership of the object that is being added or dropped.
 

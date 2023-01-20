@@ -40,7 +40,7 @@ The following topics describe the components that make up a Greenplum Database s
 
 The Greenplum Database coordinator is the entry to the Greenplum Database system, accepting client connections and SQL queries, and distributing work to the segment instances.
 
-Greenplum Database end-users interact with Greenplum Database \(through the coordinator\) as they would with a typical PostgreSQL database. They connect to the database using client programs such as `psql` or application programming interfaces \(APIs\) such as JDBC, ODBC or [libpq](https://www.postgresql.org/docs/9.4/libpq.html) \(the PostgreSQL C API\).
+Greenplum Database end-users interact with Greenplum Database \(through the coordinator\) as they would with a typical PostgreSQL database. They connect to the database using client programs such as `psql` or application programming interfaces \(APIs\) such as JDBC, ODBC or [libpq](https://www.postgresql.org/docs/12/libpq.html) \(the PostgreSQL C API\).
 
 The coordinator is where the *global system catalog* resides. The global system catalog is the set of system tables that contain metadata about the Greenplum Database system itself. The coordinator does not contain any user data; data resides only on the *segments*. The coordinator authenticates client connections, processes incoming SQL commands, distributes workloads among segments, coordinates the results returned by each segment, and presents the final results to the client program.
 

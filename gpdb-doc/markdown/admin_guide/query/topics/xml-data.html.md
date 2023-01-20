@@ -74,9 +74,7 @@ Be careful when dealing with multiple character encodings on the client, server,
 
 When using binary mode to pass query parameters to the server and query results back to the client, no character set conversion is performed, so the situation is different. In this case, an encoding declaration in the XML data will be observed, and if it is absent, the data will be assumed to be in UTF-8 \(as required by the XML standard; note that Greenplum Database does not support UTF-16\). On output, data will have an encoding declaration specifying the client encoding, unless the client encoding is UTF-8, in which case it will be omitted.
 
-**Note:**
-
-Processing XML data with Greenplum Database will be less error-prone and more efficient if the XML data encoding, client encoding, and server encoding are the same. Because XML data is internally processed in UTF-8, computations will be most efficient if the server encoding is also UTF-8.
+> **Note** Processing XML data with Greenplum Database will be less error-prone and more efficient if the XML data encoding, client encoding, and server encoding are the same. Because XML data is internally processed in UTF-8, computations will be most efficient if the server encoding is also UTF-8.
 
 ## <a id="topic_kxv_4gq_vz"></a>Accessing XML Values 
 
@@ -469,7 +467,7 @@ SELECT xmlelement(name foo, xmlattributes('xyz' as bar),
  <foo bar="xyz"><abc/><!--test--><xyz/></foo>
 ```
 
-Content of other types will be formatted into valid XML character data. This means in particular that the characters `<`, `>`, and `&` will be converted to entities. Binary data \(data type `bytea`\) will be represented in base64 or hex encoding, depending on the setting of the configuration parameter [xmlbinary](https://www.postgresql.org/docs/9.4/runtime-config-client.html#GUC-XMLBINARY). The particular behavior for individual data types is expected to evolve in order to align the SQL and Greenplum Database data types with the XML schema specification, at which point a more precise description will appear.
+Content of other types will be formatted into valid XML character data. This means in particular that the characters `<`, `>`, and `&` will be converted to entities. Binary data \(data type `bytea`\) will be represented in base64 or hex encoding, depending on the setting of the configuration parameter [xmlbinary](https://www.postgresql.org/docs/12/runtime-config-client.html#GUC-XMLBINARY). The particular behavior for individual data types is expected to evolve in order to align the SQL and Greenplum Database data types with the XML schema specification, at which point a more precise description will appear.
 
 **Function:**
 

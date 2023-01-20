@@ -913,7 +913,8 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
 
 			more_col_wrapping = col_count;
 			curr_nl_line = 0;
-			memset(header_done, false, col_count * sizeof(bool));
+			if (col_count > 0)
+				memset(header_done, false, col_count * sizeof(bool));
 			while (more_col_wrapping)
 			{
 				if (opt_border == 2)
@@ -3653,6 +3654,9 @@ strlen_max_width(unsigned char *str, int *target_width, int encoding)
 		curr_width += char_width;
 
 		str += PQmblen((char *) str, encoding);
+
+		if (str > end)			/* Don't overrun invalid string */
+			str = end;
 	}
 
 	*target_width = curr_width;

@@ -98,7 +98,7 @@ This table lists the PostGIS extensions support by Greenplum PostGIS.
 </table>
 </div>
 
-**Note:** The PostGIS topology extension `postgis_topology` and the PostGIS 3D and geoprocessing extension `postgis_sfcgal` are not supported by Greenplum PostGIS and are not included in the Greenplum PostGIS extension package.
+> **Note** The PostGIS topology extension `postgis_topology` and the PostGIS 3D and geoprocessing extension `postgis_sfcgal` are not supported by Greenplum PostGIS and are not included in the Greenplum PostGIS extension package.
 
 For information about the PostGIS extensions, see the [PostGIS 2.5 documentation](https://postgis.net/documentation/).
 
@@ -225,7 +225,7 @@ You can also activate or deactivate this feature for a Greenplum Database sessio
 SET postgis.enable_outdb_rasters = true;				
 ```
 
-**Note:** When the feature is enabled, the server configuration parameter `postgis.gdal_enabled_drivers` determines the accessible raster formats.
+> **Note** When the feature is enabled, the server configuration parameter `postgis.gdal_enabled_drivers` determines the accessible raster formats.
 
 ### <a id="topic_bgz_vcl_r1b"></a>Removing PostGIS Support 
 
@@ -233,7 +233,7 @@ You use the `DROP EXTENSION` command to remove support for the PostGIS extension
 
 Removing PostGIS support from a database does not remove these PostGIS Raster environment variables from the `greenplum_path.sh` file: `GDAL_DATA`, `POSTGIS_ENABLE_OUTDB_RASTERS`, `POSTGIS_GDAL_ENABLED_DRIVERS`. The environment variables are removed when you uninstall the PostGIS extension package.
 
-**Warning:** Removing PostGIS support from a database drops PostGIS database objects from the database without warning. Users accessing PostGIS objects might interfere with the dropping of PostGIS objects. See [Notes](#postgis_note).
+> **Caution** Removing PostGIS support from a database drops PostGIS database objects from the database without warning. Users accessing PostGIS objects might interfere with the dropping of PostGIS objects. See [Notes](#postgis_note).
 
 #### <a id="drop_postgis_cmd"></a>Using the DROP EXTENSION Command 
 

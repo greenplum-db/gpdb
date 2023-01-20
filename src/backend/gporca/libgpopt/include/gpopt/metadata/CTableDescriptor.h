@@ -182,8 +182,6 @@ public:
 		return m_pdrgpbsKeys;
 	}
 
-	// return the number of leaf partitions
-	ULONG PartitionCount() const;
 
 	// distribution policy
 	IMDRelation::Ereldistrpolicy

@@ -123,6 +123,8 @@ m/ERROR:  invalid partition constraint on "[^"]+".*/
 s/ERROR:  invalid partition constraint on "[^"]+".*/ERROR:  invalid partition constraint on "[^"]+".*(cdbpartition.c:XXX)/
 m/ERROR:  FIPS enabled OpenSSL is required for strict FIPS mode .*/
 s/ERROR:  FIPS enabled OpenSSL is required for strict FIPS mode .*/ERROR:  FIPS enabled OpenSSL is required for strict FIPS mode (openssl.c:XXX)/
+m/ERROR:  requested functionality not allowed in FIPS mode .*/
+s/ERROR:  requested functionality not allowed in FIPS mode .*/ERROR:  requested functionality not allowed in FIPS mode (openssl.c:XXX)/
 
 # Mask out OpenSSL behavior change in different version
 m/ERROR:  Cannot use "md5": No such hash algorithm/
@@ -160,6 +162,10 @@ s/\(dbsize\.c:\d+\)/\(dbsize\.c:XXX\)/
 # remove the cdbdisp_async suffix of some ERROR messages
 m/ \(cdbdisp_async\.c.*\)/
 s/ \(cdbdisp_async\.c.*\)//
+
+# remove the parse_utilcmd suffix of some ERROR messages
+m/ \(parse_utilcmd\.c\:\d+\)/
+s/ \(parse_utilcmd\.c:\d+\)//
 
 # ignore establish time and segindex num
 m/ The shortest establish conn time: \d+\.\d+ ms, segindex: \d+,/

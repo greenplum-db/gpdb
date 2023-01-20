@@ -64,13 +64,11 @@ Greenplum Database provides the following utility programs. Superscripts identif
 - [reindexdb](ref/reindexdb.html)
 - [vacuumdb](ref/vacuumdb.html)
 
-**Note:**
+> **Note** <sup>1</sup> The utility program can be obtained from the *Greenplum Backup and Restore* tile on [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb-backup-restore).
 
-<sup>1</sup> The utility program can be obtained from the *Greenplum Backup and Restore* tile on [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb-backup-restore).
+> <sup>2</sup> The utility program can be obtained from the *Greenplum Data Copy Utility* tile on [VMware Tanzu Network](https://network.pivotal.io/products/gpdb-data-copy).
 
-<sup>2</sup> The utility program can be obtained from the *Greenplum Data Copy Utility* tile on [VMware Tanzu Network](https://network.pivotal.io/products/gpdb-data-copy).
+> <sup>3</sup> The utility program is also installed with the _Greenplum Client and Loader Tools Package_ for Linux and Windows. You can obtain these packages from the Greenplum Database _Greenplum Clients_ filegroup on [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb).
 
-<sup>3</sup> The utility program is also installed with the _Greenplum Client and Loader Tools Package_ for Linux and Windows. You can obtain these packages from the Greenplum Database _Greenplum Clients_ filegroup on [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb).
-
-<sup>4</sup> The utility program is also installed with the _Greenplum Client and Loader Tools Package_ for Linux. You can obtain the most up-to-date version of the _Greenplum Streaming Server_ from [VMware Tanzu Network](https://network.pivotal.io/products/greenplum-streaming-server).
+> <sup>4</sup> The utility program is also installed with the _Greenplum Client and Loader Tools Package_ for Linux. You can obtain the most up-to-date version of the _Greenplum Streaming Server_ from [VMware Tanzu Network](https://network.pivotal.io/products/greenplum-streaming-server).
 

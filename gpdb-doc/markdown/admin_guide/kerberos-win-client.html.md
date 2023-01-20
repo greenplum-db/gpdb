@@ -110,7 +110,7 @@ Type "help" for help.
 
 You can create and use a Kerberos `keytab` file to avoid entering a password at the command line or listing a password in a script file when you connect to a Greenplum Database system, perhaps when automating a scheduled Greenplum task such as `gpload`. You can create a keytab file with the Java JRE keytab utility `ktab`. If you use AES256-CTS-HMAC-SHA1-96 encryption, you need to download and install the Java extension *Java Cryptography Extension \(JCE\) Unlimited Strength Jurisdiction Policy Files for JDK/JRE* from Oracle.
 
-**Note:** You must enter the password to create a keytab file. The password is visible onscreen as you enter it.
+> **Note** You must enter the password to create a keytab file. The password is visible onscreen as you enter it.
 
 This example runs the Java `ktab.exe` program to create a keytab file \(`-a` option\) and list the keytab name and entries \(`-l` `-e` `-t` options\).
 

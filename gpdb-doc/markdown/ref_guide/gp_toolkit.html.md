@@ -8,7 +8,7 @@ Greenplum Database provides an administrative schema called `gp_toolkit` that yo
 
 This documentation describes the most useful views in `gp_toolkit`. You may notice other objects \(views, functions, and external tables\) within the `gp_toolkit` schema that are not described in this documentation \(these are supporting objects to the views described in this section\).
 
-**Warning:** Do not change database objects in the gp\_toolkit schema. Do not create database objects in the schema. Changes to objects in the schema might affect the accuracy of administrative information returned by schema objects. Any changes made in the gp\_toolkit schema are lost when the database is backed up and then restored with the `gpbackup` and `gprestore` utilities.
+> **Caution** Do not change database objects in the gp\_toolkit schema. Do not create database objects in the schema. Changes to objects in the schema might affect the accuracy of administrative information returned by schema objects. Any changes made in the gp\_toolkit schema are lost when the database is backed up and then restored with the `gpbackup` and `gprestore` utilities.
 
 These are the categories for views in the `gp_toolkit` schema.
 
@@ -56,7 +56,7 @@ The `ANALYZE` command collects column-level statistics needed by the query optim
 
 This view shows regular heap-storage tables that have bloat \(the actual number of pages on disk exceeds the expected number of pages given the table statistics\). Tables that are bloated require a `VACUUM` or a `VACUUM FULL` in order to reclaim disk space occupied by deleted or obsolete rows. This view is accessible to all users, however non-superusers will only be able to see the tables that they have permission to access.
 
-**Note:** For diagnostic functions that return append-optimized table information, see [Checking Append-Optimized Tables](#topic8).
+> **Note** For diagnostic functions that return append-optimized table information, see [Checking Append-Optimized Tables](#topic8).
 
 |Column|Description|
 |------|-----------|
@@ -108,7 +108,7 @@ This view shows any locks currently being held on a relation, and the associated
 
 ### <a id="topic7"></a>gp\_locks\_on\_resqueue 
 
-**Note:** The `gp_locks_on_resqueue` view is valid only when resource queue-based resource management is active.
+> **Note** The `gp_locks_on_resqueue` view is valid only when resource queue-based resource management is active.
 
 This view shows any locks currently being held on a resource queue, and the associated session information about the query associated with the lock. This view is accessible to all users, however non-superusers will only be able to see the locks associated with their own sessions.
 
@@ -142,7 +142,7 @@ For most of the functions, the input argument is `regclass`, either the table `n
 
 This function displays compaction information for an append-optimized table. The information is for the on-disk data files on Greenplum Database segments that store the table data. You can use the information to determine the data files that will be compacted by a `VACUUM` operation on an append-optimized table.
 
-**Note:** Until a VACUUM operation deletes the row from the data file, deleted or updated data rows occupy physical space on disk even though they are hidden to new transactions. The configuration parameter [gp\_appendonly\_compaction](config_params/guc-list.html) controls the functionality of the `VACUUM` command.
+> **Note** Until a VACUUM operation deletes the row from the data file, deleted or updated data rows occupy physical space on disk even though they are hidden to new transactions. The configuration parameter [gp\_appendonly\_compaction](config_params/guc-list.html) controls the functionality of the `VACUUM` command.
 
 This table describes the \_\_gp\_aovisimap\_compaction\_info function output table.
 
@@ -472,7 +472,7 @@ This view shows information about segments that are marked as down in the system
 
 ## <a id="topic26x"></a>Checking Resource Group Activity and Status 
 
-**Note:** The resource group activity and status views described in this section are valid only when resource group-based resource management is active.
+> **Note** The resource group activity and status views described in this section are valid only when resource group-based resource management is active.
 
 Resource groups manage transactions to avoid exhausting system CPU and memory resources. Every database user is assigned a resource group. Greenplum Database evaluates every transaction submitted by a user against the limits configured for the user's resource group before running the transaction.
 
@@ -507,7 +507,7 @@ This view is accessible to all users.
 
 The `gp_resgroup_status` view allows administrators to see status and activity for a resource group. It shows how many queries are waiting to run and how many queries are currently active in the system for each resource group. The view also displays current memory and CPU usage for the resource group.
 
-**Note:** Resource groups use the Linux control groups \(cgroups\) configured on the host systems. The cgroups are used to manage host system resources. When resource groups use cgroups that are as part of a nested set of cgroups, resource group limits are relative to the parent cgroup allotment. For information about nested cgroups and Greenplum Database resource group limits, see [Using Resource Groups](../admin_guide/workload_mgmt_resgroups.html#topic8339intro).
+> **Note** Resource groups use the Linux control groups \(cgroups\) configured on the host systems. The cgroups are used to manage host system resources. When resource groups use cgroups that are as part of a nested set of cgroups, resource group limits are relative to the parent cgroup allotment. For information about nested cgroups and Greenplum Database resource group limits, see [Using Resource Groups](../admin_guide/workload_mgmt_resgroups.html#topic8339intro).
 
 This view is accessible to all users.
 
@@ -545,7 +545,7 @@ For each resource group that you assign to an external component, the `memory_us
 "1":{"used":11, "limit_granted":15}
 ```
 
-**Note:** See the `gp_resgroup_status_per_host` and `gp_resgroup_status_per_segment` views, described below, for more user-friendly display of CPU and memory usage.
+> **Note** See the `gp_resgroup_status_per_host` and `gp_resgroup_status_per_segment` views, described below, for more user-friendly display of CPU and memory usage.
 
 ### <a id="perhost"></a>gp\_resgroup\_status\_per\_host 
 
@@ -596,7 +596,7 @@ Query output for this view is similar to that of the `gp_resgroup_status_per_hos
 
 ## <a id="topic26"></a>Checking Resource Queue Activity and Status 
 
-**Note:** The resource queue activity and status views described in this section are valid only when resource queue-based resource management is active.
+> **Note** The resource queue activity and status views described in this section are valid only when resource queue-based resource management is active.
 
 The purpose of resource queues is to limit the number of active queries in the system at any given time in order to avoid exhausting system resources such as memory, CPU, and disk I/O. All database users are assigned to a resource queue, and every statement submitted by a user is first evaluated against the resource queue limits before it can run. The `gp_resq_*` family of views can be used to check the status of statements currently submitted to the system through their respective resource queue. Note that statements issued by superusers are exempt from resource queuing.
 

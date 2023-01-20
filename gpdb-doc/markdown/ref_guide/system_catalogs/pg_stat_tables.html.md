@@ -29,7 +29,7 @@ The `pg_stat_user_tables` and `pg_stat_sys_table` views contain the same informa
 |`analyze_count`|bigint|Number of times this table has been manually analyzed|
 |`autoanalyze_count`|bigint|Number of times this table has been analyzed by the autovacuum daemon <sup>1</sup>|
 
-**Note:** <sup>1</sup>In Greenplum Database, the autovacuum daemon is deactivated and not supported for user defined databases.
+> **Note** <sup>1</sup>In Greenplum Database, the autovacuum daemon is deactivated and not supported for user defined databases.
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

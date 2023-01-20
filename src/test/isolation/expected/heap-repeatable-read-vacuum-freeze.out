@@ -4,51 +4,61 @@ starting permutation: s2begin s1delete s1setfreezeminage s1vacuumfreeze s2select
 step s2begin: SET Debug_print_full_dtm=on; BEGIN ISOLATION LEVEL REPEATABLE READ;
 		 SELECT 123 AS "establish snapshot";
 establish snapshot
+------------------
+               123
+(1 row)
 
-123            
 step s1delete: DELETE FROM heaptest;
 step s1setfreezeminage: SET vacuum_freeze_min_age = 0;
 step s1vacuumfreeze: VACUUM heaptest;
 step s2select: 
     SELECT * from show_heaptest_content ORDER BY i;
 
-xmin_kind      xmax_kind      i              j              
+xmin_kind|xmax_kind|i|j
+---------+---------+-+-
+FrozenXid|NormalXid|0|0
+FrozenXid|NormalXid|1|1
+FrozenXid|NormalXid|2|2
+FrozenXid|NormalXid|3|3
+FrozenXid|NormalXid|4|4
+FrozenXid|NormalXid|5|5
+FrozenXid|NormalXid|6|6
+FrozenXid|NormalXid|7|7
+FrozenXid|NormalXid|8|8
+FrozenXid|NormalXid|9|9
+(10 rows)
 
-FrozenXid      NormalXid      0              0              
-FrozenXid      NormalXid      1              1              
-FrozenXid      NormalXid      2              2              
-FrozenXid      NormalXid      3              3              
-FrozenXid      NormalXid      4              4              
-FrozenXid      NormalXid      5              5              
-FrozenXid      NormalXid      6              6              
-FrozenXid      NormalXid      7              7              
-FrozenXid      NormalXid      8              8              
-FrozenXid      NormalXid      9              9              
 step s1select: SELECT COUNT(*) FROM heaptest;
-count          
+count
+-----
+    0
+(1 row)
 
-0              
 step s2abort: ABORT;
 step s3select: 
     SELECT * from show_heaptest_content ORDER BY i;
 
-xmin_kind      xmax_kind      i              j              
+xmin_kind|xmax_kind|i|j
+---------+---------+-+-
+FrozenXid|NormalXid| | 
+FrozenXid|NormalXid| | 
+FrozenXid|NormalXid| | 
+FrozenXid|NormalXid| | 
+FrozenXid|NormalXid| | 
+FrozenXid|NormalXid| | 
+FrozenXid|NormalXid| | 
+FrozenXid|NormalXid| | 
+FrozenXid|NormalXid| | 
+FrozenXid|NormalXid| | 
+(10 rows)
 
-FrozenXid      NormalXid                                    
-FrozenXid      NormalXid                                    
-FrozenXid      NormalXid                                    
-FrozenXid      NormalXid                                    
-FrozenXid      NormalXid                                    
-FrozenXid      NormalXid                                    
-FrozenXid      NormalXid                                    
-FrozenXid      NormalXid                                    
-FrozenXid      NormalXid                                    
-FrozenXid      NormalXid                                    
 step s1vacuumfreeze: VACUUM heaptest;
 step s3select: 
     SELECT * from show_heaptest_content ORDER BY i;
 
-xmin_kind      xmax_kind      i              j              
+xmin_kind|xmax_kind|i|j
+---------+---------+-+-
+(0 rows)
 
 
 starting permutation: s4begin s4delete s4abort s1setfreezeminage s1vacuumfreeze s2select
@@ -60,156 +70,172 @@ step s1vacuumfreeze: VACUUM heaptest;
 step s2select: 
     SELECT * from show_heaptest_content ORDER BY i;
 
-xmin_kind      xmax_kind      i              j              
+xmin_kind|xmax_kind |i|j
+---------+----------+-+-
+FrozenXid|InvalidXid|0|0
+FrozenXid|InvalidXid|1|1
+FrozenXid|InvalidXid|2|2
+FrozenXid|InvalidXid|3|3
+FrozenXid|InvalidXid|4|4
+FrozenXid|InvalidXid|5|5
+FrozenXid|InvalidXid|6|6
+FrozenXid|InvalidXid|7|7
+FrozenXid|InvalidXid|8|8
+FrozenXid|InvalidXid|9|9
+(10 rows)
 
-FrozenXid      InvalidXid     0              0              
-FrozenXid      InvalidXid     1              1              
-FrozenXid      InvalidXid     2              2              
-FrozenXid      InvalidXid     3              3              
-FrozenXid      InvalidXid     4              4              
-FrozenXid      InvalidXid     5              5              
-FrozenXid      InvalidXid     6              6              
-FrozenXid      InvalidXid     7              7              
-FrozenXid      InvalidXid     8              8              
-FrozenXid      InvalidXid     9              9              
 
 starting permutation: s2begin s1insert s1setfreezeminage s1vacuumfreeze s2select s1select s2abort s2select s3select s1vacuumfreeze s2select s3select
 step s2begin: SET Debug_print_full_dtm=on; BEGIN ISOLATION LEVEL REPEATABLE READ;
 		 SELECT 123 AS "establish snapshot";
 establish snapshot
+------------------
+               123
+(1 row)
 
-123            
 step s1insert: SET Debug_print_full_dtm=on; INSERT INTO heaptest SELECT i, i FROM generate_series(10, 19) i;
 step s1setfreezeminage: SET vacuum_freeze_min_age = 0;
 step s1vacuumfreeze: VACUUM heaptest;
 step s2select: 
     SELECT * from show_heaptest_content ORDER BY i;
 
-xmin_kind      xmax_kind      i              j              
+xmin_kind|xmax_kind |i|j
+---------+----------+-+-
+FrozenXid|InvalidXid|0|0
+FrozenXid|InvalidXid|1|1
+FrozenXid|InvalidXid|2|2
+FrozenXid|InvalidXid|3|3
+FrozenXid|InvalidXid|4|4
+FrozenXid|InvalidXid|5|5
+FrozenXid|InvalidXid|6|6
+FrozenXid|InvalidXid|7|7
+FrozenXid|InvalidXid|8|8
+FrozenXid|InvalidXid|9|9
+NormalXid|InvalidXid| | 
+NormalXid|InvalidXid| | 
+NormalXid|InvalidXid| | 
+NormalXid|InvalidXid| | 
+NormalXid|InvalidXid| | 
+NormalXid|InvalidXid| | 
+NormalXid|InvalidXid| | 
+NormalXid|InvalidXid| | 
+NormalXid|InvalidXid| | 
+NormalXid|InvalidXid| | 
+(20 rows)
 
-FrozenXid      InvalidXid     0              0              
-FrozenXid      InvalidXid     1              1              
-FrozenXid      InvalidXid     2              2              
-FrozenXid      InvalidXid     3              3              
-FrozenXid      InvalidXid     4              4              
-FrozenXid      InvalidXid     5              5              
-FrozenXid      InvalidXid     6              6              
-FrozenXid      InvalidXid     7              7              
-FrozenXid      InvalidXid     8              8              
-FrozenXid      InvalidXid     9              9              
-NormalXid      InvalidXid                                   
-NormalXid      InvalidXid                                   
-NormalXid      InvalidXid                                   
-NormalXid      InvalidXid                                   
-NormalXid      InvalidXid                                   
-NormalXid      InvalidXid                                   
-NormalXid      InvalidXid                                   
-NormalXid      InvalidXid                                   
-NormalXid      InvalidXid                                   
-NormalXid      InvalidXid                                   
 step s1select: SELECT COUNT(*) FROM heaptest;
-count          
+count
+-----
+   20
+(1 row)
 
-20             
 step s2abort: ABORT;
 step s2select: 
     SELECT * from show_heaptest_content ORDER BY i;
 
-xmin_kind      xmax_kind      i              j              
+xmin_kind|xmax_kind | i| j
+---------+----------+--+--
+FrozenXid|InvalidXid| 0| 0
+FrozenXid|InvalidXid| 1| 1
+FrozenXid|InvalidXid| 2| 2
+FrozenXid|InvalidXid| 3| 3
+FrozenXid|InvalidXid| 4| 4
+FrozenXid|InvalidXid| 5| 5
+FrozenXid|InvalidXid| 6| 6
+FrozenXid|InvalidXid| 7| 7
+FrozenXid|InvalidXid| 8| 8
+FrozenXid|InvalidXid| 9| 9
+NormalXid|InvalidXid|10|10
+NormalXid|InvalidXid|11|11
+NormalXid|InvalidXid|12|12
+NormalXid|InvalidXid|13|13
+NormalXid|InvalidXid|14|14
+NormalXid|InvalidXid|15|15
+NormalXid|InvalidXid|16|16
+NormalXid|InvalidXid|17|17
+NormalXid|InvalidXid|18|18
+NormalXid|InvalidXid|19|19
+(20 rows)
 
-FrozenXid      InvalidXid     0              0              
-FrozenXid      InvalidXid     1              1              
-FrozenXid      InvalidXid     2              2              
-FrozenXid      InvalidXid     3              3              
-FrozenXid      InvalidXid     4              4              
-FrozenXid      InvalidXid     5              5              
-FrozenXid      InvalidXid     6              6              
-FrozenXid      InvalidXid     7              7              
-FrozenXid      InvalidXid     8              8              
-FrozenXid      InvalidXid     9              9              
-NormalXid      InvalidXid     10             10             
-NormalXid      InvalidXid     11             11             
-NormalXid      InvalidXid     12             12             
-NormalXid      InvalidXid     13             13             
-NormalXid      InvalidXid     14             14             
-NormalXid      InvalidXid     15             15             
-NormalXid      InvalidXid     16             16             
-NormalXid      InvalidXid     17             17             
-NormalXid      InvalidXid     18             18             
-NormalXid      InvalidXid     19             19             
 step s3select: 
     SELECT * from show_heaptest_content ORDER BY i;
 
-xmin_kind      xmax_kind      i              j              
+xmin_kind|xmax_kind | i| j
+---------+----------+--+--
+FrozenXid|InvalidXid| 0| 0
+FrozenXid|InvalidXid| 1| 1
+FrozenXid|InvalidXid| 2| 2
+FrozenXid|InvalidXid| 3| 3
+FrozenXid|InvalidXid| 4| 4
+FrozenXid|InvalidXid| 5| 5
+FrozenXid|InvalidXid| 6| 6
+FrozenXid|InvalidXid| 7| 7
+FrozenXid|InvalidXid| 8| 8
+FrozenXid|InvalidXid| 9| 9
+NormalXid|InvalidXid|10|10
+NormalXid|InvalidXid|11|11
+NormalXid|InvalidXid|12|12
+NormalXid|InvalidXid|13|13
+NormalXid|InvalidXid|14|14
+NormalXid|InvalidXid|15|15
+NormalXid|InvalidXid|16|16
+NormalXid|InvalidXid|17|17
+NormalXid|InvalidXid|18|18
+NormalXid|InvalidXid|19|19
+(20 rows)
 
-FrozenXid      InvalidXid     0              0              
-FrozenXid      InvalidXid     1              1              
-FrozenXid      InvalidXid     2              2              
-FrozenXid      InvalidXid     3              3              
-FrozenXid      InvalidXid     4              4              
-FrozenXid      InvalidXid     5              5              
-FrozenXid      InvalidXid     6              6              
-FrozenXid      InvalidXid     7              7              
-FrozenXid      InvalidXid     8              8              
-FrozenXid      InvalidXid     9              9              
-NormalXid      InvalidXid     10             10             
-NormalXid      InvalidXid     11             11             
-NormalXid      InvalidXid     12             12             
-NormalXid      InvalidXid     13             13             
-NormalXid      InvalidXid     14             14             
-NormalXid      InvalidXid     15             15             
-NormalXid      InvalidXid     16             16             
-NormalXid      InvalidXid     17             17             
-NormalXid      InvalidXid     18             18             
-NormalXid      InvalidXid     19             19             
 step s1vacuumfreeze: VACUUM heaptest;
 step s2select: 
     SELECT * from show_heaptest_content ORDER BY i;
 
-xmin_kind      xmax_kind      i              j              
+xmin_kind|xmax_kind | i| j
+---------+----------+--+--
+FrozenXid|InvalidXid| 0| 0
+FrozenXid|InvalidXid| 1| 1
+FrozenXid|InvalidXid| 2| 2
+FrozenXid|InvalidXid| 3| 3
+FrozenXid|InvalidXid| 4| 4
+FrozenXid|InvalidXid| 5| 5
+FrozenXid|InvalidXid| 6| 6
+FrozenXid|InvalidXid| 7| 7
+FrozenXid|InvalidXid| 8| 8
+FrozenXid|InvalidXid| 9| 9
+FrozenXid|InvalidXid|10|10
+FrozenXid|InvalidXid|11|11
+FrozenXid|InvalidXid|12|12
+FrozenXid|InvalidXid|13|13
+FrozenXid|InvalidXid|14|14
+FrozenXid|InvalidXid|15|15
+FrozenXid|InvalidXid|16|16
+FrozenXid|InvalidXid|17|17
+FrozenXid|InvalidXid|18|18
+FrozenXid|InvalidXid|19|19
+(20 rows)
 
-FrozenXid      InvalidXid     0              0              
-FrozenXid      InvalidXid     1              1              
-FrozenXid      InvalidXid     2              2              
-FrozenXid      InvalidXid     3              3              
-FrozenXid      InvalidXid     4              4              
-FrozenXid      InvalidXid     5              5              
-FrozenXid      InvalidXid     6              6              
-FrozenXid      InvalidXid     7              7              
-FrozenXid      InvalidXid     8              8              
-FrozenXid      InvalidXid     9              9              
-FrozenXid      InvalidXid     10             10             
-FrozenXid      InvalidXid     11             11             
-FrozenXid      InvalidXid     12             12             
-FrozenXid      InvalidXid     13             13             
-FrozenXid      InvalidXid     14             14             
-FrozenXid      InvalidXid     15             15             
-FrozenXid      InvalidXid     16             16             
-FrozenXid      InvalidXid     17             17             
-FrozenXid      InvalidXid     18             18             
-FrozenXid      InvalidXid     19             19             
 step s3select: 
     SELECT * from show_heaptest_content ORDER BY i;
 
-xmin_kind      xmax_kind      i              j              
+xmin_kind|xmax_kind | i| j
+---------+----------+--+--
+FrozenXid|InvalidXid| 0| 0
+FrozenXid|InvalidXid| 1| 1
+FrozenXid|InvalidXid| 2| 2
+FrozenXid|InvalidXid| 3| 3
+FrozenXid|InvalidXid| 4| 4
+FrozenXid|InvalidXid| 5| 5
+FrozenXid|InvalidXid| 6| 6
+FrozenXid|InvalidXid| 7| 7
+FrozenXid|InvalidXid| 8| 8
+FrozenXid|InvalidXid| 9| 9
+FrozenXid|InvalidXid|10|10
+FrozenXid|InvalidXid|11|11
+FrozenXid|InvalidXid|12|12
+FrozenXid|InvalidXid|13|13
+FrozenXid|InvalidXid|14|14
+FrozenXid|InvalidXid|15|15
+FrozenXid|InvalidXid|16|16
+FrozenXid|InvalidXid|17|17
+FrozenXid|InvalidXid|18|18
+FrozenXid|InvalidXid|19|19
+(20 rows)
 
-FrozenXid      InvalidXid     0              0              
-FrozenXid      InvalidXid     1              1              
-FrozenXid      InvalidXid     2              2              
-FrozenXid      InvalidXid     3              3              
-FrozenXid      InvalidXid     4              4              
-FrozenXid      InvalidXid     5              5              
-FrozenXid      InvalidXid     6              6              
-FrozenXid      InvalidXid     7              7              
-FrozenXid      InvalidXid     8              8              
-FrozenXid      InvalidXid     9              9              
-FrozenXid      InvalidXid     10             10             
-FrozenXid      InvalidXid     11             11             
-FrozenXid      InvalidXid     12             12             
-FrozenXid      InvalidXid     13             13             
-FrozenXid      InvalidXid     14             14             
-FrozenXid      InvalidXid     15             15             
-FrozenXid      InvalidXid     16             16             
-FrozenXid      InvalidXid     17             17             
-FrozenXid      InvalidXid     18             18             
-FrozenXid      InvalidXid     19             19             

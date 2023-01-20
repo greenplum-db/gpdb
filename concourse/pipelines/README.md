@@ -26,7 +26,7 @@ configure workflow.
 The following workflow should be followed:
 
 * Edit the template file (`templates/gpdb-tpl.yml`).
-* Generate the pipeline. During this step, the pipeline release jobs will be validated.
+* Generate the pipelines. During this step, the pipeline release jobs will be validated.
 * Use the Concourse `fly` command to set the pipeline (`gpdb_main-generated.yml`).
 * Once the pipeline is validated to function properly, commit the updated template and pipeline.
 
@@ -54,10 +54,10 @@ gen_pipeline.py -h|--help
 
 ## Examples of usage
 
-### Create Production Pipeline
+### Create and Update Production Pipelines
 
 The `./gen_pipeline.py -t prod` command will generate the production
-pipeline (`gpdb_main-generated.yml`). All supported platforms and
+pipeline (`gpdb_main-generated.yml`). Default platform and
 test sections are included. The pipeline release jobs will be
 validated. The output of the utility will provide details of the
 pipeline generated. Following standard conventions, two `fly`
@@ -110,6 +110,15 @@ fly -t prod \
 The generated pipeline file `gpdb_main-generated.yml` will be set,
 validated and ultimately committed (including the updated pipeline
 template) to the source repository.
+
+Create and update gpdb_main_rhel8, gpdb_main_oel8 pipelines:
+
+```
+./gen_pipeline.py  -t prod -O rhel8
+./gen_pipeline.py  -t prod -O oel8
+```
+
+
 
 ### Creating Developer pipelines
 

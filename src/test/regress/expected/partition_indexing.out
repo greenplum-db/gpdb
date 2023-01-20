@@ -167,7 +167,7 @@ CREATE UNIQUE INDEX mpp3033a_stringu1 ON mpp3033a (stringu1);
 ERROR:  UNIQUE index must contain all columns in the table's distribution key
 DETAIL:  Distribution key column "unique1" is not included in the constraint.
 CREATE UNIQUE INDEX mpp3033b_unique1 ON mpp3033b (unique1);
-ERROR:  insufficient columns in UNIQUE constraint definition
+ERROR:  unique constraint on partitioned table must include all partitioning columns
 DETAIL:  UNIQUE constraint on table "mpp3033b_1_prt_aa" lacks column "unique2" which is part of the partition key.
 CREATE UNIQUE INDEX mpp3033b_unique2 ON mpp3033b (unique2);
 ERROR:  UNIQUE index must contain all columns in the table's distribution key
@@ -435,7 +435,7 @@ CREATE UNIQUE INDEX mpp3033a_stringu1 ON mpp3033a (stringu1);
 ERROR:  UNIQUE index must contain all columns in the table's distribution key
 DETAIL:  Distribution key column "unique1" is not included in the constraint.
 CREATE UNIQUE INDEX mpp3033b_unique1 ON mpp3033b (unique1);
-ERROR:  insufficient columns in UNIQUE constraint definition
+ERROR:  unique constraint on partitioned table must include all partitioning columns
 DETAIL:  UNIQUE constraint on table "mpp3033b_1_prt_1" lacks column "unique2" which is part of the partition key.
 CREATE UNIQUE INDEX mpp3033b_unique2 ON mpp3033b (unique2);
 ERROR:  UNIQUE index must contain all columns in the table's distribution key

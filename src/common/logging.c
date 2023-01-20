@@ -32,6 +32,43 @@ static const char *sgr_locus = NULL;
 #define ANSI_ESCAPE_FMT "\x1b[%sm"
 #define ANSI_ESCAPE_RESET "\x1b[0m"
 
+#ifdef WIN32
+
+#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#endif
+
+/*
+ * Attempt to enable VT100 sequence processing for colorization on Windows.
+ * If current environment is not VT100-compatible or if this mode could not
+ * be enabled, return false.
+ */
+static bool
+enable_vt_processing(void)
+{
+	/* Check stderr */
+	HANDLE		hOut = GetStdHandle(STD_ERROR_HANDLE);
+	DWORD		dwMode = 0;
+
+	if (hOut == INVALID_HANDLE_VALUE)
+		return false;
+
+	/*
+	 * Look for the current console settings and check if VT100 is already
+	 * enabled.
+	 */
+	if (!GetConsoleMode(hOut, &dwMode))
+		return false;
+	if ((dwMode & ENABLE_VIRTUAL_TERMINAL_PROCESSING) != 0)
+		return true;
+
+	dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+	if (!SetConsoleMode(hOut, dwMode))
+		return false;
+	return true;
+}
+#endif							/* WIN32 */
+
 /*
  * This should be called before any output happens.
  */
@@ -40,6 +77,17 @@ pg_logging_init(const char *argv0)
 {
 	const char *pg_color_env = getenv("PG_COLOR");
 	bool		log_color = false;
+	bool		color_terminal = isatty(fileno(stderr));
+
+#ifdef WIN32
+
+	/*
+	 * On Windows, check if environment is VT100-compatible if using a
+	 * terminal.
+	 */
+	if (color_terminal)
+		color_terminal = enable_vt_processing();
+#endif
 
 	/* usually the default, but not on Windows */
 	setvbuf(stderr, NULL, _IONBF, 0);
@@ -50,7 +98,7 @@ pg_logging_init(const char *argv0)
 	if (pg_color_env)
 	{
 		if (strcmp(pg_color_env, "always") == 0 ||
-			(strcmp(pg_color_env, "auto") == 0 && isatty(fileno(stderr))))
+			(strcmp(pg_color_env, "auto") == 0 && color_terminal))
 			log_color = true;
 	}
 
@@ -215,6 +263,8 @@ pg_log_generic_v(enum pg_log_level level, const char *pg_restrict fmt, va_list a
 	va_end(ap2);
 
 	buf = pg_malloc_extended(required_len, MCXT_ALLOC_NO_OOM);
+
+	errno = save_errno;			/* malloc might change errno */
 
 	if (!buf)
 	{

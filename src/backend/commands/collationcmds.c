@@ -211,7 +211,26 @@ DefineCollation(ParseState *pstate, List *names, List *parameters, bool if_not_e
 	if (!fromEl)
 	{
 		if (collprovider == COLLPROVIDER_ICU)
+		{
+#ifdef USE_ICU
+			/*
+			 * We could create ICU collations with collencoding == database
+			 * encoding, but it seems better to use -1 so that it matches the
+			 * way initdb would create ICU collations.  However, only allow
+			 * one to be created when the current database's encoding is
+			 * supported.  Otherwise the collation is useless, plus we get
+			 * surprising behaviors like not being able to drop the collation.
+			 *
+			 * Skip this test when !USE_ICU, because the error we want to
+			 * throw for that isn't thrown till later.
+			 */
+			if (!is_encoding_supported_by_icu(GetDatabaseEncoding()))
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("current database's encoding is not supported with this provider")));
+#endif
 			collencoding = -1;
+		}
 		else
 		{
 			collencoding = GetDatabaseEncoding();
@@ -521,7 +540,7 @@ get_icu_language_tag(const char *localename)
 	UErrorCode	status;
 
 	status = U_ZERO_ERROR;
-	uloc_toLanguageTag(localename, buf, sizeof(buf), TRUE, &status);
+	uloc_toLanguageTag(localename, buf, sizeof(buf), true, &status);
 	if (U_FAILURE(status))
 		ereport(ERROR,
 				(errmsg("could not convert locale name \"%s\" to language tag: %s",
@@ -579,9 +598,6 @@ pg_import_system_collations(PG_FUNCTION_ARGS)
 	Oid			nspid = PG_GETARG_OID(0);
 	int			ncreated = 0;
 
-	/* silence compiler warning if we have no locale implementation at all */
-	(void) nspid;
-
 	if (!superuser())
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
@@ -590,6 +606,11 @@ pg_import_system_collations(PG_FUNCTION_ARGS)
 	if (Gp_role != GP_ROLE_DISPATCH)
 		ereport(ERROR,
 					(errmsg("must be dispatcher to import system collations")));
+
+	if (!SearchSysCacheExists1(NAMESPACEOID, ObjectIdGetDatum(nspid)))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_SCHEMA),
+				 errmsg("schema with OID %u does not exist", nspid)));
 
 	/* Load collations known to libc, using "locale -a" to enumerate them */
 #ifdef READ_LOCALE_A_OUTPUT

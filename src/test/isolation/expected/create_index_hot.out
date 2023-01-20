@@ -5,21 +5,27 @@ step s2begin: BEGIN ISOLATION LEVEL SERIALIZABLE;
 step s2select: select '#' as expected, c from hot where c = '#'
                   union all
                   select '$', c from hot where c = '$';
-expected       c              
+expected|c
+--------+-
+#       |#
+(1 row)
 
-#              #              
 step s1update: update hot set c = '$' where c = '#';
 step s1createindexonc: create index idx_c on hot (c);
 step s2select: select '#' as expected, c from hot where c = '#'
                   union all
                   select '$', c from hot where c = '$';
-expected       c              
+expected|c
+--------+-
+#       |#
+(1 row)
 
-#              #              
 step s2forceindexscan: set enable_indexscan=on; set enable_seqscan=off;
 step s2select: select '#' as expected, c from hot where c = '#'
                   union all
                   select '$', c from hot where c = '$';
-expected       c              
+expected|c
+--------+-
+#       |#
+(1 row)
 
-#              #              

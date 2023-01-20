@@ -3277,7 +3277,7 @@
           <dxl:Partition Mdid="6.328475004.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.328475001.1.1" Name="fact_sales_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.328475001.1.1" Name="fact_sales_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7">
         <dxl:Columns>
           <dxl:Column Name="sales_date" Attno="1" Mdid="0.1082.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -3328,7 +3328,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.328475002.1.1" Name="fact_sales_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.328475002.1.1" Name="fact_sales_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7">
         <dxl:Columns>
           <dxl:Column Name="sales_date" Attno="1" Mdid="0.1082.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -3379,7 +3379,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.328475003.1.1" Name="fact_sales_prt_3" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.328475003.1.1" Name="fact_sales_prt_3" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7">
         <dxl:Columns>
           <dxl:Column Name="sales_date" Attno="1" Mdid="0.1082.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -3430,7 +3430,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.328475004.1.1" Name="fact_sales_prt_4" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.328475004.1.1" Name="fact_sales_prt_4" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7">
         <dxl:Columns>
           <dxl:Column Name="sales_date" Attno="1" Mdid="0.1082.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>

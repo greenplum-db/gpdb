@@ -28,6 +28,8 @@
 %{
 #include "fe_utils/psqlscan_int.h"
 
+#define PQmblenBounded(s, e)  strnlen(s, PQmblen(s, e))
+
 /*
  * We must have a typedef YYSTYPE for yylex's first argument, but this lexer
  * doesn't presently make use of that argument, so just declare it as int.
@@ -759,7 +761,7 @@ dequote_downcase_identifier(char *str, bool downcase, int encoding)
 		{
 			if (downcase && !inquotes)
 				*cp = pg_tolower((unsigned char) *cp);
-			cp += PQmblen(cp, encoding);
+			cp += PQmblenBounded(cp, encoding);
 		}
 	}
 }
@@ -783,7 +785,7 @@ evaluate_backtick(PsqlScanState state)
 
 	initPQExpBuffer(&cmd_output);
 
-	fd = popen(cmd, PG_BINARY_R);
+	fd = popen(cmd, "r");
 	if (!fd)
 	{
 		pg_log_error("%s: %m", cmd);
@@ -824,7 +826,7 @@ evaluate_backtick(PsqlScanState state)
 	/* If no error, transfer result to output_buf */
 	if (!error)
 	{
-		/* strip any trailing newline */
+		/* strip any trailing newline (but only one) */
 		if (cmd_output.len > 0 &&
 			cmd_output.data[cmd_output.len - 1] == '\n')
 			cmd_output.len--;

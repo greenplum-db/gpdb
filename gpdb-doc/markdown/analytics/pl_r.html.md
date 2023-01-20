@@ -27,7 +27,7 @@ For RHEL and CentOS, installing the PL/R package installs R in `$GPHOME/ext/R-<v
 
 To use PL/R on Ubuntu host systems, you must install and configure R on all Greenplum Database host systems before installing PL/R.
 
-**Note:** You can use the [gpssh](../utility_guide/ref/gpssh.html) utility to run bash shell commands on multiple remote hosts.
+> **Note** You can use the [gpssh](../utility_guide/ref/gpssh.html) utility to run bash shell commands on multiple remote hosts.
 
 1.  To install R, run these `apt` commands on all host systems.
 
@@ -239,7 +239,7 @@ R packages are modules that contain R functions and data sets. You can install R
 
 Greenplum Database provides a collection of data science-related R libraries that can be used with the Greenplum Database PL/R language. You can download these libraries in `.gppkg` format from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). For information about the libraries, see [R Data Science Library Package](../install_guide/install_r_dslib.html#topic1).
 
-**Note:** If you expand Greenplum Database and add segment hosts, you must install the R packages in the R installation of the new hosts.
+> **Note** If you expand Greenplum Database and add segment hosts, you must install the R packages in the R installation of the new hosts.
 
 1.  For an R package, identify all dependent R packages and each package web URL. The information can be found by selecting the given package from the following navigation page:
 

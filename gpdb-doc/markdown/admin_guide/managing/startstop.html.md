@@ -8,7 +8,7 @@ Because a Greenplum Database system is distributed across many machines, the pro
 
 Use the `gpstart` and `gpstop` utilities to start and stop Greenplum Database, respectively. These utilities are located in the $GPHOME/bin directory on your Greenplum Database coordinator host.
 
-**Important:** Do not issue a `kill` command to end any Postgres process. Instead, use the database command `pg_cancel_backend()`.
+> **Important** Do not issue a `kill` command to end any Postgres process. Instead, use the database command `pg_cancel_backend()`.
 
 Issuing a `kill -9` or `kill -11` can introduce database corruption and prevent root cause analysis from being performed.
 
@@ -78,16 +78,14 @@ Maintenance mode should only be used with direction from VMware Technical Suppor
     $ gpstart
     ```
 
-    **Warning:**
-
-    Incorrect use of maintenance mode connections can result in an inconsistent system state. Only Technical Support should perform this operation.
+    > **Caution** Incorrect use of maintenance mode connections can result in an inconsistent system state. Only Technical Support should perform this operation.
 
 
 ## <a id="task_gpdb_stop"></a>Stopping Greenplum Database 
 
 The `gpstop` utility stops or restarts your Greenplum Database system and always runs on the coordinator host. When activated, `gpstop` stops all `postgres` processes in the system, including the coordinator and all segment instances. The `gpstop` utility uses a default of up to 64 parallel worker threads to bring down the Postgres instances that make up the Greenplum Database cluster. The system waits for any active transactions to finish before shutting down. If after two minutes there are still active connections, `gpstop` will prompt you to either continue waiting in smart mode, stop in fast mode, or stop in immediate mode. To stop Greenplum Database immediately, use fast mode.
 
-**Important:** Immediate shut down mode is not recommended. This mode stops all database processes without allowing the database server to complete transaction processing or clean up any temporary or in-process work files.
+> **Important** Immediate shut down mode is not recommended. This mode stops all database processes without allowing the database server to complete transaction processing or clean up any temporary or in-process work files.
 
 -   To stop Greenplum Database:
 

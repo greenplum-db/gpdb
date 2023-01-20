@@ -516,9 +516,11 @@ begin;
 -- this perhaps should be rejected, but it isn't:
 alter table tt14t drop column f3;
 
--- f3 is still in the view ...
+-- column f3 is still in the view, sort of ...
 select pg_get_viewdef('tt14v', true);
--- but will fail at execution
+-- ... and you can even EXPLAIN it ...
+explain (verbose, costs off) select * from tt14v;
+-- but it will fail at execution
 select f1, f4 from tt14v;
 select * from tt14v;
 
@@ -554,6 +556,11 @@ create view tt17v as select * from int8_tbl i where i in (values(i));
 select * from tt17v;
 select pg_get_viewdef('tt17v', true);
 select * from int8_tbl i where i.* in (values(i.*::int8_tbl));
+
+create table tt15v_log(o tt15v, n tt15v, incr bool);
+create rule updlog as on update to tt15v do also
+  insert into tt15v_log values(old, new, row(old,old) < row(new,new));
+\d+ tt15v
 
 -- check unique-ification of overlength names
 

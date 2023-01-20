@@ -3852,6 +3852,11 @@ def impl(context, contentid):
     if str(contentid) not in segments_with_running_basebackup:
         raise Exception("pg_basebackup entry was not found for content %s in gp_stat_replication" % contentid)
 
+@given('create a gpcheckperf input host file')
+def impl(context):
+    cmd = Command(name='create input host file', cmdStr='echo sdw1 > /tmp/hostfile1;echo mdw >> /tmp/hostfile1;')
+    cmd.run(validateAfter=True)
+
 @given('backup /etc/hosts file and update hostname entry for localhost')
 def impl(context):
      # Backup current /etc/hosts file

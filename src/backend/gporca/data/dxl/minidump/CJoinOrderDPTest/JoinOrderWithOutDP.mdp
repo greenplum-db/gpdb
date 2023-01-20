@@ -74,7 +74,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.73740.1.1" Name="foo6" Rows="1000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.73740.1.1" Name="foo6" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.73740.1.1" Name="foo6" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,1">
         <dxl:Columns>
           <dxl:Column Name="f1" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -389,7 +389,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.73895.1.1" Name="foo10" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.73895.1.1" Name="foo10" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.73895.1.1" Name="foo10" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="4,2">
         <dxl:Columns>
           <dxl:Column Name="i1" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -411,7 +411,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.73771.1.1" Name="foo7" Rows="1000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.73771.1.1" Name="foo7" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="11,9" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.73771.1.1" Name="foo7" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="11,9">
         <dxl:Columns>
           <dxl:Column Name="m1" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -767,7 +767,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
       </dxl:ColumnStatistics>
       <dxl:MDCast Mdid="3.1043.1.0;25.1.0" Name="text" BinaryCoercible="true" SourceTypeId="0.1043.1.0" DestinationTypeId="0.25.1.0" CastFuncId="0.0.0.0"/>
       <dxl:RelationStatistics Mdid="2.73802.1.1" Name="foo8" Rows="1000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.73802.1.1" Name="foo8" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.73802.1.1" Name="foo8" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,1">
         <dxl:Columns>
           <dxl:Column Name="h1" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1328,7 +1328,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.73833.1.1" Name="foo9" Rows="1000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.73833.1.1" Name="foo9" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.73833.1.1" Name="foo9" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,1">
         <dxl:Columns>
           <dxl:Column Name="g1" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>

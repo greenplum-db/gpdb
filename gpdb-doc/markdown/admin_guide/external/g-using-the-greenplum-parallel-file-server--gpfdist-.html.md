@@ -41,7 +41,7 @@ You can run `gpfdist` instances on multiple hosts and you can run multiple `gpfd
 
 ![External Tables Using Multiple gpfdist Instances with Multiple NICs](../graphics/ext_tables.jpg "External Tables Using Multiple gpfdist Instances with Multiple NICs")
 
-**Note:** Use pipes \(\|\) to separate formatted text when you submit files to gpfdist. Greenplum Database encloses comma-separated text strings in single or double quotes. gpfdist has to remove the quotes to parse the strings. Using pipes to separate formatted text avoids the extra step and improves performance.
+> **Note** Use pipes \(\|\) to separate formatted text when you submit files to gpfdist. Greenplum Database encloses comma-separated text strings in single or double quotes. gpfdist has to remove the quotes to parse the strings. Using pipes to separate formatted text avoids the extra step and improves performance.
 
 ## <a id="topic15"></a>Controlling Segment Parallelism 
 

@@ -67,9 +67,10 @@ my $realm    = 'EXAMPLE.COM';
 
 my $krb5_conf   = "${TestLib::tmp_check}/krb5.conf";
 my $kdc_conf    = "${TestLib::tmp_check}/kdc.conf";
-my $krb5_log    = "${TestLib::tmp_check}/krb5libs.log";
-my $kdc_log     = "${TestLib::tmp_check}/krb5kdc.log";
-my $kdc_port    = int(rand() * 16384) + 49152;
+my $krb5_cache  = "${TestLib::tmp_check}/krb5cc";
+my $krb5_log    = "${TestLib::log_path}/krb5libs.log";
+my $kdc_log     = "${TestLib::log_path}/krb5kdc.log";
+my $kdc_port    = get_free_port();
 my $kdc_datadir = "${TestLib::tmp_check}/krb5kdc";
 my $kdc_pidfile = "${TestLib::tmp_check}/krb5kdc.pid";
 my $keytab      = "${TestLib::tmp_check}/krb5.keytab";
@@ -134,8 +135,10 @@ $realm = {
 
 mkdir $kdc_datadir or die;
 
+# Ensure that we use test's config and cache files, not global ones.
 $ENV{'KRB5_CONFIG'}      = $krb5_conf;
 $ENV{'KRB5_KDC_PROFILE'} = $kdc_conf;
+$ENV{'KRB5CCNAME'}       = $krb5_cache;
 
 my $service_principal = "$ENV{with_krb_srvnam}/$host";
 
@@ -174,13 +177,15 @@ sub test_access
 	# need to connect over TCP/IP for Kerberos
 	my ($res, $stdoutres, $stderrres) = $node->psql(
 		'postgres',
-		"$query",
+		undef,
 		extra_params => [
 			'-XAtd',
 			$node->connstr('postgres')
 			  . " host=$host hostaddr=$hostaddr $gssencmode",
 			'-U',
-			$role
+			$role,
+			'-c',
+			$query
 		]);
 
 	# If we get a query result back, it should be true.
@@ -198,6 +203,8 @@ sub test_access
 # As above, but test for an arbitrary query result.
 sub test_query
 {
+	local $Test::Builder::Level = $Test::Builder::Level + 1;
+
 	my ($node, $role, $query, $expected, $gssencmode, $test_name) = @_;
 
 	# need to connect over TCP/IP for Kerberos

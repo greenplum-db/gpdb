@@ -67,7 +67,7 @@ The primary segment is down and segment instances are not in their preferred rol
 
 After `gprecoverseg` has completed, the segments are in the states shown in the following table where the primary-mirror segment pair is up with the primary and mirror roles reversed from their preferred roles.
 
-**Note:** There might be a lag between when `gprecoverseg` completes and when the segment status is set to `u` \(up\).
+> **Note** There might be a lag between when `gprecoverseg` completes and when the segment status is set to `u` \(up\).
 
 | Segment Type |`preferred_role`|`role`|`mode`|`status`|
 |--------------|----------------|------|------|--------|
@@ -89,7 +89,7 @@ Greenplum database can perform two types of recovery: incremental or full. The d
 
 By default, `gprecoverseg` performs an incremental recovery, placing the mirror into *Synchronizing* mode, which starts to replay the recorded changes from the primary onto the mirror. If the incremental recovery cannot be completed, the recovery fails and you should run `gprecoverseg` again with the `-F` option, to perform full recovery. This causes the primary to copy all of its data to the mirror.
 
-**Note:** After a failed incremental recovery attempt you must perform a full recovery.
+> **Note** After a failed incremental recovery attempt you must perform a full recovery.
 
 Whenever possible, you should perform an incremental recovery rather than a full recovery, as incremental recovery is substantially faster.
 

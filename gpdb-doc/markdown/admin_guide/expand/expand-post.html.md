@@ -22,7 +22,7 @@ You can safely remove the expansion schema after the expansion operation is comp
     $ gpexpand -c
     ```
 
-    **Note:** Some systems require you to press Enter twice.
+    > **Note** Some systems require you to press Enter twice.
 
 
 ## <a id="topic_pxl_1q2_hpb"></a>Setting Up PXF on the New Host 

@@ -41,17 +41,17 @@ Follow the instructions in [Verifying the VMware Greenplum Software Download](ve
 
 Before you begin installing Greenplum Database, be sure you have completed the steps in [Configuring Your Systems](prep_os.html) to configure each of the coordinator, standby coordinator, and segment host machines for Greenplum Database.
 
-**Important:** After installing Greenplum Database, you must set Greenplum Database environment variables. See [Setting Greenplum Environment Variables](init_gpdb.html).
+> **Important** After installing Greenplum Database, you must set Greenplum Database environment variables. See [Setting Greenplum Environment Variables](init_gpdb.html).
 
 See [Example Ansible Playbook](ansible-example.html) for an example script that shows how you can automate creating the `gpadmin` user and installing the Greenplum Database.
 
 Follow these instructions to install Greenplum Database from a pre-built binary.
 
-**Important:** You require sudo or root user access to install from a pre-built RPM or DEB file.
+> **Important** You require sudo or root user access to install from a pre-built RPM or DEB file.
 
 1.  Download and copy the Greenplum Database package to the `gpadmin` user's home directory on the coordinator, standby coordinator, and every segment host machine. The distribution file name has the format `greenplum-db-<version>-<platform>.rpm` for RHEL, Oracle Linux, or Rocky Linux systems.
 
-    **Note:** For Oracle Linux or Rocky Linux installations, download and install the `rhel8-x86_64`distribution files.
+    > **Note** For Oracle Linux or Rocky Linux installations, download and install the `rhel8-x86_64`distribution files.
 
 2.  With sudo \(or as root\), install the Greenplum Database package on each host machine using your system's package manager software.
     -   For RHEL/Oracle Linux/Rocky Linux systems, run the `yum` command:
@@ -81,7 +81,7 @@ On RHEL/CentOS systems, you can use the `rpm` command with the `--prefix` option
 
 Follow these instructions to install Greenplum Database to a specific directory.
 
-**Important:** You require sudo or root user access to install from a pre-built RPM file.
+> **Important** You require sudo or root user access to install from a pre-built RPM file.
 
 1.  Download and copy the Greenplum Database package to the `gpadmin` user's home directory on the coordinator, standby coordinator, and every segment host machine. The distribution file name has the format `greenplum-db-<version>-<platform>.rpm` for RHEL systems, or `greenplum-db-<version>-<platform>.deb` for Ubuntu systems, where `<platform>` is similar to `rhel8-x86_64` \(Red Hat 8 64-bit\).
 2.  Manually install the Greenplum Database dependencies to each host system:
@@ -106,7 +106,7 @@ Follow these instructions to install Greenplum Database to a specific directory.
     ```
 
 
-**Note:** All example procedures in the Greenplum Database documentation assume that you installed to the default directory, which is `/usr/local`. If you install to a non-default directory, substitute that directory for `/usr/local`.
+> **Note** All example procedures in the Greenplum Database documentation assume that you installed to the default directory, which is `/usr/local`. If you install to a non-default directory, substitute that directory for `/usr/local`.
 
 If you install to a non-default directory using `rpm`, you will need to continue using `rpm` \(and of `yum`\) to perform minor version upgrades; these changes are covered in the upgrade documentation.
 
@@ -121,12 +121,12 @@ The `gpadmin` user on each Greenplum host must be able to SSH from any host in t
     $ source /usr/local/greenplum-db-<version>/greenplum_path.sh
     ```
 
-    **Note:** Add the above `source` command to the `gpadmin` user's `.bashrc` or other shell startup file so that the Greenplum Database path and environment variables are set whenever you log in as `gpadmin`.
+    > **Note** Add the above `source` command to the `gpadmin` user's `.bashrc` or other shell startup file so that the Greenplum Database path and environment variables are set whenever you log in as `gpadmin`.
 
 3.  Use the `ssh-copy-id` command to add the `gpadmin` user's public key to the `authorized_hosts` SSH file on every other host in the cluster.
 
     ```
-    $ ssh-copy-id smdw
+    $ ssh-copy-id scdw
     $ ssh-copy-id sdw1
     $ ssh-copy-id sdw2
     $ ssh-copy-id sdw3
@@ -136,18 +136,18 @@ The `gpadmin` user on each Greenplum host must be able to SSH from any host in t
     This enables 1-*n* passwordless SSH. You will be prompted to enter the `gpadmin` user's password for each host. If you have the `sshpass` command on your system, you can use a command like the following to avoid the prompt.
 
     ```
-    $ SSHPASS=<password> sshpass -e ssh-copy-id smdw
+    $ SSHPASS=<password> sshpass -e ssh-copy-id scdw
     ```
 
 4.  In the `gpadmin` home directory, create a file named `hostfile_exkeys` that has the machine configured host names and host addresses \(interface names\) for each host in your Greenplum system \(coordinator, standby coordinator, and segment hosts\). Make sure there are no blank lines or extra spaces. Check the `/etc/hosts` file on your systems for the correct host names to use for your environment. For example, if you have a coordinator, standby coordinator, and three segment hosts with two unbonded network interfaces per host, your file would look something like this:
 
     ```
-    mdw
-    mdw-1
-    mdw-2
-    smdw
-    smdw-1
-    smdw-2
+    cdw
+    cdw-1
+    cdw-2
+    scdw
+    scdw-1
+    scdw-2
     sdw1
     sdw1-1
     sdw1-2

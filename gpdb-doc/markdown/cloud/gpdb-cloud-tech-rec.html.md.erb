@@ -24,7 +24,7 @@ The disk settings for cloud deployments are the same as on-premise with a few mo
    ```
    rw,noatime,nobarrier,nodev,inode64
    ```
-    <br/>**Note:** The `nobarrier` option is not supported on RHEL 8 or Ubuntu nodes.
+    <br/>> **Note** The `nobarrier` option is not supported on RHEL 8 or Ubuntu nodes.
 -  Use mq-deadline instead of the deadline scheduler for the R5 series instance type in AWS
 -  Use a swap disk per VM (32GB size works well)
 
@@ -123,7 +123,7 @@ The HighMem instance type is slightly faster for higher concurrency.  Furthermor
 
 ## <a id="azure"></a>Azure
 
-**Note:** On the Azure platform, in addition to bandwidth, the number of network connections present on a VM at any given moment can affect the VM's network performance. The Azure networking stack maintains the state for each direction of a TCP/UDP connection in a data structures called a _flow_. A typical TCP/UDP connection will have 2 flows created: one for the inbound direction and another for the outbound direction. The number of network flows on Azure is limited to an upper bound.  See [Virtual machine network bandwidth](https://docs.microsoft.com/bs-latn-ba/azure/virtual-network/virtual-machine-network-throughput) in the Azure documentation for more details.  In practice this can present scalability challenges for workloads based on the number of concurrent queries, and on the complexity of those queries.  Always test your workload on Azure to validate that you are within the Azure limits, and be advised that if your workload increases you may hit Azure flow count boundaries at which point your workload may fail.  VMware recommends using the UDP interconnect, and not the TCP interconnect, when using Azure.  A connection pooler and resource group settings can also be used to help keep flow counts at a lower level.
+> **Note** On the Azure platform, in addition to bandwidth, the number of network connections present on a VM at any given moment can affect the VM's network performance. The Azure networking stack maintains the state for each direction of a TCP/UDP connection in a data structures called a _flow_. A typical TCP/UDP connection will have 2 flows created: one for the inbound direction and another for the outbound direction. The number of network flows on Azure is limited to an upper bound.  See [Virtual machine network bandwidth](https://docs.microsoft.com/bs-latn-ba/azure/virtual-network/virtual-machine-network-throughput) in the Azure documentation for more details.  In practice this can present scalability challenges for workloads based on the number of concurrent queries, and on the complexity of those queries.  Always test your workload on Azure to validate that you are within the Azure limits, and be advised that if your workload increases you may hit Azure flow count boundaries at which point your workload may fail.  VMware recommends using the UDP interconnect, and not the TCP interconnect, when using Azure.  A connection pooler and resource group settings can also be used to help keep flow counts at a lower level.
 
 ### <a id="az-vm-type"></a>Virtual Machine Type
 Each VM type has limits on disk throughput so picking a VM that doesn't have a limit that is too low is essential.  Most of Azure is designed for OLTP or Application workloads, which limits the choices for databases like Greenplum where throughput is more important.  Disk type also plays a part in the throughput cap, so that needs to be considered too.

@@ -9,7 +9,7 @@ gp_external_enable_exec = off
 
 ```
 
-**Note:** You must restart the database in order for changes to the `gp_external_enable_exec` server configuration parameter to take effect.
+> **Note** You must restart the database in order for changes to the `gp_external_enable_exec` server configuration parameter to take effect.
 
 **Parent topic:** [Defining a Command-Based Writable External Web Table](../../load/topics/g-defining-a-command-based-writable-external-web-table.html)
 

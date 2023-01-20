@@ -36,7 +36,7 @@ The user that creates the function becomes the owner of the function.
 
 To be able to create a function, you must have `USAGE` privilege on the argument types and the return type.
 
-For more information about creating functions, see the [User Defined Functions](https://www.postgresql.org/docs/9.4/xfunc.html) section of the PostgreSQL documentation.
+For more information about creating functions, see the [User Defined Functions](https://www.postgresql.org/docs/12/xfunc.html) section of the PostgreSQL documentation.
 
 **Limited Use of VOLATILE and STABLE Functions**
 
@@ -162,7 +162,7 @@ EXECUTE ON INITPLAN
 
 :   `EXECUTE ON INITPLAN` indicates that the function contains an SQL command that dispatches queries to the segment instances and requires special processing on the coordinator instance by Greenplum Database when possible.
 
-    **Note:** `EXECUTE ON INITPLAN` is only supported in functions that are used in the `FROM` clause of a `CREATE TABLE AS` or `INSERT` command such as the `get_data()` function in these commands.
+    > **Note** `EXECUTE ON INITPLAN` is only supported in functions that are used in the `FROM` clause of a `CREATE TABLE AS` or `INSERT` command such as the `get_data()` function in these commands.
 
     ```
     CREATE TABLE t AS SELECT * FROM get_data();
@@ -182,7 +182,7 @@ EXECUTE ON INITPLAN
 :   For information about using `EXECUTE ON` attributes, see [Notes](#section6).
 
 COST execution\_cost
-:   A positive number identifying the estimated execution cost for the function, in [cpu\_operator\_cost](https://www.postgresql.org/docs/9.4/runtime-config-query.html#GUC-CPU-OPERATOR-COST) units. If the function returns a set, execution\_cost identifies the cost per returned row. If the cost is not specified, C-language and internal functions default to 1 unit, while functions in other languages default to 100 units. The planner tries to evaluate the function less often when you specify larger execution\_cost values.
+:   A positive number identifying the estimated execution cost for the function, in [cpu\_operator\_cost](https://www.postgresql.org/docs/12/runtime-config-query.html#GUC-CPU-OPERATOR-COST) units. If the function returns a set, execution\_cost identifies the cost per returned row. If the cost is not specified, C-language and internal functions default to 1 unit, while functions in other languages default to 100 units. The planner tries to evaluate the function less often when you specify larger execution\_cost values.
 
 configuration\_parameter
 value

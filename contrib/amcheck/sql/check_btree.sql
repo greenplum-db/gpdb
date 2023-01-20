@@ -94,15 +94,41 @@ SELECT bt_index_parent_check('delete_test_table_pkey', true);
 -- tuple.  Bloom filter must fingerprint normalized index tuple representation.
 --
 CREATE TABLE toast_bug(buggy text);
-ALTER TABLE toast_bug ALTER COLUMN buggy SET STORAGE plain;
--- pg_attribute entry for toasty.buggy will have plain storage:
-CREATE INDEX toasty ON toast_bug(buggy);
--- Whereas pg_attribute entry for toast_bug.buggy now has extended storage:
 ALTER TABLE toast_bug ALTER COLUMN buggy SET STORAGE extended;
+CREATE INDEX toasty ON toast_bug(buggy);
+
+-- pg_attribute entry for toasty.buggy (the index) will have plain storage:
+UPDATE pg_attribute SET attstorage = 'p'
+WHERE attrelid = 'toasty'::regclass AND attname = 'buggy';
+
+-- Whereas pg_attribute entry for toast_bug.buggy (the table) still has extended storage:
+SELECT attstorage FROM pg_attribute
+WHERE attrelid = 'toast_bug'::regclass AND attname = 'buggy';
+
 -- Insert compressible heap tuple (comfortably exceeds TOAST_TUPLE_THRESHOLD):
 INSERT INTO toast_bug SELECT repeat('a', 2200);
 -- Should not get false positive report of corruption:
 SELECT bt_index_check('toasty', true);
+
+--
+-- Check that index expressions and predicates are run as the table's owner
+--
+TRUNCATE bttest_a;
+INSERT INTO bttest_a SELECT * FROM generate_series(1, 1000);
+ALTER TABLE bttest_a OWNER TO regress_bttest_role;
+-- A dummy index function checking current_user
+CREATE FUNCTION ifun(int8) RETURNS int8 AS $$
+BEGIN
+	ASSERT current_user = 'regress_bttest_role',
+		format('ifun(%s) called by %s', $1, current_user);
+	RETURN $1;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+CREATE INDEX bttest_a_expr_idx ON bttest_a ((ifun(id) + ifun(0)))
+	WHERE ifun(id + 10) > ifun(10);
+
+SELECT bt_index_check('bttest_a_expr_idx', true);
 
 -- cleanup
 DROP TABLE bttest_a;
@@ -110,5 +136,6 @@ DROP TABLE bttest_b;
 DROP TABLE bttest_multi;
 DROP TABLE delete_test_table;
 DROP TABLE toast_bug;
+DROP FUNCTION ifun(int8);
 DROP OWNED BY regress_bttest_role; -- permissions
 DROP ROLE regress_bttest_role;

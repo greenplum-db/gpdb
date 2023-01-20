@@ -160,11 +160,16 @@ REINDEX [ ( VERBOSE ) ] { INDEX | TABLE | SCHEMA | DATABASE | SYSTEM } [ CONCURR
      <para>
       When this option is used, <productname>PostgreSQL</productname> will rebuild the
       index without taking any locks that prevent concurrent inserts,
-      updates, or deletes on the table; whereas a standard reindex build
+      updates, or deletes on the table; whereas a standard index rebuild
       locks out writes (but not reads) on the table until it's done.
       There are several caveats to be aware of when using this option
       &mdash; see <xref linkend="sql-reindex-concurrently"
       endterm="sql-reindex-concurrently-title"/>.
+     </para>
+     <para>
+      For temporary tables, <command>REINDEX</command> is always
+      non-concurrent, as no other session can access them, and
+      non-concurrent reindex is cheaper.
      </para>
     </listitem>
    </varlistentry>
@@ -231,14 +236,15 @@ REINDEX [ ( VERBOSE ) ] { INDEX | TABLE | SCHEMA | DATABASE | SYSTEM } [ CONCURR
    <command>REINDEX</command> is similar to a drop and recreate of the index
    in that the index contents are rebuilt from scratch.  However, the locking
    considerations are rather different.  <command>REINDEX</command> locks out writes
-   but not reads of the index's parent table.  It also takes an exclusive lock
-   on the specific index being processed, which will block reads that attempt
-   to use that index.  In contrast, <command>DROP INDEX</command> momentarily takes
-   an exclusive lock on the parent table, blocking both writes and reads.  The
-   subsequent <command>CREATE INDEX</command> locks out writes but not reads; since
-   the index is not there, no read will attempt to use it, meaning that there
-   will be no blocking but reads might be forced into expensive sequential
-   scans.
+   but not reads of the index's parent table.  It also takes an
+   <literal>ACCESS EXCLUSIVE</literal> lock on the specific index being processed,
+   which will block reads that attempt to use that index.  In contrast,
+   <command>DROP INDEX</command> momentarily takes an
+   <literal>ACCESS EXCLUSIVE</literal> lock on the parent table, blocking both
+   writes and reads.  The subsequent <command>CREATE INDEX</command> locks out
+   writes but not reads; since the index is not there, no read will attempt to
+   use it, meaning that there will be no blocking but reads might be forced
+   into expensive sequential scans.
   </para>
 
   <para>
@@ -287,12 +293,12 @@ REINDEX [ ( VERBOSE ) ] { INDEX | TABLE | SCHEMA | DATABASE | SYSTEM } [ CONCURR
     of writes.  This method is invoked by specifying the
     <literal>CONCURRENTLY</literal> option of <command>REINDEX</command>. When this option
     is used, <productname>PostgreSQL</productname> must perform two scans of the table
-    for each index that needs to be rebuild and in addition it must wait for
-    all existing transactions that could potentially use the index to
-    terminate. This method requires more total work than a standard index
+    for each index that needs to be rebuilt and wait for termination of
+    all existing transactions that could potentially use the index.
+    This method requires more total work than a standard index
     rebuild and takes significantly longer to complete as it needs to wait
     for unfinished transactions that might modify the index. However, since
-    it allows normal operations to continue while the index is rebuilt, this
+    it allows normal operations to continue while the index is being rebuilt, this
     method is useful for rebuilding indexes in a production environment. Of
     course, the extra CPU, memory and I/O load imposed by the index rebuild
     may slow down other operations.
@@ -306,7 +312,7 @@ REINDEX [ ( VERBOSE ) ] { INDEX | TABLE | SCHEMA | DATABASE | SYSTEM } [ CONCURR
     <orderedlist>
      <listitem>
       <para>
-       A new temporary index definition is added to the catalog
+       A new transient index definition is added to the catalog
        <literal>pg_index</literal>.  This definition will be used to replace
        the old index.  A <literal>SHARE UPDATE EXCLUSIVE</literal> lock at
        session level is taken on the indexes being reindexed as well as their
@@ -382,13 +388,15 @@ Indexes:
     "idx_ccnew" btree (col) INVALID
 </programlisting>
 
-    The recommended recovery method in such cases is to drop the invalid index
-    and try again to perform <command>REINDEX CONCURRENTLY</command>.  The
-    concurrent index created during the processing has a name ending in the
-    suffix <literal>ccnew</literal>, or <literal>ccold</literal> if it is an
-    old index definition which we failed to drop. Invalid indexes can be
-    dropped using <literal>DROP INDEX</literal>, including invalid toast
-    indexes.
+    If the index marked <literal>INVALID</literal> is suffixed
+    <literal>ccnew</literal>, then it corresponds to the transient
+    index created during the concurrent operation, and the recommended
+    recovery method is to drop it using <literal>DROP INDEX</literal>,
+    then attempt <command>REINDEX CONCURRENTLY</command> again.
+    If the invalid index is instead suffixed <literal>ccold</literal>,
+    it corresponds to the original index which could not be dropped;
+    the recommended recovery method is to just drop said index, since the
+    rebuild proper has been successful.
    </para>
 
    <para>
@@ -399,6 +407,12 @@ Indexes:
     <command>REINDEX TABLE</command> or <command>REINDEX INDEX</command>
     command can be performed within a transaction block, but <command>REINDEX
     CONCURRENTLY</command> cannot.
+   </para>
+
+   <para>
+    Like any long-running transaction, <command>REINDEX</command> on a table
+    can affect which tuples can be removed by concurrent
+    <command>VACUUM</command> on any other table.
    </para>
 
    <para>
@@ -449,8 +463,8 @@ broken_db=&gt; \q
 </programlisting></para>
 
   <para>
-   Rebuild a table while authorizing read and write operations on involved
-   relations when performed:
+   Rebuild indexes for a table, without blocking read and write operations
+   on involved relations while reindexing is in progress:
 
 <programlisting>
 REINDEX TABLE CONCURRENTLY my_broken_table;

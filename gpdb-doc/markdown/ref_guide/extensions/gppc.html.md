@@ -6,7 +6,7 @@ Functions that you write to the GPPC API can be invoked using SQL in Greenplum D
 
 You compile the C/C++ functions that you develop with the GPPC API into a shared library. The GPPC functions are available to Greenplum Database users after the shared library is installed in the Greenplum Database cluster and the GPPC functions are registered as SQL UDFs.
 
-**Note:** The Greenplum Partner Connector is supported for Greenplum Database versions 4.3.5.0 and later.
+> **Note** The Greenplum Partner Connector is supported for Greenplum Database versions 4.3.5.0 and later.
 
 This topic contains the following information:
 
@@ -32,7 +32,7 @@ This topic contains the following information:
 
 ## <a id="topic_dev"></a>Using the GPPC API 
 
-The GPPC API shares some concepts with C language functions as defined by PostgreSQL. Refer to [C-Language Functions](https://www.postgresql.org/docs/9.4/xfunc-c.html) in the PostgreSQL documentation for detailed information about developing C language functions.
+The GPPC API shares some concepts with C language functions as defined by PostgreSQL. Refer to [C-Language Functions](https://www.postgresql.org/docs/12/xfunc-c.html) in the PostgreSQL documentation for detailed information about developing C language functions.
 
 The GPPC API is a wrapper that makes a C/C++ function SQL-invokable in Greenplum Database. This wrapper shields GPPC functions that you write from Greenplum Database library changes by normalizing table and data manipulation and SPI operations through functions and macros defined by the API.
 
@@ -318,7 +318,7 @@ Refer to the [GPPC example code](https://github.com/greenplum-db/gpdb/tree/main/
 
 ### <a id="topic_spi"></a>SPI Functions 
 
-The Greenplum Database Server Programming Interface \(SPI\) provides writers of C/C++ functions the ability to run SQL commands within a GPPC function. For additional information on SPI functions, refer to [Server Programming Interface](https://www.postgresql.org/docs/9.4/spi.html) in the PostgreSQL documentation.
+The Greenplum Database Server Programming Interface \(SPI\) provides writers of C/C++ functions the ability to run SQL commands within a GPPC function. For additional information on SPI functions, refer to [Server Programming Interface](https://www.postgresql.org/docs/12/spi.html) in the PostgreSQL documentation.
 
 The GPPC API exposes a subset of PostgreSQL SPI functions. This subset enables you to issue SPI queries and retrieve SPI result values in your GPPC function. The GPPC SPI wrapper functions are:
 
@@ -602,7 +602,7 @@ You can use the PostgreSQL build extension infrastructure \(PGXS\) to build the 
 
 To use the PGXS infrastructure to generate a shared library for functions that you create with the GPPC API, create a simple `Makefile` that sets PGXS-specific variables.
 
-**Note:** Refer to [Extension Building Infrastructure](https://www.postgresql.org/docs/9.4/extend-pgxs.html) in the PostgreSQL documentation for information about the `Makefile` variables supported by PGXS.
+> **Note** Refer to [Extension Building Infrastructure](https://www.postgresql.org/docs/12/extend-pgxs.html) in the PostgreSQL documentation for information about the `Makefile` variables supported by PGXS.
 
 For example, the following `Makefile` generates a shared library named `sharedlib_name.so` from two C source files named `src1.c` and `src2.c`:
 

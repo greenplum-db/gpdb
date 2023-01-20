@@ -44,10 +44,10 @@ typedef struct ReorderBufferTupleBuf
  * changes. Users of the decoding facilities will never see changes with
  * *_INTERNAL_* actions.
  *
- * The INTERNAL_SPEC_INSERT and INTERNAL_SPEC_CONFIRM changes concern
- * "speculative insertions", and their confirmation respectively.  They're
- * used by INSERT .. ON CONFLICT .. UPDATE.  Users of logical decoding don't
- * have to care about these.
+ * The INTERNAL_SPEC_INSERT and INTERNAL_SPEC_CONFIRM, and INTERNAL_SPEC_ABORT
+ * changes concern "speculative insertions", their confirmation, and abort
+ * respectively.  They're used by INSERT .. ON CONFLICT .. UPDATE.  Users of
+ * logical decoding don't have to care about these.
  */
 enum ReorderBufferChangeType
 {
@@ -60,7 +60,8 @@ enum ReorderBufferChangeType
 	REORDER_BUFFER_CHANGE_INTERNAL_TUPLECID,
 	REORDER_BUFFER_CHANGE_INTERNAL_SPEC_INSERT,
 	REORDER_BUFFER_CHANGE_INTERNAL_SPEC_CONFIRM,
-	REORDER_BUFFER_CHANGE_TRUNCATE
+	REORDER_BUFFER_CHANGE_TRUNCATE,
+	REORDER_BUFFER_CHANGE_INTERNAL_SPEC_ABORT
 };
 
 /*
@@ -179,9 +180,10 @@ typedef struct ReorderBufferTXN
 	 * * prepared transaction commit
 	 * * plain abort record
 	 * * prepared transaction abort
-	 * * error during decoding
-	 * * for a crashed transaction, the LSN of the last change, regardless of
-	 *   what it was.
+	 *
+	 * This can also become set to earlier values than transaction end when
+	 * a transaction is spilled to disk; specifically it's set to the LSN of
+	 * the latest change written to disk so far.
 	 * ----
 	 */
 	XLogRecPtr	final_lsn;
@@ -292,34 +294,29 @@ typedef struct ReorderBufferTXN
 typedef struct ReorderBuffer ReorderBuffer;
 
 /* change callback signature */
-typedef void (*ReorderBufferApplyChangeCB) (
-											ReorderBuffer *rb,
+typedef void (*ReorderBufferApplyChangeCB) (ReorderBuffer *rb,
 											ReorderBufferTXN *txn,
 											Relation relation,
 											ReorderBufferChange *change);
 
 /* truncate callback signature */
-typedef void (*ReorderBufferApplyTruncateCB) (
-											  ReorderBuffer *rb,
+typedef void (*ReorderBufferApplyTruncateCB) (ReorderBuffer *rb,
 											  ReorderBufferTXN *txn,
 											  int nrelations,
 											  Relation relations[],
 											  ReorderBufferChange *change);
 
 /* begin callback signature */
-typedef void (*ReorderBufferBeginCB) (
-									  ReorderBuffer *rb,
+typedef void (*ReorderBufferBeginCB) (ReorderBuffer *rb,
 									  ReorderBufferTXN *txn);
 
 /* commit callback signature */
-typedef void (*ReorderBufferCommitCB) (
-									   ReorderBuffer *rb,
+typedef void (*ReorderBufferCommitCB) (ReorderBuffer *rb,
 									   ReorderBufferTXN *txn,
 									   XLogRecPtr commit_lsn);
 
 /* message callback signature */
-typedef void (*ReorderBufferMessageCB) (
-										ReorderBuffer *rb,
+typedef void (*ReorderBufferMessageCB) (ReorderBuffer *rb,
 										ReorderBufferTXN *txn,
 										XLogRecPtr message_lsn,
 										bool transactional,

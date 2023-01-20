@@ -29,7 +29,7 @@ Mirror segment instances can be placed on hosts in the cluster in different conf
 
 ![Spread Segment Mirroring in Greenplum Database](../../graphics/spread-mirroring.png "Spread Segment Mirroring in Greenplum Database")
 
-**Note:** You must ensure you have the appropriate number of host systems for your mirroring configuration when you create a system or when you expand a system. For example, to create a system that is configured with spread mirroring requires more hosts than segment instances per host, and a system that is configured with group mirroring requires at least two new hosts when expanding the system. For information about segment mirroring configurations, see [Segment Mirroring Configurations](../../../best_practices/ha.html#topic_ngz_qf4_tt). For information about expanding systems with segment mirroring enabled, see [Planning Mirror Segments](../../expand/expand-planning.html).
+> **Note** You must ensure you have the appropriate number of host systems for your mirroring configuration when you create a system or when you expand a system. For example, to create a system that is configured with spread mirroring requires more hosts than segment instances per host, and a system that is configured with group mirroring requires at least two new hosts when expanding the system. For information about segment mirroring configurations, see [Segment Mirroring Configurations](../../../best_practices/ha.html#topic_ngz_qf4_tt). For information about expanding systems with segment mirroring enabled, see [Planning Mirror Segments](../../expand/expand-planning.html).
 
 
 

@@ -11,7 +11,7 @@ The topics in this section help to ensure that you are prepared to perform a sys
 -   [Planning New Segment Initialization](#topic6) provides information about planning to initialize new segment hosts with `gpexpand`.
 -   [Planning Table Redistribution](#topic10) provides information about planning the data redistribution after the new segment hosts have been initialized.
 
-**Important:** When expanding a Greenplum Database system, you must deactivate Greenplum interconnect proxies before adding new hosts and segment instances to the system, and you must update the `gp_interconnect_proxy_addresses` parameter with the newly-added segment instances before you re-enable interconnect proxies. For example, these commands deactivate Greenplum interconnect proxies by setting the interconnect to the default \(`UDPIFC`\) and reloading the `postgresql.conf` file to update the Greenplum system configuration.
+> **Important** When expanding a Greenplum Database system, you must deactivate Greenplum interconnect proxies before adding new hosts and segment instances to the system, and you must update the `gp_interconnect_proxy_addresses` parameter with the newly-added segment instances before you re-enable interconnect proxies. For example, these commands deactivate Greenplum interconnect proxies by setting the interconnect to the default \(`UDPIFC`\) and reloading the `postgresql.conf` file to update the Greenplum system configuration.
 
 ```
 gpconfig -r gp_interconnect_type
@@ -193,7 +193,7 @@ These utilities cannot be run while `gpexpand` is performing segment initializat
 -   `gppkg`
 -   `gprestore`
 
-**Important:** After you begin initializing new segments, you can no longer restore the system using backup files created for the pre-expansion system. When initialization successfully completes, the expansion is committed and cannot be rolled back.
+> **Important** After you begin initializing new segments, you can no longer restore the system using backup files created for the pre-expansion system. When initialization successfully completes, the expansion is committed and cannot be rolled back.
 
 ### <a id="topic7"></a>Planning Mirror Segments 
 
@@ -229,7 +229,7 @@ Control expansion process aspects by modifying *gpexpand.status\_detail*. For ex
 
 Table redistribution is performed while the system is online. For many Greenplum systems, table redistribution completes in a single `gpexpand` session scheduled during a low-use period. Larger systems may require multiple sessions and setting the order of table redistribution to minimize performance impact. Complete the table redistribution in one session if possible.
 
-**Important:** To perform table redistribution, your segment hosts must have enough disk space to temporarily hold a copy of your largest table. All tables are unavailable for read and write operations during redistribution.
+> **Important** To perform table redistribution, your segment hosts must have enough disk space to temporarily hold a copy of your largest table. All tables are unavailable for read and write operations during redistribution.
 
 The performance impact of table redistribution depends on the size, storage type, and partitioning design of a table. For any given table, redistributing it with `gpexpand` takes as much time as a `CREATE TABLE AS SELECT` operation would. When redistributing a terabyte-scale fact table, the expansion utility can use much of the available system resources, which could affect query performance or other database workloads.
 
@@ -270,7 +270,7 @@ Also consider the following:
 -   Append-optimized tables that are defined to use data compression expand at a significantly slower rate than uncompressed append-optimized tables, potentially up to 80% slower.
 -   Systems with data compression such as ZFS/LZJB take longer to redistribute.
 
-**Important:** If your system hosts use data compression, use identical compression settings on the new hosts to avoid disk space shortage.
+> **Important** If your system hosts use data compression, use identical compression settings on the new hosts to avoid disk space shortage.
 
 ### <a id="topic16"></a>Redistributing Partitioned Tables 
 

@@ -196,7 +196,12 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
 	// collect oids from rtable
 	List *oids_list = NIL;
 
+	// collect unique RTE in FROM Clause
+	List *oids_list_unique = NIL;
+
 	ListCell *lc_rte = nullptr;
+
+	RangeTblEntry *pRTEHashFuncCal = nullptr;
 
 	ForEach(lc_rte, m_dxl_to_plstmt_context->GetRTableEntriesList())
 	{
@@ -205,7 +210,30 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
 		if (pRTE->rtekind == RTE_RELATION)
 		{
 			oids_list = gpdb::LAppendOid(oids_list, pRTE->relid);
+			if (pRTE->inFromCl || (CMD_INSERT == m_cmd_type))
+			{
+				// If we have only one RTE in the FROM clause,
+				// then we use it to extract information
+				// about the distribution policy, which gives info about the
+				// typeOid used for direct dispatch. This helps to perform
+				// direct dispatch based on the distribution column type
+				// inplace of the constant in the filter.
+				pRTEHashFuncCal = (RangeTblEntry *) lfirst(lc_rte);
+
+				// collecting only unique RTE in FROM clause
+				oids_list_unique =
+					list_append_unique_oid(oids_list_unique, pRTE->relid);
+			}
 		}
+	}
+
+	if (gpdb::ListLength(oids_list_unique) > 1)
+	{
+		// If we have a scenario with multiple unique RTE
+		// in "from" clause, then the hash function selection
+		// based on distribution policy of relation will not work
+		// and we switch back to selection based on constant type
+		pRTEHashFuncCal = nullptr;
 	}
 
 	// assemble planned stmt
@@ -245,8 +273,8 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
 	if (CMD_SELECT == m_cmd_type &&
 		nullptr != dxlnode->GetDXLDirectDispatchInfo())
 	{
-		List *direct_dispatch_segids =
-			TranslateDXLDirectDispatchInfo(dxlnode->GetDXLDirectDispatchInfo());
+		List *direct_dispatch_segids = TranslateDXLDirectDispatchInfo(
+			dxlnode->GetDXLDirectDispatchInfo(), pRTEHashFuncCal);
 
 		if (direct_dispatch_segids != NIL)
 		{
@@ -268,7 +296,7 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
 			CDXLPhysicalDML::Cast(dxlnode->GetOperator());
 
 		List *direct_dispatch_segids = TranslateDXLDirectDispatchInfo(
-			phy_dml_dxlop->GetDXLDirectDispatchInfo());
+			phy_dml_dxlop->GetDXLDirectDispatchInfo(), pRTEHashFuncCal);
 		if (direct_dispatch_segids != NIL)
 		{
 			topslice->directDispatch.isDirectDispatch = true;
@@ -630,6 +658,32 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan(
 	return plan_return;
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorDXLToPlStmt::SetHashKeysVarnoWalker
+//
+//	@doc:
+//		Walker to set inner var to outer.
+//
+//---------------------------------------------------------------------------
+BOOL
+CTranslatorDXLToPlStmt::SetHashKeysVarnoWalker(Node *node, void *context)
+{
+	if (nullptr == node)
+	{
+		return false;
+	}
+
+	if (IsA(node, Var) && ((Var *) node)->varno == INNER_VAR)
+	{
+		((Var *) node)->varno = OUTER_VAR;
+		return false;
+	}
+
+	return gpdb::WalkExpressionTree(
+		node, (BOOL(*)()) CTranslatorDXLToPlStmt::SetHashKeysVarnoWalker,
+		context);
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -943,7 +997,7 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexOnlyScan(
 		&index_strategy_list, &index_subtype_list);
 
 	index_scan->indexqual = index_cond;
-	index_scan->indexqualorig = index_orig_cond;
+	// index_scan->indexqualorig = index_orig_cond;
 	SetParamIds(plan);
 
 	return (Plan *) index_scan;
@@ -1419,6 +1473,50 @@ CTranslatorDXLToPlStmt::TranslateDXLHashJoin(
 	}
 
 	GPOS_ASSERT(NIL != hashjoin->hashclauses);
+
+	/*
+	 * The following code is copied from create_hashjoin_plan, only difference is
+	 * we have to deep copy the inner hashkeys since later we will modify it for
+	 * Hash Plannode.
+	 *
+	 * Collect hash related information. The hashed expressions are
+	 * deconstructed into outer/inner expressions, so they can be computed
+	 * separately (inner expressions are used to build the hashtable via Hash,
+	 * outer expressions to perform lookups of tuples from HashJoin's outer
+	 * plan in the hashtable). Also collect operator information necessary to
+	 * build the hashtable.
+	 */
+	List *hashoperators = NIL;
+	List *hashcollations = NIL;
+	List *outer_hashkeys = NIL;
+	List *inner_hashkeys = NIL;
+	ListCell *lc;
+	foreach (lc, hashjoin->hashclauses)
+	{
+		OpExpr *hclause = lfirst_node(OpExpr, lc);
+
+		hashoperators = gpdb::LAppendOid(hashoperators, hclause->opno);
+		hashcollations = gpdb::LAppendOid(hashcollations, hclause->inputcollid);
+		outer_hashkeys = gpdb::LAppend(outer_hashkeys, linitial(hclause->args));
+		inner_hashkeys = gpdb::LAppend(
+			inner_hashkeys, gpdb::CopyObject(lsecond(hclause->args)));
+	}
+
+	hashjoin->hashoperators = hashoperators;
+	hashjoin->hashcollations = hashcollations;
+	/*
+	 * The following code is a little differnt from Postgres Legacy Planner:
+	 *   * In Postgres Legacy Planner will fix variable's varno late in set_plan_references, like
+	 *     set the varno to OUTER_VAR  or INNER_VAR.
+	 *   * ORCA here, the outer_hashkeys and inner_hashkeys are already the fixed version as Planner.
+	 *     outer_hashkeys can be directly set to hashjoin, however, inner_hashkeys is used for
+	 *     the right child, Hash Plan, standing at Hash Plan, it only has lefttree (no righttree),
+	 *     so if we want to set Hash Plan's hashkeys field, we need to walk the inner_hashkeys and
+	 *     replace every INNER_VARs to OUTER_VARS.
+	 */
+	hashjoin->hashkeys = outer_hashkeys;
+	SetHashKeysVarnoWalker((Node *) inner_hashkeys, nullptr);
+	((Hash *) right_plan)->hashkeys = inner_hashkeys;
 
 	plan->lefttree = left_plan;
 	plan->righttree = right_plan;
@@ -4369,7 +4467,8 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 //---------------------------------------------------------------------------
 List *
 CTranslatorDXLToPlStmt::TranslateDXLDirectDispatchInfo(
-	CDXLDirectDispatchInfo *dxl_direct_dispatch_info)
+	CDXLDirectDispatchInfo *dxl_direct_dispatch_info,
+	RangeTblEntry *pRTEHashFuncCal)
 {
 	if (!optimizer_enable_direct_dispatch ||
 		nullptr == dxl_direct_dispatch_info)
@@ -4424,14 +4523,14 @@ CTranslatorDXLToPlStmt::TranslateDXLDirectDispatchInfo(
 		return segids_list;
 	}
 
-	ULONG hash_code = GetDXLDatumGPDBHash(dxl_datum_array);
+	ULONG hash_code = GetDXLDatumGPDBHash(dxl_datum_array, pRTEHashFuncCal);
 	for (ULONG ul = 0; ul < length; ul++)
 	{
 		CDXLDatumArray *dispatch_identifier_datum_array =
 			(*dispatch_identifier_datum_arrays)[ul];
 		GPOS_ASSERT(0 < dispatch_identifier_datum_array->Size());
-		ULONG hash_code_new =
-			GetDXLDatumGPDBHash(dispatch_identifier_datum_array);
+		ULONG hash_code_new = GetDXLDatumGPDBHash(
+			dispatch_identifier_datum_array, pRTEHashFuncCal);
 
 		if (hash_code != hash_code_new)
 		{
@@ -4453,25 +4552,63 @@ CTranslatorDXLToPlStmt::TranslateDXLDirectDispatchInfo(
 //
 //---------------------------------------------------------------------------
 ULONG
-CTranslatorDXLToPlStmt::GetDXLDatumGPDBHash(CDXLDatumArray *dxl_datum_array)
+CTranslatorDXLToPlStmt::GetDXLDatumGPDBHash(CDXLDatumArray *dxl_datum_array,
+											RangeTblEntry *pRTEHashFuncCal)
 {
 	List *consts_list = NIL;
 	Oid *hashfuncs;
 
 	const ULONG length = dxl_datum_array->Size();
 
-	hashfuncs = (Oid *) gpdb::GPDBAlloc(length * sizeof(Oid));
-
-	for (ULONG ul = 0; ul < length; ul++)
+	if (pRTEHashFuncCal != nullptr)
 	{
-		CDXLDatum *datum_dxl = (*dxl_datum_array)[ul];
+		// If we have one unique RTE in FROM clause,
+		// then we do direct dispatch based on the distribution policy
 
-		Const *const_expr =
-			(Const *) m_translator_dxl_to_scalar->TranslateDXLDatumToScalar(
-				datum_dxl);
-		consts_list = gpdb::LAppend(consts_list, const_expr);
-		hashfuncs[ul] = m_dxl_to_plstmt_context->GetDistributionHashFuncForType(
-			const_expr->consttype);
+		gpdb::RelationWrapper rel = gpdb::GetRelation(pRTEHashFuncCal->relid);
+		GPOS_ASSERT(rel);
+		GpPolicy *policy = rel->rd_cdbpolicy;
+		int policy_nattrs = policy->nattrs;
+		TupleDesc desc = rel->rd_att;
+		Oid *opclasses = policy->opclasses;
+		hashfuncs = (Oid *) gpdb::GPDBAlloc(policy_nattrs * sizeof(Oid));
+
+		for (int i = 0; i < policy_nattrs; i++)
+		{
+			AttrNumber attnum = policy->attrs[i];
+			Oid typeoid = desc->attrs[attnum - 1].atttypid;
+			Oid opfamily;
+
+			opfamily = gpdb::GetOpclassFamily(opclasses[i]);
+			hashfuncs[i] = gpdb::GetHashProcInOpfamily(opfamily, typeoid);
+		}
+		for (ULONG ul = 0; ul < length; ul++)
+		{
+			CDXLDatum *datum_dxl = (*dxl_datum_array)[ul];
+			Const *const_expr =
+				(Const *) m_translator_dxl_to_scalar->TranslateDXLDatumToScalar(
+					datum_dxl);
+			consts_list = gpdb::LAppend(consts_list, const_expr);
+		}
+	}
+	else
+	{
+		// If we have multiple tables in the "from" clause,
+		// we calculate hashfunction based on the consttype
+
+		hashfuncs = (Oid *) gpdb::GPDBAlloc(length * sizeof(Oid));
+		for (ULONG ul = 0; ul < length; ul++)
+		{
+			CDXLDatum *datum_dxl = (*dxl_datum_array)[ul];
+
+			Const *const_expr =
+				(Const *) m_translator_dxl_to_scalar->TranslateDXLDatumToScalar(
+					datum_dxl);
+			consts_list = gpdb::LAppend(consts_list, const_expr);
+			hashfuncs[ul] =
+				m_dxl_to_plstmt_context->GetDistributionHashFuncForType(
+					const_expr->consttype);
+		}
 	}
 
 	ULONG hash =

@@ -53,7 +53,7 @@ Before you can use the module, you must perform these steps:
     =# SELECT diskquota.init_table_size_table();
     ```
 
-    **Note:** You must run the `diskquota.init_table_size_table()` UDF for `diskquota` to work.
+    > **Note** You must run the `diskquota.init_table_size_table()` UDF for `diskquota` to work.
 
 
 ## <a id="intro"></a>About the diskquota Module 
@@ -62,7 +62,7 @@ The disk usage for a table includes the table data, indexes, toast tables, and f
 
 The `diskquota` module allows a Greenplum Database administrator to limit the amount of disk space used by tables in schemas or owned by roles in up to 50 databases. The administrator can also use the module to limit the amount of disk space used by schemas and roles on a per-tablespace basis, as well as to limit the disk space used per Greenplum Database segment for a tablespace.
 
-**Note:** A role-based disk quota cannot be set for the Greenplum Database system owner \(the user that creates the Greenplum cluster\).
+> **Note** A role-based disk quota cannot be set for the Greenplum Database system owner \(the user that creates the Greenplum cluster\).
 
 You can set the following quotas with the `diskquota` module:
 
@@ -104,15 +104,15 @@ The `diskquota` module provides user-defined functions \(UDFs\) and views that y
 
 The functions and views provided by the `diskquota` module are available in the Greenplum Database schema named `diskquota`.
 
-**Note:** You may be required to prepend the schema name \(`diskquota.`\) to any UDF or view that you access.
+> **Note** You may be required to prepend the schema name \(`diskquota.`\) to any UDF or view that you access.
 
 User-defined functions provided by the module include:
 
 |Function Signature|Description|
 |------------------|-----------|
 |void init\_table\_size\_table\(\)|Sizes the existing tables in the current database.|
-|void set\_role\_quota\( role\_name text, quota text \)|Sets a disk quota for a specific role in the current database.<br/><br/>**Note:** A role-based disk quota cannot be set for the Greenplum Database system owner.|
-|void set\_role\_tablespace\_quota\( role\_name text, tablespace\_name text, quota text \)|Sets a disk quota for a specific role and tablespace combination in the current database.<br/><br/>**Note:** A role-based disk quota cannot be set for the Greenplum Database system owner.|
+|void set\_role\_quota\( role\_name text, quota text \)|Sets a disk quota for a specific role in the current database.<br/><br/>> **Note** A role-based disk quota cannot be set for the Greenplum Database system owner.|
+|void set\_role\_tablespace\_quota\( role\_name text, tablespace\_name text, quota text \)|Sets a disk quota for a specific role and tablespace combination in the current database.<br/><br/>> **Note** A role-based disk quota cannot be set for the Greenplum Database system owner.|
 |void set\_schema\_quota\( schema\_name text, quota text \)|Sets a disk quota for a specific schema in the current database.|
 |void set\_schema\_tablespace\_quota\( schema\_name text, tablespace\_name text, quota text \)|Sets a disk quota for a specific schema and tablespace combination in the current database.|
 |void set\_per\_segment\_quota\( tablespace\_name text, ratio float4 \)|Sets a per-segment disk quota for a tablespace in the current database.|
@@ -185,7 +185,7 @@ The `diskquota.max_workers` server configuration parameter specifies the maximum
 
 You must set this parameter at Greenplum Database server start time.
 
-**Note:** Setting `diskquota.max_workers` to a value that is larger than `max_worker_processes` has no effect; `diskquota` workers are taken from the pool of worker processes established by that Greenplum Database server configuration parameter setting.
+> **Note** Setting `diskquota.max_workers` to a value that is larger than `max_worker_processes` has no effect; `diskquota` workers are taken from the pool of worker processes established by that Greenplum Database server configuration parameter setting.
 
 ### <a id="maxtableseg"></a>Specifying the Maximum Number of Table Segments (Shards)
 
@@ -231,7 +231,7 @@ SELECT diskquota.pause();
 SELECT diskquota.resume(); 
 ```
 
-**Note:** The pause operation does not persist through a Greenplum Database cluster restart; you must invoke `diskquota.pause()` again when the cluster is back up and running.
+> **Note** The pause operation does not persist through a Greenplum Database cluster restart; you must invoke `diskquota.pause()` again when the cluster is back up and running.
 
 ### <a id="schema_or_role_quota"></a>Setting a Schema or Role Disk Quota 
 
@@ -391,7 +391,7 @@ $ gpconfig -c shared_preload_libraries -v 'auto_explain'
 $ gpstop -ar
 ```
 
-**Note:** When you deactivate the `diskquota` module in this manner, disk quota monitoring ceases. To re-initiate disk quota monitoring in this scenario, you must:
+> **Note** When you deactivate the `diskquota` module in this manner, disk quota monitoring ceases. To re-initiate disk quota monitoring in this scenario, you must:
 
 1.  Re-add the library to `shared_preload_libraries`.
 2.  Restart Greenplum Database.

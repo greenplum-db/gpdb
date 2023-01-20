@@ -230,7 +230,7 @@ See [Encrypting Data and Database Connections](encryption.html)
 
 ## <a id="havail"></a>High Availability 
 
-**Note:** The following guidelines apply to actual hardware deployments, but not to public cloud-based infrastructure, where high availability solutions may already exist.
+> **Note** The following guidelines apply to actual hardware deployments, but not to public cloud-based infrastructure, where high availability solutions may already exist.
 
 -   Use a hardware RAID storage solution with 8 to 24 disks.
 -   Use RAID 1, 5, or 6 so that the disk array can tolerate a failed disk.

@@ -3742,6 +3742,14 @@ remove_useless_groupby_columns(PlannerInfo *root)
 		if (rte->rtekind != RTE_RELATION)
 			continue;
 
+		/*
+		 * We must skip inheritance parent tables as some of the child rels
+		 * may cause duplicate rows.  This cannot happen with partitioned
+		 * tables, however.
+		 */
+		if (rte->inh && rte->relkind != RELKIND_PARTITIONED_TABLE)
+			continue;
+
 		/* Nothing to do unless this rel has multiple Vars in GROUP BY */
 		relattnos = groupbyattnos[relid];
 		if (bms_membership(relattnos) != BMS_MULTIPLE)
@@ -7066,8 +7074,11 @@ plan_create_index_workers(Oid tableOid, Oid indexOid)
 	double		reltuples;
 	double		allvisfrac;
 
-	/* Return immediately when parallelism disabled */
-	if (max_parallel_maintenance_workers == 0)
+	/*
+	 * We don't allow performing parallel operation in standalone backend or
+	 * when parallelism is disabled.
+	 */
+	if (!IsUnderPostmaster || max_parallel_maintenance_workers == 0)
 		return 0;
 
 	/* Set up largely-dummy planner state */

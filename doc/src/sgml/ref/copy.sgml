@@ -3,7 +3,6 @@ doc/src/sgml/ref/copy.sgml
 PostgreSQL documentation
 -->
 
-
 <refentry id="sql-copy">
  <indexterm zone="sql-copy">
   <primary>COPY</primary>
@@ -67,11 +66,11 @@ COPY { <replaceable class="parameter">table_name</replaceable> [ ( <replaceable 
   </para>
 
   <para>
-   If a list of columns is specified, <command>COPY</command> will
-   only copy the data in the specified columns to or from the file.
-   If there are any columns in the table that are not in the column list,
-   <command>COPY FROM</command> will insert the default values for
-   those columns.
+   If a column list is specified, <command>COPY TO</command> copies only
+   the data in the specified columns to the file.  For <command>COPY
+   FROM</command>, each field in the file is inserted, in order, into the
+   specified column.  Table columns not specified in the <command>COPY
+   FROM</command> column list will receive their default values.
   </para>
 
   <para>
@@ -448,26 +447,22 @@ COPY <replaceable class="parameter">count</replaceable>
   <title>Notes</title>
 
    <para>
-    <command>COPY TO</command> can only be used with plain tables, not
-    with views.  However, you can write <literal>COPY (SELECT * FROM
-    <replaceable class="parameter">viewname</replaceable>) TO ...</literal>
-    to copy the current contents of a view.
+    <command>COPY TO</command> can be used only with plain
+    tables, not views, and does not copy rows from child tables
+    or child partitions.  For example, <literal>COPY <replaceable
+    class="parameter">table</replaceable> TO</literal> copies
+    the same rows as <literal>SELECT * FROM ONLY <replaceable
+    class="parameter">table</replaceable></literal>.
+    The syntax <literal>COPY (SELECT * FROM <replaceable
+    class="parameter">table</replaceable>) TO ...</literal> can be used to
+    dump all of the rows in an inheritance hierarchy, partitioned table,
+    or view.
    </para>
 
    <para>
     <command>COPY FROM</command> can be used with plain, foreign, or
     partitioned tables or with views that have
     <literal>INSTEAD OF INSERT</literal> triggers.
-   </para>
-
-   <para>
-    <command>COPY</command> only deals with the specific table named;
-    it does not copy data to or from child tables.  Thus for example
-    <literal>COPY <replaceable class="parameter">table</replaceable> TO</literal>
-    shows the same data as <literal>SELECT * FROM ONLY <replaceable
-    class="parameter">table</replaceable></literal>.  But <literal>COPY
-    (SELECT * FROM <replaceable class="parameter">table</replaceable>) TO ...</literal>
-    can be used to dump all of the data in an inheritance hierarchy.
    </para>
 
    <para>
@@ -669,12 +664,12 @@ COPY <replaceable class="parameter">count</replaceable>
       <row>
        <entry><literal>\</literal><replaceable>digits</replaceable></entry>
        <entry>Backslash followed by one to three octal digits specifies
-       the character with that numeric code</entry>
+       the byte with that numeric code</entry>
       </row>
       <row>
        <entry><literal>\x</literal><replaceable>digits</replaceable></entry>
        <entry>Backslash <literal>x</literal> followed by one or two hex digits specifies
-       the character with that numeric code</entry>
+       the byte with that numeric code</entry>
       </row>
      </tbody>
     </tgroup>
@@ -704,6 +699,12 @@ COPY <replaceable class="parameter">count</replaceable>
     They are also highly vulnerable to corruption if the <command>COPY</command> file is
     transferred across different machines (for example, from Unix to Windows
     or vice versa).
+   </para>
+
+   <para>
+     All backslash sequences are interpreted after encoding conversion.
+     The bytes specified with the octal and hex-digit backslash sequences must
+     form valid characters in the database encoding.
    </para>
 
    <para>
@@ -1051,22 +1052,22 @@ COPY <replaceable class="parameter">table_name</replaceable> [ ( <replaceable cl
     FROM { '<replaceable class="parameter">filename</replaceable>' | STDIN }
     [ [ WITH ]
           [ BINARY ]
-          [ DELIMITER [ AS ] '<replaceable class="parameter">delimiter</replaceable>' ]
-          [ NULL [ AS ] '<replaceable class="parameter">null string</replaceable>' ]
+          [ DELIMITER [ AS ] '<replaceable class="parameter">delimiter_character</replaceable>' ]
+          [ NULL [ AS ] '<replaceable class="parameter">null_string</replaceable>' ]
           [ CSV [ HEADER ]
-                [ QUOTE [ AS ] '<replaceable class="parameter">quote</replaceable>' ]
-                [ ESCAPE [ AS ] '<replaceable class="parameter">escape</replaceable>' ]
+                [ QUOTE [ AS ] '<replaceable class="parameter">quote_character</replaceable>' ]
+                [ ESCAPE [ AS ] '<replaceable class="parameter">escape_character</replaceable>' ]
                 [ FORCE NOT NULL <replaceable class="parameter">column_name</replaceable> [, ...] ] ] ]
 
 COPY { <replaceable class="parameter">table_name</replaceable> [ ( <replaceable class="parameter">column_name</replaceable> [, ...] ) ] | ( <replaceable class="parameter">query</replaceable> ) }
     TO { '<replaceable class="parameter">filename</replaceable>' | STDOUT }
     [ [ WITH ]
           [ BINARY ]
-          [ DELIMITER [ AS ] '<replaceable class="parameter">delimiter</replaceable>' ]
-          [ NULL [ AS ] '<replaceable class="parameter">null string</replaceable>' ]
+          [ DELIMITER [ AS ] '<replaceable class="parameter">delimiter_character</replaceable>' ]
+          [ NULL [ AS ] '<replaceable class="parameter">null_string</replaceable>' ]
           [ CSV [ HEADER ]
-                [ QUOTE [ AS ] '<replaceable class="parameter">quote</replaceable>' ]
-                [ ESCAPE [ AS ] '<replaceable class="parameter">escape</replaceable>' ]
+                [ QUOTE [ AS ] '<replaceable class="parameter">quote_character</replaceable>' ]
+                [ ESCAPE [ AS ] '<replaceable class="parameter">escape_character</replaceable>' ]
                 [ FORCE QUOTE { <replaceable class="parameter">column_name</replaceable> [, ...] | * } ] ] ]
 </synopsis>
 
@@ -1082,13 +1083,13 @@ COPY { <replaceable class="parameter">table_name</replaceable> [ ( <replaceable 
 <synopsis>
 COPY [ BINARY ] <replaceable class="parameter">table_name</replaceable>
     FROM { '<replaceable class="parameter">filename</replaceable>' | STDIN }
-    [ [USING] DELIMITERS '<replaceable class="parameter">delimiter</replaceable>' ]
-    [ WITH NULL AS '<replaceable class="parameter">null string</replaceable>' ]
+    [ [USING] DELIMITERS '<replaceable class="parameter">delimiter_character</replaceable>' ]
+    [ WITH NULL AS '<replaceable class="parameter">null_string</replaceable>' ]
 
 COPY [ BINARY ] <replaceable class="parameter">table_name</replaceable>
     TO { '<replaceable class="parameter">filename</replaceable>' | STDOUT }
-    [ [USING] DELIMITERS '<replaceable class="parameter">delimiter</replaceable>' ]
-    [ WITH NULL AS '<replaceable class="parameter">null string</replaceable>' ]
+    [ [USING] DELIMITERS '<replaceable class="parameter">delimiter_character</replaceable>' ]
+    [ WITH NULL AS '<replaceable class="parameter">null_string</replaceable>' ]
 </synopsis></para>
  </refsect1>
 </refentry>

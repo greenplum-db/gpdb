@@ -94,7 +94,7 @@ Also, the `pg_log` file is collected from the coordinator and segment hosts.
 :   Collect all `gpupgrade` logs along with Greenplum logs.
 
 
-**Note**: Hostnames provided through `-hostfile` or `-h` must match the hostname column in `gp_segment_configuration`.
+> **Note** Hostnames provided through `-hostfile` or `-h` must match the hostname column in `gp_segment_configuration`.
 
 The tool also collects the following information:
 
@@ -108,7 +108,7 @@ The tool also collects the following information:
 | PXF files | <ul><li>`pxf cluster status`</li><li>`pxf status`</li><li>PXF version</li><li>`Logs/`</li><li>`CONF/`</li><li>`Run/`</li></ul> |
 | gpupgrade files | <ul><li>`~/gpAdminLogs` on all hosts</li><li>`$HOME/gpupgrade` on coordinator host</li><li>`$HOME/.gpupgrade` on all hosts</li><li>Source cluster's `pg_log` files located in `$MASTER_DATA_DIRECTORY/pg_log` on coordinator host</li><li>Target cluster's `pg_log` files located in `$(gpupgrade config show --target-datadir)/pg_log` on coordinator host</li><li>Target cluster's coordinator data directory</li></ul> |
 
-**NOTE**: Some commands might not be able to be run if user does not have the correct permissions.
+> **Note** Some commands might not be able to be run if user does not have the correct permissions.
 
 ## <a id="exs"></a>Examples 
 

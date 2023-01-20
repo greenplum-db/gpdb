@@ -41,14 +41,6 @@ explain (costs off)
   select round(avg(aa)), sum(aa) from a_star;
 select round(avg(aa)), sum(aa) from a_star a3;
 
--- Temporary hack to investigate whether extra vacuum/analyze is happening
-select relname, relpages, reltuples
-from pg_class
-where relname like '__star' order by relname;
-select relname, vacuum_count, analyze_count, autovacuum_count, autoanalyze_count
-from pg_stat_all_tables
-where relname like '__star' order by relname;
-
 -- Disable Parallel Append
 alter table a_star reset (parallel_workers);
 alter table b_star reset (parallel_workers);
@@ -181,9 +173,29 @@ select * from
   (select count(*) from tenk1 where thousand > 99) ss
   right join (values (1),(2),(3)) v(x) on true;
 
-reset enable_material;
+-- test rescans for a Limit node with a parallel node beneath it.
 reset enable_seqscan;
+set enable_indexonlyscan to off;
+set enable_indexscan to off;
+alter table tenk1 set (parallel_workers = 0);
+alter table tenk2 set (parallel_workers = 1);
+explain (costs off)
+select count(*) from tenk1
+  left join (select tenk2.unique1 from tenk2 order by 1 limit 1000) ss
+  on tenk1.unique1 < ss.unique1 + 1
+  where tenk1.unique1 < 2;
+select count(*) from tenk1
+  left join (select tenk2.unique1 from tenk2 order by 1 limit 1000) ss
+  on tenk1.unique1 < ss.unique1 + 1
+  where tenk1.unique1 < 2;
+--reset the value of workers for each table as it was before this test.
+alter table tenk1 set (parallel_workers = 4);
+alter table tenk2 reset (parallel_workers);
+
+reset enable_material;
 reset enable_bitmapscan;
+reset enable_indexonlyscan;
+reset enable_indexscan;
 
 -- test parallel bitmap heap scan.
 set enable_seqscan to off;
@@ -394,9 +406,10 @@ EXPLAIN (analyze, timing off, summary off, costs off) SELECT * FROM tenk1;
 ROLLBACK TO SAVEPOINT settings;
 
 -- provoke error in worker
+-- (make the error message long enough to require multiple bufferloads)
 SAVEPOINT settings;
 SET LOCAL force_parallel_mode = 1;
-select stringu1::int2 from tenk1 where unique1 = 1;
+select (stringu1 || repeat('abcd', 5000))::int2 from tenk1 where unique1 = 1;
 ROLLBACK TO SAVEPOINT settings;
 
 -- test interaction with set-returning functions

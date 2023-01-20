@@ -13,8 +13,8 @@ Usage: gpcheckcat [<option>] [dbname]
     -S option                : shared table options (none, only)
     -O                       : Online
     -l                       : list all tests
-    -R test | 'test1, test2' : run this particular test(s) (quoted, comma seperated list for multiple tests)
-    -s test | 'test1, test2' : skip this particular test(s) (quoted, comma seperated list for multiple tests)
+    -R test | 'test1, test2' : run this particular test(s) (quoted, comma separated list for multiple tests)
+    -s test | 'test1, test2' : skip this particular test(s) (quoted, comma separated list for multiple tests)
     -C catname               : run cross consistency, FK and ACL tests for this catalog table
 
     Test subset options are mutually exclusive, use only one of '-R', '-s', or '-C'.
@@ -167,7 +167,7 @@ class Global():
         # array of SQL statements. Key is dbid
         self.ReSync = {}
 
-        # constraints which are actually unenforcable
+        # constraints which are actually unenforceable
         self.Constraints = []
 
         # ownership fixups
@@ -414,7 +414,7 @@ def connect2run(qry, col=None):
     threads = []
     i = 1
 
-    # parallelise queries
+    # parallelize queries
     for dbid in GV.cfg:
         c = GV.cfg[dbid]
         db = connect2(c)
@@ -2308,6 +2308,7 @@ TableMainColumn['pg_attribute_encoding'] = ['attrelid', 'pg_class']
 TableMainColumn['pg_auth_members'] = ['roleid', 'pg_authid']
 TableMainColumn['pg_autovacuum'] = ['vacrelid', 'pg_class']
 TableMainColumn['pg_compression'] = ['compname', 'pg_compression']
+TableMainColumn['pg_db_role_setting'] = ['setdatabase', 'pg_database']
 TableMainColumn['pg_depend'] = ['objid', 'pg_class']
 TableMainColumn['pg_foreign_table'] = ['ftrelid', 'pg_class']
 TableMainColumn['pg_index'] = ['indexrelid', 'pg_class']

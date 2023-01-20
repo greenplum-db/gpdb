@@ -83,5 +83,5 @@ missing, special character missing (needs to be one listed in "<list-of-special-
 
 ## <a id="topic_info"></a>Additional Module Documentation 
 
-Refer to the [passwordcheck](https://www.postgresql.org/docs/9.4/passwordcheck.html) PostgreSQL documentation for more information about this module.
+Refer to the [passwordcheck](https://www.postgresql.org/docs/12/passwordcheck.html) PostgreSQL documentation for more information about this module.
 

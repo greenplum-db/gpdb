@@ -1157,6 +1157,10 @@ doputenv(const char *var, const char *val)
 static void
 initialize_environment(void)
 {
+	/*
+	 * Set default application_name.  (The test_function may choose to
+	 * override this, but if it doesn't, we have something useful in place.)
+	 */
 	putenv("PGAPPNAME=pg_regress");
 
 	if (nolocale)
@@ -1233,14 +1237,33 @@ initialize_environment(void)
 		 * we also use psql's -X switch consistently, so that ~/.psqlrc files
 		 * won't mess things up.)  Also, set PGPORT to the temp port, and set
 		 * PGHOST depending on whether we are using TCP or Unix sockets.
+		 *
+		 * This list should be kept in sync with TestLib.pm.
 		 */
-		unsetenv("PGDATABASE");
-		unsetenv("PGUSER");
-		unsetenv("PGSERVICE");
-		unsetenv("PGSSLMODE");
-		unsetenv("PGREQUIRESSL");
+		/* PGCLIENTENCODING, see above */
 		unsetenv("PGCONNECT_TIMEOUT");
 		unsetenv("PGDATA");
+		unsetenv("PGDATABASE");
+		unsetenv("PGGSSENCMODE");
+		unsetenv("PGGSSLIB");
+		/* PGHOSTADDR, see below */
+		unsetenv("PGKRBSRVNAME");
+		unsetenv("PGPASSFILE");
+		unsetenv("PGPASSWORD");
+		unsetenv("PGREQUIREPEER");
+		unsetenv("PGREQUIRESSL");
+		unsetenv("PGSERVICE");
+		unsetenv("PGSERVICEFILE");
+		unsetenv("PGSSLCERT");
+		unsetenv("PGSSLCRL");
+		unsetenv("PGSSLKEY");
+		unsetenv("PGSSLMODE");
+		unsetenv("PGSSLROOTCERT");
+		unsetenv("PGTARGETSESSIONATTRS");
+		unsetenv("PGUSER");
+		/* PGPORT, see below */
+		/* PGHOST, see below */
+
 #ifdef HAVE_UNIX_SOCKETS
 		if (hostname != NULL)
 			doputenv("PGHOST", hostname);

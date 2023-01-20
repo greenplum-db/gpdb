@@ -970,11 +970,10 @@ ExecMergeJoin_guts(PlanState *pstate)
 
 						if (compareResult == 0)
 							node->mj_JoinState = EXEC_MJ_JOINTUPLES;
-						else
-						{
-							Assert(compareResult < 0);
+						else if (compareResult < 0)
 							node->mj_JoinState = EXEC_MJ_NEXTOUTER;
-						}
+						else	/* compareResult > 0 should not happen */
+							elog(ERROR, "mergejoin input data is out of order");
 						break;
 					case MJEVAL_NONMATCHABLE:
 
@@ -1178,7 +1177,7 @@ ExecMergeJoin_guts(PlanState *pstate)
 
 					node->mj_JoinState = EXEC_MJ_JOINTUPLES;
 				}
-				else
+				else if (compareResult > 0)
 				{
 					/* ----------------
 					 *	if the new outer tuple didn't match the marked inner
@@ -1197,8 +1196,6 @@ ExecMergeJoin_guts(PlanState *pstate)
 					 *	no more inners, no more matches are possible.
 					 * ----------------
 					 */
-					if (compareResult <= 0 && !((MergeJoin*)node->js.ps.plan)->unique_outer)
-						elog(ERROR, "Mergejoin: compareResult > 0, bad plan ?");
 					innerTupleSlot = node->mj_InnerTupleSlot;
 
 					/* reload comparison data for current inner */
@@ -1232,6 +1229,8 @@ ExecMergeJoin_guts(PlanState *pstate)
 							return NULL;
 					}
 				}
+				else			/* compareResult < 0 should not happen */
+					elog(ERROR, "mergejoin input data is out of order");
 				break;
 
 				/*----------------------------------------------------------

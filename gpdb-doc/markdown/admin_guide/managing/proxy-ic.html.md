@@ -15,7 +15,7 @@ To enable interconnect proxies for the Greenplum system, set these system config
 -   List the proxy ports with the parameter [gp\_interconnect\_proxy\_addresses](../../ref_guide/config_params/guc-list.html#gp_interconnect_proxy_addresses). You must specify a proxy port for the coordinator, standby coordinator, and all segment instances.
 -   Set the parameter [gp\_interconnect\_type](../../ref_guide/config_params/guc-list.html#gp_interconnect_type) to `proxy`.
 
-**Note:** When expanding a Greenplum Database system, you must deactivate interconnect proxies before adding new hosts and segment instances to the system, and you must update the `gp_interconnect_proxy_addresses` parameter with the newly-added segment instances before you re-enable interconnect proxies.
+> **Note** When expanding a Greenplum Database system, you must deactivate interconnect proxies before adding new hosts and segment instances to the system, and you must update the `gp_interconnect_proxy_addresses` parameter with the newly-added segment instances before you re-enable interconnect proxies.
 
 **Parent topic:** [Managing a Greenplum System](../managing/partII.html)
 
@@ -42,7 +42,7 @@ For the coordinator, standby coordinator, and segment instance, the first three 
 -   seg\_address is the IP address or hostname corresponding to the `address` column in the catalog table.
 -   port is the TCP/IP port for the segment instance proxy that you specify.
 
-**Important:** If a segment instance hostname is bound to a different IP address at runtime, you must run `gpstop -u` to re-load the `gp_interconnect_proxy_addresses` value.
+> **Important** If a segment instance hostname is bound to a different IP address at runtime, you must run `gpstop -u` to re-load the `gp_interconnect_proxy_addresses` value.
 
 This is an example PL/Python function that displays or sets the segment instance proxy port values for the `gp_interconnect_proxy_addresses` parameter. To create and run the function, you must enable PL/Python in the database with the `CREATE EXTENSION plpythonu` command.
 
@@ -101,7 +101,7 @@ returns table(dbid smallint, content smallint, address text, port int) as $$
 $$ language plpythonu execute on coordinator;
 ```
 
-**Note:** When you run the function, you should connect to the database using the Greenplum interconnect type `UDPIFC` or `TCP`. This example uses `psql` to connect to the database `mytest` with the interconnect type `UDPIFC`.
+> **Note** When you run the function, you should connect to the database using the Greenplum interconnect type `UDPIFC` or `TCP`. This example uses `psql` to connect to the database `mytest` with the interconnect type `UDPIFC`.
 
 ```
 PGOPTIONS="-c gp_interconnect_type=udpifc" psql -d mytest
