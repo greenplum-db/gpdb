@@ -3854,7 +3854,7 @@ def impl(context, contentid):
 
 @given('create a gpcheckperf input host file')
 def impl(context):
-    cmd = Command(name='create input host file', cmdStr='echo sdw1 > /tmp/hostfile1;echo mdw >> /tmp/hostfile1;')
+    cmd = Command(name='create input host file', cmdStr='echo sdw1 > /tmp/hostfile1;echo cdw >> /tmp/hostfile1;')
     cmd.run(validateAfter=True)
 
 @given('backup /etc/hosts file and update hostname entry for localhost')
