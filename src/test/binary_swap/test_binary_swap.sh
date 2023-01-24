@@ -28,7 +28,8 @@ clean_output()
 ## Run pre test to ignore expected failures
 run_pre_test()
 {
-    psql -f test_binary_swap_pre.sql postgres > /dev/null 2>&1
+    echo "Run pre test to ignore expected failures..."
+    psql -af test_binary_swap_pre.sql postgres
 }
 
 ## Run tests via pg_regress with given schedule name
