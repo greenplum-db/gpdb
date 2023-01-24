@@ -479,3 +479,18 @@ RESET gp_default_storage_options;
 ALTER TABLE aocs_alter_add_col_reorganize ADD COLUMN d int;
 \d+ aocs_alter_add_col_reorganize
 DROP TABLE aocs_alter_add_col_reorganize;
+
+-- test case: Ensure that reads don't fail after aborting an add column + insert operation and we don't project the aborted column
+CREATE TABLE aocs_addcol_abort(a int, b int) USING ao_column;
+INSERT INTO aocs_addcol_abort SELECT i,i FROM generate_series(1,10)i;
+BEGIN;
+ALTER TABLE aocs_addcol_abort ADD COLUMN c int;
+INSERT INTO aocs_addcol_abort SELECT i,i,i FROM generate_series(1,10)i;
+-- check state of aocsseg for entries of add column + insert
+SELECT * FROM gp_toolkit.__gp_aocsseg('aocs_addcol_abort') ORDER BY segment_id, column_num;
+SELECT * FROM aocs_addcol_abort;
+ABORT;
+-- check state of aocsseg if entries for new column are rolled back correctly
+SELECT * FROM gp_toolkit.__gp_aocsseg('aocs_addcol_abort') ORDER BY segment_id, column_num;
+SELECT * FROM aocs_addcol_abort;
+DROP TABLE aocs_addcol_abort;
