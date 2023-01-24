@@ -868,7 +868,6 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Limitations:</strong><p class="p"><code class="ph codeph">DEFERRABLE</code> clause has no
                   effect.</p>
-<p class="p"><code class="ph codeph">SET TRANSACTION SNAPSHOT</code>YES</p>
 </td>
 </tr>
 <tr class="row">
