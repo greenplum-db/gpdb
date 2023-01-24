@@ -4091,3 +4091,71 @@ DROP ROLE part_inherit_other_role;
 DROP ROLE part_inherit_priv_role;
 DROP ROLE part_inherit_attach_priv_role;
 DROP ROLE part_inherit_exchange_out_priv_role;
+
+--Test cases for data selection from range partitioned tables with predicate on date or timestamp type-------------
+drop table if exists test_rangePartition;
+create table public.test_rangePartition
+(datedday date)
+    WITH (
+        appendonly=false
+        )
+    PARTITION BY RANGE(datedday)
+(
+    PARTITION pn_20221022 START ('2022-10-22'::date) END ('2022-10-23'::date),
+    PARTITION pn_20221023 START ('2022-10-23'::date) END ('2022-10-24'::date),
+    DEFAULT PARTITION pdefault
+    );
+
+insert into public.test_rangePartition(datedday)
+select ('2022-10-22'::date)
+union
+select ('2022-10-23'::date);
+
+--Test case with condition on date and timestamp
+explain (costs off) select max(datedday) from public.test_rangePartition where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+select max(datedday) from public.test_rangePartition where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+
+--Test case with condition on date and timestamp
+explain (costs off) select max(datedday) from public.test_rangePartition where datedday='2022-10-23' or datedday='2022-10-22';
+select max(datedday) from public.test_rangePartition where datedday='2022-10-23' or datedday='2022-10-22';
+
+--Test case with condition on timestamp and timestamp
+explain (costs off) select max(datedday) from public.test_rangePartition where datedday=('2022-10-23'::date -interval '0 day') or datedday=('2022-10-23'::date -interval '1 day');
+select max(datedday) from public.test_rangePartition where datedday=('2022-10-23'::date -interval '0 day') or datedday=('2022-10-23'::date -interval '1 day');
+
+--Test case with condition on date and timestamp
+explain (costs off) select datedday from public.test_rangePartition where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+select datedday from public.test_rangePartition where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+
+drop table test_rangePartition;
+
+--Test cases for data selection from List partitioned tables with predicate on date or timestamp type-------------
+drop table if exists test_listPartition;
+create table test_listPartition (i int, d date)
+    partition by list(d)
+ (partition p1 values('2022-10-22'), partition p2 values('2022-10-23'),
+ default partition pdefault  );
+
+
+insert into test_listPartition values(1,'2022-10-22');
+insert into test_listPartition values(2,'2022-10-23');
+insert into test_listPartition values(3,'2022-10-24');
+
+
+--Test case with condition on date and timestamp
+explain (costs off) select max(d) from test_listPartition where d='2022-10-23' or d=('2022-10-23'::date -interval '1 day');
+select max(d) from test_listPartition where d='2022-10-23' or d=('2022-10-23'::date -interval '1 day');
+
+--Test case with condition on date and date
+explain (costs off) select max(d) from test_listPartition where d='2022-10-23' or d='2022-10-22';
+select max(d) from test_listPartition where d='2022-10-23' or d='2022-10-22';
+
+--Test case with condition on timestamp and timestamp
+explain (costs off) select max(d) from test_listPartition where d=('2022-10-23'::date -interval '0 day') or d=('2022-10-23'::date -interval '1 day');
+select max(d) from test_listPartition where d=('2022-10-23'::date -interval '0 day') or d=('2022-10-23'::date -interval '1 day');
+
+--Test case with condition on timestamp and timestamp
+explain (costs off) select d from test_listPartition where d='2022-10-23' or d=('2022-10-23'::date -interval '1 day');
+select d from test_listPartition where d='2022-10-23' or d=('2022-10-23'::date -interval '1 day');
+
+drop table test_listPartition;
