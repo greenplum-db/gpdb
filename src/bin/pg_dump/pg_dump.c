@@ -144,8 +144,6 @@ char		g_comment_end[10];
 
 static const CatalogId nilCatalogId = {0, 0};
 
-const char *EXT_PARTITION_NAME_POSTFIX = "_external_partition__";
-
 /* sorted table of role names */
 static RoleNameItem *rolenames = NULL;
 static int	nrolenames = 0;
@@ -4972,11 +4970,20 @@ getTables(Archive *fout, int *numTables)
 		if (tblinfo[i].parrelid != 0 && tblinfo[i].relstorage == 'x')
 		{
 			/*
-			 * Length of tmpStr is bigger than the sum of NAMEDATALEN
-			 * and the length of EXT_PARTITION_NAME_POSTFIX
+			 * The temporary external table name has to be under NAMEDATALEN
+			 * in length so that we don't have to deal with any unexpected
+			 * issues in restore table creation where the table name would be
+			 * automatically truncated down. This is especially important for
+			 * binary upgrade dumps where the preserved oid expects a certain
+			 * relation name that is implicitly restricted to NAMEDATALEN. The
+			 * below will generate a temporary table name
+			 * _external_partition_parrelid_<oid>_relid_<oid> which is under
+			 * length NAMEDATALEN and is unique. This generated name will be
+			 * stored in the table map and used later to assist in the ALTER
+			 * TABLE EXCHANGE PARTITION dump logic.
 			 */
-			char tmpStr[500];
-			snprintf(tmpStr, sizeof(tmpStr), "%s%s", tblinfo[i].dobj.name, EXT_PARTITION_NAME_POSTFIX);
+			char tmpStr[NAMEDATALEN];
+			snprintf(tmpStr, NAMEDATALEN, "_external_partition_parrelid_%u_relid_%u", tblinfo[i].parrelid, tblinfo[i].dobj.catId.oid);
 			tblinfo[i].dobj.name = pg_strdup(tmpStr);
 		}
 	
@@ -13776,7 +13783,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		if (hasExternalPartitions)
 		{
 			int numExternalPartitions = 0;
-			int i_relname = 0;
+			int i_reloid = 0;
 			int i_parname = 0;
 			int i_parparentrule = 0;
 			int i_parlevel = 0;
@@ -13804,7 +13811,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			 */
 			ExecuteSqlStatement(fout, "SET enable_nestloop TO off");
 
-			appendPQExpBuffer(getExternalPartsQuery, "SELECT c.relname, pr.parname, pr.parparentrule, p.parlevel, "
+			appendPQExpBuffer(getExternalPartsQuery, "SELECT c.oid AS reloid, pr.parname, pr.parparentrule, p.parlevel, "
 							  "CASE "
 							  "    WHEN p.parkind <> 'r'::\"char\" OR pr.parisdefault THEN NULL::bigint "
 							  "    ELSE pr.parruleord "
@@ -13823,7 +13830,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 				exit_horribly(NULL, "partition table %s has external partitions but unable to query more details about them\n",
 							  qualrelname);
 
-			i_relname = PQfnumber(getExternalPartsResult, "relname");
+			i_reloid = PQfnumber(getExternalPartsResult, "reloid");
 			i_parname = PQfnumber(getExternalPartsResult, "parname");
 			i_parparentrule = PQfnumber(getExternalPartsResult, "parparentrule");
 			i_parlevel = PQfnumber(getExternalPartsResult, "parlevel");
@@ -13858,15 +13865,12 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			{
 				int maxParLevel = atoi(PQgetvalue(getExternalPartsResult, i, i_parlevel));
 				int lookupSubRootHierarchyIndex[maxParLevel];
+				Oid relOid = atooid(PQgetvalue(getExternalPartsResult, i, i_reloid));
+				TableInfo *relInfo = findTableByOid(relOid);
 				char *parentOid = PQgetvalue(getExternalPartsResult, i, i_parparentrule);
-				char *relname  = pg_strdup(PQgetvalue(getExternalPartsResult, i, i_relname));
-				char *qualTmpExtTable;
-				char tmpExtTable[500] = {0};
-
-				snprintf(tmpExtTable, sizeof(tmpExtTable), "%s%s", relname, EXT_PARTITION_NAME_POSTFIX);
-				qualTmpExtTable = pg_strdup(fmtQualifiedId(fout->remoteVersion,
-														   tbinfo->dobj.namespace->dobj.name,
-														   tmpExtTable));
+				char *qualTmpExtTable = qualTmpExtTable = pg_strdup(fmtQualifiedId(fout->remoteVersion,
+																				   tbinfo->dobj.namespace->dobj.name,
+																				   relInfo->dobj.name));
 
 				/* Start of the ALTER TABLE EXCHANGE PARTITION statement */
 				appendPQExpBuffer(q, "ALTER TABLE %s ", qualrelname);
@@ -13947,7 +13951,6 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 				appendPQExpBuffer(q, "WITH TABLE %s WITHOUT VALIDATION;\n", qualTmpExtTable);
 				appendPQExpBuffer(q, "DROP TABLE %s;\n", qualTmpExtTable);
 
-				free(relname);
 				free(qualTmpExtTable);
 			}
 

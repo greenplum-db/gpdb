@@ -567,7 +567,6 @@ extern char g_comment_end[10];
 
 extern char g_opaque_type[10];	/* name for the opaque type */
 
-extern const char *EXT_PARTITION_NAME_POSTFIX;
 /*
  *	common utility functions
  */
