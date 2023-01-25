@@ -76,6 +76,8 @@ where column\_constraint is:
   | NULL 
   | CHECK  ( <expression> ) [ NO INHERIT ]
   | DEFAULT <default_expr>
+  | GENERATED ALWAYS AS ( <generation_expr> ) STORED
+  | GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY [ ( <sequence_options> ) ]
   | UNIQUE <index_parameters>
   | PRIMARY KEY <index_parameters>
   | REFERENCES <reftable> [ ( refcolumn ) ] 
@@ -98,10 +100,10 @@ and table\_constraint is:
 [ DEFERRABLE | NOT DEFERRABLE ] [ INITIALLY DEFERRED | INITIALLY IMMEDIATE ]
 ```
 
-and *like\_option* is:
+and like_option is:
 
 ``` pre
-{INCLUDING|EXCLUDING} {DEFAULTS|CONSTRAINTS|INDEXES|STORAGE|COMMENTS|ALL}
+{INCLUDING|EXCLUDING} {COMMENTS|CONSTRAINTS|DEFAULTS|GENERATED|IDENTITY|INDEXES|STATISTICS|STORAGE|ALL}
 ```
 
 and index_parameters in `UNIQUE` and `PRIMARY KEY` constraints are:
@@ -296,11 +298,17 @@ LIKE source\_table like\_option `...`\]
 
 :   Default expressions for the copied column definitions will only be copied if `INCLUDING DEFAULTS` is specified. The default behavior is to exclude default expressions, resulting in the copied columns in the new table having null defaults.
 
+:   Any generation expressions of copied column definitions will be copied when `INCLUDING GENERATED` is specified. By default, new columns will be regular base columns.
+
+:   Any identity specifications of copied column definitions will be copied when `INCLUDING IDENTITY` is specified. A new sequence is created for each identity column of the new table, separate from the sequences associated with the old table.
+
 :   Not-null constraints are always copied to the new table. `CHECK` constraints will be copied only if `INCLUDING CONSTRAINTS` is specified. No distinction is made between column constraints and table constraints.
 
 :   Indexes, `PRIMARY KEY`, and `UNIQUE` constraints on the original table will be created on the new table only if the `INCLUDING INDEXES` clause is specified. Names for the new indexes and constraints are chosen according to the default rules, regardless of how the originals were named. \(This behavior avoids possible duplicate-name failures for the new indexes.\)
 
 :   Any indexes on the original table will not be created on the new table, unless the `INCLUDING INDEXES` clause is specified.
+
+:   Extended statistics are copied to the new table when `INCLUDING STATISTICS` is specified.
 
 :   `STORAGE` settings for the copied column definitions will be copied only if `INCLUDING STORAGE` is specified. The default behavior is to exclude `STORAGE` settings, resulting in the copied columns in the new table having type-specific default settings.
 
@@ -326,6 +334,17 @@ CHECK \(expression\) \[ NO INHERIT \]
 :   A constraint marked with `NO INHERIT` will not propagate to child tables.
 
 :   Currently, `CHECK` expressions cannot contain subqueries nor refer to variables other than columns of the current row.
+
+
+GENERATED ALWAYS AS ( generation_expr ) STORED
+:   The `GENERATED ALWAYS AS` clause creates the column as a *generated column*. The column cannot be written to, and when read it will be computed from the specified expression.
+:   The keyword `STORED` is required to signify that the column will be computed on write and will be stored on disk.
+:   The generation expression can refer to other columns in the table, but not other generated columns. Any functions and operators used must be immutable. References to other tables are not allowed.
+
+GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY [ ( sequence_options ) ]
+:   The `GENERATED ... AS IDENTITY` clause creates the column as an identity column. Greenplum Database attaches an implicit sequence to it, and automatically assignes a value from the sequence to the column in new rows. Such a column is implicitly `NOT NULL`.
+:   The clauses `ALWAYS` and `BY DEFAULT` determine how the sequence value is given precedence over a user-specified value in an `INSERT` statement. If `ALWAYS` is specified, a user-specified value is only accepted if the `INSERT` statement specifies `OVERRIDING SYSTEM VALUE`. If `BY DEFAULT` is specified, then the user-specified value takes precedence. See [INSERT](INSERT.html) for details. (User-specified values are always used regardless of this setting in the `COPY` command.)
+:   You can use the optional sequence_options clause to override the options of the sequence. See [CREATE SEQUENCE](CREATE_SEQUENCE.html) for details.
 
 UNIQUE \( column\_constraint \)
 UNIQUE \( column\_name \[, ... \] \) \( table\_constraint \)
@@ -635,7 +654,9 @@ PARTITION BY RANGE (year)
 -   **Inheritance** — Multiple inheritance via the `INHERITS` clause is a Greenplum Database language extension. SQL:1999 and later define single inheritance using a different syntax and different semantics. SQL:1999-style inheritance is not yet supported by Greenplum Database.
 -   **Partitioning** — Table partitioning via the `PARTITION BY` clause is a Greenplum Database language extension.
 -   **Zero-column tables** — Greenplum Database allows a table of no columns to be created \(for example, `CREATE TABLE foo();`\). This is an extension from the SQL standard, which does not allow zero-column tables. Zero-column tables are not in themselves very useful, but disallowing them creates odd special cases for `ALTER TABLE DROP COLUMN`, so Greenplum decided to ignore this spec restriction.
--   **LIKE** — While a `LIKE` clause exists in the SQL standard, many of the options that Greenplum Database accepts for it are not in the standard, and some of the standard's options are not implemented by Greenplum Database.
+-   **Multiple Identity Columns** - Greenplum Database allows a table to have more than one identity column. The standard specifies that a table can have at most one identity column. This is relaxed mainly to give more flexibility for performing schema changes or migrations. Note that the `INSERT` command supports only one override clause that applies to the entire statement; multiple identity columns with different behaviors is not well supported.
+-   **Generated Columns** - The option `STORED` is not standard but is also used by other SQL implementations. The SQL standard does not specify the storage of generated columns.
+-   **LIKE clause** — While a `LIKE` clause exists in the SQL standard, many of the options that Greenplum Database accepts for it are not in the standard, and some of the standard's options are not implemented by Greenplum Database.
 -   **WITH clause** — The `WITH` clause is a Greenplum Database extension; neither storage parameters nor OIDs are in the standard.
 -   **Tablespaces** — The Greenplum Database concept of tablespaces is not part of the SQL standard. The clauses `TABLESPACE` and `USING INDEX TABLESPACE` are extensions.
 -   **Data Distribution** — The Greenplum Database concept of a parallel or distributed database is not part of the SQL standard. The `DISTRIBUTED` clauses are extensions.

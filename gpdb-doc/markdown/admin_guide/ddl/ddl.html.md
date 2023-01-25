@@ -14,6 +14,8 @@ Most of the advanced Greenplum features are enabled with extensions to the SQL `
 
 -   **[Creating and Managing Schemas](../ddl/ddl-schema.html)**  
 
+-   **[About Table Definition Basics](../ddl/ddl-basics.html)**  
+
 -   **[Creating and Managing Tables](../ddl/ddl-table.html)**  
 
 -   **[Choosing the Table Storage Model](../ddl/ddl-storage.html)**  

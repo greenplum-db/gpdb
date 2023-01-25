@@ -202,7 +202,7 @@ For information about Greenplum features and SQL compliance, see the *Greenplum 
 |F191|Referential delete actions|NO| |
 |F200|`TRUNCATE TABLE` statement|YES| |
 |F201|`CAST` function|YES| |
-|F202|`TRUNCATE TABLE`: identity column restart option|NO| |
+|F202|`TRUNCATE TABLE`: identity column restart option|YES| |
 |F221|Explicit defaults|YES| |
 |F222|`INSERT` statement: `DEFAULT VALUES` clause|YES| |
 |F231|Privilege tables|YES| |
@@ -241,6 +241,8 @@ For information about Greenplum features and SQL compliance, see the *Greenplum 
 |F381-02|`ALTER TABLE` statement: `ADD CONSTRAINT` clause| | |
 |F381-03|`ALTER TABLE` statement: `DROP CONSTRAINT` clause| | |
 |F382|Alter column data type|YES|Some limitations on altering distribution key columns|
+|F384|Drop identity property clause|YES| |
+|F386|Set identity column generation clause|YES| |
 |F391|Long identifiers|YES| |
 |F392|Unicode escapes in identifiers|NO| |
 |F393|Unicode escapes in literals|NO| |
@@ -402,11 +404,11 @@ For information about Greenplum features and SQL compliance, see the *Greenplum 
 |T171|`LIKE` clause in table definition|YES| |
 |T172|`AS` subquery clause in table definition|YES| |
 |T173|Extended `LIKE` clause in table definition|YES| |
-|T174|Identity columns|NO| |
+|T174|Identity columns|YES| |
 |T175|Generated columns|NO| |
 |T176|Sequence generator support|NO| |
 |T177|Sequence generator support: simple restart option|NO| |
-|T178|Identity columns: simple restart option|NO| |
+|T178|Identity columns: simple restart option|YES| |
 |T191|Referential action `RESTRICT`|NO| |
 |T201|Comparable data types for referential constraints|NO| |
 |T211|Basic trigger capability|NO| |

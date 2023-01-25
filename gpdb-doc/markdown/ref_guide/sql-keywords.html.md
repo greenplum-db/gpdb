@@ -197,6 +197,7 @@ Before studying the table, note the fact that a key word is not reserved does no
 |FULLSCAN|unreserved||
 |FUNCTION|unreserved|unreserved|
 |FUNCTIONS|unreserved|unreserved|
+|GENERATED|unreserved|unreserved|
 |GLOBAL|unreserved|unreserved|
 |GRANT|reserved|reserved|
 |GRANTED|unreserved|unreserved|
@@ -432,6 +433,7 @@ Before studying the table, note the fact that a key word is not reserved does no
 |STDIN|unreserved|unreserved|
 |STDOUT|unreserved|unreserved|
 |STORAGE|unreserved|unreserved|
+|STORED|unreserved|unreserved|
 |STRICT|unreserved|unreserved|
 |STRIP|unreserved|unreserved|
 |SUBPARTITION|unreserved||

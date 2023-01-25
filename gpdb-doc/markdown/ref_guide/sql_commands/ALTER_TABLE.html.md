@@ -43,6 +43,9 @@ where <action> is one of:
   ALTER [COLUMN] <column_name> SET DEFAULT <expression>
   ALTER [COLUMN] <column_name> DROP DEFAULT
   ALTER [COLUMN] <column_name> { SET | DROP } NOT NULL
+  ALTER [ COLUMN ] <column_name> ADD GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY [ ( <sequence_options> ) ]
+  ALTER [ COLUMN ] <column_name> { SET GENERATED { ALWAYS | BY DEFAULT } | SET <sequence_option> | RESTART [ [ WITH ] <restart> ] } [...]
+  ALTER [ COLUMN ] <column_name> DROP IDENTITY [ IF EXISTS ]
   ALTER [COLUMN] <column_name> SET STATISTICS <integer>
   ALTER [COLUMN] column SET ( <attribute_option> = <value> [, ... ] )
   ALTER [COLUMN] column RESET ( <attribute_option> [, ... ] )
@@ -203,6 +206,9 @@ Although you can specify the table's access method using the <code>appendoptimiz
 
 -   **SET/DROP DEFAULT** — Sets or removes the default value for a column. Default values only apply in subsequent `INSERT` or `UPDATE` commands; they do not cause rows already in the table to change.
 -   **SET/DROP NOT NULL** — Changes whether a column is marked to allow null values or to reject null values. You can only use `SET NOT NULL` when the column contains no null values.
+-   **ADD/SET GENERATED, DROP IDENTITY** - These forms change whether a column is an identity column or change the generation attribute of an existing identity column. See [CREATE TABLE](CREATE_TABLE.html) for details.
+    If `DROP IDENTITY IF EXISTS` is specified and the column is not an identity column, no error is thrown. In this case Greenplum Database issues a notice instead.
+- **SET sequence\_option, RESTART** - These forms alter the sequence that underlies an existing identity column. sequence_option is an option supported by [ALTER SEQUENCE](ALTER_SEQUENCE.html) such as `INCREMENT BY`.
 -   **SET STATISTICS** — Sets the per-column statistics-gathering target for subsequent `ANALYZE` operations. The target can be set in the range 0 to 10000, or set to -1 to revert to using the system default statistics target \(`default_statistics_target`\). When set to 0, no statistics are collected.
 -   **SET \( attribute\_option = value \[, ... \]\)**
 
@@ -455,7 +461,7 @@ To see the structure of a partitioned table, you can use the view [pg\_partition
 
 A recursive `DROP COLUMN` operation will remove a descendant table's column only if the descendant does not inherit that column from any other parents and never had an independent definition of the column. A nonrecursive `DROP COLUMN` \(`ALTER TABLE ONLY ... DROP COLUMN`\) never removes any descendant columns, but instead marks them as independently defined rather than inherited.
 
-The `TRIGGER`, `CLUSTER`, `OWNER`, and `TABLESPACE` actions never recurse to descendant tables; that is, they always act as though `ONLY` were specified. Adding a constraint recurses only for `CHECK` constraints that are not marked `NO INHERIT`.
+The actions for identity columns (`ADD GENERATED`, `SET` etc., `DROP IDENTITY`), as well as the actions `TRIGGER`, `CLUSTER`, `OWNER`, and `TABLESPACE` never recurse to descendant tables; that is, they always act as though `ONLY` were specified. Adding a constraint recurses only for `CHECK` constraints that are not marked `NO INHERIT`.
 
 These `ALTER PARTITION` operations are supported if no data is changed on a partitioned table that contains a leaf child partition that has been exchanged to use an external table. Otherwise, an error is returned.
 
@@ -608,7 +614,7 @@ In the previous command, the two `ALTER PARTITION` clauses identify which `regio
 
 ## <a id="section7"></a>Compatibility 
 
-The forms `ADD` \(without `USING INDEX`\), `DROP`, `SET DEFAULT`, and `SET DATA TYPE` \(without `USING`\) conform with the SQL standard. The other forms are Greenplum Database extensions of the SQL standard. Also, the ability to specify more than one manipulation in a single `ALTER TABLE` command is an extension.
+The forms `ADD` \(without `USING INDEX`\), `DROP [COLUMN]`, `DROP IDENTITY`, `RESTART`, `SET DEFAULT`, `SET DATA TYPE` \(without `USING`\), `SET GENERATED`, and `SET <sequence_option>` conform with the SQL standard. The other forms are Greenplum Database extensions of the SQL standard. Also, the ability to specify more than one manipulation in a single `ALTER TABLE` command is an extension.
 
 `ALTER TABLE DROP COLUMN` can be used to drop the only column of a table, leaving a zero-column table. This is an extension of SQL, which disallows zero-column tables.
 
