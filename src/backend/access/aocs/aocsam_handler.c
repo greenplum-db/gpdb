@@ -524,34 +524,34 @@ extractcolumns_from_node(Node *expr, bool *cols, AttrNumber natts)
 
 static TableScanDesc
 aoco_beginscan_extractcolumns(Relation rel, Snapshot snapshot,
-							  List *targetlist, List *qual,
+							  List *targetlist, List *qual, bool *proj,
 							  uint32 flags)
 {
 	AOCSScanDesc	aoscan;
-	AttrNumber		natts = RelationGetNumberOfAttributes(rel);
-	bool		   *cols;
-	bool			found = false;
 
-	cols = palloc0(natts * sizeof(*cols));
+	AssertImply(list_length(targetlist) || list_length(qual), !proj);
 
-	found |= extractcolumns_from_node((Node *)targetlist, cols, natts);
-	found |= extractcolumns_from_node((Node *)qual, cols, natts);
-
-	/*
-	 * In some cases (for example, count(*)), targetlist and qual may be null,
-	 * extractcolumns_walker will return immediately, so no columns are specified.
-	 * We always scan the first column.
-	 */
-	if (!found)
-		cols[0] = true;
-
+	if (!proj)
+	{
+		AttrNumber		natts = RelationGetNumberOfAttributes(rel);
+		bool			found = false;
+		proj = palloc0(sizeof(bool*) * natts);
+		found |= extractcolumns_from_node((Node *)targetlist, proj, natts);
+		found |= extractcolumns_from_node((Node *)qual, proj, natts);
+		/*
+		* In some cases (for example, count(*)), targetlist and qual may be null,
+		* extractcolumns_walker will return immediately, so no columns are specified.
+		* We always scan the first column.
+		*/
+		if (!found)
+			proj[0] = true;
+	}
 	aoscan = aocs_beginscan(rel,
 							snapshot,
-							cols,
+							proj,
 							flags);
 
-	pfree(cols);
-
+	pfree(proj);
 	return (TableScanDesc)aoscan;
 }
 
@@ -1670,7 +1670,8 @@ aoco_index_build_range_scan(Relation heapRelation,
 			scan = table_beginscan_es(heapRelation,	/* relation */
 									  snapshot,		/* snapshot */
 									  tlist,		/* targetlist */
-									  qual);		/* qual */
+									  qual,			/* qual */
+									  NULL);
 		}
 	}
 	else

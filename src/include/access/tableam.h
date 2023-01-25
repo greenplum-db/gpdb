@@ -206,13 +206,15 @@ typedef struct TableAmRoutine
 								 uint32 flags);
 
 	/*
-	 * GPDB: Extract columns for scan from targetlist and quals. This is mainly
-	 * for AOCS tables.
+	 * GPDB: Extract columns for scan from either a projection array
+	 * or a targetlist and quals. This is currently used for AOCO
+	 * tables.
 	 */
 	TableScanDesc	(*scan_begin_extractcolumns) (Relation rel,
 												  Snapshot snapshot,
 												  List *targetlist,
 												  List *qual,
+												  bool *proj,
 												  uint32 flags);
 
 	/*
@@ -785,14 +787,14 @@ table_beginscan(Relation rel, Snapshot snapshot,
  */
 static inline TableScanDesc
 table_beginscan_es(Relation rel, Snapshot snapshot,
-				   List *targetList, List *qual)
+				   List *targetList, List *qual, bool *proj)
 {
 	uint32		flags = SO_TYPE_SEQSCAN |
 	SO_ALLOW_STRAT | SO_ALLOW_SYNC | SO_ALLOW_PAGEMODE;
 
 	if (rel->rd_tableam->scan_begin_extractcolumns)
 		return rel->rd_tableam->scan_begin_extractcolumns(rel, snapshot,
-														  targetList, qual,
+														  targetList, qual, proj,
 														  flags);
 
 	return rel->rd_tableam->scan_begin(rel, snapshot,
