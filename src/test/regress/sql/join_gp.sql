@@ -768,3 +768,113 @@ full join ( select r.id1, r.id2 from t_issue_10315 r group by r.id1, r.id2 ) tq_
 on (coalesce(t.id1) = tq_all.id1  and t.id2 = tq_all.id2) ;
 
 drop table t_issue_10315;
+
+-----------------------------------------------------------------
+-- Test cases on Dynamic Partition Elimination(DPE) for Right Joins
+-----------------------------------------------------------------
+
+-- Note1 : DPE for Right join will happen if, all the following satisfy
+-- Condition 1: Outer table is partition table
+-- Condition 2: The partitioned column is same as distribution column
+-- Condition 3: Join condition is on partitioned key of outer table
+
+-- Note2 : To view the effect of DPE, the queries should be run with
+-- "Explain Analyze ...". With it, the exact number of partitions scanned
+-- will be shows in the plan.
+-- Eg: explain analyze select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a;
+
+drop table if exists foo;
+drop table if exists bar_PT1;
+drop table if exists bar_PT2;
+drop table if exists bar_PT3;
+drop table if exists bar_List_PT1;
+drop table if exists bar_List_PT2;
+
+-- Table creation : Normal table
+create table foo (a int , b int) distributed by (a);
+insert into foo select i,i from generate_series(1,5)i;
+analyze foo;
+-- Table creation : First range Partitioned table with same 'Distribution Column' and 'Partitioning key'
+create table bar_PT1 (a1_PC int, b1 int) partition by range(a1_PC) (start (1) inclusive end (12) every (2)) distributed by (a1_PC);
+insert into bar_PT1 select i,i from generate_series(1,11)i;
+analyze bar_PT1;
+-- Table creation : Second range Partitioned table with different 'Distribution Column' and 'Partitioning key'
+create table bar_PT2 (a2 int, b2_PC int) partition by range(b2_PC) (start (1) inclusive end (12) every (2)) distributed by (a2);
+insert into bar_PT2 select i,i from generate_series(1,11)i;
+analyze bar_PT2;
+-- Table creation : Third range Partitioned table with same 'Distribution Column' and 'Partitioning key'
+create table bar_PT3 (a3_PC int, b3 int) partition by range(a3_PC) (start (1) inclusive end (6) every (2))distributed by (a3_PC);
+insert into bar_PT3 select i,i from generate_series(1,5)i;
+analyze bar_PT3;
+
+-- Table creation : First list Partitioned table with same 'Distribution Column' and 'Partitioning key'
+create table bar_List_PT1 (a1_PC int, b1 int) partition by list(a1_PC)
+(partition p1 values(1,2), partition p2 values(3,4), partition p3 values(5,6), partition p4 values(7,8), partition p5 values(9,10),
+ partition p6 values(11,12), partition p7 values(13,14), partition p8 values(15,16), partition p9 values(17,18), partition p10 values(19,20),
+ partition p11 values(21,22), partition p12 values(23,24), default partition pdefault) distributed by (a1_PC);
+insert into bar_List_PT1 select i,i from generate_series(1,24)i;
+analyze bar_List_PT1;
+
+-- Table creation : Second list Partitioned table with same 'Distribution Column' and 'Partitioning key'
+create table bar_List_PT2 (a2_PC int, b2 int) partition by list(a2_PC)
+ (partition p1 values(1,2), partition p2 values(3,4), partition p3 values(5,6), partition p4 values(7,8), partition p5 values(9,10),
+ partition p6 values(11,12), default partition pdefault) distributed by (a2_PC);
+insert into bar_List_PT2 select i,i from generate_series(1,12)i;
+analyze bar_List_PT2;
+
+-- Case-1 : Distribution colm = Partition Key.
+
+-- FOR RANGE PARTITIONED TABLE
+
+-- Outer table: Partitioned table, Join Condition on Partition key: Yes, Result: DPE - YES
+explain (costs off) select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a;
+select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a;
+-- Outer table: Partitioned table, Join Condition on Partition key: No, Result: DPE - No
+explain (costs off) select * from bar_PT1 right join foo on bar_PT1.b1 =foo.a;
+select * from bar_PT1 right join foo on bar_PT1.b1 =foo.a;
+-- Outer,Inner table: Partitioned table, Join Condition on Partition key: Yes, Result: DPE - Yes
+explain (costs off) select * from bar_PT1 right join bar_PT3 on bar_PT1.a1_PC =bar_PT3.a3_PC;
+select * from bar_PT1 right join bar_PT3 on bar_PT1.a1_PC =bar_PT3.a3_PC;
+-- Outer table: Not a Partitioned table, Join Condition on Partition key: Yes, Result: DPE - No
+explain (costs off) select * from foo right join bar_PT1 on foo.a=bar_PT1.a1_PC;
+select * from foo right join bar_PT1 on foo.a=bar_PT1.a1_PC;
+-- Right join with predicate on the column of non partitioned table in 'where clause'.
+-- Result: DPE - Yes,
+explain (costs off) select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a where foo.a>2;
+select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a where foo.a>2;
+--Conjunction in join condition, Result: DPE - Yes
+explain (costs off) select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a and bar_PT1.b1 =foo.b;
+select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a and bar_PT1.b1 =foo.b;
+
+explain (costs off) select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a and foo.b>2;
+select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a and foo.b>2;
+
+-- Multiple Right Joins, DPE- Yes
+explain (costs off) select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a right join bar_PT2 on bar_PT1.a1_PC =bar_PT2.b2_PC;
+select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a right join bar_PT2 on bar_PT1.a1_PC =bar_PT2.b2_PC;
+
+-- FOR LIST PARTITIONED TABLE
+
+-- Outer table: List Partitioned table, Join Condition on Partition key: Yes, Result: DPE - YES
+explain (costs off) select * from bar_List_PT1 right join foo on bar_List_PT1.a1_PC =foo.a;
+select * from bar_List_PT1 right join foo on bar_List_PT1.a1_PC =foo.a;
+
+-- Outer,Inner table: Partitioned table, Join Condition on Partition key: Yes, Result: DPE - Yes
+explain (costs off) select * from bar_List_PT1 right join bar_List_PT2 on bar_List_PT1.a1_PC =bar_List_PT2.a2_PC;
+select * from bar_List_PT1 right join bar_List_PT2 on bar_List_PT1.a1_PC =bar_List_PT2.a2_PC;
+
+-- Case-2 : Distribution colm <> Partition Key.
+
+-- Outer table: Partitioned table, Join Condition on Partition key: Yes, Result: DPE - No
+explain (costs off) select * from bar_PT2 right join foo on bar_PT2.b2_PC =foo.a;
+select * from bar_PT2 right join foo on bar_PT2.b2_PC =foo.a;
+-- Outer,Inner table: Partitioned table, Join Condition on Partition key: Yes, Result: DPE - No
+explain (costs off) select * from bar_PT2 right join bar_PT1 on bar_PT2.b2_PC =bar_PT1.b1;
+select * from bar_PT2 right join bar_PT1 on bar_PT2.b2_PC =bar_PT1.b1;
+
+drop table if exists foo;
+drop table if exists bar_PT1;
+drop table if exists bar_PT2;
+drop table if exists bar_PT3;
+drop table if exists bar_List_PT1;
+drop table if exists bar_List_PT2;

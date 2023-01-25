@@ -956,4 +956,163 @@ CPhysicalHashJoin::CreateOptRequests(CMemoryPool *mp)
 		SetPartPropagateRequests(1);
 	}
 }
+
+CExpression *
+CPhysicalHashJoin::PexprJoinPredOnPartKeys(CMemoryPool *mp,
+										   CExpression *pexprScalar,
+										   CPartKeysArray *pdrgppartkeys,
+										   CColRefSet *pcrsAllowedRefs) const
+{
+	GPOS_ASSERT(nullptr != pcrsAllowedRefs);
+
+	CExpression *pexprPred = nullptr;
+	for (ULONG ulKey = 0; nullptr == pexprPred && ulKey < pdrgppartkeys->Size();
+		 ulKey++)
+	{
+		// get partition key
+		CColRef2dArray *pdrgpdrgpcrPartKeys =
+			(*pdrgppartkeys)[ulKey]->Pdrgpdrgpcr();
+
+		// try to generate a request with dynamic partition selection
+		pexprPred = CPredicateUtils::PexprExtractPredicatesOnPartKeys(
+			mp, pexprScalar, pdrgpdrgpcrPartKeys, pcrsAllowedRefs,
+			true  // fUseConstraints
+		);
+	}
+
+	return pexprPred;
+}
+
+CPartitionPropagationSpec *
+CPhysicalHashJoin::PppsRequiredForJoins(CMemoryPool *mp,
+										CExpressionHandle &exprhdl,
+										CPartitionPropagationSpec *pppsRequired,
+										ULONG child_index,
+										CDrvdPropArray *pdrgpdpCtxt,
+										ULONG ulOptReq) const
+{
+	GPOS_ASSERT(nullptr != pppsRequired);
+	GPOS_ASSERT(nullptr != pdrgpdpCtxt);
+
+	CExpression *pexprScalar = exprhdl.PexprScalarExactChild(2 /*child_index*/);
+
+	CColRefSet *pcrsOutputInner = exprhdl.DeriveOutputColumns(1);
+
+	CPartitionPropagationSpec *pps_result;
+	if (ulOptReq == 0)
+	{
+		// DPE: create a new request
+		pps_result = GPOS_NEW(mp) CPartitionPropagationSpec(mp);
+
+		// Extract the partition info of the outer child.
+		// Info in CPartInfo is added at the logical level. We add information
+		// about consumers during that stage. During the physical implementation,
+		// for every consumer, we check if we have to insert a consumer/propagator
+		// in PppsRequired()
+		CPartInfo *part_info_outer = exprhdl.DerivePartitionInfo(0);
+
+		// Extracting the information of existing partition table consumers.
+		// For every consumer(Dynamic Table Scan, identified by scan-id),
+		// if PppsRequired() is called for inner child, we can add a propagator.
+		// if PppsRequired() is called for outer child, we can add a consumer.
+		for (ULONG ul = 0; ul < part_info_outer->UlConsumers(); ++ul)
+		{
+			ULONG scan_id = part_info_outer->ScanId(ul);
+			IMDId *rel_mdid = part_info_outer->GetRelMdId(ul);
+			CPartKeysArray *part_keys_array =
+				part_info_outer->Pdrgppartkeys(ul);
+
+			CExpression *pexprCmp =
+				PexprJoinPredOnPartKeys(mp, pexprScalar, part_keys_array,
+										pcrsOutputInner /* pcrsAllowedRefs*/);
+
+			// If we don't have predicate on partition keys, then partition
+			// elimination won't work, so we don't add a Consumer or Propagator
+			if (pexprCmp == nullptr)
+			{
+				continue;
+			}
+
+			// For outer child(index=0), we insert Consumer, if a Partition
+			// Selector exist in the inner child for a scan-id.
+			if (child_index == 0)
+			{
+				// For the inner child, we extract the derived PPS.
+				CPartitionPropagationSpec *pps_inner =
+					CDrvdPropPlan::Pdpplan((*pdrgpdpCtxt)[0])->Ppps();
+
+				// In the derived plan properties of the inner child,
+				// we check if a partition selector exist for the given scan-id
+				// If found, we insert a corresponding 'Consumer' in the outer child
+				CBitSet *selector_ids =
+					GPOS_NEW(mp) CBitSet(mp, *pps_inner->SelectorIds(scan_id));
+
+				// For the identified 'partition selector' we insert a consumer.
+				// This will a form part of our required properties, i.e. for the
+				// given 'partition selector', we require a 'Consumer'
+				pps_result->Insert(scan_id,
+								   CPartitionPropagationSpec::EpptConsumer,
+								   rel_mdid, selector_ids, nullptr /* expr */);
+				selector_ids->Release();
+			}
+			else
+			{
+				// For inner child (index=1), we insert a propagator given that
+				// we have predicate on the partition keys
+				GPOS_ASSERT(child_index == 1);
+				pps_result->Insert(scan_id,
+								   CPartitionPropagationSpec::EpptPropagator,
+								   rel_mdid, nullptr, pexprCmp);
+			}
+			pexprCmp->Release();
+		}
+
+		// Now for the input 'pppsRequired' & 'child_index' we check if any
+		// other consumer is required to be added in the pps_result.
+		// 1. We prepare a list of allowed scan-ids for the input child. These scan-ids
+		// we defined at the logical level.
+		// 2. For each of the scan-ids, that exist in pppsRequired, we check if
+		// they exist in 'allowed list' and are of type Consumer.
+		// 3. For all such scan-ids, we update our computed required props in pps_result
+		// Thus based we have computed the required properties for the operator based
+		// on the input from higher level(using input pppsRequired) and our own
+		// operator specific rules (as in the for loop above)
+		CBitSet *allowed_scan_ids = GPOS_NEW(mp) CBitSet(mp);
+		CPartInfo *part_info = exprhdl.DerivePartitionInfo(child_index);
+		for (ULONG ul = 0; ul < part_info->UlConsumers(); ++ul)
+		{
+			ULONG scan_id = part_info->ScanId(ul);
+			allowed_scan_ids->ExchangeSet(scan_id);
+		}
+		pps_result->InsertAllowedConsumers(pppsRequired, allowed_scan_ids);
+		allowed_scan_ids->Release();
+	}
+	else
+	{
+		// No DPE: pass through requests
+		pps_result = CPhysical::PppsRequired(
+			mp, exprhdl, pppsRequired, child_index, pdrgpdpCtxt, ulOptReq);
+	}
+	return pps_result;
+}
+
+// In the following function, we are generating the Derived property :
+// "Partition Propagation Spec" of the join.
+// Since Property derivation takes place in a bottom-up fashion, this operator
+// derives the information from its child and passes it up. In this function
+// we are focussing only on the "Partition Propagation Spec" of the children
+CPartitionPropagationSpec *
+CPhysicalHashJoin::PppsDeriveForJoins(CMemoryPool *mp,
+									  CExpressionHandle &exprhdl) const
+{
+	CPartitionPropagationSpec *pps_outer = exprhdl.Pdpplan(0)->Ppps();
+	CPartitionPropagationSpec *pps_inner = exprhdl.Pdpplan(1)->Ppps();
+
+	CPartitionPropagationSpec *pps_result =
+		GPOS_NEW(mp) CPartitionPropagationSpec(mp);
+	pps_result->InsertAll(pps_outer);
+	pps_result->InsertAllResolve(pps_inner);
+
+	return pps_result;
+}
 // EOF

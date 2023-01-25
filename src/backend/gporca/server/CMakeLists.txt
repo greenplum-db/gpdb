@@ -45,8 +45,6 @@ endfunction()
 # IN-ArrayCmp
 # NOT-IN-ArrayCmp
 
-# GPDB_12_MERGE_FIXME: re-add the following test to Right Join once DPE is supported
-# RightJoinDPS PartTbl-RightOuterHashJoin-DPE-IsNull
 
 # minidump tests must follow rule:
 # "CxxxTest: file1 file2; CxxxTest: file3 file4"
@@ -365,7 +363,8 @@ CIndexOnlyScanTest:
 IndexOnlyScan-NoDistKeyInIndex IndexConstraintsMDidCache;
 
 CRightJoinTest:
-RightJoinHashed RightJoinRedistribute RightJoinReplicated RightJoinBothReplicated RightJoinNoDPSNonDistKey RightJoinTVF;
+RightJoinHashed RightJoinRedistribute RightJoinReplicated RightJoinBothReplicated RightJoinNoDPSNonDistKey RightJoinTVF
+RightJoinDPE PartTbl-RightOuterHashJoin-DPE-IsNull-V2 RightJoinDpeWithWhereClause;
 
 CSqlFunctionTest:
 SqlFuncNullReject SqlFuncPredFactorize SqlFuncDmlScalar SqlFuncDmlTvf CompositeTypeRelMdId;

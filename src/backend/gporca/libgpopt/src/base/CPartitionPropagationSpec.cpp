@@ -140,21 +140,37 @@ CPartitionPropagationSpec::Insert(ULONG scan_id, EPartPropSpecInfoType type,
 
 	CMemoryPool *mp = COptCtxt::PoctxtFromTLS()->Pmp();
 	rool_rel_mdid->AddRef();
+
+	// Constructing 'SPartPropSpecInfo' for the received scan-id & PartPropSpecInfoType
+	// This structure is a data member of CPartitionPropagationSpec and hence
+	// required to create new object.
 	SPartPropSpecInfo *info =
 		GPOS_NEW(mp) SPartPropSpecInfo(scan_id, type, rool_rel_mdid);
 
+	// If we are adding a consumer, then the selector_ids field will
+	// not be NULL. For this consumer, we add the details of all the
+	// partition selectors which will feed to this particular consumer.
+	// If partition selector already exist for this scan id
+	// then we take union of the existing ids with the new coming with this call
 	if (selector_ids != nullptr)
 	{
 		info->m_selector_ids->Union(selector_ids);
 	}
 
+	// When we add Consumer, exp is nullptr; for propagator it is not Null
+	// we only add propagator if we have predicate on the partition key
 	if (expr != nullptr)
 	{
 		expr->AddRef();
 		info->m_filter_expr = expr;
 	}
-
 	m_scan_ids->ExchangeSet(scan_id);
+
+	// Insertion is done only if the value doesn't exist in the map
+	// Case - Insert called from PPSRequired(); For a given scan id,
+	// a case of consecutive propagator, consumer request
+	// cannot happen, as the PPSRequired() is called for a given child index
+	// and the child index decide if we will add propagator/consumer
 	m_part_prop_spec_infos->Insert(GPOS_NEW(mp) ULONG(scan_id), info);
 }
 
@@ -218,6 +234,8 @@ CPartitionPropagationSpec::InsertAllowedConsumers(
 			continue;
 		}
 
+		// We check if info for the other_info->m_scan_id exist for the calling
+		// object. eg pps_result->InsertAllowedConsumers(pppsRequired, allowed_scan_ids);
 		SPartPropSpecInfo *found_info =
 			FindPartPropSpecInfo(other_info->m_scan_id);
 
@@ -230,7 +248,7 @@ CPartitionPropagationSpec::InsertAllowedConsumers(
 		GPOS_ASSERT(found_info->m_root_rel_mdid == other_info->m_root_rel_mdid);
 
 		// for a given scan-id, only a consumer request can be merged with an
-		// existing consumer request; so bail in all other cases; eg: merging a
+		// existing consumer request; so bail in all other cases; eg: merging
 		// a propagator or merging a consumer when a propagator was already inserted
 		GPOS_RTL_ASSERT(found_info->m_type == EpptConsumer &&
 						other_info->m_type == EpptConsumer);
