@@ -19,10 +19,16 @@
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CScalarBoolOp.h"
+#include "gpopt/operators/CScalarIdent.h"
 
 namespace gpopt
 {
 using namespace gpos;
+
+using IdentToExprMap =
+	CHashMap<CScalarIdent, CExpression, CScalarIdent::HashValue,
+			 CScalarIdent::Equals, CleanupRelease<CScalarIdent>,
+			 CleanupRelease<CExpression>>;
 
 //---------------------------------------------------------------------------
 //	@class:
@@ -152,6 +158,9 @@ private:
 	// eliminate CTE Anchors for CTEs that have zero consumers
 	static CExpression *PexprRemoveUnusedCTEs(CMemoryPool *mp,
 											  CExpression *pexpr);
+
+	static CExpression *PexprSubstitutePredicateConstants(
+		CMemoryPool *mp, CExpression *pexpr, IdentToExprMap *phmIdentToExpr);
 
 	// collect CTE predicates from consumers
 	static void CollectCTEPredicates(CMemoryPool *mp, CExpression *pexpr,
