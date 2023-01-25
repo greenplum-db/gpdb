@@ -29,7 +29,8 @@ where <column_constraint> is:
 [ CONSTRAINT <constraint_name> ]
 { NOT NULL |
   NULL |
-  DEFAULT <default_expr> }
+  DEFAULT <default_expr> |
+  GENERATED ALWAYS AS ( <generation_expr> ) STORED}
 
 and <table_constraint> is:
 
