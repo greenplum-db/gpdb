@@ -13769,87 +13769,193 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		appendPQExpBufferStr(q, ";\n");
 
 		/*
-		 * Exchange external partitions. This is an expensive process, so only
-		 * run it if we've found evidence of external partitions up above.
+		 * GPDB: Exchange external partitions. This is an expensive process,
+		 * so only run it if we've found evidence of external partitions up
+		 * above.
 		 */
 		if (hasExternalPartitions)
 		{
-			int i = 0;
-			int ntups = 0;
-			char *relname = NULL;
+			int numExternalPartitions = 0;
 			int i_relname = 0;
 			int i_parname = 0;
+			int i_parparentrule = 0;
+			int i_parlevel = 0;
 			int i_partitionrank = 0;
-			PQExpBuffer query = createPQExpBuffer();
-			PGresult   *res;
+			int j_paroid = 0;
+			int j_parlevel = 0;
+			int j_parparentrule = 0;
+			int j_parname = 0;
+			int j_partitionrank = 0;
+			char *maxExtPartLevel;
+			PQExpBuffer getExternalPartsQuery = createPQExpBuffer();
+			PQExpBuffer getPartHierarchyQuery = createPQExpBuffer();
+			PGresult   *getExternalPartsResult;
+			PGresult   *getPartHierarchyResult;
 
 			/*
-			 * The multiple JOINs below trigger an apparent planner bug which
-			 * may effectively hang the backend. This bug is present in both
-			 * released versions of GPDB and the current development tip at time
-			 * of writing. Disable nestloops temporarily as a workaround.
-			 *
-			 * TODO: when this bug is fixed, version-gate this code so that we
-			 * don't run it on well-behaved backends.
+			 * We disable nestloops here because the previous original query
+			 * that handled ALTER TABLE EXCHANGE PARTITION had multiple JOINs
+			 * (even joining on pg_partitions view which is usually a big
+			 * no-no) that would trigger an apparent planner bug which
+			 * sometimes would hang the backend. The latest query below is
+			 * much, much simpler so technically we could remove the disabling
+			 * of nestloops... but disabling nestloops actually gives a
+			 * performance boost so we'll keep it for now.
 			 */
 			ExecuteSqlStatement(fout, "SET enable_nestloop TO off");
 
-			appendPQExpBuffer(query, "SELECT DISTINCT cc.relname, ps.partitionrank, pp.parname "
-					"FROM pg_partition p "
-					"JOIN pg_class c on (p.parrelid = c.oid) "
-					"JOIN pg_partitions ps on (c.relname = ps.tablename) "
-					"JOIN pg_class cc on (ps.partitiontablename = cc.relname) "
-					"JOIN pg_partition_rule pp on (cc.oid = pp.parchildrelid) "
-					"WHERE p.parrelid = %u AND cc.relstorage = '%c';",
-					tbinfo->dobj.catId.oid, RELSTORAGE_EXTERNAL);
+			appendPQExpBuffer(getExternalPartsQuery, "SELECT c.relname, pr.parname, pr.parparentrule, p.parlevel, "
+							  "CASE "
+							  "    WHEN p.parkind <> 'r'::\"char\" OR pr.parisdefault THEN NULL::bigint "
+							  "    ELSE pr.parruleord "
+							  "END AS partitionrank "
+							  "FROM pg_class c "
+							  "    JOIN pg_partition_rule pr ON c.oid = pr.parchildrelid "
+							  "    JOIN pg_partition p ON pr.paroid = p.oid AND p.paristemplate = false "
+							  "WHERE p.parrelid = %u AND c.relstorage = '%c' "
+							  "ORDER BY p.parlevel DESC;",
+							  tbinfo->dobj.catId.oid, RELSTORAGE_EXTERNAL);
 
-			res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
+			getExternalPartsResult = ExecuteSqlQuery(fout, getExternalPartsQuery->data, PGRES_TUPLES_OK);
 
-			ntups = PQntuples(res);
-			i_relname = PQfnumber(res, "relname");
-			i_parname = PQfnumber(res, "parname");
-			i_partitionrank = PQfnumber(res, "partitionrank");
+			numExternalPartitions = PQntuples(getExternalPartsResult);
+			if (numExternalPartitions < 1)
+				exit_horribly(NULL, "partition table %s has external partitions but unable to query more details about them\n",
+							  qualrelname);
 
-			/* FIXME: does this code handle external SUBPARTITIONs correctly? */
-			for (i = 0; i < ntups; i++)
+			i_relname = PQfnumber(getExternalPartsResult, "relname");
+			i_parname = PQfnumber(getExternalPartsResult, "parname");
+			i_parparentrule = PQfnumber(getExternalPartsResult, "parparentrule");
+			i_parlevel = PQfnumber(getExternalPartsResult, "parlevel");
+			i_partitionrank = PQfnumber(getExternalPartsResult, "partitionrank");
+
+			/*
+			 * For multi-level partition tables, we must first add ALTER
+			 * PARTITION syntax for the entire subroot hierarchy. The query
+			 * below will get all the necessary subroot information to loop
+			 * over for each external partition.
+			 */
+			maxExtPartLevel = PQgetvalue(getExternalPartsResult, 0, i_parlevel);
+			appendPQExpBuffer(getPartHierarchyQuery, "SELECT pr.oid AS paroid, p.parlevel, pr.parparentrule, pr.parname, "
+							  "CASE "
+							  "    WHEN p.parkind <> 'r'::\"char\" OR pr.parisdefault THEN NULL::bigint "
+							  "    ELSE pr.parruleord "
+							  "END AS partitionrank "
+							  "FROM pg_partition p "
+							  "    JOIN pg_partition_rule pr ON p.oid = pr.paroid AND p.paristemplate = false "
+							  "WHERE p.parrelid = %u AND p.parlevel < %s "
+							  "ORDER BY p.parlevel DESC;",
+							  tbinfo->dobj.catId.oid, maxExtPartLevel);
+			getPartHierarchyResult = ExecuteSqlQuery(fout, getPartHierarchyQuery->data, PGRES_TUPLES_OK);
+
+			j_paroid = PQfnumber(getPartHierarchyResult, "paroid");
+			j_parlevel = PQfnumber(getPartHierarchyResult, "parlevel");
+			j_parparentrule = PQfnumber(getPartHierarchyResult, "parparentrule");
+			j_parname = PQfnumber(getPartHierarchyResult, "parname");
+			j_partitionrank = PQfnumber(getPartHierarchyResult, "partitionrank");
+
+			for (int i = 0; i < numExternalPartitions; i++)
 			{
+				int maxParLevel = atoi(PQgetvalue(getExternalPartsResult, i, i_parlevel));
+				int lookupSubRootHierarchyIndex[maxParLevel];
+				char *parentOid = PQgetvalue(getExternalPartsResult, i, i_parparentrule);
+				char *relname  = pg_strdup(PQgetvalue(getExternalPartsResult, i, i_relname));
+				char *qualTmpExtTable;
 				char tmpExtTable[500] = {0};
-				relname = pg_strdup(PQgetvalue(res, i, i_relname));
-				snprintf(tmpExtTable, sizeof(tmpExtTable), "%s%s", relname, EXT_PARTITION_NAME_POSTFIX);
-				char *qualTmpExtTable = pg_strdup(fmtQualifiedId(fout->remoteVersion,
-																 tbinfo->dobj.namespace->dobj.name,
-																 tmpExtTable));
 
+				snprintf(tmpExtTable, sizeof(tmpExtTable), "%s%s", relname, EXT_PARTITION_NAME_POSTFIX);
+				qualTmpExtTable = pg_strdup(fmtQualifiedId(fout->remoteVersion,
+														   tbinfo->dobj.namespace->dobj.name,
+														   tmpExtTable));
+
+				/* Start of the ALTER TABLE EXCHANGE PARTITION statement */
 				appendPQExpBuffer(q, "ALTER TABLE %s ", qualrelname);
+
 				/*
-				 * If it is an anonymous range partition we must exchange for
-				 * the rank rather than the parname.
+				 * Populate the lookupSubRootHierarchyIndex array with the
+				 * getPartHierarchy result row numbers that make up the
+				 * partition hierarchy of a specific external partition. To do
+				 * this, we go backwards (in terms of partition level) from
+				 * the external partition's parent up to the root (ending at
+				 * partition level 0 directly below the root). Because of
+				 * that, the lookupSubRootHierarchyIndex array is actually
+				 * filled out in reverse.
 				 */
-				if (PQgetisnull(res, i, i_parname) || !strlen(PQgetvalue(res, i, i_parname)))
+				for (int j = 0; j < PQntuples(getPartHierarchyResult); j++)
+				{
+					char *currentOid;
+					int currentParLevel;
+
+					currentOid = PQgetvalue(getPartHierarchyResult, j, j_paroid);
+					if (strcmp(parentOid, currentOid) != 0)
+						continue;
+
+					currentParLevel = atoi(PQgetvalue(getPartHierarchyResult, j, j_parlevel));
+					lookupSubRootHierarchyIndex[currentParLevel] = j;
+
+					/*
+					 * Get the next parent OID to search for. If 0, we've
+					 * reached the root and can exit the loop.
+					 */
+					parentOid = PQgetvalue(getPartHierarchyResult, j, j_parparentrule);
+					if (strcmp(parentOid, "0") == 0)
+						break;
+				}
+
+				/*
+				 * Forward traverse the lookupSubRootHierarchyIndex array to
+				 * append the required ALTER PARTITION statement(s) in the
+				 * correct partition level order. If it is an anonymous range
+				 * partition we must exchange for the rank rather than the
+				 * parname.
+				 */
+				for (int parLevel = 0; parLevel < maxParLevel; parLevel++)
+				{
+					int hierarchyIndex = lookupSubRootHierarchyIndex[parLevel];
+
+					if (PQgetisnull(getPartHierarchyResult, hierarchyIndex, j_parname) ||
+						!strlen(PQgetvalue(getPartHierarchyResult, hierarchyIndex, j_parname)))
+					{
+						appendPQExpBuffer(q, "ALTER PARTITION FOR (RANK(%s)) ",
+										  PQgetvalue(getPartHierarchyResult, hierarchyIndex, j_partitionrank));
+					}
+					else
+					{
+						appendPQExpBuffer(q, "ALTER PARTITION %s ",
+										  fmtId(PQgetvalue(getPartHierarchyResult, hierarchyIndex, j_parname)));
+					}
+				}
+
+				/*
+				 * Add the actual EXCHANGE PARTITION part of the ALTER TABLE
+				 * EXCHANGE PARTITION statement. If it is an anonymous range
+				 * partition we must exchange for the rank rather than the
+				 * parname.
+				 */
+				if (PQgetisnull(getExternalPartsResult, i, i_parname) ||
+					!strlen(PQgetvalue(getExternalPartsResult, i, i_parname)))
 				{
 					appendPQExpBuffer(q, "EXCHANGE PARTITION FOR (RANK(%s)) ",
-									  PQgetvalue(res, i, i_partitionrank));
+									  PQgetvalue(getExternalPartsResult, i, i_partitionrank));
 				}
 				else
 				{
 					appendPQExpBuffer(q, "EXCHANGE PARTITION %s ",
-									  fmtId(PQgetvalue(res, i, i_parname)));
+									  fmtId(PQgetvalue(getExternalPartsResult, i, i_parname)));
 				}
-				appendPQExpBuffer(q, "WITH TABLE %s WITHOUT VALIDATION; ", qualTmpExtTable);
 
-				appendPQExpBuffer(q, "\n");
+				appendPQExpBuffer(q, "WITH TABLE %s WITHOUT VALIDATION;\n", qualTmpExtTable);
+				appendPQExpBuffer(q, "DROP TABLE %s;\n", qualTmpExtTable);
 
-				appendPQExpBuffer(q, "DROP TABLE %s; ", qualTmpExtTable);
-
-				appendPQExpBuffer(q, "\n");
 				free(relname);
 				free(qualTmpExtTable);
 			}
 
-			PQclear(res);
-			destroyPQExpBuffer(query);
+			PQclear(getPartHierarchyResult);
+			PQclear(getExternalPartsResult);
+			destroyPQExpBuffer(getPartHierarchyQuery);
+			destroyPQExpBuffer(getExternalPartsQuery);
 
-			/* TODO: version-gate this when the planner bug is fixed; see above. */
 			ExecuteSqlStatement(fout, "SET enable_nestloop TO on");
 		}
 
