@@ -265,7 +265,9 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 		CreateExternalStmt
 		CreateQueueStmt CreateResourceGroupStmt
 		DropQueueStmt DropResourceGroupStmt
-		ExtTypedesc OptSingleRowErrorHandling ExtSingleRowErrorHandling
+		ExtTypedesc ExtSingleRowErrorHandling
+
+%type<list> 	OptSingleRowErrorHandling
 
 %type <node>    deny_login_role deny_interval deny_point deny_day_specifier
 
@@ -3892,6 +3894,7 @@ CopyStmt:	COPY opt_binary qualified_name opt_column_list opt_oids
 					n->options = NIL;
 					n->skip_ext_partition = $13;
 
+
 					/* Concatenate user-supplied flags */
 					if ($2)
 						n->options = lappend(n->options, $2);
@@ -3901,6 +3904,9 @@ CopyStmt:	COPY opt_binary qualified_name opt_column_list opt_oids
 						n->options = lappend(n->options, $9);
 					if ($11)
 						n->options = list_concat(n->options, $11);
+					if ($12) {
+						n->options = list_concat(n->options, $12);
+					}
 					$$ = (Node *)n;
 				}
 			| COPY select_with_parens TO opt_program copy_file_name opt_with copy_options
@@ -5718,7 +5724,7 @@ OptSingleRowErrorHandling:
 					   (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 						errmsg("invalid (ROWS) reject limit. Should be 2 or larger")));
 
-			$$ = (Node *)n;
+			$$ = lappend(NULL, makeDefElem("sreh", (Node *) n));
 		}
 		| /*EMPTY*/		{ $$ = NULL; }
 		;
