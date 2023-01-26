@@ -4003,7 +4003,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan(
 	const IMDIndex *md_index = m_md_accessor->RetrieveIndex(mdid_index);
 	Oid index_oid = mdid_index->Oid();
 	RangeTblEntry *rte = m_dxl_to_plstmt_context->GetRTEByIndex(index);
-	
+
 	GPOS_ASSERT(InvalidOid != index_oid);
 	dyn_idx_scan->indexscan.indexid = index_oid;
 
@@ -4140,7 +4140,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 
 	Index index =
 		ProcessDXLTblDescr(table_descr, &base_table_context, acl_mode);
-	
+
 	dml->scanrelid = index;
 
 	m_result_rel_list = gpdb::LAppendInt(m_result_rel_list, index);

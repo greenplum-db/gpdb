@@ -316,8 +316,8 @@ CStatisticsTest::PtabdescTwoColumnSource(CMemoryPool *mp,
 		mp, GPOS_NEW(mp) CMDIdGPDB(GPOPT_TEST_REL_OID1, 1, 1), nameTable,
 		false,	// convert_hash_to_random
 		IMDRelation::EreldistrRandom, IMDRelation::ErelstorageHeap,
-		0,	 // ulExecuteAsUser
-		0	 // UNASSIGNED_QUERYID
+		0,	// ulExecuteAsUser
+		0	// UNASSIGNED_QUERYID
 	);
 
 	for (ULONG i = 0; i < 2; i++)

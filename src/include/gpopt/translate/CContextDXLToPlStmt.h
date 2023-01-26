@@ -91,7 +91,7 @@ private:
 		HMUlCTEConsumerInfo;
 
 	typedef CHashMap<ULONG, Index, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
-				 CleanupDelete<ULONG>, CleanupDelete<Index> >
+					 CleanupDelete<ULONG>, CleanupDelete<Index> >
 		HMUlIndex;
 
 	CMemoryPool *m_mp;

@@ -3262,8 +3262,8 @@ CTranslatorQueryToDXL::TranslateRTEToDXLLogicalGet(const RangeTblEntry *rte,
 
 	// construct table descriptor for the scan node from the range table entry
 	CDXLTableDescr *dxl_table_descr = CTranslatorUtils::GetTableDescr(
-		m_mp, m_md_accessor, m_context->m_colid_counter, rte, query_id_for_target_rel,
-		&m_context->m_has_distributed_tables,
+		m_mp, m_md_accessor, m_context->m_colid_counter, rte,
+		query_id_for_target_rel, &m_context->m_has_distributed_tables,
 		&m_context->m_has_replicated_tables);
 
 	CDXLLogicalGet *dxl_op = NULL;
