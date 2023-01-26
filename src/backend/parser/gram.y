@@ -304,7 +304,9 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 		CreateExternalStmt
 		CreateQueueStmt CreateResourceGroupStmt
 		DropQueueStmt DropResourceGroupStmt
-		ExtTypedesc OptSingleRowErrorHandling ExtSingleRowErrorHandling
+		ExtTypedesc ExtSingleRowErrorHandling
+
+%type<list> 	OptSingleRowErrorHandling
 
 %type <node>    deny_login_role deny_interval deny_point deny_day_specifier
 
@@ -4334,6 +4336,9 @@ CopyStmt:	COPY opt_binary qualified_name opt_column_list
 						n->options = lappend(n->options, $8);
 					if ($10)
 						n->options = list_concat(n->options, $10);
+					if ($12)
+						n->options = list_concat(n->options, $12);
+
 					$$ = (Node *)n;
 				}
 			| COPY '(' PreparableStmt ')' TO opt_program copy_file_name opt_with copy_options
@@ -6487,7 +6492,7 @@ OptSingleRowErrorHandling:
 					   (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 						errmsg("invalid (ROWS) reject limit. Should be 2 or larger")));
 
-			$$ = (Node *)n;
+			$$ = lappend(NULL, makeDefElem("sreh", (Node *) n));
 		}
 		| /*EMPTY*/		{ $$ = NULL; }
 		;
