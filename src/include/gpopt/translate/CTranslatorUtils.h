@@ -146,6 +146,7 @@ public:
 										 CMDAccessor *md_accessor,
 										 CIdGenerator *id_generator,
 										 const RangeTblEntry *rte,
+										 ULONG assigned_query_id_for_target_rel,
 										 BOOL *is_distributed_table = NULL,
 										 BOOL *is_replicated_table = NULL);
 

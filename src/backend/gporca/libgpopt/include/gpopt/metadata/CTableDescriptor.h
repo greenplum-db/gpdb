@@ -97,13 +97,20 @@ private:
 	// returns true if this table descriptor has partial indexes
 	BOOL FDescriptorWithPartialIndexes();
 
+	// identifier of query to which current table belongs.
+	// This field is used for assigning current table entry with
+	// target one within DML operation. If descriptor doesn't point
+	// to the target (result) relation it has value UNASSIGNED_QUERYID
+	ULONG m_assigned_query_id_for_target_rel;
+
 public:
 	// ctor
 	CTableDescriptor(CMemoryPool *, IMDId *mdid, const CName &,
 					 BOOL convert_hash_to_random,
 					 IMDRelation::Ereldistrpolicy rel_distr_policy,
 					 IMDRelation::Erelstoragetype erelstoragetype,
-					 ULONG ulExecuteAsUser);
+					 ULONG ulExecuteAsUser,
+					 ULONG assigned_query_id_for_target_rel);
 
 	// dtor
 	virtual ~CTableDescriptor();
@@ -237,6 +244,12 @@ public:
 	{
 		return m_erelstoragetype == IMDRelation::ErelstorageAppendOnlyCols ||
 			   m_erelstoragetype == IMDRelation::ErelstorageAppendOnlyRows;
+	}
+
+	ULONG
+	GetAssignedQueryIdForTargetRel() const
+	{
+		return m_assigned_query_id_for_target_rel;
 	}
 
 };	// class CTableDescriptor

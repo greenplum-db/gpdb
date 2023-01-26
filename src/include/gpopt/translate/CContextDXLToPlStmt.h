@@ -90,6 +90,10 @@ private:
 					 CleanupDelete<SCTEConsumerInfo> >
 		HMUlCTEConsumerInfo;
 
+	typedef CHashMap<ULONG, Index, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+				 CleanupDelete<ULONG>, CleanupDelete<Index> >
+		HMUlIndex;
+
 	CMemoryPool *m_mp;
 
 	// counter for generating plan ids
@@ -127,6 +131,9 @@ private:
 
 	// CTAS distribution policy
 	GpPolicy *m_distribution_policy;
+
+	// hash map of the queryid (of DML query) and the target relation index
+	HMUlIndex *m_used_rte_indexes;
 
 public:
 	// ctor/dtor
@@ -215,6 +222,12 @@ public:
 	// based on decision made by DetermineDistributionHashOpclasses()
 	Oid GetDistributionHashOpclassForType(Oid typid);
 	Oid GetDistributionHashFuncForType(Oid typid);
+
+	// get rte from m_rtable_entries_list by given index
+	RangeTblEntry *GetRTEByIndex(Index index);
+
+	Index GetRTEIndexByTableDescr(const CDXLTableDescr *table_descr,
+								  BOOL *is_rte_exists);
 };
 
 }  // namespace gpdxl

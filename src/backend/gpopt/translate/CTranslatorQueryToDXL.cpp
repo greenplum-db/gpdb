@@ -117,6 +117,8 @@ CTranslatorQueryToDXL::CTranslatorQueryToDXL(
 	GPOS_ASSERT(NULL != query);
 	CheckSupportedCmdType(query);
 
+	m_query_id = m_context->GetNextQueryId();
+
 	CheckRangeTable(query);
 
 	// GPDB_94_MERGE_FIXME: WITH CHECK OPTION views are not supported yet.
@@ -710,9 +712,10 @@ CTranslatorQueryToDXL::TranslateInsertQueryToDXL()
 		m_query->rtable, m_query->resultRelation - 1);
 
 	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(
-		m_mp, m_md_accessor, m_context->m_colid_counter, rte,
+		m_mp, m_md_accessor, m_context->m_colid_counter, rte, m_query_id,
 		&m_context->m_has_distributed_tables,
 		&m_context->m_has_replicated_tables);
+
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
 	if (!optimizer_enable_dml_triggers &&
 		CTranslatorUtils::RelHasTriggers(m_mp, m_md_accessor, md_rel,
@@ -1186,7 +1189,7 @@ CTranslatorQueryToDXL::TranslateDeleteQueryToDXL()
 		m_query->rtable, m_query->resultRelation - 1);
 
 	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(
-		m_mp, m_md_accessor, m_context->m_colid_counter, rte,
+		m_mp, m_md_accessor, m_context->m_colid_counter, rte, m_query_id,
 		&m_context->m_has_distributed_tables,
 		&m_context->m_has_replicated_tables);
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
@@ -1260,7 +1263,7 @@ CTranslatorQueryToDXL::TranslateUpdateQueryToDXL()
 		m_query->rtable, m_query->resultRelation - 1);
 
 	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(
-		m_mp, m_md_accessor, m_context->m_colid_counter, rte,
+		m_mp, m_md_accessor, m_context->m_colid_counter, rte, m_query_id,
 		&m_context->m_has_distributed_tables,
 		&m_context->m_has_replicated_tables);
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
@@ -3247,9 +3250,19 @@ CTranslatorQueryToDXL::TranslateRTEToDXLLogicalGet(const RangeTblEntry *rte,
 				   GPOS_WSZ_LIT("ONLY in the FROM clause"));
 	}
 
+	// query_id_for_target_rel is used to tag table descriptors assigned to target
+	// (result) relations one. In case of possible nested DML subqueries it's
+	// field points to target relation of corresponding Query structure of subquery.
+	ULONG query_id_for_target_rel = UNASSIGNED_QUERYID;
+	if (m_query->resultRelation > 0 &&
+		ULONG(m_query->resultRelation) == rt_index)
+	{
+		query_id_for_target_rel = m_query_id;
+	}
+
 	// construct table descriptor for the scan node from the range table entry
 	CDXLTableDescr *dxl_table_descr = CTranslatorUtils::GetTableDescr(
-		m_mp, m_md_accessor, m_context->m_colid_counter, rte,
+		m_mp, m_md_accessor, m_context->m_colid_counter, rte, query_id_for_target_rel,
 		&m_context->m_has_distributed_tables,
 		&m_context->m_has_replicated_tables);
 
