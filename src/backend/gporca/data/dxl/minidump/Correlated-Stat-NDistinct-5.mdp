@@ -964,10 +964,10 @@
       <dxl:ExtendedStatistics Mdid="9.90361.1.0" Name="stts">
         <dxl:MVDependencyList/>
         <dxl:MVNDistinctList>
-          <dxl:MVNDistinctItem MVNDistinct="100.000000" Attno="1,2"/>
-          <dxl:MVNDistinctItem MVNDistinct="1000.000000" Attno="1,3"/>
-          <dxl:MVNDistinctItem MVNDistinct="1000.000000" Attno="2,3"/>
-          <dxl:MVNDistinctItem MVNDistinct="1000.000000" Attno="1,2,3"/>
+          <dxl:MVNDistinct MVNDistinct="100.000000" Attno="1,2"/>
+          <dxl:MVNDistinct MVNDistinct="1000.000000" Attno="1,3"/>
+          <dxl:MVNDistinct MVNDistinct="1000.000000" Attno="2,3"/>
+          <dxl:MVNDistinct MVNDistinct="1000.000000" Attno="1,2,3"/>
         </dxl:MVNDistinctList>
       </dxl:ExtendedStatistics>
       <dxl:RelationStatistics Mdid="2.90358.1.0" Name="t" Rows="100000.000000" RelPages="137" RelAllVisible="0" EmptyRelation="false"/>

@@ -1022,7 +1022,7 @@
       <dxl:ExtendedStatistics Mdid="9.73911.1.0" Name="stts">
         <dxl:MVDependencyList/>
         <dxl:MVNDistinctList>
-          <dxl:MVNDistinctItem MVNDistinct="100.000000" Attno="1,2"/>
+          <dxl:MVNDistinct MVNDistinct="100.000000" Attno="1,2"/>
         </dxl:MVNDistinctList>
       </dxl:ExtendedStatistics>
     </dxl:Metadata>

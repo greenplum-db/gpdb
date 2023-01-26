@@ -69,7 +69,7 @@ CParseHandlerExtStatsNDistinctList::StartElement(
 				 CDXLTokens::XmlstrToken(EdxltokenMVNDistinctList),
 				 element_local_name) &&
 		0 != XMLString::compareString(
-				 CDXLTokens::XmlstrToken(EdxltokenMVNDistinctItem),
+				 CDXLTokens::XmlstrToken(EdxltokenMVNDistinct),
 				 element_local_name))
 	{
 		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
@@ -78,13 +78,13 @@ CParseHandlerExtStatsNDistinctList::StartElement(
 				   str->GetBuffer());
 	}
 	else if (0 == XMLString::compareString(
-					  CDXLTokens::XmlstrToken(EdxltokenMVNDistinctItem),
+					  CDXLTokens::XmlstrToken(EdxltokenMVNDistinct),
 					  element_local_name))
 	{
 		// new ndistinct
 		CParseHandlerBase *parse_handler_base_ndistinct =
 			CParseHandlerFactory::GetParseHandler(
-				m_mp, CDXLTokens::XmlstrToken(EdxltokenMVNDistinctItem),
+				m_mp, CDXLTokens::XmlstrToken(EdxltokenMVNDistinct),
 				m_parse_handler_mgr, this);
 		this->Append(parse_handler_base_ndistinct);
 

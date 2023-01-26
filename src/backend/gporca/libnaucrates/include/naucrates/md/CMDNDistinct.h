@@ -78,7 +78,7 @@ public:
 	{
 		xml_serializer->OpenElement(
 			CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
-			CDXLTokens::GetDXLTokenStr(EdxltokenMVNDistinctItem));
+			CDXLTokens::GetDXLTokenStr(EdxltokenMVNDistinct));
 
 		xml_serializer->AddAttribute(
 			CDXLTokens::GetDXLTokenStr(EdxltokenMVNDistinct), m_ndistnct_value);
@@ -90,7 +90,7 @@ public:
 
 		xml_serializer->CloseElement(
 			CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
-			CDXLTokens::GetDXLTokenStr(EdxltokenMVNDistinctItem));
+			CDXLTokens::GetDXLTokenStr(EdxltokenMVNDistinct));
 	}
 
 	CBitSet *

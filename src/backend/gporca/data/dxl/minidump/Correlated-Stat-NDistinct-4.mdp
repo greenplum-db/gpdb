@@ -159,10 +159,10 @@
       <dxl:ExtendedStatistics Mdid="9.90351.1.0" Name="stts2">
         <dxl:MVDependencyList/>
         <dxl:MVNDistinctList>
-          <dxl:MVNDistinctItem MVNDistinct="100.000000" Attno="1,2"/>
-          <dxl:MVNDistinctItem MVNDistinct="1000.000000" Attno="1,3"/>
-          <dxl:MVNDistinctItem MVNDistinct="1000.000000" Attno="2,3"/>
-          <dxl:MVNDistinctItem MVNDistinct="1000.000000" Attno="1,2,3"/>
+          <dxl:MVNDistinct MVNDistinct="100.000000" Attno="1,2"/>
+          <dxl:MVNDistinct MVNDistinct="1000.000000" Attno="1,3"/>
+          <dxl:MVNDistinct MVNDistinct="1000.000000" Attno="2,3"/>
+          <dxl:MVNDistinct MVNDistinct="1000.000000" Attno="1,2,3"/>
         </dxl:MVNDistinctList>
       </dxl:ExtendedStatistics>
       <dxl:RelationExtendedStatistics Mdid="10.90347.1.0" Name="t">

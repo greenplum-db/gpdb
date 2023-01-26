@@ -465,10 +465,7 @@ CExtendedStatsProcessor::ApplyCorrelatedStatsToNDistinctCalculation(
 		 */
 		if (nshared > nmatches)
 		{
-			if (matched)
-			{
-				matched->Release();
-			}
+			CRefCount::SafeRelease(matched);
 
 			statOid = info->GetStatOid();
 			nmatches = nshared;
@@ -483,10 +480,7 @@ CExtendedStatsProcessor::ApplyCorrelatedStatsToNDistinctCalculation(
 	/* No match? */
 	if (statOid == InvalidOid)
 	{
-		if (matched)
-		{
-			matched->Release();
-		}
+		CRefCount::SafeRelease(matched);
 		attnums->Release();
 		return false;
 	}

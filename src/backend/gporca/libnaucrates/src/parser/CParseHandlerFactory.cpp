@@ -77,7 +77,7 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 		{EdxltokenMVDependencyList, &CreateExtStatsDependenciesParseHandler},
 		{EdxltokenMVDependency, &CreateExtStatsDependencyParseHandler},
 		{EdxltokenMVNDistinctList, &CreateExtStatsNDistinctListParseHandler},
-		{EdxltokenMVNDistinctItem, &CreateExtStatsNDistinctParseHandler},
+		{EdxltokenMVNDistinct, &CreateExtStatsNDistinctParseHandler},
 		{EdxltokenColumnStats, &CreateColStatsParseHandler},
 		{EdxltokenMetadataIdList, &CreateMDIdListParseHandler},
 		{EdxltokenIndexInfoList, &CreateMDIndexInfoListParseHandler},
