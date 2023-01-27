@@ -911,14 +911,6 @@ validate_and_adjust_options(StdRdOptions *result,
 			result->compresslevel = setDefaultCompressionLevel(result->compresstype);
 		}
 
-		/*
-		 * use the default compressor if compresslevel was indicated but not
-		 * compresstype. must make a copy otherwise str_tolower below will
-		 * crash.
-		 */
-		if (result->compresslevel > 0 && !result->compresstype[0])
-			strlcpy(result->compresstype, AO_DEFAULT_COMPRESSTYPE, sizeof(result->compresstype));
-
 		/* Check upper bound of compresslevel for each compression type */
 
 		if (result->compresstype[0] &&
@@ -1010,8 +1002,18 @@ validate_and_adjust_options(StdRdOptions *result,
 		result->checksum = checksum_opt->values.bool_val;
 	}
 
-	if (result->compresstype[0] &&
-		result->compresslevel == AO_DEFAULT_COMPRESSLEVEL)
+	/* More adjustment for compression settings: */
+	/*
+	 * use the default compressor if compresslevel was indicated but not
+	 * compresstype. must make a copy otherwise str_tolower below will
+	 * crash.
+	 */
+	if (result->compresslevel > 0 && !result->compresstype[0])
+		strlcpy(result->compresstype, AO_DEFAULT_COMPRESSTYPE, sizeof(result->compresstype));
+	/*
+	 * use compresslevel=1 if the compresstype is not none
+	 */
+	if (result->compresstype[0] && result->compresslevel == 0)
 	{
 		result->compresslevel = setDefaultCompressionLevel(result->compresstype);
 	}
