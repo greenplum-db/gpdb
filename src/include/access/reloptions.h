@@ -31,16 +31,18 @@
 #define AO_DEFAULT_BLOCKSIZE      DEFAULT_APPENDONLY_BLOCK_SIZE
 /* Compression is turned off by default. */
 #define AO_DEFAULT_COMPRESSLEVEL  0
+#define AO_DEFAULT_USABLE_COMPRESSLEVEL  1 /* used when there's a meaningful compresstype */
 #define AO_MIN_COMPRESSLEVEL  0
 #define AO_MAX_COMPRESSLEVEL  19
 /*
  * If compression is turned on without specifying compresstype, this
  * is the default.
  */
-#ifdef HAVE_LIBZ
-#define AO_DEFAULT_COMPRESSTYPE   "zlib"
-#else
 #define AO_DEFAULT_COMPRESSTYPE   "none"
+#ifdef HAVE_LIBZ
+#define AO_DEFAULT_USABLE_COMPRESSTYPE   "zlib" /* used when there's a meaningful compresslevel */
+#else
+#define AO_DEFAULT_USABLE_COMPRESSTYPE   "none"
 #endif
 #define AO_DEFAULT_CHECKSUM       true
 #define ANALYZE_DEFAULT_HLL       false
