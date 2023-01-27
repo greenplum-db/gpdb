@@ -852,11 +852,8 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 																		true,
 																		RELOPT_KIND_APPENDOPTIMIZED);
 
-		/* Validate the StdRdOptions parsed or error out */
-		validateAppendOnlyRelOptions(stdRdOptions->blocksize,
-									 stdRdOptions->compresslevel,
-									 stdRdOptions->compresstype,
-									 stdRdOptions->checksum,
+		/* check orientation-specific rules */
+		validateOrientationRelOptions(stdRdOptions->compresstype,
 									 (accessMethodId == AO_COLUMN_TABLE_AM_OID));
 
 		reloptions = transformAOStdRdOptions(stdRdOptions, reloptions, RELKIND_HAS_STORAGE(relkind));
@@ -15025,10 +15022,7 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 				StdRdOptions *stdRdOptions = (StdRdOptions *) default_reloptions(newOptions,
 																				 true,
 																				 RELOPT_KIND_APPENDOPTIMIZED);
-				validateAppendOnlyRelOptions(stdRdOptions->blocksize,
-											 stdRdOptions->compresslevel,
-											 stdRdOptions->compresstype,
-											 stdRdOptions->checksum,
+				validateOrientationRelOptions(stdRdOptions->compresstype,
 											 tableam == AO_COLUMN_TABLE_AM_OID);
 
 				newOptions = transformAOStdRdOptions(stdRdOptions, newOptions, RELKIND_HAS_STORAGE(rel->rd_rel->relkind));

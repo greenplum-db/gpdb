@@ -315,9 +315,7 @@ extern Datum transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts, bool ha
 
 extern bool relOptionsEquals(Datum oldOptions, Datum newOptions);
 
-extern void validateAppendOnlyRelOptions(int blocksize,
-										 int complevel, char* comptype,
-										 bool checksum, bool co);
+extern void validateOrientationRelOptions(char* comptype, bool co);
 extern void parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
 									  bool validate, relopt_kind relkind);
 
