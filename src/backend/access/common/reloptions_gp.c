@@ -329,7 +329,7 @@ static int	setDefaultCompressionLevel(char *compresstype);
 /*
  * Accept a string of the form "name=value,name=value,...".  Space
  * around ',' and '=' is allowed.  Parsed values are stored in
- * corresponding fields of StdRdOptions object.  The parser is a
+ * a text array and returned to caller.  The parser is a
  * finite state machine that changes states for each input character
  * scanned.
  */
@@ -1027,8 +1027,7 @@ validate_and_refill_options(StdRdOptions *result, relopt_value *options,
 	 * If anything is not set but it has been specified by 
 	 * gp_default_storage_options before, use them. 
 	 */
-	if (validate &&
-		ao_storage_opts &&
+	if (ao_storage_opts &&
 		KIND_IS_APPENDOPTIMIZED(kind))
 	{
 		if (!(get_option_set(options, numrelopts, SOPT_BLOCKSIZE)))

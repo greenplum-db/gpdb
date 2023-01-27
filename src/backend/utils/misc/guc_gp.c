@@ -4963,7 +4963,6 @@ storageOptToString(const StdRdOptions *ao_opts)
 static bool
 check_gp_default_storage_options(char **newval, void **extra, GucSource source)
 {
-	/* Value of "appendonly" option if one is specified. */
 	StdRdOptions *newopts;
 
 	newopts = calloc(sizeof(*newopts), 1);
