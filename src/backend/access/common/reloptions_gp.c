@@ -189,8 +189,7 @@ initialize_reloptions_gp(void)
 /*
  * This is set whenever the GUC gp_default_storage_options is set.
  */
-static StdRdOptions ao_storage_opts;
-static bool ao_storage_opts_changed = false;
+static StdRdOptions *ao_storage_opts = NULL;
 
 /*
  * Accumulate a new datum for one AO storage option.
@@ -297,7 +296,7 @@ resetDefaultAOStorageOpts(void)
 const StdRdOptions *
 currentAOStorageOptions(void)
 {
-	return (const StdRdOptions *) &ao_storage_opts;
+	return (const StdRdOptions *) ao_storage_opts;
 }
 
 /*
@@ -308,14 +307,21 @@ setDefaultAOStorageOpts(StdRdOptions *copy)
 {
 	Assert(copy);
 
-	memcpy(&ao_storage_opts, copy, sizeof(ao_storage_opts));
+	/* If not allocated yet, do it now */
+	if (!ao_storage_opts)
+		ao_storage_opts = calloc(sizeof(*ao_storage_opts), 1);
+	if (!ao_storage_opts)
+		ereport(ERROR,
+			(errcode(ERRCODE_OUT_OF_MEMORY),
+				 errmsg("out of memory")));
+
+	memcpy(ao_storage_opts, copy, sizeof(*ao_storage_opts));
+
 	if (pg_strcasecmp(copy->compresstype, "none") == 0)
 	{
 		/* Represent compresstype=none as an empty string (MPP-25073). */
-		ao_storage_opts.compresstype[0] = '\0';
+		ao_storage_opts->compresstype[0] = '\0';
 	}
-
-	ao_storage_opts_changed = true;
 }
 
 static int	setDefaultCompressionLevel(char *compresstype);
@@ -1015,21 +1021,25 @@ void
 validate_and_refill_options(StdRdOptions *result, relopt_value *options,
 							int numrelopts, relopt_kind kind, bool validate)
 {
+	/* 
+	 * If anything is not set but it has been specified by 
+	 * gp_default_storage_options before, use them. 
+	 */
 	if (validate &&
-		ao_storage_opts_changed &&
+		ao_storage_opts &&
 		KIND_IS_APPENDOPTIMIZED(kind))
 	{
 		if (!(get_option_set(options, numrelopts, SOPT_BLOCKSIZE)))
-			result->blocksize = ao_storage_opts.blocksize;
+			result->blocksize = ao_storage_opts->blocksize;
 
 		if (!(get_option_set(options, numrelopts, SOPT_COMPLEVEL)))
-			result->compresslevel = ao_storage_opts.compresslevel;
+			result->compresslevel = ao_storage_opts->compresslevel;
 
 		if (!(get_option_set(options, numrelopts, SOPT_COMPTYPE)))
-			strlcpy(result->compresstype, ao_storage_opts.compresstype, sizeof(result->compresstype));
+			strlcpy(result->compresstype, ao_storage_opts->compresstype, sizeof(result->compresstype));
 
 		if (!(get_option_set(options, numrelopts, SOPT_CHECKSUM)))
-			result->checksum = ao_storage_opts.checksum;
+			result->checksum = ao_storage_opts->checksum;
 	}
 
 	validate_and_adjust_options(result, options, numrelopts, kind, validate);
