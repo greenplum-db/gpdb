@@ -238,7 +238,7 @@ For Azure deployments with Greenplum Database avoid using port 65330; add the fo
 net.ipv4.ip_local_reserved_ports=65330 
 ```
 
-For additional requirements and recommendations for cloud deployments, see *[Greenplum Database Cloud Technical Recommendations](../cloud/gpdb-cloud-tech-rec.html)*.
+For additional requirements and recommendations for cloud deployments, see [Greenplum Database Cloud Technical Recommendations](./platform-requirements-overview.html#public-cloud).
 
 **IP Fragmentation Settings**
 
