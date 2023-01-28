@@ -6,7 +6,7 @@ Describes how to prepare your operating system environment for Greenplum Databas
 
 Perform the following tasks in order:
 
-1.  Make sure your host systems meet the requirements described in [Platform Requirements](platform-requirements.html).
+1.  Make sure your host systems meet the requirements described in [Platform Requirements](platform-requirements-overview.html).
 2.  [Deactivate or configure SELinux.](#topic_sqj_lt1_nfb)
 3.  [Deactivate or configure firewall software.](#topic_et2_y22_4nb)
 4.  [Set the required operating system parameters.](#topic3)
