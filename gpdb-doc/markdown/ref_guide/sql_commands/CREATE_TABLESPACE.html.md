@@ -52,7 +52,7 @@ You cannot run `CREATE TABLESPACE` inside a transaction block.
 
 When creating tablespaces, ensure that file system locations have sufficient I/O speed and available disk space.
 
-**Note:** Greenplum Database does not support different tablespace locations for a primary-mirror pair with the same content ID. It is only possible to configure different locations for different content IDs. Do not modify symbolic links under the `pg_tblspc` directory so that primary-mirror pairs point to different file locations; this will lead to erroneous behavior.
+> **Note** Greenplum Database does not support different tablespace locations for a primary-mirror pair with the same content ID. It is only possible to configure different locations for different content IDs. Do not modify symbolic links under the `pg_tblspc` directory so that primary-mirror pairs point to different file locations; this will lead to erroneous behavior.
 
 ## <a id="section6"></a>Examples 
 

@@ -276,7 +276,7 @@ The following table lists the modules that are provided in the Data Science Pack
 
 Before you install a Data Science Package for Python, make sure that your Greenplum Database is running, you have sourced `greenplum_path.sh`, and that the `$MASTER_DATA_DIRECTORY` and `$GPHOME` environment variables are set.
 
-**Note:** The `PyMC3` module depends on `Tk`. If you want to use `PyMC3`, you must install the `tk` OS package on every node in your cluster. For example:
+> **Note** The `PyMC3` module depends on `Tk`. If you want to use `PyMC3`, you must install the `tk` OS package on every node in your cluster. For example:
 
 ```
 $ sudo yum install tk
@@ -338,5 +338,5 @@ $ . /usr/local/greenplum-db/greenplum_path.sh
 $ gpstop -r 
 ```
 
-**Note:** After you uninstall a Data Science Package for Python from your Greenplum Database cluster, any UDFs that you have created that import Python modules installed with this package will return an error.
+> **Note** After you uninstall a Data Science Package for Python from your Greenplum Database cluster, any UDFs that you have created that import Python modules installed with this package will return an error.
 

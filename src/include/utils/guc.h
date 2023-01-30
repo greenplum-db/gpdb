@@ -346,7 +346,6 @@ extern PGDLLIMPORT int log_min_messages;
 extern PGDLLIMPORT int client_min_messages;
 extern int	log_min_duration_statement;
 extern int	log_temp_files;
-extern double log_statement_sample_rate;
 extern double log_xact_sample_rate;
 
 extern int	temp_file_limit;
@@ -627,8 +626,7 @@ extern IndexCheckType gp_indexcheck_insert;
 extern void SetConfigOption(const char *name, const char *value,
 							GucContext context, GucSource source);
 
-extern void DefineCustomBoolVariable(
-									 const char *name,
+extern void DefineCustomBoolVariable(const char *name,
 									 const char *short_desc,
 									 const char *long_desc,
 									 bool *valueAddr,
@@ -639,8 +637,7 @@ extern void DefineCustomBoolVariable(
 									 GucBoolAssignHook assign_hook,
 									 GucShowHook show_hook);
 
-extern void DefineCustomIntVariable(
-									const char *name,
+extern void DefineCustomIntVariable(const char *name,
 									const char *short_desc,
 									const char *long_desc,
 									int *valueAddr,
@@ -653,8 +650,7 @@ extern void DefineCustomIntVariable(
 									GucIntAssignHook assign_hook,
 									GucShowHook show_hook);
 
-extern void DefineCustomRealVariable(
-									 const char *name,
+extern void DefineCustomRealVariable(const char *name,
 									 const char *short_desc,
 									 const char *long_desc,
 									 double *valueAddr,
@@ -667,8 +663,7 @@ extern void DefineCustomRealVariable(
 									 GucRealAssignHook assign_hook,
 									 GucShowHook show_hook);
 
-extern void DefineCustomStringVariable(
-									   const char *name,
+extern void DefineCustomStringVariable(const char *name,
 									   const char *short_desc,
 									   const char *long_desc,
 									   char **valueAddr,
@@ -679,8 +674,7 @@ extern void DefineCustomStringVariable(
 									   GucStringAssignHook assign_hook,
 									   GucShowHook show_hook);
 
-extern void DefineCustomEnumVariable(
-									 const char *name,
+extern void DefineCustomEnumVariable(const char *name,
 									 const char *short_desc,
 									 const char *long_desc,
 									 int *valueAddr,

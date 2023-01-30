@@ -450,6 +450,7 @@ enum Edxltoken
 	EdxltokenSchema,
 	EdxltokenTablespace,
 	EdxltokenOid,
+	EdxltokenKind,
 	EdxltokenVersion,
 	EdxltokenMdid,
 	EdxltokenLockMode,
@@ -460,10 +461,21 @@ enum Edxltoken
 	EdxltokenRelationStats,
 	EdxltokenColumnStats,
 	EdxltokenColumnStatsBucket,
+	EdxltokenRelationExtendedStats,
+	EdxltokenExtendedStats,
+	EdxltokenExtendedStatsInfo,
+	EdxltokenMVDependencyList,
+	EdxltokenMVDependency,
+	EdxltokenMVNDistinctList,
+	EdxltokenMVNDistinct,
+	EdxltokenDegree,
+	EdxltokenFrom,
+	EdxltokenTo,
 	EdxltokenEmptyRelation,
 	EdxltokenIsNull,
 	EdxltokenLintValue,
 	EdxltokenDoubleValue,
+	EdxltokenAssignedQueryIdForTargetRel,
 
 	EdxltokenRelTemporary,
 
@@ -477,7 +489,6 @@ enum Edxltoken
 
 	EdxltokenPartKeys,
 	EdxltokenPartTypes,
-	EdxltokenNumLeafPartitions,
 
 	EdxltokenRelDistrPolicy,
 	EdxltokenRelDistrMasterOnly,

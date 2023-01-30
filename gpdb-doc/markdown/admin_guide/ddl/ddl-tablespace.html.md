@@ -8,7 +8,7 @@ A tablespace requires a host file system location to store its database files. I
 
 A tablespace is Greenplum Database system object \(a global object\), you can use a tablespace from any database if you have appropriate privileges.
 
-**Note:** Greenplum Database does not support different tablespace locations for a primary-mirror pair with the same content ID. It is only possible to configure different locations for different content IDs. Do not modify symbolic links under the `pg_tblspc` directory so that primary-mirror pairs point to different file locations; this will lead to erroneous behavior.
+> **Note** Greenplum Database does not support different tablespace locations for a primary-mirror pair with the same content ID. It is only possible to configure different locations for different content IDs. Do not modify symbolic links under the `pg_tblspc` directory so that primary-mirror pairs point to different file locations; this will lead to erroneous behavior.
 
 **Parent topic:** [Defining Database Objects](../ddl/ddl.html)
 
@@ -121,7 +121,7 @@ To drop a tablespace, you must be the tablespace owner or a superuser. You canno
 
 The `DROP TABLESPACE` command removes an empty tablespace.
 
-**Note:** You cannot drop a tablespace if it is not empty or if it stores temporary or transaction files.
+> **Note** You cannot drop a tablespace if it is not empty or if it stores temporary or transaction files.
 
 ## <a id="topic11"></a>Moving the Location of Temporary or Transaction Files 
 

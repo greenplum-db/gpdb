@@ -122,14 +122,14 @@ WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Update on keo1
    ->  Hash Join
-         Hash Cond: ((keo1_1.user_vie_project_code_pk)::text = (keo1_2.user_vie_project_code_pk)::text)
-         ->  Seq Scan on keo1 keo1_1
+         Hash Cond: ((keo1.user_vie_project_code_pk)::text = (keo1_1.user_vie_project_code_pk)::text)
+         ->  Seq Scan on keo1
          ->  Hash
                ->  Broadcast Motion 3:3  (slice1; segments: 3)
                      ->  Hash Join
-                           Hash Cond: ((keo1_2.user_vie_project_code_pk)::text = (keo2.projects_pk)::text)
+                           Hash Cond: ((keo1_1.user_vie_project_code_pk)::text = (keo2.projects_pk)::text)
                            ->  Hash Join
-                                 Hash Cond: ((max((keo3.sky_per)::text)) = (keo1_2.user_vie_fiscal_year_period_sk)::text)
+                                 Hash Cond: ((max((keo3.sky_per)::text)) = (keo1_1.user_vie_fiscal_year_period_sk)::text)
                                  ->  Redistribute Motion 1:3  (slice2; segments: 1)
                                        ->  Aggregate
                                              ->  Hash Join
@@ -152,7 +152,7 @@ WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
                                                                                              ->  Seq Scan on keo4 keo4_1
                                  ->  Hash
                                        ->  Broadcast Motion 3:3  (slice8; segments: 3)
-                                             ->  Seq Scan on keo1 keo1_2
+                                             ->  Seq Scan on keo1 keo1_1
                            ->  Hash
                                  ->  Broadcast Motion 3:3  (slice9; segments: 3)
                                        ->  Seq Scan on keo2
@@ -182,17 +182,17 @@ EXPLAIN (COSTS OFF) DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS
 ------------------------------------------------------------------------------------
  Delete on keo5
    ->  Hash Semi Join
-         Hash Cond: (keo5_1.x = keo5_3.x)
-         ->  Seq Scan on keo5 keo5_1
+         Hash Cond: (keo5.x = keo5_2.x)
+         ->  Seq Scan on keo5
          ->  Hash
                ->  Nested Loop Semi Join
                      Join Filter: true
-                     ->  Seq Scan on keo5 keo5_3
+                     ->  Seq Scan on keo5 keo5_2
                      ->  Materialize
                            ->  Broadcast Motion 1:3  (slice1; segments: 1)
                                  ->  Limit
                                        ->  Gather Motion 3:1  (slice2; segments: 3)
-                                             ->  Seq Scan on keo5 keo5_2
+                                             ->  Seq Scan on keo5 keo5_1
                                                    Filter: (x < 2)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (15 rows)
@@ -438,9 +438,9 @@ EXPLAIN (COSTS OFF ) UPDATE tab3 SET C1 = C1 + 1, C5 = C5+1;
  Update on tab3
    ->  Result
          ->  Redistribute Motion 3:3  (slice1; segments: 3)
-               Hash Key: tab3_1.c1, tab3_1.c2, tab3_1.c3
+               Hash Key: c1, c2, c3
                ->  Split
-                     ->  Seq Scan on tab3 tab3_1
+                     ->  Seq Scan on tab3
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (7 rows)
 
@@ -879,13 +879,13 @@ where into_table.a=from_table.a and into_table.b=from_table.b and into_table.c=f
  Update on into_table
    ->  Result
          ->  Redistribute Motion 3:3  (slice1; segments: 3)
-               Hash Key: into_table_1.a, into_table_1.b, into_table_1.c
+               Hash Key: into_table.a, into_table.b, into_table.c
                ->  Split
                      ->  Hash Join
-                           Hash Cond: ((into_table_1.a = from_table.a) AND (into_table_1.b = from_table.b) AND (into_table_1.c = from_table.c))
+                           Hash Cond: ((into_table.a = from_table.a) AND (into_table.b = from_table.b) AND (into_table.c = from_table.c))
                            ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                 Hash Key: into_table_1.a
-                                 ->  Dynamic Seq Scan on into_table into_table_1
+                                 Hash Key: into_table.a
+                                 ->  Dynamic Seq Scan on into_table
                                        Number of partitions to scan: 4 (out of 4)
                            ->  Hash
                                  ->  Seq Scan on from_table

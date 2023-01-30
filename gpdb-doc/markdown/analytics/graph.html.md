@@ -59,7 +59,7 @@ To represent a graph in Greenplum, create tables that represent the vertices, ed
 Using SQL, create the relevant tables in the database you want to use. This example uses `testdb`:
 
 ```
-gpadmin@mdw ~]$ psql
+gpadmin@cdw ~]$ psql
 dev=# \c testdb
 ```
 

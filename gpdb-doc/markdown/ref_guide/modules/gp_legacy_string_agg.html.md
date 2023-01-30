@@ -4,7 +4,7 @@ The `gp_legacy_string_agg` module re-introduces the single-argument `string_agg(
 
 The `gp_legacy_string_agg` module is a Greenplum Database extension.
 
-**Note:** Use this module to aid migration from Greenplum Database 5 to the native, two-argument `string_agg()` function included in Greenplum 6.
+> **Note** Use this module to aid migration from Greenplum Database 5 to the native, two-argument `string_agg()` function included in Greenplum 6.
 
 ## <a id="topic_reg"></a>Installing and Registering the Module 
 

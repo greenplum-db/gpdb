@@ -38,7 +38,7 @@ The host name and port must match the host name and port of the installed Greenp
 
 Some objects, such as roles, are shared by all the databases in a Greenplum Database system. Other objects, such as tables that you create, are known only in the database in which you create them.
 
-**Warning:** The `CREATE DATABASE` command is not transactional.
+> **Caution** The `CREATE DATABASE` command is not transactional.
 
 ### <a id="topic5"></a>Cloning a Database 
 
@@ -89,7 +89,7 @@ You can also use the client program `dropdb` to drop a database. For example, th
 $ dropdb -h coordinator_host -p 5432 mydatabase
 ```
 
-**Warning:** Dropping a database cannot be undone.
+> **Caution** Dropping a database cannot be undone.
 
 The `DROP DATABASE` command is not transactional.
 

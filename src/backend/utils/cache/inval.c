@@ -65,6 +65,20 @@
  *	(XXX is it worth testing likewise for duplicate catcache flush entries?
  *	Probably not.)
  *
+ *	Many subsystems own higher-level caches that depend on relcache and/or
+ *	catcache, and they register callbacks here to invalidate their caches.
+ *	While building a higher-level cache entry, a backend may receive a
+ *	callback for the being-built entry or one of its dependencies.  This
+ *	implies the new higher-level entry would be born stale, and it might
+ *	remain stale for the life of the backend.  Many caches do not prevent
+ *	that.  They rely on DDL for can't-miss catalog changes taking
+ *	AccessExclusiveLock on suitable objects.  (For a change made with less
+ *	locking, backends might never read the change.)  The relation cache,
+ *	however, needs to reflect changes from CREATE INDEX CONCURRENTLY no later
+ *	than the beginning of the next transaction.  Hence, when a relevant
+ *	invalidation callback arrives during a build, relcache.c reattempts that
+ *	build.  Caches with similar needs could do likewise.
+ *
  *	If a relcache flush is issued for a system relation that we preload
  *	from the relcache init file, we must also delete the init file so that
  *	it will be rebuilt during the next backend restart.  The actual work of
@@ -629,7 +643,7 @@ LocalExecuteInvalidationMessage(SharedInvalidationMessage *msg)
 			int			i;
 
 			if (msg->rc.relId == InvalidOid)
-				RelationCacheInvalidate();
+				RelationCacheInvalidate(false);
 			else
 				RelationCacheInvalidateEntry(msg->rc.relId);
 
@@ -664,9 +678,9 @@ LocalExecuteInvalidationMessage(SharedInvalidationMessage *msg)
 	else if (msg->id == SHAREDINVALSNAPSHOT_ID)
 	{
 		/* We only care about our own database and shared catalogs */
-		if (msg->rm.dbId == InvalidOid)
+		if (msg->sn.dbId == InvalidOid)
 			InvalidateCatalogSnapshot();
-		else if (msg->rm.dbId == MyDatabaseId)
+		else if (msg->sn.dbId == MyDatabaseId)
 			InvalidateCatalogSnapshot();
 	}
 	else
@@ -692,11 +706,17 @@ LocalExecuteInvalidationMessage(SharedInvalidationMessage *msg)
 void
 InvalidateSystemCaches(void)
 {
+	InvalidateSystemCachesExtended(false);
+}
+
+void
+InvalidateSystemCachesExtended(bool debug_discard)
+{
 	int			i;
 
 	InvalidateCatalogSnapshot();
 	ResetCatalogCaches();
-	RelationCacheInvalidate();	/* gets smgr and relmap too */
+	RelationCacheInvalidate(debug_discard); /* gets smgr and relmap too */
 
 	for (i = 0; i < syscache_callback_count; i++)
 	{
@@ -755,7 +775,7 @@ AcceptInvalidationMessages(void)
 		if (!in_recursion)
 		{
 			in_recursion = true;
-			InvalidateSystemCaches();
+			InvalidateSystemCachesExtended(true);
 			in_recursion = false;
 		}
 	}
@@ -767,7 +787,7 @@ AcceptInvalidationMessages(void)
 		if (recursion_depth < 3)
 		{
 			recursion_depth++;
-			InvalidateSystemCaches();
+			InvalidateSystemCachesExtended(true);
 			recursion_depth--;
 		}
 	}

@@ -96,7 +96,7 @@ Rows out:  1 rows at destination with 0.241 ms to first row, 0.242 ms to end.
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.16396.1.0" Name="tc" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.16396.1.0" Name="tc" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16396.1.0" Name="tc" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

@@ -109,6 +109,7 @@ typedef struct AppendOnlyInsertDescData
 
 	/* The block directory for the appendonly relation. */
 	AppendOnlyBlockDirectory blockDirectory;
+	Oid segrelid;
 } AppendOnlyInsertDescData;
 
 typedef AppendOnlyInsertDescData *AppendOnlyInsertDesc;

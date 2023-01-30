@@ -14489,17 +14489,17 @@ where t.j = tt.j;
    ->  Result  (cost=0.00..0.00 rows=0 width=0)
          ->  Explicit Redistribute Motion 1:3  (slice1; segments: 1)  (cost=0.00..862.00 rows=1 width=18)
                ->  Hash Join  (cost=0.00..862.00 rows=1 width=18)
-                     Hash Cond: (window_agg_test_1.j = window_agg_test_2.j)
+                     Hash Cond: (window_agg_test.j = window_agg_test_1.j)
                      ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=14)
-                           ->  Seq Scan on window_agg_test window_agg_test_1  (cost=0.00..431.00 rows=1 width=14)
+                           ->  Seq Scan on window_agg_test  (cost=0.00..431.00 rows=1 width=14)
                      ->  Hash  (cost=431.00..431.00 rows=1 width=8)
                            ->  WindowAgg  (cost=0.00..431.00 rows=1 width=8)
-                                 Order By: window_agg_test_2.j
+                                 Order By: window_agg_test_1.j
                                  ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                       Merge Key: window_agg_test_2.j
+                                       Merge Key: window_agg_test_1.j
                                        ->  Sort  (cost=0.00..431.00 rows=1 width=8)
-                                             Sort Key: window_agg_test_2.j
-                                             ->  Seq Scan on window_agg_test window_agg_test_2  (cost=0.00..431.00 rows=1 width=8)
+                                             Sort Key: window_agg_test_1.j
+                                             ->  Seq Scan on window_agg_test window_agg_test_1  (cost=0.00..431.00 rows=1 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
 (16 rows)
 

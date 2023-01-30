@@ -4,7 +4,7 @@ The `dblink` module supports connections to other Greenplum Database databases f
 
 Greenplum Database supports `dblink` connections between databases in Greenplum Database installations with the same major version number. You can also use `dblink` to connect to other Greenplum Database installations that use compatible `libpq` libraries.
 
-**Note:** `dblink` is intended for database users to perform short ad hoc queries in other databases. `dblink` is not intended for use as a replacement for external tables or for administrative tools such as `gpcopy`.
+> **Note** `dblink` is intended for database users to perform short ad hoc queries in other databases. `dblink` is not intended for use as a replacement for external tables or for administrative tools such as `gpcopy`.
 
 The Greenplum Database `dblink` module is a modified version of the PostgreSQL `dblink` module. There are some restrictions and limitations when you use the module in Greenplum Database.
 
@@ -69,7 +69,7 @@ The following procedure identifies the basic steps for configuring and using `db
     (1 row)
     ```
 
-    **Note:** If a `user` is not specified, `dblink_connect()` uses the value of the `PGUSER` environment variable when Greenplum Database was started. If `PGUSER` is not set, the default is the system user that started Greenplum Database.
+    > **Note** If a `user` is not specified, `dblink_connect()` uses the value of the `PGUSER` environment variable when Greenplum Database was started. If `PGUSER` is not set, the default is the system user that started Greenplum Database.
 
 4.  Use the `dblink()` function to query a database using a configured connection. Keep in mind that this function returns a record type, so you must assign the columns returned in the `dblink()` query. For example, the following command uses the named connection to query the table you created earlier:
 
@@ -97,17 +97,17 @@ testdb=# SELECT dblink_connect('host=remotehost port=5432 dbname=postgres user=g
 
 ### <a id="dblink_u"></a>Using dblink as a Non-Superuser 
 
-To make a connection to a database with `dblink_connect()`, non-superusers must include host, user, and password information in the connection string. The host, user, and password information must be included even when connecting to a local database. For example, the user `test_user` can create a `dblink` connection to the local system `mdw` with this command:
+To make a connection to a database with `dblink_connect()`, non-superusers must include host, user, and password information in the connection string. The host, user, and password information must be included even when connecting to a local database. For example, the user `test_user` can create a `dblink` connection to the local system `cdw` with this command:
 
 ```
-testdb=> SELECT dblink_connect('host=mdw port=5432 dbname=postgres user=test_user password=secret');
+testdb=> SELECT dblink_connect('host=cdw port=5432 dbname=postgres user=test_user password=secret');
 ```
 
 If non-superusers need to create `dblink` connections that do not require a password, they can use the `dblink_connect_u()` function. The `dblink_connect_u()` function is identical to `dblink_connect()`, except that it allows non-superusers to create connections that do not require a password.
 
 `dblink_connect_u()` is initially installed with all privileges revoked from `PUBLIC`, making it un-callable except by superusers. In some situations, it may be appropriate to grant `EXECUTE` permission on `dblink_connect_u()` to specific users who are considered trustworthy, but this should be done with care.
 
-**Warning:** If a Greenplum Database system has configured users with an authentication method that does not involve a password, then impersonation and subsequent escalation of privileges can occur when a non-superuser runs `dblink_connect_u()`. The `dblink` connection will appear to have originated from the user specified by the function. For example, a non-superuser can run `dblink_connect_u()` and specify a user that is configured with `trust` authentication.
+> **Caution** If a Greenplum Database system has configured users with an authentication method that does not involve a password, then impersonation and subsequent escalation of privileges can occur when a non-superuser runs `dblink_connect_u()`. The `dblink` connection will appear to have originated from the user specified by the function. For example, a non-superuser can run `dblink_connect_u()` and specify a user that is configured with `trust` authentication.
 
 Also, even if the `dblink` connection requires a password, it is possible for the password to be supplied from the server environment, such as a `~/.pgpass` file belonging to the server's user. It is recommended that any `~/.pgpass` file belonging to the server's user not contain any records specifying a wildcard host name.
 
@@ -124,7 +124,7 @@ Also, even if the `dblink` connection requires a password, it is possible for th
     testdb=> SELECT dblink_connect_u('testconn', 'dbname=postgres user=test_user');
     ```
 
-    **Note:** If a `user` is not specified, `dblink_connect_u()` uses the value of the `PGUSER` environment variable when Greenplum Database was started. If `PGUSER` is not set, the default is the system user that started Greenplum Database.
+    > **Note** If a `user` is not specified, `dblink_connect_u()` uses the value of the `PGUSER` environment variable when Greenplum Database was started. If `PGUSER` is not set, the default is the system user that started Greenplum Database.
 
 3.  `test_user` can use the `dblink()` function to run a query using a `dblink` connection. For example, this command uses the `dblink` connection named `testconn` created in the previous step. `test_user` must have appropriate access to the table.
 
@@ -145,5 +145,5 @@ Refer to [SSL Client Authentication](../../security-guide/topics/Authenticate.ht
 
 ## <a id="topic_info"></a>Additional Module Documentation 
 
-Refer to the [dblink](https://www.postgresql.org/docs/9.4/dblink.html) PostgreSQL documentation for detailed information about the individual functions in this module.
+Refer to the [dblink](https://www.postgresql.org/docs/12/dblink.html) PostgreSQL documentation for detailed information about the individual functions in this module.
 

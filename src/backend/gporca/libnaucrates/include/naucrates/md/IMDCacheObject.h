@@ -72,6 +72,8 @@ public:
 		EmdtColStats,
 		EmdtCastFunc,
 		EmdtScCmp,
+		EmdtExtStats,
+		EmdtExtStatsInfo,
 		EmdtSentinel
 	};
 

@@ -136,7 +136,7 @@ Rows out:  0 rows with 0.002 ms to end.
         <dxl:OpFunc Mdid="0.177.1.0"/>
         <dxl:Commutator Mdid="0.551.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:Relation Mdid="6.16469.1.0" Name="t" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16469.1.0" Name="t" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>

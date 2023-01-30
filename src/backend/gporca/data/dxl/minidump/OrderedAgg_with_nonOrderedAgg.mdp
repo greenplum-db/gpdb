@@ -81,7 +81,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a1), percentile_disc(0
         <dxl:IntermediateResultType Mdid="0.17.1.0"/>
       </dxl:GPDBAgg>
       <dxl:RelationStatistics Mdid="2.24576.1.0" Name="foo" Rows="0.000000" RelPages="0" RelAllVisible="0" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.24576.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.24576.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="a1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

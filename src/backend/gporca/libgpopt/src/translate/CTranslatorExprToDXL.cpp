@@ -1250,7 +1250,8 @@ CTranslatorExprToDXL::MakeTableDescForPart(const IMDRelation *part,
 		m_mp, part_mdid, part->Mdname().GetMDName(),
 		part->ConvertHashToRandom(), part->GetRelDistribution(),
 		part->RetrieveRelStorageType(), root_table_desc->GetExecuteAsUserId(),
-		root_table_desc->LockMode());
+		root_table_desc->LockMode(),
+		root_table_desc->GetAssignedQueryIdForTargetRel());
 
 	for (ULONG ul = 0; ul < part->ColumnCount(); ++ul)
 	{
@@ -6580,9 +6581,9 @@ CTranslatorExprToDXL::MakeDXLTableDescr(
 	CMDIdGPDB *mdid = CMDIdGPDB::CastMdid(ptabdesc->MDId());
 	mdid->AddRef();
 
-	CDXLTableDescr *table_descr = GPOS_NEW(m_mp)
-		CDXLTableDescr(m_mp, mdid, pmdnameTbl, ptabdesc->GetExecuteAsUserId(),
-					   ptabdesc->LockMode());
+	CDXLTableDescr *table_descr = GPOS_NEW(m_mp) CDXLTableDescr(
+		m_mp, mdid, pmdnameTbl, ptabdesc->GetExecuteAsUserId(),
+		ptabdesc->LockMode(), ptabdesc->GetAssignedQueryIdForTargetRel());
 
 	const ULONG ulColumns = ptabdesc->ColumnCount();
 	// translate col descriptors

@@ -2244,7 +2244,7 @@ partition by list (b)
      default partition other
    );
 alter table mpp18179 alter column b type varchar(20);
-ERROR:  cannot alter type of column named in partition key
+ERROR:  cannot alter column "b" because it is part of the partition key of relation "mpp18179"
 --
 -- Drop index on partitioned table, and recreate it.
 --
@@ -2411,7 +2411,7 @@ PARTITION BY list (b)
  PARTITION t2 values (2));
 -- the following statement should fail because index cols does not contain part key
 CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(a);
-ERROR:  insufficient columns in UNIQUE constraint definition
+ERROR:  unique constraint on partitioned table must include all partitioning columns
 DETAIL:  UNIQUE constraint on table "t_idx_col_contain_partkey" lacks column "b" which is part of the partition key.
 -- the following statement should work
 CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(a, b);
@@ -2443,7 +2443,7 @@ SUBPARTITION BY LIST (r_name) SUBPARTITION TEMPLATE
 );
 -- should fail, must contain all the partition keys of all levels
 CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(r_regionkey);
-ERROR:  insufficient columns in UNIQUE constraint definition
+ERROR:  unique constraint on partitioned table must include all partitioning columns
 DETAIL:  UNIQUE constraint on table "t_idx_col_contain_partkey_1_prt_region1" lacks column "r_name" which is part of the partition key.
 -- should work
 CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(r_regionkey, r_name);

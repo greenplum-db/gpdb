@@ -38,7 +38,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.32768.1.0" Name="replicated_table" Rows="100.000000" RelPages="1" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.32768.1.0" Name="replicated_table" IsTemporary="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32768.1.0" Name="replicated_table" IsTemporary="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="val1" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="19">
             <dxl:DefaultValue/>
@@ -71,7 +71,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.32776.1.0" Name="distributed_table" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32776.1.0" Name="distributed_table" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="_etl_id" Attno="1" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
             <dxl:DefaultValue>

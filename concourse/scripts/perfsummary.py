@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Extracts summary info from a log file that compiles and executes test suite
 # queries. Creates a CSV (comma-separated values) summary.
@@ -209,20 +209,20 @@ class FileState:
     # print header for CSV file
     def printHeader(self, numFiles):
         if (numFiles == 1):
-            print 'Query id, planning time, execution time, comment'
+            print('Query id, planning time, execution time, comment')
         else:
-            print 'Query id, base planning time, planning time, base execution time, execution time, plan changes, base comment, comment'
+            print('Query id, base planning time, planning time, base execution time, execution time, plan changes, base comment, comment')
 
     # print result for all recorded queries in CSV format for a single log file
     def printme(self):
         for q in self.query_id_list:
-            print "%s, %s, %s, %s" % (q, self.query_explain_time_map[q], self.query_exe_time_map[q], self.query_comment_map[q])
+            print("%s, %s, %s, %s" % (q, self.query_explain_time_map[q], self.query_exe_time_map[q], self.query_comment_map[q]))
 
     # print a CSV file with a comparison between a base file and a test file
     def printComparison(self, base, diffDir, diffThreshold, diffLevel):
         for q in self.query_id_list:
             planDiffs = self.comparePlans(base, q)
-            print "%s, %s, %s, %s, %s, %s, %s, %s" % (q, base.query_explain_time_map[q], self.query_explain_time_map[q], base.query_exe_time_map[q], self.query_exe_time_map[q], planDiffText[planDiffs], base.query_comment_map[q], self.query_comment_map[q])
+            print("%s, %s, %s, %s, %s, %s, %s, %s" % (q, base.query_explain_time_map[q], self.query_explain_time_map[q], base.query_exe_time_map[q], self.query_exe_time_map[q], planDiffText[planDiffs], base.query_comment_map[q], self.query_comment_map[q]))
             if int(diffLevel) <= int(planDiffs):
                 baseTime = float(base.query_exe_time_map[q])
                 testTime = float(self.query_exe_time_map[q])
@@ -267,7 +267,7 @@ def main():
             os.mkdir(diffDir + "/base")
             os.mkdir(diffDir + "/test")
         except:
-            print "Unable to create diff directory %s" % diffDir
+            print("Unable to create diff directory %s" % diffDir)
             exit(1)
         if args.diffThreshold is not None:
             diffThreshold = args.diffThreshold
@@ -278,11 +278,11 @@ def main():
             diffLevel = args.diffLevel
     else:
         if (args.diffThreshold is not None or args.diffLevel is not None):
-            print "Please specify the --diffDir option with a directory name to request diff files\n"
+            print("Please specify the --diffDir option with a directory name to request diff files\n")
             exit(1)
 
     if inputfile is None:
-        print "Expected the name of a log file with test suite queries\n"
+        print("Expected the name of a log file with test suite queries\n")
         exit(1)
 
     if basefile is not None:

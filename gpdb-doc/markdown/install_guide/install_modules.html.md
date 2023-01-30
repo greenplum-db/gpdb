@@ -16,7 +16,7 @@ To remove a module from a database, drop the associated extension. For example, 
 $ psql -d testdb -c 'DROP EXTENSION dblink;'
 ```
 
-**Note:** When you drop a module extension from a database, any user-defined function that you created in the database that references functions defined in the module will no longer work. If you created any database objects that use data types defined in the module, Greenplum Database will notify you of these dependencies when you attempt to drop the module extension.
+> **Note** When you drop a module extension from a database, any user-defined function that you created in the database that references functions defined in the module will no longer work. If you created any database objects that use data types defined in the module, Greenplum Database will notify you of these dependencies when you attempt to drop the module extension.
 
 You can register the following modules in this manner:
 

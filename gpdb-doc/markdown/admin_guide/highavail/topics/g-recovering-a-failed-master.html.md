@@ -29,7 +29,7 @@ These steps assume a standby coordinator host is configured for the system. See 
 
 3.  Optional: If you have not already done so while activating the prior standby coordinator, you can run `gpinitstandby` on the active coordinator host to configure a new standby coordinator.
 
-    **Important:** You must initialize a new standby coordinator to continue providing coordinator mirroring.
+    > **Important** You must initialize a new standby coordinator to continue providing coordinator mirroring.
 
     For information about restoring the original coordinator and standby coordinator configuration, see [Restoring Coordinator Mirroring After a Recovery](g-restoring-master-mirroring-after-a-recovery.html).
 

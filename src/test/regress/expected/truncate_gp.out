@@ -1,5 +1,9 @@
 -- Mask out segment file name
 -- start_matchsubs
+-- m/\ +stat_table_segfile_size\ +/
+-- s/\ +stat_table_segfile_size\ +/stat_table_segfile_size/
+-- m/----------------------------+/
+-- s/----------------------------+/---------------------------/
 -- m/segfile.*,/
 -- s/segfile:\d+\/\d+/segfile###/
 -- end_matchsubs

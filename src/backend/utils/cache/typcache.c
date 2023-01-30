@@ -72,6 +72,7 @@
 #include "utils/syscache.h"
 #include "utils/typcache.h"
 #include "cdb/cdbvars.h"
+#include "cdb/cdbendpoint.h"
 
 
 /* The main type cache hashtable searched by lookup_type_cache */
@@ -1740,6 +1741,30 @@ lookup_rowtype_tupdesc_domain(Oid type_id, int32 typmod, bool noError)
 }
 
 /*
+ * GPDB: In order to reuse the retrieve conn for different endpoints,
+ * it is necessary to detach from the old session DSM segment during
+ * start_retrieve(), which will invalidate the record cache. The record
+ * cache of the retrieve connection is a pointer to the shared memory
+ * segment, so we can directly reset the RecordCacheArray.
+ */
+void
+reset_record_cache(void)
+{
+	if (RecordCacheArray != NULL)
+	{
+		Assert(RecordCacheArrayLen != 0);
+		Assert(RecordIdentifierArray != NULL);
+
+		pfree(RecordCacheArray);
+		pfree(RecordIdentifierArray);
+
+		RecordCacheArray = NULL;
+		RecordIdentifierArray = NULL;
+		RecordCacheArrayLen = 0;
+	}
+}
+
+/*
  * Hash function for the hash table of RecordCacheEntry.
  */
 static uint32
@@ -1798,10 +1823,14 @@ assign_record_type_typmod(TupleDesc tupDesc)
 			CreateCacheMemoryContext();
 	}
 
-	/* Find or create a hashtable entry for this tuple descriptor */
+	/*
+	 * Find a hashtable entry for this tuple descriptor. We don't use
+	 * HASH_ENTER yet, because if it's missing, we need to make sure that all
+	 * the allocations succeed before we create the new entry.
+	 */
 	recentry = (RecordCacheEntry *) hash_search(RecordCacheHash,
 												(void *) &tupDesc,
-												HASH_ENTER, &found);
+												HASH_FIND, &found);
 	if (found && recentry->tupdesc != NULL)
 	{
 		tupDesc->tdtypmod = recentry->tupdesc->tdtypmod;
@@ -1809,24 +1838,38 @@ assign_record_type_typmod(TupleDesc tupDesc)
 	}
 
 	/* Not present, so need to manufacture an entry */
-	recentry->tupdesc = NULL;
 	oldcxt = MemoryContextSwitchTo(CacheMemoryContext);
 
 	/* Look in the SharedRecordTypmodRegistry, if attached */
 	entDesc = find_or_make_matching_shared_tupledesc(tupDesc);
 	if (entDesc == NULL)
 	{
+		/*
+		 * Make sure we have room before we CreateTupleDescCopy() or advance
+		 * NextRecordTypmod.
+		 */
+		ensure_record_cache_typmod_slot_exists(NextRecordTypmod);
+
 		/* Reference-counted local cache only. */
 		entDesc = CreateTupleDescCopy(tupDesc);
 		entDesc->tdrefcount = 1;
 		entDesc->tdtypmod = NextRecordTypmod++;
 	}
-	ensure_record_cache_typmod_slot_exists(entDesc->tdtypmod);
+	else
+	{
+		ensure_record_cache_typmod_slot_exists(entDesc->tdtypmod);
+	}
+
 	RecordCacheArray[entDesc->tdtypmod] = entDesc;
-	recentry->tupdesc = entDesc;
 
 	/* Assign a unique tupdesc identifier, too. */
 	RecordIdentifierArray[entDesc->tdtypmod] = ++tupledesc_id_counter;
+
+	/* Fully initialized; create the hash table entry */
+	recentry = (RecordCacheEntry *) hash_search(RecordCacheHash,
+												(void *) &tupDesc,
+												HASH_ENTER, NULL);
+	recentry->tupdesc = entDesc;
 
 	/* Update the caller's tuple descriptor. */
 	tupDesc->tdtypmod = entDesc->tdtypmod;
@@ -2123,6 +2166,16 @@ TypeCacheRelCallback(Datum arg, Oid relid)
 				if (--typentry->tupDesc->tdrefcount == 0)
 					FreeTupleDesc(typentry->tupDesc);
 				typentry->tupDesc = NULL;
+
+				/*
+				 * Also clear tupDesc_identifier, so that anything watching
+				 * that will realize that the tupdesc has possibly changed.
+				 * (Alternatively, we could specify that to detect possible
+				 * tupdesc change, one must check for tupDesc != NULL as well
+				 * as tupDesc_identifier being the same as what was previously
+				 * seen.  That seems error-prone.)
+				 */
+				typentry->tupDesc_identifier = 0;
 			}
 
 			/* Reset equality/comparison/hashing validity information */
@@ -2642,7 +2695,7 @@ find_or_make_matching_shared_tupledesc(TupleDesc tupdesc)
 		Assert(record_table_entry->key.shared);
 		result = (TupleDesc)
 			dsa_get_address(CurrentSession->area,
-							record_table_entry->key.shared);
+							record_table_entry->key.u.shared_tupdesc);
 		Assert(result->tdrefcount == -1);
 
 		return result;

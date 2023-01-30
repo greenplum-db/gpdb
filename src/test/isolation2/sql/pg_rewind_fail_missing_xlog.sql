@@ -243,9 +243,59 @@ INSERT INTO tst_missing_tbl values(2),(1),(5);
 !\retcode gprecoverseg -aF;
 4: SELECT wait_until_all_segments_synchronized();
 
+-- Test 5: Ensure that replication slot's restart_lsn advances and WAL files
+-- that are older than the minimum restart_lsn get removed/recycled.
+
+-- Turn off wal_recycle to make this test easier to write.
+!\retcode gpconfig -c wal_recycle -v false;
+!\retcode gpstop -ari;
+
+-- Create an unlogged table on the primary that remembers replication slot's last restart_lsn and number of WAL files.
+1U: CREATE UNLOGGED TABLE unlogged_wal_retention_test(restart_lsn_before pg_lsn, wal_count_before int);
+1U: INSERT INTO unlogged_wal_retention_test SELECT (select restart_lsn FROM pg_replication_slots WHERE slot_name = 'internal_wal_replication_slot') as restart_lsn_before, (select count(*) from pg_ls_waldir()) as wal_count_before;
+5: CHECKPOINT;
+-- Replication slot's restart_lsn should advance to the checkpoint's redo location.
+1U: SELECT pg_wal_lsn_diff(restart_lsn, restart_lsn_before) > 0 from pg_replication_slots, unlogged_wal_retention_test WHERE slot_name = 'internal_wal_replication_slot';
+1U: SELECT pg_wal_lsn_diff(restart_lsn, redo_lsn) = 0 from pg_replication_slots, pg_control_checkpoint() WHERE slot_name = 'internal_wal_replication_slot';
+-- Some old WALs should be removed
+1U: select ((select count(*)::int from pg_ls_waldir()) - wal_count_before) < 0 FROM unlogged_wal_retention_test;
+-- Record the restart_lsn and the WAL file count.
+1U: UPDATE unlogged_wal_retention_test SET restart_lsn_before = (SELECT restart_lsn from pg_replication_slots WHERE slot_name = 'internal_wal_replication_slot'), wal_count_before = (select count(*) from pg_ls_waldir());
+-- Write some records to a newer WAL file.
+1U: SELECT pg_switch_wal is not null FROM pg_switch_wal();
+5: INSERT INTO tst_missing_tbl values(2),(1),(5);
+-- Replication slot's restart_lsn should NOT change regardless mirror has received more wals.
+1U: select pg_wal_lsn_diff(restart_lsn, restart_lsn_before) = 0 FROM pg_replication_slots, unlogged_wal_retention_test WHERE slot_name = 'internal_wal_replication_slot';
+-- Record the WAL file count.
+1U: UPDATE unlogged_wal_retention_test SET wal_count_before = (select count(*) from pg_ls_waldir());
+
+-- Hang the wal sender before writing more wals.
+5: SELECT gp_inject_fault('wal_sender_loop', 'suspend', dbid) FROM gp_segment_configuration WHERE role='p' AND content = 1;
+-- Perform checkpoint. This is to mimic walreciver's confirmed received lsn is behind the redo lsn.
+1U: CHECKPOINT;
+
+-- Replication slot's restart_lsn should NOT change regardless a new checkpoints was performed.
+1U: select pg_wal_lsn_diff(restart_lsn, restart_lsn_before) = 0 FROM pg_replication_slots, unlogged_wal_retention_test WHERE slot_name = 'internal_wal_replication_slot';
+-- Replication slot's restart_lsn should be smaller than the checkpoint's redo location.
+1U: SELECT pg_wal_lsn_diff(restart_lsn, redo_lsn) < 0 from pg_replication_slots, pg_control_checkpoint() WHERE slot_name = 'internal_wal_replication_slot';
+
+-- Resume walsender.
+5: SELECT gp_inject_fault('wal_sender_loop', 'reset', dbid) FROM gp_segment_configuration WHERE role='p' AND content = 1;
+-- Perform transaction to make sure wals are in sync.
+5: INSERT INTO tst_missing_tbl values(2),(1),(5);
+-- Replication slot's restart_lsn should now advance to the checkpoint's redo location.
+1U: SELECT pg_wal_lsn_diff(restart_lsn, restart_lsn_before) > 0 from pg_replication_slots, unlogged_wal_retention_test WHERE slot_name = 'internal_wal_replication_slot';
+1U: SELECT pg_wal_lsn_diff(restart_lsn, redo_lsn) = 0 from pg_replication_slots, pg_control_checkpoint() WHERE slot_name = 'internal_wal_replication_slot';
+-- Trigger old WAL removal.
+1U: CHECKPOINT;
+-- And the WAL file(s) older than the redo lsn that we previously kept should now be removed.
+1U: select ((select count(*)::int from pg_ls_waldir()) - wal_count_before) < 0 FROM unlogged_wal_retention_test;
+
 -- Cleanup
+1U: DROP TABLE unlogged_wal_retention_test;
+1Uq:
+
 5: DROP TABLE tst_missing_tbl;
-!\retcode gprecoverseg -ar;
-5: SELECT wait_until_all_segments_synchronized();
 !\retcode gpconfig -r wal_keep_segments;
+!\retcode gpconfig -r wal_recycle;
 !\retcode gpstop -ari;

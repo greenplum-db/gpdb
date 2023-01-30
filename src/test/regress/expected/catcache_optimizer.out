@@ -46,7 +46,7 @@ explain update dml_14027_union_s set a = (select null union select null)::numeri
                ->  Split  (cost=0.00..882689.22 rows=1 width=26)
                      ->  Nested Loop Left Join  (cost=0.00..882689.22 rows=1 width=30)
                            Join Filter: true
-                           ->  Dynamic Seq Scan on dml_14027_union_s dml_14027_union_s_1  (cost=0.00..431.00 rows=1 width=22)
+                           ->  Dynamic Seq Scan on dml_14027_union_s  (cost=0.00..431.00 rows=1 width=22)
                                  Number of partitions to scan: 2 (out of 2)
                            ->  Assert  (cost=0.00..0.00 rows=1 width=8)
                                  Assert Cond: ((row_number() OVER (?)) = 1)

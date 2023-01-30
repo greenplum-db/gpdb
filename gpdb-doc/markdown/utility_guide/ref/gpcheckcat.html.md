@@ -33,7 +33,7 @@ gpcheckcat -? | --help
 
 The `gpcheckcat` utility runs multiple tests that check for database catalog inconsistencies. Some of the tests cannot be run concurrently with other workload statements or the results will not be usable. Restart the database in restricted mode when running `gpcheckcat`, otherwise `gpcheckcat` might report inconsistencies due to ongoing database operations rather than the actual number of inconsistencies. If you run `gpcheckcat` without stopping database activity, run it with `-O` option.
 
-**Note:** Any time you run the utility, it checks for and deletes orphaned, temporary database schemas \(temporary schemas without a session ID\) in the specified databases. The utility displays the results of the orphaned, temporary schema check on the command line and also logs the results.
+> **Note** Any time you run the utility, it checks for and deletes orphaned, temporary database schemas \(temporary schemas without a session ID\) in the specified databases. The utility displays the results of the orphaned, temporary schema check on the command line and also logs the results.
 
 Catalog inconsistencies are inconsistencies that occur between Greenplum Database system tables. In general, there are three types of inconsistencies:
 
@@ -51,7 +51,7 @@ Catalog inconsistencies are inconsistencies that occur between Greenplum Databas
 :   The number of processes to run in parallel.
 
 :   The `gpcheckcat` utility attempts to determine the number of simultaneous processes \(the batch size\) to use. The utility assumes it can use a buffer with a minimum of 20MB for each process. The maximum number of parallel processes is the number of Greenplum Database segment instances. The utility displays the number of parallel processes that it uses when it starts checking the catalog.
-    **Note:** The utility might run out of memory if the number of errors returned exceeds the buffer size. If an out of memory error occurs, you can lower the batch size with the `-B` option. For example, if the utility displays a batch size of 936 and runs out of memory, you can specify `-B 468` to run 468 processes in parallel.
+    > **Note** The utility might run out of memory if the number of errors returned exceeds the buffer size. If an out of memory error occurs, you can lower the batch size with the `-B` option. For example, if the utility displays a batch size of 936 and runs out of memory, you can specify `-B 468` to run 468 processes in parallel.
 
 -C catalog\_table
 :   Run cross consistency, foreign key, and ACL tests for the specified catalog table.
@@ -94,7 +94,7 @@ Catalog inconsistencies are inconsistencies that occur between Greenplum Databas
 
     `orphaned_toast_tables` - Check for orphaned TOAST tables.
 
-    **Note:** There are several ways a TOAST table can become orphaned where a repair script cannot be generated and a manual catalog change is required. One way is if the `reltoastrelid` entry in *pg\_class* points to an incorrect TOAST table \(a TOAST table mismatch\). Another way is if both the `reltoastrelid` in *pg\_class* is missing and the `pg_depend` entry is missing \(a double orphan TOAST table\). If a manual catalog change is needed, `gpcheckcat` will display detailed steps you can follow to update the catalog. Contact VMware Support if you need help with the catalog change.
+    > **Note** There are several ways a TOAST table can become orphaned where a repair script cannot be generated and a manual catalog change is required. One way is if the `reltoastrelid` entry in *pg\_class* points to an incorrect TOAST table \(a TOAST table mismatch\). Another way is if both the `reltoastrelid` in *pg\_class* is missing and the `pg_depend` entry is missing \(a double orphan TOAST table\). If a manual catalog change is needed, `gpcheckcat` will display detailed steps you can follow to update the catalog. Contact VMware Support if you need help with the catalog change.
 
     `part_integrity` - Check *pg\_partition* branch integrity, partition with OIDs, partition distribution policy
 

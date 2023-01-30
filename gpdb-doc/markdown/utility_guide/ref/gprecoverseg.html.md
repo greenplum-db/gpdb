@@ -30,7 +30,7 @@ During an incremental recovery \(the `-F` option is not specified\), if `gprecov
 
 A segment instance can fail for several reasons, such as a host failure, network failure, or disk failure. When a segment instance fails, its status is marked as `d` \(down\) in the Greenplum Database system catalog, and its mirror is activated in `Not in Sync` mode. In order to bring the failed segment instance back into operation again, you must first correct the problem that made it fail in the first place, and then recover the segment instance in Greenplum Database using `gprecoverseg`.
 
-**Note:** If incremental recovery was not successful and the down segment instance data is not corrupted, contact VMware Support.
+> **Note** If incremental recovery was not successful and the down segment instance data is not corrupted, contact VMware Support.
 
 Segment recovery using `gprecoverseg` requires that you have an active mirror to recover from. For systems that do not have mirroring enabled, or in the event of a double fault \(a primary and mirror pair both down at the same time\) — you must take manual steps to recover the failed segment instances and then perform a system restart to bring the segments back online. For example, this command restarts a system.
 
@@ -83,7 +83,7 @@ The recovery process marks the segment as up again in the Greenplum Database sys
 -F \(full recovery\)
 :   Optional. Perform a full copy of the active segment instance in order to recover the failed segment. The default is to only copy over the incremental changes that occurred while the segment was down.
 
-    **Warning:** A full recovery deletes the data directory of the down segment instance before copying the data from the active \(current primary\) segment instance. Before performing a full recovery, ensure that the segment failure did not cause data corruption and that any host segment disk issues have been fixed.
+    > **Caution** A full recovery deletes the data directory of the down segment instance before copying the data from the active \(current primary\) segment instance. Before performing a full recovery, ensure that the segment failure did not cause data corruption and that any host segment disk issues have been fixed.
 
     Also, for a full recovery, the utility does not restore custom files that are stored in the segment instance data directory even if the custom files are also in the active segment instance. You must restore the custom files manually. For example, when using the `gpfdists` protocol \(`gpfdist` with SSL encryption\) to manage external data, client certificate files are required in the segment instance `$PGDATA/gpfdists` directory. These files are not restored. For information about configuring `gpfdists`, see [Encrypting gpfdist Connections](../../security-guide/topics/Encryption.html).
 
@@ -108,7 +108,7 @@ The recovery process marks the segment as up again in the Greenplum Database sys
     newPort|newDataDirectory
     ```
 
-    **Note:** Lines beginning with `#` are treated as comments and ignored.
+    > **Note** Lines beginning with `#` are treated as comments and ignored.
 
     **Examples**
 
@@ -143,7 +143,7 @@ The recovery process marks the segment as up again in the Greenplum Database sys
 
 :   The new host must have the Greenplum Database software installed and configured, and have the same hardware and OS configuration as the current segment hosts \(same OS version, locales, `gpadmin` user account, data directory locations created, ssh keys exchanged, number of network interfaces, network interface naming convention, and so on\). Specifically, the Greenplum Database binaries must be installed, the new host must be able to connect password-less with all segments including the Greenplum coordinator, and any other Greenplum Database specific OS configuration parameters must be applied.
 
-:   **Note:** In the case of multiple failed segment hosts, you can specify the hosts to recover with a comma-separated list. However, it is strongly recommended to recover one host at a time. If you must recover more than one host at a time, then it is critical to ensure that a double fault scenario does not occur, in which both the segment primary and corresponding mirror are offline.
+:   > **Note** In the case of multiple failed segment hosts, you can specify the hosts to recover with a comma-separated list. However, it is strongly recommended to recover one host at a time. If you must recover more than one host at a time, then it is critical to ensure that a double fault scenario does not occur, in which both the segment primary and corresponding mirror are offline.
 
 -q \(no screen output\)
 :   Run in quiet mode. Command output is not displayed on the screen, but is still written to the log file.

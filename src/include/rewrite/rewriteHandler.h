@@ -26,10 +26,14 @@ extern Node *build_column_default(Relation rel, int attrno);
 extern void rewriteTargetListUD(Query *parsetree, RangeTblEntry *target_rte,
 								Relation target_relation);
 
+extern void fill_extraUpdatedCols(RangeTblEntry *target_rte,
+								  Relation target_relation);
+
 extern Query *get_view_query(Relation view);
 extern const char *view_query_is_auto_updatable(Query *viewquery,
 												bool check_cols);
 extern int	relation_is_updatable(Oid reloid,
+								  List *outer_reloids,
 								  bool include_triggers,
 								  Bitmapset *include_cols);
 

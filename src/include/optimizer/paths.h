@@ -74,7 +74,8 @@ extern void create_index_paths(PlannerInfo *root, RelOptInfo *rel);
 extern bool relation_has_unique_index_for(PlannerInfo *root, RelOptInfo *rel,
 										  List *restrictlist,
 										  List *exprlist, List *oprlist);
-extern bool indexcol_is_bool_constant_for_query(IndexOptInfo *index,
+extern bool indexcol_is_bool_constant_for_query(PlannerInfo *root,
+												IndexOptInfo *index,
 												int indexcol);
 extern bool match_index_to_operand(Node *operand, int indexcol,
 								   IndexOptInfo *index);
@@ -154,6 +155,11 @@ extern void add_child_rel_equivalences(PlannerInfo *root,
 									   AppendRelInfo *appinfo,
 									   RelOptInfo *parent_rel,
 									   RelOptInfo *child_rel);
+extern void add_child_join_rel_equivalences(PlannerInfo *root,
+											int nappinfos,
+											AppendRelInfo **appinfos,
+											RelOptInfo *parent_rel,
+											RelOptInfo *child_rel);
 extern List *generate_implied_equalities_for_column(PlannerInfo *root,
 													RelOptInfo *rel,
 													ec_matches_callback_type callback,

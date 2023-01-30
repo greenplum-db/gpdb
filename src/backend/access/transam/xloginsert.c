@@ -1081,7 +1081,12 @@ log_newpage_range(Relation rel, ForkNumber forkNum,
 				  BlockNumber startblk, BlockNumber endblk,
 				  bool page_std)
 {
+	int			flags;
 	BlockNumber blkno;
+
+	flags = REGBUF_FORCE_IMAGE;
+	if (page_std)
+		flags |= REGBUF_STANDARD;
 
 	/*
 	 * Iterate over all the pages in the range. They are collected into
@@ -1104,7 +1109,8 @@ log_newpage_range(Relation rel, ForkNumber forkNum,
 		nbufs = 0;
 		while (nbufs < XLR_MAX_BLOCK_ID && blkno < endblk)
 		{
-			Buffer		buf = ReadBuffer(rel, blkno);
+			Buffer		buf = ReadBufferExtended(rel, forkNum, blkno,
+												 RBM_NORMAL, NULL);
 
 			LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
 
@@ -1126,7 +1132,7 @@ log_newpage_range(Relation rel, ForkNumber forkNum,
 		START_CRIT_SECTION();
 		for (i = 0; i < nbufs; i++)
 		{
-			XLogRegisterBuffer(i, bufpack[i], REGBUF_FORCE_IMAGE | REGBUF_STANDARD);
+			XLogRegisterBuffer(i, bufpack[i], flags);
 			MarkBufferDirty(bufpack[i]);
 		}
 

@@ -32,7 +32,7 @@ Greenplum's MVCC transaction semantics depend on comparing transaction ID \(XID\
 
 Greenplum Database assigns XID values only to transactions that involve DDL or DML operations, which are typically the only transactions that require an XID.
 
-**Important:** Greenplum Database monitors transaction IDs. If you do not vacuum the database regularly, Greenplum Database will generate a warning and error.
+> **Important** Greenplum Database monitors transaction IDs. If you do not vacuum the database regularly, Greenplum Database will generate a warning and error.
 
 Greenplum Database issues the following warning when a significant portion of the transaction IDs are no longer available and before transaction ID wraparound occurs:
 
@@ -61,7 +61,7 @@ When Greenplum Database reaches the `xid_stop_limit` transaction ID limit due to
 
 For information about the configuration parameters, see the *Greenplum Database Reference Guide*.
 
-For information about transaction ID wraparound see the [PostgreSQL documentation](https://www.postgresql.org/docs/9.4/index.html).
+For information about transaction ID wraparound see the [PostgreSQL documentation](https://www.postgresql.org/docs/12/index.html).
 
 ### <a id="topic4"></a>System Catalog Maintenance 
 
@@ -77,7 +77,7 @@ These are Greenplum Database system catalog maintenance steps.
 
 1.  Perform a `REINDEX` on the system catalog tables to rebuild the system catalog indexes. This removes bloat in the indexes and improves `VACUUM` performance.
 
-    **Note:** `REINDEX` causes locking of system catalog tables, which could affect currently running queries. To avoid disrupting ongoing business operations, schedule the `REINDEX` operation during a period of low activity.
+    > **Note** `REINDEX` causes locking of system catalog tables, which could affect currently running queries. To avoid disrupting ongoing business operations, schedule the `REINDEX` operation during a period of low activity.
 
 2.  Perform a `VACUUM` on the system catalog tables.
 3.  Perform an `ANALYZE` on the system catalog tables to update the catalog table statistics.
@@ -96,7 +96,7 @@ analyzedb -as pg_catalog -d $DBNAME
 
 ```
 
-**Note:** If you are performing catalog maintenance during a maintenance period and you need to stop a process due to time constraints, run the Greenplum Database function `pg_cancel_backend(<PID>)` to safely stop the Greenplum Database process.
+> **Note** If you are performing catalog maintenance during a maintenance period and you need to stop a process due to time constraints, run the Greenplum Database function `pg_cancel_backend(<PID>)` to safely stop the Greenplum Database process.
 
 #### <a id="topic6"></a>Intensive System Catalog Maintenance 
 
@@ -113,7 +113,7 @@ These are steps for intensive system catalog maintenance.
 3.  Perform a `VACUUM FULL` on the system catalog tables. See the following Note.
 4.  Perform an `ANALYZE` on the system catalog tables to update the catalog table statistics.
 
-**Note:** The system catalog table `pg_attribute` is usually the largest catalog table. If the `pg_attribute` table is significantly bloated, a `VACUUM FULL` operation on the table might require a significant amount of time and might need to be performed separately. The presence of both of these conditions indicate a significantly bloated `pg_attribute` table that might require a long `VACUUM FULL` time:
+> **Note** The system catalog table `pg_attribute` is usually the largest catalog table. If the `pg_attribute` table is significantly bloated, a `VACUUM FULL` operation on the table might require a significant amount of time and might need to be performed separately. The presence of both of these conditions indicate a significantly bloated `pg_attribute` table that might require a long `VACUUM FULL` time:
 
 -   The `pg_attribute` table contains a large number of records.
 -   The diagnostic message for `pg_attribute` is `significant amount of bloat` in the `gp_toolkit.gp_bloat_diag` view.
@@ -142,9 +142,9 @@ ANALYZE cust_info;
 VACUUM cust_info;
 ```
 
-**Important:** If you intend to run queries on partitioned tables with GPORCA enabled \(the default\), you must collect statistics on the partitioned table root partition with the ANALYZE command. For information about GPORCA, see [Overview of GPORCA](../query/topics/query-piv-opt-overview.html).
+> **Important** If you intend to run queries on partitioned tables with GPORCA enabled \(the default\), you must collect statistics on the partitioned table root partition with the ANALYZE command. For information about GPORCA, see [Overview of GPORCA](../query/topics/query-piv-opt-overview.html).
 
-**Note:** You can use the Greenplum Database utility analyzedb to update table statistics. Tables can be analyzed concurrently. For append optimized tables, analyzedb updates statistics only if the statistics are not current. See the [analyzedb](../../utility_guide/ref/analyzedb.html) utility.
+> **Note** You can use the Greenplum Database utility analyzedb to update table statistics. Tables can be analyzed concurrently. For append optimized tables, analyzedb updates statistics only if the statistics are not current. See the [analyzedb](../../utility_guide/ref/analyzedb.html) utility.
 
 ## <a id="topic8"></a>Routine Reindexing 
 

@@ -950,7 +950,8 @@ typedef enum
 {
 	WAIT_EVENT_BASE_BACKUP_THROTTLE = PG_WAIT_TIMEOUT,
 	WAIT_EVENT_PG_SLEEP,
-	WAIT_EVENT_RECOVERY_APPLY_DELAY
+	WAIT_EVENT_RECOVERY_APPLY_DELAY,
+	WAIT_EVENT_REGISTER_SYNC_REQUEST
 } WaitEventTimeout;
 
 /* ----------
@@ -1294,9 +1295,9 @@ typedef struct PgStat_FunctionCallUsage
  * GUC parameters
  * ----------
  */
-extern bool pgstat_track_activities;
-extern bool pgstat_track_counts;
-extern int	pgstat_track_functions;
+extern PGDLLIMPORT bool pgstat_track_activities;
+extern PGDLLIMPORT bool pgstat_track_counts;
+extern PGDLLIMPORT int pgstat_track_functions;
 extern PGDLLIMPORT int pgstat_track_activity_query_size;
 extern char *pgstat_stat_directory;
 extern char *pgstat_stat_tmpname;

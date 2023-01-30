@@ -319,7 +319,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
           <dxl:Partition Mdid="6.284979010.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.284979001.1.1" Name="t1_prt_1" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.284979001.1.1" Name="t1_prt_1" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -355,7 +355,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.284979002.1.1" Name="t1_prt_2" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.284979002.1.1" Name="t1_prt_2" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -391,7 +391,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.284979003.1.1" Name="t1_prt_3" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.284979003.1.1" Name="t1_prt_3" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -427,7 +427,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.284979004.1.1" Name="t1_prt_4" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.284979004.1.1" Name="t1_prt_4" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -463,7 +463,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.284979005.1.1" Name="t1_prt_5" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.284979005.1.1" Name="t1_prt_5" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -499,7 +499,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.284979006.1.1" Name="t1_prt_6" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.284979006.1.1" Name="t1_prt_6" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -535,7 +535,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.284979007.1.1" Name="t1_prt_7" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.284979007.1.1" Name="t1_prt_7" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -571,7 +571,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.284979008.1.1" Name="t1_prt_8" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.284979008.1.1" Name="t1_prt_8" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -607,7 +607,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.284979009.1.1" Name="t1_prt_9" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.284979009.1.1" Name="t1_prt_9" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -643,7 +643,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.284979010.1.1" Name="t1_prt_10" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.284979010.1.1" Name="t1_prt_10" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

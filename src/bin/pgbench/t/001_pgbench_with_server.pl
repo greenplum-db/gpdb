@@ -58,26 +58,19 @@ sub pgbench
 	return;
 }
 
-# Test concurrent insertion into table with serial column.  This
-# indirectly exercises LWLock and spinlock concurrency.  This test
-# makes a 5-MiB table.
-
-$node->safe_psql('postgres',
-	'CREATE UNLOGGED TABLE insert_tbl (id serial primary key); ');
-
+# Test concurrent OID generation via pg_enum_oid_index.  This indirectly
+# exercises LWLock and spinlock concurrency.
+my $labels = join ',', map { "'l$_'" } 1 .. 1000;
 pgbench(
 	'--no-vacuum --client=5 --protocol=prepared --transactions=25',
 	0,
 	[qr{processed: 125/125}],
 	[qr{^$}],
-	'concurrent insert workload',
+	'concurrent OID generation',
 	{
 		'001_pgbench_concurrent_insert' =>
-		  'INSERT INTO insert_tbl SELECT FROM generate_series(1,1000);'
+		  "CREATE TYPE pg_temp.e AS ENUM ($labels); DROP TYPE pg_temp.e;"
 	});
-
-# cleanup
-$node->safe_psql('postgres', 'DROP TABLE insert_tbl;');
 
 # Trigger various connection errors
 pgbench(
@@ -517,7 +510,7 @@ pgbench(
 		qr{processed: 1/1},
 		qr{shell-echo-output}
 	],
-	[qr{command=8.: int 2\b}],
+	[qr{command=8.: int 1\b}],
 	'pgbench backslash commands',
 	{
 		'001_pgbench_backslash_commands' => q{-- run set
@@ -529,10 +522,10 @@ pgbench(
 \sleep 0 s
 \sleep :zero
 -- setshell and continuation
-\setshell two\
-  expr \
-    1 + :one
-\set n debug(:two)
+\setshell another_one\
+  echo \
+    :one
+\set n debug(:another_one)
 -- shell
 \shell echo shell-echo-output
 }
@@ -862,7 +855,12 @@ sub list_files
 	return map { $dir . '/' . $_ } @files;
 }
 
-# check log contents and cleanup
+# Check log contents and clean them up:
+#   $dir: directory holding logs
+#   $prefix: file prefix for per-thread logs
+#   $nb: number of expected files
+#   $min/$max: minimum and maximum number of lines in log files
+#   $re: regular expression each log line has to match
 sub check_pgbench_logs
 {
 	local $Test::Builder::Level = $Test::Builder::Level + 1;
@@ -877,42 +875,51 @@ sub check_pgbench_logs
 	my $log_number = 0;
 	for my $log (sort @logs)
 	{
-		eval {
-			open my $fh, '<', $log or die "$@";
-			my @contents = <$fh>;
-			my $clen     = @contents;
-			ok( $min <= $clen && $clen <= $max,
-				"transaction count for $log ($clen)");
-			ok( grep($re, @contents) == $clen,
-				"transaction format for $prefix");
-			close $fh or die "$@";
-		};
+		# Check the contents of each log file.
+		my $contents_raw = slurp_file($log);
+
+		my @contents = split(/\n/, $contents_raw);
+		my $clen     = @contents;
+		ok( $min <= $clen && $clen <= $max,
+			"transaction count for $log ($clen)");
+		my $clen_match = grep(/$re/, @contents);
+		ok($clen_match == $clen, "transaction format for $prefix");
+
+		# Show more information if some logs don't match
+		# to help with debugging.
+		if ($clen_match != $clen)
+		{
+			foreach my $log (@contents)
+			{
+				print "# Log entry not matching: $log\n"
+				  unless $log =~ /$re/;
+			}
+		}
 	}
-	ok(unlink(@logs), "remove log files");
 	return;
 }
 
 my $bdir = $node->basedir;
 
-# with sampling rate
+# Run with sampling rate, 2 clients with 50 transactions each.
 pgbench(
 	"-n -S -t 50 -c 2 --log --sampling-rate=0.5", 0,
 	[ qr{select only}, qr{processed: 100/100} ], [qr{^$}],
 	'pgbench logs', undef,
 	"--log-prefix=$bdir/001_pgbench_log_2");
-
+# The IDs of the clients (1st field) in the logs should be either 0 or 1.
 check_pgbench_logs($bdir, '001_pgbench_log_2', 1, 8, 92,
-	qr{^0 \d{1,2} \d+ \d \d+ \d+$});
+	qr{^[01] \d{1,2} \d+ \d \d+ \d+$});
 
-# check log file in some detail
+# Run with different read-only option pattern, 1 client with 10 transactions.
 pgbench(
-	"-n -b se -t 10 -l", 0,
+	"-n -b select-only -t 10 -l", 0,
 	[ qr{select only}, qr{processed: 10/10} ], [qr{^$}],
 	'pgbench logs contents', undef,
 	"--log-prefix=$bdir/001_pgbench_log_3");
-
+# The ID of a single client (1st field) should match 0.
 check_pgbench_logs($bdir, '001_pgbench_log_3', 1, 10, 10,
-	qr{^\d \d{1,2} \d+ \d \d+ \d+$});
+	qr{^0 \d{1,2} \d+ \d \d+ \d+$});
 
 # done
 $node->stop;

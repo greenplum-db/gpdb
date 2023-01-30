@@ -12,7 +12,7 @@ The catalog `pg_policy` stores row level security policies for tables. A policy 
 |`polqual`|pg\_node\_tree| |The expression tree to be added to the security barrier qualifications for queries that use the table|
 |`polwithcheck`|pg\_node\_tree| |The expression tree to be added to the `WITH CHECK` qualifications for queries that attempt to add rows to the table|
 
-**Note:**  Greenplum Database applies policies stored in `pg_policy` only when `pg_class.relrowsecurity` is set for their table.
+> **Note**  Greenplum Database applies policies stored in `pg_policy` only when `pg_class.relrowsecurity` is set for their table.
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

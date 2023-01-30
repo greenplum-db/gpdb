@@ -1,0 +1,158 @@
+--
+-- expression evaluated tests that don't fit into a more specific file
+--
+--
+-- Tests for SQLVAlueFunction
+--
+-- current_date  (always matches because of transactional behaviour)
+SELECT date(now())::text = current_date::text;
+ ?column? 
+----------
+ t
+(1 row)
+
+-- current_time / localtime
+SELECT now()::timetz::text = current_time::text;
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT now()::time::text = localtime::text;
+ ?column? 
+----------
+ t
+(1 row)
+
+-- current_timestamp / localtimestamp (always matches because of transactional behaviour)
+SELECT current_timestamp = NOW();
+ ?column? 
+----------
+ t
+(1 row)
+
+-- precision
+SELECT length(current_timestamp::text) >= length(current_timestamp(0)::text);
+ ?column? 
+----------
+ t
+(1 row)
+
+-- localtimestamp
+SELECT now()::timestamp::text = localtimestamp::text;
+ ?column? 
+----------
+ t
+(1 row)
+
+-- current_role/user/user is tested in rolnames.sql
+-- current database / catalog
+SELECT current_catalog = current_database();
+ ?column? 
+----------
+ t
+(1 row)
+
+-- current_schema
+SELECT current_schema;
+ current_schema 
+----------------
+ public
+(1 row)
+
+SET search_path = 'notme';
+SELECT current_schema;
+ current_schema 
+----------------
+ 
+(1 row)
+
+SET search_path = 'pg_catalog';
+SELECT current_schema;
+ current_schema 
+----------------
+ pg_catalog
+(1 row)
+
+RESET search_path;
+--
+-- Test parsing of a no-op cast to a type with unspecified typmod
+--
+begin;
+create table numeric_tbl (f1 numeric(18,3), f2 numeric);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create view numeric_view as
+  select
+    f1, f1::numeric(16,4) as f1164, f1::numeric as f1n,
+    f2, f2::numeric(16,4) as f2164, f2::numeric as f2n
+  from numeric_tbl;
+\d+ numeric_view
+                           View "public.numeric_view"
+ Column |     Type      | Collation | Nullable | Default | Storage | Description 
+--------+---------------+-----------+----------+---------+---------+-------------
+ f1     | numeric(18,3) |           |          |         | main    | 
+ f1164  | numeric(16,4) |           |          |         | main    | 
+ f1n    | numeric       |           |          |         | main    | 
+ f2     | numeric       |           |          |         | main    | 
+ f2164  | numeric(16,4) |           |          |         | main    | 
+ f2n    | numeric       |           |          |         | main    | 
+View definition:
+ SELECT numeric_tbl.f1,
+    numeric_tbl.f1::numeric(16,4) AS f1164,
+    numeric_tbl.f1::numeric AS f1n,
+    numeric_tbl.f2,
+    numeric_tbl.f2::numeric(16,4) AS f2164,
+    numeric_tbl.f2 AS f2n
+   FROM numeric_tbl;
+
+explain (verbose, costs off) select * from numeric_view;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: f1, ("numeric"(f1, 1048584)), ((f1)::numeric), f2, ("numeric"(f2, 1048584)), f2
+   ->  Seq Scan on public.numeric_tbl
+         Output: f1, "numeric"(f1, 1048584), f1, f2, "numeric"(f2, 1048584), f2
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+-- bpchar, lacking planner support for its length coercion function,
+-- could behave differently
+create table bpchar_tbl (f1 character(16) unique, f2 bpchar);
+create view bpchar_view as
+  select
+    f1, f1::character(14) as f114, f1::bpchar as f1n,
+    f2, f2::character(14) as f214, f2::bpchar as f2n
+  from bpchar_tbl;
+\d+ bpchar_view
+                            View "public.bpchar_view"
+ Column |     Type      | Collation | Nullable | Default | Storage  | Description 
+--------+---------------+-----------+----------+---------+----------+-------------
+ f1     | character(16) |           |          |         | extended | 
+ f114   | character(14) |           |          |         | extended | 
+ f1n    | bpchar        |           |          |         | extended | 
+ f2     | bpchar        |           |          |         | extended | 
+ f214   | character(14) |           |          |         | extended | 
+ f2n    | bpchar        |           |          |         | extended | 
+View definition:
+ SELECT bpchar_tbl.f1,
+    bpchar_tbl.f1::character(14) AS f114,
+    bpchar_tbl.f1::bpchar AS f1n,
+    bpchar_tbl.f2,
+    bpchar_tbl.f2::character(14) AS f214,
+    bpchar_tbl.f2 AS f2n
+   FROM bpchar_tbl;
+
+explain (verbose, costs off) select * from bpchar_view
+  where f1::bpchar = 'foo';
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   Output: f1, (bpchar(f1, 18, true)), ((f1)::bpchar), f2, (bpchar(f2, 18, true)), f2
+   ->  Index Scan using bpchar_tbl_f1_key on public.bpchar_tbl
+         Output: f1, bpchar(f1, 18, true), f1, f2, bpchar(f2, 18, true), f2
+         Index Cond: ((bpchar_tbl.f1)::bpchar = 'foo'::bpchar)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+rollback;

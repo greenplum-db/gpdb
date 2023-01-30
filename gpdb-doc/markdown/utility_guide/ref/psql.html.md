@@ -34,7 +34,7 @@ psql [<option> ...] [<dbname> [<username>]]
 -d dbname \| --dbname=dbname
 :   Specifies the name of the database to connect to. This is equivalent to specifying dbname as the first non-option argument on the command line.
 
-:   If this parameter contains an `=` sign or starts with a valid URI prefix \(`postgresql://` or `postgres://`\), it is treated as a `conninfo` string. See [Connection Strings](https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-CONNSTRING) in the PostgreSQL documentation for more information.
+:   If this parameter contains an `=` sign or starts with a valid URI prefix \(`postgresql://` or `postgres://`\), it is treated as a `conninfo` string. See [Connection Strings](https://www.postgresql.org/docs/12/libpq-connect.html#LIBPQ-CONNSTRING) in the PostgreSQL documentation for more information.
 
 -e \| --echo-queries
 :   Copy all SQL commands sent to the server to standard output as well.
@@ -133,7 +133,7 @@ psql [<option> ...] [<dbname> [<username>]]
 -w --no-password
 :   Never issue a password prompt. If the server requires password authentication and a password is not available by other means such as a .pgpass file, the connection attempt will fail. This option can be useful in batch jobs and scripts where no user is present to enter a password.
 
-:   **Note:** This option remains set for the entire session, and so it affects uses of the meta-command `\connect` as well as the initial connection attempt.
+:   > **Note** This option remains set for the entire session, and so it affects uses of the meta-command `\connect` as well as the initial connection attempt.
 
 ## <a id="section6"></a>Exit Status 
 
@@ -162,7 +162,7 @@ $ psql "service=myservice sslmode=require"
 $ psql postgresql://gpcoordinator:5433/mydb?sslmode=require
 ```
 
-This way you can also use LDAP for connection parameter lookup as described in [LDAP Lookup of Connection Parameters](https://www.postgresql.org/docs/9.4/libpq-ldap.html) in the PostgreSQL documentation. See [Parameter Keywords](https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-PARAMKEYWORDS) in the PostgreSQL documentation for more information on all the available connection options.
+This way you can also use LDAP for connection parameter lookup as described in [LDAP Lookup of Connection Parameters](https://www.postgresql.org/docs/12/libpq-ldap.html) in the PostgreSQL documentation. See [Parameter Keywords](https://www.postgresql.org/docs/12/libpq-connect.html#LIBPQ-PARAMKEYWORDS) in the PostgreSQL documentation for more information on all the available connection options.
 
 If the connection could not be made for any reason \(insufficient privileges, server is not running, etc.\), `psql` will return an error and terminate.
 
@@ -179,7 +179,7 @@ testdb=#
 
 At the prompt, the user may type in SQL commands. Ordinarily, input lines are sent to the server when a command-terminating semicolon is reached. An end of line does not terminate a command. Thus commands can be spread over several lines for clarity. If the command was sent and run without error, the results of the command are displayed on the screen.
 
-If untrusted users have access to a database that has not adopted a [secure schema usage pattern](https://www.postgresql.org/docs/9.4/ddl-schemas.html#DDL-SCHEMAS-PATTERNS), begin your session by removing publicly-writable schemas from search\_path. You can add `options=-csearch_path=` to the connection string or issue `SELECT pg_catalog.set_config('search_path', '', false)` before other SQL commands. This consideration is not specific to `psql`; it applies to every interface for running arbitrary SQL commands.
+If untrusted users have access to a database that has not adopted a [secure schema usage pattern](https://www.postgresql.org/docs/12/ddl-schemas.html#DDL-SCHEMAS-PATTERNS), begin your session by removing publicly-writable schemas from search\_path. You can add `options=-csearch_path=` to the connection string or issue `SELECT pg_catalog.set_config('search_path', '', false)` before other SQL commands. This consideration is not specific to `psql`; it applies to every interface for running arbitrary SQL commands.
 
 ## <a id="section10"></a>Meta-Commands 
 
@@ -203,7 +203,7 @@ The following meta-commands are defined:
 :   If the current table output format is unaligned, it is switched to aligned. If it is not unaligned, it is set to unaligned. This command is kept for backwards compatibility. See `\pset` for a more general solution.
 
 \\c \| \\connect \[dbname \[username\] \[host\] \[port\]\] \| conninfo
-:   Establishes a new Greenplum Database connection. The connection parameters to use can be specified either using a positional syntax, or using `conninfo` connection strings as detailed in [libpq Connection Strings](https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-CONNSTRING).
+:   Establishes a new Greenplum Database connection. The connection parameters to use can be specified either using a positional syntax, or using `conninfo` connection strings as detailed in [libpq Connection Strings](https://www.postgresql.org/docs/12/libpq-connect.html#LIBPQ-CONNSTRING).
 
 :   Where the command omits database name, user, host, or port, the new connection can reuse values from the previous connection. By default, values from the previous connection are reused except when processing a `conninfo` string. Passing a first argument of `-reuse-previous=on` or `-reuse-previous=off` overrides that default. When the command neither specifies nor reuses a particular parameter, the `libpq` default is used. Specifying any of dbname, username, host or port as `-` is equivalent to omitting that parameter.
 
@@ -250,7 +250,7 @@ The following meta-commands are defined:
         <br/><br/>For append-optimized tables and column-oriented tables, `\d+` displays the storage options for a table. For append-optimized tables, the options are displayed for the table. For column-oriented tables, storage options are displayed for each column.
 
     -   By default, only user-created objects are shown; supply a pattern or the `S` modifier to include system objects.
-        <br/><br/>**Note:** If `\d` is used without a pattern argument, it is equivalent to `\dtvmsE` which will show a list of all visible tables, views, materialized views, sequences, and foreign tables.
+        <br/><br/>> **Note** If `\d` is used without a pattern argument, it is equivalent to `\dtvmsE` which will show a list of all visible tables, views, materialized views, sequences, and foreign tables.
 
 
 \\da\[S\] \[aggregate\_pattern\]
@@ -292,7 +292,7 @@ The following meta-commands are defined:
 \\deu\[+\] \[user\_mapping\_pattern\]
 :   Lists user mappings. If a pattern is specified, only those mappings whose user names match the pattern are listed. If the form `\deu+` is used, additional information about each mapping is shown.
 
-    **Warning:** `\deu+` might also display the user name and password of the remote user, so care should be taken not to disclose them.
+    > **Caution** `\deu+` might also display the user name and password of the remote user, so care should be taken not to disclose them.
 
 \\dew\[+\] \[foreign\_data\_wrapper\_pattern\]
 :   Lists foreign-data wrappers. If a pattern is specified, only those foriegn-data wrappers whose name matches the pattern are listed. If the form `\dew+` is used, the ACL, options, and description of the foreign-data wrapper are also shown.
@@ -317,7 +317,7 @@ The following meta-commands are defined:
 
 \\dl
 :   This is an alias for `\lo_list`, which shows a list of large objects.
-    <br/><br/>**Note:** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/9.4/largeobjects.html) for streaming user data that is stored in large-object structures.
+    <br/><br/>> **Note** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/12/largeobjects.html) for streaming user data that is stored in large-object structures.
 
 \\dL\[S+\] \[pattern\]
 :   Lists procedural languages. If a pattern is specified, only languages whose names match the pattern are listed. By default, only user-created languages are shown; supply the `S` modifier to include system objects. If `+` is appended to the command name, each language is listed with its call handler, validator, access privileges, and whether it is a system object.
@@ -354,7 +354,7 @@ The following meta-commands are defined:
 \\dy\[+\] \[pattern\]
 :   Lists event triggers. If a pattern is specified, only those triggers whose names match the pattern are listed. If `+` is appended to the command name, each object is listed with its associated description.
 
-    **Note:** Greenplum Database does not support user-defined triggers.
+    > **Note** Greenplum Database does not support user-defined triggers.
 
 \\e \| \\edit \[filename\] \[line\_number\]
 :   If filename is specified, the file is edited; after the editor exits, its content is copied back to the query buffer. If no filename is given, the current query buffer is copied to a temporary file which is then edited in the same fashion.
@@ -368,7 +368,7 @@ The following meta-commands are defined:
 \\echo text \[ ... \]
 :   Prints the arguments to the standard output, separated by one space and followed by a newline. This can be useful to intersperse information in the output of scripts. If the first argument is an unquoted `-n`, the trailing newline is not written.
 
-    **Note:** If you use the `\o` command to redirect your query output you might wish to use `\qecho` instead of this command.
+    > **Note** If you use the `\o` command to redirect your query output you might wish to use `\qecho` instead of this command.
 
 \\ef \[function\_description \[line\_number\]\]
 :   This command fetches and edits the definition of the named function, in the form of a `CREATE OR REPLACE FUNCTION` command. Editing is done in the same way as for `\edit`. After the editor exits, the updated command waits in the query buffer; type semicolon or `\g` to send it, or `\r` to cancel.
@@ -439,7 +439,7 @@ The following meta-commands are defined:
 \\lo\_export loid filename
 :   Reads the large object with OID loid from the database and writes it to filename. Note that this is subtly different from the server function `lo_export`, which acts with the permissions of the user that the database server runs as and on the server's file system. Use `\lo_list` to find out the large object's OID.
 
-    **Note:** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/9.4/largeobjects.html) for streaming user data that is stored in large-object structures.
+    > **Note** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/12/largeobjects.html) for streaming user data that is stored in large-object structures.
 
 \\lo\_import large\_object\_filename \[comment\]
 :   Stores the file into a large object. Optionally, it associates the given comment with the object. Example:
@@ -452,17 +452,17 @@ lo_import 152801
 
 The response indicates that the large object received object ID 152801 which one ought to remember if one wants to access the object ever again. For that reason it is recommended to always associate a human-readable comment with every object. Those can then be seen with the `\lo_list` command. Note that this command is subtly different from the server-side `lo_import` because it acts as the local user on the local file system, rather than the server's user and file system.
 
-**Note:** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/9.4/largeobjects.html) for streaming user data that is stored in large-object structures.
+> **Note** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/12/largeobjects.html) for streaming user data that is stored in large-object structures.
 
 \\lo\_list
 :   Shows a list of all large objects currently stored in the database, along with any comments provided for them.
 
-    **Note:** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/9.4/largeobjects.html) for streaming user data that is stored in large-object structures.
+    > **Note** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/12/largeobjects.html) for streaming user data that is stored in large-object structures.
 
 \\lo\_unlink largeobject\_oid
 :   Deletes the large object of the specified OID from the database. Use `\lo_list` to find out the large object's OID.
 
-    **Note:** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/9.4/largeobjects.html) for streaming user data that is stored in large-object structures.
+    > **Note** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/12/largeobjects.html) for streaming user data that is stored in large-object structures.
 
 \\o \| \\out \[ filename \]
 \\o \| \\out \[ `|` command \]
@@ -598,7 +598,7 @@ Within a pattern, `*` matches any sequence of characters \(including no characte
 
 A pattern that contains a dot \(`.`\) is interpreted as a schema name pattern followed by an object name pattern. For example, `\dt foo*.bar*` displays all tables whose table name starts with `bar` that are in schemas whose schema name starts with `foo`. When no dot appears, then the pattern matches only objects that are visible in the current schema search path. Again, a dot within double quotes loses its special meaning and is matched literally.
 
-Advanced users can use regular-expression notations. All regular expression special characters work as specified in the [PostgreSQL documentation on regular expressions](https://www.postgresql.org/docs/9.4/functions-matching.html#FUNCTIONS-POSIX-REGEXP), except for `.` which is taken as a separator as mentioned above, `*` which is translated to the regular-expression notation `.*`, and `?` which is translated to `..` You can emulate these pattern characters at need by writing `?` for `.,``(R+|)` for `R*`, or `(R|)` for `R?`. Remember that the pattern must match the whole name, unlike the usual interpretation of regular expressions; write `*` at the beginning and/or end if you don't wish the pattern to be anchored. Note that within double quotes, all regular expression special characters lose their special meanings and are matched literally. Also, the regular expression special characters are matched literally in operator name patterns \(such as the argument of `\do`\).
+Advanced users can use regular-expression notations. All regular expression special characters work as specified in the [PostgreSQL documentation on regular expressions](https://www.postgresql.org/docs/12/functions-matching.html#FUNCTIONS-POSIX-REGEXP), except for `.` which is taken as a separator as mentioned above, `*` which is translated to the regular-expression notation `.*`, and `?` which is translated to `..` You can emulate these pattern characters at need by writing `?` for `.,``(R+|)` for `R*`, or `(R|)` for `R?`. Remember that the pattern must match the whole name, unlike the usual interpretation of regular expressions; write `*` at the beginning and/or end if you don't wish the pattern to be anchored. Note that within double quotes, all regular expression special characters lose their special meanings and are matched literally. Also, the regular expression special characters are matched literally in operator name patterns \(such as the argument of `\do`\).
 
 Whenever the pattern parameter is omitted completely, the `\d` commands display all objects that are visible in the current schema search path – this is equivalent to using the pattern `*.` To see all objects in the database, use the pattern `*.*.`
 
@@ -625,7 +625,7 @@ This works in both regular SQL commands and meta-commands; there is more detail 
 
 If you call `\set` without a second argument, the variable is set, with an empty string as value. To unset \(i.e., delete\) a variable, use the command `\unset`. To show the values of all variables, call `\set` without any argument.
 
-**Note:** The arguments of `\set` are subject to the same substitution rules as with other commands. Thus you can construct interesting references such as `\set :foo 'something'` and get 'soft links' or 'variable variables' of Perl or PHP fame, respectively. Unfortunately, there is no way to do anything useful with these constructs. On the other hand, `\set bar :foo` is a perfectly valid way to copy a variable.
+> **Note** The arguments of `\set` are subject to the same substitution rules as with other commands. Thus you can construct interesting references such as `\set :foo 'something'` and get 'soft links' or 'variable variables' of Perl or PHP fame, respectively. Unfortunately, there is no way to do anything useful with these constructs. On the other hand, `\set bar :foo` is a perfectly valid way to copy a variable.
 
 A number of these variables are treated specially by `psql`. They represent certain option settings that can be changed at run time by altering the value of the variable, or in some cases represent changeable state of `psql`. Although you can use these variables for other purposes, this is not recommended, as the program behavior might grow really strange really quickly. By convention, all specially treated variables' names consist of all upper-case ASCII letters \(and possibly digits and underscores\). To ensure maximum compatibility in the future, avoid using such variable names for your own purposes. A list of all specially treated variables follows.
 

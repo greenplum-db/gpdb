@@ -30,8 +30,8 @@ The data directory location on the coordinator is different than those on the se
 
     ```
     # source /usr/local/greenplum-db/greenplum_path.sh 
-    # gpssh -h smdw -e 'mkdir -p /data/coordinator'
-    # gpssh -h smdw -e 'chown gpadmin:gpadmin /data/coordinator'
+    # gpssh -h scdw -e 'mkdir -p /data/coordinator'
+    # gpssh -h scdw -e 'chown gpadmin:gpadmin /data/coordinator'
     ```
 
 

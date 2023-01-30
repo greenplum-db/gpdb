@@ -163,7 +163,7 @@ To see the data distribution of a table's rows \(the number of rows on each segm
 
 A table is considered to have a balanced distribution if all segments have roughly the same number of rows.
 
-**Note:** If you run this query on a replicated table, it fails because Greenplum Database does not permit user queries to reference the system column `gp_segment_id` \(or the system columns `ctid`, `cmin`, `cmax`, `xmin`, and `xmax`\) in replicated tables. Because every segment has all of the tables' rows, replicated tables are evenly distributed by definition.
+> **Note** If you run this query on a replicated table, it fails because Greenplum Database does not permit user queries to reference the system column `gp_segment_id` \(or the system columns `ctid`, `cmin`, `cmax`, `xmin`, and `xmax`\) in replicated tables. Because every segment has all of the tables' rows, replicated tables are evenly distributed by definition.
 
 ### <a id="topic23"></a>Checking for Query Processing Skew 
 
@@ -360,7 +360,7 @@ The following table lists all the defined error codes. Some are not used, but ar
 
 The PL/pgSQL condition name for each error code is the same as the phrase shown in the table, with underscores substituted for spaces. For example, code 22012, DIVISION BY ZERO, has condition name DIVISION\_BY\_ZERO. Condition names can be written in either upper or lower case.
 
-**Note:** PL/pgSQL does not recognize warning, as opposed to error, condition names; those are classes 00, 01, and 02.
+> **Note** PL/pgSQL does not recognize warning, as opposed to error, condition names; those are classes 00, 01, and 02.
 
 |Error Code|Meaning|Constant|
 |----------|-------|--------|

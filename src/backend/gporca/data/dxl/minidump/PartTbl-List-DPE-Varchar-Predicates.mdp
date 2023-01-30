@@ -180,7 +180,7 @@ select * from pt where gender is null;
       <dxl:ColumnStatistics Mdid="1.321479.1.1.0" Name="id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:MDCast Mdid="3.1043.1.0;25.1.0" Name="text" BinaryCoercible="true" SourceTypeId="0.1043.1.0" DestinationTypeId="0.25.1.0" CastFuncId="0.0.0.0"/>
       <dxl:RelationStatistics Mdid="2.321479.1.1" Name="pt" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.321479.1.1" Name="pt" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="l" NumberLeafPartitions="3">
+      <dxl:Relation Mdid="6.321479.1.1" Name="pt" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="l">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

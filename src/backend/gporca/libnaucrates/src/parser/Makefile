@@ -115,6 +115,13 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerRandomMotion.o \
               CParseHandlerRedistributeMotion.o \
               CParseHandlerRelStats.o \
+              CParseHandlerRelationExtendedStats.o \
+              CParseHandlerExtStatsInfo.o \
+              CParseHandlerExtStats.o \
+              CParseHandlerExtStatsDependency.o \
+              CParseHandlerExtStatsDependencies.o \
+              CParseHandlerExtStatsNDistinct.o \
+              CParseHandlerExtStatsNDistinctList.o \
               CParseHandlerResult.o \
               CParseHandlerRoutedMotion.o \
               CParseHandlerScalarAggref.o \

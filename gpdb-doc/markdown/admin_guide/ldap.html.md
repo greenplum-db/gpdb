@@ -74,7 +74,7 @@ To use an existing OpenLDAP system for authentication, Greenplum Database must b
      TLS_CACERT /etc/pki/tls/certs/<ca-certificate-file>
     ```
 
-    **Note:** For certificate validation to succeed, the hostname in the certificate must match a hostname in the URI property. Otherwise, you must also add `TLS_REQCERT allow` to the file.
+    > **Note** For certificate validation to succeed, the hostname in the certificate must match a hostname in the URI property. Otherwise, you must also add `TLS_REQCERT allow` to the file.
 
 4.  As the gpadmin user, edit `/usr/local/greenplum-db/greenplum_path.sh` and add the following line.
 

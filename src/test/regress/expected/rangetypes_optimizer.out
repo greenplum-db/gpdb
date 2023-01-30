@@ -525,7 +525,7 @@ select numrange(1.0, 2.0) * numrange(2.5, 3.0);
 (1 row)
 
 create table numrange_test2(nr numrange);
-create index numrange_test2_hash_idx on numrange_test2 (nr);
+create index numrange_test2_hash_idx on numrange_test2 using hash (nr);
 INSERT INTO numrange_test2 VALUES('[, 5)');
 INSERT INTO numrange_test2 VALUES(numrange(1.1, 2.2));
 INSERT INTO numrange_test2 VALUES(numrange(1.1, 2.2));
@@ -588,8 +588,97 @@ select * from numrange_test natural join numrange_test2 order by nr;
 set enable_nestloop to default;
 set enable_hashjoin to default;
 set enable_mergejoin to default;
-DROP TABLE numrange_test;
+-- keep numrange_test around to help exercise dump/reload
 DROP TABLE numrange_test2;
+--
+-- Apply a subset of the above tests on a collatable type, too
+--
+CREATE TABLE textrange_test (tr textrange);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'tr' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create index textrange_test_btree on textrange_test(tr);
+INSERT INTO textrange_test VALUES('[,)');
+INSERT INTO textrange_test VALUES('["a",]');
+INSERT INTO textrange_test VALUES('[,"q")');
+INSERT INTO textrange_test VALUES(textrange('b', 'g'));
+INSERT INTO textrange_test VALUES('empty');
+INSERT INTO textrange_test VALUES(textrange('d', 'd', '[]'));
+SELECT tr, isempty(tr), lower(tr), upper(tr) FROM textrange_test;
+  tr   | isempty | lower | upper 
+-------+---------+-------+-------
+ (,)   | f       |       | 
+ (,q)  | f       |       | q
+ [a,)  | f       | a     | 
+ [b,g) | f       | b     | g
+ [d,d] | f       | d     | d
+ empty | t       |       | 
+(6 rows)
+
+SELECT tr, lower_inc(tr), lower_inf(tr), upper_inc(tr), upper_inf(tr) FROM textrange_test;
+  tr   | lower_inc | lower_inf | upper_inc | upper_inf 
+-------+-----------+-----------+-----------+-----------
+ (,)   | f         | t         | f         | t
+ (,q)  | f         | t         | f         | f
+ [a,)  | t         | f         | f         | t
+ [b,g) | t         | f         | f         | f
+ [d,d] | t         | f         | t         | f
+ empty | f         | f         | f         | f
+(6 rows)
+
+SELECT * FROM textrange_test WHERE range_contains(tr, textrange('f', 'fx'));
+  tr   
+-------
+ (,)
+ (,q)
+ [a,)
+ [b,g)
+(4 rows)
+
+SELECT * FROM textrange_test WHERE tr @> textrange('a', 'z');
+  tr  
+------
+ (,)
+ [a,)
+(2 rows)
+
+SELECT * FROM textrange_test WHERE range_contained_by(textrange('0','9'), tr);
+  tr  
+------
+ (,)
+ (,q)
+(2 rows)
+
+SELECT * FROM textrange_test WHERE 'e'::text <@ tr;
+  tr   
+-------
+ (,)
+ (,q)
+ [a,)
+ [b,g)
+(4 rows)
+
+select * from textrange_test where tr = 'empty';
+  tr   
+-------
+ empty
+(1 row)
+
+select * from textrange_test where tr = '("b","g")';
+ tr 
+----
+(0 rows)
+
+select * from textrange_test where tr = '["b","g")';
+  tr   
+-------
+ [b,g)
+(1 row)
+
+select * from textrange_test where tr < 'empty';
+ tr 
+----
+(0 rows)
+
 -- test canonical form for int4range
 select int4range(1, 10, '[]');
  int4range 
@@ -656,6 +745,30 @@ select daterange('2000-01-10'::date, '2000-01-11'::date, '(]');
         daterange        
 -------------------------
  [01-11-2000,01-12-2000)
+(1 row)
+
+select daterange('-infinity'::date, '2000-01-01'::date, '()');
+       daterange        
+------------------------
+ (-infinity,01-01-2000)
+(1 row)
+
+select daterange('-infinity'::date, '2000-01-01'::date, '[)');
+       daterange        
+------------------------
+ [-infinity,01-01-2000)
+(1 row)
+
+select daterange('2000-01-01'::date, 'infinity'::date, '[)');
+       daterange       
+-----------------------
+ [01-01-2000,infinity)
+(1 row)
+
+select daterange('2000-01-01'::date, 'infinity'::date, '[]');
+       daterange       
+-----------------------
+ [01-01-2000,infinity]
 (1 row)
 
 -- test GiST index that's been built incrementally
@@ -1099,15 +1212,15 @@ select count(*) from test_range_spgist where ir -|- int4range(100,500);
 -- test index-only scans
 explain (costs off)
 select ir from test_range_spgist where ir -|- int4range(10,20) order by ir;
-                      QUERY PLAN
-------------------------------------------------------
+                     QUERY PLAN                      
+-----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: ir
    ->  Sort
          Sort Key: ir
          ->  Seq Scan on test_range_spgist
                Filter: (ir -|- '[10,20)'::int4range)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.44.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 
 select ir from test_range_spgist where ir -|- int4range(10,20) order by ir;
@@ -1376,6 +1489,9 @@ select *, row_to_json(upper(t)) as u from
  ["(5,6)","(7,8)") | {"a":7,"b":8}
 (2 rows)
 
+-- this must be rejected to avoid self-inclusion issues:
+alter type two_ints add attribute c two_ints_range;
+ERROR:  composite type two_ints cannot be made a member of itself
 drop type two_ints cascade;
 NOTICE:  drop cascades to type two_ints_range
 --
@@ -1389,6 +1505,15 @@ select * from outparam_succeed(int4range(1,2));
  [1,2) | foo
 (1 row)
 
+create function outparam2_succeed(r anyrange, out lu anyarray, out ul anyarray)
+  as $$ select array[lower($1), upper($1)], array[upper($1), lower($1)] $$
+  language sql;
+select * from outparam2_succeed(int4range(1,11));
+   lu   |   ul   
+--------+--------
+ {1,11} | {11,1}
+(1 row)
+
 create function inoutparam_succeed(out i anyelement, inout r anyrange)
   as $$ select upper($1), $1 $$ language sql;
 select * from inoutparam_succeed(int4range(1,2));
@@ -1397,12 +1522,14 @@ select * from inoutparam_succeed(int4range(1,2));
  2 | [1,2)
 (1 row)
 
-create function table_succeed(i anyelement, r anyrange) returns table(i anyelement, r anyrange)
-  as $$ select $1, $2 $$ language sql;
-select * from table_succeed(123, int4range(1,11));
-  i  |   r    
------+--------
- 123 | [1,11)
+create function table_succeed(r anyrange)
+  returns table(l anyelement, u anyelement)
+  as $$ select lower($1), upper($1) $$
+  language sql;
+select * from table_succeed(int4range(1,11));
+ l | u  
+---+----
+ 1 | 11
 (1 row)
 
 -- should fail

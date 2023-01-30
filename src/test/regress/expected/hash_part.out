@@ -2,7 +2,7 @@
 -- Hash partitioning.
 --
 -- Use hand-rolled hash functions and operator classes to get predictable
--- result on different matchines.  See the definitions of
+-- result on different machines.  See the definitions of
 -- part_part_test_int4_ops and part_test_text_ops in insert.sql.
 CREATE TABLE mchash (a int, b text, c jsonb)
   PARTITION BY HASH (a part_test_int4_ops, b part_test_text_ops);
@@ -10,11 +10,8 @@ CREATE TABLE mchash1
   PARTITION OF mchash FOR VALUES WITH (MODULUS 4, REMAINDER 0);
 -- invalid OID, no such table
 SELECT satisfies_hash_partition(0, 4, 0, NULL);
- satisfies_hash_partition 
---------------------------
- 
-(1 row)
-
+ERROR:  could not open relation with OID 0
+DETAIL:  This can be validly caused by a concurrent delete operation on this object.
 -- not partitioned
 SELECT satisfies_hash_partition('tenk1'::regclass, 4, 0, NULL);
 ERROR:  "tenk1" is not a hash partitioned table
@@ -23,10 +20,10 @@ SELECT satisfies_hash_partition('mchash1'::regclass, 4, 0, NULL);
 ERROR:  "mchash1" is not a hash partitioned table
 -- invalid modulus
 SELECT satisfies_hash_partition('mchash'::regclass, 0, 0, NULL);
-ERROR:  modulus for hash partition must be a positive integer
+ERROR:  modulus for hash partition must be an integer value greater than zero
 -- remainder too small
 SELECT satisfies_hash_partition('mchash'::regclass, 1, -1, NULL);
-ERROR:  remainder for hash partition must be a non-negative integer
+ERROR:  remainder for hash partition must be an integer value greater than or equal to zero
 -- remainder too large
 SELECT satisfies_hash_partition('mchash'::regclass, 1, 1, NULL);
 ERROR:  remainder for hash partition must be less than modulus
@@ -34,14 +31,14 @@ ERROR:  remainder for hash partition must be less than modulus
 SELECT satisfies_hash_partition('mchash'::regclass, NULL, 0, NULL);
  satisfies_hash_partition 
 --------------------------
- 
+ f
 (1 row)
 
 -- remainder is null
 SELECT satisfies_hash_partition('mchash'::regclass, 4, NULL, NULL);
  satisfies_hash_partition 
 --------------------------
- 
+ f
 (1 row)
 
 -- too many arguments

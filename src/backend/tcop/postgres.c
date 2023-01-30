@@ -45,8 +45,8 @@
 #include "catalog/pg_type.h"
 #include "catalog/namespace.h"
 #include "commands/async.h"
-#include "commands/prepare.h"
 #include "commands/extension.h"
+#include "commands/prepare.h"
 #include "executor/spi.h"
 #include "jit/jit.h"
 #include "libpq/libpq.h"
@@ -730,7 +730,7 @@ ProcessClientWriteInterrupt(bool blocked)
 		{
 			/*
 			 * Don't mess with whereToSendOutput if ProcessInterrupts wouldn't
-			 * do anything.
+			 * service ProcDiePending.
 			 */
 			if (InterruptHoldoffCount == 0 && CritSectionCount == 0)
 			{
@@ -1956,6 +1956,13 @@ exec_simple_query(const char *query_string)
 		else
 		{
 			/*
+			 * We had better not see XACT_FLAGS_NEEDIMMEDIATECOMMIT set if
+			 * we're not calling finish_xact_command().  (The implicit
+			 * transaction block should have prevented it from getting set.)
+			 */
+			Assert(!(MyXactFlags & XACT_FLAGS_NEEDIMMEDIATECOMMIT));
+
+			/*
 			 * We need a CommandCounterIncrement after every query, except
 			 * those that start or end a transaction block.
 			 */
@@ -2752,32 +2759,16 @@ exec_execute_message(const char *portal_name, int64 max_rows)
 
 	/*
 	 * We must copy the sourceText and prepStmtName into MessageContext in
-	 * case the portal is destroyed during finish_xact_command. Can avoid the
-	 * copy if it's not an xact command, though.
+	 * case the portal is destroyed during finish_xact_command.  We do not
+	 * make a copy of the portalParams though, preferring to just not print
+	 * them in that case.
 	 */
-	if (is_xact_command)
-	{
-		sourceText = pstrdup(portal->sourceText);
-		if (portal->prepStmtName)
-			prepStmtName = pstrdup(portal->prepStmtName);
-		else
-			prepStmtName = "<unnamed>";
-
-		/*
-		 * An xact command shouldn't have any parameters, which is a good
-		 * thing because they wouldn't be around after finish_xact_command.
-		 */
-		portalParams = NULL;
-	}
+	sourceText = pstrdup(portal->sourceText);
+	if (portal->prepStmtName)
+		prepStmtName = pstrdup(portal->prepStmtName);
 	else
-	{
-		sourceText = portal->sourceText;
-		if (portal->prepStmtName)
-			prepStmtName = portal->prepStmtName;
-		else
-			prepStmtName = "<unnamed>";
-		portalParams = portal->portalParams;
-	}
+		prepStmtName = "<unnamed>";
+	portalParams = portal->portalParams;
 
 	/*
 	 * Report query to various monitoring facilities.
@@ -2865,13 +2856,24 @@ exec_execute_message(const char *portal_name, int64 max_rows)
 
 	if (completed)
 	{
-		if (is_xact_command)
+		if (is_xact_command || (MyXactFlags & XACT_FLAGS_NEEDIMMEDIATECOMMIT))
 		{
 			/*
 			 * If this was a transaction control statement, commit it.  We
 			 * will start a new xact command for the next command (if any).
+			 * Likewise if the statement required immediate commit.  Without
+			 * this provision, we wouldn't force commit until Sync is
+			 * received, which creates a hazard if the client tries to
+			 * pipeline immediate-commit statements.
 			 */
 			finish_xact_command();
+
+			/*
+			 * These commands typically don't have any parameters, and even if
+			 * one did we couldn't print them now because the storage went
+			 * away during finish_xact_command.  So pretend there were none.
+			 */
+			portalParams = NULL;
 		}
 		else
 		{
@@ -2958,8 +2960,7 @@ check_log_statement(List *stmt_list)
 
 /*
  * check_log_duration
- *		Determine whether current command's duration should be logged.
- *		If log_statement_sample_rate < 1.0, log only a sample.
+ *		Determine whether current command's duration should be logged
  *		We also check if this statement in this transaction must be logged
  *		(regardless of its duration).
  *
@@ -2983,7 +2984,6 @@ check_log_duration(char *msec_str, bool was_logged)
 		int			usecs;
 		int			msecs;
 		bool		exceeded;
-		bool		in_sample;
 
 		TimestampDifference(GetCurrentStatementStartTimestamp(),
 							GetCurrentTimestamp(),
@@ -3000,18 +3000,7 @@ check_log_duration(char *msec_str, bool was_logged)
 					 (secs > log_min_duration_statement / 1000 ||
 					  secs * 1000 + msecs >= log_min_duration_statement)));
 
-		/*
-		 * Do not log if log_statement_sample_rate = 0. Log a sample if
-		 * log_statement_sample_rate <= 1 and avoid unnecessary random() call
-		 * if log_statement_sample_rate = 1.  But don't compute any of this
-		 * unless needed.
-		 */
-		in_sample = exceeded &&
-			log_statement_sample_rate != 0 &&
-			(log_statement_sample_rate == 1 ||
-			 random() <= log_statement_sample_rate * MAX_RANDOM_VALUE);
-
-		if ((exceeded && in_sample) || log_duration || xact_is_sampled)
+		if (exceeded || log_duration || xact_is_sampled)
 		{
 			snprintf(msec_str, 32, "%ld.%03d",
 					 secs * 1000 + msecs, usecs % 1000);
@@ -3706,11 +3695,23 @@ RecoveryConflictInterrupt(ProcSignalReason reason)
 			case PROCSIG_RECOVERY_CONFLICT_BUFFERPIN:
 
 				/*
-				 * If we aren't blocking the Startup process there is nothing
-				 * more to do.
+				 * If PROCSIG_RECOVERY_CONFLICT_BUFFERPIN is requested but we
+				 * aren't blocking the Startup process there is nothing more
+				 * to do.
+				 *
+				 * When PROCSIG_RECOVERY_CONFLICT_STARTUP_DEADLOCK is
+				 * requested, if we're waiting for locks and the startup
+				 * process is not waiting for buffer pin (i.e., also waiting
+				 * for locks), we set the flag so that ProcSleep() will check
+				 * for deadlocks.
 				 */
 				if (!HoldingBufferPinThatDelaysRecovery())
+				{
+					if (reason == PROCSIG_RECOVERY_CONFLICT_STARTUP_DEADLOCK &&
+						GetStartupBufferPinWaitBufId() < 0)
+						CheckDeadLockAlert();
 					return;
+				}
 
 				MyProc->recoveryConflictPending = true;
 
@@ -3802,8 +3803,11 @@ RecoveryConflictInterrupt(ProcSignalReason reason)
  * then clear the flag and accept the interrupt.  Called only when
  * InterruptPending is true.
  *
- * Parameters filename and lineno contain the file name and the line number where
- * ProcessInterrupts was invoked, respectively.
+ * Note: if INTERRUPTS_CAN_BE_PROCESSED() is true, then ProcessInterrupts
+ * is guaranteed to clear the InterruptPending flag before returning.
+ * (This is not the same as guaranteeing that it's still clear when we
+ * return; another interrupt could have arrived.  But we promise that
+ * any pre-existing one will have been serviced.)
  */
 void
 ProcessInterrupts(const char* filename, int lineno)
@@ -3942,7 +3946,11 @@ ProcessInterrupts(const char* filename, int lineno)
 	{
 		/*
 		 * Re-arm InterruptPending so that we process the cancel request as
-		 * soon as we're done reading the message.
+		 * soon as we're done reading the message.  (XXX this is seriously
+		 * ugly: it complicates INTERRUPTS_CAN_BE_PROCESSED(), and it means we
+		 * can't use that macro directly as the initial test in this function,
+		 * meaning that this code also creates opportunities for other bugs to
+		 * appear.)
 		 */
 		InterruptPending = true;
 	}
@@ -4110,7 +4118,9 @@ ia64_get_bsp(void)
 pg_stack_base_t
 set_stack_base(void)
 {
+#ifndef HAVE__BUILTIN_FRAME_ADDRESS
 	char		stack_base;
+#endif
 	pg_stack_base_t old;
 
 #if defined(__ia64__) || defined(__ia64)
@@ -4120,8 +4130,16 @@ set_stack_base(void)
 	old = stack_base_ptr;
 #endif
 
-	/* Set up reference point for stack depth checking */
+	/*
+	 * Set up reference point for stack depth checking.  On recent gcc we use
+	 * __builtin_frame_address() to avoid a warning about storing a local
+	 * variable's address in a long-lived variable.
+	 */
+#ifdef HAVE__BUILTIN_FRAME_ADDRESS
+	stack_base_ptr = __builtin_frame_address(0);
+#else
 	stack_base_ptr = &stack_base;
+#endif
 #if defined(__ia64__) || defined(__ia64)
 	register_stack_base_ptr = ia64_get_bsp();
 #endif
@@ -5052,7 +5070,6 @@ PostgresMain(int argc, char *argv[],
 			WalSndErrorCleanup();
 
 		PortalErrorCleanup();
-		SPICleanup();
 
 		/*
 		 * We can't release replication slots inside AbortTransaction() as we
@@ -5216,7 +5233,18 @@ PostgresMain(int argc, char *argv[],
 			}
 			else
 			{
+				/* Send out notify signals and transmit self-notifies */
 				ProcessCompletedNotifies();
+
+				/*
+				 * Also process incoming notifies, if any.  This is mostly to
+				 * ensure stable behavior in tests: if any notifies were
+				 * received during the just-finished transaction, they'll be
+				 * seen by the client before ReadyForQuery is.
+				 */
+				if (notifyInterruptPending)
+					ProcessNotifyInterrupt();
+
 				pgstat_report_stat(false);
 				pgstat_report_queuestat();
 
@@ -5267,23 +5295,9 @@ PostgresMain(int argc, char *argv[],
 		IdleTracker_ActivateProcess();
 
 		/*
-		 * (4) disable async signal conditions again.
-		 *
-		 * Query cancel is supposed to be a no-op when there is no query in
-		 * progress, so if a query cancel arrived while we were idle, just
-		 * reset QueryCancelPending. ProcessInterrupts() has that effect when
-		 * it's called when DoingCommandRead is set, so check for interrupts
-		 * before resetting DoingCommandRead.
-		 */
-		CHECK_FOR_INTERRUPTS();
-		DoingCommandRead = false;
-
-		/*
-		 * (5) turn off the idle-in-transaction and idle-session timeouts, if
-		 * active.
-		 *
-		 * At most one of these two will be active, so there's no need to
-		 * worry about combining the timeout.c calls into one.
+		 * (4) turn off the idle-in-transaction timeout, if active.  We do
+		 * this before step (5) so that any last-moment timeout is certain to
+		 * be detected in step (5).
 		 */
 		if (idle_in_transaction_timeout_enabled)
 		{
@@ -5295,6 +5309,18 @@ PostgresMain(int argc, char *argv[],
 			disable_timeout(IDLE_GANG_TIMEOUT, false);
 			idle_gang_timeout_enabled = false;
 		}
+
+		/*
+		 * (5) disable async signal conditions again.
+		 *
+		 * Query cancel is supposed to be a no-op when there is no query in
+		 * progress, so if a query cancel arrived while we were idle, just
+		 * reset QueryCancelPending. ProcessInterrupts() has that effect when
+		 * it's called when DoingCommandRead is set, so check for interrupts
+		 * before resetting DoingCommandRead.
+		 */
+		CHECK_FOR_INTERRUPTS();
+		DoingCommandRead = false;
 
 		/*
 		 * (6) check for any other interesting events that happened while we

@@ -16,5 +16,5 @@ More typical usage is to preload it into some or all sessions by including `auto
 
 ## <a id="topic_info"></a>Module Documentation 
 
-See [auto\_explain](https://www.postgresql.org/docs/9.4/auto-explain.html) in the PostgreSQL documentation for detailed information about the configuration parameters that control this module's behavior.
+See [auto\_explain](https://www.postgresql.org/docs/12/auto-explain.html) in the PostgreSQL documentation for detailed information about the configuration parameters that control this module's behavior.
 

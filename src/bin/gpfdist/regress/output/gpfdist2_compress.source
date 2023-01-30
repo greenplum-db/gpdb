@@ -61,12 +61,80 @@ FORMAT 'text'
         DELIMITER AS '|'
 )
 ;
+CREATE TABLE lineitem (like ext_lineitem);
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 SELECT count(*) FROM ext_lineitem;
  count 
 -------
    256
 (1 row)
 
+INSERT INTO lineitem SELECT * FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+--test 1.1 test writable table using compression
+CREATE WRITABLE EXTERNAL TABLE ext_lineitem_w (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+      'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl.w'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+)
+;
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+      'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl.w'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+)
+;
+INSERT INTO ext_lineitem_w SELECT * FROM lineitem;
+DROP TABLE lineitem;
+SELECT count(*) FROM ext_lineitem;
+ count 
+-------
+   256
+(1 row)
+
+DROP EXTERNAL TABLE ext_lineitem_w;
 DROP EXTERNAL TABLE ext_lineitem;
 -- test 2 use a bigger file.
 CREATE EXTERNAL TABLE ext_lineitem (
@@ -96,12 +164,79 @@ FORMAT 'text'
         DELIMITER AS '|'
 )
 ;
+CREATE TABLE lineitem (like ext_lineitem);
 SELECT count(*) FROM ext_lineitem;
  count  
 --------
  100000
 (1 row)
 
+INSERT INTO lineitem SELECT * FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+--test 2.1 test writable table using compression with big data
+CREATE WRITABLE EXTERNAL TABLE ext_lineitem_w (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+      'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl.w'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+)
+;
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+      'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl.w'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+)
+;
+INSERT INTO ext_lineitem_w SELECT * FROM lineitem;
+DROP TABLE lineitem;
+SELECT count(*) FROM ext_lineitem;
+ count  
+--------
+ 100256
+(1 row)
+
+DROP EXTERNAL TABLE ext_lineitem_w;
 DROP EXTERNAL TABLE ext_lineitem;
 -- test 3 line too long with defaults
 CREATE EXTERNAL TABLE ext_test (

@@ -18,7 +18,7 @@ The steps you follow within these scenarios can vary, depending on:
 -   whether you want to recover all segments or just a subset of segments
 
 
-**Note:** Incremental recovery is only possible when recovering segments to the current host \(in-place recovery\).
+> **Note** Incremental recovery is only possible when recovering segments to the current host \(in-place recovery\).
 
 This topic is divided into the following sections:
 
@@ -117,7 +117,7 @@ Follow these steps for incremental recovery:
 
 ### <a id="different_host"></a>Recover to A Different Host within the Cluster 
 
-**Note:** Only full recovery is possible when recovering to a different host in the cluster.
+> **Note** Only full recovery is possible when recovering to a different host in the cluster.
 
 Follow these steps to recover all segments or just a subset of segments to a different host in the cluster:
 
@@ -147,7 +147,7 @@ Follow these steps to recover all segments or just a subset of segments to a dif
 
 Follow these steps if you are planning to do a hardware refresh on the host the segments are running on.
 
-**Note:** Only full recovery is possible when recovering to a new host.
+> **Note** Only full recovery is possible when recovering to a new host.
 
 #### <a id="new_host_requirements"></a>Requirements for New Host 
 
@@ -177,7 +177,7 @@ The new host must:
     gprecoverseg -p <new_host_name1>,<new_host_name2>
     ```
 
-    **Note:** In the case of multiple failed segment hosts, you can specify the hosts to recover to with a comma-separated list. However, it is strongly recommended to recover to one host at a time. If you must recover to more than one host at a time, then it is critical to ensure that a double fault scenario does not occur, in which both the segment primary and corresponding mirror are offline.
+    > **Note** In the case of multiple failed segment hosts, you can specify the hosts to recover to with a comma-separated list. However, it is strongly recommended to recover to one host at a time. If you must recover to more than one host at a time, then it is critical to ensure that a double fault scenario does not occur, in which both the segment primary and corresponding mirror are offline.
 
 3.  Perform the post-recovery tasks summarized in the section [Post-Recovery Tasks](#post_recovery).
 

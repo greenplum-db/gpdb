@@ -675,7 +675,7 @@ ExecInitMotion(Motion *node, EState *estate, int eflags)
 	 * but there are no slice tables in the new EState and we can not AssignGangs
 	 * on the QE. In this case, we raise an error.
 	 */
-	if (estate->es_epqTupleSlot)
+	if (estate->es_epq_active)
 		ereport(ERROR,
 				(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
 				 errmsg("EvalPlanQual can not handle subPlan with Motion node")));

@@ -36,7 +36,7 @@ For example, the `pg_default` resource queue has ACTIVE\_STATEMENTS = 20.
 
 The Greenplum Database optimizer assigns a numeric cost to each query. If the cost exceeds the `MAX_COST` value set for the resource queue, the query is rejected as too expensive.
 
-**Note:** GPORCA and the Postgres Planner utilize different query costing models and may compute different costs for the same query. The Greenplum Database resource queue resource management scheme neither differentiates nor aligns costs between GPORCA and the Postgres Planner; it uses the literal cost value returned from the optimizer to throttle queries.
+> **Note** GPORCA and the Postgres Planner utilize different query costing models and may compute different costs for the same query. The Greenplum Database resource queue resource management scheme neither differentiates nor aligns costs between GPORCA and the Postgres Planner; it uses the literal cost value returned from the optimizer to throttle queries.
 
 When resource queue-based resource management is active, use the `MEMORY_LIMIT` and `ACTIVE_STATEMENTS` limits for resource queues rather than configuring cost-based limits. Even when using GPORCA, Greenplum Database may fall back to using the Postgres Planner for certain queries, so using cost-based limits can lead to unexpected results.
 
@@ -124,9 +124,7 @@ At runtime, the CPU share of active statements is determined by these priority s
 
 ![CPU share readjusted according to priority](graphics/gp_query_priority1.png "CPU share readjusted according to priority")
 
-**Note:**
-
-The percentages shown in these illustrations are approximate. CPU usage between high, low and maximum priority queues is not always calculated in precisely these proportions.
+> **Note** The percentages shown in these illustrations are approximate. CPU usage between high, low and maximum priority queues is not always calculated in precisely these proportions.
 
 When an executive query enters the group of running statements, CPU usage is adjusted to account for its maximum priority setting. It may be a simple query compared to the analyst and reporting queries, but until it is completed, it will claim the largest share of CPU.
 
@@ -178,7 +176,7 @@ Resource scheduling is enabled by default when you install Greenplum Database, a
 
         Actual CPU core utilization is based on the ability of Greenplum Database to parallelize a query and the resources required to run the query.
 
-        **Note:** Include any CPU core that is available to the operating system in the number of CPU cores, including virtual CPU cores.
+        > **Note** Include any CPU core that is available to the operating system in the number of CPU cores, including virtual CPU cores.
 
 4.  If you wish to view or change any of the resource management parameter values, you can use the `gpconfig` utility.
 5.  For example, to see the setting of a particular parameter:
@@ -262,7 +260,7 @@ To create the *executive* queue with maximum priority, an administrator would us
 
 When the query prioritization feature is enabled, resource queues are given a `MEDIUM` priority by default if not explicitly assigned. For more information on how priority settings are evaluated at runtime, see [How Priorities Work](#priorities).
 
-**Important:** In order for resource queue priority levels to be enforced on the active query workload, you must enable the query prioritization feature by setting the associated server configuration parameters. See [Configuring Resource Management](#topic9).
+> **Important** In order for resource queue priority levels to be enforced on the active query workload, you must enable the query prioritization feature by setting the associated server configuration parameters. See [Configuring Resource Management](#topic9).
 
 ## <a id="topic17"></a>Assigning Roles \(Users\) to a Resource Queue 
 
@@ -434,7 +432,7 @@ Use this output to identify the process id \(pid\) of the statement you want to 
 
 ```
 
-**Important:** Do not use the operating system `KILL` command.
+> **Important** Do not use the operating system `KILL` command.
 
 ### <a id="topic28"></a>Viewing the Priority of Active Statements 
 
@@ -454,5 +452,5 @@ To obtain the session ID and statement count parameters required by this functio
 -   The value of the `rqpcommand` column for the `statement_count` parameter
 -   The value of `rqppriority` column is the current priority. You can specify a string value of `MAX`, `HIGH`, `MEDIUM`, or `LOW` as the `priority`.
 
-**Note:** The `gp_adjust_priority()` function affects only the specified statement. Subsequent statements in the same resource queue are run using the queue's normally assigned priority.
+> **Note** The `gp_adjust_priority()` function affects only the specified statement. Subsequent statements in the same resource queue are run using the queue's normally assigned priority.
 

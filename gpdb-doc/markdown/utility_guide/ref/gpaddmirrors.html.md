@@ -23,7 +23,7 @@ gpaddmirrors --version
 
 The `gpaddmirrors` utility configures mirror segment instances for an existing Greenplum Database system that was initially configured with primary segment instances only. The utility will create the mirror instances and begin the online replication process between the primary and mirror segment instances. Once all mirrors are synchronized with their primaries, your Greenplum Database system is fully data redundant.
 
-**Important:** During the online replication process, Greenplum Database should be in a quiescent state, workloads and other queries should not be running.
+> **Important** During the online replication process, Greenplum Database should be in a quiescent state, workloads and other queries should not be running.
 
 By default, the utility will prompt you for the file system location\(s\) where it will create the mirror segment data directories. If you do not want to be prompted, you can pass in a file containing the file system locations using the `-m` option.
 
@@ -70,7 +70,7 @@ If you are creating mirrors on alternate mirror hosts, the new mirror segment ho
 
 You must make sure that the user who runs `gpaddmirrors` \(the `gpadmin` user\) has permissions to write to the data directory locations specified. You may want to create these directories on the segment hosts and `chown` them to the appropriate user before running `gpaddmirrors`.
 
-**Note:** This utility uses secure shell \(SSH\) connections between systems to perform its tasks. In large Greenplum Database deployments, cloud deployments, or deployments with a large number of segments per host, this utility may exceed the host's maximum threshold for unauthenticated connections. Consider updating the SSH `MaxStartups` configuration parameter to increase this threshold. For more information about SSH configuration options, refer to the SSH documentation for your Linux distribution.
+> **Note** This utility uses secure shell \(SSH\) connections between systems to perform its tasks. In large Greenplum Database deployments, cloud deployments, or deployments with a large number of segments per host, this utility may exceed the host's maximum threshold for unauthenticated connections. Consider updating the SSH `MaxStartups` configuration parameter to increase this threshold. For more information about SSH configuration options, refer to the SSH documentation for your Linux distribution.
 
 ## <a id="section4"></a>Options 
 

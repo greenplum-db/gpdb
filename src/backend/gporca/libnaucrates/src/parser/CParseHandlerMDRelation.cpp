@@ -46,7 +46,6 @@ CParseHandlerMDRelation::CParseHandlerMDRelation(
 	  m_convert_hash_to_random(false),
 	  m_partition_cols_array(nullptr),
 	  m_str_part_types_array(nullptr),
-	  m_num_of_partitions(0),
 	  m_key_sets_arrays(nullptr),
 	  m_part_constraint(nullptr),
 	  m_opfamilies_parse_handler(nullptr),
@@ -165,16 +164,6 @@ CParseHandlerMDRelation::StartElement(const XMLCh *const element_uri,
 				EdxltokenPartTypes, EdxltokenRelation);
 	}
 
-	const XMLCh *xmlszPartitions =
-		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenNumLeafPartitions));
-
-	if (nullptr != xmlszPartitions)
-	{
-		m_num_of_partitions = CDXLOperatorFactory::ConvertAttrValueToUlong(
-			m_parse_handler_mgr->GetDXLMemoryManager(), xmlszPartitions,
-			EdxltokenNumLeafPartitions, EdxltokenRelation);
-	}
-
 	// parse whether a hash distributed relation needs to be considered as random distributed
 	const XMLCh *xmlszConvertHashToRandom =
 		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenConvertHashToRandom));
@@ -270,9 +259,9 @@ CParseHandlerMDRelation::EndElement(const XMLCh *const,	 // element_uri,
 	m_imd_obj = GPOS_NEW(m_mp) CMDRelationGPDB(
 		m_mp, m_mdid, m_mdname, m_is_temp_table, m_rel_storage_type,
 		m_rel_distr_policy, md_col_array, m_distr_col_array, distr_opfamilies,
-		m_partition_cols_array, m_str_part_types_array, m_num_of_partitions,
-		child_partitions, m_convert_hash_to_random, m_key_sets_arrays,
-		md_index_info_array, mdid_check_constraint_array, m_part_constraint);
+		m_partition_cols_array, m_str_part_types_array, child_partitions,
+		m_convert_hash_to_random, m_key_sets_arrays, md_index_info_array,
+		mdid_check_constraint_array, m_part_constraint);
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();
@@ -335,11 +324,6 @@ CParseHandlerMDRelation::ParseRelationAttributes(const Attributes &attrs,
 		// construct an empty keyset
 		m_key_sets_arrays = GPOS_NEW(m_mp) ULongPtr2dArray(m_mp);
 	}
-
-	m_num_of_partitions = CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
-		m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
-		EdxltokenNumLeafPartitions, dxl_token_element, true /* optional */,
-		0 /* default value */);
 }
 
 //---------------------------------------------------------------------------

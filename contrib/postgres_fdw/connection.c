@@ -626,7 +626,8 @@ pgfdw_report_error(int elevel, PGresult *res, PGconn *conn,
 
 		ereport(elevel,
 				(errcode(sqlstate),
-				 message_primary ? errmsg_internal("%s", message_primary) :
+				 (message_primary != NULL && message_primary[0] != '\0') ?
+				 errmsg_internal("%s", message_primary) :
 				 errmsg("could not obtain message string for remote error"),
 				 message_detail ? errdetail_internal("%s", message_detail) : 0,
 				 message_hint ? errhint("%s", message_hint) : 0,
@@ -807,12 +808,14 @@ pgfdw_xact_callback(XactEvent event, void *arg)
 		entry->xact_depth = 0;
 
 		/*
-		 * If the connection isn't in a good idle state, discard it to
-		 * recover. Next GetConnection will open a new connection.
+		 * If the connection isn't in a good idle state or it is marked as
+		 * invalid, then discard it to recover. Next GetConnection will open a
+		 * new connection.
 		 */
 		if (PQstatus(entry->conn) != CONNECTION_OK ||
 			PQtransactionStatus(entry->conn) != PQTRANS_IDLE ||
-			entry->changing_xact_state)
+			entry->changing_xact_state ||
+			entry->invalidated)
 		{
 			elog(DEBUG3, "discarding connection %p", entry->conn);
 			disconnect_pg_server(entry);
@@ -936,9 +939,12 @@ pgfdw_subxact_callback(SubXactEvent event, SubTransactionId mySubid,
  * Connection invalidation callback function
  *
  * After a change to a pg_foreign_server or pg_user_mapping catalog entry,
- * mark connections depending on that entry as needing to be remade.
- * We can't immediately destroy them, since they might be in the midst of
- * a transaction, but we'll remake them at the next opportunity.
+ * close connections depending on that entry immediately if current transaction
+ * has not used those connections yet. Otherwise, mark those connections as
+ * invalid and then make pgfdw_xact_callback() close them at the end of current
+ * transaction, since they cannot be closed in the midst of the transaction
+ * using them. Closed connections will be remade at the next opportunity if
+ * necessary.
  *
  * Although most cache invalidation callbacks blow away all the related stuff
  * regardless of the given hashvalue, connections are expensive enough that
@@ -969,7 +975,21 @@ pgfdw_inval_callback(Datum arg, int cacheid, uint32 hashvalue)
 			 entry->server_hashvalue == hashvalue) ||
 			(cacheid == USERMAPPINGOID &&
 			 entry->mapping_hashvalue == hashvalue))
-			entry->invalidated = true;
+		{
+			/*
+			 * Close the connection immediately if it's not used yet in this
+			 * transaction. Otherwise mark it as invalid so that
+			 * pgfdw_xact_callback() can close it at the end of this
+			 * transaction.
+			 */
+			if (entry->xact_depth == 0)
+			{
+				elog(DEBUG3, "discarding connection %p", entry->conn);
+				disconnect_pg_server(entry);
+			}
+			else
+				entry->invalidated = true;
+		}
 	}
 }
 
@@ -1016,6 +1036,11 @@ pgfdw_reject_incomplete_xact_state_change(ConnCacheEntry *entry)
  * Cancel the currently-in-progress query (whose query text we do not have)
  * and ignore the result.  Returns true if we successfully cancel the query
  * and discard any pending result, and false if not.
+ *
+ * It's not a huge problem if we throw an ERROR here, but if we get into error
+ * recursion trouble, we'll end up slamming the connection shut, which will
+ * necessitate failing the entire toplevel transaction even if subtransactions
+ * were used.  Try to use WARNING where we can.
  */
 static bool
 pgfdw_cancel_query(PGconn *conn)
@@ -1063,6 +1088,11 @@ pgfdw_cancel_query(PGconn *conn)
  * If the query is executed successfully but returns an error, the return
  * value is true if and only if ignore_errors is set.  If the query can't be
  * sent or times out, the return value is false.
+ *
+ * It's not a huge problem if we throw an ERROR here, but if we get into error
+ * recursion trouble, we'll end up slamming the connection shut, which will
+ * necessitate failing the entire toplevel transaction even if subtransactions
+ * were used.  Try to use WARNING where we can.
  */
 static bool
 pgfdw_exec_cleanup_query(PGconn *conn, const char *query, bool ignore_errors)
@@ -1109,11 +1139,6 @@ pgfdw_exec_cleanup_query(PGconn *conn, const char *query, bool ignore_errors)
  * be a query that was initiated as part of transaction abort to get the remote
  * side back to the appropriate state.
  *
- * It's not a huge problem if we throw an ERROR here, but if we get into error
- * recursion trouble, we'll end up slamming the connection shut, which will
- * necessitate failing the entire toplevel transaction even if subtransactions
- * were used.  Try to use WARNING where we can.
- *
  * endtime is the time at which we should give up and assume the remote
  * side is dead.  Returns true if the timeout expired, otherwise false.
  * Sets *result except in case of a timeout.
@@ -1135,20 +1160,15 @@ pgfdw_get_cleanup_result(PGconn *conn, TimestampTz endtime, PGresult **result)
 			{
 				int			wc;
 				TimestampTz now = GetCurrentTimestamp();
-				long		secs;
-				int			microsecs;
 				long		cur_timeout;
 
 				/* If timeout has expired, give up, else get sleep time. */
-				if (now >= endtime)
+				cur_timeout = TimestampDifferenceMilliseconds(now, endtime);
+				if (cur_timeout <= 0)
 				{
 					timed_out = true;
 					goto exit;
 				}
-				TimestampDifference(now, endtime, &secs, &microsecs);
-
-				/* To protect against clock skew, limit sleep to one minute. */
-				cur_timeout = Min(60000, secs * USECS_PER_SEC + microsecs);
 
 				/* Sleep until there's something to do */
 				wc = WaitLatchOrSocket(MyLatch,

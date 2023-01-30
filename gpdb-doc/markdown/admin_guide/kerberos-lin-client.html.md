@@ -25,7 +25,7 @@ The following are requirements to connect to a Greenplum Database that is enable
 
 -   Kerberos must be installed and configured on the Greenplum Database coordinator host.
 
-    **Important:** Greenplum Database must be configured so that a remote user can connect to Greenplum Database with Kerberos authentication. Authorization to access Greenplum Database is controlled by the `pg_hba.conf` file. For details, see "Editing the pg\_hba.conf File" in the *Greenplum Database Administration Guide*, and also see the *Greenplum Database Security Configuration Guide*.
+    > **Important** Greenplum Database must be configured so that a remote user can connect to Greenplum Database with Kerberos authentication. Authorization to access Greenplum Database is controlled by the `pg_hba.conf` file. For details, see "Editing the pg\_hba.conf File" in the *Greenplum Database Administration Guide*, and also see the *Greenplum Database Security Configuration Guide*.
 
 -   The client system requires the Kerberos configuration file `krb5.conf` from the Greenplum Database coordinator.
 -   The client system requires a Kerberos keytab file that contains the authentication credentials for the Greenplum Database user that is used to log into the database.
@@ -40,7 +40,7 @@ The following are requirements to connect to a Greenplum Database that is enable
 
     -   krb5-libs
     -   krb5-workstation<br/>
-    **Note:** When you install the Kerberos packages, you can use other Kerberos utilities such as `klist` to display Kerberos ticket information.
+    > **Note** When you install the Kerberos packages, you can use other Kerberos utilities such as `klist` to display Kerberos ticket information.
 
 
 Java applications require this additional software:

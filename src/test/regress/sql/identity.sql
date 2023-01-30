@@ -191,7 +191,7 @@ INSERT INTO itest6 DEFAULT VALUES;
 INSERT INTO itest6 DEFAULT VALUES;
 SELECT * FROM itest6;
 
-SELECT table_name, column_name, is_identity, identity_generation FROM information_schema.columns WHERE table_name = 'itest6';
+SELECT table_name, column_name, is_identity, identity_generation FROM information_schema.columns WHERE table_name = 'itest6' ORDER BY 1, 2;
 
 ALTER TABLE itest6 ALTER COLUMN b SET INCREMENT BY 2;  -- fail, not identity
 
@@ -254,3 +254,12 @@ CREATE TABLE itest_child PARTITION OF itest_parent (
     f3 WITH OPTIONS GENERATED ALWAYS AS IDENTITY
 ) FOR VALUES FROM ('2016-07-01') TO ('2016-08-01'); -- error
 DROP TABLE itest_parent;
+
+-- Identity columns must be NOT NULL (cf bug #16913)
+
+CREATE TABLE itest15 (id integer GENERATED ALWAYS AS IDENTITY NULL); -- fail
+CREATE TABLE itest15 (id integer NULL GENERATED ALWAYS AS IDENTITY); -- fail
+CREATE TABLE itest15 (id integer GENERATED ALWAYS AS IDENTITY NOT NULL);
+DROP TABLE itest15;
+CREATE TABLE itest15 (id integer NOT NULL GENERATED ALWAYS AS IDENTITY);
+DROP TABLE itest15;

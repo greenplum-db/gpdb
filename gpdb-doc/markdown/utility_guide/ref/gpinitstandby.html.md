@@ -34,7 +34,7 @@ A backup, standby coordinator instance serves as a 'warm standby' in the event o
 
 The activated standby coordinator effectively becomes the Greenplum Database coordinator, accepting client connections on the coordinator port and performing normal coordinator operations such as SQL command processing and resource management.
 
-**Important:** If the `gpinitstandby` utility previously failed to initialize the standby coordinator, you must delete the files in the standby coordinator data directory before running `gpinitstandby` again. The standby coordinator data directory is not cleaned up after an initialization failure because it contains log files that can help in determining the reason for the failure.
+> **Important** If the `gpinitstandby` utility previously failed to initialize the standby coordinator, you must delete the files in the standby coordinator data directory before running `gpinitstandby` again. The standby coordinator data directory is not cleaned up after an initialization failure because it contains log files that can help in determining the reason for the failure.
 
 If an initialization failure occurs, a summary report file is generated in the standby host directory `/tmp`. The report file lists the directories on the standby host that require clean up.
 
@@ -94,7 +94,7 @@ Start an existing standby coordinator instance and synchronize the data with the
 gpinitstandby -n
 ```
 
-**Note:** Do not specify the -n and -s options in the same command.
+> **Note** Do not specify the -n and -s options in the same command.
 
 Add a standby coordinator instance to your Greenplum Database system specifying a different port:
 

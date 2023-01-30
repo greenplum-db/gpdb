@@ -88,6 +88,14 @@ struct block_t
 	char*		cdata;
 };
 
+typedef struct zstd_buffer zstd_buffer;
+struct zstd_buffer
+{
+	char	*buf;
+	int		size;
+	int		pos;	
+};
+
 /*  Get session id for this request */
 #define GET_SID(r)	((r->sid))
 
@@ -293,17 +301,23 @@ struct request_t
 		char*	dbuf;		/* buffer for raw data from a POST request */
 		int 	dbuftop; 	/* # bytes used in dbuf */
 		int 	dbufmax; 	/* size of dbuf[] */
+
+		char*  	wbuf;		/* data buf for decompressed data for writing into file,
+					         	its capacity equals to MAX_FRAME_SIZE. */
+		int 	wbuftop;	/* last index for decompressed data */
+		int 	woffset;		/* mark whether there is left data in compress ctx */
 	} in;
 
 	block_t	outblock;	/* next block to send out */
 	char*           line_delim_str;
 	int             line_delim_length;
 #ifdef USE_ZSTD
-	ZSTD_CCtx*		zstd_cctx;	/* zstd context */
+	ZSTD_CCtx*		zstd_cctx;	/* zstd compression context */
+	ZSTD_DCtx*		zstd_dctx;	/* zstd decompression context */
 #endif	
-	int				zstd;		/* request use zstd compress */
-	int				zstd_err_len; 	/* space allocate for zstd_error string */
-	char*				zstd_error;	/* string contains zstd error*/
+	int		zstd;			/* request use zstd compress */
+	int		zstd_err_len;	/* space allocate for zstd_error string */
+	char*		zstd_error;	/* string contains zstd error*/
 #ifdef USE_SSL
 	/* SSL related */
 	BIO			*io;		/* for the i.o. */
@@ -365,7 +379,10 @@ static int request_validate(request_t *r);
 static int request_set_path(request_t *r, const char* d, char* p, char* pp, char* path);
 static int request_path_validate(request_t *r, const char* path);
 #ifdef USE_ZSTD
-static int compress_zstd(const request_t *r, block_t *blk, int buflen);
+static int compress_zstd(const request_t *r, block_t* block, int buflen);
+static int decompress_data(request_t *r, zstd_buffer *in, zstd_buffer *out);
+static int decompress_zstd(request_t* r, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout);
+static int decompress_write_loop(request_t *r);
 #endif
 static int request_parse_gp_headers(request_t *r, int opt_g);
 static void free_session_cb(int fd, short event, void* arg);
@@ -3043,6 +3060,47 @@ static void handle_get_request(request_t *r)
 	}
 }
 
+static
+int check_output_to_file(request_t *r, int wrote)
+{
+	session_t *session = r->session;
+	char *buf;
+	int *buftop;
+	if (r->zstd) 
+	{
+		buf = r->in.wbuf;
+		buftop = &r->in.wbuftop;
+	}
+	else
+	{
+		buf = r->in.dbuf;
+		buftop = &r->in.dbuftop;
+	}
+
+	if (wrote == -1)
+	{
+		/* write error */
+		gwarning(r, "handle_post_request, write error: %s", fstream_get_error(session->fstream));
+		http_error(r, FDIST_INTERNAL_ERROR, fstream_get_error(session->fstream));
+		request_end(r, 1, 0);
+		return -1;
+	}
+	else if(wrote == *buftop)
+	{
+		/* wrote the whole buffer. clean it for next round */
+		*buftop = 0;
+	}
+	else
+	{
+		/* wrote up to last line, some data left over in buffer. move to front */
+		int bytes_left_over = *buftop - wrote;
+
+		memmove(buf, buf + wrote, bytes_left_over);
+		*buftop = bytes_left_over;
+	}	
+	return 0;
+}
+
 static void handle_post_request(request_t *r, int header_end)
 {
 	int h_count = r->in.req->hc;
@@ -3139,7 +3197,10 @@ static void handle_post_request(request_t *r, int header_end)
 	/* create a buffer to hold the incoming raw data */
 	r->in.dbufmax = opt.m; /* size of max line size */
 	r->in.dbuftop = 0;
+	r->in.wbuftop = 0;
 	r->in.dbuf = palloc_safe(r, r->pool, r->in.dbufmax, "out of memory when allocating r->in.dbuf: %d bytes", r->in.dbufmax);
+	if(r->zstd)  
+		r->in.wbuf = palloc_safe(r, r->pool, MAX_FRAME_SIZE, "out of memory when allocating r->in.wbuf: %d bytes", MAX_FRAME_SIZE);
 
 	/* if some data come along with the request, copy it first */
 	data_start = strstr(r->in.hbuf, "\r\n\r\n");
@@ -3153,21 +3214,35 @@ static void handle_post_request(request_t *r, int header_end)
 	{
 		/* we have data after the request headers. consume it */
 		/* should make sure r->in.dbuftop + data_bytes_in_req <  r->in.dbufmax */
+		
 		memcpy(r->in.dbuf, data_start, data_bytes_in_req);
 		r->in.dbuftop += data_bytes_in_req;
+
+
 		r->in.davailable -= data_bytes_in_req;
 
 		/* only write it out if no more data is expected */
 		if(r->in.davailable == 0)
 		{
-			wrote = fstream_write(session->fstream, r->in.dbuf, data_bytes_in_req, 1, r->line_delim_str, r->line_delim_length);
-			delay_watchdog_timer();
-			if(wrote == -1)
+#ifdef USE_ZSTD
+			if(r->zstd)
 			{
-				/* write error */
-				http_error(r, FDIST_INTERNAL_ERROR, fstream_get_error(session->fstream));
-				request_end(r, 1, 0);
-				return;
+				wrote = decompress_write_loop(r);
+				if (wrote == -1)
+					return;
+			}
+			else
+#endif
+			{
+				wrote = fstream_write(session->fstream, r->in.dbuf, data_bytes_in_req, 1, r->line_delim_str, r->line_delim_length);
+				delay_watchdog_timer();
+				if (wrote == -1)
+				{
+					/* write error */
+					http_error(r, FDIST_INTERNAL_ERROR, fstream_get_error(session->fstream));
+					request_end(r, 1, 0);
+					return;
+				}
 			}
 		}
 	}
@@ -3179,7 +3254,7 @@ static void handle_post_request(request_t *r, int header_end)
 	while(r->in.davailable > 0)
 	{
 		size_t want;
-		ssize_t n;
+		ssize_t n = 0;
 		size_t buf_space_left = r->in.dbufmax - r->in.dbuftop;
 
 		if (r->in.davailable > buf_space_left)
@@ -3223,36 +3298,33 @@ static void handle_post_request(request_t *r, int header_end)
 			r->in.davailable -= n;
 			r->in.dbuftop += n;
 
+			/* success is a flag to check whether data is written into file successfully.
+			 * There is no need to do anything when success is less than 0, since all
+			 * error handling has been done in 'check_output_to_file' function.
+			 */
+			int success = 0;
+
 			/* if filled our buffer or no more data expected, write it */
 			if (r->in.dbufmax == r->in.dbuftop || r->in.davailable == 0)
 			{
+#ifdef USE_ZSTD
 				/* only write up to end of last row */
-				wrote = fstream_write(session->fstream, r->in.dbuf, r->in.dbuftop, 1, r->line_delim_str, r->line_delim_length);
-				gdebug(r, "wrote %d bytes to file", wrote);
-				delay_watchdog_timer();
-
-				if (wrote == -1)
+				if(r->zstd) 
 				{
-					/* write error */
-					gwarning(r, "handle_post_request, write error: %s", fstream_get_error(session->fstream));
-					http_error(r, FDIST_INTERNAL_ERROR, fstream_get_error(session->fstream));
-					request_end(r, 1, 0);
-					return;
-				}
-				else if(wrote == r->in.dbuftop)
-				{
-					/* wrote the whole buffer. clean it for next round */
-					r->in.dbuftop = 0;
+					success = decompress_write_loop(r);
 				}
 				else
+#endif
 				{
-					/* wrote up to last line, some data left over in buffer. move to front */
-					int bytes_left_over = r->in.dbuftop - wrote;
+					wrote = fstream_write(session->fstream, r->in.dbuf, r->in.dbuftop, 1, r->line_delim_str, r->line_delim_length);
+					gdebug(r, "wrote %d bytes to file", wrote);
+					delay_watchdog_timer();
 
-					memmove(r->in.dbuf, r->in.dbuf + wrote, bytes_left_over);
-					r->in.dbuftop = bytes_left_over;
+					success = check_output_to_file(r, wrote);
 				}
 			}
+			if (success < 0)
+				return;
 		}
 
 	}
@@ -3489,6 +3561,9 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 #ifdef USE_ZSTD
 	if (r->zstd)
 	{
+		if (!r->is_get)
+			r->zstd_dctx = ZSTD_createDCtx();
+
 		OUT_BUFFER_SIZE = ZSTD_CStreamOutSize();
 		r->zstd_err_len = 1024;
 		r->outblock.cdata = palloc_safe(r, r->pool, opt.m, "out of memory when allocating buffer for compressed data: %d bytes", opt.m);
@@ -4488,6 +4563,10 @@ static void request_cleanup(request_t *r)
 	{
 		ZSTD_freeCCtx(r->zstd_cctx);
 	}
+	if ( r->zstd && !r->is_get )
+	{
+		ZSTD_freeDCtx(r->zstd_dctx);
+	}
 #endif
 }
 
@@ -4597,6 +4676,7 @@ static void delay_watchdog_timer()
 		shutdown_time = apr_time_now() + gcb.wdtimer * APR_USEC_PER_SEC;
 	}
 }
+
 #else
 static void delay_watchdog_timer()
 {
@@ -4604,6 +4684,96 @@ static void delay_watchdog_timer()
 #endif
 
 #ifdef USE_ZSTD
+
+/* decompress the data and write data to the file.
+ * Finally, the function will check the write result,
+ * and change the related value about data buffer. 
+ */
+static 
+int decompress_write_loop(request_t *r)
+{
+	session_t *session = r->session;
+	int wrote_total = 0;
+	do
+	{
+		int offset = 0;
+		if (r->in.woffset)
+			offset = r->in.woffset;
+
+		zstd_buffer in = {r->in.dbuf, r->in.dbuftop, offset};
+		zstd_buffer out = {r->in.wbuf + r->in.wbuftop, MAX_FRAME_SIZE - r->in.wbuftop, 0};
+
+		int res = decompress_data(r, &in, &out);
+
+		if (res < 0) 
+		{
+			http_error(r, FDIST_INTERNAL_ERROR, r->zstd_error);
+			request_end(r, 1, 0);
+			return res;
+		}
+
+		int wrote = fstream_write(session->fstream, r->in.wbuf, r->in.wbuftop, 0, r->line_delim_str, r->line_delim_length);
+		wrote_total += wrote;
+		gdebug(r, "wrote %d bytes to file", wrote);
+		delay_watchdog_timer();
+
+		res = check_output_to_file(r, wrote);
+		if (res < 0)
+		{
+			return -1;
+		}
+
+	} while(r->in.woffset);
+	return wrote_total;
+}
+
+static int decompress_zstd(request_t* r, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout)
+{	
+	int ret;
+	/* The return code is zero if the frame is complete, but there may
+		* be multiple frames concatenated together. Zstd will automatically
+		* reset the context when a frame is complete. Still, calling
+		* ZSTD_DCtx_reset() can be useful to reset the context to a clean
+		* state, for instance if the last decompression call returned an
+		* error.
+		*/
+		 
+	ret = ZSTD_decompressStream(r->zstd_dctx, bout, bin);
+	size_t const err = ret;                          
+	if(ZSTD_isError(err)){
+		snprintf(r->zstd_error, r->zstd_err_len, "zstd decompression error, error is %s", ZSTD_getErrorName(err));
+		gwarning(NULL, "%s", r->zstd_error);
+		return -1;
+	}
+	return bout->pos;
+}
+
+static int decompress_data(request_t* r, zstd_buffer *in, zstd_buffer *out){
+	ZSTD_inBuffer inbuf = {in->buf , in->size, in->pos};
+	ZSTD_outBuffer obuf = {out->buf, out->size, out->pos};
+	
+	if(!r->zstd_dctx) {
+		gwarning(stderr, "%s", "Out of memory when ZSTD_createDCtx");
+		return -1;
+	}
+
+	int outSize = decompress_zstd(r, &inbuf, &obuf);
+	if(outSize < 0){
+		return outSize;
+	}
+
+	r->in.wbuftop += outSize;
+	if (inbuf.pos == inbuf.size) 
+	{
+		r->in.woffset = 0;
+	}
+	else
+	{
+		r->in.woffset = inbuf.pos;
+	}
+	gdebug(NULL, "decompress_zstd finished, input size = %d, output size = %d.", r->in.wbuftop, r->in.dbuftop);
+	return outSize;
+}
 /*
  * compress_zstd
  * It is for compress data in buffer. Return is the length of data after compression.
@@ -4659,6 +4829,8 @@ static int compress_zstd(const request_t *r, block_t *blk, int buflen)
 		return -1;
 	}
 	offset += output.pos;
+
+	gdebug(NULL, "compress_zstd finished, input size = %d, output size = %d.", buflen, offset);
 
 	return offset;
 }

@@ -92,6 +92,8 @@ extern TimeTzADT *GetSQLCurrentTime(int32 typmod);
 extern TimeADT GetSQLLocalTime(int32 typmod);
 extern int	time2tm(TimeADT time, struct pg_tm *tm, fsec_t *fsec);
 extern int	timetz2tm(TimeTzADT *time, struct pg_tm *tm, fsec_t *fsec, int *tzp);
+extern bool time_overflows(int hour, int min, int sec, fsec_t fsec);
+extern bool float_time_overflows(int hour, int min, double sec);
 
 extern float8 time_li_fraction(TimeADT x, TimeADT x0, TimeADT x1,
 							   bool *eq_bounds, bool *eq_abscissas);

@@ -21,7 +21,7 @@ Some settings specify a memory size or time value. Each of these has an implicit
 SET statement_mem TO '200MB';
 ```
 
-**Note:** There is no space between the value and the unit names.
+> **Note** There is no space between the value and the unit names.
 
 ## <a id="topic_cyz_p2l_z4"></a>Setting Parameters 
 

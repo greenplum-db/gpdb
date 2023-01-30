@@ -167,6 +167,24 @@ bool		criticalSharedRelcachesBuilt = false;
 static long relcacheInvalsReceived = 0L;
 
 /*
+ * in_progress_list is a stack of ongoing RelationBuildDesc() calls.  CREATE
+ * INDEX CONCURRENTLY makes catalog changes under ShareUpdateExclusiveLock.
+ * It critically relies on each backend absorbing those changes no later than
+ * next transaction start.  Hence, RelationBuildDesc() loops until it finishes
+ * without accepting a relevant invalidation.  (Most invalidation consumers
+ * don't do this.)
+ */
+typedef struct inprogressent
+{
+	Oid			reloid;			/* OID of relation being built */
+	bool		invalidated;	/* whether an invalidation arrived for it */
+} InProgressEnt;
+
+static InProgressEnt *in_progress_list;
+static int	in_progress_list_len;
+static int	in_progress_list_maxlen;
+
+/*
  * eoxact_list[] stores the OIDs of relations that (might) need AtEOXact
  * cleanup work.  This list intentionally has limited size; if it overflows,
  * we fall back to scanning the whole hashtable.  There is no value in a very
@@ -333,7 +351,7 @@ ScanPgRelation(Oid targetRelId, bool indexOK, bool force_non_historic)
 	Relation	pg_class_desc;
 	SysScanDesc pg_class_scan;
 	ScanKeyData key[1];
-	Snapshot	snapshot;
+	Snapshot	snapshot = NULL;
 
 	/*
 	 * If something goes wrong during backend startup, we might find ourselves
@@ -363,14 +381,14 @@ ScanPgRelation(Oid targetRelId, bool indexOK, bool force_non_historic)
 	/*
 	 * The caller might need a tuple that's newer than the one the historic
 	 * snapshot; currently the only case requiring to do so is looking up the
-	 * relfilenode of non mapped system relations during decoding.
+	 * relfilenode of non mapped system relations during decoding. That
+	 * snapshot cant't change in the midst of a relcache build, so there's no
+	 * need to register the snapshot.
 	 */
 	if (force_non_historic)
 		snapshot = GetNonHistoricCatalogSnapshot(
 			RelationRelationId,
 			DistributedTransactionContext);
-	else
-		snapshot = GetCatalogSnapshot(RelationRelationId);
 
 	pg_class_scan = systable_beginscan(pg_class_desc, ClassOidIndexId,
 									   indexOK && criticalRelcachesBuilt,
@@ -570,6 +588,7 @@ RelationBuildTupleDesc(Relation relation)
 	{
 		Form_pg_attribute attp;
 		int			attnum;
+		bool        atthasmissing;
 
 		attp = (Form_pg_attribute) GETSTRUCT(pg_attribute_tuple);
 
@@ -582,6 +601,22 @@ RelationBuildTupleDesc(Relation relation)
 		memcpy(TupleDescAttr(relation->rd_att, attnum - 1),
 			   attp,
 			   ATTRIBUTE_FIXED_PART_SIZE);
+
+		/*
+		 * Fix atthasmissing flag - it's only for plain tables. Others
+		 * should not have missing values set, but there may be some left from
+		 * before when we placed that check, so this code defensively ignores
+		 * such values.
+		 */
+		atthasmissing = attp->atthasmissing;
+		if (relation->rd_rel->relkind != RELKIND_RELATION && atthasmissing)
+		{
+			Form_pg_attribute nattp;
+
+			atthasmissing = false;
+			nattp = TupleDescAttr(relation->rd_att, attnum - 1);
+			nattp->atthasmissing = false;
+		}
 
 		/* Update constraint/default info */
 		if (attp->attnotnull)
@@ -604,7 +639,7 @@ RelationBuildTupleDesc(Relation relation)
 		}
 
 		/* Likewise for a missing value */
-		if (attp->atthasmissing)
+		if (atthasmissing)
 		{
 			Datum		missingval;
 			bool		missingNull;
@@ -1043,6 +1078,7 @@ equalRSDesc(RowSecurityDesc *rsdesc1, RowSecurityDesc *rsdesc2)
 static Relation
 RelationBuildDesc(Oid targetRelId, bool insertIt)
 {
+	int			in_progress_offset;
 	Relation	relation;
 	Oid			relid;
 	HeapTuple	pg_class_tuple;
@@ -1070,6 +1106,21 @@ RelationBuildDesc(Oid targetRelId, bool insertIt)
 	oldcxt = MemoryContextSwitchTo(tmpcxt);
 #endif
 
+	/* Register to catch invalidation messages */
+	if (in_progress_list_len >= in_progress_list_maxlen)
+	{
+		int			allocsize;
+
+		allocsize = in_progress_list_maxlen * 2;
+		in_progress_list = repalloc(in_progress_list,
+									allocsize * sizeof(*in_progress_list));
+		in_progress_list_maxlen = allocsize;
+	}
+	in_progress_offset = in_progress_list_len++;
+	in_progress_list[in_progress_offset].reloid = targetRelId;
+retry:
+	in_progress_list[in_progress_offset].invalidated = false;
+
 	/*
 	 * find the tuple in pg_class corresponding to the given relation id
 	 */
@@ -1085,6 +1136,8 @@ RelationBuildDesc(Oid targetRelId, bool insertIt)
 		MemoryContextSwitchTo(oldcxt);
 		MemoryContextDelete(tmpcxt);
 #endif
+		Assert(in_progress_offset + 1 == in_progress_list_len);
+		in_progress_list_len--;
 		return NULL;
 	}
 
@@ -1278,6 +1331,21 @@ RelationBuildDesc(Oid targetRelId, bool insertIt)
 	 * now we can free the memory allocated for pg_class_tuple
 	 */
 	heap_freetuple(pg_class_tuple);
+
+	/*
+	 * If an invalidation arrived mid-build, start over.  Between here and the
+	 * end of this function, don't add code that does or reasonably could read
+	 * system catalogs.  That range must be free from invalidation processing
+	 * for the !insertIt case.  For the insertIt case, RelationCacheInsert()
+	 * will enroll this relation in ordinary relcache invalidation processing,
+	 */
+	if (in_progress_list[in_progress_offset].invalidated)
+	{
+		RelationDestroyRelation(relation, false);
+		goto retry;
+	}
+	Assert(in_progress_offset + 1 == in_progress_list_len);
+	in_progress_list_len--;
 
 	/*
 	 * Insert newly created relation into relcache hash table, if requested.
@@ -1640,15 +1708,15 @@ LookupOpclassInfo(Oid operatorClassOid,
 		/* First time through: initialize the opclass cache */
 		HASHCTL		ctl;
 
+		/* Also make sure CacheMemoryContext exists */
+		if (!CacheMemoryContext)
+			CreateCacheMemoryContext();
+
 		MemSet(&ctl, 0, sizeof(ctl));
 		ctl.keysize = sizeof(Oid);
 		ctl.entrysize = sizeof(OpClassCacheEnt);
 		OpClassCache = hash_create("Operator class cache", 64,
 								   &ctl, HASH_ELEM | HASH_BLOBS);
-
-		/* Also make sure CacheMemoryContext exists */
-		if (!CacheMemoryContext)
-			CreateCacheMemoryContext();
 	}
 
 	opcentry = (OpClassCacheEnt *) hash_search(OpClassCache,
@@ -1657,16 +1725,10 @@ LookupOpclassInfo(Oid operatorClassOid,
 
 	if (!found)
 	{
-		/* Need to allocate memory for new entry */
+		/* Initialize new entry */
 		opcentry->valid = false;	/* until known OK */
 		opcentry->numSupport = numSupport;
-
-		if (numSupport > 0)
-			opcentry->supportProcs = (RegProcedure *)
-				MemoryContextAllocZero(CacheMemoryContext,
-									   numSupport * sizeof(RegProcedure));
-		else
-			opcentry->supportProcs = NULL;
+		opcentry->supportProcs = NULL;	/* filled below */
 	}
 	else
 	{
@@ -1674,13 +1736,15 @@ LookupOpclassInfo(Oid operatorClassOid,
 	}
 
 	/*
-	 * When testing for cache-flush hazards, we intentionally disable the
-	 * operator class cache and force reloading of the info on each call. This
-	 * is helpful because we want to test the case where a cache flush occurs
-	 * while we are loading the info, and it's very hard to provoke that if
-	 * this happens only once per opclass per backend.
+	 * When aggressively testing cache-flush hazards, we disable the operator
+	 * class cache and force reloading of the info on each call.  This models
+	 * no real-world behavior, since the cache entries are never invalidated
+	 * otherwise.  However it can be helpful for detecting bugs in the cache
+	 * loading logic itself, such as reliance on a non-nailed index.  Given
+	 * the limited use-case and the fact that this adds a great deal of
+	 * expense, we enable it only in CLOBBER_CACHE_RECURSIVELY mode.
 	 */
-#if defined(CLOBBER_CACHE_ALWAYS)
+#if defined(CLOBBER_CACHE_RECURSIVELY)
 	opcentry->valid = false;
 #endif
 
@@ -1688,8 +1752,15 @@ LookupOpclassInfo(Oid operatorClassOid,
 		return opcentry;
 
 	/*
-	 * Need to fill in new entry.
-	 *
+	 * Need to fill in new entry.  First allocate space, unless we already did
+	 * so in some previous attempt.
+	 */
+	if (opcentry->supportProcs == NULL && numSupport > 0)
+		opcentry->supportProcs = (RegProcedure *)
+			MemoryContextAllocZero(CacheMemoryContext,
+								   numSupport * sizeof(RegProcedure));
+
+	/*
 	 * To avoid infinite recursion during startup, force heap scans if we're
 	 * looking up info for the opclasses used by the indexes we would like to
 	 * reference here.
@@ -2416,6 +2487,7 @@ RelationDestroyRelation(Relation relation, bool remember_tupdesc)
 	FreeTriggerDesc(relation->trigdesc);
 	list_free_deep(relation->rd_fkeylist);
 	list_free(relation->rd_indexlist);
+	list_free(relation->rd_statlist);
 	bms_free(relation->rd_indexattr);
 	bms_free(relation->rd_keyattr);
 	bms_free(relation->rd_pkattr);
@@ -2426,6 +2498,10 @@ RelationDestroyRelation(Relation relation, bool remember_tupdesc)
 		pfree(relation->rd_options);
 	if (relation->rd_indextuple)
 		pfree(relation->rd_indextuple);
+	if (relation->rd_amcache)
+		pfree(relation->rd_amcache);
+	if (relation->rd_fdwroutine)
+		pfree(relation->rd_fdwroutine);
 	if (relation->rd_indexcxt)
 		MemoryContextDelete(relation->rd_indexcxt);
 	if (relation->rd_rulescxt)
@@ -2438,8 +2514,6 @@ RelationDestroyRelation(Relation relation, bool remember_tupdesc)
 		MemoryContextDelete(relation->rd_pdcxt);
 	if (relation->rd_partcheckcxt)
 		MemoryContextDelete(relation->rd_partcheckcxt);
-	if (relation->rd_fdwroutine)
-		pfree(relation->rd_fdwroutine);
 	if (relation->rd_cdbpolicy)
 		pfree(relation->rd_cdbpolicy);
 
@@ -2486,6 +2560,11 @@ RelationClearRelation(Relation relation, bool rebuild)
 	 * truncation.
 	 */
 	RelationCloseSmgr(relation);
+
+	/* Free AM cached data, if any */
+	if (relation->rd_amcache)
+		pfree(relation->rd_amcache);
+	relation->rd_amcache = NULL;
 
 	/*
 	 * Treat nailed-in system relations separately, they always need to be
@@ -2606,6 +2685,14 @@ RelationClearRelation(Relation relation, bool rebuild)
 
 		/* Build temporary entry, but don't link it into hashtable */
 		newrel = RelationBuildDesc(save_relid, false);
+
+		/*
+		 * Between here and the end of the swap, don't add code that does or
+		 * reasonably could read system catalogs.  That range must be free
+		 * from invalidation processing.  See RelationBuildDesc() manipulation
+		 * of in_progress_list.
+		 */
+
 		if (newrel == NULL)
 		{
 			/*
@@ -2821,6 +2908,14 @@ RelationCacheInvalidateEntry(Oid relationId)
 		relcacheInvalsReceived++;
 		RelationFlushRelation(relation);
 	}
+	else
+	{
+		int			i;
+
+		for (i = 0; i < in_progress_list_len; i++)
+			if (in_progress_list[i].reloid == relationId)
+				in_progress_list[i].invalidated = true;
+	}
 }
 
 /*
@@ -2852,9 +2947,14 @@ RelationCacheInvalidateEntry(Oid relationId)
  *	 second pass processes nailed-in-cache items before other nondeletable
  *	 items.  This should ensure that system catalogs are up to date before
  *	 we attempt to use them to reload information about other open relations.
+ *
+ *	 After those two phases of work having immediate effects, we normally
+ *	 signal any RelationBuildDesc() on the stack to start over.  However, we
+ *	 don't do this if called as part of debug_discard_caches.  Otherwise,
+ *	 RelationBuildDesc() would become an infinite loop.
  */
 void
-RelationCacheInvalidate(void)
+RelationCacheInvalidate(bool debug_discard)
 {
 	HASH_SEQ_STATUS status;
 	RelIdCacheEnt *idhentry;
@@ -2862,6 +2962,7 @@ RelationCacheInvalidate(void)
 	List	   *rebuildFirstList = NIL;
 	List	   *rebuildList = NIL;
 	ListCell   *l;
+	int			i;
 
 	/*
 	 * Reload relation mapping data before starting to reconstruct cache.
@@ -2948,6 +3049,11 @@ RelationCacheInvalidate(void)
 		RelationClearRelation(relation, true);
 	}
 	list_free(rebuildList);
+
+	if (!debug_discard)
+		/* Any RelationBuildDesc() on the stack must start over. */
+		for (i = 0; i < in_progress_list_len; i++)
+			in_progress_list[i].invalidated = true;
 }
 
 /*
@@ -3019,6 +3125,13 @@ AtEOXact_RelationCache(bool isCommit)
 	HASH_SEQ_STATUS status;
 	RelIdCacheEnt *idhentry;
 	int			i;
+
+	/*
+	 * Forget in_progress_list.  This is relevant when we're aborting due to
+	 * an error during RelationBuildDesc().
+	 */
+	Assert(in_progress_list_len == 0 || !isCommit);
+	in_progress_list_len = 0;
 
 	/*
 	 * Unless the eoxact_list[] overflowed, we only need to examine the rels
@@ -3124,10 +3237,7 @@ AtEOXact_cleanup(Relation relation, bool isCommit)
 	 *
 	 * During commit, reset the flag to zero, since we are now out of the
 	 * creating transaction.  During abort, simply delete the relcache entry
-	 * --- it isn't interesting any longer.  (NOTE: if we have forgotten the
-	 * new-ness of a new relation due to a forced cache flush, the entry will
-	 * get deleted anyway by shared-cache-inval processing of the aborted
-	 * pg_class insertion.)
+	 * --- it isn't interesting any longer.
 	 */
 	if (relation->rd_createSubid != InvalidSubTransactionId)
 	{
@@ -3174,6 +3284,14 @@ AtEOSubXact_RelationCache(bool isCommit, SubTransactionId mySubid,
 	HASH_SEQ_STATUS status;
 	RelIdCacheEnt *idhentry;
 	int			i;
+
+	/*
+	 * Forget in_progress_list.  This is relevant when we're aborting due to
+	 * an error during RelationBuildDesc().  We don't commit subtransactions
+	 * during RelationBuildDesc().
+	 */
+	Assert(in_progress_list_len == 0 || !isCommit);
+	in_progress_list_len = 0;
 
 	/*
 	 * Unless the eoxact_list[] overflowed, we only need to examine the rels
@@ -3492,6 +3610,13 @@ RelationBuildLocalRelation(const char *relname,
 
 	rel->rd_rel->relam = accessmtd;
 
+	/*
+	 * RelationInitTableAccessMethod will do syscache lookups, so we mustn't
+	 * run it in CacheMemoryContext.  Fortunately, the remaining steps don't
+	 * require a long-lived current context.
+	 */
+	MemoryContextSwitchTo(oldcxt);
+
 	if (relkind == RELKIND_RELATION ||
 		relkind == RELKIND_SEQUENCE ||
 		relkind == RELKIND_TOASTVALUE ||
@@ -3519,11 +3644,6 @@ RelationBuildLocalRelation(const char *relname,
 	 * can't do this before storing relid in it.
 	 */
 	EOXactListAdd(rel);
-
-	/*
-	 * done building relcache entry.
-	 */
-	MemoryContextSwitchTo(oldcxt);
 
 	/* It's fully valid */
 	rel->rd_isvalid = true;
@@ -3726,6 +3846,7 @@ void
 RelationCacheInitialize(void)
 {
 	HASHCTL		ctl;
+	int			allocsize;
 
 	/*
 	 * make sure cache memory context exists
@@ -3741,6 +3862,15 @@ RelationCacheInitialize(void)
 	ctl.entrysize = sizeof(RelIdCacheEnt);
 	RelationIdCache = hash_create("Relcache by OID", INITRELCACHESIZE,
 								  &ctl, HASH_ELEM | HASH_BLOBS);
+
+	/*
+	 * reserve enough in_progress_list slots for many cases
+	 */
+	allocsize = 4;
+	in_progress_list =
+		MemoryContextAlloc(CacheMemoryContext,
+						   allocsize * sizeof(*in_progress_list));
+	in_progress_list_maxlen = allocsize;
 
 	/*
 	 * relation mapper needs to be initialized too
@@ -4839,6 +4969,57 @@ RelationGetIndexExpressions(Relation relation)
 	oldcxt = MemoryContextSwitchTo(relation->rd_indexcxt);
 	relation->rd_indexprs = copyObject(result);
 	MemoryContextSwitchTo(oldcxt);
+
+	return result;
+}
+
+/*
+ * RelationGetDummyIndexExpressions -- get dummy expressions for an index
+ *
+ * Return a list of dummy expressions (just Const nodes) with the same
+ * types/typmods/collations as the index's real expressions.  This is
+ * useful in situations where we don't want to run any user-defined code.
+ */
+List *
+RelationGetDummyIndexExpressions(Relation relation)
+{
+	List	   *result;
+	Datum		exprsDatum;
+	bool		isnull;
+	char	   *exprsString;
+	List	   *rawExprs;
+	ListCell   *lc;
+
+	/* Quick exit if there is nothing to do. */
+	if (relation->rd_indextuple == NULL ||
+		heap_attisnull(relation->rd_indextuple, Anum_pg_index_indexprs, NULL))
+		return NIL;
+
+	/* Extract raw node tree(s) from index tuple. */
+	exprsDatum = heap_getattr(relation->rd_indextuple,
+							  Anum_pg_index_indexprs,
+							  GetPgIndexDescriptor(),
+							  &isnull);
+	Assert(!isnull);
+	exprsString = TextDatumGetCString(exprsDatum);
+	rawExprs = (List *) stringToNode(exprsString);
+	pfree(exprsString);
+
+	/* Construct null Consts; the typlen and typbyval are arbitrary. */
+	result = NIL;
+	foreach(lc, rawExprs)
+	{
+		Node	   *rawExpr = (Node *) lfirst(lc);
+
+		result = lappend(result,
+						 makeConst(exprType(rawExpr),
+								   exprTypmod(rawExpr),
+								   exprCollation(rawExpr),
+								   1,
+								   (Datum) 0,
+								   true,
+								   true));
+	}
 
 	return result;
 }
@@ -6100,7 +6281,7 @@ write_item(const void *data, Size len, FILE *fp)
 {
 	if (fwrite(&len, 1, sizeof(len), fp) != sizeof(len))
 		elog(FATAL, "could not write init file");
-	if (fwrite(data, 1, len, fp) != len)
+	if (len > 0 && fwrite(data, 1, len, fp) != len)
 		elog(FATAL, "could not write init file");
 }
 
@@ -6130,48 +6311,6 @@ RelationIdIsInInitFile(Oid relationId)
 		return true;
 	}
 	return RelationSupportsSysCache(relationId);
-}
-
-/*
- * Tells whether any index for the relation is unlogged.
- *
- * Note: There doesn't seem to be any way to have an unlogged index attached
- * to a permanent table, but it seems best to keep this general so that it
- * returns sensible results even when they seem obvious (like for an unlogged
- * table) and to handle possible future unlogged indexes on permanent tables.
- */
-bool
-RelationHasUnloggedIndex(Relation rel)
-{
-	List	   *indexoidlist;
-	ListCell   *indexoidscan;
-	bool		result = false;
-
-	indexoidlist = RelationGetIndexList(rel);
-
-	foreach(indexoidscan, indexoidlist)
-	{
-		Oid			indexoid = lfirst_oid(indexoidscan);
-		HeapTuple	tp;
-		Form_pg_class reltup;
-
-		tp = SearchSysCache1(RELOID, ObjectIdGetDatum(indexoid));
-		if (!HeapTupleIsValid(tp))
-			elog(ERROR, "cache lookup failed for relation %u", indexoid);
-		reltup = (Form_pg_class) GETSTRUCT(tp);
-
-		if (reltup->relpersistence == RELPERSISTENCE_UNLOGGED)
-			result = true;
-
-		ReleaseSysCache(tp);
-
-		if (result == true)
-			break;
-	}
-
-	list_free(indexoidlist);
-
-	return result;
 }
 
 /*

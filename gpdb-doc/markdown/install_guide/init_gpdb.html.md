@@ -48,7 +48,7 @@ The [gpinitsystem](../utility_guide/ref/gpinitsystem.html) utility requires a ho
 
 This file should only contain segment host addresses \(not the coordinator or standby coordinator\). For segment machines with multiple, unbonded network interfaces, this file should list the host address names for each interface — one per line.
 
-**Note:** The Greenplum Database segment host naming convention is sdwN where sdw is a prefix and N is an integer. For example, `sdw2` and so on. If hosts have multiple unbonded NICs, the convention is to append a dash \(`-`\) and number to the host name. For example, `sdw1-1` and `sdw1-2` are the two interface names for host `sdw1`. However, NIC bonding is recommended to create a load-balanced, fault-tolerant network.
+> **Note** The Greenplum Database segment host naming convention is sdwN where sdw is a prefix and N is an integer. For example, `sdw2` and so on. If hosts have multiple unbonded NICs, the convention is to append a dash \(`-`\) and number to the host name. For example, `sdw1-1` and `sdw1-2` are the two interface names for host `sdw1`. However, NIC bonding is recommended to create a load-balanced, fault-tolerant network.
 
 #### <a id="jm138608"></a>To create the initialization host file 
 
@@ -67,7 +67,7 @@ This file should only contain segment host addresses \(not the coordinator or st
 
 2.  Save and close the file.
 
-**Note:** If you are not sure of the host names and/or interface address names used by your machines, look in the `/etc/hosts` file.
+> **Note** If you are not sure of the host names and/or interface address names used by your machines, look in the `/etc/hosts` file.
 
 ### <a id="topic5"></a>Creating the Greenplum Database Configuration File 
 
@@ -96,7 +96,7 @@ Your Greenplum Database configuration file tells the [gpinitsystem](../utility_g
     SEG_PREFIX=gpseg
     PORT_BASE=6000 
     declare -a DATA_DIRECTORY=(/data1/primary /data1/primary /data1/primary /data2/primary /data2/primary /data2/primary)
-    MASTER_HOSTNAME=mdw 
+    MASTER_HOSTNAME=cdw 
     MASTER_DIRECTORY=/data/coordinator 
     MASTER_PORT=5432 
     TRUSTED SHELL=ssh
@@ -111,7 +111,7 @@ Your Greenplum Database configuration file tells the [gpinitsystem](../utility_g
     declare -a MIRROR_DATA_DIRECTORY=(/data1/mirror /data1/mirror /data1/mirror /data2/mirror /data2/mirror /data2/mirror)
     ```
 
-    **Note:** You can initialize your Greenplum system with primary segments only and deploy mirrors later using the [gpaddmirrors](../utility_guide/ref/gpaddmirrors.html) utility.
+    > **Note** You can initialize your Greenplum system with primary segments only and deploy mirrors later using the [gpaddmirrors](../utility_guide/ref/gpaddmirrors.html) utility.
 
 4.  Save and close the file.
 
@@ -145,7 +145,7 @@ These steps assume you are logged in as the `gpadmin` user and have sourced the 
 
     This output file can be edited and used at a later stage as the input file of the `-I` option, to create a new cluster or to recover from a backup. See [gpinitsystem](../utility_guide/ref/gpinitsystem.html) for further details.
 
-    **Note:** Calling `gpinitsystem` with the `-O` option does not initialize the Greenplum Database system; it merely generates and saves a file with cluster configuration details.
+    > **Note** Calling `gpinitsystem` with the `-O` option does not initialize the Greenplum Database system; it merely generates and saves a file with cluster configuration details.
 
 2.  The utility will verify your setup information and make sure it can connect to each host and access the data directories specified in your configuration. If all of the pre-checks are successful, the utility will prompt you to confirm your configuration. For example:
 
@@ -203,7 +203,7 @@ You must set environment variables in the Greenplum Database user \(`gpadmin`\) 
 
 The Greenplum Database management utilities also require that the `MASTER_DATA_DIRECTORY` environment variable be set. This should point to the directory created by the `gpinitsystem` utility in the coordinator data directory location.
 
-**Note:** The `greenplum_path.sh` script changes the operating environment in order to support running the Greenplum Database-specific utilities. These same changes to the environment can negatively affect the operation of other system-level utilities, such as `ps` or `yum`. Use separate accounts for performing system administration and database administration, instead of attempting to perform both functions as `gpadmin`.
+> **Note** The `greenplum_path.sh` script changes the operating environment in order to support running the Greenplum Database-specific utilities. These same changes to the environment can negatively affect the operation of other system-level utilities, such as `ps` or `yum`. Use separate accounts for performing system administration and database administration, instead of attempting to perform both functions as `gpadmin`.
 
 These steps ensure that the environment variables are set for the `gpadmin` user after a system reboot.
 
@@ -252,7 +252,7 @@ These steps ensure that the environment variables are set for the `gpadmin` user
     ```
 
 
-**Note:** The `.bashrc` file should not produce any output. If you wish to have a message display to users upon logging in, use the `.bash_profile` file instead.
+> **Note** The `.bashrc` file should not produce any output. If you wish to have a message display to users upon logging in, use the `.bash_profile` file instead.
 
 ## <a id="topic9"></a>Next Steps 
 

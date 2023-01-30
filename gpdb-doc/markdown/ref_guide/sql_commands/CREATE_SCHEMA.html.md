@@ -40,7 +40,7 @@ user\_name
 schema\_element
 :   An SQL statement defining an object to be created within the schema. Currently, only `CREATE TABLE`, `CREATE VIEW`, `CREATE INDEX`, `CREATE SEQUENCE`, `CREATE TRIGGER`, and `GRANT` are accepted as clauses within `CREATE SCHEMA`. Other kinds of objects may be created in separate commands after the schema is created.
 
-    **Note:** Greenplum Database does not support triggers.
+    > **Note** Greenplum Database does not support triggers.
 
 `IF NOT EXISTS`
 :   Do nothing \(except issuing a notice\) if a schema with the same name already exists. schema\_element subcommands cannot be included when this option is used.

@@ -973,7 +973,7 @@ appendonly_tuple_lock(Relation relation, ItemPointer tid, Snapshot snapshot,
 static void
 appendonly_finish_bulk_insert(Relation relation, int options)
 {
-	appendonly_dml_finish(relation);
+	/* nothing for ao tables */
 }
 
 
@@ -1276,7 +1276,6 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	for (;;)
 	{
 		HeapTuple	tuple;
-		uint32		prev_memtuple_len = 0;
 		uint32		len;
 		uint32		null_save_len;
 		bool		has_nulls;
@@ -1290,17 +1289,14 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 		heap_deform_tuple(tuple, oldTupDesc, values, isnull);
 
 		len = compute_memtuple_size(mt_bind, values, isnull, &null_save_len, &has_nulls);
-		if (len > prev_memtuple_len)
+		if (len > 0)
 		{
-			/* Here we are trying to avoid reallocation of temp mtuple */
 			if (mtuple != NULL)
 				pfree(mtuple);
-			mtuple = palloc(len);
-			prev_memtuple_len = len;
+			mtuple = NULL;
 		}
 
-		memtuple_form_to(mt_bind, values, isnull, len, null_save_len, has_nulls,
-					mtuple);
+		mtuple = memtuple_form_to(mt_bind, values, isnull, len, null_save_len, has_nulls, mtuple);
 
 		appendonly_insert(aoInsertDesc, mtuple, &aoTupleId);
 	}

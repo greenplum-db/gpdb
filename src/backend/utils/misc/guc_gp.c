@@ -2973,16 +2973,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_safefswritesize", PGC_BACKEND, RESOURCES,
-			gettext_noop("Minimum FS safe write size."),
-			NULL
-		},
-		&gp_safefswritesize,
-		DEFAULT_FS_SAFE_WRITE_SIZE, 0, INT_MAX,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"planner_work_mem", PGC_USERSET, RESOURCES_MEM,
 			gettext_noop("Sets the maximum memory to be used for query workspaces, "
 						 "used in the planner only."),

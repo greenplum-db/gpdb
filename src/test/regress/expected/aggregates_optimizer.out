@@ -136,7 +136,79 @@ SELECT var_samp(b::numeric) FROM aggtest;
 
 -- population variance is defined for a single tuple, sample variance
 -- is not
-SELECT var_pop(1.0), var_samp(2.0);
+SELECT var_pop(1.0::float8), var_samp(2.0::float8);
+ var_pop | var_samp 
+---------+----------
+       0 |         
+(1 row)
+
+SELECT stddev_pop(3.0::float8), stddev_samp(4.0::float8);
+ stddev_pop | stddev_samp 
+------------+-------------
+          0 |            
+(1 row)
+
+SELECT var_pop('inf'::float8), var_samp('inf'::float8);
+ var_pop | var_samp 
+---------+----------
+     NaN |         
+(1 row)
+
+SELECT stddev_pop('inf'::float8), stddev_samp('inf'::float8);
+ stddev_pop | stddev_samp 
+------------+-------------
+        NaN |            
+(1 row)
+
+SELECT var_pop('nan'::float8), var_samp('nan'::float8);
+ var_pop | var_samp 
+---------+----------
+     NaN |         
+(1 row)
+
+SELECT stddev_pop('nan'::float8), stddev_samp('nan'::float8);
+ stddev_pop | stddev_samp 
+------------+-------------
+        NaN |            
+(1 row)
+
+SELECT var_pop(1.0::float4), var_samp(2.0::float4);
+ var_pop | var_samp 
+---------+----------
+       0 |         
+(1 row)
+
+SELECT stddev_pop(3.0::float4), stddev_samp(4.0::float4);
+ stddev_pop | stddev_samp 
+------------+-------------
+          0 |            
+(1 row)
+
+SELECT var_pop('inf'::float4), var_samp('inf'::float4);
+ var_pop | var_samp 
+---------+----------
+     NaN |         
+(1 row)
+
+SELECT stddev_pop('inf'::float4), stddev_samp('inf'::float4);
+ stddev_pop | stddev_samp 
+------------+-------------
+        NaN |            
+(1 row)
+
+SELECT var_pop('nan'::float4), var_samp('nan'::float4);
+ var_pop | var_samp 
+---------+----------
+     NaN |         
+(1 row)
+
+SELECT stddev_pop('nan'::float4), stddev_samp('nan'::float4);
+ stddev_pop | stddev_samp 
+------------+-------------
+        NaN |            
+(1 row)
+
+SELECT var_pop(1.0::numeric), var_samp(2.0::numeric);
  var_pop | var_samp 
 ---------+----------
        0 |         
@@ -146,6 +218,18 @@ SELECT stddev_pop(3.0::numeric), stddev_samp(4.0::numeric);
  stddev_pop | stddev_samp 
 ------------+-------------
           0 |            
+(1 row)
+
+SELECT var_pop('nan'::numeric), var_samp('nan'::numeric);
+ var_pop | var_samp 
+---------+----------
+     NaN |      NaN
+(1 row)
+
+SELECT stddev_pop('nan'::numeric), stddev_samp('nan'::numeric);
+ stddev_pop | stddev_samp 
+------------+-------------
+        NaN |         NaN
 (1 row)
 
 -- verify correct results for null and NaN inputs
@@ -306,6 +390,25 @@ SELECT corr(b, a) FROM aggtest;
        corr        
 -------------------
  0.139634516517873
+(1 row)
+
+-- check single-tuple behavior
+SELECT covar_pop(1::float8,2::float8), covar_samp(3::float8,4::float8);
+ covar_pop | covar_samp 
+-----------+------------
+         0 |           
+(1 row)
+
+SELECT covar_pop(1::float8,'inf'::float8), covar_samp(3::float8,'inf'::float8);
+ covar_pop | covar_samp 
+-----------+------------
+       NaN |           
+(1 row)
+
+SELECT covar_pop(1::float8,'nan'::float8), covar_samp(3::float8,'nan'::float8);
+ covar_pop | covar_samp 
+-----------+------------
+       NaN |           
 (1 row)
 
 -- test accum and combine functions directly
@@ -470,7 +573,6 @@ SELECT oldcnt(*) AS cnt_1000 FROM onek;
 SELECT sum2(q1,q2) FROM int8_tbl;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
-CONTEXT:  SQL function "sum3" during startup
        sum2        
 -------------------
  18271560493827981
@@ -1211,9 +1313,62 @@ explain (costs off) select * from t3 group by a,b,c;
  Optimizer: Pivotal Optimizer (GPORCA) version 3.78.0
 (3 rows)
 
-drop table t1;
+create temp table t1c () inherits (t1);
+NOTICE:  table has parent, setting distribution columns to match parent table
+-- Ensure we don't remove any columns when t1 has a child table
+explain (costs off) select * from t1 group by a,b,c,d;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Inherited tables
+                QUERY PLAN                 
+-------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  HashAggregate
+         Group Key: t1.a, t1.b, t1.c, t1.d
+         ->  Append
+               ->  Seq Scan on t1
+               ->  Seq Scan on t1c
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+-- Okay to remove columns if we're only querying the parent.
+explain (costs off) select * from only t1 group by a,b,c,d;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: ONLY in the FROM clause
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  HashAggregate
+         Group Key: a, b
+         ->  Seq Scan on t1
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+create temp table p_t1 (
+  a int,
+  b int,
+  c int,
+  d int,
+  primary key(a,b)
+) partition by list(a);
+create temp table p_t1_1 partition of p_t1 for values in(1);
+NOTICE:  table has parent, setting distribution columns to match parent table
+create temp table p_t1_2 partition of p_t1 for values in(2);
+NOTICE:  table has parent, setting distribution columns to match parent table
+-- Ensure we can remove non-PK columns for partitioned tables.
+explain (costs off) select * from p_t1 group by a,b,c,d;
+                     QUERY PLAN                     
+----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Dynamic Seq Scan on p_t1
+         Number of partitions to scan: 2 (out of 2)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+drop table t1 cascade;
+NOTICE:  drop cascades to table t1c
 drop table t2;
 drop table t3;
+drop table p_t1;
 --
 -- Test combinations of DISTINCT and/or ORDER BY
 --
@@ -2127,6 +2282,40 @@ CONTEXT:  SQL function "aggfns_trans" during startup
  {"(2,2,bar)","(3,1,baz)"}
 (1 row)
 
+-- check handling of bare boolean Var in FILTER
+select max(0) filter (where b1) from bool_test;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Aggregate functions with FILTER
+ max 
+-----
+   0
+(1 row)
+
+select (select max(0) filter (where b1)) from bool_test;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Aggregate functions with FILTER
+ max 
+-----
+   0
+(1 row)
+
+-- check for correct detection of nested-aggregate errors in FILTER
+select max(unique1) filter (where sum(ten) > 0) from tenk1;
+ERROR:  aggregate functions are not allowed in FILTER
+LINE 1: select max(unique1) filter (where sum(ten) > 0) from tenk1;
+                                          ^
+select (select max(unique1) filter (where sum(ten) > 0) from int8_tbl) from tenk1;
+ERROR:  aggregate function calls cannot be nested
+LINE 1: select (select max(unique1) filter (where sum(ten) > 0) from...
+                                                  ^
+select max(unique1) filter (where bool_or(ten > 0)) from tenk1;
+ERROR:  aggregate functions are not allowed in FILTER
+LINE 1: select max(unique1) filter (where bool_or(ten > 0)) from ten...
+                                          ^
+select (select max(unique1) filter (where bool_or(ten > 0)) from int8_tbl) from tenk1;
+ERROR:  aggregate function calls cannot be nested
+LINE 1: select (select max(unique1) filter (where bool_or(ten > 0)) ...
+                                                  ^
 -- ordered-set aggregates
 select p, percentile_cont(p) within group (order by x::float8)
 from generate_series(1,5) x,
@@ -2811,30 +3000,93 @@ SET parallel_setup_cost = 0;
 SET parallel_tuple_cost = 0;
 SET min_parallel_table_scan_size = 0;
 SET max_parallel_workers_per_gather = 4;
+SET parallel_leader_participation = off;
 SET enable_indexonlyscan = off;
 -- variance(int4) covers numeric_poly_combine
 -- sum(int8) covers int8_avg_combine
 -- regr_count(float8, float8) covers int8inc_float8_float8 and aggregates with > 1 arg
 EXPLAIN (COSTS OFF, VERBOSE)
-  SELECT variance(unique1::int4), sum(unique1::int8), regr_count(unique1::float8, unique1::float8) FROM tenk1;
-                                                                          QUERY PLAN                                                                           
----------------------------------------------------------------------------------------------------------------------------------------------------------------
+SELECT variance(unique1::int4), sum(unique1::int8), regr_count(unique1::float8, unique1::float8)
+FROM (SELECT * FROM tenk1
+      UNION ALL SELECT * FROM tenk1
+      UNION ALL SELECT * FROM tenk1
+      UNION ALL SELECT * FROM tenk1) u;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+                                                                                      QUERY PLAN                                                                                       
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Finalize Aggregate
-   Output: variance(unique1), sum((unique1)::bigint), regr_count((unique1)::double precision, (unique1)::double precision)
+   Output: variance(tenk1.unique1), sum((tenk1.unique1)::bigint), regr_count((tenk1.unique1)::double precision, (tenk1.unique1)::double precision)
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         Output: (PARTIAL variance(unique1)), (PARTIAL sum((unique1)::bigint)), (PARTIAL regr_count((unique1)::double precision, (unique1)::double precision))
+         Output: (PARTIAL variance(tenk1.unique1)), (PARTIAL sum((tenk1.unique1)::bigint)), (PARTIAL regr_count((tenk1.unique1)::double precision, (tenk1.unique1)::double precision))
          ->  Partial Aggregate
-               Output: PARTIAL variance(unique1), PARTIAL sum((unique1)::bigint), PARTIAL regr_count((unique1)::double precision, (unique1)::double precision)
-               ->  Seq Scan on public.tenk1
-                     Output: unique1
- Optimizer: Pivotal Optimizer (GPORCA)
- Settings: enable_indexonlyscan=off, min_parallel_table_scan_size=0, optimizer=on, parallel_setup_cost=0, parallel_tuple_cost=0
-(10 rows)
+               Output: PARTIAL variance(tenk1.unique1), PARTIAL sum((tenk1.unique1)::bigint), PARTIAL regr_count((tenk1.unique1)::double precision, (tenk1.unique1)::double precision)
+               ->  Append
+                     ->  Seq Scan on public.tenk1
+                           Output: tenk1.unique1
+                     ->  Seq Scan on public.tenk1 tenk1_1
+                           Output: tenk1_1.unique1
+                     ->  Seq Scan on public.tenk1 tenk1_2
+                           Output: tenk1_2.unique1
+                     ->  Seq Scan on public.tenk1 tenk1_3
+                           Output: tenk1_3.unique1
+ Optimizer: Postgres query optimizer
+ Settings: enable_indexonlyscan = 'off', min_parallel_table_scan_size = '0', parallel_setup_cost = '0', parallel_tuple_cost = '0'
+(17 rows)
 
-SELECT variance(unique1::int4), sum(unique1::int8), regr_count(unique1::float8, unique1::float8) FROM tenk1;
-       variance       |   sum    | regr_count 
-----------------------+----------+------------
- 8334166.666666666667 | 49995000 |      10000
+SELECT variance(unique1::int4), sum(unique1::int8), regr_count(unique1::float8, unique1::float8)
+FROM (SELECT * FROM tenk1
+      UNION ALL SELECT * FROM tenk1
+      UNION ALL SELECT * FROM tenk1
+      UNION ALL SELECT * FROM tenk1) u;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+       variance       |    sum    | regr_count 
+----------------------+-----------+------------
+ 8333541.588539713493 | 199980000 |      40000
+(1 row)
+
+-- variance(int8) covers numeric_combine
+-- avg(numeric) covers numeric_avg_combine
+EXPLAIN (COSTS OFF, VERBOSE)
+SELECT variance(unique1::int8), avg(unique1::numeric)
+FROM (SELECT * FROM tenk1
+      UNION ALL SELECT * FROM tenk1
+      UNION ALL SELECT * FROM tenk1
+      UNION ALL SELECT * FROM tenk1) u;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+                                                            QUERY PLAN                                                            
+----------------------------------------------------------------------------------------------------------------------------------
+ Finalize Aggregate
+   Output: variance((tenk1.unique1)::bigint), avg((tenk1.unique1)::numeric)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: (PARTIAL variance((tenk1.unique1)::bigint)), (PARTIAL avg((tenk1.unique1)::numeric))
+         ->  Partial Aggregate
+               Output: PARTIAL variance((tenk1.unique1)::bigint), PARTIAL avg((tenk1.unique1)::numeric)
+               ->  Append
+                     ->  Seq Scan on public.tenk1
+                           Output: tenk1.unique1
+                     ->  Seq Scan on public.tenk1 tenk1_1
+                           Output: tenk1_1.unique1
+                     ->  Seq Scan on public.tenk1 tenk1_2
+                           Output: tenk1_2.unique1
+                     ->  Seq Scan on public.tenk1 tenk1_3
+                           Output: tenk1_3.unique1
+ Optimizer: Postgres query optimizer
+ Settings: enable_indexonlyscan = 'off', min_parallel_table_scan_size = '0', parallel_setup_cost = '0', parallel_tuple_cost = '0'
+(17 rows)
+
+SELECT variance(unique1::int8), avg(unique1::numeric)
+FROM (SELECT * FROM tenk1
+      UNION ALL SELECT * FROM tenk1
+      UNION ALL SELECT * FROM tenk1
+      UNION ALL SELECT * FROM tenk1) u;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+       variance       |          avg          
+----------------------+-----------------------
+ 8333541.588539713493 | 4999.5000000000000000
 (1 row)
 
 ROLLBACK;
@@ -3109,13 +3361,14 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Queries on master-only tables
                                                       QUERY PLAN                                                       
 -----------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=10000000017.74..10000000017.75 rows=1 width=8) (actual time=0.142..0.142 rows=1 loops=1)
-   ->  Nested Loop  (cost=10000000000.02..10000000016.44 rows=520 width=0) (actual time=0.016..0.114 rows=686 loops=1)
-         ->  Aggregate  (cost=0.02..0.03 rows=1 width=1) (actual time=0.003..0.003 rows=1 loops=1)
-               ->  Result  (cost=0.00..0.01 rows=1 width=8) (actual time=0.001..0.001 rows=1 loops=1)
-         ->  Seq Scan on pg_class  (cost=0.00..11.20 rows=520 width=0) (actual time=0.012..0.071 rows=686 loops=1)
- Planning Time: 1.961 ms
-   (slice0)    Executor memory: 50K bytes.
+ Aggregate  (cost=10000000047.27..10000000047.28 rows=1 width=8) (actual time=0.435..0.437 rows=1 loops=1)
+   ->  Nested Loop  (cost=10000000000.02..10000000045.02 rows=899 width=0) (actual time=0.026..0.344 rows=881 loops=1)
+         ->  Aggregate  (cost=0.02..0.03 rows=1 width=1) (actual time=0.007..0.007 rows=1 loops=1)
+               ->  Result  (cost=0.00..0.01 rows=1 width=8) (actual time=0.002..0.002 rows=1 loops=1)
+         ->  Seq Scan on pg_class  (cost=0.00..35.99 rows=899 width=0) (actual time=0.016..0.218 rows=881 loops=1)
+ Optimizer: Postgres query optimizer
+ Planning Time: 10.063 ms
+   (slice0)    Executor memory: 29K bytes.
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Execution Time: 0.198 ms

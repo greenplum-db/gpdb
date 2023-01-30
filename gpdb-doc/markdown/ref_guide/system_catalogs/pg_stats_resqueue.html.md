@@ -1,6 +1,6 @@
 # pg_stat_resqueues 
 
-**Note:** The `pg_stat_resqueues` view is valid only when resource queue-based resource management is active.
+> **Note** The `pg_stat_resqueues` view is valid only when resource queue-based resource management is active.
 
 The `pg_stat_resqueues` view allows administrators to view metrics about a resource queue's workload over time. To allow statistics to be collected for this view, you must enable the `stats_queue_level` server configuration parameter on the Greenplum Database coordinator instance. Enabling the collection of these metrics does incur a small performance penalty, as each statement submitted through a resource queue must be logged in the system catalog tables.
 

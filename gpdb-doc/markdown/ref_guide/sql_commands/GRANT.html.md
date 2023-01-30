@@ -7,13 +7,13 @@ Defines access privileges.
 ``` {#sql_command_synopsis}
 GRANT { {SELECT | INSERT | UPDATE | DELETE | REFERENCES | 
 TRIGGER | TRUNCATE } [, ...] | ALL [PRIVILEGES] }
-    ON { [TABLE] <table_name> [, ...]
+    ON { [TABLE] [[[ONLY] <table_name> [, ...]] [, ...]]
          | ALL TABLES IN SCHEMA <schema_name> [, ...] }
     TO <role_specification> [, ...] [ WITH GRANT OPTION ]
 
 GRANT { { SELECT | INSERT | UPDATE | REFERENCES } ( <column_name> [, ...] )
     [, ...] | ALL [ PRIVILEGES ] ( <column_name> [, ...] ) }
-    ON [ TABLE ] <table_name> [, ...]
+    ON [TABLE] [[[ONLY] <table_name> [, ...]] [, ...]]
     TO <role_specification> [, ...] [ WITH GRANT OPTION ]
 
 GRANT { {USAGE | SELECT | UPDATE} [, ...] | ALL [PRIVILEGES] }
@@ -88,7 +88,7 @@ The keyword `PUBLIC` indicates that the privileges are to be granted to all role
 If `WITH GRANT OPTION` is specified, the recipient of the privilege may in turn grant it to others. Without a grant option, the recipient cannot do that. Grant options cannot be granted to `PUBLIC`.
 
 There is no need to grant privileges to the owner of an object \(usually the role that created it\), as the owner has all privileges by default. \(The owner could, however, choose to revoke some of their own privileges for safety.\)
-
+it
 The right to drop an object, or to alter its definition in any way is not treated as a grantable privilege; it is inherent in the owner, and cannot be granted or revoked. \(However, a similar effect can be obtained by granting or revoking membership in the role that owns the object; see below.\) The owner implicitly has all grant options for the object, too.
 
 The possible privileges are:
@@ -120,6 +120,10 @@ If `WITH ADMIN OPTION` is specified, the member may in turn grant membership in 
 If `GRANTED BY` is specified, the grant is recorded as having been done by the specified role. Only database superusers may use this option, except when it names the same role executing the command.
 
 Unlike the case with privileges, membership in a role cannot be granted to `PUBLIC`. Note also that this form of the command does not allow the noise word `GROUP` in role\_specification.
+
+**GRANT on Partitioned Tables**
+
+By default, when you grant privileges to a partitioned table, Greenplum Database recurses the operation to its child partition tables. To direct Greenplum to perform the `GRANT` on the partitioned table only, specify the `ONLY <table_name>` clause.
 
 **GRANT on Protocols**
 
@@ -166,7 +170,7 @@ REFERENCES
 TRIGGER
 :   Allows the creation of a trigger on the specified table.
 
-    **Note:** Greenplum Database does not support triggers.
+    > **Note** Greenplum Database does not support triggers.
 
 TRUNCATE
 :   Allows `TRUNCATE` of all rows from the specified table.

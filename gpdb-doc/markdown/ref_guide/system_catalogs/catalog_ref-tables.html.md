@@ -58,6 +58,8 @@
 -   [pg\_stat\_last\_shoperation](pg_stat_last_shoperation.html)
 -   [pg\_stat\_replication](pg_stat_replication.html)
 -   [pg\_statistic](pg_statistic.html)
+-   [pg\_statistic\_ext](pg_statistic_ext.html)
+-   [pg\_statistic\_ext\_data](pg_statistic_ext_data.html)
 -   [pg\_tablespace](pg_tablespace.html)
 -   [pg\_trigger](pg_trigger.html)
 -   [pg\_type](pg_type.html)
