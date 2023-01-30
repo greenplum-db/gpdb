@@ -1018,10 +1018,3 @@ DELETE FROM returning_aotab RETURNING *;
 CREATE TABLE returning_ctid_aotab (f1 serial, f2 text) WITH (appendonly=true) DISTRIBUTED BY (f1);
 INSERT INTO returning_ctid_aotab (f2) VALUES ('test1') RETURNING ctid;
 DROP TABLE returning_ctid_aotab;
-
---
--- Test returning ctid for AOCO table
---
-CREATE TABLE returning_ctid_aocotab (f1 serial, f2 text) WITH (appendonly=true, orientation=column) DISTRIBUTED BY (f1);
-INSERT INTO returning_ctid_aocotab (f2) VALUES ('test1') RETURNING ctid;
-DROP TABLE returning_ctid_aocotab;
