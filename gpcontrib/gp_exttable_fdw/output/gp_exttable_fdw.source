@@ -1,0 +1,21 @@
+--
+-- Test foreign-data wrapper gp_exttable_fdw.
+--
+CREATE EXTENSION IF NOT EXISTS gp_exttable_fdw;
+NOTICE:  extension "gp_exttable_fdw" already exists, skipping
+CREATE SERVER IF NOT EXISTS gp_exttable_server FOREIGN DATA WRAPPER gp_exttable_fdw;
+NOTICE:  server "gp_exttable_server" already exists, skipping
+-- create table without execute_on option
+CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
+SERVER gp_exttable_server
+OPTIONS (format 'csv', delimiter ',', format_type 'c',
+         location_uris 'file://@hostname@@abs_srcdir@/data/tableless.csv',
+         log_errors 'f', encoding '6', is_writable 'false');
+SELECT * FROM tableless_ext_fdw;
+ a | b  
+---+----
+ 1 | 12
+ 2 | 22
+ 3 | 32
+(3 rows)
+
