@@ -33,9 +33,7 @@ CDistributionSpecNonSingleton::CDistributionSpecNonSingleton() = default;
 
 CDistributionSpecNonSingleton::CDistributionSpecNonSingleton(
 	BOOL fProhibitReplicated)
-	: m_fAllowReplicated(true),
-	  m_fAllowEnforced(true),
-	  m_fProhibitReplicated(fProhibitReplicated)
+	: m_fProhibitReplicated(fProhibitReplicated)
 {
 }
 
