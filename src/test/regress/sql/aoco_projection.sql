@@ -60,7 +60,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', ''
 -- Tests for COPY <aoco_table> (<col_list>) TO ..
 
 -- Reads all blocks in the table as all columns are implicitly specified.
-1U: COPY aoco TO '/dev/null';
+COPY aoco TO '/dev/null';
 
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
     FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -72,7 +72,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', ''
     FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
 
 -- Reads all blocks in the table as all columns are specified.
-1U: COPY aoco (i,j,k) TO '/dev/null';
+COPY aoco (i,j,k) TO '/dev/null';
 
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
     FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -84,7 +84,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', ''
     FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
 
 -- Reads blocks only for cols: i int, j bigint
-1U: COPY aoco (i,j) TO '/dev/null';
+COPY aoco (i,j) TO '/dev/null';
 
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
     FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -96,7 +96,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', ''
     FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
 
 -- Reads blocks only for cols: i int
-1U: COPY aoco (i) TO '/dev/null';
+COPY aoco (i) TO '/dev/null';
 
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
     FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
