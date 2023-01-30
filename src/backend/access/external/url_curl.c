@@ -160,6 +160,11 @@ static char curl_Error_Buffer[CURL_ERROR_SIZE];
 static void gp_proto0_write_done(URL_CURL_FILE *file);
 static void extract_http_domain(char* i_path, char* o_domain, int dlen);
 
+#ifdef HAVE_LIBZSTD
+static int compress_zstd_data(URL_CURL_FILE *file);
+static int decompress_zstd_data(ZSTD_DCtx* ctx, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout);
+#endif
+
 /* we use a global one for convenience */
 static CURLM *multi_handle = 0;
 
@@ -185,7 +190,6 @@ fill_buffer(URL_CURL_FILE *curl, int want);
 static curlhandle_t *open_curl_handles;
 
 static bool url_curl_resowner_callback_registered;
-
 
 static curlhandle_t *
 create_curlhandle(void)
@@ -424,7 +428,6 @@ header_callback(void *ptr_, size_t size, size_t nmemb, void *userp)
 
 	return size * nmemb;
 }
-
 
 /*
  * write_callback
@@ -893,10 +896,8 @@ fill_buffer(URL_CURL_FILE *curl, int want)
 				curl->eof, curl->block.datalen, maxfd, nfds, e);
 	}
 
-
 	return 0;
 }
-
 
 static void
 set_httpheader(URL_CURL_FILE *fcurl, const char *name, const char *value)
@@ -1560,7 +1561,6 @@ url_curl_feof(URL_FILE *file, int bytesread)
 	return (cfile->eof != 0);
 }
 
-
 bool
 url_curl_ferror(URL_FILE *file, int bytesread, char *ebuf, int ebuflen)
 {
@@ -1600,7 +1600,7 @@ gp_proto0_read(char *buf, int bufsz, URL_CURL_FILE *file)
 }
 
 #ifdef HAVE_LIBZSTD
-int 
+static int 
 decompress_zstd_data(ZSTD_DCtx* ctx, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout)
 {
 	
@@ -1926,7 +1926,6 @@ gp_proto0_write(URL_CURL_FILE *file, CopyState pstate)
 	file->seq_number++;
 }
 
-
 /*
  * Send an empty POST request, with an added X-GP-DONE header.
  */
@@ -2054,7 +2053,6 @@ url_curl_fflush(URL_FILE *file, CopyState pstate)
 	gp_proto0_write((URL_CURL_FILE *) file, pstate);
 }
 #else /* USE_CURL */
-
 
 /* Dummy versions of all the url_curl_* functions, when built without libcurl. */
 

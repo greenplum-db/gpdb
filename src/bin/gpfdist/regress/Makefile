@@ -11,14 +11,10 @@ ifeq ($(with_openssl),yes)
 endif
 endif
 
-<<<<<<< HEAD
-PSQLDIR = $(prefix)/bin
-=======
 ifeq ($(with_zstd),yes)
 	REGRESS += gpfdist2_compress
 endif
 
->>>>>>> 17c3d5c... Add stream zstd compress for gpfdist to gpdb7 (#14144)
 REGRESS_OPTS = --init-file=init_file
 
 installcheck: watchdog ipv4v6_ports

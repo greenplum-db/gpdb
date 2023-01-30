@@ -166,7 +166,6 @@ static void percent_encoding_to_char(char* p, char* pp, char* path);
 #define GPFDIST_MAX_LINE_MESSAGE     "Error: -m max row length must be between 32KB and 1MB"
 #endif
 
-
 /*	Struct of command line options */
 static struct
 {
@@ -190,7 +189,6 @@ static struct
 	int			w; /* The time used for session timeout in seconds */
 	int			compress; /* The flag to indicate whether comopression transmission is open */
 } opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 32768, 0, 256, 0, 0, 0, 0, 0};
-
 
 typedef union address
 {
@@ -323,8 +321,6 @@ struct request_t
 	SSL			*ssl;
 #endif
 };
-
-
 
 #if APR_IS_BIGENDIAN
 #define local_htonll(n)  (n)
@@ -527,8 +523,6 @@ static unsigned short get_client_port(address_t *clientInformation)
 		return ipv6->sin6_port;
 	}
 }
-
-
 
 /* Print usage */
 static void usage_error(const char* msg, int print_usage)
@@ -934,7 +928,6 @@ static void http_continue(request_t* r)
 	local_send(r, buf, sizeof buf -1);
 }
 
-
 /* send an OK response */
 static apr_status_t http_ok(request_t* r)
 {
@@ -1058,7 +1051,6 @@ static void log_gpfdist_status()
 	}
 	printf("]\r\n");
 
-
 	gprint(NULL, "---------------------------------------\n");
 }
 
@@ -1132,7 +1124,6 @@ static apr_status_t send_gpfdist_status(request_t* r)
 										gcb.total_bytes,
 #endif
 										gcb.total_sessions);
-
 
 	if (n >= sizeof buf - 1)
 		gfatal(r, "internal error - buffer overflow during send_gpfdist_status");
@@ -1593,7 +1584,6 @@ static int session_attach(request_t* r)
 		request_end(r, 1, 0);
 		return -1;
 	}
-
 
 	/* check if such session already exists in hashtable */
 	session = apr_hash_get(gcb.session.tab, key, APR_HASH_KEY_STRING);
@@ -2158,7 +2148,6 @@ static void do_read_request(int fd, short event, void* arg)
 	}
 }
 
-
 /* Callback when the listen socket is ready to accept connections. */
 static void do_accept(int fd, short event, void* arg)
 {
@@ -2297,7 +2286,6 @@ static void do_accept(int fd, short event, void* arg)
 		r->peer = apr_psprintf(r->pool, "%s", host);
 	}
 
-
 	/* set up for callback when socket ready for reading the http request */
 	if (setup_read(r))
 	{
@@ -2326,7 +2314,6 @@ static int setup_write(request_t* r)
 	event_set(&r->ev, r->sock, EV_WRITE, do_write, r);
 	return (event_add(&r->ev, 0));
 }
-
 
 /*
  * setup_read
@@ -2439,7 +2426,6 @@ addrinfo* rearrange_addrs(struct addrinfo *head, int first_family)
 	return new_head;
 }
 
-
 static void
 print_addrinfo_list(struct addrinfo *head)
 {
@@ -2520,7 +2506,6 @@ http_setup(void)
 	/* setup event priority */
 	if (event_priority_init(10))
 		gwarning(NULL, "event_priority_init failed");
-
 
 	/* Try each possible port from opt.p to opt.last_port */
 	for (;;)
@@ -2729,7 +2714,6 @@ process_term_signal(int sig,short event,void* arg)
 			}
 		_exit(1);
 }
-
 
 static gnet_request_t*
 gnet_parse_request(const char* buf, int* len, apr_pool_t* pool)
@@ -2965,7 +2949,6 @@ void gdebug(const request_t *r, const char *fmt, ...)
 	va_end(args);
 	printf("\n");
 }
-
 
 void gfile_printf_then_putc_newline(const char *format, ...)
 {
@@ -3215,7 +3198,6 @@ static void handle_post_request(request_t *r, int header_end)
 		memcpy(r->in.dbuf, data_start, data_bytes_in_req);
 		r->in.dbuftop += data_bytes_in_req;
 
-
 		r->in.davailable -= data_bytes_in_req;
 
 		/* only write it out if no more data is expected */
@@ -3370,7 +3352,6 @@ static int request_set_path(request_t *r, const char* d, char* p, char* pp, char
 		path = p;
 
 	} while (path);
-
 
 	if (!r->path)
 	{
@@ -3626,7 +3607,6 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 
 	return 0;
 }
-
 
 #ifdef GPFXDIST
 static int request_set_transform(request_t *r)
@@ -3895,9 +3875,7 @@ int main(int argc, const char* const argv[])
 	return gpfdist_run();
 }
 
-
 #else   /* in Windows gpfdist may run as a Windows service or a console application  */
-
 
 SERVICE_STATUS          ServiceStatus;
 SERVICE_STATUS_HANDLE   hStatus;
@@ -3910,7 +3888,6 @@ int cmd_line_args;
 
 void  ServiceMain(int argc, char** argv);
 void  ControlHandler(DWORD request);
-
 
 /* gpfdist service registration on the WINDOWS command line
  * sc create gpfdist binpath= "c:\temp\gpfdist.exe param1 param2 param3"
@@ -3995,7 +3972,6 @@ void init_cmd_buffer(int argc, const char* const argv[])
 		report_event(TEXT("msg"));
 	}
 
-
 	for (i = 0; i < cmd_line_args; i++)
 	{
 		int len;
@@ -4068,7 +4044,6 @@ int main(int argc, const char* const argv[])
 			gfatal(NULL, "Initialization failed");
 		main_ret = gpfdist_run();
 	}
-
 
 	return main_ret;
 }
@@ -4285,7 +4260,6 @@ static SSL_CTX *initialize_ctx(void)
 }
 #endif
 
-
 /*
  * gpfdist_socket_send
  *
@@ -4345,7 +4319,6 @@ static int gpfdist_SSL_send(const request_t *r, const void *buf, const size_t bu
 }
 #endif
 
-
 /*
  * gpfdist_socket_receive
  *
@@ -4404,7 +4377,6 @@ static void free_SSL_resources(const request_t *r)
 	SSL_free(r->ssl);
 }
 
-
 /*
  * handle_ssl_error
  *
@@ -4449,7 +4421,6 @@ static void flush_ssl_buffer(int fd, short event, void* arg)
 	}
 }
 
-
 /*
  * setup_flush_ssl_buffer
  *
@@ -4464,7 +4435,6 @@ static void setup_flush_ssl_buffer(request_t* r)
 	(void)event_add(&r->ev, &r->tm);
 }
 #endif
-
 
 /*
  * log unsent/unacked bytes in socket buffer.
@@ -4580,7 +4550,6 @@ static void setup_do_close(request_t* r)
 	}
 }
 
-
 #ifdef USE_SSL
 /*
  * request_cleanup_and_free_SSL_resources
@@ -4597,7 +4566,6 @@ static void request_cleanup_and_free_SSL_resources(request_t *r)
 	free_SSL_resources(r);
 }
 #endif
-
 
 /*
  * free_session_cb
@@ -4750,7 +4718,7 @@ static int decompress_data(request_t* r, zstd_buffer *in, zstd_buffer *out){
 	ZSTD_outBuffer obuf = {out->buf, out->size, out->pos};
 	
 	if(!r->zstd_dctx) {
-		gwarning(stderr, "%s", "Out of memory when ZSTD_createDCtx");
+		gwarning(r, "%s", "Out of memory when ZSTD_createDCtx");
 		return -1;
 	}
 
@@ -4776,7 +4744,7 @@ static int decompress_data(request_t* r, zstd_buffer *in, zstd_buffer *out){
  * It is for compress data in buffer. Return is the length of data after compression.
  */
 
-static int compress_zstd(request_t *r, block_t *blk, int buflen)
+static int compress_zstd(const request_t *r, block_t *blk, int buflen)
 {
 	char *buf = blk->data;
 	int offset = 0;
@@ -4785,7 +4753,7 @@ static int compress_zstd(request_t *r, block_t *blk, int buflen)
 	if (!r->zstd_cctx)
 	{
 		snprintf(r->zstd_error, r->zstd_err_len, "Creating compression context failed, out of memory.");
-		gprintln(NULL, r->zstd_error);
+		gprintln(NULL, "%s", r->zstd_error);
 		return -1;
 	}
 
@@ -4793,7 +4761,7 @@ static int compress_zstd(request_t *r, block_t *blk, int buflen)
 	if (ZSTD_isError(init_result)) 
 	{
 		snprintf(r->zstd_error, r->zstd_err_len, "Creating compression context initialization failed, error is %s.", ZSTD_getErrorName(init_result));
-		gprintln(NULL, r->zstd_error);
+		gprintln(NULL, "%s", r->zstd_error);
 		return -1;
 	}
 
@@ -4808,7 +4776,7 @@ static int compress_zstd(request_t *r, block_t *blk, int buflen)
 			if (ZSTD_isError(res))
 			{
 				snprintf(r->zstd_error, r->zstd_err_len, "Compression failed, error is %s.", ZSTD_getErrorName(res));
-				gprintln(NULL, r->zstd_error);
+				gprintln(NULL, "%s", r->zstd_error);
 				return -1;
 			}
 			offset += bout.pos;
@@ -4822,7 +4790,7 @@ static int compress_zstd(request_t *r, block_t *blk, int buflen)
 	if (remainingToFlush)
 	{
 		snprintf(r->zstd_error, r->zstd_err_len, "Compression failed, error is not fully flushed.");
-		gprintln(NULL, r->zstd_error);
+		gprintln(NULL, "%s", r->zstd_error);
 		return -1;
 	}
 	offset += output.pos;
