@@ -272,6 +272,7 @@ test: vacuum_full_ao
 test: vacuum_full_freeze_heap
 test: vacuum_full_heap
 test: vacuum_full_heap_bitmapindex
+test: vacuum_ao_aux_only
 # Check for shmem leak for instrumentation slots
 test: instr_in_shmem_verify
 # check autostats
