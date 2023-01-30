@@ -1574,10 +1574,22 @@ cdb_map_to_base_var(Var *var, List *rtable)
 {
 	RangeTblEntry *rte    = rt_fetch(var->varno, rtable);
 
-	while(rte != NULL && rte->rtekind == RTE_JOIN && rte->joinaliasvars)
+	while (rte != NULL && rte->rtekind == RTE_JOIN && rte->joinaliasvars)
 	{
-		var = (Var *) list_nth(rte->joinaliasvars, var->varattno-1);
-		rte = rt_fetch(var->varno, rtable);
+		Node *node = list_nth(rte->joinaliasvars, var->varattno-1);
+		/*
+		 * Per the comments of the field joinaliasvars of struct RangeTblEntry,
+		 * it might be Var or COALESCE expr or NULL pointer. For cases other than
+		 * a simple Var, return NULL is a safe choice. See Github Issue
+		 * https://github.com/greenplum-db/gpdb/issues/14858 for details.
+		 */
+		if (node != NULL && IsA(node, Var))
+		{
+			var = (Var *) node;
+			rte = rt_fetch(var->varno, rtable);
+		}
+		else
+			return NULL;
 	}
 
 	/* not found RTE in current level rtable */
