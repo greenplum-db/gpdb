@@ -88,6 +88,14 @@ struct block_t
 	char*		cdata;
 };
 
+typedef struct zstd_buffer zstd_buffer;
+struct zstd_buffer
+{
+	char	*buf;
+	int		size;
+	int		pos;	
+};
+
 /*  Get session id for this request */
 #define GET_SID(r)	((r->sid))
 
@@ -314,6 +322,11 @@ struct request_t
 		char*	dbuf;		/* buffer for raw data from a POST request */
 		int 	dbuftop; 	/* # bytes used in dbuf */
 		int 	dbufmax; 	/* size of dbuf[] */
+
+		char*  	wbuf;		/* data buf for decompressed data for writing into file,
+					         	its capacity equals to MAX_FRAME_SIZE. */
+		int 	wbuftop;	/* last index for decompressed data */
+		int 	woffset;		/* mark whether there is left data in compress ctx */
 	} in;
 
 	block_t	outblock;	/* next block to send out */
@@ -3895,6 +3908,9 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 #ifdef USE_ZSTD
 	if (r->zstd)
 	{
+		if (!r->is_get)
+			r->zstd_dctx = ZSTD_createDCtx();
+
 		OUT_BUFFER_SIZE = ZSTD_CStreamOutSize();
 		r->outblock.cdata = palloc_safe(r, r->pool, opt.m, "out of memory when allocating buffer for compressed data: %d bytes", opt.m);
 		r->is_running = 0;
@@ -4915,6 +4931,10 @@ static void request_cleanup(request_t *r)
 		ZSTD_freeDCtx(r->zstd_dctx);
 		r->zstd_cctx = NULL;
 	}
+	if ( r->zstd && !r->is_get )
+	{
+		ZSTD_freeDCtx(r->zstd_dctx);
+	}
 #endif
 }
 
@@ -5024,6 +5044,7 @@ static void delay_watchdog_timer()
 		shutdown_time = apr_time_now() + gcb.wdtimer * APR_USEC_PER_SEC;
 	}
 }
+
 #else
 static void delay_watchdog_timer()
 {
@@ -5089,7 +5110,7 @@ static int decompress_zstd(request_t* r, ZSTD_inBuffer* bin, ZSTD_outBuffer* bou
 	size_t const err = ret;
 	if(ZSTD_isError(err)){
 		snprintf(r->zstd_error, r->zstd_err_len, "zstd decompression error, error is %s", ZSTD_getErrorName(err));
-		gwarning(NULL, "%s", r->zstd_error);
+		gwarning(r, "%s", r->zstd_error);
 		return -1;
 	}
 	return bout->pos;
@@ -5100,7 +5121,7 @@ static int decompress_data(request_t* r, zstd_buffer *in, zstd_buffer *out){
 	ZSTD_outBuffer obuf = {out->buf, out->size, out->pos};
 
 	if(!r->zstd_dctx) {
-		gwarning(NULL, "%s", "Out of memory when ZSTD_createDCtx");
+		gwarning(r, "%s", "Out of memory when ZSTD_createDCtx");
 		return -1;
 	}
 
@@ -5135,7 +5156,7 @@ static int compress_zstd(const request_t *r, block_t *blk, int buflen)
 	if (!r->zstd_cctx)
 	{
 		snprintf(r->zstd_error, r->zstd_err_len, "Creating compression context failed, out of memory.");
-		gprintln(NULL, "%s", r->zstd_error);
+		gprintln(r, "%s", r->zstd_error);
 		return -1;
 	}
 
@@ -5143,7 +5164,7 @@ static int compress_zstd(const request_t *r, block_t *blk, int buflen)
 	if (ZSTD_isError(init_result))
 	{
 		snprintf(r->zstd_error, r->zstd_err_len, "Creating compression context initialization failed, error is %s.", ZSTD_getErrorName(init_result));
-		gprintln(NULL, "%s", r->zstd_error);
+		gprintln(r, "%s", r->zstd_error);
 		return -1;
 	}
 
@@ -5172,7 +5193,7 @@ static int compress_zstd(const request_t *r, block_t *blk, int buflen)
 	if (remainingToFlush)
 	{
 		snprintf(r->zstd_error, r->zstd_err_len, "Compression failed, error is not fully flushed.");
-		gprintln(NULL, "%s", r->zstd_error);
+		gprintln(r, "%s", r->zstd_error);
 		return -1;
 	}
 	offset += output.pos;
