@@ -420,6 +420,18 @@ The Postgres Planner will merge sub-queries into upper queries if the resulting 
 |-----------|-------|-------------------|
 |1-*n*|20|master, session, reload|
 
+## <a id="gin_pending_list_limit"></a>gin\_pending\_list\_limit
+
+Sets the maximum size of a GIN index's pending list, which is used when `fastupdate` is enabled. If the list grows larger than this maximum size, it is cleaned up by moving the entries in it to the index's main GIN data structure in bulk.
+
+A value specified without units it is taken to be kilobytes. The default is four megabytes (4MB).
+
+You can override this setting for individual GIN indexes by changing index storage parameters.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|64 - `MAX_KILOBYTES` |4096|master, session, reload|
+
 ## <a id="gp_adjust_selectivity_for_outerjoins"></a>gp\_adjust\_selectivity\_for\_outerjoins 
 
 Enables the selectivity of NULL tests over outer joins.
@@ -2948,6 +2960,18 @@ Enables updating of the process title every time a new SQL command is received b
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |Boolean|on|local, session, reload|
+
+## <a id="vacuum_cleanup_index_scale_factor"></a>vacuum\_cleanup\_index\_scale\_factor
+
+Specifies the fraction of the total number of heap tuples counted in the previous statistics collection that can be inserted without incurring an index scan at the `VACUUM` cleanup stage. This setting currently applies to B-tree indexes only.
+
+If no tuples were deleted from the heap, Greenplum Database still scans B-tree indexes at the `VACUUM` cleanup stage when at least one of the following conditions is met: the index statistics are stale, or the index contains deleted pages that can be recycled during cleanup. Index statistics are considered to be stale if the number of newly inserted tuples exceeds the `vacuum_cleanup_index_scale_factor` fraction of the total number of heap tuples detected by the previous statistics collection. The total number of heap tuples is stored in the index meta-page. Note that the meta-page does not include this data until `VACUUM` finds no dead tuples, so B-tree index scan at the cleanup stage can only be skipped if the second and subsequent `VACUUM` cycles detect no dead tuples.
+
+When `vacuum_cleanup_index_scale_factor` is set to `0`, Greenplum Database never skips index scans during `VACUUM` cleanup. The default value is `0.1`.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+| 0 - 10000000000 |0.1|master, session, reload|
 
 ## <a id="vacuum_cost_delay"></a>vacuum\_cost\_delay 
 
