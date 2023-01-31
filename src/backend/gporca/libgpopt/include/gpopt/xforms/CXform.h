@@ -218,11 +218,13 @@ public:
 		ExfIndexGet2IndexOnlyScan,
 		ExfJoin2BitmapIndexGetApply,
 		ExfJoin2IndexGetApply,
-		ExfMultiForeignGet2MultiForeignScan____removed,
+		ExfMultiExternalGet2MultiExternalScan____removed,
 		ExfExpandDynamicGetWithExternalPartitions____removed,
 		ExfLeftJoin2RightJoin,
 		ExfRightOuterJoin2HashJoin,
 		ExfImplementInnerJoin,
+		ExfDynamicForeignGet2DynamicForeignScan,
+		ExfExpandDynamicGetWithForeignPartitions,
 		ExfInvalid,
 		ExfSentinel = ExfInvalid
 	};
