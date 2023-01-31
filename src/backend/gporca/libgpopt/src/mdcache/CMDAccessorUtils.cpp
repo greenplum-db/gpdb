@@ -23,10 +23,10 @@
 #include "naucrates/exception.h"
 #include "naucrates/md/CMDIdGPDB.h"
 #include "naucrates/md/IMDAggregate.h"
+#include "naucrates/md/IMDCast.h"
 #include "naucrates/md/IMDFunction.h"
 #include "naucrates/md/IMDScCmp.h"
 #include "naucrates/md/IMDScalarOp.h"
-
 using namespace gpmd;
 using namespace gpos;
 using namespace gpopt;
@@ -83,7 +83,7 @@ CMDAccessorUtils::FCmpExists(CMDAccessor *md_accessor, IMDId *left_mdid,
 {
 	GPOS_ASSERT(nullptr != md_accessor);
 	GPOS_ASSERT(nullptr != left_mdid);
-	GPOS_ASSERT(nullptr != left_mdid);
+	GPOS_ASSERT(nullptr != right_mdid);
 	GPOS_ASSERT(IMDType::EcmptOther > cmp_type);
 
 	GPOS_TRY
@@ -113,7 +113,7 @@ CMDAccessorUtils::GetScCmpMdid(CMDAccessor *md_accessor, IMDId *left_mdid,
 {
 	GPOS_ASSERT(nullptr != md_accessor);
 	GPOS_ASSERT(nullptr != left_mdid);
-	GPOS_ASSERT(nullptr != left_mdid);
+	GPOS_ASSERT(nullptr != right_mdid);
 	GPOS_ASSERT(IMDType::EcmptOther > cmp_type);
 
 	IMDId *sc_cmp_mdid;
@@ -331,7 +331,7 @@ CMDAccessorUtils::ApplyCastsForScCmp(CMemoryPool *mp, CMDAccessor *md_accessor,
 //		CMDAccessorUtils::FCastExists
 //
 //	@doc:
-//		Does if a cast object between given source and destination types exists
+//		Check if a cast object between given source and destination types exists
 //
 //---------------------------------------------------------------------------
 BOOL
@@ -360,6 +360,30 @@ CMDAccessorUtils::FCastExists(CMDAccessor *md_accessor, IMDId *mdid_src,
 	GPOS_CATCH_END;
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CMDAccessorUtils::FCoercible
+//
+//	@doc:
+//		Check if srctype is binary-coercible to targettype.
+//      A cast object existing between srctype and
+//      targettype is a necessary condition
+//
+//---------------------------------------------------------------------------
+BOOL
+CMDAccessorUtils::FBinaryCoercible(CMDAccessor *md_accessor, IMDId *mdid_src,
+								   IMDId *mdid_dest)
+{
+	if (FCastExists(md_accessor, mdid_src, mdid_dest))
+	{
+		const IMDCast *pmdcast = md_accessor->Pmdcast(mdid_src, mdid_dest);
+		if (pmdcast->IsBinaryCoercible())
+		{
+			return true;
+		}
+	}
+	return false;
+}
 
 //---------------------------------------------------------------------------
 //	@function:

@@ -3551,6 +3551,62 @@ where
 (0 rows)
 
 drop table t_13722;
+-- This test is introduced to verify incorrect result
+-- from hash join of char columns is fixed
+-- foo stores 'cd' of varchar
+-- bar stores 'cd ' of char
+-- baz stores 'cd  ' of text
+-- foo join condition: 'cd' of varchar is cast to bpchar, and stays 'cd'.
+-- bar join condition: 'cd ' of char is used for comparison, and becomes 'cd'.
+-- baz join condition:
+-- (1) First, 'cd  ' of text is cast to bpchar, and becomes 'cd  '.
+-- (2) Because it's used for comparison, the trailing spaces are removed, and becomes 'cd'.
+-- 'cd' matches 'cd' matches 'cd', so 1 row is returned.
+create table foo (varchar_3 varchar(3)) distributed by (varchar_3);
+create table bar (char_3 char(3)) distributed by (char_3);
+create table baz (text_any text) distributed by (text_any);
+insert into foo values ('cd'); -- 0 trailing spaces
+insert into bar values ('cd '); -- 1 trailing space
+insert into baz values ('cd  '); -- 2 trailing spaces
+explain select varchar_3, char_3 from foo join bar on varchar_3=char_3;
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=16)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=16)
+         Hash Cond: ((foo.varchar_3)::bpchar = bar.char_3)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+               Hash Key: foo.varchar_3
+               ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=8)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=8)
+               ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+select varchar_3, char_3 from foo join bar on varchar_3=char_3;
+ varchar_3 | char_3 
+-----------+--------
+ cd        | cd 
+(1 row)
+
+explain select char_3, text_any from bar join baz on char_3=text_any;
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=16)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=16)
+         Hash Cond: ((bar.char_3)::text = baz.text_any)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+               Hash Key: (bar.char_3)::text
+               ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=8)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=8)
+               ->  Seq Scan on baz  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+select char_3, text_any from bar join baz on char_3=text_any;
+ char_3 | text_any 
+--------+----------
+(0 rows)
+
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;
 set client_min_messages='warning';

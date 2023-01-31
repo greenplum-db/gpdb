@@ -410,6 +410,44 @@ where
 
 drop table t_13722;
 
+-- This test is introduced to verify incorrect result
+-- from hash join of char columns is fixed
+-- foo stores 'cd' of varchar
+-- bar stores 'cd ' of char
+-- baz stores 'cd  ' of text
+-- foo join condition: 'cd' of varchar is cast to bpchar, and stays 'cd'.
+-- bar join condition: 'cd ' of char is used for comparison, and becomes 'cd'.
+-- baz join condition:
+-- (1) First, 'cd  ' of text is cast to bpchar, and becomes 'cd  '.
+-- (2) Because it's used for comparison, the trailing spaces are removed, and becomes 'cd'.
+-- 'cd' matches 'cd' matches 'cd', so 1 row is returned.
+--start_ignore
+drop table foo;
+drop table bar;
+drop table baz;
+--end_ignore
+create table foo (varchar_3 varchar(3)) distributed by (varchar_3);
+create table bar (char_3 char(3)) distributed by (char_3);
+create table baz (text_any text) distributed by (text_any);
+insert into foo values ('cd'); -- 0 trailing spaces
+insert into bar values ('cd '); -- 1 trailing space
+insert into baz values ('cd  '); -- 2 trailing spaces
+
+explain select varchar_3, char_3 from foo join bar on varchar_3=char_3;
+select varchar_3, char_3 from foo join bar on varchar_3=char_3;
+
+explain select char_3, text_any from bar join baz on char_3=text_any;
+select char_3, text_any from bar join baz on char_3=text_any;
+
+--start_ignore
+--the following query will be useful in verifying the join order fix
+--the join condition varchar_3=text_any cannot be exchanged with
+--char_3=text_any, cause the latter isn't binary coercible
+--explain select varchar_3, char_3, text_any from foo join bar on varchar_3=char_3
+--join baz on varchar_3=text_any;
+--select varchar_3, char_3, text_any from foo join bar on varchar_3=char_3
+--join baz on varchar_3=text_any;
+--end_ignore
 
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;

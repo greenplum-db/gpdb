@@ -44,6 +44,10 @@ public:
 	static BOOL FCastExists(CMDAccessor *md_accessor, IMDId *mdid_src,
 							IMDId *mdid_dest);
 
+	// check if srctype is binary-coercible to targettype.
+	static BOOL FBinaryCoercible(CMDAccessor *md_accessor, IMDId *mdid_src,
+								 IMDId *mdid_dest);
+
 	// does a scalar comparison object between given types exist
 	static BOOL FCmpExists(CMDAccessor *md_accessor, IMDId *left_mdid,
 						   IMDId *right_mdid, IMDType::ECmpType cmp_type);

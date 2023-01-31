@@ -23,6 +23,7 @@
 #include "gpopt/base/CUtils.h"
 #include "gpopt/exception.h"
 #include "gpopt/mdcache/CMDAccessor.h"
+#include "gpopt/mdcache/CMDAccessorUtils.h"
 #include "gpopt/operators/CExpressionFactorizer.h"
 #include "gpopt/operators/CExpressionUtils.h"
 #include "gpopt/operators/CLogicalCTEAnchor.h"
@@ -1441,7 +1442,73 @@ CExpressionPreprocessor::PexprConjEqualityPredicates(CMemoryPool *mp,
 				break;
 			}
 
-			pdrgpexpr->Append(CUtils::PexprScalarEqCmp(mp, pcrLeft, pcrRight));
+			// derive expression and then type mdid for coercibility check
+			CExpression *pexprLeft = CUtils::PexprScalarIdent(mp, pcrLeft);
+			CExpression *pexprRight = CUtils::PexprScalarIdent(mp, pcrRight);
+			IMDId *left_mdid =
+				CScalar::PopConvert(pexprLeft->Pop())->MdidType();
+			IMDId *right_mdid =
+				CScalar::PopConvert(pexprRight->Pop())->MdidType();
+			CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+
+			// PexprScalarEqCmp checks three condition sequentially
+			// If a condition is satisfied, the latter conditions
+			// won't be checked anymore
+			// Condition 1: left type equals right type, then no cast
+			// Condition 2: cast object exists from right type to
+			// left type, then cast right type to left type
+			// Condition 3: cast object exists from left type to right
+			// type, then cast left type to right type
+
+			// In some cases, condition 2 and 3 can both be satisfied,
+			// such as varchar can be cast to char, and char can also be
+			// cast to varchar. Given the above sequential logic, only
+			// the cast in condition 2 will be applied.
+
+			// This behavior isn't always desired, cause cast coercibility
+			// isn't necessarily bidirectional. Eg. when we derive
+			// additional equality hash conditions, we would only want to
+			// add predicates where cast is coercible. The following logic
+			// ensures that.
+
+			// case 1:
+			// Left type is the same as the right type, or,
+			// casting the right type to the left type is coercible.
+			// We pass left column reference as "left" type, and right
+			// column reference as "right" type.
+			// This way, either no cast is required, or,
+			// the cast is applied from right to left.
+			if (left_mdid == right_mdid ||
+				CMDAccessorUtils::FBinaryCoercible(md_accessor, right_mdid,
+												   left_mdid))
+			{
+				pdrgpexpr->Append(
+					CUtils::PexprScalarEqCmp(mp, pcrLeft, pcrRight));
+			}
+			// case 2:
+			// Casting the left type to the right type is coercible.
+			// We pass right column reference as "left" type, and left
+			// column reference as "right" type.
+			// This way, the cast is applied from left to right.
+			else if (CMDAccessorUtils::FBinaryCoercible(md_accessor, left_mdid,
+														right_mdid))
+			{
+				pdrgpexpr->Append(
+					CUtils::PexprScalarEqCmp(mp, pcrRight, pcrLeft));
+			}
+			// case 3:
+			// Cast is not coercible.
+			// No predicate is added.
+			else
+			{
+				pexprLeft->Release();
+				pexprRight->Release();
+				continue;
+			}
+
+			pexprLeft->Release();
+			pexprRight->Release();
+
 			ulPreds++;
 		}
 	}
