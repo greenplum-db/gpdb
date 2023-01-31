@@ -26,7 +26,7 @@ Before starting the upgrade process, perform the following checks.
 
     If you have not yet configured PXF, no action is necessary.
 
--   If you have configured and used the Tanzu Greenplum Streaming Server \(GPSS\) in your previous Tanzu Greenplum Database installation, you must stop any running GPSS jobs and service instances before you upgrade to a new version of Greenplum Database. Refer to [GPSS Pre-Upgrade Actions](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Streaming-Server/1.7/greenplum-streaming-server/GUID-upgrading-gpss.html#step1-gpss-pre-upgrade-actions) for instructions.
+-   If you have configured and used the VMware Greenplum Streaming Server \(GPSS\) in your previous VMware Greenplum Database installation, you must stop any running GPSS jobs and service instances before you upgrade to a new version of Greenplum Database. Refer to [GPSS Pre-Upgrade Actions](https://docs.vmware.com/en/VMware-Greenplum-Streaming-Server/1.7/greenplum-streaming-server/GUID-upgrading-gpss.html#step1-gpss-pre-upgrade-actions) for instructions.
 
     If you do not plan to use GPSS, or you have not yet configured GPSS, no action is necessary.
 
@@ -121,18 +121,18 @@ An upgrade from Greenplum Database 6.x to a newer 6.x release involves stopping 
     $ gpstart
     ```
 
-11. For Tanzu Greenplum Database, use the `gppkg` utility to re-install Tanzu Greenplum Database extensions. If you were previously using any Tanzu Greenplum Database extensions such as pgcrypto, PL/R, PL/Java, or PostGIS, download the corresponding packages from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb), and install using this utility. See the extension documentation for details.
+11. For VMware Greenplum Database, use the `gppkg` utility to re-install VMware Greenplum Database extensions. If you were previously using any VMware Greenplum Database extensions such as pgcrypto, PL/R, PL/Java, or PostGIS, download the corresponding packages from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb), and install using this utility. See the extension documentation for details.
 
     Also copy any files that are used by the extensions \(such as JAR files, shared object files, and libraries\) from the previous version installation directory to the new version installation directory on the master and segment host systems.
 
 12. If you configured PXF in your previous Greenplum Database installation, you may need to install PXF in your new Greenplum installation, and you may be required to re-initialize or register the PXF service after you upgrade Greenplum Database. Refer to the [Step 2](../pxf/upgrade_pxf_6x.html#pxfup) PXF upgrade procedure for instructions.
-13. For Tanzu Greenplum Database, if you configured GPSS in your previous installation, you may be required to perform some upgrade actions, and you must re-restart the GPSS service instances and jobs. Refer to [Step 2](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Streaming-Server/1.7/greenplum-streaming-server/GUID-upgrading-gpss.html#step2-upgrading-gpss) of the GPSS upgrade procedure for instructions.
+13. For VMware Greenplum Database, if you configured GPSS in your previous installation, you may be required to perform some upgrade actions, and you must re-restart the GPSS service instances and jobs. Refer to [Step 2](https://docs.vmware.com/en/VMware-Greenplum-Streaming-Server/1.7/greenplum-streaming-server/GUID-upgrading-gpss.html#step2-upgrading-gpss) of the GPSS upgrade procedure for instructions.
 
 After upgrading Greenplum Database, ensure that all features work as expected. For example, test that backup and restore perform as expected, and Greenplum Database features such as user-defined functions, and extensions such as MADlib and PostGIS perform as expected.
 
 ## <a id="topic_zbx_szy_kbb"></a>Troubleshooting a Failed Upgrade 
 
-If you experience issues during the migration process and have active entitlements for Greenplum Database or Tanzu Greenplum Database that were purchased through VMware, contact VMware Support. Information for contacting VMware Support is at [https://tanzu.vmware.com/support](https://tanzu.vmware.com/support).
+If you experience issues during the migration process and have active entitlements for Greenplum Database or VMware Greenplum Database that were purchased through VMware, contact VMware Support. Information for contacting VMware Support is at [https://tanzu.vmware.com/support](https://tanzu.vmware.com/support).
 
 **Be prepared to provide the following information:**
 

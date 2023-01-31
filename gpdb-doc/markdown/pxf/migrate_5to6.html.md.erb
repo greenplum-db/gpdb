@@ -16,7 +16,7 @@ The PXF Greenplum Database 5.x to 6.x migration procedure has two parts. You per
 
 Before migrating PXF from Greenplum 5.x to Greenplum 6.x, ensure that you can:
 
-- Identify your OS Version. Greenplum Database 6.x does not support running PXF on CentOS 6.x or RHEL 6.x due to a limitation with the version of `cURL`. See [Known Issues and Limitations](https://docs.vmware.com/en/VMware-Tanzu-Greenplum/6/greenplum-database/GUID-relnotes-release-notes.html#known-issues-and-limitations) in the Greenplum Database release notes for more details.
+- Identify your OS Version. Greenplum Database 6.x does not support running PXF on CentOS 6.x or RHEL 6.x due to a limitation with the version of `cURL`. See [Known Issues and Limitations](https://docs.vmware.com/en/VMware-Greenplum/6/greenplum-database/GUID-relnotes-release-notes.html#known-issues-and-limitations) in the Greenplum Database release notes for more details.
 - Identify the version number of your Greenplum 5.x installation. If it is older than 5.21.2, upgrade to a newer 5.x version.
 - Identify the version of PXF running in the Greenplum 5.x cluster.
 - Identify the location of your PXF installation:
@@ -60,7 +60,7 @@ Perform this procedure in your Greenplum Database 5.x installation:
 
 3. Greenplum 6 removes the `gphdfs` external table protocol. If you have `gphdfs` external tables defined in your Greenplum 5.x installation, you must delete or migrate them to `pxf` as described in [Migrating gphdfs External Tables to PXF](gphdfs-pxf-migrate.html).
 
-3. Stop PXF on each segment host as described in [Stopping PXF](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-cfginitstart_pxf.html#stop_pxf).
+3. Stop PXF on each segment host as described in [Stopping PXF](https://docs.vmware.com/en/VMware-Greenplum-Platform-Extension-Framework/6.3/vmware-greenplum-platform-extension-framework/GUID-cfginitstart_pxf.html#stop_pxf).
 
 4. If you plan to install Greenplum Database 6.x on a new set of hosts, be sure to save a copy of the `$PXF_CONF` directory in your Greenplum 5.x installation.
 
@@ -81,7 +81,7 @@ After you upgrade to Greenplum Database 6.x, and table definitions and data from
 
 3. PXF releases different software packages for Greenplum Database version 5 and version 6. 
     1. If you are running version 6.x of the independent PXF distribution that you installed via an `rpm` or `deb` in your Greenplum 5.x installation:
-        1. Install the same PXF 6.x version *for Greenplum 6* on your Greenplum 6.x hosts as described in [Installing PXF](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-installing_pxf.html).
+        1. Install the same PXF 6.x version *for Greenplum 6* on your Greenplum 6.x hosts as described in [Installing PXF](https://docs.vmware.com/en/VMware-Greenplum-Platform-Extension-Framework/6.3/vmware-greenplum-platform-extension-framework/GUID-installing_pxf.html).
         1. Copy the PXF extension control file from the PXF installation directory to the new Greenplum 6.x install directory:
 
             ``` shell
@@ -94,7 +94,7 @@ After you upgrade to Greenplum Database 6.x, and table definitions and data from
             ```
         1. Skip the following steps and exit this procedure.
 
-    1. If you are running PXF version 5.x, you must install the latest independent PXF 5.16.x distribution for Greenplum 6 on your Greenplum 6.x hosts as described in [Installing PXF](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-installing_pxf.html).
+    1. If you are running PXF version 5.x, you must install the latest independent PXF 5.16.x distribution for Greenplum 6 on your Greenplum 6.x hosts as described in [Installing PXF](https://docs.vmware.com/en/VMware-Greenplum-Platform-Extension-Framework/6.3/vmware-greenplum-platform-extension-framework/GUID-installing_pxf.html).
 
         <div class="note"><b>Note:</b> If you are interested in running PXF version 6.x, upgrade to that version <b>after</b> you complete this entire procedure and verify that PXF is working in your Greenplum 6.x installation.</div>
 
@@ -164,7 +164,7 @@ After you upgrade to Greenplum Database 6.x, and table definitions and data from
     gpadmin@gp6master$ pxf cluster start
     ```
 
-    Your Greenplum Database cluster is now running version 5.16.x of PXF, and running it from the PXF installation directory (`/usr/local/pxf-gp<greenplum-major-version>`). Should you wish to upgrade PXF in the future, consult the [PXF upgrade documentation](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-upgrade_landing.html).
+    Your Greenplum Database cluster is now running version 5.16.x of PXF, and running it from the PXF installation directory (`/usr/local/pxf-gp<greenplum-major-version>`). Should you wish to upgrade PXF in the future, consult the [PXF upgrade documentation](https://docs.vmware.com/en/VMware-Greenplum-Platform-Extension-Framework/6.3/vmware-greenplum-platform-extension-framework/GUID-upgrade_landing.html).
 
 7. Verify the migration by testing that each PXF external table can access the referenced data store.
 

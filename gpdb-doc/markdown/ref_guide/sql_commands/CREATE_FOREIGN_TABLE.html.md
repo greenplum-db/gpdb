@@ -82,7 +82,7 @@ mpp\_execute \{ 'master' \| 'any' \| 'all segments' \}
 
 ## <a id="section5"></a>Notes 
 
-The Tanzu Greenplum Query Optimizer, GPORCA, does not support foreign tables. A query on a foreign table always falls back to the Postgres Planner.
+The VMware Greenplum Query Optimizer, GPORCA, does not support foreign tables. A query on a foreign table always falls back to the Postgres Planner.
 
 ## <a id="section6"></a>Examples 
 

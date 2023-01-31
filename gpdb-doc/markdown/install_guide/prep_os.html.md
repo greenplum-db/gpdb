@@ -19,13 +19,13 @@ The Greenplum Database host naming convention for the master host is `mdw` and f
 
 The segment host naming convention is sdwN where sdw is a prefix and N is an integer. For example, segment host names would be `sdw1`, `sdw2` and so on. NIC bonding is recommended for hosts with multiple interfaces, but when the interfaces are not bonded, the convention is to append a dash \(`-`\) and number to the host name. For example, `sdw1-1` and `sdw1-2` are the two interface names for host `sdw1`.
 
-For information about running Tanzu Greenplum Database in the cloud see *Cloud Services* in the [Tanzu Greenplum Partner Marketplace](https://pivotal.io/pivotal-greenplum/greenplum-partner-marketplace).
+For information about running VMware Greenplum Database in the cloud see *Cloud Services* in the [VMware Greenplum Partner Marketplace](https://pivotal.io/pivotal-greenplum/greenplum-partner-marketplace).
 
 > **Important** When data loss is not acceptable for a Greenplum Database cluster, Greenplum master and segment mirroring is recommended. If mirroring is not enabled then Greenplum stores only one copy of the data, so the underlying storage media provides the only guarantee for data availability and correctness in the event of a hardware failure.
 
-The VMware Tanzu Greenplum on vSphere virtualized environment ensures the enforcement of anti-affinity rules required for Greenplum mirroring solutions and fully supports mirrorless deployments. Other virtualized or containerized deployment environments are generally not supported for production use unless both Greenplum master and segment mirroring are enabled.
+The VMware Greenplum on vSphere virtualized environment ensures the enforcement of anti-affinity rules required for Greenplum mirroring solutions and fully supports mirrorless deployments. Other virtualized or containerized deployment environments are generally not supported for production use unless both Greenplum master and segment mirroring are enabled.
 
-> **Note** For information about upgrading Tanzu Greenplum from a previous version, see the *Tanzu Greenplum Database Release Notes* for the release that you are installing.
+> **Note** For information about upgrading VMware Greenplum from a previous version, see the *VMware Greenplum Database Release Notes* for the release that you are installing.
 
 > **Note** Automating the configuration steps described in this topic and [Installing the Greenplum Database Software](install_gpdb.html) with a system provisioning tool, such as Ansible, Chef, or Puppet, can save time and ensure a reliable and repeatable Greenplum Database installation.
 

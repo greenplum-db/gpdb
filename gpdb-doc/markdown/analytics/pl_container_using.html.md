@@ -319,7 +319,7 @@ Record the name of the GPU device ID (0 in the above example) or the device UUID
 
 #### Install and Customize the PL/Container Image
 
-1. Download the `plcontainer-python3-image-2.2.0-gp6.tar.gz` file from the **Greenplum Procedural Languages** section on [Tanzu Network](https://network.pivotal.io/products/vmware-tanzu-greenplum).
+1. Download the `plcontainer-python3-image-2.2.0-gp6.tar.gz` file from the **Greenplum Procedural Languages** section on [VMware Tanzu Network](https://network.pivotal.io/products/VMware-Greenplum).
 
 2. Load the downloaded PL/Container image into Docker:
     ```

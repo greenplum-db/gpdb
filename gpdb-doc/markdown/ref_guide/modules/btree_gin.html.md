@@ -18,7 +18,7 @@ Refer to [Installing Additional Supplied Modules](../../install_guide/install_mo
 
 ## <a id="topic_issues"></a>Greenplum Database Limitations 
 
-The Tanzu Greenplum Query Optimizer \(GPORCA\) does not support queries that access an index with `op_class`, such queries will fall back to the Postgres Planner
+The VMware Greenplum Query Optimizer \(GPORCA\) does not support queries that access an index with `op_class`, such queries will fall back to the Postgres Planner
 
 ## <a id="topic_info"></a>Module Documentation 
 

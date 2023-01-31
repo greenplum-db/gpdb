@@ -2,14 +2,14 @@
 title: About Full Text Search 
 ---
 
-This topic provides an overview of Greenplum Database full text search, basic text search expressions, configuring, and customizing text search. Greenplum Database full text search is compared with Tanzu Greenplum Text.
+This topic provides an overview of Greenplum Database full text search, basic text search expressions, configuring, and customizing text search. Greenplum Database full text search is compared with VMware Greenplum Text.
 
 This section contains the following subtopics:
 
 -   [What is a Document?](#document)
 -   [Basic Text Matching](#basic-text-matching)
 -   [Configurations](#configurations)
--   [Comparing Greenplum Database Text Search with Tanzu Greenplum Text](#gptext)
+-   [Comparing Greenplum Database Text Search with VMware Greenplum Text](#gptext)
 
 Full Text Searching \(or just "text search"\) provides the capability to identify natural-language *documents* that satisfy a *query*, and optionally to rank them by relevance to the query. The most common type of search is to find all documents containing given *query terms* and return them in order of their *similarity* to the query.
 
@@ -125,26 +125,26 @@ To make it easier to build custom text search configurations, a configuration is
 
 Text search parsers and templates are built from low-level C functions; therefore it requires C programming ability to develop new ones, and superuser privileges to install one into a database. \(There are examples of add-on parsers and templates in the `contrib/` area of the Greenplum Database distribution.\) Since dictionaries and configurations just parameterize and connect together some underlying parsers and templates, no special privilege is needed to create a new dictionary or configuration. Examples of creating custom dictionaries and configurations appear later in this chapter.
 
-## <a id="gptext"></a>Comparing Greenplum Database Text Search with Tanzu Greenplum Text 
+## <a id="gptext"></a>Comparing Greenplum Database Text Search with VMware Greenplum Text 
 
-Greenplum Database text search is PostgreSQL text search ported to the Greenplum Database MPP platform. VMware also offers Tanzu Greenplum Text, which integrates Greenplum Database with the Apache Solr text search platform. Tanzu Greenplum Text installs an Apache Solr cluster alongside your Greenplum Database cluster and provides Greenplum Database functions you can use to create Solr indexes, query them, and receive results in the database session.
+Greenplum Database text search is PostgreSQL text search ported to the Greenplum Database MPP platform. VMware also offers VMware Greenplum Text, which integrates Greenplum Database with the Apache Solr text search platform. VMware Greenplum Text installs an Apache Solr cluster alongside your Greenplum Database cluster and provides Greenplum Database functions you can use to create Solr indexes, query them, and receive results in the database session.
 
 Both of these systems provide powerful, enterprise-quality document indexing and searching services. Greenplum Database text search is immediately available to you, with no need to install and maintain additional software. If it meets your applications' requirements, you should use it.
 
-Tanzu Greenplum Text, with Solr, has many capabilities that are not available with Greenplum Database text search. In particular, it is better for advanced text analysis applications. Following are some of the advantages and capabilities available to you when you use Tanzu Greenplum Text for text search applications.
+VMware Greenplum Text, with Solr, has many capabilities that are not available with Greenplum Database text search. In particular, it is better for advanced text analysis applications. Following are some of the advantages and capabilities available to you when you use VMware Greenplum Text for text search applications.
 
 -   The Apache Solr cluster can be scaled separately from the database. Solr nodes can be deployed on the Greenplum Database hosts or on separate hosts on the network.
 -   Indexing and search workloads can be moved out of Greenplum Database to Solr to maintain database query performance.
--   Tanzu Greenplum Text creates Solr indexes that are split into *shards*, one per Greenplum Database segment, so the advantages of the Greenplum Database MPP architecture are extended to text search workloads.
+-   VMware Greenplum Text creates Solr indexes that are split into *shards*, one per Greenplum Database segment, so the advantages of the Greenplum Database MPP architecture are extended to text search workloads.
 -   Indexing and searching documents with Solr is very fast and can be scaled by adding more Solr nodes to the cluster.
 -   Document content can be stored in Greenplum Database tables, in the Solr index, or both.
--   Through Tanzu Greenplum Text, Solr can index documents stored as text in Greenplum Database tables, as well as documents in external stores accessible using HTTP, FTP, S3, or HDFS URLs.
+-   Through VMware Greenplum Text, Solr can index documents stored as text in Greenplum Database tables, as well as documents in external stores accessible using HTTP, FTP, S3, or HDFS URLs.
 -   Solr automatically recognizes most rich document formats and indexes document content and metadata separately.
 -   Solr indexes are highly customizable. You can customize the text analysis chain down to the field level.
--   In addition to the large number of languages, tokenizers, and filters available from the Apache project, Tanzu Greenplum Text provides a social media tokenizer, an international text tokenizer, and a universal query parser that understands several common text search syntaxes.
--   The Tanzu Greenplum Text API supports advanced text analysis tools, such as facetting, named entity recognition \(NER\), and parts of speech \(POS\) recognition.
+-   In addition to the large number of languages, tokenizers, and filters available from the Apache project, VMware Greenplum Text provides a social media tokenizer, an international text tokenizer, and a universal query parser that understands several common text search syntaxes.
+-   The VMware Greenplum Text API supports advanced text analysis tools, such as facetting, named entity recognition \(NER\), and parts of speech \(POS\) recognition.
 
-See the [Tanzu Greenplum Text Documentation web site](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Text/index.html) for more information.
+See the [VMware Greenplum Text Documentation web site](https://docs.vmware.com/en/VMware-Greenplum-Text/index.html) for more information.
 
 **Parent topic:** [Using Full Text Search](../textsearch/full-text-search.html)
 

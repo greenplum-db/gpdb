@@ -4,8 +4,8 @@ title: Server Programmatic Interfaces
 
 This section describes programmatic interfaces to the Greenplum Database server.
 
--   [DataDirect ODBC Driver (Tanzu Greenplum Only)](/vmware/datadirect/datadirect_ODBC_71.html)
--   [DataDirect JDBC Driver (Tanzu Greenplum Only)](/vmware/datadirect/datadirect_jdbc.html)
+-   [DataDirect ODBC Driver (VMware Greenplum Only)](/vmware/datadirect/datadirect_ODBC_71.html)
+-   [DataDirect JDBC Driver (VMware Greenplum Only)](/vmware/datadirect/datadirect_jdbc.html)
 -   [Greenplum Partner Connector API](gppc.html)
 -   [Background Worker Processes](bgworker.html)
 

@@ -12,7 +12,7 @@ This chapter contains the following information:
 
 For information about the Greenplum Database PL/R Language, see [Greenplum PL/R Language Extension](../analytics/pl_r.html).
 
-**Parent topic:** [Installing Optional Extensions \(Tanzu Greenplum\)](data_sci_pkgs.html)
+**Parent topic:** [Installing Optional Extensions \(VMware Greenplum\)](data_sci_pkgs.html)
 
 ## <a id="topic2"></a>R Data Science Libraries 
 

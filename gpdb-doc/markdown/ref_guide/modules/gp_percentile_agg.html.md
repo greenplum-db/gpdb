@@ -2,7 +2,7 @@
 title: gp_percentile_agg 
 ---
 
-The `gp_percentile_agg` module introduces improved Tanzu Greenplum Query Optimizer \(GPORCA\) performance for ordered-set aggregate functions including `percentile_cont()`, `percentile_disc()`, and `median()`. These improvements particularly benefit MADlib, which internally invokes these functions.
+The `gp_percentile_agg` module introduces improved VMware Greenplum Query Optimizer \(GPORCA\) performance for ordered-set aggregate functions including `percentile_cont()`, `percentile_disc()`, and `median()`. These improvements particularly benefit MADlib, which internally invokes these functions.
 
 GPORCA generates a more performant query plan when:
 

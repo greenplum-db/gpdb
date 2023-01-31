@@ -95,7 +95,7 @@ storage\_directive
 
 :   **COMPRESSTYPE** — Set to `ZLIB` \(the default\), `ZSTD`, `RLE_TYPE`, or `QUICKLZ`1 to specify the type of compression used.
 
-    > **Note** 1QuickLZ compression is available only in the commercial release of Tanzu Greenplum.
+    > **Note** 1QuickLZ compression is available only in the commercial release of VMware Greenplum.
 
 :   **COMPRESSLEVEL** — For Zstd compression, set to an integer value from 1 \(fastest compression\) to 19 \(highest compression ratio\). For zlib compression, the valid range is from 1 to 9. The QuickLZ compression level can only be set to 1. For `RLE_TYPE`, the compression level can be set to an integer value from 1 \(fastest compression\) to 4 \(highest compression ratio\). The default compression level is 1.
 

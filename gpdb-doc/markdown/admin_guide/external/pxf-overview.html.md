@@ -10,7 +10,7 @@ PXF is installed with Hadoop and Object Storage connectors. These connectors ena
 
 The Greenplum Platform Extension Framework includes a C-language extension and a Java service. After you configure and initialize PXF, you start a single PXF JVM process on each Greenplum Database segment host. This long- running process concurrently serves multiple query requests.
 
-For detailed information about the architecture of and using PXF, refer to the [Greenplum Platform Extension Framework \(PXF\)](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-overview_pxf.html) documentation.
+For detailed information about the architecture of and using PXF, refer to the [Greenplum Platform Extension Framework \(PXF\)](https://docs.vmware.com/en/VMware-Greenplum-Platform-Extension-Framework/6.3/vmware-greenplum-platform-extension-framework/GUID-overview_pxf.html) documentation.
 
 **Parent topic:** [Working with External Data](../external/g-working-with-file-based-ext-tables.html)
 

@@ -99,14 +99,14 @@ Finally, through native API integration, Greenplum Database can stream backups d
 
 -   Back up Greenplum databases regularly unless the data is easily restored from sources.
 
--   Use the `gpbackup` command to specify only the schema and tables that you want backed up. See the [gpbackup](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/index.html) reference for more information.
+-   Use the `gpbackup` command to specify only the schema and tables that you want backed up. See the [gpbackup](https://docs.vmware.com/en/VMware-Greenplum-Backup-and-Restore/index.html) reference for more information.
 
 -   `gpbackup` places `SHARED ACCESS` locks on the set of tables to back up. Backups with fewer tables are more efficient for selectively restoring schemas and tables, since `gprestore` does not have to search through the entire database.
 
 -   If backups are saved to local cluster storage, move the files to a safe, off-cluster location when the backup is complete. Backup files and database files that reside on the same storage can be lost simultaneously.
 -   If backups are saved to NFS mounts, use a scale-out NFS solution such as Dell EMC Isilon to prevent IO bottlenecks.
 
--   Tanzuy Greenplum customers should consider streaming backups to the Dell EMC Data Domain enterprise backup platform.
+-   VMware Greenplum customers should consider streaming backups to the Dell EMC Data Domain enterprise backup platform.
 
 ## <a id="topic_wlw_wxc_54"></a>Detecting Failed Master and Segment Instances 
 

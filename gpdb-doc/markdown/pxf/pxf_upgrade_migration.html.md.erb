@@ -7,9 +7,9 @@ There are two possible scenarios:
 
 1. *Greenplum Database 5.x to 6.x upgrade or migration*:
     - If you are using the `gphdfs` external table protocol to access data stored in Hadoop in your Greenplum Database 5.x installation, you must first [migrate your gphdfs external tables](gphdfs-pxf-migrate.html) to use PXF instead, since Greenplum Database version 6 removes support for the `gphdfs` protocol.
-    - PXF actions are required if you choose a [gpupgrade](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Upgrade/1.3/greenplum-upgrade/GUID-about.html)-based Greenplum Database 5.x to 6.x upgrade.
+    - PXF actions are required if you choose a [gpupgrade](https://docs.vmware.com/en/VMware-Greenplum-Upgrade/1.3/greenplum-upgrade/GUID-about.html)-based Greenplum Database 5.x to 6.x upgrade.
     - PXF actions are required if you choose to manually [migrate from Greenplum Database 5.x to 6.x](migrate_5to6.html).
 
-1. *Greenplum Database 6.x to 6.newer upgrade*: You may be required to perform PXF upgrade actions when you [upgrade from a previous Greenplum Database 6.x version](upgrade_pxf_6x.html). Note that different steps are outlined based on your PXF installation source: a manually installed `rpm` or `deb` package downloaded from Tanzu Network, or the PXF version included with the Greenplum Database Server installer in versions 6.18.x and older. 
+1. *Greenplum Database 6.x to 6.newer upgrade*: You may be required to perform PXF upgrade actions when you [upgrade from a previous Greenplum Database 6.x version](upgrade_pxf_6x.html). Note that different steps are outlined based on your PXF installation source: a manually installed `rpm` or `deb` package downloaded from VMware Tanzu Network, or the PXF version included with the Greenplum Database Server installer in versions 6.18.x and older. 
 
-If you are upgrading a PXF `rpm` or `deb` installation independent of a Greenplum Database upgrade, refer to the [PXF upgrade documentation](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-upgrade_landing.html).
+If you are upgrading a PXF `rpm` or `deb` installation independent of a Greenplum Database upgrade, refer to the [PXF upgrade documentation](https://docs.vmware.com/en/VMware-Greenplum-Platform-Extension-Framework/6.3/vmware-greenplum-platform-extension-framework/GUID-upgrade_landing.html).

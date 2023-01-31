@@ -10,7 +10,7 @@ Greenplum Database supports parallel and non-parallel methods for backing up and
 
 `gpbackup` and `gprestore` are the recommended Greenplum Database backup and restore utilities. `gpbackup` utilizes `ACCESS SHARE` locks at the individual table level, instead of `EXCLUSIVE` locks on the `pg_class` catalog table. This enables you to run DML statements during the backup, such as `CREATE`, `ALTER`, `DROP`, and `TRUNCATE` operations, as long as those operations do not target the current backup set. Backup files created with `gpbackup` are designed to provide future capabilities for restoring individual database objects along with their dependencies, such as functions and required user-defined datatypes.
 
-`gpbackup`, `gprestore`, and related utilities are provided as a separate download, [VMware Tanzu™ Greenplum® Backup and Restore](https://network.pivotal.io/products/pivotal-gpdb-backup-restore). Follow the instructions in the [VMware Tanzu Greenplum Backup and Restore Documentation](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/index.html) to install and use these utilities.
+`gpbackup`, `gprestore`, and related utilities are provided as a separate download, [VMware Greenplum Backup and Restore](https://network.pivotal.io/products/pivotal-gpdb-backup-restore). Follow the instructions in the [VMware Greenplum Backup and Restore Documentation](https://docs.vmware.com/en/VMware-Greenplum-Backup-and-Restore/index.html) to install and use these utilities.
 
 ## <a id="nparback"></a>Non-Parallel Backup with pg\_dump 
 

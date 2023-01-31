@@ -52,7 +52,7 @@ The `SELECT` statement may include joins on multiple base tables, `WHERE` clause
 
 The *anytable* type is only permitted in functions implemented in the C or C++ languages. The body of the function can access the table using the Greenplum Database Server Programming Interface \(SPI\) or the Greenplum Partner Connector \(GPPC\) API.
 
-The *anytable* type is used in some user-defined functions in the Tanzu Greenplum Text API. The following GPText example uses the `TABLE` function with the `SCATTER BY` clause in the GPText function `gptext.index()` to populate the index `mydb.mytest.articles` with data from the messages table:
+The *anytable* type is used in some user-defined functions in the VMware Greenplum Text API. The following GPText example uses the `TABLE` function with the `SCATTER BY` clause in the GPText function `gptext.index()` to populate the index `mydb.mytest.articles` with data from the messages table:
 
 ```
 SELECT * FROM gptext.index(TABLE(SELECT * FROM mytest.messages 
@@ -60,5 +60,5 @@ SELECT * FROM gptext.index(TABLE(SELECT * FROM mytest.messages
         
 ```
 
-For information about the function `gptext.index()`, see the Tanzu Greenplum Text documentation.
+For information about the function `gptext.index()`, see the VMware Greenplum Text documentation.
 

@@ -40,7 +40,7 @@ You can register the following modules in this manner:
 <li class="li"><a class="xref" href="../ref_guide/modules/hstore.html">hstore</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/ip4r.html">ip4r</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/ltree.html">ltree</a></li>
-<li class="li"><a class="xref" href="../ref_guide/modules/orafce_ref.html">orafce</a> (Tanzu Greenplum only)</li>
+<li class="li"><a class="xref" href="../ref_guide/modules/orafce_ref.html">orafce</a> (VMware Greenplum only)</li>
 <li class="li"><a class="xref" href="../ref_guide/modules/pageinspect.html">pageinspect</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/pg_trgm.html">pg_trgm</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/pgcrypto.html">pgcrypto</a></li>
