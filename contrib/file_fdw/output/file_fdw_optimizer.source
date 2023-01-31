@@ -314,8 +314,6 @@ CREATE FOREIGN TABLE p1 partition of pt for values in (1) SERVER file_server
 OPTIONS (format 'csv', filename '@abs_srcdir@/data/list1.csv', delimiter ',');
 CREATE TABLE p2 partition of pt for values in (2);
 SELECT tableoid::regclass, * FROM pt;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Partitioned table with external/foreign partition
  tableoid | a |  b  
 ----------+---+-----
  p1       | 1 | foo
@@ -339,8 +337,6 @@ ERROR:  cannot insert into foreign table "p1"
 CONTEXT:  COPY pt, line 2: "1,qux"
 COPY pt FROM '@abs_srcdir@/data/list2.csv' with (format 'csv', delimiter ',');
 SELECT tableoid::regclass, * FROM pt;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Partitioned table with external/foreign partition
  tableoid | a |  b  
 ----------+---+-----
  p1       | 1 | foo
@@ -365,18 +361,16 @@ SELECT tableoid::regclass, * FROM p2;
 
 INSERT INTO pt VALUES (1, 'xyzzy'); -- ERROR
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Partitioned table with external/foreign partition
-ERROR:  cannot insert into foreign table "p1"  (seg1 127.0.0.1:7008 pid=78225)
+DETAIL:  Feature not supported: Insert with External/foreign partition storage types
+ERROR:  cannot insert into foreign table "p1"  (seg1 127.0.0.1:7008 pid=39425)
 INSERT INTO pt VALUES (2, 'xyzzy');
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Partitioned table with external/foreign partition
+DETAIL:  Feature not supported: Insert with External/foreign partition storage types
 UPDATE pt set a = 1 where a = 2; -- ERROR
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Partitioned table with external/foreign partition
-ERROR:  cannot insert into foreign table "p1"  (seg1 127.0.0.1:7008 pid=78225)
+DETAIL:  Feature not supported: Update with External/foreign partition storage types
+ERROR:  cannot insert into foreign table "p1"  (seg1 127.0.0.1:7008 pid=50091)
 SELECT tableoid::regclass, * FROM pt;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Partitioned table with external/foreign partition
  tableoid | a |   b   
 ----------+---+-------
  p1       | 1 | foo

@@ -111,7 +111,9 @@ create table p1(a int);
 create external web table p2_ext (like p1) EXECUTE 'cat something.txt' FORMAT 'TEXT';
 alter table ext_part attach partition p1 for values in (1);
 alter table ext_part attach partition p2_ext for values in (2);
-explain select * from ext_part;
+explain insert into ext_part values (1);
+explain delete from ext_part where a=1;
+explain update ext_part set a=1;
 -- start_ignore
 -- FIXME: gpcheckcat fails due to mismatching distribution policy if this table isn't dropped
 -- Keep this table around once this is fixed
