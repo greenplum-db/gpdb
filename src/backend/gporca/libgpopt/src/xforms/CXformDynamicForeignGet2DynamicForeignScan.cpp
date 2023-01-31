@@ -1,74 +1,76 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2012 EMC Corp.
+//	Copyright (C) 2023 VMware Inc.
 //
 //	@filename:
-//		CXformDynamicGet2DynamicTableScan.cpp
+//		CXformDynamicForeignGet2DynamicForeignScan.cpp
 //
 //	@doc:
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpopt/xforms/CXformDynamicGet2DynamicTableScan.h"
+#include "gpopt/xforms/CXformDynamicForeignGet2DynamicForeignScan.h"
 
 #include "gpos/base.h"
 
-#include "gpopt/metadata/CPartConstraint.h"
 #include "gpopt/metadata/CTableDescriptor.h"
-#include "gpopt/operators/CLogicalDynamicGet.h"
-#include "gpopt/operators/CPhysicalDynamicTableScan.h"
+#include "gpopt/operators/CLogicalDynamicForeignGet.h"
+#include "gpopt/operators/CPhysicalDynamicForeignScan.h"
 
 using namespace gpopt;
 
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformDynamicGet2DynamicTableScan::CXformDynamicGet2DynamicTableScan
+//		CXformDynamicForeignGet2DynamicForeignScan::CXformDynamicForeignGet2DynamicForeignScan
 //
 //	@doc:
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CXformDynamicGet2DynamicTableScan::CXformDynamicGet2DynamicTableScan(
-	CMemoryPool *mp)
+CXformDynamicForeignGet2DynamicForeignScan::
+	CXformDynamicForeignGet2DynamicForeignScan(CMemoryPool *mp)
 	: CXformImplementation(
 		  // pattern
-		  GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CLogicalDynamicGet(mp)))
+		  GPOS_NEW(mp)
+			  CExpression(mp, GPOS_NEW(mp) CLogicalDynamicForeignGet(mp)))
 {
 }
 
-// compute xform promise for a given expression handle
+//---------------------------------------------------------------------------
+//	@function:
+//		CXformDynamicForeignGet2DynamicForeignScan::Exfp
+//
+//	@doc:
+//		Compute promise of xform
+//
+//---------------------------------------------------------------------------
 CXform::EXformPromise
-CXformDynamicGet2DynamicTableScan::Exfp(CExpressionHandle &exprhdl) const
+CXformDynamicForeignGet2DynamicForeignScan::Exfp(CExpressionHandle &  //exprhdl
+) const
 {
-	CLogicalDynamicGet *popGet = CLogicalDynamicGet::PopConvert(exprhdl.Pop());
-	// Do not run if contains foreign partitions, instead run CXformExpandDynamicGetWithForeignPartitions
-	if (popGet->ContainsForeignParts())
-	{
-		return CXform::ExfpNone;
-	}
-
 	return CXform::ExfpHigh;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformDynamicGet2DynamicTableScan::Transform
+//		CXformDynamicForeignGet2DynamicForeignScan::Transform
 //
 //	@doc:
 //		Actual transformation
 //
 //---------------------------------------------------------------------------
 void
-CXformDynamicGet2DynamicTableScan::Transform(CXformContext *pxfctxt,
-											 CXformResult *pxfres,
-											 CExpression *pexpr) const
+CXformDynamicForeignGet2DynamicForeignScan::Transform(CXformContext *pxfctxt,
+													  CXformResult *pxfres,
+													  CExpression *pexpr) const
 {
 	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
-	CLogicalDynamicGet *popGet = CLogicalDynamicGet::PopConvert(pexpr->Pop());
+	CLogicalDynamicForeignGet *popGet =
+		CLogicalDynamicForeignGet::PopConvert(pexpr->Pop());
 	CMemoryPool *mp = pxfctxt->Pmp();
 
 	// create/extract components for alternative
@@ -90,13 +92,13 @@ CXformDynamicGet2DynamicTableScan::Transform(CXformContext *pxfctxt,
 
 	// create alternative expression
 	CExpression *pexprAlt = GPOS_NEW(mp) CExpression(
-		mp, GPOS_NEW(mp) CPhysicalDynamicTableScan(
+		mp, GPOS_NEW(mp) CPhysicalDynamicForeignScan(
 				mp, pname, ptabdesc, popGet->UlOpId(), popGet->ScanId(),
 				pdrgpcrOutput, pdrgpdrgpcrPart, popGet->GetPartitionMdids(),
-				popGet->GetRootColMappingPerPart()));
+				popGet->GetRootColMappingPerPart(),
+				popGet->GetForeignServerOid(), popGet->IsMasterOnly()));
 	// add alternative to transformation result
 	pxfres->Add(pexprAlt);
 }
-
 
 // EOF

@@ -1,19 +1,18 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2012 EMC Corp.
+//	Copyright (C) 2023 VMware Inc.
 //
 //	@filename:
-//		CXformDynamicGet2DynamicTableScan.h
+//		CXformDynamicForeignGet2DynamicForeignScan.h
 //
 //	@doc:
-//		Transform DynamicGet to DynamicTableScan
+//		Transform DynamicForeignGet to DynamicForeignScan
 //---------------------------------------------------------------------------
-#ifndef GPOPT_CXformDynamicGet2DynamicTableScan_H
-#define GPOPT_CXformDynamicGet2DynamicTableScan_H
+#ifndef GPOPT_CXformDynamicForeignGet2DynamicForeignScan_H
+#define GPOPT_CXformDynamicForeignGet2DynamicForeignScan_H
 
 #include "gpos/base.h"
 
-#include "gpopt/operators/CLogicalDynamicGet.h"
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt
@@ -22,37 +21,37 @@ using namespace gpos;
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CXformDynamicGet2DynamicTableScan
+//		CXformDynamicForeignGet2DynamicForeignScan
 //
 //	@doc:
-//		Transform DynamicGet to DynamicTableScan
+//		Transform DynamicForeignGet to DynamicForeignScan
 //
 //---------------------------------------------------------------------------
-class CXformDynamicGet2DynamicTableScan : public CXformImplementation
+class CXformDynamicForeignGet2DynamicForeignScan : public CXformImplementation
 {
 private:
 public:
-	CXformDynamicGet2DynamicTableScan(
-		const CXformDynamicGet2DynamicTableScan &) = delete;
+	CXformDynamicForeignGet2DynamicForeignScan(
+		const CXformDynamicForeignGet2DynamicForeignScan &) = delete;
 
 	// ctor
-	explicit CXformDynamicGet2DynamicTableScan(CMemoryPool *mp);
+	explicit CXformDynamicForeignGet2DynamicForeignScan(CMemoryPool *);
 
 	// dtor
-	~CXformDynamicGet2DynamicTableScan() override = default;
+	~CXformDynamicForeignGet2DynamicForeignScan() override = default;
 
 	// ident accessors
 	EXformId
 	Exfid() const override
 	{
-		return ExfDynamicGet2DynamicTableScan;
+		return ExfDynamicForeignGet2DynamicForeignScan;
 	}
 
 	// return a string for xform name
 	const CHAR *
 	SzId() const override
 	{
-		return "CXformDynamicGet2DynamicTableScan";
+		return "CXformDynamicForeignGet2DynamicForeignScan";
 	}
 
 	// compute xform promise for a given expression handle
@@ -62,11 +61,10 @@ public:
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 				   CExpression *pexpr) const override;
 
-};	// class CXformDynamicGet2DynamicTableScan
+};	// class CXformDynamicForeignGet2DynamicForeignScan
 
 }  // namespace gpopt
 
-
-#endif	// !GPOPT_CXformDynamicGet2DynamicTableScan_H
+#endif	// !GPOPT_CXformDynamicForeignGet2DynamicForeignScan_H
 
 // EOF
