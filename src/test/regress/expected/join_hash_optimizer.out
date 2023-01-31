@@ -1150,8 +1150,10 @@ WHERE
                                    Filter: (((hjtest_2.c * 5)) < 55)
                                    ->  Result
                                          Output: (hjtest_2.c * 5)
-                     ->  Result
-                           Output: 1
+                     ->  Materialize
+                           Output: (1)
+                           ->  Result
+                                 Output: 1
                      SubPlan 2
                        ->  Result
                              Output: (hjtest_2.c * 5)
@@ -1178,7 +1180,7 @@ WHERE
                                          Output: (hjtest_1.b * 5)
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: enable_sort = 'off', from_collapse_limit = '1'
-(49 rows)
+(51 rows)
 
 SELECT hjtest_1.a a1, hjtest_2.a a2,hjtest_1.tableoid::regclass t1, hjtest_2.tableoid::regclass t2
 FROM hjtest_1, hjtest_2
@@ -1225,8 +1227,10 @@ WHERE
                                    Filter: (((hjtest_2.c * 5)) < 55)
                                    ->  Result
                                          Output: (hjtest_2.c * 5)
-                     ->  Result
-                           Output: 1
+                     ->  Materialize
+                           Output: (1)
+                           ->  Result
+                                 Output: 1
                      SubPlan 2
                        ->  Result
                              Output: (hjtest_2.c * 5)
@@ -1253,7 +1257,7 @@ WHERE
                                          Output: (hjtest_1.b * 5)
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: enable_sort = 'off', from_collapse_limit = '1'
-(49 rows)
+(51 rows)
 
 SELECT hjtest_1.a a1, hjtest_2.a a2,hjtest_1.tableoid::regclass t1, hjtest_2.tableoid::regclass t2
 FROM hjtest_2, hjtest_1

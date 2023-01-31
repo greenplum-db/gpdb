@@ -3287,7 +3287,8 @@ where q1 = thousand or q2 = thousand;
                ->  Nested Loop
                      Join Filter: true
                      ->  Result
-                     ->  Result
+                     ->  Materialize
+                           ->  Result
                ->  Bitmap Heap Scan on tenk1
                      Recheck Cond: ((thousand = (1)) OR (thousand = (0)))
                      ->  BitmapOr
@@ -3299,7 +3300,7 @@ where q1 = thousand or q2 = thousand;
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
                      ->  Seq Scan on int4_tbl
  Optimizer: Pivotal Optimizer (GPORCA)
-(20 rows)
+(21 rows)
 
 explain (costs off)
 select * from
@@ -3317,14 +3318,15 @@ where thousand = (q1 + q2);
                ->  Nested Loop
                      Join Filter: true
                      ->  Result
-                     ->  Result
+                     ->  Materialize
+                           ->  Result
                ->  Index Scan using tenk1_thous_tenthous on tenk1
                      Index Cond: (thousand = ((1) + (0)))
          ->  Hash
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
                      ->  Seq Scan on int4_tbl
  Optimizer: Pivotal Optimizer (GPORCA)
-(15 rows)
+(16 rows)
 
 --
 -- test ability to generate a suitable plan for a star-schema query

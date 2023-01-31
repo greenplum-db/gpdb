@@ -262,16 +262,19 @@ select 1 = all (select (select 1));
    Join Filter: true
    ->  Result
          Output: true
-   ->  Nested Loop Left Join
+   ->  Materialize
          Output: (1)
-         Join Filter: true
-         ->  Result
-               Output: true
-         ->  Result
-               Output: 1
+         ->  Nested Loop Left Join
+               Output: (1)
+               Join Filter: true
+               ->  Result
+                     Output: true
+               ->  Materialize
+                     Output: (1)
+                     ->  Result
+                           Output: 1
  Optimizer: Pivotal Optimizer (GPORCA)
- Settings: optimizer=on
-(14 rows)
+(17 rows)
 
 select 1 = all (select (select 1));
  ?column? 
@@ -1187,22 +1190,24 @@ select * from
   (3 not in (select * from (values (1), (2)) ss1)),
   (false)
 ) ss;
-                                                                                                                                                                QUERY PLAN                                                                                                                                                                 
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                                                                                                                 QUERY PLAN                                                                                                                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Append
    ->  Nested Loop Left Join
          Output: ((CASE WHEN (sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END)) IS NULL) THEN true WHEN (sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END)) > '0'::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN (sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END)) = '0'::bigint) THEN true ELSE false END) = true)
          Join Filter: true
          ->  Result
                Output: true
-         ->  Aggregate
-               Output: CASE WHEN (sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END)) IS NULL) THEN true WHEN (sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END)) > '0'::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN (sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END)) = '0'::bigint) THEN true ELSE false END
-               ->  Values Scan on "Values"
-                     Output: CASE WHEN (3 = column1) THEN 1 ELSE 0 END, CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END
+         ->  Materialize
+               Output: (CASE WHEN (sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END)) IS NULL) THEN true WHEN (sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END)) > '0'::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN (sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END)) = '0'::bigint) THEN true ELSE false END)
+               ->  Aggregate
+                     Output: CASE WHEN (sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END)) IS NULL) THEN true WHEN (sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END)) > '0'::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN (sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END)) = '0'::bigint) THEN true ELSE false END
+                     ->  Values Scan on "Values"
+                           Output: CASE WHEN (3 = column1) THEN 1 ELSE 0 END, CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END
    ->  Result
          Output: false
  Optimizer: Pivotal Optimizer (GPORCA)
-(13 rows)
+(15 rows)
 
 select * from
 (values

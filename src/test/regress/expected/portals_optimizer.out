@@ -1141,9 +1141,10 @@ explain (costs off) declare c1 cursor for select (select 42) as x;
  Nested Loop Left Join
    Join Filter: true
    ->  Result
-   ->  Result
+   ->  Materialize
+         ->  Result
  Optimizer: Pivotal Optimizer (GPORCA)
-(5 rows)
+(6 rows)
 
 explain (costs off) declare c1 scroll cursor for select (select 42) as x;
               QUERY PLAN               
@@ -1151,9 +1152,10 @@ explain (costs off) declare c1 scroll cursor for select (select 42) as x;
  Nested Loop Left Join
    Join Filter: true
    ->  Result
-   ->  Result
+   ->  Materialize
+         ->  Result
  Optimizer: Pivotal Optimizer (GPORCA)
-(5 rows)
+(6 rows)
 
 declare c1 scroll cursor for select (select 42) as x;
 fetch all in c1;
