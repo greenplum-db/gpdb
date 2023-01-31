@@ -185,6 +185,7 @@ extern char get_typtype(Oid typid);
 extern bool type_is_rowtype(Oid typid);
 extern bool type_is_enum(Oid typid);
 extern bool type_is_range(Oid typid);
+extern bool type_is_domain(Oid typid);
 extern void get_type_category_preferred(Oid typid,
 							char *typcategory,
 							bool *typispreferred);

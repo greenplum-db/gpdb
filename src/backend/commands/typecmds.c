@@ -3839,16 +3839,14 @@ AlterType(AlterTypeStmt *stmt)
 {
 	TypeName   *typname;
 	Oid			typid;
-	HeapTuple	tup;
+	Oid			arrtypid;
 	Datum		typoptions;
 	List	   *encoding;
-	Relation 	pgtypeenc;
-	ScanKeyData	scankey;
-	SysScanDesc scan;
 
 	/* Make a TypeName so we can use standard type lookup machinery */
 	typname = makeTypeNameFromNameList(stmt->typeName);
 	typid = typenameTypeId(NULL, typname);
+	arrtypid = get_array_type(typid);
 
 	if (type_is_rowtype(typid))
 		ereport(ERROR,
@@ -3870,42 +3868,17 @@ AlterType(AlterTypeStmt *stmt)
 									 false,
 									 false);
 
-	/* SELECT * FROM pg_type_encoding WHERE typid = :1 FOR UPDATE */
-	pgtypeenc = heap_open(TypeEncodingRelationId, RowExclusiveLock);
-	ScanKeyInit(&scankey, Anum_pg_type_encoding_typid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(typid));
-	scan = systable_beginscan(pgtypeenc, TypeEncodingTypidIndexId, true,
-							  NULL, 1, &scankey);
+	/* GPDB: domain types do not have dependent array types */
+	if (arrtypid == InvalidOid && !type_is_domain(typid))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("failed to get the array type of type \"%s\"",
+						TypeNameToString(typname))));
 
-	tup = systable_getnext(scan);
-	if (HeapTupleIsValid(tup))
-	{
-		/* update case */
-		Datum values[Natts_pg_type_encoding];
-		bool nulls[Natts_pg_type_encoding];
-		bool replaces[Natts_pg_type_encoding];
-		HeapTuple newtuple;
+	update_type_encoding(typid, typoptions);
 
-		MemSet(values, 0, sizeof(values));
-		MemSet(nulls, false, sizeof(nulls));
-		MemSet(replaces, false, sizeof(replaces));
-
-		replaces[Anum_pg_type_encoding_typoptions - 1] = true;
-		values[Anum_pg_type_encoding_typoptions - 1] = typoptions;
-
-		newtuple = heap_modify_tuple(tup, RelationGetDescr(pgtypeenc),
-									 values, nulls, replaces);
-
-		simple_heap_update(pgtypeenc, &tup->t_self, newtuple);
-		CatalogUpdateIndexes(pgtypeenc, newtuple);
-	}
-	else
-	{
-		add_type_encoding(typid, typoptions);
-	}	
-	systable_endscan(scan);
-	heap_close(pgtypeenc, NoLock);
+	if (!type_is_domain(typid))
+		update_type_encoding(arrtypid, typoptions);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 		CdbDispatchUtilityStatement((Node *) stmt,

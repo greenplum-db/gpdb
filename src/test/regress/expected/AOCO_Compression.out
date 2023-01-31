@@ -3995,3 +3995,34 @@ SELECT * FROM pg_compression WHERE compname='rle_type';
  rle_type | gp_rle_type_constructor | gp_rle_type_destructor | gp_rle_type_compress | gp_rle_type_decompress | gp_rle_type_validator |        10
 (1 row)
 
+-- Check ALTER TYPE SET DEFAULT ENCODING propagates to the dependent arrary type
+DROP type if exists mood_encoded cascade;
+NOTICE:  type "mood_encoded" does not exist, skipping
+CREATE TYPE mood_encoded AS ENUM ('sad', 'ok', 'happy');
+ALTER TYPE public.mood_encoded SET DEFAULT ENCODING (compresstype=zlib, blocksize=65536, compresslevel=4);
+SELECT t.typname, te.typoptions
+FROM pg_type t
+LEFT JOIN pg_type_encoding te ON (t.oid=te.typid)
+WHERE t.typname in ('mood_encoded', '_mood_encoded');
+    typname    |                     typoptions                      
+---------------+-----------------------------------------------------
+ mood_encoded  | {compresstype=zlib,blocksize=65536,compresslevel=4}
+ _mood_encoded | {compresstype=zlib,blocksize=65536,compresslevel=4}
+(2 rows)
+
+-- ALTER TYPE SET DEFAULT ENCODING should still work on domain types even
+-- though they do not have a dependent array type in 6x.
+DROP type if exists us_zip_code_encoded;
+NOTICE:  type "us_zip_code_encoded" does not exist, skipping
+CREATE DOMAIN us_zip_code_encoded AS TEXT CHECK
+       ( VALUE ~ '^\d{5}$' OR VALUE ~ '^\d{5}-\d{4}$' );
+ALTER TYPE public.us_zip_code_encoded SET DEFAULT ENCODING (compresstype=zlib, blocksize=32768, compresslevel=3);
+SELECT t.typname, te.typoptions
+FROM pg_type t
+LEFT JOIN pg_type_encoding te ON (t.oid=te.typid)
+WHERE t.typname in ('us_zip_code_encoded');
+       typname       |                     typoptions                      
+---------------------+-----------------------------------------------------
+ us_zip_code_encoded | {compresstype=zlib,blocksize=32768,compresslevel=3}
+(1 row)
+

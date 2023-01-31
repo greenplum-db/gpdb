@@ -2992,6 +2992,16 @@ type_is_range(Oid typid)
 }
 
 /*
+ * type_is_domain
+ *	  Returns true if the given type is a domain type.
+ */
+bool
+type_is_domain(Oid typid)
+{
+	return (get_typtype(typid) == TYPTYPE_DOMAIN);
+}
+
+/*
  * get_type_category_preferred
  *
  *		Given the type OID, fetch its category and preferred-type status.

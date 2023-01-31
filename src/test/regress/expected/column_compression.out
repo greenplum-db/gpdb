@@ -1888,10 +1888,14 @@ select * from pg_type_encoding;
  typid |                     typoptions                      
 -------+-----------------------------------------------------
   1043 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+  1015 | {compresstype=zlib,compresslevel=1,blocksize=32768}
   1042 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+  1014 | {compresstype=zlib,compresslevel=1,blocksize=32768}
   1184 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+  1185 | {compresstype=zlib,compresslevel=1,blocksize=32768}
     25 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-(4 rows)
+  1009 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+(8 rows)
 
 -- cleanup
 deallocate ccddlcheck;
