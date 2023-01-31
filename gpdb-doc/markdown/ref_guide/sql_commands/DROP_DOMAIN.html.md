@@ -28,10 +28,10 @@ RESTRICT
 
 ## <a id="section5"></a>Examples 
 
-Remove the domain named `box`:
+Remove the domain named `us_postal_code`:
 
 ```
-DROP DOMAIN box;
+DROP DOMAIN us_postal_code;
 ```
 
 ## <a id="section6"></a>Compatibility 

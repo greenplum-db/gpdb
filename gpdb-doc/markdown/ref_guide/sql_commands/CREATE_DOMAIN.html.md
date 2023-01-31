@@ -12,7 +12,7 @@ CREATE DOMAIN <name> [AS] <data_type>
 
 where <constraint> is:
 
-[ CONSTRAINT <constraint_name>
+[ CONSTRAINT <constraint_name> ]
 { NOT NULL | NULL | CHECK (<expression>)  }
 ```
 
@@ -45,7 +45,7 @@ CONSTRAINT constraint\_name
 :   An optional name for a constraint. If not specified, the system generates a name.
 
 NOT NULL
-:   Values of this domain are normally prevented from being null. This is the default.
+:   Values of this domain are prevented from being null (but see the Notes below).
 
 NULL
 :   Values of this domain are allowed to be null. This is the default.
