@@ -112,7 +112,6 @@ Several restrictions apply to the definition of generated columns and tables inv
 - A generated column cannot be used as a distribution key.
 - A generated column cannot be part of a partition key.
 - While you can specify a generated column in a partitioned table, you cannot specify one in child table partitions.
-- The Pivotal Query Optimizer (GPORCA) does not support planning or optimizing queries that specify a generated column.
 
 - For inheritance:
 
