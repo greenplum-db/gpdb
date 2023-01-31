@@ -1811,6 +1811,9 @@ readNodeBinary(void)
 			case T_ForeignScan:
 				return_value = _readForeignScan();
 				break;
+			case T_DynamicForeignScan:
+				return_value = _readDynamicForeignScan();
+				break;
 			case T_CustomScan:
 				return_value = _readCustomScan();
 				break;

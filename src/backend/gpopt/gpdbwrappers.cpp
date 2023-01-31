@@ -2519,6 +2519,17 @@ gpdb::GetRelChildIndexes(Oid reloid)
 	return partoids;
 }
 
+Oid
+gpdb::GetForeignServerId(Oid reloid)
+{
+	GP_WRAP_START;
+	{
+		return GetForeignServerIdByRelId(reloid);
+	}
+	GP_WRAP_END;
+	return 0;
+}
+
 // Locks on partition leafs and indexes are held during optimizer (after
 // parse-analyze stage). ORCA need this function to lock relation. Here
 // we do not need to consider lock-upgrade issue, reasons are:

@@ -1003,6 +1003,9 @@ _outNode(StringInfo str, void *obj)
 			case T_ForeignScan:
 				_outForeignScan(str, obj);
 				break;
+			case T_DynamicForeignScan:
+				_outDynamicForeignScan(str, obj);
+				break;
 			case T_CustomScan:
 				_outCustomScan(str, obj);
 				break;
