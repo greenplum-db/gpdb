@@ -478,7 +478,7 @@ ExecCreateTableAs(CreateTableAsStmt *stmt, const char *queryString,
 
 		/* MPP-14001: Running auto_stats */
 		if (Gp_role == GP_ROLE_DISPATCH)
-			auto_stats(cmdType, relationOid, queryDesc->es_processed, false /* inFunction */);
+			auto_stats(cmdType, relationOid, queryDesc->es_processed, already_under_executor_run());
 	}
 
 	{

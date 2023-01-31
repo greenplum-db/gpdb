@@ -675,4 +675,6 @@ extern ResultRelInfo *slot_get_partition(TupleTableSlot *slot, EState *estate, b
 
 extern void
 change_varattnos_of_a_varno(Node *node, const AttrNumber *newattno, Index varno);
+
+extern bool already_under_executor_run(void);
 #endif							/* EXECUTOR_H  */
