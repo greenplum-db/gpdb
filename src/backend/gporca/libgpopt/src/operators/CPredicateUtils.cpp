@@ -1026,22 +1026,25 @@ CPredicateUtils::FCompareIdentToConst(CExpression *pexpr)
 	CExpression *pexprLeft = (*pexpr)[0];
 	CExpression *pexprRight = (*pexpr)[1];
 
-	// left side must be scalar ident
-
-	if (!(CUtils::FScalarIdent(pexprLeft) ||
-		  CCastUtils::FBinaryCoercibleCastedScId(pexprLeft)))
+	// if left side scalar ident then right side must be a const
+	if ((CUtils::FScalarIdent(pexprLeft) ||
+		 CCastUtils::FBinaryCoercibleCastedScId(pexprLeft)) &&
+		(CUtils::FScalarConst(pexprRight) ||
+		 CCastUtils::FBinaryCoercibleCastedConst(pexprRight)))
 	{
-		return false;
+		return true;
 	}
 
-	// right side must be a constant
-	if (!(CUtils::FScalarConst(pexprRight) ||
-		  CCastUtils::FBinaryCoercibleCastedConst(pexprRight)))
+	// if right side scalar ident then left side must be a const
+	if ((CUtils::FScalarIdent(pexprRight) ||
+		 CCastUtils::FBinaryCoercibleCastedScId(pexprRight)) &&
+		(CUtils::FScalarConst(pexprLeft) ||
+		 CCastUtils::FBinaryCoercibleCastedConst(pexprLeft)))
 	{
-		return false;
+		return true;
 	}
 
-	return true;
+	return false;
 }
 
 // is the given expression of the form (col IS DISTINCT FROM const)

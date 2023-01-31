@@ -456,13 +456,23 @@ CConstraintInterval::PciIntervalFromScalarCmp(CMemoryPool *mp,
 
 	// TODO:  - May 28, 2012; add support for other expression forms
 	// besides (column relop const)
+	//         (const reolop column)
 	if (CPredicateUtils::FCompareIdentToConst(pexpr))
 	{
+		CExpression *pexprRight = (*pexpr)[1];
+		CExpression *pexprLeft = (*pexpr)[0];
+
+		if (CUtils::FScalarIdent(pexprRight) ||
+			CCastUtils::FBinaryCoercibleCastedScId(pexprRight))
+		{
+			// ensure that column is on left side variable
+			std::swap(pexprLeft, pexprRight);
+		}
+
 		// column
 #ifdef GPOS_DEBUG
 		CScalarIdent *popScId;
-		CExpression *pexprLeft = (*pexpr)[0];
-		if (CUtils::FScalarIdent((*pexpr)[0]))
+		if (CUtils::FScalarIdent(pexprLeft))
 		{
 			popScId = CScalarIdent::PopConvert(pexprLeft->Pop());
 		}
@@ -475,7 +485,6 @@ CConstraintInterval::PciIntervalFromScalarCmp(CMemoryPool *mp,
 #endif	// GPOS_DEBUG
 
 		// constant
-		CExpression *pexprRight = (*pexpr)[1];
 		CScalarConst *popScConst;
 		if (CUtils::FScalarConst(pexprRight))
 		{

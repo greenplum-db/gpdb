@@ -10,18 +10,18 @@
     CREATE TABLE t2 (c INT, d bigint) DISTRIBUTED BY (c);
 
     EXPLAIN (costs off) SELECT count(*) FROM t2 INNER JOIN t1 ON t2.c BETWEEN t1.a AND t1.b WHERE t2.c = 2;
-                           QUERY PLAN
-    ----------------------------------------------------------------
+                                 QUERY PLAN
+    ---------------------------------------------------------------------
      Aggregate
        ->  Gather Motion 3:1  (slice1; segments: 3)
              ->  Nested Loop
                    Join Filter: ((t2.c >= t1.a) AND (t2.c <= t1.b))
-                   ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                         ->  Seq Scan on t2
-                               Filter: (c = 2)
                    ->  Seq Scan on t1
                          Filter: ((a <= 2) AND (b >= 2))
-     Optimizer: Pivotal Optimizer (GPORCA)
+                   ->  Materialize
+                         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                               ->  Seq Scan on t2
+                                     Filter: (c = 2)
   ]]>
   </dxl:Comment>
   <dxl:Thread Id="0">
@@ -353,7 +353,7 @@
     <dxl:Plan Id="0" SpaceSize="18">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1324032.770239" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="1324032.772037" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:GroupingColumns/>
         <dxl:ProjList>
@@ -369,14 +369,14 @@
         <dxl:Filter/>
         <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1324032.770239" Rows="1.000000" Width="1"/>
+            <dxl:Cost StartupCost="0" TotalCost="1324032.772037" Rows="1.000000" Width="1"/>
           </dxl:Properties>
           <dxl:ProjList/>
           <dxl:Filter/>
           <dxl:SortingColumnList/>
           <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1324032.770235" Rows="1.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="1324032.772033" Rows="1.000000" Width="1"/>
             </dxl:Properties>
             <dxl:ProjList/>
             <dxl:Filter/>
@@ -392,46 +392,6 @@
                 </dxl:Comparison>
               </dxl:And>
             </dxl:JoinFilter>
-            <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
-              <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000278" Rows="3.000000" Width="4"/>
-              </dxl:Properties>
-              <dxl:ProjList>
-                <dxl:ProjElem ColId="0" Alias="c">
-                  <dxl:Ident ColId="0" ColName="c" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-              </dxl:ProjList>
-              <dxl:Filter/>
-              <dxl:SortingColumnList/>
-              <dxl:TableScan>
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000063" Rows="1.000000" Width="4"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="0" Alias="c">
-                    <dxl:Ident ColId="0" ColName="c" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Filter>
-                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                    <dxl:Ident ColId="0" ColName="c" TypeMdid="0.23.1.0"/>
-                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
-                  </dxl:Comparison>
-                </dxl:Filter>
-                <dxl:TableDescriptor Mdid="6.24585.1.0" TableName="t2" LockMode="1">
-                  <dxl:Columns>
-                    <dxl:Column ColId="0" Attno="1" ColName="c" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                    <dxl:Column ColId="3" Attno="-2" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="4" Attno="-3" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="5" Attno="-4" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="6" Attno="-5" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="7" Attno="-6" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="8" Attno="-7" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  </dxl:Columns>
-                </dxl:TableDescriptor>
-              </dxl:TableScan>
-            </dxl:BroadcastMotion>
             <dxl:TableScan>
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="431.000102" Rows="1.000000" Width="8"/>
@@ -470,6 +430,57 @@
                 </dxl:Columns>
               </dxl:TableDescriptor>
             </dxl:TableScan>
+            <dxl:Materialize Eager="false">
+              <dxl:Properties>
+                <dxl:Cost StartupCost="0" TotalCost="431.000282" Rows="3.000000" Width="4"/>
+              </dxl:Properties>
+              <dxl:ProjList>
+                <dxl:ProjElem ColId="0" Alias="c">
+                  <dxl:Ident ColId="0" ColName="c" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+              </dxl:ProjList>
+              <dxl:Filter/>
+              <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
+                <dxl:Properties>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000278" Rows="3.000000" Width="4"/>
+                </dxl:Properties>
+                <dxl:ProjList>
+                  <dxl:ProjElem ColId="0" Alias="c">
+                    <dxl:Ident ColId="0" ColName="c" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                </dxl:ProjList>
+                <dxl:Filter/>
+                <dxl:SortingColumnList/>
+                <dxl:TableScan>
+                  <dxl:Properties>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000063" Rows="1.000000" Width="4"/>
+                  </dxl:Properties>
+                  <dxl:ProjList>
+                    <dxl:ProjElem ColId="0" Alias="c">
+                      <dxl:Ident ColId="0" ColName="c" TypeMdid="0.23.1.0"/>
+                    </dxl:ProjElem>
+                  </dxl:ProjList>
+                  <dxl:Filter>
+                    <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                      <dxl:Ident ColId="0" ColName="c" TypeMdid="0.23.1.0"/>
+                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
+                    </dxl:Comparison>
+                  </dxl:Filter>
+                  <dxl:TableDescriptor Mdid="6.24585.1.0" TableName="t2" LockMode="1">
+                    <dxl:Columns>
+                      <dxl:Column ColId="0" Attno="1" ColName="c" TypeMdid="0.23.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                      <dxl:Column ColId="3" Attno="-2" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="4" Attno="-3" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="5" Attno="-4" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="6" Attno="-5" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="7" Attno="-6" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="8" Attno="-7" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                    </dxl:Columns>
+                  </dxl:TableDescriptor>
+                </dxl:TableScan>
+              </dxl:BroadcastMotion>
+            </dxl:Materialize>
           </dxl:NestedLoopJoin>
         </dxl:GatherMotion>
       </dxl:Aggregate>
