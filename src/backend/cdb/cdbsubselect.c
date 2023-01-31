@@ -1482,18 +1482,20 @@ convert_IN_to_antijoin(PlannerInfo *root, SubLink *sublink,
 		int			subq_indx      = add_notin_subquery_rte(parse, subselect);
 		List       *inner_exprs    = NIL;
 		List       *outer_exprs    = NIL;
-		bool        inner_nullable = true;
-		bool        outer_nullable = true;
-
-		inner_exprs = fetch_targetlist_exprs(subselect->targetList);
-		outer_exprs = fetch_outer_exprs(sublink->testexpr);
-		inner_nullable = is_exprs_nullable((Node *) inner_exprs, subselect);
-		outer_nullable = is_exprs_nullable((Node *) outer_exprs, parse);
-
-		JoinExpr   *join_expr = make_join_expr(NULL, subq_indx, JOIN_LASJ_NOTIN);
+		bool        nullable       = true;
+		JoinExpr   *join_expr      = make_join_expr(NULL, subq_indx, JOIN_LASJ_NOTIN);
 
 		join_expr->quals = make_lasj_quals(root, sublink, subq_indx);
-		if (inner_nullable || outer_nullable)
+
+		inner_exprs = fetch_targetlist_exprs(subselect->targetList);
+		nullable = is_exprs_nullable((Node *) inner_exprs, subselect);
+		if (!nullable)
+		{
+			outer_exprs = fetch_outer_exprs(sublink->testexpr);
+			nullable = is_exprs_nullable((Node *) outer_exprs, parse);
+		}
+
+		if (nullable)
 			join_expr->quals = add_null_match_clause(join_expr->quals);
 
 		return join_expr;
