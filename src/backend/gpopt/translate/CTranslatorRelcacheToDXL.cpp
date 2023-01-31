@@ -513,6 +513,7 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	BOOL is_partitioned = false;
 	IMDRelation *md_rel = nullptr;
 	IMdIdArray *partition_oids = nullptr;
+	IMDId *foreign_server_mdid = nullptr;
 
 	// get rel name
 	mdname = GetRelName(mp, rel.get());
@@ -543,23 +544,19 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	// collect relation indexes
 	md_index_info_array = RetrieveRelIndexInfo(mp, rel.get());
 
-	// get partition keys
-	if (IMDRelation::ErelstorageForeign != rel_storage_type)
-	{
-		RetrievePartKeysAndTypes(mp, rel.get(), oid, &part_keys, &part_types);
-	}
-	is_partitioned = (nullptr != part_keys && 0 < part_keys->Size());
+	is_partitioned = (nullptr != rel->rd_partdesc);
 
 	// get number of leaf partitions
 	if (rel->rd_partdesc)
 	{
-		partition_oids = GPOS_NEW(mp) IMdIdArray(mp);
+		RetrievePartKeysAndTypes(mp, rel.get(), oid, &part_keys, &part_types);
 
+		partition_oids = GPOS_NEW(mp) IMdIdArray(mp);
 		for (int i = 0; i < rel->rd_partdesc->nparts; ++i)
 		{
-			Oid oid = rel->rd_partdesc->oids[i];
+			Oid part_oid = rel->rd_partdesc->oids[i];
 			partition_oids->Append(GPOS_NEW(mp)
-									   CMDIdGPDB(IMDId::EmdidRel, oid));
+									   CMDIdGPDB(IMDId::EmdidRel, part_oid));
 			gpdb::RelationWrapper rel_part = gpdb::GetRelation(oid);
 			if (rel_part->rd_partdesc)
 			{
@@ -594,11 +591,19 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	mdpart_constraint =
 		RetrievePartConstraintForRel(mp, md_accessor, rel.get(), mdcol_array);
 
+
+	// root partitions don't have a foreign server
+	if (IMDRelation::ErelstorageForeign == rel_storage_type && !is_partitioned)
+	{
+		foreign_server_mdid = GPOS_NEW(mp)
+			CMDIdGPDB(IMDId::EmdidGeneral, gpdb::GetForeignServerId(oid));
+	}
+
 	md_rel = GPOS_NEW(mp) CMDRelationGPDB(
 		mp, mdid, mdname, is_temporary, rel_storage_type, dist, mdcol_array,
 		distr_cols, distr_op_families, part_keys, part_types, partition_oids,
 		convert_hash_to_random, keyset_array, md_index_info_array,
-		check_constraint_mdids, mdpart_constraint);
+		check_constraint_mdids, mdpart_constraint, foreign_server_mdid);
 
 	return md_rel;
 }
@@ -3001,27 +3006,32 @@ CTranslatorRelcacheToDXL::RetrieveStorageTypeForPartitionedTable(Relation rel)
 	{
 		return IMDRelation::ErelstorageHeap;
 	}
+	// for partitioned tables with foreign partitions, we want to ignore the foreign partitions
+	// for storage-type purposes unless all of the partitions are foreign as we'll be separating them out later
+	BOOL all_foreign = true;
 	for (int i = 0; i < rel->rd_partdesc->nparts; ++i)
 	{
 		Oid oid = rel->rd_partdesc->oids[i];
 		gpdb::RelationWrapper child_rel = gpdb::GetRelation(oid);
 		IMDRelation::Erelstoragetype child_storage =
 			RetrieveRelStorageType(child_rel.get());
-
+		if (child_storage == IMDRelation::ErelstorageForeign)
+		{
+			if (!optimizer_enable_foreign_table)
+			{
+				GPOS_RAISE(
+					gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+					GPOS_WSZ_LIT(
+						"Use optimizer_enable_foreign_table to enable Orca with foreign partitions"));
+			}
+			continue;
+		}
+		all_foreign = false;
 		if (rel_storage_type == IMDRelation::ErelstorageSentinel)
 		{
 			rel_storage_type = child_storage;
 		}
 
-		// fall back if any external partitions, we need additional logic to
-		// handle distribution or will get wrong results
-		if (child_storage == IMDRelation::ErelstorageForeign)
-		{
-			GPOS_RAISE(
-				gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
-				GPOS_WSZ_LIT(
-					"Partitioned table with external/foreign partition"));
-		}
 		// mark any partitioned table with supported partitions of mixed storage types,
 		// this is more conservative for certain skans (eg: we can't do an index scan if any
 		// partition is ao, we must only do a sequential or bitmap scan)
@@ -3029,6 +3039,10 @@ CTranslatorRelcacheToDXL::RetrieveStorageTypeForPartitionedTable(Relation rel)
 		{
 			rel_storage_type = IMDRelation::ErelstorageMixedPartitioned;
 		}
+	}
+	if (all_foreign)
+	{
+		rel_storage_type = IMDRelation::ErelstorageForeign;
 	}
 	return rel_storage_type;
 }

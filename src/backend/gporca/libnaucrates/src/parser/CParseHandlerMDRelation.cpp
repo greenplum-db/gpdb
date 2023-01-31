@@ -49,7 +49,8 @@ CParseHandlerMDRelation::CParseHandlerMDRelation(
 	  m_key_sets_arrays(nullptr),
 	  m_part_constraint(nullptr),
 	  m_opfamilies_parse_handler(nullptr),
-	  m_child_partitions_parse_handler(nullptr)
+	  m_child_partitions_parse_handler(nullptr),
+	  m_foreign_server(nullptr)
 {
 }
 
@@ -261,7 +262,7 @@ CParseHandlerMDRelation::EndElement(const XMLCh *const,	 // element_uri,
 		m_rel_distr_policy, md_col_array, m_distr_col_array, distr_opfamilies,
 		m_partition_cols_array, m_str_part_types_array, child_partitions,
 		m_convert_hash_to_random, m_key_sets_arrays, md_index_info_array,
-		mdid_check_constraint_array, m_part_constraint);
+		mdid_check_constraint_array, m_part_constraint, m_foreign_server);
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();
@@ -323,6 +324,15 @@ CParseHandlerMDRelation::ParseRelationAttributes(const Attributes &attrs,
 	{
 		// construct an empty keyset
 		m_key_sets_arrays = GPOS_NEW(m_mp) ULongPtr2dArray(m_mp);
+	}
+
+	const XMLCh *xmlszForeignServer =
+		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenRelForeignServer));
+	if (nullptr != xmlszForeignServer)
+	{
+		m_foreign_server = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
+			m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
+			EdxltokenRelForeignServer, dxl_token_element);
 	}
 }
 
