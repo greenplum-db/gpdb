@@ -1,0 +1,56 @@
+-- This is intended to verify read-only transactions is able to run
+-- concurently with index creation.
+
+set default_table_access_method=@amname@;
+
+create table @amname@_create_index_with_select_tbl(a int, b int);
+insert into @amname@_create_index_with_select_tbl select a,a from generate_series(1,10) a;
+
+-- Verify readonly transaction is able to run concurrently with index creation.
+
+1: begin;
+1: select * from @amname@_create_index_with_select_tbl where a = 2;
+
+2: begin;
+-- expect no hang
+2: create index @amname@_create_index_with_select_idx on @amname@_create_index_with_select_tbl(a);
+-- expect no hang
+3: select * from @amname@_create_index_with_select_tbl where a = 2;
+
+1: end;
+2: end;
+
+-- Verify behaviors of select with locking clause (i.e. select for update)
+-- when running concurrently with index creation, expect blocking with each other.
+-- This is only for AO/CO tables, for Heap tables, refer to lockmodes.sql.
+
+drop index @amname@_create_index_with_select_idx;
+
+1: begin;
+1: select * from @amname@_create_index_with_select_tbl where a = 2 for update;
+
+2: begin;
+-- expect blocking
+2&: create index @amname@_create_index_with_select_idx on @amname@_create_index_with_select_tbl(a);
+
+1: commit;
+
+2<:
+2: commit;
+
+drop index @amname@_create_index_with_select_idx;
+
+2: begin;
+2: create index @amname@_create_index_with_select_idx on @amname@_create_index_with_select_tbl(a);
+
+1: begin;
+-- expect blocking
+1&: select * from @amname@_create_index_with_select_tbl where a = 2 for update;
+
+2: commit;
+
+1<:
+1: commit;
+
+drop table @amname@_create_index_with_select_tbl;
+reset default_table_access_method;

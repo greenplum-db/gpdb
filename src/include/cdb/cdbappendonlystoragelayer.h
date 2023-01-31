@@ -113,12 +113,6 @@ typedef struct AppendOnlyStorageAttributes
 			 * and content.  Otherwise, no checksums.
 			 */
 
-	int					safeFSWriteSize;
-			/*
-			 * The page round out with zero padding byte length.
-			 * When 0, do no zero pad.
-			 */
-
 } AppendOnlyStorageAttributes;
 
 /*

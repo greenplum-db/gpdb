@@ -506,6 +506,15 @@ heap_create(const char *relname,
 			RelationCloseSmgr(rel);
 	}
 
+	/*
+	 * If a tablespace is specified, removal of that tablespace is normally
+	 * protected by the existence of a physical file; but for relations with
+	 * no files, add a pg_shdepend entry to account for that.
+	 */
+	if (!create_storage && reltablespace != InvalidOid)
+		recordDependencyOnTablespace(RelationRelationId, relid,
+									 reltablespace);
+
 	return rel;
 }
 
@@ -637,6 +646,10 @@ CheckAttributeNamesTypes(TupleDesc tupdesc, char relkind,
  * are reliably identifiable only within a session, since the identity info
  * may use a typmod that is only locally assigned.  The caller is expected
  * to know whether these cases are safe.)
+ *
+ * flags can also control the phrasing of the error messages.  If
+ * CHKATYPE_IS_PARTKEY is specified, "attname" should be a partition key
+ * column number as text, not a real column name.
  * --------------------------------
  */
 void
@@ -672,10 +685,19 @@ CheckAttributeType(const char *attname,
 		if (!((atttypid == ANYARRAYOID && (flags & CHKATYPE_ANYARRAY)) ||
 			  (atttypid == RECORDOID && (flags & CHKATYPE_ANYRECORD)) ||
 			  (atttypid == RECORDARRAYOID && (flags & CHKATYPE_ANYRECORD))))
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("column \"%s\" has pseudo-type %s",
-							attname, format_type_be(atttypid))));
+		{
+			if (flags & CHKATYPE_IS_PARTKEY)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+				/* translator: first %s is an integer not a name */
+						 errmsg("partition key column %s has pseudo-type %s",
+								attname, format_type_be(atttypid))));
+			else
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						 errmsg("column \"%s\" has pseudo-type %s",
+								attname, format_type_be(atttypid))));
+		}
 	}
 	else if (att_typtype == TYPTYPE_DOMAIN)
 	{
@@ -722,12 +744,22 @@ CheckAttributeType(const char *attname,
 			CheckAttributeType(NameStr(attr->attname),
 							   attr->atttypid, attr->attcollation,
 							   containing_rowtypes,
-							   flags);
+							   flags & ~CHKATYPE_IS_PARTKEY);
 		}
 
 		relation_close(relation, AccessShareLock);
 
 		containing_rowtypes = list_delete_first(containing_rowtypes);
+	}
+	else if (att_typtype == TYPTYPE_RANGE)
+	{
+		/*
+		 * If it's a range, recurse to check its subtype.
+		 */
+		CheckAttributeType(attname, get_range_subtype(atttypid),
+						   get_range_collation(atttypid),
+						   containing_rowtypes,
+						   flags);
 	}
 	else if (OidIsValid((att_typelem = get_element_type(atttypid))))
 	{
@@ -744,11 +776,21 @@ CheckAttributeType(const char *attname,
 	 * useless, and it cannot be dumped, so we must disallow it.
 	 */
 	if (!OidIsValid(attcollation) && type_is_collatable(atttypid))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("no collation was derived for column \"%s\" with collatable type %s",
-						attname, format_type_be(atttypid)),
-				 errhint("Use the COLLATE clause to set the collation explicitly.")));
+	{
+		if (flags & CHKATYPE_IS_PARTKEY)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+			/* translator: first %s is an integer not a name */
+					 errmsg("no collation was derived for partition key column %s with collatable type %s",
+							attname, format_type_be(atttypid)),
+					 errhint("Use the COLLATE clause to set the collation explicitly.")));
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+					 errmsg("no collation was derived for column \"%s\" with collatable type %s",
+							attname, format_type_be(atttypid)),
+					 errhint("Use the COLLATE clause to set the collation explicitly.")));
+	}
 }
 
 /* MPP-6929: metadata tracking */
@@ -1666,16 +1708,7 @@ heap_create_with_catalog(const char *relname,
 	 */
 	if (RelationIsAppendOptimized(new_rel_desc))
 	{
-		StdRdOptions *stdRdOptions = (StdRdOptions *)default_reloptions(reloptions,
-																	 !valid_opts,
-																	 RELOPT_KIND_APPENDOPTIMIZED);
 		InsertAppendOnlyEntry(relid,
-							  stdRdOptions->blocksize,
-							  gp_safefswritesize,
-							  stdRdOptions->compresslevel,
-							  stdRdOptions->checksum,
-							  RelationIsAoCols(new_rel_desc),
-							  stdRdOptions->compresstype,
 							  InvalidOid,
 							  InvalidOid,
 							  InvalidOid,
@@ -2575,6 +2608,13 @@ SetAttrMissing(Oid relid, char *attname, char *value)
 	/* lock the table the attribute belongs to */
 	tablerel = table_open(relid, AccessExclusiveLock);
 
+	/* Don't do anything unless it's a plain table */
+	if (tablerel->rd_rel->relkind != RELKIND_RELATION)
+	{
+		table_close(tablerel, AccessExclusiveLock);
+		return;
+	}
+
 	/* Lock the attribute row and get the data */
 	attrrel = table_open(AttributeRelationId, RowExclusiveLock);
 	atttup = SearchSysCacheAttName(relid, attname);
@@ -2713,12 +2753,14 @@ StoreAttrDefault(Relation rel, AttrNumber attnum,
 		valuesAtt[Anum_pg_attribute_atthasdef - 1] = true;
 		replacesAtt[Anum_pg_attribute_atthasdef - 1] = true;
 
-		if (add_column_mode && !attgenerated && cookedMissingVal && *cookedMissingVal)
+		if (rel->rd_rel->relkind == RELKIND_RELATION && add_column_mode &&
+			!attgenerated && cookedMissingVal && *cookedMissingVal)
 		{
 			missingval = *missingval_p;
 			missingIsNull = *missingIsNull_p;
 		}
-		else if (add_column_mode && !attgenerated)
+		else if (rel->rd_rel->relkind == RELKIND_RELATION && add_column_mode &&
+				 !attgenerated)
 		{
 			expr2 = expression_planner(expr2);
 			estate = CreateExecutorState();
@@ -2749,7 +2791,7 @@ StoreAttrDefault(Relation rel, AttrNumber attnum,
 															 defAttStruct->attalign));
 			}
 		}
-		if (add_column_mode && !attgenerated)
+		if (rel->rd_rel->relkind == RELKIND_RELATION && add_column_mode && !attgenerated)
 		{
 			valuesAtt[Anum_pg_attribute_atthasmissing - 1] = !missingIsNull;
 			replacesAtt[Anum_pg_attribute_atthasmissing - 1] = true;
@@ -3464,15 +3506,26 @@ check_nested_generated_walker(Node *node, void *context)
 		AttrNumber	attnum;
 
 		relid = rt_fetch(var->varno, pstate->p_rtable)->relid;
+		if (!OidIsValid(relid))
+			return false;		/* XXX shouldn't we raise an error? */
+
 		attnum = var->varattno;
 
-		if (OidIsValid(relid) && AttributeNumberIsValid(attnum) && get_attgenerated(relid, attnum))
+		if (attnum > 0 && get_attgenerated(relid, attnum))
 			ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
+					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 					 errmsg("cannot use generated column \"%s\" in column generation expression",
 							get_attname(relid, attnum, false)),
 					 errdetail("A generated column cannot reference another generated column."),
 					 parser_errposition(pstate, var->location)));
+		/* A whole-row Var is necessarily self-referential, so forbid it */
+		if (attnum == 0)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+					 errmsg("cannot use whole-row variable in column generation expression"),
+					 errdetail("This would cause the generated column to depend on its own value."),
+					 parser_errposition(pstate, var->location)));
+		/* System columns were already checked in the parser */
 
 		return false;
 	}
@@ -3609,6 +3662,47 @@ cookConstraint(ParseState *pstate,
 	return expr;
 }
 
+/*
+ * CopyStatistics --- copy entries in pg_statistic from one rel to another
+ */
+void
+CopyStatistics(Oid fromrelid, Oid torelid)
+{
+	HeapTuple	tup;
+	SysScanDesc scan;
+	ScanKeyData key[1];
+	Relation	statrel;
+
+	statrel = table_open(StatisticRelationId, RowExclusiveLock);
+
+	/* Now search for stat records */
+	ScanKeyInit(&key[0],
+				Anum_pg_statistic_starelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(fromrelid));
+
+	scan = systable_beginscan(statrel, StatisticRelidAttnumInhIndexId,
+							  true, NULL, 1, key);
+
+	while (HeapTupleIsValid((tup = systable_getnext(scan))))
+	{
+		Form_pg_statistic statform;
+
+		/* make a modifiable copy */
+		tup = heap_copytuple(tup);
+		statform = (Form_pg_statistic) GETSTRUCT(tup);
+
+		/* update the copy of the tuple and insert it */
+		statform->starelid = torelid;
+		CatalogTupleInsert(statrel, tup);
+
+		heap_freetuple(tup);
+	}
+
+	systable_endscan(scan);
+
+	table_close(statrel, RowExclusiveLock);
+}
 
 /*
  * RemoveStatistics --- remove entries in pg_statistic for a rel or column
@@ -3678,8 +3772,15 @@ RelationTruncateIndexes(Relation heapRelation)
 		/* Open the index relation; use exclusive lock, just to be sure */
 		currentIndex = index_open(indexId, AccessExclusiveLock);
 
-		/* Fetch info needed for index_build */
-		indexInfo = BuildIndexInfo(currentIndex);
+		/*
+		 * Fetch info needed for index_build.  Since we know there are no
+		 * tuples that actually need indexing, we can use a dummy IndexInfo.
+		 * This is slightly cheaper to build, but the real point is to avoid
+		 * possibly running user-defined code in index expressions or
+		 * predicates.  We might be getting invoked during ON COMMIT
+		 * processing, and we don't want to run any such code then.
+		 */
+		indexInfo = BuildDummyIndexInfo(currentIndex);
 
 		/* Now truncate the actual file (and discard buffers) */
 		RelationTruncate(currentIndex, 0);
@@ -3893,15 +3994,26 @@ List *
 heap_truncate_find_FKs(List *relationIds)
 {
 	List	   *result = NIL;
+	List	   *oids = list_copy(relationIds);
+	List	   *parent_cons;
+	ListCell   *cell;
+	ScanKeyData key;
 	Relation	fkeyRel;
 	SysScanDesc fkeyScan;
 	HeapTuple	tuple;
+	bool		restart;
+
+	oids = list_copy(relationIds);
 
 	/*
 	 * Must scan pg_constraint.  Right now, it is a seqscan because there is
 	 * no available index on confrelid.
 	 */
 	fkeyRel = table_open(ConstraintRelationId, AccessShareLock);
+
+restart:
+	restart = false;
+	parent_cons = NIL;
 
 	fkeyScan = systable_beginscan(fkeyRel, InvalidOid, false,
 								  NULL, 0, NULL);
@@ -3915,16 +4027,85 @@ heap_truncate_find_FKs(List *relationIds)
 			continue;
 
 		/* Not referencing one of our list of tables */
-		if (!list_member_oid(relationIds, con->confrelid))
+		if (!list_member_oid(oids, con->confrelid))
 			continue;
 
-		/* Add referencer unless already in input or result list */
+		/*
+		 * If this constraint has a parent constraint which we have not seen
+		 * yet, keep track of it for the second loop, below.  Tracking parent
+		 * constraints allows us to climb up to the top-level level constraint
+		 * and look for all possible relations referencing the partitioned
+		 * table.
+		 */
+		if (OidIsValid(con->conparentid) &&
+			!list_member_oid(parent_cons, con->conparentid))
+			parent_cons = lappend_oid(parent_cons, con->conparentid);
+
+		/*
+		 * Add referencer to result, unless already present in input or result
+		 * list.
+		 */
 		if (!list_member_oid(relationIds, con->conrelid))
 			result = insert_ordered_unique_oid(result, con->conrelid);
 	}
 
 	systable_endscan(fkeyScan);
+
+	/*
+	 * Process each parent constraint we found to add the list of referenced
+	 * relations by them to the oids list.  If we do add any new such
+	 * relations, redo the first loop above.  Also, if we see that the parent
+	 * constraint in turn has a parent, add that so that we process all
+	 * relations in a single additional pass.
+	 */
+	foreach(cell, parent_cons)
+	{
+		Oid		parent = lfirst_oid(cell);
+
+		ScanKeyInit(&key,
+					Anum_pg_constraint_oid,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(parent));
+
+		fkeyScan = systable_beginscan(fkeyRel, ConstraintOidIndexId,
+									  true, NULL, 1, &key);
+
+		tuple = systable_getnext(fkeyScan);
+		if (HeapTupleIsValid(tuple))
+		{
+			Form_pg_constraint con = (Form_pg_constraint) GETSTRUCT(tuple);
+
+			/*
+			 * pg_constraint rows always appear for partitioned hierarchies
+			 * this way: on the each side of the constraint, one row appears
+			 * for each partition that points to the top-most table on the
+			 * other side.
+			 *
+			 * Because of this arrangement, we can correctly catch all
+			 * relevant relations by adding to 'parent_cons' all rows with
+			 * valid conparentid, and to the 'oids' list all rows with a
+			 * zero conparentid.  If any oids are added to 'oids', redo the
+			 * first loop above by setting 'restart'.
+			 */
+			if (OidIsValid(con->conparentid))
+				parent_cons = list_append_unique_oid(parent_cons,
+													 con->conparentid);
+			else if (!list_member_oid(oids, con->confrelid))
+			{
+				oids = lappend_oid(oids, con->confrelid);
+				restart = true;
+			}
+		}
+
+		systable_endscan(fkeyScan);
+	}
+
+	list_free(parent_cons);
+	if (restart)
+		goto restart;
+
 	table_close(fkeyRel, AccessShareLock);
+	list_free(oids);
 
 	return result;
 }
@@ -4062,16 +4243,36 @@ StorePartitionKey(Relation rel,
 	}
 
 	/*
-	 * Anything mentioned in the expressions.  We must ignore the column
-	 * references, which will depend on the table itself; there is no separate
-	 * partition key object.
+	 * The partitioning columns are made internally dependent on the table,
+	 * because we cannot drop any of them without dropping the whole table.
+	 * (ATExecDropColumn independently enforces that, but it's not bulletproof
+	 * so we need the dependencies too.)
+	 */
+	for (i = 0; i < partnatts; i++)
+	{
+		if (partattrs[i] == 0)
+			continue;			/* ignore expressions here */
+
+		referenced.classId = RelationRelationId;
+		referenced.objectId = RelationGetRelid(rel);
+		referenced.objectSubId = partattrs[i];
+
+		recordDependencyOn(&referenced, &myself, DEPENDENCY_INTERNAL);
+	}
+
+	/*
+	 * Also consider anything mentioned in partition expressions.  External
+	 * references (e.g. functions) get NORMAL dependencies.  Table columns
+	 * mentioned in the expressions are handled the same as plain partitioning
+	 * columns, i.e. they become internally dependent on the whole table.
 	 */
 	if (partexprs)
 		recordDependencyOnSingleRelExpr(&myself,
 										(Node *) partexprs,
 										RelationGetRelid(rel),
 										DEPENDENCY_NORMAL,
-										DEPENDENCY_AUTO, true);
+										DEPENDENCY_INTERNAL,
+										true /* reverse the self-deps */ );
 
 	/*
 	 * We must invalidate the relcache so that the next

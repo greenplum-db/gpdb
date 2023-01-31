@@ -36,13 +36,13 @@ GreenplumR supports the following component versions:
 You can use GreenplumR with Greenplum Database and the PL/R and PL/Container procedural languages. Before you install and run GreenplumR on a client system:
 
 -   Ensure that your Greenplum Database installation is running version 6.1 or newer.
--   Ensure that your client development system has connectivity to the Greenplum Database master host.
+-   Ensure that your client development system has connectivity to the Greenplum Database coordinator host.
 -   Ensure that `R` version 3.6.0 or newer is installed on your client system, and that you set the `$R_HOME` environment variable appropriately.
 -   Determine the procedural language\(s\) you plan to use with GreenplumR, and ensure that the language\(s\) is installed and configured in your Greenplum Database cluster. Refer to [PL/R Language](pl_r.html) and [PL/Container Language](pl_container.html) \(3.0 Beta\) for language installation and configuration instructions.
 -   Verify that you have registered the procedural language\(s\) in each database in which you plan to use GreenplumR to read data from or write data to Greenplum. For example, the following command lists the extensions and languages registered in the database named `testdb`:
 
     ```
-    $ psql -h gpmaster -d testdb -c '\dx'
+    $ psql -h gpcoordinator -d testdb -c '\dx'
                                          List of installed extensions
         Name     | Version  |   Schema   |                          Description     
                           
@@ -134,7 +134,7 @@ db.disconnect( conn.id = 1, verbose = TRUE, force = FALSE )
 
 ```
 
-When you connect to Greenplum Database, you provide the master host, port, database name, user name, password, and other information via function arguments or a data source name \(DSN\) file. If you do not specify an argument or value, GreenplumR uses the default.
+When you connect to Greenplum Database, you provide the coordinator host, port, database name, user name, password, and other information via function arguments or a data source name \(DSN\) file. If you do not specify an argument or value, GreenplumR uses the default.
 
 The `db.connect[.dsn]()` functions return an integer connection identifier. You specify this identifier when you operate on tables or views in the database. You also specify this identifier when you close the connection.
 
@@ -145,8 +145,8 @@ To list and display information about active Greenplum connections, use the `db.
 **Example**:
 
 ```
-## connect to Greenplum database named testdb on host gpmaster
-> cid_to_testdb <- db.connect( host = "gpmaster", port=5432, dbname = "testdb" )
+## connect to Greenplum database named testdb on host gpcoordinator
+> cid_to_testdb <- db.connect( host = "gpcoordinator", port=5432, dbname = "testdb" )
 Loading required package: DBI
 Created a connection to database with ID 1 
 [1] 1
@@ -155,7 +155,7 @@ Created a connection to database with ID 1
 Database Connection Info
 ## -------------------------------
 [Connection ID 1]
-Host     :    gpmaster
+Host     :    gpcoordinator
 User     :    gpadmin
 Database :    testdb
 DBMS     :    Greenplum 6
@@ -206,10 +206,10 @@ The fundamental data structure of R is the `data.frame`. A data frame is a colle
 ## use most of the function defaults
 > as.db.data.frame( abdf1, table.name = "public.abalone_from_r" ) 
 The data contained in table "pg_temp_93"."gp_temp_5bdf4ec7_42f9_9f9799_a0d76231be8f" which is wrapped by abdf1 is c
-opied into "public"."abalone_from_r" in database testdb on gpmaster !
+opied into "public"."abalone_from_r" in database testdb on gpcoordinator !
 Table       :    "public"."abalone_from_r"
 Database    :    testdb
-Host        :    gpmaster
+Host        :    gpcoordinator
 Connection  :    1
 
 ## list database objects, should display the newly created table
@@ -219,7 +219,7 @@ Connection  :    1
 
 ### <a id="run_greenplum"></a>Running R Functions in Greenplum Database 
 
-GreenplumR supports two functions that allow you to run an R function, in-database, on every row of a Greenplum Database table: [db.gpapply\(\)](https://github.com/greenplum-db/GreenplumR/blob/master/db.gpapply.html) and [db.gptapply\(\)](https://github.com/greenplum-db/GreenplumR/blob/master/db.gptapply.html). You can use the Greenplum PL/R or PL/Container procedural language as the vehicle in which to run the function.
+GreenplumR supports two functions that allow you to run an R function, in-database, on every row of a Greenplum Database table: [db.gpapply\(\)](https://github.com/greenplum-db/GreenplumR/blob/main/db.gpapply.md) and [db.gptapply\(\)](https://github.com/greenplum-db/GreenplumR/blob/main/db.gptapply.md). You can use the Greenplum PL/R or PL/Container procedural language as the vehicle in which to run the function.
 
 The function signatures follow:
 
@@ -245,7 +245,7 @@ By default, `db.gp[t]apply()` passes a single data frame input argument to the R
 Create a Greenplum table named `table1` in the database named `testdb`. This table has a single integer-type field. Populate the table with some data:
 
 ```
-user@clientsys$ psql -h gpmaster -d testdb
+user@clientsys$ psql -h gpcoordinator -d testdb
 testdb=# CREATE TABLE table1( id int );
 testdb=# INSERT INTO table1 SELECT generate_series(1,13);
 testdb=# \q
@@ -302,7 +302,7 @@ user@clientsys$ R
 Create a Greenplum table named `table2` in the database named `testdb`. This table has two integer-type fields. Populate the table with some data:
 
 ```
-user@clientsys$ psql -h gpmaster -d testdb
+user@clientsys$ psql -h gpcoordinator -d testdb
 testdb=# CREATE TABLE table2( c1 int, c2 int );
 testdb=# INSERT INTO table2 VALUES (1, 2);
 testdb=#\q
@@ -341,7 +341,7 @@ user@clientsys$ R
 View the contents of the Greenplum table named `table2_r_upd`:
 
 ```
-user@clientsys$ psql -h gpmaster -d testdb
+user@clientsys$ psql -h gpcoordinator -d testdb
 testdb=# SELECT * FROM table2_r_upd;
  a  | b  
 ----+----

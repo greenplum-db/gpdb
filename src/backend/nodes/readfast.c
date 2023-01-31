@@ -2212,6 +2212,9 @@ readNodeBinary(void)
 			case T_ReplicaIdentityStmt:
 				return_value = _readReplicaIdentityStmt();
 				break;
+			case T_AlterDatabaseStmt:
+				return_value = _readAlterDatabaseStmt();
+			break;
 			case T_AlterTableStmt:
 				return_value = _readAlterTableStmt();
 				break;

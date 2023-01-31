@@ -371,12 +371,12 @@ done
 # Set up the globals according to whether we're running in local or Concourse
 # mode.
 if (( $CONCOURSE_MODE )); then
-    MASTER_HOST=mdw
+    MASTER_HOST=cdw
     OLD_GPHOME=/usr/local/greenplum-db-devel
     NEW_GPHOME=/usr/local/gpdb_master
     DATADIR_PREFIX=/data/gpdata
-    OLD_COORDINATOR_DATA_DIRECTORY=/data/gpdata/master/gpseg-1
-    NEW_COORDINATOR_DATA_DIRECTORY=/data/gpdata/master-new/gpseg-1
+    OLD_COORDINATOR_DATA_DIRECTORY=/data/gpdata/coordinator/gpseg-1
+    NEW_COORDINATOR_DATA_DIRECTORY=/data/gpdata/coordinator-new/gpseg-1
     PSQL_ADDOPTS=
     GPINITSYSTEM_CONFIG=gpinitsystem_config
     GPINITSYSTEM_HOSTFILE=segment_host_list

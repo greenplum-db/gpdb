@@ -475,7 +475,7 @@ DirectDispatchUpdateContentIdsFromPlan(PlannerInfo *root, Plan *plan)
 				dispatchInfo = GetContentIdsFromPlanForSingleRelation(root,
 																	  plan,
 																	  ((Scan *) plan)->scanrelid,
-																	  indexOnlyScan->indexqualorig);
+																	  indexOnlyScan->recheckqual);
 				/* must use _orig_ qual ! */
 			}
 			break;

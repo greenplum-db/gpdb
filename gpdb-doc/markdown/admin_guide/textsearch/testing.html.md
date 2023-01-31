@@ -201,7 +201,7 @@ SELECT ts_lexize('english_stem', 'a');
  {}
 ```
 
-**Note:** The `ts_lexize` function expects a single token, not text. Here is a case where this can be confusing:
+> **Note** The `ts_lexize` function expects a single token, not text. Here is a case where this can be confusing:
 
 ```
 SELECT ts_lexize('thesaurus_astro','supernovae stars') is null;

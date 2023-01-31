@@ -55,13 +55,14 @@ ALTER TABLE reloptions_test RESET (fillfactor=12);
 -- Test vacuum_truncate option
 DROP TABLE reloptions_test;
 
-CREATE TABLE reloptions_test(i INT NOT NULL, j text)
+CREATE TEMP TABLE reloptions_test(i INT NOT NULL, j text)
 	WITH (vacuum_truncate=false,
 	toast.vacuum_truncate=false,
 	autovacuum_enabled=false);
 SELECT reloptions FROM pg_class WHERE oid = 'reloptions_test'::regclass;
 INSERT INTO reloptions_test VALUES (1, NULL), (NULL, NULL);
-VACUUM reloptions_test;
+-- Do an aggressive vacuum to prevent page-skipping.
+VACUUM (FREEZE, DISABLE_PAGE_SKIPPING) reloptions_test;
 SELECT pg_relation_size('reloptions_test') > 0;
 
 SELECT reloptions FROM pg_class WHERE oid =
@@ -71,7 +72,8 @@ SELECT reloptions FROM pg_class WHERE oid =
 ALTER TABLE reloptions_test RESET (vacuum_truncate);
 SELECT reloptions FROM pg_class WHERE oid = 'reloptions_test'::regclass;
 INSERT INTO reloptions_test VALUES (1, NULL), (NULL, NULL);
-VACUUM reloptions_test;
+-- Do an aggressive vacuum to prevent page-skipping.
+VACUUM (FREEZE, DISABLE_PAGE_SKIPPING) reloptions_test;
 SELECT pg_relation_size('reloptions_test') = 0;
 
 -- Test toast.* options

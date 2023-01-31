@@ -44,7 +44,7 @@ conv_proc(
 
 ## <a id="section5"></a>Notes 
 
-Note that in this release of Greenplum Database, user-defined functions used in a user-defined conversion must be defined as `IMMUTABLE`. Any compiled code \(shared library files\) for custom functions must be placed in the same location on every host in your Greenplum Database array \(master and all segments\). This location must also be in the `LD_LIBRARY_PATH` so that the server can locate the files.
+Note that in this release of Greenplum Database, user-defined functions used in a user-defined conversion must be defined as `IMMUTABLE`. Any compiled code \(shared library files\) for custom functions must be placed in the same location on every host in your Greenplum Database array \(coordinatornatornatornator and all segments\). This location must also be in the `LD_LIBRARY_PATH` so that the server can locate the files.
 
 ## <a id="section6"></a>Examples 
 

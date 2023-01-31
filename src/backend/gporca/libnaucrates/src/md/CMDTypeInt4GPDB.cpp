@@ -38,31 +38,38 @@ CMDName CMDTypeInt4GPDB::m_mdname(&m_str);
 //---------------------------------------------------------------------------
 CMDTypeInt4GPDB::CMDTypeInt4GPDB(CMemoryPool *mp) : m_mp(mp)
 {
-	m_mdid = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_OID);
+	m_mdid = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_OID);
 	if (GPOS_FTRACE(EopttraceConsiderOpfamiliesForDistribution))
 	{
-		m_distr_opfamily = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_OPFAMILY);
-		m_legacy_distr_opfamily =
-			GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_LEGACY_OPFAMILY);
+		m_distr_opfamily =
+			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_OPFAMILY);
+		m_legacy_distr_opfamily = GPOS_NEW(mp)
+			CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_LEGACY_OPFAMILY);
 	}
 	else
 	{
 		m_distr_opfamily = nullptr;
 		m_legacy_distr_opfamily = nullptr;
 	}
-	m_mdid_op_eq = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP);
-	m_mdid_op_neq = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_NEQ_OP);
-	m_mdid_op_lt = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_LT_OP);
-	m_mdid_op_leq = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_LEQ_OP);
-	m_mdid_op_gt = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_GT_OP);
-	m_mdid_op_geq = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_GEQ_OP);
-	m_mdid_op_cmp = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_COMP_OP);
-	m_mdid_type_array = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_ARRAY_TYPE);
-	m_mdid_min = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_AGG_MIN);
-	m_mdid_max = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_AGG_MAX);
-	m_mdid_avg = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_AGG_AVG);
-	m_mdid_sum = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_AGG_SUM);
-	m_mdid_count = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_AGG_COUNT);
+	m_mdid_op_eq = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP);
+	m_mdid_op_neq =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_NEQ_OP);
+	m_mdid_op_lt = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_LT_OP);
+	m_mdid_op_leq =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_LEQ_OP);
+	m_mdid_op_gt = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_GT_OP);
+	m_mdid_op_geq =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_GEQ_OP);
+	m_mdid_op_cmp =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_COMP_OP);
+	m_mdid_type_array =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_ARRAY_TYPE);
+	m_mdid_min = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_AGG_MIN);
+	m_mdid_max = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_AGG_MAX);
+	m_mdid_avg = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_AGG_AVG);
+	m_mdid_sum = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_AGG_SUM);
+	m_mdid_count =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_AGG_COUNT);
 
 	m_dxl_str = CDXLUtils::SerializeMDObj(
 		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);

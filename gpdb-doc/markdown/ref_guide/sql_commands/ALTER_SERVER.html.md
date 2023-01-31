@@ -5,12 +5,12 @@ Changes the definition of a foreign server.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-ALTER SERVER <server_name> [ VERSION '<new_version>' ]
+ALTER SERVER <name> [ VERSION '<new_version>' ]
     [ OPTIONS ( [ ADD | SET | DROP ] <option> ['<value>'] [, ... ] ) ]
 
-ALTER SERVER <server_name> OWNER TO <new_owner>
+ALTER SERVER <name> OWNER TO { <new_owner> | CURRENT_USER | SESSION_USER }
                 
-ALTER SERVER <server_name> RENAME TO <new_name>
+ALTER SERVER <name> RENAME TO <new_name>
 ```
 
 ## <a id="section3"></a>Description 
@@ -27,7 +27,7 @@ Superusers automatically satisfy all of these criteria.
 
 ## <a id="section4"></a>Parameters 
 
-server\_name
+name
 :   The name of an existing server.
 
 new\_version
@@ -36,10 +36,10 @@ new\_version
 OPTIONS \( \[ ADD \| SET \| DROP \] option \['value'\] \[, ... \] \)
 :   Change the server's options. `ADD`, `SET`, and `DROP` specify the action to perform. If no operation is explicitly specified, the default operation is `ADD`. Option names must be unique. Greenplum Database validates names and values using the server's foreign-data wrapper library.
 
-OWNER TO new\_owner
+new\_owner
 :   Specifies the new owner of the foreign server.
 
-RENAME TO new\_name
+new\_name
 :   Specifies the new name of the foreign server.
 
 ## <a id="section6"></a>Examples 

@@ -29,6 +29,7 @@ typedef struct CdbPgResults
 {
 	struct pg_result **pg_results;
 	int numResults;
+	int numDispatches; /* the number of dispatched QE, from CdbDispatchResults.resultCount */
 }CdbPgResults;
 
 /*

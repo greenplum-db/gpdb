@@ -4,7 +4,7 @@ The `gp_toolkit.gp_resgroup_status_per_segment` view allows administrators to se
 
 Memory amounts are specified in MBs.
 
-**Note:** The `gp_resgroup_status_per_segment` view is valid only when resource group-based resource management is active.
+> **Note** The `gp_resgroup_status_per_segment` view is valid only when resource group-based resource management is active.
 
 |column|type|references|description|
 |------|----|----------|-----------|

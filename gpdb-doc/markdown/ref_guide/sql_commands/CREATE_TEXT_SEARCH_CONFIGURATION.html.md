@@ -15,9 +15,9 @@ CREATE TEXT SEARCH CONFIGURATION <name> (
 
 `CREATE TEXT SEARCH CONFIGURATION` creates a new text search configuration. A text search configuration specifies a text search parser that can divide a string into tokens, plus dictionaries that can be used to determine which tokens are of interest for searching.
 
-If only the parser is specified, then the new text search configuration initially has no mappings from token types to dictionaries, and therefore will ignore all words. Subsequent `ALTER TEXT SEARCH CONFIGURATION` commands must be used to create mappings to make the configuration useful. Alternatively, an existing text search configuration can be copied.
+If only the parser is specified, then the new text search configuration initially has no mappings from token types to dictionaries, and therefore will ignore all words. Subsequent [ALTER TEXT SEARCH CONFIGURATION](ALTER_TEXT_SEARCH_CONFIGURATION.html) commands must be used to create mappings to make the configuration useful. Alternatively, an existing text search configuration can be copied.
 
-If a schema name is given then the text search configuration is created in the specified schema. Otherwise it is created in the current schema.
+If a schema name is provided then the text search configuration is created in the specified schema. Otherwise it is created in the current schema.
 
 The user who defines a text search configuration becomes its owner.
 

@@ -21,6 +21,7 @@ class GpBuild:
                                     "--with-openssl",
                                     "--with-perl",
                                     "--with-python",
+                                    "--with-uuid=e2fs",
                                     # TODO: Remove this line as soon as zstd is built into Ubuntu docker image
                                     "--without-zstd",
                                     "--prefix={0}".format(INSTALL_DIR)
@@ -51,7 +52,7 @@ class GpBuild:
             cmd = source_env_cmd
         runcmd = "runuser gpadmin -c \"{0} && {1} \"".format(cmd, command)
         if print_command:
-            print "Executing {}".format(runcmd)
+            print("Executing {}".format(runcmd))
         return subprocess.call([runcmd], shell=True, stdout=stdout, stderr=stderr)
 
     def run_explain_test_suite(self, dbexists):
@@ -73,7 +74,7 @@ class GpBuild:
                 status = self._run_gpdb_command("psql -q -f stats.sql", stdout=f)
             if status:
                 with open("load_stats.txt", "r") as f:
-                    print f.read()
+                    print(f.read())
                 fail_on_error(status)
 
         # set gucs if any were specified
@@ -94,10 +95,10 @@ class GpBuild:
             if fsql.endswith('.sql') and fsql not in ['stats.sql', 'schema.sql']:
                 output_fname = 'out/{}'.format(fsql.replace('.sql', '.out'))
                 with open(output_fname, 'w') as fout:
-                    print "Running query: " + fsql
+                    print("Running query: " + fsql)
                     current_status = self._run_gpdb_command("psql -a -f sql/{}".format(fsql), stdout=fout, stderr=fout, source_env_cmd=source_env_cmd, print_command=False)
                     if current_status != 0:
-                        print "ERROR: {0}".format(current_status)
+                        print("ERROR: {0}".format(current_status))
                     status = status if status != 0 else current_status
 
         return status

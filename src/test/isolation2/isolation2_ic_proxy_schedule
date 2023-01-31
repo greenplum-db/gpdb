@@ -1,0 +1,9 @@
+# Schedule with targeted tests for proxy interconnect.
+# Assumes that gp_interconnect_type=proxy
+# Assumes that gp_interconnect_proxy_addresses has been set up
+
+# test TCP interconnect teardown bounded wait (Proxy IC reuses TCP setup/teardown)
+test: tcp_ic_teardown
+
+# test TCP proxy peer shutdown
+test: ic_proxy_peer_shutdown

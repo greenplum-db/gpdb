@@ -6,7 +6,7 @@
     </dxl:OutputColumns>
     <dxl:CTEList/>
     <dxl:LogicalInsert InsertColumns="1">
-      <dxl:TableDescriptor Mdid="0.28421389.1.1" TableName="nim1">
+      <dxl:TableDescriptor Mdid="6.28421389.1.1" TableName="nim1">
         <dxl:Columns>
           <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
           <dxl:Column ColId="10" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -25,7 +25,7 @@
         <dxl:LimitCount/>
         <dxl:LimitOffset/>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.28421336.1.1" TableName="nim">
+          <dxl:TableDescriptor Mdid="6.28421336.1.1" TableName="nim">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

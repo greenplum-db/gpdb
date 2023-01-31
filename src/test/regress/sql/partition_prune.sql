@@ -121,6 +121,7 @@ explain (costs off) select * from rlp where a = 1 or b = 'ab';
 explain (costs off) select * from rlp where a > 20 and a < 27;
 explain (costs off) select * from rlp where a = 29;
 explain (costs off) select * from rlp where a >= 29;
+explain (costs off) select * from rlp where a < 1 or (a > 20 and a < 25);
 
 -- redundant clauses are eliminated
 explain (costs off) select * from rlp where a > 1 and a = 10;	/* only default */
@@ -197,6 +198,15 @@ explain (costs off) select * from boolpart where a is not true and a is not fals
 explain (costs off) select * from boolpart where a is unknown;
 explain (costs off) select * from boolpart where a is not unknown;
 
+create table boolrangep (a bool, b bool, c int) partition by range (a,b,c);
+create table boolrangep_tf partition of boolrangep for values from ('true', 'false', 0) to ('true', 'false', 100);
+create table boolrangep_ft partition of boolrangep for values from ('false', 'true', 0) to ('false', 'true', 100);
+create table boolrangep_ff1 partition of boolrangep for values from ('false', 'false', 0) to ('false', 'false', 50);
+create table boolrangep_ff2 partition of boolrangep for values from ('false', 'false', 50) to ('false', 'false', 100);
+
+-- try a more complex case that's been known to trip up pruning in the past
+explain (costs off)  select * from boolrangep where not a and not b and c = 25;
+
 -- test scalar-to-array operators
 create table coercepart (a varchar) partition by list (a);
 create table coercepart_ab partition of coercepart for values in ('ab');
@@ -208,6 +218,13 @@ explain (costs off) select * from coercepart where a ~ any ('{ab}');
 explain (costs off) select * from coercepart where a !~ all ('{ab}');
 explain (costs off) select * from coercepart where a ~ any ('{ab,bc}');
 explain (costs off) select * from coercepart where a !~ all ('{ab,bc}');
+explain (costs off) select * from coercepart where a = any ('{ab,bc}');
+explain (costs off) select * from coercepart where a = any ('{ab,null}');
+explain (costs off) select * from coercepart where a = any (null::text[]);
+explain (costs off) select * from coercepart where a = all ('{ab}');
+explain (costs off) select * from coercepart where a = all ('{ab,bc}');
+explain (costs off) select * from coercepart where a = all ('{ab,null}');
+explain (costs off) select * from coercepart where a = all (null::text[]);
 
 drop table coercepart;
 
@@ -302,29 +319,30 @@ create table rparted_by_int2_maxvalue partition of rparted_by_int2 for values fr
 -- all partitions but rparted_by_int2_maxvalue pruned
 explain (costs off) select * from rparted_by_int2 where a > 100000000000000;
 
-drop table lp, coll_pruning, rlp, mc3p, mc2p, boolpart, rp, coll_pruning_multi, like_op_noprune, lparted_by_int2, rparted_by_int2;
+drop table lp, coll_pruning, rlp, mc3p, mc2p, boolpart, boolrangep, rp, coll_pruning_multi, like_op_noprune, lparted_by_int2, rparted_by_int2;
 
 --
 -- Test Partition pruning for HASH partitioning
 --
 -- Use hand-rolled hash functions and operator classes to get predictable
--- result on different matchines.  See the definitions of
+-- result on different machines.  See the definitions of
 -- part_part_test_int4_ops and part_test_text_ops in insert.sql.
 --
 
-create table hp (a int, b text) partition by hash (a part_test_int4_ops, b part_test_text_ops);
+create table hp (a int, b text, c int)
+  partition by hash (a part_test_int4_ops, b part_test_text_ops);
 create table hp0 partition of hp for values with (modulus 4, remainder 0);
 create table hp3 partition of hp for values with (modulus 4, remainder 3);
 create table hp1 partition of hp for values with (modulus 4, remainder 1);
 create table hp2 partition of hp for values with (modulus 4, remainder 2);
 
-insert into hp values (null, null);
-insert into hp values (1, null);
-insert into hp values (1, 'xxx');
-insert into hp values (null, 'xxx');
-insert into hp values (2, 'xxx');
-insert into hp values (1, 'abcde');
-select tableoid::regclass, * from hp;
+insert into hp values (null, null, 0);
+insert into hp values (1, null, 1);
+insert into hp values (1, 'xxx', 2);
+insert into hp values (null, 'xxx', 3);
+insert into hp values (2, 'xxx', 4);
+insert into hp values (1, 'abcde', 5);
+select tableoid::regclass, * from hp order by c;
 
 -- partial keys won't prune, nor would non-equality conditions
 explain (costs off) select * from hp where a = 1;
@@ -344,6 +362,16 @@ explain (costs off) select * from hp where a is null and b = 'xxx';
 explain (costs off) select * from hp where a = 2 and b = 'xxx';
 explain (costs off) select * from hp where a = 1 and b = 'abcde';
 explain (costs off) select * from hp where (a = 1 and b = 'abcde') or (a = 2 and b = 'xxx') or (a is null and b is null);
+
+-- test pruning when not all the partitions exist
+drop table hp1;
+drop table hp3;
+explain (costs off) select * from hp where a = 1 and b = 'abcde';
+explain (costs off) select * from hp where a = 1 and b = 'abcde' and
+  (c = 2 or c = 3);
+drop table hp2;
+explain (costs off) select * from hp where a = 1 and b = 'abcde' and
+  (c = 2 or c = 3);
 
 drop table hp;
 
@@ -440,9 +468,14 @@ drop table list_part;
 
 -- Parallel append
 
--- Suppress the number of loops each parallel node runs for.  This is because
--- more than one worker may run the same parallel node if timing conditions
--- are just right, which destabilizes the test.
+-- Parallel queries won't necessarily get as many workers as the planner
+-- asked for.  This affects not only the "Workers Launched:" field of EXPLAIN
+-- results, but also row counts and loop counts for parallel scans, Gathers,
+-- and everything in between.  This function filters out the values we can't
+-- rely on to be stable.
+-- This removes enough info that you might wonder why bother with EXPLAIN
+-- ANALYZE at all.  The answer is that we need to see '(never executed)'
+-- notations because that's the only way to verify runtime pruning.
 create function explain_parallel_append(text) returns setof text
 language plpgsql as
 $$
@@ -453,9 +486,9 @@ begin
         execute format('explain (analyze, costs off, summary off, timing off) %s',
             $1)
     loop
-        if ln like '%Parallel%' then
-            ln := regexp_replace(ln, 'loops=\d*',  'loops=N');
-        end if;
+        ln := regexp_replace(ln, 'Workers Launched: \d+', 'Workers Launched: N');
+        ln := regexp_replace(ln, 'actual rows=\d+ loops=\d+', 'actual rows=N loops=N');
+        ln := regexp_replace(ln, 'Rows Removed by Filter: \d+', 'Rows Removed by Filter: N');
         return next ln;
     end loop;
 end;
@@ -773,6 +806,9 @@ select * from stable_qual_pruning
 explain (analyze, costs off, summary off, timing off)
 select * from stable_qual_pruning
   where a = any(array['2000-02-01', '2010-01-01']::timestamptz[]);
+explain (analyze, costs off, summary off, timing off)
+select * from stable_qual_pruning
+  where a = any(null::timestamptz[]);
 
 drop table stable_qual_pruning;
 
@@ -1062,3 +1098,79 @@ reset constraint_exclusion;
 reset enable_partition_pruning;
 
 drop table listp;
+
+--
+-- Check that gen_prune_steps_from_opexps() works well for various cases of
+-- clauses for different partition keys
+--
+
+create table rp_prefix_test1 (a int, b varchar) partition by range(a, b);
+create table rp_prefix_test1_p1 partition of rp_prefix_test1 for values from (1, 'a') to (1, 'b');
+create table rp_prefix_test1_p2 partition of rp_prefix_test1 for values from (2, 'a') to (2, 'b');
+
+-- Don't call get_steps_using_prefix() with the last partition key b plus
+-- an empty prefix
+explain (costs off) select * from rp_prefix_test1 where a <= 1 and b = 'a';
+
+create table rp_prefix_test2 (a int, b int, c int) partition by range(a, b, c);
+create table rp_prefix_test2_p1 partition of rp_prefix_test2 for values from (1, 1, 0) to (1, 1, 10);
+create table rp_prefix_test2_p2 partition of rp_prefix_test2 for values from (2, 2, 0) to (2, 2, 10);
+
+-- Don't call get_steps_using_prefix() with the last partition key c plus
+-- an invalid prefix (ie, b = 1)
+explain (costs off) select * from rp_prefix_test2 where a <= 1 and b = 1 and c >= 0;
+
+create table rp_prefix_test3 (a int, b int, c int, d int) partition by range(a, b, c, d);
+create table rp_prefix_test3_p1 partition of rp_prefix_test3 for values from (1, 1, 1, 0) to (1, 1, 1, 10);
+create table rp_prefix_test3_p2 partition of rp_prefix_test3 for values from (2, 2, 2, 0) to (2, 2, 2, 10);
+
+-- Test that get_steps_using_prefix() handles a prefix that contains multiple
+-- clauses for the partition key b (ie, b >= 1 and b >= 2)
+explain (costs off) select * from rp_prefix_test3 where a >= 1 and b >= 1 and b >= 2 and c >= 2 and d >= 0;
+
+-- Test that get_steps_using_prefix() handles a prefix that contains multiple
+-- clauses for the partition key b (ie, b >= 1 and b = 2)  (This also tests
+-- that the caller arranges clauses in that prefix in the required order)
+explain (costs off) select * from rp_prefix_test3 where a >= 1 and b >= 1 and b = 2 and c = 2 and d >= 0;
+
+create table hp_prefix_test (a int, b int, c int, d int) partition by hash (a part_test_int4_ops, b part_test_int4_ops, c part_test_int4_ops, d part_test_int4_ops);
+create table hp_prefix_test_p1 partition of hp_prefix_test for values with (modulus 2, remainder 0);
+create table hp_prefix_test_p2 partition of hp_prefix_test for values with (modulus 2, remainder 1);
+
+-- Test that get_steps_using_prefix() handles non-NULL step_nullkeys
+explain (costs off) select * from hp_prefix_test where a = 1 and b is null and c = 1 and d = 1;
+
+drop table rp_prefix_test1;
+drop table rp_prefix_test2;
+drop table rp_prefix_test3;
+drop table hp_prefix_test;
+
+--
+-- Check that gen_partprune_steps() detects self-contradiction from clauses
+-- regardless of the order of the clauses (Here we use a custom operator to
+-- prevent the equivclass.c machinery from reordering the clauses)
+--
+
+create operator === (
+   leftarg = int4,
+   rightarg = int4,
+   procedure = int4eq,
+   commutator = ===,
+   hashes
+);
+create operator class part_test_int4_ops2
+for type int4
+using hash as
+operator 1 ===,
+function 2 part_hashint4_noop(int4, int8);
+
+create table hp_contradict_test (a int, b int) partition by hash (a part_test_int4_ops2, b part_test_int4_ops2);
+create table hp_contradict_test_p1 partition of hp_contradict_test for values with (modulus 2, remainder 0);
+create table hp_contradict_test_p2 partition of hp_contradict_test for values with (modulus 2, remainder 1);
+
+explain (costs off) select * from hp_contradict_test where a is null and a === 1 and b === 1;
+explain (costs off) select * from hp_contradict_test where a === 1 and b === 1 and a is null;
+
+drop table hp_contradict_test;
+drop operator class part_test_int4_ops2 using hash;
+drop operator ===(int4, int4);

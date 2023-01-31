@@ -32,7 +32,7 @@ gpexpand --version
 -   Enough disk space on your segment hosts to temporarily hold a copy of your largest table.
 -   When redistributing data, Greenplum Database must be running in production mode. Greenplum Database cannot be running in restricted mode or in coordinator mode. The `gpstart` options `-R` or `-m` cannot be specified to start Greenplum Database.
 
-**Note:** These utilities cannot be run while `gpexpand` is performing segment initialization.
+> **Note** These utilities cannot be run while `gpexpand` is performing segment initialization.
 
 -   `gpbackup`
 -   `gpcheckcat`
@@ -40,7 +40,7 @@ gpexpand --version
 -   `gppkg`
 -   `gprestore`
 
-**Important:** When expanding a Greenplum Database system, you must deactivate Greenplum interconnect proxies before adding new hosts and segment instances to the system, and you must update the `gp_interconnect_proxy_addresses` parameter with the newly-added segment instances before you re-enable interconnect proxies. For information about Greenplum interconnect proxies, see [Configuring Proxies for the Greenplum Interconnect](../../admin_guide/managing/proxy-ic.html).
+> **Important** When expanding a Greenplum Database system, you must deactivate Greenplum interconnect proxies before adding new hosts and segment instances to the system, and you must update the `gp_interconnect_proxy_addresses` parameter with the newly-added segment instances before you re-enable interconnect proxies. For information about Greenplum interconnect proxies, see [Configuring Proxies for the Greenplum Interconnect](../../admin_guide/managing/proxy-ic.html).
 
 For information about preparing a system for expansion, see [Expanding a Greenplum System](../../admin_guide/expand/expand-main.html)in the *Greenplum Database Administrator Guide*.
 
@@ -58,11 +58,11 @@ In addition to initializing the segment instances, the initialization phase perf
 
 In the table data redistribution phase, `gpexpand` redistributes table data to rebalance the data across the old and new segment instances.
 
-**Note:** Data redistribution should be performed during low-use hours. Redistribution can be divided into batches over an extended period.
+> **Note** Data redistribution should be performed during low-use hours. Redistribution can be divided into batches over an extended period.
 
 To begin the redistribution phase, run `gpexpand` with either the `-d` \(duration\) or `-e` \(end time\) options, or with no options. If you specify an end time or duration, then the utility redistributes tables in the expansion schema until the specified end time or duration is reached. If you specify no options, then the utility redistribution phase continues until all tables in the expansion schema are reorganized. Each table is reorganized using `ALTER TABLE` commands to rebalance the tables across new segments, and to set tables to their original distribution policy. If `gpexpand` completes the reorganization of all tables, it displays a success message and ends.
 
-**Note:** This utility uses secure shell \(SSH\) connections between systems to perform its tasks. In large Greenplum Database deployments, cloud deployments, or deployments with a large number of segments per host, this utility may exceed the host's maximum threshold for unauthenticated connections. Consider updating the SSH `MaxStartups` and `MaxSessions` configuration parameters to increase this threshold. For more information about SSH configuration options, refer to the SSH documentation for your Linux distribution.
+> **Note** This utility uses secure shell \(SSH\) connections between systems to perform its tasks. In large Greenplum Database deployments, cloud deployments, or deployments with a large number of segments per host, this utility may exceed the host's maximum threshold for unauthenticated connections. Consider updating the SSH `MaxStartups` and `MaxSessions` configuration parameters to increase this threshold. For more information about SSH configuration options, refer to the SSH documentation for your Linux distribution.
 
 ## <a id="section5"></a>Options 
 
@@ -90,7 +90,7 @@ To begin the redistribution phase, run `gpexpand` with either the `-d` \(duratio
 
 :   This file can contain hostnames with or without network interfaces specified. The `gpexpand` utility handles either case, adding interface numbers to end of the hostname if the original nodes are configured with multiple network interfaces.
 
-    **Note:** The Greenplum Database segment host naming convention is `sdwN` where `sdw` is a prefix and `N` is an integer. For example, `sdw1`, `sdw2` and so on. For hosts with multiple interfaces, the convention is to append a dash \(`-`\) and number to the host name. For example, `sdw1-1` and `sdw1-2` are the two interface names for host `sdw1`.
+    > **Note** The Greenplum Database segment host naming convention is `sdwN` where `sdw` is a prefix and `N` is an integer. For example, `sdw1`, `sdw2` and so on. For hosts with multiple interfaces, the convention is to append a dash \(`-`\) and number to the host name. For example, `sdw1-1` and `sdw1-2` are the two interface names for host `sdw1`.
 
 :   For information about using a hostname or IP address, see [Specifying Hosts using Hostnames or IP Addresses](#host_ip). Also, see [Using Host Systems with Multiple NICs](#multi_nic).
 

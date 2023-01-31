@@ -138,7 +138,7 @@ class ConfExpSegCmd(Command):
                     cmd = PgBaseBackup(target_datadir=self.datadir,
                                        source_host=self.syncWithSegmentHostname,
                                        source_port=str(self.syncWithSegmentPort),
-                                       create_slot = False,
+                                       create_slot=True,
                                        replication_slot_name=self.replicationSlotName,
                                        forceoverwrite=self.forceoverwrite,
                                        target_gp_dbid=self.dbid,
@@ -149,30 +149,9 @@ class ConfExpSegCmd(Command):
                         self.set_results(CommandResult(0, b'', b'', True, False))
                         if shouldDeleteProgressFile:
                             os.remove(self.progressFile)
-
                     except Exception as e:
-                        #  If the cluster never has mirrors, cmd will fail
-                        #  quickly because the internal slot doesn't exist.
-                        #  Re-run with `create_slot`.
-                        #  GPDB_12_MERGE_FIXME could we check it before? or let
-                        #  pg_basebackup create slot if not exists.
-                        cmd = PgBaseBackup(target_datadir=self.datadir,
-                                           source_host=self.syncWithSegmentHostname,
-                                           source_port=str(self.syncWithSegmentPort),
-                                           create_slot = True,
-                                           replication_slot_name=self.replicationSlotName,
-                                           forceoverwrite=True,
-                                           target_gp_dbid=self.dbid,
-                                           logfile=self.progressFile)
-                        try:
-                            logger.info("Re-running pg_basebackup, creating the slot this time")
-                            cmd.run(validateAfter=True)
-                            self.set_results(CommandResult(0, b'', b'', True, False))
-                            if shouldDeleteProgressFile:
-                                os.remove(self.progressFile)
-                        except Exception as e:
-                            self.set_results(CommandResult(1, b'', str(e).encode(), True, False))
-                            raise
+                        self.set_results(CommandResult(1, b'', str(e).encode(), True, False))
+                        raise
 
                     logger.info("Successfully ran pg_basebackup: %s" % cmd.cmdStr)
                     return

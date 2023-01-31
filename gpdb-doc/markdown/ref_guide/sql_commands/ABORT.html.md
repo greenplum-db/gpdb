@@ -5,7 +5,7 @@ Terminates the current transaction.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-ABORT [WORK | TRANSACTION]
+ABORT [WORK | TRANSACTION] [AND [NO] CHAIN]
 ```
 
 ## <a id="section3"></a>Description 
@@ -18,11 +18,22 @@ WORK
 TRANSACTION
 :   Optional key words. They have no effect.
 
+AND CHAIN
+:   If `AND CHAIN` is specified, a new transaction is immediately started with the same transaction characteristics \(see [SET TRANSACTION](SET_TRANSACTION.html)\) as the just finished one. Otherwise, no new transaction is started.
+
 ## <a id="section5"></a>Notes 
 
-Use `COMMIT` to successfully terminate a transaction.
+Use [COMMIT](COMMIT.html) to successfully terminate a transaction.
 
-Issuing `ABORT` when not inside a transaction does no harm, but it will provoke a warning message.
+Issuing `ABORT` outside of a transaction block emits a warning and otherwise has no effect.
+
+## <a id="section5a"></a>Examples 
+
+To terminate all changes:
+
+```
+ABORT;
+```
 
 ## <a id="section6"></a>Compatibility 
 

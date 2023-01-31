@@ -8,7 +8,7 @@
 static void
 KeepLogSeg_wrapper(XLogRecPtr recptr, XLogSegNo *logSegNo)
 {
-	KeepLogSeg(recptr, logSegNo, InvalidXLogRecPtr);
+	KeepLogSeg(recptr, logSegNo);
 }
 
 static void

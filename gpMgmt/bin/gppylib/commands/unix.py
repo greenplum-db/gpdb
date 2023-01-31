@@ -501,7 +501,7 @@ class FileDirExists(Command):
         return (not self.results.rc)
 
 
-# -------------scp------------------
+# -------------rsync------------------
 
 # MPP-13617
 def canonicalize(addr):
@@ -510,10 +510,10 @@ def canonicalize(addr):
     return '[' + addr + ']'
 
 
-class Scp(Command):
+class Rsync(Command):
     def __init__(self, name, srcFile, dstFile, srcHost=None, dstHost=None, recursive=False, ctxt=LOCAL,
                  remoteHost=None):
-        cmdStr = findCmdInPath('scp') + " "
+        cmdStr = findCmdInPath('rsync') + " "
 
         if recursive:
             cmdStr = cmdStr + "-r "

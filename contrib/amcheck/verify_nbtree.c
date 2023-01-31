@@ -35,6 +35,7 @@
 #include "lib/bloomfilter.h"
 #include "miscadmin.h"
 #include "storage/lmgr.h"
+#include "storage/smgr.h"
 #include "utils/memutils.h"
 #include "utils/snapmgr.h"
 
@@ -128,6 +129,7 @@ PG_FUNCTION_INFO_V1(bt_index_parent_check);
 static void bt_index_check_internal(Oid indrelid, bool parentcheck,
 									bool heapallindexed, bool rootdescend);
 static inline void btree_index_checkable(Relation rel);
+static inline bool btree_index_mainfork_expected(Relation rel);
 static void bt_check_every_level(Relation rel, Relation heaprel,
 								 bool heapkeyspace, bool readonly, bool heapallindexed,
 								 bool rootdescend);
@@ -225,8 +227,10 @@ bt_index_check_internal(Oid indrelid, bool parentcheck, bool heapallindexed,
 	Oid			heapid;
 	Relation	indrel;
 	Relation	heaprel;
-	bool		heapkeyspace;
 	LOCKMODE	lockmode;
+	Oid			save_userid;
+	int			save_sec_context;
+	int			save_nestlevel;
 
 	if (parentcheck)
 		lockmode = ShareLock;
@@ -243,9 +247,27 @@ bt_index_check_internal(Oid indrelid, bool parentcheck, bool heapallindexed,
 	 */
 	heapid = IndexGetRelation(indrelid, true);
 	if (OidIsValid(heapid))
+	{
 		heaprel = table_open(heapid, lockmode);
+
+		/*
+		 * Switch to the table owner's userid, so that any index functions are
+		 * run as that user.  Also lock down security-restricted operations
+		 * and arrange to make GUC variable changes local to this command.
+		 */
+		GetUserIdAndSecContext(&save_userid, &save_sec_context);
+		SetUserIdAndSecContext(heaprel->rd_rel->relowner,
+							   save_sec_context | SECURITY_RESTRICTED_OPERATION);
+		save_nestlevel = NewGUCNestLevel();
+	}
 	else
+	{
 		heaprel = NULL;
+		/* Set these just to suppress "uninitialized variable" warnings */
+		save_userid = InvalidOid;
+		save_sec_context = -1;
+		save_nestlevel = -1;
+	}
 
 	/*
 	 * Open the target index relations separately (like relation_openrv(), but
@@ -275,10 +297,28 @@ bt_index_check_internal(Oid indrelid, bool parentcheck, bool heapallindexed,
 	/* Relation suitable for checking as B-Tree? */
 	btree_index_checkable(indrel);
 
-	/* Check index, possibly against table it is an index on */
-	heapkeyspace = _bt_heapkeyspace(indrel);
-	bt_check_every_level(indrel, heaprel, heapkeyspace, parentcheck,
-						 heapallindexed, rootdescend);
+	if (btree_index_mainfork_expected(indrel))
+	{
+		bool	heapkeyspace;
+
+		RelationOpenSmgr(indrel);
+		if (!smgrexists(indrel->rd_smgr, MAIN_FORKNUM))
+			ereport(ERROR,
+					(errcode(ERRCODE_INDEX_CORRUPTED),
+					 errmsg("index \"%s\" lacks a main relation fork",
+							RelationGetRelationName(indrel))));
+
+		/* Check index, possibly against table it is an index on */
+		heapkeyspace = _bt_heapkeyspace(indrel);
+		bt_check_every_level(indrel, heaprel, heapkeyspace, parentcheck,
+							 heapallindexed, rootdescend);
+	}
+
+	/* Roll back any GUC changes executed by index functions */
+	AtEOXact_GUC(false, save_nestlevel);
+
+	/* Restore userid and security context */
+	SetUserIdAndSecContext(save_userid, save_sec_context);
 
 	/*
 	 * Release locks early. That's ok here because nothing in the called
@@ -322,6 +362,28 @@ btree_index_checkable(Relation rel)
 				 errmsg("cannot check index \"%s\"",
 						RelationGetRelationName(rel)),
 				 errdetail("Index is not valid.")));
+}
+
+/*
+ * Check if B-Tree index relation should have a file for its main relation
+ * fork.  Verification uses this to skip unlogged indexes when in hot standby
+ * mode, where there is simply nothing to verify.
+ *
+ * NB: Caller should call btree_index_checkable() before calling here.
+ */
+static inline bool
+btree_index_mainfork_expected(Relation rel)
+{
+	if (rel->rd_rel->relpersistence != RELPERSISTENCE_UNLOGGED ||
+		!RecoveryInProgress())
+		return true;
+
+	ereport(NOTICE,
+			(errcode(ERRCODE_READ_ONLY_SQL_TRANSACTION),
+			 errmsg("cannot verify unlogged index \"%s\" during recovery, skipping",
+					RelationGetRelationName(rel))));
+
+	return false;
 }
 
 /*
@@ -377,11 +439,20 @@ bt_check_every_level(Relation rel, Relation heaprel, bool heapkeyspace,
 
 	if (state->heapallindexed)
 	{
+		int64		total_pages;
 		int64		total_elems;
 		uint64		seed;
 
-		/* Size Bloom filter based on estimated number of tuples in index */
-		total_elems = (int64) state->rel->rd_rel->reltuples;
+		/*
+		 * Size Bloom filter based on estimated number of tuples in index,
+		 * while conservatively assuming that each block must contain at least
+		 * MaxIndexTuplesPerPage / 5 non-pivot tuples.  (Non-leaf pages cannot
+		 * contain non-pivot tuples.  That's okay because they generally make
+		 * up no more than about 1% of all pages in the index.)
+		 */
+		total_pages = RelationGetNumberOfBlocks(rel);
+		total_elems = Max(total_pages * (MaxIndexTuplesPerPage / 5),
+						  (int64) state->rel->rd_rel->reltuples);
 		/* Random seed relies on backend srandom() call to avoid repetition */
 		seed = random();
 		/* Create Bloom filter to fingerprint index */
@@ -425,8 +496,6 @@ bt_check_every_level(Relation rel, Relation heaprel, bool heapkeyspace,
 		}
 		else
 		{
-			int64		total_pages;
-
 			/*
 			 * Extra readonly downlink check.
 			 *
@@ -437,7 +506,6 @@ bt_check_every_level(Relation rel, Relation heaprel, bool heapkeyspace,
 			 * splits and page deletions, though.  This is taken care of in
 			 * bt_downlink_missing_check().
 			 */
-			total_pages = (int64) state->rel->rd_rel->relpages;
 			state->downlinkfilter = bloom_create(total_pages, work_mem, seed);
 		}
 	}
@@ -2375,7 +2443,11 @@ palloc_btree_page(BtreeCheckState *state, BlockNumber blocknum)
 	 * As noted at the beginning of _bt_binsrch(), an internal page must have
 	 * children, since there must always be a negative infinity downlink
 	 * (there may also be a highkey).  In the case of non-rightmost leaf
-	 * pages, there must be at least a highkey.
+	 * pages, there must be at least a highkey.  Deleted pages on replica
+	 * might contain no items, because page unlink re-initializes
+	 * page-to-be-deleted.  Deleted pages with no items might be on primary
+	 * too due to preceding recovery, but on primary new deletions can't
+	 * happen concurrently to amcheck.
 	 *
 	 * This is correct when pages are half-dead, since internal pages are
 	 * never half-dead, and leaf pages must have a high key when half-dead
@@ -2395,13 +2467,13 @@ palloc_btree_page(BtreeCheckState *state, BlockNumber blocknum)
 						blocknum, RelationGetRelationName(state->rel),
 						MaxIndexTuplesPerPage)));
 
-	if (!P_ISLEAF(opaque) && maxoffset < P_FIRSTDATAKEY(opaque))
+	if (!P_ISLEAF(opaque) && !P_ISDELETED(opaque) && maxoffset < P_FIRSTDATAKEY(opaque))
 		ereport(ERROR,
 				(errcode(ERRCODE_INDEX_CORRUPTED),
 				 errmsg("internal block %u in index \"%s\" lacks high key and/or at least one downlink",
 						blocknum, RelationGetRelationName(state->rel))));
 
-	if (P_ISLEAF(opaque) && !P_RIGHTMOST(opaque) && maxoffset < P_HIKEY)
+	if (P_ISLEAF(opaque) && !P_ISDELETED(opaque) && !P_RIGHTMOST(opaque) && maxoffset < P_HIKEY)
 		ereport(ERROR,
 				(errcode(ERRCODE_INDEX_CORRUPTED),
 				 errmsg("non-rightmost leaf block %u in index \"%s\" lacks high key item",

@@ -29,11 +29,19 @@ CContextQueryToDXL::CContextQueryToDXL(CMemoryPool *mp)
 {
 	// map that stores gpdb att to optimizer col mapping
 	m_colid_counter = GPOS_NEW(mp) CIdGenerator(GPDXL_COL_ID_START);
+	m_queryid_counter = GPOS_NEW(mp) CIdGenerator(GPDXL_QUERY_ID_START);
 	m_cte_id_counter = GPOS_NEW(mp) CIdGenerator(GPDXL_CTE_ID_START);
 }
 
 CContextQueryToDXL::~CContextQueryToDXL()
 {
+	GPOS_DELETE(m_queryid_counter);
 	GPOS_DELETE(m_colid_counter);
 	GPOS_DELETE(m_cte_id_counter);
+}
+
+ULONG
+CContextQueryToDXL::GetNextQueryId()
+{
+	return m_queryid_counter->next_id();
 }

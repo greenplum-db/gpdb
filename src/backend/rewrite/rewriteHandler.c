@@ -29,8 +29,10 @@
 #include "catalog/pg_type.h"
 #include "commands/trigger.h"
 #include "foreign/fdwapi.h"
+#include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
+#include "optimizer/optimizer.h"
 #include "parser/analyze.h"
 #include "parser/parse_coerce.h"
 #include "parser/parse_relation.h"
@@ -42,6 +44,8 @@
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
 #include "utils/rel.h"
+
+#include "catalog/aocatalog.h"
 
 
 /* We use a list of these to detect recursion in RewriteQuery */
@@ -582,6 +586,9 @@ rewriteRuleAction(Query *parsetree,
 		 *
 		 * This could possibly be fixed by using some sort of internally
 		 * generated ID, instead of names, to link CTE RTEs to their CTEs.
+		 * However, decompiling the results would be quite confusing; note the
+		 * merge of hasRecursive flags below, which could change the apparent
+		 * semantics of such redundantly-named CTEs.
 		 */
 		foreach(lc, parsetree->cteList)
 		{
@@ -603,6 +610,26 @@ rewriteRuleAction(Query *parsetree,
 		/* OK, it's safe to combine the CTE lists */
 		sub_action->cteList = list_concat(sub_action->cteList,
 										  copyObject(parsetree->cteList));
+		/* ... and don't forget about the associated flags */
+		sub_action->hasRecursive |= parsetree->hasRecursive;
+		sub_action->hasModifyingCTE |= parsetree->hasModifyingCTE;
+
+		/*
+		 * If rule_action is different from sub_action (i.e., the rule action
+		 * is an INSERT...SELECT), then we might have just added some
+		 * data-modifying CTEs that are not at the top query level.  This is
+		 * disallowed by the parser and we mustn't generate such trees here
+		 * either, so throw an error.
+		 *
+		 * Conceivably such cases could be supported by attaching the original
+		 * query's CTEs to rule_action not sub_action.  But to do that, we'd
+		 * have to increment ctelevelsup in RTEs and SubLinks copied from the
+		 * original query.  For now, it doesn't seem worth the trouble.
+		 */
+		if (sub_action->hasModifyingCTE && rule_action != sub_action)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("INSERT...SELECT rule actions are not supported for queries having data-modifying statements in WITH")));
 	}
 
 	/*
@@ -1504,7 +1531,8 @@ rewriteTargetListUD(Query *parsetree, RangeTblEntry *target_rte,
 
 	if (target_relation->rd_rel->relkind == RELKIND_RELATION ||
 		target_relation->rd_rel->relkind == RELKIND_MATVIEW ||
-		target_relation->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+		target_relation->rd_rel->relkind == RELKIND_PARTITIONED_TABLE ||
+		IsAppendonlyMetadataRelkind(target_relation->rd_rel->relkind))
 	{
 		/*
 		 * Emit CTID so that executor can find the row to update or delete.
@@ -1611,6 +1639,42 @@ rewriteTargetListUD(Query *parsetree, RangeTblEntry *target_rte,
 							  true);					/* resjunk */
 
 		parsetree->targetList = lappend(parsetree->targetList, tle);
+	}
+}
+
+/*
+ * Record in target_rte->extraUpdatedCols the indexes of any generated columns
+ * that depend on any columns mentioned in target_rte->updatedCols.
+ */
+void
+fill_extraUpdatedCols(RangeTblEntry *target_rte, Relation target_relation)
+{
+	TupleDesc	tupdesc = RelationGetDescr(target_relation);
+	TupleConstr *constr = tupdesc->constr;
+
+	target_rte->extraUpdatedCols = NULL;
+
+	if (constr && constr->has_generated_stored)
+	{
+		for (int i = 0; i < constr->num_defval; i++)
+		{
+			AttrDefault *defval = &constr->defval[i];
+			Node	   *expr;
+			Bitmapset  *attrs_used = NULL;
+
+			/* skip if not generated column */
+			if (!TupleDescAttr(tupdesc, defval->adnum - 1)->attgenerated)
+				continue;
+
+			/* identify columns this generated column depends on */
+			expr = stringToNode(defval->adbin);
+			pull_varattnos(expr, 1, &attrs_used);
+
+			if (bms_overlap(target_rte->updatedCols, attrs_used))
+				target_rte->extraUpdatedCols =
+					bms_add_member(target_rte->extraUpdatedCols,
+								   defval->adnum - FirstLowInvalidHeapAttributeNumber);
+		}
 	}
 }
 
@@ -1745,6 +1809,7 @@ ApplyRetrieveRule(Query *parsetree,
 			rte->selectedCols = NULL;
 			rte->insertedCols = NULL;
 			rte->updatedCols = NULL;
+			rte->extraUpdatedCols = NULL;
 
 			/*
 			 * For the most part, Vars referencing the view should remain as
@@ -2010,8 +2075,12 @@ fireRIRrules(Query *parsetree, List *activeRIRs)
 		 * expanded as if they were regular views, if they are not scannable.
 		 * In that case this test would need to be postponed till after we've
 		 * opened the rel, so that we could check its state.
+		 *
+		 * In the minirepro utility in GPDB, we use the expandMatViews flag
+		 * to treat materialized views as regular views when dumping the
+		 * DDL in order to dump dependent objects
 		 */
-		if (rte->relkind == RELKIND_MATVIEW)
+		if (rte->relkind == RELKIND_MATVIEW && !parsetree->expandMatViews)
 			continue;
 
 		/*
@@ -2724,6 +2793,11 @@ view_cols_are_auto_updatable(Query *viewquery,
  * non-NULL, then only the specified columns are considered when testing for
  * updatability.
  *
+ * Unlike the preceding functions, this does recurse to look at a view's
+ * base relations, so it needs to detect recursion.  To do that, we pass
+ * a list of currently-considered outer relations.  External callers need
+ * only pass NIL.
+ *
  * This is used for the information_schema views, which have separate concepts
  * of "updatable" and "trigger updatable".  A relation is "updatable" if it
  * can be updated without the need for triggers (either because it has a
@@ -2742,6 +2816,7 @@ view_cols_are_auto_updatable(Query *viewquery,
  */
 int
 relation_is_updatable(Oid reloid,
+					  List *outer_reloids,
 					  bool include_triggers,
 					  Bitmapset *include_cols)
 {
@@ -2750,6 +2825,9 @@ relation_is_updatable(Oid reloid,
 	RuleLock   *rulelocks;
 
 #define ALL_EVENTS ((1 << CMD_INSERT) | (1 << CMD_UPDATE) | (1 << CMD_DELETE))
+
+	/* Since this function recurses, it could be driven to stack overflow */
+	check_stack_depth();
 
 	rel = try_relation_open(reloid, AccessShareLock, false);
 
@@ -2761,6 +2839,13 @@ relation_is_updatable(Oid reloid,
 	 */
 	if (rel == NULL)
 		return 0;
+
+	/* If we detect a recursive view, report that it is not updatable */
+	if (list_member_oid(outer_reloids, RelationGetRelid(rel)))
+	{
+		relation_close(rel, AccessShareLock);
+		return 0;
+	}
 
 	/* If the relation is a table, it is always updatable */
 	/* GPDB: except if it's an external table, which we checked above */
@@ -2883,11 +2968,15 @@ relation_is_updatable(Oid reloid,
 				base_rte->relkind != RELKIND_PARTITIONED_TABLE)
 			{
 				baseoid = base_rte->relid;
+				outer_reloids = lcons_oid(RelationGetRelid(rel),
+										  outer_reloids);
 				include_cols = adjust_view_column_set(updatable_cols,
 													  viewquery->targetList);
 				auto_events &= relation_is_updatable(baseoid,
+													 outer_reloids,
 													 include_triggers,
 													 include_cols);
+				outer_reloids = list_delete_first(outer_reloids);
 			}
 			events |= auto_events;
 		}
@@ -3559,15 +3648,29 @@ RewriteQuery(Query *parsetree, List *rewrite_events)
 
 		/*
 		 * Currently we can only handle unconditional, single-statement DO
-		 * INSTEAD rules correctly; we have to get exactly one Query out of
-		 * the rewrite operation to stuff back into the CTE node.
+		 * INSTEAD rules correctly; we have to get exactly one non-utility
+		 * Query out of the rewrite operation to stuff back into the CTE node.
 		 */
 		if (list_length(newstuff) == 1)
 		{
-			/* Push the single Query back into the CTE node */
+			/* Must check it's not a utility command */
 			ctequery = linitial_node(Query, newstuff);
+			if (!(ctequery->commandType == CMD_SELECT ||
+				  ctequery->commandType == CMD_UPDATE ||
+				  ctequery->commandType == CMD_INSERT ||
+				  ctequery->commandType == CMD_DELETE))
+			{
+				/*
+				 * Currently it could only be NOTIFY; this error message will
+				 * need work if we ever allow other utility commands in rules.
+				 */
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("DO INSTEAD NOTIFY rules are not supported for data-modifying statements in WITH")));
+			}
 			/* WITH queries should never be canSetTag */
 			Assert(!ctequery->canSetTag);
+			/* Push the single Query back into the CTE node */
 			cte->ctequery = (Node *) ctequery;
 		}
 		else if (newstuff == NIL)
@@ -3702,6 +3805,9 @@ RewriteQuery(Query *parsetree, List *rewrite_events)
 									parsetree->override,
 									rt_entry_relation,
 									parsetree->resultRelation);
+
+			/* Also populate extraUpdatedCols (for generated columns) */
+			fill_extraUpdatedCols(rt_entry, rt_entry_relation);
 		}
 		else if (event == CMD_DELETE)
 		{
@@ -3753,21 +3859,71 @@ RewriteQuery(Query *parsetree, List *rewrite_events)
 		}
 
 		/*
-		 * If there were no INSTEAD rules, and the target relation is a view
-		 * without any INSTEAD OF triggers, see if the view can be
+		 * If there was no unqualified INSTEAD rule, and the target relation
+		 * is a view without any INSTEAD OF triggers, see if the view can be
 		 * automatically updated.  If so, we perform the necessary query
 		 * transformation here and add the resulting query to the
 		 * product_queries list, so that it gets recursively rewritten if
 		 * necessary.
+		 *
+		 * If the view cannot be automatically updated, we throw an error here
+		 * which is OK since the query would fail at runtime anyway.  Throwing
+		 * the error here is preferable to the executor check since we have
+		 * more detailed information available about why the view isn't
+		 * updatable.
 		 */
-		if (!instead && qual_product == NULL &&
+		if (!instead &&
 			rt_entry_relation->rd_rel->relkind == RELKIND_VIEW &&
 			!view_has_instead_trigger(rt_entry_relation, event))
 		{
 			/*
+			 * If there were any qualified INSTEAD rules, don't allow the view
+			 * to be automatically updated (an unqualified INSTEAD rule or
+			 * INSTEAD OF trigger is required).
+			 *
+			 * The messages here should match execMain.c's CheckValidResultRel
+			 * and in principle make those checks in executor unnecessary, but
+			 * we keep them just in case.
+			 */
+			if (qual_product != NULL)
+			{
+				switch (parsetree->commandType)
+				{
+					case CMD_INSERT:
+						ereport(ERROR,
+								(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+								 errmsg("cannot insert into view \"%s\"",
+										RelationGetRelationName(rt_entry_relation)),
+								 errdetail("Views with conditional DO INSTEAD rules are not automatically updatable."),
+								 errhint("To enable inserting into the view, provide an INSTEAD OF INSERT trigger or an unconditional ON INSERT DO INSTEAD rule.")));
+						break;
+					case CMD_UPDATE:
+						ereport(ERROR,
+								(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+								 errmsg("cannot update view \"%s\"",
+										RelationGetRelationName(rt_entry_relation)),
+								 errdetail("Views with conditional DO INSTEAD rules are not automatically updatable."),
+								 errhint("To enable updating the view, provide an INSTEAD OF UPDATE trigger or an unconditional ON UPDATE DO INSTEAD rule.")));
+						break;
+					case CMD_DELETE:
+						ereport(ERROR,
+								(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+								 errmsg("cannot delete from view \"%s\"",
+										RelationGetRelationName(rt_entry_relation)),
+								 errdetail("Views with conditional DO INSTEAD rules are not automatically updatable."),
+								 errhint("To enable deleting from the view, provide an INSTEAD OF DELETE trigger or an unconditional ON DELETE DO INSTEAD rule.")));
+						break;
+					default:
+						elog(ERROR, "unrecognized CmdType: %d",
+							 (int) parsetree->commandType);
+						break;
+				}
+			}
+
+			/*
+			 * Attempt to rewrite the query to automatically update the view.
 			 * This throws an error if the view can't be automatically
-			 * updated, but that's OK since the query would fail at runtime
-			 * anyway.
+			 * updated.
 			 */
 			parsetree = rewriteTargetView(parsetree, rt_entry_relation);
 

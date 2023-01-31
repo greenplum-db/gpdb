@@ -548,19 +548,10 @@ CreateIntoRelDestReceiver(IntoClause *intoClause)
 static void
 intorel_startup_dummy(DestReceiver *self, int operation, TupleDesc typeinfo)
 {
-	/*
-	 * In PostgreSQL, this is a no-op, but in GPDB, AO relations do need some
-	 * initialization of state, because the tableam API does not provide a
-	 * good enough interface for handling with this later, we need to
-	 * specifically all the init at start up.
-	 */
-
+	Relation rel = ((DR_intorel *)self)->rel;
 	/* See intorel_initplan() for explanation */
-
-	if (RelationIsAoRows(((DR_intorel *)self)->rel))
-		appendonly_dml_init(((DR_intorel *)self)->rel, CMD_INSERT);
-	else if (RelationIsAoCols(((DR_intorel *)self)->rel))
-		aoco_dml_init(((DR_intorel *)self)->rel, CMD_INSERT);
+	if (rel->rd_tableam)
+		table_dml_init(rel);
 }
 
 /*
@@ -767,6 +758,9 @@ intorel_shutdown(DestReceiver *self)
 	FreeBulkInsertState(myState->bistate);
 
 	table_finish_bulk_insert(myState->rel, myState->ti_options);
+
+	if (myState->rel->rd_tableam)
+		table_dml_finish(myState->rel);
 
 	/* close rel, but keep lock until commit */
 	table_close(myState->rel, NoLock);

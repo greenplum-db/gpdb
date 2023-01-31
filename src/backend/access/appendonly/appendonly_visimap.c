@@ -875,3 +875,70 @@ AppendOnlyVisimapDelete_Finish(
 	hash_destroy(visiMapDelete->dirtyEntryCache);
 	BufFileClose(visiMapDelete->workfile);
 }
+
+/*
+ * AppendOnlyVisimap_Init_forUniqueCheck
+ *
+ * Initializes the visimap to determine if tuples were deleted as a part of
+ * uniqueness checks.
+ *
+ * Note: we defer setting up the appendOnlyMetaDataSnapshot for the visibility
+ * map to the index_fetch_tuple_exists() table AM call. This is because
+ * snapshots used for unique index lookups are special and don't follow the
+ * usual allocation or registration mechanism. They may be stack-allocated and a
+ * new snapshot object may be passed to every unique index check (this happens
+ * when SNAPSHOT_DIRTY is passed). While technically, we could set up the
+ * metadata snapshot in advance for SNAPSHOT_SELF, the alternative is fine.
+ */
+void AppendOnlyVisimap_Init_forUniqueCheck(
+	AppendOnlyVisimap *visiMap,
+	Relation aoRel,
+	Snapshot snapshot)
+{
+	Oid visimaprelid;
+	Oid visimapidxid;
+
+	Assert(snapshot->snapshot_type == SNAPSHOT_DIRTY ||
+			   snapshot->snapshot_type == SNAPSHOT_SELF);
+
+	GetAppendOnlyEntryAuxOids(aoRel->rd_id,
+							  InvalidSnapshot, /* catalog snapshot is enough */
+							  NULL, NULL, NULL, &visimaprelid, &visimapidxid);
+	if (!OidIsValid(visimaprelid) || !OidIsValid(visimapidxid))
+		elog(ERROR, "Could not find block directory for relation: %u", aoRel->rd_id);
+
+	ereportif(Debug_appendonly_print_visimap, LOG,
+			  (errmsg("Append-only visimap init for unique checks"),
+				  errdetail("(aoRel = %u, visimaprel = %u, visimapidxrel = %u)",
+							aoRel->rd_id, visimaprelid, visimapidxid)));
+
+	AppendOnlyVisimap_Init(visiMap,
+						   visimaprelid,
+						   visimapidxid,
+						   AccessShareLock,
+						   InvalidSnapshot /* appendOnlyMetaDataSnapshot */);
+}
+
+void
+AppendOnlyVisimap_Finish_forUniquenessChecks(
+	AppendOnlyVisimap *visiMap)
+{
+	AppendOnlyVisimapStore *visimapStore = &visiMap->visimapStore;
+	/*
+	 * The snapshot was either reset to NULL in between calls or already cleaned
+	 * up (if this was part of an update command)
+	 */
+	Assert(visimapStore->snapshot == InvalidSnapshot);
+
+	ereportif(Debug_appendonly_print_visimap, LOG,
+			  (errmsg("Append-only visimap finish for unique checks"),
+				  errdetail("(visimaprel = %u, visimapidxrel = %u)",
+							visimapStore->visimapRelation->rd_id,
+							visimapStore->visimapRelation->rd_id)));
+
+	AppendOnlyVisimapStore_Finish(&visiMap->visimapStore, AccessShareLock);
+	AppendOnlyVisimapEntry_Finish(&visiMap->visimapEntry);
+
+	MemoryContextDelete(visiMap->memoryContext);
+	visiMap->memoryContext = NULL;
+}

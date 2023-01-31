@@ -310,6 +310,7 @@ get_lwlock_stats_entry(LWLock *lock)
 		return &lwlock_stats_dummy;
 
 	/* Fetch or create the entry. */
+	MemSet(&key, 0, sizeof(key));
 	key.tranche = lock->tranche;
 	key.instance = lock;
 	lwstats = hash_search(lwlock_stats_htab, &key, HASH_ENTER, &found);
@@ -1221,14 +1222,10 @@ LWLockAcquire(LWLock *lock, LWLockMode mode)
 		/*
 		 * Wait until awakened.
 		 *
-		 * Since we share the process wait semaphore with the regular lock
-		 * manager and ProcWaitForSignal, and we may need to acquire an LWLock
-		 * while one of those is pending, it is possible that we get awakened
-		 * for a reason other than being signaled by LWLockRelease. If so,
-		 * loop back and wait again.  Once we've gotten the LWLock,
-		 * re-increment the sema by the number of additional signals received,
-		 * so that the lock manager or signal manager will see the received
-		 * signal when it next waits.
+		 * It is possible that we get awakened for a reason other than being
+		 * signaled by LWLockRelease.  If so, loop back and wait again.  Once
+		 * we've gotten the LWLock, re-increment the sema by the number of
+		 * additional signals received.
 		 */
 		LOG_LWDEBUG("LWLockAcquire", lock, "waiting");
 
@@ -1388,8 +1385,7 @@ LWLockAcquireOrWait(LWLock *lock, LWLockMode mode)
 		{
 			/*
 			 * Wait until awakened.  Like in LWLockAcquire, be prepared for
-			 * bogus wakeups, because we share the semaphore with
-			 * ProcWaitForSignal.
+			 * bogus wakeups.
 			 */
 			LOG_LWDEBUG("LWLockAcquireOrWait", lock, "waiting");
 
@@ -1598,14 +1594,10 @@ LWLockWaitForVar(LWLock *lock, uint64 *valptr, uint64 oldval, uint64 *newval)
 		/*
 		 * Wait until awakened.
 		 *
-		 * Since we share the process wait semaphore with the regular lock
-		 * manager and ProcWaitForSignal, and we may need to acquire an LWLock
-		 * while one of those is pending, it is possible that we get awakened
-		 * for a reason other than being signaled by LWLockRelease. If so,
-		 * loop back and wait again.  Once we've gotten the LWLock,
-		 * re-increment the sema by the number of additional signals received,
-		 * so that the lock manager or signal manager will see the received
-		 * signal when it next waits.
+		 * It is possible that we get awakened for a reason other than being
+		 * signaled by LWLockRelease.  If so, loop back and wait again.  Once
+		 * we've gotten the LWLock, re-increment the sema by the number of
+		 * additional signals received.
 		 */
 		LOG_LWDEBUG("LWLockWaitForVar", lock, "waiting");
 
@@ -1846,6 +1838,32 @@ LWLockHeldByMe(LWLock *l)
 	for (i = 0; i < num_held_lwlocks; i++)
 	{
 		if (held_lwlocks[i].lock == l)
+			return true;
+	}
+	return false;
+}
+
+/*
+ * LWLockHeldByMe - test whether my process holds any of an array of locks
+ *
+ * This is meant as debug support only.
+ */
+bool
+LWLockAnyHeldByMe(LWLock *l, int nlocks, size_t stride)
+{
+	char	   *held_lock_addr;
+	char	   *begin;
+	char	   *end;
+	int			i;
+
+	begin = (char *) l;
+	end = begin + nlocks * stride;
+	for (i = 0; i < num_held_lwlocks; i++)
+	{
+		held_lock_addr = (char *) held_lwlocks[i].lock;
+		if (held_lock_addr >= begin &&
+			held_lock_addr < end &&
+			(held_lock_addr - begin) % stride == 0)
 			return true;
 	}
 	return false;

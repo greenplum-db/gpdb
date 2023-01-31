@@ -10,7 +10,7 @@ Greenplum Database manages database access permissions using *roles*. The concep
 
 Every Greenplum Database system contains a set of database roles \(users and groups\). Those roles are separate from the users and groups managed by the operating system on which the server runs. However, for convenience you may want to maintain a relationship between operating system user names and Greenplum Database role names, since many of the client applications use the current operating system user name as the default.
 
-In Greenplum Database, users log in and connect through the master instance, which verifies their role and access privileges. The master then issues out commands to the segment instances behind the scenes using the currently logged in role.
+In Greenplum Database, users log in and connect through the coordinator instance, which verifies their role and access privileges. The coordinator then issues out commands to the segment instances behind the scenes using the currently logged in role.
 
 Roles are defined at the system level, so they are valid for all databases in the system.
 
@@ -89,7 +89,7 @@ TIME '02:00 PM'  # 12-hour time specified by PM
 TIME '02:00'     # 24-hour time implied. This is equivalent to TIME '02:00 AM'. 
 ```
 
-**Important:** Time-based authentication is enforced with the server time. Timezones are disregarded.
+> **Important** Time-based authentication is enforced with the server time. Timezones are disregarded.
 
 To specify an interval of time during which access is denied, use two day/time specifications with the words `BETWEEN` and `AND`, as shown. `DAY` is always required.
 
@@ -109,7 +109,7 @@ BETWEEN DAY 'Monday' TIME '00:00' AND
 
 The last three statements are equivalent.
 
-**Note:** Intervals of days cannot wrap past Saturday.
+> **Note** Intervals of days cannot wrap past Saturday.
 
 The following syntax is not correct:
 

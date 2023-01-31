@@ -65,6 +65,51 @@ add_attribute_encoding_entry(Oid relid, AttrNumber attnum, Datum attoptions)
 	heap_close(rel, RowExclusiveLock);
 }
 
+static void
+update_attribute_encoding_entry(Oid relid, AttrNumber attnum, Datum newattoptions)
+{
+	Relation 	rel;
+	SysScanDesc scan;
+	ScanKeyData skey[2];
+	HeapTuple	oldtup;
+	HeapTuple   newtup;
+	Datum	    values[Natts_pg_attribute_encoding];
+	bool	    nulls[Natts_pg_attribute_encoding];
+	bool		repl[Natts_pg_attribute_encoding];
+
+	MemSet(values, 0, sizeof(values));
+	MemSet(nulls, false, sizeof(nulls));
+	MemSet(repl, false, sizeof(repl));
+
+	rel = heap_open(AttributeEncodingRelationId, RowExclusiveLock);
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_attribute_encoding_attrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+	ScanKeyInit(&skey[1],
+				Anum_pg_attribute_encoding_attnum,
+				BTEqualStrategyNumber, F_OIDEQ,
+				Int16GetDatum(attnum));
+	scan = systable_beginscan(rel, AttributeEncodingAttrelidAttnumIndexId, true,
+							  NULL, 2, skey);
+
+	oldtup = systable_getnext(scan);
+	Assert(HeapTupleIsValid(oldtup));
+
+	heap_deform_tuple(oldtup, RelationGetDescr(rel), values, nulls);
+
+	values[Anum_pg_attribute_encoding_attoptions - 1] = newattoptions;
+	repl[Anum_pg_attribute_encoding_attoptions - 1] = true;
+
+	newtup = heap_modify_tuple(oldtup, RelationGetDescr(rel), values, nulls, repl);
+
+	CatalogTupleUpdate(rel, &oldtup->t_self, newtup);
+	heap_freetuple(newtup);
+
+	systable_endscan(scan);
+	heap_close(rel, RowExclusiveLock);
+}
 /*
  * Get the set of functions implementing a compression algorithm.
  *
@@ -180,7 +225,7 @@ rel_get_column_encodings(Relation rel)
  * stored for oldrelid.
  */
 void
-cloneAttributeEncoding(Oid oldrelid, Oid newrelid, AttrNumber max_attno)
+CloneAttributeEncodings(Oid oldrelid, Oid newrelid, AttrNumber max_attno)
 {
 	Datum *attoptions = get_rel_attoptions(oldrelid, max_attno);
 	AttrNumber n;
@@ -191,6 +236,44 @@ cloneAttributeEncoding(Oid oldrelid, Oid newrelid, AttrNumber max_attno)
 			add_attribute_encoding_entry(newrelid,
 										 n + 1,
 										 attoptions[n]);
+	}
+	CommandCounterIncrement();
+}
+
+void
+UpdateAttributeEncodings(Oid relid, List *new_attr_encodings)
+{
+	ListCell *lc;
+	foreach(lc, new_attr_encodings)
+	{
+		Datum                           newattoptions;
+		ColumnReferenceStorageDirective *c = lfirst(lc);
+		List                            *encoding;
+		AttrNumber                      attnum;
+
+		Assert(IsA(c, ColumnReferenceStorageDirective));
+
+		attnum = get_attnum(relid, c->column);
+
+		if (attnum == InvalidAttrNumber)
+			elog(ERROR, "column \"%s\" does not exist", c->column);
+
+		if (attnum < 0)
+			elog(ERROR, "column \"%s\" is a system column", c->column);
+
+		encoding = c->encoding;
+
+		if (!encoding)
+			continue;
+
+		newattoptions = transformRelOptions(PointerGetDatum(NULL),
+											encoding,
+											NULL,
+											NULL,
+											true,
+											false);
+
+		update_attribute_encoding_entry(relid, attnum, newattoptions);
 	}
 	CommandCounterIncrement();
 }
@@ -250,14 +333,9 @@ RelationGetAttributeOptions(Relation rel)
  * pg_attribute_encoding. Should be absolutely valid at this point.
  */
 void
-AddRelationAttributeEncodings(Relation rel, List *attr_encodings)
+AddRelationAttributeEncodings(Oid relid, List *attr_encodings)
 {
-	Oid relid = RelationGetRelid(rel);
 	ListCell *lc;
-
-	/* No pg_attribute_encoding entries for partition root. */
-	if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
-		return;
 
 	foreach(lc, attr_encodings)
 	{

@@ -308,9 +308,6 @@ select attstattarget from pg_attribute where attrelid = 'aocs_addcol.addcol1'::r
 alter table addcol1 set distributed randomly;
 alter table addcol1 set distributed by (a);
 
--- test some constraints (unique indexes do not work for unique and pkey)
-alter table addcol1 add constraint tunique unique(a);
-alter table addcol1 add constraint tpkey primary key(a);
 alter table addcol1 add constraint tcheck check (a is not null);
 
 -- test changing the storage type of a column
@@ -446,14 +443,14 @@ alter table aocs_with_compress alter column c type integer;
 
 -- test case: alter AOCS table add column, the preference of the storage setting is: the encoding clause > table setting > gp_default_storage_options
 CREATE TABLE aocs_alter_add_col(a int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=4, blocksize=65536);
-SET gp_default_storage_options ='compresstype=zlib, compresslevel=2';
 -- use statement encoding 
 ALTER TABLE aocs_alter_add_col ADD COLUMN b int ENCODING(compresstype=zlib, compresslevel=3, blocksize=16384);
 -- use table setting
 ALTER TABLE aocs_alter_add_col ADD COLUMN c int;
-RESET gp_default_storage_options;
--- use table setting
+-- table setting > gp_default_storage_options
+SET gp_default_storage_options ='compresstype=zlib, compresslevel=2';
 ALTER TABLE aocs_alter_add_col ADD COLUMN d int;
+RESET gp_default_storage_options;
 \d+ aocs_alter_add_col
 DROP TABLE aocs_alter_add_col;
 
@@ -461,7 +458,7 @@ CREATE TABLE aocs_alter_add_col_no_compress(a int) WITH (appendonly=true, orient
 SET gp_default_storage_options ='compresstype=zlib, compresslevel=2, blocksize=8192';
 -- use statement encoding
 ALTER TABLE aocs_alter_add_col_no_compress ADD COLUMN b int ENCODING(compresstype=rle_type, compresslevel=3, blocksize=16384);
--- use gp_default_storage_options
+-- use table setting
 ALTER TABLE aocs_alter_add_col_no_compress ADD COLUMN c int;
 RESET gp_default_storage_options;
 -- use default value 

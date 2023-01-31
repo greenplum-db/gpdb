@@ -7,7 +7,7 @@ DROP
 DROP RESOURCE GROUP rg_test;
 ERROR:  resource group "rg_test" does not exist
 -- end_ignore
-CREATE RESOURCE GROUP rg_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=10);
+CREATE RESOURCE GROUP rg_test WITH (concurrency=2, cpu_hard_quota_limit=10);
 CREATE
 CREATE ROLE role_test RESOURCE GROUP rg_test;
 CREATE

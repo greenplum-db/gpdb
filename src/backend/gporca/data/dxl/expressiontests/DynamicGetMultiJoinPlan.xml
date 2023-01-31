@@ -121,7 +121,7 @@
                       <dxl:Ident ColId="1" ColName="foo1.j" TypeMdid="0.23.1.0"/>
                     </dxl:ProjElem>
                   </dxl:ProjList>
-                  <dxl:TableDescriptor Mdid="0.25647.1.0" TableName="foo1">
+                  <dxl:TableDescriptor Mdid="6.25647.1.0" TableName="foo1">
                     <dxl:Columns>
                       <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="1" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -210,7 +210,7 @@
                           </dxl:Not>
                         </dxl:And>
                       </dxl:Filter>
-                      <dxl:TableDescriptor Mdid="0.26031.1.0" TableName="foo2">
+                      <dxl:TableDescriptor Mdid="6.26031.1.0" TableName="foo2">
                         <dxl:Columns>
                           <dxl:Column ColId="10" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                           <dxl:Column ColId="11" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -293,7 +293,7 @@
                             </dxl:IsNull>
                           </dxl:Not>
                         </dxl:Filter>
-                        <dxl:TableDescriptor Mdid="0.26054.1.0" TableName="foo3">
+                        <dxl:TableDescriptor Mdid="6.26054.1.0" TableName="foo3">
                           <dxl:Columns>
                             <dxl:Column ColId="20" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                             <dxl:Column ColId="21" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>

@@ -26,11 +26,11 @@ The `WHERE CURRENT OF` clause is not supported with replicated tables.
 
 The optional `RETURNING` clause causes `DELETE` to compute and return value\(s\) based on each row actually deleted. Any expression using the table's columns, and/or columns of other tables mentioned in `USING`, can be computed. The syntax of the `RETURNING` list is identical to that of the output list of `SELECT`.
 
-**Note:** The `RETURNING` clause is not supported when deleting from append-optimized tables.
+> **Note** The `RETURNING` clause is not supported when deleting from append-optimized tables.
 
 You must have the `DELETE` privilege on the table to delete from it.
 
-**Note:** As the default, Greenplum Database acquires an `EXCLUSIVE` lock on tables for `DELETE` operations on heap tables. When the Global Deadlock Detector is enabled, the lock mode for `DELETE` operations on heap tables is `ROW EXCLUSIVE`. See [Global Deadlock Detector](../../admin_guide/dml.html#topic_gdd).
+> **Note** As the default, Greenplum Database acquires an `EXCLUSIVE` lock on tables for `DELETE` operations on heap tables. When the Global Deadlock Detector is enabled, the lock mode for `DELETE` operations on heap tables is `ROW EXCLUSIVE`. See [Global Deadlock Detector](../../admin_guide/dml.html#topic_gdd).
 
 **Outputs**
 

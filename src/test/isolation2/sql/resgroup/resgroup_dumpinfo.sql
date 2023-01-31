@@ -17,21 +17,18 @@ def validate(json_obj, segnum):
       return False
    qd_info = [j for j in array if j["segid"] == -1][0]
    #validate keys
-   keys = ["segid", "segmentsOnMaster", "loaded", "totalChunks",
-   		   "freeChunks", "chunkSizeInBits", "groups"]
+   keys = ["segid", "segmentsOnMaster", "loaded", "groups"]
    for key in keys:
        if key not in qd_info:
            return False
 
-   groups = [g for g in qd_info["groups"] if g["group_id"] > 6438]
+   groups = [g for g in qd_info["groups"] if g["group_id"] > 6441]
    #validate user created group
    if len(groups) != 1:
       return False
    group = groups[0]
    #validate group keys
-   keys = ["group_id", "nRunning", "locked_for_drop", "memExpected",
-   		   "memQuotaGranted", "memSharedGranted", "memQuotaUsed",
-   		   "memUsage", "memSharedUsage"]
+   keys = ["group_id", "nRunning", "locked_for_drop"]
    for key in keys:
       if key not in group:
          return False
@@ -60,7 +57,7 @@ return validate(json_obj, n)
 
 $$ LANGUAGE plpython3u;
 
-CREATE RESOURCE GROUP rg_dumpinfo_test WITH (concurrency=2, cpu_rate_limit=20, memory_limit=20);
+CREATE RESOURCE GROUP rg_dumpinfo_test WITH (concurrency=2, cpu_hard_quota_limit=20);
 CREATE ROLE role_dumpinfo_test RESOURCE GROUP rg_dumpinfo_test;
 
 2:SET ROLE role_dumpinfo_test;

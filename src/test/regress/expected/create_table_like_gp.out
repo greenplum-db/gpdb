@@ -16,29 +16,19 @@ NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution 
 -- Verify default_table_access_method GUC doesn't get used
 SET default_table_access_method = ao_row;
 CREATE TABLE t_ao_d (LIKE t_ao INCLUDING ALL);
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 RESET gp_default_storage_options;
 -- Verify created tables and attributes
-SELECT
-	c.relname,
-	am.amname,
-	a.columnstore,
-	a.compresstype,
-	a.compresslevel
-FROM
-	pg_catalog.pg_class c
-		LEFT OUTER JOIN pg_catalog.pg_am am ON (c.relam = am.oid)
-		LEFT OUTER JOIN pg_catalog.pg_appendonly a ON (c.oid = a.relid)
-WHERE
-	c.relname LIKE 't_ao%';
-  relname   |  amname   | columnstore | compresstype | compresslevel 
-------------+-----------+-------------+--------------+---------------
- t_ao       | ao_column | t           |              |             0
- t_ao_enc   | ao_column | t           |              |             0
- t_ao_a     | ao_column | t           |              |             0
- t_ao_b     | ao_column | t           |              |             0
- t_ao_c     | heap      |             |              |              
- t_ao_enc_a | ao_column | t           |              |             0
- t_ao_d     | ao_column | t           |              |             0
+select relname, reloptions from pg_class where relname LIKE 't_ao%' order by relname;
+  relname   |                            reloptions                             
+------------+-------------------------------------------------------------------
+ t_ao       | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
+ t_ao_a     | {blocksize=32768,checksum=true,compresslevel=0,compresstype=none}
+ t_ao_b     | {blocksize=32768,checksum=true,compresslevel=0,compresstype=none}
+ t_ao_c     | 
+ t_ao_d     | {blocksize=32768,checksum=true,compresslevel=0,compresstype=none}
+ t_ao_enc   | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
+ t_ao_enc_a | {blocksize=32768,checksum=true,compresslevel=0,compresstype=none}
 (7 rows)
 
 SELECT

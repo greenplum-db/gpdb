@@ -438,7 +438,7 @@
               <entry>unreserved</entry>
             </row>
             <row>
-              <entry>CPU_RATE_LIMIT</entry>
+              <entry>cpu_hard_quota_limit</entry>
               <entry>unreserved</entry>
               <entry> </entry>
             </row>

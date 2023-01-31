@@ -21,7 +21,7 @@ The `gpstart` utility is used to start the Greenplum Database server processes. 
 
 As part of the startup process, the utility checks the consistency of heap checksum setting among the Greenplum Database coordinator and segment instances, either enabled or deactivated on all instances. If the heap checksum setting is different among the instances, an error is returned and Greenplum Database does not start. The validation can be deactivated by specifying the option `--skip-heap-checksum-validation`. For more information about heap checksums, see [Enabling High Availability and Data Consistency Features](../../admin_guide/highavail/topics/g-enabling-high-availability-features.html) in the *Greenplum Database Administrator Guide*.
 
-**Note:** Before you can start a Greenplum Database system, you must have initialized the system using `gpinitsystem`. Enabling or deactivating heap checksums is set when you initialize the system and cannot be changed after initialization.
+> **Note** Before you can start a Greenplum Database system, you must have initialized the system using `gpinitsystem`. Enabling or deactivating heap checksums is set when you initialize the system and cannot be changed after initialization.
 
 If the Greenplum Database system is configured with a standby coordinator, and `gpstart` does not detect it during startup, `gpstart` displays a warning and lets you cancel the startup operation.
 
@@ -77,7 +77,7 @@ If the standby coordinator is not accessible, you can start the system and troub
 --skip-heap-checksum-validation
 :   During startup, the utility does not validate the consistency of the heap checksum setting among the Greenplum Database coordinator and segment instances. The default is to ensure that the heap checksum setting is the same on all instances, either enabled or deactivated.
 
-    **Warning:** Starting Greenplum Database without this validation could lead to data loss. Use this option to start Greenplum Database only when it is necessary to ignore the heap checksum verification errors to recover data or to troubleshoot the errors.
+    > **Caution** Starting Greenplum Database without this validation could lead to data loss. Use this option to start Greenplum Database only when it is necessary to ignore the heap checksum verification errors to recover data or to troubleshoot the errors.
 
 -t timeout\_seconds
 :   Specifies a timeout in seconds to wait for a segment instance to start up. If a segment instance was shutdown abnormally \(due to power failure or killing its `postgres` database listener process, for example\), it may take longer to start up due to the database recovery and validation process. If not specified, the default timeout is 600 seconds.

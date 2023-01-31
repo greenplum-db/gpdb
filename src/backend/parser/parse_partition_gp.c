@@ -352,7 +352,7 @@ list_qsort_arg(List *list, qsort_arg_comparator cmp, void *arg)
  * END, deduce the value and update the corresponding list of CreateStmts.
  */
 static void
-deduceImplicitRangeBounds(ParseState *pstate, Relation parentrel, List *stmts)
+deduceImplicitRangeBounds(ParseState *pstate, Relation parentrel, List *stmts, bool addpartition)
 {
 	PartitionKey key = RelationGetPartitionKey(parentrel);
 	PartitionDesc desc = RelationGetPartitionDesc(parentrel);
@@ -360,14 +360,15 @@ deduceImplicitRangeBounds(ParseState *pstate, Relation parentrel, List *stmts)
 	list_qsort_arg(stmts, qsort_stmt_cmp, key);
 
 	/*
-	 * This works slightly differenly, depending on whether this is a
-	 * CREATE TABLE command to create a whole new table, or an ALTER TABLE
-	 * ADD PARTTION to add to an existing table.
+	 * This works slightly differently, depending on whether this is a
+	 * CREATE TABLE or ALTER TABLE SET SUBPARTITION TEMPLATE command to create
+	 * a whole new set of child partitions of a parent table, or an ALTER TABLE
+	 * ADD PARTTION to add to an existing set of sibling partitions.
 	 */
-	if (desc->nparts == 0)
+	if (!addpartition)
 	{
 		/*
-		 * CREATE TABLE, there are no existing partitions. We deduce the
+		 * CREATE TABLE or ALTER TABLE SET SUBPARTITION TEMPLATE. We deduce the
 		 * missing START/END bounds based on the other partitions defined in
 		 * the same command.
 		 */
@@ -442,6 +443,7 @@ deduceImplicitRangeBounds(ParseState *pstate, Relation parentrel, List *stmts)
 		 * but in practice it is not necessary, because the ALTER TABLE ADD
 		 * PARTITION syntax only allows creating one partition in one command.
 		 */
+		Assert(desc->nparts != 0);
 		if (list_length(stmts) != 1)
 			elog(ERROR, "cannot add more than one partition to existing partitioned table in one command");
 		CreateStmt *stmt = linitial_node(CreateStmt, stmts);
@@ -535,85 +537,31 @@ deduceImplicitRangeBounds(ParseState *pstate, Relation parentrel, List *stmts)
 
 /*
  * Functions for iterating through all the partition bounds based on
- * START/END/EVERY.
+ * transformed START/END/EVERY.
  */
 static PartEveryIterator *
-initPartEveryIterator(ParseState *pstate, PartitionKeyData *partkey, const char *part_col_name,
-					  Node *start, bool startExclusive,
-					  Node *end, bool endInclusive,
-					  Node *every)
+initPartEveryIterator(ParseState *pstate, PartitionKeyData *partkey,
+					  Node *start, Node *end, Node *every, int end_location)
 {
 	PartEveryIterator *iter;
 	Datum		startVal = 0;
 	Datum		endVal = 0;
+	Expr 		*plusexpr = NULL;
 	bool		isEndValMaxValue = false;
-	Datum		everyVal;
-	Oid			plusop;
-	Oid			part_col_typid;
-	int32		part_col_typmod;
-	Oid			part_col_collation;
 
-	/* caller should've checked this already */
-	Assert(partkey->partnatts == 1);
-
-	part_col_typid = get_partition_col_typid(partkey, 0);
-	part_col_typmod = get_partition_col_typmod(partkey, 0);
-	part_col_collation = get_partition_col_collation(partkey, 0);
-
-	/* Parse the START/END/EVERY clauses */
 	if (start)
 	{
-		Const	   *startConst;
-
-		startConst = transformPartitionBoundValue(pstate,
-												  start,
-												  part_col_name,
-												  part_col_typid,
-												  part_col_typmod,
-												  part_col_collation);
-		if (startConst->constisnull)
-			ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("cannot use NULL with range partition specification"),
-				 parser_errposition(pstate, exprLocation(start))));
-
-		if (startExclusive)
-			convert_exclusive_start_inclusive_end(startConst,
-												  part_col_typid, part_col_typmod,
-												  true);
-		if (startConst->constisnull)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("START EXCLUSIVE is out of range"),
-					 parser_errposition(pstate, exprLocation(start))));
-
-		startVal = startConst->constvalue;
+		Assert(IsA(start, Const));
+		Assert(!((Const *)start)->constisnull);
+		startVal = ((Const *)start)->constvalue;
 	}
 
 	if (end)
 	{
-		Const	   *endConst;
-
-		endConst = transformPartitionBoundValue(pstate,
-												end,
-												part_col_name,
-												part_col_typid,
-												part_col_typmod,
-												part_col_collation);
-		if (endConst->constisnull)
-			ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("cannot use NULL with range partition specification"),
-				 parser_errposition(pstate, exprLocation(end))));
-
-		if (endInclusive)
-			convert_exclusive_start_inclusive_end(endConst,
-												  part_col_typid, part_col_typmod,
-												  false);
-		if (endConst->constisnull)
+		Assert(IsA(end, Const));
+		if (((Const *)end)->constisnull)
 			isEndValMaxValue = true;
-
-		endVal = endConst->constvalue;
+		endVal = ((Const *)end)->constvalue;
 	}
 
 	iter = palloc0(sizeof(PartEveryIterator));
@@ -623,72 +571,7 @@ initPartEveryIterator(ParseState *pstate, PartitionKeyData *partkey, const char 
 
 	if (every)
 	{
-		Node		*plusexpr;
-		Param		*param;
-
-		if (start == NULL || end == NULL)
-		{
-			ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("EVERY clause requires START and END"),
-				 parser_errposition(pstate, exprLocation(every))));
-		}
-
-		/*
-		 * NOTE: We don't use transformPartitionBoundValue() here. We don't want to cast
-		 * the EVERY clause to that type; rather, we'll be passing it to the + operator.
-		 * For example, if the partition column is a timestamp, the EVERY clause
-		 * can be an interval, so don't try to cast it to timestamp.
-		 */
-
-		param = makeNode(Param);
-		param->paramkind = PARAM_EXTERN;
-		param->paramid = 1;
-		param->paramtype = part_col_typid;
-		param->paramtypmod = part_col_typmod;
-		param->paramcollid = part_col_collation;
-		param->location = -1;
-
-		/* Look up + operator */
-		plusexpr = (Node *) make_op(pstate,
-									list_make2(makeString("pg_catalog"), makeString("+")),
-									(Node *) param,
-									(Node *) transformExpr(pstate, every, EXPR_KIND_PARTITION_BOUND),
-									pstate->p_last_srf,
-									-1);
-
-		/*
-		 * Check that the input expression's collation is compatible with one
-		 * specified for the parent's partition key (partcollation).  Don't throw
-		 * an error if it's the default collation which we'll replace with the
-		 * parent's collation anyway.
-		 */
-		if (IsA(plusexpr, CollateExpr))
-		{
-			Oid		exprCollOid = exprCollation(plusexpr);
-
-			if (OidIsValid(exprCollOid) &&
-				exprCollOid != DEFAULT_COLLATION_OID &&
-				exprCollOid != part_col_collation)
-				ereport(ERROR,
-						(errcode(ERRCODE_DATATYPE_MISMATCH),
-							errmsg("collation of partition bound value for column \"%s\" does not match partition key collation \"%s\"",
-							part_col_name, get_collation_name(part_col_collation))));
-		}
-
-		plusexpr = coerce_to_target_type(pstate,
-										 plusexpr, exprType(plusexpr),
-										 part_col_typid,
-										 part_col_typmod,
-										 COERCION_ASSIGNMENT,
-										 COERCE_IMPLICIT_CAST,
-										 -1);
-
-		if (plusexpr == NULL)
-			ereport(ERROR,
-					(errcode(ERRCODE_DATATYPE_MISMATCH),
-						errmsg("specified value cannot be cast to type %s for column \"%s\"",
-							   format_type_be(part_col_typid), part_col_name)));
+		plusexpr = (Expr *)every;
 
 		iter->estate = CreateExecutorState();
 
@@ -696,16 +579,11 @@ initPartEveryIterator(ParseState *pstate, PartitionKeyData *partkey, const char 
 		iter->plusexpr_params->params[0].value = (Datum) 0;
 		iter->plusexpr_params->params[0].isnull = true;
 		iter->plusexpr_params->params[0].pflags = 0;
-		iter->plusexpr_params->params[0].ptype = part_col_typid;
+		iter->plusexpr_params->params[0].ptype = partkey->parttypid[0];
 
 		iter->estate->es_param_list_info = iter->plusexpr_params;
 
 		iter->plusexprstate = ExecInitExprWithParams((Expr *) plusexpr, iter->plusexpr_params);
-	}
-	else
-	{
-		everyVal = (Datum) 0;
-		plusop = InvalidOid;
 	}
 
 	iter->currEnd = startVal;
@@ -714,7 +592,7 @@ initPartEveryIterator(ParseState *pstate, PartitionKeyData *partkey, const char 
 	iter->endReached = false;
 
 	iter->pstate = pstate;
-	iter->end_location = exprLocation(end);
+	iter->end_location = end_location;
 	iter->every_location = exprLocation(every);
 
 	return iter;
@@ -905,7 +783,7 @@ makePartitionCreateStmt(Relation parentrel, char *partname, PartitionBoundSpec *
 	return childstmt;
 }
 
-/* Generate partitions for START (..) END (..) EVERY (..) */
+/* Generate partitions for transformed START (..) END (..) EVERY (..) */
 static List *
 generateRangePartitions(ParseState *pstate,
 						Relation parentrel,
@@ -917,22 +795,20 @@ generateRangePartitions(ParseState *pstate,
 	GpPartitionRangeSpec *boundspec;
 	List				 *result = NIL;
 	PartitionKey		 partkey;
-	char				 *partcolname;
 	PartEveryIterator	 *boundIter;
 	Node				 *start = NULL;
-	bool				 startExclusive = false;
 	Node				 *end = NULL;
-	bool				 endInclusive = false;
 	Node				 *every = NULL;
+	int 				 end_location = -1;
 	int					 i;
 
-	if (elem->boundSpec == NULL)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("missing boundary specification in partition \"%s\" of type RANGE",
-						elem->partName),
-				 parser_errposition(pstate, elem->location)));
-
+	Assert(elem->boundSpec != NULL);
+	/*
+	 * We should have checked the same in transformGpPartDefElemWithRangeSpec().
+	 * However, we need to check again here in case a GpPartDefElem that comes
+	 * from a subpartition template with a boundspec that is no longer up to
+	 * date with the first child partition's PartitionKey.
+	 */
 	if (!IsA(elem->boundSpec, GpPartitionRangeSpec))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
@@ -941,50 +817,32 @@ generateRangePartitions(ParseState *pstate,
 
 	boundspec = (GpPartitionRangeSpec *) elem->boundSpec;
 	partkey = RelationGetPartitionKey(parentrel);
+	/* Syntax doesn't allow expressions in partition key */
+	Assert(partkey->partattrs[0] != 0);
 
-	/*
-	 * GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: We currently disabled support for multi-column
-	 * range partitioned tables. If user want to define partition table with multi-column
-	 * range, can use PostgreSQL's grammar:
-	 *
-	 * create table z (a int, b int, c int) partition by range(b, c);
-	 * create table z1 partition of z for values from (10, 10) TO (20, 20);
-	 */
 	if (partkey->partnatts != 1)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("too many columns for RANGE partition -- only one column is allowed")));
-
-	/* Syntax doesn't allow expressions in partition key */
-	Assert(partkey->partattrs[0] != 0);
-	partcolname = NameStr(TupleDescAttr(RelationGetDescr(parentrel), partkey->partattrs[0] - 1)->attname);
+				 errmsg("too many columns for RANGE partition -- only one column is allowed"),
+					errhint("To create multi-column range partitioned table, use PostgreSQL's grammar. For example:\n"
+							"create table z (a int, b int, c int) partition by range(b, c);\n"
+							"create table z1 partition of z for values from (10, 10) TO (20, 20);")));
 
 	if (boundspec->partStart)
 	{
-		if (list_length(boundspec->partStart->val) != partkey->partnatts)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("number of START values should cover all partition key columns"),
-					 parser_errposition(pstate, boundspec->partStart->location)));
+		Assert(boundspec->partStart->edge = PART_EDGE_INCLUSIVE);
 		start = linitial(boundspec->partStart->val);
-		startExclusive = (boundspec->partStart->edge == PART_EDGE_EXCLUSIVE) ? true : false;
 	}
 	else
 		*hasImplicitRangeBounds = true;
-
 	if (boundspec->partEnd)
 	{
-		if (list_length(boundspec->partEnd->val) != partkey->partnatts)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("number of END values should cover all partition key columns"),
-					 parser_errposition(pstate, boundspec->partEnd->location)));
+		Assert(boundspec->partEnd->edge = PART_EDGE_EXCLUSIVE);
 		end = linitial(boundspec->partEnd->val);
-		endInclusive = (boundspec->partEnd->edge == PART_EDGE_INCLUSIVE) ? true : false;
+		end_location = boundspec->partEnd->location;
 	}
 	else
 		*hasImplicitRangeBounds = true;
-
 	/*
 	 * Tablename is used by legacy dump and restore ONLY. If tablename is
 	 * specified expectation is to ignore the EVERY clause even if
@@ -994,20 +852,9 @@ generateRangePartitions(ParseState *pstate,
 	 * the same hack in new code.
 	 */
 	if (partnamecomp->tablename == NULL && boundspec->partEvery)
-	{
-		if (list_length(boundspec->partEvery) != partkey->partnatts)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("number of EVERY values should cover all partition key columns"),
-					 parser_errposition(pstate, boundspec->location)));
 		every = linitial(boundspec->partEvery);
-	}
 
-	partkey = RelationGetPartitionKey(parentrel);
-
-	boundIter = initPartEveryIterator(pstate, partkey, partcolname,
-									  start, startExclusive,
-									  end, endInclusive, every);
+	boundIter = initPartEveryIterator(pstate, partkey, start, end, every, end_location);
 
 	i = 0;
 	while (nextPartBound(boundIter))
@@ -1062,39 +909,27 @@ generateListPartition(ParseState *pstate,
 	GpPartitionListSpec *gpvaluesspec;
 	PartitionBoundSpec  *boundspec;
 	CreateStmt			*childstmt;
-	PartitionKey		partkey;
 	ListCell			*lc;
 	List				*listdatums;
 
-	if (elem->boundSpec == NULL)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					  errmsg("missing boundary specification in partition \"%s\" of type LIST",
-							 elem->partName),
-							 parser_errposition(pstate, elem->location)));
-
+	Assert(elem->boundSpec != NULL);
+	/*
+	 * We should have checked the same in transformGpPartDefElemWithListSpec().
+	 * However, we need to check again here in case a GpPartDefElem that comes
+	 * from a subpartition template with a boundspec that is no longer up to
+	 * date with the first child partition's PartitionKey.
+	 */
 	if (!IsA(elem->boundSpec, GpPartitionListSpec))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					  errmsg("invalid boundary specification for LIST partition"),
-					  parser_errposition(pstate, elem->location)));
+				errmsg("invalid boundary specification for LIST partition"),
+				parser_errposition(pstate, elem->location)));
 
 	gpvaluesspec = (GpPartitionListSpec *) elem->boundSpec;
-
-	partkey = RelationGetPartitionKey(parentrel);
 
 	boundspec = makeNode(PartitionBoundSpec);
 	boundspec->strategy = PARTITION_STRATEGY_LIST;
 	boundspec->is_default = false;
-
-	/*
-	 * GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: We currently disabled support for multi-column
-	 * range partitioned tables. If user want to define partition table with multi-column
-	 * range, can use PostgreSQL's grammar:
-	 *
-	 * create table z (a int, b int, c int) partition by range(b, c);
-	 * create table z1 partition of z for values from (10, 10) TO (20, 20);
-	 */
 
 	listdatums = NIL;
 	foreach (lc, gpvaluesspec->partValues)
@@ -1102,7 +937,10 @@ generateListPartition(ParseState *pstate,
 		List	   *thisvalue = lfirst(lc);
 
 		if (list_length(thisvalue) != 1)
-			elog(ERROR, "VALUES specification with more than one column not allowed");
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						errmsg("VALUES specification with more than one column not allowed"),
+						parser_errposition(pstate, elem->location)));
 
 		listdatums = lappend(listdatums, linitial(thisvalue));
 	}
@@ -1110,7 +948,6 @@ generateListPartition(ParseState *pstate,
 	boundspec->listdatums = listdatums;
 	boundspec->location = -1;
 
-	boundspec = transformPartitionBound(pstate, parentrel, boundspec);
 	childstmt = makePartitionCreateStmt(parentrel, elem->partName, boundspec, subPart,
 										elem, partnamecomp);
 
@@ -1440,14 +1277,450 @@ convert_exclusive_start_inclusive_end(Const *constval, Oid part_col_typid, int32
 }
 
 /*
- * Create a list of CreateStmts, to create partitions based on 'gpPartDef'
- * specification.
+ * Transform the GPDB specific GpPartDefElem with LIST spec (VALUES(..))
+ *
+ * The input GpPartDefElem is modified in-place. Caller is responsible for
+ * passing in the copy of the original GpPartDefElem.
+ */
+static void
+transformGpPartDefElemWithListSpec(ParseState *pstate, Relation parentrel, GpPartDefElem *elem)
+{
+	GpPartitionListSpec *gpvaluesspec;
+	GpPartitionListSpec *new_gpvaluesspec;
+	PartitionBoundSpec  *boundspec;
+	ListCell			*lc;
+	List				*listdatums;
+
+	if (elem->boundSpec == NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+					errmsg("missing boundary specification in partition \"%s\" of type LIST",
+						   elem->partName),
+					parser_errposition(pstate, elem->location)));
+
+	if (!IsA(elem->boundSpec, GpPartitionListSpec))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+					errmsg("invalid boundary specification for LIST partition"),
+					parser_errposition(pstate, elem->location)));
+
+	gpvaluesspec = (GpPartitionListSpec *) elem->boundSpec;
+	new_gpvaluesspec = makeNode(GpPartitionListSpec);
+	new_gpvaluesspec->location = -1;
+	new_gpvaluesspec->partValues = NIL;
+
+	boundspec = makeNode(PartitionBoundSpec);
+	boundspec->strategy = PARTITION_STRATEGY_LIST;
+	boundspec->is_default = false;
+	listdatums = NIL;
+	foreach (lc, gpvaluesspec->partValues)
+	{
+		List	   *thisvalue = lfirst(lc);
+
+		if (list_length(thisvalue) != 1)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						errmsg("VALUES specification with more than one column not allowed"),
+						parser_errposition(pstate, elem->location)));
+
+		listdatums = lappend(listdatums, linitial(thisvalue));
+	}
+	boundspec->listdatums = listdatums;
+	boundspec->location = -1;
+	boundspec = transformPartitionBound(pstate, parentrel, boundspec);
+
+	foreach (lc, boundspec->listdatums)
+	{
+		Node *value = lfirst(lc);
+		/*
+		 * GPDB6 and lower used to support multi-column LIST partitioning, for
+		 * backward compatibility we keep the partValues list two-dimensional.
+		 */
+		new_gpvaluesspec->partValues = lappend(new_gpvaluesspec->partValues,
+											   list_make1(value));
+	}
+	elem->boundSpec = (Node *)new_gpvaluesspec;
+}
+
+/*
+ * Transform the GPDB specific GpPartDefElem with RANGE spec (START(..) END(..) EVERY(..))
+ *
+ * The transforms include:
+ * - Transform START and END into Consts
+ * - Transform EVERY into a plus Expr
+ * - Convert EXCLUSIVE START to INCLUSIVE END
+ * - Convert INCLUSIVE END to EXCLUSIVE START
+ *
+ * The input GpPartDefElem is modified in-place. Caller is responsible for
+ * passing in the copy of the original GpPartDefElem.
+ */
+static void
+transformGpPartDefElemWithRangeSpec(ParseState *pstate, Relation parentrel, GpPartDefElem *elem)
+{
+	GpPartitionRangeSpec *boundspec;
+	GpPartitionRangeSpec *new_boundspec;
+	PartitionKey		 partkey;
+	const char			 *partcolname;
+	Node				 *start = NULL;
+	bool				 startExclusive = false;
+	Node				 *end = NULL;
+	bool				 endInclusive = false;
+	Node				 *every = NULL;
+	Oid					 part_col_typid;
+	int32				 part_col_typmod;
+	Oid					 part_col_collation;
+
+	if (elem->boundSpec == NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+					errmsg("missing boundary specification in partition \"%s\" of type RANGE",
+						   elem->partName),
+					parser_errposition(pstate, elem->location)));
+
+	if (!IsA(elem->boundSpec, GpPartitionRangeSpec))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+					errmsg("invalid boundary specification for RANGE partition"),
+					parser_errposition(pstate, elem->location)));
+
+	boundspec = (GpPartitionRangeSpec *) elem->boundSpec;
+	partkey = RelationGetPartitionKey(parentrel);
+
+	/*
+	 * GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: We currently disabled support for multi-column
+	 * range partitioned tables. If user want to define partition table with multi-column
+	 * range, can use PostgreSQL's grammar:
+	 *
+	 * create table z (a int, b int, c int) partition by range(b, c);
+	 * create table z1 partition of z for values from (10, 10) TO (20, 20);
+	 */
+	if (partkey->partnatts != 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+					errmsg("too many columns for RANGE partition -- only one column is allowed")));
+
+	/* Syntax doesn't allow expressions in partition key */
+	Assert(partkey->partattrs[0] != 0);
+	partcolname = NameStr(TupleDescAttr(RelationGetDescr(parentrel),
+										partkey->partattrs[0] - 1)->attname);
+
+	/* Avoid scribbling on input */
+	new_boundspec = copyObject(boundspec);
+
+	if (boundspec->partStart)
+	{
+		if (list_length(boundspec->partStart->val) != partkey->partnatts)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						errmsg("number of START values should cover all partition key columns"),
+						parser_errposition(pstate, boundspec->partStart->location)));
+		start = linitial(boundspec->partStart->val);
+		startExclusive = (boundspec->partStart->edge == PART_EDGE_EXCLUSIVE) ? true : false;
+	}
+
+	if (boundspec->partEnd)
+	{
+		if (list_length(boundspec->partEnd->val) != partkey->partnatts)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						errmsg("number of END values should cover all partition key columns"),
+						parser_errposition(pstate, boundspec->partEnd->location)));
+		end = linitial(boundspec->partEnd->val);
+		endInclusive = (boundspec->partEnd->edge == PART_EDGE_INCLUSIVE) ? true : false;
+	}
+
+	if (boundspec->partEvery)
+	{
+		if (list_length(boundspec->partEvery) != partkey->partnatts)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						errmsg("number of EVERY values should cover all partition key columns"),
+						parser_errposition(pstate, boundspec->location)));
+		every = linitial(boundspec->partEvery);
+	}
+	else if (boundspec->partEvery)
+		new_boundspec->partEvery = NIL;
+
+	part_col_typid = get_partition_col_typid(partkey, 0);
+	part_col_typmod = get_partition_col_typmod(partkey, 0);
+	part_col_collation = get_partition_col_collation(partkey, 0);
+
+	/* Parse the START/END/EVERY clauses */
+	if (start)
+	{
+		Const	   *startConst;
+
+		startConst = transformPartitionBoundValue(pstate,
+												  start,
+												  partcolname,
+												  part_col_typid,
+												  part_col_typmod,
+												  part_col_collation);
+		if (startConst->constisnull)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						errmsg("cannot use NULL with range partition specification"),
+						parser_errposition(pstate, exprLocation(start))));
+
+		if (startExclusive)
+			convert_exclusive_start_inclusive_end(startConst,
+												  part_col_typid, part_col_typmod,
+												  true);
+		if (startConst->constisnull)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						errmsg("START EXCLUSIVE is out of range"),
+						parser_errposition(pstate, exprLocation(start))));
+
+		new_boundspec->partStart->val = list_make1(startConst);
+		new_boundspec->partStart->edge = PART_EDGE_INCLUSIVE;
+	}
+
+	if (end)
+	{
+		Const	   *endConst;
+
+		endConst = transformPartitionBoundValue(pstate,
+												end,
+												partcolname,
+												part_col_typid,
+												part_col_typmod,
+												part_col_collation);
+		if (endConst->constisnull)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						errmsg("cannot use NULL with range partition specification"),
+						parser_errposition(pstate, exprLocation(end))));
+
+		if (endInclusive)
+			convert_exclusive_start_inclusive_end(endConst,
+												  part_col_typid, part_col_typmod,
+												  false);
+
+		new_boundspec->partEnd->val = list_make1(endConst);
+		new_boundspec->partEnd->location = exprLocation(end);
+		new_boundspec->partEnd->edge = PART_EDGE_EXCLUSIVE;
+	}
+
+	if (every)
+	{
+		Node		*plusexpr;
+		Param		*param;
+
+		if (start == NULL || end == NULL)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						errmsg("EVERY clause requires START and END"),
+						parser_errposition(pstate, exprLocation(every))));
+		}
+
+		/*
+		 * NOTE: We don't use transformPartitionBoundValue() here. We don't want to cast
+		 * the EVERY clause to that type; rather, we'll be passing it to the + operator.
+		 * For example, if the partition column is a timestamp, the EVERY clause
+		 * can be an interval, so don't try to cast it to timestamp.
+		 */
+
+		param = makeNode(Param);
+		param->paramkind = PARAM_EXTERN;
+		param->paramid = 1;
+		param->paramtype = part_col_typid;
+		param->paramtypmod = part_col_typmod;
+		param->paramcollid = part_col_collation;
+		param->location = -1;
+
+		/* Look up + operator */
+		plusexpr = (Node *) make_op(pstate,
+									list_make2(makeString("pg_catalog"), makeString("+")),
+									(Node *) param,
+									(Node *) transformExpr(pstate, every, EXPR_KIND_PARTITION_BOUND),
+									pstate->p_last_srf,
+									exprLocation(every));
+
+		/*
+		 * Check that the input expression's collation is compatible with one
+		 * specified for the parent's partition key (partcollation).  Don't throw
+		 * an error if it's the default collation which we'll replace with the
+		 * parent's collation anyway.
+		 */
+		if (IsA(plusexpr, CollateExpr))
+		{
+			Oid		exprCollOid = exprCollation(plusexpr);
+
+			if (OidIsValid(exprCollOid) &&
+				exprCollOid != DEFAULT_COLLATION_OID &&
+				exprCollOid != part_col_collation)
+				ereport(ERROR,
+						(errcode(ERRCODE_DATATYPE_MISMATCH),
+							errmsg("collation of partition bound value for column \"%s\" does not match partition key collation \"%s\"",
+								   partcolname, get_collation_name(part_col_collation))));
+		}
+
+		plusexpr = coerce_to_target_type(pstate,
+										 plusexpr, exprType(plusexpr),
+										 part_col_typid,
+										 part_col_typmod,
+										 COERCION_ASSIGNMENT,
+										 COERCE_IMPLICIT_CAST,
+										 -1);
+
+		if (plusexpr == NULL)
+			ereport(ERROR,
+					(errcode(ERRCODE_DATATYPE_MISMATCH),
+						errmsg("specified value cannot be cast to type %s for column \"%s\"",
+							   format_type_be(part_col_typid), partcolname)));
+
+		new_boundspec->partEvery = list_make1(plusexpr);
+	}
+
+	elem->boundSpec = (Node *)new_boundspec;
+}
+
+/*
+ * Transform the GPDB specific partition definition.
+ *
+ * The transforms include:
+ * - Split partDefElems and encClauses
+ * - Sort partDefElems so that DEFAULT PARTITION always appears first
+ * - Transform the partDefElems for RANGE and LIST strategy
+ *
+ * Returns a transformed GpPartitionDefinition.
+ */
+GpPartitionDefinition *
+transformGpPartitionDefinition(Oid parentrelid, const char *queryString,
+							   GpPartitionDefinition *gpPartDef)
+{
+	GpPartitionDefinition	*result;
+	Relation 				parentrel;
+	ListCell				*lc;
+	ParseState				*pstate;
+	List					*partDefElems = NIL;
+	List					*encClauses = NIL;
+	GpPartDefElem			*defaultPartDefElem = NULL;
+	PartitionKey 			partkey;
+
+	result = makeNode(GpPartitionDefinition);
+
+	result->type = gpPartDef->type;
+	result->isTemplate = gpPartDef->isTemplate;
+	result->fromCatalog = gpPartDef->fromCatalog;
+	result->location = gpPartDef->location;
+
+	pstate = make_parsestate(NULL);
+	pstate->p_sourcetext = queryString;
+
+	parentrel = table_open(parentrelid, NoLock);
+	partkey = RelationGetPartitionKey(parentrel);
+	Assert(partkey != NULL);
+	if (list_length(partkey->partexprs) > 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+					errmsg("expressions in partition key not supported in legacy GPDB partition syntax")));
+
+	/*
+	 * If there is a DEFAULT PARTITION, move it to the front of the list.
+	 *
+	 * This is to keep the partition naming consistent with historic behavior.
+	 * In GPDB 6 and below, the default partition is always numbered 1,
+	 * regardless of where in the command it is listed. In other words, it is
+	 * always given number 1 in the "partcomp" struct . The default partition
+	 * itself always has a name, so the partition number isn't used for it,
+	 * but it affects the numbering of all the other partitions.
+	 *
+	 * The main reason we work so hard to keep the naming the same as in
+	 * GPDB 6 is to keep the regression tests that refer to partitions by
+	 * name after creating them with the legacy partitioning syntax unchanged.
+	 * And conceivably there might be users relying on it on real systems,
+	 * too.
+	 */
+
+	foreach(lc, gpPartDef->partDefElems)
+	{
+		Node	*n = lfirst(lc);
+		Node	*newnode = copyObject(n);
+
+		if (IsA(newnode, GpPartDefElem))
+		{
+			GpPartDefElem *elem = (GpPartDefElem *) newnode;
+
+			/*
+			 * This was not allowed pre-GPDB7, so keeping the same
+			 * restriction. Ideally, we can easily support it now based on how
+			 * template is stored. I wish to not open up new cases with legacy
+			 * syntax than we supported in past, hence keeping the restriction
+			 * in-place.
+			 */
+			if (gpPartDef->isTemplate && elem->colencs)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+							errmsg("partition specific ENCODING clause not supported in SUBPARTITION TEMPLATE"),
+							parser_errposition(pstate, elem->location)));
+
+			if (elem->isDefault)
+			{
+				if (defaultPartDefElem)
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+							 errmsg("multiple default partitions are not allowed"),
+							 parser_errposition(pstate, elem->location)));
+				defaultPartDefElem = elem;
+				partDefElems = lcons(elem, partDefElems);
+			}
+			else
+				partDefElems = lappend(partDefElems, elem);
+		}
+		else
+		{
+			/*
+			 * GPDB_12_MERGE_FIXME: can we optimize grammar to create separate lists
+			 * for elems and encoding in encClauses.
+			 */
+			Assert(IsA(newnode, ColumnReferenceStorageDirective));
+			encClauses = lappend(encClauses, newnode);
+		}
+	}
+
+	result->partDefElems = partDefElems;
+	result->encClauses = encClauses;
+
+	foreach(lc, partDefElems)
+	{
+		Node			*n = lfirst(lc);
+		GpPartDefElem	*elem = (GpPartDefElem *) n;
+
+		if (!elem->isDefault)
+		{
+			switch (partkey->strategy)
+			{
+				case PARTITION_STRATEGY_RANGE:
+					transformGpPartDefElemWithRangeSpec(pstate, parentrel, elem);
+					break;
+				case PARTITION_STRATEGY_LIST:
+					transformGpPartDefElemWithListSpec(pstate, parentrel, elem);
+					break;
+				default:
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+								errmsg("Not supported partition strategy")));
+			}
+		}
+	}
+
+	free_parsestate(pstate);
+	table_close(parentrel, NoLock);
+	return result;
+}
+
+/*
+ * Create a list of CreateStmts, to create partitions based on transformed
+ * 'gpPartDef' specification.
  */
 List *
 generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 				   PartitionSpec *subPartSpec, const char *queryString,
 				   List *parentoptions, const char *parentaccessmethod,
-				   List *parentattenc, bool forvalidationonly)
+				   List *parentattenc, bool addpartition)
 {
 	Relation	parentrel;
 	List	   *result = NIL;
@@ -1470,19 +1743,11 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 	/* Remove "tablename" cell from parentOptions, if exists */
 	extract_tablename_from_options(&parentoptions);
 
+	/* Check subpartition specs */
 	if (subPartSpec && subPartSpec->gpPartDef)
 	{
 		Assert(subPartSpec->gpPartDef->isTemplate);
 		isSubTemplate = subPartSpec->gpPartDef->isTemplate;
-		/*
-		 * If the subpartition specification is read from gp_partition_template
-		 * catalog, we don't need to call StoreGpPartitionTemplate. This will
-		 * help to save some IO since StoreGpPartitionTemplate trying to scan
-		 * gp_partition_template.
-		 */
-		if (isSubTemplate && !subPartSpec->gpPartDef->fromCatalog)
-			StoreGpPartitionTemplate(ancestors ? llast_oid(ancestors) : parentrelid,
-									 partcomp.level, subPartSpec->gpPartDef);
 	}
 
 	foreach(lc, parentattenc)
@@ -1492,16 +1757,12 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 			parent_tblenc = lappend(parent_tblenc, lfirst(lc));
 	}
 
-	/*
-	 * GPDB_12_MERGE_FIXME: can we optimize grammar to create separate lists
-	 * for elems and encoding in encClauses.
-	 */
-	foreach(lc, gpPartSpec->partDefElems)
+	foreach(lc, gpPartSpec->encClauses)
 	{
 		Node	   *n = lfirst(lc);
 
-		if (IsA(n, ColumnReferenceStorageDirective))
-			penc_cls = lappend(penc_cls, lfirst(lc));
+		Assert(IsA(n, ColumnReferenceStorageDirective));
+		penc_cls = lappend(penc_cls, lfirst(lc));
 	}
 
 	/*
@@ -1520,135 +1781,82 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 	 */
 	penc_cls = merge_partition_encoding(pstate, penc_cls, parent_tblenc);
 
-	/*
-	 * If there is a DEFAULT PARTITION, move it to the front of the list.
-	 *
-	 * This is to keep the partition naming consistent with historic behavior.
-	 * In GPDB 6 and below, the default partition is always numbered 1,
-	 * regardless of where in the command it is listed. In other words, it is
-	 * always given number 1 in the "partcomp" struct . The default partition
-	 * itself always has a name, so the partition number isn't used for it,
-	 * but it affects the numbering of all the other partitions.
-	 *
-	 * The main reason we work so hard to keep the naming the same as in
-	 * GPDB 6 is to keep the regression tests that refer to partitions by
-	 * name after creating them with the legacy partitioning syntax unchanged.
-	 * And conceivably there might be users relying on it on real systems,
-	 * too.
-	 */
-	List	   *partDefElems = NIL;
-	GpPartDefElem *defaultPartDefElem = NULL;
+	hasImplicitRangeBounds = false;
 	foreach(lc, gpPartSpec->partDefElems)
 	{
-		Node	   *n = lfirst(lc);
+		Node			*n = lfirst(lc);
+		GpPartDefElem	*elem;
+		List			*new_parts;
+		PartitionSpec	*tmpSubPartSpec = NULL;
 
-		if (IsA(n, GpPartDefElem))
+		Assert(IsA(n, GpPartDefElem));
+		/* Avoid scribbling on input */
+		elem = copyObject((GpPartDefElem *) n);
+
+		if (subPartSpec)
 		{
-			GpPartDefElem *elem           = (GpPartDefElem *) n;
-
-			if (elem->isDefault)
+			tmpSubPartSpec = copyObject(subPartSpec);
+			if (isSubTemplate)
 			{
-				if (defaultPartDefElem)
+				if (elem->subSpec)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("multiple default partitions are not allowed"),
-							 parser_errposition(pstate, elem->location)));
-				defaultPartDefElem = elem;
-				partDefElems = lcons(elem, partDefElems);
+								errmsg("subpartition configuration conflicts with subpartition template"),
+								parser_errposition(pstate, ((GpPartitionDefinition*)elem->subSpec)->location)));
 			}
 			else
-				partDefElems = lappend(partDefElems, elem);
-		}
-	}
+				tmpSubPartSpec->gpPartDef = (GpPartitionDefinition*) elem->subSpec;
 
-	hasImplicitRangeBounds = false;
-	foreach(lc, partDefElems)
-	{
-		Node	   *n = lfirst(lc);
-
-		if (IsA(n, GpPartDefElem))
-		{
-			GpPartDefElem *elem           = (GpPartDefElem *) n;
-			List          *new_parts;
-			PartitionSpec *tmpSubPartSpec = NULL;
-
-			if (subPartSpec)
+			if (tmpSubPartSpec->gpPartDef == NULL)
 			{
-				tmpSubPartSpec = copyObject(subPartSpec);
-				if (isSubTemplate)
-				{
-					if (elem->subSpec)
-						ereport(ERROR,
-								(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-								 errmsg("subpartition configuration conflicts with subpartition template"),
-								 parser_errposition(pstate, ((GpPartitionDefinition*)elem->subSpec)->location)));
-				}
-				else
-					tmpSubPartSpec->gpPartDef = (GpPartitionDefinition*) elem->subSpec;
-
-				if (tmpSubPartSpec->gpPartDef == NULL)
-				{
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-								errmsg("no partitions specified at depth %d",
-									   partcomp.level + 1),
-								parser_errposition(pstate, subPartSpec->location)));
-				}
-			}
-			else if (elem->subSpec)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							errmsg("subpartition specification provided but table doesn't have SUBPARTITION BY clause"),
-							parser_errposition(pstate, ((GpPartitionDefinition*)elem->subSpec)->location)));
-
-			/*
-			 * This was not allowed pre-GPDB7, so keeping the same
-			 * restriction. Ideally, we can easily support it now based on how
-			 * template is stored. I wish to not open up new cases with legacy
-			 * syntax than we supported in past, hence keeping the restriction
-			 * in-place.
-			 */
-			if (gpPartSpec->isTemplate && elem->colencs)
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("partition specific ENCODING clause not supported in SUBPARTITION TEMPLATE"),
-						 parser_errposition(pstate, elem->location)));
-
-			/* if WITH has "tablename" then it will be used as name for partition */
-			partcomp.tablename = extract_tablename_from_options(&elem->options);
-
-			if (elem->options == NIL)
-				elem->options = parentoptions ? copyObject(parentoptions) : NIL;
-			if (elem->accessMethod == NULL)
-				elem->accessMethod = parentaccessmethod ? pstrdup(parentaccessmethod) : NULL;
-
-			if (elem->accessMethod && strcmp(elem->accessMethod, "ao_column") == 0)
-				elem->colencs = merge_partition_encoding(pstate, elem->colencs, penc_cls);
-
-			if (elem->isDefault)
-				new_parts = generateDefaultPartition(pstate, parentrel, elem, tmpSubPartSpec, &partcomp);
-			else
-			{
-				PartitionKey key = RelationGetPartitionKey(parentrel);
-				Assert(key != NULL);
-				switch (key->strategy)
-				{
-					case PARTITION_STRATEGY_RANGE:
-						new_parts = generateRangePartitions(pstate, parentrel,
-															elem, tmpSubPartSpec, &partcomp,
-															&hasImplicitRangeBounds);
-						break;
-
-					case PARTITION_STRATEGY_LIST:
-						new_parts = generateListPartition(pstate, parentrel, elem, tmpSubPartSpec, &partcomp);
-						break;
-					default:
-						elog(ERROR, "Not supported partition strategy");
-				}
+							errmsg("no partitions specified at depth %d",
+								   partcomp.level + 1),
+							parser_errposition(pstate, subPartSpec->location)));
 			}
-
-			result = list_concat(result, new_parts);
 		}
+		else if (elem->subSpec)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						errmsg("subpartition specification provided but table doesn't have SUBPARTITION BY clause"),
+						parser_errposition(pstate, ((GpPartitionDefinition*)elem->subSpec)->location)));
+
+		/* if WITH has "tablename" then it will be used as name for partition */
+		partcomp.tablename = extract_tablename_from_options(&elem->options);
+
+		if (elem->options == NIL)
+			elem->options = parentoptions ? copyObject(parentoptions) : NIL;
+		if (elem->accessMethod == NULL)
+			elem->accessMethod = parentaccessmethod ? pstrdup(parentaccessmethod) : NULL;
+
+		if (elem->accessMethod && strcmp(elem->accessMethod, "ao_column") == 0)
+			elem->colencs = merge_partition_encoding(pstate, elem->colencs, penc_cls);
+
+		if (elem->isDefault)
+			new_parts = generateDefaultPartition(pstate, parentrel, elem, tmpSubPartSpec, &partcomp);
+		else
+		{
+			PartitionKey key = RelationGetPartitionKey(parentrel);
+			Assert(key != NULL);
+			switch (key->strategy)
+			{
+				case PARTITION_STRATEGY_RANGE:
+				{
+					new_parts = generateRangePartitions(pstate, parentrel,
+														elem, tmpSubPartSpec, &partcomp, &hasImplicitRangeBounds);
+					break;
+				}
+
+				case PARTITION_STRATEGY_LIST:
+					new_parts = generateListPartition(pstate, parentrel, elem, tmpSubPartSpec, &partcomp);
+					break;
+				default:
+					elog(ERROR, "Not supported partition strategy");
+			}
+		}
+
+		result = list_concat(result, new_parts);
 	}
 
 	/*
@@ -1657,15 +1865,9 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 	 * Validate and maybe update range partitions bound here instead of in
 	 * check_new_partition_bound(), because we need to modify the lower or upper
 	 * bounds for implicit START/END.
-	 *
-	 * Need to skip this step forvalidationonly -- which is called by SET
-	 * SUBPARTITION TEMPLATE. Reason is deduceImplicitRangeBounds() assumes
-	 * for ADD PARTITION, only one partition is being added if missing START
-	 * or END specification. While that's true for ADD PARTITION, it's not
-	 * while setting template.
 	 */
-	if (hasImplicitRangeBounds && !forvalidationonly)
-		deduceImplicitRangeBounds(pstate, parentrel, result);
+	if (hasImplicitRangeBounds)
+		deduceImplicitRangeBounds(pstate, parentrel, result, addpartition);
 
 	free_parsestate(pstate);
 	table_close(parentrel, NoLock);

@@ -26,8 +26,8 @@ The Concourse directory should contain this README and three sub-directories onl
 #### Pipelines Directory
 There should be just a handful of pipelines in this directory:
 
-* `gpdb_master-generated.yml` the pipeline that compiles, tests, and
-  produces installers from the master branch of gpdb. This is a
+* `gpdb_main-generated.yml` the pipeline that compiles, tests, and
+  produces installers from the main branch of gpdb. This is a
   generated and should not be edited directly.  The template
   [pipelines/templates/gpdb-tpl.yml](pipelines/templates/gpdb-tpl.yml)
   should be edited and the utility
@@ -59,7 +59,7 @@ There is a `gpdb` team in the
 Use this team to create any pipelines instead of the `main` team.
 
 ### Creating Your Own Pipeline
-Many developers want to create their own copies of the master pipeline.
+Many developers want to create their own copies of the main pipeline.
 
 To accommodate this without naming confusion, workload instability,
 nor artifact collision, please follow instructions in pipelines
@@ -68,8 +68,8 @@ nor artifact collision, please follow instructions in pipelines
 #### Notes and warnings
 
 * Clean up your dev pipelines when you are finished with them. (Use `fly destroy-pipeline`)
-* Be sure to use a unique name for your pipeline. Don't blow away the master
-  pipeline by using `gpdb_master` when setting your dev pipeline. Try to prefix
+* Be sure to use a unique name for your pipeline. Don't blow away the main
+  pipeline by using `gpdb_main` when setting your dev pipeline. Try to prefix
   your pipeline name with `dev:`
 * Please pause the pulse jobs (the rightmost column of builds). If you are
   working on one, that's fine, but pause all of the others. We've had issues

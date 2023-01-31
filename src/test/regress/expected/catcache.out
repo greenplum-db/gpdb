@@ -1,0 +1,62 @@
+-- Test abort transaction should invalidate reader gang's cat cache
+-- Discussion: https://groups.google.com/a/greenplum.org/g/gpdb-dev/c/u3-D7isdvmM
+set optimizer_force_multistage_agg = 1;
+create table dml_14027_union_s (a int not null, b numeric default 10.00) distributed by (a) partition by range(b);
+create table dml_14027_union_s_1_prt_2 partition of dml_14027_union_s for values from (1) to (1001);
+NOTICE:  table has parent, setting distribution columns to match parent table
+create table dml_14027_union_s_1_prt_def partition of dml_14027_union_s default;
+NOTICE:  table has parent, setting distribution columns to match parent table
+insert into dml_14027_union_s select generate_series(1,1), generate_series(1,1);
+begin;
+drop table dml_14027_union_s_1_prt_def;
+explain select count(distinct(b)) from dml_14027_union_s;
+                                                     QUERY PLAN                                                     
+--------------------------------------------------------------------------------------------------------------------
+ Finalize Aggregate  (cost=321.22..321.23 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=321.17..321.22 rows=3 width=8)
+         ->  Partial Aggregate  (cost=321.17..321.18 rows=1 width=8)
+               ->  HashAggregate  (cost=317.00..320.33 rows=333 width=32)
+                     Group Key: dml_14027_union_s_1_prt_2.b
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=282.00..312.00 rows=1000 width=32)
+                           Hash Key: dml_14027_union_s_1_prt_2.b
+                           ->  Streaming HashAggregate  (cost=282.00..292.00 rows=1000 width=32)
+                                 Group Key: dml_14027_union_s_1_prt_2.b
+                                 ->  Seq Scan on dml_14027_union_s_1_prt_2  (cost=0.00..199.33 rows=16533 width=32)
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+select count(distinct(b)) from dml_14027_union_s;
+ count 
+-------
+     1
+(1 row)
+
+rollback;
+explain update dml_14027_union_s set a = (select null union select null)::numeric;
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Update on dml_14027_union_s  (cost=0.07..1969.41 rows=66133 width=46)
+   Update on dml_14027_union_s_1_prt_2
+   Update on dml_14027_union_s_1_prt_def
+   InitPlan 1 (returns $0)  (slice1)
+     ->  HashAggregate  (cost=0.06..0.07 rows=2 width=32)
+           Group Key: (NULL::text)
+           ->  Append  (cost=0.00..0.05 rows=2 width=32)
+                 ->  Result  (cost=0.00..0.01 rows=1 width=32)
+                 ->  Result  (cost=0.00..0.01 rows=1 width=32)
+   ->  Explicit Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..984.67 rows=33067 width=46)
+         ->  Split  (cost=0.00..323.33 rows=33067 width=46)
+               ->  Seq Scan on dml_14027_union_s_1_prt_2  (cost=0.00..323.33 rows=16533 width=46)
+   ->  Explicit Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..984.67 rows=33067 width=46)
+         ->  Split  (cost=0.00..323.33 rows=33067 width=46)
+               ->  Seq Scan on dml_14027_union_s_1_prt_def  (cost=0.00..323.33 rows=16533 width=46)
+ Optimizer: Postgres query optimizer
+(16 rows)
+
+-- Should not raise error due to stale catcache in reader gang.
+-- eg: ERROR: expected partdefid 134733, but got 0
+update dml_14027_union_s set a = (select null union select null)::numeric;
+ERROR:  null value in column "a" violates not-null constraint  (seg0 127.0.1.1:7002 pid=27795)
+DETAIL:  Failing row contains (null, 1).
+drop table dml_14027_union_s;
+reset optimizer_force_multistage_agg;

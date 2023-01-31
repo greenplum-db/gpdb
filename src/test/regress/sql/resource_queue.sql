@@ -409,3 +409,23 @@ SELECT * FROM rq_test_oosm_table;
 DROP TABLE rq_test_oosm_table;
 RESET ROLE;
 DROP ROLE rq_test_oosm_role;
+-- test for extended queries
+-- create a role that only use in this test will drop it later
+-- later we will use username to identify the backend process
+create role extend_protocol_requeue_role with login;
+
+-- start_matchsubs
+--
+-- m/NOTICE:  query requested \d+/
+-- s/NOTICE:  query requested \d+/NOTICE:  query requested XXX/g
+--
+-- m/NOTICE:  SPI memory reservation \d+/
+-- s/NOTICE:  SPI memory reservation \d+/NOTICE:  SPI memory reservation /g
+--
+-- end_matchsubs
+
+-- run query using non_superuser role so that it can be
+-- controled by resource queue
+\! ./extended_protocol_resqueue dbname=regression extend_protocol_requeue_role;
+
+drop role extend_protocol_requeue_role;

@@ -35,7 +35,7 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=44)
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
       <dxl:TraceFlags Value="102001,102002,102003,102074,102120,102144,103001,103014,103015,103022,103033,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -112,7 +112,7 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=44)
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.573531.1.0" Name="partial_gist_tbl" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.573531.1.0" Name="partial_gist_tbl" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,5,3" PartitionColumns="0" PartitionTypes="r" NumberLeafPartitions="3">
+      <dxl:Relation Mdid="6.573531.1.0" Name="partial_gist_tbl" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,5,3" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -136,15 +136,14 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=44)
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.573613.1.0" IsPartial="true"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.573531001.1.0"/>
-          <dxl:Partition Mdid="0.573531002.1.0"/>
-          <dxl:Partition Mdid="0.573531003.1.0"/>
+          <dxl:Partition Mdid="6.573531001.1.0"/>
+          <dxl:Partition Mdid="6.573531002.1.0"/>
+          <dxl:Partition Mdid="6.573531003.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.573531001.1.0" Name="partial_gist_tbl_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,5,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.573531001.1.0" Name="partial_gist_tbl_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,5,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -168,7 +167,6 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=44)
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.573613001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -186,7 +184,7 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=44)
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.573531002.1.0" Name="partial_gist_tbl_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,5,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.573531002.1.0" Name="partial_gist_tbl_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,5,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -210,7 +208,6 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=44)
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.573613002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -228,7 +225,7 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=44)
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.573531003.1.0" Name="partial_gist_tbl_prt_def_part" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,5,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.573531003.1.0" Name="partial_gist_tbl_prt_def_part" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,5,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -252,7 +249,6 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=44)
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.573613003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:Not>
@@ -335,9 +331,9 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=44)
           <dxl:Opfamily Mdid="0.2593.1.0"/>
         </dxl:Opfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.573613001.1.0"/>
-          <dxl:Partition Mdid="0.573613002.1.0"/>
-          <dxl:Partition Mdid="0.573613003.1.0"/>
+          <dxl:Partition Mdid="6.573613001.1.0"/>
+          <dxl:Partition Mdid="6.573613002.1.0"/>
+          <dxl:Partition Mdid="6.573613003.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
       <dxl:GPDBScalarOp Mdid="0.497.1.0" Name="&lt;@" ComparisonType="Other" ReturnsNullOnNullInput="true">
@@ -364,7 +360,7 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=44)
           <dxl:ConstValue TypeMdid="0.603.1.0" Value="AAAAAAAAAEAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAA="/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.573531.1.0" TableName="partial_gist_tbl">
+          <dxl:TableDescriptor Mdid="6.573531.1.0" TableName="partial_gist_tbl">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.603.1.0" ColWidth="32"/>
@@ -423,12 +419,12 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=44)
             </dxl:Comparison>
           </dxl:IndexCondList>
           <dxl:Partitions>
-            <dxl:Partition Mdid="0.573531001.1.0"/>
-            <dxl:Partition Mdid="0.573531002.1.0"/>
-            <dxl:Partition Mdid="0.573531003.1.0"/>
+            <dxl:Partition Mdid="6.573531001.1.0"/>
+            <dxl:Partition Mdid="6.573531002.1.0"/>
+            <dxl:Partition Mdid="6.573531003.1.0"/>
           </dxl:Partitions>
           <dxl:IndexDescriptor Mdid="0.573613.1.0" IndexName="partialboxindex"/>
-          <dxl:TableDescriptor Mdid="0.573531.1.0" TableName="partial_gist_tbl">
+          <dxl:TableDescriptor Mdid="6.573531.1.0" TableName="partial_gist_tbl">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.603.1.0" ColWidth="32"/>

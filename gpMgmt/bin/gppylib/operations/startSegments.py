@@ -136,7 +136,7 @@ class StartSegmentsOperation:
 
     def __runStartCommand(self, segments, startMethod, numContentsInCluster, resultOut, gpArray, era):
         """
-        Putt results into the resultOut object
+        Put results into the resultOut object
         """
 
         if len(segments) == 0:

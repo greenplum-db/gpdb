@@ -60,6 +60,20 @@ CREATE PUBLICATION testpub4 FOR TABLE ONLY testpub_tbl3;
 DROP TABLE testpub_tbl3, testpub_tbl3a;
 DROP PUBLICATION testpub3, testpub4;
 
+-- Test cache invalidation FOR ALL TABLES publication
+SET client_min_messages = 'ERROR';
+CREATE TABLE testpub_tbl4(a int);
+INSERT INTO testpub_tbl4 values(1);
+UPDATE testpub_tbl4 set a = 2;
+CREATE PUBLICATION testpub_foralltables FOR ALL TABLES;
+RESET client_min_messages;
+-- fail missing REPLICA IDENTITY
+UPDATE testpub_tbl4 set a = 3;
+DROP PUBLICATION testpub_foralltables;
+-- should pass after dropping the publication
+UPDATE testpub_tbl4 set a = 3;
+DROP TABLE testpub_tbl4;
+
 -- fail - view
 CREATE PUBLICATION testpub_fortbl FOR TABLE testpub_view;
 CREATE PUBLICATION testpub_fortbl FOR TABLE testpub_tbl1, pub_test.testpub_nopk;
@@ -90,6 +104,19 @@ ALTER PUBLICATION testpub_default DROP TABLE testpub_tbl1, pub_test.testpub_nopk
 ALTER PUBLICATION testpub_default DROP TABLE pub_test.testpub_nopk;
 
 \d+ testpub_tbl1
+
+-- verify relation cache invalidation when a primary key is added using
+-- an existing index
+CREATE TABLE pub_test.testpub_addpk (id int not null, data int);
+ALTER PUBLICATION testpub_default ADD TABLE pub_test.testpub_addpk;
+INSERT INTO pub_test.testpub_addpk VALUES(1, 11);
+CREATE UNIQUE INDEX testpub_addpk_id_idx ON pub_test.testpub_addpk(id);
+-- fail:
+UPDATE pub_test.testpub_addpk SET id = 2;
+ALTER TABLE pub_test.testpub_addpk ADD PRIMARY KEY USING INDEX testpub_addpk_id_idx;
+-- now it should work:
+UPDATE pub_test.testpub_addpk SET id = 2;
+DROP TABLE pub_test.testpub_addpk;
 
 -- permissions
 SET ROLE regress_publication_user2;

@@ -335,37 +335,6 @@ public:
 		CLogicalDML::EDMLOperator edmlop, CTableDescriptor *ptabdesc,
 		CColRefArray *colref_array, CColRef *pcrCtid, CColRef *pcrSegmentId);
 
-	// check whether there are any BEFORE or AFTER triggers on the
-	// given table that match the given DML operation
-	static BOOL FTriggersExist(CLogicalDML::EDMLOperator edmlop,
-							   CTableDescriptor *ptabdesc, BOOL fBefore);
-
-	// does the given trigger type match the given logical DML type
-	static BOOL FTriggerApplies(CLogicalDML::EDMLOperator edmlop,
-								const IMDTrigger *pmdtrigger);
-
-	// construct a trigger expression on top of the given expression
-	static CExpression *PexprRowTrigger(CMemoryPool *mp,
-										CExpression *pexprChild,
-										CLogicalDML::EDMLOperator edmlop,
-										IMDId *rel_mdid, BOOL fBefore,
-										CColRefArray *colref_array);
-
-	// construct a trigger expression on top of the given expression
-	static CExpression *PexprRowTrigger(CMemoryPool *mp,
-										CExpression *pexprChild,
-										CLogicalDML::EDMLOperator edmlop,
-										IMDId *rel_mdid, BOOL fBefore,
-										CColRefArray *pdrgpcrOld,
-										CColRefArray *pdrgpcrNew);
-
-	// construct a logical partition selector for the given table descriptor on top
-	// of the given child expression. The partition selection filters use columns
-	// from the given column array
-	static CExpression *PexprLogicalPartitionSelector(
-		CMemoryPool *mp, CTableDescriptor *ptabdesc, CColRefArray *colref_array,
-		CExpression *pexprChild);
-
 	// return partition filter expressions given a table
 	// descriptor and the given column references
 	static CExpressionArray *PdrgpexprPartEqFilters(

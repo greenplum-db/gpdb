@@ -95,6 +95,179 @@ DECLARE
 1: CLOSE c1;
 CLOSE
 
+--------- Test1.1: test for PARALLEL RETRIEVE CURSOR on select transient record types and multi-retrieve
+1: BEGIN;
+BEGIN
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT make_record(x) FROM t1;
+DECLARE
+1: @post_run 'parse_endpoint_info 1 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
+ endpoint_id1 | token_id | host_id | port_id | READY
+ endpoint_id1 | token_id | host_id | port_id | READY
+ endpoint_id1 | token_id | host_id | port_id | READY
+(3 rows)
+
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', 0);
+ finished 
+----------
+ f        
+(1 row)
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);  <waiting ...>
+
+*U: @pre_run 'set_endpoint_variable @ENDPOINT1': SELECT state FROM gp_get_segment_endpoints() WHERE endpointname='@ENDPOINT1';
+ state 
+-------
+(0 rows)
+
+ state 
+-------
+ READY 
+(1 row)
+
+ state 
+-------
+ READY 
+(1 row)
+
+ state 
+-------
+ READY 
+(1 row)
+*R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE 1 FROM ENDPOINT "@ENDPOINT1";
+#-1retrieve> FATAL:  retrieve auth token is invalid
+
+
+ make_record 
+-------------
+ (1,2)       
+(1 row)
+
+ make_record 
+-------------
+ (1)         
+(1 row)
+
+ make_record 
+-------------
+ (1,2,3,4,5) 
+(1 row)
+*R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE 1 FROM ENDPOINT "@ENDPOINT1";
+#-1retrieve> FATAL:  retrieve auth token is invalid
+
+
+ make_record 
+-------------
+ (1,2,3)     
+(1 row)
+
+ make_record 
+-------------
+(0 rows)
+
+ make_record 
+-------------
+ (1,2,3,4,5) 
+(1 row)
+*R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT1";
+#-1retrieve> FATAL:  retrieve auth token is invalid
+
+
+ make_record 
+-------------
+ (1,2,3,4)   
+ (1,2,3,4,5) 
+ (1,2,3,4,5) 
+(3 rows)
+
+ make_record 
+-------------
+(0 rows)
+
+ make_record 
+-------------
+ (1,2,3,4,5) 
+ (1,2,3,4,5) 
+(2 rows)
+
+1<:  <... completed>
+ finished 
+----------
+ t        
+(1 row)
+1: CLOSE c1;
+CLOSE
+
+1: CREATE OR REPLACE FUNCTION make_record2(n int) RETURNS RECORD LANGUAGE plpgsql AS ' BEGIN RETURN CASE n WHEN 1 THEN ROW(1,2,3) WHEN 2 THEN ROW(1,2,3,4) WHEN 3 THEN ROW(1,2,3,4,5) WHEN 4 THEN ROW(1,2,3,4,5,6) ELSE ROW(1,2,3,4,5,6,7) END; END; ';
+CREATE
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT make_record2(x) FROM t1;
+DECLARE
+1: @post_run 'parse_endpoint_info 1 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
+ endpoint_id1 | token_id | host_id | port_id | READY
+ endpoint_id1 | token_id | host_id | port_id | READY
+ endpoint_id1 | token_id | host_id | port_id | READY
+(3 rows)
+
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', 0);
+ finished 
+----------
+ f        
+(1 row)
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);  <waiting ...>
+
+*U: @pre_run 'set_endpoint_variable @ENDPOINT1': SELECT state FROM gp_get_segment_endpoints() WHERE endpointname='@ENDPOINT1';
+ state 
+-------
+(0 rows)
+
+ state 
+-------
+ READY 
+(1 row)
+
+ state 
+-------
+ READY 
+(1 row)
+
+ state 
+-------
+ READY 
+(1 row)
+-- *R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE 1 FROM ENDPOINT "@ENDPOINT1";
+-- *R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE 1 FROM ENDPOINT "@ENDPOINT1";
+*R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT1";
+#-1retrieve> FATAL:  retrieve auth token is invalid
+
+
+ make_record2    
+-----------------
+ (1,2,3,4)       
+ (1,2,3,4,5)     
+ (1,2,3,4,5,6)   
+ (1,2,3,4,5,6,7) 
+ (1,2,3,4,5,6,7) 
+(5 rows)
+
+ make_record2 
+--------------
+ (1,2,3)      
+(1 row)
+
+ make_record2    
+-----------------
+ (1,2,3,4,5,6,7) 
+ (1,2,3,4,5,6,7) 
+ (1,2,3,4,5,6,7) 
+ (1,2,3,4,5,6,7) 
+(4 rows)
+
+1<:  <... completed>
+ finished 
+----------
+ t        
+(1 row)
+1: CLOSE c1;
+CLOSE
+
 --------- Test2: test for PARALLEL RETRIEVE CURSOR on select with join statement.
 -- there was a hang issue when declaring PARALLEL RETRIEVE CURSOR with join clause.
 -- for example: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t2 join t2 t12 on true;

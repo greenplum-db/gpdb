@@ -381,7 +381,7 @@ CREATE TABLE co_cr_sub_partzlib8192_1
  COLUMN a1 encoding (compresstype = zlib),
  COLUMN a5 ENCODING (compresstype=zlib,compresslevel=1, blocksize=8192),
  DEFAULT COLUMN ENCODING (compresstype=zlib,compresslevel=1,blocksize=8192)) (start(1) end(5000) every(1000));
-
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'co_cr_sub_partzlib8192_1'::regclass;
 -- 
 -- Create Indexes
 --
@@ -400,6 +400,7 @@ ANALYZE co_cr_sub_partzlib8192_1;
 --Create Uncompressed table of same schema definition
 
 CREATE TABLE co_cr_sub_partzlib8192_1_uncompr(id SERIAL,a1 int,a2 char(5),a3 numeric,a4 boolean DEFAULT false ,a5 char DEFAULT 'd',a6 text,a7 timestamp,a8 character varying(705),a9 bigint,a10 date,a11 varchar(600),a12 text,a13 decimal,a14 real,a15 bigint,a16 int4 ,a17 bytea,a18 timestamp with time zone,a19 timetz,a20 path,a21 box,a22 macaddr,a23 interval,a24 character varying(800),a25 lseg,a26 point,a27 double precision,a28 circle,a29 int4,a30 numeric(8),a31 polygon,a32 date,a33 real,a34 money,a35 cidr,a36 inet,a37 time,a38 text,a39 bit,a40 bit varying(5),a41 smallint,a42 int) WITH (appendonly=true, orientation=column) distributed randomly Partition by range(a1) Subpartition by list(a2) subpartition template ( subpartition sp1 values('M') , subpartition sp2 values('F') ) (start(1)  end(5000) every(1000)) ;
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'co_cr_sub_partzlib8192_1_uncompr'::regclass;
 
 --
 -- Insert to uncompressed table
@@ -531,6 +532,7 @@ CREATE TABLE co_cr_sub_partzlib8192_1_2
  COLUMN a1 encoding (compresstype = zlib),
  COLUMN a5 ENCODING (compresstype=zlib,compresslevel=1, blocksize=8192),
  DEFAULT COLUMN ENCODING (compresstype=zlib,compresslevel=1,blocksize=8192)) (partition p1 values('F'), partition p2 values ('M'));
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'co_cr_sub_partzlib8192_1_2'::regclass;
 
 -- 
 -- Create Indexes
@@ -681,6 +683,7 @@ CREATE TABLE co_wt_sub_partrle_type8192_1
 	(id SERIAL,a1 int,a2 char(5),a3 numeric,a4 boolean DEFAULT false ,a5 char DEFAULT 'd',a6 text,a7 timestamp,a8 character varying(705),a9 bigint,a10 date,a11 varchar(600),a12 text,a13 decimal,a14 real,a15 bigint,a16 int4 ,a17 bytea,a18 timestamp with time zone,a19 timetz,a20 path,a21 box,a22 macaddr,a23 interval,a24 character varying(800),a25 lseg,a26 point,a27 double precision,a28 circle,a29 int4,a30 numeric(8),a31 polygon,a32 date,a33 real,a34 money,a35 cidr,a36 inet,a37 time,a38 text,a39 bit,a40 bit varying(5),a41 smallint,a42 int )
  WITH (appendonly=true, orientation=column) distributed randomly  Partition by range(a1) Subpartition by list(a2) subpartition template ( default subpartition df_sp, subpartition sp1 values('M') , subpartition sp2 values('F')  
  WITH (appendonly=true, orientation=column,compresstype=rle_type,compresslevel=1,blocksize=8192)) (start(1)  end(5000) every(1000) );
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'co_wt_sub_partrle_type8192_1'::regclass;
 
 -- 
 -- Create Indexes
@@ -702,6 +705,7 @@ ANALYZE co_wt_sub_partrle_type8192_1;
 --Create Uncompressed table of same schema definition
 
 CREATE TABLE co_wt_sub_partrle_type8192_1_uncompr(id SERIAL,a1 int,a2 char(5),a3 numeric,a4 boolean DEFAULT false ,a5 char DEFAULT 'd',a6 text,a7 timestamp,a8 character varying(705),a9 bigint,a10 date,a11 varchar(600),a12 text,a13 decimal,a14 real,a15 bigint,a16 int4 ,a17 bytea,a18 timestamp with time zone,a19 timetz,a20 path,a21 box,a22 macaddr,a23 interval,a24 character varying(800),a25 lseg,a26 point,a27 double precision,a28 circle,a29 int4,a30 numeric(8),a31 polygon,a32 date,a33 real,a34 money,a35 cidr,a36 inet,a37 time,a38 text,a39 bit,a40 bit varying(5),a41 smallint,a42 int) WITH (appendonly=true, orientation=column) distributed randomly Partition by range(a1) Subpartition by list(a2) subpartition template ( subpartition sp1 values('M') , subpartition sp2 values('F') ) (start(1)  end(5000) every(1000)) ;
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'co_wt_sub_partrle_type8192_1_uncompr'::regclass;
 
 --
 -- Insert to uncompressed table
@@ -829,6 +833,7 @@ CREATE TABLE co_wt_sub_partrle_type8192_1_2
 	(id SERIAL,a1 int,a2 char(5),a3 numeric,a4 boolean DEFAULT false ,a5 char DEFAULT 'd',a6 text,a7 timestamp,a8 character varying(705),a9 bigint,a10 date,a11 varchar(600),a12 text,a13 decimal,a14 real,a15 bigint,a16 int4 ,a17 bytea,a18 timestamp with time zone,a19 timetz,a20 path,a21 box,a22 macaddr,a23 interval,a24 character varying(800),a25 lseg,a26 point,a27 double precision,a28 circle,a29 int4,a30 numeric(8),a31 polygon,a32 date,a33 real,a34 money,a35 cidr,a36 inet,a37 time,a38 text,a39 bit,a40 bit varying(5),a41 smallint,a42 int )
  WITH (appendonly=true, orientation=column) distributed randomly  Partition by list(a2) Subpartition by range(a1) subpartition template (default subpartition df_sp, start(1)  end(5000) every(1000) 
  WITH (appendonly=true, orientation=column,compresstype=rle_type,compresslevel=1,blocksize=8192)) (partition p1 values ('M'), partition p2 values ('F'));
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'co_wt_sub_partrle_type8192_1_2'::regclass;
 
 -- 
 -- Create Indexes
@@ -981,6 +986,7 @@ CREATE TABLE ao_wt_sub_partzlib8192_5
 	(id SERIAL,a1 int,a2 char(5),a3 numeric,a4 boolean DEFAULT false ,a5 char DEFAULT 'd',a6 text,a7 timestamp,a8 character varying(705),a9 bigint,a10 date,a11 varchar(600),a12 text,a13 decimal,a14 real,a15 bigint,a16 int4 ,a17 bytea,a18 timestamp with time zone,a19 timetz,a20 path,a21 box,a22 macaddr,a23 interval,a24 character varying(800),a25 lseg,a26 point,a27 double precision,a28 circle,a29 int4,a30 numeric(8),a31 polygon,a32 date,a33 real,a34 money,a35 cidr,a36 inet,a37 time,a38 text,a39 bit,a40 bit varying(5),a41 smallint,a42 int )
  WITH (appendonly=true, orientation=row) distributed randomly  Partition by range(a1) Subpartition by list(a2) subpartition template ( default subpartition df_sp, subpartition sp1 values('M') , subpartition sp2 values('F')  
  WITH (appendonly=true, orientation=row,compresstype=zlib,compresslevel=5,blocksize=8192)) (start(1)  end(5000) every(1000) );
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ao_wt_sub_partzlib8192_5'::regclass;
 
 -- 
 -- Create Indexes
@@ -1128,6 +1134,7 @@ CREATE TABLE ao_wt_sub_partzlib8192_5_2
 	(id SERIAL,a1 int,a2 char(5),a3 numeric,a4 boolean DEFAULT false ,a5 char DEFAULT 'd',a6 text,a7 timestamp,a8 character varying(705),a9 bigint,a10 date,a11 varchar(600),a12 text,a13 decimal,a14 real,a15 bigint,a16 int4 ,a17 bytea,a18 timestamp with time zone,a19 timetz,a20 path,a21 box,a22 macaddr,a23 interval,a24 character varying(800),a25 lseg,a26 point,a27 double precision,a28 circle,a29 int4,a30 numeric(8),a31 polygon,a32 date,a33 real,a34 money,a35 cidr,a36 inet,a37 time,a38 text,a39 bit,a40 bit varying(5),a41 smallint,a42 int )
  WITH (appendonly=true, orientation=row) distributed randomly  Partition by list(a2) Subpartition by range(a1) subpartition template (default subpartition df_sp, start(1)  end(5000) every(1000) 
  WITH (appendonly=true, orientation=row,compresstype=zlib,compresslevel=5,blocksize=8192)) (partition p1 values ('M'), partition p2 values ('F'));
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ao_wt_sub_partzlib8192_5_2'::regclass;
 
 -- 
 -- Create Indexes
