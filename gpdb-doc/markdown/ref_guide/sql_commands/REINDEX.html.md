@@ -51,9 +51,7 @@ Reindexing a single index or table requires being the owner of that index or tab
 
 Greenplum Datase does not support reindexing partitioned tables or partitioned indexes. You can separately reindex each individual partition instead.
 
-XXX `REINDEX` does not update the `reltuples` and `relpages` statistics for the index. To update those statistics, run `ANALYZE` on the table after reindexing.
-
-XXX If you suspect that shared global system catalog indexes are corrupted, they can only be reindexed in Greenplum utility mode. The typical symptom of a corrupt shared index is "index is not a btree" errors, or else the server crashes immediately at startup due to reliance on the corrupted indexes. Contact Greenplum Customer Support for assistance in this situation.
+REINDEX` does not update the `reltuples` and `relpages` statistics for the index. To update those statistics, run `ANALYZE` on the table after reindexing.
 
 ## <a id="section6"></a>Examples 
 

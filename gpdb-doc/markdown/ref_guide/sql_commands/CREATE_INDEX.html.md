@@ -59,9 +59,9 @@ table\_name
 :   The name \(optionally schema-qualified\) of the table to be indexed.
 
 method
-:   The name of the index method to be used. Choices are `btree`, `bitmap`, `gist`, `spgist`, `gin`, and `brin`. The default method is `btree`.
+:   The name of the index method to be used. Choices are `btree`, `bitmap`, `hash`, `gist`, `spgist`, `gin`, and `brin`. The default method is `btree`.
 
-:   XXX GPORCA supports only B-tree, bitmap, GiST, and GIN indexes. GPORCA ignores indexes created with unsupported indexing methods.
+:   GPORCA supports only B-tree, bitmap, GiST, and GIN indexes. GPORCA ignores indexes created with unsupported indexing methods.
 
 column\_name
 :   The name of a column of the table on which to create the index.
@@ -147,15 +147,13 @@ The system regularly collects statistics on all of a table's columns. Newly-crea
 
 For most index methods, the speed of creating an index is dependent on the setting of [maintenance\_work\_mem](../config_params/guc-list.html#maintenance_work_mem). Larger values will reduce the time needed for index creation, so long as you don't make it larger than the amount of memory really available, which would drive the machine into swapping.
 
-XXX `bitmap` indexes perform best for columns that have between 100 and 100,000 distinct values. For a column with more than 100,000 distinct values, the performance and space efficiency of a bitmap index decline. The size of a bitmap index is proportional to the number of rows in the table times the number of distinct values in the indexed column.
+`bitmap` indexes perform best for columns that have between 100 and 100,000 distinct values. For a column with more than 100,000 distinct values, the performance and space efficiency of a bitmap index decline. The size of a bitmap index is proportional to the number of rows in the table times the number of distinct values in the indexed column.
 
 Use [DROP INDEX](DROP_INDEX.html) to remove an index.
 
 Like any long-running transaction, `CREATE INDEX` on a table can affect which tuples can be removed by concurrent `VACUUM` on any other table.
 
 Prior releases of Greenplum Database also had an R-tree index method. This method has been removed because it had no significant advantages over the GiST method. If `USING rtree` is specified, `CREATE INDEX` will interpret it as `USING gist`, to simplify conversion of old databases to GiST.
-
-XXX The use of hash indexes has been deactivated in Greenplum Database.
 
 ## <a id="section6"></a>Examples 
 
