@@ -3675,6 +3675,109 @@ where
 (0 rows)
 
 drop table t_13722;
+-- This test is introduced to verify incorrect result
+-- from hash join of char columns is fixed
+-- Notice when varchar/text is cast to bpchar and used for
+-- comparison, the trailing spaces are ignored
+-- When char is cast to varchar/text, it's considered
+-- comparison, and the trailing spaces are also ignored
+-- Prior to the fix, opclasses belonging to different
+-- opfamilies could be grouped as equivalent, and thence
+-- deriving incorrect equality hash join conditions
+create table foo (varchar_3 varchar(3)) distributed by (varchar_3);
+create table bar (char_3 char(3)) distributed by (char_3);
+create table baz (text_any text) distributed by (text_any);
+insert into foo values ('cd'); -- 0 trailing spaces
+insert into bar values ('cd '); -- 1 trailing space
+insert into baz values ('cd  '); -- 2 trailing spaces
+-- varchar cast to bpchar
+-- 'cd' matches 'cd', returns 1 row
+explain select varchar_3, char_3 from foo join bar on varchar_3=char_3;
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=20000000002.06..20000000002.08 rows=4 width=7)
+   ->  Merge Join  (cost=20000000002.06..20000000002.08 rows=2 width=7)
+         Merge Cond: ((foo.varchar_3)::bpchar = bar.char_3)
+         ->  Sort  (cost=10000000001.04..10000000001.05 rows=1 width=3)
+               Sort Key: foo.varchar_3
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=10000000000.00..10000000001.03 rows=1 width=3)
+                     Hash Key: foo.varchar_3
+                     ->  Seq Scan on foo  (cost=10000000000.00..10000000001.01 rows=1 width=3)
+         ->  Sort  (cost=10000000001.02..10000000001.02 rows=1 width=4)
+               Sort Key: bar.char_3
+               ->  Seq Scan on bar  (cost=10000000000.00..10000000001.01 rows=1 width=4)
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+select varchar_3, char_3 from foo join bar on varchar_3=char_3;
+ varchar_3 | char_3 
+-----------+--------
+ cd        | cd 
+(1 row)
+
+-- char cast to text
+-- 'cd' doesn't match 'cd  ', returns 0 rows
+explain select char_3, text_any from bar join baz on char_3=text_any;
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=20000000002.06..20000000002.09 rows=4 width=9)
+   ->  Merge Join  (cost=20000000002.06..20000000002.09 rows=2 width=9)
+         Merge Cond: (((bar.char_3)::text) = baz.text_any)
+         ->  Sort  (cost=10000000001.04..10000000001.05 rows=1 width=4)
+               Sort Key: ((bar.char_3)::text)
+               ->  Result  (cost=10000000000.00..10000000001.03 rows=1 width=4)
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=10000000000.00..10000000001.03 rows=1 width=4)
+                           Hash Key: (bar.char_3)::text
+                           ->  Seq Scan on bar  (cost=10000000000.00..10000000001.01 rows=1 width=4)
+         ->  Sort  (cost=10000000001.02..10000000001.02 rows=1 width=5)
+               Sort Key: baz.text_any
+               ->  Seq Scan on baz  (cost=10000000000.00..10000000001.01 rows=1 width=5)
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select char_3, text_any from bar join baz on char_3=text_any;
+ char_3 | text_any 
+--------+----------
+(0 rows)
+
+-- foo - bar join: varchar cast to bpchar
+-- 'cd' matches 'cd'
+-- foo - baz join: no cast
+-- 'cd' doesn't match 'cd  '
+-- returns 0 rows
+-- Notice ORCA changes join order to minimize motion
+explain select varchar_3, char_3, text_any from foo join bar on varchar_3=char_3
+join baz on varchar_3=text_any;
+                                                             QUERY PLAN                                                             
+------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=30000000003.19..30000000003.35 rows=4 width=12)
+   ->  Merge Join  (cost=30000000003.19..30000000003.35 rows=2 width=12)
+         Merge Cond: ((foo.varchar_3)::text = baz.text_any)
+         ->  Sort  (cost=20000000002.11..20000000002.12 rows=2 width=7)
+               Sort Key: foo.varchar_3
+               ->  Merge Join  (cost=20000000002.06..20000000002.08 rows=2 width=7)
+                     Merge Cond: ((foo.varchar_3)::bpchar = bar.char_3)
+                     ->  Sort  (cost=10000000001.04..10000000001.05 rows=1 width=3)
+                           Sort Key: foo.varchar_3
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=10000000000.00..10000000001.03 rows=1 width=3)
+                                 Hash Key: foo.varchar_3
+                                 ->  Seq Scan on foo  (cost=10000000000.00..10000000001.01 rows=1 width=3)
+                     ->  Sort  (cost=10000000001.02..10000000001.02 rows=1 width=4)
+                           Sort Key: bar.char_3
+                           ->  Seq Scan on bar  (cost=10000000000.00..10000000001.01 rows=1 width=4)
+         ->  Sort  (cost=10000000001.07..10000000001.08 rows=1 width=5)
+               Sort Key: baz.text_any
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=10000000000.00..10000000001.05 rows=1 width=5)
+                     ->  Seq Scan on baz  (cost=10000000000.00..10000000001.01 rows=1 width=5)
+ Optimizer: Postgres query optimizer
+(20 rows)
+
+select varchar_3, char_3, text_any from foo join bar on varchar_3=char_3
+join baz on varchar_3=text_any;
+ varchar_3 | char_3 | text_any 
+-----------+--------+----------
+(0 rows)
+
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;
 set client_min_messages='warning';

@@ -83,7 +83,7 @@ CMDAccessorUtils::FCmpExists(CMDAccessor *md_accessor, IMDId *left_mdid,
 {
 	GPOS_ASSERT(NULL != md_accessor);
 	GPOS_ASSERT(NULL != left_mdid);
-	GPOS_ASSERT(NULL != left_mdid);
+	GPOS_ASSERT(NULL != right_mdid);
 	GPOS_ASSERT(IMDType::EcmptOther > cmp_type);
 
 	GPOS_TRY
@@ -113,7 +113,7 @@ CMDAccessorUtils::GetScCmpMdid(CMDAccessor *md_accessor, IMDId *left_mdid,
 {
 	GPOS_ASSERT(NULL != md_accessor);
 	GPOS_ASSERT(NULL != left_mdid);
-	GPOS_ASSERT(NULL != left_mdid);
+	GPOS_ASSERT(NULL != right_mdid);
 	GPOS_ASSERT(IMDType::EcmptOther > cmp_type);
 
 	CAutoTraceFlag atf1(EtraceSimulateOOM, false);
@@ -336,7 +336,7 @@ CMDAccessorUtils::ApplyCastsForScCmp(CMemoryPool *mp, CMDAccessor *md_accessor,
 //		CMDAccessorUtils::FCastExists
 //
 //	@doc:
-//		Does if a cast object between given source and destination types exists
+//		Check if a cast object between given source and destination types exists
 //
 //---------------------------------------------------------------------------
 BOOL
