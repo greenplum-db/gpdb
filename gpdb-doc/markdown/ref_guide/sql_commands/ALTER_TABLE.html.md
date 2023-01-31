@@ -57,7 +57,7 @@ where <action> is one of:
   CLUSTER ON <index_name>
   SET WITHOUT CLUSTER
   SET WITHOUT OIDS
-  SET ACCESS METHOD <access_method>
+  SET ACCESS METHOD <access_method>  WITH (<storage_parameter> = <value>)
   SET (<storage_parameter> = <value>)
   RESET (<storage_parameter> [, ... ])
   SET  WITH (<storage_parameter> = <value>)
@@ -117,7 +117,7 @@ where partition\_element is:
   | START ([<datatype>] '<start_value>') [INCLUSIVE | EXCLUSIVE]
      [ END ([<datatype>] '<end_value>') [INCLUSIVE | EXCLUSIVE] ]
   | END ([<datatype>] '<end_value>') [INCLUSIVE | EXCLUSIVE]
-[ WITH ( <partition_storage_parameter>=<value> [, ... ] ) ]
+[ WITH ( <storage_parameter>=<value> [, ... ] ) ]
 [ TABLESPACE <tablespace> ]
 ```
 
@@ -139,7 +139,7 @@ and subpartition\_element is:
   | [SUBPARTITION <subpartition_name>] 
      END ([<datatype>] '<end_value>') [INCLUSIVE | EXCLUSIVE]
      [ EVERY ( [<number | datatype>] '<interval_value>') ]
-[ WITH ( <partition_storage_parameter>=<value> [, ... ] ) ]
+[ WITH ( <storage_parameter>=<value> [, ... ] ) ]
 [ TABLESPACE <tablespace> ]
 ```
 
@@ -542,6 +542,29 @@ Move a table to a different schema:
 ```
 ALTER TABLE myschema.distributors SET SCHEMA yourschema;
 ```
+
+Change a table's access method to ao_row:
+
+```
+ALTER TABLE sales_1_prt_1 SET ACCESS METHOD ao_row;
+```
+
+Change a table's blocksize to 32768:
+
+```
+ALTER TABLE SET (blocksize = 32768);
+```
+
+Change a table's access method to ao_row, compression type to zstd and compression level to 4:
+
+```
+ALTER TABLE sales_1_prt_1 SET ACCESS METHOD ao_row with (compresstype=zstd,compresslevel=4);
+```
+
+Change all future partitions of a table to have an access method of `heap`, leaving the access method of current partitions as is:
+
+ALTER TABLE ONLY sales_1_prt_1 SET ACCESS METHOD heap;
+
 
 Change the distribution policy of a table to replicated:
 

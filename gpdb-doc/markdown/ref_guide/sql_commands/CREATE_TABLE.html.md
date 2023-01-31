@@ -119,7 +119,7 @@ and storage_directive for a column is:
     [blocksize={8192-2097152} ]
 ```
 
-and storage\_parameter for the table is:
+and storage\_parameter for a table or parition is:
 
 ```
    appendoptimized={TRUE|FALSE}
@@ -129,6 +129,7 @@ and storage\_parameter for the table is:
    compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
    compresslevel={0-9}
    fillfactor={10-100}
+   analyze_hll_non_part_table={TRUE|FALSE}
 ```
 
 
@@ -168,7 +169,7 @@ and partition\_element is:
   | [PARTITION <name>] 
      END ([<datatype>] '<end_value>') [INCLUSIVE | EXCLUSIVE]
      [ EVERY ([<datatype>] [<number | >INTERVAL] '<interval_value>') ]
-[ WITH ( <partition_storage_parameter>=<value> [, ... ] ) ]
+[ WITH ( <storage_parameter>=<value> [, ... ] ) ]
 [ <column_reference_storage_directive> [, ...] ]
 [ TABLESPACE <tablespace> ]
 ```
@@ -191,23 +192,9 @@ and subpartition\_element is:
   | [SUBPARTITION <name>] 
      END ([<datatype>] '<end_value>') [INCLUSIVE | EXCLUSIVE]
      [ EVERY ([<datatype>] [<number | >INTERVAL] '<interval_value>') ]
-[ WITH ( <partition_storage_parameter>=<value> [, ... ] ) ]
+[ WITH ( <storage_parameter>=<value> [, ... ] ) ]
 [ <column_reference_storage_directive> [, ...] ]
 [ TABLESPACE <tablespace> ]
-```
-
-where storage\_parameter for a partition is:
-
-```
-   appendoptimized={TRUE|FALSE}
-   blocksize={8192-2097152}
-   orientation={COLUMN|ROW}
-   checksum={TRUE|FALSE}
-   compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
-   compresslevel={1-19}
-   fillfactor={10-100}
-   analyze_hll_non_part_table={TRUE|FALSE}
-   [oids=FALSE]
 ```
 
 ## <a id="section3"></a>Description 
@@ -432,7 +419,7 @@ partition\_specification
 
 :   **`EVERY`** — For range partitions, defines how to increment the values from `START` to `END` to create individual partitions. Typically the data type of the `EVERY` expression is the same type as the partition key column. If that is not the case, then you must explicitly cast to the intended data type.
 
-:   **`WITH`**— Sets the table storage options for a partition. For example, you may want older partitions to be append-optimized tables and newer partitions to be regular heap tables.
+:   **`WITH`**— Sets the table storage options for a partition. For example, you may want older partitions to be append-optimized tables and newer partitions to be regular heap tables. See [Storage Parameters](#storage-parameters), below.
 
 :   **`TABLESPACE`** — The name of the tablespace in which the partition is to be created.
 
@@ -444,11 +431,11 @@ SUBPARTITION TEMPLATE
 
 ### <a id="storage_parameters"></a>Storage Parameters
 
-The `WITH` clause can specify storage parameters for tables, and for indexes associated with a `UNIQUE` or `PRIMARY` constraint. Storage parameters for indexes are documented on the [CREATE INDEX](CREATE_INDEX.html.md) reference page. Note that you can also set storage parameters on a particular partition or subpartition by declaring the `WITH` clause in the partition specification. The lowest-level settings have priority. 
+The `WITH` clause can specify storage parameters for tables, and for indexes associated with a `UNIQUE` or `PRIMARY` constraint. Storage parameters for indexes are documented on the [CREATE INDEX](CREATE_INDEX.html.md) reference page. Note that you can also set storage parameters on a particular partition or subpartition by declaring the `WITH` clause in the partition specification. The lowest-level partition's settings have priority. 
 
 The defaults for some of the table storage options can be specified with the server configuration parameter `gp_default_storage_options`. For information about setting default storage options, see [Notes](#section5).
 
-Greenplum Database supports the following storage parameters for tables:
+Greenplum Database supports the following storage parameters for tables and partitions:
 
 :   **appendoptimized** — Set to `TRUE` to create the table as an append-optimized table. If `FALSE` or not declared, the table will be created as a regular heap-storage table.
 
