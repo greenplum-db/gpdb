@@ -131,6 +131,8 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenPhysicalValuesScan, GPOS_WSZ_LIT("Values")},
 		{EdxltokenPhysicalAppend, GPOS_WSZ_LIT("Append")},
 		{EdxltokenPhysicalMaterialize, GPOS_WSZ_LIT("Materialize")},
+		{EdxltokenPhysicalDynamicForeignScan,
+		 GPOS_WSZ_LIT("DynamicForeignScan")},
 		{EdxltokenPhysicalSequence, GPOS_WSZ_LIT("Sequence")},
 		{EdxltokenPhysicalDynamicTableScan, GPOS_WSZ_LIT("DynamicTableScan")},
 		{EdxltokenPhysicalDynamicIndexScan, GPOS_WSZ_LIT("DynamicIndexScan")},
@@ -546,10 +548,8 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenRelDistrOpclasses, GPOS_WSZ_LIT("DistrOpclasses")},
 		{EdxltokenRelDistrOpclass, GPOS_WSZ_LIT("DistrOpclass")},
 
-		{EdxltokenExtRelRejLimit, GPOS_WSZ_LIT("RejectLimit")},
-		{EdxltokenExtRelRejLimitInRows, GPOS_WSZ_LIT("RejectLimitInRows")},
-		{EdxltokenExtRelFmtErrRel, GPOS_WSZ_LIT("FormatErrorRelId")},
-
+		{EdxltokenRelForeignServer, GPOS_WSZ_LIT("ForeignServer")},
+		{EdxltokenForeignServerOid, GPOS_WSZ_LIT("ForeignServerOid")},
 		{EdxltokenKeys, GPOS_WSZ_LIT("Keys")},
 		{EdxltokenDistrColumns, GPOS_WSZ_LIT("DistributionColumns")},
 

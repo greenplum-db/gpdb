@@ -106,6 +106,7 @@ enum Edxltoken
 	EdxltokenPhysicalAggregate,
 	EdxltokenPhysicalAppend,
 	EdxltokenPhysicalMaterialize,
+	EdxltokenPhysicalDynamicForeignScan,
 	EdxltokenPhysicalSequence,
 	EdxltokenPhysicalDynamicTableScan,
 	EdxltokenPhysicalDynamicIndexScan,
@@ -497,9 +498,7 @@ enum Edxltoken
 	EdxltokenRelDistrOpclasses,
 	EdxltokenRelDistrOpclass,
 
-	EdxltokenExtRelRejLimit,
-	EdxltokenExtRelRejLimitInRows,
-	EdxltokenExtRelFmtErrRel,
+	EdxltokenRelForeignServer,
 
 	EdxltokenMetadataColumns,
 	EdxltokenMetadataColumn,
@@ -735,6 +734,9 @@ enum Edxltoken
 	EdxltokenVarTypeModList,
 
 	EdxltokenIndexTypeBrin,
+
+	EdxltokenForeignServerOid,
+
 	EdxltokenSentinel
 };
 

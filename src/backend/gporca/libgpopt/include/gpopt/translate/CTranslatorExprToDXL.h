@@ -332,6 +332,19 @@ private:
 		CDistributionSpecArray *pdrgpdsBaseTables, ULONG *pulNonGatherMotions,
 		BOOL *pfDML);
 
+	// translate a dynamic foreign scan
+	CDXLNode *PdxlnDynamicForeignScan(CExpression *pexprDFS,
+									  CColRefArray *colref_array,
+									  CDistributionSpecArray *pdrgpdsBaseTables,
+									  ULONG *pulNonGatherMotions, BOOL *pfDML);
+
+	// translate a dynamic foreign scan with a scalar condition
+	CDXLNode *PdxlnDynamicForeignScan(CExpression *pexprDFS,
+									  CColRefArray *colref_array,
+									  CDistributionSpecArray *pdrgpdsBaseTables,
+									  CExpression *pexprScalarCond,
+									  CDXLPhysicalProperties *dxl_properties);
+
 	// Construct a table descr for a child partition
 	CTableDescriptor *MakeTableDescForPart(const IMDRelation *part,
 										   CTableDescriptor *root_table_desc);
