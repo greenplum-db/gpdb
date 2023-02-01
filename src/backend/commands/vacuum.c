@@ -1435,6 +1435,18 @@ vac_update_relstats(Relation relation,
 		 */
 		if (get_rel_relkind(relid) != RELKIND_FOREIGN_TABLE && num_tuples >= 1.0)
 		{
+			/*
+			 * For many foreign tables, num_pages < 1.0 && num_tuples >= 1.0 
+			 * might arise and is reasonable.
+			 *
+			 * For example, while ANALYZE kafka_fdw foreign tables, num_pages < 1.0 
+			 * && num_tuples >= 1.0 always arises.
+			 * Because num_pages is meaningless for kafka, kafka_fdw won't compute it.
+			 * 
+			 * To avoid the crash of GPDB and ensure the quality of query plan,
+			 * we won't reset num_tuples to 0 when num_pages < 1.0 && num_tuples >= 1.0
+			 * for foreign tables.
+			 */
 			Assert(Gp_role == GP_ROLE_UTILITY);
 			Assert(!IsSystemRelation(relation));
 			Assert(RelationIsAppendOptimized(relation));
