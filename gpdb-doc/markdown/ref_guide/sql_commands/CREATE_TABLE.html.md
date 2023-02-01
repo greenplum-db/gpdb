@@ -119,7 +119,7 @@ and storage_directive for a column is:
     [blocksize={8192-2097152} ]
 ```
 
-and storage\_parameter for a table or parition is:
+and storage\_parameter for a table or partition is:
 
 ```
    appendoptimized={TRUE|FALSE}
@@ -130,6 +130,8 @@ and storage\_parameter for a table or parition is:
    compresslevel={0-9}
    fillfactor={10-100}
    analyze_hll_non_part_table={TRUE|FALSE}
+   reorganize={TRUE|FALSE}
+   vacuum_index_cleanup={TRUE|FALSE}
 ```
 
 
