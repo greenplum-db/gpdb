@@ -28,7 +28,7 @@
 #include "cdb/cdbappendonlystorageread.h"
 #include "storage/gp_compress.h"
 #include "utils/guc.h"
-
+#include "utils/faultinjector.h"
 
 /*----------------------------------------------------------------
  * Initialization
@@ -1023,6 +1023,8 @@ AppendOnlyStorageRead_ReadNextBlock(AppendOnlyStorageRead *storageRead)
 	{
 		/* UNDONE: Finish the read for the information only header. */
 	}
+
+	SIMPLE_FAULT_INJECTOR("AppendOnlyStorageRead_ReadNextBlock_success");
 
 	return true;
 }
