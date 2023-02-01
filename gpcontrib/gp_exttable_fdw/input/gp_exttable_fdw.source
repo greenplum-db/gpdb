@@ -6,12 +6,63 @@ CREATE EXTENSION IF NOT EXISTS gp_exttable_fdw;
 
 CREATE SERVER IF NOT EXISTS gp_exttable_server FOREIGN DATA WRAPPER gp_exttable_fdw;
 
--- create table without execute_on option
+-- ===================================================================
+-- tests for validator
+-- ===================================================================
+-- Error, undefined option
 CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
 SERVER gp_exttable_server
-OPTIONS (format 'csv', delimiter ',', format_type 'c',
+OPTIONS (undefined_option ',');
+
+-- Error, miss format_type option
+CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
+SERVER gp_exttable_server
+OPTIONS (delimiter ',',
+         location_uris 'file://@hostname@@abs_srcdir@/data/tableless.csv');
+
+-- Error, invalid format_type
+CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
+SERVER gp_exttable_server
+OPTIONS (format_type 'invalid_format_type', delimiter ',',
+         location_uris 'file://@hostname@@abs_srcdir@/data/tableless.csv');
+
+-- Error, miss both location_uris and command option
+CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
+SERVER gp_exttable_server
+OPTIONS (format_type 'c', delimiter ',');
+
+-- Error, conflict location_uris and command option
+CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
+SERVER gp_exttable_server
+OPTIONS (format_type 'c', delimiter ',',
          location_uris 'file://@hostname@@abs_srcdir@/data/tableless.csv',
-         log_errors 'f', encoding '6', is_writable 'false');
+         command 'command');
+
+-- Error, invalid reject_limit_type option
+CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
+SERVER gp_exttable_server
+OPTIONS (format_type 'c', delimiter ',',
+         location_uris 'file://@hostname@@abs_srcdir@/data/tableless.csv',
+         reject_limit_type 'invalid_reject_limit_type');
+
+-- Error, invalid reject_limit option
+CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
+SERVER gp_exttable_server
+OPTIONS (format_type 'c', delimiter ',',
+         location_uris 'file://@hostname@@abs_srcdir@/data/tableless.csv',
+         reject_limit_type 'r', reject_limit '-1');
+
+CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
+SERVER gp_exttable_server
+OPTIONS (format_type 'c', delimiter ',',
+         location_uris 'file://@hostname@@abs_srcdir@/data/tableless.csv',
+         reject_limit_type 'p', reject_limit '120');
+
+-- OK, no execute_on | log_errors | encoding | is_writable option
+CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
+SERVER gp_exttable_server
+OPTIONS (format_type 'c', delimiter ',',
+         location_uris 'file://@hostname@@abs_srcdir@/data/tableless.csv');
 
 SELECT * FROM tableless_ext_fdw;
 

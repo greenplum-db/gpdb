@@ -171,14 +171,11 @@ GetExtFromForeignTableOptions(List *ftoptons, Oid relid)
 	ListCell		   *lc;
 	List			   *entryOptions = NIL;
 	char			   *arg;
-	bool				fmtcode_found = false;
 	bool				rejectlimit_found = false;
 	bool				rejectlimittype_found = false;
 	bool				logerrors_found = false;
 	bool				encoding_found = false;
 	bool				iswritable_found = false;
-	bool				locationuris_found = false;
-	bool				command_found = false;
 	bool				executeon_found = false;
 
 	extentry = (ExtTableEntry *) palloc0(sizeof(ExtTableEntry));
@@ -190,7 +187,6 @@ GetExtFromForeignTableOptions(List *ftoptons, Oid relid)
 		if (pg_strcasecmp(def->defname, "location_uris") == 0)
 		{
 			extentry->urilocations = TokenizeLocationUris(defGetString(def));
-			locationuris_found = true;
 			continue;
 		}
 
@@ -204,7 +200,6 @@ GetExtFromForeignTableOptions(List *ftoptons, Oid relid)
 		if (pg_strcasecmp(def->defname, "command") == 0)
 		{
 			extentry->command = defGetString(def);
-			command_found = true;
 			continue;
 		}
 
@@ -212,7 +207,6 @@ GetExtFromForeignTableOptions(List *ftoptons, Oid relid)
 		{
 			arg = defGetString(def);
 			extentry->fmtcode = arg[0];
-			fmtcode_found = true;
 			continue;
 		}
 
@@ -266,44 +260,25 @@ GetExtFromForeignTableOptions(List *ftoptons, Oid relid)
 	if (fmttype_is_csv(extentry->fmtcode))
 		entryOptions = lappend(entryOptions, makeDefElem("format", (Node *) makeString("csv"), -1));
 
-	/*
-	 * external table syntax does have these for sure, but errors could happen
-	 * if using foreign table syntax
-	 */
-	if (!fmtcode_found || !logerrors_found || !encoding_found || !iswritable_found)
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("missing format, logerrors, encoding or iswritable options for relation \"%s\"",
-						get_rel_name(relid))));
+	if (!executeon_found)
+		extentry->execlocations = list_make1(makeString("ALL_SEGMENTS"));
 
-	if (locationuris_found && command_found)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("locationuris and command options conflict with each other")));
+	if(!iswritable_found)
+		extentry->iswritable = false;
 
-	if (!fmttype_is_custom(extentry->fmtcode) &&
-		!fmttype_is_csv(extentry->fmtcode) &&
-		!fmttype_is_text(extentry->fmtcode))
-		elog(ERROR, "unsupported format type %d for external table", extentry->fmtcode);
+	if(!encoding_found)
+		extentry->encoding = GetDatabaseEncoding();
+
+	if(!logerrors_found)
+		extentry->logerrors = LOG_ERRORS_DISABLE;
 
 	if (!rejectlimit_found) {
 		/* mark that no SREH requested */
 		extentry->rejectlimit = -1;
 	}
 
-	if (rejectlimittype_found)
-	{
-		if (extentry->rejectlimittype != 'r' && extentry->rejectlimittype != 'p')
-			elog(ERROR, "unsupported reject limit type %c for external table",
-				 extentry->rejectlimittype);
-	}
-	else
+	if (!rejectlimittype_found)
 		extentry->rejectlimittype = -1;
-
-	if (!executeon_found)
-	{
-		extentry->execlocations = list_make1(makeString("ALL_SEGMENTS"));
-	}
 
 	if (!PG_VALID_ENCODING(extentry->encoding))
 		elog(ERROR, "invalid encoding found for external table");
