@@ -173,6 +173,7 @@ where storage\_parameter when used with the `SET WITH` command is:
    fillfactor={10-100}
    checksum={true | false }
    reorganize={true | false }
+   vacuum_index_cleanup {true | false } 
 ```
 
   <p class="note">

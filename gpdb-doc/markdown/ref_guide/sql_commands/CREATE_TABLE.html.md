@@ -463,6 +463,8 @@ Greenplum Database supports the following storage parameters for tables and part
 
 :   **analyze_hll_non_part_table** — Set this storage parameter to `true` to force collection of HLL statistics even if the table is not part of a partitioned table. This is useful if the table will be exchanged or added to a partitioned table, so that the table does not need to be re-analyzed. The default is `false`.
 
+:   **reorganize** — Set this storage parameter to `true` when the hash distribution policy has not changed or when you have changed from a hash to a random distribution, and you want to redistribute the data anyway.
+
 :   **vacuum_index_cleanup** - Specifies whether `VACUUM` attempts to remove index entries pointing to dead tuples. The default is `true`. Setting this to false may be useful when you need to run `VACUUM` as quickly as possible, for example to prevent imminent transaction ID wraparound. However, if you do not perform index cleanup regularly, performance may suffer, because as the table is modified, indexes accumulate dead tuples and the table itself accumulates dead line pointers that cannot be removed until index cleanup completes.
 
 ## <a id="section5"></a>Notes 
