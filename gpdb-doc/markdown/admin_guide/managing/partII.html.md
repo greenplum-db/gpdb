@@ -26,6 +26,8 @@ To scale up performance and storage capacity, expand your Greenplum Database sys
 You can use the `gpcopy` utility to transfer data between databases in different Greenplum Database clusters.
 -   **[Monitoring a Greenplum System](../managing/monitor.html)**  
 You can monitor a Greenplum Database system using a variety of tools included with the system or available as add-ons.
+-   **[Monitoring Long-Running Operations](../managing/progress_reporting.html)**  
+You can monitor, at run time, the progress of certain SQL and utility commands.
 -   **[Routine System Maintenance Tasks](../managing/maintain.html)**  
 To keep a Greenplum Database system running efficiently, the database must be regularly cleared of expired data and the table statistics must be updated so that the query optimizer has accurate information.
 -   **[Recommended Monitoring and Maintenance Tasks](../monitoring/monitoring.html)**  

@@ -40,6 +40,7 @@
         - [gpstate](./ref/gpstate.md)
         - [gpstop](./ref/gpstop.md)
         - [gpsync](./ref/gpsync.md)
+        - [pg\_checksums](./ref/pg_checksums.md)
         - [pg\_config](./ref/pg_config.md)
         - [pg\_dump](./ref/pg_dump.md)
         - [pg\_dumpall](./ref/pg_dumpall.md)

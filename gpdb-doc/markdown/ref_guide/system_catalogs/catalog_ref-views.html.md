@@ -23,6 +23,12 @@ Greenplum Database provides the system views listed below.
 -   gp_stat_database_conflicts
 -   gp_stat_gssapi
 -   gp_stat_operations
+-   [gp_stat_progress_analyze](#gp_stat_progress_analyze)
+-   [gp_stat_progress_basebackup](#gp_stat_progress_basebackup)
+-   [gp_stat_progress_cluster](#gp_stat_progress_cluster)
+-   [gp_stat_progress_copy](#gp_stat_progress_copy)
+-   [gp_stat_progress_create_index](#gp_stat_progress_create_index)
+-   [gp_stat_progress_vacuum](#gp_stat_progress_vacuum)
 -   [gp_stat_replication](#gp_stat_replication)
 -   gp_stat_resqueues
 -   gp_stat_slru
@@ -79,6 +85,12 @@ For more information on summary views, see [Summary Views](#summary_views), belo
 - gp_stat_archiver_summary
 - gp_stat_bgwriter_summary
 - gp_stat_database_summary
+- gp_stat_progress_analyze_summary
+- gp_stat_progress_basebackup_summary
+- gp_stat_progress_cluster_summary
+- gp_stat_progress_copy_summary
+- gp_stat_progress_create_index_summary
+- gp_stat_progress_vacuum_summary
 - gp_stat_slru_summary
 - gp_stat_sys_indexes_summary
 - gp_stat_user_functions_summary
@@ -501,6 +513,136 @@ The `gp_stat_activity` view is a cluster-wide view that displays the [`pg_stat_a
       </div>
     </div>
 
+### <a id="gp_stat_progress_analyze"></a>gp_stat_progress_analyze
+
+The `gp_stat_progress_analyze` view is a cluster-wide view that displays the [pg_stat_progress_analyze](https://www.postgresql.org/docs/15/progress-reporting.html#ANALYZE-PROGRESS-REPORTING) information from every primary segment for all currently-running `ANALYZE` operations.
+
+The `gp_stat_progress_analyze_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_analyze`, and shares the same schema as this view.
+
+|Column|Type|Description|
+|------|----|-----------|
+|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_analyze_summary` view.) |
+| `pid` | integer | The process identifier of the backend, or the coordinator process identifier if the `gp_stat_progress_analyze_summary` view. |
+| `datid` | oid | The object identifier of the database to which this backend is connected. |
+| `datname` | name | Name of the database to which this backend is connected. |
+| `relid` | oid | The object identifier of the table being analyzed. |
+| `phase` | text | Current processing phase. Refer to [ANALYZE Progress Reporting](../../admin_guide/managing/progress_reporting.html#analyze_progress) for detailed information about the phases. |
+| `sample_blks_total` | bigint | Total number of heap blocks that will be sampled. |
+| `sample_blks_scanned` | bigint | Number of heap blocks scanned. |
+| `ext_stats_total` | bigint | Number of extended statistics. |
+| `ext_stats_computed` | bigint | Number of extended statistics computed. This counter only advances when the phase is computing extended statistics. |
+| `child_tables_total` | bigint | Number of child tables. |
+| `child_tables_done` | bigint | Number of child tables scanned. This counter only advances when the phase is acquiring inherited sample rows. |
+| `current_child_table_relid` | oid | The object identifier of the child table currently being scanned. This field is only valid when the phase is acquiring inherited sample rows. (This column is not present in the for `gp_stat_progress_analyze_summary` view.)|
+
+### <a id="gp_stat_progress_basebackup"></a>gp_stat_progress_basebackup
+
+The `gp_stat_progress_basebackup` view is a cluster-wide view that displays the [pg_stat_progress_basebackup](https://www.postgresql.org/docs/15/progress-reporting.html#BASEBACKUP-PROGRESS-REPORTING) information from every primary segment for all currently-running base backup operations (`gprecoverseg`).
+
+The `gp_stat_progress_basebackup_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_basebackup`, and shares the same schema as this view.
+
+|Column|Type|Description|
+|------|----|-----------|
+|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_basebackup_summary` view.)|
+| `pid` | integer | The process identifier of a WAL sender process, or the coordinator process identifier if the `gp_stat_progress_basebackup_summary` view. |
+| `phase` | text | Current processing phase. Refer to [Base Backup Progress Reporting](../../admin_guide/managing/progress_reporting.html#basebackup_progress) for detailed information about the phases. |
+| `backup_total` | bigint | Total amount of data that will be streamed. This is estimated and reported as of the beginning of streaming database files phase. Note that this is only an approximation since the database may change during streaming database files phase and WAL log may be included in the backup later. This is always the same value as backup_streamed once the amount of data streamed exceeds the estimated total size. NULL if the estimation is disabled in `pg_basebackup`. |
+| `backup_streamed` | bigint | Amount of data streamed. This counter only advances when the phase is streaming database files or transferring wal files. |
+| `tablespaces_total` | bigint | Total number of tablespaces that will be streamed. |
+| `tablespaces_streamed` | bigint | Number of tablespaces streamed. This counter only advances when the phase is streaming database files. |
+
+### <a id="gp_stat_progress_cluster"></a>gp_stat_progress_cluster
+
+The `gp_stat_progress_cluster` view is a cluster-wide view that displays the [pg_stat_progress_cluster](https://www.postgresql.org/docs/15/progress-reporting.html#CLUSTER-PROGRESS-REPORTING) information from every primary segment for all currently-running `CLUSTER` and `VACUUM FULL` operations.
+
+The `gp_stat_progress_cluster_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_cluster`, and shares the same schema as this view.
+
+|Column|Type|Description|
+|------|----|-----------|
+|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_cluster_summary` view.)|
+| `pid` | integer | Process identifier of the backend, or the coordinator process identifier if the `gp_stat_progress_cluster_summary` view. |
+| `datid` | oid | The object identifier of the database to which this backend is connected. |
+| `datname` | name | Name of the database to which this backend is connected. |
+| `relid` | `oid` | The object identifier of the table being clustered. |
+| `command` | text | The name of the command that is running. Either `CLUSTER` or `VACUUM FULL`. |
+| `phase` | text | Current processing phase. Refer to [CLUSTER and VACUUM FULL Progress Reporting](../../admin_guide/managing/progress_reporting.html#cluster_progress) for detailed information about the phases. |
+| `cluster_index_relid` | oid | If the table is being scanned using an index, this is the object identifier of the index being used; otherwise, it is zero. This field is not applicable to AO/CO tables. |
+| `heap_tuples_scanned` | bigint | *Heap tables*: Number of heap tuples scanned. This counter only advances when the phase is `seq scanning heap`, `index scanning heap`, or `writing new heap`.</br></bra>*AO/CO tables*: Greenplum counts only the number of live tuples scanned. |
+| `heap_tuples_written` | bigint | Number of heap tuples written. This counter only advances when the phase is `seq scanning heap`, `index scanning heap`, or `writing new heap`. |
+| `heap_blks_total` | bigint | Total number of heap blocks in the table. This number is reported as of the beginning of `seq scanning heap`. For AO/CO tables, Greenplum converts byte size into equivalent heap blocks in size. |
+| `heap_blks_scanned` | bigint | Number of heap blocks scanned. This counter only advances when the phase is `seq scanning heap`. For AO/CO tables, Greenplum converts byte size into equivalent heap blocks in size. |
+| `index_rebuild_count` | bigint | Number of indexes rebuilt. This counter only advances when the phase is `rebuilding index`, and is not applicable to AO/CO tables. |
+
+### <a id="gp_stat_progress_copy"></a>gp_stat_progress_copy
+
+The `gp_stat_progress_copy` view is a cluster-wide view that displays the [pg_stat_progress_copy](https://www.postgresql.org/docs/15/progress-reporting.html#COPY-PROGRESS-REPORTING) information from every primary segment for all currently-running `COPY` operations.
+
+The `gp_stat_progress_copy_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_copy`, and shares the same schema as this view.
+
+|Column|Type|Description|
+|------|----|-----------|
+|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_copy_summary` view.)|
+| `pid` | integer | Process identifier of the backend, or the coordinator process identifier if the `gp_stat_progress_copy_summary` view. |
+| `datid` | oid | The object identifier of the database to which this backend is connected. |
+| `datname` | name | Name of the database to which this backend is connected. |
+| `relid` | oid | The object identifier of the table on which the `COPY` command is executed. It is set to `0` if copying from a `SELECT` query. |
+| `command` | text | The command that is running: `COPY FROM`, `COPY TO`, `COPY FROM ON SEGMENT`, or `COPY TO ON SEGMENT`. |
+| `type` | text | The io type that the data is read from or written to: `FILE`, `PROGRAM`, `PIPE` (for `COPY FROM STDIN` and `COPY TO STDOUT`), or `CALLBACK` (used for example during the initial table synchronization in logical replication). |
+| `bytes_processed` | bigint | Number of bytes already processed by `COPY` command. |
+| `bytes_total` | bigint | Size of source file for `COPY FROM` command in bytes. It is set to `0` if not available. |
+| `tuples_processed` | bigint | Number of tuples already processed by `COPY` command. |
+| `tuples_excluded` | bigint | Number of tuples not processed because they were excluded by the `WHERE` clause of the `COPY` command. |
+
+### <a id="gp_stat_progress_create_index"></a>gp_stat_progress_create_index
+
+The `gp_stat_progress_create_index` view is a cluster-wide view that displays the [pg_stat_progress_create_index](https://www.postgresql.org/docs/15/progress-reporting.html#CREATE-INDEX-PROGRESS-REPORTING) information from every primary segment for all currently-running `CREATE INDEX` and `REINDEX` operations.
+
+The `gp_stat_progress_create_index_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_create_index`, and shares the same schema as this view.
+
+|Column|Type|Description|
+|------|----|-----------|
+|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_create_index_summary` view.)|
+| `pid` | integer | Process identifier of the backend, or the coordinator process identifier if the `gp_stat_progress_create_index_summary` view. |
+| `datid` | oid | The object identifer of the database to which this backend is connected. |
+| `datname` | name | Name of the database to which this backend is connected. |
+| `relid` | oid | The object identifer of the table on which the index is being created. |
+| `index_relid` | oid | The object identifer of the index being created or reindexed. Because Greenplum Database does not support concurrent (re)indexing, this value is always `0`. |
+| `command` | text | The name of the command that is running: `CREATE INDEX` or `REINDEX`. |
+| `phase` | text | Current processing phase of index creation. Refer to [CREATE INDEX Progress Reporting](../../admin_guide/managing/progress_reporting.html#create_index_progress) for detailed information about the phases. |
+| `lockers_total` | bigint | Total number of lockers to wait for, when applicable. |
+| `lockers_done` | bigint | Number of lockers already waited for. |
+| `current_locker_pid` | bigint | The process identifier of the locker currently being waited for. |
+| `blocks_total` | bigint | Total number of blocks to be processed in the current phase. |
+| `blocks_done` | bigint | Number of blocks already processed in the current phase. |
+| `tuples_total` | bigint | Total number of tuples to be processed in the current phase. |
+| `tuples_done` | bigint | Number of tuples already processed in the current phase. |
+| `partitions_total` | bigint | When creating an index on a partitioned table, this column is set to the total number of partitions on which the index is to be created. This field is 0 during a `REINDEX`. |
+| `partitions_done` | bigint | When creating an index on a partitioned table, this column is set to the number of partitions on which the index has been completed. This field is 0 during a `REINDEX`. |
+
+### <a id="gp_stat_progress_vacuum"></a>gp_stat_progress_vacuum
+
+The `gp_stat_progress_vacuum` view is a cluster-wide view that displays the [pg_stat_progress_vacuum](https://www.postgresql.org/docs/15/progress-reporting.html#VACUUM-PROGRESS-REPORTING) information from every primary segment for all currently-running `VACUUM` and `vacuumdb` operations.
+
+The `gp_stat_progress_vacuum_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_vacuum`, and shares the same schema as this view.
+
+|Column|Type|Description|
+|------|----|-----------|
+|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_vacuum_summary` view.)|
+| `pid` | integer | Process identifier of the backend, or the coordinator process identifier if the `gp_stat_progress_vacuum_summary` view. |
+| `datid` | oid | The object identifier of the database to which this backend is connected. |
+| `datname` | name | Name of the database to which this backend is connected. |
+| `relid` | oid | The object identifier of the table being vacuumed. |
+| `phase` | text | Current processing phase of vacuum. Refer to [VACUUM Progress Reporting](../../admin_guide/managing/progress_reporting.html#vacuum_progress) for detailed information about the phases. |
+| `heap_blks_total` | bigint | *Heap tables*: Total number of heap blocks in the table. This number is reported as of the beginning of the scan; blocks added later will not be (and need not be) visited by this `VACUUM`.</br></br>*AO/CO tables*<sup>1</sup>: Collected at the beginning of the `append-optimized pre-cleanup` phase by adding up the on-disk file sizes of all segment files of the relation, and converting the size into the number of heap-equivalent blocks. The value should not change while `VACUUM` progresses. |
+| `heap_blks_scanned` | bigint | *Heap tables*: Number of heap blocks scanned. Because the visibility map is used to optimize scans, some blocks will be skipped without inspection; skipped blocks are included in this total, so that this number will eventually become equal to `heap_blks_total` when the vacuum is complete. This counter only advances when the phase is `scanning heap`. </br></br> *AO/CO tables*:<sup>1</sup> Collected during the `append-optimized compact` phase. For `ao_row` tables, updated every time Greenplum finishes scanning a segment file. For `ao_column` tables, updated every time Greenplum moves a tuple. `heap_blks_scanned` can be less than or equal to `heap_blks_total` at the end of the `VACUUM` operation because Greenplum does not need to scan blocks after the logical EOF of a segment file. |
+| `heap_blks_vacuumed` | bigint | *Heap tables*: Number of heap blocks vacuumed. Unless the table has no indexes, this counter only advances when the phase is `vacuuming heap`. Blocks that contain no dead tuples are skipped, so the counter may sometimes skip forward in large increments. </br></br> *AO/CO tables*<sup>1</sup>: Collected when Greenplum truncates a segment file, which may happen during both `append-optimized pre-cleanup` and `append-optimized post-cleanup` phases. Because Greenplum Database truncates physical blocks after the logical EOF in a segment file, `heap_blks_vacuumed` may be either smaller or larger than `heap_blks_scanned`. |
+| `index_vacuum_count` | bigint | *Heap tables*: Number of completed index vacuum cycles. </br></br> *AO/CO tables*: Collected when Greenplum recycles a dead segment file, which may happen both, or neither, during `append-optimized pre-cleanup` phase and `append-optimized post-cleanup phase`. |
+| `max_dead_tuples` | bigint | *Heap tables*: Number of dead tuples that we can store before needing to perform an index vacuum cycle, based on [maintenance_work_mem](../config_params/guc-list.html#maintenance_work_mem). </br></br> *AO/CO tables*: Collected at the beginning of the `append-optimized pre-cleanup` phase, this is the total number of tuples before the logical EOF of all segment files. The value should not change while `VACUUM` progresses. |
+| `num_dead_tuples` | bigint | *Heap tables*: Number of dead tuples collected since the last index vacuum cycle. </br></br> *AO/CO tables*: Collected during `append-optimized compact` phase. For `ao_row` tables, updated every time Greenplum discares a dead tuple. For `ao_column` tables, updated every time Greenplum moves a live tuple, and also when the number of dead tuples advances. |
+
+<sup>1</sup> In Greenplum Database, an AO/CO table vacuum behaves differently than a heap table vacuum. Because Greenplum stores the logical EOF for each segment file, it does not need to scan physical blocks after the logical EOF, and Greenplum can truncate them. Because of this, for AO/CO tables, `heap_blks_vacuumed` could be either smaller or larger than `heap_blks_scanned`. Neither `heap_blks_vacuumed` nor `heap_blks_scanned` can be larger than `heap_blks_total`. Similarly, `heap_blks_scanned` can be less than or equal to `heap_blks_total` at the end of `VACUUM` for AO/CO tables - there is no need to scan blocks after the logical EOF of a segment file.
+
+
 ## <a id="gp_stat_replication"></a>gp_stat_replication
 
 The `gp_stat_replication` view contains replication statistics of the `walsender` process that is used for Greenplum Database Write-Ahead Logging \(WAL\) replication when coordinator or segment mirroring is enabled.
@@ -858,6 +1000,12 @@ The following is a list of summary views:
 - gp_stat_bgwriter_summary
 - gp_stat_database_summary
 - gp_stat_slru_summary
+- gp_stat_progress_analyze_summary
+- gp_stat_progress_basebackup_summary
+- gp_stat_progress_cluster_summary
+- gp_stat_progress_copy_summary
+- gp_stat_progress_create_index_summary
+- gp_stat_progress_vacuum_summary
 - gp_stat_sys_indexes_summary
 - gp_stat_user_functions_summary
 - gp_stat_user_indexes_summary
@@ -875,5 +1023,6 @@ The following is a list of summary views:
 - gp_statio_user_indexes_summary
 - gp_statio_user_sequences_summary
 - gp_statio_user_tables_summary
+
 
 **Parent topic:** [System Catalogs](../system_catalogs/catalog_ref.html)
