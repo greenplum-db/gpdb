@@ -1136,3 +1136,64 @@ gp_backend_info(PG_FUNCTION_ARGS)
 	}
 #undef BACKENDINFO_NATTR
 }
+
+/*
+ * Print the time of create a gang.
+ * if all segDescs of the gang are cached, we regard the gang as reused.
+ * else we print the shortest time and the longest time of estabishing connection to the segDesc.
+ */
+void
+printCreateGangTime(int sliceId, Gang *gang)
+{
+	double	shortestTime = -1, longestTime = -1;
+	int		shortestSegIndex = -1, longestSegIndex = -1;
+	int		size = gang->size;
+	SegmentDatabaseDescriptor *segdbDesc;
+	for (int i = 0; i < size; i++)
+	{
+		segdbDesc = gang->db_descriptors[i];
+		/* the connection of segdbDesc is not cached */
+		if (segdbDesc->establishConnTime != -1)
+		{
+			if (longestTime == -1 || segdbDesc->establishConnTime > longestTime)
+			{
+				longestTime = segdbDesc->establishConnTime;
+				longestSegIndex = segdbDesc->segindex;
+			}
+			if (shortestTime == -1 || segdbDesc->establishConnTime < shortestTime)
+			{
+				shortestTime = segdbDesc->establishConnTime;
+				shortestSegIndex = segdbDesc->segindex;
+			}
+		}
+	}
+
+	/* All the segDescs are cached, and we regard this gang as reused gang. */
+	if (longestTime == -1)
+	{
+		if (sliceId == -1)
+		{
+			elog(INFO, "(Gang) is reused");
+		}
+		else
+		{
+			elog(INFO, "(Slice%d) is reused", sliceId);
+		}
+
+	}
+	else
+	{
+		if (sliceId == -1)
+		{
+			elog(INFO, "The shortest establish conn time: %.2f ms, segindex: %d,\n"
+				"       The longest  establish conn time: %.2f ms, segindex: %d",
+				shortestTime, shortestSegIndex, longestTime, longestSegIndex);
+			}
+		else
+		{
+			elog(INFO, "(Slice%d) The shortest establish conn time: %.2f ms, segindex: %d,\n"
+				 "                The longest  establish conn time: %.2f ms, segindex: %d",
+				sliceId, shortestTime, shortestSegIndex, longestTime, longestSegIndex);
+		}
+	}
+}

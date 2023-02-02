@@ -67,9 +67,6 @@ protected:
 	// partition types
 	CharPtrArray *m_str_part_types_array;
 
-	// number of partitions
-	ULONG m_num_of_partitions;
-
 	// key sets
 	ULongPtr2dArray *m_key_sets_arrays;
 

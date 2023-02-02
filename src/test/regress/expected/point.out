@@ -32,7 +32,7 @@ ERROR:  invalid input syntax for type point: "(10.0,10.0"
 LINE 1: INSERT INTO POINT_TBL(f1) VALUES ('(10.0,10.0');
                                           ^
 INSERT INTO POINT_TBL(f1) VALUES ('(10.0, 1e+500)');	-- Out of range
-ERROR:  value out of range: overflow
+ERROR:  "1e+500" is out of range for type double precision
 LINE 1: INSERT INTO POINT_TBL(f1) VALUES ('(10.0, 1e+500)');
                                           ^
 SELECT '' AS six, * FROM POINT_TBL;

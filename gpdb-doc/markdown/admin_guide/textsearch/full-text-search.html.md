@@ -5,7 +5,7 @@ title: Using Full Text Search
 Greenplum Database provides data types, functions, operators, index types, and configurations for querying natural language documents.
 
 -   **[About Full Text Search](../textsearch/intro.html)**  
-This topic provides an overview of Greenplum Database full text search, basic text search expressions, configuring, and customizing text search. Greenplum Database full text search is compared with Tanzu Greenplum Text.
+This topic provides an overview of Greenplum Database full text search, basic text search expressions, configuring, and customizing text search. Greenplum Database full text search is compared with VMware Greenplum Text.
 -   **[Searching Text in Database Tables](../textsearch/tables-indexes.html)**  
 This topic shows how to use text search operators to search database tables and how to create indexes to speed up text searches.
 -   **[Controlling Text Search](../textsearch/controlling.html)**  

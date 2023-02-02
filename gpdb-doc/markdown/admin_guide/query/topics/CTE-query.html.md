@@ -8,7 +8,7 @@ See [SELECT in a WITH Clause](#topic_xyn_dgh_5gb) for information about using `S
 
 See [Data-Modifying Statements in a WITH clause](#topic_zg3_bgh_5gb), for information about using `INSERT`, `UPDATE`, or `DELETE` in a `WITH` clause.
 
-**Note:** These are limitations for using a `WITH` clause.
+> **Note** These are limitations for using a `WITH` clause.
 
 -   For a `SELECT` command that includes a `WITH` clause, the clause can contain at most a single clause that modifies table data \(`INSERT`, `UPDATE`, or `DELETE` command\).
 -   For a data-modifying command \(`INSERT`, `UPDATE`, or `DELETE`\) that includes a `WITH` clause, the clause can only contain a `SELECT` command, the `WITH` clause cannot contain a data-modifying command.
@@ -72,7 +72,7 @@ A recursive `WITH` query that contains a `UNION [ ALL ]` is run as follows:
     1.  Evaluate the recursive term, substituting the current contents of the working table for the recursive self-reference. For `UNION` \(but not `UNION ALL`\), discard duplicate rows and rows that duplicate any previous result row. Include all remaining rows in the result of the recursive query, and also place them in a temporary *intermediate table*.
     2.  Replace the contents of the *working table* with the contents of the *intermediate table*, then empty the *intermediate table*.
 
-**Note:** Strictly speaking, the process is iteration not recursion, but `RECURSIVE` is the terminology chosen by the SQL standards committee.
+> **Note** Strictly speaking, the process is iteration not recursion, but `RECURSIVE` is the terminology chosen by the SQL standards committee.
 
 Recursive `WITH` queries are typically used to deal with hierarchical or tree-structured data. An example is this query to find all the direct and indirect sub-parts of a product, given only a table that shows immediate inclusions:
 

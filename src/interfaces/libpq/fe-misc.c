@@ -874,6 +874,10 @@ definitelyFailed:
  * Return 0 on success, -1 on failure and 1 when not all data could be sent
  * because the socket would block and the connection is non-blocking.
  *
+ * Note that this is also responsible for consuming data from the socket
+ * (putting it in conn->inBuffer) in any situation where we can't send
+ * all the specified data immediately.
+ *
  * Upon write failure, conn->write_failed is set and the error message is
  * saved in conn->write_err_msg, but we clear the output buffer and return
  * zero anyway; this is because callers should soldier on until it's possible
@@ -893,12 +897,20 @@ pqSendSome(PGconn *conn, int len)
 	 * on that connection.  Even if the kernel would let us, we've probably
 	 * lost message boundary sync with the server.  conn->write_failed
 	 * therefore persists until the connection is reset, and we just discard
-	 * all data presented to be written.
+	 * all data presented to be written.  However, as long as we still have a
+	 * valid socket, we should continue to absorb data from the backend, so
+	 * that we can collect any final error messages.
 	 */
 	if (conn->write_failed)
 	{
 		/* conn->write_err_msg should be set up already */
 		conn->outCount = 0;
+		/* Absorb input data if any, and detect socket closure */
+		if (conn->sock != PGINVALID_SOCKET)
+		{
+			if (pqReadData(conn) < 0)
+				return -1;
+		}
 		return 0;
 	}
 
@@ -968,6 +980,13 @@ pqSendSome(PGconn *conn, int len)
 
 					/* Discard queued data; no chance it'll ever be sent */
 					conn->outCount = 0;
+
+					/* Absorb input data if any, and detect socket closure */
+					if (conn->sock != PGINVALID_SOCKET)
+					{
+						if (pqReadData(conn) < 0)
+							return -1;
+					}
 					return 0;
 			}
 		}
@@ -1356,7 +1375,14 @@ PQenv2encoding(void)
 static void
 libpq_binddomain()
 {
-	static bool already_bound = false;
+	/*
+	 * If multiple threads come through here at about the same time, it's okay
+	 * for more than one of them to call bindtextdomain().  But it's not okay
+	 * for any of them to return to caller before bindtextdomain() is
+	 * complete, so don't set the flag till that's done.  Use "volatile" just
+	 * to be sure the compiler doesn't try to get cute.
+	 */
+	static volatile bool already_bound = false;
 
 	if (!already_bound)
 	{
@@ -1368,12 +1394,12 @@ libpq_binddomain()
 #endif
 		const char *ldir;
 
-		already_bound = true;
 		/* No relocatable lookup here because the binary could be anywhere */
 		ldir = getenv("PGLOCALEDIR");
 		if (!ldir)
 			ldir = LOCALEDIR;
 		bindtextdomain(PG_TEXTDOMAIN("libpq"), ldir);
+		already_bound = true;
 #ifdef WIN32
 		SetLastError(save_errno);
 #else

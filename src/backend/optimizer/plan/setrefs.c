@@ -125,6 +125,7 @@ static Plan *set_append_references(PlannerInfo *root,
 static Plan *set_mergeappend_references(PlannerInfo *root,
 										MergeAppend *mplan,
 										int rtoffset);
+static void set_hash_references(PlannerInfo *root, Plan *plan, int rtoffset);
 static Node *fix_scan_expr(PlannerInfo *root, Node *node, int rtoffset);
 static Node *fix_scan_expr_mutator(Node *node, fix_scan_expr_context *context);
 static bool fix_scan_expr_walker(Node *node, fix_scan_expr_context *context);
@@ -532,9 +533,9 @@ flatten_rtes_walker(Node *node, PlannerGlobal *glob)
  * In the flat rangetable, we zero out substructure pointers that are not
  * needed by the executor; this reduces the storage space and copying cost
  * for cached plans.  We keep only the ctename, alias and eref Alias fields,
- * which are needed by EXPLAIN, and the selectedCols, insertedCols and
- * updatedCols bitmaps, which are needed for executor-startup permissions
- * checking and for trigger event checking.
+ * which are needed by EXPLAIN, and the selectedCols, insertedCols,
+ * updatedCols, and extraUpdatedCols bitmaps, which are needed for
+ * executor-startup permissions checking and for trigger event checking.
  */
 static void
 add_rte_to_flat_rtable(PlannerGlobal *glob, RangeTblEntry *rte)
@@ -868,6 +869,9 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 			break;
 
 		case T_Hash:
+			set_hash_references(root, plan, rtoffset);
+			break;
+
 		case T_Material:
 		case T_Sort:
 		case T_Unique:
@@ -971,33 +975,36 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 		case T_Agg:
 			{
 				Agg		   *agg = (Agg *) plan;
+				int 		aggref_split = (int)agg->aggsplit;
 
 				if (DO_AGGSPLIT_DEDUPLICATED(agg->aggsplit))
 				{
 					plan->targetlist = (List *)
 						convert_deduplicated_aggrefs((Node *) plan->targetlist,
-													 NULL);
+													NULL);
 					plan->qual = (List *)
 						convert_deduplicated_aggrefs((Node *) plan->qual,
-													 NULL);
+													NULL);
 
 					agg->aggsplit &= ~AGGSPLITOP_DEDUPLICATED;
 				}
 
 				/*
-				 * If this node is combining partial-aggregation results, we
-				 * must convert its Aggrefs to contain references to the
-				 * partial-aggregate subexpressions that will be available
-				 * from the child plan node.
-				 */
+				* If this node is combining partial/intermedaite aggregation results,
+				* we must convert its Aggrefs to contain references to the
+				* partial-aggregate subexpressions that will be available
+				* from the child plan node.
+				* In order to ref subexpressions, child-aggref is always partial
+				* aggregate and parent-aggref is the same as aggregate in Aggplan. 
+				*/
 				if (DO_AGGSPLIT_COMBINE(agg->aggsplit))
 				{
 					plan->targetlist = (List *)
 						convert_combining_aggrefs((Node *) plan->targetlist,
-												  NULL);
+												&aggref_split);
 					plan->qual = (List *)
 						convert_combining_aggrefs((Node *) plan->qual,
-												  NULL);
+												&aggref_split);
 				}
 
 				set_upper_references(root, plan, rtoffset);
@@ -1309,8 +1316,26 @@ set_indexonlyscan_references(PlannerInfo *root,
 							 int rtoffset)
 {
 	indexed_tlist *index_itlist;
+	List	   *stripped_indextlist;
+	ListCell   *lc;
 
-	index_itlist = build_tlist_index(plan->indextlist);
+	/*
+	 * Vars in the plan node's targetlist, qual, and recheckqual must only
+	 * reference columns that the index AM can actually return.  To ensure
+	 * this, remove non-returnable columns (which are marked as resjunk) from
+	 * the indexed tlist.  We can just drop them because the indexed_tlist
+	 * machinery pays attention to TLE resnos, not physical list position.
+	 */
+	stripped_indextlist = NIL;
+	foreach(lc, plan->indextlist)
+	{
+		TargetEntry *indextle = (TargetEntry *) lfirst(lc);
+
+		if (!indextle->resjunk)
+			stripped_indextlist = lappend(stripped_indextlist, indextle);
+	}
+
+	index_itlist = build_tlist_index(stripped_indextlist);
 
 	plan->scan.scanrelid += rtoffset;
 	plan->scan.plan.targetlist = (List *)
@@ -1325,10 +1350,14 @@ set_indexonlyscan_references(PlannerInfo *root,
 					   index_itlist,
 					   INDEX_VAR,
 					   rtoffset);
+	plan->recheckqual = (List *)
+		fix_upper_expr(root,
+					   (Node *) plan->recheckqual,
+					   index_itlist,
+					   INDEX_VAR,
+					   rtoffset);
 	/* indexqual is already transformed to reference index columns */
 	plan->indexqual = fix_scan_list(root, plan->indexqual, rtoffset);
-	/* indexqualorig is already transformed to reference index columns */
-	plan->indexqualorig = fix_scan_list(root, plan->indexqualorig, rtoffset);
 	/* indexorderby is already transformed to reference index columns */
 	plan->indexorderby = fix_scan_list(root, plan->indexorderby, rtoffset);
 	/* indextlist must NOT be transformed to reference index columns */
@@ -1652,8 +1681,16 @@ set_append_references(PlannerInfo *root,
 		lfirst(l) = set_plan_refs(root, (Plan *) lfirst(l), rtoffset);
 	}
 
-	/* Now, if there's just one, forget the Append and return that child */
-	if (list_length(aplan->appendplans) == 1)
+	/*
+	 * See if it's safe to get rid of the Append entirely.  For this to be
+	 * safe, there must be only one child plan and that child plan's parallel
+	 * awareness must match that of the Append's.  The reason for the latter
+	 * is that the if the Append is parallel aware and the child is not then
+	 * the calling plan may execute the non-parallel aware child multiple
+	 * times.
+	 */
+	if (list_length(aplan->appendplans) == 1 &&
+		((Plan *) linitial(aplan->appendplans))->parallel_aware == aplan->plan.parallel_aware)
 		return clean_up_removed_plan_level((Plan *) aplan,
 										   (Plan *) linitial(aplan->appendplans));
 
@@ -1714,8 +1751,16 @@ set_mergeappend_references(PlannerInfo *root,
 		lfirst(l) = set_plan_refs(root, (Plan *) lfirst(l), rtoffset);
 	}
 
-	/* Now, if there's just one, forget the MergeAppend and return that child */
-	if (list_length(mplan->mergeplans) == 1)
+	/*
+	 * See if it's safe to get rid of the MergeAppend entirely.  For this to
+	 * be safe, there must be only one child plan and that child plan's
+	 * parallel awareness must match that of the MergeAppend's.  The reason
+	 * for the latter is that the if the MergeAppend is parallel aware and the
+	 * child is not then the calling plan may execute the non-parallel aware
+	 * child multiple times.
+	 */
+	if (list_length(mplan->mergeplans) == 1 &&
+		((Plan *) linitial(mplan->mergeplans))->parallel_aware == mplan->plan.parallel_aware)
 		return clean_up_removed_plan_level((Plan *) mplan,
 										   (Plan *) linitial(mplan->mergeplans));
 
@@ -1749,6 +1794,36 @@ set_mergeappend_references(PlannerInfo *root,
 	return (Plan *) mplan;
 }
 
+/*
+ * set_hash_references
+ *	   Do set_plan_references processing on a Hash node
+ */
+static void
+set_hash_references(PlannerInfo *root, Plan *plan, int rtoffset)
+{
+	Hash	   *hplan = (Hash *) plan;
+	Plan	   *outer_plan = plan->lefttree;
+	indexed_tlist *outer_itlist;
+
+	/*
+	 * Hash's hashkeys are used when feeding tuples into the hashtable,
+	 * therefore have them reference Hash's outer plan (which itself is the
+	 * inner plan of the HashJoin).
+	 */
+	outer_itlist = build_tlist_index(outer_plan->targetlist);
+	hplan->hashkeys = (List *)
+		fix_upper_expr(root,
+					   (Node *) hplan->hashkeys,
+					   outer_itlist,
+					   OUTER_VAR,
+					   rtoffset);
+
+	/* Hash doesn't project */
+	set_dummy_tlist_references(plan, rtoffset);
+
+	/* Hash nodes don't have their own quals */
+	Assert(plan->qual == NIL);
+}
 
 /*
  * copyVar
@@ -2095,6 +2170,16 @@ set_join_references(PlannerInfo *root, Join *join, int rtoffset)
 											inner_itlist,
 											(Index) 0,
 											rtoffset);
+
+		/*
+		 * HashJoin's hashkeys are used to look for matching tuples from its
+		 * outer plan (not the Hash node!) in the hashtable.
+		 */
+		hj->hashkeys = (List *) fix_upper_expr(root,
+											   (Node *) hj->hashkeys,
+											   outer_itlist,
+											   OUTER_VAR,
+											   rtoffset);
 	}
 
 	/*
@@ -2279,7 +2364,7 @@ set_param_references(PlannerInfo *root, Plan *plan)
  * the plan node above the Agg has resolved its subplan references.
  */
 static Node *
-convert_combining_aggrefs(Node *node, void *context)
+convert_combining_aggrefs(Node *node, void *split)
 {
 	if (node == NULL)
 		return NULL;
@@ -2288,6 +2373,33 @@ convert_combining_aggrefs(Node *node, void *context)
 		Aggref	   *orig_agg = (Aggref *) node;
 		Aggref	   *child_agg;
 		Aggref	   *parent_agg;
+		int			aggsplit = *(int *)split;
+
+		/*
+		 * For AGGSPLIT_DQAWITHAGG final agg plan node, we should skip
+		 * aggdistinct Aggref like Count(distinct ..) because we have
+		 * eliminated duplicates, and just refer Vars instead of partial
+		 * Aggref.
+		 */
+		if (DO_AGGSPLIT_DQAWITHAGG(aggsplit))
+		{
+			if (orig_agg->aggdistinct != NULL)
+			{
+				Aggref	   *parent_agg = NULL;
+
+				parent_agg = makeNode(Aggref);
+				memcpy(parent_agg, orig_agg, sizeof(Aggref));
+
+				parent_agg->aggdistinct = NIL;
+				parent_agg->aggsplit = AGGSPLIT_SIMPLE;
+
+				return (Node *) parent_agg;
+			}
+			else
+			{
+				aggsplit = AGGSPLIT_FINAL_DESERIAL;
+			}
+		}
 
 		/* Assert we've not chosen to partial-ize any unsupported cases */
 		Assert(orig_agg->aggorder == NIL);
@@ -2331,7 +2443,7 @@ convert_combining_aggrefs(Node *node, void *context)
 		 */
 		parent_agg->args = list_make1(makeTargetEntry((Expr *) child_agg,
 													  1, NULL, false));
-		mark_partial_aggref(parent_agg, AGGSPLIT_FINAL_DESERIAL);
+		mark_partial_aggref(parent_agg, aggsplit);
 
 		/*
 		 * In GPDB two-stage aggregates with DISTINCT, the first stage
@@ -2343,7 +2455,7 @@ convert_combining_aggrefs(Node *node, void *context)
 		return (Node *) parent_agg;
 	}
 	return expression_tree_mutator(node, convert_combining_aggrefs,
-								   (void *) context);
+								   (void *)split);
 }
 
 static Node *

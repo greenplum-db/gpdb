@@ -54,13 +54,6 @@ public:
 		return 0;
 	}
 
-	// number of partitions
-	ULONG
-	PartitionCount() const override
-	{
-		return 0;
-	}
-
 	// retrieve the partition column at the given position
 	const IMDColumn *PartColAt(ULONG  // pos
 	) const override

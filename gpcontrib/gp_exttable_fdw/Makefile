@@ -1,5 +1,3 @@
-# contrib/pxf_fdw/Makefile
-
 MODULE_big = gp_exttable_fdw
 OBJS = gp_exttable_fdw.o extaccess.o
 
@@ -9,6 +7,8 @@ EXTENSION = gp_exttable_fdw
 DATA = gp_exttable_fdw--1.0.sql
 
 REGRESS =
+
+HEADERS = extaccess.h
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

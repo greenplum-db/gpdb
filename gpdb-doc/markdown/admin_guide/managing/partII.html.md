@@ -7,7 +7,7 @@ This section describes basic system administration tasks performed by a Greenplu
 -   **[About the Greenplum Database Release Version Number](../managing/versioning.html)**  
 Greenplum Database version numbers and the way they change identify what has been modified from one Greenplum Database release to the next.
 -   **[Starting and Stopping Greenplum Database](../managing/startstop.html)**  
-In a Greenplum Database DBMS, the database server instances \(the master and all segments\) are started or stopped across all of the hosts in the system in such a way that they can work together as a unified DBMS.
+In a Greenplum Database DBMS, the database server instances \(the coordinator and all segments\) are started or stopped across all of the hosts in the system in such a way that they can work together as a unified DBMS.
 -   **[Accessing the Database](../access_db/topics/g-accessing-the-database.html)**  
 This topic describes the various client tools you can use to connect to Greenplum Database, and how to establish a database session.
 -   **[Configuring the Greenplum Database System](../topics/g-configuring-the-greenplum-system.html)**  

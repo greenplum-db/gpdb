@@ -69,6 +69,16 @@ alter table idxpart attach partition idxpart1 for values from (0) to (10);
 \d idxpart1
 \d+ idxpart1_a_idx
 \d+ idxpart1_b_c_idx
+
+-- ALTER TABLE when attaching or detaching an index to a partition.
+create index idxpart_c on only idxpart (c);
+create index idxpart1_c on idxpart1 (c);
+alter table idxpart_c attach partition idxpart1_c for values from (10) to (20);
+alter index idxpart_c attach partition idxpart1_c;
+select relname, relpartbound from pg_class
+  where relname in ('idxpart_c', 'idxpart1_c')
+  order by relname;
+alter table idxpart_c detach partition idxpart1_c;
 drop table idxpart;
 
 -- If a partition already has an index, don't create a duplicative one
@@ -88,6 +98,7 @@ create table idxpart (a int) partition by range (a);
 create index on idxpart (a);
 create table idxpart1 partition of idxpart for values from (0) to (10);
 drop index idxpart1_a_idx;	-- no way
+drop index concurrently idxpart_a_idx;	-- unsupported
 drop index idxpart_a_idx;	-- both indexes go away
 select relname, relkind from pg_class
   where relname like 'idxpart%' order by relname;
@@ -96,6 +107,18 @@ drop table idxpart1;		-- the index on partition goes away too
 select relname, relkind from pg_class
   where relname like 'idxpart%' order by relname;
 drop table idxpart;
+
+-- DROP behavior with temporary partitioned indexes
+create temp table idxpart_temp (a int) partition by range (a);
+create index on idxpart_temp(a);
+create temp table idxpart1_temp partition of idxpart_temp
+  for values from (0) to (10);
+drop index idxpart1_temp_a_idx; -- error
+-- non-concurrent drop is enforced here, so it is a valid case.
+drop index concurrently idxpart_temp_a_idx;
+select relname, relkind from pg_class
+  where relname like 'idxpart_temp%' order by relname;
+drop table idxpart_temp;
 
 -- ALTER INDEX .. ATTACH, error cases
 create table idxpart (a int, b int) partition by range (a, b);

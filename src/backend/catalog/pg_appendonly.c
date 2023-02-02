@@ -17,6 +17,7 @@
 
 #include "postgres.h"
 
+#include "access/reloptions.h"
 #include "catalog/pg_am_d.h"
 #include "catalog/pg_appendonly.h"
 #include "catalog/pg_attribute_encoding.h"
@@ -41,17 +42,11 @@ static void SwapAppendonlyEntries(Oid entryRelId1, Oid entryRelId2);
 
 /*
  * Adds an entry into the pg_appendonly catalog table. The entry
- * includes the new relfilenode of the appendonly relation that 
+ * includes the new relfilenode of the appendonly relation that
  * was just created and an initial eof and reltuples values of 0
  */
 void
-InsertAppendOnlyEntry(Oid relid, 
-					  int blocksize, 
-					  int safefswritesize, 
-					  int compresslevel,
-					  bool checksum,
-                      bool columnstore,
-					  char* compresstype,
+InsertAppendOnlyEntry(Oid relid,
 					  Oid segrelid,
 					  Oid blkdirrelid,
 					  Oid blkdiridxid,
@@ -60,7 +55,6 @@ InsertAppendOnlyEntry(Oid relid,
 {
 	Relation	pg_appendonly_rel;
 	HeapTuple	pg_appendonly_tuple = NULL;
-	NameData	compresstype_name;
 	bool	   *nulls;
 	Datum	   *values;
 	int			natts = 0;
@@ -74,24 +68,7 @@ InsertAppendOnlyEntry(Oid relid,
 	values = palloc0(sizeof(Datum) * natts);
 	nulls = palloc0(sizeof(bool) * natts);
 
-	/*
-	 * GPDB_12_MERGE_FIXME:
-	 *		Consider not storing the parsed values for blocksize, compresstype,
-	 *		compresslevel and checksum as those are also present in StdRdOptions
-	 *		of Relcache.
-	 */
-
-	if (compresstype)
-		namestrcpy(&compresstype_name, compresstype);
-	else
-		namestrcpy(&compresstype_name, "");
 	values[Anum_pg_appendonly_relid - 1] = ObjectIdGetDatum(relid);
-	values[Anum_pg_appendonly_blocksize - 1] = Int32GetDatum(blocksize);
-	values[Anum_pg_appendonly_safefswritesize - 1] = Int32GetDatum(safefswritesize);
-	values[Anum_pg_appendonly_compresslevel - 1] = Int32GetDatum(compresslevel);
-	values[Anum_pg_appendonly_checksum - 1] = BoolGetDatum(checksum);
-	values[Anum_pg_appendonly_compresstype - 1] = NameGetDatum(&compresstype_name);
-	values[Anum_pg_appendonly_columnstore - 1] = BoolGetDatum(columnstore);
 	values[Anum_pg_appendonly_segrelid - 1] = ObjectIdGetDatum(segrelid);
 	values[Anum_pg_appendonly_blkdirrelid - 1] = ObjectIdGetDatum(blkdirrelid);
 	values[Anum_pg_appendonly_blkdiridxid - 1] = ObjectIdGetDatum(blkdiridxid);
@@ -121,54 +98,51 @@ InsertAppendOnlyEntry(Oid relid,
 void
 GetAppendOnlyEntryAttributes(Oid relid,
 							 int32 *blocksize,
-							 int32 *safefswritesize,
 							 int16 *compresslevel,
 							 bool *checksum,
 							 NameData *compresstype)
 {
-	Relation	pg_appendonly;
-	TupleDesc	tupDesc;
-	ScanKeyData	key[1];
-	SysScanDesc	scan;
+	Relation	ao_rel;
+	StdRdOptions *relopts;
 	HeapTuple	tuple;
-	Form_pg_appendonly	aoForm;
+	Datum reloptions;
+	bool		isNull;
 
-	pg_appendonly = table_open(AppendOnlyRelationId, AccessShareLock);
-	tupDesc = RelationGetDescr(pg_appendonly);
+	ao_rel = table_open(relid, AccessShareLock);
 
-	ScanKeyInit(&key[0],
-				Anum_pg_appendonly_relid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(relid));
-
-	scan = systable_beginscan(pg_appendonly, AppendOnlyRelidIndexId, true,
-							  NULL, 1, key);
-	tuple = systable_getnext(scan);
+	tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
 	if (!HeapTupleIsValid(tuple))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("missing pg_appendonly entry for relation \"%s\"",
-						get_rel_name(relid))));
+		elog(ERROR, "cache lookup failed for relation %u", relid);
 
-	aoForm = (Form_pg_appendonly) GETSTRUCT(tuple);
+	reloptions = SysCacheGetAttr(RELOID, tuple, Anum_pg_class_reloptions,
+								 &isNull);
+	if (isNull)
+		reloptions = (Datum) 0;
+
+	relopts = (StdRdOptions *) default_reloptions(reloptions, false, RELOPT_KIND_APPENDOPTIMIZED);
+
 	if (blocksize != NULL)
-		*blocksize = aoForm->blocksize;
+		*blocksize = relopts->blocksize ? relopts->blocksize : DEFAULT_APPENDONLY_BLOCK_SIZE;
 
-	if (safefswritesize != NULL)
-		*safefswritesize = aoForm->safefswritesize;
+	/* If compresstype not specified, set to none */
+	if (compresstype != NULL)
+		*relopts->compresstype ? namestrcpy(compresstype, relopts->compresstype) : namestrcpy(compresstype, "none");
 
 	if (compresslevel != NULL)
-		*compresslevel = aoForm->compresslevel;
+	{
+		if (relopts->compresslevel)
+			*compresslevel = relopts->compresslevel;
+		else if (!compresstype || pg_strcasecmp(compresstype->data, "none") == 0) /* no compression */
+			*compresslevel = 0;
+		else /* zlib, quicklz, zstd and RLE */
+			*compresslevel = 1;
+	}
 
 	if (checksum != NULL)
-		*checksum = aoForm->checksum;
+			*checksum = relopts->checksum ? relopts->checksum : AO_DEFAULT_CHECKSUM;
 
-	if (compresstype != NULL)
-		namestrcpy(compresstype, NameStr(aoForm->compresstype));
-
-	/* Finish up scan and close pg_appendonly catalog. */
-	systable_endscan(scan);
-	table_close(pg_appendonly, AccessShareLock);
+	ReleaseSysCache(tuple);
+	table_close(ao_rel, AccessShareLock);
 }
 
 /*

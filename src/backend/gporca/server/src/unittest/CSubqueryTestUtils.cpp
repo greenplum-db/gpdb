@@ -47,14 +47,16 @@ CSubqueryTestUtils::GenerateGetExpressions(CMemoryPool *mp,
 
 	// outer expression
 	CWStringConst strNameR(GPOS_WSZ_LIT("Rel1"));
-	CMDIdGPDB *pmdidR = GPOS_NEW(mp) CMDIdGPDB(GPOPT_TEST_REL_OID1, 1, 1);
+	CMDIdGPDB *pmdidR =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_TEST_REL_OID1, 1, 1);
 	CTableDescriptor *ptabdescR = CTestUtils::PtabdescCreate(
 		mp, 3 /*num_cols*/, pmdidR, CName(&strNameR));
 	*ppexprOuter = CTestUtils::PexprLogicalGet(mp, ptabdescR, &strNameR);
 
 	// inner expression
 	CWStringConst strNameS(GPOS_WSZ_LIT("Rel2"));
-	CMDIdGPDB *pmdidS = GPOS_NEW(mp) CMDIdGPDB(GPOPT_TEST_REL_OID2, 1, 1);
+	CMDIdGPDB *pmdidS =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_TEST_REL_OID2, 1, 1);
 	CTableDescriptor *ptabdescS = CTestUtils::PtabdescCreate(
 		mp, 3 /*num_cols*/, pmdidS, CName(&strNameS));
 	*ppexprInner = CTestUtils::PexprLogicalGet(mp, ptabdescS, &strNameS);
@@ -290,7 +292,8 @@ CSubqueryTestUtils::PexprSelectWithAggSubqueryOverJoin(CMemoryPool *mp,
 	// generate outer expression
 	CWStringConst strNameT(GPOS_WSZ_LIT("Rel3"));
 
-	CMDIdGPDB *pmdidT = GPOS_NEW(mp) CMDIdGPDB(GPOPT_TEST_REL_OID3, 1, 1);
+	CMDIdGPDB *pmdidT =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_TEST_REL_OID3, 1, 1);
 	CTableDescriptor *ptabdescT = CTestUtils::PtabdescCreate(
 		mp, 3 /*num_cols*/, pmdidT, CName(&strNameT));
 	CExpression *pexprT = CTestUtils::PexprLogicalGet(mp, ptabdescT, &strNameT);
@@ -743,7 +746,8 @@ CSubqueryTestUtils::PexprSelectWithCmpSubqueries(CMemoryPool *mp,
 	// generate get expression
 	CWStringConst strNameT(GPOS_WSZ_LIT("Rel3"));
 
-	CMDIdGPDB *pmdidT = GPOS_NEW(mp) CMDIdGPDB(GPOPT_TEST_REL_OID3, 1, 1);
+	CMDIdGPDB *pmdidT =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_TEST_REL_OID3, 1, 1);
 	CTableDescriptor *ptabdescT = CTestUtils::PtabdescCreate(
 		mp, 3 /*num_cols*/, pmdidT, CName(&strNameT));
 	CExpression *pexprT = CTestUtils::PexprLogicalGet(mp, ptabdescT, &strNameT);
@@ -1050,7 +1054,9 @@ CSubqueryTestUtils::PexprSubqueryQuantified(
 		return GPOS_NEW(mp) CExpression(
 			mp,
 			GPOS_NEW(mp) gpopt::CScalarSubqueryAny(
-				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
+				mp,
+				GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP),
+				str, pcrInner),
 			pexprSelect, CUtils::PexprScalarIdent(mp, pcrOuter));
 	}
 
@@ -1058,7 +1064,8 @@ CSubqueryTestUtils::PexprSubqueryQuantified(
 	return GPOS_NEW(mp) CExpression(
 		mp,
 		GPOS_NEW(mp) CScalarSubqueryAll(
-			mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_NEQ_OP), str, pcrInner),
+			mp, GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_NEQ_OP),
+			str, pcrInner),
 		pexprSelect, CUtils::PexprScalarIdent(mp, pcrOuter));
 }
 
@@ -1082,8 +1089,9 @@ CSubqueryTestUtils::PexprUndecorrelatableSubquery(CMemoryPool *mp,
 				COperator::EopScalarSubqueryNotExists == op_id);
 
 	CWStringConst strNameR(GPOS_WSZ_LIT("Rel1"));
-	CMDIdGPDB *pmdidR = GPOS_NEW(mp) CMDIdGPDB(
-		GPOPT_TEST_REL_OID1, 1 /*version_major*/, 1 /*version_minor*/);
+	CMDIdGPDB *pmdidR =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_TEST_REL_OID1,
+							   1 /*version_major*/, 1 /*version_minor*/);
 	CTableDescriptor *ptabdescR =
 		CTestUtils::PtabdescPlain(mp, 3 /*num_cols*/, pmdidR, CName(&strNameR));
 	CExpression *pexprOuter =
@@ -1509,7 +1517,9 @@ CSubqueryTestUtils::PexprSelectWithQuantifiedAggSubquery(
 		pexprSubqueryQuantified = GPOS_NEW(mp) CExpression(
 			mp,
 			GPOS_NEW(mp) gpopt::CScalarSubqueryAny(
-				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
+				mp,
+				GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP),
+				str, pcrInner),
 			pexprGb, CUtils::PexprScalarIdent(mp, pcrOuter));
 	}
 
@@ -1517,7 +1527,8 @@ CSubqueryTestUtils::PexprSelectWithQuantifiedAggSubquery(
 	pexprSubqueryQuantified = GPOS_NEW(mp) CExpression(
 		mp,
 		GPOS_NEW(mp) CScalarSubqueryAll(
-			mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_NEQ_OP), str, pcrInner),
+			mp, GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_NEQ_OP),
+			str, pcrInner),
 		pexprGb, CUtils::PexprScalarIdent(mp, pcrOuter));
 
 
@@ -1712,7 +1723,8 @@ CSubqueryTestUtils::PexprSubqueryWithConstTableGet(CMemoryPool *mp,
 				COperator::EopScalarSubqueryAll == op_id);
 
 	CWStringConst strNameR(GPOS_WSZ_LIT("Rel1"));
-	CMDIdGPDB *pmdidR = GPOS_NEW(mp) CMDIdGPDB(GPOPT_TEST_REL_OID1, 1, 1);
+	CMDIdGPDB *pmdidR =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_TEST_REL_OID1, 1, 1);
 	CTableDescriptor *ptabdescR = CTestUtils::PtabdescCreate(
 		mp, 3 /*num_cols*/, pmdidR, CName(&strNameR));
 
@@ -1738,7 +1750,9 @@ CSubqueryTestUtils::PexprSubqueryWithConstTableGet(CMemoryPool *mp,
 		pexprSubquery = GPOS_NEW(mp) CExpression(
 			mp,
 			GPOS_NEW(mp) gpopt::CScalarSubqueryAny(
-				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
+				mp,
+				GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP),
+				str, pcrInner),
 			pexprConstTableGet, CUtils::PexprScalarIdent(mp, pcrOuter));
 	}
 	else
@@ -1747,7 +1761,9 @@ CSubqueryTestUtils::PexprSubqueryWithConstTableGet(CMemoryPool *mp,
 		pexprSubquery = GPOS_NEW(mp) CExpression(
 			mp,
 			GPOS_NEW(mp) CScalarSubqueryAll(
-				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
+				mp,
+				GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP),
+				str, pcrInner),
 			pexprConstTableGet, CUtils::PexprScalarIdent(mp, pcrOuter));
 	}
 
@@ -1770,7 +1786,8 @@ CSubqueryTestUtils::PexprSubqueryWithDisjunction(CMemoryPool *mp)
 	GPOS_ASSERT(nullptr != mp);
 
 	CWStringConst strNameR(GPOS_WSZ_LIT("Rel1"));
-	CMDIdGPDB *pmdidR = GPOS_NEW(mp) CMDIdGPDB(GPOPT_TEST_REL_OID1, 1, 1);
+	CMDIdGPDB *pmdidR =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_TEST_REL_OID1, 1, 1);
 	CTableDescriptor *ptabdescR = CTestUtils::PtabdescCreate(
 		mp, 3 /*num_cols*/, pmdidR, CName(&strNameR));
 
@@ -1797,7 +1814,9 @@ CSubqueryTestUtils::PexprSubqueryWithDisjunction(CMemoryPool *mp)
 		CExpression *pexprSubquery = GPOS_NEW(mp) CExpression(
 			mp,
 			GPOS_NEW(mp) gpopt::CScalarSubqueryAny(
-				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
+				mp,
+				GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP),
+				str, pcrInner),
 			pexprConstTableGet, CUtils::PexprScalarIdent(mp, pcrOuter));
 		pdrgpexpr->Append(pexprSubquery);
 	}

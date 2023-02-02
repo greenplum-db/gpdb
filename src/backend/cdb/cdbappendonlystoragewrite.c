@@ -365,76 +365,6 @@ AppendOnlyStorageWrite_OpenFile(AppendOnlyStorageWrite *storageWrite,
 }
 
 /*
- * Optionally pad out to next page boundary.
- *
- * Since we do not do typical recovery processing of append-only file-system
- * pages, we pad out the last file-system byte with zeroes. The number of
- * bytes that are padded with zero's is determined by safefswritesize.
- * This function pads with 0's of length padLen or pads the whole remainder
- * of the safefswritesize size with 0's if padLen is -1.
- */
-static void
-AppendOnlyStorageWrite_DoPadOutRemainder(AppendOnlyStorageWrite *storageWrite,
-										 int32 padLen)
-{
-	int64		nextWritePosition;
-	int64		nextBoundaryPosition;
-	int32		safeWrite = storageWrite->storageAttributes.safeFSWriteSize;
-	int32		safeWriteRemainder;
-	bool		doPad;
-	uint8	   *buffer;
-
-	/* early exit if no pad needed */
-	if (safeWrite == 0)
-		return;
-
-	nextWritePosition = BufferedAppendNextBufferPosition(&storageWrite->bufferedAppend);
-	nextBoundaryPosition =
-		((nextWritePosition + safeWrite - 1) / safeWrite) * safeWrite;
-	safeWriteRemainder = (int32) (nextBoundaryPosition - nextWritePosition);
-
-	if (safeWriteRemainder <= 0)
-		doPad = false;
-	else if (padLen == -1)
-	{
-		/*
-		 * Pad to end of page.
-		 */
-		doPad = true;
-	}
-	else
-		doPad = (safeWriteRemainder < padLen);
-
-	if (doPad)
-	{
-		/*
-		 * Get buffer of the remainder to pad.
-		 */
-		buffer = BufferedAppendGetBuffer(&storageWrite->bufferedAppend,
-										 safeWriteRemainder);
-
-		if (buffer == NULL)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INTERNAL_ERROR),
-					 errmsg("We do not expect files to be have a maximum length")));
-		}
-
-		memset(buffer, 0, safeWriteRemainder);
-		BufferedAppendFinishBuffer(&storageWrite->bufferedAppend,
-								   safeWriteRemainder,
-								   safeWriteRemainder,
-								   storageWrite->needsWAL);
-
-		elogif(Debug_appendonly_print_insert, LOG,
-			   "Append-only insert zero padded safeWriteRemainder for table '%s' (nextWritePosition = " INT64_FORMAT ", safeWriteRemainder = %d)",
-			   storageWrite->relationName,
-			   nextWritePosition,
-			   safeWriteRemainder);
-	}
-}
-
-/*
  * Flush and close the current segment file.
  *
  * No error if the current is already closed.
@@ -456,13 +386,6 @@ AppendOnlyStorageWrite_FlushAndCloseFile(
 		*fileLen_uncompressed = 0;
 		return;
 	}
-
-	/*
-	 * We pad out append commands to the page boundary.
-	 */
-	AppendOnlyStorageWrite_DoPadOutRemainder(
-											 storageWrite,
-											  /* indicate till end of page */ -1);
 
 	/*
 	 * Have the BufferedAppend module let go, but this does not close the

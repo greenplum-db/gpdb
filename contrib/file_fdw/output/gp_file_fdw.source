@@ -3,6 +3,7 @@
 --
 -- Clean up in case a prior regression run failed
 SET client_min_messages TO 'error';
+SET optimizer_trace_fallback = on;
 DROP ROLE IF EXISTS file_fdw_superuser, file_fdw_user, no_priv_user;
 RESET client_min_messages;
 CREATE ROLE file_fdw_superuser LOGIN SUPERUSER; -- is a superuser

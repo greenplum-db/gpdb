@@ -20,7 +20,7 @@ The key field\(s\) for the index are specified as column names, or alternatively
 
 An index field can be an expression computed from the values of one or more columns of the table row. This feature can be used to obtain fast access to data based on some transformation of the basic data. For example, an index computed on `upper(col)` would allow the clause `WHERE upper(col) = 'JIM'` to use an index.
 
-Greenplum Database provides the index methods B-tree, bitmap, GiST, SP-GiST, and GIN. Users can also define their own index methods, but that is fairly complicated.
+Greenplum Database provides the index methods B-tree, hash, bitmap, GiST, SP-GiST, GIN, and BRIN. Users can also define their own index methods, but that is fairly complicated.
 
 When the `WHERE` clause is present, a partial index is created. A partial index is an index that contains entries for only a portion of a table, usually a portion that is more useful for indexing than the rest of the table. For example, if you have a table that contains both billed and unbilled orders where the unbilled orders take up a small fraction of the total table and yet is most often selected, you can improve performance by creating an index on just that portion.
 
@@ -40,11 +40,11 @@ table\_name
 :   The name \(optionally schema-qualified\) of the table to be indexed.
 
 method
-:   The name of the index method to be used. Choices are `btree`, `bitmap`, `gist`, `spgist`, and `gin`. The default method is `btree`.
+:   The name of the index method to be used. Choices are `btree`, `hash`, `bitmap`, `gist`, `spgist`, `gin`, and `brin`. The default method is `btree`.
 
-:   Currently, only the B-tree, GiST, and GIN index methods support multicolumn indexes. Up to 32 fields can be specified by default. Only B-tree currently supports unique indexes.
+:   Currently, only the B-tree, GiST, GIN, and BRIN index methods support multicolumn indexes. Up to 32 fields can be specified by default. Only B-tree currently supports unique indexes.
 
-:   GPORCA supports only B-tree, bitmap, GiST, and GIN indexes. GPORCA ignores indexes created with unsupported indexing methods.
+:   GPORCA supports only B-tree, bitmap, GiST, GIN, and BRIN indexes. GPORCA ignores indexes created with unsupported indexing methods.
 
 column\_name
 :   The name of a column of the table on which to create the index. Only the B-tree, bitmap, GiST, and GIN index methods support multicolumn indexes.
@@ -75,11 +75,13 @@ storage\_parameter
 
 :   `FILLFACTOR` - B-tree, bitmap, GiST, and SP-GiST index methods all accept this parameter. The `FILLFACTOR` for an index is a percentage that determines how full the index method will try to pack index pages. For B-trees, leaf pages are filled to this percentage during initial index build, and also when extending the index at the right \(adding new largest key values\). If pages subsequently become completely full, they will be split, leading to gradual degradation in the index's efficiency. B-trees use a default fillfactor of 90, but any integer value from 10 to 100 can be selected. If the table is static then fillfactor 100 is best to minimize the index's physical size, but for heavily updated tables a smaller fillfactor is better to minimize the need for page splits. The other index methods use fillfactor in different but roughly analogous ways; the default fillfactor varies between methods.
 
-:   `BUFFERING` - In addition to `FILLFACTOR`, GiST indexes additionally accept the `BUFFERING` parameter. `BUFFERING` determines whether Greenplum Database builds the index using the buffering build technique described in [GiST buffering build](https://www.postgresql.org/docs/9.4/gist-implementation.html) in the PostgreSQL documentation. With `OFF` it is deactivated, with `ON` it is enabled, and with `AUTO` it is initially deactivated, but turned on on-the-fly once the index size reaches [effective-cache-size](../config_params/guc-list.html). The default is `AUTO`.
+:   `BUFFERING` - In addition to `FILLFACTOR`, GiST indexes additionally accept the `BUFFERING` parameter. `BUFFERING` determines whether Greenplum Database builds the index using the buffering build technique described in [GiST buffering build](https://www.postgresql.org/docs/12/gist-implementation.html) in the PostgreSQL documentation. With `OFF` it is deactivated, with `ON` it is enabled, and with `AUTO` it is initially deactivated, but turned on on-the-fly once the index size reaches [effective-cache-size](../config_params/guc-list.html). The default is `AUTO`.
 
-:   `FASTUPDATE` - The GIN index method accepts the `FASTUPDATE` storage parameter. `FASTUPDATE` is a Boolean parameter that deactivates or enables the GIN index fast update technique. A value of ON enables fast update \(the default\), and OFF deactivates it. See [GIN fast update technique](https://www.postgresql.org/docs/9.4/gin-implementation.html#GIN-FAST-UPDATE) in the PostgreSQL documentation for more information.
+:   `FASTUPDATE` - The GIN index method accepts the `FASTUPDATE` storage parameter. `FASTUPDATE` is a Boolean parameter that deactivates or enables the GIN index fast update technique. A value of ON enables fast update \(the default\), and OFF deactivates it. See [GIN fast update technique](https://www.postgresql.org/docs/12/gin-implementation.html#GIN-FAST-UPDATE) in the PostgreSQL documentation for more information.
 
-    **Note:** Turning `FASTUPDATE` off via `ALTER INDEX` prevents future insertions from going into the list of pending index entries, but does not in itself flush previous entries. You might want to VACUUM the table afterward to ensure the pending list is emptied.
+    > **Note** Turning `FASTUPDATE` off via `ALTER INDEX` prevents future insertions from going into the list of pending index entries, but does not in itself flush previous entries. You might want to VACUUM the table afterward to ensure the pending list is emptied.
+
+:   `pages_per_range` - The BRIN index method accepts this parameter. Defines the number of table blocks that make up one block range for each entry of a BRIN index. The default is 128. See [BRIN Indexes](https://www.postgresql.org/docs/12/brin.html) in the PostgreSQL documentation for more information.
 
 tablespace\_name
 :   The tablespace in which to create the index. If not specified, the default tablespace is used, or [temp\_tablespaces](../config_params/guc-list.html) for indexes on temporary tables.
@@ -111,7 +113,7 @@ Columns with fewer than 100 distinct values usually do not benefit much from any
 
 Prior releases of Greenplum Database also had an R-tree index method. This method has been removed because it had no significant advantages over the GiST method. If `USING rtree` is specified, `CREATE INDEX` will interpret it as `USING gist`.
 
-For more information on the GiST index type, refer to the [PostgreSQL documentation](https://www.postgresql.org/docs/9.4/indexes-types.html).
+For more information on the GiST index type, refer to the [PostgreSQL documentation](https://www.postgresql.org/docs/12/indexes-types.html).
 
 The use of hash indexes has been deactivated in Greenplum Database.
 

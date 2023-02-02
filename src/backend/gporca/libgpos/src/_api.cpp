@@ -70,8 +70,8 @@ const ULONG expected_dxl_fallback[] = {
 
 // array of DXL minor exception types that error out and NOT fallback to the planner
 const ULONG expected_dxl_errors[] = {
-	gpdxl::ExmiDXL2PlStmtExternalScanError,	 // external table error
-	gpdxl::ExmiQuery2DXLNotNullViolation,	 // not null violation
+	gpdxl::ExmiDXL2PlStmtForeignScanError,	// foreign table error
+	gpdxl::ExmiQuery2DXLNotNullViolation,	// not null violation
 };
 
 BOOL

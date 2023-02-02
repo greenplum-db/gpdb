@@ -207,6 +207,12 @@ public:
 		return false;
 	}
 
+	virtual CConstraint *
+	GetConstraintOnSegmentId() const
+	{
+		return nullptr;
+	}
+
 	// return a copy of the constraint with remapped columns
 	virtual CConstraint *PcnstrCopyWithRemappedColumns(
 		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist) = 0;
@@ -239,6 +245,10 @@ public:
 											 CExpression *pexpr,
 											 CColRefSetArray **ppdrgpcrs,
 											 BOOL infer_nulls_as = false);
+
+	// create constraint from EXISTS/ANY scalar subquery
+	static CConstraint *PcnstrFromExistsAnySubquery(
+		CMemoryPool *mp, CExpression *pexpr, CColRefSetArray **ppdrgpcrs);
 
 	// create conjunction from array of constraints
 	static CConstraint *PcnstrConjunction(CMemoryPool *mp,

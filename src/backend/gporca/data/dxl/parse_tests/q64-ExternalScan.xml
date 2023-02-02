@@ -21,7 +21,7 @@
       </dxl:ProjList>
       <dxl:Filter/>
       <dxl:SortingColumnList/>
-      <dxl:ExternalScan>
+      <dxl:ForeignScan>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="15625.000000" Rows="1000000.000000" Width="32"/>
         </dxl:Properties>
@@ -40,7 +40,7 @@
           </dxl:ProjElem>
         </dxl:ProjList>
         <dxl:Filter/>
-        <dxl:TableDescriptor Mdid="0.1565413.1.1" TableName="ext_nation">
+        <dxl:TableDescriptor Mdid="6.1565413.1.1" TableName="ext_nation">
           <dxl:Columns>
             <dxl:Column ColId="0" Attno="1" ColName="n_nationkey" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="1" Attno="2" ColName="n_name" TypeMdid="0.1042.1.0" ColWidth="25"/>
@@ -55,7 +55,7 @@
             <dxl:Column ColId="10" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
           </dxl:Columns>
         </dxl:TableDescriptor>
-      </dxl:ExternalScan>
+      </dxl:ForeignScan>
     </dxl:GatherMotion>
   </dxl:Plan>
 </dxl:DXLMessage>

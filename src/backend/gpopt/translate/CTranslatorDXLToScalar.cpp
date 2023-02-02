@@ -555,7 +555,8 @@ CTranslatorDXLToScalar::TranslateDXLScalarAggrefToScalar(
 	aggref->aggtranstype = InvalidOid;
 	aggref->aggargtypes = NIL;
 
-	CMDIdGPDB *agg_mdid = GPOS_NEW(m_mp) CMDIdGPDB(aggref->aggfnoid);
+	CMDIdGPDB *agg_mdid =
+		GPOS_NEW(m_mp) CMDIdGPDB(IMDId::EmdidGeneral, aggref->aggfnoid);
 	const IMDAggregate *pmdagg = m_md_accessor->RetrieveAgg(agg_mdid);
 	agg_mdid->Release();
 
@@ -587,7 +588,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarAggrefToScalar(
 			aggref->aggsplit = AGGSPLIT_INITIAL_SERIAL;
 			break;
 		case EdxlaggstageIntermediate:
-			aggref->aggsplit = AGGSPLIT_INTERNMEDIATE;
+			aggref->aggsplit = AGGSPLIT_INTERMEDIATE;
 			break;
 		case EdxlaggstageFinal:
 			aggref->aggsplit = AGGSPLIT_FINAL_DESERIAL;

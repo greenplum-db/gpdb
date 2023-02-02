@@ -1,5 +1,4 @@
 ---
-# usage: fly set-pipeline -p gpdb_dev -l common_dev.yml
 aws-bucket: gpdb5-assert-concourse-builds-dev
 google-project-id: data-sandbox-2
 google-zone: us-central1-a

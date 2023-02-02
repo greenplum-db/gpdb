@@ -209,9 +209,41 @@ alter table foo_p exchange partition for(6) with table bar_p;
 select has_table_privilege('part_role', 'foo_p_1_prt_6'::regclass, 'select');
 select has_table_privilege('part_role', 'bar_p'::regclass, 'select');
 
+-- the ONLY keyword will affect just the partition root for both grant/revoke
+create role part_role2;
+grant select on only foo_p to part_role2;
+select has_table_privilege('part_role2', 'foo_p'::regclass, 'select');
+select has_table_privilege('part_role2', 'foo_p_1_prt_6'::regclass, 'select');
+
+grant select on foo_p to part_role2;
+revoke select on only foo_p from part_role2;
+select has_table_privilege('part_role2', 'foo_p'::regclass, 'select');
+select has_table_privilege('part_role2', 'foo_p_1_prt_6'::regclass, 'select');
+revoke select on foo_p from part_role2;
+select has_table_privilege('part_role2', 'foo_p_1_prt_6'::regclass, 'select');
+
+create table foo_p2 (a int, b int) partition by range(a) (start(1) end(10) every(1));
+grant select on foo_p, only foo_p2 to part_role2; -- multiple tables in same statement
+select has_table_privilege('part_role2', 'foo_p'::regclass, 'select');
+select has_table_privilege('part_role2', 'foo_p_1_prt_6'::regclass, 'select');
+select has_table_privilege('part_role2', 'foo_p2'::regclass, 'select');
+select has_table_privilege('part_role2', 'foo_p2_1_prt_6'::regclass, 'select');
+
+-- more cases
+revoke all on foo_p from part_role2;
+revoke all on foo_p2 from part_role2;
+grant select on only public.foo_p to part_role2; -- with schema
+select has_table_privilege('part_role2', 'foo_p'::regclass, 'select');
+select has_table_privilege('part_role2', 'foo_p_1_prt_6'::regclass, 'select');
+grant update(b) on only foo_p2 to part_role2; -- column level priviledge
+select relname, has_column_privilege('part_role2', oid, 'b', 'update') from pg_class
+where relname = 'foo_p2' or relname = 'foo_p2_1_prt_6';
+
 drop table foo_p;
+drop table foo_p2;
 drop table bar_p;
 drop role part_role;
+drop role part_role2;
 
 -- validation
 create table foo_p (i int) partition by range(i)
@@ -1517,7 +1549,7 @@ insert into bar_p values(5, 5);
 drop table bar_p;
 -- Drop should not leave anything lingering for bar_p or its
 -- subpartitions in pg_partition* catalog tables.
-select relid, level, template from gp_partition_template where not exists (select oid from pg_class where oid = relid);
+select relid, level, pg_get_expr(template, relid) from gp_partition_template where not exists (select oid from pg_class where oid = relid);
 
 -- MPP-4172
 -- should fail
@@ -1632,11 +1664,11 @@ select relid::regclass, level from gp_partition_template where relid = 'rank_set
 alter table rank_settemp set subpartition template (default subpartition def2);
 
 -- def2 is there
-select relid::regclass, level, template from gp_partition_template where relid = 'rank_settemp'::regclass;
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'rank_settemp'::regclass;
 
 alter table rank_settemp set subpartition template (default subpartition def2);
 -- Should still be there
-select relid::regclass, level, template from gp_partition_template where relid = 'rank_settemp'::regclass;
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'rank_settemp'::regclass;
 
 
 alter table rank_settemp set subpartition template (start (date '2006-01-01') with (appendonly=true));
@@ -1644,7 +1676,7 @@ alter table rank_settemp add partition f1 values ('N');
 alter table rank_settemp set subpartition template (start (date '2007-01-01') with (appendonly=true, compresslevel=5));
 alter table rank_settemp add partition f2 values ('C');
 
-select relid::regclass, level, template from gp_partition_template where relid = 'rank_settemp'::regclass;
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'rank_settemp'::regclass;
 
 drop table rank_settemp;
 
@@ -1722,7 +1754,7 @@ partition by range(j) (start(1) end(10) every(1), default partition def);
 insert into foo_p select i, i+1, repeat('fooo', 9000) from generate_series(1, 100) i;
 alter table foo_p split default partition start (10) end(20) 
 into (partition p10_20, default partition);
-select c.oid::regclass, relkind, amname, reloptions from pg_class c left join pg_am am on am.oid = relam where c.oid = 'foo_p_1_prt_p10_20'::regclass;
+select c.oid::regclass, relkind, amname, reloptions from pg_class c left join pg_am am on am.oid = relam where c.oid = 'foo_p_1_prt_p10_20'::regclass or c.oid = 'foo_p'::regclass;
 select count(distinct k) from foo_p;
 drop table foo_p;
 
@@ -2349,7 +2381,7 @@ subpartition l2 values (6,7,8,9,10) );
 alter table mpp5992 
 set subpartition template (subpartition l1 values (1,2,3), 
 subpartition l2 values (4,5,6), subpartition l3 values (7,8,9,10));
-select relid::regclass, level, template from gp_partition_template where relid = 'mpp5992'::regclass;
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'mpp5992'::regclass;
 
 -- Now we can add a new partition
 alter table mpp5992 
@@ -2368,7 +2400,7 @@ start (date '2013-01-01') end (date '2014-01-01') WITH (appendonly=true);
 
 select * from pg_partition_tree('mpp5992');
 select relname, relam, pg_get_expr(relpartbound, oid) from pg_class where relname like 'mpp5992%';
-select relid::regclass, level, template from gp_partition_template where relid = 'mpp5992'::regclass;
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'mpp5992'::regclass;
 
 -- MPP-10223: split subpartitions
 CREATE TABLE MPP10223pk
@@ -2512,7 +2544,7 @@ subpartition by range(d)
 subpartition template (start (1) end (10) every (1))
 (start (20) end (30) every (1));
 
-select relid::regclass, level, template from gp_partition_template where relid = 'MPP10480'::regclass;
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'MPP10480'::regclass;
 
 -- MPP-10421: fix SPLIT of partitions with PRIMARY KEY constraint/indexes
 CREATE TABLE mpp10321a
@@ -3765,20 +3797,23 @@ create table employee_table(timest date, user_id numeric(16,0) not null, tag1 ch
 -- We grant default SELECT permission to a new user, this new user should be
 -- able to SELECT from any partition table we create later.
 -- (https://github.com/greenplum-db/gpdb/issues/9524)
-DROP TABLE IF EXISTS public.t_part_acl;
+DROP TABLE IF EXISTS user_prt_acl.t_part_acl;
+DROP SCHEMA IF EXISTS user_prt_acl;
 DROP ROLE IF EXISTS user_prt_acl;
 
 CREATE ROLE user_prt_acl;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO user_prt_acl;
+CREATE SCHEMA schema_part_acl;
+GRANT USAGE ON SCHEMA schema_part_acl TO user_prt_acl;
+ALTER DEFAULT PRIVILEGES IN SCHEMA schema_part_acl GRANT SELECT ON TABLES TO user_prt_acl;
 
-CREATE TABLE public.t_part_acl (dt date)
+CREATE TABLE schema_part_acl.t_part_acl (dt date)
 PARTITION BY RANGE (dt)
 (
     START (date '2019-12-01') INCLUSIVE
     END (date '2020-02-01') EXCLUSIVE
     EVERY (INTERVAL '1 month')
 );
-INSERT INTO public.t_part_acl VALUES (date '2019-12-01'), (date '2020-01-31');
+INSERT INTO schema_part_acl.t_part_acl VALUES (date '2019-12-01'), (date '2020-01-31');
 
 -- check if parent and child table have same relacl
 SELECT relname FROM pg_class
@@ -3787,12 +3822,10 @@ WHERE relname LIKE 't_part_acl%'
 
 -- check if new user can SELECT all data
 SET ROLE user_prt_acl;
-SELECT * FROM public.t_part_acl;
+SELECT * FROM schema_part_acl.t_part_acl;
 
 RESET ROLE;
-DROP TABLE public.t_part_acl;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT ON TABLES FROM user_prt_acl;
-DROP ROLE user_prt_acl;
+-- we don't drop the table, schema and role here in order to test upgrade
 
 
 -- test on commit behavior used on partition table
@@ -3853,3 +3886,284 @@ DROP TABLE expanded_parent2;
 DROP TABLE unexpanded_parent;
 DROP TABLE unexpanded_attach;
 DROP TABLE unexpanded_attach2;
+
+--
+-- Verify inheritance behavior of new partition child using various syntax
+--
+-- set owner for partition root (should be inherited except for ATTACH, EXCHANGE)
+CREATE ROLE part_inherit_role CREATEROLE;
+CREATE ROLE part_inherit_other_role IN ROLE part_inherit_role;
+CREATE ROLE part_inherit_priv_role;
+CREATE ROLE part_inherit_attach_priv_role;
+CREATE ROLE part_inherit_exchange_out_priv_role;
+SET ROLE part_inherit_role;
+
+CREATE TABLE part_inherit (
+    a int,
+    b int,
+-- non-partition constraint should be inherited except for ATTACH, EXCHANGE
+    CONSTRAINT con1 CHECK (a >= 0)
+)
+PARTITION BY RANGE (a)
+SUBPARTITION BY RANGE (b)
+SUBPARTITION TEMPLATE
+(SUBPARTITION l2_child START(10100) END(10200))
+(DEFAULT PARTITION l1_default,
+       PARTITION l1_child1 START (0) END (100),
+       PARTITION l1_to_split START (100) END (200),
+       PARTITION l1_to_exchange START (200) END (300))
+--AM and reloption should be inherited except for ATTACH, EXCHANGE
+WITH (appendonly = TRUE, compresslevel = 7);
+
+-- Set more properties for the root.
+-- index are inherited 
+CREATE INDEX part_inherit_i on part_inherit(a);
+-- privileges are inherited except for ATTACH, EXCHANGE
+GRANT UPDATE ON part_inherit TO part_inherit_priv_role;
+-- triggers are inherited except for subpartitions 
+-- FIXME: In 6X we used to not inherit triggers at all, in 7X we start to inherit
+-- trigger like the upstream, but the subpartitions created from the subpartition 
+-- template still don't inherit the triggers. We should fix that.
+CREATE FUNCTION part_inherit_trig() RETURNS TRIGGER LANGUAGE plpgsql
+  AS $$ BEGIN RETURN NULL; END $$;
+CREATE TRIGGER part_inherit_tg AFTER INSERT ON part_inherit
+  FOR EACH ROW EXECUTE FUNCTION part_inherit_trig();
+-- rules are not inherited
+CREATE RULE part_inherit_rule AS ON UPDATE TO part_inherit DO INSERT INTO part_inherit values(1);
+-- row-level security policies are not inherited
+ALTER TABLE part_inherit ENABLE ROW LEVEL SECURITY;
+
+-- Check the current status 
+SELECT c.relname,
+        c.reloptions,
+        c.relkind,
+        a.amname as am,
+        c.relhasindex as hasindex,
+        r.rolname as owner,
+        c.relacl as acl,
+        c.relchecks as numchecks,
+        c.relhasrules as hasrules,
+        c.relhastriggers as hastriggers,
+        c.relrowsecurity as rowsecurity
+FROM pg_class c join pg_roles r on c.relowner = r.oid
+        join pg_am a on c.relam = a.oid
+WHERE c.relname LIKE 'part_inherit%' AND 
+        c.relkind NOT IN ('i', 'I');
+
+-- Now create child partitions in various forms 
+
+-- set an alternative role
+SET ROLE part_inherit_other_role;
+
+-- CREATE TABLE PARTITION OF
+CREATE TABLE part_inherit_partof PARTITION OF part_inherit FOR VALUES FROM (300) TO (400);
+
+SELECT c.relname,
+        c.reloptions,
+        c.relkind,
+        a.amname as am,
+        c.relhasindex as hasindex,
+        r.rolname as owner,
+        c.relacl as acl,
+        c.relchecks as numchecks,
+        c.relhasrules as hasrules,
+        c.relhastriggers as hastriggers,
+        c.relrowsecurity as rowsecurity
+FROM pg_class c join pg_roles r on c.relowner = r.oid
+        join pg_am a on c.relam = a.oid
+WHERE c.relname = 'part_inherit_partof';
+
+-- Now create child partitions in various forms 
+-- ATTACH PARTITION
+-- error if the partition-to-be doesn't have the same constraint as the parent.
+CREATE TABLE part_inherit_attach(a int, b int);
+ALTER TABLE part_inherit ATTACH PARTITION part_inherit_attach FOR VALUES FROM (400) TO (500);
+DROP TABLE part_inherit_attach;
+-- good case: have the same constraint as parent. Can have other constraint too.
+CREATE TABLE part_inherit_attach(a int, b int, CONSTRAINT con1 CHECK (a>=0), CONSTRAINT con2 CHECK (b>=0));
+-- reloptions and AM ('heap' which is different than the future parent) will be kept
+ALTER TABLE part_inherit_attach SET (fillfactor=30);
+-- privilege will be kept
+GRANT UPDATE ON part_inherit_attach TO part_inherit_attach_priv_role;
+-- do the attach
+ALTER TABLE part_inherit ATTACH PARTITION part_inherit_attach FOR VALUES FROM (400) TO (500);
+
+SELECT c.relname,
+        c.reloptions,
+        c.relkind,
+        a.amname as am,
+        c.relhasindex as hasindex,
+        r.rolname as owner,
+        c.relacl as acl,
+        c.relchecks as numchecks,
+        c.relhasrules as hasrules,
+        c.relhastriggers as hastriggers,
+        c.relrowsecurity as rowsecurity
+FROM pg_class c join pg_roles r on c.relowner = r.oid
+        join pg_am a on c.relam = a.oid
+WHERE c.relname = 'part_inherit_attach';
+
+
+-- ADD PARTITION
+ALTER TABLE part_inherit ADD PARTITION added START(500) END(600);
+
+SELECT c.relname,
+        c.reloptions,
+        c.relkind,
+        a.amname as am,
+        c.relhasindex as hasindex,
+        r.rolname as owner,
+        c.relacl as acl,
+        c.relchecks as numchecks,
+        c.relhasrules as hasrules,
+        c.relhastriggers as hastriggers,
+        c.relrowsecurity as rowsecurity
+FROM pg_class c join pg_roles r on c.relowner = r.oid
+        join pg_am a on c.relam = a.oid
+WHERE c.relname LIKE 'part_inherit_1_prt_added%' AND 
+        c.relkind NOT IN ('i', 'I');
+
+-- EXCHANGE PARTITION - same behavior as ATTACH PARTITION
+-- error if the partition-to-be doesn't have the same constraint as the parent.
+CREATE TABLE part_inherit_exchange_out(a int, b int);
+ALTER TABLE part_inherit_1_prt_l1_to_exchange EXCHANGE PARTITION l2_child WITH TABLE part_inherit_exchange_out;
+DROP TABLE part_inherit_exchange_out;
+-- good case: have the same constraint as parent. Can have other constraint too.
+CREATE TABLE part_inherit_exchange_out(a int, b int, CONSTRAINT con1 CHECK (a>=0), CONSTRAINT con2 CHECK (b>=0));
+-- reloptions and AM ('heap' which is different than the future parent) will be kept
+ALTER TABLE part_inherit_exchange_out SET (fillfactor=30);
+-- privilege will be kept
+GRANT UPDATE ON part_inherit_exchange_out TO part_inherit_exchange_out_priv_role;
+-- do the exchange
+ALTER TABLE part_inherit_1_prt_l1_to_exchange EXCHANGE PARTITION l2_child WITH TABLE part_inherit_exchange_out;
+
+SELECT c.relname,
+        c.reloptions,
+        c.relkind,
+        a.amname as am,
+        c.relhasindex as hasindex,
+        r.rolname as owner,
+        c.relacl as acl,
+        c.relchecks as numchecks,
+        c.relhasrules as hasrules,
+        c.relhastriggers as hastriggers,
+        c.relrowsecurity as rowsecurity
+FROM pg_class c join pg_roles r on c.relowner = r.oid
+        join pg_am a on c.relam = a.oid
+WHERE (c.relname LIKE 'part_inherit_1_prt_l1_to_exchange%' OR c.relname = 'part_inherit_exchange_out')
+	AND c.relkind NOT IN ('i', 'I');
+
+-- SPLIT PARTITION
+ALTER TABLE part_inherit_1_prt_l1_to_split SPLIT PARTITION l2_child AT (10150) INTO (PARTITION split1, PARTITION split2);
+
+SELECT c.relname,
+        c.reloptions,
+        c.relkind,
+        a.amname as am,
+        c.relhasindex as hasindex,
+        r.rolname as owner,
+        c.relacl as acl,
+        c.relchecks as numchecks,
+        c.relhasrules as hasrules,
+        c.relhastriggers as hastriggers,
+        c.relrowsecurity as rowsecurity
+FROM pg_class c join pg_roles r on c.relowner = r.oid
+        join pg_am a on c.relam = a.oid
+WHERE c.relname LIKE 'part_inherit_1_prt_l1_to_split%' AND 
+        c.relkind NOT IN ('i', 'I');
+
+-- Now print everything for comparison
+SELECT c.relname,
+        c.reloptions,
+        c.relkind,
+        a.amname as am,
+        c.relhasindex as hasindex,
+        r.rolname as owner,
+        c.relacl as acl,
+        c.relchecks as numchecks,
+        c.relhasrules as hasrules,
+        c.relhastriggers as hastriggers,
+        c.relrowsecurity as rowsecurity
+FROM pg_class c join pg_roles r on c.relowner = r.oid
+        join pg_am a on c.relam = a.oid
+WHERE c.relname LIKE 'part_inherit%' AND 
+        c.relkind NOT IN ('i', 'I');
+
+RESET ROLE;
+
+DROP TABLE part_inherit;
+DROP FUNCTION part_inherit_trig CASCADE;
+DROP TABLE part_inherit_exchange_out;
+DROP ROLE part_inherit_role;
+DROP ROLE part_inherit_other_role;
+DROP ROLE part_inherit_priv_role;
+DROP ROLE part_inherit_attach_priv_role;
+DROP ROLE part_inherit_exchange_out_priv_role;
+
+--Test cases for data selection from range partitioned tables with predicate on date or timestamp type-------------
+drop table if exists test_rangePartition;
+create table public.test_rangePartition
+(datedday date)
+    WITH (
+        appendonly=false
+        )
+    PARTITION BY RANGE(datedday)
+(
+    PARTITION pn_20221022 START ('2022-10-22'::date) END ('2022-10-23'::date),
+    PARTITION pn_20221023 START ('2022-10-23'::date) END ('2022-10-24'::date),
+    DEFAULT PARTITION pdefault
+    );
+
+insert into public.test_rangePartition(datedday)
+select ('2022-10-22'::date)
+union
+select ('2022-10-23'::date);
+
+--Test case with condition on date and timestamp
+explain (costs off) select max(datedday) from public.test_rangePartition where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+select max(datedday) from public.test_rangePartition where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+
+--Test case with condition on date and timestamp
+explain (costs off) select max(datedday) from public.test_rangePartition where datedday='2022-10-23' or datedday='2022-10-22';
+select max(datedday) from public.test_rangePartition where datedday='2022-10-23' or datedday='2022-10-22';
+
+--Test case with condition on timestamp and timestamp
+explain (costs off) select max(datedday) from public.test_rangePartition where datedday=('2022-10-23'::date -interval '0 day') or datedday=('2022-10-23'::date -interval '1 day');
+select max(datedday) from public.test_rangePartition where datedday=('2022-10-23'::date -interval '0 day') or datedday=('2022-10-23'::date -interval '1 day');
+
+--Test case with condition on date and timestamp
+explain (costs off) select datedday from public.test_rangePartition where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+select datedday from public.test_rangePartition where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+
+drop table test_rangePartition;
+
+--Test cases for data selection from List partitioned tables with predicate on date or timestamp type-------------
+drop table if exists test_listPartition;
+create table test_listPartition (i int, d date)
+    partition by list(d)
+ (partition p1 values('2022-10-22'), partition p2 values('2022-10-23'),
+ default partition pdefault  );
+
+
+insert into test_listPartition values(1,'2022-10-22');
+insert into test_listPartition values(2,'2022-10-23');
+insert into test_listPartition values(3,'2022-10-24');
+
+
+--Test case with condition on date and timestamp
+explain (costs off) select max(d) from test_listPartition where d='2022-10-23' or d=('2022-10-23'::date -interval '1 day');
+select max(d) from test_listPartition where d='2022-10-23' or d=('2022-10-23'::date -interval '1 day');
+
+--Test case with condition on date and date
+explain (costs off) select max(d) from test_listPartition where d='2022-10-23' or d='2022-10-22';
+select max(d) from test_listPartition where d='2022-10-23' or d='2022-10-22';
+
+--Test case with condition on timestamp and timestamp
+explain (costs off) select max(d) from test_listPartition where d=('2022-10-23'::date -interval '0 day') or d=('2022-10-23'::date -interval '1 day');
+select max(d) from test_listPartition where d=('2022-10-23'::date -interval '0 day') or d=('2022-10-23'::date -interval '1 day');
+
+--Test case with condition on timestamp and timestamp
+explain (costs off) select d from test_listPartition where d='2022-10-23' or d=('2022-10-23'::date -interval '1 day');
+select d from test_listPartition where d='2022-10-23' or d=('2022-10-23'::date -interval '1 day');
+
+drop table test_listPartition;

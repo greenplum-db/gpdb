@@ -30,6 +30,8 @@ extern void transformRuleStmt(RuleStmt *stmt, const char *queryString,
 extern List *transformCreateSchemaStmt(CreateSchemaStmt *stmt);
 extern PartitionBoundSpec *transformPartitionBound(ParseState *pstate, Relation parent,
 												   PartitionBoundSpec *spec);
+extern List *expandTableLikeClause(RangeVar *heapRel,
+								   TableLikeClause *table_like_clause);
 extern IndexStmt *generateClonedIndexStmt(RangeVar *heapRel,
 										  Relation source_idx,
 										  const AttrNumber *attmap, int attmap_length,
@@ -46,7 +48,10 @@ extern List *generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSp
 								PartitionSpec *subPartSpec,
 								const char *queryString, List *parentoptions,
 								const char *parentaccessmethod,
-								List *parentattenc, bool forvalidationonly);
+								List *parentattenc, bool addpartition);
+GpPartitionDefinition *
+transformGpPartitionDefinition(Oid parentrelid, const char *queryString,
+							   GpPartitionDefinition *gpPartDef_orig);
 extern void convert_exclusive_start_inclusive_end(Const *constval, Oid part_col_typid,
 												  int32 part_col_typmod, bool is_exclusive_start);
 

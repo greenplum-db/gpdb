@@ -14,7 +14,6 @@ where option can be:
       SUPERUSER | NOSUPERUSER
     | CREATEDB | NOCREATEDB
     | CREATEROLE | NOCREATEROLE
-    | CREATEUSER | NOCREATEUSER
     | CREATEEXTTABLE | NOCREATEEXTTABLE 
       [ ( <attribute>='<value>'[, ...] ) ]
            where <attributes> and <value> are:
@@ -22,16 +21,21 @@ where option can be:
            protocol='gpfdist'|'http'
     | INHERIT | NOINHERIT
     | LOGIN | NOLOGIN
+    | REPLICATION | NOREPLICATION
+    | BYPASSRLS | NOBYPASSRLS
     | CONNECTION LIMIT <connlimit>
-    | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<password>'
+    | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<password>' | PASSWORD NULL
     | VALID UNTIL '<timestamp>' 
-    | IN ROLE <rolename> [, ...]
-    | ROLE <rolename> [, ...]
-    | ADMIN <rolename> [, ...]
+    | IN ROLE <role_name> [, ...]
+    | IN GROUP <role_name> [, ...]
+    | ROLE <role_name> [, ...]
+    | ADMIN <role_name> [, ...]
+    | USER <role_name> [, ...]
+    | SYSID <uid> [, ...]
     | RESOURCE QUEUE <queue_name>
     | RESOURCE GROUP <group_name>
-    | [ DENY <deny_point> ]
-    | [ DENY BETWEEN <deny_point> AND <deny_point>]
+    | [ DENY <deny_point> ]
+    | [ DENY BETWEEN <deny_point> AND <deny_point>]
 ```
 
 ## <a id="section3"></a>Description 

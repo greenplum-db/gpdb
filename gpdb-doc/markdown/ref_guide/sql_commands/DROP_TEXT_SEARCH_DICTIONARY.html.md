@@ -10,20 +10,20 @@ DROP TEXT SEARCH DICTIONARY [ IF EXISTS ] <name> [ CASCADE | RESTRICT ]
 
 ## <a id="section3"></a>Description 
 
-`DROP TEXT SEARCH DICTIONARY` drops an existing text search dictionary. To run this command you must be the owner of the dictionary.
+`DROP TEXT SEARCH DICTIONARY` drops an existing text search dictionary. You must be the owner of the dictionary to run this command.
 
 ## <a id="section4"></a>Parameters 
 
-`IF EXISTS`
-:   Do not throw an error if the text search dictionary does not exist. A notice is issued in this case.
+IF EXISTS
+:   Do not throw an error if the text search dictionary does not exist. Greenplum Database issues a notice in this case.
 
-`name`
+name
 :   The name \(optionally schema-qualified\) of an existing text search dictionary.
 
-`CASCADE`
-:   Automatically drop objects that depend on the text search dictionary.
+CASCADE
+:   Automatically drop objects that depend on the text search dictionary, and in turn all objects that depend on those objects.
 
-`RESTRICT`
+RESTRICT
 :   Refuse to drop the text search dictionary if any objects depend on it. This is the default.
 
 ## <a id="section5"></a>Examples 

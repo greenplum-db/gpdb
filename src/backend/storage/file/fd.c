@@ -273,8 +273,10 @@ static AllocateDesc *allocatedDescs = NULL;
 static long tempFileCounter = 0;
 
 /*
- * Array of OIDs of temp tablespaces.  When numTempTableSpaces is -1,
- * this has not been set in the current transaction.
+ * Array of OIDs of temp tablespaces.  (Some entries may be InvalidOid,
+ * indicating that the current database's default tablespace should be used.)
+ * When numTempTableSpaces is -1, this has not been set in the current
+ * transaction.
  */
 static Oid *tempTableSpaces = NULL;
 static int	numTempTableSpaces = -1;
@@ -783,7 +785,10 @@ durable_link_or_rename(const char *oldfile, const char *newfile, int elevel)
 		ereport(elevel,
 				(errcode_for_file_access(),
 				 errmsg("could not link file \"%s\" to \"%s\": %m",
-						oldfile, newfile)));
+						oldfile, newfile),
+				 (AmCheckpointerProcess() ?
+				  errhint("This is known to fail occasionally during archive recovery, where it is harmless.") :
+				  0)));
 		return -1;
 	}
 	unlink(oldfile);
@@ -794,7 +799,10 @@ durable_link_or_rename(const char *oldfile, const char *newfile, int elevel)
 		ereport(elevel,
 				(errcode_for_file_access(),
 				 errmsg("could not rename file \"%s\" to \"%s\": %m",
-						oldfile, newfile)));
+						oldfile, newfile),
+				 (AmCheckpointerProcess() ?
+				  errhint("This is known to fail occasionally during archive recovery, where it is harmless.") :
+				  0)));
 		return -1;
 	}
 #endif
@@ -1409,8 +1417,6 @@ PathNameOpenFilePerm(const char *fileName, int fileFlags, mode_t fileMode)
 	DO_DB(elog(LOG, "PathNameOpenFile: success %d",
 			   vfdP->fd));
 
-	Insert(file);
-
 	vfdP->fileName = fnamecopy;
 	/* Saved flags are adjusted to be OK for re-opening file */
 	vfdP->fileFlags = fileFlags & ~(O_CREAT | O_TRUNC | O_EXCL);
@@ -1418,6 +1424,8 @@ PathNameOpenFilePerm(const char *fileName, int fileFlags, mode_t fileMode)
 	vfdP->fileSize = 0;
 	vfdP->fdstate = 0x0;
 	vfdP->resowner = NULL;
+
+	Insert(file);
 
 	return file;
 }
@@ -1758,7 +1766,7 @@ PathNameDeleteTemporaryFile(const char *path, bool error_on_failure)
 		if (errno != ENOENT)
 			ereport(error_on_failure ? ERROR : LOG,
 					(errcode_for_file_access(),
-					 errmsg("cannot unlink temporary file \"%s\": %m",
+					 errmsg("could not unlink temporary file \"%s\": %m",
 							path)));
 		return false;
 	}
@@ -2805,6 +2813,9 @@ closeAllVfds(void)
  * unless this function is called again before then.  It is caller's
  * responsibility that the passed-in array has adequate lifespan (typically
  * it'd be allocated in TopTransactionContext).
+ *
+ * Some entries of the array may be InvalidOid, indicating that the current
+ * database's default tablespace should be used.
  */
 void
 SetTempTablespaces(Oid *tableSpaces, int numSpaces)
@@ -2844,7 +2855,10 @@ TempTablespacesAreSet(void)
  * GetTempTablespaces
  *
  * Populate an array with the OIDs of the tablespaces that should be used for
- * temporary files.  Return the number that were copied into the output array.
+ * temporary files.  (Some entries may be InvalidOid, indicating that the
+ * current database's default tablespace should be used.)  At most numSpaces
+ * entries will be filled.
+ * Returns the number of OIDs that were copied into the output array.
  */
 int
 GetTempTablespaces(Oid *tableSpaces, int numSpaces)
@@ -3500,7 +3514,7 @@ unlink_if_exists_fname(const char *fname, bool isdir, int elevel)
 		if (rmdir(fname) != 0 && errno != ENOENT)
 			ereport(elevel,
 					(errcode_for_file_access(),
-					 errmsg("could not rmdir directory \"%s\": %m", fname)));
+					 errmsg("could not remove directory \"%s\": %m", fname)));
 	}
 	else
 	{

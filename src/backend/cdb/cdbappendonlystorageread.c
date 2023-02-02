@@ -27,6 +27,7 @@
 #include "cdb/cdbappendonlystorageformat.h"
 #include "cdb/cdbappendonlystorageread.h"
 #include "storage/gp_compress.h"
+#include "utils/faultinjector.h"
 #include "utils/guc.h"
 
 
@@ -465,88 +466,6 @@ AppendOnlyStorageRead_CloseFile(AppendOnlyStorageRead *storageRead)
  * we are currently in until the end of the block. The function will skip
  * to the end of block if skipLen is -1 or skip skipLen bytes otherwise.
  */
-static void
-AppendOnlyStorageRead_DoSkipPadding(AppendOnlyStorageRead *storageRead,
-									int32 skipLen)
-{
-	int64		nextReadPosition;
-	int64		nextBoundaryPosition;
-	int32		safeWriteRemainder;
-	bool		doSkip;
-	uint8	   *buffer;
-	int32		availableLen;
-	int32		safewrite = storageRead->storageAttributes.safeFSWriteSize;
-
-	/* early exit if no pad used */
-	if (safewrite == 0)
-		return;
-
-	nextReadPosition =
-		BufferedReadNextBufferPosition(&storageRead->bufferedRead);
-	nextBoundaryPosition =
-		((nextReadPosition + safewrite - 1) / safewrite) * safewrite;
-	safeWriteRemainder = (int32) (nextBoundaryPosition - nextReadPosition);
-
-	if (safeWriteRemainder <= 0)
-		doSkip = false;
-	else if (skipLen == -1)
-	{
-		/*
-		 * Skip to end of page.
-		 */
-		doSkip = true;
-	}
-	else
-		doSkip = (safeWriteRemainder < skipLen);
-
-	if (doSkip)
-	{
-		/*
-		 * Read through the remainder.
-		 */
-		buffer = BufferedReadGetNextBuffer(&storageRead->bufferedRead,
-										   safeWriteRemainder,
-										   &availableLen);
-
-		/*
-		 * Since our file EOF should always be a multiple of the file-system
-		 * page, we do not expect a short read here.
-		 */
-		if (buffer == NULL)
-			availableLen = 0;
-		if (buffer == NULL || safeWriteRemainder != availableLen)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INTERNAL_ERROR),
-					 errmsg("unexpected end of file"),
-					 errdetail("Expected to read %d bytes after position " INT64_FORMAT " but found %d bytes (bufferCount  " INT64_FORMAT ").",
-							safeWriteRemainder,
-							nextReadPosition,
-							availableLen,
-							storageRead->bufferCount)));
-		}
-
-		/*
-		 * UNDONE: For verification purposes, we should verify the remainder
-		 * is all zeroes.
-		 */
-
-		elogif(Debug_appendonly_print_scan, LOG,
-			   "Append-only scan skipping zero padded remainder for table '%s' (nextReadPosition = " INT64_FORMAT ", safeWriteRemainder = %d)",
-			   storageRead->relationName,
-			   nextReadPosition,
-			   safeWriteRemainder);
-	}
-}
-
-/*
- * Skip zero padding to next page boundary, if necessary.
- *
- * This function is called when the file system block we are scanning has
- * no more valid data but instead is padded with zero's from the position
- * we are currently in until the end of the block. The function will skip
- * to the end of block if skipLen is -1 or skip skipLen bytes otherwise.
- */
 static bool
 AppendOnlyStorageRead_PositionToNextBlock(AppendOnlyStorageRead *storageRead,
 										  int64 *headerOffsetInFile,
@@ -566,7 +485,6 @@ AppendOnlyStorageRead_PositionToNextBlock(AppendOnlyStorageRead *storageRead,
 	 * However, we need to honor the file-system page boundaries here since we
 	 * do not let the length information cross the boundary.
 	 */
-	AppendOnlyStorageRead_DoSkipPadding(storageRead, storageRead->minimumHeaderLen);
 
 	*headerOffsetInFile =
 		BufferedReadNextBufferPosition(&storageRead->bufferedRead);
@@ -606,13 +524,6 @@ AppendOnlyStorageRead_PositionToNextBlock(AppendOnlyStorageRead *storageRead,
 		i++;
 		if (i >= storageRead->minimumHeaderLen)
 		{
-			/*
-			 * Skip over zero padding caused when the append command left a
-			 * partially full page.
-			 */
-			AppendOnlyStorageRead_DoSkipPadding(storageRead,
-												-1 /* means till end of page */ );
-
 			/*
 			 * Now try to get the peek data from the new page.
 			 */
@@ -1002,6 +913,8 @@ AppendOnlyStorageRead_ReadNextBlock(AppendOnlyStorageRead *storageRead)
 	{
 		/* UNDONE: Finish the read for the information only header. */
 	}
+
+	SIMPLE_FAULT_INJECTOR("AppendOnlyStorageRead_ReadNextBlock_success");
 
 	return true;
 }

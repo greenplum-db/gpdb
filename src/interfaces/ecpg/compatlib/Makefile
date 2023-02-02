@@ -26,13 +26,6 @@ SHLIB_LINK_INTERNAL = -L../ecpglib -lecpg -L../pgtypeslib -lpgtypes $(libpq_pgpo
 SHLIB_LINK = $(filter -lintl -lm, $(LIBS)) $(PTHREAD_LIBS)
 SHLIB_PREREQS = submake-ecpglib submake-pgtypeslib
 
-# For a bug in gcc on centos 32-bit
-ifeq ($(GCC), yes)
- CFLAGS += -Wno-error
-endif # GCC
-
-SHLIB_EXPORTS = exports.txt
-
 SHLIB_EXPORTS = exports.txt
 
 OBJS= informix.o $(WIN32RES)

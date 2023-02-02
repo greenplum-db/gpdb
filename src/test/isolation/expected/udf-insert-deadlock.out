@@ -4,21 +4,29 @@ starting permutation: s1begin s2begin s1insert_1_stat s2insert_2_stat s1insert_2
 step s1begin: BEGIN;
 step s2begin: BEGIN;
 step s1insert_1_stat: SELECT i_one(10, False);
-i_one          
+i_one
+-----
+     
+(1 row)
 
-               
 step s2insert_2_stat: SELECT i_two(100, False);
-i_two          
+i_two
+-----
+     
+(1 row)
 
-               
 step s1insert_2_stat: SELECT i_two(10, False);
-i_two          
+i_two
+-----
+     
+(1 row)
 
-               
 step s2insert_1_stat: SELECT i_one(100, False);
-i_one          
+i_one
+-----
+     
+(1 row)
 
-               
 step s1commit: COMMIT;
 step s2commit: COMMIT;
 
@@ -26,21 +34,29 @@ starting permutation: s1begin s2begin s1insert_1_dyn s2insert_2_dyn s1insert_2_d
 step s1begin: BEGIN;
 step s2begin: BEGIN;
 step s1insert_1_dyn: SELECT i_one(15, True);
-i_one          
+i_one
+-----
+     
+(1 row)
 
-               
 step s2insert_2_dyn: SELECT i_two(150, True);
-i_two          
+i_two
+-----
+     
+(1 row)
 
-               
 step s1insert_2_dyn: SELECT i_two(15, True);
-i_two          
+i_two
+-----
+     
+(1 row)
 
-               
 step s2insert_1_dyn: SELECT i_one(150, True);
-i_one          
+i_one
+-----
+     
+(1 row)
 
-               
 step s1commit: COMMIT;
 step s2commit: COMMIT;
 
@@ -48,21 +64,29 @@ starting permutation: s1begin s2begin s1insert_1_stat s2insert_2_dyn s1insert_2_
 step s1begin: BEGIN;
 step s2begin: BEGIN;
 step s1insert_1_stat: SELECT i_one(10, False);
-i_one          
+i_one
+-----
+     
+(1 row)
 
-               
 step s2insert_2_dyn: SELECT i_two(150, True);
-i_two          
+i_two
+-----
+     
+(1 row)
 
-               
 step s1insert_2_stat: SELECT i_two(10, False);
-i_two          
+i_two
+-----
+     
+(1 row)
 
-               
 step s2insert_1_dyn: SELECT i_one(150, True);
-i_one          
+i_one
+-----
+     
+(1 row)
 
-               
 step s1commit: COMMIT;
 step s2commit: COMMIT;
 
@@ -70,20 +94,28 @@ starting permutation: s1begin s2begin s1insert_1_dyn s2insert_2_stat s1insert_2_
 step s1begin: BEGIN;
 step s2begin: BEGIN;
 step s1insert_1_dyn: SELECT i_one(15, True);
-i_one          
+i_one
+-----
+     
+(1 row)
 
-               
 step s2insert_2_stat: SELECT i_two(100, False);
-i_two          
+i_two
+-----
+     
+(1 row)
 
-               
 step s1insert_2_dyn: SELECT i_two(15, True);
-i_two          
+i_two
+-----
+     
+(1 row)
 
-               
 step s2insert_1_stat: SELECT i_one(100, False);
-i_one          
+i_one
+-----
+     
+(1 row)
 
-               
 step s1commit: COMMIT;
 step s2commit: COMMIT;

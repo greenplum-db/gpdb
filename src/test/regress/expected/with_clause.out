@@ -2267,10 +2267,10 @@ UNION ALL
 SELECT count(a1.i)
   FROM a1
   INNER JOIN a2 ON a2.i = a1.i;
-                                    QUERY PLAN                                    
-----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
-   ->  Append
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Append
+   ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Subquery Scan on "*SELECT* 1"
                ->  Hash Join
                      Hash Cond: (share1_ref1.i = a2.i)
@@ -2280,18 +2280,16 @@ SELECT count(a1.i)
                            ->  Subquery Scan on a2
                                  ->  Shared Scan (share slice:id 1:0)
                                        ->  Seq Scan on foo foo_1
-         ->  Redistribute Motion 1:3  (slice2; segments: 1)
-               Hash Key: (count(share1_ref2.i))
-               ->  Aggregate
-                     ->  Gather Motion 3:1  (slice3; segments: 3)
-                           ->  Hash Join
-                                 Hash Cond: (share1_ref2.i = a2_1.i)
-                                 ->  Shared Scan (share slice:id 3:1)
-                                 ->  Hash
-                                       ->  Subquery Scan on a2_1
-                                             ->  Shared Scan (share slice:id 3:0)
+   ->  Aggregate
+         ->  Gather Motion 3:1  (slice2; segments: 3)
+               ->  Hash Join
+                     Hash Cond: (share1_ref2.i = a2_1.i)
+                     ->  Shared Scan (share slice:id 2:1)
+                     ->  Hash
+                           ->  Subquery Scan on a2_1
+                                 ->  Shared Scan (share slice:id 2:0)
  Optimizer: Postgres query optimizer
-(22 rows)
+(20 rows)
 
 -- Another cross-slice ShareInputScan test. There is one producing slice,
 -- and two consumers in second slice. Make sure the Share Input Scan

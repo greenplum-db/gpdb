@@ -435,7 +435,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 				sort_clause opt_sort_clause sortby_list index_params
 				opt_include opt_c_include index_including_params
 				name_list role_list from_clause from_list opt_array_bounds
-				qualified_name_list any_name any_name_list type_name_list
+				qualified_name_list qualified_name_list_with_only any_name any_name_list type_name_list
 				any_operator expr_list attrs
 				target_list opt_target_list insert_column_list set_target_list
 				set_clause_list set_clause
@@ -751,7 +751,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 	LEADING LEAKPROOF LEAST LEFT LEVEL LIKE LIMIT LISTEN LOAD LOCAL
 	LOCALTIME LOCALTIMESTAMP LOCATION LOCK_P LOCKED LOGGED
 
-	MAPPING MATCH MATERIALIZED MAXVALUE MEMORY_LIMIT MEMORY_SHARED_QUOTA MEMORY_SPILL_RATIO
+	MAPPING MATCH MATERIALIZED MAXVALUE MEMORY_LIMIT
 	METHOD MINUTE_P MINVALUE MODE MONTH_P MOVE
 
 	NAME_P NAMES NATIONAL NATURAL NCHAR NEW NEXT NO NONE
@@ -804,7 +804,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 %token <keyword>
 	ACTIVE
 
-	CONTAINS COORDINATOR CPUSET CPU_RATE_LIMIT
+	CONTAINS COORDINATOR CPUSET CPU_HARD_QUOTA_LIMIT CPU_SOFT_PRIORITY
 
 	CREATEEXTTABLE
 
@@ -947,7 +947,8 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc COPY
 			%nonassoc COST
 			%nonassoc CPUSET
-			%nonassoc CPU_RATE_LIMIT
+			%nonassoc CPU_HARD_QUOTA_LIMIT
+			%nonassoc CPU_SOFT_PRIORITY
 			%nonassoc CREATEEXTTABLE
 			%nonassoc CSV
 			%nonassoc CURRENT_P
@@ -1031,8 +1032,6 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc MATCH
 			%nonassoc MAXVALUE
 			%nonassoc MEMORY_LIMIT
-			%nonassoc MEMORY_SHARED_QUOTA
-			%nonassoc MEMORY_SPILL_RATIO
 			%nonassoc MINUTE_P
 			%nonassoc MINVALUE
 			%nonassoc MISSING
@@ -1606,25 +1605,17 @@ OptResourceGroupElem:
 					/* was "concurrency" */
 					$$ = makeDefElem("concurrency", (Node *) makeInteger($2), @1);
 				}
-			| CPU_RATE_LIMIT SignedIconst
+			| CPU_HARD_QUOTA_LIMIT SignedIconst
 				{
-					$$ = makeDefElem("cpu_rate_limit", (Node *) makeInteger($2), @1);
+					$$ = makeDefElem("cpu_hard_quota_limit", (Node *) makeInteger($2), @1);
 				}
+            | CPU_SOFT_PRIORITY SignedIconst
+                {
+                    $$ = makeDefElem("cpu_soft_priority", (Node *) makeInteger($2), @1);
+                }
 			| CPUSET Sconst
 				{
 					$$ = makeDefElem("cpuset", (Node *) makeString($2), @1);
-				}
-			| MEMORY_SHARED_QUOTA SignedIconst
-				{
-					$$ = makeDefElem("memory_shared_quota", (Node *) makeInteger($2), @1);
-				}
-			| MEMORY_LIMIT SignedIconst
-				{
-					$$ = makeDefElem("memory_limit", (Node *) makeInteger($2), @1);
-				}
-			| MEMORY_SPILL_RATIO SignedIconst
-				{
-					$$ = makeDefElem("memory_spill_ratio", (Node *) makeInteger($2), @1);
 				}
 		;
 
@@ -2910,6 +2901,18 @@ alter_table_cmd:
 					n->subtype = AT_SetStatistics;
 					n->num = (int16) $3;
 					n->def = (Node *) makeInteger($6);
+					$$ = (Node *)n;
+				}
+			/* ALTER TABLE <name> ALTER COLUMN <column> SET ENCODING <coldef> */
+			| ALTER opt_column ColId SET ENCODING definition
+				{
+					ColumnReferenceStorageDirective *c =
+						makeNode(ColumnReferenceStorageDirective);
+					c->column = $3;
+					c->encoding = $6;
+					AlterTableCmd *n = makeNode(AlterTableCmd);
+					n->subtype = AT_SetColumnEncoding;
+					n->def = (Node *)c;
 					$$ = (Node *)n;
 				}
 			/* ALTER TABLE <name> ALTER [COLUMN] <colname> SET ( column_parameter = value [, ... ] ) */
@@ -5065,6 +5068,7 @@ TableLikeClause:
 					TableLikeClause *n = makeNode(TableLikeClause);
 					n->relation = $2;
 					n->options = $3;
+					n->relationOid = InvalidOid;
 					$$ = (Node *)n;
 				}
 		;
@@ -9531,7 +9535,7 @@ privilege:	SELECT opt_column_list
  * opt_table.  You're going to get conflicts.
  */
 privilege_target:
-			qualified_name_list
+			qualified_name_list_with_only
 				{
 					PrivTarget *n = (PrivTarget *) palloc(sizeof(PrivTarget));
 					n->targtype = ACL_TARGET_OBJECT;
@@ -9539,7 +9543,7 @@ privilege_target:
 					n->objs = $1;
 					$$ = n;
 				}
-			| TABLE qualified_name_list
+			| TABLE qualified_name_list_with_only
 				{
 					PrivTarget *n = (PrivTarget *) palloc(sizeof(PrivTarget));
 					n->targtype = ACL_TARGET_OBJECT;
@@ -17631,6 +17635,27 @@ qualified_name_list:
 			| qualified_name_list ',' qualified_name { $$ = lappend($1, $3); }
 		;
 
+qualified_name_list_with_only:
+			qualified_name
+				{
+					$$ = list_make1($1);
+				}
+			| ONLY qualified_name
+				{ 
+					$2->inh = false; 
+					$$ = list_make1($2);
+				}
+			| qualified_name_list_with_only ',' qualified_name
+				{
+					$$ = lappend($1, $3);
+				}
+			| qualified_name_list_with_only ',' ONLY qualified_name
+				{
+					$4->inh = false; 
+					$$ = lappend($1, $4);
+				}
+		;
+
 /*
  * The production for a qualified relation name has to exactly match the
  * production for a qualified func_name, because in a FROM clause we cannot
@@ -18005,7 +18030,8 @@ unreserved_keyword:
 			| COPY
 			| COST
 			| CPUSET
-			| CPU_RATE_LIMIT
+			| CPU_HARD_QUOTA_LIMIT
+			| CPU_SOFT_PRIORITY
 			| CREATEEXTTABLE
 			| CSV
 			| CUBE
@@ -18117,8 +18143,6 @@ unreserved_keyword:
 			| MATERIALIZED
 			| MAXVALUE
 			| MEMORY_LIMIT
-			| MEMORY_SHARED_QUOTA
-			| MEMORY_SPILL_RATIO
 			| METHOD
 			| MINUTE_P
 			| MINVALUE
@@ -18365,7 +18389,8 @@ PartitionIdentKeyword: ABORT_P
 			| COPY
 			| COST
 			| CPUSET
-			| CPU_RATE_LIMIT
+			| CPU_HARD_QUOTA_LIMIT
+			| CPU_SOFT_PRIORITY
 			| CREATEEXTTABLE
 			| CSV
 			| CUBE
@@ -18445,8 +18470,6 @@ PartitionIdentKeyword: ABORT_P
 			| MATCH
 			| MAXVALUE
 			| MEMORY_LIMIT
-			| MEMORY_SHARED_QUOTA
-			| MEMORY_SPILL_RATIO
 			| MINVALUE
 			| MISSING
 			| MODE
@@ -19121,7 +19144,7 @@ makeOrderedSetArgs(List *directargs, List *orderedargs,
 				   core_yyscan_t yyscanner)
 {
 	FunctionParameter *lastd = (FunctionParameter *) llast(directargs);
-	int			ndirectargs;
+	Value	   *ndirectargs;
 
 	/* No restriction unless last direct arg is VARIADIC */
 	if (lastd->mode == FUNC_PARAM_VARIADIC)
@@ -19145,10 +19168,10 @@ makeOrderedSetArgs(List *directargs, List *orderedargs,
 	}
 
 	/* don't merge into the next line, as list_concat changes directargs */
-	ndirectargs = list_length(directargs);
+	ndirectargs = makeInteger(list_length(directargs));
 
 	return list_make2(list_concat(directargs, orderedargs),
-					  makeInteger(ndirectargs));
+					  ndirectargs);
 }
 
 /* insertSelectOptions()

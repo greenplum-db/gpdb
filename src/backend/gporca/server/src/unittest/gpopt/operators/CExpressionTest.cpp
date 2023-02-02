@@ -84,7 +84,8 @@ CExpressionTest::PexprCreateGbyWithColumnFormat(CMemoryPool *mp,
 												const WCHAR *wszColNameFormat)
 {
 	CWStringConst strRelName(GPOS_WSZ_LIT("Rel1"));
-	CMDIdGPDB *rel_mdid = GPOS_NEW(mp) CMDIdGPDB(GPOPT_TEST_REL_OID1, 1, 1);
+	CMDIdGPDB *rel_mdid =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_TEST_REL_OID1, 1, 1);
 	CTableDescriptor *ptabdesc = CTestUtils::PtabdescPlainWithColNameFormat(
 		mp, 3, rel_mdid, wszColNameFormat, CName(&strRelName), false);
 	CWStringConst strRelAlias(GPOS_WSZ_LIT("Rel1"));
@@ -157,7 +158,7 @@ CExpressionTest::EresUnittest_SimpleOps()
 
 	Pfpexpr rgpf[] = {
 		CTestUtils::PexprLogicalGet,
-		CTestUtils::PexprLogicalExternalGet,
+		CTestUtils::PexprLogicalForeignGet,
 		CTestUtils::PexprLogicalGetPartitioned,
 		CTestUtils::PexprLogicalSelect,
 		CTestUtils::PexprLogicalSelectCmpToConst,
@@ -358,7 +359,8 @@ CExpressionTest::EresUnittest_BitmapGet()
 
 	CWStringConst strRelName(GPOS_WSZ_LIT("MyTable"));
 	CWStringConst strRelAlias(GPOS_WSZ_LIT("T"));
-	CMDIdGPDB *rel_mdid = GPOS_NEW(mp) CMDIdGPDB(GPOPT_MDCACHE_TEST_OID, 1, 1);
+	CMDIdGPDB *rel_mdid =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_MDCACHE_TEST_OID, 1, 1);
 	const WCHAR *wszColNameFormat = GPOS_WSZ_LIT("column_%04d");
 	CTableDescriptor *ptabdesc = CTestUtils::PtabdescPlainWithColNameFormat(
 		mp, 3, rel_mdid, wszColNameFormat, CName(&strRelName), false);
@@ -1284,7 +1286,8 @@ CExpressionTest::EresUnittest_InvalidSetOp()
 
 		// create two different Get expressions
 		CWStringConst strName1(GPOS_WSZ_LIT("T1"));
-		CMDIdGPDB *pmdid1 = GPOS_NEW(mp) CMDIdGPDB(GPOPT_TEST_REL_OID1, 1, 1);
+		CMDIdGPDB *pmdid1 =
+			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_TEST_REL_OID1, 1, 1);
 		CTableDescriptor *ptabdesc1 =
 			CTestUtils::PtabdescCreate(mp, 3, pmdid1, CName(&strName1));
 		CWStringConst strAlias1(GPOS_WSZ_LIT("T1Alias"));
@@ -1293,7 +1296,8 @@ CExpressionTest::EresUnittest_InvalidSetOp()
 		CColRefSet *pcrsOutput1 = pexprGet1->DeriveOutputColumns();
 
 		CWStringConst strName2(GPOS_WSZ_LIT("T2"));
-		CMDIdGPDB *pmdid2 = GPOS_NEW(mp) CMDIdGPDB(GPOPT_TEST_REL_OID2, 1, 1);
+		CMDIdGPDB *pmdid2 =
+			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_TEST_REL_OID2, 1, 1);
 		CTableDescriptor *ptabdesc2 =
 			CTestUtils::PtabdescCreate(mp, 3, pmdid2, CName(&strName2));
 		CWStringConst strAlias2(GPOS_WSZ_LIT("T2Alias"));

@@ -53,8 +53,8 @@ create table t1 (a int, b int) distributed by (a);
 --------+---------+-----------+----------+---------+---------+--------------+------------------+-------------------+------------+-------------
  a      | integer |           |          |         | plain   |              | none             | 0                 | 32768      | 
  b      | integer |           |          |         | plain   |              | none             | 0                 | 32768      | 
-Checksum: t
 Distributed by: (a)
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=true
 
 SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 't1';
   amname   
@@ -86,9 +86,8 @@ create table t2 (a int, b varchar, c text) distributed by (a);
  a      | integer           |           |          |         | plain    |              | none             | 0                 | 8192       | 
  b      | character varying |           |          |         | extended |              | none             | 0                 | 8192       | 
  c      | text              |           |          |         | extended |              | none             | 0                 | 8192       | 
-Checksum: t
 Distributed by: (a)
-Options: blocksize=8192
+Options: blocksize=8192, compresslevel=0, compresstype=none, checksum=true
 
 SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 't2';
   amname   
@@ -144,23 +143,14 @@ select * from h1 where a > 5 and a < 10 order by a,b;
 select c.relname, am.amname, c.relkind, c.reloptions
 	from pg_class c left join pg_am am on (c.relam = am.oid)
 	where c.relkind='r' and c.relnamespace=2200 order by relname;
- relname |  amname   | relkind |    reloptions    
----------+-----------+---------+------------------
+ relname |  amname   | relkind |                            reloptions                             
+---------+-----------+---------+-------------------------------------------------------------------
  h1      | heap      | r       | 
- t1      | ao_column | r       | 
- t2      | ao_column | r       | {blocksize=8192}
+ t1      | ao_column | r       | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
+ t2      | ao_column | r       | {blocksize=8192,compresslevel=0,compresstype=none,checksum=true}
  t3      | heap      | r       | 
- t4      | ao_row    | r       | {blocksize=8192}
+ t4      | ao_row    | r       | {blocksize=8192,compresslevel=0,compresstype=none,checksum=true}
 (5 rows)
-
-select relid::regclass, blocksize, compresstype,
-	compresslevel, columnstore, checksum from pg_appendonly order by 1;
- relid | blocksize | compresstype | compresslevel | columnstore | checksum 
--------+-----------+--------------+---------------+-------------+----------
- t1    |     32768 |              |             0 | t           | t
- t2    |      8192 |              |             0 | t           | t
- t4    |      8192 |              |             0 | f           | t
-(3 rows)
 
 \c dsp2
 set default_table_access_method = ao_row;
@@ -184,12 +174,8 @@ create table t1 (a int, b int) distributed by (a);
 --------+---------+-----------+----------+---------+---------+--------------+-------------
  a      | integer |           |          |         | plain   |              | 
  b      | integer |           |          |         | plain   |              | 
-Compression Type: zlib
-Compression Level: 2
-Block Size: 32768
-Checksum: t
 Distributed by: (a)
-Options: compresslevel=2
+Options: blocksize=32768, compresslevel=2, compresstype=zlib, checksum=true
 
 SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 't1';
  amname 
@@ -220,9 +206,8 @@ create table t2 (
  b      | double precision |           |          |         | plain    |              | zlib             | 2                 | 32768      | 
  c      | integer          |           |          |         | plain    |              | rle_type         | 2                 | 32768      | 
  d      | text             |           |          |         | extended |              | zlib             | 2                 | 32768      | 
-Checksum: t
 Distributed by: (a)
-Options: compresslevel=2
+Options: blocksize=32768, compresslevel=2, compresstype=zlib, checksum=true
 
 SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 't2';
   amname   
@@ -282,20 +267,11 @@ select * from t3 order by 1;
 select c.relname, am.amname, c.relkind, c.reloptions
 	from pg_class c left join pg_am am on (c.relam = am.oid)
     where c.relname in ('t1', 't2', 't3') order by 1;
- relname |  amname   | relkind |            reloptions            
----------+-----------+---------+----------------------------------
- t1      | ao_row    | r       | {compresslevel=2}
- t2      | ao_column | r       | {compresslevel=2}
- t3      | ao_row    | r       | {compresslevel=4,checksum=false}
-(3 rows)
-
-select relid::regclass, blocksize, compresstype,
-	compresslevel, columnstore, checksum from pg_appendonly order by 1;
- relid | blocksize | compresstype | compresslevel | columnstore | checksum 
--------+-----------+--------------+---------------+-------------+----------
- t1    |     32768 | zlib         |             2 | f           | t
- t2    |     32768 | zlib         |             2 | t           | t
- t3    |     32768 | zlib         |             4 | f           | f
+ relname |  amname   | relkind |                             reloptions                             
+---------+-----------+---------+--------------------------------------------------------------------
+ t1      | ao_row    | r       | {blocksize=32768,compresslevel=2,compresstype=zlib,checksum=true}
+ t2      | ao_column | r       | {blocksize=32768,compresslevel=2,compresstype=zlib,checksum=true}
+ t3      | ao_row    | r       | {blocksize=32768,compresslevel=4,compresstype=zlib,checksum=false}
 (3 rows)
 
 -- The GUC has checksum=false. Test that you can still turn it in WITH, and
@@ -331,19 +307,24 @@ ALTER TABLE alter_part_tab1 ADD partition p31 values(1) WITH (appendonly=true, o
 (default subpartition subothers,
    subpartition sp1 start(1) end(9) with (appendonly=true,orientation=column,checksum=true,compresstype=rle_type),
    subpartition sp2 start(11) end(20) with(appendonly=true,orientation=column,checksum=true,compresstype=none));
-SELECT relname, checksum from pg_appendonly ao, pg_class c where ao.relid = c.oid and relname like 'alter_part_tab1%';
-                  relname                  | checksum 
--------------------------------------------+----------
- alter_part_tab1_1_prt_p1_2_prt_sp1        | t
- alter_part_tab1_1_prt_p1_2_prt_sp2        | t
- alter_part_tab1_1_prt_p1_2_prt_subothers  | t
- alter_part_tab1_1_prt_p2_2_prt_sp1        | t
- alter_part_tab1_1_prt_p2_2_prt_sp2        | t
- alter_part_tab1_1_prt_p2_2_prt_subothers  | t
- alter_part_tab1_1_prt_p31_2_prt_sp1       | t
- alter_part_tab1_1_prt_p31_2_prt_sp2       | t
- alter_part_tab1_1_prt_p31_2_prt_subothers | t
-(9 rows)
+SELECT relname, reloptions from pg_class c where relname like 'alter_part_tab1%';
+                  relname                  |                              reloptions                               
+-------------------------------------------+-----------------------------------------------------------------------
+ alter_part_tab1                           | {checksum=true,compresstype=zlib,compresslevel=4}
+ alter_part_tab1_1_prt_p1                  | {compresslevel=4,checksum=true,compresstype=zlib}
+ alter_part_tab1_1_prt_p1_2_prt_sp1        | {compresslevel=4,checksum=true,compresstype=rle_type,blocksize=32768}
+ alter_part_tab1_1_prt_p1_2_prt_sp2        | {compresslevel=4,checksum=true,compresstype=none,blocksize=32768}
+ alter_part_tab1_1_prt_p1_2_prt_subothers  | {compresslevel=4,checksum=true,compresstype=zlib,blocksize=32768}
+ alter_part_tab1_1_prt_p2                  | {compresslevel=4,checksum=true,compresstype=zlib}
+ alter_part_tab1_1_prt_p2_2_prt_sp1        | {compresslevel=4,checksum=true,compresstype=rle_type,blocksize=32768}
+ alter_part_tab1_1_prt_p2_2_prt_sp2        | {compresslevel=4,checksum=true,compresstype=none,blocksize=32768}
+ alter_part_tab1_1_prt_p2_2_prt_subothers  | {compresslevel=4,checksum=true,compresstype=zlib,blocksize=32768}
+ alter_part_tab1_1_prt_p31                 | {compresslevel=4,checksum=true,compresstype=zlib}
+ alter_part_tab1_1_prt_p31_2_prt_sp1       | {compresslevel=4,checksum=true,compresstype=rle_type,blocksize=32768}
+ alter_part_tab1_1_prt_p31_2_prt_sp2       | {compresslevel=4,checksum=true,compresstype=none,blocksize=32768}
+ alter_part_tab1_1_prt_p31_2_prt_subothers | {compresslevel=4,checksum=true,compresstype=zlib,blocksize=32768}
+ alter_part_tab1_id_seq                    | 
+(14 rows)
 
 drop table alter_part_tab1;
 -- attribute encoding tests for column oriented tables
@@ -383,22 +364,6 @@ create table co7(
 	b varchar encoding(compresstype=zlib,compresslevel=6),
 	c char encoding(compresstype=rle_type))
 	with (checksum=false) distributed by (a);
-select relid::regclass,compresslevel,compresstype,blocksize,checksum,columnstore
-	from pg_appendonly order by 1;
- relid | compresslevel | compresstype | blocksize | checksum | columnstore 
--------+---------------+--------------+-----------+----------+-------------
- t1    |             2 | zlib         |     32768 | t        | f
- t2    |             2 | zlib         |     32768 | t        | t
- t3    |             4 | zlib         |     32768 | f        | f
- co1   |             1 | zlib         |     32768 | t        | t
- co2   |             1 | zlib         |      8192 | t        | t
- co3   |             1 | zlib         |     32768 | t        | t
- co4   |             1 | zlib         |     32768 | t        | t
- co5   |             1 | zlib         |     32768 | t        | t
- co6   |             1 | zlib         |     32768 | t        | t
- co7   |             1 | zlib         |     32768 | f        | t
-(10 rows)
-
 select attrelid::regclass,attnum,attoptions
 	from pg_attribute_encoding order by 1,2;
  attrelid | attnum |                       attoptions                        
@@ -487,14 +452,14 @@ set default_table_access_method = ao_row;
 set gp_default_storage_options = "blocksize=32768,compresstype=none,checksum=true";
 create table co5 (a int encoding (blocksize=8192), b float)
 	with (appendonly=true,orientation=column, checksum=false) distributed by (a);
-select relid::regclass,compresslevel,compresstype,blocksize,checksum,columnstore
-	from pg_appendonly order by 1;
- relid | compresslevel | compresstype | blocksize | checksum | columnstore 
--------+---------------+--------------+-----------+----------+-------------
- co1   |             0 |              |     32768 | t        | t
- co2   |             3 | zlib         |     32768 | t        | t
- co3   |             0 |              |     32768 | t        | t
- co5   |             0 |              |     32768 | f        | t
+select c.relname, am.amname, c.relkind, c.reloptions from pg_class c left join pg_am am on (c.relam=am.oid)
+where relname in ('co1', 'co2', 'co3', 'co5') order by 1;
+ relname |  amname   | relkind |                             reloptions                             
+---------+-----------+---------+--------------------------------------------------------------------
+ co1     | ao_column | r       | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
+ co2     | ao_column | r       | {blocksize=32768,compresslevel=3,compresstype=zlib,checksum=true}
+ co3     | ao_column | r       | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
+ co5     | ao_column | r       | {checksum=false,blocksize=32768,compresslevel=0,compresstype=none}
 (4 rows)
 
 select attrelid::regclass,attnum,attoptions
@@ -640,8 +605,8 @@ create table co8 (a int, b float) distributed by (a);
 --------+------------------+-----------+----------+---------+---------+--------------+------------------+-------------------+------------+-------------
  a      | integer          |           |          |         | plain   |              | none             | 0                 | 32768      | 
  b      | double precision |           |          |         | plain   |              | none             | 0                 | 32768      | 
-Checksum: t
 Distributed by: (a)
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=true
 
 SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 'co8';
   amname   
@@ -690,12 +655,8 @@ create table ao1 (a int, b int) with (appendonly=true) distributed by (a);
 --------+---------+-----------+----------+---------+---------+--------------+-------------
  a      | integer |           |          |         | plain   |              | 
  b      | integer |           |          |         | plain   |              | 
-Compression Type: zlib
-Compression Level: 2
-Block Size: 32768
-Checksum: t
 Distributed by: (a)
-Options: compresslevel=2
+Options: blocksize=32768, compresslevel=2, compresstype=zlib, checksum=true
 
 SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 'ao1';
  amname 
@@ -726,9 +687,8 @@ create table co9 (x int, y float) distributed by (x);
 --------+------------------+-----------+----------+---------+---------+--------------+------------------+-------------------+------------+-------------
  x      | integer          |           |          |         | plain   |              | rle_type         | 1                 | 32768      | 
  y      | double precision |           |          |         | plain   |              | rle_type         | 1                 | 32768      | 
-Checksum: t
 Distributed by: (x)
-Options: compresstype=rle_type
+Options: blocksize=32768, compresslevel=1, compresstype=rle_type, checksum=true
 
 SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 'co9';
   amname   
@@ -761,10 +721,6 @@ create table ao2 (a int, b int) with
 --------+---------+-----------+----------+---------
  a      | integer |           |          | 
  b      | integer |           |          | 
-Compression Type: zlib
-Compression Level: 4
-Block Size: 32768
-Checksum: t
 Distributed by: (a)
 
 -- MPP-25073 verify if compresstype=none is represented as NULL.
@@ -777,22 +733,12 @@ create table ao4 (a int, b int) with (appendonly=true)
 --------+---------+-----------+----------+---------
  a      | integer |           |          | 
  b      | integer |           |          | 
-Compression Type: None
-Compression Level: 0
-Block Size: 32768
-Checksum: t
 Distributed by: (a)
 
 select amname, reloptions from pg_class left join pg_am on pg_am.oid = relam where relname = 'ao4';
- amname | reloptions 
---------+------------
- ao_row | 
-(1 row)
-
-select compresstype from pg_appendonly where relid = 'ao4'::regclass;
- compresstype 
---------------
- 
+ amname |                            reloptions                             
+--------+-------------------------------------------------------------------
+ ao_row | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
 (1 row)
 
 set default_table_access_method = ao_row;
@@ -807,12 +753,6 @@ select attnum,attoptions from pg_attribute_encoding
       2 | {compresstype=none,blocksize=32768,compresslevel=0}
       3 | {compresstype=none,blocksize=32768,compresslevel=0}
 (3 rows)
-
-select compresstype from pg_appendonly where relid = 'co10'::regclass;
- compresstype 
---------------
- 
-(1 row)
 
 -- compression disabled by default, enable in WITH clause
 set default_table_access_method = ao_row;
@@ -832,10 +772,6 @@ create table ao5 (a int, b int) with (compresstype=zlib)
 --------+---------+-----------+----------+---------
  a      | integer |           |          | 
  b      | integer |           |          | 
-Compression Type: zlib
-Compression Level: 1
-Block Size: 32768
-Checksum: t
 Distributed by: (a)
 
 insert into ao5 select i, i from generate_series(1,10)i;
@@ -848,10 +784,6 @@ create table ao6 with (compresslevel=4) as select * from ao5
 --------+---------+-----------+----------+---------
  a      | integer |           |          | 
  b      | integer |           |          | 
-Compression Type: zlib
-Compression Level: 4
-Block Size: 32768
-Checksum: t
 Distributed by: (a)
 
 -- both compresstype and compresslevel
@@ -863,10 +795,6 @@ create table ao7 with (compresstype=zlib, compresslevel=3) as
 --------+---------+-----------+----------+---------
  a      | integer |           |          | 
  b      | integer |           |          | 
-Compression Type: zlib
-Compression Level: 3
-Block Size: 32768
-Checksum: t
 Distributed by: (a)
 
 -- compression enabled by default, disable in WITH clause
@@ -887,10 +815,6 @@ create table ao8 with (compresstype=none) as select * from ao7
 --------+---------+-----------+----------+---------
  a      | integer |           |          | 
  b      | integer |           |          | 
-Compression Type: none
-Compression Level: 1
-Block Size: 32768
-Checksum: t
 Distributed by: (a)
 
 -- compresslevel only (should fail)
@@ -908,10 +832,6 @@ create table ao11 (a int, b int) with (compresstype=none, compresslevel=2)
 --------+---------+-----------+----------+---------
  a      | integer |           |          | 
  b      | integer |           |          | 
-Compression Type: none
-Compression Level: 2
-Block Size: 32768
-Checksum: t
 Distributed by: (a)
 
 set gp_default_storage_options='compresstype=none,compresslevel=2';
@@ -928,10 +848,6 @@ create table ao12 (a int, b int) with (appendonly=true) distributed by (a);
 --------+---------+-----------+----------+---------
  a      | integer |           |          | 
  b      | integer |           |          | 
-Compression Type: None
-Compression Level: 2
-Block Size: 32768
-Checksum: t
 Distributed by: (a)
 
 --bitmap index
@@ -1032,15 +948,15 @@ SELECT DISTINCT relid::regclass FROM gp_dist_random('pg_appendonly') WHERE relid
 (1 row)
 
 SELECT DISTINCT relname, reloptions FROM pg_class WHERE relname='check_guc_value_after_new_cdbgang';
-              relname              |    reloptions    
------------------------------------+------------------
- check_guc_value_after_new_cdbgang | {checksum=false}
+              relname              |                             reloptions                             
+-----------------------------------+--------------------------------------------------------------------
+ check_guc_value_after_new_cdbgang | {blocksize=32768,compresslevel=0,compresstype=none,checksum=false}
 (1 row)
 
 SELECT DISTINCT relname, reloptions FROM gp_dist_random('pg_class') WHERE relname='check_guc_value_after_new_cdbgang';
-              relname              |    reloptions    
------------------------------------+------------------
- check_guc_value_after_new_cdbgang | {checksum=false}
+              relname              |                             reloptions                             
+-----------------------------------+--------------------------------------------------------------------
+ check_guc_value_after_new_cdbgang | {blocksize=32768,compresslevel=0,compresstype=none,checksum=false}
 (1 row)
 
 RESET gp_vmem_idle_resource_timeout;
@@ -1054,9 +970,9 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 select c.relname, am.amname, c.relkind, c.reloptions
 	from pg_class c left join pg_am am on (c.relam = am.oid)
     where c.relname = 'alter_table_reorg_ao';
-       relname        | amname | relkind | reloptions 
-----------------------+--------+---------+------------
- alter_table_reorg_ao | ao_row | r       | 
+       relname        | amname | relkind |                            reloptions                             
+----------------------+--------+---------+-------------------------------------------------------------------
+ alter_table_reorg_ao | ao_row | r       | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
 (1 row)
 
 set default_table_access_method = ao_column;
@@ -1065,9 +981,9 @@ alter table alter_table_reorg_ao set with (reorganize=true);
 select c.relname, am.amname, c.relkind, c.reloptions
 	from pg_class c left join pg_am am on (c.relam = am.oid)
     where c.relname = 'alter_table_reorg_ao';
-       relname        | amname | relkind | reloptions 
-----------------------+--------+---------+------------
- alter_table_reorg_ao | ao_row | r       | 
+       relname        | amname | relkind |                            reloptions                             
+----------------------+--------+---------+-------------------------------------------------------------------
+ alter_table_reorg_ao | ao_row | r       | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
 (1 row)
 
 set default_table_access_method = ao_column;
@@ -1078,9 +994,9 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 select c.relname, am.amname, c.relkind, c.reloptions
 	from pg_class c left join pg_am am on (c.relam = am.oid)
     where c.relname = 'alter_table_reorg_aoco';
-        relname         |  amname   | relkind | reloptions 
-------------------------+-----------+---------+------------
- alter_table_reorg_aoco | ao_column | r       | 
+        relname         |  amname   | relkind |                            reloptions                             
+------------------------+-----------+---------+-------------------------------------------------------------------
+ alter_table_reorg_aoco | ao_column | r       | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
 (1 row)
 
 set default_table_access_method = "heap";
@@ -1089,9 +1005,9 @@ alter table alter_table_reorg_aoco set with (reorganize=true);
 select c.relname, am.amname, c.relkind, c.reloptions
 	from pg_class c left join pg_am am on (c.relam = am.oid)
     where c.relname = 'alter_table_reorg_aoco';
-        relname         |  amname   | relkind | reloptions 
-------------------------+-----------+---------+------------
- alter_table_reorg_aoco | ao_column | r       | 
+        relname         |  amname   | relkind |                            reloptions                             
+------------------------+-----------+---------+-------------------------------------------------------------------
+ alter_table_reorg_aoco | ao_column | r       | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
 (1 row)
 
 -- Make sure SELECT INTO uses gp_default_storage_options GUC
@@ -1107,9 +1023,9 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 select c.relname, am.amname, c.relkind, c.reloptions
 	from pg_class c left join pg_am am on (c.relam = am.oid)
     where c.relname = 'select_into_heap_to';
-       relname       |  amname   | relkind | reloptions 
----------------------+-----------+---------+------------
- select_into_heap_to | ao_column | r       | 
+       relname       |  amname   | relkind |                            reloptions                             
+---------------------+-----------+---------+-------------------------------------------------------------------
+ select_into_heap_to | ao_column | r       | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
 (1 row)
 
 select count(*) from select_into_heap_to;
@@ -1125,9 +1041,9 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 select c.relname, am.amname, c.relkind, c.reloptions
 	from pg_class c left join pg_am am on (c.relam = am.oid)
     where c.relname = 'ctas_ao_from_heap';
-      relname      |  amname   | relkind | reloptions 
--------------------+-----------+---------+------------
- ctas_ao_from_heap | ao_column | r       | 
+      relname      |  amname   | relkind |                            reloptions                             
+-------------------+-----------+---------+-------------------------------------------------------------------
+ ctas_ao_from_heap | ao_column | r       | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
 (1 row)
 
 select count(*) from ctas_ao_from_heap;
@@ -1150,20 +1066,12 @@ select count(*) from dsp_partition1;
 select c.relname, am.amname, c.relkind, c.reloptions
 	from pg_class c left join pg_am am on (c.relam = am.oid)
     where c.relname like 'dsp_partition1%' order by relname;
-        relname         | amname | relkind | reloptions 
-------------------------+--------+---------+------------
+        relname         | amname | relkind |                            reloptions                             
+------------------------+--------+---------+-------------------------------------------------------------------
  dsp_partition1         | ao_row | p       | 
- dsp_partition1_1_prt_1 | ao_row | r       | 
- dsp_partition1_1_prt_2 | ao_row | r       | 
+ dsp_partition1_1_prt_1 | ao_row | r       | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
+ dsp_partition1_1_prt_2 | ao_row | r       | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
 (3 rows)
-
-select compresslevel, compresstype, blocksize, checksum, columnstore from pg_appendonly
-       where relid in (select oid from pg_class where relname  like 'dsp_partition1%') order by columnstore;
- compresslevel | compresstype | blocksize | checksum | columnstore 
----------------+--------------+-----------+----------+-------------
-             0 |              |     32768 | t        | f
-             0 |              |     32768 | t        | f
-(2 rows)
 
 -- The child partition tables should default to their parent table's AM.
 set default_table_access_method = ao_column;
@@ -1174,12 +1082,12 @@ alter table dsp_partition1 add partition p4 start(16) end(18) with(appendonly=fa
 select c.relname, am.amname, c.relkind, c.reloptions
 	from pg_class c left join pg_am am on (c.relam = am.oid)
     where c.relname like 'dsp_partition1%' order by relname;
-         relname         | amname | relkind | reloptions 
--------------------------+--------+---------+------------
+         relname         | amname | relkind |                            reloptions                             
+-------------------------+--------+---------+-------------------------------------------------------------------
  dsp_partition1          | ao_row | p       | 
- dsp_partition1_1_prt_1  | ao_row | r       | 
- dsp_partition1_1_prt_2  | ao_row | r       | 
- dsp_partition1_1_prt_p3 | ao_row | r       | 
+ dsp_partition1_1_prt_1  | ao_row | r       | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
+ dsp_partition1_1_prt_2  | ao_row | r       | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
+ dsp_partition1_1_prt_p3 | ao_row | r       | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
  dsp_partition1_1_prt_p4 | heap   | r       | 
 (5 rows)
 
@@ -1188,14 +1096,14 @@ alter table dsp_partition1 split partition for (6) at (7) into (partition split_
 select c.relname, am.amname, c.relkind, c.reloptions
 	from pg_class c left join pg_am am on (c.relam = am.oid)
     where c.relname like 'dsp_partition1%' order by relname;
-            relname            | amname | relkind | reloptions 
--------------------------------+--------+---------+------------
+            relname            | amname | relkind |                            reloptions                             
+-------------------------------+--------+---------+-------------------------------------------------------------------
  dsp_partition1                | ao_row | p       | 
- dsp_partition1_1_prt_1        | ao_row | r       | 
- dsp_partition1_1_prt_p3       | ao_row | r       | 
+ dsp_partition1_1_prt_1        | ao_row | r       | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
+ dsp_partition1_1_prt_p3       | ao_row | r       | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
  dsp_partition1_1_prt_p4       | heap   | r       | 
- dsp_partition1_1_prt_split_p1 | ao_row | r       | 
- dsp_partition1_1_prt_split_p2 | ao_row | r       | 
+ dsp_partition1_1_prt_split_p1 | ao_row | r       | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
+ dsp_partition1_1_prt_split_p2 | ao_row | r       | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
 (6 rows)
 
 RESET gp_default_storage_options;

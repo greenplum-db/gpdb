@@ -353,8 +353,8 @@ alter table t_9526 expand table;
 show gp_default_storage_options;
 select localoid::regclass::name, policytype, numsegments, distkey, distclass
 from gp_distribution_policy where localoid = 't_9526'::regclass::oid;
--- storage paramter should be same with before
-select blocksize,compresslevel,checksum,compresstype,columnstore from pg_appendonly where relid='t_9526'::regclass::oid;
+-- storage parameter should be same as before
+select relname, reloptions from pg_class where oid='t_9526'::regclass;
 
 -- set back
 set gp_default_storage_options = '';
@@ -379,8 +379,8 @@ alter table t_9527 expand table;
 show gp_default_storage_options;
 select localoid::regclass::name, policytype, numsegments, distkey, distclass
     from gp_distribution_policy where localoid = 't_9527'::regclass::oid;
--- storage paramter should be same with before
-select blocksize,compresslevel,checksum,compresstype,columnstore from pg_appendonly where relid='t_9527'::regclass::oid;
+-- storage parameter should be same as before
+select relname, reloptions from pg_class where oid='t_9527'::regclass;
 
 -- set back
 set gp_default_storage_options = '';
@@ -404,8 +404,8 @@ alter table t_9528 set distributed by (b);
 show gp_default_storage_options;
 select localoid::regclass::name, policytype, numsegments, distkey, distclass
     from gp_distribution_policy where localoid = 't_9528'::regclass::oid;
--- storage paramter should be same with before
-select blocksize,compresslevel,checksum,compresstype,columnstore from pg_appendonly where relid='t_9528'::regclass::oid;
+-- storage parameter should be same as before
+select relname, reloptions from pg_class where oid='t_9528'::regclass;
 
 -- set back
 set gp_default_storage_options = '';

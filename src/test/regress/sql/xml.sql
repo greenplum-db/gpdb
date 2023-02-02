@@ -384,6 +384,9 @@ SELECT * FROM xmltableview1;
 EXPLAIN (COSTS OFF) SELECT * FROM xmltableview1;
 EXPLAIN (COSTS OFF, VERBOSE) SELECT * FROM xmltableview1;
 
+-- errors
+SELECT * FROM XMLTABLE (ROW () PASSING null COLUMNS v1 timestamp) AS f (v1, v2);
+
 -- XMLNAMESPACES tests
 SELECT * FROM XMLTABLE(XMLNAMESPACES('http://x.y' AS zz),
                       '/zz:rows/zz:row'
@@ -401,6 +404,10 @@ SELECT * FROM XMLTABLE(XMLNAMESPACES(DEFAULT 'http://x.y'),
                       '/rows/row'
                       PASSING '<rows xmlns="http://x.y"><row><a>10</a></row></rows>'
                       COLUMNS a int PATH 'a');
+
+SELECT * FROM XMLTABLE('.'
+                       PASSING '<foo/>'
+                       COLUMNS a text PATH 'foo/namespace::node()');
 
 -- used in prepare statements
 PREPARE pp AS

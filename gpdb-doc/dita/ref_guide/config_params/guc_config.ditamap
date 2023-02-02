@@ -153,7 +153,6 @@
             <topicref href="guc-list.xml#gp_resource_manager"/>
             <topicref href="guc-list.xml#gp_retrieve_conn"/>
             <topicref href="guc-list.xml#gp_role"/>
-            <topicref href="guc-list.xml#gp_safefswritesize"/>
             <topicref href="guc-list.xml#gp_segment_connect_timeout"/>
             <topicref href="guc-list.xml#gp_segments_for_planner"/>
             <topicref href="guc-list.xml#gp_server_version"/>

@@ -21,12 +21,10 @@ CREATE TABLE bfv_tab1 (
 ) distributed by (unique1);
 
 create index bfv_tab1_idx1 on bfv_tab1 using btree(unique1);
--- GPDB_12_MERGE_FIXME: Non default collation
 explain select * from bfv_tab1, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
     WHERE bfv_tab1.unique1 = v.i and bfv_tab1.stringu1 = v.j;
 
 set gp_enable_relsize_collection=on;
--- GPDB_12_MERGE_FIXME: Non default collation
 explain select * from bfv_tab1, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
     WHERE bfv_tab1.unique1 = v.i and bfv_tab1.stringu1 = v.j;
 

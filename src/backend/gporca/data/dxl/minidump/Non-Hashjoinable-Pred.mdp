@@ -188,7 +188,7 @@
       <dxl:ColumnStatistics Mdid="1.49165.1.1.4" Name="xmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.49189.1.1" Name="case2_tbl" Rows="0.000000"/>
       <dxl:RelationStatistics Mdid="2.49165.1.1" Name="case_tbl" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.49189.1.1" Name="case2_tbl" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.49189.1.1" Name="case2_tbl" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -219,10 +219,9 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.49165.1.1" Name="case_tbl" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.49165.1.1" Name="case_tbl" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="dummy" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue>
@@ -262,7 +261,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.49189.1.1.7" Name="tableoid" Width="4.000000"/>
@@ -289,7 +287,7 @@
         <dxl:LimitOffset/>
         <dxl:LogicalJoin JoinType="Inner">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.49165.1.1" TableName="case_tbl">
+            <dxl:TableDescriptor Mdid="6.49165.1.1" TableName="case_tbl">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="dummy" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="i" TypeMdid="0.23.1.0"/>
@@ -305,7 +303,7 @@
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.49189.1.1" TableName="case2_tbl">
+            <dxl:TableDescriptor Mdid="6.49189.1.1" TableName="case2_tbl">
               <dxl:Columns>
                 <dxl:Column ColId="11" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="12" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -447,7 +445,7 @@
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.49165.1.1" TableName="case_tbl">
+                <dxl:TableDescriptor Mdid="6.49165.1.1" TableName="case_tbl">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="dummy" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="1" Attno="2" ColName="i" TypeMdid="0.23.1.0"/>
@@ -476,7 +474,7 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.49189.1.1" TableName="case2_tbl">
+              <dxl:TableDescriptor Mdid="6.49189.1.1" TableName="case2_tbl">
                 <dxl:Columns>
                   <dxl:Column ColId="10" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="11" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>

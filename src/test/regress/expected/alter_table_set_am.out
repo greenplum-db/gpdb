@@ -1,4 +1,5 @@
 -- Check changing table access method
+\set HIDE_TABLEAM off
 -- Scenario 1: Changing to the same AM: it should have no effect but
 -- make sure it doesn't rewrite table or blow up existing reloptions:
 CREATE TABLE sameam_heap(a int, b int) WITH (fillfactor=70) DISTRIBUTED BY (a);
@@ -39,10 +40,10 @@ SELECT * FROM relfilebeforesameam EXCEPT SELECT * FROM relfileaftersameam;
 
 -- reloptions should remain the same
 SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'sameam_%';
-   relname    |               reloptions                
---------------+-----------------------------------------
- sameam_ao    | {compresstype=zlib,compresslevel=3}
- sameam_co    | {compresstype=rle_type,compresslevel=3}
+   relname    |                              reloptions                               
+--------------+-----------------------------------------------------------------------
+ sameam_ao    | {compresstype=zlib,compresslevel=3,blocksize=32768,checksum=true}
+ sameam_co    | {compresstype=rle_type,compresslevel=3,blocksize=32768,checksum=true}
  sameam_heap  | {fillfactor=70}
  sameam_heap2 | {fillfactor=70}
 (4 rows)
@@ -68,40 +69,45 @@ CREATE TEMP TABLE relfilebeforeao AS
     WHERE relname in ('heap2ao', 'heap2ao2', 'heapi') ORDER BY segid;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'segid' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
--- Altering a heap table with a unique index to AO should error out
--- as unique indexes aren't supported on AO tables
-ALTER TABLE heap2ao2 SET ACCESS METHOD ao_row;
-ERROR:  append-only tables do not support unique indexes
-DETAIL:  heap table "heap2ao2" being altered contains unique index
-ALTER TABLE heap2ao2 DROP CONSTRAINT unique_constraint;
 -- Set default storage options for the table to inherit from
 SET gp_default_storage_options = 'blocksize=65536, compresstype=zlib, compresslevel=5, checksum=true';
--- Alter table heap to AO should work
+-- Alter table heap to AO should work, even if heap table has unique indexes.
 ALTER TABLE heap2ao SET ACCESS METHOD ao_row;
 ALTER TABLE heap2ao2 SET WITH (appendoptimized=true);
 -- The altered tables should have AO AM
-SELECT c.relname, a.amname FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'heap2ao%';
- relname  | amname 
-----------+--------
- heap2ao  | ao_row
- heap2ao2 | ao_row
-(2 rows)
-
 -- The altered tables should inherit storage options from gp_default_storage_options
--- And, the original heap reloptions are gone (in this case, 'fillfactor'). 
-SELECT blocksize,compresslevel,checksum,compresstype,columnstore
-FROM pg_appendonly WHERE relid in ('heap2ao'::regclass::oid, 'heap2ao2'::regclass::oid);
- blocksize | compresslevel | checksum | compresstype | columnstore 
------------+---------------+----------+--------------+-------------
-     65536 |             5 | t        | zlib         | f
-     65536 |             5 | t        | zlib         | f
-(2 rows)
+-- And, the original heap reloptions are gone (in this case, 'fillfactor').
+-- Also, equivalent indexes have been created
+\d+ heap2ao
+                                  Table "public.heap2ao"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer |           |          |         | plain   |              | 
+ b      | integer |           |          |         | plain   |              | 
+Indexes:
+    "heapi" btree (b)
+Distributed by: (a)
+Access method: ao_row
+Options: blocksize=65536, compresslevel=5, compresstype=zlib, checksum=true
 
-SELECT reloptions from pg_class where relname in ('heap2ao', 'heap2ao2');
-            reloptions             
------------------------------------
- {blocksize=65536,compresslevel=5}
- {blocksize=65536,compresslevel=5}
+\d+ heap2ao2
+                                 Table "public.heap2ao2"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer |           |          |         | plain   |              | 
+ b      | integer |           |          |         | plain   |              | 
+Indexes:
+    "unique_constraint" UNIQUE CONSTRAINT, btree (a)
+Distributed by: (a)
+Access method: ao_row
+Options: blocksize=65536, compresslevel=5, compresstype=zlib, checksum=true
+
+-- Check reloptions
+SELECT relname, reloptions from pg_class where relname in ('heap2ao', 'heap2ao2');
+ relname  |                            reloptions                             
+----------+-------------------------------------------------------------------
+ heap2ao  | {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
+ heap2ao2 | {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
 (2 rows)
 
 -- Check data is intact
@@ -216,26 +222,12 @@ show gp_default_storage_options;
  blocksize=65536,compresstype=zlib,compresslevel=5,checksum=true
 (1 row)
 
-SELECT blocksize,compresslevel,checksum,compresstype,columnstore
-FROM pg_appendonly WHERE relid in ('heapbase'::regclass::oid, 'heapbase2'::regclass::oid);
- blocksize | compresslevel | checksum | compresstype | columnstore 
------------+---------------+----------+--------------+-------------
-     65536 |             5 | t        | zlib         | f
-     65536 |             5 | t        | zlib         | f
-(2 rows)
-
 SELECT reloptions from pg_class where relname in ('heapbase','heapbase2');
-            reloptions             
------------------------------------
- {blocksize=65536,compresslevel=5}
- {blocksize=65536,compresslevel=5}
+                            reloptions                             
+-------------------------------------------------------------------
+ {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
+ {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
 (2 rows)
-
-SELECT blocksize,compresslevel,checksum,compresstype,columnstore
-FROM pg_appendonly WHERE relid in ('heapchild'::regclass::oid, 'heapchild2'::regclass::oid);
- blocksize | compresslevel | checksum | compresstype | columnstore 
------------+---------------+----------+--------------+-------------
-(0 rows)
 
 SELECT reloptions from pg_class where relname in ('heapchild','heapchild2');
  reloptions 
@@ -371,10 +363,10 @@ INSERT INTO ao2heap SELECT i,i FROM generate_series(1,5) i;
 INSERT INTO ao2heap2 SELECT i,i FROM generate_series(1,5) i;
 -- Check once that the AO tables have the custom reloptions 
 SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'ao2heap%';
- relname  |            reloptions             
-----------+-----------------------------------
- ao2heap  | {blocksize=65536,compresslevel=5}
- ao2heap2 | {blocksize=65536,compresslevel=5}
+ relname  |                            reloptions                             
+----------+-------------------------------------------------------------------
+ ao2heap  | {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
+ ao2heap2 | {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
 (2 rows)
 
 -- Check once that the AO tables have relfrozenxid = 0
@@ -506,10 +498,10 @@ DROP TABLE relfilebeforeat;
 DROP TABLE relfileafterat;
 -- table AMs are changed to AO, and reloptions changed to what we set
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ataoset%';
- relname  | amname |            reloptions             
-----------+--------+-----------------------------------
- ataoset  | ao_row | {blocksize=65536,compresslevel=7}
- ataoset2 | ao_row | {blocksize=65536,compresslevel=7}
+ relname  | amname |                            reloptions                             
+----------+--------+-------------------------------------------------------------------
+ ataoset  | ao_row | {blocksize=65536,compresslevel=7,compresstype=zlib,checksum=true}
+ ataoset2 | ao_row | {blocksize=65536,compresslevel=7,compresstype=zlib,checksum=true}
 (2 rows)
 
 -- data are intact
@@ -552,10 +544,10 @@ DROP TABLE relfilebeforeat;
 DROP TABLE relfileafterat;
 -- table AMs are still AO, but reloptions should reflect the order of options in the most recent ALTER TABLE
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ataoset%';
- relname  | amname |            reloptions             
-----------+--------+-----------------------------------
- ataoset  | ao_row | {compresslevel=7,blocksize=65536}
- ataoset2 | ao_row | {compresslevel=7,blocksize=65536}
+ relname  | amname |                            reloptions                             
+----------+--------+-------------------------------------------------------------------
+ ataoset  | ao_row | {compresstype=zlib,checksum=true,compresslevel=7,blocksize=65536}
+ ataoset2 | ao_row | {compresstype=zlib,checksum=true,compresslevel=7,blocksize=65536}
 (2 rows)
 
 -- data still intact
@@ -593,10 +585,10 @@ SELECT * FROM relfilebeforeao INTERSECT SELECT * FROM relfileafterao;
 
 -- reloptions changed too
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ataoset%';
- relname  | amname |            reloptions             
-----------+--------+-----------------------------------
- ataoset  | ao_row | {compresslevel=7,blocksize=32768}
- ataoset2 | ao_row | {compresslevel=7,blocksize=32768}
+ relname  | amname |                            reloptions                             
+----------+--------+-------------------------------------------------------------------
+ ataoset  | ao_row | {compresstype=zlib,checksum=true,compresslevel=7,blocksize=32768}
+ ataoset2 | ao_row | {compresstype=zlib,checksum=true,compresslevel=7,blocksize=32768}
 (2 rows)
 
 DROP TABLE relfilebeforeao;
@@ -649,20 +641,22 @@ LINE 1: ALTER TABLE ao2co SET ACCESS METHOD ao_column WITH (appendop...
                                                       ^
 -- Use of *both* ACCESS METHOD and WITH clauses is allowed, but we'll print a hint to indicate the redundancy.
 ALTER TABLE ao2co SET ACCESS METHOD ao_row WITH (appendoptimized=true, orientation=row);
-HINT:  Only one of these is needed to indicate access method: the SET ACCESS METHOD clause or the options in the WITH clause.
 NOTICE:  Redundant clauses are used to indicate the access method.
+HINT:  Only one of these is needed to indicate access method: the SET ACCESS METHOD clause or the options in the WITH clause.
 CREATE TEMP TABLE relfilebeforeao AS
     SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'ao2co%'
     UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
     WHERE relname LIKE 'ao2co%' ORDER BY segid;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'segid' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- Check once the reloptions
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ao2co%';
- relname | amname |            reloptions             
----------+--------+-----------------------------------
- ao2co   | ao_row | {blocksize=65536,compresslevel=5}
- ao2co2  | ao_row | {blocksize=65536,compresslevel=5}
- ao2co3  | ao_row | {blocksize=65536,compresslevel=5}
- ao2co4  | ao_row | {blocksize=65536,compresslevel=5}
+ relname | amname |                            reloptions                             
+---------+--------+-------------------------------------------------------------------
+ ao2co   | ao_row | {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
+ ao2co2  | ao_row | {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
+ ao2co3  | ao_row | {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
+ ao2co4  | ao_row | {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
 (4 rows)
 
 -- Altering AO to AOCO with various syntaxes, reloptions:
@@ -750,35 +744,24 @@ SELECT * FROM gp_toolkit.__gp_aoblkdir('ao2co3');
 SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'ao2co%';
  relname | attnum |                       attoptions                        
 ---------+--------+---------------------------------------------------------
- ao2co   |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
  ao2co   |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- ao2co2  |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ ao2co   |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
  ao2co2  |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- ao2co3  |      1 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
+ ao2co2  |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
  ao2co3  |      2 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
- ao2co4  |      1 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
+ ao2co3  |      1 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
  ao2co4  |      2 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
+ ao2co4  |      1 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
 (8 rows)
 
 -- AM and reloptions changed accordingly
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ao2co%';
- relname |  amname   |                       reloptions                        
----------+-----------+---------------------------------------------------------
- ao2co   | ao_column | 
- ao2co2  | ao_column | 
- ao2co3  | ao_column | {blocksize=32768,compresstype=rle_type,compresslevel=3}
- ao2co4  | ao_column | {blocksize=32768,compresstype=rle_type,compresslevel=3}
-(4 rows)
-
--- pg_appendonly should reflect the changes in reloptions
-SELECT c.relname,a.blocksize,a.compresslevel,a.checksum,a.compresstype,a.columnstore
-FROM pg_appendonly a, pg_class c WHERE a.relid = c.oid AND relname like ('ao2co%');
- relname | blocksize | compresslevel | checksum | compresstype | columnstore 
----------+-----------+---------------+----------+--------------+-------------
- ao2co   |     32768 |             0 | t        |              | t
- ao2co2  |     32768 |             0 | t        |              | t
- ao2co3  |     32768 |             3 | t        | rle_type     | t
- ao2co4  |     32768 |             3 | t        | rle_type     | t
+ relname |  amname   |                              reloptions                               
+---------+-----------+-----------------------------------------------------------------------
+ ao2co   | ao_column | {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
+ ao2co2  | ao_column | {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
+ ao2co3  | ao_column | {blocksize=32768,compresstype=rle_type,compresslevel=3,checksum=true}
+ ao2co4  | ao_column | {blocksize=32768,compresstype=rle_type,compresslevel=3,checksum=true}
 (4 rows)
 
 DROP TABLE ao2co;
@@ -799,12 +782,12 @@ INSERT INTO co2heap4 SELECT i,i FROM generate_series(1,5) i;
 -- Prior-ATSETAM checks:
 -- Check once that the AO tables have the custom reloptions
 SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2heap%';
- relname  |            reloptions             
-----------+-----------------------------------
- co2heap  | {blocksize=65536,compresslevel=5}
- co2heap2 | {blocksize=65536,compresslevel=5}
- co2heap3 | {blocksize=65536,compresslevel=5}
- co2heap4 | {blocksize=65536,compresslevel=5}
+ relname  |                            reloptions                             
+----------+-------------------------------------------------------------------
+ co2heap  | {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
+ co2heap2 | {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
+ co2heap3 | {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
+ co2heap4 | {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
 (4 rows)
 
 -- Check once that the AO tables have relfrozenxid = 0
@@ -956,22 +939,12 @@ INSERT INTO co2ao4 SELECT i,i FROM generate_series(1,5) i;
 -- Prior-ATSETAM checks:
 -- Check once that the AOCO tables have the custom reloptions
 SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2ao%';
- relname |                       reloptions                        
----------+---------------------------------------------------------
- co2ao   | {compresstype=rle_type,compresslevel=3,blocksize=65536}
- co2ao2  | {compresstype=rle_type,compresslevel=3,blocksize=65536}
- co2ao3  | {compresstype=rle_type,compresslevel=3,blocksize=65536}
- co2ao4  | {compresstype=rle_type,compresslevel=3,blocksize=65536}
-(4 rows)
-
--- Check once that pg_appendonly has expected entries.
-SELECT c.relname, p.compresstype, p.compresslevel, p.blocksize FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'co2ao%' AND c.oid = p.relid;
- relname | compresstype | compresslevel | blocksize 
----------+--------------+---------------+-----------
- co2ao   | rle_type     |             3 |     65536
- co2ao2  | rle_type     |             3 |     65536
- co2ao3  | rle_type     |             3 |     65536
- co2ao4  | rle_type     |             3 |     65536
+ relname |                              reloptions                               
+---------+-----------------------------------------------------------------------
+ co2ao   | {compresstype=rle_type,compresslevel=3,blocksize=65536,checksum=true}
+ co2ao2  | {compresstype=rle_type,compresslevel=3,blocksize=65536,checksum=true}
+ co2ao3  | {compresstype=rle_type,compresslevel=3,blocksize=65536,checksum=true}
+ co2ao4  | {compresstype=rle_type,compresslevel=3,blocksize=65536,checksum=true}
 (4 rows)
 
 -- Check once that the pg_attribute_encoding has entries for the AOCO tables.
@@ -1065,7 +1038,7 @@ SELECT count(*) FROM co2ao4;
 SELECT * FROM gp_toolkit.__gp_aoseg('co2ao');
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
-          0 |     0 |  88 |        3 |             1 |               88 |        1 |             4 |     1
+          0 |     0 |  72 |        3 |             1 |               88 |        1 |             4 |     1
           1 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
           2 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
 (3 rows)
@@ -1108,16 +1081,6 @@ SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('co2ao3')).* FROM gp_dist_random
              2 | (0,1)   |     0 |              0 |        0 |            1 |           0 |         1
 (3 rows)
 
--- pg_appendonly entries should be still be there, but options has changed accordingly.
-SELECT c.relname, p.compresstype, p.compresslevel, p.blocksize FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'co2ao%' AND c.oid = p.relid;
- relname | compresstype | compresslevel | blocksize 
----------+--------------+---------------+-----------
- co2ao   |              |             0 |     32768
- co2ao2  |              |             0 |     32768
- co2ao3  | zlib         |             7 |     32768
- co2ao4  | zlib         |             7 |     32768
-(4 rows)
-
 -- The altered tables should show AO AM.
 SELECT c.relname, a.amname FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'co2ao%';
  relname | amname 
@@ -1130,12 +1093,12 @@ SELECT c.relname, a.amname FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE
 
 -- Only the new tables altered w/ reloptions supplies should have reloptions.
 SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2ao%';
- relname |             reloptions              
----------+-------------------------------------
- co2ao   | 
- co2ao2  | 
- co2ao3  | {compresstype=zlib,compresslevel=7}
- co2ao4  | {compresstype=zlib,compresslevel=7}
+ relname |                            reloptions                             
+---------+-------------------------------------------------------------------
+ co2ao   | {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
+ co2ao2  | {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
+ co2ao3  | {compresstype=zlib,compresslevel=7,blocksize=65536,checksum=true}
+ co2ao4  | {compresstype=zlib,compresslevel=7,blocksize=65536,checksum=true}
 (4 rows)
 
 -- The pg_attribute_encoding entries for the altered tables should have all gone.
@@ -1185,9 +1148,9 @@ NOTICE:  Redundant clauses are used to indicate the access method.
 HINT:  Only one of these is needed to indicate access method: the SET ACCESS METHOD clause or the options in the WITH clause.
 -- Check once the reloptions
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'heap2co%';
- relname  |  amname   |            reloptions             
-----------+-----------+-----------------------------------
- heap2co  | ao_column | {blocksize=65536,compresslevel=5}
+ relname  |  amname   |                            reloptions                             
+----------+-----------+-------------------------------------------------------------------
+ heap2co  | ao_column | {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
  heap2co2 | heap      | 
  heap2co3 | heap      | 
  heap2co4 | heap      | 
@@ -1299,23 +1262,12 @@ SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class 
 
 -- AM and reloptions changed accordingly
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'heap2co%';
- relname  |  amname   |            reloptions             
-----------+-----------+-----------------------------------
- heap2co  | ao_column | {blocksize=65536,compresslevel=5}
- heap2co2 | ao_column | {blocksize=65536,compresslevel=5}
- heap2co3 | ao_column | {blocksize=32768,compresslevel=3}
- heap2co4 | ao_column | {blocksize=32768,compresslevel=3}
-(4 rows)
-
--- pg_appendonly should reflect the changes in reloptions
-SELECT c.relname,a.blocksize,a.compresslevel,a.checksum,a.compresstype,a.columnstore
-FROM pg_appendonly a, pg_class c WHERE a.relid = c.oid AND relname like ('heap2co%');
- relname  | blocksize | compresslevel | checksum | compresstype | columnstore 
-----------+-----------+---------------+----------+--------------+-------------
- heap2co  |     65536 |             5 | t        | zlib         | t
- heap2co2 |     65536 |             5 | t        | zlib         | t
- heap2co3 |     32768 |             3 | t        | zlib         | t
- heap2co4 |     32768 |             3 | t        | zlib         | t
+ relname  |  amname   |                            reloptions                             
+----------+-----------+-------------------------------------------------------------------
+ heap2co  | ao_column | {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
+ heap2co2 | ao_column | {blocksize=65536,compresslevel=5,compresstype=zlib,checksum=true}
+ heap2co3 | ao_column | {blocksize=32768,compresslevel=3,compresstype=zlib,checksum=true}
+ heap2co4 | ao_column | {blocksize=32768,compresslevel=3,compresstype=zlib,checksum=true}
 (4 rows)
 
 DROP TABLE heap2co;
@@ -1334,37 +1286,37 @@ CREATE TABLE atsetam_part_2_1 partition OF atsetam_part_2 FOR VALUES FROM (100) 
 CREATE TABLE atsetam_part_2_2 partition OF atsetam_part_2 FOR VALUES FROM (150) to (200);
 ALTER TABLE atsetam_part SET ACCESS METHOD ao_row WITH (blocksize=65536, compresslevel=7);
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'atsetam_part%';
-     relname      | amname |            reloptions             
-------------------+--------+-----------------------------------
- atsetam_part     | ao_row | {blocksize=65536,compresslevel=7}
- atsetam_part_1   | ao_row | {blocksize=65536,compresslevel=7}
- atsetam_part_2   | ao_row | {blocksize=65536,compresslevel=7}
- atsetam_part_2_1 | ao_row | {blocksize=65536,compresslevel=7}
- atsetam_part_2_2 | ao_row | {blocksize=65536,compresslevel=7}
+     relname      | amname |                            reloptions                             
+------------------+--------+-------------------------------------------------------------------
+ atsetam_part     | ao_row | {blocksize=65536,compresslevel=7,compresstype=zlib}
+ atsetam_part_1   | ao_row | {blocksize=65536,compresslevel=7,compresstype=zlib,checksum=true}
+ atsetam_part_2   | ao_row | {blocksize=65536,compresslevel=7,compresstype=zlib}
+ atsetam_part_2_1 | ao_row | {blocksize=65536,compresslevel=7,compresstype=zlib,checksum=true}
+ atsetam_part_2_2 | ao_row | {blocksize=65536,compresslevel=7,compresstype=zlib,checksum=true}
 (5 rows)
 
 -- altering it again with the same AM and reloptions. Nothing should change.
 ALTER TABLE atsetam_part SET ACCESS METHOD ao_row WITH (blocksize=65536, compresslevel=7);
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'atsetam_part%';
-     relname      | amname |            reloptions             
-------------------+--------+-----------------------------------
- atsetam_part     | ao_row | {blocksize=65536,compresslevel=7}
- atsetam_part_1   | ao_row | {blocksize=65536,compresslevel=7}
- atsetam_part_2   | ao_row | {blocksize=65536,compresslevel=7}
- atsetam_part_2_1 | ao_row | {blocksize=65536,compresslevel=7}
- atsetam_part_2_2 | ao_row | {blocksize=65536,compresslevel=7}
+     relname      | amname |                            reloptions                             
+------------------+--------+-------------------------------------------------------------------
+ atsetam_part     | ao_row | {compresstype=zlib,blocksize=65536,compresslevel=7}
+ atsetam_part_1   | ao_row | {compresstype=zlib,checksum=true,blocksize=65536,compresslevel=7}
+ atsetam_part_2   | ao_row | {compresstype=zlib,blocksize=65536,compresslevel=7}
+ atsetam_part_2_1 | ao_row | {compresstype=zlib,checksum=true,blocksize=65536,compresslevel=7}
+ atsetam_part_2_2 | ao_row | {compresstype=zlib,checksum=true,blocksize=65536,compresslevel=7}
 (5 rows)
 
 -- altering a subpartition root, should apply and only apply to the subpartition root/child.
 ALTER TABLE atsetam_part_2 SET ACCESS METHOD ao_column WITH (compresstype=rle_type, compresslevel=3);
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'atsetam_part%';
-     relname      |  amname   |               reloptions                
-------------------+-----------+-----------------------------------------
- atsetam_part     | ao_row    | {blocksize=65536,compresslevel=7}
- atsetam_part_1   | ao_row    | {blocksize=65536,compresslevel=7}
- atsetam_part_2   | ao_column | {compresstype=rle_type,compresslevel=3}
- atsetam_part_2_1 | ao_column | {compresstype=rle_type,compresslevel=3}
- atsetam_part_2_2 | ao_column | {compresstype=rle_type,compresslevel=3}
+     relname      |  amname   |                              reloptions                               
+------------------+-----------+-----------------------------------------------------------------------
+ atsetam_part     | ao_row    | {compresstype=zlib,blocksize=65536,compresslevel=7}
+ atsetam_part_1   | ao_row    | {compresstype=zlib,checksum=true,blocksize=65536,compresslevel=7}
+ atsetam_part_2   | ao_column | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+ atsetam_part_2_1 | ao_column | {compresstype=rle_type,compresslevel=3,blocksize=65536,checksum=true}
+ atsetam_part_2_2 | ao_column | {compresstype=rle_type,compresslevel=3,blocksize=65536,checksum=true}
 (5 rows)
 
 -- attaching an existing table to the partition and the table should keep its AM.
@@ -1380,36 +1332,48 @@ DROP TABLE atsetam_part;
 -- Altering the storage model at the partition root with the ONLY keyword should change the 
 -- storage model for all future children. Existing children should remain unaffected.
 CREATE TABLE atsetam_part(a int, b int) PARTITION BY RANGE(a);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 CREATE TABLE atsetam_part_1 partition OF atsetam_part FOR VALUES FROM (1) to (100);
+NOTICE:  table has parent, setting distribution columns to match parent table
 CREATE TABLE atsetam_part_2 partition OF atsetam_part FOR VALUES FROM (100) to (200) PARTITION BY RANGE(a);
+NOTICE:  table has parent, setting distribution columns to match parent table
 CREATE TABLE atsetam_part_2_1 partition OF atsetam_part_2 FOR VALUES FROM (100) to (150);
+NOTICE:  table has parent, setting distribution columns to match parent table
 ALTER TABLE ONLY atsetam_part SET ACCESS METHOD ao_row WITH (blocksize=65536, compresslevel=7);
 CREATE TABLE atsetam_part_3 partition OF atsetam_part FOR VALUES FROM (200) to (300);
+NOTICE:  table has parent, setting distribution columns to match parent table
 CREATE TABLE atsetam_part_4 partition OF atsetam_part FOR VALUES FROM (300) to (400) PARTITION BY RANGE(a);
+NOTICE:  table has parent, setting distribution columns to match parent table
 CREATE TABLE atsetam_part_4_1 partition OF atsetam_part_4 FOR VALUES FROM (300) to (350);
+NOTICE:  table has parent, setting distribution columns to match parent table
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'atsetam_part%';
-     relname      | amname |            reloptions             
-------------------+--------+-----------------------------------
- atsetam_part     | ao_row | {blocksize=65536,compresslevel=7}
+     relname      | amname |                            reloptions                             
+------------------+--------+-------------------------------------------------------------------
+ atsetam_part     | ao_row | {blocksize=65536,compresslevel=7,compresstype=zlib}
  atsetam_part_1   | heap   | 
  atsetam_part_2   | heap   | 
  atsetam_part_2_1 | heap   | 
- atsetam_part_3   | ao_row | {blocksize=65536,compresslevel=7}
- atsetam_part_4   | ao_row | {blocksize=65536,compresslevel=7}
- atsetam_part_4_1 | ao_row | {blocksize=65536,compresslevel=7}
+ atsetam_part_3   | ao_row | {blocksize=65536,compresslevel=7,compresstype=zlib,checksum=true}
+ atsetam_part_4   | ao_row | {blocksize=65536,compresslevel=7,compresstype=zlib}
+ atsetam_part_4_1 | ao_row | {blocksize=65536,compresslevel=7,compresstype=zlib,checksum=true}
 (7 rows)
 
 DROP TABLE atsetam_part;
 -- Altering the storage model at a leaf should change the storage model for the leaf.
 CREATE TABLE atsetam_part(a int, b int) PARTITION BY RANGE(a);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 CREATE TABLE atsetam_part_1 partition OF atsetam_part FOR VALUES FROM (1) to (100);
+NOTICE:  table has parent, setting distribution columns to match parent table
 CREATE TABLE atsetam_part_2 partition OF atsetam_part FOR VALUES FROM (100) to (200);
+NOTICE:  table has parent, setting distribution columns to match parent table
 ALTER TABLE ONLY atsetam_part_1 SET ACCESS METHOD ao_row WITH (blocksize=65536, compresslevel=7);
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'atsetam_part%';
-    relname     | amname |            reloptions             
-----------------+--------+-----------------------------------
+    relname     | amname |                            reloptions                             
+----------------+--------+-------------------------------------------------------------------
  atsetam_part   | heap   | 
- atsetam_part_1 | ao_row | {blocksize=65536,compresslevel=7}
+ atsetam_part_1 | ao_row | {blocksize=65536,compresslevel=7,compresstype=zlib,checksum=true}
  atsetam_part_2 | heap   | 
 (3 rows)
 

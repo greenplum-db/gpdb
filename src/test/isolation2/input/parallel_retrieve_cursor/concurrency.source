@@ -32,5 +32,5 @@ COMMIT;
 1: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 1: COMMIT;
 
-ALTER SYSTEM SET gp_max_parallel_cursors TO -1;
+ALTER SYSTEM RESET gp_max_parallel_cursors;
 SELECT pg_reload_conf();

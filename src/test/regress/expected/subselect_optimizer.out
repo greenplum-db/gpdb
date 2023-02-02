@@ -291,10 +291,11 @@ select * from int4_tbl o where exists
    ->  Hash Semi Join
          Hash Cond: (int4_tbl.f1 = int4_tbl_1.f1)
          ->  Seq Scan on int4_tbl
+               Filter: (NOT (f1 IS NULL))
          ->  Hash
                ->  Seq Scan on int4_tbl int4_tbl_1
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(7 rows)
+(8 rows)
 
 explain (costs off)
 select * from int4_tbl o where not exists
@@ -325,11 +326,12 @@ select * from int4_tbl o where exists
    ->  Nested Loop Semi Join
          Join Filter: true
          ->  Seq Scan on int4_tbl
+               Filter: (NOT (f1 IS NULL))
          ->  Limit
                ->  Result
                      One-Time Filter: false
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(8 rows)
+(9 rows)
 
 --
 -- Test cases to catch unpleasant interactions between IN-join processing
@@ -780,12 +782,38 @@ insert into outer_text values ('a', null);
 insert into outer_text values ('b', null);
 create temp table inner_text (c1 text, c2 text);
 insert into inner_text values ('a', null);
+insert into inner_text values ('123', '456');
 select * from outer_text where (f1, f2) not in (select * from inner_text);
  f1 | f2 
 ----+----
  b  | a
  b  | 
 (2 rows)
+
+--
+-- Another test case for cross-type hashed subplans: comparison of
+-- inner-side values must be done with appropriate operator
+--
+explain (verbose, costs off)
+select 'foo'::text in (select 'bar'::name union all select 'bar'::name);
+             QUERY PLAN              
+-------------------------------------
+ Result
+   Output: (hashed SubPlan 1)
+   SubPlan 1
+     ->  Append
+           ->  Result
+                 Output: 'bar'::name
+           ->  Result
+                 Output: 'bar'::name
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select 'foo'::text in (select 'bar'::name union all select 'bar'::name);
+ ?column? 
+----------
+ f
+(1 row)
 
 --
 -- Test case for premature memory release during hashing of subplan output
@@ -796,6 +824,108 @@ select '1'::text in (select '1'::name union all select '1'::name);
  t
 (1 row)
 
+--
+-- Test that we don't try to use a hashed subplan if the simplified
+-- testexpr isn't of the right shape
+--
+-- this fails by default, of course
+select * from int8_tbl where q1 in (select c1 from inner_text);
+ERROR:  operator does not exist: bigint = text
+LINE 1: select * from int8_tbl where q1 in (select c1 from inner_tex...
+                                        ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+begin;
+-- make an operator to allow it to succeed
+create function bogus_int8_text_eq(int8, text) returns boolean
+language sql as 'select $1::text = $2';
+create operator = (procedure=bogus_int8_text_eq, leftarg=int8, rightarg=text);
+explain (costs off)
+select * from int8_tbl where q1 in (select c1 from inner_text);
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  GroupAggregate
+         Group Key: int8_tbl.q1, int8_tbl.q2, int8_tbl.ctid, int8_tbl.gp_segment_id
+         ->  Sort
+               Sort Key: int8_tbl.ctid, int8_tbl.gp_segment_id
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: int8_tbl.ctid, int8_tbl.gp_segment_id
+                     ->  Nested Loop
+                           Join Filter: (int8_tbl.q1 = inner_text.c1)
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on inner_text
+                           ->  Seq Scan on int8_tbl
+ Optimizer: Pivotal Optimizer (GPORCA)
+(13 rows)
+
+select * from int8_tbl where q1 in (select c1 from inner_text);
+ q1  |        q2        
+-----+------------------
+ 123 |              456
+ 123 | 4567890123456789
+(2 rows)
+
+-- inlining of this function results in unusual number of hash clauses,
+-- which we can still cope with
+create or replace function bogus_int8_text_eq(int8, text) returns boolean
+language sql as 'select $1::text = $2 and $1::text = $2';
+explain (costs off)
+select * from int8_tbl where q1 in (select c1 from inner_text);
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  GroupAggregate
+         Group Key: int8_tbl.q1, int8_tbl.q2, int8_tbl.ctid, int8_tbl.gp_segment_id
+         ->  Sort
+               Sort Key: int8_tbl.ctid, int8_tbl.gp_segment_id
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: int8_tbl.ctid, int8_tbl.gp_segment_id
+                     ->  Nested Loop
+                           Join Filter: (int8_tbl.q1 = inner_text.c1)
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on inner_text
+                           ->  Seq Scan on int8_tbl
+ Optimizer: Pivotal Optimizer (GPORCA)
+(13 rows)
+
+select * from int8_tbl where q1 in (select c1 from inner_text);
+ q1  |        q2        
+-----+------------------
+ 123 |              456
+ 123 | 4567890123456789
+(2 rows)
+
+-- inlining of this function causes LHS and RHS to be switched,
+-- which we can't cope with, so hashing should be abandoned
+create or replace function bogus_int8_text_eq(int8, text) returns boolean
+language sql as 'select $2 = $1::text';
+explain (costs off)
+select * from int8_tbl where q1 in (select c1 from inner_text);
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  GroupAggregate
+         Group Key: int8_tbl.q1, int8_tbl.q2, int8_tbl.ctid, int8_tbl.gp_segment_id
+         ->  Sort
+               Sort Key: int8_tbl.ctid, int8_tbl.gp_segment_id
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: int8_tbl.ctid, int8_tbl.gp_segment_id
+                     ->  Nested Loop
+                           Join Filter: (int8_tbl.q1 = inner_text.c1)
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on inner_text
+                           ->  Seq Scan on int8_tbl
+ Optimizer: Pivotal Optimizer (GPORCA)
+(13 rows)
+
+select * from int8_tbl where q1 in (select c1 from inner_text);
+ q1  |        q2        
+-----+------------------
+ 123 |              456
+ 123 | 4567890123456789
+(2 rows)
+
+rollback;  -- to get rid of the bogus operator
 --
 -- Test case for planner bug with nested EXISTS handling
 --
@@ -884,6 +1014,119 @@ explain (verbose, costs off)
 (9 rows)
 
 --
+-- Test rescan of a hashed subplan (the use of random() is to prevent the
+-- sub-select from being pulled up, which would result in not hashing)
+--
+explain (verbose, costs off)
+select sum(ss.tst::int) from
+  onek o cross join lateral (
+  select i.ten in (select f1 from int4_tbl where f1 <= o.hundred) as tst,
+         random() as r
+  from onek i where i.unique1 = o.unique1 ) ss
+where o.ten = 0;
+ERROR:  correlated subquery with skip-level correlations is not supported
+select sum(ss.tst::int) from
+  onek o cross join lateral (
+  select i.ten in (select f1 from int4_tbl where f1 <= o.hundred) as tst,
+         random() as r
+  from onek i where i.unique1 = o.unique1 ) ss
+where o.ten = 0;
+ERROR:  correlated subquery with skip-level correlations is not supported
+--
+-- Test rescan of a SetOp node
+--
+explain (costs off)
+select count(*) from
+  onek o cross join lateral (
+    select * from onek i1 where i1.unique1 = o.unique1
+    except
+    select * from onek i2 where i2.unique1 = o.unique2
+  ) ss
+where o.ten = 1;
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Aggregate
+   ->  Nested Loop
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               ->  Seq Scan on onek o
+                     Filter: (ten = 1)
+         ->  Materialize
+               ->  Subquery Scan on ss
+                     ->  HashSetOp Except
+                           ->  Append
+                                 ->  Subquery Scan on "*SELECT* 1"
+                                       ->  Result
+                                             Filter: (i1.unique1 = o.unique1)
+                                             ->  Materialize
+                                                   ->  Gather Motion 3:1  (slice2; segments: 3)
+                                                         ->  Seq Scan on onek i1
+                                 ->  Subquery Scan on "*SELECT* 2"
+                                       ->  Result
+                                             Filter: (i2.unique1 = o.unique2)
+                                             ->  Materialize
+                                                   ->  Gather Motion 3:1  (slice3; segments: 3)
+                                                         ->  Seq Scan on onek i2
+ Optimizer: Postgres query optimizer
+(22 rows)
+
+select count(*) from
+  onek o cross join lateral (
+    select * from onek i1 where i1.unique1 = o.unique1
+    except
+    select * from onek i2 where i2.unique1 = o.unique2
+  ) ss
+where o.ten = 1;
+ count 
+-------
+   100
+(1 row)
+
+--
+-- Test rescan of a RecursiveUnion node
+--
+explain (costs off)
+select sum(o.four), sum(ss.a) from
+  onek o cross join lateral (
+    with recursive x(a) as
+      (select o.four as a
+       union
+       select a + 1 from x
+       where a < 10)
+    select * from x
+  ) ss
+where o.ten = 1;
+                       QUERY PLAN                        
+---------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Nested Loop
+                     ->  Seq Scan on onek o
+                           Filter: (ten = 1)
+                     ->  Materialize
+                           ->  Recursive Union
+                                 ->  Result
+                                 ->  WorkTable Scan on x
+                                       Filter: (a < 10)
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+select sum(o.four), sum(ss.a) from
+  onek o cross join lateral (
+    with recursive x(a) as
+      (select o.four as a
+       union
+       select a + 1 from x
+       where a < 10)
+    select * from x
+  ) ss
+where o.ten = 1;
+ sum  | sum  
+------+------
+ 1700 | 5350
+(1 row)
+
+--
 -- Check we don't misoptimize a NOT IN where the subquery returns no rows.
 --
 create temp table notinouter (a int);
@@ -936,6 +1179,41 @@ where s.i < 10 and (select val.x) < 110;
  109
   10
 (17 rows)
+
+-- another variant of that (bug #16213)
+explain (verbose, costs off)
+select * from
+(values
+  (3 not in (select * from (values (1), (2)) ss1)),
+  (false)
+) ss;
+                                                                                                                                                                QUERY PLAN                                                                                                                                                                 
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Append
+   ->  Nested Loop Left Join
+         Output: ((CASE WHEN (sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END)) IS NULL) THEN true WHEN (sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END)) > '0'::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN (sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END)) = '0'::bigint) THEN true ELSE false END) = true)
+         Join Filter: true
+         ->  Result
+               Output: true
+         ->  Aggregate
+               Output: CASE WHEN (sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END)) IS NULL) THEN true WHEN (sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END)) > '0'::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN (sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END)) = '0'::bigint) THEN true ELSE false END
+               ->  Values Scan on "Values"
+                     Output: CASE WHEN (3 = column1) THEN 1 ELSE 0 END, CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END
+   ->  Result
+         Output: false
+ Optimizer: Pivotal Optimizer (GPORCA)
+(13 rows)
+
+select * from
+(values
+  (3 not in (select * from (values (1), (2)) ss1)),
+  (false)
+) ss;
+ column1 
+---------
+ t
+ f
+(2 rows)
 
 --
 -- Check sane behavior with nested IN SubLinks
@@ -1006,14 +1284,8 @@ select * from int4_tbl o where (f1, f1) in
                            Output: i.f1, ((generate_series(1, 50)) / 10)
                            ->  ProjectSet
                                  Output: generate_series(1, 50), i.f1
-                                 ->  GroupAggregate
+                                 ->  Seq Scan on public.int4_tbl i
                                        Output: i.f1
-                                       Group Key: i.f1
-                                       ->  Sort
-                                             Output: i.f1
-                                             Sort Key: i.f1
-                                             ->  Seq Scan on public.int4_tbl i
-                                                   Output: i.f1
  Optimizer: Postgres query optimizer
 (19 rows)
 
@@ -1040,6 +1312,64 @@ from int4_tbl;
  (1,2,3)
  (1,2,3)
  (4,5,6.0)
+(5 rows)
+
+--
+-- Check for sane handling of a lateral reference in a subquery's quals
+-- (most of the complication here is to prevent the test case from being
+-- flattened too much)
+--
+explain (verbose, costs off)
+select * from
+    int4_tbl i4,
+    lateral (
+        select i4.f1 > 1 as b, 1 as id
+        from (select random() order by 1) as t1
+      union all
+        select true as b, 2 as id
+    ) as t2
+where b and f1 >= 0;
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: i4.f1, ((i4.f1 > 1)), (1)
+   ->  Nested Loop
+         Output: i4.f1, ((i4.f1 > 1)), (1)
+         ->  Seq Scan on public.int4_tbl i4
+               Output: i4.f1
+               Filter: (i4.f1 >= 0)
+         ->  Materialize
+               Output: ((i4.f1 > 1)), (1)
+               ->  Append
+                     ->  Subquery Scan on t1
+                           Output: (i4.f1 > 1), 1
+                           Filter: (i4.f1 > 1)
+                           ->  Result
+                                 Output: $0
+                                 InitPlan 1 (returns $0)  (slice2)
+                                   ->  Result
+                                         Output: random()
+                     ->  Result
+                           Output: true, 2
+ Optimizer: Postgres query optimizer
+(21 rows)
+
+select * from
+    int4_tbl i4,
+    lateral (
+        select i4.f1 > 1 as b, 1 as id
+        from (select random() order by 1) as t1
+      union all
+        select true as b, 2 as id
+    ) as t2
+where b and f1 >= 0;
+     f1     | b | id 
+------------+---+----
+          0 | t |  2
+ 2147483647 | t |  1
+ 2147483647 | t |  2
+     123456 | t |  1
+     123456 | t |  2
 (5 rows)
 
 --
@@ -1139,6 +1469,11 @@ select * from
 select * from
   (select 9 as x, unnest(array[1,2,3,11,12,13]) as u) ss
   where tattle(x, 8);
+NOTICE:  x = 9, y = 8
+NOTICE:  x = 9, y = 8
+NOTICE:  x = 9, y = 8
+NOTICE:  x = 9, y = 8
+NOTICE:  x = 9, y = 8
 NOTICE:  x = 9, y = 8
  x | u  
 ---+----

@@ -673,9 +673,6 @@ DETAIL:  Query-to-DXL Translation: No variable entry found due to incorrect norm
         | 2100
 (2 rows)
 
--- start_ignore
--- GPDB_12_MERGE_FIXME: unsupported exec location fallback
--- end_ignore
 with cte as (select row_number() over (order by code) as rn1, code
              from t2_github_issue_10143
              group by code)

@@ -23,6 +23,7 @@
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/exception.h"
 #include "naucrates/md/CDXLColStats.h"
+#include "naucrates/md/CDXLExtStatsInfo.h"
 #include "naucrates/md/CDXLRelStats.h"
 #include "naucrates/md/CMDTypeBoolGPDB.h"
 #include "naucrates/md/CMDTypeInt4GPDB.h"
@@ -191,6 +192,17 @@ CMDProviderMemory::GetMDObjDXLStr(CMemoryPool *mp,
 					false /*findent*/);
 				break;
 			}
+			case IMDId::EmdidExtStatsInfo:
+			{
+				mdid->AddRef();
+				CAutoRef<CDXLExtStatsInfo> a_pdxlrelstats;
+				a_pdxlrelstats =
+					CDXLExtStatsInfo::CreateDXLDummyExtStatsInfo(mp, mdid);
+				a_pstrResult = CDXLUtils::SerializeMDObj(
+					mp, a_pdxlrelstats.Value(), true /*fSerializeHeaders*/,
+					false /*findent*/);
+				break;
+			}
 			default:
 			{
 				GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDCacheEntryNotFound,
@@ -228,7 +240,7 @@ CMDProviderMemory::MDId(CMemoryPool *mp, CSystemId sysid,
 // return the requested metadata object
 IMDCacheObject *
 CMDProviderMemory::GetMDObj(CMemoryPool *mp, CMDAccessor *md_accessor,
-							IMDId *mdid) const
+							IMDId *mdid, IMDCacheObject::Emdtype) const
 {
 	CAutoP<CWStringBase> a_pstr;
 	a_pstr = GetMDObjDXLStr(mp, md_accessor, mdid);
