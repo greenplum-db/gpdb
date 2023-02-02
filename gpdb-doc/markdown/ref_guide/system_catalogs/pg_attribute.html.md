@@ -2,7 +2,7 @@
 
 The `pg_attribute` table stores information about table columns. There will be exactly one `pg_attribute` row for every column in every table in the database. \(There will also be attribute entries for indexes, and all objects that have `pg_class` entries.\) The term attribute is equivalent to column.
 
-In a dropped column's `pg_attribute` entry, `atttypid` is reset to zero, but `attlen` and the other fields copied from `pg_type` are still valid. This arrangement is needed to cope with the situation where the dropped column's data type was later dropped, and so there is no `pg_type` row anymore. `attlen` and the other fields can be used to interpret the contents of a row of the table
+In a dropped column's `pg_attribute` entry, `atttypid` is reset to zero, but `attlen` and the other fields copied from `pg_type` are still valid. This arrangement is needed to address the situation where the dropped column's data type was later dropped, and so there is no `pg_type` row anymore. `attlen` and the other fields can be used to interpret the contents of a row of the table
 
 |column|type|references|description|
 |------|----|----------|-----------|
