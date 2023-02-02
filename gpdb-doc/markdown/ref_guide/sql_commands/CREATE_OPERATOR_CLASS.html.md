@@ -39,7 +39,7 @@ data\_type
 :   The column data type that this operator class is for.
 
 index\_method
-:   The name of the index method that this operator class is for. XXX Choices are `btree`, `bitmap`, `gist`, and `hash`. XXX
+:   The name of the index method that this operator class is for.
 
 family\_name
 :   The name of the existing operator family to add this operator class to. If not specified, a family named the same as the operator class is used \(creating it, if it doesn't already exist\).
