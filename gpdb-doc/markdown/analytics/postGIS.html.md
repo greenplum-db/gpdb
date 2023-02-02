@@ -124,7 +124,7 @@ To enable PostGIS support, install the Greenplum PostGIS extension package into 
 Install Greenplum PostGIS extension package with the `gppkg` utility. For example, this command installs the package for RHEL 7.
 
 ```
-gppkg -i postgis-2.5.4+pivotal.2.build.1-gp7-rhel7-x86_64.gppkg
+gppkg -i postgis-2.5.4+pivotal.2.build.1-gp7-rhel8-x86_64.gppkg
 ```
 
 After installing the package, source the `greenplum_path.sh` file and restart Greenplum Database. This command restarts Greenplum Database.

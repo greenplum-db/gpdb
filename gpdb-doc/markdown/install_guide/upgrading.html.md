@@ -48,7 +48,7 @@ An upgrade from Greenplum Database 6.x to a newer 6.x release involves stopping 
 3.  Copy the new Greenplum Database software installation package to the `gpadmin` user's home directory on each coordinator, standby, and segment host.
 4.  *If you used `yum` or `apt` to install Greenplum Database to the default location*, run these commands on each host to upgrade to the new software release.
 
-    For RHEL/CentOS systems:
+    For RHEL systems:
 
     ```
     $ sudo yum upgrade ./greenplum-db-<version>-<platform>.rpm
@@ -62,7 +62,7 @@ An upgrade from Greenplum Database 6.x to a newer 6.x release involves stopping 
 
     The `yum` or `apt` command installs the new Greenplum Database software files into a version-specific directory under `/usr/local` and updates the symbolic link `/usr/local/greenplum-db` to point to the new installation directory.
 
-5.  *If you used `rpm` to install Greenplum Database to a non-default location on RHEL/CentOS systems*, run `rpm` on each host to upgrade to the new software release and specify the same custom installation directory with the `--prefix` option. For example:
+5.  *If you used `rpm` to install Greenplum Database to a non-default location on RHEL systems*, run `rpm` on each host to upgrade to the new software release and specify the same custom installation directory with the `--prefix` option. For example:
 
     ```
     $ sudo rpm -U ./greenplum-db-<version>-<platform>.rpm --prefix=<directory>

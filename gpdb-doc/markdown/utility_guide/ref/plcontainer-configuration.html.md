@@ -145,7 +145,7 @@ settings
 
     The Greenplum Database server configuration parameter [log\_min\_messages](../../ref_guide/config_params/guc-list.html) controls the PL/Container log level. The default log level is `warning`. For information about PL/Container log information, see [Notes](../../analytics/pl_container_using.html).
 
-    By default, the PL/Container log information is sent to a system service. On Red Hat 7 or CentOS 7 systems, the log information is sent to the `journald` service. On Red Hat 6 or CentOS 6 systems, the log is sent to the `syslogd` service.
+    By default, the PL/Container log information is sent to a system `journald` service.
 
 ## <a id="topic_v3s_qv3_kw"></a>Update the PL/Container Configuration 
 

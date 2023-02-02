@@ -2,7 +2,7 @@
 title: Data Science Package for Python 
 ---
 
-Greenplum Database provides a collection of data science-related Python modules that can be used with the Greenplum Database PL/Python language. You can download these modules in `.gppkg` format from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). Separate modules are provided for Python 2.7 and Python 3.9 development on RHEL7, RHEL8, and Ubuntu platforms.
+Greenplum Database provides a collection of data science-related Python modules that can be used with the Greenplum Database PL/Python language. You can download these modules in `.gppkg` format from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). Separate modules are provided for Python 2.7 and Python 3.9 development.
 
 This section contains the following information:
 
@@ -56,7 +56,7 @@ Packages required for Deep Learning features of MADlib are now included. Note th
 |JMESPath|JSON Matching Expressions|
 |Joblib|Python functions as pipeline jobs|
 |jsonschema|JSON Schema validation|
-|Keras \(RHEL/CentOS 7 only\)|Deep learning|
+|Keras |Deep learning|
 |Keras Applications|Reference implementations of popular deep learning models|
 |Keras Preprocessing|Easy data preprocessing and data augmentation for deep learning models|
 |Kiwi|A fast implementation of the Cassowary constraint solver|
@@ -101,7 +101,7 @@ Packages required for Deep Learning features of MADlib are now included. Note th
 |srsly|Modern high-performance serialization utilities for Python|
 |StatsModels|Statistical modeling|
 |subprocess32|Backport of the subprocess module from Python 3|
-|Tensorflow \(RHEL/CentOS 7 only\)|Numerical computation using data flow graphs|
+|Tensorflow |Numerical computation using data flow graphs|
 |Theano|Optimizing compiler for evaluating mathematical expressions on CPUs and GPUs|
 |thinc|Practical Machine Learning for NLP|
 |tqdm|Fast, extensible progress meter|
