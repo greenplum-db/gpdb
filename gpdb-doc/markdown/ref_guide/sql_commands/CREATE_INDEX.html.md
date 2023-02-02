@@ -86,7 +86,7 @@ predicate
 
 ## <a id="section4isp"></a>Index Storage Parameters
 
-The optional `WITH` clause specifies *storage parameters* for the index. Each index method has its own set of allowed storage parameters. The B-tree, hash, GiST and SP-GiST index methods all accept this parameter:
+The optional `WITH` clause specifies *storage parameters* for the index. Each index method has its own set of allowed storage parameters. The B-tree, bitmap, hash, GiST, and SP-GiST index methods all accept this parameter:
 
 `fillfactor`
 :    The `fillfactor` for an index is a percentage that determines how full the index method will try to pack index pages. For B-trees, leaf pages are filled to this percentage during initial index build, and also when extending the index at the right \(adding new largest key values\). If pages subsequently become completely full, they will be split, leading to gradual degradation in the index's efficiency. B-trees use a default fillfactor of 90, but any integer value from 10 to 100 can be selected. If the table is static then fillfactor 100 is best to minimize the index's physical size, but for heavily updated tables a smaller fillfactor is better to minimize the need for page splits. The other index methods use fillfactor in different but roughly analogous ways; the default fillfactor varies between methods.
@@ -122,7 +122,7 @@ autosummarize
 ## <a id="section5"></a>Notes 
 Refer to the [Indexes](https://www.postgresql.org/docs/12/indexes.html) topics in the PostgreSQL documentation for information about when indexes can be used, when they are not used, and in which particular situations they can be useful.
 
-Currently, only the B-tree, GiST, GIN, and BRIN index methods support multicolumn indexes. You can specify up to 32 fields by default. Only B-tree currently supports unique indexes.
+Currently, only the B-tree, bitmap, GiST, GIN, and BRIN index methods support multicolumn indexes. You can specify up to 32 fields by default. Only B-tree currently supports unique indexes.
 
 An operator class can be specified for each column of an index. The operator class identifies the operators to be used by the index for that column. For example, a B-tree index on four-byte integers would use the `int4_ops` class; this operator class includes comparison functions for four-byte integers. In practice the default operator class for the column's data type is usually sufficient. The main point of having operator classes is that for some data types, there could be more than one meaningful ordering. For example, we might want to sort a complex-number data type either by absolute value or by real part. We could do this by defining two operator classes for the data type and then selecting the proper class when creating an index. Refer to [Operator Classes and Operator Families](https://www.postgresql.org/docs/12/indexes-opclass.html) and [Interfacing Extensions to Indexes
 ](https://www.postgresql.org/docs/12/xindex.html) in the PostgreSQL documentation for more information about operator classes.
@@ -149,12 +149,6 @@ To create a unique B-tree index on the column `title` in the table `films`:
 
 ```
 CREATE UNIQUE INDEX title_idx ON films (title);
-```
-
-To create a unique B-tree index on the column `title` with included columns `director` and `rating` in the table `films`:
-
-```
-CREATE UNIQUE INDEX title_idx ON films (title) INCLUDE (director, rating);
 ```
 
 To create an index on the expression `lower(title)`, allowing efficient case-insensitive searches:

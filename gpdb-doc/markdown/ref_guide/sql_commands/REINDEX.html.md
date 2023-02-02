@@ -49,8 +49,6 @@ Greenplum Database does not support concurrently recreating indexes \(`CONCURREN
 
 Reindexing a single index or table requires being the owner of that index or table. Reindexing a schema or database requires being the owner of the schema or database. Note that it is therefore sometimes possible for non-superusers to rebuild indexes of tables owned by other users. However, as a special exception, when a non-superuser issues `REINDEX DATABASE`, `REINDEX SCHEMA` or `REINDEX SYSTEM`, Greenplum Database skips indexes on shared catalogs unless the user owns the catalog \(which typically won't be the case\). Of course, superusers can always reindex anything.
 
-Greenplum Datase does not support reindexing partitioned tables or partitioned indexes. You can separately reindex each individual partition instead.
-
 REINDEX` does not update the `reltuples` and `relpages` statistics for the index. To update those statistics, run `ANALYZE` on the table after reindexing.
 
 ## <a id="section6"></a>Examples 
