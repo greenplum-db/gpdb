@@ -45,7 +45,6 @@ To be able to create a function, you must have `USAGE` privilege on the argument
 
 For more information about creating functions, refer to the [User Defined Functions](https://www.postgresql.org/docs/12/xfunc.html) section of the PostgreSQL documentation.
 
-XXX
 **Limited Use of VOLATILE and STABLE Functions**
 
 To prevent data from becoming out-of-sync across the segments in Greenplum Database, any function classified as `STABLE` or `VOLATILE` cannot be run at the segment level if it contains SQL or modifies the database in any way. For example, functions such as `random()` or `timeofday()` are not allowed to run on distributed data in Greenplum Database because they could potentially cause inconsistent data between the segment instances.
@@ -77,7 +76,6 @@ See [Using Functions and Operators](../../admin_guide/query/topics/functions-ope
 
 A user-defined function that runs only `SELECT` commands on replicated tables can run on segments. Replicated tables, created with the `DISTRIBUTED REPLICATED` clause, store all of their rows on every segment. It is safe for a function to read them on the segments, but updates to replicated tables must run on the master instance.
 
-XXX
 
 ## <a id="section5"></a>Parameters 
 
@@ -243,7 +241,6 @@ When replacing an existing function with `CREATE OR REPLACE FUNCTION`, there are
 
 If a function is declared `STRICT` with a `VARIADIC` argument, the strictness check tests that the variadic array as a whole is non-null. The function will still be called if the array has null elements.
 
-XXX
 **Using Functions with Queries on Distributed Data**
 
 In some cases, Greenplum Database does not support using functions in a query where the data in a table specified in the `FROM` clause is distributed over Greenplum Database segments. As an example, this SQL query contains the function `func()`:
@@ -321,7 +318,6 @@ LANGUAGE plpgsql;
 
 SELECT my_ctas('t1');
 ```
-XXX
 
 ## <a id="section8"></a>Examples 
 
