@@ -7,7 +7,7 @@ The `pg_prepared_statements` view displays all of the prepared statements that a
 The `pg_prepared_statements` view is read-only.
 
 |name|type|description|
-|----|----|----------|-----------|
+|----|----|----------|
 |`name`|text|The identifier of the prepared statement.|
 |`statement`|text| The query string submitted by the client to create this prepared statement. For prepared statements created via SQL, this is the `PREPARE` statement submitted by the client. For prepared statements created via the frontend/backend protocol, this is the text of the prepared statement itself. |
 |`prepare_time`|timestamptz|The time at which the prepared statement was created.|
