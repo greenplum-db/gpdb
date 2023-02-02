@@ -26,6 +26,15 @@ my $tmp_installdir = "$topdir/tmp_install";
 do './src/tools/msvc/config_default.pl';
 do './src/tools/msvc/config.pl' if (-f 'src/tools/msvc/config.pl');
 
+my $devnull = File::Spec->devnull;
+
+# These values are defaults that can be overridden by the calling environment
+# (see buildenv.pl processing below).  We assume that the ones listed here
+# always exist by default.  Other values may optionally be set for bincheck
+# or taptest, see set_command_env() below.
+# c.f. src/Makefile.global.in and configure.ac
+$ENV{TAR} ||= 'tar';
+
 # buildenv.pl is for specifying the build environment settings
 # it should contain lines like:
 # $ENV{PATH} = "c:/path/to/bison/bin;$ENV{PATH}";
@@ -54,6 +63,14 @@ copy("$Config/refint/refint.dll",                 "src/test/regress");
 copy("$Config/autoinc/autoinc.dll",               "src/test/regress");
 copy("$Config/regress/regress.dll",               "src/test/regress");
 copy("$Config/dummy_seclabel/dummy_seclabel.dll", "src/test/regress");
+
+# Configuration settings used by TAP tests
+$ENV{with_openssl} = $config->{openssl} ? 'yes' : 'no';
+$ENV{with_ldap} = $config->{ldap} ? 'yes' : 'no';
+$ENV{with_icu} = $config->{icu} ? 'yes' : 'no';
+$ENV{with_gssapi} = $config->{gss} ? 'yes' : 'no';
+$ENV{with_krb_srvnam} = $config->{krb_srvnam} || 'postgres';
+$ENV{with_readline} = 'no';
 
 $ENV{PATH} = "$topdir/$Config/libpq;$ENV{PATH}";
 
@@ -98,6 +115,32 @@ exit 3 unless $proc;
 exit 0;
 
 ########################################################################
+
+# Helper function for set_command_env, to set one environment command.
+sub set_single_env
+{
+	my $envname    = shift;
+	my $envdefault = shift;
+
+	# If a command is defined by the environment, just use it.
+	return if (defined($ENV{$envname}));
+
+	# Nothing is defined, so attempt to assign a default.  The command
+	# may not be in the current environment, hence check if it can be
+	# executed.
+	my $rc = system("$envdefault --version >$devnull 2>&1");
+
+	# Set the environment to the default if it exists, else leave it.
+	$ENV{$envname} = $envdefault if $rc == 0;
+	return;
+}
+
+# Set environment values for various command types.  These can be used
+# in the TAP tests.
+sub set_command_env
+{
+	set_single_env('GZIP_PROGRAM', 'gzip');
+}
 
 sub installcheck_internal
 {
@@ -196,7 +239,7 @@ sub tap_check
 	  unless $config->{tap_tests};
 
 	my @flags;
-	foreach my $arg (0 .. scalar(@_))
+	foreach my $arg (0 .. scalar(@_) - 1)
 	{
 		next unless $_[$arg] =~ /^PROVE_FLAGS=(.*)/;
 		@flags = split(/\s+/, $1);
@@ -207,7 +250,7 @@ sub tap_check
 	my $dir = shift;
 	chdir $dir;
 
-	my @args = ("prove", @flags, "t/*.pl");
+	my @args = ("prove", @flags, glob("t/*.pl"));
 
 	# adjust the environment for just this test
 	local %ENV = %ENV;
@@ -226,6 +269,8 @@ sub tap_check
 sub bincheck
 {
 	InstallTemp();
+
+	set_command_env();
 
 	my $mstat = 0;
 
@@ -260,6 +305,9 @@ sub taptest
 	push(@args, "$topdir/$dir");
 
 	InstallTemp();
+
+	set_command_env();
+
 	my $status = tap_check(@args);
 	exit $status if $status;
 	return;
@@ -298,7 +346,7 @@ sub mangle_plpython3
 					s/([ [{])u'/$1'/g;
 					s/def next/def __next__/g;
 					s/LANGUAGE plpython2?u/LANGUAGE plpython3u/g;
-					s/EXTENSION ([^ ]*_)*plpython2?u/EXTENSION $1plpython3u/g;
+					s/EXTENSION (\S*?)plpython2?u/EXTENSION $1plpython3u/g;
 					s/installing required extension "plpython2u"/installing required extension "plpython3u"/g;
 				  }
 				  for ($contents);

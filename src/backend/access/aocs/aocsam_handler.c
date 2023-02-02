@@ -29,6 +29,7 @@
 #include "catalog/storage_xlog.h"
 #include "cdb/cdbaocsam.h"
 #include "cdb/cdbvars.h"
+#include "commands/progress.h"
 #include "commands/vacuum.h"
 #include "executor/executor.h"
 #include "nodes/makefuncs.h"
@@ -80,46 +81,36 @@ typedef struct AOCSBitmapScanData
 	int	rs_cindex;	/* current tuple's index tbmres->offset or -1 */
 } *AOCSBitmapScan;
 
+/*
+ * Per-relation backend-local DML state for DML or DML-like operations.
+ */
 typedef struct AOCODMLState
 {
 	Oid relationOid;
 	AOCSInsertDesc insertDesc;
 	AOCSDeleteDesc deleteDesc;
+	AOCSUniqueCheckDesc uniqueCheckDesc;
 } AOCODMLState;
 
 static void reset_state_cb(void *arg);
+
 /*
- * GPDB_12_MERGE_FIXME: This is a temporary state of things. A locally stored
- * state is needed currently because there is no viable place to store this
- * information outside of the table access method. Ideally the caller should be
- * responsible for initializing a state and passing it over using the table
- * access method api.
- *
- * Until this is in place, the local state is not to be accessed directly but
- * only via the *_dml_state functions.
- * It contains:
- *		a quick look up member for the common case
+ * A repository for per-relation backend-local DML states. Contains:
+ *		a quick look up member for the common case (only 1 relation)
  *		a hash table which keeps per relation information
  *		a memory context that should be long lived enough and is
  *			responsible for reseting the state via its reset cb
  */
-static struct AOCOLocal
+typedef struct AOCODMLStates
 {
 	AOCODMLState           *last_used_state;
-	HTAB				   *dmlDescriptorTab;
+	HTAB				   *state_table;
 
 	MemoryContext			stateCxt;
 	MemoryContextCallback	cb;
-} aocoLocal = {
-	.last_used_state  = NULL,
-	.dmlDescriptorTab = NULL,
+} AOCODMLStates;
 
-	.stateCxt		  = NULL,
-	.cb				  = {
-		.func	= reset_state_cb,
-		.arg	= NULL
-	},
-};
+static AOCODMLStates aocoDMLStates;
 
 /*
  * There are two cases that we are called from, during context destruction
@@ -131,32 +122,42 @@ static struct AOCOLocal
 static void
 reset_state_cb(void *arg)
 {
-	aocoLocal.dmlDescriptorTab = NULL;
-	aocoLocal.last_used_state = NULL;
-	aocoLocal.stateCxt = NULL;
+	aocoDMLStates.state_table = NULL;
+	aocoDMLStates.last_used_state = NULL;
+	aocoDMLStates.stateCxt = NULL;
 }
 
+
+/*
+ * Initialize the backend local AOCODMLStates object for this backend for the
+ * current DML or DML-like command (if not already initialized).
+ *
+ * This function should be called with a current memory context whose life
+ * span is enough to last until the end of this command execution.
+ */
 static void
-init_dml_local_state(void)
+init_aoco_dml_states()
 {
 	HASHCTL hash_ctl;
 
-	if (!aocoLocal.dmlDescriptorTab)
+	if (!aocoDMLStates.state_table)
 	{
-		Assert(aocoLocal.stateCxt == NULL);
-		aocoLocal.stateCxt = AllocSetContextCreate(
+		Assert(aocoDMLStates.stateCxt == NULL);
+		aocoDMLStates.stateCxt = AllocSetContextCreate(
 			CurrentMemoryContext,
 			"AppendOnly DML State Context",
 			ALLOCSET_SMALL_SIZES);
-		MemoryContextRegisterResetCallback(
-			aocoLocal.stateCxt,
-			&aocoLocal.cb);
+
+		aocoDMLStates.cb.func = reset_state_cb;
+		aocoDMLStates.cb.arg = NULL;
+		MemoryContextRegisterResetCallback(aocoDMLStates.stateCxt,
+										   &aocoDMLStates.cb);
 
 		memset(&hash_ctl, 0, sizeof(hash_ctl));
 		hash_ctl.keysize = sizeof(Oid);
 		hash_ctl.entrysize = sizeof(AOCODMLState);
-		hash_ctl.hcxt = aocoLocal.stateCxt;
-		aocoLocal.dmlDescriptorTab =
+		hash_ctl.hcxt = aocoDMLStates.stateCxt;
+		aocoDMLStates.state_table =
 			hash_create("AppendOnly DML state", 128, &hash_ctl,
 			            HASH_CONTEXT | HASH_ELEM | HASH_BLOBS);
 	}
@@ -168,27 +169,26 @@ init_dml_local_state(void)
  *
  * Should be called exactly once per relation.
  */
-static inline AOCODMLState *
-enter_dml_state(const Oid relationOid)
+static inline void
+init_dml_state(const Oid relationOid)
 {
 	AOCODMLState *state;
 	bool				found;
 
-	Assert(aocoLocal.dmlDescriptorTab);
+	Assert(aocoDMLStates.state_table);
 
-	state = (AOCODMLState *) hash_search(
-		aocoLocal.dmlDescriptorTab,
-		&relationOid,
-		HASH_ENTER,
-		&found);
+	state = (AOCODMLState *) hash_search(aocoDMLStates.state_table,
+										 &relationOid,
+										 HASH_ENTER,
+										 &found);
 
 	Assert(!found);
 
 	state->insertDesc = NULL;
 	state->deleteDesc = NULL;
+	state->uniqueCheckDesc = NULL;
 
-	aocoLocal.last_used_state = state;
-	return state;
+	aocoDMLStates.last_used_state = state;
 }
 
 /*
@@ -199,21 +199,20 @@ static inline AOCODMLState *
 find_dml_state(const Oid relationOid)
 {
 	AOCODMLState *state;
-	Assert(aocoLocal.dmlDescriptorTab);
+	Assert(aocoDMLStates.state_table);
 
-	if (aocoLocal.last_used_state &&
-		aocoLocal.last_used_state->relationOid == relationOid)
-		return aocoLocal.last_used_state;
+	if (aocoDMLStates.last_used_state &&
+		aocoDMLStates.last_used_state->relationOid == relationOid)
+		return aocoDMLStates.last_used_state;
 
-	state = (AOCODMLState *) hash_search(
-		aocoLocal.dmlDescriptorTab,
-		&relationOid,
-		HASH_FIND,
-		NULL);
+	state = (AOCODMLState *) hash_search(aocoDMLStates.state_table,
+										 &relationOid,
+										 HASH_FIND,
+										 NULL);
 
 	Assert(state);
 
-	aocoLocal.last_used_state = state;
+	aocoDMLStates.last_used_state = state;
 	return state;
 }
 
@@ -223,49 +222,57 @@ find_dml_state(const Oid relationOid)
  *
  * Should be called exactly once per relation.
  */
-static inline AOCODMLState *
+static inline void
 remove_dml_state(const Oid relationOid)
 {
 	AOCODMLState *state;
-	Assert(aocoLocal.dmlDescriptorTab);
+	Assert(aocoDMLStates.state_table);
 
-	state = (AOCODMLState *) hash_search(
-		aocoLocal.dmlDescriptorTab,
-		&relationOid,
-		HASH_REMOVE,
-		NULL);
+	state = (AOCODMLState *) hash_search(aocoDMLStates.state_table,
+										 &relationOid,
+										 HASH_REMOVE,
+										 NULL);
 
 	Assert(state);
 
-	if (aocoLocal.last_used_state &&
-		aocoLocal.last_used_state->relationOid == relationOid)
-		aocoLocal.last_used_state = NULL;
+	if (aocoDMLStates.last_used_state &&
+		aocoDMLStates.last_used_state->relationOid == relationOid)
+		aocoDMLStates.last_used_state = NULL;
 
-	return state;
+	return;
 }
 
 /*
- * Although the operation param is superfluous at the momment, the signature of
- * the function is such for balance between the init and finish.
- *
- * This function should be called exactly once per relation.
+ * Provides an opportunity to create backend-local state to be consulted during
+ * the course of the current DML or DML-like command, for the given relation.
  */
 void
-aoco_dml_init(Relation relation, CmdType operation)
+aoco_dml_init(Relation relation)
 {
-	init_dml_local_state();
-	(void) enter_dml_state(RelationGetRelid(relation));
+	init_aoco_dml_states();
+	init_dml_state(RelationGetRelid(relation));
 }
 
 /*
- * This function should be called exactly once per relation.
+ * Provides an opportunity to clean up backend-local state set up for the
+ * current DML or DML-like command, for the given relation.
  */
 void
-aoco_dml_finish(Relation relation, CmdType operation)
+aoco_dml_finish(Relation relation)
 {
 	AOCODMLState *state;
+	bool		 had_delete_desc = false;
 
-	state = remove_dml_state(RelationGetRelid(relation));
+	Oid relationOid = RelationGetRelid(relation);
+
+	Assert(aocoDMLStates.state_table);
+
+	state = (AOCODMLState *) hash_search(aocoDMLStates.state_table,
+										 &relationOid,
+										 HASH_FIND,
+										 NULL);
+
+	Assert(state);
 
 	if (state->deleteDesc)
 	{
@@ -279,6 +286,8 @@ aoco_dml_finish(Relation relation, CmdType operation)
 		 */
 		if (!state->insertDesc)
 			AORelIncrementModCount(relation);
+
+		had_delete_desc = true;
 	}
 
 	if (state->insertDesc)
@@ -288,6 +297,30 @@ aoco_dml_finish(Relation relation, CmdType operation)
 		state->insertDesc = NULL;
 	}
 
+	if (state->uniqueCheckDesc)
+	{
+		/* clean up the block directory */
+		AppendOnlyBlockDirectory_End_forUniqueChecks(state->uniqueCheckDesc->blockDirectory);
+		pfree(state->uniqueCheckDesc->blockDirectory);
+		state->uniqueCheckDesc->blockDirectory = NULL;
+
+		/*
+		 * If this fetch is a part of an update, then we have been reusing the
+		 * visimap used by the delete half of the update, which would have
+		 * already been cleaned up above. Clean up otherwise.
+		 */
+		if (!had_delete_desc)
+		{
+			AppendOnlyVisimap_Finish_forUniquenessChecks(state->uniqueCheckDesc->visimap);
+			pfree(state->uniqueCheckDesc->visimap);
+		}
+		state->uniqueCheckDesc->visimap = NULL;
+
+		pfree(state->uniqueCheckDesc);
+		state->uniqueCheckDesc = NULL;
+	}
+
+	remove_dml_state(relationOid);
 }
 
 /*
@@ -305,11 +338,50 @@ get_or_create_aoco_insert_descriptor(const Relation relation, int64 num_rows)
 	if (state->insertDesc == NULL)
 	{
 		MemoryContext oldcxt;
+		AOCSInsertDesc insertDesc;
 
-		oldcxt = MemoryContextSwitchTo(aocoLocal.stateCxt);
-		state->insertDesc = aocs_insert_init(relation,
-											 ChooseSegnoForWrite(relation),
-											 num_rows);
+		oldcxt = MemoryContextSwitchTo(aocoDMLStates.stateCxt);
+		insertDesc = aocs_insert_init(relation,
+									  ChooseSegnoForWrite(relation),
+									  num_rows);
+		/*
+		 * If we have a unique index, insert a placeholder block directory row to
+		 * entertain uniqueness checks from concurrent inserts. See
+		 * AppendOnlyBlockDirectory_InsertPlaceholder() for details.
+		 *
+		 * Note: For AOCO tables, we need to only insert a placeholder block
+		 * directory row for the 1st non-dropped column. This is because
+		 * during a uniqueness check, only the first non-dropped column's block
+		 * directory entry is consulted. (See AppendOnlyBlockDirectory_CoversTuple())
+		 */
+		if (relationHasUniqueIndex(relation))
+		{
+			int 				firstNonDroppedColumn = -1;
+			int64 				firstRowNum;
+			DatumStreamWrite 	*dsw;
+			BufferedAppend 		*bufferedAppend;
+			int64 				fileOffset;
+
+			for(int i = 0; i < relation->rd_att->natts; i++)
+			{
+				if (!relation->rd_att->attrs[i].attisdropped) {
+					firstNonDroppedColumn = i;
+					break;
+				}
+			}
+			Assert(firstNonDroppedColumn != -1);
+
+			dsw = insertDesc->ds[firstNonDroppedColumn];
+			firstRowNum = dsw->blockFirstRowNum;
+			bufferedAppend = &dsw->ao_write.bufferedAppend;
+			fileOffset = BufferedAppendNextBufferPosition(bufferedAppend);
+
+			AppendOnlyBlockDirectory_InsertPlaceholder(&insertDesc->blockDirectory,
+													   firstRowNum,
+													   fileOffset,
+													   firstNonDroppedColumn);
+		}
+		state->insertDesc = insertDesc;
 		MemoryContextSwitchTo(oldcxt);
 	}
 
@@ -329,30 +401,58 @@ get_or_create_delete_descriptor(const Relation relation, bool forUpdate)
 
 	if (state->deleteDesc == NULL)
 	{
-		/*
-		 * GPDB_12_MERGE_FIXME: Can we perform this check earlier on?
-		 * Example during init? Idealy should be called on master node first,
-		 * that way we will avoid the dispatch.
-		 */
 		MemoryContext oldcxt;
-		if (IsolationUsesXactSnapshot())
-		{
-			if (forUpdate)
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("updates on append-only tables are not supported in serializable transactions")));
-			else
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("deletes on append-only tables are not supported in serializable transactions")));
-		}
 
-		oldcxt = MemoryContextSwitchTo(aocoLocal.stateCxt);
+		oldcxt = MemoryContextSwitchTo(aocoDMLStates.stateCxt);
 		state->deleteDesc = aocs_delete_init(relation);
 		MemoryContextSwitchTo(oldcxt);
 	}
 
 	return state->deleteDesc;
+}
+
+static AOCSUniqueCheckDesc
+get_or_create_unique_check_desc(Relation relation, Snapshot snapshot)
+{
+	AOCODMLState *state = find_dml_state(RelationGetRelid(relation));
+
+	if (!state->uniqueCheckDesc)
+	{
+		MemoryContext oldcxt;
+		AOCSUniqueCheckDesc uniqueCheckDesc;
+
+		oldcxt = MemoryContextSwitchTo(aocoDMLStates.stateCxt);
+		uniqueCheckDesc = palloc0(sizeof(AOCSUniqueCheckDescData));
+
+		/* Initialize the block directory */
+		uniqueCheckDesc->blockDirectory = palloc0(sizeof(AppendOnlyBlockDirectory));
+		AppendOnlyBlockDirectory_Init_forUniqueChecks(uniqueCheckDesc->blockDirectory,
+													  relation,
+													  relation->rd_att->natts, /* numColGroups */
+													  snapshot);
+		/*
+		 * If this is part of an update, we need to reuse the visimap used by
+		 * the delete half of the update. This is to avoid spurious conflicts
+		 * when the key's previous and new value are identical. Using the
+		 * visimap from the delete half ensures that the visimap can recognize
+		 * any tuples deleted by us prior to this insert, within this command.
+		 */
+		if (state->deleteDesc)
+			uniqueCheckDesc->visimap = &state->deleteDesc->visibilityMap;
+		else
+		{
+			/* Initialize the visimap */
+			uniqueCheckDesc->visimap = palloc0(sizeof(AppendOnlyVisimap));
+			AppendOnlyVisimap_Init_forUniqueCheck(uniqueCheckDesc->visimap,
+												  relation,
+												  snapshot);
+		}
+
+		state->uniqueCheckDesc = uniqueCheckDesc;
+		MemoryContextSwitchTo(oldcxt);
+	}
+
+	return state->uniqueCheckDesc;
 }
 
 /*
@@ -424,34 +524,34 @@ extractcolumns_from_node(Node *expr, bool *cols, AttrNumber natts)
 
 static TableScanDesc
 aoco_beginscan_extractcolumns(Relation rel, Snapshot snapshot,
-							  List *targetlist, List *qual,
+							  List *targetlist, List *qual, bool *proj,
 							  uint32 flags)
 {
 	AOCSScanDesc	aoscan;
-	AttrNumber		natts = RelationGetNumberOfAttributes(rel);
-	bool		   *cols;
-	bool			found = false;
 
-	cols = palloc0(natts * sizeof(*cols));
+	AssertImply(list_length(targetlist) || list_length(qual), !proj);
 
-	found |= extractcolumns_from_node((Node *)targetlist, cols, natts);
-	found |= extractcolumns_from_node((Node *)qual, cols, natts);
-
-	/*
-	 * In some cases (for example, count(*)), targetlist and qual may be null,
-	 * extractcolumns_walker will return immediately, so no columns are specified.
-	 * We always scan the first column.
-	 */
-	if (!found)
-		cols[0] = true;
-
+	if (!proj)
+	{
+		AttrNumber		natts = RelationGetNumberOfAttributes(rel);
+		bool			found = false;
+		proj = palloc0(sizeof(bool*) * natts);
+		found |= extractcolumns_from_node((Node *)targetlist, proj, natts);
+		found |= extractcolumns_from_node((Node *)qual, proj, natts);
+		/*
+		* In some cases (for example, count(*)), targetlist and qual may be null,
+		* extractcolumns_walker will return immediately, so no columns are specified.
+		* We always scan the first column.
+		*/
+		if (!found)
+			proj[0] = true;
+	}
 	aoscan = aocs_beginscan(rel,
 							snapshot,
-							cols,
+							proj,
 							flags);
 
-	pfree(cols);
-
+	pfree(proj);
 	return (TableScanDesc)aoscan;
 }
 
@@ -657,6 +757,7 @@ aoco_index_fetch_tuple(struct IndexFetchTableData *scan,
                              bool *call_again, bool *all_dead)
 {
 	IndexFetchAOCOData *aocoscan = (IndexFetchAOCOData *) scan;
+	bool found = false;
 
 	if (!aocoscan->aocofetch)
 	{
@@ -684,7 +785,6 @@ aoco_index_fetch_tuple(struct IndexFetchTableData *scan,
 											  appendOnlyMetaDataSnapshot,
 											  aocoscan->proj);
 	}
-
 	/*
 	 * There is no reason to expect changes on snapshot between tuple
 	 * fetching calls after fech_init is called, treat it as a
@@ -697,10 +797,129 @@ aoco_index_fetch_tuple(struct IndexFetchTableData *scan,
 	if (aocs_fetch(aocoscan->aocofetch, (AOTupleId *) tid, slot))
 	{
 		ExecStoreVirtualTuple(slot);
-		return true;
+		found = true;
 	}
 
-	return false;
+	/*
+	 * Currently, we don't determine this parameter. By contract, it is to be
+	 * set to true iff we can determine that this row is dead to all
+	 * transactions. Failure to set this will lead to use of a garbage value
+	 * in certain code, such as that for unique index checks.
+	 * This is typically used for HOT chains, which we don't support.
+	 */
+	if (all_dead)
+		*all_dead = false;
+
+	/* Currently, we don't determine this parameter. By contract, it is to be
+	 * set to true iff there is another tuple for the tid, so that we can prompt
+	 * the caller to call index_fetch_tuple() again for the same tid.
+	 * This is typically used for HOT chains, which we don't support.
+	 */
+	if (call_again)
+		*call_again = false;
+
+	return found;
+}
+
+/*
+ * Check if a visible tuple exists given the tid and a snapshot. This is
+ * currently used to determine uniqueness checks.
+ *
+ * We determine existence simply by checking if a *visible* block directory
+ * entry covers the given tid.
+ *
+ * There is no need to fetch the tuple (we actually can't reliably do so as
+ * we might encounter a placeholder row in the block directory)
+ *
+ * If no visible block directory entry exists, we are done. If it does, we need
+ * to further check the visibility of the tuple itself by consulting the visimap.
+ * Now, the visimap check can be skipped if the tuple was found to have been
+ * inserted by a concurrent in-progress transaction, in which case we return
+ * true and have the xwait machinery kick in.
+ */
+static bool
+aoco_index_fetch_tuple_exists(Relation rel,
+							  ItemPointer tid,
+							  Snapshot snapshot,
+							  bool *all_dead)
+{
+	AOCSUniqueCheckDesc 		uniqueCheckDesc;
+	AOTupleId 					*aoTupleId = (AOTupleId *) tid;
+	bool						visible;
+
+#ifdef USE_ASSERT_CHECKING
+	int			segmentFileNum = AOTupleIdGet_segmentFileNum(aoTupleId);
+	int64		rowNum = AOTupleIdGet_rowNum(aoTupleId);
+
+	Assert(segmentFileNum != InvalidFileSegNumber);
+	Assert(rowNum != InvalidAORowNum);
+	/*
+	 * Since this can only be called in the context of a unique index check, the
+	 * snapshots that are supplied can only be non-MVCC snapshots: SELF and DIRTY.
+	 */
+	Assert(snapshot->snapshot_type == SNAPSHOT_SELF ||
+		   snapshot->snapshot_type == SNAPSHOT_DIRTY);
+#endif
+
+	/*
+	 * Currently, we don't determine this parameter. By contract, it is to be
+	 * set to true iff we can determine that this row is dead to all
+	 * transactions. Failure to set this will lead to use of a garbage value
+	 * in certain code, such as that for unique index checks.
+	 * This is typically used for HOT chains, which we don't support.
+	 */
+	if (all_dead)
+		*all_dead = false;
+
+	/*
+	 * FIXME: for when we want CREATE UNIQUE INDEX CONCURRENTLY to work
+	 * Unique constraint violation checks with SNAPSHOT_SELF are currently
+	 * required to support CREATE UNIQUE INDEX CONCURRENTLY. Currently, the
+	 * sole placeholder row inserted at first insert might not be visible to
+	 * the snapshot, if it was already updated by its actual first row. So,
+	 * we would need to flush a placeholder row at the beginning of each new
+	 * in-memory minipage. Currently, CREATE INDEX CONCURRENTLY isn't
+	 * supported, so we assume such a check satisfies SNAPSHOT_SELF.
+	 */
+	if (snapshot->snapshot_type == SNAPSHOT_SELF)
+		return true;
+
+	uniqueCheckDesc = get_or_create_unique_check_desc(rel, snapshot);
+
+	/* First, scan the block directory */
+	if (!AppendOnlyBlockDirectory_UniqueCheck(uniqueCheckDesc->blockDirectory,
+											  aoTupleId,
+											  snapshot))
+		return false;
+
+	/*
+	 * If the xmin or xmax are set for the dirty snapshot, after the block
+	 * directory is scanned with the snapshot, it means that there is a
+	 * concurrent in-progress transaction inserting the tuple. So, return true
+	 * and have the xwait machinery kick in.
+	 */
+	Assert(snapshot->snapshot_type == SNAPSHOT_DIRTY);
+	if (TransactionIdIsValid(snapshot->xmin) || TransactionIdIsValid(snapshot->xmax))
+		return true;
+
+	/* Now, consult the visimap */
+	visible = AppendOnlyVisimap_UniqueCheck(uniqueCheckDesc->visimap,
+											aoTupleId,
+											snapshot);
+
+	/*
+	 * Since we disallow deletes and updates running in parallel with inserts,
+	 * there is no way that the dirty snapshot has it's xmin and xmax populated
+	 * after the visimap has been scanned with it.
+	 *
+	 * Note: we disallow it by grabbing an ExclusiveLock on the QD (See
+	 * CdbTryOpenTable()). So if we are running in utility mode, there is no
+	 * such restriction.
+	 */
+	AssertImply(Gp_role != GP_ROLE_UTILITY,
+				(!TransactionIdIsValid(snapshot->xmin) && !TransactionIdIsValid(snapshot->xmax)));
+
+	return visible;
 }
 
 static void
@@ -722,20 +941,29 @@ aoco_tuple_insert(Relation relation, TupleTableSlot *slot, CommandId cid,
 	pgstat_count_heap_insert(relation, 1);
 }
 
+/*
+ * We don't support speculative inserts on appendoptimized tables, i.e. we don't
+ * support INSERT ON CONFLICT DO NOTHING or INSERT ON CONFLICT DO UPDATE. Thus,
+ * the following functions are left unimplemented.
+ */
+
 static void
 aoco_tuple_insert_speculative(Relation relation, TupleTableSlot *slot,
                                     CommandId cid, int options,
                                     BulkInsertState bistate, uint32 specToken)
 {
-	/* GPDB_12_MERGE_FIXME: not supported. Can this function be left out completely? Or ereport()? */
-	elog(ERROR, "speculative insertion not supported on AO_COLUMN tables");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("speculative insert is not supported on appendoptimized relations")));
 }
 
 static void
 aoco_tuple_complete_speculative(Relation relation, TupleTableSlot *slot,
                                       uint32 specToken, bool succeeded)
 {
-	elog(ERROR, "speculative insertion not supported on AO_COLUMN tables");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("speculative insert is not supported on appendoptimized relations")));
 }
 
 /*
@@ -831,23 +1059,45 @@ aoco_tuple_update(Relation relation, ItemPointer otid, TupleTableSlot *slot,
 	return result;
 }
 
+/*
+ * This API is called for a variety of purposes, which are either not supported
+ * for AO/CO tables or not supported for GPDB in general:
+ *
+ * (1) UPSERT: ExecOnConflictUpdate() calls this, but clearly upsert is not
+ * supported for AO/CO tables.
+ *
+ * (2) DELETE and UPDATE triggers: GetTupleForTrigger() calls this, but clearly
+ * these trigger types are not supported for AO/CO tables.
+ *
+ * (3) Logical replication: RelationFindReplTupleByIndex() and
+ * RelationFindReplTupleSeq() calls this, but clearly we don't support logical
+ * replication yet for GPDB.
+ *
+ * (4) For DELETEs/UPDATEs, when a state of TM_Updated is returned from
+ * table_tuple_delete() and table_tuple_update() respectively, this API is invoked.
+ * However, that is impossible for AO/CO tables as an AO/CO tuple cannot be
+ * deleted/updated while another transaction is updating it (see CdbTryOpenTable()).
+ *
+ * (5) Row-level locking (SELECT FOR ..): ExecLockRows() calls this but a plan
+ * containing the LockRows plan node is never generated for AO/CO tables. In fact,
+ * we lock at the table level instead.
+ */
 static TM_Result
 aoco_tuple_lock(Relation relation, ItemPointer tid, Snapshot snapshot,
                       TupleTableSlot *slot, CommandId cid, LockTupleMode mode,
                       LockWaitPolicy wait_policy, uint8 flags,
                       TM_FailureData *tmfd)
 {
-	/* GPDB_12_MERGE_FIXME: not supported. Can this function be left out completely? Or ereport()? */
-	elog(ERROR, "speculative insertion not supported on AO tables");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("tuple locking is not supported on appendoptimized tables")));
 }
 
 static void
 aoco_finish_bulk_insert(Relation relation, int options)
 {
-	aoco_dml_finish(relation, CMD_INSERT);
+	/* nothing for co tables */
 }
-
-
 
 
 /* ------------------------------------------------------------------------
@@ -926,8 +1176,17 @@ aoco_compute_xid_horizon_for_tuples(Relation rel,
                                           ItemPointerData *tids,
                                           int nitems)
 {
-	// GPDB_12_MERGE_FIXME: vacuum related call back.
-	elog(ERROR, "not implemented yet");
+	/*
+	 * This API is only useful for hot standby snapshot conflict resolution
+	 * (for eg. see btree_xlog_delete()), in the context of index page-level
+	 * vacuums (aka page-level cleanups). This operation is only done when
+	 * IndexScanDesc->kill_prior_tuple is true, which is never for AO/CO tables
+	 * (we always return all_dead = false in the index_fetch_tuple() callback
+	 * as we don't support HOT)
+	 */
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("feature not supported on appendoptimized relations")));
 }
 
 /* ------------------------------------------------------------------------
@@ -1306,13 +1565,12 @@ aoco_index_build_range_scan(Relation heapRelation,
 	EState	   *estate;
 	ExprContext *econtext;
 	Snapshot	snapshot;
-	bool		need_unregister_snapshot = false;
 	bool		need_create_blk_directory = false;
 	List	   *tlist = NIL;
 	List	   *qual = indexInfo->ii_Predicate;
 	Oid			blkdirrelid;
 	Oid			blkidxrelid;
-	TransactionId OldestXmin;
+	int64 		previous_blkno = -1;
 
 	/*
 	 * sanity checks
@@ -1353,19 +1611,6 @@ aoco_index_build_range_scan(Relation heapRelation,
 	predicate = ExecPrepareQual(indexInfo->ii_Predicate, estate);
 
 	/*
-	 * Prepare for scan of the base relation.  In a normal index build, we use
-	 * SnapshotAny because we must retrieve all tuples and do our own time
-	 * qual checks (because we have to index RECENTLY_DEAD tuples). In a
-	 * concurrent build, or during bootstrap, we take a regular MVCC snapshot
-	 * and index whatever's live according to that.
-	 */
-	OldestXmin = InvalidTransactionId;
-
-	/* okay to ignore lazy VACUUMs here */
-	if (!IsBootstrapProcessingMode() && !indexInfo->ii_Concurrent)
-		OldestXmin = GetOldestXmin(heapRelation, PROCARRAY_FLAGS_VACUUM);
-
-	/*
 	 * If block directory is empty, it must also be built along with the index.
 	 */
 	GetAppendOnlyEntryAuxOids(RelationGetRelid(heapRelation), NULL, NULL,
@@ -1381,17 +1626,10 @@ aoco_index_build_range_scan(Relation heapRelation,
 		/*
 		 * Serial index build.
 		 *
-		 * Must begin our own heap scan in this case.  We may also need to
-		 * register a snapshot whose lifetime is under our direct control.
+		 * XXX: We always use SnapshotAny here. An MVCC snapshot and oldest xmin
+		 * calculation is necessary to support indexes built CONCURRENTLY.
 		 */
-		if (!TransactionIdIsValid(OldestXmin))
-		{
-			snapshot = RegisterSnapshot(GetTransactionSnapshot());
-			need_unregister_snapshot = true;
-		}
-		else
-			snapshot = SnapshotAny;
-
+		snapshot = SnapshotAny;
 		/*
 		 * Scan all columns if we need to create block directory.
 		 */
@@ -1432,7 +1670,8 @@ aoco_index_build_range_scan(Relation heapRelation,
 			scan = table_beginscan_es(heapRelation,	/* relation */
 									  snapshot,		/* snapshot */
 									  tlist,		/* targetlist */
-									  qual);		/* qual */
+									  qual,			/* qual */
+									  NULL);
 		}
 	}
 	else
@@ -1472,38 +1711,35 @@ aoco_index_build_range_scan(Relation heapRelation,
 	}
 
 
-	/* GPDB_12_MERGE_FIXME */
-#if 0
 	/* Publish number of blocks to scan */
 	if (progress)
 	{
-		BlockNumber nblocks;
+		FileSegTotals	*fileSegTotals;
+		BlockNumber		totalBlocks;
 
-		if (aoscan->rs_base.rs_parallel != NULL)
-		{
-			ParallelBlockTableScanDesc pbscan;
+		/* XXX: How can we report for builds with parallel scans? */
+		Assert(!aocoscan->rs_base.rs_parallel);
 
-			pbscan = (ParallelBlockTableScanDesc) aoscan->rs_base.rs_parallel;
-			nblocks = pbscan->phs_nblocks;
-		}
+		/*
+		 * We will need to scan the entire table if we need to create a block
+		 * directory, otherwise we need to scan only the columns projected. So,
+		 * calculate the total blocks accordingly.
+		 */
+		if (need_create_blk_directory)
+			fileSegTotals = GetAOCSSSegFilesTotals(heapRelation,
+												   aocoscan->appendOnlyMetaDataSnapshot);
 		else
-			nblocks = aoscan->rs_nblocks;
+			fileSegTotals = GetAOCSSSegFilesTotalsWithProj(heapRelation,
+														   aocoscan->appendOnlyMetaDataSnapshot,
+														   aocoscan->columnScanInfo.proj_atts,
+														   aocoscan->columnScanInfo.num_proj_atts);
 
+		Assert(fileSegTotals->totalbytes >= 0);
+
+		totalBlocks = RelationGuessNumberOfBlocksFromSize(fileSegTotals->totalbytes);
 		pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_TOTAL,
-									 nblocks);
+									 totalBlocks);
 	}
-#endif
-
-	/*
-	 * Must call GetOldestXmin() with SnapshotAny.  Should never call
-	 * GetOldestXmin() with MVCC snapshot. (It's especially worth checking
-	 * this for parallel builds, since ambuild routines that support parallel
-	 * builds must work these details out for themselves.)
-	 */
-	Assert(snapshot == SnapshotAny || IsMVCCSnapshot(snapshot));
-	Assert(snapshot == SnapshotAny ? TransactionIdIsValid(OldestXmin) :
-	       !TransactionIdIsValid(OldestXmin));
-	Assert(snapshot == SnapshotAny || !anyvisible);
 
 	/* set our scan endpoints */
 	if (!allow_sync)
@@ -1524,6 +1760,7 @@ aoco_index_build_range_scan(Relation heapRelation,
 	while (aoco_getnextslot(&aocoscan->rs_base, ForwardScanDirection, slot))
 	{
 		bool		tupleIsAlive;
+		AOTupleId 	*aoTupleId;
 
 		CHECK_FOR_INTERRUPTS();
 
@@ -1536,30 +1773,38 @@ aoco_index_build_range_scan(Relation heapRelation,
 			(numblocks != InvalidBlockNumber && ItemPointerGetBlockNumber(&slot->tts_tid) >= numblocks))
 			continue;
 
-		/* GPDB_12_MERGE_FIXME */
-#if 0
 		/* Report scan progress, if asked to. */
 		if (progress)
 		{
-			BlockNumber blocks_done = appendonly_scan_get_blocks_done(aoscan);
+			int64 current_blkno =
+					  RelationGuessNumberOfBlocksFromSize(aocoscan->totalBytesRead);
 
-			if (blocks_done != previous_blkno)
+			/* XXX: How can we report for builds with parallel scans? */
+			Assert(!aocoscan->rs_base.rs_parallel);
+
+			/* As soon as a new block starts, report it as scanned */
+			if (current_blkno != previous_blkno)
 			{
 				pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_DONE,
-											 blocks_done);
-				previous_blkno = blocks_done;
+											 current_blkno);
+				previous_blkno = current_blkno;
 			}
 		}
-#endif
 
+		aoTupleId = (AOTupleId *) &slot->tts_tid;
 		/*
-		 * appendonly_getnext did the time qual check
-		 *
-		 * GPDB_12_MERGE_FIXME: in heapam, we do visibility checks in SnapshotAny case
-		 * here. Is that not needed with AO_COLUMN tables?
+		 * We didn't perform the check to see if the tuple was deleted in
+		 * aocs_getnext(), since we passed it SnapshotAny. See aocs_getnext()
+		 * for details. We need to do this to avoid spurious conflicts with
+		 * deleted tuples for unique index builds.
 		 */
-		tupleIsAlive = true;
-		reltuples += 1;
+		if (AppendOnlyVisimap_IsVisible(&aocoscan->visibilityMap, aoTupleId))
+		{
+			tupleIsAlive = true;
+			reltuples += 1;
+		}
+		else
+			tupleIsAlive = false; /* excluded from unique-checking */
 
 		MemoryContextReset(econtext->ecxt_per_tuple_memory);
 
@@ -1601,33 +1846,7 @@ aoco_index_build_range_scan(Relation heapRelation,
 
 	}
 
-	/* GPDB_12_MERGE_FIXME */
-#if 0
-	/* Report scan progress one last time. */
-	if (progress)
-	{
-		BlockNumber blks_done;
-
-		if (aoscan->rs_base.rs_parallel != NULL)
-		{
-			ParallelBlockTableScanDesc pbscan;
-
-			pbscan = (ParallelBlockTableScanDesc) aoscan->rs_base.rs_parallel;
-			blks_done = pbscan->phs_nblocks;
-		}
-		else
-			blks_done = aoscan->rs_nblocks;
-
-		pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_DONE,
-									 blks_done);
-	}
-#endif
-
 	table_endscan(scan);
-
-	/* we can now forget our snapshot, if set and registered by us */
-	if (need_unregister_snapshot)
-		UnregisterSnapshot(snapshot);
 
 	ExecDropSingleTupleTableSlot(slot);
 
@@ -1929,6 +2148,10 @@ static const TableAmRoutine ao_column_methods = {
 	.index_fetch_reset = aoco_index_fetch_reset,
 	.index_fetch_end = aoco_index_fetch_end,
 	.index_fetch_tuple = aoco_index_fetch_tuple,
+	.index_fetch_tuple_exists = aoco_index_fetch_tuple_exists,
+
+	.dml_init = aoco_dml_init,
+	.dml_finish = aoco_dml_finish,
 
 	.tuple_insert = aoco_tuple_insert,
 	.tuple_insert_speculative = aoco_tuple_insert_speculative,

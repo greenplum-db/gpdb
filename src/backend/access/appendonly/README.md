@@ -178,3 +178,84 @@ Vacuum drop phase, to recycle segments that have been compacted,
 checks the xmin of each AWAITING_DROP segment. If it's visible to
 everyone, the segfile is recycled. It uses the relation extension lock
 to protect the scan over pg_aoseg.
+
+
+# Unique indexes
+
+To answer uniqueness checks for AO/AOCO tables, we have a complication. Unlike
+heap, in AO/CO we don't store the xmin/xmax fields in the tuples. So, we have to
+rely on block directory rows that "cover" the data rows to satisfy index lookups.
+Since the block directory is maintained as a heap table, visibility checks on it
+are identical to any other heap table: the xmin/xmax of the block directory
+row(s) will be leveraged. This means we don't have to write any special
+visibility checking code ourselves, nor do we need to worry about transactions
+vs subtransactions.
+
+Since block directory rows are written usually much after the data row has been
+inserted, there are windows in which there is no block  directory row on disk
+for a given data row - a problem for concurrent unique index checks. So during
+INSERT/COPY, at the beginning of the insertion operation, we insert a
+placeholder block directory row to cover ALL future tuples going to the current
+segment file for this command.
+
+To answer unique index lookups, we don't have to physically fetch the tuple from
+the table. This is key to answering unique index lookups against placeholder
+rows which predate their corresponding data rows. We simply perform a sysscan of
+the block directory, and if we have a visible entry that encompasses the rowNum
+being looked up, we go on to the next check. Otherwise, we have no conflict and
+return. The next check that we need to perform is against the visimap, to see if
+the tuple is visible. If yes, then we have a conflict. Since the snapshot used
+to perform uniqueness checks for AO/CO is SNAPSHOT_DIRTY (we currently don't
+support SNAPSHOT_SELF used for CREATE UNIQUE INDEX CONCURRENTLY), it is possible
+to detect if the block directory tuple (and by extension the data tuple) was
+inserted by a concurrent in-progress transaction. In this case, we simply avoid
+the visimap check and return true. The benefit of performing the sysscan on the
+block directory is that HeapTupleSatisfiesDirty() is called, and in the process,
+the snapshot's xmin and/or xmax fields are updated (see SNAPSHOT_DIRTY for
+details on its special contract). Returning true in this situation will lead to
+the unique index code's xwait mechanism to kick in (see _bt_check_unique()) and
+the current transaction will wait for the one that inserted the tuple to commit
+or abort.
+
+Tableam changes: Since there is a lot of overhead (leads to ~20x performance
+degradation in the worst case) in setting up and tearing down scan descriptors
+for AO/CO tables, we avoid the scanbegin..fetch..scanend construct in
+table_index_fetch_tuple_check().
+
+So, a new tableam API index_fetch_tuple_exists() is used, which is implemented
+only for AO/CO tables. Here, we fetch a UniqueCheckDesc, which stores all the
+in-memory state to help us perform a unique index check. This descriptor is
+attached to the DMLState structs. The descriptor holds a block directory struct
+and a visimap struct. Furthermore, we initialize this struct on the first unique
+index check performed, akin to how we initialize descriptors for insert and delete.
+
+AO lazy VACUUM is different from heap vacuum in the sense that ctids of data
+tuples change (and the index tuples need to be updated as a consequence). It
+leverages the scan and insert code to scan live tuples from each segfile and to
+move (insert) them in a target segfile. While moving tuples, we need to avoid
+performing uniqueness checks from the insert machinery. This is to ensure that
+we avoid spurious conflicts between the moved tuple and the original tuple. We
+don't need to insert a placeholder row for the backend running vacuum as the old
+index entries will still point to the segment being compacted. This will be the
+case up until the index entries are bulk deleted, but by then the new index
+entries along with new block directory rows would already have been written and
+would be able to answer uniqueness checks.
+
+Transaction isolation: Since uniqueness checks utilize the special dirty
+snapshot, these checks can cross transaction isolation boundaries. For instance,
+let us consider what will happen if we are in a repeatable read transaction and
+we insert a key that was inserted by a concurrent transaction. Further let's say
+that the repeatable read transaction's snapshot was taken before the concurrent
+transaction started. This means that the repeatable read transaction won't be
+able to see the conflicting key (for eg. with a SELECT). In spite of that
+conflicts will still be detected. Depending on whether the concurrent
+transaction committed or is still in progress, the repeatable read transaction
+will raise a conflict or enter into xwait respectively. This behavior is table
+AM agnostic.
+
+Partial unique indexes: We don't have to do anything special for partial indexes.
+Keys not satisfying the partial index predicate are never inserted into the
+index, and hence there are no uniqueness checks triggered (see
+ExecInsertIndexTuples()). Also during partial unique index builds, keys that
+don't satisfy the partial index predicate are never inserted into the index
+(see *_index_build_range_scan()).

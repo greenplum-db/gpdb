@@ -12,7 +12,7 @@ from gppylib.db import dbconn
 from gppylib.gparray import GpArray
 from contextlib import closing
 from gppylib.commands import gp
-from gppylib.commands.unix import Scp
+from gppylib.commands.unix import Rsync
 from gppylib.commands.base import Command, ExecutionError
 from gppylib.operations import Operation
 from gppylib.operations.unix import CheckFile, RemoveRemoteFile
@@ -632,7 +632,7 @@ class MuckWithInternalsTestCases(GppkgTestCase):
         try:
             self.install(gppkg_file)
         except ExecutionError as e:
-            Scp(name="copy to segment", srcFile=gppkg_file, dstFile=archive_file, srcHost=None,
+            Rsync(name="copy to segment", srcFile=gppkg_file, dstFile=archive_file, srcHost=None,
                 dstHost=segment_host_list[0]).run(validateAfter=True)
             self.fail("ExecutionError %s" % e)
 
@@ -653,7 +653,7 @@ class MuckWithInternalsTestCases(GppkgTestCase):
         try:
             self.install(gppkg_file)
         except ExecutionError as e:
-            Scp(name="copy to segment", srcFile=gppkg_file, dstFile=archive_file, srcHost=None, dstHost=standby).run(
+            Rsync(name="copy to segment", srcFile=gppkg_file, dstFile=archive_file, srcHost=None, dstHost=standby).run(
                 validateAfter=True)
             self.fail("ExecutionError %s" % e)
 

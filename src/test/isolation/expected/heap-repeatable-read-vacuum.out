@@ -6,11 +6,15 @@ step s1delete: delete from heaptest;
 step s2begin: BEGIN ISOLATION LEVEL REPEATABLE READ;
 		  select 123 as "establish snapshot";
 establish snapshot
+------------------
+               123
+(1 row)
 
-123            
 step s1commit: commit;
 step s1vacuum: vacuum heaptest;
 step s2select: select count(*) from heaptest;
-count          
+count
+-----
+  100
+(1 row)
 
-100            

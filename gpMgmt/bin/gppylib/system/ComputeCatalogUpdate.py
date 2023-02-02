@@ -42,7 +42,7 @@ class ComputeCatalogUpdate:
 
         @param gpArray the array containing the goal and db segment states.
         @param forceMap a map of dbid->True for mirrors for which we should force updating via remove/add
-        @param useUtilityMode True if the operations we're doing are expected to run via utility moed
+        @param useUtilityMode True if the operations we're doing are expected to run via utility mode
         @param allowPrimary True if caller authorizes add/remove primary operations (e.g. gpexpand)
         """
 

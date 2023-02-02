@@ -229,8 +229,14 @@ endif
 ifeq ($(with_llvm), yes)
 install-bin: install-postgres-bitcode
 
+# GPDB: Bitcode generation in certain subdir can be avoid when `with_llvm = no`
+# set there. But the install step is not aware of the setting and would fail if
+# we don't tell it the absence of *.bc files under those directory manually.
+# As we set ORCA to generate no bitcodes, ORCA directories is excluded here.
+bitcode_ignored_subdirs = $(top_builddir)/src/timezone gporca gpopt
+
 install-postgres-bitcode: $(OBJS) all
-	$(call install_llvm_module,postgres,$(call expand_subsys, $(filter-out $(top_builddir)/src/timezone/objfiles.txt, $(SUBDIROBJS))))
+	$(call install_llvm_module,postgres,$(call expand_subsys, $(filter-out $(bitcode_ignored_subdirs:%=%/objfiles.txt), $(SUBDIROBJS))))
 endif
 
 install-bin: postgres $(POSTGRES_IMP) installdirs
@@ -317,6 +323,8 @@ maintainer-clean: distclean
 	      parser/gram.c \
 	      parser/gram.h \
 	      parser/scan.c \
+	      statistics/statistics_gram.c \
+	      statistics/statistics_scanner.c \
 	      replication/repl_gram.c \
 	      replication/repl_scanner.c \
 	      replication/syncrep_gram.c \

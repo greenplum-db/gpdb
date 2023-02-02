@@ -85,9 +85,6 @@ private:
 	// partition types
 	CharPtrArray *m_str_part_types_array;
 
-	// number of partition
-	ULONG m_num_of_partitions;
-
 	// Child partition oids
 	IMdIdArray *m_partition_oids;
 
@@ -96,9 +93,6 @@ private:
 
 	// array of index info
 	CMDIndexInfoArray *m_mdindex_info_array;
-
-	// array of trigger ids
-	IMdIdArray *m_mdid_trigger_array;
 
 	// array of check constraint mdids
 	IMdIdArray *m_mdid_check_constraint_array;
@@ -131,10 +125,9 @@ public:
 		Erelstoragetype rel_storage_type, Ereldistrpolicy rel_distr_policy,
 		CMDColumnArray *mdcol_array, ULongPtrArray *distr_col_array,
 		IMdIdArray *distr_opfamilies, ULongPtrArray *partition_cols_array,
-		CharPtrArray *str_part_types_array, ULONG num_of_partitions,
-		IMdIdArray *partition_oids, BOOL convert_hash_to_random,
-		ULongPtr2dArray *keyset_array, CMDIndexInfoArray *md_index_info_array,
-		IMdIdArray *mdid_triggers_array,
+		CharPtrArray *str_part_types_array, IMdIdArray *partition_oids,
+		BOOL convert_hash_to_random, ULongPtr2dArray *keyset_array,
+		CMDIndexInfoArray *md_index_info_array,
 		IMdIdArray *mdid_check_constraint_array, CDXLNode *mdpart_constraint);
 
 	// dtor
@@ -212,9 +205,6 @@ public:
 	// number of partition keys
 	ULONG PartColumnCount() const override;
 
-	// number of partitions
-	ULONG PartitionCount() const override;
-
 	// retrieve the partition key column at the given position
 	const IMDColumn *PartColAt(ULONG pos) const override;
 
@@ -227,14 +217,8 @@ public:
 	// number of indices
 	ULONG IndexCount() const override;
 
-	// number of triggers
-	ULONG TriggerCount() const override;
-
 	// retrieve the id of the metadata cache index at the given position
 	IMDId *IndexMDidAt(ULONG pos) const override;
-
-	// retrieve the id of the metadata cache trigger at the given position
-	IMDId *TriggerMDidAt(ULONG pos) const override;
 
 	// serialize metadata relation in DXL format given a serializer object
 	void Serialize(gpdxl::CXMLSerializer *) const override;

@@ -11,7 +11,7 @@
         <dxl:ConstValue TypeMdid="0.23.1.0" Value="20"/>
       </dxl:Comparison>
       <dxl:LogicalGet>
-        <dxl:TableDescriptor Mdid="0.899686.1.1" TableName="t">
+        <dxl:TableDescriptor Mdid="6.899686.1.1" TableName="t">
           <dxl:Columns>
             <dxl:Column ColId="1" Attno="1" ColName="t1" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="2" Attno="2" ColName="t2" TypeMdid="0.23.1.0"/>

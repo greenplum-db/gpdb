@@ -68,11 +68,12 @@ not NULL AND visimapidxid is not NULL AND relid='uao_tab_compress_zlib1'::regcla
               1
 (1 row)
 
-SELECT 1 AS compression_present from pg_appendonly WHERE
-compresstype='zlib' AND compresslevel=1 AND relid='uao_tab_compress_zlib1'::regclass;
- compression_present 
----------------------
-                   1
+SELECT c.relname, c.reloptions from pg_class c
+join pg_namespace n on n.oid=c.relnamespace
+where c.relname='uao_tab_compress_zlib1' and n.nspname='compresstype_@amname@';
+        relname         |                            reloptions                             
+------------------------+-------------------------------------------------------------------
+ uao_tab_compress_zlib1 | {compresstype=zlib,compresslevel=1,blocksize=32768,checksum=true}
 (1 row)
 
 -- create uao table with compress=zlib COMPRESSLEVEL=9
@@ -125,11 +126,12 @@ not NULL AND visimapidxid is not NULL AND relid='uao_tab_compress_zlib9'::regcla
               1
 (1 row)
 
-SELECT 1 AS compression_present from pg_appendonly WHERE
-compresstype='zlib' AND compresslevel=9 AND relid='uao_tab_compress_zlib9'::regclass;
- compression_present 
----------------------
-                   1
+SELECT c.relname, c.reloptions from pg_class c
+join pg_namespace n on n.oid=c.relnamespace
+where c.relname='uao_tab_compress_zlib9' and n.nspname='compresstype_@amname@';
+        relname         |                            reloptions                             
+------------------------+-------------------------------------------------------------------
+ uao_tab_compress_zlib9 | {compresstype=zlib,compresslevel=9,blocksize=32768,checksum=true}
 (1 row)
 
 COMMIT;

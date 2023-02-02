@@ -10,7 +10,7 @@ Although GPORCA is on by default, you can configure GPORCA usage at the system, 
 -   [Enabling GPORCA for a Database](#topic_pzr_3db_3r)
 -   [Enabling GPORCA for a Session or a Query](#topic_lx4_vqk_br)
 
-**Note:** You can deactivate the ability to activate or deactivate GPORCA with the server configuration parameter optimizer\_control. For information about the server configuration parameters, see the *Greenplum Database Reference Guide*.
+> **Note** You can deactivate the ability to activate or deactivate GPORCA with the server configuration parameter optimizer\_control. For information about the server configuration parameters, see the *Greenplum Database Reference Guide*.
 
 **Parent topic:** [About GPORCA](../../query/topics/query-piv-optimizer.html)
 
@@ -18,14 +18,14 @@ Although GPORCA is on by default, you can configure GPORCA usage at the system, 
 
 Set the server configuration parameter optimizer for the Greenplum Database system.
 
-1.  Log into the Greenplum Database master host as `gpadmin`, the Greenplum Database administrator.
+1.  Log into the Greenplum Database coordinator host as `gpadmin`, the Greenplum Database administrator.
 2.  Set the values of the server configuration parameters. These Greenplum Database gpconfig utility commands sets the value of the parameters to `on`:
 
     ```
     $ gpconfig -c optimizer -v on --masteronly
     ```
 
-3.  Restart Greenplum Database. This Greenplum Database gpstop utility command reloads the `postgresql.conf` files of the master and segments without shutting down Greenplum Database.
+3.  Restart Greenplum Database. This Greenplum Database gpstop utility command reloads the `postgresql.conf` files of the coordinator and segments without shutting down Greenplum Database.
 
     ```
     gpstop -u

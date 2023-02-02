@@ -8,7 +8,7 @@ Greenplum Database provides an administrative schema called `gp_toolkit` that yo
 
 This documentation describes the most useful views in `gp_toolkit`. You may notice other objects \(views, functions, and external tables\) within the `gp_toolkit` schema that are not described in this documentation \(these are supporting objects to the views described in this section\).
 
-**Warning:** Do not change database objects in the gp\_toolkit schema. Do not create database objects in the schema. Changes to objects in the schema might affect the accuracy of administrative information returned by schema objects. Any changes made in the gp\_toolkit schema are lost when the database is backed up and then restored with the `gpbackup` and `gprestore` utilities.
+> **Caution** Do not change database objects in the gp\_toolkit schema. Do not create database objects in the schema. Changes to objects in the schema might affect the accuracy of administrative information returned by schema objects. Any changes made in the gp\_toolkit schema are lost when the database is backed up and then restored with the `gpbackup` and `gprestore` utilities.
 
 These are the categories for views in the `gp_toolkit` schema.
 
@@ -56,7 +56,7 @@ The `ANALYZE` command collects column-level statistics needed by the query optim
 
 This view shows regular heap-storage tables that have bloat \(the actual number of pages on disk exceeds the expected number of pages given the table statistics\). Tables that are bloated require a `VACUUM` or a `VACUUM FULL` in order to reclaim disk space occupied by deleted or obsolete rows. This view is accessible to all users, however non-superusers will only be able to see the tables that they have permission to access.
 
-**Note:** For diagnostic functions that return append-optimized table information, see [Checking Append-Optimized Tables](#topic8).
+> **Note** For diagnostic functions that return append-optimized table information, see [Checking Append-Optimized Tables](#topic8).
 
 |Column|Description|
 |------|-----------|
@@ -108,7 +108,7 @@ This view shows any locks currently being held on a relation, and the associated
 
 ### <a id="topic7"></a>gp\_locks\_on\_resqueue 
 
-**Note:** The `gp_locks_on_resqueue` view is valid only when resource queue-based resource management is active.
+> **Note** The `gp_locks_on_resqueue` view is valid only when resource queue-based resource management is active.
 
 This view shows any locks currently being held on a resource queue, and the associated session information about the query associated with the lock. This view is accessible to all users, however non-superusers will only be able to see the locks associated with their own sessions.
 
@@ -142,7 +142,7 @@ For most of the functions, the input argument is `regclass`, either the table `n
 
 This function displays compaction information for an append-optimized table. The information is for the on-disk data files on Greenplum Database segments that store the table data. You can use the information to determine the data files that will be compacted by a `VACUUM` operation on an append-optimized table.
 
-**Note:** Until a VACUUM operation deletes the row from the data file, deleted or updated data rows occupy physical space on disk even though they are hidden to new transactions. The configuration parameter [gp\_appendonly\_compaction](config_params/guc-list.html) controls the functionality of the `VACUUM` command.
+> **Note** Until a VACUUM operation deletes the row from the data file, deleted or updated data rows occupy physical space on disk even though they are hidden to new transactions. The configuration parameter [gp\_appendonly\_compaction](config_params/guc-list.html) controls the functionality of the `VACUUM` command.
 
 This table describes the \_\_gp\_aovisimap\_compaction\_info function output table.
 
@@ -280,9 +280,33 @@ The input argument is the name or the oid of an append-optimized table.
 |hidden\_tupcount|The number of hidden tuples in the entry.|
 |bitmap|A text representation of the visibility bitmap.|
 
+### <a id="topic_aoblkdir"></a>\_\_gp\_aoblkdir\(regclass\)
+
+For a given AO/AOCO table that had or has an index, this function returns a row for each block directory entry recorded in the block directory relation; it flattens the `minipage` column of block directory relations and returns a row for each `minipage` entry.
+
+The input argument is the name or the oid of an append-optimized table.
+
+You must execute this function in utility mode against every segment, or with `gp_dist_random()` as shown here:
+
+``` sql
+SELECT (gp_toolkit.__gp_aoblkdir('<table_name>')).*
+    FROM gp_dist_random('gp_id');
+```
+
+
+|Column|Description|
+|------|-----------|
+|tupleid|The tuple id of the block directory row containing this block directory entry.|
+|segno|The physical segment file number.|
+|columngroup\_no|The `attnum` of the column described by this `minipage` entry (always `0` for row-oriented tables).|
+|entry\_no|The entry serial number inside this `minipage` containing this block directory entry.|
+|first\_row\_no|The first row number of the rows covered by this block directory entry.|
+|file\_offset|The starting file offset of the rows covered by this block directory entry.|
+|row\_count|The count of rows covered by this block directory entry.|
+
 ## <a id="topic16"></a>Viewing Greenplum Database Server Log Files 
 
-Each component of a Greenplum Database system \(master, standby master, primary segments, and mirror segments\) keeps its own server log files. The `gp_log_*` family of views allows you to issue SQL queries against the server log files to find particular entries of interest. The use of these views require superuser permissions.
+Each component of a Greenplum Database system \(coordinator, standby coordinator, primary segments, and mirror segments\) keeps its own server log files. The `gp_log_*` family of views allows you to issue SQL queries against the server log files to find particular entries of interest. The use of these views require superuser permissions.
 
 -   [gp\_log\_command\_timings](#topic17)
 -   [gp\_log\_database](#topic18)
@@ -293,7 +317,7 @@ Each component of a Greenplum Database system \(master, standby master, primary 
 
 ### <a id="topic17"></a>gp\_log\_command\_timings 
 
-This view uses an external table to read the log files on the master and report the run time of SQL commands in a database session. The use of this view requires superuser permissions.
+This view uses an external table to read the log files on the coordinator and report the run time of SQL commands in a database session. The use of this view requires superuser permissions.
 
 |Column|Description|
 |------|-----------|
@@ -308,7 +332,7 @@ This view uses an external table to read the log files on the master and report 
 
 ### <a id="topic18"></a>gp\_log\_database 
 
-This view uses an external table to read the server log files of the entire Greenplum system \(master, segments, and mirrors\) and lists log entries associated with the current database. Associated log entries can be identified by the session id \(logsession\) and command id \(logcmdcount\). The use of this view requires superuser permissions.
+This view uses an external table to read the server log files of the entire Greenplum system \(coordinator, segments, and mirrors\) and lists log entries associated with the current database. Associated log entries can be identified by the session id \(logsession\) and command id \(logcmdcount\). The use of this view requires superuser permissions.
 
 |Column|Description|
 |------|-----------|
@@ -317,13 +341,13 @@ This view uses an external table to read the server log files of the entire Gree
 |logdatabase|The name of the database.|
 |logpid|The associated process id \(prefixed with "p"\).|
 |logthread|The associated thread count \(prefixed with "th"\).|
-|loghost|The segment or master host name.|
-|logport|The segment or master port.|
+|loghost|The segment or coordinator host name.|
+|logport|The segment or coordinator port.|
 |logsessiontime|Time session connection was opened.|
 |logtransaction|Global transaction id.|
 |logsession|The session identifier \(prefixed with "con"\).|
 |logcmdcount|The command number within a session \(prefixed with "cmd"\).|
-|logsegment|The segment content identifier \(prefixed with "seg" for primary or "mir" for mirror. The master always has a content id of -1\).|
+|logsegment|The segment content identifier \(prefixed with "seg" for primary or "mir" for mirror. The coordinator always has a content id of -1\).|
 |logslice|The slice id \(portion of the query plan being run\).|
 |logdistxact|Distributed transaction id.|
 |loglocalxact|Local transaction id.|
@@ -345,7 +369,7 @@ This view uses an external table to read the server log files of the entire Gree
 
 ### <a id="topic19"></a>gp\_log\_master\_concise 
 
-This view uses an external table to read a subset of the log fields from the master log file. The use of this view requires superuser permissions.
+This view uses an external table to read a subset of the log fields from the coordinator log file. The use of this view requires superuser permissions.
 
 |Column|Description|
 |------|-----------|
@@ -358,7 +382,7 @@ This view uses an external table to read a subset of the log fields from the mas
 
 ### <a id="topic20"></a>gp\_log\_system 
 
-This view uses an external table to read the server log files of the entire Greenplum system \(master, segments, and mirrors\) and lists all log entries. Associated log entries can be identified by the session id \(logsession\) and command id \(logcmdcount\). The use of this view requires superuser permissions.
+This view uses an external table to read the server log files of the entire Greenplum system \(coordinator, segments, and mirrors\) and lists all log entries. Associated log entries can be identified by the session id \(logsession\) and command id \(logcmdcount\). The use of this view requires superuser permissions.
 
 |Column|Description|
 |------|-----------|
@@ -367,13 +391,13 @@ This view uses an external table to read the server log files of the entire Gree
 |logdatabase|The name of the database.|
 |logpid|The associated process id \(prefixed with "p"\).|
 |logthread|The associated thread count \(prefixed with "th"\).|
-|loghost|The segment or master host name.|
-|logport|The segment or master port.|
+|loghost|The segment or coordinator host name.|
+|logport|The segment or coordinator port.|
 |logsessiontime|Time session connection was opened.|
 |logtransaction|Global transaction id.|
 |logsession|The session identifier \(prefixed with "con"\).|
 |logcmdcount|The command number within a session \(prefixed with "cmd"\).|
-|logsegment|The segment content identifier \(prefixed with "seg" for primary or "mir" for mirror. The master always has a content id of -1\).|
+|logsegment|The segment content identifier \(prefixed with "seg" for primary or "mir" for mirror. The coordinator always has a content id of -1\).|
 |logslice|The slice id \(portion of the query plan being run\).|
 |logdistxact|Distributed transaction id.|
 |loglocalxact|Local transaction id.|
@@ -395,7 +419,7 @@ This view uses an external table to read the server log files of the entire Gree
 
 ## <a id="topic21"></a>Checking Server Configuration Files 
 
-Each component of a Greenplum Database system \(master, standby master, primary segments, and mirror segments\) has its own server configuration file \(`postgresql.conf`\). The following `gp_toolkit` objects can be used to check parameter settings across all primary `postgresql.conf` files in the system:
+Each component of a Greenplum Database system \(coordinator, standby coordinator, primary segments, and mirror segments\) has its own server configuration file \(`postgresql.conf`\). The following `gp_toolkit` objects can be used to check parameter settings across all primary `postgresql.conf` files in the system:
 
 -   [gp\_param\_setting\('parameter\_name'\)](#topic22)
 -   [gp\_param\_settings\_seg\_value\_diffs](#topic23)
@@ -404,11 +428,11 @@ Each component of a Greenplum Database system \(master, standby master, primary 
 
 ### <a id="topic22"></a>gp\_param\_setting\('parameter\_name'\) 
 
-This function takes the name of a server configuration parameter and returns the `postgresql.conf` value for the master and each active segment. This function is accessible to all users.
+This function takes the name of a server configuration parameter and returns the `postgresql.conf` value for the coordinator and each active segment. This function is accessible to all users.
 
 |Column|Description|
 |------|-----------|
-|paramsegment|The segment content id \(only active segments are shown\). The master content id is always -1.|
+|paramsegment|The segment content id \(only active segments are shown\). The coordinator content id is always -1.|
 |paramname|The name of the parameter.|
 |paramvalue|The value of the parameter.|
 
@@ -448,7 +472,7 @@ This view shows information about segments that are marked as down in the system
 
 ## <a id="topic26x"></a>Checking Resource Group Activity and Status 
 
-**Note:** The resource group activity and status views described in this section are valid only when resource group-based resource management is active.
+> **Note** The resource group activity and status views described in this section are valid only when resource group-based resource management is active.
 
 Resource groups manage transactions to avoid exhausting system CPU and memory resources. Every database user is assigned a resource group. Greenplum Database evaluates every transaction submitted by a user against the limits configured for the user's resource group before running the transaction.
 
@@ -472,18 +496,18 @@ This view is accessible to all users.
 |groupid|The ID of the resource group.|
 |groupname|The name of the resource group.|
 |concurrency|The concurrency \(`CONCURRENCY`\) value specified for the resource group.|
-|cpu\_rate\_limit|The CPU limit \(`CPU_RATE_LIMIT`\) value specified for the resource group, or -1.|
+|cpu\_rate\_limit|The CPU limit \(`cpu_hard_quota_limit`\) value specified for the resource group, or -1.|
 |memory\_limit|The memory limit \(`MEMORY_LIMIT`\) value specified for the resource group.|
 |memory\_shared\_quota|The shared memory quota \(`MEMORY_SHARED_QUOTA`\) value specified for the resource group.|
 |memory\_spill\_ratio|The memory spill ratio \(`MEMORY_SPILL_RATIO`\) value specified for the resource group.|
 |memory\_auditor|The memory auditor for the resource group.|
-|cpuset|The CPU cores reserved for the resource group, or -1.|
+|cpuset|The CPU cores reserved for the resource group on the master host and segment hosts, or -1.|
 
 ### <a id="topic31x"></a>gp\_resgroup\_status 
 
 The `gp_resgroup_status` view allows administrators to see status and activity for a resource group. It shows how many queries are waiting to run and how many queries are currently active in the system for each resource group. The view also displays current memory and CPU usage for the resource group.
 
-**Note:** Resource groups use the Linux control groups \(cgroups\) configured on the host systems. The cgroups are used to manage host system resources. When resource groups use cgroups that are as part of a nested set of cgroups, resource group limits are relative to the parent cgroup allotment. For information about nested cgroups and Greenplum Database resource group limits, see [Using Resource Groups](../admin_guide/workload_mgmt_resgroups.html#topic8339intro).
+> **Note** Resource groups use the Linux control groups \(cgroups\) configured on the host systems. The cgroups are used to manage host system resources. When resource groups use cgroups that are as part of a nested set of cgroups, resource group limits are relative to the parent cgroup allotment. For information about nested cgroups and Greenplum Database resource group limits, see [Using Resource Groups](../admin_guide/workload_mgmt_resgroups.html#topic8339intro).
 
 This view is accessible to all users.
 
@@ -521,7 +545,7 @@ For each resource group that you assign to an external component, the `memory_us
 "1":{"used":11, "limit_granted":15}
 ```
 
-**Note:** See the `gp_resgroup_status_per_host` and `gp_resgroup_status_per_segment` views, described below, for more user-friendly display of CPU and memory usage.
+> **Note** See the `gp_resgroup_status_per_host` and `gp_resgroup_status_per_segment` views, described below, for more user-friendly display of CPU and memory usage.
 
 ### <a id="perhost"></a>gp\_resgroup\_status\_per\_host 
 
@@ -572,7 +596,7 @@ Query output for this view is similar to that of the `gp_resgroup_status_per_hos
 
 ## <a id="topic26"></a>Checking Resource Queue Activity and Status 
 
-**Note:** The resource queue activity and status views described in this section are valid only when resource queue-based resource management is active.
+> **Note** The resource queue activity and status views described in this section are valid only when resource queue-based resource management is active.
 
 The purpose of resource queues is to limit the number of active queries in the system at any given time in order to avoid exhausting system resources such as memory, CPU, and disk I/O. All database users are assigned to a resource queue, and every statement submitted by a user is first evaluated against the resource queue limits before it can run. The `gp_resq_*` family of views can be used to check the status of statements currently submitted to the system through their respective resource queue. Note that statements issued by superusers are exempt from resource queuing.
 
@@ -590,7 +614,7 @@ For the resource queues that have active workload, this view shows one row for e
 
 |Column|Description|
 |------|-----------|
-|resqprocpid|Process ID assigned to this statement \(on the master\).|
+|resqprocpid|Process ID assigned to this statement \(on the coordinator\).|
 |resqrole|User name.|
 |resqoid|Resource queue object id.|
 |resqname|Resource queue name.|

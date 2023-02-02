@@ -12,12 +12,12 @@ inputs:
 - name: ccp_src
 - name: cluster_env_files
 - name: gpdb_src
-- name: bin_gpdb_centos7
+- name: bin_gpdb
 - name: sqldump
 
 run:
   path: gpdb_src/concourse/scripts/test_upgrade.bash
-  args: [ '-c', '-t', 'bin_gpdb_centos7', '-s', 'sqldump/dump.sql.xz' ]
+  args: [ '-c', '-t', 'bin_gpdb', '-s', 'sqldump/dump.sql.xz' ]
 
 params:
   DEBUG_UPGRADE: ""

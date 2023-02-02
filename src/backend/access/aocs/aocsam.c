@@ -92,14 +92,14 @@ open_datumstreamread_segfile(
  * the block directory.
  */
 static void
-open_all_datumstreamread_segfiles(Relation rel,
-								  AOCSFileSegInfo *segInfo,
-								  DatumStreamRead **ds,
-								  AttrNumber *proj_atts,
-								  AttrNumber num_proj_atts,
-								  AppendOnlyBlockDirectory *blockDirectory)
+open_all_datumstreamread_segfiles(AOCSScanDesc scan, AOCSFileSegInfo *segInfo)
 {
-	char	   *basepath = relpathbackend(rel->rd_node, rel->rd_backend, MAIN_FORKNUM);
+	Relation 		rel = scan->rs_base.rs_rd;
+	DatumStreamRead **ds = scan->columnScanInfo.ds;
+	AttrNumber 		*proj_atts = scan->columnScanInfo.proj_atts;
+	AttrNumber 		num_proj_atts = scan->columnScanInfo.num_proj_atts;
+	AppendOnlyBlockDirectory *blockDirectory = scan->blockDirectory;
+	char *basepath = relpathbackend(rel->rd_node, rel->rd_backend, MAIN_FORKNUM);
 
 	Assert(proj_atts);
 	for (AttrNumber i = 0; i < num_proj_atts; i++)
@@ -108,6 +108,8 @@ open_all_datumstreamread_segfiles(Relation rel,
 
 		open_datumstreamread_segfile(basepath, rel->rd_node, segInfo, ds[attno], attno);
 		datumstreamread_block(ds[attno], blockDirectory, attno);
+
+		AOCSScanDesc_UpdateTotalBytesRead(scan, attno);
 	}
 
 	pfree(basepath);
@@ -155,9 +157,6 @@ open_ds_write(Relation rel, DatumStreamWrite **ds, TupleDesc relationTupleDesc, 
 		ds[i] = create_datumstreamwrite(ct,
 										clvl,
 										checksum,
-										 /* safeFSWriteSize */ 0,	/* UNDONE: Need to wire
-																	 * down pg_appendonly
-																	 * column? */
 										blksz,
 										attr,
 										RelationGetRelationName(rel),
@@ -165,6 +164,10 @@ open_ds_write(Relation rel, DatumStreamWrite **ds, TupleDesc relationTupleDesc, 
 										XLogIsNeeded() && RelationNeedsWAL(rel));
 
 	}
+
+	for (int i = 0; i < RelationGetNumberOfAttributes(rel); i++)
+		pfree(opts[i]);
+	pfree(opts);
 }
 
 /*
@@ -246,14 +249,15 @@ open_ds_read(Relation rel, DatumStreamRead **ds, TupleDesc relationTupleDesc,
 		ds[attno] = create_datumstreamread(ct,
 										   clvl,
 										   checksum,
-										    /* safeFSWriteSize */ false,	/* UNDONE:Need to wire
-																			 * down pg_appendonly
-																			 * column */
 										   blksz,
 										   attr,
 										   RelationGetRelationName(rel),
 										    /* title */ titleBuf.data);
 	}
+
+	for (int i = 0; i < RelationGetNumberOfAttributes(rel); i++)
+		pfree(opts[i]);
+	pfree(opts);
 }
 
 static void
@@ -321,6 +325,8 @@ initscan_with_colinfo(AOCSScanDesc scan)
 
 	ItemPointerSet(&scan->cdb_fake_ctid, 0, 0);
 
+	scan->totalBytesRead = 0;
+
 	pgstat_count_heap_scan(scan->rs_base.rs_rd);
 }
 
@@ -380,12 +386,7 @@ open_next_scan_seg(AOCSScanDesc scan)
 															true);
 				}
 
-				open_all_datumstreamread_segfiles(scan->rs_base.rs_rd,
-												  curSegInfo,
-												  scan->columnScanInfo.ds,
-												  scan->columnScanInfo.proj_atts,
-												  scan->columnScanInfo.num_proj_atts,
-												  scan->blockDirectory);
+				open_all_datumstreamread_segfiles(scan, curSegInfo);
 
 				return scan->cur_seg;
 			}
@@ -543,7 +544,6 @@ aocs_beginscan_internal(Relation relation,
 	GetAppendOnlyEntryAttributes(RelationGetRelid(relation),
 								 NULL,
 								 NULL,
-								 NULL,
 								 &scan->checksum,
 								 NULL);
 
@@ -616,80 +616,6 @@ aocs_endscan(AOCSScanDesc scan)
 	pfree(scan);
 }
 
-/*
- * Upgrades a Datum value from a previous version of the AOCS page format. The
- * DatumStreamRead that is passed must correspond to the column being upgraded.
- */
-static void upgrade_datum_impl(DatumStreamRead *ds, int attno, Datum values[],
-							   bool isnull[], int formatversion)
-{
-	bool 	convert_numeric = false;
-
-	if (PG82NumericConversionNeeded(formatversion))
-	{
-		/*
-		 * On the first call for this DatumStream, figure out if this column is
-		 * a numeric, or a domain over numerics.
-		 *
-		 * TODO: consolidate this code with upgrade_tuple() in appendonlyam.c.
-		 */
-		if (!OidIsValid(ds->baseTypeOid))
-		{
-			ds->baseTypeOid = getBaseType(ds->typeInfo.typid);
-		}
-
-		/* If this Datum is a numeric, we need to convert it. */
-		convert_numeric = (ds->baseTypeOid == NUMERICOID) && !isnull[attno];
-	}
-
-	if (convert_numeric)
-	{
-		/*
-		 * Before PostgreSQL 8.3, the n_weight and n_sign_dscale fields were the
-		 * other way 'round. Swap them.
-		 */
-		Datum 		datum;
-		char	   *numericdata;
-		char	   *upgradedata;
-		size_t		datalen;
-		uint16		tmp;
-
-		/*
-		 * We need to make a copy of this data so that any other tuples pointing
-		 * to it won't be affected. Store it in the upgrade space for this
-		 * DatumStream.
-		 */
-		datum = values[attno];
-		datalen = VARSIZE_ANY(DatumGetPointer(datum));
-
-		upgradedata = datumstreamread_get_upgrade_space(ds, datalen);
-		memcpy(upgradedata, DatumGetPointer(datum), datalen);
-
-		/* Swap the fields. */
-		numericdata = VARDATA_ANY(upgradedata);
-
-		memcpy(&tmp, &numericdata[0], 2);
-		memcpy(&numericdata[0], &numericdata[2], 2);
-		memcpy(&numericdata[2], &tmp, 2);
-
-		/* Re-point the Datum to the upgraded numeric. */
-		values[attno] = PointerGetDatum(upgradedata);
-	}
-}
-
-static void upgrade_datum_scan(AOCSScanDesc scan, int attno, Datum values[],
-							   bool isnull[], int formatversion)
-{
-	upgrade_datum_impl(scan->columnScanInfo.ds[attno], attno, values, isnull, formatversion);
-}
-
-static void upgrade_datum_fetch(AOCSFetchDesc fetch, int attno, Datum values[],
-								bool isnull[], int formatversion)
-{
-	upgrade_datum_impl(fetch->datumStreamFetchDesc[attno]->datumStream, attno,
-					   values, isnull, formatversion);
-}
-
 bool
 aocs_getnext(AOCSScanDesc scan, ScanDirection direction, TupleTableSlot *slot)
 {
@@ -756,6 +682,8 @@ ReadNext:
 					goto ReadNext;
 				}
 
+				AOCSScanDesc_UpdateTotalBytesRead(scan, attno);
+
 				err = datumstreamread_advance(scan->columnScanInfo.ds[attno]);
 				Assert(err > 0);
 			}
@@ -765,15 +693,6 @@ ReadNext:
 			 * should still be hot in CPU data cache memory.
 			 */
 			datumstreamread_get(scan->columnScanInfo.ds[attno], &d[attno], &null[attno]);
-
-			/*
-			 * Perform any required upgrades on the Datum we just fetched.
-			 */
-			if (curseginfo->formatversion < AORelationVersion_GetLatest())
-			{
-				upgrade_datum_scan(scan, attno, d, null,
-								   curseginfo->formatversion);
-			}
 
 			if (rowNum == INT64CONST(-1) &&
 				scan->columnScanInfo.ds[attno]->blockFirstRowNum != INT64CONST(-1))
@@ -916,7 +835,6 @@ aocs_insert_init(Relation rel, int segno, int64 num_rows)
 
     GetAppendOnlyEntryAttributes(rel->rd_id,
                                  &desc->blocksz,
-                                 NULL,
                                  (int16 *)&desc->compLevel,
                                  &desc->checksum,
                                  &nd);
@@ -1149,18 +1067,9 @@ fetchFromCurrentBlock(AOCSFetchDesc aocsFetchDesc,
 	{
 		Datum	   *values = slot->tts_values;
 		bool	   *nulls = slot->tts_isnull;
-		int			formatversion = datumStream->ao_read.formatVersion;
 
 		datumstreamread_get(datumStream, &(values[colno]), &(nulls[colno]));
 
-		/*
-		 * Perform any required upgrades on the Datum we just fetched.
-		 */
-		if (formatversion < AORelationVersion_GetLatest())
-		{
-			upgrade_datum_fetch(aocsFetchDesc, colno, values, nulls,
-								formatversion);
-		}
 	}
 	else
 	{
@@ -1345,7 +1254,7 @@ aocs_fetch_init(Relation relation,
 
 	Assert(proj);
 
-    bool checksum;
+    bool checksum = true;
     Oid visimaprelid;
     Oid visimapidxid;
     GetAppendOnlyEntryAuxOids(relation->rd_id,
@@ -1354,7 +1263,6 @@ aocs_fetch_init(Relation relation,
                               &visimaprelid, &visimapidxid);
 
     GetAppendOnlyEntryAttributes(relation->rd_id,
-                                 NULL,
                                  NULL,
                                  NULL,
                                  &checksum,
@@ -1428,9 +1336,6 @@ aocs_fetch_init(Relation relation,
 				create_datumstreamread(ct,
 									   clvl,
 									   checksum,
-									    /* safeFSWriteSize */ false,	/* UNDONE:Need to wire
-																		 * down pg_appendonly
-																		 * column */
 									   blksz,
 									   TupleDescAttr(tupleDesc, colno),
 									   relation->rd_rel->relname.data,
@@ -1699,123 +1604,6 @@ aocs_fetch_finish(AOCSFetchDesc aocsFetchDesc)
 	AppendOnlyVisimap_Finish(&aocsFetchDesc->visibilityMap, AccessShareLock);
 }
 
-typedef struct AOCSUpdateDescData
-{
-	AOCSInsertDesc insertDesc;
-
-	/*
-	 * visibility map
-	 */
-	AppendOnlyVisimap visibilityMap;
-
-	/*
-	 * Visimap delete support structure. Used to handle out-of-order deletes
-	 */
-	AppendOnlyVisimapDelete visiMapDelete;
-
-}			AOCSUpdateDescData;
-
-AOCSUpdateDesc
-aocs_update_init(Relation rel, int segno)
-{
-	Oid			visimaprelid;
-	Oid			visimapidxid;
-	AOCSUpdateDesc desc = (AOCSUpdateDesc) palloc0(sizeof(AOCSUpdateDescData));
-
-	/*
-	 * Note: since we don't know how many rows will actually be inserted, we
-	 * provide the default number of rows to bump gp_fastsequence by.
-	 */
-	desc->insertDesc = aocs_insert_init(rel, segno, NUM_FAST_SEQUENCES);
-
-    GetAppendOnlyEntryAuxOids(rel->rd_id,
-                              desc->insertDesc->appendOnlyMetaDataSnapshot,
-                              NULL, NULL, NULL,
-                              &visimaprelid, &visimapidxid);
-	AppendOnlyVisimap_Init(&desc->visibilityMap,
-						   visimaprelid,
-						   visimapidxid,
-						   RowExclusiveLock,
-						   desc->insertDesc->appendOnlyMetaDataSnapshot);
-
-	AppendOnlyVisimapDelete_Init(&desc->visiMapDelete,
-								 &desc->visibilityMap);
-
-	return desc;
-}
-
-void
-aocs_update_finish(AOCSUpdateDesc desc)
-{
-	Assert(desc);
-
-	AppendOnlyVisimapDelete_Finish(&desc->visiMapDelete);
-
-	aocs_insert_finish(desc->insertDesc);
-	desc->insertDesc = NULL;
-
-	/* Keep lock until the end of transaction */
-	AppendOnlyVisimap_Finish(&desc->visibilityMap, NoLock);
-
-	pfree(desc);
-}
-
-TM_Result
-aocs_update(AOCSUpdateDesc desc, TupleTableSlot *slot,
-			AOTupleId *oldTupleId, AOTupleId *newTupleId)
-{
-	TM_Result result;
-
-	Assert(desc);
-	Assert(oldTupleId);
-	Assert(newTupleId);
-
-#ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet(
-								   "appendonly_update",
-								   DDLNotSpecified,
-								   "", //databaseName
-								   RelationGetRelationName(desc->insertDesc->aoi_rel));
-	/* tableName */
-#endif
-
-	result = AppendOnlyVisimapDelete_Hide(&desc->visiMapDelete, oldTupleId);
-	if (result != TM_Ok)
-		return result;
-
-	slot_getallattrs(slot);
-	aocs_insert_values(desc->insertDesc,
-					   slot->tts_values, slot->tts_isnull,
-					   newTupleId);
-
-	return result;
-}
-
-
-/*
- * AOCSDeleteDescData is used for delete data from AOCS relations.
- * It serves an equivalent purpose as AppendOnlyScanDescData
- * (relscan.h) only that the later is used for scanning append-only
- * relations.
- */
-typedef struct AOCSDeleteDescData
-{
-	/*
-	 * Relation to delete from
-	 */
-	Relation	aod_rel;
-
-	/*
-	 * visibility map
-	 */
-	AppendOnlyVisimap visibilityMap;
-
-	/*
-	 * Visimap delete support structure. Used to handle out-of-order deletes
-	 */
-	AppendOnlyVisimapDelete visiMapDelete;
-
-}			AOCSDeleteDescData;
 
 
 /*
@@ -1906,7 +1694,6 @@ aocs_begin_headerscan(Relation rel, int colno)
     GetAppendOnlyEntryAttributes(rel->rd_id,
                                  NULL,
                                  NULL,
-                                 NULL,
                                  &ao_attr.checksum,
                                  NULL);
 
@@ -1918,7 +1705,6 @@ aocs_begin_headerscan(Relation rel, int colno)
 	ao_attr.compressType = NULL;
 	ao_attr.compressLevel = 0;
 	ao_attr.overflowSize = 0;
-	ao_attr.safeFSWriteSize = 0;
 	hdesc = palloc(sizeof(AOCSHeaderScanDescData));
 	AppendOnlyStorageRead_Init(&hdesc->ao_read,
 							   NULL, //current memory context
@@ -1927,6 +1713,11 @@ aocs_begin_headerscan(Relation rel, int colno)
 							   "ALTER TABLE ADD COLUMN scan",
 							   &ao_attr);
 	hdesc->colno = colno;
+
+	for (int i = 0; i < RelationGetNumberOfAttributes(rel); i++)
+		pfree(opts[i]);
+	pfree(opts);
+
 	return hdesc;
 }
 
@@ -2001,7 +1792,6 @@ aocs_addcol_init(Relation rel,
     GetAppendOnlyEntryAttributes(rel->rd_id,
                                  NULL,
                                  NULL,
-                                 NULL,
                                  &checksum,
                                  NULL);
 
@@ -2017,11 +1807,16 @@ aocs_addcol_init(Relation rel,
 		ct = opts[iattr]->compresstype;
 		clvl = opts[iattr]->compresslevel;
 		blksz = opts[iattr]->blocksize;
-		desc->dsw[i] = create_datumstreamwrite(ct, clvl, checksum, 0, blksz /* safeFSWriteSize */ ,
+		desc->dsw[i] = create_datumstreamwrite(ct, clvl, checksum, blksz,
 											   attr, RelationGetRelationName(rel),
 											   titleBuf.data,
 											   XLogIsNeeded() && RelationNeedsWAL(rel));
 	}
+
+	for (i = 0; i < RelationGetNumberOfAttributes(rel); i++)
+		pfree(opts[i]);
+	pfree(opts);
+
 	return desc;
 }
 

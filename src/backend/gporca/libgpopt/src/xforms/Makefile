@@ -35,7 +35,7 @@ OBJS        = CDecorrelator.o \
               CXformExpandNAryJoinGreedy.o \
               CXformExpandNAryJoinMinCard.o \
               CXformExploration.o \
-              CXformExternalGet2ExternalScan.o \
+              CXformForeignGet2ForeignScan.o \
               CXformFactory.o \
               CXformGbAgg2Apply.o \
               CXformGbAgg2HashAgg.o \
@@ -55,7 +55,6 @@ OBJS        = CDecorrelator.o \
               CXformImplementFullOuterMergeJoin.o \
               CXformImplementLimit.o \
               CXformImplementPartitionSelector.o \
-              CXformImplementRowTrigger.o \
               CXformImplementSequence.o \
               CXformImplementSequenceProject.o \
               CXformImplementSplit.o \

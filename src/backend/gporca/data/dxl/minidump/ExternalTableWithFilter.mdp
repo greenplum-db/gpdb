@@ -142,7 +142,7 @@
       <dxl:ColumnStatistics Mdid="1.133758.1.1.7" Name="xmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.133758.1.1.6" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.133758.1.1" Name="ext_nation" Rows="1000000.000000"/>
-      <dxl:ExternalRelation Mdid="0.133758.1.1" Name="ext_nation" DistributionPolicy="Random" Keys="10,4">
+      <dxl:Relation Mdid="6.133758.1.1" Name="ext_nation" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="n_nationkey" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -179,9 +179,8 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
-      </dxl:ExternalRelation>
+      </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.133758.1.1.9" Name="tableoid" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.133758.1.1.8" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.133758.1.1.1" Name="n_name" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -203,8 +202,8 @@
           <dxl:Ident ColId="1" ColName="n_nationkey" TypeMdid="0.23.1.0"/>
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
         </dxl:Comparison>
-        <dxl:LogicalExternalGet>
-          <dxl:TableDescriptor Mdid="0.133758.1.1" TableName="ext_nation">
+        <dxl:LogicalForeignGet>
+          <dxl:TableDescriptor Mdid="6.133758.1.1" TableName="ext_nation">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="n_nationkey" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="n_name" TypeMdid="0.1042.1.0" ColWidth="25"/>
@@ -219,7 +218,7 @@
               <dxl:Column ColId="11" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
             </dxl:Columns>
           </dxl:TableDescriptor>
-        </dxl:LogicalExternalGet>
+        </dxl:LogicalForeignGet>
       </dxl:LogicalSelect>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="1">
@@ -243,7 +242,7 @@
         </dxl:ProjList>
         <dxl:Filter/>
         <dxl:SortingColumnList/>
-        <dxl:ExternalScan>
+        <dxl:ForeignScan>
           <dxl:Properties>
             <dxl:Cost StartupCost="0" TotalCost="576.883000" Rows="400000.000000" Width="189"/>
           </dxl:Properties>
@@ -267,7 +266,7 @@
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
             </dxl:Comparison>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.133758.1.1" TableName="ext_nation">
+          <dxl:TableDescriptor Mdid="6.133758.1.1" TableName="ext_nation">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="n_nationkey" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="n_name" TypeMdid="0.1042.1.0" ColWidth="25"/>
@@ -282,7 +281,7 @@
               <dxl:Column ColId="10" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
             </dxl:Columns>
           </dxl:TableDescriptor>
-        </dxl:ExternalScan>
+        </dxl:ForeignScan>
       </dxl:GatherMotion>
     </dxl:Plan>
   </dxl:Thread>

@@ -5,7 +5,6 @@
 -- reset the GUC and restart cluster.
 -- start_ignore
 ! gpconfig -r gp_resource_manager;
-! gpconfig -r gp_resource_group_memory_limit;
 ! gpstop -rai;
 -- end_ignore
 
@@ -13,10 +12,4 @@ SHOW gp_resource_manager;
 
 -- reset settings
 ALTER RESOURCE GROUP admin_group SET concurrency 10;
-ALTER RESOURCE GROUP admin_group SET memory_spill_ratio 0;
-ALTER RESOURCE GROUP admin_group SET memory_limit 10;
-ALTER RESOURCE GROUP admin_group SET memory_shared_quota 80;
 ALTER RESOURCE GROUP default_group SET concurrency 20;
-ALTER RESOURCE GROUP default_group SET memory_spill_ratio 0;
-ALTER RESOURCE GROUP default_group SET memory_limit 0;
-ALTER RESOURCE GROUP default_group SET memory_shared_quota 80;

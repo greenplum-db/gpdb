@@ -31,6 +31,7 @@
 #include "utils/snapmgr.h"
 
 #include "cdb/ml_ipc.h"
+#include "cdb/cdbtm.h"
 #include "commands/createas.h"
 #include "commands/queue.h"
 #include "commands/createas.h"
@@ -604,11 +605,41 @@ PortalStart(Portal portal, ParamListInfo params,
 		{
 			case PORTAL_ONE_SELECT:
 
+				/*
+				 * GPDB: If we just have one motion and slices[1] can be direct dispatched,
+				 * we do not need to grab distributed snapshot on QD, the local snapshot on
+				 * QE is enough if we meet direct dispatch.
+				 *
+				 * This could improve some efficiency on OLTP.
+				 */
+				if (Gp_role == GP_ROLE_DISPATCH && !IsInTransactionBlock(true) && !snapshot)
+				{
+					/* check whether we need to create distributed snapshot */
+					int 		determinedSliceIndex = 1;
+					PlannedStmt *pstmt = linitial_node(PlannedStmt, portal->stmts);
+
+					if (pstmt->numSlices == 2 &&
+						pstmt->slices[determinedSliceIndex].directDispatch.isDirectDispatch)
+						needDistributedSnapshot = false;
+				}
+				
 				/* Must set snapshot before starting executor. */
 				if (snapshot)
 					PushActiveSnapshot(snapshot);
 				else
 					PushActiveSnapshot(GetTransactionSnapshot());
+
+				/* reset value */
+				needDistributedSnapshot = true;
+
+				/*
+				 * We could remember the snapshot in portal->portalSnapshot,
+				 * but presently there seems no need to, as this code path
+				 * cannot be used for non-atomic execution.  Hence there can't
+				 * be any commit/abort that might destroy the snapshot.  Since
+				 * we don't do that, there's also no need to force a
+				 * non-default nesting level for the snapshot.
+				 */
 
 				/*
 				 * Create QueryDesc in portal's context; for the moment, set
@@ -1312,49 +1343,36 @@ PortalRunUtility(Portal portal, PlannedStmt *pstmt,
 				 bool isTopLevel, bool setHoldSnapshot,
 				 DestReceiver *dest, char *completionTag)
 {
-	Node	   *utilityStmt = pstmt->utilityStmt;
-	Snapshot	snapshot;
-
 	/*
-	 * Set snapshot if utility stmt needs one.  Most reliable way to do this
-	 * seems to be to enumerate those that do not need one; this is a short
-	 * list.  Transaction control, LOCK, and SET must *not* set a snapshot
-	 * since they need to be executable at the start of a transaction-snapshot
-	 * mode transaction without freezing a snapshot.  By extension we allow
-	 * SHOW not to set a snapshot.  The other stmts listed are just efficiency
-	 * hacks.  Beware of listing anything that can modify the database --- if,
-	 * say, it has to update an index with expressions that invoke
-	 * user-defined functions, then it had better have a snapshot.
+	 * Set snapshot if utility stmt needs one.
 	 */
-	if (!(IsA(utilityStmt, TransactionStmt) ||
-		  IsA(utilityStmt, LockStmt) ||
-		  IsA(utilityStmt, VariableSetStmt) ||
-		  IsA(utilityStmt, VariableShowStmt) ||
-		  IsA(utilityStmt, ConstraintsSetStmt) ||
-	/* efficiency hacks from here down */
-		  IsA(utilityStmt, FetchStmt) ||
-		  IsA(utilityStmt, ListenStmt) ||
-		  IsA(utilityStmt, NotifyStmt) ||
-		  IsA(utilityStmt, UnlistenStmt) ||
-		  IsA(utilityStmt, CheckPointStmt)))
+	if (PlannedStmtRequiresSnapshot(pstmt))
 	{
-		snapshot = GetTransactionSnapshot();
+		Snapshot	snapshot = GetTransactionSnapshot();
+
 		/* If told to, register the snapshot we're using and save in portal */
 		if (setHoldSnapshot)
 		{
 			snapshot = RegisterSnapshot(snapshot);
 			portal->holdSnapshot = snapshot;
 		}
-		PushActiveSnapshot(snapshot);
-		/* PushActiveSnapshot might have copied the snapshot */
-		snapshot = GetActiveSnapshot();
+
+		/*
+		 * In any case, make the snapshot active and remember it in portal.
+		 * Because the portal now references the snapshot, we must tell
+		 * snapmgr.c that the snapshot belongs to the portal's transaction
+		 * level, else we risk portalSnapshot becoming a dangling pointer.
+		 */
+		PushActiveSnapshotWithLevel(snapshot, portal->createLevel);
+		/* PushActiveSnapshotWithLevel might have copied the snapshot */
+		portal->portalSnapshot = GetActiveSnapshot();
 	}
 	else
-		snapshot = NULL;
+		portal->portalSnapshot = NULL;
 
 	/* check if this utility statement need to be involved into resource queue
 	 * mgmt */
-	ResHandleUtilityStmt(portal, utilityStmt);
+	ResHandleUtilityStmt(portal, pstmt->utilityStmt);
 
 	ProcessUtility(pstmt,
 				   portal->sourceText ? portal->sourceText : "(Source text for portal is not available)",
@@ -1368,13 +1386,17 @@ PortalRunUtility(Portal portal, PlannedStmt *pstmt,
 	MemoryContextSwitchTo(portal->portalContext);
 
 	/*
-	 * Some utility commands may pop the ActiveSnapshot stack from under us,
-	 * so be careful to only pop the stack if our snapshot is still at the
-	 * top.
+	 * Some utility commands (e.g., VACUUM) pop the ActiveSnapshot stack from
+	 * under us, so don't complain if it's now empty.  Otherwise, our snapshot
+	 * should be the top one; pop it.  Note that this could be a different
+	 * snapshot from the one we made above; see EnsurePortalSnapshotExists.
 	 */
-	if (snapshot != NULL && ActiveSnapshotSet() &&
-		snapshot == GetActiveSnapshot())
+	if (portal->portalSnapshot != NULL && ActiveSnapshotSet())
+	{
+		Assert(portal->portalSnapshot == GetActiveSnapshot());
 		PopActiveSnapshot();
+	}
+	portal->portalSnapshot = NULL;
 }
 
 /*
@@ -1456,6 +1478,12 @@ PortalRunMulti(Portal portal,
 				 * from what holdSnapshot has.)
 				 */
 				PushCopiedSnapshot(snapshot);
+
+				/*
+				 * As for PORTAL_ONE_SELECT portals, it does not seem
+				 * necessary to maintain portal->portalSnapshot here.
+				 */
+
 				active_snapshot_set = true;
 			}
 			else
@@ -1515,18 +1543,29 @@ PortalRunMulti(Portal portal,
 		}
 
 		/*
-		 * Increment command counter between queries, but not after the last
-		 * one.
-		 */
-		if (lnext(stmtlist_item) != NULL)
-			CommandCounterIncrement();
-
-		/*
 		 * Clear subsidiary contexts to recover temporary memory.
 		 */
 		Assert(portal->portalContext == CurrentMemoryContext);
 
 		MemoryContextDeleteChildren(portal->portalContext);
+
+		/*
+		 * Avoid crashing if portal->stmts has been reset.  This can only
+		 * occur if a CALL or DO utility statement executed an internal
+		 * COMMIT/ROLLBACK (cf PortalReleaseCachedPlan).  The CALL or DO must
+		 * have been the only statement in the portal, so there's nothing left
+		 * for us to do; but we don't want to dereference a now-dangling list
+		 * pointer.
+		 */
+		if (portal->stmts == NIL)
+			break;
+
+		/*
+		 * Increment command counter between queries, but not after the last
+		 * one.
+		 */
+		if (lnext(stmtlist_item) != NULL)
+			CommandCounterIncrement();
 	}
 
 	/* Pop the snapshot if we pushed one. */
@@ -1671,9 +1710,8 @@ PortalRunFetch(Portal portal,
  * DoPortalRunFetch
  *		Guts of PortalRunFetch --- the portal context is already set up
  *
- * count <= 0 is interpreted as a no-op: the destination gets started up
- * and shut down, but nothing else happens.  Also, count == FETCH_ALL is
- * interpreted as "all rows".  (cf FetchStmt.howMany)
+ * Here, count < 0 typically reverses the direction.  Also, count == FETCH_ALL
+ * is interpreted as "all rows".  (cf FetchStmt.howMany)
  *
  * Returns number of rows processed (suitable for use in result tag)
  */
@@ -1690,6 +1728,15 @@ DoPortalRunFetch(Portal portal,
 		   portal->strategy == PORTAL_ONE_MOD_WITH ||
 		   portal->strategy == PORTAL_UTIL_SELECT);
 
+	/*
+	 * Note: we disallow backwards fetch (including re-fetch of current row)
+	 * for NO SCROLL cursors, but we interpret that very loosely: you can use
+	 * any of the FetchDirection options, so long as the end result is to move
+	 * forwards by at least one row.  Currently it's sufficient to check for
+	 * NO SCROLL in DoPortalRewind() and in the forward == false path in
+	 * PortalRunSelect(); but someday we might prefer to account for that
+	 * restriction explicitly here.
+	 */
 	switch (fdirection)
 	{
 		case FETCH_FORWARD:
@@ -1908,6 +1955,25 @@ DoPortalRewind(Portal portal)
 {
 	QueryDesc  *queryDesc;
 
+	/*
+	 * No work is needed if we've not advanced nor attempted to advance the
+	 * cursor (and we don't want to throw a NO SCROLL error in this case).
+	 */
+	if (portal->atStart && !portal->atEnd)
+		return;
+
+	/*
+	 * Otherwise, cursor should allow scrolling.  However, we're only going to
+	 * enforce that policy fully beginning in v15.  In older branches, insist
+	 * on this only if the portal has a holdStore.  That prevents users from
+	 * seeing that the holdStore may not have all the rows of the query.
+	 */
+	if ((portal->cursorOptions & CURSOR_OPT_NO_SCROLL) && portal->holdStore)
+		ereport(ERROR,
+				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+				 errmsg("cursor can only scan forward"),
+				 errhint("Declare it with SCROLL option to enable backward scan.")));
+
 	/* Rewind holdStore, if we have one */
 	if (portal->holdStore)
 	{
@@ -1945,4 +2011,85 @@ PortalBackoffEntryInit(Portal portal)
 		/* Initialize the SHM backend entry */
 		BackoffBackendEntryInit(gp_session_id, gp_command_count, portal->queueId);
 	}
+}
+
+/*
+ * PlannedStmtRequiresSnapshot - what it says on the tin
+ */
+bool
+PlannedStmtRequiresSnapshot(PlannedStmt *pstmt)
+{
+	Node	   *utilityStmt = pstmt->utilityStmt;
+
+	/* If it's not a utility statement, it definitely needs a snapshot */
+	if (utilityStmt == NULL)
+		return true;
+
+	/*
+	 * Most utility statements need a snapshot, and the default presumption
+	 * about new ones should be that they do too.  Hence, enumerate those that
+	 * do not need one.
+	 *
+	 * Transaction control, LOCK, and SET must *not* set a snapshot, since
+	 * they need to be executable at the start of a transaction-snapshot-mode
+	 * transaction without freezing a snapshot.  By extension we allow SHOW
+	 * not to set a snapshot.  The other stmts listed are just efficiency
+	 * hacks.  Beware of listing anything that can modify the database --- if,
+	 * say, it has to update an index with expressions that invoke
+	 * user-defined functions, then it had better have a snapshot.
+	 */
+	if (IsA(utilityStmt, TransactionStmt) ||
+		IsA(utilityStmt, LockStmt) ||
+		IsA(utilityStmt, VariableSetStmt) ||
+		IsA(utilityStmt, VariableShowStmt) ||
+		IsA(utilityStmt, ConstraintsSetStmt) ||
+	/* efficiency hacks from here down */
+		IsA(utilityStmt, FetchStmt) ||
+		IsA(utilityStmt, ListenStmt) ||
+		IsA(utilityStmt, NotifyStmt) ||
+		IsA(utilityStmt, UnlistenStmt) ||
+		IsA(utilityStmt, CheckPointStmt))
+		return false;
+
+	return true;
+}
+
+/*
+ * EnsurePortalSnapshotExists - recreate Portal-level snapshot, if needed
+ *
+ * Generally, we will have an active snapshot whenever we are executing
+ * inside a Portal, unless the Portal's query is one of the utility
+ * statements exempted from that rule (see PlannedStmtRequiresSnapshot).
+ * However, procedures and DO blocks can commit or abort the transaction,
+ * and thereby destroy all snapshots.  This function can be called to
+ * re-establish the Portal-level snapshot when none exists.
+ */
+void
+EnsurePortalSnapshotExists(void)
+{
+	Portal		portal;
+
+	/*
+	 * Nothing to do if a snapshot is set.  (We take it on faith that the
+	 * outermost active snapshot belongs to some Portal; or if there is no
+	 * Portal, it's somebody else's responsibility to manage things.)
+	 */
+	if (ActiveSnapshotSet())
+		return;
+
+	/* Otherwise, we'd better have an active Portal */
+	portal = ActivePortal;
+	if (unlikely(portal == NULL))
+		elog(ERROR, "cannot execute SQL without an outer snapshot or portal");
+	Assert(portal->portalSnapshot == NULL);
+
+	/*
+	 * Create a new snapshot, make it active, and remember it in portal.
+	 * Because the portal now references the snapshot, we must tell snapmgr.c
+	 * that the snapshot belongs to the portal's transaction level, else we
+	 * risk portalSnapshot becoming a dangling pointer.
+	 */
+	PushActiveSnapshotWithLevel(GetTransactionSnapshot(), portal->createLevel);
+	/* PushActiveSnapshotWithLevel might have copied the snapshot */
+	portal->portalSnapshot = GetActiveSnapshot();
 }

@@ -55,6 +55,9 @@ static void StartupProcSigUsr1Handler(SIGNAL_ARGS);
 static void StartupProcTriggerHandler(SIGNAL_ARGS);
 static void StartupProcSigHupHandler(SIGNAL_ARGS);
 
+/* Callbacks */
+static void StartupProcExit(int code, Datum arg);
+
 
 /* --------------------------------
  *		signal handler routines
@@ -178,6 +181,19 @@ HandleCrash(SIGNAL_ARGS)
 }
 
 
+/* --------------------------------
+ *		signal handler routines
+ * --------------------------------
+ */
+static void
+StartupProcExit(int code, Datum arg)
+{
+	/* Shutdown the recovery environment */
+	if (standbyState != STANDBY_DISABLED)
+		ShutdownRecoveryTransactionEnvironment();
+}
+
+
 /* ----------------------------------
  *	Startup Process main entry point
  * ----------------------------------
@@ -186,6 +202,10 @@ void
 StartupProcessMain(void)
 {
 	am_startup = true;
+
+	/* Arrange to clean up at startup process exit */
+	on_shmem_exit(StartupProcExit, 0);
+
 	/*
 	 * Properly accept or ignore signals the postmaster might send us.
 	 */

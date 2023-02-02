@@ -10,11 +10,11 @@ from gppylib.gparray import GpArray
 from gppylib.gpversion import MAIN_VERSION
 from contextlib import closing
 from gppylib.commands import gp
-from gppylib.commands.unix import Scp
+from gppylib.commands.unix import Rsync
 from gppylib.commands.base import Command, ExecutionError, REMOTE
 from gppylib.operations import Operation
 from gppylib.operations.unix import CheckFile, CheckRemoteFile, RemoveRemoteFile
-from gppylib.operations.package import dereference_symlink, GpScp, linux_distribution_id, linux_distribution_version
+from gppylib.operations.package import dereference_symlink, GpRsync, linux_distribution_id, linux_distribution_version
 from gppylib.commands.base import Command, REMOTE
 
 def get_os():

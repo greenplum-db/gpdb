@@ -54,8 +54,8 @@
 #include "nodes/plannodes.h"
 #include "optimizer/paramassign.h"
 #include "optimizer/placeholder.h"
+#include "optimizer/subselect.h"
 #include "rewrite/rewriteManip.h"
-
 
 /*
  * Select a PARAM_EXEC number to identify the given Var as a parameter for
@@ -68,6 +68,9 @@ assign_param_for_var(PlannerInfo *root, Var *var)
 	ListCell   *ppl;
 	PlannerParamItem *pitem;
 	Index		levelsup;
+
+	/* check multi-level correlated subquery in GPDB planner */
+	check_multi_subquery_correlated(root, var);
 
 	/* Find the query level the Var belongs to */
 	for (levelsup = var->varlevelsup; levelsup > 0; levelsup--)

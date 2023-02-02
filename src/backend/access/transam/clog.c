@@ -296,16 +296,10 @@ TransactionIdSetPageStatus(TransactionId xid, int nsubxids,
 	if (all_xact_same_page && xid == MyPgXact->xid &&
 		nsubxids <= THRESHOLD_SUBTRANS_CLOG_OPT &&
 		nsubxids == MyPgXact->nxids &&
-		memcmp(subxids, MyProc->subxids.xids,
-			   nsubxids * sizeof(TransactionId)) == 0)
+		(nsubxids == 0 ||
+		 memcmp(subxids, MyProc->subxids.xids,
+				nsubxids * sizeof(TransactionId)) == 0))
 	{
-		/*
-		 * We don't try to do group update optimization if a process has
-		 * overflowed the subxids array in its PGPROC, since in that case we
-		 * don't have a complete list of XIDs for it.
-		 */
-		Assert(THRESHOLD_SUBTRANS_CLOG_OPT <= PGPROC_MAX_CACHED_SUBXIDS);
-
 		/*
 		 * If we can immediately acquire CLogControlLock, we update the status
 		 * of our own XID and release the lock.  If not, try use group XID
@@ -457,7 +451,12 @@ TransactionGroupUpdateXidStatus(TransactionId xid, XidStatus status,
 		if (nextidx != INVALID_PGPROCNO &&
 			ProcGlobal->allProcs[nextidx].clogGroupMemberPage != proc->clogGroupMemberPage)
 		{
+			/*
+			 * Ensure that this proc is not a member of any clog group that
+			 * needs an XID status update.
+			 */
 			proc->clogGroupMember = false;
+			pg_atomic_write_u32(&proc->clogGroupNext, INVALID_PGPROCNO);
 			return false;
 		}
 
@@ -520,10 +519,10 @@ TransactionGroupUpdateXidStatus(TransactionId xid, XidStatus status,
 		PGXACT	   *pgxact = &ProcGlobal->allPgXact[nextidx];
 
 		/*
-		 * Overflowed transactions should not use group XID status update
-		 * mechanism.
+		 * Transactions with more than THRESHOLD_SUBTRANS_CLOG_OPT sub-XIDs
+		 * should not use group XID status update mechanism.
 		 */
-		Assert(!pgxact->overflowed);
+		Assert(pgxact->nxids <= THRESHOLD_SUBTRANS_CLOG_OPT);
 
 		TransactionIdSetPageStatusInternal(proc->clogGroupMemberXid,
 										   pgxact->nxids,
@@ -810,6 +809,7 @@ CLOGShmemInit(void)
 	ClogCtl->PagePrecedes = CLOGPagePrecedes;
 	SimpleLruInit(ClogCtl, "clog", CLOGShmemBuffers(), CLOG_LSNS_PER_PAGE,
 				  CLogControlLock, "pg_xact", LWTRANCHE_CLOG_BUFFERS);
+	SlruPagePrecedesUnitTests(ClogCtl, CLOG_XACTS_PER_PAGE);
 }
 
 /*
@@ -954,13 +954,6 @@ CheckPointCLOG(void)
 	/* Flush dirty CLOG pages to disk */
 	TRACE_POSTGRESQL_CLOG_CHECKPOINT_START(true);
 	SimpleLruFlush(ClogCtl, true);
-
-	/*
-	 * fsync pg_xact to ensure that any files flushed previously are durably
-	 * on disk.
-	 */
-	fsync_fname("pg_xact", true);
-
 	TRACE_POSTGRESQL_CLOG_CHECKPOINT_DONE(true);
 }
 
@@ -1050,13 +1043,22 @@ TruncateCLOG(TransactionId oldestXact, Oid oldestxid_datoid)
 
 
 /*
- * Decide which of two CLOG page numbers is "older" for truncation purposes.
+ * Decide whether a CLOG page number is "older" for truncation purposes.
  *
  * We need to use comparison of TransactionIds here in order to do the right
- * thing with wraparound XID arithmetic.  However, if we are asked about
- * page number zero, we don't want to hand InvalidTransactionId to
- * TransactionIdPrecedes: it'll get weird about permanent xact IDs.  So,
- * offset both xids by FirstNormalTransactionId to avoid that.
+ * thing with wraparound XID arithmetic.  However, TransactionIdPrecedes()
+ * would get weird about permanent xact IDs.  So, offset both such that xid1,
+ * xid2, and xid2 + CLOG_XACTS_PER_PAGE - 1 are all normal XIDs; this offset
+ * is relevant to page 0 and to the page preceding page 0.
+ *
+ * The page containing oldestXact-2^31 is the important edge case.  The
+ * portion of that page equaling or following oldestXact-2^31 is expendable,
+ * but the portion preceding oldestXact-2^31 is not.  When oldestXact-2^31 is
+ * the first XID of a page and segment, the entire page and segment is
+ * expendable, and we could truncate the segment.  Recognizing that case would
+ * require making oldestXact, not just the page containing oldestXact,
+ * available to this callback.  The benefit would be rare and small, so we
+ * don't optimize that edge case.
  */
 static bool
 CLOGPagePrecedes(int page1, int page2)
@@ -1065,11 +1067,12 @@ CLOGPagePrecedes(int page1, int page2)
 	TransactionId xid2;
 
 	xid1 = ((TransactionId) page1) * CLOG_XACTS_PER_PAGE;
-	xid1 += FirstNormalTransactionId;
+	xid1 += FirstNormalTransactionId + 1;
 	xid2 = ((TransactionId) page2) * CLOG_XACTS_PER_PAGE;
-	xid2 += FirstNormalTransactionId;
+	xid2 += FirstNormalTransactionId + 1;
 
-	return TransactionIdPrecedes(xid1, xid2);
+	return (TransactionIdPrecedes(xid1, xid2) &&
+			TransactionIdPrecedes(xid1, xid2 + CLOG_XACTS_PER_PAGE - 1));
 }
 
 

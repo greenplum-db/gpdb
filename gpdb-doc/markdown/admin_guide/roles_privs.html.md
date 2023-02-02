@@ -8,7 +8,7 @@ Greenplum Database manages database access permissions using *roles*. The concep
 
 Every Greenplum Database system contains a set of database roles \(users and groups\). Those roles are separate from the users and groups managed by the operating system on which the server runs. However, for convenience you may want to maintain a relationship between operating system user names and Greenplum Database role names, since many of the client applications use the current operating system user name as the default.
 
-In Greenplum Database, users log in and connect through the master instance, which then verifies their role and access privileges. The master then issues commands to the segment instances behind the scenes as the currently logged in role.
+In Greenplum Database, users log in and connect through the coordinator instance, which then verifies their role and access privileges. The coordinator then issues commands to the segment instances behind the scenes as the currently logged in role.
 
 Roles are defined at the system level, meaning they are valid for all databases in the system.
 
@@ -307,7 +307,7 @@ When an object \(table, view, sequence, database, function, language, schema, or
             </tr>
           </tbody></table>
 
-**Note:** You must grant privileges for each object individually. For example, granting `ALL` on a database does not grant full access to the objects within that database. It only grants all of the database-level privileges \(`CONNECT`, `CREATE`, `TEMPORARY`\) to the database itself.
+> **Note** You must grant privileges for each object individually. For example, granting `ALL` on a database does not grant full access to the objects within that database. It only grants all of the database-level privileges \(`CONNECT`, `CREATE`, `TEMPORARY`\) to the database itself.
 
 Use the `GRANT` SQL command to give a specified role privileges on an object. For example, to grant the role named `jsmith` insert privileges on the table named `mytable`:
 
@@ -336,15 +336,11 @@ You can also use the `DROP OWNED` and `REASSIGN OWNED` commands for managing obj
 
 ```
 
-### <a id="topic7"></a>Simulating Row Level Access Control 
-
-Greenplum Database does not support row-level access or row-level, labeled security. You can simulate row-level access by using views to restrict the rows that are selected. You can simulate row-level labels by adding an extra column to the table to store sensitivity information, and then using views to control row-level access based on this column. You can then grant roles access to the views rather than to the base table.
-
 ## <a id="topic8"></a>Encrypting Data 
 
 Greenplum Database is installed with an optional module of encryption/decryption functions called `pgcrypto`. The `pgcrypto` functions allow database administrators to store certain columns of data in encrypted form. This adds an extra layer of protection for sensitive data, as data stored in Greenplum Database in encrypted form cannot be read by anyone who does not have the encryption key, nor can it be read directly from the disks.
 
-**Note:** The `pgcrypto` functions run inside the database server, which means that all the data and passwords move between `pgcrypto` and the client application in clear-text. For optimal security, consider also using SSL connections between the client and the Greenplum master server.
+> **Note** The `pgcrypto` functions run inside the database server, which means that all the data and passwords move between `pgcrypto` and the client application in clear-text. For optimal security, consider also using SSL connections between the client and the Greenplum coordinator server.
 
 To use `pgcrypto` functions, register the `pgcrypto` extension in each database in which you want to use the functions. For example:
 
@@ -352,7 +348,7 @@ To use `pgcrypto` functions, register the `pgcrypto` extension in each database 
 $ psql -d testdb -c "CREATE EXTENSION pgcrypto"
 ```
 
-See [pgcrypto](https://www.postgresql.org/docs/9.4/pgcrypto.html) in the PostgreSQL documentation for more information about individual functions.
+See [pgcrypto](https://www.postgresql.org/docs/12/pgcrypto.html) in the PostgreSQL documentation for more information about individual functions.
 
 ## <a id="topic9"></a>Protecting Passwords in Greenplum Database 
 
@@ -367,7 +363,7 @@ The hash function runs when the password is set by using any of the following co
 
 The `ENCRYPTED` keyword may be omitted when the `password_encryption` system configuration parameter is `on`, which is the default value. The `password_encryption` configuration parameter determines whether clear text or hashed passwords are saved when the `ENCRYPTED` or `UNENCRYPTED` keyword is not present in the command.
 
-**Note:** The SQL command syntax and `password_encryption` configuration variable include the term *encrypt*, but the passwords are not technically encrypted. They are *hashed* and therefore cannot be decrypted.
+> **Note** The SQL command syntax and `password_encryption` configuration variable include the term *encrypt*, but the passwords are not technically encrypted. They are *hashed* and therefore cannot be decrypted.
 
 The hash is calculated on the concatenated clear text password and role name. The MD5 hash produces a 32-byte hexadecimal string prefixed with the characters `md5`. The hashed password is saved in the `rolpassword` column of the `pg_authid` system table.
 

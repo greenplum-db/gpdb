@@ -213,7 +213,7 @@ CXformFactory::Instantiate()
 	Add(GPOS_NEW(m_mp) CXformDelete2DML(m_mp));
 	Add(GPOS_NEW(m_mp) CXformUpdate2DML(m_mp));
 	Add(GPOS_NEW(m_mp) CXformImplementDML(m_mp));
-	Add(GPOS_NEW(m_mp) CXformImplementRowTrigger(m_mp));
+	SkipUnused(1);
 	Add(GPOS_NEW(m_mp) CXformImplementSplit(m_mp));
 	Add(GPOS_NEW(m_mp) CXformJoinCommutativity(m_mp));
 	Add(GPOS_NEW(m_mp) CXformJoinAssociativity(m_mp));
@@ -256,7 +256,7 @@ CXformFactory::Instantiate()
 	Add(GPOS_NEW(m_mp) CXformImplementCTEProducer(m_mp));
 	Add(GPOS_NEW(m_mp) CXformImplementCTEConsumer(m_mp));
 	Add(GPOS_NEW(m_mp) CXformExpandFullOuterJoin(m_mp));
-	Add(GPOS_NEW(m_mp) CXformExternalGet2ExternalScan(m_mp));
+	Add(GPOS_NEW(m_mp) CXformForeignGet2ForeignScan(m_mp));
 	Add(GPOS_NEW(m_mp) CXformSelect2BitmapBoolOp(m_mp));
 	Add(GPOS_NEW(m_mp) CXformSelect2DynamicBitmapBoolOp(m_mp));
 	Add(GPOS_NEW(m_mp) CXformImplementBitmapTableGet(m_mp));

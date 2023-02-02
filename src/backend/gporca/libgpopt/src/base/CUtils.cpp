@@ -649,7 +649,7 @@ CUtils::GetPercentileAggMDId(CMemoryPool *mp, CExpression *pexprAggFn)
 				GPOS_RTL_ASSERT(!"Invalid arg type");
 		}
 	}
-	return GPOS_NEW(mp) CMDIdGPDB(return_oid);
+	return GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, return_oid);
 }
 
 // returns if the scalar constant array has already been collapased
@@ -736,13 +736,21 @@ CUtils::PexprScalarArrayCmp(CMemoryPool *mp,
 		return nullptr;
 	}
 
-	pmdidColType->AddRef();
-	pmdidArrType->AddRef();
 	pmdidCmpOp->AddRef();
-
 	const CMDName mdname = md_accessor->RetrieveScOp(pmdidCmpOp)->Mdname();
 	CWStringConst strOp(mdname.GetMDName()->GetBuffer());
 
+	if (pexprScalarChildren->Size() == 1)
+	{
+		(*pexprScalarChildren)[0]->AddRef();
+		CExpression *scalarCmp = CUtils::PexprScalarCmp(
+			mp, colref, (*pexprScalarChildren)[0], strOp, pmdidCmpOp);
+		pexprScalarChildren->Release();
+		return scalarCmp;
+	}
+
+	pmdidColType->AddRef();
+	pmdidArrType->AddRef();
 	CExpression *pexprArray = GPOS_NEW(mp)
 		CExpression(mp,
 					GPOS_NEW(mp) CScalarArray(mp, pmdidColType, pmdidArrType,
@@ -1878,7 +1886,8 @@ CUtils::PexprCountStar(CMemoryPool *mp)
 	// way using MDAccessor
 
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
-	CMDIdGPDB *mdid = GPOS_NEW(mp) CMDIdGPDB(GPDB_COUNT_STAR);
+	CMDIdGPDB *mdid =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_COUNT_STAR);
 	CWStringConst *str = GPOS_NEW(mp) CWStringConst(GPOS_WSZ_LIT("count"));
 
 	CScalarValuesList *popScalarValuesList = GPOS_NEW(mp) CScalarValuesList(mp);
@@ -4424,14 +4433,27 @@ CUtils::FAnySubquery(COperator *pop)
 {
 	GPOS_ASSERT(nullptr != pop);
 
-	BOOL fInSubquery = false;
-	if (COperator::EopScalarSubqueryAny == pop->Eopid())
-	{
-		fInSubquery = true;
-	}
+	return COperator::EopScalarSubqueryAny == pop->Eopid();
+}
 
+// check if a given operator is an EXISTS subquery
+BOOL
+CUtils::FExistsSubquery(COperator *pop)
+{
+	GPOS_ASSERT(nullptr != pop);
 
-	return fInSubquery;
+	return COperator::EopScalarSubqueryExists == pop->Eopid();
+}
+
+// check if the expression is a correlated EXISTS/ANY subquery
+BOOL
+CUtils::FCorrelatedExistsAnySubquery(CExpression *pexpr)
+{
+	GPOS_ASSERT(nullptr != pexpr);
+
+	return (CUtils::FAnySubquery(pexpr->Pop()) ||
+			CUtils::FExistsSubquery(pexpr->Pop())) &&
+		   (*pexpr)[0]->HasOuterRefs();
 }
 
 CScalarProjectElement *

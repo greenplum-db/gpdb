@@ -5936,7 +5936,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="2452648"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Relation Mdid="0.1977341.1.1" Name="store_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.1977341.1.1" Name="store_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6030,17 +6030,16 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.1977341001.1.1"/>
-          <dxl:Partition Mdid="0.1977341002.1.1"/>
-          <dxl:Partition Mdid="0.1977341003.1.1"/>
-          <dxl:Partition Mdid="0.1977341004.1.1"/>
-          <dxl:Partition Mdid="0.1977341005.1.1"/>
+          <dxl:Partition Mdid="6.1977341001.1.1"/>
+          <dxl:Partition Mdid="6.1977341002.1.1"/>
+          <dxl:Partition Mdid="6.1977341003.1.1"/>
+          <dxl:Partition Mdid="6.1977341004.1.1"/>
+          <dxl:Partition Mdid="6.1977341005.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1977341001.1.1" Name="store_sales_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1977341001.1.1" Name="store_sales_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6134,7 +6133,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -6152,7 +6150,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1977341002.1.1" Name="store_sales_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1977341002.1.1" Name="store_sales_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6246,7 +6244,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -6264,7 +6261,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1977341003.1.1" Name="store_sales_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1977341003.1.1" Name="store_sales_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6358,7 +6355,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -6376,7 +6372,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1977341004.1.1" Name="store_sales_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1977341004.1.1" Name="store_sales_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6470,7 +6466,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -6488,7 +6483,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1977341005.1.1" Name="store_sales_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1977341005.1.1" Name="store_sales_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6582,7 +6577,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -6601,7 +6595,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.1962503.1.1" Name="date_dim" Rows="73049.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1962503.1.1" Name="date_dim" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" PartitionColumns="6" PartitionTypes="r">
+      <dxl:Relation Mdid="6.1962503.1.1" Name="date_dim" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" PartitionColumns="6" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6710,17 +6704,16 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.1962503001.1.1"/>
-          <dxl:Partition Mdid="0.1962503002.1.1"/>
-          <dxl:Partition Mdid="0.1962503003.1.1"/>
-          <dxl:Partition Mdid="0.1962503004.1.1"/>
-          <dxl:Partition Mdid="0.1962503005.1.1"/>
+          <dxl:Partition Mdid="6.1962503001.1.1"/>
+          <dxl:Partition Mdid="6.1962503002.1.1"/>
+          <dxl:Partition Mdid="6.1962503003.1.1"/>
+          <dxl:Partition Mdid="6.1962503004.1.1"/>
+          <dxl:Partition Mdid="6.1962503005.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1962503001.1.1" Name="date_dim_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1962503001.1.1" Name="date_dim_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6829,7 +6822,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -6847,7 +6839,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1962503002.1.1" Name="date_dim_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1962503002.1.1" Name="date_dim_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6956,7 +6948,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -6974,7 +6965,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1962503003.1.1" Name="date_dim_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1962503003.1.1" Name="date_dim_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -7083,7 +7074,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -7101,7 +7091,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1962503004.1.1" Name="date_dim_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1962503004.1.1" Name="date_dim_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -7210,7 +7200,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -7228,7 +7217,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1962503005.1.1" Name="date_dim_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1962503005.1.1" Name="date_dim_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -7337,7 +7326,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -15462,7 +15450,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1974718.1.1" Name="customer" Rows="100138.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1974718.1.1" Name="customer" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;24,18">
+      <dxl:Relation Mdid="6.1974718.1.1" Name="customer" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;24,18">
         <dxl:Columns>
           <dxl:Column Name="c_customer_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -15541,7 +15529,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.97.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true">
@@ -15657,7 +15644,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
             </dxl:ProjList>
             <dxl:LogicalJoin JoinType="Inner">
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.1974718.1.1" TableName="customer">
+                <dxl:TableDescriptor Mdid="6.1974718.1.1" TableName="customer">
                   <dxl:Columns>
                     <dxl:Column ColId="1" Attno="1" ColName="c_customer_sk" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="2" Attno="2" ColName="c_customer_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
@@ -15688,7 +15675,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
                 </dxl:TableDescriptor>
               </dxl:LogicalGet>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.1977341.1.1" TableName="store_sales">
+                <dxl:TableDescriptor Mdid="6.1977341.1.1" TableName="store_sales">
                   <dxl:Columns>
                     <dxl:Column ColId="26" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="27" Attno="2" ColName="ss_sold_time_sk" TypeMdid="0.23.1.0"/>
@@ -15724,7 +15711,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
                 </dxl:TableDescriptor>
               </dxl:LogicalGet>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.1962503.1.1" TableName="date_dim">
+                <dxl:TableDescriptor Mdid="6.1962503.1.1" TableName="date_dim">
                   <dxl:Columns>
                     <dxl:Column ColId="56" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="57" Attno="2" ColName="d_date_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
@@ -16137,13 +16124,13 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
                       </dxl:ProjList>
                       <dxl:Filter/>
                       <dxl:Partitions>
-                        <dxl:Partition Mdid="0.1977341001.1.1"/>
-                        <dxl:Partition Mdid="0.1977341002.1.1"/>
-                        <dxl:Partition Mdid="0.1977341003.1.1"/>
-                        <dxl:Partition Mdid="0.1977341004.1.1"/>
-                        <dxl:Partition Mdid="0.1977341005.1.1"/>
+                        <dxl:Partition Mdid="6.1977341001.1.1"/>
+                        <dxl:Partition Mdid="6.1977341002.1.1"/>
+                        <dxl:Partition Mdid="6.1977341003.1.1"/>
+                        <dxl:Partition Mdid="6.1977341004.1.1"/>
+                        <dxl:Partition Mdid="6.1977341005.1.1"/>
                       </dxl:Partitions>
-                      <dxl:TableDescriptor Mdid="0.1977341.1.1" TableName="store_sales">
+                      <dxl:TableDescriptor Mdid="6.1977341.1.1" TableName="store_sales">
                         <dxl:Columns>
                           <dxl:Column ColId="25" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
                           <dxl:Column ColId="27" Attno="3" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
@@ -16161,7 +16148,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
                         </dxl:Columns>
                       </dxl:TableDescriptor>
                     </dxl:DynamicTableScan>
-                    <dxl:PartitionSelector RelationMdid="0.1977341.1.1" SelectorId="0" ScanId="1" Partitions="0,1,2,3,4">
+                    <dxl:PartitionSelector RelationMdid="6.1977341.1.1" SelectorId="0" ScanId="1" Partitions="0,1,2,3,4">
                       <dxl:Properties>
                         <dxl:Cost StartupCost="0" TotalCost="438.249254" Rows="12874.750453" Width="12"/>
                       </dxl:Properties>
@@ -16241,13 +16228,13 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
                             </dxl:Or>
                           </dxl:Filter>
                           <dxl:Partitions>
-                            <dxl:Partition Mdid="0.1962503001.1.1"/>
-                            <dxl:Partition Mdid="0.1962503002.1.1"/>
-                            <dxl:Partition Mdid="0.1962503003.1.1"/>
-                            <dxl:Partition Mdid="0.1962503004.1.1"/>
-                            <dxl:Partition Mdid="0.1962503005.1.1"/>
+                            <dxl:Partition Mdid="6.1962503001.1.1"/>
+                            <dxl:Partition Mdid="6.1962503002.1.1"/>
+                            <dxl:Partition Mdid="6.1962503003.1.1"/>
+                            <dxl:Partition Mdid="6.1962503004.1.1"/>
+                            <dxl:Partition Mdid="6.1962503005.1.1"/>
                           </dxl:Partitions>
-                          <dxl:TableDescriptor Mdid="0.1962503.1.1" TableName="date_dim">
+                          <dxl:TableDescriptor Mdid="6.1962503.1.1" TableName="date_dim">
                             <dxl:Columns>
                               <dxl:Column ColId="55" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
                               <dxl:Column ColId="61" Attno="7" ColName="d_year" TypeMdid="0.23.1.0"/>
@@ -16329,7 +16316,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.1974718.1.1" TableName="customer">
+                    <dxl:TableDescriptor Mdid="6.1974718.1.1" TableName="customer">
                       <dxl:Columns>
                         <dxl:Column ColId="0" Attno="1" ColName="c_customer_sk" TypeMdid="0.23.1.0"/>
                         <dxl:Column ColId="1" Attno="2" ColName="c_customer_id" TypeMdid="0.1042.1.0" ColWidth="16"/>

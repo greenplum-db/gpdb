@@ -375,7 +375,7 @@ CREATE TABLE partitioned (
 ERROR:  cannot use subquery in partition key expression
 CREATE TABLE partitioned (
 	a int
-) PARTITION BY RANGE (('a'));
+) PARTITION BY RANGE ((42));
 ERROR:  cannot use constant expression as partition key
 CREATE FUNCTION const_func () RETURNS int AS $$ SELECT 1; $$ LANGUAGE SQL IMMUTABLE;
 CREATE TABLE partitioned (
@@ -402,6 +402,17 @@ CREATE TABLE partitioned (
 ERROR:  cannot use system column "xmin" in partition key
 LINE 3: ) PARTITION BY RANGE (xmin);
                               ^
+-- cannot use pseudotypes
+CREATE TABLE partitioned (
+	a int,
+	b int
+) PARTITION BY RANGE (((a, b)));
+ERROR:  partition key column 1 has pseudo-type record
+CREATE TABLE partitioned (
+	a int,
+	b int
+) PARTITION BY RANGE (a, ('unknown'));
+ERROR:  partition key column 2 has pseudo-type unknown
 -- functions in key must be immutable
 CREATE FUNCTION immut_func (a int) RETURNS int AS $$ SELECT a + random()::int; $$ LANGUAGE SQL;
 CREATE TABLE partitioned (
@@ -501,6 +512,42 @@ Partition of: partitioned2 FOR VALUES FROM ('-1', 'aaaaa') TO (100, 'ccccc')
 Partition constraint: (((a + 1) IS NOT NULL) AND (substr(b, 1, 5) IS NOT NULL) AND (((a + 1) > '-1'::integer) OR (((a + 1) = '-1'::integer) AND (substr(b, 1, 5) >= 'aaaaa'::text))) AND (((a + 1) < 100) OR (((a + 1) = 100) AND (substr(b, 1, 5) < 'ccccc'::text))))
 
 DROP TABLE partitioned, partitioned2;
+-- check that dependencies of partition columns are handled correctly
+create domain intdom1 as int;
+create table partitioned (
+	a intdom1,
+	b text
+) partition by range (a);
+alter table partitioned drop column a;  -- fail
+ERROR:  cannot drop column "a" because it is part of the partition key of relation "partitioned"
+drop domain intdom1;  -- fail, requires cascade
+ERROR:  cannot drop type intdom1 because other objects depend on it
+DETAIL:  table partitioned depends on type intdom1
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+drop domain intdom1 cascade;
+NOTICE:  drop cascades to table partitioned
+table partitioned;  -- gone
+ERROR:  relation "partitioned" does not exist
+LINE 1: table partitioned;
+              ^
+-- likewise for columns used in partition expressions
+create domain intdom1 as int;
+create table partitioned (
+	a intdom1,
+	b text
+) partition by range (plusone(a));
+alter table partitioned drop column a;  -- fail
+ERROR:  cannot drop column "a" because it is part of the partition key of relation "partitioned"
+drop domain intdom1;  -- fail, requires cascade
+ERROR:  cannot drop type intdom1 because other objects depend on it
+DETAIL:  table partitioned depends on type intdom1
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+drop domain intdom1 cascade;
+NOTICE:  drop cascades to table partitioned
+table partitioned;  -- gone
+ERROR:  relation "partitioned" does not exist
+LINE 1: table partitioned;
+              ^
 --
 -- Partitions
 --
@@ -555,6 +602,12 @@ LINE 1: ...expr_fail PARTITION OF list_parted FOR VALUES IN ((select 1)...
 CREATE TABLE part_bogus_expr_fail PARTITION OF list_parted FOR VALUES IN (generate_series(4, 6));
 ERROR:  set-returning functions are not allowed in partition bound
 LINE 1: ...expr_fail PARTITION OF list_parted FOR VALUES IN (generate_s...
+                                                             ^
+CREATE TABLE part_bogus_expr_fail PARTITION OF list_parted FOR VALUES IN ('1' collate "POSIX");
+ERROR:  collations are not supported by type integer
+CREATE TABLE part_bogus_expr_fail PARTITION OF list_parted FOR VALUES IN ((1+1) collate "POSIX");
+ERROR:  collations are not supported by type integer
+LINE 1: ...ail PARTITION OF list_parted FOR VALUES IN ((1+1) collate "P...
                                                              ^
 -- syntax does not allow empty list of values for list partitions
 CREATE TABLE fail_part PARTITION OF list_parted FOR VALUES IN ();
@@ -792,7 +845,7 @@ CREATE TABLE fail_part PARTITION OF hash_parted2 FOR VALUES WITH (MODULUS 2, REM
 ERROR:  partition "fail_part" would overlap partition "h2part_4"
 -- modulus must be greater than zero
 CREATE TABLE fail_part PARTITION OF hash_parted2 FOR VALUES WITH (MODULUS 0, REMAINDER 1);
-ERROR:  modulus for hash partition must be a positive integer
+ERROR:  modulus for hash partition must be an integer value greater than zero
 -- remainder must be greater than or equal to zero and less than modulus
 CREATE TABLE fail_part PARTITION OF hash_parted2 FOR VALUES WITH (MODULUS 8, REMAINDER 8);
 ERROR:  remainder for hash partition must be less than modulus
@@ -884,6 +937,13 @@ DETAIL:  Failing row contains (1, null).
 Partition of: parted_notnull_inh_test FOR VALUES IN (1)
 
 drop table parted_notnull_inh_test;
+-- check that collations are assigned in partition bound expressions
+create table parted_boolean_col (a bool, b text) partition by list(a);
+create table parted_boolean_less partition of parted_boolean_col
+  for values in ('foo' < 'bar');
+create table parted_boolean_greater partition of parted_boolean_col
+  for values in ('foo' > 'bar');
+drop table parted_boolean_col;
 -- check for a conflicting COLLATE clause
 create table parted_collate_must_match (a text collate "C", b text collate "C")
   partition by range (a);
@@ -1142,3 +1202,52 @@ CREATE UNLOGGED TABLE unlogged_toast (a text);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 TRUNCATE unlogged_toast;
+-- tests of column drop with partition tables and indexes using
+-- predicates and expressions.
+create table part_column_drop (
+  useless_1 int,
+  id int,
+  useless_2 int,
+  d int,
+  b int,
+  useless_3 int
+) partition by range (id);
+alter table part_column_drop drop column useless_1;
+alter table part_column_drop drop column useless_2;
+alter table part_column_drop drop column useless_3;
+create index part_column_drop_b_pred on part_column_drop(b) where b = 1;
+create index part_column_drop_b_expr on part_column_drop((b = 1));
+create index part_column_drop_d_pred on part_column_drop(d) where d = 2;
+create index part_column_drop_d_expr on part_column_drop((d = 2));
+create table part_column_drop_1_10 partition of
+  part_column_drop for values from (1) to (10);
+\d part_column_drop
+    Partitioned table "public.part_column_drop"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ id     | integer |           |          | 
+ d      | integer |           |          | 
+ b      | integer |           |          | 
+Partition key: RANGE (id)
+Indexes:
+    "part_column_drop_b_expr" btree ((b = 1))
+    "part_column_drop_b_pred" btree (b) WHERE b = 1
+    "part_column_drop_d_expr" btree ((d = 2))
+    "part_column_drop_d_pred" btree (d) WHERE d = 2
+Number of partitions: 1 (Use \d+ to list them.)
+
+\d part_column_drop_1_10
+       Table "public.part_column_drop_1_10"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ id     | integer |           |          | 
+ d      | integer |           |          | 
+ b      | integer |           |          | 
+Partition of: part_column_drop FOR VALUES FROM (1) TO (10)
+Indexes:
+    "part_column_drop_1_10_b_idx" btree (b) WHERE b = 1
+    "part_column_drop_1_10_d_idx" btree (d) WHERE d = 2
+    "part_column_drop_1_10_expr_idx" btree ((b = 1))
+    "part_column_drop_1_10_expr_idx1" btree ((d = 2))
+
+drop table part_column_drop;

@@ -98,7 +98,11 @@ extern TransactionId GetOldestActiveTransactionId(void);
 extern TransactionId GetOldestSafeDecodingTransactionId(bool catalogOnly);
 
 extern VirtualTransactionId *GetVirtualXIDsDelayingChkpt(int *nvxids);
-extern bool HaveVirtualXIDsDelayingChkpt(VirtualTransactionId *vxids, int nvxids);
+extern VirtualTransactionId *GetVirtualXIDsDelayingChkptEnd(int *nvxids);
+extern bool HaveVirtualXIDsDelayingChkpt(VirtualTransactionId *vxids,
+										 int nvxids);
+extern bool HaveVirtualXIDsDelayingChkptEnd(VirtualTransactionId *vxids,
+											int nvxids);
 
 extern PGPROC *BackendPidGetProc(int pid);
 extern PGPROC *BackendPidGetProcWithLock(int pid);
@@ -110,6 +114,8 @@ extern VirtualTransactionId *GetCurrentVirtualXIDs(TransactionId limitXmin,
 												   int *nvxids);
 extern VirtualTransactionId *GetConflictingVirtualXIDs(TransactionId limitXmin, Oid dbOid);
 extern pid_t CancelVirtualTransaction(VirtualTransactionId vxid, ProcSignalReason sigmode);
+extern pid_t SignalVirtualTransaction(VirtualTransactionId vxid, ProcSignalReason sigmode,
+									  bool conflictPending);
 
 extern bool MinimumActiveBackends(int min);
 extern int	CountDBBackends(Oid databaseid);
@@ -125,7 +131,7 @@ extern void XidCacheRemoveRunningXids(TransactionId xid,
 									  TransactionId latestXid);
 						  
 extern PGPROC *FindProcByGpSessionId(long gp_session_id);
-extern void UpdateSerializableCommandId(CommandId curcid);
+extern void UpdateCommandIdInSnapshot(CommandId curcid);
 
 extern void updateSharedLocalSnapshot(struct DtxContextInfo *dtxContextInfo,
 									  DtxContext distributedTransactionContext,

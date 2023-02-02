@@ -234,6 +234,25 @@ ic_proxy_reload_addresses(uv_loop_t *loop)
 	 * of the addresses.
 	 */
 	ic_proxy_prev_addrs = ic_proxy_list_free_deep(ic_proxy_prev_addrs);
+
+	/*
+	 * If the value of gp_interconnect_proxy_addresses is not ordered by dbid,
+	 * ic_proxy_unknown_addrs loaded from config file and sorted by dbid is
+	 * different from ic_proxy_prev_addrs, some addr will be added in
+	 * ic_proxy_removed_addrs, these addrs will be disconnected after reloading
+	 * config file, Actually gp_interconnect_proxy_addresses is not modified.
+	 * This may lead to some cases failing when reading data from QE.
+	 *
+	 * Though the value of gp_interconnect_proxy_addresses is ordered by dbid,
+	 * uv_getaddrinfo(loop, &addr->req, ic_proxy_addr_on_getaddrinfo,
+						   addr->hostname, addr->service, &hints);
+	 * can not guarantee the addrs parsed from gp_interconnect_proxy_addresses
+	 * is added sequentially to ic_proxy_addrs.
+	 *
+	 * before reloading the config file. we should sort ic_proxy_addrs by dbid to
+	 * avoid mis-disconnecting of addrs.
+	 */
+	ic_proxy_addrs = list_qsort(ic_proxy_addrs, ic_proxy_addr_compare_dbid);
 	ic_proxy_prev_addrs = ic_proxy_addrs;
 	ic_proxy_addrs = NULL;
 

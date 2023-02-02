@@ -30,7 +30,8 @@ HANDLER handler\_function
 
 NO HANDLER
 :   Specifies that the foreign-data wrapper should no longer have a handler function.
-:   **Note:** You cannot access a foreign table that uses a foreign-data wrapper with no handler.
+
+    > **Note** You cannot access a foreign table that uses a foreign-data wrapper with no handler.
 
 VALIDATOR validator\_function
 :   Specifies a new validator function for the foreign-data wrapper.

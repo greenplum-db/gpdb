@@ -7,12 +7,12 @@ Defines a new text search parser.
 ## <a id="Synopsis"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-CREATE TEXT SEARCH PARSER name (
-    START = start_function ,
-    GETTOKEN = gettoken_function ,
-    END = end_function ,
-    LEXTYPES = lextypes_function
-    [, HEADLINE = headline_function ]
+CREATE TEXT SEARCH PARSER <name> (
+    START = <start_function> ,
+    GETTOKEN = <gettoken_function> ,
+    END = <end_function> ,
+    LEXTYPES = <lextypes_function>
+    [, HEADLINE = <headline_function> ]
 )
 ```
 
@@ -28,22 +28,22 @@ Refer to [Using Full Text Search](../../admin_guide/textsearch/full-text-search.
 
 ## <a id="section4"></a>Parameters 
 
-`name`
+name
 :   The name of the text search parser to be created. The name can be schema-qualified.
 
-`start\_function`
+start\_function
 :   The name of the start function for the parser.
 
-`gettoken\_function`
+gettoken\_function
 :   The name of the get-next-token function for the parser.
 
-`end\_function`
+end\_function
 :   The name of the end function for the parser.
 
-`lextypes\_function`
+lextypes\_function
 :   The name of the lextypes function for the parser \(a function that returns information about the set of token types it produces\).
 
-`headline\_function`
+headline\_function
 :   The name of the headline function for the parser \(a function that summarizes a set of tokens\).
 
 The function names can be schema-qualified if necessary. Argument types are not given, since the argument list for each type of function is predetermined. All except the headline function are required.

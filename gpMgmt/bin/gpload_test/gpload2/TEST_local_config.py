@@ -38,7 +38,7 @@ def test_49_gpload_config_wrong_d():
     copy_data('external_file_01.txt', 'data_file.txt')
     write_config_file(database="", format='text',file='data_file.txt',table='texttable')
 
-@prepare_before_test(num=50, cmd="-U gpadmin")
+@prepare_before_test(num=50, cmd="-U "+str(PGUSER))
 def test_50_gpload_config_U():
     "50 gpload command config test -U username"
     copy_data('external_file_01.txt', 'data_file.txt')

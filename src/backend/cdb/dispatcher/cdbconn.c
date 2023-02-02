@@ -89,6 +89,7 @@ cdbconn_createSegmentDescriptor(struct CdbComponentDatabaseInfo *cdbinfo, int id
 	segdbDesc->whoami = NULL;
 	segdbDesc->identifier = identifier;
 	segdbDesc->isWriter = isWriter;
+	segdbDesc->establishConnTime = 0;
 
 	MemoryContextSwitchTo(oldContext);
 	return segdbDesc;

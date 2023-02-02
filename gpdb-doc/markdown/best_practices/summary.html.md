@@ -230,7 +230,7 @@ See [Encrypting Data and Database Connections](encryption.html)
 
 ## <a id="havail"></a>High Availability 
 
-**Note:** The following guidelines apply to actual hardware deployments, but not to public cloud-based infrastructure, where high availability solutions may already exist.
+> **Note** The following guidelines apply to actual hardware deployments, but not to public cloud-based infrastructure, where high availability solutions may already exist.
 
 -   Use a hardware RAID storage solution with 8 to 24 disks.
 -   Use RAID 1, 5, or 6 so that the disk array can tolerate a failed disk.
@@ -238,8 +238,8 @@ See [Encrypting Data and Database Connections](encryption.html)
 -   Protect against failure of the entire disk array and degradation during rebuilds by mirroring the RAID volume.
 -   Monitor disk utilization regularly and add additional space when needed.
 -   Monitor segment skew to ensure that data is distributed evenly and storage is consumed evenly at all segments.
--   Set up a standby master instance to take over if the primary master fails.
--   Plan how to switch clients to the new master instance when a failure occurs, for example, by updating the master address in DNS.
+-   Set up a standby coordinator instance to take over if the primary coordinator fails.
+-   Plan how to switch clients to the new coordinator instance when a failure occurs, for example, by updating the coordinator address in DNS.
 -   Set up monitoring to send notifications in a system monitoring application or by email when the primary fails.
 -   Set up mirrors for all segments.
 -   Locate primary segments and their mirrors on different hosts to protect against host failure.

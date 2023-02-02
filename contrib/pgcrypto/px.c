@@ -200,7 +200,7 @@ combo_init(PX_Combo *cx, const uint8 *key, unsigned klen,
 		memset(ivbuf, 0, ivs);
 		if (ivlen > ivs)
 			memcpy(ivbuf, iv, ivs);
-		else
+		else if (ivlen > 0)
 			memcpy(ivbuf, iv, ivlen);
 	}
 
@@ -292,6 +292,7 @@ static int
 combo_decrypt(PX_Combo *cx, const uint8 *data, unsigned dlen,
 			  uint8 *res, unsigned *rlen)
 {
+	int			err = 0;
 	unsigned	bs,
 				i,
 				pad;
@@ -317,7 +318,9 @@ combo_decrypt(PX_Combo *cx, const uint8 *data, unsigned dlen,
 
 	/* decrypt */
 	*rlen = dlen;
-	px_cipher_decrypt(c, data, dlen, res);
+	err = px_cipher_decrypt(c, data, dlen, res);
+	if (err)
+		return err;
 
 	/* unpad */
 	if (bs > 1 && cx->padding)

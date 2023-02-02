@@ -8,7 +8,7 @@ DROP RESOURCE GROUP rg_test_group;
 
 -- helper view to check the resgroup status
 CREATE OR REPLACE VIEW rg_test_monitor AS
-	SELECT groupname, concurrency, cpu_rate_limit
+	SELECT groupname, concurrency, cpu_hard_quota_limit
 	FROM gp_toolkit.gp_resgroup_config
 	WHERE groupname='rg_test_group';
 
@@ -18,12 +18,12 @@ CREATE OR REPLACE VIEW rg_test_monitor AS
 
 -- CREATE RESOURCE GROUP cannot run inside a transaction block
 BEGIN;
-	CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
+	CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=5);
 END;
 SELECT * FROM rg_test_monitor;
 
 -- ALTER RESOURCE GROUP cannot run inside a transaction block
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=5);
 BEGIN;
 	ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 10;
 END;
@@ -45,12 +45,12 @@ DROP RESOURCE GROUP rg_test_group;
 -- CREATE RESOURCE GROUP cannot run inside a transaction block
 BEGIN;
 	SELECT 1;
-	CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
+	CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=5);
 END;
 SELECT * FROM rg_test_monitor;
 
 -- ALTER RESOURCE GROUP cannot run inside a transaction block
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=5);
 BEGIN;
 	SELECT 1;
 	ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 10;
@@ -74,13 +74,13 @@ DROP RESOURCE GROUP rg_test_group;
 -- CREATE RESOURCE GROUP cannot run inside a subtransaction
 BEGIN;
 	SAVEPOINT rg_savepoint;
-	CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
+	CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=5);
 	ROLLBACK TO SAVEPOINT rg_savepoint;
 ABORT;
 SELECT * FROM rg_test_monitor;
 
 -- ALTER RESOURCE GROUP cannot run inside a subtransaction
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=5);
 BEGIN;
 	SAVEPOINT rg_savepoint;
 	ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 10;
@@ -103,7 +103,7 @@ DROP RESOURCE GROUP rg_test_group;
 -- ----------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION rg_create_func() RETURNS VOID
-AS $$ CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5) $$
+AS $$ CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=5) $$
 LANGUAGE SQL;
 
 CREATE OR REPLACE FUNCTION rg_alter_func() RETURNS VOID
@@ -119,7 +119,7 @@ SELECT * FROM rg_create_func();
 SELECT * FROM rg_test_monitor;
 
 -- ALTER RESOURCE GROUP cannot run inside a function call
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=5);
 SELECT * FROM rg_alter_func();
 SELECT * FROM rg_test_monitor;
 

@@ -1152,7 +1152,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.17142.1.1" Name="orders" Rows="15040.000000"/>
-      <dxl:Relation Mdid="0.17142.1.1" Name="orders" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="15,9">
+      <dxl:Relation Mdid="6.17142.1.1" Name="orders" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="15,9">
         <dxl:Columns>
           <dxl:Column Name="o_orderkey" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1204,7 +1204,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.17142.1.1.13" Name="cmax" Width="4.000000"/>
@@ -1668,7 +1667,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.17165.1.1" Name="lineitem" Rows="60398.000000"/>
-      <dxl:Relation Mdid="0.17165.1.1" Name="lineitem" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,16">
+      <dxl:Relation Mdid="6.17165.1.1" Name="lineitem" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,16">
         <dxl:Columns>
           <dxl:Column Name="l_orderkey" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1741,7 +1740,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.17142.1.1.15" Name="gp_segment_id" Width="4.000000"/>
@@ -2038,7 +2036,7 @@
           </dxl:ProjList>
           <dxl:LogicalJoin JoinType="Inner">
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.17142.1.1" TableName="orders">
+              <dxl:TableDescriptor Mdid="6.17142.1.1" TableName="orders">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="o_orderkey" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="2" Attno="2" ColName="o_custkey" TypeMdid="0.23.1.0"/>
@@ -2060,7 +2058,7 @@
               </dxl:TableDescriptor>
             </dxl:LogicalGet>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.17165.1.1" TableName="lineitem">
+              <dxl:TableDescriptor Mdid="6.17165.1.1" TableName="lineitem">
                 <dxl:Columns>
                   <dxl:Column ColId="17" Attno="1" ColName="l_orderkey" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="18" Attno="2" ColName="l_partkey" TypeMdid="0.23.1.0"/>
@@ -2326,7 +2324,7 @@
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:TableDescriptor Mdid="0.17142.1.1" TableName="orders">
+                      <dxl:TableDescriptor Mdid="6.17142.1.1" TableName="orders">
                         <dxl:Columns>
                           <dxl:Column ColId="0" Attno="1" ColName="o_orderkey" TypeMdid="0.23.1.0"/>
                           <dxl:Column ColId="1" Attno="2" ColName="o_custkey" TypeMdid="0.23.1.0"/>
@@ -2386,7 +2384,7 @@
                           </dxl:Comparison>
                         </dxl:And>
                       </dxl:Filter>
-                      <dxl:TableDescriptor Mdid="0.17165.1.1" TableName="lineitem">
+                      <dxl:TableDescriptor Mdid="6.17165.1.1" TableName="lineitem">
                         <dxl:Columns>
                           <dxl:Column ColId="16" Attno="1" ColName="l_orderkey" TypeMdid="0.23.1.0"/>
                           <dxl:Column ColId="17" Attno="2" ColName="l_partkey" TypeMdid="0.23.1.0"/>

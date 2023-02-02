@@ -228,6 +228,37 @@ SET ROLE regress_alter_table_user1;
 ALTER INDEX onek_unique1 RENAME TO fail;  -- permission denied
 RESET ROLE;
 
+-- rename statements with mismatching statement and object types
+CREATE TABLE alter_idx_rename_test (a INT);
+CREATE INDEX alter_idx_rename_test_idx ON alter_idx_rename_test (a);
+CREATE TABLE alter_idx_rename_test_parted (a INT) PARTITION BY LIST (a);
+CREATE INDEX alter_idx_rename_test_parted_idx ON alter_idx_rename_test_parted (a);
+BEGIN;
+ALTER INDEX alter_idx_rename_test RENAME TO alter_idx_rename_test_2;
+ALTER INDEX alter_idx_rename_test_parted RENAME TO alter_idx_rename_test_parted_2;
+SELECT relation::regclass, mode FROM pg_locks
+WHERE pid = pg_backend_pid() AND locktype = 'relation'
+  AND relation::regclass::text LIKE 'alter\_idx%'
+ORDER BY relation::regclass::text COLLATE "C";
+COMMIT;
+BEGIN;
+ALTER INDEX alter_idx_rename_test_idx RENAME TO alter_idx_rename_test_idx_2;
+ALTER INDEX alter_idx_rename_test_parted_idx RENAME TO alter_idx_rename_test_parted_idx_2;
+SELECT relation::regclass, mode FROM pg_locks
+WHERE pid = pg_backend_pid() AND locktype = 'relation'
+  AND relation::regclass::text LIKE 'alter\_idx%'
+ORDER BY relation::regclass::text COLLATE "C";
+COMMIT;
+BEGIN;
+ALTER TABLE alter_idx_rename_test_idx_2 RENAME TO alter_idx_rename_test_idx_3;
+ALTER TABLE alter_idx_rename_test_parted_idx_2 RENAME TO alter_idx_rename_test_parted_idx_3;
+SELECT relation::regclass, mode FROM pg_locks
+WHERE pid = pg_backend_pid() AND locktype = 'relation'
+  AND relation::regclass::text LIKE 'alter\_idx%'
+ORDER BY relation::regclass::text COLLATE "C";
+COMMIT;
+DROP TABLE alter_idx_rename_test_2;
+
 -- renaming views
 CREATE VIEW attmp_view (unique1) AS SELECT unique1 FROM tenk1;
 ALTER TABLE attmp_view RENAME TO attmp_view_new;
@@ -768,6 +799,28 @@ insert into atacc1 values(1);
 alter table atacc1
   add column b float8 not null default random(),
   add primary key(a);
+drop table atacc1;
+
+-- additionally, we've seen issues with foreign key validation not being
+-- properly delayed until after a table rewrite.  Check that works ok.
+create table atacc1 (a int primary key);
+alter table atacc1 add constraint atacc1_fkey foreign key (a) references atacc1 (a) not valid;
+alter table atacc1 validate constraint atacc1_fkey, alter a type bigint;
+drop table atacc1;
+
+-- we've also seen issues with check constraints being validated at the wrong
+-- time when there's a pending table rewrite.
+create table atacc1 (a bigint, b int);
+insert into atacc1 values(1,1);
+alter table atacc1 add constraint atacc1_chk check(b = 1) not valid;
+alter table atacc1 validate constraint atacc1_chk, alter a type int;
+drop table atacc1;
+
+-- same as above, but ensure the constraint violation is detected
+create table atacc1 (a bigint, b int);
+insert into atacc1 values(1,2);
+alter table atacc1 add constraint atacc1_chk check(b = 1) not valid;
+alter table atacc1 validate constraint atacc1_chk, alter a type int;
 drop table atacc1;
 
 -- something a little more complicated
@@ -1387,10 +1440,21 @@ select * from another;
 
 drop table another;
 
--- table's row type
-create table tab1 (a int, b text);
-create table tab2 (x int, y tab1);
-alter table tab1 alter column b type varchar; -- fails
+-- We disallow changing table's row type if it's used for storage
+create table at_tab1 (a int, b text);
+create table at_tab2 (x int, y at_tab1);
+alter table at_tab1 alter column b type varchar; -- fails
+drop table at_tab2;
+-- Use of row type in an expression is defended differently
+create table at_tab2 (x int, y text, check((x,y)::at_tab1 = (1,'42')::at_tab1));
+alter table at_tab1 alter column b type varchar; -- allowed, but ...
+insert into at_tab2 values(1,'42'); -- ... this will fail
+drop table at_tab1, at_tab2;
+-- Check it for a partitioned table, too
+create table at_tab1 (a int, b text) partition by list(a);
+create table at_tab2 (x int, y at_tab1);
+alter table at_tab1 alter column b type varchar; -- fails
+drop table at_tab1, at_tab2;
 
 -- Alter column type that's part of a partitioned index
 create table at_partitioned (a int, b text) partition by range (a);
@@ -1498,6 +1562,12 @@ select reltoastrelid <> 0 as has_toast_table
 from pg_class
 where oid = 'test_storage'::regclass;
 
+-- test that SET STORAGE propagates to index correctly
+create index test_storage_idx on test_storage (b, a);
+alter table test_storage alter column a set storage external;
+\d+ test_storage
+\d+ test_storage_idx
+
 -- ALTER COLUMN TYPE with a check constraint and a child table (bug #13779)
 CREATE TABLE test_inh_check (a float check (a > 10.2), b float);
 CREATE TABLE test_inh_check_child() INHERITS(test_inh_check);
@@ -1584,6 +1654,69 @@ select * from at_view_2;
 drop view at_view_2;
 drop view at_view_1;
 drop table at_base_table;
+
+-- check adding a column not iself requiring a rewrite, together with
+-- a column requiring a default (bug #16038)
+
+-- ensure that rewrites aren't silently optimized away, removing the
+-- value of the test
+CREATE FUNCTION check_ddl_rewrite(p_tablename regclass, p_ddl text)
+RETURNS boolean
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_relfilenode oid;
+BEGIN
+    v_relfilenode := relfilenode FROM pg_class WHERE oid = p_tablename;
+
+    EXECUTE p_ddl;
+
+    RETURN v_relfilenode <> (SELECT relfilenode FROM pg_class WHERE oid = p_tablename);
+END;
+$$;
+
+CREATE TABLE rewrite_test(col text);
+INSERT INTO rewrite_test VALUES ('something');
+INSERT INTO rewrite_test VALUES (NULL);
+
+-- empty[12] don't need rewrite, but notempty[12]_rewrite will force one
+SELECT check_ddl_rewrite('rewrite_test', $$
+  ALTER TABLE rewrite_test
+      ADD COLUMN empty1 text,
+      ADD COLUMN notempty1_rewrite serial;
+$$);
+SELECT check_ddl_rewrite('rewrite_test', $$
+    ALTER TABLE rewrite_test
+        ADD COLUMN notempty2_rewrite serial,
+        ADD COLUMN empty2 text;
+$$);
+-- also check that fast defaults cause no problem, first without rewrite
+SELECT check_ddl_rewrite('rewrite_test', $$
+    ALTER TABLE rewrite_test
+        ADD COLUMN empty3 text,
+        ADD COLUMN notempty3_norewrite int default 42;
+$$);
+SELECT check_ddl_rewrite('rewrite_test', $$
+    ALTER TABLE rewrite_test
+        ADD COLUMN notempty4_norewrite int default 42,
+        ADD COLUMN empty4 text;
+$$);
+-- then with rewrite
+SELECT check_ddl_rewrite('rewrite_test', $$
+    ALTER TABLE rewrite_test
+        ADD COLUMN empty5 text,
+        ADD COLUMN notempty5_norewrite int default 42,
+        ADD COLUMN notempty5_rewrite serial;
+$$);
+SELECT check_ddl_rewrite('rewrite_test', $$
+    ALTER TABLE rewrite_test
+        ADD COLUMN notempty6_rewrite serial,
+        ADD COLUMN empty6 text,
+        ADD COLUMN notempty6_norewrite int default 42;
+$$);
+
+-- cleanup
+DROP FUNCTION check_ddl_rewrite(regclass, text);
+DROP TABLE rewrite_test;
 
 --
 -- lock levels
@@ -2539,7 +2672,7 @@ DROP TABLE quuux;
 -- check validation when attaching hash partitions
 
 -- Use hand-rolled hash functions and operator class to get predictable result
--- on different matchines. part_test_int4_ops is defined in insert.sql.
+-- on different machines. part_test_int4_ops is defined in insert.sql.
 
 -- check that the new partition won't overlap with an existing partition
 CREATE TABLE hash_parted (
@@ -2584,6 +2717,11 @@ ALTER TABLE hash_parted ATTACH PARTITION fail_part FOR VALUES WITH (MODULUS 0, R
 ALTER TABLE hash_parted ATTACH PARTITION fail_part FOR VALUES WITH (MODULUS 8, REMAINDER 8);
 ALTER TABLE hash_parted ATTACH PARTITION fail_part FOR VALUES WITH (MODULUS 3, REMAINDER 2);
 DROP TABLE fail_part;
+
+-- fails with incorrect object type
+CREATE VIEW at_v1 AS SELECT 1 as a;
+ALTER TABLE at_v1 ATTACH PARTITION dummy default;
+DROP VIEW at_v1;
 
 --
 -- DETACH PARTITION
@@ -2797,3 +2935,104 @@ alter table at_test_sql_partop attach partition at_test_sql_partop_1 for values 
 drop table at_test_sql_partop;
 drop operator class at_test_sql_partop using btree;
 drop function at_test_sql_partop;
+
+/* Test case for bug #16242 */
+
+-- We create a parent and child where the child has missing
+-- non-null attribute values, and arrange to pass them through
+-- tuple conversion from the child to the parent tupdesc
+create table bar1 (a integer, b integer not null default 1)
+  partition by range (a);
+create table bar2 (a integer);
+insert into bar2 values (1);
+alter table bar2 add column b integer not null default 1;
+-- (at this point bar2 contains tuple with natts=1)
+alter table bar1 attach partition bar2 default;
+
+-- this works:
+select * from bar1;
+
+-- this exercises tuple conversion:
+create function xtrig()
+  returns trigger language plpgsql
+as $$
+  declare
+    r record;
+  begin
+    for r in select * from old loop
+      raise info 'a=%, b=%', r.a, r.b;
+    end loop;
+    return NULL;
+  end;
+$$;
+create trigger xtrig
+  after update on bar1
+  referencing old table as old
+  for each statement execute procedure xtrig();
+
+update bar1 set a = a + 1;
+
+/* End test case for bug #16242 */
+
+-- Test that ALTER TABLE rewrite preserves a clustered index
+-- for normal indexes and indexes on constraints.
+create table alttype_cluster (a int);
+alter table alttype_cluster add primary key (a);
+create index alttype_cluster_ind on alttype_cluster (a);
+alter table alttype_cluster cluster on alttype_cluster_ind;
+-- Normal index remains clustered.
+select indexrelid::regclass, indisclustered from pg_index
+  where indrelid = 'alttype_cluster'::regclass
+  order by indexrelid::regclass::text;
+alter table alttype_cluster alter a type bigint;
+select indexrelid::regclass, indisclustered from pg_index
+  where indrelid = 'alttype_cluster'::regclass
+  order by indexrelid::regclass::text;
+-- Constraint index remains clustered.
+alter table alttype_cluster cluster on alttype_cluster_pkey;
+select indexrelid::regclass, indisclustered from pg_index
+  where indrelid = 'alttype_cluster'::regclass
+  order by indexrelid::regclass::text;
+alter table alttype_cluster alter a type int;
+select indexrelid::regclass, indisclustered from pg_index
+  where indrelid = 'alttype_cluster'::regclass
+  order by indexrelid::regclass::text;
+drop table alttype_cluster;
+
+--
+-- Check that attaching or detaching a partitioned partition correctly leads
+-- to its partitions' constraint being updated to reflect the parent's
+-- newly added/removed constraint
+create table target_parted (a int, b int) partition by list (a);
+create table attach_parted (a int, b int) partition by list (b);
+create table attach_parted_part1 partition of attach_parted for values in (1);
+-- insert a row directly into the leaf partition so that its partition
+-- constraint is built and stored in the relcache
+insert into attach_parted_part1 values (1, 1);
+-- the following better invalidate the partition constraint of the leaf
+-- partition too...
+alter table target_parted attach partition attach_parted for values in (1);
+-- ...such that the following insert fails
+insert into attach_parted_part1 values (2, 1);
+-- ...and doesn't when the partition is detached along with its own partition
+alter table target_parted detach partition attach_parted;
+insert into attach_parted_part1 values (2, 1);
+
+-- Test that altering owner of partition root should recurse into the child tables.
+create role atown_r1;
+create role atown_r2 in role atown_r1;
+set role atown_r2;
+create table atown_part(a int, b int) partition by range(a) (partition p1 start (1) end (100));
+select c.relname, r.rolname from pg_class c join pg_roles r on c.relowner = r.oid where relname like 'atown_part%';
+alter table atown_part owner to atown_r1;
+alter table atown_part add partition start(100) end(200);
+-- both existing and new child tables should have the new owner
+select c.relname, r.rolname from pg_class c join pg_roles r on c.relowner = r.oid where relname like 'atown_part%';
+-- should only alter the partition root with ONLY keyword
+alter table only atown_part owner to atown_r2;
+select c.relname, r.rolname from pg_class c join pg_roles r on c.relowner = r.oid where relname like 'atown_part%';
+
+drop table atown_part;
+reset role;
+drop role atown_r1;
+drop role atown_r2;

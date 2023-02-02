@@ -171,7 +171,7 @@ def stopProcesses(host, workdir):
         return
 
     try:
-        subprocess.check_call('scp -q %s:%s/%s ./%s.%s' % (host, dest_dir, ps_file, host, ps_file), shell=True)
+        subprocess.check_call('rsync -q %s:%s/%s ./%s.%s' % (host, dest_dir, ps_file, host, ps_file), shell=True)
     except subprocess.CalledProcessError as e:
         print('Error retrieving data from host: ' + host, file=sys.stderr)
         print(e)

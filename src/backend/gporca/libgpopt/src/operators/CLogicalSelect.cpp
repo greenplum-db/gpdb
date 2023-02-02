@@ -15,14 +15,10 @@
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefSetIter.h"
-#include "gpopt/base/CColRefTable.h"
-#include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPatternTree.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "naucrates/statistics/CFilterStatsProcessor.h"
-#include "naucrates/statistics/CStatisticsUtils.h"
 using namespace gpopt;
 
 //---------------------------------------------------------------------------

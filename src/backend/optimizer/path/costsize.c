@@ -3152,8 +3152,9 @@ initial_cost_mergejoin(PlannerInfo *root, JoinCostWorkspace *workspace,
 	outer_rows = clamp_row_est(outer_path_rows * outerendsel);
 	inner_rows = clamp_row_est(inner_path_rows * innerendsel);
 
-	Assert(outer_skip_rows <= outer_rows);
-	Assert(inner_skip_rows <= inner_rows);
+	/* skip rows can become NaN when path rows has become infinite */
+	Assert(outer_skip_rows <= outer_rows || isnan(outer_skip_rows));
+	Assert(inner_skip_rows <= inner_rows || isnan(inner_skip_rows));
 
 	/*
 	 * Readjust scan selectivities to account for above rounding.  This is
@@ -3165,8 +3166,9 @@ initial_cost_mergejoin(PlannerInfo *root, JoinCostWorkspace *workspace,
 	outerendsel = outer_rows / outer_path_rows;
 	innerendsel = inner_rows / inner_path_rows;
 
-	Assert(outerstartsel <= outerendsel);
-	Assert(innerstartsel <= innerendsel);
+	/* start sel can become NaN when path rows has become infinite */
+	Assert(outerstartsel <= outerendsel || isnan(outerstartsel));
+	Assert(innerstartsel <= innerendsel || isnan(innerstartsel));
 
 	/* cost of source data */
 
@@ -4417,6 +4419,12 @@ cost_qual_eval_walker(Node *node, cost_qual_eval_context *context)
 		 * be factored into plan-node-specific costing of the Agg or WindowAgg
 		 * plan node.
 		 */
+		return false;			/* don't recurse into children */
+	}
+	else if (IsA(node, GroupingFunc))
+	{
+		/* Treat this as having cost 1 */
+		context->total.per_tuple += cpu_operator_cost;
 		return false;			/* don't recurse into children */
 	}
 	else if (IsA(node, CoerceViaIO))

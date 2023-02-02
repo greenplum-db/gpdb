@@ -448,6 +448,14 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	estate->es_result_relation_info = resultRelInfo;
 
 	/*
+	 * We don't want uniqueness checks to be performed while "insert"ing tuples
+	 * to a destination segfile during AppendOnlyMoveTuple(). This is to ensure
+	 * that we can avoid spurious conflicts between the moved tuple and the
+	 * original tuple.
+	 */
+	estate->gp_bypass_unique_check = true;
+
+	/*
 	 * Go through all visible tuples and move them to a new segfile.
 	 */
 	while (appendonly_getnextslot(&scanDesc->rs_base, ForwardScanDirection, slot))

@@ -115,6 +115,18 @@
 #endif
 
 /*
+ * Place this macro before functions that should be allowed to make misaligned
+ * accesses.  Think twice before using it on non-x86-specific code!
+ * Testing can be done with "-fsanitize=alignment -fsanitize-trap=alignment"
+ * on clang, or "-fsanitize=alignment -fno-sanitize-recover=alignment" on gcc.
+ */
+#if __clang_major__ >= 7 || __GNUC__ >= 8
+#define pg_attribute_no_sanitize_alignment() __attribute__((no_sanitize("alignment")))
+#else
+#define pg_attribute_no_sanitize_alignment()
+#endif
+
+/*
  * Append PG_USED_FOR_ASSERTS_ONLY to definitions of variables that are only
  * used in assert-enabled builds, to avoid compiler warnings about unused
  * variables in assert-disabled builds.
@@ -1038,6 +1050,30 @@ extern void ExceptionalCondition(const char *conditionName,
 		while (_start < _stop) \
 			*_start++ = 0; \
 	} while (0)
+
+/*
+ * Macros for range-checking float values before converting to integer.
+ * We must be careful here that the boundary values are expressed exactly
+ * in the float domain.  PG_INTnn_MIN is an exact power of 2, so it will
+ * be represented exactly; but PG_INTnn_MAX isn't, and might get rounded
+ * off, so avoid using that.
+ * The input must be rounded to an integer beforehand, typically with rint(),
+ * else we might draw the wrong conclusion about close-to-the-limit values.
+ * These macros will do the right thing for Inf, but not necessarily for NaN,
+ * so check isnan(num) first if that's a possibility.
+ */
+#define FLOAT4_FITS_IN_INT16(num) \
+	((num) >= (float4) PG_INT16_MIN && (num) < -((float4) PG_INT16_MIN))
+#define FLOAT4_FITS_IN_INT32(num) \
+	((num) >= (float4) PG_INT32_MIN && (num) < -((float4) PG_INT32_MIN))
+#define FLOAT4_FITS_IN_INT64(num) \
+	((num) >= (float4) PG_INT64_MIN && (num) < -((float4) PG_INT64_MIN))
+#define FLOAT8_FITS_IN_INT16(num) \
+	((num) >= (float8) PG_INT16_MIN && (num) < -((float8) PG_INT16_MIN))
+#define FLOAT8_FITS_IN_INT32(num) \
+	((num) >= (float8) PG_INT32_MIN && (num) < -((float8) PG_INT32_MIN))
+#define FLOAT8_FITS_IN_INT64(num) \
+	((num) >= (float8) PG_INT64_MIN && (num) < -((float8) PG_INT64_MIN))
 
 
 /* ----------------------------------------------------------------
