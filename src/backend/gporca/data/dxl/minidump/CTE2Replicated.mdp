@@ -3,8 +3,8 @@
   <dxl:Comment><![CDATA[
     CREATE TABLE d (a int, b int, c int) DISTRIBUTED BY (a);
     CREATE TABLE r (a int, b int, c char(255)) DISTRIBUTED REPLICATED;
-    --INSERT INTO d SELECT 1, generate_series(1,10), 1; -- table d must be empty!
-    --INSERT INTO r SELECT 1, 2, generate_series(1,100); -- table r must be empty!
+    INSERT INTO d SELECT 1, generate_series(1,10), 1;
+    INSERT INTO r SELECT 1, 2, generate_series(1,100);
     EXPLAIN (ANALYZE off, COSTS off, VERBOSE off)
     WITH e AS (
         SELECT DISTINCT b FROM d
