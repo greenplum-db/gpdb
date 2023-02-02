@@ -1549,7 +1549,7 @@ insert into bar_p values(5, 5);
 drop table bar_p;
 -- Drop should not leave anything lingering for bar_p or its
 -- subpartitions in pg_partition* catalog tables.
-select relid, level, template from gp_partition_template where not exists (select oid from pg_class where oid = relid);
+select relid, level, pg_get_expr(template, relid) from gp_partition_template where not exists (select oid from pg_class where oid = relid);
 
 -- MPP-4172
 -- should fail
@@ -1664,11 +1664,11 @@ select relid::regclass, level from gp_partition_template where relid = 'rank_set
 alter table rank_settemp set subpartition template (default subpartition def2);
 
 -- def2 is there
-select relid::regclass, level, template from gp_partition_template where relid = 'rank_settemp'::regclass;
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'rank_settemp'::regclass;
 
 alter table rank_settemp set subpartition template (default subpartition def2);
 -- Should still be there
-select relid::regclass, level, template from gp_partition_template where relid = 'rank_settemp'::regclass;
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'rank_settemp'::regclass;
 
 
 alter table rank_settemp set subpartition template (start (date '2006-01-01') with (appendonly=true));
@@ -1676,7 +1676,7 @@ alter table rank_settemp add partition f1 values ('N');
 alter table rank_settemp set subpartition template (start (date '2007-01-01') with (appendonly=true, compresslevel=5));
 alter table rank_settemp add partition f2 values ('C');
 
-select relid::regclass, level, template from gp_partition_template where relid = 'rank_settemp'::regclass;
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'rank_settemp'::regclass;
 
 drop table rank_settemp;
 
@@ -2381,7 +2381,7 @@ subpartition l2 values (6,7,8,9,10) );
 alter table mpp5992 
 set subpartition template (subpartition l1 values (1,2,3), 
 subpartition l2 values (4,5,6), subpartition l3 values (7,8,9,10));
-select relid::regclass, level, template from gp_partition_template where relid = 'mpp5992'::regclass;
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'mpp5992'::regclass;
 
 -- Now we can add a new partition
 alter table mpp5992 
@@ -2400,7 +2400,7 @@ start (date '2013-01-01') end (date '2014-01-01') WITH (appendonly=true);
 
 select * from pg_partition_tree('mpp5992');
 select relname, relam, pg_get_expr(relpartbound, oid) from pg_class where relname like 'mpp5992%';
-select relid::regclass, level, template from gp_partition_template where relid = 'mpp5992'::regclass;
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'mpp5992'::regclass;
 
 -- MPP-10223: split subpartitions
 CREATE TABLE MPP10223pk
@@ -2544,7 +2544,7 @@ subpartition by range(d)
 subpartition template (start (1) end (10) every (1))
 (start (20) end (30) every (1));
 
-select relid::regclass, level, template from gp_partition_template where relid = 'MPP10480'::regclass;
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'MPP10480'::regclass;
 
 -- MPP-10421: fix SPLIT of partitions with PRIMARY KEY constraint/indexes
 CREATE TABLE mpp10321a
@@ -3797,20 +3797,23 @@ create table employee_table(timest date, user_id numeric(16,0) not null, tag1 ch
 -- We grant default SELECT permission to a new user, this new user should be
 -- able to SELECT from any partition table we create later.
 -- (https://github.com/greenplum-db/gpdb/issues/9524)
-DROP TABLE IF EXISTS public.t_part_acl;
+DROP TABLE IF EXISTS user_prt_acl.t_part_acl;
+DROP SCHEMA IF EXISTS user_prt_acl;
 DROP ROLE IF EXISTS user_prt_acl;
 
 CREATE ROLE user_prt_acl;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO user_prt_acl;
+CREATE SCHEMA schema_part_acl;
+GRANT USAGE ON SCHEMA schema_part_acl TO user_prt_acl;
+ALTER DEFAULT PRIVILEGES IN SCHEMA schema_part_acl GRANT SELECT ON TABLES TO user_prt_acl;
 
-CREATE TABLE public.t_part_acl (dt date)
+CREATE TABLE schema_part_acl.t_part_acl (dt date)
 PARTITION BY RANGE (dt)
 (
     START (date '2019-12-01') INCLUSIVE
     END (date '2020-02-01') EXCLUSIVE
     EVERY (INTERVAL '1 month')
 );
-INSERT INTO public.t_part_acl VALUES (date '2019-12-01'), (date '2020-01-31');
+INSERT INTO schema_part_acl.t_part_acl VALUES (date '2019-12-01'), (date '2020-01-31');
 
 -- check if parent and child table have same relacl
 SELECT relname FROM pg_class
@@ -3819,12 +3822,10 @@ WHERE relname LIKE 't_part_acl%'
 
 -- check if new user can SELECT all data
 SET ROLE user_prt_acl;
-SELECT * FROM public.t_part_acl;
+SELECT * FROM schema_part_acl.t_part_acl;
 
 RESET ROLE;
-DROP TABLE public.t_part_acl;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT ON TABLES FROM user_prt_acl;
-DROP ROLE user_prt_acl;
+-- we don't drop the table, schema and role here in order to test upgrade
 
 
 -- test on commit behavior used on partition table
@@ -3935,6 +3936,7 @@ ALTER TABLE part_inherit ENABLE ROW LEVEL SECURITY;
 -- Check the current status 
 SELECT c.relname,
         c.reloptions,
+        c.relkind,
         a.amname as am,
         c.relhasindex as hasindex,
         r.rolname as owner,
@@ -3958,6 +3960,7 @@ CREATE TABLE part_inherit_partof PARTITION OF part_inherit FOR VALUES FROM (300)
 
 SELECT c.relname,
         c.reloptions,
+        c.relkind,
         a.amname as am,
         c.relhasindex as hasindex,
         r.rolname as owner,
@@ -3987,6 +3990,7 @@ ALTER TABLE part_inherit ATTACH PARTITION part_inherit_attach FOR VALUES FROM (4
 
 SELECT c.relname,
         c.reloptions,
+        c.relkind,
         a.amname as am,
         c.relhasindex as hasindex,
         r.rolname as owner,
@@ -4005,6 +4009,7 @@ ALTER TABLE part_inherit ADD PARTITION added START(500) END(600);
 
 SELECT c.relname,
         c.reloptions,
+        c.relkind,
         a.amname as am,
         c.relhasindex as hasindex,
         r.rolname as owner,
@@ -4034,6 +4039,7 @@ ALTER TABLE part_inherit_1_prt_l1_to_exchange EXCHANGE PARTITION l2_child WITH T
 
 SELECT c.relname,
         c.reloptions,
+        c.relkind,
         a.amname as am,
         c.relhasindex as hasindex,
         r.rolname as owner,
@@ -4052,6 +4058,7 @@ ALTER TABLE part_inherit_1_prt_l1_to_split SPLIT PARTITION l2_child AT (10150) I
 
 SELECT c.relname,
         c.reloptions,
+        c.relkind,
         a.amname as am,
         c.relhasindex as hasindex,
         r.rolname as owner,
@@ -4068,6 +4075,7 @@ WHERE c.relname LIKE 'part_inherit_1_prt_l1_to_split%' AND
 -- Now print everything for comparison
 SELECT c.relname,
         c.reloptions,
+        c.relkind,
         a.amname as am,
         c.relhasindex as hasindex,
         r.rolname as owner,
@@ -4091,3 +4099,71 @@ DROP ROLE part_inherit_other_role;
 DROP ROLE part_inherit_priv_role;
 DROP ROLE part_inherit_attach_priv_role;
 DROP ROLE part_inherit_exchange_out_priv_role;
+
+--Test cases for data selection from range partitioned tables with predicate on date or timestamp type-------------
+drop table if exists test_rangePartition;
+create table public.test_rangePartition
+(datedday date)
+    WITH (
+        appendonly=false
+        )
+    PARTITION BY RANGE(datedday)
+(
+    PARTITION pn_20221022 START ('2022-10-22'::date) END ('2022-10-23'::date),
+    PARTITION pn_20221023 START ('2022-10-23'::date) END ('2022-10-24'::date),
+    DEFAULT PARTITION pdefault
+    );
+
+insert into public.test_rangePartition(datedday)
+select ('2022-10-22'::date)
+union
+select ('2022-10-23'::date);
+
+--Test case with condition on date and timestamp
+explain (costs off) select max(datedday) from public.test_rangePartition where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+select max(datedday) from public.test_rangePartition where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+
+--Test case with condition on date and timestamp
+explain (costs off) select max(datedday) from public.test_rangePartition where datedday='2022-10-23' or datedday='2022-10-22';
+select max(datedday) from public.test_rangePartition where datedday='2022-10-23' or datedday='2022-10-22';
+
+--Test case with condition on timestamp and timestamp
+explain (costs off) select max(datedday) from public.test_rangePartition where datedday=('2022-10-23'::date -interval '0 day') or datedday=('2022-10-23'::date -interval '1 day');
+select max(datedday) from public.test_rangePartition where datedday=('2022-10-23'::date -interval '0 day') or datedday=('2022-10-23'::date -interval '1 day');
+
+--Test case with condition on date and timestamp
+explain (costs off) select datedday from public.test_rangePartition where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+select datedday from public.test_rangePartition where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+
+drop table test_rangePartition;
+
+--Test cases for data selection from List partitioned tables with predicate on date or timestamp type-------------
+drop table if exists test_listPartition;
+create table test_listPartition (i int, d date)
+    partition by list(d)
+ (partition p1 values('2022-10-22'), partition p2 values('2022-10-23'),
+ default partition pdefault  );
+
+
+insert into test_listPartition values(1,'2022-10-22');
+insert into test_listPartition values(2,'2022-10-23');
+insert into test_listPartition values(3,'2022-10-24');
+
+
+--Test case with condition on date and timestamp
+explain (costs off) select max(d) from test_listPartition where d='2022-10-23' or d=('2022-10-23'::date -interval '1 day');
+select max(d) from test_listPartition where d='2022-10-23' or d=('2022-10-23'::date -interval '1 day');
+
+--Test case with condition on date and date
+explain (costs off) select max(d) from test_listPartition where d='2022-10-23' or d='2022-10-22';
+select max(d) from test_listPartition where d='2022-10-23' or d='2022-10-22';
+
+--Test case with condition on timestamp and timestamp
+explain (costs off) select max(d) from test_listPartition where d=('2022-10-23'::date -interval '0 day') or d=('2022-10-23'::date -interval '1 day');
+select max(d) from test_listPartition where d=('2022-10-23'::date -interval '0 day') or d=('2022-10-23'::date -interval '1 day');
+
+--Test case with condition on timestamp and timestamp
+explain (costs off) select d from test_listPartition where d='2022-10-23' or d=('2022-10-23'::date -interval '1 day');
+select d from test_listPartition where d='2022-10-23' or d=('2022-10-23'::date -interval '1 day');
+
+drop table test_listPartition;

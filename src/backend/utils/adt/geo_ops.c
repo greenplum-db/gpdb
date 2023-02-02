@@ -4488,8 +4488,8 @@ poly_path(PG_FUNCTION_ARGS)
 /*		circle_in		-		convert a string to internal form.
  *
  *		External format: (center and radius of circle)
- *				"((f8,f8)<f8>)"
- *				also supports quick entry style "(f8,f8,f8)"
+ *				"<(f8,f8),f8>"
+ *				also supports quick entry style "f8,f8,f8"
  */
 Datum
 circle_in(PG_FUNCTION_ARGS)
@@ -4503,16 +4503,19 @@ circle_in(PG_FUNCTION_ARGS)
 	s = str;
 	while (isspace((unsigned char) *s))
 		s++;
-	if ((*s == LDELIM_C) || (*s == LDELIM))
+	if (*s == LDELIM_C)
+		depth++, s++;
+	else if (*s == LDELIM)
 	{
-		depth++;
+		/* If there are two left parens, consume the first one */
 		cp = (s + 1);
 		while (isspace((unsigned char) *cp))
 			cp++;
 		if (*cp == LDELIM)
-			s = cp;
+			depth++, s = cp;
 	}
 
+	/* pair_decode will consume parens around the pair, if any */
 	pair_decode(s, &circle->center.x, &circle->center.y, &s, "circle", str);
 
 	if (*s == DELIM)
@@ -5429,7 +5432,10 @@ pg_hypot(float8 x, float8 y)
 	yx = y / x;
 	result = x * sqrt(1.0 + (yx * yx));
 
-	check_float8_val(result, false, false);
+	if (unlikely(isinf(result)))
+		float_overflow_error();
+	if (unlikely(result == 0.0))
+		float_underflow_error();
 
 	return result;
 }

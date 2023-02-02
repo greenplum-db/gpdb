@@ -1219,6 +1219,7 @@ finalize_partialaggregate(AggState *aggstate,
 										   pergroupstate->transValueIsNull,
 										   pertrans->transtypeLen);
 			fcinfo->args[0].isnull = pergroupstate->transValueIsNull;
+			fcinfo->isnull = false;
 
 			*resultVal = FunctionCallInvoke(fcinfo);
 			*resultIsNull = fcinfo->isnull;
@@ -3718,7 +3719,11 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 							&aggstate->hash_ngroups_limit,
 							&aggstate->hash_planned_partitions);
 		find_hash_columns(aggstate);
-		build_hash_tables(aggstate);
+
+		/* Skip massive memory allocation if we are just doing EXPLAIN */
+		if (!(eflags & EXEC_FLAG_EXPLAIN_ONLY))
+			build_hash_tables(aggstate);
+
 		aggstate->table_filled = false;
 	}
 
@@ -4187,7 +4192,7 @@ build_pertrans_for_aggref(AggStatePerTrans pertrans,
 	 * transfn and transfn_oid fields of pertrans refer to the combine
 	 * function rather than the transition function.
 	 */
-	if (DO_AGGSPLIT_COMBINE(aggstate->aggsplit))
+	if (DO_AGGSPLIT_COMBINE(pertrans->aggref->aggsplit))
 	{
 		Expr	   *combinefnexpr;
 		size_t		numTransArgs;

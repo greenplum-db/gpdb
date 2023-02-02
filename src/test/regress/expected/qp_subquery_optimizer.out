@@ -1448,8 +1448,8 @@ explain delete from TabDel1 where TabDel1.a not in (select a from TabDel3); -- d
 ---------------------------------------------------------------------------------------------------
  Delete on tabdel1  (cost=0.00..862.04 rows=1 width=1)
    ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=18)
-         Hash Cond: (tabdel1_1.a = tabdel3.a)
-         ->  Seq Scan on tabdel1 tabdel1_1  (cost=0.00..431.00 rows=1 width=18)
+         Hash Cond: (tabdel1.a = tabdel3.a)
+         ->  Seq Scan on tabdel1  (cost=0.00..431.00 rows=1 width=18)
          ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                      ->  Seq Scan on tabdel3  (cost=0.00..431.00 rows=1 width=4)
@@ -1461,8 +1461,8 @@ explain delete from TabDel2 where TabDel2.a not in (select a from TabDel4); -- s
 ---------------------------------------------------------------------------------------------------
  Delete on tabdel2  (cost=0.00..862.03 rows=1 width=1)
    ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=18)
-         Hash Cond: (tabdel2_1.a = tabdel4.a)
-         ->  Seq Scan on tabdel2 tabdel2_1  (cost=0.00..431.00 rows=1 width=18)
+         Hash Cond: (tabdel2.a = tabdel4.a)
+         ->  Seq Scan on tabdel2  (cost=0.00..431.00 rows=1 width=18)
          ->  Hash  (cost=431.00..431.00 rows=3 width=4)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=4)
                      ->  Seq Scan on tabdel4  (cost=0.00..431.00 rows=1 width=4)

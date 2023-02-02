@@ -1219,7 +1219,10 @@ GetMultiXactIdMembers(MultiXactId multi, MultiXactMember **members,
 	debug_elog3(DEBUG2, "GetMembers: asked for %u", multi);
 
 	if (!MultiXactIdIsValid(multi) || from_pgupgrade)
+	{
+		*members = NULL;
 		return -1;
+	}
 
 	/* See if the MultiXactId is in the local cache */
 	length = mXactCacheGetById(multi, members);
@@ -1270,13 +1273,10 @@ GetMultiXactIdMembers(MultiXactId multi, MultiXactMember **members,
 	LWLockRelease(MultiXactGenLock);
 
 	if (MultiXactIdPrecedes(multi, oldestMXact))
-	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("MultiXactId %u does no longer exist -- apparent wraparound",
 						multi)));
-		return -1;
-	}
 
 	if (!MultiXactIdPrecedes(multi, nextMXact))
 		ereport(ERROR,
@@ -1376,7 +1376,6 @@ retry:
 	LWLockRelease(MultiXactOffsetControlLock);
 
 	ptr = (MultiXactMember *) palloc(length * sizeof(MultiXactMember));
-	*members = ptr;
 
 	/* Now get the members themselves. */
 	LWLockAcquire(MultiXactMemberControlLock, LW_EXCLUSIVE);
@@ -1421,6 +1420,9 @@ retry:
 
 	LWLockRelease(MultiXactMemberControlLock);
 
+	/* A multixid with zero members should not happen */
+	Assert(truelength > 0);
+
 	/*
 	 * Copy the result into the local cache.
 	 */
@@ -1428,6 +1430,7 @@ retry:
 
 	debug_elog3(DEBUG2, "GetMembers: no cache for %s",
 				mxid_to_string(multi, truelength, ptr));
+	*members = ptr;
 	return truelength;
 }
 
@@ -1528,7 +1531,6 @@ mXactCacheGetById(MultiXactId multi, MultiXactMember **members)
 
 			size = sizeof(MultiXactMember) * entry->nmembers;
 			ptr = (MultiXactMember *) palloc(size);
-			*members = ptr;
 
 			memcpy(ptr, entry->members, size);
 
@@ -1544,6 +1546,7 @@ mXactCacheGetById(MultiXactId multi, MultiXactMember **members)
 			 */
 			dlist_move_head(&MXactCache, iter.cur);
 
+			*members = ptr;
 			return entry->nmembers;
 		}
 	}
@@ -1829,10 +1832,12 @@ MultiXactShmemInit(void)
 				  "multixact_offset", NUM_MXACTOFFSET_BUFFERS, 0,
 				  MultiXactOffsetControlLock, "pg_multixact/offsets",
 				  LWTRANCHE_MXACTOFFSET_BUFFERS);
+	SlruPagePrecedesUnitTests(MultiXactOffsetCtl, MULTIXACT_OFFSETS_PER_PAGE);
 	SimpleLruInit(MultiXactMemberCtl,
 				  "multixact_member", NUM_MXACTMEMBER_BUFFERS, 0,
 				  MultiXactMemberControlLock, "pg_multixact/members",
 				  LWTRANCHE_MXACTMEMBER_BUFFERS);
+	/* doesn't call SimpleLruTruncate() or meet criteria for unit tests */
 
 	/* Initialize our shared state struct */
 	MultiXactState = ShmemInitStruct("Shared MultiXact State",
@@ -2976,6 +2981,14 @@ TruncateMultiXact(MultiXactId newOldestMulti, Oid newOldestMultiDB)
 	 * truncate the members SLRU.  So we first scan the directory to determine
 	 * the earliest offsets page number that we can read without error.
 	 *
+	 * When nextMXact is less than one segment away from multiWrapLimit,
+	 * SlruScanDirCbFindEarliest can find some early segment other than the
+	 * actual earliest.  (MultiXactOffsetPagePrecedes(EARLIEST, LATEST)
+	 * returns false, because not all pairs of entries have the same answer.)
+	 * That can also arise when an earlier truncation attempt failed unlink()
+	 * or returned early from this function.  The only consequence is
+	 * returning early, which wastes space that we could have liberated.
+	 *
 	 * NB: It's also possible that the page that oldestMulti is on has already
 	 * been truncated away, and we crashed before updating oldestMulti.
 	 */
@@ -3090,15 +3103,11 @@ TruncateMultiXact(MultiXactId newOldestMulti, Oid newOldestMultiDB)
 }
 
 /*
- * Decide which of two MultiXactOffset page numbers is "older" for truncation
- * purposes.
+ * Decide whether a MultiXactOffset page number is "older" for truncation
+ * purposes.  Analogous to CLOGPagePrecedes().
  *
- * We need to use comparison of MultiXactId here in order to do the right
- * thing with wraparound.  However, if we are asked about page number zero, we
- * don't want to hand InvalidMultiXactId to MultiXactIdPrecedes: it'll get
- * weird.  So, offset both multis by FirstMultiXactId to avoid that.
- * (Actually, the current implementation doesn't do anything weird with
- * InvalidMultiXactId, but there's no harm in leaving this code like this.)
+ * Offsetting the values is optional, because MultiXactIdPrecedes() has
+ * translational symmetry.
  */
 static bool
 MultiXactOffsetPagePrecedes(int page1, int page2)
@@ -3107,15 +3116,17 @@ MultiXactOffsetPagePrecedes(int page1, int page2)
 	MultiXactId multi2;
 
 	multi1 = ((MultiXactId) page1) * MULTIXACT_OFFSETS_PER_PAGE;
-	multi1 += FirstMultiXactId;
+	multi1 += FirstMultiXactId + 1;
 	multi2 = ((MultiXactId) page2) * MULTIXACT_OFFSETS_PER_PAGE;
-	multi2 += FirstMultiXactId;
+	multi2 += FirstMultiXactId + 1;
 
-	return MultiXactIdPrecedes(multi1, multi2);
+	return (MultiXactIdPrecedes(multi1, multi2) &&
+			MultiXactIdPrecedes(multi1,
+								multi2 + MULTIXACT_OFFSETS_PER_PAGE - 1));
 }
 
 /*
- * Decide which of two MultiXactMember page numbers is "older" for truncation
+ * Decide whether a MultiXactMember page number is "older" for truncation
  * purposes.  There is no "invalid offset number" so use the numbers verbatim.
  */
 static bool
@@ -3127,7 +3138,9 @@ MultiXactMemberPagePrecedes(int page1, int page2)
 	offset1 = ((MultiXactOffset) page1) * MULTIXACT_MEMBERS_PER_PAGE;
 	offset2 = ((MultiXactOffset) page2) * MULTIXACT_MEMBERS_PER_PAGE;
 
-	return MultiXactOffsetPrecedes(offset1, offset2);
+	return (MultiXactOffsetPrecedes(offset1, offset2) &&
+			MultiXactOffsetPrecedes(offset1,
+									offset2 + MULTIXACT_MEMBERS_PER_PAGE - 1));
 }
 
 /*

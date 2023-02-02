@@ -18,7 +18,7 @@ The following Greenplum Database management utilities are located in `$GPHOME/bi
 </li>
 <li class="li"><a class="xref" href="../utility_guide/ref/gpcheckperf.html">gpcheckperf</a>
 </li>
-<li class="li"><a class="xref" href="../utility_guide/ref/gpcopy.html">gpcopy</a> (Tanzu Greenplum only) </li>
+<li class="li"><a class="xref" href="../utility_guide/ref/gpcopy.html">gpcopy</a> (VMware Greenplum only) </li>
 <li class="li"><a class="xref" href="../utility_guide/ref/gpdeletesystem.html">gpdeletesystem</a>
 </li>
 <li class="li"><a class="xref" href="../utility_guide/ref/gpinitstandby.html">gpinitstandby</a>
@@ -31,8 +31,6 @@ The following Greenplum Database management utilities are located in `$GPHOME/bi
 </li>
 <li class="li"><a class="xref" href="../utility_guide/ref/gppkg.html">gppkg</a>
 </li>
-<li class="li"><a class="xref" href="../utility_guide/ref/gpscp.html">gpscp</a>
-</li>
 <li class="li"><a class="xref" href="../utility_guide/ref/gpssh.html">gpssh</a>
 </li>
 <li class="li"><a class="xref" href="../utility_guide/ref/gpssh-exkeys.html">gpssh-exkeys</a>
@@ -40,6 +38,8 @@ The following Greenplum Database management utilities are located in `$GPHOME/bi
 <li class="li"><a class="xref" href="../utility_guide/ref/gpstart.html">gpstart</a>
 </li>
 <li class="li"><a class="xref" href="../utility_guide/ref/gpstop.html">gpstop</a>
+</li>
+<li class="li"><a class="xref" href="../utility_guide/ref/gpsync.html">gpsync</a>
 </li>
 </ul>
 </td>

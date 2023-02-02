@@ -10,7 +10,7 @@
       <codeblock id="sql_command_synopsis">ALTER RESOURCE GROUP &lt;name> SET &lt;group_attribute> &lt;value></codeblock>
 <p>where <varname>group_attribute</varname> is one of:</p>
       <codeblock>CONCURRENCY &lt;integer>
-CPU_RATE_LIMIT &lt;integer> 
+cpu_hard_quota_limit &lt;integer>
 CPUSET &lt;tuple> 
 MEMORY_LIMIT &lt;integer>
 MEMORY_SHARED_QUOTA &lt;integer>
@@ -48,13 +48,13 @@ MEMORY_SPILL_RATIO &lt;integer></codeblock>
             <pd><note>You cannot set the <codeph>CONCURRENCY</codeph> value for the <codeph>admin_group</codeph> to zero (0).</note></pd>
         </plentry>
         <plentry>
-          <pt>CPU_RATE_LIMIT <varname>integer</varname></pt>
+          <pt>cpu_hard_quota_limit <varname>integer</varname></pt>
           <pd>The percentage of CPU resources to allocate to
             this resource group. The minimum CPU percentage for a resource group is 1.
             The maximum is 100. The sum of the
-            <codeph>CPU_RATE_LIMIT</codeph>s of all resource groups defined in the
+            <codeph>cpu_hard_quota_limit</codeph>s of all resource groups defined in the
             Greenplum Database cluster must not exceed 100.</pd>
-          <pd>If you alter the <codeph>CPU_RATE_LIMIT</codeph> of a resource group in which
+          <pd>If you alter the <codeph>cpu_hard_quota_limit</codeph> of a resource group in which
             you previously configured a <codeph>CPUSET</codeph>, <codeph>CPUSET</codeph> is disabled, the reserved CPU cores are returned to Greenplum Database, and <codeph>CPUSET</codeph> is set to -1.</pd>
         </plentry>
         <plentry>
@@ -62,7 +62,7 @@ MEMORY_SPILL_RATIO &lt;integer></codeblock>
           <pd>The CPU cores to reserve for this resource group. The CPU cores that you specify in <varname>tuple</varname> must be available in the system and cannot overlap with any CPU cores that you specify for other resource groups.</pd>
           <pd><varname>tuple</varname> is a comma-separated list of single core numbers or core intervals. You must enclose <varname>tuple</varname> in single quotes, for example, '1,3-4'.</pd>
           <pd>If you alter the <codeph>CPUSET</codeph> value of a resource group for which
-            you previously configured a <codeph>CPU_RATE_LIMIT</codeph>, <codeph>CPU_RATE_LIMIT</codeph> is disabled, the reserved CPU resources are returned to Greenplum Database, and <codeph>CPU_RATE_LIMIT</codeph> is set to -1.</pd>
+            you previously configured a <codeph>cpu_hard_quota_limit</codeph>, <codeph>cpu_hard_quota_limit</codeph> is disabled, the reserved CPU resources are returned to Greenplum Database, and <codeph>cpu_hard_quota_limit</codeph> is set to -1.</pd>
           <pd>You can alter <codeph>CPUSET</codeph> for a resource group only after you have enabled resource group-based resource management for your Greenplum Database cluster.</pd>
         </plentry>
         <plentry>
@@ -110,7 +110,7 @@ MEMORY_SPILL_RATIO &lt;integer></codeblock>
       <p>Change the active transaction limit for a resource group: </p>
       <codeblock>ALTER RESOURCE GROUP rgroup1 SET CONCURRENCY 13;</codeblock>
       <p>Update the CPU limit for a resource group: </p>
-      <codeblock>ALTER RESOURCE GROUP rgroup2 SET CPU_RATE_LIMIT 45;</codeblock>
+      <codeblock>ALTER RESOURCE GROUP rgroup2 SET cpu_hard_quota_limit 45;</codeblock>
       <p>Update the memory limit for a resource group: </p>
       <codeblock>ALTER RESOURCE GROUP rgroup3 SET MEMORY_LIMIT 30;</codeblock>
       <p>Update the memory spill ratio for a resource group: </p>

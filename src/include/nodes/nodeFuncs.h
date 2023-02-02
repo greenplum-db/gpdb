@@ -27,6 +27,7 @@
 #define QTW_EXAMINE_RTES_AFTER		0x20	/* examine RTE nodes after their
 											 * contents */
 #define QTW_DONT_COPY_QUERY			0x40	/* do not copy top Query */
+#define QTW_EXAMINE_SORTGROUP		0x80	/* include SortGroupNode lists */
 
 /* callback function for check_functions_in_node */
 typedef bool (*check_function_callback) (Oid func_id, void *context);
@@ -35,6 +36,9 @@ typedef bool (*check_function_callback) (Oid func_id, void *context);
 extern Oid	exprType(const Node *expr);
 extern int32 exprTypmod(const Node *expr);
 extern bool exprIsLengthCoercion(const Node *expr, int32 *coercedTypmod);
+extern Node *applyRelabelType(Node *arg, Oid rtype, int32 rtypmod, Oid rcollid,
+							  CoercionForm rformat, int rlocation,
+							  bool overwrite_ok);
 extern Node *relabel_to_typmod(Node *expr, int32 typmod);
 extern Node *strip_implicit_coercions(Node *node);
 extern bool expression_returns_set(Node *clause);
@@ -142,6 +146,9 @@ extern bool range_table_walker(List *rtable, bool (*walker) (),
 							   void *context, int flags);
 extern List *range_table_mutator(List *rtable, Node *(*mutator) (),
 								 void *context, int flags);
+
+extern bool range_table_entry_walker(RangeTblEntry *rte, bool (*walker) (),
+									 void *context, int flags);
 
 extern bool query_or_expression_tree_walker(Node *node, bool (*walker) (),
 											void *context, int flags);

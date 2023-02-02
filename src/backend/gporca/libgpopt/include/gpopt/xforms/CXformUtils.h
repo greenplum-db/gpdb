@@ -335,13 +335,6 @@ public:
 		CLogicalDML::EDMLOperator edmlop, CTableDescriptor *ptabdesc,
 		CColRefArray *colref_array, CColRef *pcrCtid, CColRef *pcrSegmentId);
 
-	// construct a logical partition selector for the given table descriptor on top
-	// of the given child expression. The partition selection filters use columns
-	// from the given column array
-	static CExpression *PexprLogicalPartitionSelector(
-		CMemoryPool *mp, CTableDescriptor *ptabdesc, CColRefArray *colref_array,
-		CExpression *pexprChild);
-
 	// return partition filter expressions given a table
 	// descriptor and the given column references
 	static CExpressionArray *PdrgpexprPartEqFilters(

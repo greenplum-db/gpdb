@@ -90,12 +90,4 @@ SELECT 'Test raw encrypt : EXPECTED PASS' as comment;
 
 SELECT encrypt('santa claus', 'mypass', 'aes') as raw_aes;
 ERROR:  requested functionality not allowed in FIPS mode (openssl.c:772)
-SELECT 'Test raw encrypt : EXPECTED FAIL FIPS' as comment;
-                comment                
----------------------------------------
- Test raw encrypt : EXPECTED FAIL FIPS
-(1 row)
-
-SELECT encrypt('santa claus', 'mypass', 'bf') as raw_blowfish;
-ERROR:  requested functionality not allowed in FIPS mode (openssl.c:772)
 DROP TABLE fipstest;

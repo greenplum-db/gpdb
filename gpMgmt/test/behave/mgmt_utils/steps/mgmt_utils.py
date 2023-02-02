@@ -46,7 +46,7 @@ def show_all_installed(gphome):
     name = x[0].lower()
     if 'ubuntu' in name:
         return "dpkg --get-selections --admindir=%s/share/packages/database/deb | awk '{print $1}'" % gphome
-    elif 'centos' in name or 'rhel' in name:
+    elif 'centos' in name or 'rhel' in name or 'rocky' in name or 'ol' in name:
         return "rpm -qa --dbpath %s/share/packages/database" % gphome
     else:
         raise Exception('UNKNOWN platform: %s' % str(x))
@@ -56,7 +56,7 @@ def remove_native_package_command(gphome, full_gppkg_name):
     name = x[0].lower()
     if 'ubuntu' in name:
         return 'fakeroot dpkg --force-not-root --log=/dev/null --instdir=%s --admindir=%s/share/packages/database/deb -r %s' % (gphome, gphome, full_gppkg_name)
-    elif 'centos' in name or 'rhel' in name:
+    elif 'centos' in name or 'rhel' in name or 'rocky' in name or 'ol' in name:
         return 'rpm -e %s --dbpath %s/share/packages/database' % (full_gppkg_name, gphome)
     else:
         raise Exception('UNKNOWN platform: %s' % str(x))
@@ -438,12 +438,30 @@ def impl(context, content):
     dburl = dbconn.DbURL(hostname=host, port=port, dbname='template1')
     wait_for_desired_query_result(dburl, query, desired_result, utility=True)
 
+
+@given('the user just waits until recovery_progress.file is created in {logdir}')
+@when('the user just waits until recovery_progress.file is created in {logdir}')
+@then('the user just waits until recovery_progress.file is created in {logdir}')
+def impl(context, logdir):
+    attempt = 0
+    num_retries = 6000
+    log_dir = _get_gpAdminLogs_directory() if logdir == 'gpAdminLogs' else logdir
+    recovery_progress_file = '{}/recovery_progress.file'.format(log_dir)
+    while attempt < num_retries:
+        attempt += 1
+        if os.path.exists(recovery_progress_file):
+            return
+        time.sleep(0.1)
+        if attempt == num_retries:
+            raise Exception('Timed out after {} retries'.format(num_retries))
+
+
 @given('the user waits until recovery_progress.file is created in {logdir} and verifies its format')
 @when('the user waits until recovery_progress.file is created in {logdir} and verifies its format')
 @then('the user waits until recovery_progress.file is created in {logdir} and verifies its format')
 def impl(context, logdir):
     attempt = 0
-    num_retries = 60000
+    num_retries = 6000
     log_dir = _get_gpAdminLogs_directory() if logdir == 'gpAdminLogs' else logdir
     recovery_progress_file = '{}/recovery_progress.file'.format(log_dir)
     while attempt < num_retries:
@@ -459,7 +477,7 @@ def impl(context, logdir):
                     return
                 else:
                     raise Exception('File present but incorrect format line "{}"'.format(line))
-        time.sleep(0.01)
+        time.sleep(0.1)
         if attempt == num_retries:
             raise Exception('Timed out after {} retries'.format(num_retries))
 
@@ -3685,8 +3703,8 @@ def impl(context, command, input):
     context.error_message = stderr.decode()
 
 def are_on_different_subnets(primary_hostname, mirror_hostname):
-    primary_broadcast = check_output(['ssh', '-n', primary_hostname, "/sbin/ip addr show eth0 | grep 'inet .* brd' | awk '{ print $4 }'"])
-    mirror_broadcast = check_output(['ssh', '-n', mirror_hostname,  "/sbin/ip addr show eth0 | grep 'inet .* brd' | awk '{ print $4 }'"])
+    primary_broadcast = check_output(['ssh', '-n', primary_hostname, "/sbin/ip addr show | grep 'inet .* brd' | awk '{ print $4 }'"])
+    mirror_broadcast = check_output(['ssh', '-n', mirror_hostname,  "/sbin/ip addr show | grep 'inet .* brd' | awk '{ print $4 }'"])
     if not primary_broadcast:
         raise Exception("primary hostname %s has no broadcast address" % primary_hostname)
     if not mirror_broadcast:
@@ -3784,7 +3802,6 @@ def impl(context):
     locale = get_en_utf_locale()
     context.execute_steps('''When a demo cluster is created using gpinitsystem args "--lc-ctype=%s"''' % locale)
 
-
 @given('the user asynchronously runs pg_basebackup with {segment} of content {contentid} as source and the process is saved')
 @when('the user asynchronously runs pg_basebackup with {segment} of content {contentid} as source and the process is saved')
 @then('the user asynchronously runs pg_basebackup with {segment} of content {contentid} as source and the process is saved')
@@ -3834,3 +3851,125 @@ def impl(context, contentid):
 
     if str(contentid) not in segments_with_running_basebackup:
         raise Exception("pg_basebackup entry was not found for content %s in gp_stat_replication" % contentid)
+
+@given('create a gpcheckperf input host file')
+def impl(context):
+    cmd = Command(name='create input host file', cmdStr='echo sdw1 > /tmp/hostfile1;echo cdw >> /tmp/hostfile1;')
+    cmd.run(validateAfter=True)
+
+@given('backup /etc/hosts file and update hostname entry for localhost')
+def impl(context):
+     # Backup current /etc/hosts file
+     cmd = Command(name='backup the hosts file', cmdStr='sudo cp /etc/hosts /tmp/hosts_orig')
+     cmd.run(validateAfter=True)
+     # Get the host-name
+     cmd = Command(name='get hostname', cmdStr='hostname')
+     cmd.run(validateAfter=True)
+     hostname = cmd.get_stdout()
+     # Update entry in current /etc/hosts file to add new host-address
+     cmd = Command(name='update hostlist with new hostname', cmdStr="sudo sed 's/%s/%s__1 %s/g' </etc/hosts >> /tmp/hosts; sudo cp -f /tmp/hosts /etc/hosts;rm /tmp/hosts"
+                                                        %(hostname, hostname, hostname))
+     cmd.run(validateAfter=True)
+
+@then('restore /etc/hosts file and cleanup hostlist file')
+def impl(context):
+    cmd = "sudo mv -f /tmp/hosts_orig /etc/hosts; rm -f /tmp/clusterConfigFile-1; rm -f /tmp/hostfile--1"
+    context.execute_steps(u'''Then the user runs command "%s"''' % cmd)
+
+@given('update hostlist file with updated host-address')
+def impl(context):
+     cmd = Command(name='get hostname', cmdStr='hostname')
+     cmd.run(validateAfter=True)
+     hostname = cmd.get_stdout()
+     # Update entry in hostfile to replace with address
+     cmd = Command(name='update temp hosts file', cmdStr= "sed 's/%s/%s__1/g' < ../gpAux/gpdemo/hostfile >> /tmp/hostfile--1" % (hostname, hostname))
+     cmd.run(validateAfter=True)
+
+@given('update clusterConfig file with new port and host-address')
+def impl(context):
+     cmd = Command(name='get hostname', cmdStr='hostname')
+     cmd.run(validateAfter=True)
+     hostname = cmd.get_stdout()
+
+     # Create a copy of config file
+     cmd = Command(name='create a copy of config file',
+                   cmdStr= "cp ../gpAux/gpdemo/clusterConfigFile /tmp/clusterConfigFile-1;")
+     cmd.run(validateAfter=True)
+
+     # Update hostfile location
+     cmd = Command(name='update master hostname in config file',
+                   cmdStr= "sed 's/MACHINE_LIST_FILE=.*/MACHINE_LIST_FILE=\/tmp\/hostfile--1/g' -i /tmp/clusterConfigFile-1")
+     cmd.run(validateAfter=True)
+
+
+@then('verify that cluster config has host-name populated correctly')
+def impl(context):
+     cmd = Command(name='get hostname', cmdStr='hostname')
+     cmd.run(validateAfter=True)
+     hostname_orig = cmd.get_stdout().strip()
+     hostname_new = "{}__1".format(hostname_orig)
+     # Verift host-address not populated in the config
+     with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
+         sql = "SELECT count(*) FROM gp_segment_configuration WHERE hostname='%s'" % hostname_new
+         num_matching = dbconn.querySingleton(conn, sql)
+         if(num_matching != 0):
+             raise Exception("Found entries in gp_segment_configuration is host-address popoulated as host-name")
+     # Verify correct host-name is populated in the config
+     with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
+         sql = "SELECT count( distinct hostname) FROM gp_segment_configuration WHERE hostname='%s'" % hostname_orig
+         num_matching = dbconn.querySingleton(conn, sql)
+         if(num_matching != 1):
+             raise Exception("Found no entries in gp_segment_configuration is host-address popoulated as host-name")
+
+@given('update the private keys for the new host address')
+def impl(context):
+     cmd = Command(name='get hostname', cmdStr='hostname')
+     cmd.run(validateAfter=True)
+     hostname = "{}__1".format(cmd.get_stdout().strip())
+     cmd_str = "rm -f ~/.ssh/id_rsa ~/.ssh/id_rsa.pub ~/.ssh/known_hosts; $GPHOME/bin/gpssh-exkeys -h {}".format(hostname)
+     cmd = Command(name='update ssh private keys', cmdStr=cmd_str)
+     cmd.run(validateAfter=True)
+
+@then('verify replication slot {slot} is available on all the segments')
+@when('verify replication slot {slot} is available on all the segments')
+@given('verify replication slot {slot} is available on all the segments')
+def impl(context, slot):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    segments = gparray.getDbList()
+    dbname = "template1"
+    query = "SELECT count(*) FROM pg_catalog.pg_replication_slots WHERE slot_name = '{}'".format(slot)
+
+    for seg in segments:
+        if seg.isSegmentPrimary():
+            host = seg.getSegmentHostName()
+            port = seg.getSegmentPort()
+            with closing(dbconn.connect(dbconn.DbURL(dbname=dbname, port=port, hostname=host),
+                                        utility=True, unsetSearchPath=False)) as conn:
+                result = dbconn.querySingleton(conn, query)
+                if result == 0:
+                    raise Exception("Slot does not exist for host:{}, port:{}".format(host, port))
+
+
+@given('user waits until gp_stat_replication table has no pg_basebackup entries for content {contentids}')
+@when('user waits until gp_stat_replication table has no pg_basebackup entries for content {contentids}')
+@then('user waits until gp_stat_replication table has no pg_basebackup entries for content {contentids}')
+def impl(context, contentids):
+     retries = 600
+     content_ids = contentids.split(',')
+     content_ids = ', '.join(c for c in content_ids)
+     sql = "select count(*) from gp_stat_replication where application_name = 'pg_basebackup' and gp_segment_id in (%s)" %(content_ids)
+     no_basebackup = False
+
+     for i in range(retries):
+         try:
+             with closing(dbconn.connect(dbconn.DbURL())) as conn:
+                 res = dbconn.querySingleton(conn, sql)
+         except Exception as e:
+             raise Exception("Failed to query gp_stat_replication: %s" % str(e))
+         if res == 0:
+             no_basebackup = True
+             break
+         time.sleep(1)
+
+     if not no_basebackup:
+         raise Exception("pg_basebackup entry was found for contents %s in gp_stat_replication after %d retries" % (contentids, retries))

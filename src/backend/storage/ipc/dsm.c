@@ -45,13 +45,8 @@
 
 #define PG_DYNSHMEM_CONTROL_MAGIC		0x9a503d32
 
-/*
- * There's no point in getting too cheap here, because the minimum allocation
- * is one OS page, which is probably at least 4KB and could easily be as high
- * as 64KB.  Each currently sizeof(dsm_control_item), currently 8 bytes.
- */
 #define PG_DYNSHMEM_FIXED_SLOTS			64
-#define PG_DYNSHMEM_SLOTS_PER_BACKEND	2
+#define PG_DYNSHMEM_SLOTS_PER_BACKEND	5
 
 #define INVALID_CONTROL_SLOT		((uint32) -1)
 
@@ -484,17 +479,16 @@ dsm_create(Size size, int flags)
 	/* Verify that we can support an additional mapping. */
 	if (nitems >= dsm_control->maxitems)
 	{
+		LWLockRelease(DynamicSharedMemoryControlLock);
+		dsm_impl_op(DSM_OP_DESTROY, seg->handle, 0, &seg->impl_private,
+					&seg->mapped_address, &seg->mapped_size, WARNING);
+		if (seg->resowner != NULL)
+			ResourceOwnerForgetDSM(seg->resowner, seg);
+		dlist_delete(&seg->node);
+		pfree(seg);
+
 		if ((flags & DSM_CREATE_NULL_IF_MAXSEGMENTS) != 0)
-		{
-			LWLockRelease(DynamicSharedMemoryControlLock);
-			dsm_impl_op(DSM_OP_DESTROY, seg->handle, 0, &seg->impl_private,
-						&seg->mapped_address, &seg->mapped_size, WARNING);
-			if (seg->resowner != NULL)
-				ResourceOwnerForgetDSM(seg->resowner, seg);
-			dlist_delete(&seg->node);
-			pfree(seg);
 			return NULL;
-		}
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
 				 errmsg("too many dynamic shared memory segments")));
@@ -666,8 +660,12 @@ dsm_detach(dsm_segment *seg)
 	/*
 	 * Invoke registered callbacks.  Just in case one of those callbacks
 	 * throws a further error that brings us back here, pop the callback
-	 * before invoking it, to avoid infinite error recursion.
+	 * before invoking it, to avoid infinite error recursion.  Don't allow
+	 * interrupts while running the individual callbacks in non-error code
+	 * paths, to avoid leaving cleanup work unfinished if we're interrupted by
+	 * a statement timeout or similar.
 	 */
+	HOLD_INTERRUPTS();
 	while (!slist_is_empty(&seg->on_detach))
 	{
 		slist_node *node;
@@ -683,6 +681,7 @@ dsm_detach(dsm_segment *seg)
 
 		function(seg, arg);
 	}
+	RESUME_INTERRUPTS();
 
 	/*
 	 * Try to remove the mapping, if one exists.  Normally, there will be, but

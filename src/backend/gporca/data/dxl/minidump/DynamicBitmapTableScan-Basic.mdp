@@ -19,7 +19,7 @@
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="2147483647" ArrayExpansionThreshold="25" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="2147483647" ArrayExpansionThreshold="25" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000"/>
       <dxl:TraceFlags Value="103027,101001,102120,103001,103014,103015,103022,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -53,7 +53,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.3723603.1.0" Name="foobar" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.3723603.1.0" Name="foobar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="10">
+      <dxl:Relation Mdid="6.3723603.1.0" Name="foobar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="x1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -91,19 +91,19 @@
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.3723603001.1.0"/>
-          <dxl:Partition Mdid="0.3723603002.1.0"/>
-          <dxl:Partition Mdid="0.3723603003.1.0"/>
-          <dxl:Partition Mdid="0.3723603004.1.0"/>
-          <dxl:Partition Mdid="0.3723603005.1.0"/>
-          <dxl:Partition Mdid="0.3723603006.1.0"/>
-          <dxl:Partition Mdid="0.3723603007.1.0"/>
-          <dxl:Partition Mdid="0.3723603008.1.0"/>
-          <dxl:Partition Mdid="0.3723603009.1.0"/>
-          <dxl:Partition Mdid="0.3723603010.1.0"/>
+          <dxl:Partition Mdid="6.3723603001.1.0"/>
+          <dxl:Partition Mdid="6.3723603002.1.0"/>
+          <dxl:Partition Mdid="6.3723603003.1.0"/>
+          <dxl:Partition Mdid="6.3723603004.1.0"/>
+          <dxl:Partition Mdid="6.3723603005.1.0"/>
+          <dxl:Partition Mdid="6.3723603006.1.0"/>
+          <dxl:Partition Mdid="6.3723603007.1.0"/>
+          <dxl:Partition Mdid="6.3723603008.1.0"/>
+          <dxl:Partition Mdid="6.3723603009.1.0"/>
+          <dxl:Partition Mdid="6.3723603010.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.3723603001.1.0" Name="foobar_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.3723603001.1.0" Name="foobar_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="x1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -156,7 +156,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.3723603002.1.0" Name="foobar_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.3723603002.1.0" Name="foobar_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="x1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -209,7 +209,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.3723603003.1.0" Name="foobar_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.3723603003.1.0" Name="foobar_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="x1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -262,7 +262,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.3723603004.1.0" Name="foobar_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.3723603004.1.0" Name="foobar_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="x1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -315,7 +315,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.3723603005.1.0" Name="foobar_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.3723603005.1.0" Name="foobar_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="x1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -368,7 +368,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.3723603006.1.0" Name="foobar_prt_6" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.3723603006.1.0" Name="foobar_prt_6" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="x1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -421,7 +421,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.3723603007.1.0" Name="foobar_prt_7" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.3723603007.1.0" Name="foobar_prt_7" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="x1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -474,7 +474,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.3723603008.1.0" Name="foobar_prt_8" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.3723603008.1.0" Name="foobar_prt_8" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="x1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -527,7 +527,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.3723603009.1.0" Name="foobar_prt_9" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.3723603009.1.0" Name="foobar_prt_9" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="x1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -580,7 +580,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.3723603010.1.0" Name="foobar_prt_10" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.3723603010.1.0" Name="foobar_prt_10" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="x1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -719,16 +719,16 @@
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.3723795001.1.0"/>
-          <dxl:Partition Mdid="0.3723795002.1.0"/>
-          <dxl:Partition Mdid="0.3723795003.1.0"/>
-          <dxl:Partition Mdid="0.3723795004.1.0"/>
-          <dxl:Partition Mdid="0.3723795005.1.0"/>
-          <dxl:Partition Mdid="0.3723795006.1.0"/>
-          <dxl:Partition Mdid="0.3723795007.1.0"/>
-          <dxl:Partition Mdid="0.3723795008.1.0"/>
-          <dxl:Partition Mdid="0.3723795009.1.0"/>
-          <dxl:Partition Mdid="0.3723795010.1.0"/>
+          <dxl:Partition Mdid="6.3723795001.1.0"/>
+          <dxl:Partition Mdid="6.3723795002.1.0"/>
+          <dxl:Partition Mdid="6.3723795003.1.0"/>
+          <dxl:Partition Mdid="6.3723795004.1.0"/>
+          <dxl:Partition Mdid="6.3723795005.1.0"/>
+          <dxl:Partition Mdid="6.3723795006.1.0"/>
+          <dxl:Partition Mdid="6.3723795007.1.0"/>
+          <dxl:Partition Mdid="6.3723795008.1.0"/>
+          <dxl:Partition Mdid="6.3723795009.1.0"/>
+          <dxl:Partition Mdid="6.3723795010.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
       <dxl:GPDBScalarOp Mdid="0.96.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true">
@@ -776,7 +776,7 @@
           </dxl:Comparison>
         </dxl:And>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.3723603.1.0" TableName="foobar">
+          <dxl:TableDescriptor Mdid="6.3723603.1.0" TableName="foobar">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="x1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="x2" TypeMdid="0.23.1.0"/>
@@ -856,9 +856,9 @@
               <dxl:IndexDescriptor Mdid="0.3723795.1.0" IndexName="x2_ind_1_prt_1"/>
             </dxl:BitmapIndexProbe>
             <dxl:Partitions>
-              <dxl:Partition Mdid="0.-571364286.1.0"/>
+              <dxl:Partition Mdid="6.-571364286.1.0"/>
             </dxl:Partitions>
-            <dxl:TableDescriptor Mdid="0.3723603.1.0" TableName="foobar">
+            <dxl:TableDescriptor Mdid="6.3723603.1.0" TableName="foobar">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="x1" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="x2" TypeMdid="0.23.1.0"/>

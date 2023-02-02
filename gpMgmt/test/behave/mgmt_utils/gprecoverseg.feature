@@ -113,6 +113,30 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And check segment conf: postgresql.conf
 
+    Scenario: gprecoverseg full recovery displays pg_controldata success info
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And user stops all mirror processes
+        When user can start transactions
+        And the user runs "gprecoverseg -F -a"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "Successfully finished pg_controldata.* for dbid.*" to stdout
+        And the segments are synchronized
+        And check segment conf: postgresql.conf
+
+    Scenario: gprecoverseg incremental recovery displays pg_controldata success info
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And user stops all mirror processes
+        When user can start transactions
+        And the user runs "gprecoverseg -a"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "Successfully finished pg_controldata.* for dbid.*" to stdout
+        And the segments are synchronized
+        And check segment conf: postgresql.conf
+
     Scenario: gprecoverseg mixed recovery displays pg_basebackup and rewind progress to the user
       Given the database is running
       And all the segments are running
@@ -251,6 +275,48 @@ Feature: gprecoverseg tests
         And gprecoverseg should print "skipping pg_rewind on mirror as standby.signal is present" to stdout
         Then gprecoverseg should return a return code of 0
         And gpAdminLogs directory has no "pg_rewind*" files
+        And all the segments are running
+        And the segments are synchronized
+        And the cluster is rebalanced
+
+    Scenario: gprecoverseg should drop existing slot on full recovery
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And verify replication slot internal_wal_replication_slot is available on all the segments
+        And user stops all mirror processes
+        And user can start transactions
+        And the user waits until mirror on content 0,1,2 is down
+        When the user runs "gprecoverseg -a -F -v"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "Checking if slot internal_wal_replication_slot exists" to stdout
+        And gprecoverseg should print "Successfully dropped replication slot internal_wal_replication_slot" to stdout
+        And gprecoverseg should print "pg_basebackup: base backup completed" to stdout
+        And gprecoverseg should print "Segments successfully recovered" to stdout
+        And the user waits until mirror on content 0,1,2 is up
+        And verify replication slot internal_wal_replication_slot is available on all the segments
+        And all the segments are running
+        And the segments are synchronized
+        And the cluster is rebalanced
+
+    Scenario: gprecoverseg should not try to drop slot if slot does not exist
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And verify replication slot internal_wal_replication_slot is available on all the segments
+        And the mirror on content 0 is stopped
+        And user can start transactions
+        And the status of the mirror on content 0 should be "d"
+        And the user runs sql "select pg_drop_replication_slot('internal_wal_replication_slot');" in "postgres" on first primary segment
+        When the user runs "gprecoverseg -a -F -v"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "Checking if slot internal_wal_replication_slot exists" to stdout
+        And gprecoverseg should print "Slot internal_wal_replication_slot does not exist" to stdout
+        And gprecoverseg should not print "Successfully dropped replication slot internal_wal_replication_slot" to stdout
+        And gprecoverseg should print "pg_basebackup: base backup completed" to stdout
+        And gprecoverseg should print "Segments successfully recovered" to stdout
+        And the user waits until mirror on content 0 is up
+        And verify replication slot internal_wal_replication_slot is available on all the segments
         And all the segments are running
         And the segments are synchronized
         And the cluster is rebalanced
@@ -402,6 +468,7 @@ Feature: gprecoverseg tests
     And sql "DROP TABLE IF EXISTS test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,100000000) AS a;" is executed in "postgres" db
     When the user asynchronously runs "gprecoverseg -a" and the process is saved
     Then the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And an FTS probe is triggered
     And the user waits until saved async process is completed
     And recovery_progress.file should not exist in gpAdminLogs
     And the user waits until mirror on content 0,1,2 is up
@@ -420,7 +487,9 @@ Feature: gprecoverseg tests
     And all files in gpAdminLogs directory are deleted on all hosts in the cluster
     Then the gprecoverseg lock directory is removed
 
+    And the cluster is rebalanced
     And user immediately stops all primary processes for content 0,1,2
+    And the user waits until mirror on content 0,1,2 is down
     And user can start transactions
     When the user asynchronously runs "gprecoverseg -aF" and the process is saved
     And the user suspend the walsender on the primary on content 0
@@ -430,6 +499,7 @@ Feature: gprecoverseg tests
     And the user reset the walsender on the primary on content 0
     And the user waits until saved async process is completed
     And recovery_progress.file should not exist in gpAdminLogs
+    And an FTS probe is triggered
     And the user waits until mirror on content 0,1,2 is up
     And user can start transactions
 
@@ -526,6 +596,7 @@ Feature: gprecoverseg tests
     Then recovery_progress.file should not exist in gpAdminLogs
     Then the user reset the walsender on the primary on content 0
     Then the gprecoverseg lock directory is removed
+    And an FTS probe is triggered
     And the user waits until mirror on content 0,1,2 is up
     And verify that lines from recovery_progress.file are present in segment progress files in gpAdminLogs
     And the cluster is rebalanced
@@ -574,6 +645,8 @@ Feature: gprecoverseg tests
     And edit the input file to recover mirror with content 2 incremental
     When the user asynchronously runs gprecoverseg with input file and additional args "-a" and the process is saved
     Then the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And user waits until gp_stat_replication table has no pg_basebackup entries for content 1
+    And an FTS probe is triggered
     And the user waits until mirror on content 1,2 is up
     And verify that mirror on content 0 is down
     And user can start transactions
@@ -621,10 +694,10 @@ Feature: gprecoverseg tests
     And user immediately stops all primary processes for content 0,1,2
     And user can start transactions
     And the user suspend the walsender on the primary on content 0
-    And sql "DROP TABLE if exists test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,100000000) AS i" is executed in "postgres" db
-    And the "test_recoverseg" table row count in "postgres" is saved
     And the user asynchronously runs "gprecoverseg -aF" and the process is saved
-    And the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And the user just waits until recovery_progress.file is created in gpAdminLogs
+    And user waits until gp_stat_replication table has no pg_basebackup entries for content 1,2
+    And an FTS probe is triggered
     And the user waits until mirror on content 1,2 is up
     And verify that mirror on content 0 is down
     And the gprecoverseg lock directory is removed
@@ -644,7 +717,6 @@ Feature: gprecoverseg tests
     Then gprecoverseg should print "No basebackup running" to stdout
     And gprecoverseg should return a return code of 0
     And the cluster is rebalanced
-    And the row count from table "test_recoverseg" in "postgres" is verified against the saved data
 
   @demo_cluster
   @concourse_cluster
@@ -657,10 +729,10 @@ Feature: gprecoverseg tests
     And user can start transactions
     And the user suspend the walsender on the primary on content 0
     And the user suspend the walsender on the primary on content 1
-    And sql "DROP TABLE if exists test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,100000000) AS i" is executed in "postgres" db
-    And the "test_recoverseg" table row count in "postgres" is saved
     And the user asynchronously runs "gprecoverseg -aF" and the process is saved
-    And the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And the user just waits until recovery_progress.file is created in gpAdminLogs
+    And user waits until gp_stat_replication table has no pg_basebackup entries for content 2
+    And an FTS probe is triggered
     And the user waits until mirror on content 2 is up
     And verify that mirror on content 0,1 is down
     And the gprecoverseg lock directory is removed
@@ -681,7 +753,6 @@ Feature: gprecoverseg tests
     Then gprecoverseg should print "No basebackup running" to stdout
     And gprecoverseg should return a return code of 0
     And the cluster is rebalanced
-    And the row count from table "test_recoverseg" in "postgres" is verified against the saved data
 
   @demo_cluster
   @concourse_cluster
@@ -695,10 +766,8 @@ Feature: gprecoverseg tests
     And the user suspend the walsender on the primary on content 0
     And the user suspend the walsender on the primary on content 1
     And the user suspend the walsender on the primary on content 2
-    And sql "DROP TABLE if exists test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,100000000) AS i" is executed in "postgres" db
-    And the "test_recoverseg" table row count in "postgres" is saved
     And the user asynchronously runs "gprecoverseg -aF" and the process is saved
-    And the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And the user just waits until recovery_progress.file is created in gpAdminLogs
     And verify that mirror on content 0,1,2 is down
     And the gprecoverseg lock directory is removed
     When the user runs "gprecoverseg -aF"
@@ -718,7 +787,6 @@ Feature: gprecoverseg tests
     And gprecoverseg should return a return code of 0
     And verify that mirror on content 0,1,2 is up
     And the cluster is rebalanced
-    And the row count from table "test_recoverseg" in "postgres" is verified against the saved data
 
   @demo_cluster
   @concourse_cluster
@@ -732,15 +800,13 @@ Feature: gprecoverseg tests
     And the user suspend the walsender on the primary on content 0
     And the user suspend the walsender on the primary on content 1
     And the user suspend the walsender on the primary on content 2
-    And sql "DROP TABLE if exists test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,100000000) AS i" is executed in "postgres" db
-    And the "test_recoverseg" table row count in "postgres" is saved
     And a gprecoverseg directory under '/tmp' with mode '0700' is created
     And a gprecoverseg input file is created
     And edit the input file to recover mirror with content 0 full inplace
     And edit the input file to recover mirror with content 1 full inplace
     And edit the input file to recover mirror with content 2 full inplace
     When the user asynchronously runs gprecoverseg with input file and additional args "-a" and the process is saved
-    Then the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    Then the user just waits until recovery_progress.file is created in gpAdminLogs
     And verify that mirror on content 0,1,2 is down
     And the gprecoverseg lock directory is removed
     When the user runs gprecoverseg with input file and additional args "-a"
@@ -759,7 +825,6 @@ Feature: gprecoverseg tests
     Then gprecoverseg should print "No basebackup running" to stdout
     And gprecoverseg should return a return code of 0
     Then the cluster is rebalanced
-    And the row count from table "test_recoverseg" in "postgres" is verified against the saved data
 
   @demo_cluster
   @concourse_cluster
@@ -1037,7 +1102,7 @@ Feature: gprecoverseg tests
        When user kills a "mirror" process with the saved information
         And user can start transactions
        Then the saved "mirror" segment is marked down in config
-       When the user runs "gprecoverseg -a -p mdw"
+       When the user runs "gprecoverseg -a -p cdw"
        Then gprecoverseg should return a return code of 0
        When user kills a "primary" process with the saved information
         And user can start transactions
@@ -1084,7 +1149,7 @@ Feature: gprecoverseg tests
       And all the segments are running
       And the segments are synchronized
       And the information of contents 0,1,2 is saved
-      And all files in gpAdminLogs directory are deleted on hosts mdw,sdw1,sdw2
+      And all files in gpAdminLogs directory are deleted on hosts cdw,sdw1,sdw2
       And the "primary" segment information is saved
 
       And the primary on content 0 is stopped
@@ -1186,7 +1251,7 @@ Feature: gprecoverseg tests
     And the gp_configuration_history table should contain a backout entry for the primary segment for contents 0,1
 
     And the mode of all the created data directories is changed to 0700
-    When the user runs "gprecoverseg -a"
+    When the user runs "gprecoverseg -aF"
     Then gprecoverseg should return a return code of 0
     And user can start transactions
     And all the segments are running

@@ -125,8 +125,9 @@ sub GetOpenSSLVersion
 
 	# Attempt to get OpenSSL version and location.  This assumes that
 	# openssl.exe is in the specified directory.
+	# Quote the .exe name in case it has spaces
 	my $opensslcmd =
-	  $self->{options}->{openssl} . "\\bin\\openssl.exe version 2>&1";
+	  qq("$self->{options}->{openssl}\\bin\\openssl.exe" version 2>&1);
 	my $sslout = `$opensslcmd`;
 
 	$? >> 8 == 0
@@ -261,7 +262,8 @@ sub GenerateFiles
 			my ($digit1, $digit2, $digit3) = $self->GetOpenSSLVersion();
 
 			# More symbols are needed with OpenSSL 1.1.0 and above.
-			if ($digit1 >= '1' && $digit2 >= '1' && $digit3 >= '0')
+			if (   ($digit1 >= '3' && $digit2 >= '0' && $digit3 >= '0')
+				|| ($digit1 >= '1' && $digit2 >= '1' && $digit3 >= '0'))
 			{
 				print $o "#define HAVE_ASN1_STRING_GET0_DATA 1\n";
 				print $o "#define HAVE_BIO_GET_DATA 1\n";
@@ -669,7 +671,8 @@ sub AddProject
 		# changed their library names from:
 		# - libeay to libcrypto
 		# - ssleay to libssl
-		if ($digit1 >= '1' && $digit2 >= '1' && $digit3 >= '0')
+		if (   ($digit1 >= '3' && $digit2 >= '0' && $digit3 >= '0')
+			|| ($digit1 >= '1' && $digit2 >= '1' && $digit3 >= '0'))
 		{
 			my $dbgsuffix;
 			my $libsslpath;
@@ -736,19 +739,27 @@ sub AddProject
 	}
 	if ($self->{options}->{gss})
 	{
+		$proj->AddIncludeDir($self->{options}->{gss} . '\include');
+		$proj->AddIncludeDir($self->{options}->{gss} . '\include\krb5');
 		if ($self->{platform} eq 'Win32')
 		{
-			$proj->AddIncludeDir($self->{options}->{gss} . '\inc\krb5');
-			$proj->AddLibrary($self->{options}->{gss} . '\lib\i386\krb5_32.lib');
-			$proj->AddLibrary($self->{options}->{gss} . '\lib\i386\comerr32.lib');
-			$proj->AddLibrary($self->{options}->{gss} . '\lib\i386\gssapi32.lib');
+			$proj->AddLibrary(
+				$self->{options}->{gss} . '\lib\i386\krb5_32.lib');
+			$proj->AddLibrary(
+				$self->{options}->{gss} . '\lib\i386\comerr32.lib');
+			$proj->AddLibrary(
+				$self->{options}->{gss} . '\lib\i386\gssapi32.lib');
 		}
 		else
 		{
-			$proj->AddIncludeDir($self->{options}->{gss} . '\include');
-			$proj->AddLibrary($self->{options}->{gss} . '\lib\krb5_64.lib');
-			$proj->AddLibrary($self->{options}->{gss} . '\lib\comerr64.lib');
-			$proj->AddLibrary($self->{options}->{gss} . '\lib\gssapi64.lib');
+			# The latest upstream Kerberos on Windows is installed
+			# under \lib\amd64, but our buildbot hasn't updated yet.
+			$proj->AddLibrary(
+				$self->{options}->{gss} . '\lib\krb5_64.lib');
+			$proj->AddLibrary(
+				$self->{options}->{gss} . '\lib\comerr64.lib');
+			$proj->AddLibrary(
+				$self->{options}->{gss} . '\lib\gssapi64.lib');
 		}
 	}
 	if ($self->{options}->{iconv})
@@ -899,6 +910,8 @@ sub GetFakeConfigure
 	$cfg .= ' --with-tcl'           if ($self->{options}->{tcl});
 	$cfg .= ' --with-perl'          if ($self->{options}->{perl});
 	$cfg .= ' --with-python'        if ($self->{options}->{python});
+	my $port = $self->{options}->{'--with-pgport'};
+	$cfg .= " --with-pgport=$port" if defined($port);
 
 	return $cfg;
 }
@@ -982,6 +995,62 @@ sub new
 	$self->{vcver}                      = '15.00';
 	$self->{visualStudioName}           = 'Visual Studio 2017';
 	$self->{VisualStudioVersion}        = '15.0.26730.3';
+	$self->{MinimumVisualStudioVersion} = '10.0.40219.1';
+
+	return $self;
+}
+
+package VS2019Solution;
+
+#
+# Package that encapsulates a Visual Studio 2019 solution file
+#
+
+use Carp;
+use strict;
+use warnings;
+use base qw(Solution);
+
+no warnings qw(redefine);    ## no critic
+
+sub new
+{
+	my $classname = shift;
+	my $self      = $classname->SUPER::_new(@_);
+	bless($self, $classname);
+
+	$self->{solutionFileVersion}        = '12.00';
+	$self->{vcver}                      = '16.00';
+	$self->{visualStudioName}           = 'Visual Studio 2019';
+	$self->{VisualStudioVersion}        = '16.0.28729.10';
+	$self->{MinimumVisualStudioVersion} = '10.0.40219.1';
+
+	return $self;
+}
+
+package VS2022Solution;
+
+#
+# Package that encapsulates a Visual Studio 2022 solution file
+#
+
+use Carp;
+use strict;
+use warnings;
+use base qw(Solution);
+
+no warnings qw(redefine);    ## no critic
+
+sub new
+{
+	my $classname = shift;
+	my $self      = $classname->SUPER::_new(@_);
+	bless($self, $classname);
+
+	$self->{solutionFileVersion}        = '12.00';
+	$self->{vcver}                      = '17.00';
+	$self->{visualStudioName}           = 'Visual Studio 2022';
+	$self->{VisualStudioVersion}        = '17.0.31903.59';
 	$self->{MinimumVisualStudioVersion} = '10.0.40219.1';
 
 	return $self;

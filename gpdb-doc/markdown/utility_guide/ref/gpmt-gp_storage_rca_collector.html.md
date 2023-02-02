@@ -43,11 +43,11 @@ The tool also collects the following information:
 
 - AO data for a given appendonly table
 
-**NOTE**: some commands might not be able to be run if the user does not have correct permissions.
+> **Note** some commands might not be able to be run if the user does not have correct permissions.
 
 ## <a id="exs"></a>Examples 
 
-Collect storage root cause analysis artifacts only for master, database `postgres`, and table `test_table`:
+Collect storage root cause analysis artifacts only for coordinator, database `postgres`, and table `test_table`:
 
 ```
 gpmt storage_rca_collector -db postgres -t test_table
@@ -77,4 +77,4 @@ Collect storage rca artifacts for primary segment with contentid [0,1], database
 gpmt storage_rca_collector -db postgres -c 0,1 -t test_table -dir <dir>
 ```
 
-**Note:** Output files follow the naming convention \<database name>\_\<dbid>\_\<artifact name>.
+> **Note** Output files follow the naming convention \<database name>\_\<dbid>\_\<artifact name>.

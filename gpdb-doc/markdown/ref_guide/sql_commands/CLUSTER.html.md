@@ -49,7 +49,7 @@ Because the query optimizer records statistics about the ordering of tables, it 
 
 Because `CLUSTER` remembers which indexes are clustered, you can cluster the tables you want clustered manually the first time, then set up a periodic maintenance script that runs `CLUSTER` without any parameters, so that the desired tables are periodically reclustered.
 
-**Note:** `CLUSTER` on non-B-tree indexes is not supported with append-optimized tables.
+> **Note** `CLUSTER` on non-B-tree indexes is not supported with append-optimized tables.
 
 ## <a id="section6"></a>Examples 
 

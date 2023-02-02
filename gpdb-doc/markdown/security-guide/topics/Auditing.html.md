@@ -4,13 +4,13 @@ Describes Greenplum Database events that are logged and should be monitored to d
 
 Greenplum Database is capable of auditing a variety of events, including startup and shutdown of the system, segment database failures, SQL statements that result in an error, and all connection attempts and disconnections. Greenplum Database also logs SQL statements and information regarding SQL statements, and can be configured in a variety of ways to record audit information with more or less detail. The `log_error_verbosity` configuration parameter controls the amount of detail written in the server log for each message that is logged.  Similarly, the `log_min_error_statement` parameter allows administrators to configure the level of detail recorded specifically for SQL statements, and the `log_statement` parameter determines the kind of SQL statements that are audited. Greenplum Database records the username for all auditable events, when the event is initiated by a subject outside the Greenplum Database.
 
-Greenplum Database prevents unauthorized modification and deletion of audit records by only allowing administrators with an appropriate role to perform any operations on log files.  Logs are stored in a proprietary format using comma-separated values \(CSV\).  Each segment and the master stores its own log files, although these can be accessed remotely by an administrator.  Greenplum Database also authorizes overwriting of old log files via the `log_truncate_on_rotation` parameter.  This is a local parameter and must be set on each segment and master configuration file.
+Greenplum Database prevents unauthorized modification and deletion of audit records by only allowing administrators with an appropriate role to perform any operations on log files.  Logs are stored in a proprietary format using comma-separated values \(CSV\).  Each segment and the coordinator stores its own log files, although these can be accessed remotely by an administrator.  Greenplum Database also authorizes overwriting of old log files via the `log_truncate_on_rotation` parameter.  This is a local parameter and must be set on each segment and coordinator configuration file.
 
 Greenplum provides an administrative schema called `gp_toolkit` that you can use to query log files, as well as system catalogs and operating environment for system status information. For more information, including usage, refer to *The gp\_tookit Administrative Schema* appendix in the *Greenplum Database Reference Guide*.
 
 ## <a id="viewing"></a>Viewing the Database Server Log Files 
 
-Every database instance in Greenplum Database \(master and segments\) is a running PostgreSQL database server with its own server log file. Daily log files are created in the `log` directory of the master and each segment data directory.
+Every database instance in Greenplum Database \(coordinator and segments\) is a running PostgreSQL database server with its own server log file. Daily log files are created in the `log` directory of the coordinator and each segment data directory.
 
 The server log files are written in comma-separated values \(CSV\) format. Not all log entries will have values for all of the log fields. For example, only log entries associated with a query worker process will have the `slice_id` populated. Related log entries of a particular query can be identified by its session identifier \(`gp_session_id`\) and command identifier \(`gp_command_count`\).
 
@@ -21,13 +21,13 @@ The server log files are written in comma-separated values \(CSV\) format. Not a
 |3 |database\_name |varchar\(100\) |The database name |
 |4 |process\_id |varchar\(10\) |The system process id \(prefixed with "p"\) |
 |5 |thread\_id |varchar\(50\) |The thread count \(prefixed with "th"\) |
-|6 |remote\_host |varchar\(100\) |On the master, the hostname/address of the client machine. On the segment, the hostname/address of the master. |
-|7 |remote\_port |varchar\(10\) |The segment or master port number |
+|6 |remote\_host |varchar\(100\) |On the coordinator, the hostname/address of the client machine. On the segment, the hostname/address of the coordinator. |
+|7 |remote\_port |varchar\(10\) |The segment or coordinator port number |
 |8 |session\_start\_time |timestamp with time zone |Time session connection was opened |
-|9 |transaction\_id |int |Top-level transaction ID on the master. This ID is the parent of any subtransactions. |
+|9 |transaction\_id |int |Top-level transaction ID on the coordinator. This ID is the parent of any subtransactions. |
 |10 |gp\_session\_id |text |Session identifier number \(prefixed with "con"\) |
 |11 |gp\_command\_count |text |The command number within a session \(prefixed with "cmd"\) |
-|12 |gp\_segment |text |The segment content identifier \(prefixed with "seg" for primaries or "mir" for mirrors\). The master always has a content id of -1. |
+|12 |gp\_segment |text |The segment content identifier \(prefixed with "seg" for primaries or "mir" for mirrors\). The coordinator always has a content id of -1. |
 |13 |slice\_id |text |The slice id \(portion of the query plan being run\) |
 |14 |distr\_tranx\_id text |Distributed transaction ID | 
 |15 |local\_tranx\_id |text |Local transaction ID |
@@ -47,7 +47,7 @@ The server log files are written in comma-separated values \(CSV\) format. Not a
 |29 |file\_line |int |The line of the code file where the message originated |
 |30 |stack\_trace |text |Stack trace text associated with this message |
 
-Greenplum provides a utility called `gplogfilter` that can be used to search through a Greenplum Database log file for entries matching the specified criteria. By default, this utility searches through the Greenplum master log file in the default logging location. For example, to display the last three lines of the master log file:
+Greenplum provides a utility called `gplogfilter` that can be used to search through a Greenplum Database log file for entries matching the specified criteria. By default, this utility searches through the Greenplum coordinator log file in the default logging location. For example, to display the last three lines of the coordinator log file:
 
 ```
 $ gplogfilter -n 3

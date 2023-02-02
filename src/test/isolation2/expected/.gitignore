@@ -1,12 +1,11 @@
 # ignores only for this directory
-/ao_upgrade.out
-/ao_upgrade_optimizer.out
 /external_table.out
 /fts_manual_probe.out
 /gp_collation.out
 /pg_basebackup.out
 /pg_basebackup_with_tablespaces.out
 /pt_io_in_progress_deadlock.out
+/distributed_snapshot.out
 
 # ignores including sub-directories
 autovacuum-analyze.out

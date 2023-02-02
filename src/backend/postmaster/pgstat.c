@@ -2704,6 +2704,11 @@ BackendStatusShmemSize(void)
 	size = add_size(size,
 					mul_size(sizeof(PgBackendSSLStatus), NumBackendStatSlots));
 #endif
+#ifdef ENABLE_GSS
+	/* BackendGssStatusBuffer: */
+	size = add_size(size,
+					mul_size(sizeof(PgBackendGSSStatus), NumBackendStatSlots));
+#endif
 	return size;
 }
 
@@ -3037,12 +3042,13 @@ pgstat_bestart(void)
 #ifdef ENABLE_GSS
 	if (MyProcPort && MyProcPort->gss != NULL)
 	{
+		const char *princ = be_gssapi_get_princ(MyProcPort);
+
 		lbeentry.st_gss = true;
 		lgssstatus.gss_auth = be_gssapi_get_auth(MyProcPort);
 		lgssstatus.gss_enc = be_gssapi_get_enc(MyProcPort);
-
-		if (lgssstatus.gss_auth)
-			strlcpy(lgssstatus.gss_princ, be_gssapi_get_princ(MyProcPort), NAMEDATALEN);
+		if (princ)
+			strlcpy(lgssstatus.gss_princ, princ, NAMEDATALEN);
 	}
 	else
 	{
@@ -3316,10 +3322,10 @@ pgstat_progress_end_command(void)
 {
 	volatile PgBackendStatus *beentry = MyBEEntry;
 
-	if (!beentry)
+	if (!beentry || !pgstat_track_activities)
 		return;
-	if (!pgstat_track_activities
-		&& beentry->st_progress_command == PROGRESS_COMMAND_INVALID)
+
+	if (beentry->st_progress_command == PROGRESS_COMMAND_INVALID)
 		return;
 
 	PGSTAT_BEGIN_WRITE_ACTIVITY(beentry);
@@ -3827,6 +3833,9 @@ pgstat_get_wait_client(WaitEventClient w)
 		case WAIT_EVENT_CLIENT_WRITE:
 			event_name = "ClientWrite";
 			break;
+		case WAIT_EVENT_GSS_OPEN_SERVER:
+			event_name = "GSSOpenServer";
+			break;
 		case WAIT_EVENT_LIBPQWALRECEIVER_CONNECT:
 			event_name = "LibPQWalReceiverConnect";
 			break;
@@ -3844,9 +3853,6 @@ pgstat_get_wait_client(WaitEventClient w)
 			break;
 		case WAIT_EVENT_WAL_SENDER_WRITE_DATA:
 			event_name = "WalSenderWriteData";
-			break;
-		case WAIT_EVENT_GSS_OPEN_SERVER:
-			event_name = "GSSOpenServer";
 			break;
 			/* no default case, so that compiler will warn */
 	}
@@ -4024,6 +4030,9 @@ pgstat_get_wait_timeout(WaitEventTimeout w)
 			break;
 		case WAIT_EVENT_RECOVERY_APPLY_DELAY:
 			event_name = "RecoveryApplyDelay";
+			break;
+		case WAIT_EVENT_REGISTER_SYNC_REQUEST:
+			event_name = "RegisterSyncRequest";
 			break;
 			/* no default case, so that compiler will warn */
 	}

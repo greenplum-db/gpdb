@@ -4,7 +4,7 @@ title: About Management and Monitoring Utilities
 
 Greenplum Database provides standard command-line utilities for performing common monitoring and administration tasks.
 
-Greenplum command-line utilities are located in the $GPHOME/bin directory and are run on the master host. Greenplum provides utilities for the following administration tasks:
+Greenplum command-line utilities are located in the $GPHOME/bin directory and are run on the coordinator host. Greenplum provides utilities for the following administration tasks:
 
 -   Installing Greenplum Database on an array
 -   Initializing a Greenplum Database System
@@ -12,7 +12,7 @@ Greenplum command-line utilities are located in the $GPHOME/bin directory and ar
 -   Adding or removing a host
 -   Expanding the array and redistributing tables among new segments
 -   Managing recovery for failed segment instances
--   Managing failover and recovery for a failed master instance
+-   Managing failover and recovery for a failed coordinator instance
 -   Backing up and restoring a database \(in parallel\)
 -   Loading data in parallel
 -   Transferring data between Greenplum databases

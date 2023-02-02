@@ -22,6 +22,7 @@
 
 #include "access/bitmap.h"
 #include "access/reloptions.h"
+#include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbvars.h"
@@ -53,6 +54,15 @@ static relopt_bool boolRelOpts_gp[] =
 			AccessExclusiveLock
 		},
 		AO_DEFAULT_CHECKSUM
+	},
+	{
+		{
+			SOPT_ANALYZEHLL,
+			"Enable HLL stats collection during analyze",
+			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST | RELOPT_KIND_APPENDOPTIMIZED,
+			ShareUpdateExclusiveLock
+		},
+		ANALYZE_DEFAULT_HLL
 	},
 	/* list terminator */
 	{{NULL}}
@@ -513,12 +523,14 @@ parseAOStorageOpts(const char *opts_str)
  * appendonly storage option in opts.  This datum is used to populate
  * pg_class.reloptions during relation creation.
  *
- * To avoid catalog bloat, we only create "name=value" item for those
- * values in opts that are not specified in WITH clause and are
- * different from their initial defaults.
+ * If hasStorage is true, record all attributes to pg_class.reloptions
+ * even if not specified in withOpts since they are necessary to perform
+ * table scans. In cases where hasStorage is false and the reloption has
+ * been modified from server defaults, the parameter is recorded in
+ * pg_class.reloptions and used for inheritence purposes only.
  */
 Datum
-transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
+transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts, bool hasStorage)
 {
 	char	   *strval;
 	Datum	   *withDatums = NULL;
@@ -533,7 +545,8 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 	bool		foundBlksz = false,
 				foundComptype = false,
 				foundComplevel = false,
-				foundChecksum = false;
+				foundChecksum = false,
+				foundAnalyzeHLL = false;
 
 	/*
 	 * withOpts must be parsed to see if an option was spcified in WITH()
@@ -616,55 +629,63 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 				astate = accumArrayResult(astate, d, false, TEXTOID,
 										  CurrentMemoryContext);
 			}
+			soptLen = strlen(SOPT_ANALYZEHLL);
+			if (withLen > soptLen &&
+				pg_strncasecmp(strval, SOPT_ANALYZEHLL, soptLen) == 0)
+			{
+				foundAnalyzeHLL = true;
+				d = CStringGetTextDatum(psprintf("%s=%s",
+												 SOPT_ANALYZEHLL,
+												 (opts->analyze_hll_non_part_table ? "true" : "false")));
+				astate = accumArrayResult(astate, d, false, TEXTOID,
+										  CurrentMemoryContext);
+			}
 		}
 	}
 
-	if ((opts->blocksize != AO_DEFAULT_BLOCKSIZE) && !foundBlksz)
+
+	/* Record AO storage parameters {blocksize,checksum,compresslevel,compresstype}
+	 * in pg_class.reloptions even if not provided in WITH clause IFF hasStorage=true
+	 * OR the paremeter has been modified from the server default value.
+	 */
+
+	if (!foundBlksz && (opts->blocksize != AO_DEFAULT_BLOCKSIZE || hasStorage))
 	{
 		d = CStringGetTextDatum(psprintf("%s=%d",
-										 SOPT_BLOCKSIZE,
-										 opts->blocksize));
+										SOPT_BLOCKSIZE,
+										opts->blocksize));
 		astate = accumArrayResult(astate, d, false, TEXTOID,
-								  CurrentMemoryContext);
+									CurrentMemoryContext);
 	}
-
-	/*
-	 * Record compression options only if compression is enabled.  No need to
-	 * check compresstype here as by the time we get here, "opts" should have
-	 * been set by default_reloptions() correctly.
-	 */
-	if (opts->compresslevel > AO_DEFAULT_COMPRESSLEVEL &&
-		opts->compresstype[0])
+	if (!foundComplevel && (opts->compresslevel != AO_DEFAULT_COMPRESSLEVEL || hasStorage))
 	{
-		if (!foundComptype && (
-							   (pg_strcasecmp(opts->compresstype, AO_DEFAULT_COMPRESSTYPE) == 0
-								&& opts->compresslevel == 1 && !foundComplevel) ||
-							   pg_strcasecmp(opts->compresstype,
-											 AO_DEFAULT_COMPRESSTYPE) != 0))
-		{
-			d = CStringGetTextDatum(psprintf("%s=%s",
-											 SOPT_COMPTYPE,
-											 opts->compresstype));
-			astate = accumArrayResult(astate, d, false, TEXTOID,
-									  CurrentMemoryContext);
-		}
-		/* When compression is enabled, default compresslevel is 1. */
-		if ((opts->compresslevel != 1) &&
-			!foundComplevel)
-		{
 			d = CStringGetTextDatum(psprintf("%s=%d",
-											 SOPT_COMPLEVEL,
-											 opts->compresslevel));
+												SOPT_COMPLEVEL,
+												(opts->compresslevel ? opts->compresslevel : AO_DEFAULT_COMPRESSLEVEL)));
 			astate = accumArrayResult(astate, d, false, TEXTOID,
-									  CurrentMemoryContext);
-		}
+										CurrentMemoryContext);
 	}
-
-	if ((opts->checksum != AO_DEFAULT_CHECKSUM) && !foundChecksum)
+	if (!foundComptype && ((opts->compresstype[0] && pg_strcasecmp(opts->compresstype, "none") != 0) || hasStorage))
 	{
 		d = CStringGetTextDatum(psprintf("%s=%s",
-										 SOPT_CHECKSUM,
-										 (opts->checksum ? "true" : "false")));
+							SOPT_COMPTYPE,
+							(opts->compresstype[0] ? opts->compresstype : "none")));
+		astate = accumArrayResult(astate, d, false, TEXTOID,
+									CurrentMemoryContext);
+	}
+	if (!foundChecksum && (!opts->checksum || hasStorage))
+	{
+	d = CStringGetTextDatum(psprintf("%s=%s",
+									SOPT_CHECKSUM,
+									(opts->checksum ? "true" : "false")));
+	astate = accumArrayResult(astate, d, false, TEXTOID,
+								CurrentMemoryContext);
+	}
+	if ((opts->analyze_hll_non_part_table != ANALYZE_DEFAULT_HLL) && !foundAnalyzeHLL)
+	{
+		d = CStringGetTextDatum(psprintf("%s=%s",
+										 SOPT_ANALYZEHLL,
+										 (opts->analyze_hll_non_part_table ? "true" : "false")));
 		astate = accumArrayResult(astate, d, false, TEXTOID,
 								  CurrentMemoryContext);
 	}
@@ -710,7 +731,13 @@ reloption_is_default(const char *optstr, int optlen)
 										 SOPT_CHECKSUM,
 										 AO_DEFAULT_CHECKSUM ? "true" : "false");
 	}
-
+	else if (optlen > strlen(SOPT_ANALYZEHLL) &&
+		pg_strncasecmp(optstr, SOPT_ANALYZEHLL, strlen("analyze_hll_non_part_table")) == 0)
+	{
+		defaultopt = psprintf("%s=%s",
+							  SOPT_ANALYZEHLL,
+										 ANALYZE_DEFAULT_HLL ? "true" : "false");
+	}
 	if (defaultopt != NULL)
 		res = strlen(defaultopt) == optlen && 
 				pg_strncasecmp(optstr, defaultopt, optlen) == 0;
@@ -1028,7 +1055,6 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
  */
 void
 validateAppendOnlyRelOptions(int blocksize,
-							 int safewrite,
 							 int complevel,
 							 char *comptype,
 							 bool checksum,
@@ -1116,18 +1142,6 @@ validateAppendOnlyRelOptions(int blocksize,
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("block size must be between 8KB and 2MB and be an 8KB multiple, got %d", blocksize)));
-
-	if (safewrite > MAX_APPENDONLY_BLOCK_SIZE || safewrite % 8 != 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("safefswrite size must be less than 8MB and be a multiple of 8")));
-
-	if (gp_safefswritesize > blocksize)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("block size (%d) is smaller gp_safefswritesize (%d)",
-						blocksize, gp_safefswritesize),
-				 errhint("Increase blocksize or decrease gp_safefswritesize if it is safe to do so on this file system.")));
 }
 
 /*
@@ -1342,7 +1356,6 @@ default_column_encoding_clause(Relation rel)
 	{
 		GetAppendOnlyEntryAttributes(RelationGetRelid(rel),
 									 &blocksize,
-									 NULL,
 									 &compresslevel,
 									 NULL,
 									 &compresstype_nd);
@@ -1519,7 +1532,6 @@ validateColumnStorageEncodingClauses(List *aocoColumnEncoding,
 																	RELOPT_KIND_APPENDOPTIMIZED);
 
 		validateAppendOnlyRelOptions(stdRdOptions->blocksize,
-									 gp_safefswritesize,
 									 stdRdOptions->compresslevel,
 									 stdRdOptions->compresstype,
 									 stdRdOptions->checksum,
@@ -1638,6 +1650,10 @@ find_crsd(const char *column, List *stenc)
  * 'colDefs' - list of ColumnDefs
  * 'stenc' - list of ColumnReferenceStorageDirectives
  * 'withOptions' - list of WITH options
+ * 'parentenc' - list of ColumnReferenceStorageDirectives explicitly defined for
+ * parent partition
+ * 'explicitOnly' - Only return explicitly defined column encoding values
+ *  to be used for child partitions
  *
  * ENCODING options can be attached to column definitions, like
  * "mycolumn integer ENCODING ..."; these go into ColumnDefs. They
@@ -1666,7 +1682,7 @@ find_crsd(const char *column, List *stenc)
  * This needs access to possible inherited columns, so it can only be done after
  * expanding them.
  */
-List* transformColumnEncoding(Relation rel, List *colDefs, List *stenc, List *withOptions, bool rootpartition, bool errorOnEncodingClause)
+List* transformColumnEncoding(Relation rel, List *colDefs, List *stenc, List *withOptions, List *parentenc, bool explicitOnly, bool errorOnEncodingClause)
 {
 	ColumnReferenceStorageDirective *deflt = NULL;
 	ListCell   *lc;
@@ -1741,7 +1757,8 @@ List* transformColumnEncoding(Relation rel, List *colDefs, List *stenc, List *wi
 		 * 1. An explicit encoding clause in the ColumnDef
 		 * 2. A column reference storage directive for this column
 		 * 3. A default column encoding in the statement
-		 * 4. A default for the type.
+		 * 4. Parent partition's column encoding values
+		 * 5. A default for the type.
 		 */
 		if (d->encoding)
 		{
@@ -1761,9 +1778,14 @@ List* transformColumnEncoding(Relation rel, List *colDefs, List *stenc, List *wi
 			{
 				if (deflt)
 					encoding = copyObject(deflt->encoding);
-				else if (!rootpartition)
+				else if (!explicitOnly)
 				{
-					if (d->typeName)
+					if (parentenc)
+					{
+						ColumnReferenceStorageDirective *parent_col_encoding = find_crsd(d->colname, parentenc);
+						encoding = transformStorageEncodingClause(parent_col_encoding->encoding, true);
+					}
+					else if (d->typeName)
 						encoding = get_type_encoding(d->typeName);
 					if (!encoding)
 						encoding = default_column_encoding_clause(rel);
@@ -1782,6 +1804,90 @@ List* transformColumnEncoding(Relation rel, List *colDefs, List *stenc, List *wi
 	}
 
 	return result;
+}
+
+/*
+ * Update the corresponding ColumnReferenceStorageDirective clause
+ * in a list of such clauses: current_encodings.
+ *
+ * return whether current_encodings was modified
+ * (either existing changed or new crsd added for new column)
+ */
+bool
+updateEncodingList(List *current_encodings, ColumnReferenceStorageDirective *new_crsd)
+{
+	ListCell *lc_current;
+	ColumnReferenceStorageDirective *crsd = NULL;
+	foreach(lc_current, current_encodings)
+	{
+		ColumnReferenceStorageDirective *current_crsd = (ColumnReferenceStorageDirective *) lfirst(lc_current);
+
+		if (current_crsd->deflt == false &&
+			strcmp(new_crsd->column, current_crsd->column) == 0)
+		{
+			crsd = current_crsd;
+			break;
+		}
+	}
+	if (crsd)
+	{
+		ListCell *lc1;
+		List *merged_encodings = NIL;
+		bool is_changed = false;
+
+		/*
+		 * Create a new list of encodings merging the existing and new values.
+		 *
+		 * Assuming crsd->encoding is complete list of all encoding attributes,
+		 * but new_crsd->encoding may or may not be complete list.
+		 */
+		foreach(lc1, crsd->encoding)
+		{
+			ListCell *lc2;
+			DefElem  *el1        = lfirst(lc1);
+			DefElem  *el2;
+			bool current_updated = false;
+			foreach (lc2, new_crsd->encoding)
+			{
+				el2 = lfirst(lc2);
+				if ((strcmp(el1->defname, el2->defname) == 0) &&
+					(strcmp(defGetString(el1), defGetString(el2)) != 0))
+				{
+					current_updated  = true;
+					is_changed       = true;
+					merged_encodings = lappend(merged_encodings, copyObject(el2));
+				}
+			}
+			if (!current_updated)
+				merged_encodings = lappend(merged_encodings, copyObject(el1));
+		}
+		/*
+		 * Validate the merged encodings to weed out duplicate parameters and/or
+		 * invalid parameter values.
+		 * We can have duplicate parameters if user enters for eg:
+		 * ALTER COLUMN a SET ENCODING (compresslevel=3, compresslevel=4);
+		 */
+		merged_encodings =
+			transformStorageEncodingClause(merged_encodings, true);
+
+		/*
+		 * Update current_encodings in place with the merged and validated merged_encodings
+		 */
+		list_free_deep(crsd->encoding);
+		crsd->encoding = merged_encodings;
+		return is_changed;
+	}
+	else
+	{
+		/*
+		 * new_crsd->column not found in current_encodings
+		 * Must be coming from a newly added column
+		 */
+
+		new_crsd->encoding = transformStorageEncodingClause(new_crsd->encoding, true);
+		lappend(current_encodings, new_crsd);
+		return true;
+	}
 }
 
 /*
@@ -1814,7 +1920,6 @@ build_ao_rel_storage_opts(List *opts, Relation rel)
 
 	GetAppendOnlyEntryAttributes(RelationGetRelid(rel),
 								 &blocksize,
-								 NULL,
 								 &compresslevel,
 								 &checksum,
 								 &compresstype_nd);

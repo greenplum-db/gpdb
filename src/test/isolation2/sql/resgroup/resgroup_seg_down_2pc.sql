@@ -12,7 +12,7 @@ alter system set gp_fts_probe_interval to 10;
 alter system set gp_fts_probe_retries to 0;
 select pg_reload_conf();
 
-1:create resource group rgroup_seg_down with (CPU_RATE_LIMIT=35, MEMORY_LIMIT=35, CONCURRENCY=10);
+1:create resource group rgroup_seg_down with (cpu_hard_quota_limit=35, CONCURRENCY=10);
 
 -- inject an error in function dtm_broadcast_commit_prepared, that is before QD broadcasts commit prepared command to QEs
 2:select gp_inject_fault_infinite('dtm_broadcast_commit_prepared', 'suspend', dbid) from gp_segment_configuration where role='p' and content=-1;

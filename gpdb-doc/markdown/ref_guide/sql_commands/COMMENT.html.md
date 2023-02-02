@@ -71,7 +71,7 @@ rule\_name
 trigger\_name
 :   The name of the object to be commented. Names of tables, aggregates, collations, conversions, domains, foreign tables, functions, indexes, operators, operator classes, operator families, sequences, text search objects, types, views, and materialized views can be schema-qualified. When commenting on a column, relation\_name must refer to a table, view, materialized view, composite type, or foreign table.
 
-    **Note:** Greenplum Database does not support triggers.
+    > **Note** Greenplum Database does not support triggers.
 
 source\_type
 :   The name of the source data type of the cast.
@@ -91,7 +91,7 @@ argtype
 large\_object\_oid
 :   The OID of the large object.
 
-:   **Note:** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/9.4/largeobjects.html) for streaming user data that is stored in large-object structures.
+:   > **Note** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/12/largeobjects.html) for streaming user data that is stored in large-object structures.
 
 left\_type
 right\_type

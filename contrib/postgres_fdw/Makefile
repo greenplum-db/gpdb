@@ -5,12 +5,12 @@ OBJS = postgres_fdw.o option.o deparse.o connection.o shippable.o $(WIN32RES)
 PGFILEDESC = "postgres_fdw - foreign data wrapper for PostgreSQL"
 
 PG_CPPFLAGS = -I$(libpq_srcdir)
-SHLIB_LINK_INTERNAL = -Wl,--exclude-libs=libpq.a -Wl,-Bstatic $(libpq) -Wl,-Bdynamic
+SHLIB_LINK_INTERNAL = $(libpq)
 
 EXTENSION = postgres_fdw
 DATA = postgres_fdw--1.0.sql
 
-REGRESS = postgres_fdw gp_postgres_fdw
+REGRESS = gp2pg_postgres_fdw
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config
@@ -23,3 +23,13 @@ top_builddir = ../..
 include $(top_builddir)/src/Makefile.global
 include $(top_srcdir)/contrib/contrib-global.mk
 endif
+
+# For postgres_fdw test
+export PG_PORT=5432
+installcheck: prep_postgres
+clean: clean_postgres
+prep_postgres:
+	./postgres_setup.bash
+clean_postgres:
+	./postgres_clean.bash
+.PHONY: prep_postgres clean_postgres

@@ -55,7 +55,7 @@ extern int aggregate_leaf_partition_histograms(Oid relationOid,
 											   MCVFreqPair **mcvpairArray,
 											   int rem_mcv,
 											   void **result);
-extern bool needs_sample(VacAttrStats **vacattrstats, int attr_cnt);
+extern bool needs_sample(Relation rel, VacAttrStats **vacattrstats, int attr_cnt);
 extern AttrNumber fetch_leaf_attnum(Oid leafRelid, const char* attname);
 extern HeapTuple fetch_leaf_att_stats(Oid leafRelid, AttrNumber leafAttNum);
 extern bool leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols, int elevel);

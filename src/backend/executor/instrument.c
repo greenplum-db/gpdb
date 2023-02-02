@@ -39,7 +39,6 @@ static bool shouldPickInstrInShmem(NodeTag tag);
 static Instrumentation *pickInstrFromShmem(const Plan *plan, int instrument_options);
 static void instrShmemRecycleCallback(ResourceReleasePhase phase, bool isCommit,
 						  bool isTopLevel, void *arg);
-static void gp_gettmid(int32* tmid);
 
 InstrumentationHeader *InstrumentGlobal = NULL;
 static int  scanNodeCounter = 0;
@@ -518,7 +517,8 @@ static int32 gp_gettmid_helper()
 /*
  * Wrapper for gp_gettmid_helper()
  */
-static void gp_gettmid(int32* tmid)
+void
+gp_gettmid(int32* tmid)
 {
 	int32 time = gp_gettmid_helper();
 	if (time == -1)

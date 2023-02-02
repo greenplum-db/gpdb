@@ -1616,6 +1616,14 @@ vac_update_datfrozenxid(void)
 	bool		dirty = false;
 
 	/*
+	 * Restrict this task to one backend per database.  This avoids race
+	 * conditions that would move datfrozenxid or datminmxid backward.  It
+	 * avoids calling vac_truncate_clog() with a datfrozenxid preceding a
+	 * datfrozenxid passed to an earlier vac_truncate_clog() call.
+	 */
+	LockDatabaseFrozenIds(ExclusiveLock);
+
+	/*
 	 * Initialize the "min" calculation with GetOldestXmin, which is a
 	 * reasonable approximation to the minimum relfrozenxid for not-yet-
 	 * committed pg_class entries for new tables; see AddNewRelationTuple().
@@ -1724,7 +1732,10 @@ vac_update_datfrozenxid(void)
 
 	/* chicken out if bogus data found */
 	if (bogus)
+	{
+		LockDatabaseFrozenIds(ExclusiveLock);
 		return;
+	}
 
 	Assert(TransactionIdIsNormal(newFrozenXid));
 	Assert(MultiXactIdIsValid(newMinMulti));
@@ -1793,6 +1804,14 @@ vac_update_datfrozenxid(void)
 	if (dirty || ForceTransactionIdLimitUpdate())
 		vac_truncate_clog(newFrozenXid, newMinMulti,
 						  lastSaneFrozenXid, lastSaneMinMulti);
+
+	// GPDB_12_12_MERGE_FIXME: @(interma) upstream lock it in the **whole** tranaction (released by ResourceOwnerRelease())
+	// https://github.com/greenplum-db/gpdb-postgres-merge/commit/30e68a2abb3890c3292ff0b2422a7ea04d62acdd#
+	// 
+	// But in GP, it will cause deadlock in QEs, details: GPSERVER-370
+	// So I tried to release it at the end of this function.
+	// But it may be risks, need to understand upstream commit deeper.
+	UnLockDatabaseFrozenIds(ExclusiveLock);
 }
 
 
@@ -1827,6 +1846,9 @@ vac_truncate_clog(TransactionId frozenXID,
 	Oid			minmulti_datoid;
 	bool		bogus = false;
 	bool		frozenAlreadyWrapped = false;
+
+	/* Restrict task to one backend per cluster; see SimpleLruTruncate(). */
+	LWLockAcquire(WrapLimitsVacuumLock, LW_EXCLUSIVE);
 
 	/* init oldest datoids to sync with my frozenXID/minMulti values */
 	oldestxid_datoid = MyDatabaseId;
@@ -1937,6 +1959,8 @@ vac_truncate_clog(TransactionId frozenXID,
 	 */
 	SetTransactionIdLimit(frozenXID, oldestxid_datoid);
 	SetMultiXactIdLimit(minMulti, minmulti_datoid, false);
+
+	LWLockRelease(WrapLimitsVacuumLock);
 }
 
 

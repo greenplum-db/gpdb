@@ -145,12 +145,7 @@ RedZoneHandler_IsVmemRedZone()
 		return false;
 
 	if (vmemTrackerInited)
-	{
-		if (IsResGroupEnabled())
-			return IsGroupInRedZone();
-		else
-			return *segmentVmemChunks > redZoneChunks;
-	}
+		return *segmentVmemChunks > redZoneChunks;
 
 	return false;
 }
@@ -211,30 +206,6 @@ RedZoneHandler_FlagTopConsumer()
 	SessionState *maxVmemSessionState = NULL;
 
 	SessionState *curSessionState = AllSessionStateEntries->usedList;
-
-	/*
-	 * Find the group which used the most of global memory in resgroup mode.
-	 */
-	if (IsResGroupEnabled())
-	{
-		int32	maxGlobalShareMem = 0;
-		int32	sessionGroupGSMem;
-
-		while (curSessionState != NULL)
-		{
-			Assert(INVALID_SESSION_ID != curSessionState->sessionId);
-
-			sessionGroupGSMem = SessionGetResGroupGlobalShareMemUsage(curSessionState);
-
-			if (sessionGroupGSMem > maxGlobalShareMem)
-			{
-				maxGlobalShareMem = sessionGroupGSMem;
-				resGroupId = SessionGetResGroupId(curSessionState);
-			}
-
-			curSessionState = curSessionState->next;
-		}
-	}
 
 	curSessionState = AllSessionStateEntries->usedList;
 

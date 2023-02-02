@@ -37,10 +37,6 @@ typedef int64 zic_t;
 #define MKDIR_UMASK 0755
 #endif
 #endif
-#ifndef AT_SYMLINK_FOLLOW
-#define linkat(fromdir, from, todir, to, flag) \
-	(itssymlink(from) ? (errno = ENOTSUP, -1) : link(from, to))
-#endif
 /* Port to native MS-Windows and to ancient UNIX.  */
 #if !defined S_ISDIR && defined S_IFDIR && defined S_IFMT
 #define S_ISDIR(mode) (((mode) & S_IFMT) == S_IFDIR)
@@ -66,7 +62,6 @@ struct rule
 
 	zic_t		r_loyear;		/* for example, 1986 */
 	zic_t		r_hiyear;		/* for example, 1986 */
-	const char *r_yrtype;
 	bool		r_lowasnum;
 	bool		r_hiwasnum;
 
@@ -116,7 +111,11 @@ struct zone
 	zic_t		z_untiltime;
 };
 
-extern int	link(const char *fromname, const char *toname);
+extern int	link(const char *target, const char *linkname);
+#ifndef AT_SYMLINK_FOLLOW
+#define linkat(targetdir, target, linknamedir, linkname, flag) \
+	(itssymlink(target) ? (errno = ENOTSUP, -1) : link(target, linkname))
+#endif
 
 static void memory_exhausted(const char *msg) pg_attribute_noreturn();
 static void verror(const char *string, va_list args) pg_attribute_printf(1, 0);
@@ -125,13 +124,14 @@ static void warning(const char *string,...) pg_attribute_printf(1, 2);
 static void usage(FILE *stream, int status) pg_attribute_noreturn();
 static void addtt(zic_t starttime, int type);
 static int	addtype(zic_t, char const *, bool, bool, bool);
-static void leapadd(zic_t, bool, int, int);
+static void leapadd(zic_t, int, int);
 static void adjleap(void);
 static void associate(void);
 static void dolink(const char *, const char *, bool);
 static char **getfields(char *buf);
 static zic_t gethms(const char *string, const char *errstring);
 static zic_t getsave(char *, bool *);
+static void inexpires(char **, int);
 static void infile(const char *filename);
 static void inleap(char **fields, int nfields);
 static void inlink(char **fields, int nfields);
@@ -153,7 +153,6 @@ static void rulesub(struct rule *rp,
 					const char *typep, const char *monthp,
 					const char *dayp, const char *timep);
 static zic_t tadd(zic_t t1, zic_t t2);
-static bool yearistype(zic_t year, const char *type);
 
 /* Bound on length of what %z can expand to.  */
 enum
@@ -202,6 +201,7 @@ static int	typecnt;
 #define LC_ZONE		1
 #define LC_LINK		2
 #define LC_LEAP		3
+#define LC_EXPIRES	4
 
 /*
  * Which fields are which on a Zone line.
@@ -251,8 +251,8 @@ static int	typecnt;
  * Which fields are which on a Link line.
  */
 
-#define LF_FROM		1
-#define LF_TO		2
+#define LF_TARGET	1
+#define LF_LINKNAME	2
 #define LINK_FIELDS	3
 
 /*
@@ -266,6 +266,9 @@ static int	typecnt;
 #define LP_CORR		5
 #define LP_ROLL		6
 #define LEAP_FIELDS	7
+
+/* Expires lines are like Leap lines, except without CORR and ROLL fields.  */
+#define EXPIRES_FIELDS	5
 
 /*
  * Year synonyms.
@@ -287,8 +290,8 @@ struct link
 {
 	const char *l_filename;
 	lineno_t	l_linenum;
-	const char *l_from;
-	const char *l_to;
+	const char *l_target;
+	const char *l_linkname;
 };
 
 static struct link *links;
@@ -312,6 +315,7 @@ static struct lookup const zi_line_codes[] = {
 };
 static struct lookup const leap_line_codes[] = {
 	{"Leap", LC_LEAP},
+	{"Expires", LC_EXPIRES},
 	{NULL, 0}
 };
 
@@ -584,6 +588,12 @@ static zic_t const max_time = MAXVAL(zic_t, TIME_T_BITS_IN_FILE);
 static zic_t lo_time = MINVAL(zic_t, TIME_T_BITS_IN_FILE);
 static zic_t hi_time = MAXVAL(zic_t, TIME_T_BITS_IN_FILE);
 
+/* The time specified by an Expires line, or negative if no such line.  */
+static zic_t leapexpires = -1;
+
+/* The time specified by an #expires comment, or negative if no such line.  */
+static zic_t comment_leapexpires = -1;
+
 /* Set the time range of the output to TIMERANGE.
    Return true if successful.  */
 static bool
@@ -622,11 +632,10 @@ static const char *lcltime;
 static const char *directory;
 static const char *leapsec;
 static const char *tzdefault;
-static const char *yitcommand;
 
 /* -1 if the TZif output file should be slim, 0 if default, 1 if the
-   output should be fat for backward compatibility.  Currently the
-   default is fat, although this may change.  */
+   output should be fat for backward compatibility.  ZIC_BLOAT_DEFAULT
+   determines the default.  */
 static int	bloat;
 
 static bool
@@ -636,7 +645,7 @@ want_bloat(void)
 }
 
 #ifndef ZIC_BLOAT_DEFAULT
-#define ZIC_BLOAT_DEFAULT "fat"
+#define ZIC_BLOAT_DEFAULT "slim"
 #endif
 
 int
@@ -652,7 +661,7 @@ main(int argc, char **argv)
 	umask(umask(S_IWGRP | S_IWOTH) | (S_IWGRP | S_IWOTH));
 #endif
 	progname = argv[0];
-	if (TYPE_BIT(zic_t) <64)
+	if (TYPE_BIT(zic_t) < 64)
 	{
 		fprintf(stderr, "%s: %s\n", progname,
 				_("wild compilation-time specification of zic_t"));
@@ -735,18 +744,7 @@ main(int argc, char **argv)
 				tzdefault = optarg;
 				break;
 			case 'y':
-				if (yitcommand == NULL)
-				{
-					warning(_("-y is obsolescent"));
-					yitcommand = strdup(optarg);
-				}
-				else
-				{
-					fprintf(stderr,
-							_("%s: More than one -y option specified\n"),
-							progname);
-					return EXIT_FAILURE;
-				}
+				warning(_("-y ignored"));
 				break;
 			case 'L':
 				if (leapsec == NULL)
@@ -790,13 +788,20 @@ main(int argc, char **argv)
 	if (optind == argc - 1 && strcmp(argv[optind], "=") == 0)
 		usage(stderr, EXIT_FAILURE);	/* usage message by request */
 	if (bloat == 0)
-		bloat = strcmp(ZIC_BLOAT_DEFAULT, "slim") == 0 ? -1 : 1;
+	{
+		static char const bloat_default[] = ZIC_BLOAT_DEFAULT;
+
+		if (strcmp(bloat_default, "slim") == 0)
+			bloat = -1;
+		else if (strcmp(bloat_default, "fat") == 0)
+			bloat = 1;
+		else
+			abort();			/* Configuration error.  */
+	}
 	if (directory == NULL)
 		directory = "data";
 	if (tzdefault == NULL)
 		tzdefault = TZDEFAULT;
-	if (yitcommand == NULL)
-		yitcommand = "yearistype";
 
 	if (optind < argc && leapsec != NULL)
 	{
@@ -826,11 +831,11 @@ main(int argc, char **argv)
 	for (i = 0; i < nlinks; ++i)
 	{
 		eat(links[i].l_filename, links[i].l_linenum);
-		dolink(links[i].l_from, links[i].l_to, false);
+		dolink(links[i].l_target, links[i].l_linkname, false);
 		if (noise)
 			for (j = 0; j < nlinks; ++j)
-				if (strcmp(links[i].l_to,
-						   links[j].l_from) == 0)
+				if (strcmp(links[i].l_linkname,
+						   links[j].l_target) == 0)
 					warning(_("link to link"));
 	}
 	if (lcltime != NULL)
@@ -941,7 +946,7 @@ namecheck(const char *name)
  */
 #ifdef HAVE_SYMLINK
 static char *
-relname(char const *from, char const *to)
+relname(char const *target, char const *linkname)
 {
 	size_t		i,
 				taillen,
@@ -949,26 +954,26 @@ relname(char const *from, char const *to)
 	size_t		dir_len = 0,
 				dotdots = 0,
 				linksize = SIZE_MAX;
-	char const *f = from;
+	char const *f = target;
 	char	   *result = NULL;
 
-	if (*to == '/')
+	if (*linkname == '/')
 	{
 		/* Make F absolute too.  */
 		size_t		len = strlen(directory);
 		bool		needslash = len && directory[len - 1] != '/';
 
-		linksize = len + needslash + strlen(from) + 1;
+		linksize = len + needslash + strlen(target) + 1;
 		f = result = emalloc(linksize);
 		strcpy(result, directory);
 		result[len] = '/';
-		strcpy(result + len + needslash, from);
+		strcpy(result + len + needslash, target);
 	}
-	for (i = 0; f[i] && f[i] == to[i]; i++)
+	for (i = 0; f[i] && f[i] == linkname[i]; i++)
 		if (f[i] == '/')
 			dir_len = i + 1;
-	for (; to[i]; i++)
-		dotdots += to[i] == '/' && to[i - 1] != '/';
+	for (; linkname[i]; i++)
+		dotdots += linkname[i] == '/' && linkname[i - 1] != '/';
 	taillen = strlen(f + dir_len);
 	dotdotetcsize = 3 * dotdots + taillen + 1;
 	if (dotdotetcsize <= linksize)
@@ -986,62 +991,65 @@ relname(char const *from, char const *to)
 /* Hard link FROM to TO, following any symbolic links.
    Return 0 if successful, an error number otherwise.  */
 static int
-hardlinkerr(char const *from, char const *to)
+hardlinkerr(char const *target, char const *linkname)
 {
-	int			r = linkat(AT_FDCWD, from, AT_FDCWD, to, AT_SYMLINK_FOLLOW);
+	int			r = linkat(AT_FDCWD, target, AT_FDCWD, linkname, AT_SYMLINK_FOLLOW);
 
 	return r == 0 ? 0 : errno;
 }
 
 static void
-dolink(char const *fromfield, char const *tofield, bool staysymlink)
+dolink(char const *target, char const *linkname, bool staysymlink)
 {
-	bool		todirs_made = false;
+	bool		remove_only = strcmp(target, "-") == 0;
+	bool		linkdirs_made = false;
 	int			link_errno;
 
 	/*
 	 * We get to be careful here since there's a fair chance of root running
 	 * us.
 	 */
-	if (itsdir(fromfield))
+	if (!remove_only && itsdir(target))
 	{
-		fprintf(stderr, _("%s: link from %s/%s failed: %s\n"),
-				progname, directory, fromfield, strerror(EPERM));
+		fprintf(stderr, _("%s: linking target %s/%s failed: %s\n"),
+				progname, directory, target, strerror(EPERM));
 		exit(EXIT_FAILURE);
 	}
 	if (staysymlink)
-		staysymlink = itssymlink(tofield);
-	if (remove(tofield) == 0)
-		todirs_made = true;
+		staysymlink = itssymlink(linkname);
+	if (remove(linkname) == 0)
+		linkdirs_made = true;
 	else if (errno != ENOENT)
 	{
 		char const *e = strerror(errno);
 
 		fprintf(stderr, _("%s: Can't remove %s/%s: %s\n"),
-				progname, directory, tofield, e);
+				progname, directory, linkname, e);
 		exit(EXIT_FAILURE);
 	}
-	link_errno = staysymlink ? ENOTSUP : hardlinkerr(fromfield, tofield);
-	if (link_errno == ENOENT && !todirs_made)
+	if (remove_only)
+		return;
+	link_errno = staysymlink ? ENOTSUP : hardlinkerr(target, linkname);
+	if (link_errno == ENOENT && !linkdirs_made)
 	{
-		mkdirs(tofield, true);
-		todirs_made = true;
-		link_errno = hardlinkerr(fromfield, tofield);
+		mkdirs(linkname, true);
+		linkdirs_made = true;
+		link_errno = hardlinkerr(target, linkname);
 	}
 	if (link_errno != 0)
 	{
 #ifdef HAVE_SYMLINK
-		bool		absolute = *fromfield == '/';
-		char	   *linkalloc = absolute ? NULL : relname(fromfield, tofield);
-		char const *contents = absolute ? fromfield : linkalloc;
-		int			symlink_errno = symlink(contents, tofield) == 0 ? 0 : errno;
+		bool		absolute = *target == '/';
+		char	   *linkalloc = absolute ? NULL : relname(target, linkname);
+		char const *contents = absolute ? target : linkalloc;
+		int			symlink_errno = symlink(contents, linkname) == 0 ? 0 : errno;
 
-		if (!todirs_made
+		if (!linkdirs_made
 			&& (symlink_errno == ENOENT || symlink_errno == ENOTSUP))
 		{
-			mkdirs(tofield, true);
+			mkdirs(linkname, true);
 			if (symlink_errno == ENOENT)
-				symlink_errno = symlink(contents, tofield) == 0 ? 0 : errno;
+				symlink_errno = symlink(contents, linkname) == 0 ? 0 : errno;
 		}
 		free(linkalloc);
 		if (symlink_errno == 0)
@@ -1057,28 +1065,28 @@ dolink(char const *fromfield, char const *tofield, bool staysymlink)
 					   *tp;
 			int			c;
 
-			fp = fopen(fromfield, "rb");
+			fp = fopen(target, "rb");
 			if (!fp)
 			{
 				char const *e = strerror(errno);
 
 				fprintf(stderr, _("%s: Can't read %s/%s: %s\n"),
-						progname, directory, fromfield, e);
+						progname, directory, target, e);
 				exit(EXIT_FAILURE);
 			}
-			tp = fopen(tofield, "wb");
+			tp = fopen(linkname, "wb");
 			if (!tp)
 			{
 				char const *e = strerror(errno);
 
 				fprintf(stderr, _("%s: Can't create %s/%s: %s\n"),
-						progname, directory, tofield, e);
+						progname, directory, linkname, e);
 				exit(EXIT_FAILURE);
 			}
 			while ((c = getc(fp)) != EOF)
 				putc(c, tp);
-			close_file(fp, directory, fromfield);
-			close_file(tp, directory, tofield);
+			close_file(fp, directory, target);
+			close_file(tp, directory, linkname);
 			if (link_errno != ENOTSUP)
 				warning(_("copy used because hard link failed: %s"),
 						strerror(link_errno));
@@ -1279,7 +1287,21 @@ infile(const char *name)
 		}
 		if (nfields == 0)
 		{
-			/* nothing to do */
+			if (name == leapsec && *buf == '#')
+			{
+				/*
+				 * PG: INT64_FORMAT isn't portable for sscanf, so be content
+				 * with scanning a "long".  Once we are requiring C99 in all
+				 * live branches, it'd be sensible to adopt upstream's
+				 * practice of using the <inttypes.h> macros.  But for now, we
+				 * don't actually use this code, and it won't overflow before
+				 * 2038 anyway.
+				 */
+				long		cl_tmp;
+
+				sscanf(buf, "#expires %ld", &cl_tmp);
+				comment_leapexpires = cl_tmp;
+			}
 		}
 		else if (wantcont)
 		{
@@ -1309,6 +1331,10 @@ infile(const char *name)
 						break;
 					case LC_LEAP:
 						inleap(fields, nfields);
+						wantcont = false;
+						break;
+					case LC_EXPIRES:
+						inexpires(fields, nfields);
 						wantcont = false;
 						break;
 					default:	/* "cannot happen" */
@@ -1634,8 +1660,8 @@ inzsub(char **fields, int nfields, bool iscont)
 	return hasuntil;
 }
 
-static void
-inleap(char **fields, int nfields)
+static zic_t
+getleapdatetime(char **fields, int nfields, bool expire_line)
 {
 	const char *cp;
 	const struct lookup *lp;
@@ -1651,11 +1677,6 @@ inleap(char **fields, int nfields)
 	zic_t		t;
 	char		xs;
 
-	if (nfields != LEAP_FIELDS)
-	{
-		error(_("wrong number of fields on Leap line"));
-		return;
-	}
 	dayoff = 0;
 	cp = fields[LP_YEAR];
 	if (sscanf(cp, "%d%c", &year, &xs) != 1)
@@ -1664,13 +1685,16 @@ inleap(char **fields, int nfields)
 		 * Leapin' Lizards!
 		 */
 		error(_("invalid leaping year"));
-		return;
+		return -1;
 	}
-	if (!leapseen || leapmaxyear < year)
-		leapmaxyear = year;
-	if (!leapseen || leapminyear > year)
-		leapminyear = year;
-	leapseen = true;
+	if (!expire_line)
+	{
+		if (!leapseen || leapmaxyear < year)
+			leapmaxyear = year;
+		if (!leapseen || leapminyear > year)
+			leapminyear = year;
+		leapseen = true;
+	}
 	j = EPOCH_YEAR;
 	while (j != year)
 	{
@@ -1689,7 +1713,7 @@ inleap(char **fields, int nfields)
 	if ((lp = byword(fields[LP_MONTH], mon_names)) == NULL)
 	{
 		error(_("invalid month name"));
-		return;
+		return -1;
 	}
 	month = lp->l_value;
 	j = TM_JANUARY;
@@ -1704,54 +1728,68 @@ inleap(char **fields, int nfields)
 		day <= 0 || day > len_months[isleap(year)][month])
 	{
 		error(_("invalid day of month"));
-		return;
+		return -1;
 	}
 	dayoff = oadd(dayoff, day - 1);
 	if (dayoff < min_time / SECSPERDAY)
 	{
 		error(_("time too small"));
-		return;
+		return -1;
 	}
 	if (dayoff > max_time / SECSPERDAY)
 	{
 		error(_("time too large"));
-		return;
+		return -1;
 	}
 	t = dayoff * SECSPERDAY;
 	tod = gethms(fields[LP_TIME], _("invalid time of day"));
-	cp = fields[LP_CORR];
-	{
-		bool		positive;
-		int			count;
+	t = tadd(t, tod);
+	if (t < 0)
+		error(_("leap second precedes Epoch"));
+	return t;
+}
 
-		if (strcmp(cp, "") == 0)
-		{						/* infile() turns "-" into "" */
-			positive = false;
-			count = 1;
-		}
-		else if (strcmp(cp, "+") == 0)
+static void
+inleap(char **fields, int nfields)
+{
+	if (nfields != LEAP_FIELDS)
+		error(_("wrong number of fields on Leap line"));
+	else
+	{
+		zic_t		t = getleapdatetime(fields, nfields, false);
+
+		if (0 <= t)
 		{
-			positive = true;
-			count = 1;
+			struct lookup const *lp = byword(fields[LP_ROLL], leap_types);
+
+			if (!lp)
+				error(_("invalid Rolling/Stationary field on Leap line"));
+			else
+			{
+				int			correction = 0;
+
+				if (!fields[LP_CORR][0])	/* infile() turns "-" into "".  */
+					correction = -1;
+				else if (strcmp(fields[LP_CORR], "+") == 0)
+					correction = 1;
+				else
+					error(_("invalid CORRECTION field on Leap line"));
+				if (correction)
+					leapadd(t, correction, lp->l_value);
+			}
 		}
-		else
-		{
-			error(_("illegal CORRECTION field on Leap line"));
-			return;
-		}
-		if ((lp = byword(fields[LP_ROLL], leap_types)) == NULL)
-		{
-			error(_("illegal Rolling/Stationary field on Leap line"));
-			return;
-		}
-		t = tadd(t, tod);
-		if (t < 0)
-		{
-			error(_("leap second precedes Epoch"));
-			return;
-		}
-		leapadd(t, positive, lp->l_value, count);
 	}
+}
+
+static void
+inexpires(char **fields, int nfields)
+{
+	if (nfields != EXPIRES_FIELDS)
+		error(_("wrong number of fields on Expires line"));
+	else if (0 <= leapexpires)
+		error(_("multiple Expires lines"));
+	else
+		leapexpires = getleapdatetime(fields, nfields, true);
 }
 
 static void
@@ -1764,17 +1802,17 @@ inlink(char **fields, int nfields)
 		error(_("wrong number of fields on Link line"));
 		return;
 	}
-	if (*fields[LF_FROM] == '\0')
+	if (*fields[LF_TARGET] == '\0')
 	{
-		error(_("blank FROM field on Link line"));
+		error(_("blank TARGET field on Link line"));
 		return;
 	}
-	if (!namecheck(fields[LF_TO]))
+	if (!namecheck(fields[LF_LINKNAME]))
 		return;
 	l.l_filename = filename;
 	l.l_linenum = linenum;
-	l.l_from = ecpyalloc(fields[LF_FROM]);
-	l.l_to = ecpyalloc(fields[LF_TO]);
+	l.l_target = ecpyalloc(fields[LF_TARGET]);
+	l.l_linkname = ecpyalloc(fields[LF_LINKNAME]);
 	links = growalloc(links, sizeof *links, nlinks, &nlinks_alloc);
 	links[nlinks++] = l;
 }
@@ -1890,18 +1928,11 @@ rulesub(struct rule *rp, const char *loyearp, const char *hiyearp,
 		error(_("starting year greater than ending year"));
 		return;
 	}
-	if (*typep == '\0')
-		rp->r_yrtype = NULL;
-	else
+	if (*typep != '\0')
 	{
-		if (rp->r_loyear == rp->r_hiyear)
-		{
-			error(_("typed single year"));
-			return;
-		}
-		warning(_("year type \"%s\" is obsolete; use \"-\" instead"),
-				typep);
-		rp->r_yrtype = ecpyalloc(typep);
+		error(_("year type \"%s\" is unsupported; use \"-\" instead"),
+			  typep);
+		return;
 	}
 
 	/*
@@ -2806,8 +2837,6 @@ stringzone(char *result, struct zone const *zpfirst, ptrdiff_t zonecount)
 		rp = &zp->z_rules[i];
 		if (rp->r_hiwasnum || rp->r_hiyear != ZIC_MAX)
 			continue;
-		if (rp->r_yrtype != NULL)
-			continue;
 		if (!rp->r_isdst)
 		{
 			if (stdrp == NULL)
@@ -3103,7 +3132,8 @@ outzone(const struct zone *zpfirst, ptrdiff_t zonecount)
 
 				/*
 				 * Mark which rules to do in the current year. For those to
-				 * do, calculate rpytime(rp, year);
+				 * do, calculate rpytime(rp, year); The former TYPE field was
+				 * also considered here.
 				 */
 				for (j = 0; j < zp->z_nrules; ++j)
 				{
@@ -3111,8 +3141,7 @@ outzone(const struct zone *zpfirst, ptrdiff_t zonecount)
 					eats(zp->z_filename, zp->z_linenum,
 						 rp->r_filename, rp->r_linenum);
 					rp->r_todo = year >= rp->r_loyear &&
-						year <= rp->r_hiyear &&
-						yearistype(year, rp->r_yrtype);
+						year <= rp->r_hiyear;
 					if (rp->r_todo)
 					{
 						rp->r_temp = rpytime(rp, year);
@@ -3369,12 +3398,11 @@ addtype(zic_t utoff, char const *abbr, bool isdst, bool ttisstd, bool ttisut)
 }
 
 static void
-leapadd(zic_t t, bool positive, int rolling, int count)
+leapadd(zic_t t, int correction, int rolling)
 {
-	int			i,
-				j;
+	int			i;
 
-	if (leapcnt + (positive ? count : 1) > TZ_MAX_LEAPS)
+	if (TZ_MAX_LEAPS <= leapcnt)
 	{
 		error(_("too many leap seconds"));
 		exit(EXIT_FAILURE);
@@ -3382,19 +3410,13 @@ leapadd(zic_t t, bool positive, int rolling, int count)
 	for (i = 0; i < leapcnt; ++i)
 		if (t <= trans[i])
 			break;
-	do
-	{
-		for (j = leapcnt; j > i; --j)
-		{
-			trans[j] = trans[j - 1];
-			corr[j] = corr[j - 1];
-			roll[j] = roll[j - 1];
-		}
-		trans[i] = t;
-		corr[i] = positive ? 1 : -count;
-		roll[i] = rolling;
-		++leapcnt;
-	} while (positive && --count != 0);
+	memmove(&trans[i + 1], &trans[i], (leapcnt - i) * sizeof *trans);
+	memmove(&corr[i + 1], &corr[i], (leapcnt - i) * sizeof *corr);
+	memmove(&roll[i + 1], &roll[i], (leapcnt - i) * sizeof *roll);
+	trans[i] = t;
+	corr[i] = correction;
+	roll[i] = rolling;
+	++leapcnt;
 }
 
 static void
@@ -3418,54 +3440,25 @@ adjleap(void)
 		trans[i] = tadd(trans[i], last);
 		last = corr[i] += last;
 	}
-}
 
-static char *
-shellquote(char *b, char const *s)
-{
-	*b++ = '\'';
-	while (*s)
+	if (leapexpires < 0)
 	{
-		if (*s == '\'')
-			*b++ = '\'', *b++ = '\\', *b++ = '\'';
-		*b++ = *s++;
+		leapexpires = comment_leapexpires;
+		if (0 <= leapexpires)
+			warning(_("\"#expires\" is obsolescent; use \"Expires\""));
 	}
-	*b++ = '\'';
-	return b;
-}
 
-static bool
-yearistype(zic_t year, const char *type)
-{
-	char	   *buf;
-	char	   *b;
-	int			result;
-
-	if (type == NULL || *type == '\0')
-		return true;
-	buf = emalloc(1 + 4 * strlen(yitcommand) + 2
-				  + INT_STRLEN_MAXIMUM(zic_t) +2 + 4 * strlen(type) + 2);
-	b = shellquote(buf, yitcommand);
-	*b++ = ' ';
-	b += sprintf(b, INT64_FORMAT, year);
-	*b++ = ' ';
-	b = shellquote(b, type);
-	*b = '\0';
-	result = system(buf);
-	if (WIFEXITED(result))
+	if (0 <= leapexpires)
 	{
-		int			status = WEXITSTATUS(result);
-
-		if (status <= 1)
+		leapexpires = oadd(leapexpires, last);
+		if (!(leapcnt == 0 || (trans[leapcnt - 1] < leapexpires)))
 		{
-			free(buf);
-			return status == 0;
+			error(_("last Leap time does not precede Expires time"));
+			exit(EXIT_FAILURE);
 		}
+		if (leapexpires <= hi_time)
+			hi_time = leapexpires - 1;
 	}
-	error(_("Wild result from command execution"));
-	fprintf(stderr, _("%s: command was '%s', result was %d\n"),
-			progname, buf, result);
-	exit(EXIT_FAILURE);
 }
 
 /* Is A a space character in the C locale?  */

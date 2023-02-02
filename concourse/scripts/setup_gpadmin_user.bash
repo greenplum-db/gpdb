@@ -63,6 +63,8 @@ create_gpadmin_if_not_existing() {
       echo "gpadmin user already exists, skipping creating again."
   else
       eval "$*"
+      # Add user to sudoers list required for gpinitsystem test
+      echo "gpadmin ALL = NOPASSWD : ALL" >> /etc/sudoers
   fi
 }
 

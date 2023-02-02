@@ -716,9 +716,8 @@ add_int_reloption(bits32 kinds, const char *name, const char *desc, int default_
  *		Add a new float reloption
  */
 void
-add_real_reloption(bits32 kinds, const char *name, const char *desc,
-				   double default_val, double min_val, double max_val,
-				   LOCKMODE lockmode)
+add_real_reloption(bits32 kinds, const char *name, const char *desc, double default_val,
+				   double min_val, double max_val, LOCKMODE lockmode)
 {
 	relopt_real *newoption;
 
@@ -741,9 +740,8 @@ add_real_reloption(bits32 kinds, const char *name, const char *desc,
  * the validation.
  */
 void
-add_string_reloption(bits32 kinds, const char *name, const char *desc,
-					 const char *default_val, validate_string_relopt validator,
-					 LOCKMODE lockmode)
+add_string_reloption(bits32 kinds, const char *name, const char *desc, const char *default_val,
+					 validate_string_relopt validator, LOCKMODE lockmode)
 {
 	relopt_string *newoption;
 
@@ -1433,7 +1431,10 @@ default_reloptions(Datum reloptions, bool validate, relopt_kind kind)
 		{"vacuum_index_cleanup", RELOPT_TYPE_BOOL,
 		offsetof(StdRdOptions, vacuum_index_cleanup)},
 		{"vacuum_truncate", RELOPT_TYPE_BOOL,
-		offsetof(StdRdOptions, vacuum_truncate)}
+		offsetof(StdRdOptions, vacuum_truncate)},
+		{SOPT_ANALYZEHLL, RELOPT_TYPE_BOOL,
+		offsetof(StdRdOptions, analyze_hll_non_part_table)}
+
 	};
 
 	options = parseRelOptions(reloptions, validate, kind, &numoptions);

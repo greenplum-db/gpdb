@@ -31,7 +31,7 @@
           </dxl:Comparison>
         </dxl:Or>
       </dxl:Filter>
-      <dxl:TableDescriptor Mdid="0.1234.1.1" TableName="S">
+      <dxl:TableDescriptor Mdid="6.1234.1.1" TableName="S">
         <dxl:Columns>
           <dxl:Column ColId="1" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
           <dxl:Column ColId="2" Attno="2" ColName="d" TypeMdid="0.23.1.0"/>

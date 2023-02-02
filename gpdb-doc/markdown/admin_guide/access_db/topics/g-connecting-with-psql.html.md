@@ -5,7 +5,7 @@ title: Connecting with psql
 Depending on the default values used or the environment variables you have set, the following examples show how to access a database via `psql`:
 
 ```
-$ psql -d gpdatabase -h master_host -p 5432 -U `gpadmin`
+$ psql -d gpdatabase -h coordinator_host -p 5432 -U `gpadmin`
          
 ```
 

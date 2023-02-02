@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use PostgresNode;
 use TestLib;
-use Test::More tests => 32;
+use Test::More tests => 34;
 
 # Initialize master node
 my $node_master = get_new_node('master');
@@ -72,6 +72,8 @@ note "testing connection parameter \"target_session_attrs\"";
 # target_session_attrs with multiple nodes.
 sub test_target_session_attrs
 {
+	local $Test::Builder::Level = $Test::Builder::Level + 1;
+
 	my $node1       = shift;
 	my $node2       = shift;
 	my $target_node = shift;
@@ -344,3 +346,42 @@ is($catalog_xmin, '',
 is($xmin, '', 'xmin of cascaded slot null with hs feedback reset');
 is($catalog_xmin, '',
 	'catalog xmin of cascaded slot still null with hs_feedback reset');
+
+$node_standby_1->stop;
+
+# Drop any existing slots on the primary, for the follow-up tests.
+$node_master->safe_psql('postgres',
+	"SELECT pg_drop_replication_slot(slot_name) FROM pg_replication_slots;");
+
+# Test physical slot advancing and its durability.  Create a new slot on
+# the primary, not used by any of the standbys. This reserves WAL at creation.
+my $phys_slot = 'phys_slot';
+$node_master->safe_psql('postgres',
+	"SELECT pg_create_physical_replication_slot('$phys_slot', true);");
+# Generate some WAL, and switch to a new segment, used to check that
+# the previous segment is correctly getting recycled as the slot advancing
+# would recompute the minimum LSN calculated across all slots.
+my $segment_removed = $node_master->safe_psql('postgres',
+	'SELECT pg_walfile_name(pg_current_wal_lsn())');
+chomp($segment_removed);
+$node_master->psql('postgres', "
+	CREATE TABLE tab_phys_slot (a int);
+	INSERT INTO tab_phys_slot VALUES (generate_series(1,10));
+	SELECT pg_switch_wal();");
+my $current_lsn = $node_master->safe_psql('postgres',
+	"SELECT pg_current_wal_lsn();");
+chomp($current_lsn);
+my $psql_rc = $node_master->psql('postgres',
+	"SELECT pg_replication_slot_advance('$phys_slot', '$current_lsn'::pg_lsn);");
+is($psql_rc, '0', 'slot advancing with physical slot');
+my $phys_restart_lsn_pre = $node_master->safe_psql('postgres',
+	"SELECT restart_lsn from pg_replication_slots WHERE slot_name = '$phys_slot';");
+chomp($phys_restart_lsn_pre);
+# Slot advance should persist across clean restarts.
+$node_master->restart;
+my $phys_restart_lsn_post = $node_master->safe_psql('postgres',
+	"SELECT restart_lsn from pg_replication_slots WHERE slot_name = '$phys_slot';");
+chomp($phys_restart_lsn_post);
+ok(($phys_restart_lsn_pre cmp $phys_restart_lsn_post) == 0,
+	"physical slot advance persists across restarts");
+

@@ -1,0 +1,4 @@
+# test_ext_cau
+comment = 'Test extension using CREATE/ALTER extension (from unpackaged/update)'
+default_version = '1.1'
+relocatable = true

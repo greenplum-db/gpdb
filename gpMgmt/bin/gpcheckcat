@@ -13,8 +13,8 @@ Usage: gpcheckcat [<option>] [dbname]
     -S option                : shared table options (none, only)
     -O                       : Online
     -l                       : list all tests
-    -R test | 'test1, test2' : run this particular test(s) (quoted, comma seperated list for multiple tests)
-    -s test | 'test1, test2' : skip this particular test(s) (quoted, comma seperated list for multiple tests)
+    -R test | 'test1, test2' : run this particular test(s) (quoted, comma separated list for multiple tests)
+    -s test | 'test1, test2' : skip this particular test(s) (quoted, comma separated list for multiple tests)
     -C catname               : run cross consistency, FK and ACL tests for this catalog table
 
     Test subset options are mutually exclusive, use only one of '-R', '-s', or '-C'.
@@ -167,7 +167,7 @@ class Global():
         # array of SQL statements. Key is dbid
         self.ReSync = {}
 
-        # constraints which are actually unenforcable
+        # constraints which are actually unenforceable
         self.Constraints = []
 
         # ownership fixups
@@ -414,7 +414,7 @@ def connect2run(qry, col=None):
     threads = []
     i = 1
 
-    # parallelise queries
+    # parallelize queries
     for dbid in GV.cfg:
         c = GV.cfg[dbid]
         db = connect2(c)
@@ -563,8 +563,73 @@ def checkPartitionIntegrity():
     err = []
     db = connect()
 
-    # MPP-11120: check for child partitions with different
-    # distribution policies.
+    # Check for the numsegments value of parent and child partition from the gp_distribution_policy table
+    qry = '''
+    select inhparent::regclass, inhrelid::regclass, parent.numsegments as numsegments_parent, child.numsegments as numsegments_child
+    from pg_inherits inner join pg_partitioned_table on (pg_inherits.inhparent = pg_partitioned_table.partrelid)
+                     inner join gp_distribution_policy parent on (parent.localoid = inhparent)
+                     inner join gp_distribution_policy child on (child.localoid = inhrelid)
+    where parent.numsegments is distinct from child.numsegments
+          and not (inhrelid in (select ftrelid from pg_catalog.pg_foreign_table) and child.numsegments = NULL);
+    '''
+    try:
+        curs = db.query(qry)
+        cols = ('inhparent', 'inhrelid', 'numsegments_parent', 'numsegments_child')
+        col_names = {
+            'inhparent': 'table',
+            'inhrelid': 'affected child',
+            'numsegments_parent': 'parent numsegments value',
+            'numsegments_child': 'child numsegments value',
+        }
+
+        err = []
+        for row in curs.dictresult():
+            err.append([GV.cfg[GV.coordinator_dbid], cols, row])
+
+        if not err:
+            logger.info('[OK] partition numsegments check')
+        else:
+            err_count = len(err)
+            GV.checkStatus = False
+            setError(ERROR_REMOVE)
+            logger.info('[FAIL] partition numsegments check')
+            logger.error('partition numsegments check found %d issue(s)' % err_count)
+            if err_count > 100:
+                logger.error(qry)
+
+            myprint(
+                '[ERROR]: child partition(s) have different numsegments value '
+                'from the root partition. Check the gpcheckcat log for details.'
+            )
+            logger.error('The following tables have different numsegments value (showing at most 100 rows):')
+
+            # report at most 100 rows, for brevity
+            err = err[:100]
+
+            for index, e in enumerate(err):
+                cfg = e[0]
+                col = e[1]
+                row = e[2]
+
+                if index == 0:
+                    logger.error("--------")
+                    logger.error("  " + " | ".join(map(col_names.get, col)))
+                    logger.error("  " + "-+-".join(['-' * len(col_names[x]) for x in col]))
+
+                logger.error("  " + " | ".join([str(row[x]) for x in col]))
+
+            if err_count > 100:
+                logger.error(" ...")
+
+    except Exception as e:
+        setError(ERROR_NOREPAIR)
+        myprint('[ERROR] executing test: checkPartitionIntegrity')
+        myprint('  Execution error: ' + str(e))
+
+    # Check for the distribution policy of parent and child partitions based on the following conditions:
+    #   1. If a root is randomly distributed, then all middle, leaf level partitions must also be randomly distributed
+    #   2. If a root is hash distributed, then middle level should be same as root and
+    #      leaf level partition can be hash on same key or randomly distributed
     qry = '''
     select inhparent::regclass, inhrelid::regclass,
            pg_get_table_distributedby(inhparent) as dby_parent,
@@ -572,7 +637,9 @@ def checkPartitionIntegrity():
     from pg_inherits inner join pg_partitioned_table on (pg_inherits.inhparent = pg_partitioned_table.partrelid)
     where pg_get_table_distributedby(inhrelid) is distinct from pg_get_table_distributedby(inhparent)
           and not (pg_get_table_distributedby(inhparent) = 'DISTRIBUTED RANDOMLY' and pg_get_table_distributedby(inhrelid) = '')
-          and not (inhrelid in (select ftrelid from pg_catalog.pg_foreign_table) and pg_get_table_distributedby(inhrelid) = '');
+          and not (inhrelid in (select ftrelid from pg_catalog.pg_foreign_table) and pg_get_table_distributedby(inhrelid) = '')
+          and not (pg_get_table_distributedby(inhparent) like 'DISTRIBUTED BY%' and pg_get_table_distributedby(inhrelid) = 'DISTRIBUTED RANDOMLY'
+                   and (select isleaf from pg_partition_tree(inhparent) where relid = inhrelid));
     '''
     try:
         curs = db.query(qry)
@@ -1358,8 +1425,9 @@ class checkAOSegVpinfoThread(execThread):
 
     def run(self):
         aoseg_query = """
-           SELECT a.relname, a.relid, a.segrelid, cl.relname
-           FROM (SELECT p.relid, p.segrelid, c.relname FROM pg_appendonly p LEFT JOIN pg_class c ON p.relid = c.oid WHERE p.columnstore = true) a
+           SELECT a.relname, a.relid, a.segrelid, cl.relname 
+           FROM (SELECT p.relid, p.segrelid, c.relname FROM pg_appendonly p LEFT JOIN pg_class c ON p.relid = c.oid LEFT JOIN pg_am a ON (a.oid = c.relam) 
+           WHERE a.amname = 'ao_column') a 
            LEFT JOIN pg_class cl ON a.segrelid = cl.oid;
         """
 
@@ -2241,6 +2309,7 @@ TableMainColumn['pg_attribute_encoding'] = ['attrelid', 'pg_class']
 TableMainColumn['pg_auth_members'] = ['roleid', 'pg_authid']
 TableMainColumn['pg_autovacuum'] = ['vacrelid', 'pg_class']
 TableMainColumn['pg_compression'] = ['compname', 'pg_compression']
+TableMainColumn['pg_db_role_setting'] = ['setdatabase', 'pg_database']
 TableMainColumn['pg_depend'] = ['objid', 'pg_class']
 TableMainColumn['pg_foreign_table'] = ['ftrelid', 'pg_class']
 TableMainColumn['pg_index'] = ['indexrelid', 'pg_class']

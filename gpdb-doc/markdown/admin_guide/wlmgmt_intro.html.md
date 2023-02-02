@@ -97,7 +97,7 @@ gp_vmem_protect_limit = gp_vmem_rq / max_acting_primary_segments
 
 where `max_acting_primary_segments` is the maximum number of primary segments that could be running on a host when mirror segments are activated due to a host or segment failure.
 
-**Note:** The gp\_vmem\_protect\_limit setting is enforced only when resource queue-based resource management is active in Greenplum Database. Greenplum ignores this configuration parameter when resource group-based resource management is active.
+> **Note** The gp\_vmem\_protect\_limit setting is enforced only when resource queue-based resource management is active in Greenplum Database. Greenplum ignores this configuration parameter when resource group-based resource management is active.
 
 Resource queues expose additional configuration parameters that enable you to further control and refine the amount of memory allocated for queries.
 

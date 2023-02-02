@@ -15,11 +15,7 @@ WHERE relname in ('aorelopts_@amname@') ORDER BY segid;
 
 ALTER TABLE aorelopts_@amname@ SET (compresslevel=7, checksum=false);
 
--- Check if the reloptions have been correctly changed from the defaults.
-SELECT blocksize,compresslevel,checksum,compresstype
-FROM pg_appendonly WHERE relid='aorelopts_@amname@'::regclass::oid;
-
--- Check pg_class.reloptions too.
+-- Check if the pg_class.reloption have been correctly changed from the defaults.
 SELECT reloptions FROM pg_class WHERE relname = 'aorelopts_@amname@';
 
 CREATE TEMP TABLE relfileafter AS
@@ -92,7 +88,7 @@ DROP TABLE aorelopts_@amname@;
 RESET gp_default_storage_options;
 CREATE TABLE aorelopts_@amname@(a int);
 
--- pg_class.reloptions should show nothing.
+-- pg_class.reloptions should show defaults.
 SELECT reloptions FROM pg_class WHERE relname = 'aorelopts_@amname@';
 
 DROP TABLE relfilebefore;

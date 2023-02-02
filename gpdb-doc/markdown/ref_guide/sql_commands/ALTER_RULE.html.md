@@ -5,7 +5,7 @@ Changes the definition of a rule.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-ALTER RULE name ON table\_name RENAME TO new\_name
+ALTER RULE name ON <table_name> RENAME TO <new_name>
 ```
 
 ## <a id="section3"></a>Description 
@@ -25,9 +25,17 @@ table\_name
 new\_name
 :   The new name for the rule.
 
+## <a id="section6"></a>Examples
+
+To rename an existing rule:
+
+```
+ALTER RULE notify_all ON emp RENAME TO notify_me; 
+```
+
 ## <a id="section7"></a>Compatibility 
 
-`ALTER RULE` is a Greenplum Database language extension, as is the entire query rewrite system.
+`ALTER RULE` is a Greenplum Database extension, as is the entire query rewrite system.
 
 ## <a id="seea"></a>See Also 
 

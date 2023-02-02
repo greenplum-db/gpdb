@@ -11,7 +11,7 @@
         <dxl:Ident ColId="2" ColName="is_new_user" TypeMdid="0.16.1.0"/>
       </dxl:Not>
       <dxl:LogicalGet>
-        <dxl:TableDescriptor Mdid="0.17614.1.1" TableName="a1">
+        <dxl:TableDescriptor Mdid="6.17614.1.1" TableName="a1">
           <dxl:Columns>
             <dxl:Column ColId="1" Attno="1" ColName="user_id" TypeMdid="0.20.1.0"/>
             <dxl:Column ColId="2" Attno="2" ColName="is_new_user" TypeMdid="0.16.1.0"/>

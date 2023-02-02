@@ -132,15 +132,6 @@ make distclean
 ./configure --disable-orca --with-perl --with-python --with-libxml --prefix=/usr/local/gpdb
 ```
 
-### Building GPDB with PXF
-
-PXF is an extension framework for GPDB to enable fast access to external hadoop datasets.
-Refer to [PXF extension](gpcontrib/pxf/README.md) for more information.
-
-Currently, GPDB is built with PXF by default (--enable-pxf is on).
-In order to build GPDB without pxf, simply invoke `./configure` with additional option `--disable-pxf`.
-PXF requires curl, so `--enable-pxf` is not compatible with the `--without-libcurl` option.
-
 ### Building GPDB with Python3 enabled
 
 GPDB supports Python3 with plpython3u UDF
@@ -177,7 +168,7 @@ throughout the codebase, but a few larger additions worth noting:
 * __gpcontrib/__
 
   Much like the PostgreSQL contrib/ directory, this directory contains
-  extensions such as gpfdist, PXF and gpmapreduce which are Greenplum-specific.
+  extensions such as gpfdist and gpmapreduce which are Greenplum-specific.
 
 * __doc/__
 

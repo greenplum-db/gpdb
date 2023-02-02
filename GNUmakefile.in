@@ -14,6 +14,7 @@ all:
 	$(MAKE) -C contrib/auto_explain all
 	$(MAKE) -C contrib/citext all
 	$(MAKE) -C contrib/file_fdw all
+	$(MAKE) -C contrib/postgres_fdw all
 	$(MAKE) -C contrib/formatter all
 	$(MAKE) -C contrib/formatter_fixedwidth all
 	$(MAKE) -C contrib/fuzzystrmatch all
@@ -22,6 +23,7 @@ all:
 	$(MAKE) -C contrib/indexscan all
 	$(MAKE) -C contrib/pageinspect all  # needed by src/test/isolation
 	$(MAKE) -C contrib/hstore all
+	$(MAKE) -C contrib/ltree all
 	$(MAKE) -C contrib/pgcrypto all
 	$(MAKE) -C contrib/btree_gin all
 	$(MAKE) -C contrib/pg_trgm all
@@ -45,6 +47,11 @@ world:
 # build src/ before contrib/
 world-contrib-recurse: world-src-recurse
 
+$(call recurse,world-bin,src config contrib,all)
+
+# build src/ before contrib/
+world-bin-contrib-recurse: world-bin-src-recurse
+
 html man:
 	$(MAKE) -C doc $@
 
@@ -52,6 +59,7 @@ install:
 	$(MAKE) -C contrib/auto_explain $@
 	$(MAKE) -C contrib/citext $@
 	$(MAKE) -C contrib/file_fdw $@
+	$(MAKE) -C contrib/postgres_fdw $@
 	$(MAKE) -C contrib/formatter $@
 	$(MAKE) -C contrib/formatter_fixedwidth $@
 	$(MAKE) -C contrib/fuzzystrmatch $@
@@ -60,6 +68,7 @@ install:
 	$(MAKE) -C contrib/indexscan $@
 	$(MAKE) -C contrib/pageinspect $@  # needed by src/test/isolation
 	$(MAKE) -C contrib/hstore $@
+	$(MAKE) -C contrib/ltree $@
 	$(MAKE) -C contrib/pgcrypto $@
 	$(MAKE) -C contrib/btree_gin $@
 	$(MAKE) -C contrib/pg_trgm $@
@@ -82,6 +91,11 @@ install-world:
 
 # build src/ before contrib/
 install-world-contrib-recurse: install-world-src-recurse
+
+$(call recurse,install-world-bin,src config contrib gpcontrib,install)
+
+# build src/ before contrib/
+install-world-bin-contrib-recurse: install-world-bin-src-recurse
 
 $(call recurse,installdirs uninstall init-po update-po,doc src config gpcontrib)
 
@@ -155,9 +169,9 @@ $(call recurse,checkprep,  src/test src/pl src/interfaces/ecpg contrib src/bin g
 # recipe body).
 ICW_TARGETS  = src/test src/pl src/interfaces/gppc
 ICW_TARGETS += contrib/auto_explain contrib/citext contrib/btree_gin
-ICW_TARGETS += contrib/file_fdw contrib/formatter_fixedwidth
+ICW_TARGETS += contrib/file_fdw contrib/postgres_fdw contrib/formatter_fixedwidth
 ICW_TARGETS += contrib/extprotocol contrib/dblink contrib/pg_trgm
-ICW_TARGETS += contrib/indexscan contrib/hstore contrib/pgcrypto
+ICW_TARGETS += contrib/indexscan contrib/hstore contrib/ltree contrib/pgcrypto
 # sslinfo depends on openssl
 ifeq ($(with_openssl), yes)
 ICW_TARGETS += contrib/sslinfo

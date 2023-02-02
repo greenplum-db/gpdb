@@ -649,7 +649,7 @@ CUtils::GetPercentileAggMDId(CMemoryPool *mp, CExpression *pexprAggFn)
 				GPOS_RTL_ASSERT(!"Invalid arg type");
 		}
 	}
-	return GPOS_NEW(mp) CMDIdGPDB(return_oid);
+	return GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, return_oid);
 }
 
 // returns if the scalar constant array has already been collapased
@@ -1886,7 +1886,8 @@ CUtils::PexprCountStar(CMemoryPool *mp)
 	// way using MDAccessor
 
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
-	CMDIdGPDB *mdid = GPOS_NEW(mp) CMDIdGPDB(GPDB_COUNT_STAR);
+	CMDIdGPDB *mdid =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_COUNT_STAR);
 	CWStringConst *str = GPOS_NEW(mp) CWStringConst(GPOS_WSZ_LIT("count"));
 
 	CScalarValuesList *popScalarValuesList = GPOS_NEW(mp) CScalarValuesList(mp);
