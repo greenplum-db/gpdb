@@ -126,8 +126,6 @@ mpp\_execute \{ 'master' \| 'any' \| 'all segments' \}
 
 ## <a id="section5"></a>Notes 
 
-GPORCA does not support foreign tables. A query on a foreign table always falls back to the Postgres Planner.
-
 Constraints on foreign tables \(such as `CHECK` or `NOT NULL` clauses\) are not enforced by Greenplum Database, and most foreign-data wrappers do not attempt to enforce them either; that is, the constraint is simply assumed to hold true. There would be little point in such enforcement since it would only apply to rows inserted or updated via the foreign table, and not to rows modified by other means, such as directly on the remote server. Instead, a constraint attached to a foreign table should represent a constraint that is being enforced by the remote server.
 
 Some special-purpose foreign-data wrappers might be the only access mechanism for the data they access, and in that case it might be appropriate for the foreign-data wrapper itself to perform constraint enforcement. But you should not assume that a wrapper does that unless its documentation says so.
