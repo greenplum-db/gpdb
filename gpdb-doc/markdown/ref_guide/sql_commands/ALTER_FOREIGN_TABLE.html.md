@@ -18,7 +18,7 @@ where <action> is one of:
 
     ADD [ COLUMN ] <column_name> <data_type> [ COLLATE <collation> ] [ <column_constraint> [ ... ] ]
     DROP [ COLUMN ] [ IF EXISTS ] <column_name> [ RESTRICT | CASCADE ]
-    ALTER [ COLUMN ] <column_name> [ SET DATA ] TYPE <data_type> [ COLLATE collation ]
+    ALTER [ COLUMN ] <column_name> [ SET DATA ] TYPE <data_type> [ COLLATE <collation> ]
     ALTER [ COLUMN ] <column_name> SET DEFAULT <expression>
     ALTER [ COLUMN ] <column_name> DROP DEFAULT
     ALTER [ COLUMN ] <column_name> { SET | DROP } NOT NULL
