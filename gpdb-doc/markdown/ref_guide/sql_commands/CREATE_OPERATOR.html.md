@@ -34,7 +34,7 @@ At least one of `LEFTARG` and `RIGHTARG` must be defined. For binary operators, 
 
 **Note:**  Right unary, also called postfix, operators are deprecated and may be removed in a future Greenplum Database release.
 
-The function\_name function must have been previously defined using `CREATE FUNCTION`, XXX must be `IMMUTABLE`, XXX and must be defined to accept the correct number of arguments \(either one or two\) of the indicated types.
+The function\_name function must have been previously defined using `CREATE FUNCTION`, must be `IMMUTABLE`, and must be defined to accept the correct number of arguments \(either one or two\) of the indicated types.
 
 In the syntax of `CREATE OPERATOR`, the keywords `FUNCTION` and `PROCEDURE` are equivalent, but the referenced function must in any case be a function, not a procedure. The use of the keyword `PROCEDURE` here is historical and deprecated.
 
@@ -48,7 +48,7 @@ name
 :   The \(optionally schema-qualified\) name of the operator to be defined. Refer to the *Description* above for allowable characters. The name can be schema-qualified, for example `CREATE OPERATOR myschema.+ (...)`. If not, then the operator is created in the current schema. Two operators in the same schema can have the same name if they operate on different data types. This is called *overloading*.
 
 function\_name
-:   The function used to implement this operator XXX \(must be an `IMMUTABLE` function\) XXX.
+:   The function used to implement this operator \(must be an `IMMUTABLE` function\).
 
 left\_type
 :   The data type of the operator's left operand, if any. This option would be omitted for a left-unary operator.
@@ -84,7 +84,7 @@ COMMUTATOR = OPERATOR(myschema.===) ,
 
 Refer to [User-defined Operators](https://www.postgresql.org/docs/12/xoper.html) in the PostgreSQL documentation for further information.
 
-XXX Any functions used to implement the operator must be defined as `IMMUTABLE`. XXX
+Any functions used to implement the operator must be defined as `IMMUTABLE`.
 
 It is not possible to specify an operator's lexical precedence in `CREATE OPERATOR`, because the parser's precedence behavior is hard-wired. See [Operator Precedence](https://www.postgresql.org/docs/12/sql-syntax-lexical.html#SQL-PRECEDENCE) in the PostgreSQL documentation for precedence details.
 
@@ -107,7 +107,6 @@ CREATE OPERATOR === (
 );
 ```
 
-XXX
 The following example creates an operator for adding two complex numbers. The example assumes that we have already created the definition of type `complex`. First define the function that does the work, then define the operator:
 
 ```
@@ -128,7 +127,6 @@ To use this operator in a query:
 ```
 SELECT (a + b) AS c FROM test_complex;
 ```
-XXX
 
 ## <a id="section7"></a>Compatibility 
 

@@ -15,7 +15,7 @@ CREATE OPERATOR CLASS <name> [DEFAULT] FOR TYPE <data_type>  
 
 ## <a id="section3"></a>Description 
 
-`CREATE OPERATOR CLASS` creates a new operator class. An operator class defines how a particular data type can be used with an index. The operator class specifies that certain operators will fill particular roles or strategies for this data type and this index method. The operator class also specifies the support functions to be used by the index method when the operator class is selected for an index column. All of the operators and functions used by an operator class must be defined before the operator class is created. XXX Any functions used to implement the operator class must be defined as `IMMUTABLE`. XXX
+`CREATE OPERATOR CLASS` creates a new operator class. An operator class defines how a particular data type can be used with an index. The operator class specifies that certain operators will fill particular roles or strategies for this data type and this index method. The operator class also specifies the support functions to be used by the index method when the operator class is selected for an index column. All of the operators and functions used by an operator class must be defined before the operator class is created. Any functions used to implement the operator class must be defined as `IMMUTABLE`.
 
 If a schema name is given, then the operator class is created in the specified schema. Otherwise, it is created in the current schema. Two operator classes in the same schema can have the same name only if they are for different index methods.
 
@@ -80,7 +80,7 @@ Because the index machinery does not check access permissions on functions befor
 
 The operators should not be defined by SQL functions. A SQL function is likely to be inlined into the calling query, which will prevent the optimizer from recognizing that the query matches an index.
 
-XXX Any functions used to implement the operator class must be defined as `IMMUTABLE`. XXX
+Any functions used to implement the operator class must be defined as `IMMUTABLE`.
 
 Before Greenplum Database 6.0, the `OPERATOR` clause could include a `RECHECK` option. This option is no longer supported. Greenplum Database now determines whether an index operator is "lossy" on-the-fly at run time. This allows more efficient handling of cases where an operator might or might not be lossy.
 
