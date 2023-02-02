@@ -20,12 +20,13 @@ ALTER ROUTINE <name> [ ( [ [<argmode>] [<argname>] <argtype> [, ...] ] ) ]
 ALTER ROUTINE <name> [ ( [ [<argmode>] [<argname>] <argtype> [, ...] ] ) ]
    DEPENDS ON EXTENSION <extension_name>
 
-where <action> is one of:
+where <action> is one of (depending on the type of routine):
 
     { IMMUTABLE | STABLE | VOLATILE }
     [ NOT ] LEAKPROOF
     { [EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINER }
     PARALLEL { UNSAFE | RESTRICTED | SAFE }
+    EXECUTE ON { ANY | MASTER | ALL SEGMENTS | INITPLAN }
     COST <execution_cost>
     ROWS <result_rows>
     SET <configuration_parameter> { TO | = } { <value> | DEFAULT }
