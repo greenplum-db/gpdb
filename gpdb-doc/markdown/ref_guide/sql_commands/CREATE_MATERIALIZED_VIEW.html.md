@@ -42,7 +42,7 @@ TABLESPACE tablespace\_name
 :   The tablespace\_name is the name of the tablespace in which the new materialized view is to be created. If not specified, server configuration parameter [default\_tablespace](../config_params/guc-list.html) is consulted.
 
 query
-:   A [SELECT](SELECT.html), [TABLE](https://www.postgresql.org/docs/12/sql-select.html#SQL-TABLE), or [VALUES](VALUES.html) command. This query will run within a security-restricted operation; in particular, calls to functions that themselves create temporary tables will fail.
+:   A [SELECT](SELECT.html), [TABLE](SELECT.html#table-command), or [VALUES](VALUES.html) command. This query will run within a security-restricted operation; in particular, calls to functions that themselves create temporary tables will fail.
 
 WITH \[ NO \] DATA
 :   This clause specifies whether or not the materialized view should be populated with data at creation time. `WITH DATA` is the default, populate the materialized view. For `WITH NO DATA`, the materialized view is not populated with data, is flagged as unscannable, and cannot be queried until `REFRESH MATERIALIZED VIEW` is used to populate the materialized view.
