@@ -56,7 +56,7 @@ explain update constr_tab set b = 10;
                                    QUERY PLAN                                   
 --------------------------------------------------------------------------------
  Update on constr_tab  (cost=0.00..431.04 rows=1 width=1)
-   ->  Seq Scan on constr_tab constr_tab_1  (cost=0.00..431.00 rows=1 width=22)
+   ->  Seq Scan on constr_tab  (cost=0.00..431.00 rows=1 width=22)
  Optimizer: Pivotal Optimizer (GPORCA)
 (3 rows)
 
@@ -109,9 +109,9 @@ explain update constr_tab set a = 10;
  Update on constr_tab  (cost=0.00..431.09 rows=1 width=1)
    ->  Result  (cost=0.00..431.00 rows=1 width=34)
          ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=30)
-               Hash Key: constr_tab_1.a
+               Hash Key: a
                ->  Split  (cost=0.00..431.00 rows=1 width=30)
-                     ->  Seq Scan on constr_tab constr_tab_1  (cost=0.00..431.00 rows=1 width=26)
+                     ->  Seq Scan on constr_tab  (cost=0.00..431.00 rows=1 width=26)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (7 rows)
 

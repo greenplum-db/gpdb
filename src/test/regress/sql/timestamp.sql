@@ -7,18 +7,11 @@ CREATE TABLE TIMESTAMP_TBL (d1 timestamp(2) without time zone);
 -- Test shorthand input values
 -- We can't just "select" the results since they aren't constants; test for
 -- equality instead.  We can do that by running the test inside a transaction
--- block, within which the value of 'now' shouldn't change.  We also check
--- that 'now' *does* change over a reasonable interval such as 100 msec.
--- NOTE: it is possible for this part of the test to fail if the transaction
--- block is entered exactly at local midnight; then 'now' and 'today' have
--- the same values and the counts will come out different.
-
-INSERT INTO TIMESTAMP_TBL VALUES ('now');
-SELECT pg_sleep(0.1);
+-- block, within which the value of 'now' shouldn't change, and so these
+-- related values shouldn't either.
 
 BEGIN;
 
-INSERT INTO TIMESTAMP_TBL VALUES ('now');
 INSERT INTO TIMESTAMP_TBL VALUES ('today');
 INSERT INTO TIMESTAMP_TBL VALUES ('yesterday');
 INSERT INTO TIMESTAMP_TBL VALUES ('tomorrow');
@@ -29,19 +22,24 @@ INSERT INTO TIMESTAMP_TBL VALUES ('tomorrow zulu');
 SELECT count(*) AS One FROM TIMESTAMP_TBL WHERE d1 = timestamp without time zone 'today';
 SELECT count(*) AS Three FROM TIMESTAMP_TBL WHERE d1 = timestamp without time zone 'tomorrow';
 SELECT count(*) AS One FROM TIMESTAMP_TBL WHERE d1 = timestamp without time zone 'yesterday';
-SELECT count(*) AS One FROM TIMESTAMP_TBL WHERE d1 = timestamp(2) without time zone 'now';
 
 COMMIT;
 
 DELETE FROM TIMESTAMP_TBL;
 
--- verify uniform transaction time within transaction block
+-- Verify that 'now' *does* change over a reasonable interval such as 100 msec,
+-- and that it doesn't change over the same interval within a transaction block
+
+INSERT INTO TIMESTAMP_TBL VALUES ('now');
+SELECT pg_sleep(0.1);
+
 BEGIN;
 INSERT INTO TIMESTAMP_TBL VALUES ('now');
 SELECT pg_sleep(0.1);
 INSERT INTO TIMESTAMP_TBL VALUES ('now');
 SELECT pg_sleep(0.1);
 SELECT count(*) AS two FROM TIMESTAMP_TBL WHERE d1 = timestamp(2) without time zone 'now';
+SELECT count(d1) AS three, count(DISTINCT d1) AS two FROM TIMESTAMP_TBL;
 COMMIT;
 
 TRUNCATE TIMESTAMP_TBL;
@@ -174,21 +172,30 @@ SELECT '' AS "54", d1 - timestamp without time zone '1997-01-02' AS diff
   WHERE d1 BETWEEN timestamp without time zone '1902-01-01'
    AND timestamp without time zone '2038-01-01';
 
-SELECT '' AS "54", d1 as "timestamp",
+-- DATE_PART (timestamp_part)
+SELECT d1 as "timestamp",
    date_part( 'year', d1) AS year, date_part( 'month', d1) AS month,
    date_part( 'day', d1) AS day, date_part( 'hour', d1) AS hour,
    date_part( 'minute', d1) AS minute, date_part( 'second', d1) AS second
-   FROM TIMESTAMP_TBL WHERE d1 BETWEEN '1902-01-01' AND '2038-01-01';
+   FROM TIMESTAMP_TBL;
 
-SELECT '' AS "54", d1 as "timestamp",
+SELECT d1 as "timestamp",
    date_part( 'quarter', d1) AS quarter, date_part( 'msec', d1) AS msec,
    date_part( 'usec', d1) AS usec
-   FROM TIMESTAMP_TBL WHERE d1 BETWEEN '1902-01-01' AND '2038-01-01';
+   FROM TIMESTAMP_TBL;
 
-SELECT '' AS "54", d1 as "timestamp",
+SELECT d1 as "timestamp",
    date_part( 'isoyear', d1) AS isoyear, date_part( 'week', d1) AS week,
-   date_part( 'dow', d1) AS dow
-   FROM TIMESTAMP_TBL WHERE d1 BETWEEN '1902-01-01' AND '2038-01-01';
+   date_part( 'isodow', d1) AS isodow, date_part( 'dow', d1) AS dow,
+   date_part( 'doy', d1) AS doy
+   FROM TIMESTAMP_TBL;
+
+SELECT d1 as "timestamp",
+   date_part( 'decade', d1) AS decade,
+   date_part( 'century', d1) AS century,
+   date_part( 'millennium', d1) AS millennium,
+   round(date_part( 'julian', d1)) AS julian
+   FROM TIMESTAMP_TBL;
 
 -- TO_CHAR()
 SELECT '' AS to_char_1, to_char(d1, 'DAY Day day DY Dy dy MONTH Month month RM MON Mon mon')
@@ -224,53 +231,28 @@ SELECT '' AS to_char_10, to_char(d1, 'IYYY IYY IY I IW IDDD ID')
 SELECT '' AS to_char_11, to_char(d1, 'FMIYYY FMIYY FMIY FMI FMIW FMIDDD FMID')
    FROM TIMESTAMP_TBL;
 
--- TO_TIMESTAMP()
-SELECT '' AS to_timestamp_1, to_timestamp('0097/Feb/16 --> 08:14:30', 'YYYY/Mon/DD --> HH:MI:SS');
-
-SELECT '' AS to_timestamp_2, to_timestamp('97/2/16 8:14:30', 'FMYYYY/FMMM/FMDD FMHH:FMMI:FMSS');
-
-SELECT '' AS to_timestamp_3, to_timestamp('1985 January 12', 'YYYY FMMonth DD');
-
-SELECT '' AS to_timestamp_4, to_timestamp('My birthday-> Year: 1976, Month: May, Day: 16',
-                                          '"My birthday-> Year" YYYY, "Month:" FMMonth, "Day:" DD');
-
-SELECT '' AS to_timestamp_5, to_timestamp('1,582nd VIII 21', 'Y,YYYth FMRM DD');
-
-SELECT '' AS to_timestamp_6, to_timestamp('15 "text between quote marks" 98 54 45', 
-                                          E'HH "\\text between quote marks\\"" YY MI SS');
-    
-SELECT '' AS to_timestamp_7, to_timestamp('05121445482000', 'MMDDHHMISSYYYY');    
-
-SELECT '' AS to_timestamp_8, to_timestamp('2000January09Sunday', 'YYYYFMMonthDDFMDay');
-
-SELECT '' AS to_timestamp_9, to_timestamp('97/Feb/16', 'YYMonDD');
-
-SELECT '' AS to_timestamp_10, to_timestamp('19971116', 'YYYYMMDD');
-
-SELECT '' AS to_timestamp_11, to_timestamp('20000-1116', 'YYYY-MMDD');
-
-SELECT '' AS to_timestamp_12, to_timestamp('9-1116', 'Y-MMDD');
-
-SELECT '' AS to_timestamp_13, to_timestamp('95-1116', 'YY-MMDD');
-
-SELECT '' AS to_timestamp_14, to_timestamp('995-1116', 'YYY-MMDD');
-
-SELECT '' AS to_timestamp_15, to_timestamp('2005426', 'YYYYWWD');
-
-SELECT '' AS to_timestamp_16, to_timestamp('2005300', 'YYYYDDD');
-
-SELECT '' AS to_timestamp_17, to_timestamp('2005527', 'IYYYIWID');
-
-SELECT '' AS to_timestamp_18, to_timestamp('005527', 'IYYIWID');
-
-SELECT '' AS to_timestamp_19, to_timestamp('05527', 'IYIWID');
-
-SELECT '' AS to_timestamp_20, to_timestamp('5527', 'IIWID');
-
-SELECT '' AS to_timestamp_21, to_timestamp('2005364', 'IYYYIDDD');
+-- Roman months, with upper and lower case.
+SELECT i,
+       to_char(i * interval '1mon', 'rm'),
+       to_char(i * interval '1mon', 'RM')
+    FROM generate_series(-13, 13) i;
 
 -- timestamp numeric fields constructor
 SELECT make_timestamp(2014,12,28,6,30,45.887);
+
+-- generate_series for timestamp
+select * from generate_series('2020-01-01 00:00'::timestamp,
+                              '2020-01-02 03:00'::timestamp,
+                              '1 hour'::interval);
+-- the LIMIT should allow this to terminate in a reasonable amount of time
+-- (but that unfortunately doesn't work yet for SELECT * FROM ...)
+select generate_series('2022-01-01 00:00'::timestamp,
+                       'infinity'::timestamp,
+                       '1 month'::interval) limit 10;
+-- errors
+select * from generate_series('2020-01-01 00:00'::timestamp,
+                              '2020-01-02 03:00'::timestamp,
+                              '0 hour'::interval);
 
 SET DateStyle TO DEFAULT;
 

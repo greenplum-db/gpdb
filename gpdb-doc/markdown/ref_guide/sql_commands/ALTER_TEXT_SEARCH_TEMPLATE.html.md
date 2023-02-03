@@ -13,7 +13,7 @@ ALTER TEXT SEARCH TEMPLATE <name> SET SCHEMA <new_schema>
 
 ## <a id="section3"></a>Description 
 
-`ALTER TEXT SEARCH TEMPLATE` changes the definition of a text search parser. Currently, the only supported functionality is to change the parser's name.
+`ALTER TEXT SEARCH TEMPLATE` changes the definition of a text search parser. Currently, the only supported functionality is to change the template's name.
 
 You must be a superuser to use `ALTER TEXT SEARCH TEMPLATE`.
 

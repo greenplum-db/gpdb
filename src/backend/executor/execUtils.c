@@ -59,6 +59,7 @@
 #include "executor/execdebug.h"
 #include "executor/execUtils.h"
 #include "executor/executor.h"
+#include "executor/execPartition.h"
 #include "jit/jit.h"
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
@@ -210,6 +211,8 @@ CreateExecutorState(void)
 
 	estate->currentSliceId = 0;
 	estate->eliminateAliens = false;
+
+	estate->gp_bypass_unique_check = false;
 
 	/*
 	 * Return the executor state structure
@@ -1642,6 +1645,18 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 	}
 
 	/*
+	 * If we are finishing a query before all the tuples of the query
+	 * plan were fetched we must call ExecSquelchNode before checking
+	 * the dispatch results in order to tell we no longer
+	 * need any more tuples.
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH && !estate->es_got_eos &&
+		!(estate->es_top_eflags & EXEC_FLAG_EXPLAIN_ONLY))
+	{
+		ExecSquelchNode(queryDesc->planstate);
+	}
+
+	/*
 	 * If QD, wait for QEs to finish and check their results.
 	 */
 	if (estate->dispatcherState && estate->dispatcherState->primaryResults)
@@ -1650,17 +1665,6 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 		CdbDispatcherState *ds = estate->dispatcherState;
 		DispatchWaitMode waitMode = DISPATCH_WAIT_NONE;
 		ErrorData *qeError = NULL;
-
-		/*
-		 * If we are finishing a query before all the tuples of the query
-		 * plan were fetched we must call ExecSquelchNode before checking
-		 * the dispatch results in order to tell the nodes below we no longer
-		 * need any more tuples.
-		 */
-		if (!estate->es_got_eos)
-		{
-			ExecSquelchNode(queryDesc->planstate);
-		}
 
 		/*
 		 * Wait for completion of all QEs.  We send a "graceful" query
@@ -2314,6 +2318,108 @@ ExecGetReturningSlot(EState *estate, ResultRelInfo *relInfo)
 	}
 
 	return relInfo->ri_ReturningSlot;
+}
+
+/* Return a bitmap representing columns being inserted */
+Bitmapset *
+ExecGetInsertedCols(ResultRelInfo *relinfo, EState *estate)
+{
+	/*
+	 * The columns are stored in the range table entry.  If this ResultRelInfo
+	 * represents a partition routing target, and doesn't have an entry of its
+	 * own in the range table, fetch the parent's RTE and map the columns to
+	 * the order they are in the partition.
+	 */
+	if (relinfo->ri_RangeTableIndex != 0)
+	{
+		RangeTblEntry *rte = exec_rt_fetch(relinfo->ri_RangeTableIndex, estate);
+
+		return rte->insertedCols;
+	}
+	else if (relinfo->ri_RootResultRelInfo)
+	{
+		ResultRelInfo *rootRelInfo = relinfo->ri_RootResultRelInfo;
+		RangeTblEntry *rte = exec_rt_fetch(rootRelInfo->ri_RangeTableIndex, estate);
+		PartitionRoutingInfo *partrouteinfo = relinfo->ri_PartitionInfo;
+
+		if (partrouteinfo->pi_RootToPartitionMap != NULL)
+			return execute_attr_map_cols(rte->insertedCols,
+										 partrouteinfo->pi_RootToPartitionMap);
+		else
+			return rte->insertedCols;
+	}
+	else
+	{
+		/*
+		 * The relation isn't in the range table and it isn't a partition
+		 * routing target.  This ResultRelInfo must've been created only for
+		 * firing triggers and the relation is not being inserted into.  (See
+		 * ExecGetTriggerResultRel.)
+		 */
+		return NULL;
+	}
+}
+
+/* Return a bitmap representing columns being updated */
+Bitmapset *
+ExecGetUpdatedCols(ResultRelInfo *relinfo, EState *estate)
+{
+	/* see ExecGetInsertedCols() */
+	if (relinfo->ri_RangeTableIndex != 0)
+	{
+		RangeTblEntry *rte = exec_rt_fetch(relinfo->ri_RangeTableIndex, estate);
+
+		return rte->updatedCols;
+	}
+	else if (relinfo->ri_RootResultRelInfo)
+	{
+		ResultRelInfo *rootRelInfo = relinfo->ri_RootResultRelInfo;
+		RangeTblEntry *rte = exec_rt_fetch(rootRelInfo->ri_RangeTableIndex, estate);
+		PartitionRoutingInfo *partrouteinfo = relinfo->ri_PartitionInfo;
+
+		if (partrouteinfo->pi_RootToPartitionMap != NULL)
+			return execute_attr_map_cols(rte->updatedCols,
+										 partrouteinfo->pi_RootToPartitionMap);
+		else
+			return rte->updatedCols;
+	}
+	else
+		return NULL;
+}
+
+/* Return a bitmap representing generated columns being updated */
+Bitmapset *
+ExecGetExtraUpdatedCols(ResultRelInfo *relinfo, EState *estate)
+{
+	/* see ExecGetInsertedCols() */
+	if (relinfo->ri_RangeTableIndex != 0)
+	{
+		RangeTblEntry *rte = exec_rt_fetch(relinfo->ri_RangeTableIndex, estate);
+
+		return rte->extraUpdatedCols;
+	}
+	else if (relinfo->ri_RootResultRelInfo)
+	{
+		ResultRelInfo *rootRelInfo = relinfo->ri_RootResultRelInfo;
+		RangeTblEntry *rte = exec_rt_fetch(rootRelInfo->ri_RangeTableIndex, estate);
+		PartitionRoutingInfo *partrouteinfo = relinfo->ri_PartitionInfo;
+
+		if (partrouteinfo->pi_RootToPartitionMap != NULL)
+			return execute_attr_map_cols(rte->extraUpdatedCols,
+										 partrouteinfo->pi_RootToPartitionMap);
+		else
+			return rte->extraUpdatedCols;
+	}
+	else
+		return NULL;
+}
+
+/* Return columns being updated, including generated columns */
+Bitmapset *
+ExecGetAllUpdatedCols(ResultRelInfo *relinfo, EState *estate)
+{
+	return bms_union(ExecGetUpdatedCols(relinfo, estate),
+					 ExecGetExtraUpdatedCols(relinfo, estate));
 }
 
 /*

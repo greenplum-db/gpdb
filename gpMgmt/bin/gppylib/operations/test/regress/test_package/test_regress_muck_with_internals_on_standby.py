@@ -5,8 +5,8 @@ import tarfile
 
 from contextlib import closing
 from gppylib.commands.base import ExecutionError
-from gppylib.commands.unix import Scp
-from gppylib.operations.package import GpScp
+from gppylib.commands.unix import Rsync
+from gppylib.operations.package import GpRsync
 from gppylib.operations.test.regress.test_package import GppkgTestCase, unittest, skipIfNoStandby, get_host_list, ARCHIVE_PATH, run_command
 from gppylib.operations.unix import RemoveRemoteFile
 
@@ -25,7 +25,7 @@ class MuckWithInternalsOnStandby(GppkgTestCase):
         try:
             self.install(gppkg_file)
         except ExecutionError as e:
-            Scp(name = "copy gppkg to standby",
+            Rsync(name = "copy gppkg to standby",
                 srcFile = gppkg_file,
                 dstFile = archive_file,
                 srcHost = None,
@@ -48,10 +48,10 @@ class MuckWithInternalsOnStandby(GppkgTestCase):
         try:
             self.remove(gppkg_file)
         except ExecutionError as e:
-            GpScp(source_path = gppkg_file,
+            GpRsync(source_path = gppkg_file,
                   target_path = archive_file,
                   host_list = get_host_list()[1]).run()
-            Scp(name = "copy gppkg to standby",
+            Rsync(name = "copy gppkg to standby",
                 srcFile = gppkg_file,
                 dstFile = archive_file, 
                 srcHost = None, 
@@ -73,7 +73,7 @@ class MuckWithInternalsOnStandby(GppkgTestCase):
             #Install the rpm 
             with closing(tarfile.open(self.alpha_spec.get_filename())) as tf:
                 tf.extract(self.A_spec.get_filename())
-            Scp(name = "copy rpm to standby", 
+            Rsync(name = "copy rpm to standby",
                 srcFile = self.A_spec.get_filename(), 
                 dstFile = self.A_spec.get_filename(), 
                 srcHost = None,
@@ -101,7 +101,7 @@ class MuckWithInternalsOnStandby(GppkgTestCase):
         #Install the rpm 
         with closing(tarfile.open(self.alpha_spec.get_filename())) as tf:
             tf.extract(self.A_spec.get_filename())
-        Scp(name = "copy the rpm to standby",
+        Rsync(name = "copy the rpm to standby",
             srcFile = self.A_spec.get_filename(),
             dstFile = self.A_spec.get_filename(), 
             srcHost = None, 
@@ -119,7 +119,7 @@ class MuckWithInternalsOnStandby(GppkgTestCase):
         #Install the rpm
         with closing(tarfile.open(self.alpha_spec.get_filename())) as tf:
             tf.extract(self.A_spec.get_filename())
-        Scp(name = "copy rpm to standby",
+        Rsync(name = "copy rpm to standby",
             srcFile = self.A_spec.get_filename(),
             dstFile = self.A_spec.get_filename(), 
             srcHost = None,

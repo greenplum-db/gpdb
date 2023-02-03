@@ -34,7 +34,7 @@
 #include "gpopt/operators/CLogicalDifference.h"
 #include "gpopt/operators/CLogicalDifferenceAll.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
-#include "gpopt/operators/CLogicalExternalGet.h"
+#include "gpopt/operators/CLogicalForeignGet.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalInsert.h"
@@ -157,7 +157,7 @@ CTranslatorDXLToExpr::CTranslatorDXLToExpr(CMemoryPool *mp,
 										   CMDAccessor *md_accessor,
 										   BOOL fInitColumnFactory)
 	: m_mp(mp),
-	  m_sysid(IMDId::EmdidGPDB, GPMD_GPDB_SYSID),
+	  m_sysid(IMDId::EmdidGeneral, GPMD_GPDB_SYSID),
 	  m_pmda(md_accessor),
 	  m_phmulcr(nullptr),
 	  m_phmululCTE(nullptr),
@@ -429,7 +429,7 @@ CTranslatorDXLToExpr::PexprLogical(const CDXLNode *dxlnode)
 	switch (dxl_op->GetDXLOperator())
 	{
 		case EdxlopLogicalGet:
-		case EdxlopLogicalExternalGet:
+		case EdxlopLogicalForeignGet:
 			return CTranslatorDXLToExpr::PexprLogicalGet(dxlnode);
 		case EdxlopLogicalTVF:
 			return CTranslatorDXLToExpr::PexprLogicalTVF(dxlnode);
@@ -628,8 +628,8 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 		}
 		else
 		{
-			GPOS_ASSERT(EdxlopLogicalExternalGet == edxlopid);
-			popGet = GPOS_NEW(m_mp) CLogicalExternalGet(m_mp, pname, ptabdesc);
+			GPOS_ASSERT(EdxlopLogicalForeignGet == edxlopid);
+			popGet = GPOS_NEW(m_mp) CLogicalForeignGet(m_mp, pname, ptabdesc);
 		}
 
 		// get the output column references
@@ -1474,6 +1474,26 @@ CTranslatorDXLToExpr::PexprLogicalUpdate(const CDXLNode *dxlnode)
 				   GPOS_WSZ_LIT("Update on replicated tables"));
 	}
 
+	const IMDRelation *pmdrel = m_pmda->RetrieveRel(ptabdesc->MDId());
+	if (pmdrel->IsPartitioned())
+	{
+		GPOS_ASSERT(EdxlopLogicalUpdate == pdxlopUpdate->GetDXLOperator());
+
+		IMdIdArray *partition_mdids = pmdrel->ChildPartitionMdids();
+		for (ULONG ul = 0; ul < partition_mdids->Size(); ++ul)
+		{
+			IMDId *part_mdid = (*partition_mdids)[ul];
+			const IMDRelation *partrel = m_pmda->RetrieveRel(part_mdid);
+
+			if (partrel->IsPartitioned())
+			{
+				// Multi-level partitioned tables are unsupported - fall back
+				GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+						   GPOS_WSZ_LIT("Multi-level partitioned tables"));
+			}
+		}
+	}
+
 	ULONG ctid_colid = pdxlopUpdate->GetCtIdColId();
 	ULONG segid_colid = pdxlopUpdate->GetSegmentIdColId();
 
@@ -1888,9 +1908,17 @@ CTranslatorDXLToExpr::Pwf(const CDXLWindowFrame *window_frame)
 	{
 		efs = CWindowFrame::EfsRange;
 	}
+	else if (EdxlfsGroups == window_frame->ParseDXLFrameSpec())
+	{
+		efs = CWindowFrame::EfsGroups;
+	}
 
-	CWindowFrame *pwf = GPOS_NEW(m_mp)
-		CWindowFrame(m_mp, efs, efbLead, efbTrail, pexprLead, pexprTrail, efes);
+	CWindowFrame *pwf = GPOS_NEW(m_mp) CWindowFrame(
+		m_mp, efs, efbLead, efbTrail, pexprLead, pexprTrail, efes,
+		window_frame->PdxlnStartInRangeFunc(),
+		window_frame->PdxlnEndInRangeFunc(), window_frame->PdxlnInRangeColl(),
+		window_frame->PdxlnInRangeAsc(),
+		window_frame->PdxlnInRangeNullsFirst());
 
 	return pwf;
 }
@@ -2092,7 +2120,7 @@ CTranslatorDXLToExpr::Ptabdesc(CDXLTableDescr *table_descr)
 	CTableDescriptor *ptabdesc = GPOS_NEW(m_mp) CTableDescriptor(
 		m_mp, mdid, CName(m_mp, &strName), pmdrel->ConvertHashToRandom(),
 		rel_distr_policy, rel_storage_type, table_descr->GetExecuteAsUserId(),
-		table_descr->LockMode());
+		table_descr->LockMode(), table_descr->GetAssignedQueryIdForTargetRel());
 
 	const ULONG ulColumns = table_descr->Arity();
 	for (ULONG ul = 0; ul < ulColumns; ul++)
@@ -2290,9 +2318,9 @@ CTranslatorDXLToExpr::PtabdescFromCTAS(CDXLLogicalCTAS *pdxlopCTAS)
 	CTableDescriptor *ptabdesc = GPOS_NEW(m_mp) CTableDescriptor(
 		m_mp, mdid, CName(m_mp, &strName), pmdrel->ConvertHashToRandom(),
 		rel_distr_policy, rel_storage_type,
-		0,	// TODO:  - Mar 5, 2014; ulExecuteAsUser
-		-1	// GPDB_12_MERGE_FIXME: Extract the lockmode from CTE
-	);
+		0,	 // TODO:  - Mar 5, 2014; ulExecuteAsUser
+		-1,	 // GPDB_12_MERGE_FIXME: Extract the lockmode from CTE
+		UNASSIGNED_QUERYID);
 
 	// populate column information from the dxl table descriptor
 	CDXLColDescrArray *dxl_col_descr_array =

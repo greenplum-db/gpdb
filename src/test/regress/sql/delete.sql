@@ -22,4 +22,11 @@ DELETE FROM delete_test WHERE a > 25;
 
 SELECT id, a, char_length(b) FROM delete_test;
 
+-- issue 14417: Range Tables related relations opening's locking issue
+CREATE EXTERNAL WEB TABLE dummy(x int) EXECUTE 'touch /tmp/dummy2.csv;cat /tmp/dummy2.csv' ON MASTER FORMAT 'csv';
+CREATE TABLE issue_14417(x int);
+DELETE FROM issue_14417 WHERE x IN (SELECT x FROM dummy);
+
 DROP TABLE delete_test;
+DROP TABLE issue_14417;
+DROP EXTERNAL TABLE dummy;

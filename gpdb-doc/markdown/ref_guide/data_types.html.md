@@ -12,11 +12,11 @@ Each data type has an external representation determined by its input and output
 |----|-----|----|-----|-----------|
 |bigint|int8|8 bytes|-922337203​6854775808 to 922337203​6854775807|large range integer|
 |bigserial|serial8|8 bytes|1 to 922337203​6854775807|large autoincrementing integer|
-|bit \[ \(n\) \]| |*n* bits|[bit string constant](https://www.postgresql.org/docs/9.4/sql-syntax.html#SQL-SYNTAX-BIT-STRINGS)|fixed-length bit string|
-|bit varying \[ \(n\) \]<sup>1</sup>|varbit|actual number of bits|[bit string constant](https://www.postgresql.org/docs/9.4/sql-syntax.html#SQL-SYNTAX-BIT-STRINGS)|variable-length bit string|
+|bit \[ \(n\) \]| |*n* bits|[bit string constant](https://www.postgresql.org/docs/12/sql-syntax.html#SQL-SYNTAX-BIT-STRINGS)|fixed-length bit string|
+|bit varying \[ \(n\) \]<sup>1</sup>|varbit|actual number of bits|[bit string constant](https://www.postgresql.org/docs/12/sql-syntax.html#SQL-SYNTAX-BIT-STRINGS)|variable-length bit string|
 |boolean|bool|1 byte|true/false, t/f, yes/no, y/n, 1/0|logical boolean \(true/false\)|
 |box| |32 bytes|\(\(x1,y1\),\(x2,y2\)\)|rectangular box in the plane - not allowed in distribution key columns.|
-|bytea<sup>1</sup>| |1 byte + *binary string*|sequence of [octets](https://www.postgresql.org/docs/9.4/datatype-binary.html#DATATYPE-BINARY-SQLESC)|variable-length binary string|
+|bytea<sup>1</sup>| |1 byte + *binary string*|sequence of [octets](https://www.postgresql.org/docs/12/datatype-binary.html#DATATYPE-BINARY-SQLESC)|variable-length binary string|
 |character \[ \(n\) \]<sup>1</sup>|char \[ \(n\) \]|1 byte + *n*|strings up to *n* characters in length|fixed-length, blank padded|
 |character varying \[ \(n\) \]<sup>1</sup>|varchar \[ \(n\) \]|1 byte + *string size*|strings up to *n* characters in length|variable-length with limit|
 |cidr| |12 or 24 bytes| |IPv4 and IPv6 networks|

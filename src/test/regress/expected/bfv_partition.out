@@ -699,6 +699,8 @@ create table mpp3058 (a char(1), b date, d char(3))
     partition aa start ('2008-01-01') end ('2009-01-01') every( '1 day')  
      );
 ERROR:  operator is not unique: date pg_catalog.+ unknown
+LINE 5: ...aa start ('2008-01-01') end ('2009-01-01') every( '1 day')  
+                                                             ^
 HINT:  Could not choose a best candidate operator. You might need to add explicit type casts.
 drop table mpp3058;
 ERROR:  table "mpp3058" does not exist
@@ -1244,7 +1246,7 @@ alter table mpp3816 add column AAA int;
 alter table mpp3816 add column BBB int;
 alter table mpp3816 drop column BBB;
 alter table mpp3816 drop column startDate;
-ERROR:  cannot drop column named in partition key
+ERROR:  cannot drop column "startdate" because it is part of the partition key of relation "mpp3816"
 drop table mpp3816;
 CREATE TABLE mpp3762_cities (
         city     varchar(80) primary key,
@@ -2233,18 +2235,18 @@ ALTER TABLE qa147.sales SET SUBPARTITION TEMPLATE (`);
 ERROR:  syntax error at or near "`"
 LINE 1: ALTER TABLE qa147.sales SET SUBPARTITION TEMPLATE (`);
                                                            ^
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147.sales'::regclass;
-    relid    | level |                                                                                                                                                                                                                                                                                                                                                     template                                                                                                                                                                                                                                                                                                                                                     
--------------+-------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- qa147.sales |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName usa :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "usa" :location 216}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName asia :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "asia" :location 252}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName europe :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "europe" :location 291}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
+    relid    | level |                                                           pg_get_expr                                                            
+-------------+-------+----------------------------------------------------------------------------------------------------------------------------------
+ qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia'), SUBPARTITION europe VALUES ('europe'))
 (1 row)
 
 set client_min_messages='warning';
 drop schema qa147 cascade;
 reset client_min_messages;
-select relid, level, template from gp_partition_template where not exists (select oid from pg_class where oid = relid);
- relid | level | template 
--------+-------+----------
+select relid, level, pg_get_expr(template, relid) from gp_partition_template where not exists (select oid from pg_class where oid = relid);
+ relid | level | pg_get_expr 
+-------+-------+-------------
 (0 rows)
 
 -- Mix-Match for Alter subpartition template
@@ -2262,18 +2264,18 @@ SUBPARTITION TEMPLATE
    EVERY (INTERVAL '1 month') ); 
 -- Clear TEMPLATE
 ALTER TABLE qa147sales SET SUBPARTITION TEMPLATE ();
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147sales'::regclass;
- relid | level | template 
--------+-------+----------
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
+ relid | level | pg_get_expr 
+-------+-------+-------------
 (0 rows)
 
 -- This will overwrite previous subpartition template
 ALTER TABLE qa147sales SET SUBPARTITION TEMPLATE
 ( SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia') );
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147sales'::regclass;
-   relid    | level |                                                                                                                                                                                                                                            template                                                                                                                                                                                                                                            
-------------+-------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- qa147sales |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName usa :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "usa" :location 76}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName asia :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "asia" :location 110}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
+   relid    | level |                                        pg_get_expr                                        
+------------+-------+-------------------------------------------------------------------------------------------
+ qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia'))
 (1 row)
 
 -- Invalid subpartition
@@ -2287,10 +2289,10 @@ ALTER TABLE qa147sales SET SUBPARTITION TEMPLATE
 ERROR:  invalid boundary specification for LIST partition
 LINE 2: ( SUBPARTITION usam1 start (date '2008-01-01') INCLUSIVE END...
           ^
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147sales'::regclass;
-   relid    | level |                                                                                                                                                                                                                                            template                                                                                                                                                                                                                                            
-------------+-------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- qa147sales |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName usa :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "usa" :location 76}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName asia :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "asia" :location 110}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
+   relid    | level |                                        pg_get_expr                                        
+------------+-------+-------------------------------------------------------------------------------------------
+ qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia'))
 (1 row)
 
 -- Mix and Match RANGE/LIST . Expect to Error
@@ -2301,10 +2303,10 @@ SUBPARTITION usadate start (date '2008-01-01') INCLUSIVE END(date '2009-01-01') 
 ERROR:  invalid boundary specification for LIST partition
 LINE 4: SUBPARTITION usadate start (date '2008-01-01') INCLUSIVE END...
         ^
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147sales'::regclass;
-   relid    | level |                                                                                                                                                                                                                                            template                                                                                                                                                                                                                                            
-------------+-------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- qa147sales |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName usa :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "usa" :location 76}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName asia :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "asia" :location 110}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
+   relid    | level |                                        pg_get_expr                                        
+------------+-------+-------------------------------------------------------------------------------------------
+ qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia'))
 (1 row)
 
 -- Mix and Match RANGE/LIST . Expect to Error
@@ -2315,10 +2317,10 @@ SUBPARTITION usa1 VALUES('usa'));
 ERROR:  invalid boundary specification for LIST partition
 LINE 3: SUBPARTITION usadate start (date '2008-01-01') INCLUSIVE END...
         ^
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147sales'::regclass;
-   relid    | level |                                                                                                                                                                                                                                            template                                                                                                                                                                                                                                            
-------------+-------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- qa147sales |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName usa :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "usa" :location 76}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName asia :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "asia" :location 110}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
+   relid    | level |                                        pg_get_expr                                        
+------------+-------+-------------------------------------------------------------------------------------------
+ qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia'))
 (1 row)
 
 drop table qa147sales;
@@ -2337,26 +2339,26 @@ SUBPARTITION TEMPLATE
   PARTITION europe VALUES ('europe') );
 -- Clear TEMPLATE
 ALTER TABLE qa147sales SET SUBPARTITION TEMPLATE ();
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147sales'::regclass;
- relid | level | template 
--------+-------+----------
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
+ relid | level | pg_get_expr 
+-------+-------+-------------
 (0 rows)
 
 -- This will overwrite previous subpartition template
 ALTER TABLE qa147sales SET SUBPARTITION TEMPLATE
 ( SUBPARTITION usam1 start (date '2008-01-01') INCLUSIVE END (date '2008-02-01') EXCLUSIVE );
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147sales'::regclass;
-   relid    | level |                                                                                                                                                                                                                                                                                                                                                                               template                                                                                                                                                                                                                                                                                                                                                                               
-------------+-------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- qa147sales |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName usam1 :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2008-01-01" :location 82} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 77} :location -1}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2008-02-01" :location 116} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 111} :location -1}) :edge 2} :partEvery <>} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
+   relid    | level |                                          pg_get_expr                                          
+------------+-------+-----------------------------------------------------------------------------------------------
+ qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usam1 START ('01-01-2008'::date) END ('02-01-2008'::date))
 (1 row)
 
 ALTER TABLE qa147sales SET SUBPARTITION TEMPLATE
 ( SUBPARTITION usam1 start (date '2008-01-01') INCLUSIVE END (date '2009-01-01') EXCLUSIVE EVERY (INTERVAL '1 month') );
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147sales'::regclass;
-   relid    | level |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           template                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
-------------+-------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- qa147sales |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName usam1 :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2008-01-01" :location 82} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 77} :location -1}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2009-01-01" :location 116} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 111} :location -1}) :edge 2} :partEvery ({TYPECAST :arg {A_CONST :val "\1\ month" :location 156} :typeName {TYPENAME :names ("pg_catalog" "interval") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 147} :location -1})} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
+   relid    | level |                                                        pg_get_expr                                                        
+------------+-------+---------------------------------------------------------------------------------------------------------------------------
+ qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usam1 START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
 
 -- Invalid subpartition template
@@ -2365,10 +2367,10 @@ ALTER TABLE qa147sales SET SUBPARTITION TEMPLATE
 ERROR:  invalid boundary specification for RANGE partition
 LINE 2: ( SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ...
           ^
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147sales'::regclass;
-   relid    | level |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           template                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
-------------+-------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- qa147sales |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName usam1 :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2008-01-01" :location 82} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 77} :location -1}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2009-01-01" :location 116} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 111} :location -1}) :edge 2} :partEvery ({TYPECAST :arg {A_CONST :val "\1\ month" :location 156} :typeName {TYPENAME :names ("pg_catalog" "interval") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 147} :location -1})} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
+   relid    | level |                                                        pg_get_expr                                                        
+------------+-------+---------------------------------------------------------------------------------------------------------------------------
+ qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usam1 START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
 
 -- Mix and Match RANGE/LIST . Expect to Error
@@ -2379,10 +2381,10 @@ SUBPARTITION usadate start (date '2008-01-01') INCLUSIVE END(date '2009-01-01') 
 ERROR:  invalid boundary specification for RANGE partition
 LINE 3: SUBPARTITION usa1 VALUES('usa'),
         ^
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147sales'::regclass;
-   relid    | level |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           template                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
-------------+-------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- qa147sales |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName usam1 :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2008-01-01" :location 82} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 77} :location -1}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2009-01-01" :location 116} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 111} :location -1}) :edge 2} :partEvery ({TYPECAST :arg {A_CONST :val "\1\ month" :location 156} :typeName {TYPENAME :names ("pg_catalog" "interval") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 147} :location -1})} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
+   relid    | level |                                                        pg_get_expr                                                        
+------------+-------+---------------------------------------------------------------------------------------------------------------------------
+ qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usam1 START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
 
 -- Mix and Match RANGE/LIST . Expect to Error
@@ -2393,16 +2395,16 @@ SUBPARTITION usa1 VALUES('usa'));
 ERROR:  invalid boundary specification for RANGE partition
 LINE 4: SUBPARTITION usa1 VALUES('usa'));
         ^
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147sales'::regclass;
-   relid    | level |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           template                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
-------------+-------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- qa147sales |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName usam1 :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2008-01-01" :location 82} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 77} :location -1}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2009-01-01" :location 116} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 111} :location -1}) :edge 2} :partEvery ({TYPECAST :arg {A_CONST :val "\1\ month" :location 156} :typeName {TYPENAME :names ("pg_catalog" "interval") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 147} :location -1})} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
+   relid    | level |                                                        pg_get_expr                                                        
+------------+-------+---------------------------------------------------------------------------------------------------------------------------
+ qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usam1 START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
 
 drop table qa147sales;
-select relid, level, template from gp_partition_template where not exists (select oid from pg_class where oid = relid);
- relid | level | template 
--------+-------+----------
+select relid, level, pg_get_expr(template, relid) from gp_partition_template where not exists (select oid from pg_class where oid = relid);
+ relid | level | pg_get_expr 
+-------+-------+-------------
 (0 rows)
 
 -- Now with Schema
@@ -2422,18 +2424,18 @@ SUBPARTITION TEMPLATE
    EVERY (INTERVAL '1 month') );
 -- Clear TEMPLATE
 ALTER TABLE qa147.sales SET SUBPARTITION TEMPLATE ();
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147.sales'::regclass;
- relid | level | template 
--------+-------+----------
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
+ relid | level | pg_get_expr 
+-------+-------+-------------
 (0 rows)
 
 -- This will overwrite previous subpartition template
 ALTER TABLE qa147.sales SET SUBPARTITION TEMPLATE
 ( SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia') );
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147.sales'::regclass;
-    relid    | level |                                                                                                                                                                                                                                            template                                                                                                                                                                                                                                            
--------------+-------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- qa147.sales |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName usa :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "usa" :location 77}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName asia :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "asia" :location 111}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
+    relid    | level |                                        pg_get_expr                                        
+-------------+-------+-------------------------------------------------------------------------------------------
+ qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia'))
 (1 row)
 
 -- Invalid subpartition
@@ -2447,10 +2449,10 @@ ALTER TABLE qa147.sales SET SUBPARTITION TEMPLATE
 ERROR:  invalid boundary specification for LIST partition
 LINE 2: ( SUBPARTITION usam1 start (date '2008-01-01') INCLUSIVE END...
           ^
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147.sales'::regclass;
-    relid    | level |                                                                                                                                                                                                                                            template                                                                                                                                                                                                                                            
--------------+-------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- qa147.sales |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName usa :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "usa" :location 77}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName asia :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "asia" :location 111}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
+    relid    | level |                                        pg_get_expr                                        
+-------------+-------+-------------------------------------------------------------------------------------------
+ qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia'))
 (1 row)
 
 -- Mix and Match RANGE/LIST . Expect to Error
@@ -2461,10 +2463,10 @@ SUBPARTITION usadate start (date '2008-01-01') INCLUSIVE END(date '2009-01-01') 
 ERROR:  invalid boundary specification for LIST partition
 LINE 4: SUBPARTITION usadate start (date '2008-01-01') INCLUSIVE END...
         ^
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147.sales'::regclass;
-    relid    | level |                                                                                                                                                                                                                                            template                                                                                                                                                                                                                                            
--------------+-------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- qa147.sales |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName usa :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "usa" :location 77}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName asia :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "asia" :location 111}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
+    relid    | level |                                        pg_get_expr                                        
+-------------+-------+-------------------------------------------------------------------------------------------
+ qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia'))
 (1 row)
 
 -- Mix and Match RANGE/LIST . Expect to Error
@@ -2475,17 +2477,17 @@ SUBPARTITION usa1 VALUES('usa'));
 ERROR:  invalid boundary specification for LIST partition
 LINE 3: SUBPARTITION usadate start (date '2008-01-01') INCLUSIVE END...
         ^
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147.sales'::regclass;
-    relid    | level |                                                                                                                                                                                                                                            template                                                                                                                                                                                                                                            
--------------+-------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- qa147.sales |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName usa :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "usa" :location 77}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName asia :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "asia" :location 111}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
+    relid    | level |                                        pg_get_expr                                        
+-------------+-------+-------------------------------------------------------------------------------------------
+ qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia'))
 (1 row)
 
 DROP SCHEMA qa147 cascade;
 NOTICE:  drop cascades to table qa147.sales
-select relid, level, template from gp_partition_template where not exists (select oid from pg_class where oid = relid);
- relid | level | template 
--------+-------+----------
+select relid, level, pg_get_expr(template, relid) from gp_partition_template where not exists (select oid from pg_class where oid = relid);
+ relid | level | pg_get_expr 
+-------+-------+-------------
 (0 rows)
 
 CREATE SCHEMA qa147;
@@ -2504,26 +2506,26 @@ SUBPARTITION TEMPLATE
   PARTITION europe VALUES ('europe') );
 -- Clear TEMPLATE
 ALTER TABLE qa147.sales SET SUBPARTITION TEMPLATE ();
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147.sales'::regclass;
- relid | level | template 
--------+-------+----------
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
+ relid | level | pg_get_expr 
+-------+-------+-------------
 (0 rows)
 
 -- This will overwrite previous subpartition template
 ALTER TABLE qa147.sales SET SUBPARTITION TEMPLATE
 ( SUBPARTITION usam1 start (date '2008-01-01') INCLUSIVE END (date '2008-02-01') EXCLUSIVE );
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147.sales'::regclass;
-    relid    | level |                                                                                                                                                                                                                                                                                                                                                                               template                                                                                                                                                                                                                                                                                                                                                                               
--------------+-------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- qa147.sales |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName usam1 :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2008-01-01" :location 83} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 78} :location -1}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2008-02-01" :location 117} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 112} :location -1}) :edge 2} :partEvery <>} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
+    relid    | level |                                          pg_get_expr                                          
+-------------+-------+-----------------------------------------------------------------------------------------------
+ qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usam1 START ('01-01-2008'::date) END ('02-01-2008'::date))
 (1 row)
 
 ALTER TABLE qa147.sales SET SUBPARTITION TEMPLATE
 ( SUBPARTITION usam1 start (date '2008-01-01') INCLUSIVE END (date '2009-01-01') EXCLUSIVE EVERY (INTERVAL '1 month') );
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147.sales'::regclass;
-    relid    | level |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           template                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
--------------+-------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- qa147.sales |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName usam1 :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2008-01-01" :location 83} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 78} :location -1}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2009-01-01" :location 117} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 112} :location -1}) :edge 2} :partEvery ({TYPECAST :arg {A_CONST :val "\1\ month" :location 157} :typeName {TYPENAME :names ("pg_catalog" "interval") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 148} :location -1})} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
+    relid    | level |                                                        pg_get_expr                                                        
+-------------+-------+---------------------------------------------------------------------------------------------------------------------------
+ qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usam1 START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
 
 -- Invalid subpartition template
@@ -2532,10 +2534,10 @@ ALTER TABLE qa147.sales SET SUBPARTITION TEMPLATE
 ERROR:  invalid boundary specification for RANGE partition
 LINE 2: ( SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ...
           ^
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147.sales'::regclass;
-    relid    | level |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           template                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
--------------+-------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- qa147.sales |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName usam1 :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2008-01-01" :location 83} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 78} :location -1}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2009-01-01" :location 117} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 112} :location -1}) :edge 2} :partEvery ({TYPECAST :arg {A_CONST :val "\1\ month" :location 157} :typeName {TYPENAME :names ("pg_catalog" "interval") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 148} :location -1})} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
+    relid    | level |                                                        pg_get_expr                                                        
+-------------+-------+---------------------------------------------------------------------------------------------------------------------------
+ qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usam1 START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
 
 -- Mix and Match RANGE/LIST . Expect to Error
@@ -2546,10 +2548,10 @@ SUBPARTITION usadate start (date '2008-01-01') INCLUSIVE END(date '2009-01-01') 
 ERROR:  invalid boundary specification for RANGE partition
 LINE 3: SUBPARTITION usa1 VALUES('usa'),
         ^
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147.sales'::regclass;
-    relid    | level |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           template                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
--------------+-------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- qa147.sales |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName usam1 :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2008-01-01" :location 83} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 78} :location -1}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2009-01-01" :location 117} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 112} :location -1}) :edge 2} :partEvery ({TYPECAST :arg {A_CONST :val "\1\ month" :location 157} :typeName {TYPENAME :names ("pg_catalog" "interval") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 148} :location -1})} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
+    relid    | level |                                                        pg_get_expr                                                        
+-------------+-------+---------------------------------------------------------------------------------------------------------------------------
+ qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usam1 START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
 
 -- Mix and Match RANGE/LIST . Expect to Error
@@ -2560,17 +2562,17 @@ SUBPARTITION usa1 VALUES('usa'));
 ERROR:  invalid boundary specification for RANGE partition
 LINE 4: SUBPARTITION usa1 VALUES('usa'));
         ^
-select relid::regclass, level, template from gp_partition_template where relid = 'qa147.sales'::regclass;
-    relid    | level |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           template                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
--------------+-------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- qa147.sales |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName usam1 :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2008-01-01" :location 83} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 78} :location -1}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2009-01-01" :location 117} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 112} :location -1}) :edge 2} :partEvery ({TYPECAST :arg {A_CONST :val "\1\ month" :location 157} :typeName {TYPENAME :names ("pg_catalog" "interval") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 148} :location -1})} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
+    relid    | level |                                                        pg_get_expr                                                        
+-------------+-------+---------------------------------------------------------------------------------------------------------------------------
+ qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usam1 START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
 
 drop schema qa147 cascade;
 NOTICE:  drop cascades to table qa147.sales
-select relid, level, template from gp_partition_template where not exists (select oid from pg_class where oid = relid);
- relid | level | template 
--------+-------+----------
+select relid, level, pg_get_expr(template, relid) from gp_partition_template where not exists (select oid from pg_class where oid = relid);
+ relid | level | pg_get_expr 
+-------+-------+-------------
 (0 rows)
 
 set gp_autostats_mode=on_change;
@@ -2695,10 +2697,10 @@ alter table partsupp_def set subpartition template( subpartition aaa start(400) 
 -- If we want to use the new subpartition template, we have to drop the default partition first, and then readd the default partition
 -- Note 2: We do not support this function yet, but if we are able to split default partition with default subpartition, would we
 -- be using the subpartition template to definte the "new" partition or the existing one.
-select relid::regclass, level, template from gp_partition_template where relid = 'partsupp_def'::regclass;
-    relid     | level |                                                                                                                                                                                                                   template                                                                                                                                                                                                                    
---------------+-------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- partsupp_def |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName aaa :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({A_CONST :val 400 :location 75}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({A_CONST :val 600 :location 85}) :edge 2} :partEvery ({A_CONST :val 100 :location 96})} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'partsupp_def'::regclass;
+    relid     | level |                                         pg_get_expr                                         
+--------------+-------+---------------------------------------------------------------------------------------------
+ partsupp_def |     1 | SUBPARTITION TEMPLATE(SUBPARTITION aaa START (400::integer) END (600::integer) Every (100))
 (1 row)
 
 alter table partsup_def add partition f1 start(0) end (300) every(100);
@@ -2721,10 +2723,10 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'ps_pa
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 alter table partsupp_def2 set subpartition template();
 alter table partsupp_def2 set subpartition template( subpartition aaa start(400) end (600) every(100) );
-select relid::regclass, level, template from gp_partition_template where relid = 'partsupp_def2'::regclass;
-     relid     | level |                                                                                                                                                                                                                   template                                                                                                                                                                                                                    
----------------+-------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- partsupp_def2 |     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName aaa :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({A_CONST :val 400 :location 76}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({A_CONST :val 600 :location 86}) :edge 2} :partEvery ({A_CONST :val 100 :location 97})} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'partsupp_def2'::regclass;
+     relid     | level |                                         pg_get_expr                                         
+---------------+-------+---------------------------------------------------------------------------------------------
+ partsupp_def2 |     1 | SUBPARTITION TEMPLATE(SUBPARTITION aaa START (400::integer) END (600::integer) Every (100))
 (1 row)
 
 drop table partsupp_def;
@@ -3004,9 +3006,9 @@ drop table partition_cleanup1;
 drop schema partition_999 cascade;
 NOTICE:  drop cascades to table partition_cleanup2
 -- These should be empty
-select relid, level, template from gp_partition_template where not exists (select oid from pg_class where oid = relid);
- relid | level | template 
--------+-------+----------
+select relid, level, pg_get_expr(template, relid) from gp_partition_template where not exists (select oid from pg_class where oid = relid);
+ relid | level | pg_get_expr 
+-------+-------+-------------
 (0 rows)
 
 --
@@ -3081,6 +3083,26 @@ SELECT grant_table_in_function();
  
 (1 row)
 
+-- Validate that ISSUE #14395 which manifested as a crash while deriving stats
+-- on partitioned tables over CTEs is resolved.
+CREATE TABLE a_partition_table_used_in_cte_test(c1 int)
+PARTITION BY LIST(c1)
+(
+	PARTITION a_part values(2,3),
+	DEFAULT partition other
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO a_partition_table_used_in_cte_test SELECT 2;
+ANALYZE a_partition_table_used_in_cte_test;
+WITH cte AS (
+  SELECT * FROM a_partition_table_used_in_cte_test WHERE c1 < 2
+) SELECT * FROM cte WHERE c1 = 1;
+ c1 
+----
+(0 rows)
+
+DROP TABLE a_partition_table_used_in_cte_test;
 -- CLEANUP
 -- start_ignore
 drop schema if exists bfv_partition cascade;

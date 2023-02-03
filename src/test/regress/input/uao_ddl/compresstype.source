@@ -41,8 +41,9 @@ select sum(length(col_text)) from uao_tab_compress_zlib1
 SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimaprelid is
 not NULL AND visimapidxid is not NULL AND relid='uao_tab_compress_zlib1'::regclass;
 
-SELECT 1 AS compression_present from pg_appendonly WHERE
-compresstype='zlib' AND compresslevel=1 AND relid='uao_tab_compress_zlib1'::regclass;
+SELECT c.relname, c.reloptions from pg_class c
+join pg_namespace n on n.oid=c.relnamespace
+where c.relname='uao_tab_compress_zlib1' and n.nspname='compresstype_@amname@';
 
 -- create uao table with compress=zlib COMPRESSLEVEL=9
 CREATE TABLE uao_tab_compress_zlib9 (
@@ -72,8 +73,9 @@ set gp_select_invisible = false;
 SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimapidxid is
 not NULL AND visimapidxid is not NULL AND relid='uao_tab_compress_zlib9'::regclass;
 
-SELECT 1 AS compression_present from pg_appendonly WHERE
-compresstype='zlib' AND compresslevel=9 AND relid='uao_tab_compress_zlib9'::regclass;
+SELECT c.relname, c.reloptions from pg_class c
+join pg_namespace n on n.oid=c.relnamespace
+where c.relname='uao_tab_compress_zlib9' and n.nspname='compresstype_@amname@';
 COMMIT;
 
 -- Verify that RLE compression is not allowed for row oriented

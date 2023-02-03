@@ -58,6 +58,8 @@
 #include "utils/snapmgr.h"
 #include "utils/memutils.h"
 
+#include "nodes/plannodes.h"
+
 typedef struct TmControlBlock
 {
 	bool						DtmStarted;
@@ -85,6 +87,7 @@ uint32 *shmNextSnapshotId;
 slock_t *shmGxidGenLock;
 
 int	max_tm_gxacts = 100;
+bool needDistributedSnapshot = true;
 
 int gp_gxid_prefetch_num;
 #define GXID_PRETCH_THRESHOLD (gp_gxid_prefetch_num>>1)
@@ -781,18 +784,11 @@ doNotifyingAbort(void)
 		case DTX_STATE_NOTIFYING_ABORT_PREPARED:
 			{
 				DtxProtocolCommand dtxProtocolCommand;
-				char	   *abortString;
 
 				if (MyTmGxactLocal->state == DTX_STATE_NOTIFYING_ABORT_SOME_PREPARED)
-				{
 					dtxProtocolCommand = DTX_PROTOCOL_COMMAND_ABORT_SOME_PREPARED;
-					abortString = "Abort [Prepared]";
-				}
 				else
-				{
 					dtxProtocolCommand = DTX_PROTOCOL_COMMAND_ABORT_PREPARED;
-					abortString = "Abort Prepared";
-				}
 
 				savedInterruptHoldoffCount = InterruptHoldoffCount;
 

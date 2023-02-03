@@ -6304,8 +6304,6 @@ select row_number() over(order by foo.a+ bar.a)/count(*) from orca.foo inner joi
 (400 rows)
 
 select count(*) over(partition by b order by a range between 1 preceding and (select count(*) from orca.bar) following) from orca.foo;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
  count 
 -------
     16
@@ -6396,8 +6394,6 @@ select a+1, rank() over(partition by b+1 order by a+1) from orca.foo order by 1,
 (40 rows)
 
 select a , sum(a) over (order by a range 1 preceding) from orca.r order by 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
  a  | sum 
 ----+-----
   1 |   1
@@ -8294,7 +8290,7 @@ explain select * from orca.t order by 1,2;
    ->  Sort  (cost=0.00..431.00 rows=1 width=24)
          Sort Key: timest, user_id
          ->  Dynamic Seq Scan on t  (cost=0.00..431.00 rows=1 width=24)
-               Number of partitions to scan: 6 
+               Number of partitions to scan: 6 (out of 6)
  Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 
@@ -8368,7 +8364,7 @@ explain select * from orca.t_date where user_id=9;
 -------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=2 width=20)
    ->  Dynamic Seq Scan on t_date  (cost=0.00..431.00 rows=1 width=20)
-         Number of partitions to scan: 6 
+         Number of partitions to scan: 6 (out of 6)
          Filter: (user_id = '9'::numeric)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -8411,7 +8407,7 @@ explain select * from orca.t_text where user_id=9;
 -------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=2 width=20)
    ->  Dynamic Seq Scan on t_text  (cost=0.00..431.00 rows=1 width=20)
-         Number of partitions to scan: 3 
+         Number of partitions to scan: 3 (out of 3)
          Filter: (user_id = '9'::numeric)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -8446,7 +8442,7 @@ explain select * from orca.t_ceeval_ints where user_id=4;
 -------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=21)
    ->  Dynamic Seq Scan on t_ceeval_ints  (cost=0.00..431.00 rows=1 width=21)
-         Number of partitions to scan: 3 
+         Number of partitions to scan: 3 (out of 3)
          Filter: (user_id = '4'::numeric)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -9978,7 +9974,7 @@ explain select * from orca.bm_dyn_test where i=2 and t='2';
 --------------------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..398.03 rows=2 width=10)
    ->  Dynamic Bitmap Heap Scan on bm_dyn_test  (cost=0.00..398.03 rows=1 width=10)
-         Number of partitions to scan: 6 
+         Number of partitions to scan: 6 (out of 6)
          Recheck Cond: (i = 2)
          Filter: ((i = 2) AND (t = '2'::text))
          ->  Dynamic Bitmap Index Scan on bm_dyn_test_idx  (cost=0.00..0.00 rows=0 width=0)
@@ -10775,25 +10771,32 @@ set log_statement='none';
 set log_min_duration_statement=-1;
 set client_min_messages='log';
 explain select count(*) from foo group by cube(a,b);
-LOG:  2020-10-19 17:17:37:192241 PDT,THD000,NOTICE,"Feature not supported: Cube",
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Cube
-                                              QUERY PLAN                                              
-------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=1319.44..1496.29 rows=10611 width=16)
-   ->  Finalize HashAggregate  (cost=1319.44..1354.81 rows=3537 width=16)
-         Group Key: a, b, (GROUPINGSET_ID())
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1213.33 rows=10611 width=16)
-               Hash Key: a, b, (GROUPINGSET_ID())
-               ->  Partial MixedAggregate  (cost=0.00..1001.11 rows=10611 width=16)
-                     Hash Key: a, b
-                     Hash Key: a
-                     Hash Key: b
-                     Group Key: ()
-                     Planned Partitions: 4
-                     ->  Seq Scan on foo  (cost=0.00..321.00 rows=28700 width=8)
- Optimizer: Postgres query optimizer
-(15 rows)
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Sequence  (cost=0.00..2155.00 rows=1 width=8)
+   ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=1)
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+               ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=8)
+   ->  Append  (cost=0.00..1724.00 rows=1 width=8)
+         ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=8)
+               Group Key: share0_ref2.a, share0_ref2.b
+               ->  Sort  (cost=0.00..431.00 rows=1 width=8)
+                     Sort Key: share0_ref2.a, share0_ref2.b
+                     ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=8)
+         ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=8)
+               Group Key: share0_ref3.b
+               ->  Sort  (cost=0.00..431.00 rows=1 width=4)
+                     Sort Key: share0_ref3.b
+                     ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=4)
+         ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=8)
+               Group Key: share0_ref4.a
+               ->  Sort  (cost=0.00..431.00 rows=1 width=4)
+                     Sort Key: share0_ref4.a
+                     ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=4)
+         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+               ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(23 rows)
 
 reset client_min_messages;
 reset log_statement;
@@ -10956,13 +10959,14 @@ create table input_tab2 (c int, d int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into input_tab1 values (1, 1);
+analyze input_tab1;
 insert into input_tab1 values (NULL, NULL);
 set optimizer_force_multistage_agg = off;
 set optimizer_force_three_stage_scalar_dqa = off;
 -- end_ignore
 explain (costs off) select count(*), t2.c from input_tab1 t1 left join input_tab2 t2 on t1.a = t2.c group by t2.c;
-                                   QUERY PLAN                                   
---------------------------------------------------------------------------------
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Finalize GroupAggregate
          Group Key: input_tab2.c
@@ -10974,13 +10978,14 @@ explain (costs off) select count(*), t2.c from input_tab1 t1 left join input_tab
                            Group Key: input_tab2.c
                            ->  Sort
                                  Sort Key: input_tab2.c
-                                 ->  Hash Left Join
-                                       Hash Cond: (input_tab1.a = input_tab2.c)
-                                       ->  Seq Scan on input_tab1
-                                       ->  Hash
-                                             ->  Seq Scan on input_tab2
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(17 rows)
+                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                       ->  Hash Left Join
+                                             Hash Cond: (input_tab1.a = input_tab2.c)
+                                             ->  Seq Scan on input_tab1
+                                             ->  Hash
+                                                   ->  Seq Scan on input_tab2
+ Optimizer: Pivotal Optimizer (GPORCA)
+(18 rows)
 
 select count(*), t2.c from input_tab1 t1 left join input_tab2 t2 on t1.a = t2.c group by t2.c;
  count | c 
@@ -11518,14 +11523,14 @@ SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f =
 ---+---+---+---+---
 (0 rows)
 
-explain SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f = 10 AND a IN ( SELECT b + 1 FROM non_part1);
+explain analyze SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f = 10 AND a IN ( SELECT b + 1 FROM non_part1);
                                                      QUERY PLAN                                                     
 --------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324481.18 rows=1 width=20)
    ->  Hash Join  (cost=0.00..1324481.18 rows=1 width=20)
          Hash Cond: (ds_part.c = non_part2.e)
          ->  Dynamic Seq Scan on ds_part  (cost=0.00..1324050.11 rows=334 width=12)
-               Number of partitions to scan: 6 
+               Number of partitions to scan: 6 (out of 6)
                Filter: ((a = (b + 1)) AND (SubPlan 1))
                SubPlan 1
                  ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
@@ -11952,12 +11957,12 @@ explain select * from part1, part2 where part1.b = part2.b limit 5;
                ->  Hash Join  (cost=0.00..862.13 rows=334 width=16)
                      Hash Cond: (part1.b = part2.b)
                      ->  Dynamic Seq Scan on part1  (cost=0.00..431.01 rows=334 width=8)
-                           Number of partitions to scan: 4 
+                           Number of partitions to scan: 4 (out of 4)
                      ->  Hash  (cost=431.02..431.02 rows=100 width=8)
                            ->  Partition Selector (selector id: $0)  (cost=0.00..431.02 rows=100 width=8)
                                  ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.02 rows=100 width=8)
                                        ->  Dynamic Seq Scan on part2  (cost=0.00..431.00 rows=34 width=8)
-                                             Number of partitions to scan: 4 
+                                             Number of partitions to scan: 4 (out of 4)
  Optimizer: Pivotal Optimizer (GPORCA)
 (13 rows)
 
@@ -12290,7 +12295,7 @@ explain select * from lossycastrangepart where b::int = 10;
 -----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
    ->  Dynamic Seq Scan on lossycastrangepart  (cost=0.00..431.00 rows=1 width=16)
-         Number of partitions to scan: 4 
+         Number of partitions to scan: 4 (out of 4)
          Filter: (int4(b) = 10)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -12307,7 +12312,7 @@ explain select * from lossycastrangepart where b::int = 11;
 -----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
    ->  Dynamic Seq Scan on lossycastrangepart  (cost=0.00..431.00 rows=1 width=16)
-         Number of partitions to scan: 4 
+         Number of partitions to scan: 4 (out of 4)
          Filter: (int4(b) = 11)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -12324,7 +12329,7 @@ explain select * from lossycastrangepart where b::int < 10;
 -----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
    ->  Dynamic Seq Scan on lossycastrangepart  (cost=0.00..431.00 rows=1 width=16)
-         Number of partitions to scan: 4 
+         Number of partitions to scan: 4 (out of 4)
          Filter: (int4(b) < 10)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -12341,7 +12346,7 @@ explain select * from lossycastrangepart where b::int < 11;
 -----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
    ->  Dynamic Seq Scan on lossycastrangepart  (cost=0.00..431.00 rows=1 width=16)
-         Number of partitions to scan: 4 
+         Number of partitions to scan: 4 (out of 4)
          Filter: (int4(b) < 11)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -12367,7 +12372,7 @@ explain select * from lossycastlistpart where b::int < 2;
 ----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
    ->  Dynamic Seq Scan on lossycastlistpart  (cost=0.00..431.00 rows=1 width=12)
-         Number of partitions to scan: 3 
+         Number of partitions to scan: 3 (out of 3)
          Filter: (int4(b) < 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -12383,7 +12388,7 @@ explain select * from lossycastlistpart where b::int = 2;
 ----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
    ->  Dynamic Seq Scan on lossycastlistpart  (cost=0.00..431.00 rows=1 width=12)
-         Number of partitions to scan: 3 
+         Number of partitions to scan: 3 (out of 3)
          Filter: (int4(b) = 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -13361,7 +13366,7 @@ explain (costs off) select * from tpart_dim d join tpart_ao_btree f on d.a=f.a w
          ->  Seq Scan on tpart_dim
                Filter: (b = 1)
          ->  Dynamic Bitmap Heap Scan on tpart_ao_btree
-               Number of partitions to scan: 2 
+               Number of partitions to scan: 2 (out of 2)
                Recheck Cond: (a = tpart_dim.a)
                Filter: (a = tpart_dim.a)
                ->  Dynamic Bitmap Index Scan on tpart_ao_btree_ix
@@ -13413,7 +13418,7 @@ explain (costs off) select * from tpart_ao_btree where a = 3 and b = 3;
 ------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Dynamic Seq Scan on tpart_ao_btree
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 2)
          Filter: ((a = 3) AND (b = 3))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -13511,7 +13516,7 @@ group by asset_records.uid, asset_records.hostname, asset_records.asset_type, as
                      ->  Hash Join
                            Hash Cond: ((upper((asset_records.hostname)::text) = upper((coverage.hostname)::text)) AND (asset_records.create_ts = coverage.date))
                            ->  Dynamic Seq Scan on asset_records
-                                 Number of partitions to scan: 5 
+                                 Number of partitions to scan: 5 (out of 5)
                                  Filter: ((upper((COALESCE(vendor, 'none'::character varying))::text) <> 'some_vendor'::text) AND (((asset_type)::text = 'xx'::text) OR ((asset_type)::text = 'yy'::text)) AND active)
                            ->  Hash
                                  ->  Partition Selector (selector id: $0)
@@ -13545,7 +13550,7 @@ explain (costs off) select count(*) from x, y where (x.i > y.j AND x.j <= y.i);
                ->  Dynamic Index Scan on y_idx on y
                      Index Cond: (j < x.i)
                      Filter: ((j < x.i) AND (x.j <= i))
-                     Number of partitions to scan: 5 
+                     Number of partitions to scan: 5 (out of 5)
  Optimizer: Pivotal Optimizer (GPORCA)
 (11 rows)
 
@@ -13572,7 +13577,7 @@ explain (costs off) select * from infer_part_vc inner join infer_txt on (infer_p
    ->  Hash Join
          Hash Cond: ((infer_part_vc.gender)::text = infer_txt.a)
          ->  Dynamic Seq Scan on infer_part_vc
-               Number of partitions to scan: 1 
+               Number of partitions to scan: 1 (out of 3)
                Filter: ((gender)::text = 'M'::text)
          ->  Hash
                ->  Partition Selector (selector id: $0)
@@ -13641,7 +13646,7 @@ explain (costs off) select * from pt where gender in ( 'F', 'FM');
 -----------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on pt
-         Number of partitions to scan: 2 
+         Number of partitions to scan: 2 (out of 3)
          Filter: ((gender)::text = ANY ('{F,FM}'::text[]))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -13659,16 +13664,16 @@ select * from pt where gender is null;
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Append
          ->  Dynamic Seq Scan on pt
-               Number of partitions to scan: 1 
+               Number of partitions to scan: 1 (out of 3)
                Filter: ((gender)::text = 'F'::text)
          ->  Dynamic Seq Scan on pt pt_1
-               Number of partitions to scan: 3 
+               Number of partitions to scan: 3 (out of 3)
                Filter: ((gender)::text <= 'M'::text)
          ->  Dynamic Seq Scan on pt pt_2
-               Number of partitions to scan: 2 
+               Number of partitions to scan: 2 (out of 3)
                Filter: ((gender)::text = ANY ('{F,FM}'::text[]))
          ->  Dynamic Seq Scan on pt pt_3
-               Number of partitions to scan: 1 
+               Number of partitions to scan: 1 (out of 3)
                Filter: (gender IS NULL)
  Optimizer: Pivotal Optimizer (GPORCA)
 (15 rows)
@@ -13712,7 +13717,7 @@ where d.msisdn=f.subscriberaddress and
          ->  Hash
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
                      ->  Dynamic Seq Scan on stg_xdr_crce_cdr
-                           Number of partitions to scan: 2 
+                           Number of partitions to scan: 2 (out of 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (11 rows)
 
@@ -13733,7 +13738,7 @@ where month_id::text = 'Apr';
 --------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on ds_4
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 2)
          Filter: ((month_id)::text = 'Apr'::text)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -13750,7 +13755,7 @@ where month_id::text >= 'Feb' and month_id::text < 'Mar';
 ------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on ds_4
-         Number of partitions to scan: 2 
+         Number of partitions to scan: 2 (out of 2)
          Filter: (((month_id)::text >= 'Feb'::text) AND ((month_id)::text < 'Mar'::text))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -13794,7 +13799,7 @@ ORDER BY to_char(order_datetime,'YYYY-Q')
                                  ->  Sort
                                        Sort Key: (to_char(order_datetime, 'YYYY-Q'::text)), item_shipment_status_code, order_id
                                        ->  Dynamic Seq Scan on order_lineitems
-                                             Number of partitions to scan: 3 
+                                             Number of partitions to scan: 3 (out of 12)
                                              Filter: ((order_datetime >= 'Thu Apr 01 00:00:00 2010'::timestamp without time zone) AND (order_datetime <= '06-30-2010'::date))
  Optimizer: Pivotal Optimizer (GPORCA)
 (18 rows)
@@ -14480,21 +14485,21 @@ from (select (min(i) over (order by j)) as i, j from window_agg_test) tt
 where t.j = tt.j;
                                                             QUERY PLAN                                                             
 -----------------------------------------------------------------------------------------------------------------------------------
- Update on window_agg_test  (cost=0.00..862.03 rows=1 width=1)
-   ->  Result  (cost=0.00..862.00 rows=1 width=22)
+ Update on window_agg_test  (cost=0.00..862.02 rows=1 width=1)
+   ->  Result  (cost=0.00..0.00 rows=0 width=0)
          ->  Explicit Redistribute Motion 1:3  (slice1; segments: 1)  (cost=0.00..862.00 rows=1 width=18)
                ->  Hash Join  (cost=0.00..862.00 rows=1 width=18)
-                     Hash Cond: (window_agg_test_1.j = window_agg_test_2.j)
+                     Hash Cond: (window_agg_test.j = window_agg_test_1.j)
                      ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=14)
-                           ->  Seq Scan on window_agg_test window_agg_test_1  (cost=0.00..431.00 rows=1 width=14)
+                           ->  Seq Scan on window_agg_test  (cost=0.00..431.00 rows=1 width=14)
                      ->  Hash  (cost=431.00..431.00 rows=1 width=8)
                            ->  WindowAgg  (cost=0.00..431.00 rows=1 width=8)
-                                 Order By: window_agg_test_2.j
+                                 Order By: window_agg_test_1.j
                                  ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                       Merge Key: window_agg_test_2.j
+                                       Merge Key: window_agg_test_1.j
                                        ->  Sort  (cost=0.00..431.00 rows=1 width=8)
-                                             Sort Key: window_agg_test_2.j
-                                             ->  Seq Scan on window_agg_test window_agg_test_2  (cost=0.00..431.00 rows=1 width=8)
+                                             Sort Key: window_agg_test_1.j
+                                             ->  Seq Scan on window_agg_test window_agg_test_1  (cost=0.00..431.00 rows=1 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
 (16 rows)
 

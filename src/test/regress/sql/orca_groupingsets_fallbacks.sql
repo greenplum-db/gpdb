@@ -11,12 +11,18 @@ insert into gstest1 values (1, 42, 20, 7, 200);
 insert into gstest1 values (2, 5, 30, 21, 300);
 insert into gstest1 values (2, 42, 40, 53, 400);
 
--- Orca falls back due to Cube
-select a, b, c, sum(v) from gstest1 group by cube(a, b, c);
-
--- Orca falls back due to multiple grouping sets specifications
-select sum(v), b, a, c from gstest1 group by c, grouping sets ((a, b), ());
-select sum(v), b, a, c, d from gstest1 group by grouping sets(a, b), rollup(c, d);
+-- Orca falls back due to multiple grouping sets specifications referencing
+-- duplicate alias columns where column is possibly nulled by ROLLUP or CUBE.
+-- This is also a known issue in Postgres. Following threads [1][2] have more
+-- details.
+--
+-- [1] https://www.postgresql.org/message-id/flat/CAHnPFjSdFx_TtNpQturPMkRSJMYaD5rGP2=8iFH9V24-OjHGiQ@mail.gmail.com
+-- [2] https://www.postgresql.org/message-id/flat/830269.1656693747@sss.pgh.pa.us
+select a as alias1, a as alias2 from gstest1 group by alias1, rollup(alias2);
+select a as alias1, a as alias2 from gstest1 group by alias1, cube(alias2);
+-- Following does not need to fallback because no ROLLUP/CUBE means neither
+-- column needs to be nulled.
+select a as alias1, a as alias2 from gstest1 group by alias1, alias2;
 
 -- Orca falls back due to nested grouping sets
 select sum(v), b, a, c, d from gstest1 group by grouping sets(a, b, rollup(c, d));

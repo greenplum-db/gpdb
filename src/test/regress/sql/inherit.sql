@@ -213,6 +213,15 @@ alter table a set distributed randomly;
 alter table a alter column aa type integer using bit_length(aa);
 select * from d;
 
+-- The above verified that we can change the type of a multiply-inherited
+-- column; but we should reject that if any definition was inherited from
+-- an unrelated parent.
+create temp table parent1(f1 int, f2 int);
+create temp table parent2(f1 int, f3 bigint);
+create temp table childtab(f4 int) inherits(parent1, parent2);
+alter table parent1 alter column f1 type bigint;  -- fail, conflict w/parent2
+alter table parent1 alter column f2 type bigint;  -- ok
+
 -- Test non-inheritable parent constraints
 create table p1(ff1 int);
 alter table p1 add constraint p1chk check (ff1 > 0) no inherit;
@@ -872,3 +881,144 @@ explain (costs off) select * from range_parted order by a,b,c;
 explain (costs off) select * from range_parted order by a desc,b desc,c desc;
 
 drop table range_parted;
+
+-- Check that we allow access to a child table's statistics when the user
+-- has permissions only for the parent table.
+create table permtest_parent (a int, b text, c text) partition by list (a);
+create table permtest_child (b text, c text, a int) partition by list (b) distributed by (a);
+create table permtest_grandchild (c text, b text, a int) distributed by (a);
+alter table permtest_child attach partition permtest_grandchild for values in ('a');
+alter table permtest_parent attach partition permtest_child for values in (1);
+create index on permtest_parent (left(c, 3));
+insert into permtest_parent
+  select 1, 'a', left(md5(i::text), 5) from generate_series(0, 100) i;
+analyze permtest_parent;
+create role regress_no_child_access;
+revoke all on permtest_grandchild from regress_no_child_access;
+grant select on permtest_parent to regress_no_child_access;
+set session authorization regress_no_child_access;
+-- without stats access, these queries would produce hash join plans:
+explain (costs off)
+  select * from permtest_parent p1 inner join permtest_parent p2
+  on p1.a = p2.a and p1.c ~ 'a1$';
+explain (costs off)
+  select * from permtest_parent p1 inner join permtest_parent p2
+  on p1.a = p2.a and left(p1.c, 3) ~ 'a1$';
+reset session authorization;
+revoke all on permtest_parent from regress_no_child_access;
+grant select(a,c) on permtest_parent to regress_no_child_access;
+set session authorization regress_no_child_access;
+explain (costs off)
+  select p2.a, p1.c from permtest_parent p1 inner join permtest_parent p2
+  on p1.a = p2.a and p1.c ~ 'a1$';
+-- we will not have access to the expression index's stats here:
+explain (costs off)
+  select p2.a, p1.c from permtest_parent p1 inner join permtest_parent p2
+  on p1.a = p2.a and left(p1.c, 3) ~ 'a1$';
+reset session authorization;
+revoke all on permtest_parent from regress_no_child_access;
+drop role regress_no_child_access;
+drop table permtest_parent;
+
+-- Verify that constraint errors across partition root / child are
+-- handled correctly (Bug #16293)
+CREATE TABLE errtst_parent (
+    partid int not null,
+    shdata int not null,
+    data int NOT NULL DEFAULT 0,
+    CONSTRAINT shdata_small CHECK(shdata < 3)
+) PARTITION BY RANGE (partid);
+
+-- fast defaults lead to attribute mapping being used in one
+-- direction, but not the other
+CREATE TABLE errtst_child_fastdef (
+    partid int not null,
+    shdata int not null,
+    CONSTRAINT shdata_small CHECK(shdata < 3)
+);
+
+-- no remapping in either direction necessary
+CREATE TABLE errtst_child_plaindef (
+    partid int not null,
+    shdata int not null,
+    data int NOT NULL DEFAULT 0,
+    CONSTRAINT shdata_small CHECK(shdata < 3),
+    CHECK(data < 10)
+);
+
+-- remapping in both direction
+CREATE TABLE errtst_child_reorder (
+    data int NOT NULL DEFAULT 0,
+    shdata int not null,
+    partid int not null,
+    CONSTRAINT shdata_small CHECK(shdata < 3),
+    CHECK(data < 10)
+) distributed by (partid);
+
+ALTER TABLE errtst_child_fastdef ADD COLUMN data int NOT NULL DEFAULT 0;
+ALTER TABLE errtst_child_fastdef ADD CONSTRAINT errtest_child_fastdef_data_check CHECK (data < 10);
+
+ALTER TABLE errtst_parent ATTACH PARTITION errtst_child_fastdef FOR VALUES FROM (0) TO (10);
+ALTER TABLE errtst_parent ATTACH PARTITION errtst_child_plaindef FOR VALUES FROM (10) TO (20);
+ALTER TABLE errtst_parent ATTACH PARTITION errtst_child_reorder FOR VALUES FROM (20) TO (30);
+
+-- insert without child check constraint error
+INSERT INTO errtst_parent(partid, shdata, data) VALUES ( '0', '1', '5');
+INSERT INTO errtst_parent(partid, shdata, data) VALUES ('10', '1', '5');
+INSERT INTO errtst_parent(partid, shdata, data) VALUES ('20', '1', '5');
+
+-- insert with child check constraint error
+INSERT INTO errtst_parent(partid, shdata, data) VALUES ( '0', '1', '10');
+INSERT INTO errtst_parent(partid, shdata, data) VALUES ('10', '1', '10');
+INSERT INTO errtst_parent(partid, shdata, data) VALUES ('20', '1', '10');
+
+-- insert with child not null constraint error
+INSERT INTO errtst_parent(partid, shdata, data) VALUES ( '0', '1', NULL);
+INSERT INTO errtst_parent(partid, shdata, data) VALUES ('10', '1', NULL);
+INSERT INTO errtst_parent(partid, shdata, data) VALUES ('20', '1', NULL);
+
+-- insert with shared check constraint error
+INSERT INTO errtst_parent(partid, shdata, data) VALUES ( '0', '5', '5');
+INSERT INTO errtst_parent(partid, shdata, data) VALUES ('10', '5', '5');
+INSERT INTO errtst_parent(partid, shdata, data) VALUES ('20', '5', '5');
+
+-- within partition update without child check constraint violation
+BEGIN;
+UPDATE errtst_parent SET data = data + 1 WHERE partid = 0;
+UPDATE errtst_parent SET data = data + 1 WHERE partid = 10;
+UPDATE errtst_parent SET data = data + 1 WHERE partid = 20;
+ROLLBACK;
+
+-- within partition update with child check constraint violation
+UPDATE errtst_parent SET data = data + 10 WHERE partid = 0;
+UPDATE errtst_parent SET data = data + 10 WHERE partid = 10;
+UPDATE errtst_parent SET data = data + 10 WHERE partid = 20;
+
+-- direct leaf partition update, without partition id violation
+BEGIN;
+UPDATE errtst_child_fastdef SET partid = 1 WHERE partid = 0;
+UPDATE errtst_child_plaindef SET partid = 11 WHERE partid = 10;
+UPDATE errtst_child_reorder SET partid = 21 WHERE partid = 20;
+ROLLBACK;
+
+-- direct leaf partition update, with partition id violation
+UPDATE errtst_child_fastdef SET partid = partid + 10 WHERE partid = 0;
+UPDATE errtst_child_plaindef SET partid = partid + 10 WHERE partid = 10;
+UPDATE errtst_child_reorder SET partid = partid + 10 WHERE partid = 20;
+
+-- partition move, without child check constraint violation
+BEGIN;
+UPDATE errtst_parent SET partid = 10, data = data + 1 WHERE partid = 0;
+UPDATE errtst_parent SET partid = 20, data = data + 1 WHERE partid = 10;
+UPDATE errtst_parent SET partid = 0, data = data + 1 WHERE partid = 20;
+ROLLBACK;
+
+-- partition move, with child check constraint violation
+UPDATE errtst_parent SET partid = 10, data = data + 10 WHERE partid = 0;
+UPDATE errtst_parent SET partid = 20, data = data + 10 WHERE partid = 10;
+UPDATE errtst_parent SET partid = 0, data = data + 10 WHERE partid = 20;
+
+-- partition move, without target partition
+UPDATE errtst_parent SET partid = 30, data = data + 10 WHERE partid = 20;
+
+DROP TABLE errtst_parent;

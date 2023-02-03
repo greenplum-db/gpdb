@@ -15,7 +15,7 @@ Greenplum Database PL/pgSQL is a loadable procedural language that is installed 
 
 With PL/pgSQL you can group a block of computation and a series of SQL queries inside the database server, thus having the power of a procedural language and the ease of use of SQL. Also, with PL/pgSQL you can use all the data types, operators and functions of Greenplum Database SQL.
 
-The PL/pgSQL language is a subset of Oracle PL/SQL. Greenplum Database PL/pgSQL is based on Postgres PL/pgSQL. The Postgres PL/pgSQL documentation is at [https://www.postgresql.org/docs/9.4/plpgsql.html](https://www.postgresql.org/docs/9.4/plpgsql.html)
+The PL/pgSQL language is a subset of Oracle PL/SQL. Greenplum Database PL/pgSQL is based on Postgres PL/pgSQL. The Postgres PL/pgSQL documentation is at [https://www.postgresql.org/docs/12/plpgsql.html](https://www.postgresql.org/docs/12/plpgsql.html)
 
 When using PL/pgSQL functions, function attributes affect how Greenplum Database creates query plans. You can specify the attribute `IMMUTABLE`, `STABLE`, or `VOLATILE` as part of the `LANGUAGE` clause to classify the type of function. For information about the creating functions and function attributes, see the [CREATE FUNCTION](../ref_guide/sql_commands/CREATE_FUNCTION.html) command in the *Greenplum Database Reference Guide*.
 
@@ -49,7 +49,7 @@ Each declaration and each statement within a block is terminated by a semicolon 
 
 A label is required only if you want to identify the block for use in an `EXIT` statement, or to qualify the names of variables declared in the block. If you provide a label after `END`, it must match the label at the block's beginning.
 
-**Important:** Do not confuse the use of the `BEGIN` and `END` keywords for grouping statements in PL/pgSQL with the database commands for transaction control. The PL/pgSQL `BEGIN` and `END` keywords are only for grouping; they do not start or end a transaction. Functions are always run within a transaction established by an outer query — they cannot start or commit that transaction, since there would be no context for them to run in. However, a PL/pgSQL block that contains an `EXCEPTION` clause effectively forms a subtransaction that can be rolled back without affecting the outer transaction. For more about the `EXCEPTION` clause, see the PostgreSQL documentation on trapping errors at [https://www.postgresql.org/docs/9.4/plpgsql-control-structures.html\#PLPGSQL-ERROR-TRAPPING](https://www.postgresql.org/docs/9.4/plpgsql-control-structures.html#PLPGSQL-ERROR-TRAPPING).
+> **Important** Do not confuse the use of the `BEGIN` and `END` keywords for grouping statements in PL/pgSQL with the database commands for transaction control. The PL/pgSQL `BEGIN` and `END` keywords are only for grouping; they do not start or end a transaction. Functions are always run within a transaction established by an outer query — they cannot start or commit that transaction, since there would be no context for them to run in. However, a PL/pgSQL block that contains an `EXCEPTION` clause effectively forms a subtransaction that can be rolled back without affecting the outer transaction. For more about the `EXCEPTION` clause, see the PostgreSQL documentation on trapping errors at [https://www.postgresql.org/docs/12/plpgsql-control-structures.html\#PLPGSQL-ERROR-TRAPPING](https://www.postgresql.org/docs/12/plpgsql-control-structures.html#PLPGSQL-ERROR-TRAPPING).
 
 Keywords are case-insensitive. Identifiers are implicitly converted to lowercase unless double-quoted, just as they are in ordinary SQL commands.
 
@@ -90,9 +90,9 @@ $$ LANGUAGE plpgsql;
 
 #### <a id="topic5"></a>Running SQL Commands 
 
-You can run SQL commands with PL/pgSQL statements such as `EXECUTE`, `PERFORM`, and `SELECT ... INTO`. For information about the PL/pgSQL statements, see [https://www.postgresql.org/docs/9.4/plpgsql-statements.html](https://www.postgresql.org/docs/9.4/plpgsql-statements.html).
+You can run SQL commands with PL/pgSQL statements such as `EXECUTE`, `PERFORM`, and `SELECT ... INTO`. For information about the PL/pgSQL statements, see [https://www.postgresql.org/docs/12/plpgsql-statements.html](https://www.postgresql.org/docs/12/plpgsql-statements.html).
 
-**Note:** The PL/pgSQL statement `SELECT INTO` is not supported in the `EXECUTE` statement.
+> **Note** The PL/pgSQL statement `SELECT INTO` is not supported in the `EXECUTE` statement.
 
 ## <a id="topic67"></a>PL/pgSQL Plan Caching 
 
@@ -106,7 +106,7 @@ The SQL commands that you use in a PL/pgSQL function must refer to the same tabl
 
 PL/pgSQL caches a separate query plan for each combination of actual argument types in which you invoke a polymorphic function to ensure that data type differences do not cause unexpected failures.
 
-Refer to the PostgreSQL [Plan Caching](https://www.postgresql.org/docs/9.4/plpgsql-implementation.html#PLPGSQL-PLAN-CACHING) documentation for a detailed discussion of plan caching considerations in the PL/pgSQL language.
+Refer to the PostgreSQL [Plan Caching](https://www.postgresql.org/docs/12/plpgsql-implementation.html#PLPGSQL-PLAN-CACHING) documentation for a detailed discussion of plan caching considerations in the PL/pgSQL language.
 
 ## <a id="topic6"></a>PL/pgSQL Examples 
 
@@ -210,7 +210,7 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 ```
 
-**Note:** The previous function is classified as a `VOLATILE` function because function values could change within a single table scan.
+> **Note** The previous function is classified as a `VOLATILE` function because function values could change within a single table scan.
 
 The following `SELECT` command uses the function.
 
@@ -218,7 +218,7 @@ The following `SELECT` command uses the function.
 select t1_calc( 'test1' );
 ```
 
-**Note:** The example PL/pgSQL function uses `SELECT` with the `INTO` clause. It is different from the SQL command `SELECT INTO`. If you want to create a table from a `SELECT` result inside a PL/pgSQL function, use the SQL command `CREATE TABLE AS`.
+> **Note** The example PL/pgSQL function uses `SELECT` with the `INTO` clause. It is different from the SQL command `SELECT INTO`. If you want to create a table from a `SELECT` result inside a PL/pgSQL function, use the SQL command `CREATE TABLE AS`.
 
 ### <a id="topic_lsh_5n5_2z1717"></a>Example: Using a Variable Number of Arguments 
 
@@ -358,11 +358,11 @@ END $$ LANGUAGE plpgsql ;
 
 ## <a id="topic10"></a>References 
 
-The PostgreSQL documentation about PL/pgSQL is at [https://www.postgresql.org/docs/9.4/plpgsql.html](https://www.postgresql.org/docs/9.4/plpgsql.html)
+The PostgreSQL documentation about PL/pgSQL is at [https://www.postgresql.org/docs/12/plpgsql.html](https://www.postgresql.org/docs/12/plpgsql.html)
 
 Also, see the [CREATE FUNCTION](../ref_guide/sql_commands/CREATE_FUNCTION.html) command in the *Greenplum Database Reference Guide*.
 
 For a summary of built-in Greenplum Database functions, see [Summary of Built-in Functions](../ref_guide/function-summary.html) in the *Greenplum Database Reference Guide*. For information about using Greenplum Database functions see "Querying Data" in the *Greenplum Database Administrator Guide*
 
-For information about porting Oracle functions, see [https://www.postgresql.org/docs/9.4/plpgsql-porting.html](https://www.postgresql.org/docs/9.4/plpgsql-porting.html). For information about installing and using the Oracle compatibility functions with Greenplum Database, see "Oracle Compatibility Functions" in the *Greenplum Database Utility Guide*.
+For information about porting Oracle functions, see [https://www.postgresql.org/docs/12/plpgsql-porting.html](https://www.postgresql.org/docs/12/plpgsql-porting.html). For information about installing and using the Oracle compatibility functions with Greenplum Database, see "Oracle Compatibility Functions" in the *Greenplum Database Utility Guide*.
 

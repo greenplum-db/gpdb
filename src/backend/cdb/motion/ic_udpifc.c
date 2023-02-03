@@ -5512,7 +5512,6 @@ SendChunkUDPIFC(ChunkTransportState *transportStates,
 	{
 		/* handling stop message will make some connection not active anymore */
 		handleStopMsgs(transportStates, pEntry, motionId);
-		gotStops = false;
 		if (!conn->stillActive)
 			return true;
 	}

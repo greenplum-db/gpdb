@@ -90,7 +90,9 @@ static Pattern_Prefix_Status pattern_fixed_prefix(Const *patt,
 												  Selectivity *rest_selec);
 static Selectivity prefix_selectivity(PlannerInfo *root,
 									  VariableStatData *vardata,
-									  Oid vartype, Oid opfamily, Const *prefixcon);
+									  Oid vartype, Oid opfamily,
+									  Oid collation,
+									  Const *prefixcon);
 static Selectivity like_selectivity(const char *patt, int pattlen,
 									bool case_insensitive);
 static Selectivity regex_selectivity(const char *patt, int pattlen,
@@ -265,7 +267,7 @@ match_pattern_prefix(Node *leftop,
 	 * pattern-matching is not supported with nondeterministic collations. (We
 	 * could also error out here, but by doing it later we get more precise
 	 * error messages.)  (It should be possible to support at least
-	 * Pattern_Prefix_Exact, but no point as along as the actual
+	 * Pattern_Prefix_Exact, but no point as long as the actual
 	 * pattern-matching implementations don't support it.)
 	 *
 	 * expr_coll is not set for a non-collation-aware data type such as bytea.
@@ -357,13 +359,16 @@ match_pattern_prefix(Node *leftop,
 
 	/*
 	 * If we found an exact-match pattern, generate an "=" indexqual.
+	 *
+	 * (Despite the checks above, we might fail to find a suitable operator in
+	 * some cases with binary-compatible opclasses.  Just punt if so.)
 	 */
 	if (pstatus == Pattern_Prefix_Exact)
 	{
 		oproid = get_opfamily_member(opfamily, ldatatype, rdatatype,
 									 BTEqualStrategyNumber);
 		if (oproid == InvalidOid)
-			elog(ERROR, "no = operator for opfamily %u", opfamily);
+			return NIL;
 		expr = make_opclause(oproid, BOOLOID, false,
 							 (Expr *) leftop, (Expr *) prefix,
 							 InvalidOid, indexcollation);
@@ -379,7 +384,7 @@ match_pattern_prefix(Node *leftop,
 	oproid = get_opfamily_member(opfamily, ldatatype, rdatatype,
 								 BTGreaterEqualStrategyNumber);
 	if (oproid == InvalidOid)
-		elog(ERROR, "no >= operator for opfamily %u", opfamily);
+		return NIL;
 	expr = make_opclause(oproid, BOOLOID, false,
 						 (Expr *) leftop, (Expr *) prefix,
 						 InvalidOid, indexcollation);
@@ -396,7 +401,7 @@ match_pattern_prefix(Node *leftop,
 	oproid = get_opfamily_member(opfamily, ldatatype, rdatatype,
 								 BTLessStrategyNumber);
 	if (oproid == InvalidOid)
-		elog(ERROR, "no < operator for opfamily %u", opfamily);
+		return result;
 	fmgr_info(get_opcode(oproid), &ltproc);
 	greaterstr = make_greater_string(prefix, &ltproc, indexcollation);
 	if (greaterstr)
@@ -583,8 +588,8 @@ patternsel_common(PlannerInfo *root,
 
 		if (eqopr == InvalidOid)
 			elog(ERROR, "no = operator for opfamily %u", opfamily);
-		result = var_eq_const(&vardata, eqopr, prefix->constvalue,
-							  false, true, false);
+		result = var_eq_const_ext(&vardata, eqopr, collation,
+								  prefix->constvalue, false, true, false);
 	}
 	else
 	{
@@ -615,8 +620,9 @@ patternsel_common(PlannerInfo *root,
 			opfuncid = get_opcode(oprid);
 		fmgr_info(opfuncid, &opproc);
 
-		selec = histogram_selectivity(&vardata, &opproc, constval, true,
-									  10, 1, &hist_size);
+		selec = histogram_selectivity_ext(&vardata, &opproc, collation,
+										  constval, true,
+										  10, 1, &hist_size);
 
 		/* If not at least 100 entries, use the heuristic method */
 		if (hist_size < 100)
@@ -626,7 +632,7 @@ patternsel_common(PlannerInfo *root,
 
 			if (pstatus == Pattern_Prefix_Partial)
 				prefixsel = prefix_selectivity(root, &vardata, vartype,
-											   opfamily, prefix);
+											   opfamily, collation, prefix);
 			else
 				prefixsel = 1.0;
 			heursel = prefixsel * rest_selec;
@@ -658,8 +664,9 @@ patternsel_common(PlannerInfo *root,
 		 * directly to the result selectivity.  Also add up the total fraction
 		 * represented by MCV entries.
 		 */
-		mcv_selec = mcv_selectivity(&vardata, &opproc, constval, true,
-									&sumcommon);
+		mcv_selec = mcv_selectivity_ext(&vardata, &opproc, collation,
+										constval, true,
+										&sumcommon);
 
 		/*
 		 * Now merge the results from the MCV and histogram calculations,
@@ -1167,12 +1174,13 @@ pattern_fixed_prefix(Const *patt, Pattern_Type ptype, Oid collation,
  */
 static Selectivity
 prefix_selectivity(PlannerInfo *root, VariableStatData *vardata,
-				   Oid vartype, Oid opfamily, Const *prefixcon)
+				   Oid vartype, Oid opfamily,
+				   Oid collation,
+				   Const *prefixcon)
 {
 	Selectivity prefixsel;
 	Oid			cmpopr;
 	FmgrInfo	opproc;
-	AttStatsSlot sslot;
 	Const	   *greaterstrcon;
 	Selectivity eq_sel;
 
@@ -1182,10 +1190,11 @@ prefix_selectivity(PlannerInfo *root, VariableStatData *vardata,
 		elog(ERROR, "no >= operator for opfamily %u", opfamily);
 	fmgr_info(get_opcode(cmpopr), &opproc);
 
-	prefixsel = ineq_histogram_selectivity(root, vardata,
-										   &opproc, true, true,
-										   prefixcon->constvalue,
-										   prefixcon->consttype);
+	prefixsel = ineq_histogram_selectivity_ext(root, vardata,
+											   &opproc, true, true,
+											   collation,
+											   prefixcon->constvalue,
+											   prefixcon->consttype);
 
 	if (prefixsel < 0.0)
 	{
@@ -1193,33 +1202,24 @@ prefix_selectivity(PlannerInfo *root, VariableStatData *vardata,
 		return DEFAULT_MATCH_SEL;
 	}
 
-	/*-------
-	 * If we can create a string larger than the prefix, say
-	 * "x < greaterstr".  We try to generate the string referencing the
-	 * collation of the var's statistics, but if that's not available,
-	 * use DEFAULT_COLLATION_OID.
-	 *-------
+	/*
+	 * If we can create a string larger than the prefix, say "x < greaterstr".
 	 */
-	if (HeapTupleIsValid(vardata->statsTuple) &&
-		get_attstatsslot(&sslot, vardata->statsTuple,
-						 STATISTIC_KIND_HISTOGRAM, InvalidOid, 0))
-		 /* sslot.stacoll is set up */ ;
-	else
-		sslot.stacoll = DEFAULT_COLLATION_OID;
 	cmpopr = get_opfamily_member(opfamily, vartype, vartype,
 								 BTLessStrategyNumber);
 	if (cmpopr == InvalidOid)
 		elog(ERROR, "no < operator for opfamily %u", opfamily);
 	fmgr_info(get_opcode(cmpopr), &opproc);
-	greaterstrcon = make_greater_string(prefixcon, &opproc, sslot.stacoll);
+	greaterstrcon = make_greater_string(prefixcon, &opproc, collation);
 	if (greaterstrcon)
 	{
 		Selectivity topsel;
 
-		topsel = ineq_histogram_selectivity(root, vardata,
-											&opproc, false, false,
-											greaterstrcon->constvalue,
-											greaterstrcon->consttype);
+		topsel = ineq_histogram_selectivity_ext(root, vardata,
+												&opproc, false, false,
+												collation,
+												greaterstrcon->constvalue,
+												greaterstrcon->consttype);
 
 		/* ineq_histogram_selectivity worked before, it shouldn't fail now */
 		Assert(topsel >= 0.0);
@@ -1250,8 +1250,8 @@ prefix_selectivity(PlannerInfo *root, VariableStatData *vardata,
 								 BTEqualStrategyNumber);
 	if (cmpopr == InvalidOid)
 		elog(ERROR, "no = operator for opfamily %u", opfamily);
-	eq_sel = var_eq_const(vardata, cmpopr, prefixcon->constvalue,
-						  false, true, false);
+	eq_sel = var_eq_const_ext(vardata, cmpopr, collation, prefixcon->constvalue,
+							  false, true, false);
 
 	prefixsel = Max(prefixsel, eq_sel);
 
@@ -1424,9 +1424,18 @@ regex_selectivity(const char *patt, int pattlen, bool case_insensitive,
 		sel *= FULL_WILDCARD_SEL;
 	}
 
-	/* If there's a fixed prefix, discount its selectivity */
+	/*
+	 * If there's a fixed prefix, discount its selectivity.  We have to be
+	 * careful here since a very long prefix could result in pow's result
+	 * underflowing to zero (in which case "sel" probably has as well).
+	 */
 	if (fixed_prefix_len > 0)
-		sel /= pow(FIXED_CHAR_SEL, fixed_prefix_len);
+	{
+		double		prefixsel = pow(FIXED_CHAR_SEL, fixed_prefix_len);
+
+		if (prefixsel > 0.0)
+			sel /= prefixsel;
+	}
 
 	/* Make sure result stays in range */
 	CLAMP_PROBABILITY(sel);
@@ -1437,8 +1446,9 @@ regex_selectivity(const char *patt, int pattlen, bool case_insensitive,
  * Check whether char is a letter (and, hence, subject to case-folding)
  *
  * In multibyte character sets or with ICU, we can't use isalpha, and it does
- * not seem worth trying to convert to wchar_t to use iswalpha.  Instead, just
- * assume any multibyte char is potentially case-varying.
+ * not seem worth trying to convert to wchar_t to use iswalpha or u_isalpha.
+ * Instead, just assume any non-ASCII char is potentially case-varying, and
+ * hard-wire knowledge of which ASCII chars are letters.
  */
 static int
 pattern_char_isalpha(char c, bool is_multibyte,
@@ -1449,7 +1459,8 @@ pattern_char_isalpha(char c, bool is_multibyte,
 	else if (is_multibyte && IS_HIGHBIT_SET(c))
 		return true;
 	else if (locale && locale->provider == COLLPROVIDER_ICU)
-		return IS_HIGHBIT_SET(c) ? true : false;
+		return IS_HIGHBIT_SET(c) ||
+			(c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 #ifdef HAVE_LOCALE_T
 	else if (locale && locale->provider == COLLPROVIDER_LIBC)
 		return isalpha_l((unsigned char) c, locale->info.lt);

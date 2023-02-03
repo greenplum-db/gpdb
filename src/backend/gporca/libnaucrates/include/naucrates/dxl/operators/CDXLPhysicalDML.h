@@ -54,9 +54,6 @@ private:
 	// action column id
 	ULONG m_action_colid;
 
-	// oid column id
-	ULONG m_oid_colid;
-
 	// ctid column id
 	ULONG m_ctid_colid;
 
@@ -65,9 +62,6 @@ private:
 
 	// direct dispatch info for insert statements
 	CDXLDirectDispatchInfo *m_direct_dispatch_info;
-
-	// needs the data to be sorted or not
-	BOOL m_input_sort_req;
 
 	// Is Split Update
 	BOOL m_fSplit;
@@ -79,9 +73,9 @@ public:
 	CDXLPhysicalDML(CMemoryPool *mp, const EdxlDmlType dxl_dml_type,
 					CDXLTableDescr *table_descr,
 					ULongPtrArray *src_colids_array, ULONG action_colid,
-					ULONG oid_colid, ULONG ctid_colid, ULONG segid_colid,
+					ULONG ctid_colid, ULONG segid_colid,
 					CDXLDirectDispatchInfo *dxl_direct_dispatch_info,
-					BOOL input_sort_req, BOOL fSplit);
+					BOOL fSplit);
 
 	// dtor
 	~CDXLPhysicalDML() override;
@@ -120,13 +114,6 @@ public:
 		return m_action_colid;
 	}
 
-	// oid column id
-	ULONG
-	OidColId() const
-	{
-		return m_oid_colid;
-	}
-
 	// ctid column id
 	ULONG
 	GetCtIdColId() const
@@ -146,13 +133,6 @@ public:
 	GetDXLDirectDispatchInfo() const
 	{
 		return m_direct_dispatch_info;
-	}
-
-	// needs the data to be sorted or not
-	BOOL
-	IsInputSortReq() const
-	{
-		return m_input_sort_req;
 	}
 
 	// Is update using split

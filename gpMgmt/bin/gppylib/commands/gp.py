@@ -1141,8 +1141,8 @@ def distribute_tarball(queue,list,tarball):
             hostname = db.getSegmentHostName()
             datadir = db.getSegmentDataDirectory()
             (head,tail)=os.path.split(datadir)
-            scp_cmd=Scp(name="copy coordinator",srcFile=tarball,dstHost=hostname,dstFile=head)
-            queue.addCommand(scp_cmd)
+            rsync_cmd=Rsync(name="copy coordinator",srcFile=tarball,dstHost=hostname,dstFile=head)
+            queue.addCommand(rsync_cmd)
         queue.join()
         queue.check_results()
         logger.debug("distributeTarBall finished")
@@ -1534,12 +1534,12 @@ def chk_local_db_running(datadir, port):
     tmpfile_exists = os.path.exists("/tmp/.s.PGSQL.%d" % port)
     lockfile_exists = os.path.exists(get_lockfile_name(port))
 
-    netstat_port_active = PgPortIsActive.local('check ss for postmaster port',"/tmp/.s.PGSQL.%d" % port, port)
+    ss_port_active = PgPortIsActive.local('check ss for postmaster port',"/tmp/.s.PGSQL.%d" % port, port)
 
     logger.debug("postmaster_pid_exists: %s tmpfile_exists: %s lockfile_exists: %s ss port: %s  pid: %s" %\
-                (postmaster_pid_exists, tmpfile_exists, lockfile_exists, netstat_port_active, pid_value))
+                (postmaster_pid_exists, tmpfile_exists, lockfile_exists, ss_port_active, pid_value))
 
-    return (postmaster_pid_exists, tmpfile_exists, lockfile_exists, netstat_port_active, pid_value)
+    return (postmaster_pid_exists, tmpfile_exists, lockfile_exists, ss_port_active, pid_value)
 
 def get_lockfile_name(port):
     return "/tmp/.s.PGSQL.%d.lock" % port

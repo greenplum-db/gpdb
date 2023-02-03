@@ -98,7 +98,6 @@ extern "C" {
 #include "naucrates/md/IMDAggregate.h"
 #include "naucrates/md/IMDFunction.h"
 #include "naucrates/md/IMDIndex.h"
-#include "naucrates/md/IMDRelationExternal.h"
 #include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDType.h"
 #include "naucrates/md/IMDTypeBool.h"
@@ -182,6 +181,7 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
 	topslice->directDispatch.contentIds = NIL;
 	topslice->directDispatch.haveProcessedAnyCalculations = false;
 
+	m_dxl_to_plstmt_context->m_orig_query = (Query *) orig_query;
 	m_dxl_to_plstmt_context->AddSlice(topslice);
 	m_dxl_to_plstmt_context->SetCurrentSlice(topslice);
 
@@ -196,7 +196,12 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
 	// collect oids from rtable
 	List *oids_list = NIL;
 
+	// collect unique RTE in FROM Clause
+	List *oids_list_unique = NIL;
+
 	ListCell *lc_rte = nullptr;
+
+	RangeTblEntry *pRTEHashFuncCal = nullptr;
 
 	ForEach(lc_rte, m_dxl_to_plstmt_context->GetRTableEntriesList())
 	{
@@ -205,7 +210,30 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
 		if (pRTE->rtekind == RTE_RELATION)
 		{
 			oids_list = gpdb::LAppendOid(oids_list, pRTE->relid);
+			if (pRTE->inFromCl || (CMD_INSERT == m_cmd_type))
+			{
+				// If we have only one RTE in the FROM clause,
+				// then we use it to extract information
+				// about the distribution policy, which gives info about the
+				// typeOid used for direct dispatch. This helps to perform
+				// direct dispatch based on the distribution column type
+				// inplace of the constant in the filter.
+				pRTEHashFuncCal = (RangeTblEntry *) lfirst(lc_rte);
+
+				// collecting only unique RTE in FROM clause
+				oids_list_unique =
+					list_append_unique_oid(oids_list_unique, pRTE->relid);
+			}
 		}
+	}
+
+	if (gpdb::ListLength(oids_list_unique) > 1)
+	{
+		// If we have a scenario with multiple unique RTE
+		// in "from" clause, then the hash function selection
+		// based on distribution policy of relation will not work
+		// and we switch back to selection based on constant type
+		pRTEHashFuncCal = nullptr;
 	}
 
 	// assemble planned stmt
@@ -245,8 +273,8 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
 	if (CMD_SELECT == m_cmd_type &&
 		nullptr != dxlnode->GetDXLDirectDispatchInfo())
 	{
-		List *direct_dispatch_segids =
-			TranslateDXLDirectDispatchInfo(dxlnode->GetDXLDirectDispatchInfo());
+		List *direct_dispatch_segids = TranslateDXLDirectDispatchInfo(
+			dxlnode->GetDXLDirectDispatchInfo(), pRTEHashFuncCal);
 
 		if (direct_dispatch_segids != NIL)
 		{
@@ -268,7 +296,7 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
 			CDXLPhysicalDML::Cast(dxlnode->GetOperator());
 
 		List *direct_dispatch_segids = TranslateDXLDirectDispatchInfo(
-			phy_dml_dxlop->GetDXLDirectDispatchInfo());
+			phy_dml_dxlop->GetDXLDirectDispatchInfo(), pRTEHashFuncCal);
 		if (direct_dispatch_segids != NIL)
 		{
 			topslice->directDispatch.isDirectDispatch = true;
@@ -320,7 +348,7 @@ CTranslatorDXLToPlStmt::TranslateDXLOperatorToPlan(
 					   dxlnode->GetOperator()->GetOpNameStr()->GetBuffer());
 		}
 		case EdxlopPhysicalTableScan:
-		case EdxlopPhysicalExternalScan:
+		case EdxlopPhysicalForeignScan:
 		{
 			plan = TranslateDXLTblScan(dxlnode, output_context,
 									   ctxt_translation_prev_siblings);
@@ -557,10 +585,6 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan(
 	// translation context for column mappings in the base relation
 	CDXLTranslateContextBaseTable base_table_context(m_mp);
 
-	// we will add the new range table entry as the last element of the range table
-	Index index =
-		gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
-
 	const CDXLTableDescr *dxl_table_descr =
 		phy_tbl_scan_dxlop->GetDXLTableDescr();
 	const IMDRelation *md_rel =
@@ -572,11 +596,8 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan(
 	GPOS_RTL_ASSERT(dxl_table_descr->LockMode() != -1);
 	gpdb::GPDBLockRelationOid(mdid->Oid(), dxl_table_descr->LockMode());
 
-	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(
-		dxl_table_descr, index, &base_table_context);
-	GPOS_ASSERT(nullptr != rte);
-	rte->requiredPerms |= ACL_SELECT;
-	m_dxl_to_plstmt_context->AddRTE(rte);
+	Index index =
+		ProcessDXLTblDescr(dxl_table_descr, &base_table_context, ACL_SELECT);
 
 	// a table scan node must have 2 children: projection list and filter
 	GPOS_ASSERT(2 == tbl_scan_dxlnode->Arity());
@@ -596,19 +617,21 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan(
 
 	Plan *plan = nullptr;
 	Plan *plan_return = nullptr;
-	if (IMDRelation::ErelstorageExternal == md_rel->RetrieveRelStorageType())
+
+	if (IMDRelation::ErelstorageForeign == md_rel->RetrieveRelStorageType())
 	{
 		OID oidRel = CMDIdGPDB::CastMdid(md_rel->MDId())->Oid();
+		RangeTblEntry *rte = m_dxl_to_plstmt_context->GetRTEByIndex(index);
 
-		// create foreign scan node
-		ForeignScan *foreign_scan = gpdb::CreateForeignScanForExternalTable(
-			oidRel, index, qual, targetlist);
+		ForeignScan *foreign_scan =
+			gpdb::CreateForeignScan(oidRel, index, qual, targetlist,
+									m_dxl_to_plstmt_context->m_orig_query, rte);
+		foreign_scan->scan.scanrelid = index;
 		plan = &(foreign_scan->scan.plan);
 		plan_return = (Plan *) foreign_scan;
 	}
 	else
 	{
-		// create seq scan node
 		SeqScan *seq_scan = MakeNode(SeqScan);
 		seq_scan->scanrelid = index;
 		plan = &(seq_scan->plan);
@@ -629,6 +652,32 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan(
 	return plan_return;
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorDXLToPlStmt::SetHashKeysVarnoWalker
+//
+//	@doc:
+//		Walker to set inner var to outer.
+//
+//---------------------------------------------------------------------------
+BOOL
+CTranslatorDXLToPlStmt::SetHashKeysVarnoWalker(Node *node, void *context)
+{
+	if (nullptr == node)
+	{
+		return false;
+	}
+
+	if (IsA(node, Var) && ((Var *) node)->varno == INNER_VAR)
+	{
+		((Var *) node)->varno = OUTER_VAR;
+		return false;
+	}
+
+	return gpdb::WalkExpressionTree(
+		node, (BOOL(*)()) CTranslatorDXLToPlStmt::SetHashKeysVarnoWalker,
+		context);
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -722,9 +771,6 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexScan(
 	// translation context for column mappings in the base relation
 	CDXLTranslateContextBaseTable base_table_context(m_mp);
 
-	Index index =
-		gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
-
 	const CDXLTableDescr *dxl_table_descr =
 		physical_idx_scan_dxlop->GetDXLTableDescr();
 	const IMDRelation *md_rel =
@@ -736,12 +782,8 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexScan(
 	GPOS_RTL_ASSERT(dxl_table_descr->LockMode() != -1);
 	gpdb::GPDBLockRelationOid(mdid->Oid(), dxl_table_descr->LockMode());
 
-	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(
-		physical_idx_scan_dxlop->GetDXLTableDescr(), index,
-		&base_table_context);
-	GPOS_ASSERT(nullptr != rte);
-	rte->requiredPerms |= ACL_SELECT;
-	m_dxl_to_plstmt_context->AddRTE(rte);
+	Index index =
+		ProcessDXLTblDescr(dxl_table_descr, &base_table_context, ACL_SELECT);
 
 	IndexScan *index_scan = nullptr;
 	index_scan = MakeNode(IndexScan);
@@ -870,18 +912,11 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexOnlyScan(
 	// translation context for column mappings in the base relation
 	CDXLTranslateContextBaseTable base_table_context(m_mp);
 
-	Index index =
-		gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
-
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(
 		physical_idx_scan_dxlop->GetDXLTableDescr()->MDId());
 
-	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(
-		physical_idx_scan_dxlop->GetDXLTableDescr(), index,
-		&base_table_context);
-	GPOS_ASSERT(nullptr != rte);
-	rte->requiredPerms |= ACL_SELECT;
-	m_dxl_to_plstmt_context->AddRTE(rte);
+	Index index =
+		ProcessDXLTblDescr(table_desc, &base_table_context, ACL_SELECT);
 
 	IndexOnlyScan *index_scan = MakeNode(IndexOnlyScan);
 	index_scan->scan.scanrelid = index;
@@ -942,7 +977,7 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexOnlyScan(
 		&index_strategy_list, &index_subtype_list);
 
 	index_scan->indexqual = index_cond;
-	index_scan->indexqualorig = index_orig_cond;
+	// index_scan->indexqualorig = index_orig_cond;
 	SetParamIds(plan);
 
 	return (Plan *) index_scan;
@@ -1103,7 +1138,7 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 		}
 
 		// retrieve index strategy and subtype
-		INT strategy_num = 0;
+		StrategyNumber strategy_num;
 		OID index_subtype_oid = InvalidOid;
 
 		OID cmp_operator_oid =
@@ -1117,8 +1152,8 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 
 		// create index qual
 		index_qual_info_array->Append(GPOS_NEW(m_mp) CIndexQualInfo(
-			attno, index_cond_expr, original_index_cond_expr,
-			(StrategyNumber) strategy_num, index_subtype_oid));
+			attno, index_cond_expr, original_index_cond_expr, strategy_num,
+			index_subtype_oid));
 	}
 
 	// the index quals much be ordered by attribute number
@@ -1418,6 +1453,50 @@ CTranslatorDXLToPlStmt::TranslateDXLHashJoin(
 	}
 
 	GPOS_ASSERT(NIL != hashjoin->hashclauses);
+
+	/*
+	 * The following code is copied from create_hashjoin_plan, only difference is
+	 * we have to deep copy the inner hashkeys since later we will modify it for
+	 * Hash Plannode.
+	 *
+	 * Collect hash related information. The hashed expressions are
+	 * deconstructed into outer/inner expressions, so they can be computed
+	 * separately (inner expressions are used to build the hashtable via Hash,
+	 * outer expressions to perform lookups of tuples from HashJoin's outer
+	 * plan in the hashtable). Also collect operator information necessary to
+	 * build the hashtable.
+	 */
+	List *hashoperators = NIL;
+	List *hashcollations = NIL;
+	List *outer_hashkeys = NIL;
+	List *inner_hashkeys = NIL;
+	ListCell *lc;
+	foreach (lc, hashjoin->hashclauses)
+	{
+		OpExpr *hclause = lfirst_node(OpExpr, lc);
+
+		hashoperators = gpdb::LAppendOid(hashoperators, hclause->opno);
+		hashcollations = gpdb::LAppendOid(hashcollations, hclause->inputcollid);
+		outer_hashkeys = gpdb::LAppend(outer_hashkeys, linitial(hclause->args));
+		inner_hashkeys = gpdb::LAppend(
+			inner_hashkeys, gpdb::CopyObject(lsecond(hclause->args)));
+	}
+
+	hashjoin->hashoperators = hashoperators;
+	hashjoin->hashcollations = hashcollations;
+	/*
+	 * The following code is a little differnt from Postgres Legacy Planner:
+	 *   * In Postgres Legacy Planner will fix variable's varno late in set_plan_references, like
+	 *     set the varno to OUTER_VAR  or INNER_VAR.
+	 *   * ORCA here, the outer_hashkeys and inner_hashkeys are already the fixed version as Planner.
+	 *     outer_hashkeys can be directly set to hashjoin, however, inner_hashkeys is used for
+	 *     the right child, Hash Plan, standing at Hash Plan, it only has lefttree (no righttree),
+	 *     so if we want to set Hash Plan's hashkeys field, we need to walk the inner_hashkeys and
+	 *     replace every INNER_VARs to OUTER_VARS.
+	 */
+	hashjoin->hashkeys = outer_hashkeys;
+	SetHashKeysVarnoWalker((Node *) inner_hashkeys, nullptr);
+	((Hash *) right_plan)->hashkeys = inner_hashkeys;
 
 	plan->lefttree = left_plan;
 	plan->righttree = right_plan;
@@ -2610,16 +2689,23 @@ CTranslatorDXLToPlStmt::TranslateDXLAgg(
 
 	// Set the aggsplit for the agg node
 	ListCell *lc;
+	INT aggsplit = 0;
 	foreach (lc, plan->targetlist)
 	{
 		TargetEntry *te = (TargetEntry *) lfirst(lc);
 		if (IsA(te->expr, Aggref))
 		{
 			Aggref *aggref = (Aggref *) te->expr;
-			agg->aggsplit = aggref->aggsplit;
-			break;
+
+			aggsplit |= aggref->aggsplit;
+
+			if (AGGSPLIT_INTERMEDIATE == aggsplit)
+			{
+				break;
+			}
 		}
 	}
+	agg->aggsplit = (AggSplit) aggsplit;
 
 	plan->lefttree = child_plan;
 
@@ -2858,16 +2944,28 @@ CTranslatorDXLToPlStmt::TranslateDXLWindow(
 			{
 				window->frameOptions |= FRAMEOPTION_ROWS;
 			}
+			else if (EdxlfsGroups == window_frame->ParseDXLFrameSpec())
+			{
+				window->frameOptions |= FRAMEOPTION_GROUPS;
+			}
 			else
 			{
 				window->frameOptions |= FRAMEOPTION_RANGE;
 			}
 
-			if (window_frame->ParseFrameExclusionStrategy() != EdxlfesNulls)
+			if (window_frame->ParseFrameExclusionStrategy() ==
+				EdxlfesCurrentRow)
 			{
-				GPOS_RAISE(gpdxl::ExmaDXL,
-						   gpdxl::ExmiQuery2DXLUnsupportedFeature,
-						   GPOS_WSZ_LIT("EXCLUDE clause in window frame"));
+				window->frameOptions |= FRAMEOPTION_EXCLUDE_CURRENT_ROW;
+			}
+			else if (window_frame->ParseFrameExclusionStrategy() ==
+					 EdxlfesGroup)
+			{
+				window->frameOptions |= FRAMEOPTION_EXCLUDE_GROUP;
+			}
+			else if (window_frame->ParseFrameExclusionStrategy() == EdxlfesTies)
+			{
+				window->frameOptions |= FRAMEOPTION_EXCLUDE_TIES;
 			}
 
 			// translate the CDXLNodes representing the leading and trailing edge
@@ -2892,35 +2990,35 @@ CTranslatorDXLToPlStmt::TranslateDXLWindow(
 					->ParseDXLFrameBoundary();
 			if (lead_boundary_type == EdxlfbUnboundedPreceding)
 			{
-				window->frameOptions |= FRAMEOPTION_END_UNBOUNDED_PRECEDING;
+				window->frameOptions |= FRAMEOPTION_START_UNBOUNDED_PRECEDING;
 			}
 			if (lead_boundary_type == EdxlfbBoundedPreceding)
 			{
-				window->frameOptions |= FRAMEOPTION_END_OFFSET_PRECEDING;
+				window->frameOptions |= FRAMEOPTION_START_OFFSET_PRECEDING;
 			}
 			if (lead_boundary_type == EdxlfbCurrentRow)
 			{
-				window->frameOptions |= FRAMEOPTION_END_CURRENT_ROW;
+				window->frameOptions |= FRAMEOPTION_START_CURRENT_ROW;
 			}
 			if (lead_boundary_type == EdxlfbBoundedFollowing)
 			{
-				window->frameOptions |= FRAMEOPTION_END_OFFSET_FOLLOWING;
+				window->frameOptions |= FRAMEOPTION_START_OFFSET_FOLLOWING;
 			}
 			if (lead_boundary_type == EdxlfbUnboundedFollowing)
 			{
-				window->frameOptions |= FRAMEOPTION_END_UNBOUNDED_FOLLOWING;
+				window->frameOptions |= FRAMEOPTION_START_UNBOUNDED_FOLLOWING;
 			}
 			if (lead_boundary_type == EdxlfbDelayedBoundedPreceding)
 			{
-				window->frameOptions |= FRAMEOPTION_END_OFFSET_PRECEDING;
+				window->frameOptions |= FRAMEOPTION_START_OFFSET_PRECEDING;
 			}
 			if (lead_boundary_type == EdxlfbDelayedBoundedFollowing)
 			{
-				window->frameOptions |= FRAMEOPTION_END_OFFSET_FOLLOWING;
+				window->frameOptions |= FRAMEOPTION_START_OFFSET_FOLLOWING;
 			}
 			if (0 != win_frame_leading_dxlnode->Arity())
 			{
-				window->endOffset =
+				window->startOffset =
 					(Node *) m_translator_dxl_to_scalar->TranslateDXLToScalar(
 						(*win_frame_leading_dxlnode)[0], &colid_var_mapping);
 			}
@@ -2934,38 +3032,44 @@ CTranslatorDXLToPlStmt::TranslateDXLWindow(
 					->ParseDXLFrameBoundary();
 			if (trail_boundary_type == EdxlfbUnboundedPreceding)
 			{
-				window->frameOptions |= FRAMEOPTION_START_UNBOUNDED_PRECEDING;
+				window->frameOptions |= FRAMEOPTION_END_UNBOUNDED_PRECEDING;
 			}
 			if (trail_boundary_type == EdxlfbBoundedPreceding)
 			{
-				window->frameOptions |= FRAMEOPTION_START_OFFSET_PRECEDING;
+				window->frameOptions |= FRAMEOPTION_END_OFFSET_PRECEDING;
 			}
 			if (trail_boundary_type == EdxlfbCurrentRow)
 			{
-				window->frameOptions |= FRAMEOPTION_START_CURRENT_ROW;
+				window->frameOptions |= FRAMEOPTION_END_CURRENT_ROW;
 			}
 			if (trail_boundary_type == EdxlfbBoundedFollowing)
 			{
-				window->frameOptions |= FRAMEOPTION_START_OFFSET_FOLLOWING;
+				window->frameOptions |= FRAMEOPTION_END_OFFSET_FOLLOWING;
 			}
 			if (trail_boundary_type == EdxlfbUnboundedFollowing)
 			{
-				window->frameOptions |= FRAMEOPTION_START_UNBOUNDED_FOLLOWING;
+				window->frameOptions |= FRAMEOPTION_END_UNBOUNDED_FOLLOWING;
 			}
 			if (trail_boundary_type == EdxlfbDelayedBoundedPreceding)
 			{
-				window->frameOptions |= FRAMEOPTION_START_OFFSET_PRECEDING;
+				window->frameOptions |= FRAMEOPTION_END_OFFSET_PRECEDING;
 			}
 			if (trail_boundary_type == EdxlfbDelayedBoundedFollowing)
 			{
-				window->frameOptions |= FRAMEOPTION_START_OFFSET_FOLLOWING;
+				window->frameOptions |= FRAMEOPTION_END_OFFSET_FOLLOWING;
 			}
 			if (0 != win_frame_trailing_dxlnode->Arity())
 			{
-				window->startOffset =
+				window->endOffset =
 					(Node *) m_translator_dxl_to_scalar->TranslateDXLToScalar(
 						(*win_frame_trailing_dxlnode)[0], &colid_var_mapping);
 			}
+
+			window->startInRangeFunc = window_frame->PdxlnStartInRangeFunc();
+			window->endInRangeFunc = window_frame->PdxlnEndInRangeFunc();
+			window->inRangeColl = window_frame->PdxlnInRangeColl();
+			window->inRangeAsc = window_frame->PdxlnInRangeAsc();
+			window->inRangeNullsFirst = window_frame->PdxlnInRangeNullsFirst();
 
 			// cleanup
 			child_contexts->Release();
@@ -3200,7 +3304,6 @@ ContainsSetReturningFuncOrOp(const CDXLNode *project_list_dxlnode,
 	return false;
 }
 
-// GPDB_12_MERGE_FIXME: this duplicates a check in ExecInitProjectSet
 static bool
 SanityCheckProjectSetTargetList(List *targetlist)
 {
@@ -3576,16 +3679,9 @@ CTranslatorDXLToPlStmt::TranslateDXLAppend(
 
 		// translation context for column mappings in the base relation
 		CDXLTranslateContextBaseTable base_table_context(m_mp);
-		// we will add the new range table entry as the last element of the range table
-		Index index =
-			gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) +
-			1;
-		RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(
-			phy_append_dxlop->GetDXLTableDesc(), index, &base_table_context);
-		GPOS_ASSERT(nullptr != rte);
-		rte->requiredPerms |= ACL_SELECT;
 
-		m_dxl_to_plstmt_context->AddRTE(rte);
+		(void) ProcessDXLTblDescr(phy_append_dxlop->GetDXLTableDesc(),
+								  &base_table_context, ACL_SELECT);
 
 		append->join_prune_paramids = NIL;
 		const ULongPtrArray *selector_ids = phy_append_dxlop->GetSelectorIds();
@@ -3950,16 +4046,8 @@ CTranslatorDXLToPlStmt::TranslateDXLDynTblScan(
 	// translation context for column mappings in the base relation
 	CDXLTranslateContextBaseTable base_table_context(m_mp);
 
-	// add the new range table entry as the last element of the range table
-	Index index =
-		gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
-
-	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(
-		dyn_tbl_scan_dxlop->GetDXLTableDescr(), index, &base_table_context);
-	GPOS_ASSERT(nullptr != rte);
-	rte->requiredPerms |= ACL_SELECT;
-
-	m_dxl_to_plstmt_context->AddRTE(rte);
+	Index index = ProcessDXLTblDescr(dyn_tbl_scan_dxlop->GetDXLTableDescr(),
+									 &base_table_context, ACL_SELECT);
 
 	// create dynamic scan node
 	DynamicSeqScan *dyn_seq_scan = MakeNode(DynamicSeqScan);
@@ -4040,16 +4128,11 @@ CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan(
 	// translation context for column mappings in the base relation
 	CDXLTranslateContextBaseTable base_table_context(m_mp);
 
-	Index index =
-		gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
+	const CDXLTableDescr *table_desc = dyn_index_scan_dxlop->GetDXLTableDescr();
+	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_desc->MDId());
 
-	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(
-		dyn_index_scan_dxlop->GetDXLTableDescr()->MDId());
-	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(
-		dyn_index_scan_dxlop->GetDXLTableDescr(), index, &base_table_context);
-	GPOS_ASSERT(nullptr != rte);
-	rte->requiredPerms |= ACL_SELECT;
-	m_dxl_to_plstmt_context->AddRTE(rte);
+	Index index =
+		ProcessDXLTblDescr(table_desc, &base_table_context, ACL_SELECT);
 
 	DynamicIndexScan *dyn_idx_scan = MakeNode(DynamicIndexScan);
 
@@ -4198,6 +4281,15 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 	IMDId *mdid_target_table = phy_dml_dxlop->GetDXLTableDescr()->MDId();
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(mdid_target_table);
 
+	if (md_rel->IsPartitioned())
+	{
+		dml->forceTupleRouting = true;
+	}
+	else
+	{
+		dml->forceTupleRouting = false;
+	}
+
 	if (IMDRelation::EreldistrMasterOnly != md_rel->GetRelDistribution())
 	{
 		m_is_tgt_tbl_distributed = true;
@@ -4213,18 +4305,12 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 	// translation context for column mappings in the base relation
 	CDXLTranslateContextBaseTable base_table_context(m_mp);
 
-	// add the new range table entry as the last element of the range table
+	CDXLTableDescr *table_descr = phy_dml_dxlop->GetDXLTableDescr();
+
 	Index index =
-		gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
+		ProcessDXLTblDescr(table_descr, &base_table_context, acl_mode);
 
 	m_result_rel_list = gpdb::LAppendInt(m_result_rel_list, index);
-
-	CDXLTableDescr *table_descr = phy_dml_dxlop->GetDXLTableDescr();
-	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(
-		table_descr, index, &base_table_context);
-	GPOS_ASSERT(nullptr != rte);
-	rte->requiredPerms |= acl_mode;
-	m_dxl_to_plstmt_context->AddRTE(rte, true);
 
 	CDXLNode *project_list_dxlnode = (*dml_dxlnode)[0];
 	CDXLNode *child_dxlnode = (*dml_dxlnode)[1];
@@ -4251,10 +4337,8 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 	dml_target_list = target_list_with_dropped_cols;
 
 	// Add junk columns to the target list for the 'action', 'ctid',
-	// 'gp_segment_id', and tuple's 'oid'. The ModifyTable node will find
-	// these based on the resnames. ORCA also includes a similar column for
-	// partition Oid in the child's target list, but we don't use it for
-	// anything in GPDB.
+	// 'gp_segment_id'. The ModifyTable node will find these based
+	// on the resnames.
 	if (m_cmd_type == CMD_UPDATE && isSplit)
 	{
 		(void) AddJunkTargetEntryForColId(&dml_target_list, &child_context,
@@ -4277,7 +4361,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 	// needed, as the child node could do the projection, but we don't have
 	// the information to determine that here. There's a step in the
 	// backend optimize_query() function to eliminate unnecessary Results
-	// throught the plan, hopefully this Result gets eliminated there.
+	// through the plan, hopefully this Result gets eliminated there.
 	Result *result = MakeNode(Result);
 	Plan *result_plan = &(result->plan);
 
@@ -4336,7 +4420,8 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 //---------------------------------------------------------------------------
 List *
 CTranslatorDXLToPlStmt::TranslateDXLDirectDispatchInfo(
-	CDXLDirectDispatchInfo *dxl_direct_dispatch_info)
+	CDXLDirectDispatchInfo *dxl_direct_dispatch_info,
+	RangeTblEntry *pRTEHashFuncCal)
 {
 	if (!optimizer_enable_direct_dispatch ||
 		nullptr == dxl_direct_dispatch_info)
@@ -4391,14 +4476,14 @@ CTranslatorDXLToPlStmt::TranslateDXLDirectDispatchInfo(
 		return segids_list;
 	}
 
-	ULONG hash_code = GetDXLDatumGPDBHash(dxl_datum_array);
+	ULONG hash_code = GetDXLDatumGPDBHash(dxl_datum_array, pRTEHashFuncCal);
 	for (ULONG ul = 0; ul < length; ul++)
 	{
 		CDXLDatumArray *dispatch_identifier_datum_array =
 			(*dispatch_identifier_datum_arrays)[ul];
 		GPOS_ASSERT(0 < dispatch_identifier_datum_array->Size());
-		ULONG hash_code_new =
-			GetDXLDatumGPDBHash(dispatch_identifier_datum_array);
+		ULONG hash_code_new = GetDXLDatumGPDBHash(
+			dispatch_identifier_datum_array, pRTEHashFuncCal);
 
 		if (hash_code != hash_code_new)
 		{
@@ -4420,25 +4505,63 @@ CTranslatorDXLToPlStmt::TranslateDXLDirectDispatchInfo(
 //
 //---------------------------------------------------------------------------
 ULONG
-CTranslatorDXLToPlStmt::GetDXLDatumGPDBHash(CDXLDatumArray *dxl_datum_array)
+CTranslatorDXLToPlStmt::GetDXLDatumGPDBHash(CDXLDatumArray *dxl_datum_array,
+											RangeTblEntry *pRTEHashFuncCal)
 {
 	List *consts_list = NIL;
 	Oid *hashfuncs;
 
 	const ULONG length = dxl_datum_array->Size();
 
-	hashfuncs = (Oid *) gpdb::GPDBAlloc(length * sizeof(Oid));
-
-	for (ULONG ul = 0; ul < length; ul++)
+	if (pRTEHashFuncCal != nullptr)
 	{
-		CDXLDatum *datum_dxl = (*dxl_datum_array)[ul];
+		// If we have one unique RTE in FROM clause,
+		// then we do direct dispatch based on the distribution policy
 
-		Const *const_expr =
-			(Const *) m_translator_dxl_to_scalar->TranslateDXLDatumToScalar(
-				datum_dxl);
-		consts_list = gpdb::LAppend(consts_list, const_expr);
-		hashfuncs[ul] = m_dxl_to_plstmt_context->GetDistributionHashFuncForType(
-			const_expr->consttype);
+		gpdb::RelationWrapper rel = gpdb::GetRelation(pRTEHashFuncCal->relid);
+		GPOS_ASSERT(rel);
+		GpPolicy *policy = rel->rd_cdbpolicy;
+		int policy_nattrs = policy->nattrs;
+		TupleDesc desc = rel->rd_att;
+		Oid *opclasses = policy->opclasses;
+		hashfuncs = (Oid *) gpdb::GPDBAlloc(policy_nattrs * sizeof(Oid));
+
+		for (int i = 0; i < policy_nattrs; i++)
+		{
+			AttrNumber attnum = policy->attrs[i];
+			Oid typeoid = desc->attrs[attnum - 1].atttypid;
+			Oid opfamily;
+
+			opfamily = gpdb::GetOpclassFamily(opclasses[i]);
+			hashfuncs[i] = gpdb::GetHashProcInOpfamily(opfamily, typeoid);
+		}
+		for (ULONG ul = 0; ul < length; ul++)
+		{
+			CDXLDatum *datum_dxl = (*dxl_datum_array)[ul];
+			Const *const_expr =
+				(Const *) m_translator_dxl_to_scalar->TranslateDXLDatumToScalar(
+					datum_dxl);
+			consts_list = gpdb::LAppend(consts_list, const_expr);
+		}
+	}
+	else
+	{
+		// If we have multiple tables in the "from" clause,
+		// we calculate hashfunction based on the consttype
+
+		hashfuncs = (Oid *) gpdb::GPDBAlloc(length * sizeof(Oid));
+		for (ULONG ul = 0; ul < length; ul++)
+		{
+			CDXLDatum *datum_dxl = (*dxl_datum_array)[ul];
+
+			Const *const_expr =
+				(Const *) m_translator_dxl_to_scalar->TranslateDXLDatumToScalar(
+					datum_dxl);
+			consts_list = gpdb::LAppend(consts_list, const_expr);
+			hashfuncs[ul] =
+				m_dxl_to_plstmt_context->GetDistributionHashFuncForType(
+					const_expr->consttype);
+		}
 	}
 
 	ULONG hash =
@@ -4607,40 +4730,74 @@ CTranslatorDXLToPlStmt::TranslateDXLAssert(
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorDXLToPlStmt::TranslateDXLTblDescrToRangeTblEntry
+//		CTranslatorDXLToPlStmt::ProcessDXLTblDescr
 //
 //	@doc:
-//		Translates a DXL table descriptor into a range table entry. If an index
-//		descriptor is provided, we use the mapping from colids to index attnos
-//		instead of table attnos
+//		Translates a DXL table descriptor into a range table entry and stores
+//		it in m_dxl_to_plstmt_context if it's needed (in case of DML operations
+//		there is more than one table descriptors which point to the result
+//		relation, so if rte was alredy translated, this rte will be updated and
+//		index of this rte at m_dxl_to_plstmt_context->m_rtable_entries_list
+//		(shortened as "rte_list"), will be returned, if the rte wasn't
+//		translated, the newly created rte will be appended to rte_list and it's
+//		index returned). Also this function fills base_table_context for the
+//		mapping from colids to index attnos instead of table attnos.
+//		Returns index of translated range table entry at the rte_list.
 //
 //---------------------------------------------------------------------------
-RangeTblEntry *
-CTranslatorDXLToPlStmt::TranslateDXLTblDescrToRangeTblEntry(
-	const CDXLTableDescr *table_descr, Index index,
-	CDXLTranslateContextBaseTable *base_table_context)
+Index
+CTranslatorDXLToPlStmt::ProcessDXLTblDescr(
+	const CDXLTableDescr *table_descr,
+	CDXLTranslateContextBaseTable *base_table_context, AclMode acl_mode)
 {
 	GPOS_ASSERT(nullptr != table_descr);
+
+	BOOL rte_was_translated = false;
+	Index index = m_dxl_to_plstmt_context->GetRTEIndexByTableDescr(
+		table_descr, &rte_was_translated);
 
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
 	const ULONG num_of_non_sys_cols =
 		CTranslatorUtils::GetNumNonSystemColumns(md_rel);
 
-	RangeTblEntry *rte = MakeNode(RangeTblEntry);
-	rte->rtekind = RTE_RELATION;
-
 	// get oid for table
 	Oid oid = CMDIdGPDB::CastMdid(table_descr->MDId())->Oid();
 	GPOS_ASSERT(InvalidOid != oid);
 
-	rte->relid = oid;
-	rte->checkAsUser = table_descr->GetExecuteAsUserId();
-	rte->requiredPerms |= ACL_NO_RIGHTS;
-	rte->rellockmode = table_descr->LockMode();
-
 	// save oid and range index in translation context
 	base_table_context->SetOID(oid);
 	base_table_context->SetRelIndex(index);
+
+	// save mapping col id -> index in translate context
+	const ULONG arity = table_descr->Arity();
+	for (ULONG ul = 0; ul < arity; ++ul)
+	{
+		const CDXLColDescr *dxl_col_descr = table_descr->GetColumnDescrAt(ul);
+		GPOS_ASSERT(nullptr != dxl_col_descr);
+
+		INT attno = dxl_col_descr->AttrNum();
+		GPOS_ASSERT(0 != attno);
+
+		(void) base_table_context->InsertMapping(dxl_col_descr->Id(), attno);
+	}
+
+	// descriptor was already processed, and translated RTE is stored at
+	// context rtable list (only update required perms of this rte is needed)
+	if (rte_was_translated)
+	{
+		RangeTblEntry *rte = m_dxl_to_plstmt_context->GetRTEByIndex(index);
+		GPOS_ASSERT(nullptr != rte);
+		rte->requiredPerms |= acl_mode;
+		return index;
+	}
+
+	// create a new RTE (and it's alias) and store it at context rtable list
+	RangeTblEntry *rte = MakeNode(RangeTblEntry);
+	rte->rtekind = RTE_RELATION;
+	rte->relid = oid;
+	rte->checkAsUser = table_descr->GetExecuteAsUserId();
+	rte->requiredPerms |= acl_mode;
+	rte->rellockmode = table_descr->LockMode();
 
 	Alias *alias = MakeNode(Alias);
 	alias->colnames = NIL;
@@ -4650,18 +4807,11 @@ CTranslatorDXLToPlStmt::TranslateDXLTblDescrToRangeTblEntry(
 		table_descr->MdName()->GetMDName()->GetBuffer());
 
 	// get column names
-	const ULONG arity = table_descr->Arity();
-
 	INT last_attno = 0;
-
 	for (ULONG ul = 0; ul < arity; ++ul)
 	{
 		const CDXLColDescr *dxl_col_descr = table_descr->GetColumnDescrAt(ul);
-		GPOS_ASSERT(nullptr != dxl_col_descr);
-
 		INT attno = dxl_col_descr->AttrNum();
-
-		GPOS_ASSERT(0 != attno);
 
 		if (0 < attno)
 		{
@@ -4684,9 +4834,6 @@ CTranslatorDXLToPlStmt::TranslateDXLTblDescrToRangeTblEntry(
 			alias->colnames = gpdb::LAppend(alias->colnames, val_colname);
 			last_attno = attno;
 		}
-
-		// save mapping col id -> index in translate context
-		(void) base_table_context->InsertMapping(dxl_col_descr->Id(), attno);
 	}
 
 	// if there are any dropped columns at the end, add those too to the RangeTblEntry
@@ -4698,7 +4845,9 @@ CTranslatorDXLToPlStmt::TranslateDXLTblDescrToRangeTblEntry(
 
 	rte->eref = alias;
 
-	return rte;
+	m_dxl_to_plstmt_context->AddRTE(rte);
+
+	return index;
 }
 
 //---------------------------------------------------------------------------
@@ -5639,10 +5788,6 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapTblScan(
 	// translation context for column mappings in the base relation
 	CDXLTranslateContextBaseTable base_table_context(m_mp);
 
-	// add the new range table entry as the last element of the range table
-	Index index =
-		gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
-
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
 
 	// Lock any table we are to scan, since it may not have been properly locked
@@ -5651,12 +5796,8 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapTblScan(
 	GPOS_RTL_ASSERT(table_descr->LockMode() != -1);
 	gpdb::GPDBLockRelationOid(mdid->Oid(), table_descr->LockMode());
 
-	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(
-		table_descr, index, &base_table_context);
-	GPOS_ASSERT(nullptr != rte);
-	rte->requiredPerms |= ACL_SELECT;
-
-	m_dxl_to_plstmt_context->AddRTE(rte);
+	Index index =
+		ProcessDXLTblDescr(table_descr, &base_table_context, ACL_SELECT);
 
 	DynamicBitmapHeapScan *dscan;
 	BitmapHeapScan *bitmap_tbl_scan;

@@ -128,16 +128,24 @@ static unsigned
 digest_result_size(PX_MD *h)
 {
 	OSSLDigest *digest = (OSSLDigest *) h->p.ptr;
+	int			result = EVP_MD_CTX_size(digest->ctx);
 
-	return EVP_MD_CTX_size(digest->ctx);
+	if (result < 0)
+		elog(ERROR, "EVP_MD_CTX_size() failed");
+
+	return result;
 }
 
 static unsigned
 digest_block_size(PX_MD *h)
 {
 	OSSLDigest *digest = (OSSLDigest *) h->p.ptr;
+	int			result = EVP_MD_CTX_block_size(digest->ctx);
 
-	return EVP_MD_CTX_block_size(digest->ctx);
+	if (result < 0)
+		elog(ERROR, "EVP_MD_CTX_block_size() failed");
+
+	return result;
 }
 
 static void
@@ -145,7 +153,8 @@ digest_reset(PX_MD *h)
 {
 	OSSLDigest *digest = (OSSLDigest *) h->p.ptr;
 
-	EVP_DigestInit_ex(digest->ctx, digest->algo, NULL);
+	if (!EVP_DigestInit_ex(digest->ctx, digest->algo, NULL))
+		elog(ERROR, "EVP_DigestInit_ex() failed");
 }
 
 static void
@@ -153,7 +162,8 @@ digest_update(PX_MD *h, const uint8 *data, unsigned dlen)
 {
 	OSSLDigest *digest = (OSSLDigest *) h->p.ptr;
 
-	EVP_DigestUpdate(digest->ctx, data, dlen);
+	if (!EVP_DigestUpdate(digest->ctx, data, dlen))
+		elog(ERROR, "EVP_DigestUpdate() failed");
 }
 
 static void
@@ -161,7 +171,8 @@ digest_finish(PX_MD *h, uint8 *dst)
 {
 	OSSLDigest *digest = (OSSLDigest *) h->p.ptr;
 
-	EVP_DigestFinal_ex(digest->ctx, dst, NULL);
+	if (!EVP_DigestFinal_ex(digest->ctx, dst, NULL))
+		elog(ERROR, "EVP_DigestFinal_ex() failed");
 }
 
 static void
@@ -216,6 +227,7 @@ px_find_digest(const char *name, PX_MD **res)
 	}
 	if (EVP_DigestInit_ex(ctx, md, NULL) == 0)
 	{
+		EVP_MD_CTX_destroy(ctx);
 		pfree(digest);
 		return -1;
 	}
@@ -381,6 +393,8 @@ gen_ossl_decrypt(PX_Cipher *c, const uint8 *data, unsigned dlen,
 	{
 		if (!EVP_DecryptInit_ex(od->evp_ctx, od->evp_ciph, NULL, NULL, NULL))
 			return PXE_CIPHER_INIT;
+		if (!EVP_CIPHER_CTX_set_padding(od->evp_ctx, 0))
+			return PXE_CIPHER_INIT;
 		if (!EVP_CIPHER_CTX_set_key_length(od->evp_ctx, od->klen))
 			return PXE_CIPHER_INIT;
 		if (!EVP_DecryptInit_ex(od->evp_ctx, NULL, NULL, od->key, od->iv))
@@ -404,6 +418,8 @@ gen_ossl_encrypt(PX_Cipher *c, const uint8 *data, unsigned dlen,
 	if (!od->init)
 	{
 		if (!EVP_EncryptInit_ex(od->evp_ctx, od->evp_ciph, NULL, NULL, NULL))
+			return PXE_CIPHER_INIT;
+		if (!EVP_CIPHER_CTX_set_padding(od->evp_ctx, 0))
 			return PXE_CIPHER_INIT;
 		if (!EVP_CIPHER_CTX_set_key_length(od->evp_ctx, od->klen))
 			return PXE_CIPHER_INIT;

@@ -187,6 +187,68 @@ Feature: gpcheckcat tests
          Then the user runs "dropdb policy_db"
           And the path "gpcheckcat.repair.*" is removed from current working directory
 
+    Scenario: gpcheckcat should not report when parent is hash distributed and child is randomly distributed and child is a leaf level partition
+        Given database "policy_db" is dropped and recreated
+        And the user runs "psql policy_db -f test/behave/mgmt_utils/steps/data/gpcheckcat/create_multilevel_partition.sql"
+        And the user runs sql "set allow_system_table_mods=true; update gp_distribution_policy set distkey = '', distclass='' where localoid='sales_1_prt_2_2_prt_asia'::regclass::oid;" in "policy_db" on all the segments
+        Then psql should return a return code of 0
+        When the user runs "gpcheckcat -R part_integrity policy_db"
+        Then gpcheckcat should return a return code of 0
+        And gpcheckcat should not print "child partition\(s\) are distributed differently from the root partition, and must be manually redistributed, for some tables" to stdout
+        And gpcheckcat should not print "Failed test\(s\) that are not reported here: part_integrity" to stdout
+        And the user runs "dropdb policy_db"
+
+    Scenario: gpcheckcat should report when parent is hash distributed and child is randomly distributed and child is a middle level partition
+        Given database "policy_db" is dropped and recreated
+        And the user runs "psql policy_db -f test/behave/mgmt_utils/steps/data/gpcheckcat/create_multilevel_partition.sql"
+        And the user runs sql "set allow_system_table_mods=true; update gp_distribution_policy set distkey = '', distclass='' where localoid='sales_1_prt_2'::regclass::oid;" in "policy_db" on all the segments
+        Then psql should return a return code of 0
+        When the user runs "gpcheckcat -R part_integrity policy_db"
+        Then gpcheckcat should return a return code of 1
+        And gpcheckcat should print "child partition\(s\) are distributed differently from the root partition, and must be manually redistributed, for some tables" to stdout
+        And gpcheckcat should print "Failed test\(s\) that are not reported here: part_integrity" to stdout
+        And the user runs "dropdb policy_db"
+
+    Scenario: gpcheckcat should report when parent is randomly distributed and child is hash distributed
+        Given database "policy_db" is dropped and recreated
+        And the user runs "psql policy_db -f test/behave/mgmt_utils/steps/data/gpcheckcat/create_multilevel_partition.sql"
+        And the user runs sql "set allow_system_table_mods=true; update gp_distribution_policy set distkey = '', distclass='' where localoid='sales'::regclass::oid;" in "policy_db" on all the segments
+        Then psql should return a return code of 0
+        When the user runs "gpcheckcat -R part_integrity policy_db"
+        Then gpcheckcat should return a return code of 1
+        And gpcheckcat should print "child partition\(s\) are distributed differently from the root partition, and must be manually redistributed, for some tables" to stdout
+        And gpcheckcat should print "Failed test\(s\) that are not reported here: part_integrity" to stdout
+        And the user runs "dropdb policy_db"
+
+    Scenario: gpcheckcat should not report part_integrity errors from readable external partitions
+        Given database "policy_db" is dropped and recreated
+        And the user runs "psql policy_db -c "create table part(a int) partition by list(a); create table p1(a int); create external web table p2_ext (like p1) EXECUTE 'cat something.txt' FORMAT 'TEXT';""
+        And the user runs "psql policy_db -c "alter table part attach partition p1 for values in (1); alter table part attach partition p2_ext for values in (2);""
+        Then psql should return a return code of 0
+        When the user runs "gpcheckcat -R part_integrity policy_db"
+        Then gpcheckcat should return a return code of 0
+        And gpcheckcat should not print "child partition\(s\) have different numsegments value from the root partition" to stdout
+        And gpcheckcat should not print "child partition\(s\) are distributed differently from the root partition, and must be manually redistributed, for some tables" to stdout
+        And gpcheckcat should not print "Failed test\(s\) that are not reported here: part_integrity" to stdout
+        And the user runs "dropdb policy_db"
+
+    Scenario: gpcheckcat should report when parent and child partitions have different numsegments value
+        Given database "policy_db" is dropped and recreated
+        And the user runs "psql policy_db -f test/behave/mgmt_utils/steps/data/gpcheckcat/create_multilevel_partition.sql"
+        Then psql should return a return code of 0
+        When the user runs "gpcheckcat -R part_integrity policy_db"
+        Then gpcheckcat should return a return code of 0
+        And gpcheckcat should not print "child partition\(s\) have different numsegments value from the root partition" to stdout
+        And gpcheckcat should not print "Failed test\(s\) that are not reported here: part_integrity" to stdout
+
+        And the user runs sql "set allow_system_table_mods=true; update gp_distribution_policy set numsegments = '1' where localoid='sales_1_prt_2'::regclass::oid;" in "policy_db" on all the segments
+        Then psql should return a return code of 0
+        When the user runs "gpcheckcat -R part_integrity policy_db"
+        Then gpcheckcat should return a return code of 1
+        And gpcheckcat should print "child partition\(s\) have different numsegments value from the root partition" to stdout
+        And gpcheckcat should print "Failed test\(s\) that are not reported here: part_integrity" to stdout
+        And the user runs "dropdb policy_db"
+
     Scenario: gpcheckcat foreign key check should report missing catalog entries. Also test missing_extraneous for the same case.
         Given database "fkey_db" is dropped and recreated
         And the path "gpcheckcat.repair.*" is removed from current working directory

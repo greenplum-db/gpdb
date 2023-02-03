@@ -68,29 +68,6 @@ CHK_CALL () {
 	fi
 }
 
-SET_VAR () {
-    # 
-    # MPP-13617: If segment contains a ~, we assume ~ is the field delimiter.
-    # Otherwise we assume : is the delimiter.  This allows us to easily 
-    # handle IPv6 addresses which may contain a : by using a ~ as a delimiter. 
-    # 
-    I=$1
-    case $I in
-        *~*)
-	    S="~"
-            ;;
-        *)
-	    S=":"
-            ;;
-    esac
-    GP_HOSTNAME=`$ECHO $I|$CUT -d$S -f1`
-    GP_HOSTADDRESS=`$ECHO $I|$CUT -d$S -f2`
-    GP_PORT=`$ECHO $I|$CUT -d$S -f3`
-    GP_DIR=`$ECHO $I|$CUT -d$S -f4`
-    GP_DBID=`$ECHO $I|$CUT -d$S -f5`
-    GP_CONTENT=`$ECHO $I|$CUT -d$S -f6`
-}
-
 PARA_EXIT () {
 	if [ $1 -ne 0 ];then
 		$ECHO "FAILED:$SEGMENT_TO_CREATE" >> $PARALLEL_STATUS_FILE

@@ -135,7 +135,6 @@ extern AOCSFileSegInfo *GetAOCSFileSegInfo(Relation prel,
 										   Snapshot appendOnlyMetaDataSnapshot,
 										   int32 segno, bool locked);
 
-
 extern AOCSFileSegInfo **GetAllAOCSFileSegInfo(Relation prel,
 					  Snapshot appendOnlyMetaDataSnapshot,
 					  int *totalseg,
@@ -143,7 +142,12 @@ extern AOCSFileSegInfo **GetAllAOCSFileSegInfo(Relation prel,
 extern void FreeAllAOCSSegFileInfo(AOCSFileSegInfo **allAOCSSegInfo, int totalSegFiles);
 
 extern FileSegTotals *GetAOCSSSegFilesTotals(Relation parentrel,
-					   Snapshot appendOnlyMetaDataSnapshot);
+											 Snapshot appendOnlyMetaDataSnapshot);
+
+extern FileSegTotals *GetAOCSSSegFilesTotalsWithProj(Relation parentrel,
+													 Snapshot appendOnlyMetaDataSnapshot,
+													 AttrNumber *proj_atts,
+													 AttrNumber num_proj_atts);
 
 extern void InsertInitialAOCSFileSegInfo(Relation prel, int32 segno, int32 nvp, Oid segrelid);
 extern void UpdateAOCSFileSegInfo(struct AOCSInsertDescData *desc);

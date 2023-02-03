@@ -1,5 +1,6 @@
 <!--
 doc/src/sgml/ref/create_procedure.sgml
+PostgreSQL documentation
 -->
 
 <refentry id="sql-createprocedure">
@@ -74,6 +75,11 @@ CREATE [ OR REPLACE ] PROCEDURE
   <para>
    To be able to create a procedure, you must have <literal>USAGE</literal>
    privilege on the argument types.
+  </para>
+
+  <para>
+   Refer to <xref linkend="xproc"/> for further information on writing
+   procedures.
   </para>
  </refsect1>
 
@@ -163,7 +169,7 @@ CREATE [ OR REPLACE ] PROCEDURE
        The name of the language that the procedure is implemented in.
        It can be <literal>sql</literal>, <literal>c</literal>,
        <literal>internal</literal>, or the name of a user-defined
-       procedural language, e.g. <literal>plpgsql</literal>.  Enclosing the
+       procedural language, e.g., <literal>plpgsql</literal>.  Enclosing the
        name in single quotes is deprecated and requires matching case.
       </para>
      </listitem>

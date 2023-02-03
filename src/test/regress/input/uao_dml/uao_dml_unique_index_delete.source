@@ -1,0 +1,111 @@
+create schema uao_dml_unique_index_@amname@;
+set search_path=uao_dml_unique_index_@amname@;
+set default_table_access_method=@amname@;
+
+-- Case 1: Inserting tx inserting a deleted key---------------------------------
+CREATE TABLE uao_unique_index_delete (a INT unique);
+INSERT INTO uao_unique_index_delete VALUES (1);
+DELETE FROM uao_unique_index_delete WHERE a = 1;
+-- Should not raise a conflict as the key has been deleted.
+INSERT INTO uao_unique_index_delete VALUES (1);
+SELECT * FROM uao_unique_index_delete;
+
+DROP TABLE uao_unique_index_delete;
+
+-- Case 2: Inserting tx inserting a key whose delete was aborted----------------
+CREATE TABLE uao_unique_index_delete (a INT unique);
+INSERT INTO uao_unique_index_delete VALUES (1);
+BEGIN;
+DELETE FROM uao_unique_index_delete WHERE a = 1;
+ABORT;
+-- Should raise a conflict as the delete of the key was aborted.
+INSERT INTO uao_unique_index_delete VALUES (1);
+SELECT * FROM uao_unique_index_delete;
+
+DROP TABLE uao_unique_index_delete;
+
+-- Case 3: Inserting tx inserting a key deleted in the same tx------------------
+CREATE TABLE uao_unique_index_delete (a INT unique);
+INSERT INTO uao_unique_index_delete VALUES (1);
+BEGIN;
+DELETE FROM uao_unique_index_delete WHERE a = 1;
+-- should succeed as the INSERT should see that the conflicting key was deleted.
+INSERT INTO uao_unique_index_delete VALUES (1);
+COMMIT;
+SELECT * FROM uao_unique_index_delete;
+
+DROP TABLE uao_unique_index_delete;
+
+-- Case 4: Deleting tx deletes a key already deleted in the same tx-------------
+CREATE TABLE uao_unique_index_delete (a INT unique);
+INSERT INTO uao_unique_index_delete VALUES (1);
+BEGIN;
+DELETE FROM uao_unique_index_delete WHERE a = 1;
+-- should be a no-op as it should see the prior DELETE.
+DELETE FROM uao_unique_index_delete WHERE a = 1;
+COMMIT;
+SELECT * FROM uao_unique_index_delete;
+
+DROP TABLE uao_unique_index_delete;
+
+-- Case 5: Deleting tx deletes a key inserted in the same tx--------------------
+CREATE TABLE uao_unique_index_delete (a INT unique);
+BEGIN;
+INSERT INTO uao_unique_index_delete VALUES (1);
+-- should be able to see and delete the inserted key.
+DELETE FROM uao_unique_index_delete WHERE a = 1;
+COMMIT;
+SELECT * FROM uao_unique_index_delete;
+
+DROP TABLE uao_unique_index_delete;
+
+-- Case 6: Deleting tx deletes a key absent from the table----------------------
+CREATE TABLE uao_unique_index_delete (a INT unique);
+-- should be a no-op.
+DELETE FROM uao_unique_index_delete WHERE a = 1;
+INSERT INTO uao_unique_index_delete VALUES (1);
+-- should be a no-op.
+DELETE FROM uao_unique_index_delete WHERE a = 2;
+SELECT * FROM uao_unique_index_delete;
+
+DROP TABLE uao_unique_index_delete;
+
+-- Case 7: Deleting tx deletes a key inserted in the same subtx-----------------
+CREATE TABLE uao_unique_index_delete (a INT unique);
+BEGIN;
+SAVEPOINT a;
+INSERT INTO uao_unique_index_delete VALUES (1);
+DELETE FROM uao_unique_index_delete WHERE a = 1;
+COMMIT;
+SELECT * FROM uao_unique_index_delete;
+
+DROP TABLE uao_unique_index_delete;
+
+-- Case 8: Deleting tx deletes a key deleted in the same subtx------------------
+CREATE TABLE uao_unique_index_delete (a INT unique);
+BEGIN;
+SAVEPOINT a;
+INSERT INTO uao_unique_index_delete VALUES (1);
+DELETE FROM uao_unique_index_delete WHERE a = 1;
+-- should be a no-op
+DELETE FROM uao_unique_index_delete WHERE a = 1;
+COMMIT;
+SELECT * FROM uao_unique_index_delete;
+
+DROP TABLE uao_unique_index_delete;
+
+-- Case 9: Deleting tx deletes a key whose earlier delete was rolled back-------
+CREATE TABLE uao_unique_index_delete (a INT unique);
+INSERT INTO uao_unique_index_delete VALUES (1);
+BEGIN;
+SAVEPOINT a;
+DELETE FROM uao_unique_index_delete WHERE a = 1;
+ROLLBACK TO SAVEPOINT a;
+-- should be able to delete it again.
+DELETE FROM uao_unique_index_delete WHERE a = 1;
+-- should be able to insert it now since it has been deleted
+INSERT INTO uao_unique_index_delete VALUES (1);
+COMMIT;
+SELECT * FROM uao_unique_index_delete;
+
+DROP TABLE uao_unique_index_delete;

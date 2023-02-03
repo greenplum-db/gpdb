@@ -732,9 +732,11 @@ objectNamesToOids(ObjectType objtype, List *objnames)
 				 * GPDB: If we the object is a partitioned relation, also
 				 * recurse to the child partitions. It is different from
 				 * PostgreSQL, but it is how GRANT has historically worked on
-				 * GPDB.
+				 * GPDB. Unless it is indicated that we should not recurse
+				 * (e.g. by specifying the 'ONLY' keyword), in which case
+				 * don't bother finding the inheritors.
 				 */
-				if (objtype == OBJECT_TABLE)
+				if (objtype == OBJECT_TABLE && relvar->inh)
 				{
 					HeapTuple	tp;
 
@@ -1515,6 +1517,9 @@ SetDefaultACL(InternalDefaultACL *iacls)
 		ReleaseSysCache(tuple);
 
 	table_close(rel, RowExclusiveLock);
+
+	/* prevent error when processing duplicate objects */
+	CommandCounterIncrement();
 }
 
 

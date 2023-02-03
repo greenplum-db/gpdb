@@ -33,7 +33,7 @@ where queue\_attribute is:
    MIN_COST
 ```
 
-**Note:** A resource queue must have either an `ACTIVE_STATEMENTS` or a `MAX_COST` value. Do not remove both these `queue_attributes` from a resource queue.
+> **Note** A resource queue must have either an `ACTIVE_STATEMENTS` or a `MAX_COST` value. Do not remove both these `queue_attributes` from a resource queue.
 
 ## <a id="section3"></a>Description 
 

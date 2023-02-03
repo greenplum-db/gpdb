@@ -30,6 +30,8 @@ ULONG CDirectDispatchTest::m_ulDirectDispatchCounter =
 const CHAR *rgszDirectDispatchFileNames[] = {
 	"../data/dxl/minidump/DirectDispatch-SingleCol.mdp",
 	"../data/dxl/minidump/DirectDispatch-GpSegmentId.mdp",
+	"../data/dxl/minidump/DirectDispatch-GpSegmentId-SingleCol-Conjunction.mdp",
+	"../data/dxl/minidump/DirectDispatch-GpSegmentId-MultiCol-Conjunction.mdp",
 	"../data/dxl/minidump/DirectDispatch-SingleCol-Disjunction.mdp",
 	"../data/dxl/minidump/DirectDispatch-SingleCol-Disjunction-IsNull.mdp",
 	"../data/dxl/minidump/DirectDispatch-SingleCol-Disjunction-Negative.mdp",

@@ -33,6 +33,11 @@ CWindowTest::EresUnittest()
 		"../data/dxl/minidump/Preds-Over-WinFunc4.mdp",
 		"../data/dxl/minidump/Preds-Over-WinFunc5.mdp",
 		"../data/dxl/minidump/window-count-gpdb6.mdp",
+		"../data/dxl/minidump/WindowFrameExcludeGroup.mdp",
+		"../data/dxl/minidump/WindowFrameExcludeTies.mdp",
+		"../data/dxl/minidump/WindowFrameExcludeCurrentRow.mdp",
+		"../data/dxl/minidump/WindowFrameRangePrecedingAndFollowing.mdp",
+		"../data/dxl/minidump/WindowFrameGroups.mdp",
 	};
 
 	return CTestUtils::EresUnittest_RunTestsWithoutAdditionalTraceFlags(

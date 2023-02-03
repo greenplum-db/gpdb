@@ -9,27 +9,27 @@ INSERT INTO FLOAT8_TBL(f1) VALUES ('1.2345678901234e+200');
 INSERT INTO FLOAT8_TBL(f1) VALUES ('1.2345678901234e-200');
 -- test for underflow and overflow handling
 SELECT '10e400'::float8;
-ERROR:  value out of range: overflow
+ERROR:  "10e400" is out of range for type double precision
 LINE 1: SELECT '10e400'::float8;
                ^
 SELECT '-10e400'::float8;
-ERROR:  value out of range: overflow
+ERROR:  "-10e400" is out of range for type double precision
 LINE 1: SELECT '-10e400'::float8;
                ^
 SELECT '1e309'::float8;
-ERROR:  value out of range: overflow
+ERROR:  "1e309" is out of range for type double precision
 LINE 1: SELECT '1e309'::float8;
                ^
 SELECT '10e-400'::float8;
-ERROR:  value out of range: underflow
+ERROR:  "10e-400" is out of range for type double precision
 LINE 1: SELECT '10e-400'::float8;
                ^
 SELECT '-10e-400'::float8;
-ERROR:  value out of range: underflow
+ERROR:  "-10e-400" is out of range for type double precision
 LINE 1: SELECT '-10e-400'::float8;
                ^
 SELECT '1e-324'::float8;
-ERROR:  value out of range: underflow
+ERROR:  "1e-324" is out of range for type double precision
 LINE 1: SELECT '1e-324'::float8;
                ^
 SELECT '1e308'::float8;
@@ -645,27 +645,27 @@ SELECT atanh(float8 'nan');
 RESET extra_float_digits;
 -- test for over- and underflow
 INSERT INTO FLOAT8_TBL(f1) VALUES ('10e400');
-ERROR:  value out of range: overflow
+ERROR:  "10e400" is out of range for type double precision
 LINE 1: INSERT INTO FLOAT8_TBL(f1) VALUES ('10e400');
                                            ^
 INSERT INTO FLOAT8_TBL(f1) VALUES ('-10e400');
-ERROR:  value out of range: overflow
+ERROR:  "-10e400" is out of range for type double precision
 LINE 1: INSERT INTO FLOAT8_TBL(f1) VALUES ('-10e400');
                                            ^
 INSERT INTO FLOAT8_TBL(f1) VALUES ('1e309');
-ERROR:  value out of range: overflow
+ERROR:  "1e309" is out of range for type double precision
 LINE 1: INSERT INTO FLOAT8_TBL(f1) VALUES ('1e309');
                                            ^
 INSERT INTO FLOAT8_TBL(f1) VALUES ('10e-400');
-ERROR:  value out of range: underflow
+ERROR:  "10e-400" is out of range for type double precision
 LINE 1: INSERT INTO FLOAT8_TBL(f1) VALUES ('10e-400');
                                            ^
 INSERT INTO FLOAT8_TBL(f1) VALUES ('-10e-400');
-ERROR:  value out of range: underflow
+ERROR:  "-10e-400" is out of range for type double precision
 LINE 1: INSERT INTO FLOAT8_TBL(f1) VALUES ('-10e-400');
                                            ^
 INSERT INTO FLOAT8_TBL(f1) VALUES ('1e-324');
-ERROR:  value out of range: underflow
+ERROR:  "1e-324" is out of range for type double precision
 LINE 1: INSERT INTO FLOAT8_TBL(f1) VALUES ('1e-324');
                                            ^
 INSERT INTO FLOAT8_TBL(f1) VALUES ('1e308');
@@ -681,19 +681,19 @@ INSERT INTO FLOAT8_TBL(f1) VALUES ('+naN'::float8);
 INSERT INTO FLOAT8_TBL(f1) VALUES ('-naN'::float8);
 -- test for over- and underflow with update statement
 UPDATE FLOAT8_TBL SET f1='0.0'::float8 WHERE f1='1e-324'::float8;
-ERROR:  value out of range: underflow
+ERROR:  "1e-324" is out of range for type double precision
 LINE 1: UPDATE FLOAT8_TBL SET f1='0.0'::float8 WHERE f1='1e-324'::fl...
                                                         ^
 UPDATE FLOAT8_TBL SET f1='0.0'::float8 WHERE f1='1e309'::float8;
-ERROR:  value out of range: overflow
+ERROR:  "1e309" is out of range for type double precision
 LINE 1: UPDATE FLOAT8_TBL SET f1='0.0'::float8 WHERE f1='1e309'::flo...
                                                         ^
 UPDATE FLOAT8_TBL SET f1='0.0'::float8 WHERE f1='1e-400'::float8;
-ERROR:  value out of range: underflow
+ERROR:  "1e-400" is out of range for type double precision
 LINE 1: UPDATE FLOAT8_TBL SET f1='0.0'::float8 WHERE f1='1e-400'::fl...
                                                         ^
 UPDATE FLOAT8_TBL SET f1='0.0'::float8 WHERE f1='1e400'::float8;
-ERROR:  value out of range: overflow
+ERROR:  "1e400" is out of range for type double precision
 LINE 1: UPDATE FLOAT8_TBL SET f1='0.0'::float8 WHERE f1='1e400'::flo...
                                                         ^
 UPDATE FLOAT8_TBL SET f1='0.0'::float8 WHERE f1='0.0'::float8;
@@ -707,19 +707,19 @@ UPDATE FLOAT8_TBL SET f1='0.0'::float8 WHERE f1='+naN'::float8;
 UPDATE FLOAT8_TBL SET f1='0.0'::float8 WHERE f1='-naN'::float8;
 -- test for over- and underflow with delete statement
 DELETE FROM FLOAT8_TBL WHERE f1='1e-324'::float8;
-ERROR:  value out of range: underflow
+ERROR:  "1e-324" is out of range for type double precision
 LINE 1: DELETE FROM FLOAT8_TBL WHERE f1='1e-324'::float8;
                                         ^
 DELETE FROM FLOAT8_TBL WHERE f1='1e309'::float8;
-ERROR:  value out of range: overflow
+ERROR:  "1e309" is out of range for type double precision
 LINE 1: DELETE FROM FLOAT8_TBL WHERE f1='1e309'::float8;
                                         ^
 DELETE FROM FLOAT8_TBL WHERE f1='1e400'::float8;
-ERROR:  value out of range: overflow
+ERROR:  "1e400" is out of range for type double precision
 LINE 1: DELETE FROM FLOAT8_TBL WHERE f1='1e400'::float8;
                                         ^
 DELETE FROM FLOAT8_TBL WHERE f1='1e-400'::float8;
-ERROR:  value out of range: underflow
+ERROR:  "1e-400" is out of range for type double precision
 LINE 1: DELETE FROM FLOAT8_TBL WHERE f1='1e-400'::float8;
                                         ^
 DELETE FROM FLOAT8_TBL WHERE f1='0.0'::float8;

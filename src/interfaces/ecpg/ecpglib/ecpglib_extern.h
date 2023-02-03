@@ -59,6 +59,10 @@ struct ECPGtype_information_cache
 	enum ARRAY_TYPE isarray;
 };
 
+#ifdef HAVE_USELOCALE
+extern locale_t ecpg_clocale;	/* LC_NUMERIC=C */
+#endif
+
 /* structure to store one statement */
 struct statement
 {
@@ -73,7 +77,6 @@ struct statement
 	struct variable *inlist;
 	struct variable *outlist;
 #ifdef HAVE_USELOCALE
-	locale_t	clocale;
 	locale_t	oldlocale;
 #else
 	char	   *oldlocale;
@@ -88,15 +91,6 @@ struct statement
 	PGresult   *results;
 };
 
-/* structure to store declared statements */
-struct declared_statement
-{
-	char	   *name;			/* declared name */
-	char	   *connection_name;
-	char	   *cursor_name;
-	struct declared_statement *next;
-};
-
 /* structure to store prepared statements for a connection */
 struct prepared_statement
 {
@@ -104,12 +98,6 @@ struct prepared_statement
 	bool		prepared;
 	struct statement *stmt;
 	struct prepared_statement *next;
-};
-
-struct cursor_statement
-{
-	char	   *name;			/* cursor name */
-	struct cursor_statement *next;
 };
 
 /* structure to store connections */
@@ -120,7 +108,6 @@ struct connection
 	bool		autocommit;
 	struct ECPGtype_information_cache *cache_head;
 	struct prepared_statement *prep_stmts;
-	struct cursor_statement *cursor_stmts;
 	struct connection *next;
 };
 
@@ -205,11 +192,6 @@ struct descriptor *ecpg_find_desc(int line, const char *name);
 struct prepared_statement *ecpg_find_prepared_statement(const char *,
 														struct connection *, struct prepared_statement **);
 
-void		ecpg_update_declare_statement(const char *, const char *, const int);
-char	   *ecpg_get_con_name_by_declared_name(const char *);
-const char *ecpg_get_con_name_by_cursor_name(const char *);
-void		ecpg_release_declared_statement(const char *);
-
 bool		ecpg_store_result(const PGresult *results, int act_field,
 							  const struct statement *stmt, struct variable *var);
 bool		ecpg_store_input(const int, const bool, const struct variable *, char **, bool);
@@ -242,6 +224,12 @@ void		ecpg_set_native_sqlda(int, struct sqlda_struct **, const PGresult *, int, 
 unsigned	ecpg_hex_dec_len(unsigned srclen);
 unsigned	ecpg_hex_enc_len(unsigned srclen);
 unsigned	ecpg_hex_encode(const char *src, unsigned len, char *dst);
+
+#ifdef ENABLE_NLS
+extern char *ecpg_gettext(const char *msgid) pg_attribute_format_arg(1);
+#else
+#define ecpg_gettext(x) (x)
+#endif
 
 /* SQLSTATE values generated or processed by ecpglib (intentionally
  * not exported -- users should refer to the codes directly) */

@@ -21,7 +21,7 @@ gppkg --version
 
 The Greenplum Package Manager \(`gppkg`\) utility installs Greenplum Database extensions, along with any dependencies, on all hosts across a cluster. It will also automatically install extensions on new hosts in the case of system expansion and segment recovery.
 
-**Note:** After a major upgrade to Greenplum Database, you must download and install all `gppkg` extensions again.
+> **Note** After a major upgrade to Greenplum Database, you must download and install all `gppkg` extensions again.
 
 Examples of database extensions and packages software that are delivered using the Greenplum Package Manager are:
 
@@ -49,7 +49,7 @@ Examples of database extensions and packages software that are delivered using t
 
 :   For example: `gppkg --migrate /usr/local/greenplum-db-<old-version> /usr/local/greenplum-db-<new-version>`
 
-:   **Note:** In general, it is best to avoid using the `--migrate` option, and packages should be reinstalled, not migrated. See [Upgrading from 6.x to a Newer 6.x Release](../../install_guide/upgrading.html#topic17).
+:   > **Note** In general, it is best to avoid using the `--migrate` option, and packages should be reinstalled, not migrated. See [Upgrading from 6.x to a Newer 6.x Release](../../install_guide/upgrading.html#topic17).
 
 :   When migrating packages, these requirements must be met.
 
@@ -72,7 +72,7 @@ Examples of database extensions and packages software that are delivered using t
 -u package \| --update=package
 :   Updates the given package.
 
-    **Warning:** The process of updating a package includes removing all previous versions of the system objects related to the package. For example, previous versions of shared libraries are removed. After the update process, a database function will fail when it is called if the function references a package file that has been removed.
+    > **Caution** The process of updating a package includes removing all previous versions of the system objects related to the package. For example, previous versions of shared libraries are removed. After the update process, a database function will fail when it is called if the function references a package file that has been removed.
 
 :   --version \(show utility version\)
 :   Displays the version of this utility.

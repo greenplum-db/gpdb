@@ -34,6 +34,11 @@ CParseHandlerWindowFrame::CParseHandlerWindowFrame(
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
 	  m_dxl_win_frame_spec(EdxlfsSentinel),
 	  m_dxl_frame_exclusion_strategy(EdxlfesSentinel),
+	  m_start_in_range_func(0),
+	  m_end_in_range_func(0),
+	  m_in_range_coll(0),
+	  m_in_range_asc(false),
+	  m_in_range_nulls_first(false),
 	  m_window_frame(nullptr)
 {
 }
@@ -129,9 +134,10 @@ CParseHandlerWindowFrame::EndElement(const XMLCh *const,  // element_uri,
 	CDXLNode *dxlnode_leading = leading_val_parse_handler_base->CreateDXLNode();
 	dxlnode_leading->AddRef();
 
-	m_window_frame = GPOS_NEW(m_mp)
-		CDXLWindowFrame(m_dxl_win_frame_spec, m_dxl_frame_exclusion_strategy,
-						dxlnode_leading, dxlnode_trailing);
+	m_window_frame = GPOS_NEW(m_mp) CDXLWindowFrame(
+		m_dxl_win_frame_spec, m_dxl_frame_exclusion_strategy, dxlnode_leading,
+		dxlnode_trailing, m_start_in_range_func, m_end_in_range_func,
+		m_in_range_coll, m_in_range_asc, m_in_range_nulls_first);
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();

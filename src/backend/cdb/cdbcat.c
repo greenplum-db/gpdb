@@ -851,7 +851,6 @@ index_check_policy_compatible(GpPolicy *policy,
 		Oid			policy_typeid;
 		Oid			policy_eqop;
 		bool		found;
-		bool		found_col;
 		Oid			found_col_indclass;
 
 		/* Look up the equality operator for the distribution key opclass */
@@ -866,7 +865,6 @@ index_check_policy_compatible(GpPolicy *policy,
 		 * key.
 		 */
 		found = false;
-		found_col = false;
 		found_col_indclass = InvalidOid;
 		for (j = 0; j < nidxatts; j++)
 		{
@@ -876,7 +874,6 @@ index_check_policy_compatible(GpPolicy *policy,
 
 			if (indattr[j] != policy_attr)
 				continue;
-			found_col = true;
 
 			/*
 			 * Is the index's operator class is compatible with the

@@ -995,10 +995,7 @@ cdbpathlocus_is_hashed_on_tlist(CdbPathLocus locus, List *tlist,
 				bool		found = false;
 
 				if (ignore_constants && CdbEquivClassIsConstant(dk_eclass))
-				{
-					found = true;
 					continue;
-				}
 
 				if (dk_eclass->ec_sortref != 0)
 				{

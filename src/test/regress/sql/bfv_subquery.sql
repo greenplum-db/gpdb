@@ -301,3 +301,27 @@ insert into t1 select i from generate_series(1, 100000) i;
 analyze t1;
 select count(*) from pg_backend_pid() b(a) where b.a % 100000 in (select a from t1);
 drop table t1;
+
+-- Test filter of RESULT node with a LIMIT parent
+-- Historically, when ORCA generates a RESULT node with a LIMIT parent, 
+-- the parent node's tuple bound is pushed down to the RESULT node's
+-- child node. This could cause the query to return a subset of the 
+-- actual result, if the RESULT node has a filter. This is because the
+-- tuple bound was applied before the filter. 
+-- Now, we allow tuple bound push down only if the RESULT node DOES NOT
+-- have a filter.
+
+-- start_ignore
+drop table if exists with_test1;
+drop table if exists with_test2;
+create table with_test1 (i int, value int) distributed by (i);
+insert into with_test1 select i%10, i%30 from generate_series(0, 99) i;
+create table with_test2 (i int, value int);
+insert into with_test2 select i%100, i%300 from generate_series(0, 999) i;
+-- end_ignore
+
+with my_group_sum(i, total) as (select i, sum(value) from with_test1 group by i)
+select with_test2.* from with_test2
+where value < all (select total from my_group_sum where my_group_sum.i = with_test2.i)
+order by 1,2
+limit 15;

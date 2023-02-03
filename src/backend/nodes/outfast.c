@@ -471,6 +471,14 @@ _outAlterDomainStmt(StringInfo str, AlterDomainStmt *node)
 }
 
 static void
+_outAlterDatabaseStmt(StringInfo str, AlterDatabaseStmt *node)
+{
+	WRITE_NODE_TYPE("ALTERDATABASESTMT");
+	WRITE_STRING_FIELD(dbname);
+	WRITE_NODE_FIELD(options);
+}
+
+static void
 _outAlterDefaultPrivilegesStmt(StringInfo str, AlterDefaultPrivilegesStmt *node)
 {
 	WRITE_NODE_TYPE("ALTERDEFAULTPRIVILEGESSTMT");
@@ -1477,6 +1485,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_CreateDomainStmt:
 				_outCreateDomainStmt(str, obj);
+				break;
+			case T_AlterDatabaseStmt:
+				_outAlterDatabaseStmt(str, obj);
 				break;
 			case T_AlterDomainStmt:
 				_outAlterDomainStmt(str, obj);

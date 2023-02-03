@@ -115,9 +115,9 @@ SHOW default_table_access_method;
 
 CREATE TABLE tenk_ao14 (like tenk_heap);
 SELECT amhandler, reloptions FROM pg_class c, PG_AM a WHERE c.relname = 'tenk_ao14' AND c.relam = a.oid;
-       amhandler        |    reloptions     
-------------------------+-------------------
- ao_row_tableam_handler | {blocksize=65536}
+       amhandler        |                            reloptions                             
+------------------------+-------------------------------------------------------------------
+ ao_row_tableam_handler | {blocksize=65536,compresslevel=0,compresstype=none,checksum=true}
 (1 row)
 
 RESET gp_default_storage_options;
@@ -125,22 +125,23 @@ RESET default_table_access_method;
 -------------------- 
 -- catalog checks
 --------------------
--- check pg_appendonly
-SELECT c.relname, a.blocksize, a.compresstype, a.compresslevel, a.checksum FROM pg_class c, pg_appendonly a
-       WHERE c.relname LIKE 'tenk_ao%' AND c.oid=a.relid AND c.relname not like 'tenk_aocs%' ORDER BY c.relname;
-      relname      | blocksize | compresstype | compresslevel | checksum 
--------------------+-----------+--------------+---------------+----------
- tenk_ao1          |     32768 |              |             0 | t
- tenk_ao13         |     32768 |              |             0 | t
- tenk_ao14         |     65536 |              |             0 | t
- tenk_ao15_1_prt_1 |     32768 |              |             0 | t
- tenk_ao15_1_prt_2 |     32768 |              |             0 | t
- tenk_ao15_1_prt_3 |     32768 |              |             0 | t
- tenk_ao2          |    262144 |              |             0 | t
- tenk_ao3          |   1048576 | zlib         |             6 | t
- tenk_ao4          |     32768 | zlib         |             1 | t
- tenk_ao5          |   1048576 | zlib         |             6 | t
-(10 rows)
+-- check reloptions
+SELECT c.relname, c.reloptions, c.relkind FROM pg_class c
+       WHERE c.relname LIKE 'tenk_ao%' AND c.relname not like 'tenk_aocs%' ORDER BY c.relname;
+      relname      |                             reloptions                              | relkind 
+-------------------+---------------------------------------------------------------------+---------
+ tenk_ao1          | {checksum=true,blocksize=32768,compresslevel=0,compresstype=none}   | r
+ tenk_ao13         | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}   | r
+ tenk_ao14         | {blocksize=65536,compresslevel=0,compresstype=none,checksum=true}   | r
+ tenk_ao15         |                                                                     | p
+ tenk_ao15_1_prt_1 | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}   | r
+ tenk_ao15_1_prt_2 | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}   | r
+ tenk_ao15_1_prt_3 | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}   | r
+ tenk_ao2          | {compresslevel=0,blocksize=262144,compresstype=none,checksum=true}  | r
+ tenk_ao3          | {compresslevel=6,blocksize=1048576,checksum=true,compresstype=zlib} | r
+ tenk_ao4          | {compresslevel=1,compresstype=zlib,blocksize=32768,checksum=true}   | r
+ tenk_ao5          | {compresslevel=6,compresstype=zlib,blocksize=1048576,checksum=true} | r
+(11 rows)
 
 --------------------
 -- fn needed later
@@ -352,12 +353,12 @@ IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
 WHERE relname='tenk_ao1'));
    case    | objmod | last_sequence | gp_segment_id 
 -----------+--------+---------------+---------------
- NormalXid |      0 |             0 |             1
- FrozenXid |      1 |         17000 |             1
  NormalXid |      0 |             0 |             0
- FrozenXid |      1 |         17000 |             0
+ FrozenXid |      1 |         16998 |             0
  NormalXid |      0 |             0 |             2
- FrozenXid |      1 |         16400 |             2
+ FrozenXid |      1 |         16395 |             2
+ NormalXid |      0 |             0 |             1
+ FrozenXid |      1 |         16996 |             1
 (6 rows)
 
 -- commit
@@ -524,21 +525,22 @@ ANALYZE tenk_ao1;
 ANALYZE tenk_ao2;
 ANALYZE tenk_ao3;
 ANALYZE tenk_ao4;
-SELECT c.relname, a.blocksize, a.compresstype, a.compresslevel, a.checksum FROM pg_class c, pg_appendonly a
-       WHERE c.relname LIKE 'tenk_ao%' AND c.oid=a.relid AND c.relname not like 'tenk_aocs%' ORDER BY c.relname;
-      relname      | blocksize | compresstype | compresslevel | checksum 
--------------------+-----------+--------------+---------------+----------
- tenk_ao1          |     32768 |              |             0 | t
- tenk_ao13         |     32768 |              |             0 | t
- tenk_ao14         |     65536 |              |             0 | t
- tenk_ao15_1_prt_1 |     32768 |              |             0 | t
- tenk_ao15_1_prt_2 |     32768 |              |             0 | t
- tenk_ao15_1_prt_3 |     32768 |              |             0 | t
- tenk_ao2          |    262144 |              |             0 | t
- tenk_ao3          |   1048576 | zlib         |             6 | t
- tenk_ao4          |     32768 | zlib         |             1 | t
- tenk_ao5          |   1048576 | zlib         |             6 | t
-(10 rows)
+SELECT c.relname, c.reloptions, c.relkind FROM pg_class c
+       WHERE c.relname LIKE 'tenk_ao%' AND c.relname not like 'tenk_aocs%' ORDER BY c.relname;
+      relname      |                             reloptions                              | relkind 
+-------------------+---------------------------------------------------------------------+---------
+ tenk_ao1          | {checksum=true,blocksize=32768,compresslevel=0,compresstype=none}   | r
+ tenk_ao13         | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}   | r
+ tenk_ao14         | {blocksize=65536,compresslevel=0,compresstype=none,checksum=true}   | r
+ tenk_ao15         |                                                                     | p
+ tenk_ao15_1_prt_1 | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}   | r
+ tenk_ao15_1_prt_2 | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}   | r
+ tenk_ao15_1_prt_3 | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}   | r
+ tenk_ao2          | {compresslevel=0,blocksize=262144,compresstype=none,checksum=true}  | r
+ tenk_ao3          | {compresslevel=6,blocksize=1048576,checksum=true,compresstype=zlib} | r
+ tenk_ao4          | {compresslevel=1,compresstype=zlib,blocksize=32768,checksum=true}   | r
+ tenk_ao5          | {compresslevel=6,compresstype=zlib,blocksize=1048576,checksum=true} | r
+(11 rows)
 
 SELECT count(*) FROM tenk_ao1;
  count 
@@ -967,10 +969,6 @@ truncate table temp_tenk_ao5;
  stringu1    | name    |           |          | 
  stringu2    | name    |           |          | 
  string4     | name    |           |          | 
-Compression Type: zlib
-Compression Level: 1
-Block Size: 32768
-Checksum: t
 Indexes:
     "temp_even_index" btree (even)
 Distributed by: (unique1)

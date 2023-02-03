@@ -43,7 +43,7 @@ enum ExMinor
 	ExmiDXLIncorrectNumberOfChildren,
 	ExmiPlStmt2DXLConversion,
 	ExmiDXL2PlStmtConversion,
-	ExmiDXL2PlStmtExternalScanError,
+	ExmiDXL2PlStmtForeignScanError,
 	ExmiDXL2PlStmtMissingPlanForSubPlanTranslation,
 	ExmiQuery2DXLAttributeNotFound,
 	ExmiQuery2DXLUnsupportedFeature,

@@ -1,0 +1,152 @@
+-- Test cases to cover CREATE UNIQUE INDEX on AO/CO tables.
+SET default_table_access_method TO @amname@;
+-- To force index scans for smoke tests
+SET enable_seqscan TO off;
+SET optimizer TO off;
+-- Case 1: Build with no conflicting rows.
+CREATE TABLE unique_index_build_@amname@(i int) DISTRIBUTED REPLICATED;
+INSERT INTO unique_index_build_@amname@ VALUES(1);
+-- should succeed
+CREATE UNIQUE INDEX on unique_index_build_@amname@(i);
+-- post-build smoke test
+EXPLAIN SELECT * FROM unique_index_build_@amname@ WHERE i = 1;
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=8.19..8.19 rows=1 width=4)
+   ->  Bitmap Heap Scan on unique_index_build_@amname@  (cost=4.18..8.19 rows=1 width=4)
+         Recheck Cond: (i = 1)
+         ->  Bitmap Index Scan on unique_index_build_@amname@_i_idx  (cost=0.00..4.18 rows=1 width=0)
+               Index Cond: (i = 1)
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+SELECT * FROM unique_index_build_@amname@ WHERE i = 1;
+ i 
+---
+ 1
+(1 row)
+
+INSERT INTO unique_index_build_@amname@ VALUES(1);
+ERROR:  duplicate key value violates unique constraint "unique_index_build_@amname@_i_idx"  (seg0 192.168.0.148:7002 pid=1421591)
+DETAIL:  Key (i)=(1) already exists.
+DROP TABLE unique_index_build_@amname@;
+-- Case 2: Build with conflicting row.
+CREATE TABLE unique_index_build_@amname@(i int) DISTRIBUTED REPLICATED;
+INSERT INTO unique_index_build_@amname@ VALUES(1);
+INSERT INTO unique_index_build_@amname@ VALUES(1);
+-- should ERROR out
+CREATE UNIQUE INDEX on unique_index_build_@amname@(i);
+ERROR:  could not create unique index "unique_index_build_@amname@_i_idx"  (seg0 192.168.0.148:7002 pid=1421591)
+DETAIL:  Key (i)=(1) is duplicated.
+DROP TABLE unique_index_build_@amname@;
+-- Case 3: Build with conflict on aborted row.
+CREATE TABLE unique_index_build_@amname@(i int) DISTRIBUTED REPLICATED;
+BEGIN;
+INSERT INTO unique_index_build_@amname@ VALUES(1);
+ABORT;
+INSERT INTO unique_index_build_@amname@ VALUES(1);
+-- should succeed
+CREATE UNIQUE INDEX on unique_index_build_@amname@(i);
+-- post-build smoke test
+EXPLAIN SELECT * FROM unique_index_build_@amname@ WHERE i = 1;
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=8.19..8.19 rows=1 width=4)
+   ->  Bitmap Heap Scan on unique_index_build_@amname@  (cost=4.18..8.19 rows=1 width=4)
+         Recheck Cond: (i = 1)
+         ->  Bitmap Index Scan on unique_index_build_@amname@_i_idx  (cost=0.00..4.18 rows=1 width=0)
+               Index Cond: (i = 1)
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+SELECT * FROM unique_index_build_@amname@ WHERE i = 1;
+ i 
+---
+ 1
+(1 row)
+
+INSERT INTO unique_index_build_@amname@ VALUES(1);
+ERROR:  duplicate key value violates unique constraint "unique_index_build_@amname@_i_idx"  (seg0 192.168.0.148:7002 pid=1421591)
+DETAIL:  Key (i)=(1) already exists.
+DROP TABLE unique_index_build_@amname@;
+-- Case 4: Build with conflict on deleted row.
+CREATE TABLE unique_index_build_@amname@(i int) DISTRIBUTED REPLICATED;
+INSERT INTO unique_index_build_@amname@ VALUES(1);
+DELETE FROM unique_index_build_@amname@;
+INSERT INTO unique_index_build_@amname@ VALUES(1);
+-- should succeed
+CREATE UNIQUE INDEX on unique_index_build_@amname@(i);
+-- post-build smoke test
+EXPLAIN SELECT * FROM unique_index_build_@amname@ WHERE i = 1;
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=8.19..8.19 rows=1 width=4)
+   ->  Bitmap Heap Scan on unique_index_build_@amname@  (cost=4.18..8.19 rows=1 width=4)
+         Recheck Cond: (i = 1)
+         ->  Bitmap Index Scan on unique_index_build_@amname@_i_idx  (cost=0.00..4.18 rows=1 width=0)
+               Index Cond: (i = 1)
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+SELECT * FROM unique_index_build_@amname@ WHERE i = 1;
+ i 
+---
+ 1
+(1 row)
+
+INSERT INTO unique_index_build_@amname@ VALUES(1);
+ERROR:  duplicate key value violates unique constraint "unique_index_build_@amname@_i_idx"  (seg0 192.168.0.148:7002 pid=1421591)
+DETAIL:  Key (i)=(1) already exists.
+DROP TABLE unique_index_build_@amname@;
+-- Case 5: Partial unique index build
+CREATE TABLE unique_index_build_@amname@(i int) DISTRIBUTED REPLICATED;
+INSERT INTO unique_index_build_@amname@ VALUES(1);
+INSERT INTO unique_index_build_@amname@ VALUES(1);
+INSERT INTO unique_index_build_@amname@ VALUES(2);
+INSERT INTO unique_index_build_@amname@ VALUES(6);
+INSERT INTO unique_index_build_@amname@ VALUES(6);
+-- should fail as conflict lies in indexed portion of data
+CREATE UNIQUE INDEX on unique_index_build_@amname@(i) WHERE i < 5;
+ERROR:  could not create unique index "unique_index_build_@amname@_i_idx"  (seg0 192.168.0.148:7002 pid=3690142)
+DETAIL:  Key (i)=(1) is duplicated.
+-- removing conflict should make index build succeed
+DELETE FROM unique_index_build_@amname@ WHERE i = 1;
+CREATE UNIQUE INDEX on unique_index_build_@amname@(i) WHERE i < 5;
+-- post build smoke tests:
+-- should succeed as it lies in non-indexed portion
+INSERT INTO unique_index_build_@amname@ VALUES(6);
+-- should fail as conflict lies in indexed portion of data
+INSERT INTO unique_index_build_@amname@ VALUES(2);
+ERROR:  duplicate key value violates unique constraint "unique_index_build_@amname@_i_idx"  (seg1 192.168.0.148:7003 pid=3690143)
+DETAIL:  Key (i)=(2) already exists.
+-- should succeed as there is no conflicting key that exists
+INSERT INTO unique_index_build_@amname@ VALUES(3);
+SELECT * FROM unique_index_build_@amname@ WHERE i = 1;
+ i 
+---
+(0 rows)
+
+SELECT * FROM unique_index_build_@amname@ WHERE i = 2;
+ i 
+---
+ 2
+(1 row)
+
+SELECT * FROM unique_index_build_@amname@ WHERE i = 3;
+ i 
+---
+ 3
+(1 row)
+
+SELECT * FROM unique_index_build_@amname@ WHERE i = 6;
+ i 
+---
+ 6
+ 6
+ 6
+(3 rows)
+
+DROP TABLE unique_index_build_@amname@;
+RESET default_table_access_method;
+RESET enable_seqscan;
+RESET optimizer;

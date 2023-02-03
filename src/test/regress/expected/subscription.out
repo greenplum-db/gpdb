@@ -84,6 +84,9 @@ ALTER SUBSCRIPTION regress_testsub SET PUBLICATION testpub2, testpub3 WITH (refr
 ALTER SUBSCRIPTION regress_testsub CONNECTION 'dbname=regress_doesnotexist2';
 ALTER SUBSCRIPTION regress_testsub SET (slot_name = 'newname');
 -- fail
+ALTER SUBSCRIPTION regress_testsub SET (slot_name = '');
+ERROR:  replication slot name "" is too short
+-- fail
 ALTER SUBSCRIPTION regress_doesnotexist CONNECTION 'dbname=regress_doesnotexist2';
 ERROR:  subscription "regress_doesnotexist" does not exist
 ALTER SUBSCRIPTION regress_testsub SET (create_slot = false);
@@ -145,6 +148,13 @@ DROP SUBSCRIPTION regress_testsub;
 ERROR:  DROP SUBSCRIPTION cannot run inside a transaction block
 COMMIT;
 ALTER SUBSCRIPTION regress_testsub SET (slot_name = NONE);
+\dRs+
+                                                      List of subscriptions
+      Name       |           Owner            | Enabled |     Publication     | Synchronous commit |           Conninfo           
+-----------------+----------------------------+---------+---------------------+--------------------+------------------------------
+ regress_testsub | regress_subscription_user2 | f       | {testpub2,testpub3} | local              | dbname=regress_doesnotexist2
+(1 row)
+
 -- now it works
 BEGIN;
 DROP SUBSCRIPTION regress_testsub;

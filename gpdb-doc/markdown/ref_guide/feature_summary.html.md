@@ -25,7 +25,7 @@ In the process of building a parallel, shared-nothing database system and query 
     Note that `UNIQUE INDEXES` \(but not `UNIQUE CONSTRAINTS`\) are enforced on a part basis within a partitioned table. They guarantee the uniqueness of the key within each part or sub-part.
 
 5.  `VOLATILE` or `STABLE` functions cannot run on the segments, and so are generally limited to being passed literal values as the arguments to their parameters.
-6.  Triggers are not supported since they typically rely on the use of `VOLATILE` functions.
+6.  Triggers are not generally supported because they typically rely on the use of `VOLATILE` functions. PostgreSQL [Event Triggers](https://www.postgresql.org/docs/12/event-triggers.html) are supported because they capture only DDL events.
 7.  Referential integrity constraints \(foreign keys\) are not enforced in Greenplum Database. Users can declare foreign keys and this information is kept in the system catalog, however.
 8.  Sequence manipulation functions `CURRVAL` and `LASTVAL`.
 
@@ -95,9 +95,9 @@ The following features of SQL 2008 are not supported in Greenplum Database:
 
 Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature and typical workload of a Greenplum Database system, some SQL commands have been added or modified, and there are a few PostgreSQL features that are not supported. Greenplum has also added features not found in PostgreSQL, such as physical data distribution, parallel query optimization, external tables, resource queues, and enhanced table partitioning. For full SQL syntax and references, see the [SQL Commands](sql_commands/sql_ref.html).
 
-**Note:** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/9.4/largeobjects.html) for streaming user data that is stored in large-object structures.
+> **Note** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/12/largeobjects.html) for streaming user data that is stored in large-object structures.
 
-**Note:** VMware does not support using `WITH OIDS` or `oids=TRUE` to assign an OID system column when creating or altering a table. This syntax is deprecated and will be removed in a future Greenplum release.
+> **Note** VMware does not support using `WITH OIDS` or `oids=TRUE` to assign an OID system column when creating or altering a table. This syntax is deprecated and will be removed in a future Greenplum release.
 
 <table cellpadding="4" cellspacing="0" summary="" id="topic8__ik213423" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 1. </span>SQL Support in Greenplum Database</span></caption><colgroup><col style="width:143pt" /><col style="width:73pt" /><col style="width:233pt" /></colgroup><thead class="thead" style="text-align:left;">
 <tr class="row">
@@ -124,6 +124,11 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 </tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER DOMAIN</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER EVENT TRIGGER</code></td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
 </tr>
@@ -333,6 +338,11 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
 </tr>
 <tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE EVENT TRIGGER</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE EXTENSION</code></td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Loads a new extension into Greenplum Database - based on
@@ -349,7 +359,7 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Limitations:</strong><p class="p">Functions defined as
         <code class="ph codeph">STABLE</code> or <code class="ph codeph">VOLATILE</code> can be run in
-      Greenplum Database provided that they are run on the master only.
+      Greenplum Database provided that they are run on the coordinator only.
         <code class="ph codeph">STABLE</code> and <code class="ph codeph">VOLATILE</code> functions cannot be used
       in statements that run at the segment level. </p>
 </td>
@@ -570,6 +580,11 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP DOMAIN</code></td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP EVENT TRIGGER</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
 </tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP EXTENSION</code></td>
@@ -868,8 +883,6 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Limitations:</strong><p class="p"><code class="ph codeph">DEFERRABLE</code> clause has no
                   effect.</p>
-<p class="p"><code class="ph codeph">SET TRANSACTION SNAPSHOT</code> command is not
-                  supported.</p>
 </td>
 </tr>
 <tr class="row">

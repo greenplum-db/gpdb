@@ -706,6 +706,12 @@ public:
 	// returns true if the subquery is a ScalarSubqueryAny
 	static BOOL FAnySubquery(COperator *pop);
 
+	// returns true if the subquery is a ScalarSubqueryExists
+	static BOOL FExistsSubquery(COperator *pop);
+
+	// returns true if the expression is a correlated EXISTS/ANY subquery
+	static BOOL FCorrelatedExistsAnySubquery(CExpression *pexpr);
+
 	static CScalarProjectElement *PNthProjectElement(CExpression *pexpr,
 													 ULONG ul);
 
@@ -945,9 +951,6 @@ public:
 	// generate a limit expression on top of the given relational child with the given offset and limit count
 	static CExpression *PexprLimit(CMemoryPool *mp, CExpression *pexpr,
 								   ULONG ulOffSet, ULONG count);
-
-	// generate part oid
-	static BOOL FGeneratePartOid(IMDId *mdid);
 
 	// return true if given expression contains window aggregate function
 	static BOOL FHasAggWindowFunc(CExpression *pexpr);

@@ -10,7 +10,7 @@ DROP GROUP [IF EXISTS] <name> [, ...]
 
 ## <a id="section3"></a>Description 
 
-`DROP GROUP` is an alias for `DROP ROLE`. See [DROP ROLE](DROP_ROLE.html) for more information.
+`DROP GROUP` is an alias for [DROP ROLE](DROP_ROLE.html).
 
 ## <a id="section5"></a>Compatibility 
 
