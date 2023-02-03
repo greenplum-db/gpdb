@@ -1,25 +1,31 @@
 select * from gp_toolkit.gp_resgroup_config where groupname='default_group';
- groupid | groupname     | concurrency | cpu_rate_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset 
----------+---------------+-------------+----------------+--------------+---------------------+--------------------+----------------+--------
- 6437    | default_group | 20          | 30             | 30           | 80                  | 10                 | vmtracker      | -1     
+ groupid | groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority | cpuset 
+---------+---------------+-------------+----------------------+-------------------+--------
+ 6437    | default_group | 20          | 20                   | 100               | -1     
 (1 row)
 
-select rsgname , groupid , num_running , num_queueing , num_queued , num_executed , cpu_usage->'-1' as qd_cpu_usage , memory_usage->'-1'->'used' as qd_memory_used , memory_usage->'-1'->'shared_used' as qd_memory_shared_used from gp_toolkit.gp_resgroup_status where rsgname='default_group';
- rsgname       | groupid | num_running | num_queueing | num_queued | num_executed | qd_cpu_usage | qd_memory_used | qd_memory_shared_used 
----------------+---------+-------------+--------------+------------+--------------+--------------+----------------+-----------------------
- default_group | 6437    | 0           | 0            | 0          | 0            | 0            | 0              | 0                     
+select rsgname , groupid , num_running , num_queueing , num_queued , num_executed , cpu_usage->'-1' as qd_cpu_usage from gp_toolkit.gp_resgroup_status where rsgname='default_group';
+ rsgname       | groupid | num_running | num_queueing | num_queued | num_executed | qd_cpu_usage 
+---------------+---------+-------------+--------------+------------+--------------+--------------
+ default_group | 6437    | 0           | 0            | 0          | 0            | 0            
 (1 row)
 
-select rsgname , groupid , cpu , memory_used , memory_shared_used from gp_toolkit.gp_resgroup_status_per_host s join gp_segment_configuration c on s.hostname=c.hostname and c.content=-1 and role='p' where rsgname='default_group';
- rsgname       | groupid | cpu  | memory_used | memory_shared_used 
----------------+---------+------+-------------+--------------------
- default_group | 6437    | 0.00 | 0           | 0                  
+select rsgname , groupid , cpu from gp_toolkit.gp_resgroup_status_per_host s join gp_segment_configuration c on s.hostname=c.hostname and c.content=-1 and role='p' where rsgname='default_group';
+ rsgname       | groupid | cpu  
+---------------+---------+------
+ default_group | 6437    | 0.00 
 (1 row)
 
-select rsgname , groupid , segment_id , cpu , memory_used , memory_shared_used from gp_toolkit.gp_resgroup_status_per_segment where rsgname='default_group' and segment_id=-1;
- rsgname       | groupid | segment_id | cpu  | memory_used | memory_shared_used 
----------------+---------+------------+------+-------------+--------------------
- default_group | 6437    | -1         | 0.00 | 0           | 0                  
+select rsgname , groupid , segment_id , cpu from gp_toolkit.gp_resgroup_status_per_segment where rsgname='default_group' and segment_id=-1;
+ rsgname       | groupid | segment_id | cpu  
+---------------+---------+------------+------
+ default_group | 6437    | -1         | 0.00 
+(1 row)
+
+select * from gp_toolkit.gp_resgroup_role where rrrolname='gpadmin';
+ rrrolname | rrrsgname   
+-----------+-------------
+ gpadmin   | admin_group 
 (1 row)
 
 -- also log the raw output of the views, if any of above tests failed it is
@@ -27,33 +33,40 @@ select rsgname , groupid , segment_id , cpu , memory_used , memory_shared_used f
 
 -- start_ignore
 select * from gp_toolkit.gp_resgroup_config;
- groupid | groupname     | concurrency | cpu_rate_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset 
----------+---------------+-------------+----------------+--------------+---------------------+--------------------+----------------+--------
- 6437    | default_group | 20          | 30             | 30           | 80                  | 10                 | vmtracker      | -1     
- 6438    | admin_group   | 2           | 10             | 10           | 80                  | 10                 | vmtracker      | -1     
-(2 rows)
+ groupid | groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority | cpuset 
+---------+---------------+-------------+----------------------+-------------------+--------
+ 6437    | default_group | 20          | 20                   | 100               | -1     
+ 6441    | system_group  | 0           | 10                   | 100               | -1     
+ 6438    | admin_group   | 2           | 10                   | 100               | -1     
+(3 rows)
 select * from gp_toolkit.gp_resgroup_status;
- rsgname       | groupid | num_running | num_queueing | num_queued | num_executed | total_queue_duration | cpu_usage                                 | memory_usage                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
----------------+---------+-------------+--------------+------------+--------------+----------------------+-------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- default_group | 6437    | 0           | 0            | 0          | 0            | @ 0                  | {"-1":0.00, "0":0.00, "1":0.00, "2":0.00} | {"-1":{"used":0, "available":204, "quota_used":0, "quota_available":40, "quota_granted":40, "quota_proposed":40, "shared_used":0, "shared_available":164, "shared_granted":164, "shared_proposed":164}, "0":{"used":0, "available":204, "quota_used":0, "quota_available":40, "quota_granted":40, "quota_proposed":40, "shared_used":0, "shared_available":164, "shared_granted":164, "shared_proposed":164}, "1":{"used":0, "available":204, "quota_used":0, "quota_available":40, "quota_granted":40, "quota_proposed":40, "shared_used":0, "shared_available":164, "shared_granted":164, "shared_proposed":164}, "2":{"used":0, "available":204, "quota_used":0, "quota_available":40, "quota_granted":40, "quota_proposed":40, "shared_used":0, "shared_available":164, "shared_granted":164, "shared_proposed":164}} 
- admin_group   | 6438    | 1           | 0            | 0          | 19           | @ 0                  | {"-1":0.41, "0":0.18, "1":0.14, "2":0.10} | {"-1":{"used":0, "available":68, "quota_used":6, "quota_available":6, "quota_granted":12, "quota_proposed":12, "shared_used":0, "shared_available":56, "shared_granted":56, "shared_proposed":56}, "0":{"used":0, "available":68, "quota_used":6, "quota_available":6, "quota_granted":12, "quota_proposed":12, "shared_used":0, "shared_available":56, "shared_granted":56, "shared_proposed":56}, "1":{"used":0, "available":68, "quota_used":6, "quota_available":6, "quota_granted":12, "quota_proposed":12, "shared_used":0, "shared_available":56, "shared_granted":56, "shared_proposed":56}, "2":{"used":0, "available":68, "quota_used":6, "quota_available":6, "quota_granted":12, "quota_proposed":12, "shared_used":0, "shared_available":56, "shared_granted":56, "shared_proposed":56}}                     
-(2 rows)
+ rsgname       | groupid | num_running | num_queueing | num_queued | num_executed | total_queue_duration | cpu_usage                                     
+---------------+---------+-------------+--------------+------------+--------------+----------------------+-----------------------------------------------
+ default_group | 6437    | 0           | 0            | 0          | 0            | @ 0                  | {'-1': 0.0, '0': 0.0, '1': 0.0, '2': 0.0}     
+ admin_group   | 6438    | 1           | 0            | 0          | 13           | @ 0                  | {'-1': 0.33, '0': 0.12, '1': 0.09, '2': 0.05} 
+ system_group  | 6441    | 0           | 0            | 0          | 0            | @ 0                  | {'-1': 0.09, '0': 0.08, '1': 0.08, '2': 0.08} 
+(3 rows)
 select * from gp_toolkit.gp_resgroup_status_per_host;
- rsgname       | groupid | hostname      | cpu  | memory_used | memory_available | memory_quota_used | memory_quota_available | memory_shared_used | memory_shared_available 
----------------+---------+---------------+------+-------------+------------------+-------------------+------------------------+--------------------+-------------------------
- admin_group   | 6438    | nyu-vm-ubuntu | 0.83 | 1           | 271              | 24                | 24                     | 0                  | 224                     
- default_group | 6437    | nyu-vm-ubuntu | 0.00 | 0           | 816              | 0                 | 160                    | 0                  | 656                     
-(2 rows)
+ rsgname       | groupid | hostname | cpu  
+---------------+---------+----------+------
+ admin_group   | 6438    | zero     | 0.15 
+ default_group | 6437    | zero     | 0.00 
+ system_group  | 6441    | zero     | 0.05 
+(3 rows)
 select * from gp_toolkit.gp_resgroup_status_per_segment;
- rsgname       | groupid | hostname      | segment_id | cpu  | memory_used | memory_available | memory_quota_used | memory_quota_available | memory_shared_used | memory_shared_available 
----------------+---------+---------------+------------+------+-------------+------------------+-------------------+------------------------+--------------------+-------------------------
- admin_group   | 6438    | nyu-vm-ubuntu | 0          | 0.13 | 0           | 68               | 6                 | 6                      | 0                  | 56                      
- default_group | 6437    | nyu-vm-ubuntu | 1          | 0.00 | 0           | 204              | 0                 | 40                     | 0                  | 164                     
- default_group | 6437    | nyu-vm-ubuntu | 0          | 0.00 | 0           | 204              | 0                 | 40                     | 0                  | 164                     
- default_group | 6437    | nyu-vm-ubuntu | -1         | 0.00 | 0           | 204              | 0                 | 40                     | 0                  | 164                     
- default_group | 6437    | nyu-vm-ubuntu | 2          | 0.00 | 0           | 204              | 0                 | 40                     | 0                  | 164                     
- admin_group   | 6438    | nyu-vm-ubuntu | 1          | 0.10 | 0           | 68               | 6                 | 6                      | 0                  | 56                      
- admin_group   | 6438    | nyu-vm-ubuntu | -1         | 0.26 | 1           | 67               | 6                 | 6                      | 0                  | 56                      
- admin_group   | 6438    | nyu-vm-ubuntu | 2          | 0.10 | 0           | 68               | 6                 | 6                      | 0                  | 56                      
-(8 rows)
+ rsgname       | groupid | hostname | segment_id | cpu  
+---------------+---------+----------+------------+------
+ admin_group   | 6438    | zero     | -1         | 0.25 
+ admin_group   | 6438    | zero     | 0          | 0.11 
+ admin_group   | 6438    | zero     | 1          | 0.11 
+ admin_group   | 6438    | zero     | 2          | 0.07 
+ default_group | 6437    | zero     | -1         | 0.00 
+ default_group | 6437    | zero     | 0          | 0.00 
+ default_group | 6437    | zero     | 1          | 0.00 
+ default_group | 6437    | zero     | 2          | 0.00 
+ system_group  | 6441    | zero     | -1         | 0.06 
+ system_group  | 6441    | zero     | 0          | 0.05 
+ system_group  | 6441    | zero     | 1          | 0.05 
+ system_group  | 6441    | zero     | 2          | 0.05 
+(12 rows)
 -- end_ignore

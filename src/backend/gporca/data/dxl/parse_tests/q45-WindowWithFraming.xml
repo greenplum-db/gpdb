@@ -96,7 +96,7 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.18872.1.1" TableName="foo">
+              <dxl:TableDescriptor Mdid="6.18872.1.1" TableName="foo">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -118,7 +118,7 @@
             <dxl:SortingColumnList>
               <dxl:SortingColumn ColId="1" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
             </dxl:SortingColumnList>
-            <dxl:WindowFrame FrameSpec="Range" ExclusionStrategy="Nulls">
+            <dxl:WindowFrame FrameSpec="Range" ExclusionStrategy="Nulls" StartInRange="0" EndInRange="0" InRangeColl="0" InRangeAsc="false" InRangeNullsFirst="false">
               <dxl:TrailingEdge TrailingBoundary="BoundedPreceding">
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
               </dxl:TrailingEdge>

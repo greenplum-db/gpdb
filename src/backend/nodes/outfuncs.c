@@ -388,9 +388,6 @@ _outPlannedStmt(StringInfo str, const PlannedStmt *node)
 
 	WRITE_UINT64_FIELD(query_mem);
 
-	WRITE_INT_FIELD(total_memory_coordinator);
-	WRITE_INT_FIELD(nsegments_coordinator);
-
 	WRITE_NODE_FIELD(intoClause);
 	WRITE_NODE_FIELD(copyIntoClause);
 	WRITE_NODE_FIELD(refreshClause);
@@ -589,6 +586,7 @@ _outModifyTable(StringInfo str, const ModifyTable *node)
 	WRITE_UINT_FIELD(exclRelRTI);
 	WRITE_NODE_FIELD(exclRelTlist);
 	WRITE_NODE_FIELD(isSplitUpdates);
+	WRITE_BOOL_FIELD(forceTupleRouting);
 }
 
 static void
@@ -780,6 +778,7 @@ _outIndexOnlyScan(StringInfo str, const IndexOnlyScan *node)
 
 	WRITE_OID_FIELD(indexid);
 	WRITE_NODE_FIELD(indexqual);
+	WRITE_NODE_FIELD(recheckqual);
 	WRITE_NODE_FIELD(indexorderby);
 	WRITE_NODE_FIELD(indextlist);
 	WRITE_ENUM_FIELD(indexorderdir, ScanDirection);
@@ -1023,6 +1022,9 @@ _outHashJoin(StringInfo str, const HashJoin *node)
 
 	WRITE_NODE_FIELD(hashclauses);
 	WRITE_NODE_FIELD(hashqualclauses);
+	WRITE_NODE_FIELD(hashoperators);
+	WRITE_NODE_FIELD(hashcollations);
+	WRITE_NODE_FIELD(hashkeys);
 }
 
 static void
@@ -1167,6 +1169,8 @@ _outHash(StringInfo str, const Hash *node)
 
 	_outPlanInfo(str, (const Plan *) node);
 	WRITE_BOOL_FIELD(rescannable);          /*CDB*/
+
+	WRITE_NODE_FIELD(hashkeys);
 	WRITE_OID_FIELD(skewTable);
 	WRITE_INT_FIELD(skewColumn);
 	WRITE_BOOL_FIELD(skewInherit);
@@ -3486,6 +3490,9 @@ _outAlteredTableInfo(StringInfo str, const AlteredTableInfo *node)
 	wrapStringList(node->changedIndexDefs);
 	WRITE_NODE_FIELD(changedIndexDefs);
 	unwrapStringList(node->changedIndexDefs);
+
+	WRITE_STRING_FIELD(replicaIdentityIndex);
+	WRITE_STRING_FIELD(clusterOnIndex);
 }
 
 static void
@@ -4102,6 +4109,7 @@ _outTableLikeClause(StringInfo str, const TableLikeClause *node)
 
 	WRITE_NODE_FIELD(relation);
 	WRITE_UINT_FIELD(options);
+	WRITE_OID_FIELD(relationOid);
 }
 
 static void

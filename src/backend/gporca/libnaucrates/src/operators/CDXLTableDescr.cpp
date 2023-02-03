@@ -31,12 +31,14 @@ using namespace gpdxl;
 //
 //---------------------------------------------------------------------------
 CDXLTableDescr::CDXLTableDescr(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
-							   ULONG ulExecuteAsUser, int lockmode)
+							   ULONG ulExecuteAsUser, int lockmode,
+							   ULONG assigned_query_id_for_target_rel)
 	: m_mdid(mdid),
 	  m_mdname(mdname),
 	  m_dxl_column_descr_array(nullptr),
 	  m_execute_as_user_id(ulExecuteAsUser),
-	  m_lockmode(lockmode)
+	  m_lockmode(lockmode),
+	  m_assigned_query_id_for_target_rel(assigned_query_id_for_target_rel)
 {
 	GPOS_ASSERT(nullptr != m_mdname);
 	m_dxl_column_descr_array = GPOS_NEW(mp) CDXLColDescrArray(mp);
@@ -218,6 +220,13 @@ CDXLTableDescr::SerializeToDXL(CXMLSerializer *xml_serializer) const
 			CDXLTokens::GetDXLTokenStr(EdxltokenLockMode), LockMode());
 	}
 
+	if (UNASSIGNED_QUERYID != m_assigned_query_id_for_target_rel)
+	{
+		xml_serializer->AddAttribute(
+			CDXLTokens::GetDXLTokenStr(EdxltokenAssignedQueryIdForTargetRel),
+			m_assigned_query_id_for_target_rel);
+	}
+
 	// serialize columns
 	xml_serializer->OpenElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
@@ -238,6 +247,23 @@ CDXLTableDescr::SerializeToDXL(CXMLSerializer *xml_serializer) const
 	xml_serializer->CloseElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
 		CDXLTokens::GetDXLTokenStr(EdxltokenTableDescr));
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CDXLTableDescr::GetAssignedQueryIdForTargetRel
+//
+//	@doc:
+//		Return id of query, to which TableDescr belongs to
+//		(if this descriptor points to a result (target) entry,
+//		else UNASSIGNED_QUERYID returned)
+//
+//---------------------------------------------------------------------------
+ULONG
+CDXLTableDescr::GetAssignedQueryIdForTargetRel() const
+{
+	return m_assigned_query_id_for_target_rel;
 }
 
 // EOF

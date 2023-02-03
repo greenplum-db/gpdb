@@ -4,7 +4,7 @@ The `gp_transaction_log` view contains status information about transactions loc
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`segment_id`|smallint|gp\_segment\_configuration.content|The content id of the segment. The master is always -1 \(no content\).|
+|`segment_id`|smallint|gp\_segment\_configuration.content|The content id of the segment. The coordinator is always -1 \(no content\).|
 |`dbid`|smallint|gp\_segment\_configuration.dbid|The unique id of the segment instance.|
 |`transaction`|xid| |The local transaction ID.|
 |`status`|text| |The status of the local transaction \(Committed or Aborted\).|

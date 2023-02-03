@@ -15,7 +15,7 @@ $(recurse)
 PROGRAMS= analyzedb gpactivatestandby gpaddmirrors gpcheckcat gpcheckperf \
 	gpcheckresgroupimpl gpconfig gpdeletesystem gpexpand gpinitstandby \
 	gpinitsystem gpload gpload.py gplogfilter gpmovemirrors \
-	gppkg gprecoverseg gpreload gpscp gpsd gpssh gpssh-exkeys gpstart \
+	gppkg gprecoverseg gpreload gpsync gpsd gpssh gpssh-exkeys gpstart \
 	gpstate gpstop minirepro gpmemwatcher gpmemreport
 
 installdirs:
@@ -58,7 +58,7 @@ PYLIB_DIR=$(SRC)/ext
 core:
 	python3 gpconfig_modules/parse_guc_metadata.py $(DESTDIR)$(prefix)
 
-ifneq "$(wildcard $(CURDIR)/pythonSrc/ext/*.tar.gz)" ""
+ifeq ($(with_pythonsrc_ext), yes)
 install: installdirs installprograms core psutil pygresql pyyaml
 else
 install: installdirs installprograms core
@@ -112,19 +112,13 @@ pyyaml:
 
 PYLINT_VERSION=0.21.0
 PYLINT_DIR=pylint-$(PYLINT_VERSION)
-LOGILAB_ASTNG_VERSION=0.20.1
-LOGILAB_ASTNG_DIR=logilab-astng-$(LOGILAB_ASTNG_VERSION)
-LOGILAB_COMMON_VERSION=0.50.1
-LOGILAB_COMMON_DIR=logilab-common-$(LOGILAB_COMMON_VERSION)
 PYLINT_PYTHONPATH=$(PYLIB_DIR):$(PYLIB_SRC_EXT)/$(PYLINT_DIR)/build/lib/
 MOCK_VERSION=1.0.1
 MOCK_DIR=mock-$(MOCK_VERSION)
 SETUP_TOOLS_VERSION=36.6.0
 PARSE_VERSION=1.8.2
-ARG_PARSE_VERSION=1.2.1
 SETUP_TOOLS_DIR=setuptools-$(SETUP_TOOLS_VERSION)
 PARSE_DIR=parse-$(PARSE_VERSION)
-ARG_PARSE_DIR=argparse-$(ARG_PARSE_VERSION)
 PYTHONSRC_INSTALL=$(PYLIB_SRC_EXT)/install
 PYTHON_VERSION=$(shell python3 -c "import sys; print ('%s.%s' % (sys.version_info[0:2]))")
 PYTHONSRC_INSTALL_SITE=$(PYLIB_SRC_EXT)/install/lib/python$(PYTHON_VERSION)/site-packages
@@ -136,15 +130,8 @@ UBUNTU_PLATFORM=$(shell if lsb_release -a 2>/dev/null | grep -q 'Ubuntu' ; then 
 pylint:
 	@echo "--- pylint"
 	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PYLINT_DIR).tar.gz
-	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(LOGILAB_ASTNG_DIR).tar.gz
-	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(LOGILAB_COMMON_DIR).tar.gz
 	@cd $(PYLIB_SRC_EXT)/$(PYLINT_DIR)/ && python3 setup.py build 1> /dev/null
-	@cd $(PYLIB_SRC_EXT)/$(LOGILAB_ASTNG_DIR)/ && python3 setup.py build 1> /dev/null
-	@cd $(PYLIB_SRC_EXT)/$(LOGILAB_COMMON_DIR)/ && python3 setup.py build 1> /dev/null
-	@cp -r $(PYLIB_SRC_EXT)/$(LOGILAB_COMMON_DIR)/build/lib/logilab $(PYLIB_SRC_EXT)/$(PYLINT_DIR)/build/lib/
-	@cp -r $(PYLIB_SRC_EXT)/$(LOGILAB_ASTNG_DIR)/build/lib/logilab $(PYLIB_SRC_EXT)/$(PYLINT_DIR)/build/lib/
 	@touch $(PYLIB_SRC_EXT)/$(PYLINT_DIR)/build/lib/__init__.py
-	@touch $(PYLIB_SRC_EXT)/$(PYLINT_DIR)/build/lib/logilab/__init__.py
 
 $(MOCK_BIN):
 	@echo "--- mock for platform $(UBUNTU_PLATFORM)"
@@ -191,14 +178,12 @@ installcheck: installcheck-bash
 
 clean distclean:
 	rm -rf $(PYLIB_SRC_EXT)/$(PYLINT_DIR)
-	rm -rf $(PYLIB_SRC_EXT)/$(LOGILAB_COMMON_DIR)
-	rm -rf $(PYLIB_SRC_EXT)/$(LOGILAB_ASTNG_DIR)
 	rm -rf $(PYLIB_SRC_EXT)/$(PYGRESQL_DIR)/build
 	rm -rf $(PYLIB_SRC)/$(PYGRESQL_DIR)/build
 	rm -rf *.pyc
 	rm -f analyzedbc gpactivatestandbyc gpaddmirrorsc gpcheckcatc \
 		  gpcheckperfc gpcheckresgroupimplc gpchecksubnetcfgc gpconfigc \
 		  gpdeletesystemc gpexpandc gpinitstandbyc gplogfilterc gpmovemirrorsc \
-		  gppkgc gprecoversegc gpreloadc gpscpc gpsdc gpssh-exkeysc gpsshc \
+		  gppkgc gprecoversegc gpreloadc gpscpc gpsyncc gpsdc gpssh-exkeysc gpsshc \
 		  gpstartc gpstatec gpstopc minireproc
 	rm -f gpconfig_modules/gucs_disallowed_in_file.txt

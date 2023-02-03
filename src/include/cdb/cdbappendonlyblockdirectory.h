@@ -92,6 +92,9 @@ typedef struct MinipagePerColumnGroup
 #define NUM_MINIPAGE_ENTRIES (((MaxHeapTupleSize)/8 - sizeof(HeapTupleHeaderData) - 64 * 3)\
 							  / sizeof(MinipageEntry))
 
+#define IsMinipageFull(minipagePerColumnGroup) \
+	((minipagePerColumnGroup)->numMinipageEntries == (uint32) gp_blockdirectory_minipage_size)
+
 /*
  * Define a structure for the append-only relation block directory.
  */
@@ -192,6 +195,9 @@ extern bool AppendOnlyBlockDirectory_GetEntry(
 	AOTupleId 						*aoTupleId,
 	int                             columnGroupNo,
 	AppendOnlyBlockDirectoryEntry	*directoryEntry);
+extern bool AppendOnlyBlockDirectory_CoversTuple(
+	AppendOnlyBlockDirectory		*blockDirectory,
+	AOTupleId 						*aoTupleId);
 extern void AppendOnlyBlockDirectory_Init_forInsert(
 	AppendOnlyBlockDirectory *blockDirectory,
 	Snapshot appendOnlyMetaDataSnapshot,
@@ -210,6 +216,10 @@ extern void AppendOnlyBlockDirectory_Init_forSearch(
 	int numColumnGroups,
 	bool isAOCol,
 	bool *proj);
+extern void AppendOnlyBlockDirectory_Init_forUniqueChecks(AppendOnlyBlockDirectory *blockDirectory,
+														  Relation aoRel,
+														  int numColumnGroups,
+														  Snapshot snapshot);
 extern void AppendOnlyBlockDirectory_Init_addCol(
 	AppendOnlyBlockDirectory *blockDirectory,
 	Snapshot appendOnlyMetaDataSnapshot,
@@ -236,6 +246,51 @@ extern void AppendOnlyBlockDirectory_DeleteSegmentFile(
 		Snapshot snapshot,
 		int segno,
 		int columnGroupNo);
+extern void AppendOnlyBlockDirectory_End_forUniqueChecks(
+	AppendOnlyBlockDirectory *blockDirectory);
+
+extern void AppendOnlyBlockDirectory_InsertPlaceholder(AppendOnlyBlockDirectory *blockDirectory,
+												  int64 firstRowNum,
+												  int64 fileOffset,
+												  int columnGroupNo);
+
+/*
+ * AppendOnlyBlockDirectory_UniqueCheck
+ *
+ * Check to see if there is a block directory entry for the tuple. If no such
+ * entry exists, the tuple doesn't exist physically in the segfile.
+ *
+ * Note: We need to use the passed in per-tuple snapshot to perform the block
+ * directory lookup. See AppendOnlyBlockDirectory_Init_forUniqueCheck() for
+ * details on why we can't set up the metadata snapshot at init time.
+ */
+static inline bool AppendOnlyBlockDirectory_UniqueCheck(
+	AppendOnlyBlockDirectory		*blockDirectory,
+	AOTupleId 						*aoTupleId,
+	Snapshot						appendOnlyMetaDataSnapshot
+)
+{
+	bool covers;
+
+	Assert(appendOnlyMetaDataSnapshot->snapshot_type == SNAPSHOT_DIRTY ||
+			   appendOnlyMetaDataSnapshot->snapshot_type == SNAPSHOT_SELF);
+
+	Assert(blockDirectory->appendOnlyMetaDataSnapshot == InvalidSnapshot);
+
+	/* Set up the snapshot to use for the block directory scan */
+	blockDirectory->appendOnlyMetaDataSnapshot = appendOnlyMetaDataSnapshot;
+
+	covers = AppendOnlyBlockDirectory_CoversTuple(blockDirectory,
+												  aoTupleId);
+
+	/*
+	 * Reset the metadata snapshot to avoid leaking a stack reference. We have
+	 * to do this since SNAPSHOT_DIRTY is stack-allocated.
+	 */
+	blockDirectory->appendOnlyMetaDataSnapshot = InvalidSnapshot;
+
+	return covers;
+}
 
 static inline uint32
 minipage_size(uint32 nEntry)

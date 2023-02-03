@@ -1,30 +1,17 @@
 # ALTER USER 
 
-Changes the definition of a database role \(user\).
+Changes the definition of a database role.
 
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-ALTER USER <name> RENAME TO <newname>
-
-ALTER USER <name> SET <config_parameter> {TO | =} {<value> | DEFAULT}
-
-ALTER USER <name> RESET <config_parameter>
-
-ALTER USER <name> RESOURCE QUEUE {<queue_name> | NONE}
-
-ALTER USER <name> RESOURCE GROUP {<group_name> | NONE}
-
-ALTER USER <name> [ [WITH] <option> [ ... ] ]
-```
+ALTER USER <role_specification> [WITH] <option> [ ... ]
 
 where option can be:
 
-```
       SUPERUSER | NOSUPERUSER
     | CREATEDB | NOCREATEDB
     | CREATEROLE | NOCREATEROLE
-    | CREATEUSER | NOCREATEUSER
     | CREATEEXTTABLE | NOCREATEEXTTABLE 
       [ ( <attribute>='<value>'[, ...] ) ]
            where <attributes> and <value> are:
@@ -33,17 +20,35 @@ where option can be:
     | INHERIT | NOINHERIT
     | LOGIN | NOLOGIN
     | REPLICATION | NOREPLICATION
+    | BYPASSRLS | NOBYPASSRLS
     | CONNECTION LIMIT <connlimit>
-    | [ENCRYPTED | UNENCRYPTED] PASSWORD '<password>'
+    | [ENCRYPTED ] PASSWORD '<password>' | PASSWORD NULL
     | VALID UNTIL '<timestamp>'
-    | [ DENY <deny_point> ]
-    | [ DENY BETWEEN <deny_point> AND <deny_point>]
-    | [ DROP DENY FOR <deny_point> ]
+    | [ DENY <deny_point> ]
+    | [ DENY BETWEEN <deny_point> AND <deny_point>]
+    | [ DROP DENY FOR <deny_point> ]
+
+ALTER USER <name> RENAME TO <new_name>
+
+ALTER USER <name> RESOURCE QUEUE {<queue_name> | NONE}
+
+ALTER USER <name> RESOURCE GROUP {<group_name> | NONE}
+
+ALTER USER { <role_specification> | ALL } [ IN DATABASE <database_name> ] SET <configuration_parameter> {TO | =} {<value> | DEFAULT}
+ALTER USER { <role_specification> | ALL } [ IN DATABASE <database_name> ] SET <configuration_parameter> FROM CURRENT
+ALTER USER { <role_specification> | ALL } [ IN DATABASE <database_name> ] RESET <configuration_parameter>
+ALTER USER { <role_specification> | ALL } [ IN DATABASE <database_name> ] RESET ALL
+
+where <role_specification> can be:
+
+    role_name
+  | CURRENT_USER
+  | SESSION_USER
 ```
 
 ## <a id="section3"></a>Description 
 
-`ALTER USER` is an alias for `ALTER ROLE`. See [ALTER ROLE](ALTER_ROLE.html) for more information.
+`ALTER USER` is an alias for [ALTER ROLE](ALTER_ROLE.html).
 
 ## <a id="section4"></a>Compatibility 
 
@@ -51,7 +56,7 @@ The `ALTER USER` statement is a Greenplum Database extension. The SQL standard l
 
 ## <a id="section5"></a>See Also 
 
-[ALTER ROLE](ALTER_ROLE.html), [CREATE USER](CREATE_USER.html), [DROP USER](DROP_USER.html)
+[ALTER ROLE](ALTER_ROLE.html)
 
 **Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

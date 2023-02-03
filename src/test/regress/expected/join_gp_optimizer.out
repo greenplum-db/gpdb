@@ -1466,10 +1466,11 @@ select * from foo where exists (select 1 from bar where foo.a = bar.b);
    ->  Hash Semi Join
          Hash Cond: (foo.a = bar.b)
          ->  Seq Scan on foo
+               Filter: (NOT (a IS NULL))
          ->  Hash
                ->  Seq Scan on bar
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(8 rows)
 
 select * from foo where exists (select 1 from bar where foo.a = bar.b);
  a  
@@ -1495,10 +1496,11 @@ select * from foo where exists (select 1 from bar where foo.a = bar.b);
    ->  Hash Semi Join
          Hash Cond: (foo.a = bar.b)
          ->  Seq Scan on foo
+               Filter: (NOT (a IS NULL))
          ->  Hash
                ->  Seq Scan on bar
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(8 rows)
 
 select * from foo where exists (select 1 from bar where foo.a = bar.b);
  a  
@@ -1548,12 +1550,13 @@ select * from fix_param_a left join fix_param_b on
                ->  Hash Semi Join
                      Hash Cond: ((fix_param_b.i = fix_param_c.i) AND (fix_param_b.j = fix_param_c.j))
                      ->  Seq Scan on fix_param_b
+                           Filter: (NOT (i IS NULL))
                      ->  Hash
                            ->  Seq Scan on fix_param_c
                ->  Hash
                      ->  Seq Scan on fix_param_a
  Optimizer: Pivotal Optimizer (GPORCA)
-(14 rows)
+(15 rows)
 
 select * from fix_param_a left join fix_param_b on
 	fix_param_a.i = fix_param_b.i and fix_param_b.j in

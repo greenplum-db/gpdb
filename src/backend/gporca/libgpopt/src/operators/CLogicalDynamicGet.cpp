@@ -159,14 +159,19 @@ CLogicalDynamicGet::PopCopyWithRemappedColumns(CMemoryPool *mp,
 	CName *pnameAlias = GPOS_NEW(mp) CName(mp, *m_pnameAlias);
 	m_ptabdesc->AddRef();
 	m_partition_mdids->AddRef();
+
+	CConstraint *partition_cnstrs_disj = nullptr;
+
 	if (m_partition_cnstrs_disj)
 	{
-		m_partition_cnstrs_disj->AddRef();
+		partition_cnstrs_disj =
+			m_partition_cnstrs_disj->PcnstrCopyWithRemappedColumns(
+				mp, colref_mapping, must_exist);
 	}
 
 	return GPOS_NEW(mp) CLogicalDynamicGet(
 		mp, pnameAlias, m_ptabdesc, m_scan_id, pdrgpcrOutput, pdrgpdrgpcrPart,
-		m_partition_mdids, m_partition_cnstrs_disj, m_static_pruned);
+		m_partition_mdids, partition_cnstrs_disj, m_static_pruned);
 }
 
 //---------------------------------------------------------------------------

@@ -86,6 +86,9 @@ public:
 	CConstraint *PcnstrRemapForColumn(CMemoryPool *mp,
 									  CColRef *colref) const override;
 
+	// Returns the constraint for system column gp_segment_id
+	CConstraint *GetConstraintOnSegmentId() const override;
+
 	// print
 	IOstream &
 	OsPrint(IOstream &os) const override

@@ -10,7 +10,7 @@ DROP [PROCEDURAL] LANGUAGE [IF EXISTS] <name> [CASCADE | RESTRICT]
 
 ## <a id="section3"></a>Description 
 
-`DROP LANGUAGE` will remove the definition of the previously registered procedural language. You must be a superuser or owner of the language to drop a language.
+`DROP LANGUAGE` removes the definition of the previously registered procedural language. You must be a superuser or owner of the language to drop a language.
 
 ## <a id="section4"></a>Parameters 
 
@@ -24,7 +24,7 @@ name
 :   The name of an existing procedural language. For backward compatibility, the name may be enclosed by single quotes.
 
 CASCADE
-:   Automatically drop objects that depend on the language \(such as functions written in that language\).
+:   Automatically drop objects that depend on the language \(such as functions written in that language\), and in turn all objects that depend on those objects.
 
 RESTRICT
 :   Refuse to drop the language if any objects depend on it. This is the default.

@@ -510,7 +510,6 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 	for (seg = 0; seg < gp->size; seg++)
 	{
 		SegmentDatabaseDescriptor *q = gp->db_descriptors[seg];
-		int			result;
 		PGresult   *res;
 		int64		segment_rows_completed = 0; /* # of rows completed by this QE */
 		int64		segment_rows_rejected = 0;	/* # of rows rejected by this QE */
@@ -590,7 +589,7 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 			if (PQresultStatus(res) == PGRES_COPY_IN)
 			{
 				elog(LOG, "Segment still in copy in, retrying the putCopyEnd");
-				result = PQputCopyEnd(q->conn, NULL);
+				PQputCopyEnd(q->conn, NULL);
 			}
 			else if (PQresultStatus(res) == PGRES_COPY_OUT)
 			{

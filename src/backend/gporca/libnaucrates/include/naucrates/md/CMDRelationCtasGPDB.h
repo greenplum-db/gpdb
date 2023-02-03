@@ -206,13 +206,6 @@ public:
 		return 0;
 	}
 
-	// number of triggers
-	ULONG
-	TriggerCount() const override
-	{
-		return 0;
-	}
-
 	// return the absolute position of the given attribute position excluding dropped columns
 	ULONG
 	NonDroppedColAt(ULONG pos) const override
@@ -234,14 +227,6 @@ public:
 	) const override
 	{
 		GPOS_ASSERT("CTAS tables have no indexes");
-		return nullptr;
-	}
-
-	// retrieve the id of the metadata cache trigger at the given position
-	IMDId *TriggerMDidAt(ULONG	// pos
-	) const override
-	{
-		GPOS_ASSERT("CTAS tables have no triggers");
 		return nullptr;
 	}
 

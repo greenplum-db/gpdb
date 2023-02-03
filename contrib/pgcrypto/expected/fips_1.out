@@ -116,16 +116,4 @@ SELECT encrypt('santa claus', 'mypass', 'aes') as raw_aes;
  \xe7ac3ad57bde59c5b78c08805afdb774
 (1 row)
 
-SELECT 'Test raw encrypt : EXPECTED FAIL FIPS' as comment;
-                comment                
----------------------------------------
- Test raw encrypt : EXPECTED FAIL FIPS
-(1 row)
-
-SELECT encrypt('santa claus', 'mypass', 'bf') as raw_blowfish;
-            raw_blowfish            
-------------------------------------
- \x0f4fe496594a2e762fb29a22fc6750e2
-(1 row)
-
 DROP TABLE fipstest;

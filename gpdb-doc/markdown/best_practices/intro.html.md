@@ -8,7 +8,7 @@ This document does not teach you how to use Greenplum Database features. Links a
 
 It is not the intent of this document to cover the entire product or compendium of features, but rather to provide a summary of *what matters most* in Greenplum Database. This document does not address *edge* use cases. While edge use cases can further leverage and benefit from Greenplum Database features, they require a proficient knowledge and expertise with these features, as well as a deep understanding of your environment, including SQL access, query execution, concurrency, workload, and other factors.
 
-By mastering these best practices, you will increase the success of your Greenplum Database clusters in the areas of maintenance, support, performance, and scalability.
+By following these best practices, you will increase the success of your Greenplum Database clusters in the areas of maintenance, support, performance, and scalability.
 
 -   **[Best Practices Summary](summary.html)**  
 A summary of best practices for Greenplum Database.

@@ -29,10 +29,7 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CLogicalPartitionSelector::CLogicalPartitionSelector(CMemoryPool *mp)
-	: CLogical(mp),
-	  m_mdid(nullptr),
-	  m_pdrgpexprFilters(nullptr),
-	  m_pcrOid(nullptr)
+	: CLogical(mp), m_mdid(nullptr), m_pdrgpexprFilters(nullptr)
 {
 	m_fPattern = true;
 }
@@ -46,17 +43,12 @@ CLogicalPartitionSelector::CLogicalPartitionSelector(CMemoryPool *mp)
 //
 //---------------------------------------------------------------------------
 CLogicalPartitionSelector::CLogicalPartitionSelector(
-	CMemoryPool *mp, IMDId *mdid, CExpressionArray *pdrgpexprFilters,
-	CColRef *pcrOid)
-	: CLogical(mp),
-	  m_mdid(mdid),
-	  m_pdrgpexprFilters(pdrgpexprFilters),
-	  m_pcrOid(pcrOid)
+	CMemoryPool *mp, IMDId *mdid, CExpressionArray *pdrgpexprFilters)
+	: CLogical(mp), m_mdid(mdid), m_pdrgpexprFilters(pdrgpexprFilters)
 {
 	GPOS_ASSERT(mdid->IsValid());
 	GPOS_ASSERT(nullptr != pdrgpexprFilters);
 	GPOS_ASSERT(0 < pdrgpexprFilters->Size());
-	GPOS_ASSERT(nullptr != pcrOid);
 }
 
 //---------------------------------------------------------------------------
@@ -92,8 +84,7 @@ CLogicalPartitionSelector::Matches(COperator *pop) const
 	CLogicalPartitionSelector *popPartSelector =
 		CLogicalPartitionSelector::PopConvert(pop);
 
-	return popPartSelector->PcrOid() == m_pcrOid &&
-		   popPartSelector->MDId()->Equals(m_mdid) &&
+	return popPartSelector->MDId()->Equals(m_mdid) &&
 		   popPartSelector->m_pdrgpexprFilters->Equals(m_pdrgpexprFilters);
 }
 
@@ -121,16 +112,14 @@ CLogicalPartitionSelector::HashValue() const
 //---------------------------------------------------------------------------
 COperator *
 CLogicalPartitionSelector::PopCopyWithRemappedColumns(
-	CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist)
+	CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL /* must_exist */)
 {
-	CColRef *pcrOid = CUtils::PcrRemap(m_pcrOid, colref_mapping, must_exist);
 	CExpressionArray *pdrgpexpr =
 		CUtils::PdrgpexprRemap(mp, m_pdrgpexprFilters, colref_mapping);
 
 	m_mdid->AddRef();
 
-	return GPOS_NEW(mp)
-		CLogicalPartitionSelector(mp, m_mdid, pdrgpexpr, pcrOid);
+	return GPOS_NEW(mp) CLogicalPartitionSelector(mp, m_mdid, pdrgpexpr);
 }
 
 //---------------------------------------------------------------------------
@@ -148,7 +137,6 @@ CLogicalPartitionSelector::DeriveOutputColumns(CMemoryPool *mp,
 	CColRefSet *pcrsOutput = GPOS_NEW(mp) CColRefSet(mp);
 
 	pcrsOutput->Union(exprhdl.DeriveOutputColumns(0));
-	pcrsOutput->Include(m_pcrOid);
 
 	return pcrsOutput;
 }

@@ -217,7 +217,8 @@ The ordinary functions used to define a new aggregate function must be defined f
 
 If the value of the Greenplum Database server configuration parameter `gp_enable_multiphase_agg` is `off`, only single-level aggregation is performed by the Postgres Planner. There is no equivalent parameter for the Pivotal Query Optimizer.
 
-Any compiled code \(shared library files\) for custom functions must be placed in the same location on every host in your Greenplum Database cluster \(master and all segments\). This location must also be in the `LD_LIBRARY_PATH` so that the server can locate the files.
+Any compiled code \(shared library files\) for custom functions must be placed in the same location on every host in your Greenplum Database array \(coordinator and all segments\). This location must also be in the `LD_LIBRARY_PATH` so that the server can locate the files.
+
 
 In previous versions of Greenplum Database, there was a concept of ordered aggregates. Since version 6, any aggregate can be called as an ordered aggregate, using the syntax:
 

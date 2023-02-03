@@ -57,8 +57,10 @@ analyze minirepro_foo;
 -- end_ignore
 -- Run minirepro
 drop table minirepro_foo; -- this will also delete the pg_statistic tuples for minirepro_foo and minirepro_foo_1
+-- start_ignore
 \! psql -f data/minirepro.sql regression
 You are now connected to database "regression" as user "pivotal".
+SET
 SET
 SET
 SET
@@ -75,8 +77,8 @@ SET
 SET
 SET
 SET
-CREATE TABLE
 SET
+CREATE TABLE
 CREATE TABLE
 ALTER TABLE
 SET
@@ -84,6 +86,7 @@ UPDATE 1
 UPDATE 1
 INSERT 0 1
 INSERT 0 1
+-- end_ignore
 select
     staattnum,
     stainherit,
@@ -139,8 +142,10 @@ analyze minirepro_foo;
 -- end_ignore
 -- Run minirepro
 drop table minirepro_foo; -- this will also delete the pg_statistic tuples for minirepro_foo and minirepro_foo_1
+-- start_ignore
 \! psql -f data/minirepro.sql regression
 You are now connected to database "regression" as user "pivotal".
+SET
 SET
 SET
 SET
@@ -157,8 +162,8 @@ SET
 SET
 SET
 SET
-CREATE TABLE
 SET
+CREATE TABLE
 CREATE TABLE
 ALTER TABLE
 SET
@@ -166,6 +171,7 @@ UPDATE 1
 UPDATE 1
 INSERT 0 1
 INSERT 0 1
+-- end_ignore
 select
     staattnum,
     stainherit,
@@ -223,8 +229,10 @@ update pg_statistic set stavalues3='{"hello", "''world''"}'::text[] where starel
 -- end_ignore
 -- Run minirepro
 drop table minirepro_foo; -- this should also delete the pg_statistic tuple for minirepro_foo
+-- start_ignore
 \! psql -f data/minirepro.sql regression
 You are now connected to database "regression" as user "pivotal".
+SET
 SET
 SET
 SET
@@ -246,6 +254,7 @@ CREATE TABLE
 SET
 UPDATE 1
 INSERT 0 1
+-- end_ignore
 select stavalues3 from pg_statistic where starelid='minirepro_foo'::regclass;
    stavalues3    
 -----------------
@@ -264,8 +273,10 @@ drop table minirepro_foo;
 -- Caution: The following operation will remove the pg_statistic tuple
 -- corresponding to pg_tablespace before it re-inserts it, which may lead to
 -- corrupted stats for pg_tablespace. But, that shouldn't matter too much?
+-- start_ignore
 \! psql -f data/minirepro.sql regression
 You are now connected to database "regression" as user "pivotal".
+SET
 SET
 SET
 SET
@@ -283,10 +294,10 @@ SET
 SET
 SET
 SET
-psql:data/minirepro.sql:44: ERROR:  only shared relations can be placed in pg_global tablespace
-psql:data/minirepro.sql:46: ERROR:  permission denied: "pg_tablespace" is a system catalog
-psql:data/minirepro.sql:53: ERROR:  permission denied: "pg_tablespace" is a system catalog
-psql:data/minirepro.sql:60: ERROR:  permission denied: "pg_tablespace" is a system catalog
+psql:data/minirepro.sql:46: ERROR:  only shared relations can be placed in pg_global tablespace
+psql:data/minirepro.sql:48: ERROR:  permission denied: "pg_tablespace" is a system catalog
+psql:data/minirepro.sql:55: ERROR:  permission denied: "pg_tablespace" is a system catalog
+psql:data/minirepro.sql:62: ERROR:  permission denied: "pg_tablespace" is a system catalog
 SET
 UPDATE 1
 DELETE 1
@@ -299,6 +310,7 @@ DELETE 1
 INSERT 0 1
 DELETE 1
 INSERT 0 1
+-- end_ignore
 select
     staattnum,
     stainherit,
@@ -340,3 +352,320 @@ from pg_statistic where starelid='pg_tablespace'::regclass;
          5 | f          |           1 |        0 |           0 |        0 |        0 |        0 |        0 |        0 |      0 |      0 |      0 |      0 |      0 |        0 |        0 |        0 |        0 |        0 |             |             |             |             |             |                        |            |            |            | 
 (5 rows)
 
+-- Ensure that our expectation of pg_statistic_ext and pg_statistic_ext_data schema is up-to-date
+\d+ pg_statistic_ext
+                                Table "pg_catalog.pg_statistic_ext"
+    Column    |    Type    | Collation | Nullable | Default | Storage  | Stats target | Description 
+--------------+------------+-----------+----------+---------+----------+--------------+-------------
+ oid          | oid        |           | not null |         | plain    |              | 
+ stxrelid     | oid        |           | not null |         | plain    |              | 
+ stxname      | name       |           | not null |         | plain    |              | 
+ stxnamespace | oid        |           | not null |         | plain    |              | 
+ stxowner     | oid        |           | not null |         | plain    |              | 
+ stxkeys      | int2vector |           | not null |         | plain    |              | 
+ stxkind      | "char"[]   |           | not null |         | extended |              | 
+Indexes:
+    "pg_statistic_ext_name_index" UNIQUE, btree (stxname, stxnamespace)
+    "pg_statistic_ext_oid_index" UNIQUE, btree (oid)
+    "pg_statistic_ext_relid_index" btree (stxrelid)
+
+\d+ pg_statistic_ext_data
+                                  Table "pg_catalog.pg_statistic_ext_data"
+      Column      |      Type       | Collation | Nullable | Default | Storage  | Stats target | Description 
+------------------+-----------------+-----------+----------+---------+----------+--------------+-------------
+ stxoid           | oid             |           | not null |         | plain    |              | 
+ stxdndistinct    | pg_ndistinct    | C         |          |         | extended |              | 
+ stxddependencies | pg_dependencies | C         |          |         | extended |              | 
+ stxdmcv          | pg_mcv_list     | C         |          |         | extended |              | 
+Indexes:
+    "pg_statistic_ext_data_stxoid_index" UNIQUE, btree (stxoid)
+
+--------------------------------------------------------------------------------
+-- Scenario: User table with correlated statistics
+--------------------------------------------------------------------------------
+create table minirepro_foo(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create statistics dep (dependencies) on a, b from minirepro_foo;
+create statistics dist (ndistinct) on a, b from minirepro_foo;
+create statistics mcv (mcv) on a, b from minirepro_foo;
+insert into minirepro_foo select i%100, i%100 from generate_series(1,10000)i;
+analyze minirepro_foo;
+-- Generate minirepro
+-- start_ignore
+\! echo "select * from minirepro_foo" > ./data/minirepro_q.sql
+\! minirepro regression -q data/minirepro_q.sql -f data/minirepro.sql
+Connecting to database: host=hmaddiletiMMD6R.vmware.com, port=7000, user=hmaddileti, db=regression ...
+Extracting metadata from query file data/minirepro_q.sql ...
+psql regression --pset footer --no-psqlrc -v ON_ERROR_STOP=1 -Atq -h hmaddiletiMMD6R.vmware.com -p 7000 -U hmaddileti -f /tmp/20221220171241/toolkit.sql
+Invoking pg_dump to dump DDL ...
+pg_dump -h hmaddiletiMMD6R.vmware.com -p 7000 -U hmaddileti -sxO regression --relation-oids 32883 --function-oids 0 -f /tmp/20221220171241/pg_dump_out.sql
+Writing schema DDLs ...
+Writing relation and function DDLs ...
+Writing table statistics ...
+Writing column statistics ...
+Writing correlated statistics ...
+Attaching raw query text ...
+--- MiniRepro completed! ---
+WARNING: This tool collects statistics about your data, including most common values, which requires some data elements to be included in the output file.
+Please review output file to ensure it is within corporate policy to transport the output file.
+-- end_ignore
+-- Run minirepro
+drop table minirepro_foo; -- this will also delete the tuples from pg_statistic_ext and pg_statistic_ext_data
+-- start_ignore
+\! psql -f data/minirepro.sql regression
+You are now connected to database "regression" as user "hmaddileti".
+SET
+SET
+SET
+SET
+SET
+SET
+SET
+ set_config 
+------------
+ 
+(1 row)
+
+SET
+SET
+SET
+SET
+SET
+SET
+CREATE TABLE
+SET
+UPDATE 1
+INSERT 0 1
+INSERT 0 1
+CREATE STATISTICS
+CREATE STATISTICS
+CREATE STATISTICS
+UPDATE 1
+UPDATE 1
+UPDATE 1
+-- end_ignore
+-- Verify that correlated stats are updated
+select count(*)=3 from pg_statistic_ext where stxname in ('dep', 'dist', 'mcv');
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*)=3 from pg_statistic_ext pge, pg_statistic_ext_data pgd where pge.oid = pgd.stxoid and pge.stxname in ('dep', 'dist', 'mcv');
+ ?column? 
+----------
+ t
+(1 row)
+
+select stxname, stxdndistinct, stxddependencies, pg_mcv_list_items(stxdmcv) from pg_statistic_ext pge, pg_statistic_ext_data pgd where pge.oid = pgd.stxoid and pge.stxname in ('dep', 'dist', 'mcv');
+ stxname | stxdndistinct | stxddependencies |         pg_mcv_list_items          
+---------+---------------+------------------+------------------------------------
+ mcv     |               |                  | (0,"{0,0}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (1,"{1,1}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (2,"{2,2}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (3,"{3,3}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (4,"{4,4}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (5,"{5,5}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (6,"{6,6}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (7,"{7,7}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (8,"{8,8}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (9,"{9,9}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (10,"{10,10}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (11,"{11,11}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (12,"{12,12}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (13,"{13,13}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (14,"{14,14}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (15,"{15,15}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (16,"{16,16}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (17,"{17,17}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (18,"{18,18}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (19,"{19,19}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (20,"{20,20}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (21,"{21,21}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (22,"{22,22}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (23,"{23,23}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (24,"{24,24}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (25,"{25,25}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (26,"{26,26}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (27,"{27,27}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (28,"{28,28}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (29,"{29,29}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (30,"{30,30}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (31,"{31,31}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (32,"{32,32}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (33,"{33,33}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (34,"{34,34}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (35,"{35,35}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (36,"{36,36}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (37,"{37,37}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (38,"{38,38}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (39,"{39,39}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (40,"{40,40}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (41,"{41,41}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (42,"{42,42}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (43,"{43,43}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (44,"{44,44}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (45,"{45,45}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (46,"{46,46}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (47,"{47,47}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (48,"{48,48}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (49,"{49,49}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (50,"{50,50}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (51,"{51,51}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (52,"{52,52}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (53,"{53,53}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (54,"{54,54}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (55,"{55,55}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (56,"{56,56}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (57,"{57,57}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (58,"{58,58}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (59,"{59,59}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (60,"{60,60}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (61,"{61,61}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (62,"{62,62}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (63,"{63,63}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (64,"{64,64}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (65,"{65,65}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (66,"{66,66}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (67,"{67,67}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (68,"{68,68}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (69,"{69,69}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (70,"{70,70}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (71,"{71,71}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (72,"{72,72}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (73,"{73,73}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (74,"{74,74}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (75,"{75,75}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (76,"{76,76}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (77,"{77,77}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (78,"{78,78}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (79,"{79,79}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (80,"{80,80}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (81,"{81,81}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (82,"{82,82}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (83,"{83,83}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (84,"{84,84}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (85,"{85,85}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (86,"{86,86}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (87,"{87,87}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (88,"{88,88}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (89,"{89,89}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (90,"{90,90}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (91,"{91,91}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (92,"{92,92}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (93,"{93,93}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (94,"{94,94}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (95,"{95,95}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (96,"{96,96}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (97,"{97,97}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (98,"{98,98}","{f,f}",0.01,0.0001)
+ mcv     |               |                  | (99,"{99,99}","{f,f}",0.01,0.0001)
+(100 rows)
+
+-- Cleanup
+drop table minirepro_foo;
+--------------------------------------------------------------------------------
+-- Scenario: User query with multiple tables of correlated statistics
+--------------------------------------------------------------------------------
+create table minirepro_foo(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table minirepro_bar(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create statistics dep1 (dependencies) on a, b from minirepro_foo;
+create statistics dist1 (ndistinct) on a, b from minirepro_foo;
+create statistics dep2 (dependencies) on a, b from minirepro_bar;
+create statistics dist2 (ndistinct) on a, b from minirepro_bar;
+insert into minirepro_foo select i%100, i%100 from generate_series(1,10000)i;
+insert into minirepro_bar select i%100, i%100 from generate_series(1,10000)i;
+analyze minirepro_foo;
+analyze minirepro_bar;
+-- Generate minirepro
+-- start_ignore
+\! echo "select * from minirepro_foo join minirepro_bar on minirepro_foo.a = minirepro_bar.a " > ./data/minirepro_q.sql
+\! minirepro regression -q data/minirepro_q.sql -f data/minirepro.sql
+Connecting to database: host=hmaddiletiMMD6R.vmware.com, port=7000, user=hmaddileti, db=regression ...
+Extracting metadata from query file data/minirepro_q.sql ...
+psql regression --pset footer --no-psqlrc -v ON_ERROR_STOP=1 -Atq -h hmaddiletiMMD6R.vmware.com -p 7000 -U hmaddileti -f /tmp/20221220171242/toolkit.sql
+Invoking pg_dump to dump DDL ...
+pg_dump -h hmaddiletiMMD6R.vmware.com -p 7000 -U hmaddileti -sxO regression --relation-oids 32893,32896 --function-oids 0 -f /tmp/20221220171242/pg_dump_out.sql
+Writing schema DDLs ...
+Writing relation and function DDLs ...
+Writing table statistics ...
+Writing column statistics ...
+Writing correlated statistics ...
+Attaching raw query text ...
+--- MiniRepro completed! ---
+WARNING: This tool collects statistics about your data, including most common values, which requires some data elements to be included in the output file.
+Please review output file to ensure it is within corporate policy to transport the output file.
+-- end_ignore
+-- Run minirepro
+-- this will also delete the tuples from pg_statistic_ext and pg_statistic_ext_data
+drop table minirepro_foo;
+drop table minirepro_bar;
+-- start_ignore
+\! psql -f data/minirepro.sql regression
+You are now connected to database "regression" as user "hmaddileti".
+SET
+SET
+SET
+SET
+SET
+SET
+SET
+ set_config 
+------------
+ 
+(1 row)
+
+SET
+SET
+SET
+SET
+SET
+SET
+CREATE TABLE
+CREATE TABLE
+SET
+UPDATE 1
+UPDATE 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+CREATE STATISTICS
+CREATE STATISTICS
+CREATE STATISTICS
+CREATE STATISTICS
+UPDATE 1
+UPDATE 1
+UPDATE 1
+UPDATE 1
+-- end_ignore
+-- Verify that correlated stats are updated
+select count(*)=4 from pg_statistic_ext where stxname in ('dep1', 'dep2', 'dist1', 'dist2');
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*)=4 from pg_statistic_ext pge, pg_statistic_ext_data pgd where pge.oid = pgd.stxoid and pge.stxname in ('dep1', 'dep2', 'dist1', 'dist2');
+ ?column? 
+----------
+ t
+(1 row)
+
+select stxname, stxdndistinct, stxddependencies, stxdmcv from pg_statistic_ext pge, pg_statistic_ext_data pgd where pge.oid = pgd.stxoid and pge.stxname in ('dep1', 'dep2', 'dist1', 'dist2');
+ stxname | stxdndistinct |             stxddependencies             | stxdmcv 
+---------+---------------+------------------------------------------+---------
+ dep1    |               | {"1 => 2": 1.000000, "2 => 1": 1.000000} | 
+ dist1   | {"1, 2": 100} |                                          | 
+ dep2    |               | {"1 => 2": 1.000000, "2 => 1": 1.000000} | 
+ dist2   | {"1, 2": 100} |                                          | 
+(4 rows)
+
+-- Cleanup
+drop table minirepro_foo;
+drop table minirepro_bar;

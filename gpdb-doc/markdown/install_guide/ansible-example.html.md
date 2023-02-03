@@ -6,7 +6,7 @@ A sample Ansible playbook to install a Greenplum Database software release onto 
 
 This Ansible playbook shows how tasks described in [Installing the Greenplum Database Software](install_gpdb.html) might be automated using [Ansible](https://docs.ansible.com).
 
-**Important:** This playbook is provided as an *example only* to illustrate how Greenplum Database cluster configuration and software installation tasks can be automated using provisioning tools such as Ansible, Chef, or Puppet. VMware does not provide support for Ansible or for the playbook presented in this example.
+> **Important** This playbook is provided as an *example only* to illustrate how Greenplum Database cluster configuration and software installation tasks can be automated using provisioning tools such as Ansible, Chef, or Puppet. VMware does not provide support for Ansible or for the playbook presented in this example.
 
 The example playbook is designed for use with CentOS 7. It creates the `gpadmin` user, installs the Greenplum Database software release, sets the owner and group of the installed software to `gpadmin`, and sets the Pam security limits for the `gpadmin` user.
 
@@ -19,7 +19,7 @@ Following are steps to use this Ansible playbook.
 3.  Create an Ansible inventory by creating a file called `hosts` with a list of the hosts that will comprise your Greenplum Database cluster. For example:
 
     ```
-    mdw
+    cdw
     sdw1
     sdw2
     ...

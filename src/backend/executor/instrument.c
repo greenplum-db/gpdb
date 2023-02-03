@@ -39,7 +39,6 @@ static bool shouldPickInstrInShmem(NodeTag tag);
 static Instrumentation *pickInstrFromShmem(const Plan *plan, int instrument_options);
 static void instrShmemRecycleCallback(ResourceReleasePhase phase, bool isCommit,
 						  bool isTopLevel, void *arg);
-static void gp_gettmid(int32* tmid);
 
 InstrumentationHeader *InstrumentGlobal = NULL;
 static int  scanNodeCounter = 0;
@@ -499,7 +498,30 @@ instrShmemRecycleCallback(ResourceReleasePhase phase, bool isCommit, bool isTopL
 	SpinLockRelease(&InstrumentGlobal->lock);
 }
 
-static void gp_gettmid(int32* tmid)
+/*
+ * Cast PgStartTime from TimestampTz to int32. Separated from gp_gettmid() to avoid elog() in
+ * gp_gettmid() to cause panic when running unit tests.
+ * Return -1 for invalid PgStartTime or overflow values.
+ */
+static int32 gp_gettmid_helper()
 {
-	*tmid = (int32) PgStartTime;
+	pg_time_t time;
+	if (PgStartTime < 0)
+		return -1;
+	time = timestamptz_to_time_t(PgStartTime);
+	if (time > INT32_MAX)
+		return -1;
+	return (int32)time;
+}
+
+/*
+ * Wrapper for gp_gettmid_helper()
+ */
+void
+gp_gettmid(int32* tmid)
+{
+	int32 time = gp_gettmid_helper();
+	if (time == -1)
+		elog(PANIC, "time_t converted from PgStartTime is too large");
+	*tmid = time;
 }

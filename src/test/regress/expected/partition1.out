@@ -82,7 +82,7 @@ partition bb start (2008,2) end (2009,3)
 ERROR:  too many columns for RANGE partition -- only one column is allowed
 drop table ggg cascade;
 ERROR:  table "ggg" does not exist
--- Mismatch between number of columns in PARTITION BY and in the START/END clauses
+-- Mismatch between number of columns in PARTITION BY and in the START/END/EVERY/VALUES clauses
 create table pby_mismatch (a char(1), b numeric, d numeric)
 distributed by (a)
 partition by range (b)
@@ -103,6 +103,25 @@ partition by range (b)
 ERROR:  number of END values should cover all partition key columns
 LINE 5:   partition aa start (2007) end (2008,1),
                                     ^
+create table pby_mismatch (a char(1), b numeric, d numeric)
+    distributed by (a)
+partition by range (b)
+(
+  partition aa start (2007) end (2008) every (1),
+  partition bb start (2008) end (2009) every (1,2)
+);
+ERROR:  number of EVERY values should cover all partition key columns
+LINE 6:   partition bb start (2008) end (2009) every (1,2)
+                       ^
+create table pby_mismatch (a char(1), b numeric, d numeric)
+    distributed by (a)
+partition by list (b)
+(
+  partition cc values ((1,2))
+);
+ERROR:  VALUES specification with more than one column not allowed
+LINE 5:   partition cc values ((1,2))
+          ^
 -- basic list partition
 create table ggg (a char(1), b char(2), d char(3))
 distributed by (a)
@@ -2225,7 +2244,7 @@ partition by list (b)
      default partition other
    );
 alter table mpp18179 alter column b type varchar(20);
-ERROR:  cannot alter type of column named in partition key
+ERROR:  cannot alter column "b" because it is part of the partition key of relation "mpp18179"
 --
 -- Drop index on partitioned table, and recreate it.
 --
@@ -2392,7 +2411,7 @@ PARTITION BY list (b)
  PARTITION t2 values (2));
 -- the following statement should fail because index cols does not contain part key
 CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(a);
-ERROR:  insufficient columns in UNIQUE constraint definition
+ERROR:  unique constraint on partitioned table must include all partitioning columns
 DETAIL:  UNIQUE constraint on table "t_idx_col_contain_partkey" lacks column "b" which is part of the partition key.
 -- the following statement should work
 CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(a, b);
@@ -2424,7 +2443,7 @@ SUBPARTITION BY LIST (r_name) SUBPARTITION TEMPLATE
 );
 -- should fail, must contain all the partition keys of all levels
 CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(r_regionkey);
-ERROR:  insufficient columns in UNIQUE constraint definition
+ERROR:  unique constraint on partitioned table must include all partitioning columns
 DETAIL:  UNIQUE constraint on table "t_idx_col_contain_partkey_1_prt_region1" lacks column "r_name" which is part of the partition key.
 -- should work
 CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(r_regionkey, r_name);
@@ -2832,3 +2851,8 @@ PARTITION BY RANGE(col2)
    partition parttwo start(100000001) end(200000001),
    partition partthree start(200000001) end(300000001));
 ERROR:  relation "partitioned_table_with_very_long_name_123456789_1_prt_partthree" already exists
+-- Test not supported partition strategy with legacy GPDB syntax
+create table hashpart_gpspec (a int, b int) partition by hash (b) (partition p1 start (1) end (2));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ERROR:  Not supported partition strategy

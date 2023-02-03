@@ -4,7 +4,7 @@ The `gp_toolkit.gp_resgroup_status_per_host` view allows administrators to see c
 
 Memory amounts are specified in MBs.
 
-**Note:** The `gp_resgroup_status_per_host` view is valid only when resource group-based resource management is active.
+> **Note** The `gp_resgroup_status_per_host` view is valid only when resource group-based resource management is active.
 
 |column|type|references|description|
 |------|----|----------|-----------|

@@ -2,7 +2,7 @@
 
 Defines a new table.
 
-**Note:** Referential integrity syntax \(foreign key constraints\) is accepted but not enforced.
+> **Note** Referential integrity syntax \(foreign key constraints\) is accepted but not enforced.
 
 ## <a id="section2"></a>Synopsis 
 
@@ -18,6 +18,8 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP } | UNLOGGED] TABLE [IF NOT EXISTS]
     [, ... ]
 ] )
 [ INHERITS ( <parent_table> [, ... ] ) ]
+
+[ USING ( <access method> ) ]
 [ WITH ( <storage_parameter> [=<value>] [, ... ] ) ]
 [ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
 [ TABLESPACE <tablespace_name> ]
@@ -58,6 +60,8 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
     | <table_constraint> } 
     [, ... ]
 ) ]
+
+[ USING <access_method> ]
 [ WITH ( <storage_parameter> [=<value>] [, ... ] ) ]
 [ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
 [ TABLESPACE <tablespace_name> ]
@@ -100,14 +104,14 @@ and *like\_option* is:
 {INCLUDING|EXCLUDING} {DEFAULTS|CONSTRAINTS|INDEXES|STORAGE|COMMENTS|ALL}
 ```
 
-and index\_parameters in `UNIQUE` and `PRIMARY KEY` constraints are:
+and index_parameters in `UNIQUE` and `PRIMARY KEY` constraints are:
 
 ```
 [ WITH ( <storage_parameter> [=<value>] [, ... ] ) ]
 [ USING INDEX TABLESPACE <tablespace_name> ] 
 ```
 
-and storage\_directive for a column is:
+and storage_directive for a column is:
 
 ```
    compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
@@ -125,8 +129,8 @@ and storage\_parameter for the table is:
    compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
    compresslevel={0-9}
    fillfactor={10-100}
-   [oids=FALSE]
 ```
+
 
 and key\_action is:
 
@@ -202,6 +206,7 @@ where storage\_parameter for a partition is:
    compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
    compresslevel={1-19}
    fillfactor={10-100}
+   analyze_hll_non_part_table={TRUE|FALSE}
    [oids=FALSE]
 ```
 
@@ -257,17 +262,21 @@ data\_type
 COLLATE collation
 :   The `COLLATE` clause assigns a collation to the column \(which must be of a collatable data type\). If not specified, the column data type's default collation is used.
 
-    **Note:** GPORCA supports collation only when all columns in the query use the same collation. If columns in the query use different collations, then Greenplum uses the Postgres Planner.
+    > **Note** GPORCA supports collation only when all columns in the query use the same collation. If columns in the query use different collations, then Greenplum uses the Postgres Planner.
 
 DEFAULT default\_expr
 :   The `DEFAULT` clause assigns a default data value for the column whose column definition it appears within. The value is any variable-free expression \(subqueries and cross-references to other columns in the current table are not allowed\). The data type of the default expression must match the data type of the column. The default expression will be used in any insert operation that does not specify a value for the column. If there is no default for a column, then the default is null.
 
-ENCODING \( storage\_directive \[, ...\] \)
+ENCODING \( storage_directive \[, ...\] \)
 :   For a column, the optional `ENCODING` clause specifies the type of compression and block size for the column data. See [storage\_options](#with_storage) for `compresstype`, `compresslevel`, and `blocksize` values.
 
 :   The clause is valid only for append-optimized, column-oriented tables.
 
 :   Column compression settings are inherited from the table level to the partition level to the subpartition level. The lowest-level settings have priority.
+
+:   The `column_reference_storage_directive` parameter specifies a column along with its storage directive.
+
+For more information on storage directives, see [Adding Column Level Compression](../../admin_guide/ddl/ddl-storage.html#topic43).
 
 INHERITS \( parent\_table \[, …\]\)
 :   The optional `INHERITS` clause specifies a list of tables from which the new table automatically inherits all columns. Use of `INHERITS` creates a persistent relationship between the new child table and its parent table\(s\). Schema modifications to the parent\(s\) normally propagate to children as well, and by default the data of the child table is included in scans of the parent\(s\).
@@ -283,7 +292,7 @@ INHERITS \( parent\_table \[, …\]\)
 LIKE source\_table like\_option `...`\]
 :   The `LIKE` clause specifies a table from which the new table automatically copies all column names, their data types, not-null constraints, and distribution policy. Unlike `INHERITS`, the new table and original table are completely decoupled after creation is complete.
 
-:   **Note:** Storage properties like append-optimized or partition structure are not copied.
+:   > **Note** Storage properties like append-optimized or partition structure are not copied.
 
 :   Default expressions for the copied column definitions will only be copied if `INCLUDING DEFAULTS` is specified. The default behavior is to exclude default expressions, resulting in the copied columns in the new table having null defaults.
 
@@ -306,7 +315,7 @@ LIKE source\_table like\_option `...`\]
 CONSTRAINT constraint\_name
 :   An optional name for a column or table constraint. If the constraint is violated, the constraint name is present in error messages, so constraint names like column must be positive can be used to communicate helpful constraint information to client applications. \(Double-quotes are needed to specify constraint names that contain spaces.\) If a constraint name is not specified, the system generates a name.
 
-    **Note:** The specified constraint\_name is used for the constraint, but a system-generated unique name is used for the index name. In some prior releases, the provided name was used for both the constraint name and the index name.
+    > **Note** The specified constraint\_name is used for the constraint, but a system-generated unique name is used for the index name. In some prior releases, the provided name was used for both the constraint name and the index name.
 
 NULL \| NOT NULL
 :   Specifies if the column is or is not allowed to contain null values. `NULL` is the default.
@@ -348,6 +357,14 @@ INITIALLY IMMEDIATE
 INITIALLY DEFERRED
 :   If a constraint is deferrable, this clause specifies the default time to check the constraint. If the constraint is `INITIALLY IMMEDIATE`, it is checked after each statement. This is the default. If the constraint is `INITIALLY DEFERRED`, it is checked only at the end of the transaction. The constraint check time can be altered with the `SET CONSTRAINTS` command.
 
+USING <access_method>
+:   The `USING` clause specifies the access method for the table you are creating. Set to `heap` to access the table as a heap-storage table, `ao_row` to access the table as an append-optimized table with row-oriented storage (AO), or `ao_column` to access the table as an append-optimized table with column-oriented storage (AOCO).The default is determined by the value of the `default_table_access_method` server configuration parameter.
+
+  <p class="note">
+<strong>Note:</strong>
+Although you can specify the table's access method using <code>WITH (appendoptimized=true|false, orientation=row|column)</code> VMware recommends that you use <code>USING &ltaccess_method></code> instead.
+</p>
+  
 WITH \( storage\_parameter=value \)
 :   The `WITH` clause can specify storage parameters for tables, and for indexes associated with a `UNIQUE` or `PRIMARY` constraint. Note that you can also set storage parameters on a particular partition or subpartition by declaring the `WITH` clause in the partition specification. The lowest-level settings have priority.
 
@@ -365,7 +382,7 @@ WITH \( storage\_parameter=value \)
 
 :   **compresstype** — Set to `ZLIB` \(the default\), `ZSTD`, `RLE_TYPE`, or `QUICKLZ`1 to specify the type of compression used. The value `NONE` deactivates compression. Zstd provides for both speed or a good compression ratio, tunable with the `compresslevel` option. QuickLZ and zlib are provided for backwards-compatibility. Zstd outperforms these compression types on usual workloads. The `compresstype` option is only valid if `appendoptimized=TRUE`.
 
-    **Note:** 1QuickLZ compression is available only in the commercial release of Tanzu Greenplum.
+    > **Note** 1QuickLZ compression is available only in the commercial release of VMware Greenplum.
 
     The value `RLE_TYPE`, which is supported only if `orientation`=`column` is specified, enables the run-length encoding \(RLE\) compression algorithm. RLE compresses data better than the Zstd, zlib, or QuickLZ compression algorithms when the same data value occurs in many consecutive rows.
 
@@ -379,7 +396,7 @@ WITH \( storage\_parameter=value \)
 
 :   **fillfactor** — The fillfactor for a table is a percentage between 10 and 100. 100 \(complete packing\) is the default. When a smaller fillfactor is specified, `INSERT` operations pack table pages only to the indicated percentage; the remaining space on each page is reserved for updating rows on that page. This gives `UPDATE` a chance to place the updated copy of a row on the same page as the original, which is more efficient than placing it on a different page. For a table whose entries are never updated, complete packing is the best choice, but in heavily updated tables smaller fillfactors are appropriate. This parameter cannot be set for TOAST tables.
 
-:   **oids=FALSE** — This setting is the default, and it ensures that rows do not have object identifiers assigned to them. VMware does not support using `WITH OIDS` or `oids=TRUE` to assign an OID system column.On large tables, such as those in a typical Greenplum Database system, using OIDs for table rows can cause wrap-around of the 32-bit OID counter. Once the counter wraps around, OIDs can no longer be assumed to be unique, which not only makes them useless to user applications, but can also cause problems in the Greenplum Database system catalog tables. In addition, excluding OIDs from a table reduces the space required to store the table on disk by 4 bytes per row, slightly improving performance. You cannot create OIDS on a partitioned or column-oriented table \(an error is displayed\). This syntax is deprecated and will be removed in a future Greenplum release.
+:   **analyze_hll_non_part_table** — Set this storage parameter to `true` to force collection of HLL statistics even if the table is not part of a partitioned table. This is useful if the table will be exchanged or added to a partitioned table, so that the table does not need to be re-analyzed. The default is `false`.
 
 ON COMMIT
 :   The behavior of temporary tables at the end of a transaction block can be controlled using `ON COMMIT`. The three options are:
@@ -425,7 +442,7 @@ PARTITION BY
 
 :   For each partition level \(each hierarchy level of tables\), a partitioned table can have a maximum of 32,767 partitions.
 
-:   **Note:** Greenplum Database stores partitioned table data in the leaf child tables, the lowest-level tables in the hierarchy of child tables for use by the partitioned table.
+:   > **Note** Greenplum Database stores partitioned table data in the leaf child tables, the lowest-level tables in the hierarchy of child tables for use by the partitioned table.
 
 :   partition\_type
 :   Declares partition type: `LIST` \(list of values\) or `RANGE` \(a numeric or date range\).
@@ -468,7 +485,7 @@ SUBPARTITION TEMPLATE
 
     A primary key constraint is simply a combination of a unique constraint and a not-null constraint.
 
-    Greenplum Database automatically creates a `UNIQUE` index for each `UNIQUE` or `PRIMARY KEY` constraint to enforce uniqueness. Thus, it is not necessary to create an index explicitly for primary key columns. `UNIQUE` and `PRIMARY KEY` constraints are not allowed on append-optimized tables because the `UNIQUE` indexes that are created by the constraints are not allowed on append-optimized tables.
+    Greenplum Database automatically creates a `UNIQUE` index for each `UNIQUE` or `PRIMARY KEY` constraint to enforce uniqueness. Thus, it is not necessary to create an index explicitly for primary key columns.
 
     Foreign key constraints are not supported in Greenplum Database.
 
@@ -487,7 +504,7 @@ SUBPARTITION TEMPLATE
     The defaults can be set for the system, a database, or a user. For information about setting storage options, see the server configuration parameter [gp\_default\_storage\_options](../config_params/guc-list.html).
 
 
-**Important:** The current Postgres Planner allows list partitions with multi-column \(composite\) partition keys. GPORCA does not support composite keys, so using composite partition keys is not recommended.
+> **Important** The current Postgres Planner allows list partitions with multi-column \(composite\) partition keys. GPORCA does not support composite keys, so using composite partition keys is not recommended.
 
 ## <a id="section6"></a>Examples 
 

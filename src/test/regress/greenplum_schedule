@@ -18,6 +18,8 @@
 # required setup steps
 test: test_setup
 
+test: pg_dump_binary_upgrade
+
 test: gp_dispatch_keepalives
 
 # copy command
@@ -30,6 +32,8 @@ test: copy_eol
 # file related tests (like gp_log_system, etc) faster.
 test: disable_autovacuum
 test: gp_toolkit
+# test gp_fastsequence allocation (early in schedule as log grepping is expensive)
+test: uao_dml/gp_fastsequence_row uao_dml/gp_fastsequence_column
 test: python_processed64bit
 test: enable_autovacuum
 
@@ -55,8 +59,9 @@ test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp li
 test: gpcopy
 
 test: orca_static_pruning orca_groupingsets_fallbacks
-test: filter gpctas gpdist gpdist_opclasses gpdist_legacy_opclasses matrix sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var gp_explain distributed_transactions explain_format olap_plans gp_copy_dtx explain_analyze
+test: filter gpctas gpdist gpdist_opclasses gpdist_legacy_opclasses matrix sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var gp_explain distributed_transactions explain_format olap_plans gp_copy_dtx
 # below test(s) inject faults so each of them need to be in a separate group
+test: explain_analyze
 test: guc_gp
 test: toast
 test: misc_jiras
@@ -113,7 +118,7 @@ test: rangefuncs_cdb gp_dqa subselect_gp subselect_gp2 gp_transactions olap_grou
 
 # 'partition' runs for a long time, so try to keep it together with other
 # long-running tests.
-test: partition partition1 partition_indexing partition_storage partition_ddl partition_with_user_defined_function partition_unlogged partition_subquery partition_with_user_defined_function_that_truncates
+test: partition partition1 partition_indexing partition_storage partition_ddl partition_with_user_defined_function partition_unlogged partition_subquery partition_with_user_defined_function_that_truncates gp_partition_template
 
 test: index_constraint_naming index_constraint_naming_partition index_constraint_naming_upgrade
 
@@ -168,7 +173,7 @@ test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_ca
 # direct dispatch tests
 test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types
 
-test: bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition_plans DML_over_joins bfv_statistic nested_case_null sort bb_mpph aggregate_with_groupingsets gporca gpsd
+test: bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition_plans DML_over_joins bfv_statistic nested_case_null sort bb_mpph aggregate_with_groupingsets gporca gpsd catcache
 # Run minirepro separately to avoid concurrent deletes erroring out the internal pg_dump call
 test: minirepro
 
@@ -185,7 +190,7 @@ test: rpt rpt_joins rpt_tpch rpt_returning
 # temp tables
 test: bfv_cte bfv_joins bfv_subquery bfv_planner bfv_legacy bfv_temp bfv_dml
 
-test: qp_olap_mdqa qp_misc gp_recursive_cte qp_dml_joins
+test: qp_olap_mdqa qp_misc gp_recursive_cte qp_dml_joins qp_skew
 
 test: qp_misc_jiras qp_with_clause qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan qp_dropped_cols
 test: qp_with_functional_inlining qp_with_functional_noinlining
@@ -306,4 +311,16 @@ test: motion_socket
 
 # subtransaction overflow test
 test: subtrx_overflow
+
+test: dboptions
+
+# DML tests for AO/CO unique indexes.
+test: uao_dml/uao_dml_unique_index_delete_row uao_dml/uao_dml_unique_index_delete_column uao_dml/uao_dml_unique_index_update_row uao_dml/uao_dml_unique_index_update_column
+
+# test CREATE UNIQUE INDEX on AO/CO tables.
+test: uao_dml/ao_unique_index_build_row uao_dml/ao_unique_index_build_column
+
+# test column projection for various operations
+test: aoco_projection
+
 # end of tests

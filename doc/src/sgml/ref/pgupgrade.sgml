@@ -1,4 +1,7 @@
-<!-- doc/src/sgml/ref/pgupgrade.sgml -->
+<!--
+doc/src/sgml/ref/pgupgrade.sgml
+PostgreSQL documentation
+-->
 
 <refentry id="pgupgrade">
  <indexterm zone="pgupgrade">
@@ -37,9 +40,9 @@
  <para>
   <application>pg_upgrade</application> (formerly called <application>pg_migrator</application>) allows data
   stored in <productname>PostgreSQL</productname> data files to be upgraded to a later <productname>PostgreSQL</productname>
-  major version without the data dump/reload typically required for
-  major version upgrades, e.g. from 9.5.8 to 9.6.4 or from 10.7 to 11.2.
-  It is not required for minor version upgrades, e.g. from 9.6.2 to 9.6.3
+  major version without the data dump/restore typically required for
+  major version upgrades, e.g., from 9.5.8 to 9.6.4 or from 10.7 to 11.2.
+  It is not required for minor version upgrades, e.g., from 9.6.2 to 9.6.3
   or from 10.1 to 10.2.
  </para>
 
@@ -57,7 +60,7 @@
 
  <para>
   <application>pg_upgrade</application> does its best to
-  make sure the old and new clusters are binary-compatible, e.g.  by
+  make sure the old and new clusters are binary-compatible, e.g.,  by
   checking for compatible compile-time settings, including 32/64-bit
   binaries.  It is important that
   any external modules are also binary compatible, though this cannot
@@ -113,8 +116,8 @@
      </varlistentry>
 
      <varlistentry>
-      <term><option>-j</option></term>
-      <term><option>--jobs</option></term>
+      <term><option>-j <replaceable class="parameter">njobs</replaceable></option></term>
+      <term><option>--jobs=<replaceable class="parameter">njobs</replaceable></option></term>
       <listitem><para>number of simultaneous processes or threads to use
       </para></listitem>
      </varlistentry>
@@ -206,8 +209,7 @@
         systems.  If it is selected but not supported, the
         <application>pg_upgrade</application> run will error.  At present, it
         is supported on Linux (kernel 4.5 or later) with Btrfs and XFS (on
-        file systems created with reflink support, which is not the default
-        for XFS at this writing), and on macOS with APFS.
+        file systems created with reflink support), and on macOS with APFS.
        </para>
       </listitem>
      </varlistentry>
@@ -236,13 +238,13 @@
     <title>Optionally move the old cluster</title>
 
     <para>
-     If you are using a version-specific installation directory, e.g.
+     If you are using a version-specific installation directory, e.g.,
      <filename>/opt/PostgreSQL/&majorversion;</filename>, you do not need to move the old cluster. The
      graphical installers all use version-specific installation directories.
     </para>
 
     <para>
-     If your installation directory is not version-specific, e.g.
+     If your installation directory is not version-specific, e.g.,
      <filename>/usr/local/pgsql</filename>, it is necessary to move the current PostgreSQL install
      directory so it does not interfere with the new <productname>PostgreSQL</productname> installation.
      Once the current <productname>PostgreSQL</productname> server is shut down, it is safe to rename the
@@ -296,17 +298,28 @@ make prefix=/usr/local/pgsql.new install
    </step>
 
    <step>
-    <title>Install custom shared object files</title>
+    <title>Install extension shared object files</title>
 
     <para>
-     Install any custom shared object files (or DLLs) used by the old cluster
-     into the new cluster, e.g. <filename>pgcrypto.so</filename>,
-     whether they are from <filename>contrib</filename>
-     or some other source. Do not install the schema definitions, e.g.
-     <command>CREATE EXTENSION pgcrypto</command>, because these will be upgraded
-     from the old cluster.
-     Also, any custom full text search files (dictionary, synonym,
-     thesaurus, stop words) must also be copied to the new cluster.
+     Many extensions and custom modules, whether from
+     <filename>contrib</filename> or another source, use shared object
+     files (or DLLs), e.g., <filename>pgcrypto.so</filename>.  If the old
+     cluster used these, shared object files matching the new server binary
+     must be installed in the new cluster, usually via operating system
+     commands.  Do not load the schema definitions, e.g., <command>CREATE
+     EXTENSION pgcrypto</command>, because these will be duplicated from
+     the old cluster.  If extension updates are available,
+     <application>pg_upgrade</application> will report this and create
+     a script that can be run later to update them.
+    </para>
+   </step>
+
+   <step>
+    <title>Copy custom full-text search files</title>
+
+    <para>
+     Copy any custom full text search files (dictionary, synonym,
+     thesaurus, stop words) from the old to the new cluster.
     </para>
    </step>
 
@@ -357,8 +370,8 @@ NET STOP postgresql-&majorversion;
      <quote>Latest checkpoint location</quote> values match in all clusters.
      (There will be a mismatch if old standby servers were shut down
      before the old primary or if the old standby servers are still running.)
-     Also, change <varname>wal_level</varname> to
-     <literal>replica</literal> in the <filename>postgresql.conf</filename> file on the
+     Also, make sure <varname>wal_level</varname> is not set to 
+     <literal>minimal</literal> in the <filename>postgresql.conf</filename> file on the
      new primary cluster.
     </para>
    </step>
@@ -391,7 +404,7 @@ NET STOP postgresql-&majorversion;
 
     <para>
      The <option>--jobs</option> option allows multiple CPU cores to be used
-     for copying/linking of files and to dump and reload database schemas
+     for copying/linking of files and to dump and restore database schemas
      in parallel;  a good place to start is the maximum of the number of
      CPU cores and tablespaces.  This option can dramatically reduce the
      time to upgrade a multi-database server running on a multiprocessor
@@ -450,7 +463,7 @@ pg_upgrade.exe
    </step>
 
    <step id="pgupgrade-step-replicas">
-    <title>Upgrade Streaming Replication and Log-Shipping standby servers</title>
+    <title>Upgrade streaming replication and log-shipping standby servers</title>
 
     <para>
      If you used link mode and have Streaming Replication (see <xref
@@ -491,10 +504,10 @@ pg_upgrade.exe
      </step>
 
      <step>
-      <title>Install custom shared object files</title>
+      <title>Install extension shared object files</title>
 
       <para>
-       Install the same custom shared object files on the new standbys
+       Install the same extension shared object files on the new standbys
        that you installed in the new primary cluster.
       </para>
      </step>
@@ -513,9 +526,10 @@ pg_upgrade.exe
 
       <para>
        Save any configuration files from the old standbys' configuration
-       directories you need to keep, e.g.  <filename>postgresql.conf</filename>,
-       <literal>pg_hba.conf</literal>, because these will be overwritten or
-       removed in the next step.
+       directories you need to keep, e.g.,  <filename>postgresql.conf</filename>
+       (and any files included by it), <filename>postgresql.auto.conf</filename>,
+       <literal>pg_hba.conf</literal>, because these will be overwritten
+       or removed in the next step.
       </para>
      </step>
 
@@ -539,7 +553,7 @@ rsync --archive --delete --hard-links --size-only --no-inc-recursive old_cluster
        on the standby.  The directory structure under the specified
        directories on the primary and standbys must match.  Consult the
        <application>rsync</application> manual page for details on specifying the
-       remote directory, e.g.
+       remote directory, e.g.,
 
 <programlisting>
 rsync --archive --delete --hard-links --size-only --no-inc-recursive /opt/PostgreSQL/9.5 \
@@ -589,7 +603,8 @@ rsync --archive --delete --hard-links --size-only --no-inc-recursive /vol1/pg_tb
        Configure the servers for log shipping.  (You do not need to run
        <function>pg_start_backup()</function> and <function>pg_stop_backup()</function>
        or take a file system backup as the standbys are still synchronized
-       with the primary.)
+       with the primary.)  Replication slots are not copied and must
+       be recreated.
       </para>
      </step>
 
@@ -603,7 +618,8 @@ rsync --archive --delete --hard-links --size-only --no-inc-recursive /vol1/pg_tb
     <para>
      If you modified <filename>pg_hba.conf</filename>, restore its original settings.
      It might also be necessary to adjust other configuration files in the new
-     cluster to match the old cluster, e.g. <filename>postgresql.conf</filename>.
+     cluster to match the old cluster, e.g., <filename>postgresql.conf</filename>
+     (and any files included by it), <filename>postgresql.auto.conf</filename>.
     </para>
    </step>
 
@@ -617,7 +633,7 @@ rsync --archive --delete --hard-links --size-only --no-inc-recursive /vol1/pg_tb
    </step>
 
    <step>
-    <title>Post-Upgrade processing</title>
+    <title>Post-upgrade processing</title>
 
     <para>
      If any post-upgrade processing is required, pg_upgrade will issue
@@ -664,7 +680,7 @@ psql --username=postgres --file=script.sql postgres
      <command>pg_upgrade</command> completes. (Automatic deletion is not
      possible if you have user-defined tablespaces inside the old data
      directory.)  You can also delete the old installation directories
-     (e.g. <filename>bin</filename>, <filename>share</filename>).
+     (e.g., <filename>bin</filename>, <filename>share</filename>).
     </para>
    </step>
 
@@ -782,7 +798,7 @@ psql --username=postgres --file=script.sql postgres
    If you are upgrading a pre-<productname>PostgreSQL</productname> 9.2 cluster
    that uses a configuration-file-only directory, you must pass the
    real data directory location to <application>pg_upgrade</application>, and
-   pass the configuration directory location to the server, e.g.
+   pass the configuration directory location to the server, e.g.,
    <literal>-d /real-data-directory -o '-D /configuration-directory'</literal>.
   </para>
 
@@ -804,7 +820,7 @@ psql --username=postgres --file=script.sql postgres
    copy with any changes to make it consistent.  (<option>--checksum</option>
    is necessary because <command>rsync</command> only has file modification-time
    granularity of one second.)  You might want to exclude some
-   files, e.g. <filename>postmaster.pid</filename>, as documented in <xref
+   files, e.g., <filename>postmaster.pid</filename>, as documented in <xref
    linkend="backup-lowlevel-base-backup"/>.  If your file system supports
    file system snapshots or copy-on-write file copies, you can use that
    to make a backup of the old cluster and tablespaces, though the snapshot

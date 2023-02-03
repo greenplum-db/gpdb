@@ -22,6 +22,10 @@
 #define STATS_NDISTINCT_MAGIC		0xA352BFA4	/* struct identifier */
 #define STATS_NDISTINCT_TYPE_BASIC	1	/* struct version */
 
+#define PG_RETURN_MVNDistinct_P(X) return PointerGetDatum(X)
+#define PG_RETURN_MVDependencies_P(X) return PointerGetDatum(X)
+#define PG_RETURN_MCVList_P(X) return PointerGetDatum(X)
+
 /* MVDistinctItem represents a single combination of columns */
 typedef struct MVNDistinctItem
 {
@@ -116,7 +120,8 @@ extern Selectivity statext_clauselist_selectivity(PlannerInfo *root,
 												  RelOptInfo *rel,
 												  Bitmapset **estimatedclauses);
 extern bool has_stats_of_kind(List *stats, char requiredkind);
-extern StatisticExtInfo *choose_best_statistics(List *stats,
-												Bitmapset *attnums, char requiredkind);
+extern StatisticExtInfo *choose_best_statistics(List *stats, char requiredkind,
+												Bitmapset **clause_attnums,
+												int nclauses);
 
 #endif							/* STATISTICS_H */

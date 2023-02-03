@@ -8297,6 +8297,36 @@ SELECT * FROM leaf_with_dropped_cols_index_part1 WHERE a>42 and z<42;
 EXPLAIN SELECT * FROM leaf_with_dropped_cols_index_part2 WHERE a>42 and z<42;
 SELECT * FROM leaf_with_dropped_cols_index_part2 WHERE a>42 and z<42;
 
+-- Exchange partitions with dropped columns and check subplan with attribute remapping into dynamicSeqscan
+-- start_ignore
+DROP TABLE if exists ds_main;
+DROP TABLE if exists ds_part1;
+DROP TABLE if exists non_part1;
+DROP TABLE if exists non_part2;
+-- end_ignore
+
+CREATE TABLE ds_main ( a INT, b INT, c INT) PARTITION BY RANGE(c)( START(1) END (10) EVERY (2), DEFAULT PARTITION deflt);
+CREATE TABLE ds_part1 (a int, a1 int, b int, c int);
+CREATE TABLE non_part1 (c INT);
+CREATE TABLE non_part2 (e INT, f INT);
+
+SET optimizer_enforce_subplans TO ON;
+
+-- drop columns to get attribute remapping
+ALTER TABLE ds_part1 drop column a1;
+ALTER TABLE ds_main exchange partition for (1) with table ds_part1;
+
+INSERT INTO non_part1 SELECT i FROM generate_series(1, 1)i;
+INSERT INTO non_part2 SELECT i, i + 1 FROM generate_series(1, 10)i;
+INSERT INTO ds_main SELECT i, i + 1, i + 2 FROM generate_series (1, 1000)i;
+
+analyze ds_main;
+analyze non_part1;
+analyze non_part2;
+
+EXPLAIN (costs off) SELECT * FROM ds_main, non_part2 WHERE ds_main.c = non_part2.e AND a IN ( SELECT a FROM non_part1) order by a;
+SELECT * FROM ds_main, non_part2 WHERE ds_main.c = non_part2.e AND a IN ( SELECT a FROM non_part1) order by a;
+
 -- As of this writing, pg_dump creates an invalid dump for some of the tables
 -- here. See https://github.com/greenplum-db/gpdb/issues/3598. So we must drop
 -- the tables, or the pg_upgrade test fails.

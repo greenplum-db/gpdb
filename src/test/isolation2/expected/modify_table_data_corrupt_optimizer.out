@@ -72,17 +72,17 @@ explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and 
  Delete on tab1                                                            
    ->  Result                                                              
          ->  Redistribute Motion 3:3  (slice1; segments: 3)                
-               Hash Key: tab1_1.b                                          
+               Hash Key: tab1.b                                            
                ->  Hash Join                                               
-                     Hash Cond: (tab2.a = tab1_1.a)                        
+                     Hash Cond: (tab2.a = tab1.a)                          
                      ->  Seq Scan on tab2                                  
                      ->  Hash                                              
                            ->  Broadcast Motion 3:3  (slice2; segments: 3) 
                                  ->  Hash Join                             
-                                       Hash Cond: (tab3.b = tab1_1.b)      
+                                       Hash Cond: (tab3.b = tab1.b)        
                                        ->  Seq Scan on tab3                
                                        ->  Hash                            
-                                             ->  Seq Scan on tab1 tab1_1   
+                                             ->  Seq Scan on tab1          
  Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0                      
 (15 rows)
 begin;
@@ -99,17 +99,17 @@ explain (costs off) update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.
  Update on tab1                                                            
    ->  Result                                                              
          ->  Redistribute Motion 3:3  (slice1; segments: 3)                
-               Hash Key: tab1_1.b                                          
+               Hash Key: tab1.b                                            
                ->  Hash Join                                               
-                     Hash Cond: (tab2.a = tab1_1.a)                        
+                     Hash Cond: (tab2.a = tab1.a)                          
                      ->  Seq Scan on tab2                                  
                      ->  Hash                                              
                            ->  Broadcast Motion 3:3  (slice2; segments: 3) 
                                  ->  Hash Join                             
-                                       Hash Cond: (tab3.b = tab1_1.b)      
+                                       Hash Cond: (tab3.b = tab1.b)        
                                        ->  Seq Scan on tab3                
                                        ->  Hash                            
-                                             ->  Seq Scan on tab1 tab1_1   
+                                             ->  Seq Scan on tab1          
  Optimizer: Pivotal Optimizer (GPORCA)                                     
 (15 rows)
 begin;
@@ -126,18 +126,18 @@ explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and 
  Delete on tab1                                                                              
    ->  Result                                                                                
          ->  Redistribute Motion 3:3  (slice1; segments: 3)                                  
-               Hash Key: tab1_1.b                                                            
+               Hash Key: tab1.b                                                              
                ->  Hash Join                                                                 
-                     Hash Cond: (tab3.a = tab1_1.b)                                          
+                     Hash Cond: (tab3.a = tab1.b)                                            
                      ->  Seq Scan on tab3                                                    
                      ->  Hash                                                                
                            ->  Broadcast Motion 3:3  (slice2; segments: 3)                   
                                  ->  Hash Join                                               
-                                       Hash Cond: (tab2.a = tab1_1.a)                        
+                                       Hash Cond: (tab2.a = tab1.a)                          
                                        ->  Seq Scan on tab2                                  
                                        ->  Hash                                              
                                              ->  Broadcast Motion 3:3  (slice3; segments: 3) 
-                                                   ->  Seq Scan on tab1 tab1_1               
+                                                   ->  Seq Scan on tab1                      
  Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0                                        
 (16 rows)
 begin;
@@ -154,18 +154,18 @@ explain (costs off) update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.
  Update on tab1                                                                              
    ->  Result                                                                                
          ->  Redistribute Motion 3:3  (slice1; segments: 3)                                  
-               Hash Key: tab1_1.b                                                            
+               Hash Key: tab1.b                                                              
                ->  Hash Join                                                                 
-                     Hash Cond: (tab3.a = tab1_1.b)                                          
+                     Hash Cond: (tab3.a = tab1.b)                                            
                      ->  Seq Scan on tab3                                                    
                      ->  Hash                                                                
                            ->  Broadcast Motion 3:3  (slice2; segments: 3)                   
                                  ->  Hash Join                                               
-                                       Hash Cond: (tab2.a = tab1_1.a)                        
+                                       Hash Cond: (tab2.a = tab1.a)                          
                                        ->  Seq Scan on tab2                                  
                                        ->  Hash                                              
                                              ->  Broadcast Motion 3:3  (slice3; segments: 3) 
-                                                   ->  Seq Scan on tab1 tab1_1               
+                                                   ->  Seq Scan on tab1                      
  Optimizer: Pivotal Optimizer (GPORCA)                                                       
 (16 rows)
 begin;
@@ -187,9 +187,9 @@ explain (costs off) update tab1 set b = b + 1;
  Update on tab1                                             
    ->  Result                                               
          ->  Redistribute Motion 3:3  (slice1; segments: 3) 
-               Hash Key: tab1_1.b                           
+               Hash Key: b                                  
                ->  Split                                    
-                     ->  Seq Scan on tab1 tab1_1            
+                     ->  Seq Scan on tab1                   
  Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0       
 (7 rows)
 begin;

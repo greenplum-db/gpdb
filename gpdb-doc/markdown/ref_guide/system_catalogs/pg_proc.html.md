@@ -6,7 +6,7 @@ For compiled functions, both built-in and dynamically loaded, `prosrc` contains 
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`oid`|oid| |Row identifier \(hidden attribute; ust be explicitly selected\)|
+|`oid`|oid| |Row identifier \(hidden attribute; must be explicitly selected\)|
 |`proname`|name| |Name of the function|
 |`pronamespace`|oid|pg\_namespace.oid|The OID of the namespace that contains this function|
 |`proowner`|oid|pg\_authid.oid|Owner of the function|
@@ -35,7 +35,7 @@ For compiled functions, both built-in and dynamically loaded, `prosrc` contains 
 |`proconfig`|text\[\]| |Function's local settings for run-time configuration variables.|
 |`proacl`|aclitem\[\]| |Access privileges for the function as given by `GRANT`/`REVOKE`|
 |`prodataaccess`|char| |Provides a hint regarding the type SQL statements that are included in the function: `n` - does not contain SQL, `c` - contains SQL, `r` - contains SQL that reads data, `m` - contains SQL that modifies data|
-|`proexeclocation`|char| |Where the function runs when it is invoked: `m` - master only, `a` - any segment instance, `s` - all segment instances, `i` - initplan.|
+|`proexeclocation`|char| |Where the function runs when it is invoked: `m` - coordinator only, `a` - any segment instance, `s` - all segment instances, `i` - initplan.|
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

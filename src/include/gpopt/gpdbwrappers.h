@@ -20,6 +20,7 @@ extern "C" {
 
 #include "access/attnum.h"
 #include "parser/parse_coerce.h"
+#include "statistics/statistics.h"
 #include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
 }
@@ -205,6 +206,11 @@ void FreeAttrStatsSlot(AttStatsSlot *sslot);
 // attribute statistics
 HeapTuple GetAttStats(Oid relid, AttrNumber attnum);
 
+List *GetExtStats(Relation rel);
+
+char *GetExtStatsName(Oid statOid);
+List *GetExtStatsKinds(Oid statOid);
+
 // does a function exist with the given oid
 bool FunctionExists(Oid oid);
 
@@ -225,27 +231,6 @@ char FuncDataAccess(Oid funcid);
 
 // exec location property of given function
 char FuncExecLocation(Oid funcid);
-
-// trigger name
-char *GetTriggerName(Oid triggerid);
-
-// trigger relid
-Oid GetTriggerRelid(Oid triggerid);
-
-// trigger funcid
-Oid GetTriggerFuncid(Oid triggerid);
-
-// trigger type
-int32 GetTriggerType(Oid triggerid);
-
-// is trigger enabled
-bool IsTriggerEnabled(Oid triggerid);
-
-// does trigger exist
-bool TriggerExists(Oid oid);
-
-// does check constraint exist
-bool CheckConstraintExists(Oid check_constraint_oid);
 
 // check constraint name
 char *GetCheckConstraintName(Oid check_constraint_oid);
@@ -308,27 +293,6 @@ RegProcedure GetOpFunc(Oid opno);
 // operator name
 char *GetOpName(Oid opno);
 
-#if 0
-	// parts of a partitioned table
-	bool IsLeafPartition(Oid oid);
-
-	// partition table has an external partition
-	bool HasExternalPartition(Oid oid);
-
-	// find the oid of the root partition given partition oid belongs to
-	Oid GetRootPartition(Oid oid);
-	
-	// partition attributes
-	List *GetPartitionAttrs(Oid oid);
-
-	// get partition keys and kinds ordered by partition level
-	void GetOrderedPartKeysAndKinds(Oid oid, List **pkeys, List **pkinds);
-
-	/* GPDB_12_MERGE_FIXME: mergings stats not yet implemented with new partitioning implementation */
-	// parts of a partitioned table
-	//PartitionNode *GetParts(Oid relid, int16 level, Oid parent, bool inctemplate, bool includesubparts);
-#endif
-
 // keys of the relation with the given oid
 List *GetRelationKeys(Oid relid);
 
@@ -346,9 +310,6 @@ bool HeapAttIsNull(HeapTuple tup, int attnum);
 
 // free heap tuple
 void FreeHeapTuple(HeapTuple htup);
-
-// does an index exist with the given oid
-bool IndexExists(Oid oid);
 
 // get the default hash opclass for type
 Oid GetDefaultDistributionOpclassForType(Oid typid);
@@ -421,14 +382,6 @@ void ListFree(List *list);
 
 // deep free of a list
 void ListFreeDeep(List *list);
-
-#if 0
-	// does a partition table have an appendonly child
-	bool IsAppendOnlyPartitionTable(Oid root_oid);
-
-	// does a multi-level partitioned table have uniform partitioning hierarchy
-	bool IsMultilevelPartitionUniform(Oid root_oid);
-#endif
 
 // lookup type cache
 TypeCacheEntry *LookupTypeCache(Oid type_id, int flags);
@@ -513,9 +466,6 @@ bool IsOpNDVPreserving(Oid opno);
 // get input types for a given operator
 void GetOpInputTypes(Oid opno, Oid *lefttype, Oid *righttype);
 
-// does an operator exist with the given oid
-bool OperatorExists(Oid oid);
-
 // expression tree walker
 bool WalkExpressionTree(Node *node, bool (*walker)(), void *context);
 
@@ -534,23 +484,12 @@ Node *MutateExpressionTree(Node *node, Node *(*mutator)(), void *context);
 Node *MutateQueryOrExpressionTree(Node *node, Node *(*mutator)(), void *context,
 								  int flags);
 
-#if 0
-	// check whether the part with the given oid is the root of a partition table
-	bool RelPartIsRoot(Oid relid);
-	
-	// check whether the part with the given oid is an interior subpartition
-	bool RelPartIsInterior(Oid relid);
-#endif
-
 bool RelIsPartitioned(Oid relid);
 
 bool IndexIsPartitioned(Oid relid);
 
 // check whether a relation is inherited
 bool HasSubclassSlow(Oid rel_oid);
-
-// check whether table with given oid is an external table
-bool RelIsExternalTable(Oid relid);
 
 // return the distribution policy of a relation; if the table is partitioned
 // and the parts are distributed differently, return Random distribution
@@ -565,9 +504,6 @@ gpos::BOOL IsChildPartDistributionMismatched(Relation rel);
     // have a trigger of the given type
     gpos::BOOL ChildPartHasTriggers(Oid oid, int trigger_type);
 #endif
-
-// does a relation exist with the given oid
-bool RelationExists(Oid oid);
 
 // estimate the relation size using the real number of blocks and tuple density
 void CdbEstimateRelationSize(RelOptInfo *relOptInfo, Relation rel,
@@ -584,15 +520,17 @@ List *GetRelationIndexes(Relation relation);
 // build an array of triggers for this relation
 void BuildRelationTriggers(Relation rel);
 
+MVNDistinct *GetMVNDistinct(Oid stat_oid);
+
+MVDependencies *GetMVDependencies(Oid stat_oid);
+
 // get relation with given oid
 RelationWrapper GetRelation(Oid rel_oid);
 
-// get external table entry with given oid
-ExtTableEntry *GetExternalTableEntry(Oid rel_oid);
-
-// get ForeignScan node to scan an external table
-ForeignScan *CreateForeignScanForExternalTable(Oid rel_oid, Index scanrelid,
-											   List *qual, List *targetlist);
+// get ForeignScan node to scan a foreign table
+ForeignScan *CreateForeignScan(Oid rel_oid, Index scanrelid, List *qual,
+							   List *targetlist, Query *query,
+							   RangeTblEntry *rte);
 
 // return the first member of the given targetlist whose expression is
 // equal to the given expression, or NULL if no such member exists
@@ -604,9 +542,6 @@ List *FindMatchingMembersInTargetList(Node *node, List *targetlist);
 
 // check if two gpdb objects are equal
 bool Equals(void *p1, void *p2);
-
-// does a type exist with the given oid
-bool TypeExists(Oid oid);
 
 // check whether a type is composite
 bool IsCompositeType(Oid typid);
@@ -662,7 +597,8 @@ void CheckRTPermissions(List *rtable);
 bool HasUpdateTriggers(Oid relid);
 
 // get index operator family properties
-void IndexOpProperties(Oid opno, Oid opfamily, int *strategy, Oid *righttype);
+void IndexOpProperties(Oid opno, Oid opfamily, StrategyNumber *strategynumber,
+					   Oid *righttype);
 
 // get oids of families this operator belongs to
 List *GetOpFamiliesForScOp(Oid opno);
@@ -679,6 +615,9 @@ List *GetIndexOpFamilies(Oid index_oid);
 // get oids of op classes for the merge join
 List *GetMergeJoinOpFamilies(Oid opno);
 
+// get the OID of base elementtype fora given typid
+Oid GetBaseType(Oid typid);
+
 // returns the result of evaluating 'expr' as an Expr. Caller keeps ownership of 'expr'
 // and takes ownership of the result
 Expr *EvaluateExpr(Expr *expr, Oid result_type, int32 typmod);
@@ -691,11 +630,6 @@ Expr *TransformArrayConstToArrayExpr(Const *constant);
 
 // transform array Const to an ArrayExpr
 Node *EvalConstExpressions(Node *node);
-
-#if 0
-	// static partition selection given a PartitionSelector node
-	SelectedParts *RunStaticPartitionSelection(PartitionSelector *ps);
-#endif
 
 #ifdef FAULT_INJECTOR
 // simple fault injector used by COptTasks.cpp to inject GPDB fault

@@ -41,10 +41,6 @@ create index aocs_empty_a on aocs_empty(a);
  a      | integer           |           |          | 
  b      | integer           |           |          | 
  c      | character varying |           |          | 
-Compression Type: None
-Compression Level: 0
-Block Size: 32768
-Checksum: t
 Indexes:
     "ao_empty_a" btree (a)
 Distributed by: (a)
@@ -56,7 +52,6 @@ Distributed by: (a)
  a      | integer           |           |          | 
  b      | integer           |           |          | 
  c      | character varying |           |          | 
-Checksum: t
 Indexes:
     "aocs_empty_a" btree (a)
 Distributed by: (a)
@@ -215,10 +210,6 @@ from pg_class where oid in (select reltoastrelid from pg_class
  a      | integer           |           |          | 
  b      | integer           |           |          | 
  c      | character varying |           |          | 
-Compression Type: None
-Compression Level: 0
-Block Size: 32768
-Checksum: t
 Indexes:
     "ao_empty_a" btree (a)
 Distributed by: (a)
@@ -230,7 +221,6 @@ Distributed by: (a)
  a      | integer           |           |          | 
  b      | integer           |           |          | 
  c      | character varying |           |          | 
-Checksum: t
 Indexes:
     "aocs_empty_a" btree (a)
 Distributed by: (a)

@@ -141,3 +141,42 @@ select
     stavalues4,
     stavalues5
 from pg_statistic where starelid IN ('gpsd_foo'::regclass, 'gpsd_foo_1'::regclass);
+
+
+--------------------------------------------------------------------------------
+-- Scenario: support correlated statistics
+--------------------------------------------------------------------------------
+
+-- start_ignore
+drop database if exists gpsd_db_ext_data;
+-- end_ignore
+create database gpsd_db_ext_data;
+\c gpsd_db_ext_data
+
+create table gpsd_foo(a int, b int);
+insert into gpsd_foo select i%100, i%100 from generate_series(1,10000)i;
+
+--  Generate correlated statistics (Below commands populates data under pg_statistic_ext, pg_statistic_ext_data)
+create statistics dep_gpsd (dependencies) on a, b from gpsd_foo;
+create statistics dist_gpsd (ndistinct) on a, b from gpsd_foo;
+create statistics mcv_gpsd (mcv) on a, b from gpsd_foo;
+
+analyze gpsd_foo;
+
+-- start_ignore
+\! PYTHONIOENCODING=utf-8 gpsd gpsd_db_ext_data  > data/gpsd_db_ext_data.sql
+-- end_ignore
+
+\c regression
+drop database gpsd_db_ext_data;
+create database gpsd_db_ext_data;
+
+-- start_ignore
+\! psql -f data/gpsd_db_ext_data.sql gpsd_db_ext_data
+-- end_ignore
+\c gpsd_db_ext_data
+
+
+select count(*)=3 from pg_statistic_ext where stxname in ('dep_gpsd', 'dist_gpsd', 'mcv_gpsd');
+select stxname, stxdndistinct, stxddependencies, pg_mcv_list_items(stxdmcv) from pg_statistic_ext pge, pg_statistic_ext_data pgd where pge.oid = pgd.stxoid and pge.stxname in ('dep_gpsd', 'dist_gpsd', 'mcv_gpsd');
+select count(*)=3 from pg_statistic_ext pge, pg_statistic_ext_data pgd where pge.oid = pgd.stxoid and pge.stxname in ('dep_gpsd', 'dist_gpsd', 'mcv_gpsd');

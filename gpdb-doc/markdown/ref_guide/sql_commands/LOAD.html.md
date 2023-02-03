@@ -14,7 +14,7 @@ This command loads a shared library file into the Greenplum Database server addr
 
 The file name is specified in the same way as for shared library names in `CREATE FUNCTION`; in particular, one may rely on a search path and automatic addition of the system's standard shared library file name extension.
 
-Note that in Greenplum Database the shared library file \(`.so` file\) must reside in the same path location on every host in the Greenplum Database array \(masters, segments, and mirrors\).
+Note that in Greenplum Database the shared library file \(`.so` file\) must reside in the same path location on every host in the Greenplum Database array \(coordinators, segments, and mirrors\).
 
 Only database superusers can load shared library files.
 

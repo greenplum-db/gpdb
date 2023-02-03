@@ -1,0 +1,5 @@
+# Schedule with targeted tests for TCP interconnect.
+# Assumes that gp_interconnect_type=tcp
+
+# test TCP interconnect teardown bounded wait
+test: tcp_ic_teardown

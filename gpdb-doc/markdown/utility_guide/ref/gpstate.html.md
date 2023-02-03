@@ -41,7 +41,7 @@ The `gpstate` utility displays information about a running Greenplum Database in
     -   Whether any segments are down.
     -   Whether any primary-mirror segment pairs are out of sync – including information on how many bytes are remaining to sync \(as displayed in the `WAL sync remaining bytes` output field\).
 
-        **Note:** `gpstate -e`does not display segment pairs that are in sync.
+        > **Note** `gpstate -e`does not display segment pairs that are in sync.
 
     -   Whether any primary-mirror segment pairs are not in their preferred roles.
 
@@ -134,7 +134,7 @@ The following output fields are reported by `gpstate -s` for each mirror segment
 |Coordinator reports status as|segment status as reported in the system catalog: Up or Down|
 |Database status|status of Greenplum Database to incoming requests: Up, Down, or Suspended. A Suspended state means database activity is temporarily paused while a segment transitions from one state to another.|
 
-**Note:** When there is no connection between a primary segment and its mirror, `gpstate -s` displays `Unknown` in the following fields:
+> **Note** When there is no connection between a primary segment and its mirror, `gpstate -s` displays `Unknown` in the following fields:
 
 -   `Bytes remaining to send to mirror`
 -   `WAL Sent Location`

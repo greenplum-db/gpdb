@@ -83,7 +83,7 @@ public:
 	enum EOperatorId
 	{
 		EopLogicalGet,
-		EopLogicalExternalGet,
+		EopLogicalForeignGet,
 		EopLogicalIndexGet,
 		EopLogicalBitmapTableGet,
 		EopLogicalSelect,
@@ -133,7 +133,6 @@ public:
 		EopLogicalUpdate,
 		EopLogicalDML,
 		EopLogicalSplit,
-		EopLogicalRowTrigger,
 		EopLogicalPartitionSelector,
 		EopLogicalAssert,
 		EopLogicalMaxOneRow,
@@ -185,7 +184,7 @@ public:
 		EopScalarBitmapBoolOp,
 
 		EopPhysicalTableScan,
-		EopPhysicalExternalScan,
+		EopPhysicalForeignScan,
 		EopPhysicalIndexScan,
 		EopPhysicalIndexOnlyScan,
 		EopPhysicalBitmapTableScan,
@@ -244,7 +243,6 @@ public:
 
 		EopPhysicalDML,
 		EopPhysicalSplit,
-		EopPhysicalRowTrigger,
 
 		EopPhysicalAssert,
 

@@ -60,6 +60,7 @@
  alter table pt_heap_tab exchange partition for ('pqr') with table heap_can; -- CO exchanged with Heap
 
 --Check for the storage properties and indexes of the two tables involved in the exchange
+ \d+ pt_heap_tab
  \d+ heap_can
  \d+ co_can
  \d+ ao_can
@@ -146,6 +147,7 @@ drop table if exists co_can cascade;
  alter table pt_ao_tab exchange partition for ('pqr') with table heap_can; --CO tab exchanged with Heap
 
 --Check for the storage properties and indexes of the two tables involved in the exchange
+ \d+ pt_ao_tab
  \d+ heap_can
  \d+ co_can
  \d+ ao_can
@@ -239,6 +241,7 @@ drop table if exists co_can cascade;
  alter table pt_co_tab exchange partition for ('xyz1') with table heap_can; -- CO exchanged with Heap
 
 --Check for the storage properties and indexes of the two tables involved in the exchange
+ \d+ pt_co_tab
  \d+ heap_can
  \d+ co_can
  \d+ ao_can
@@ -315,6 +318,7 @@ drop table if exists co_can cascade;
  alter table pt_heap_tab_rng exchange partition newao with table co_can; -- AO <=> CO
  alter table pt_heap_tab_rng exchange partition newco with table heap_can; -- CO <=> HEAP
 
+ \d+ pt_heap_tab_rng
  \d+ ao_can 
  \d+ co_can
  \d+ heap_can
@@ -386,6 +390,7 @@ drop table if exists co_can cascade;
  alter table pt_ao_tab_rng exchange partition ao1 with table co_can;-- AO <=> CO
  alter table pt_ao_tab_rng exchange partition newco with table heap_can; --CO <=> HEAP
 
+ \d+ pt_ao_tab_rng
  \d+ ao_can 
  \d+ co_can
  \d+ heap_can
@@ -458,6 +463,7 @@ drop table if exists co_can cascade;
  alter table pt_co_tab_rng exchange partition newao with table co_can; -- AO <=> CO
  alter table pt_co_tab_rng exchange partition co1 with table heap_can; -- CO <=> HEAP
 
+ \d+ pt_co_tab_rng
  \d+ ao_can 
  \d+ co_can
  \d+ heap_can

@@ -37,7 +37,7 @@ vacuumdb -V | --version
 -f \| --full
 :   Selects a full vacuum, which may reclaim more space, but takes much longer and exclusively locks the table.
 
-    **Warning:** A `VACUUM FULL` is not recommended in Greenplum Database.
+    > **Caution** A `VACUUM FULL` is not recommended in Greenplum Database.
 
 -F \| --freeze
 :   Freeze row transaction information.

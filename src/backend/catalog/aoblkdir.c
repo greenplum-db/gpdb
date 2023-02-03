@@ -16,6 +16,8 @@
  */
 #include "postgres.h"
 
+#include "access/aosegfiles.h"
+#include "access/aocssegfiles.h"
 #include "access/table.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/aoblkdir.h"
@@ -49,17 +51,18 @@ AlterTableCreateAoBlkdirTable(Oid relOid)
 		return;
 
 	/*
-	 * GPDB_12_MERGE_FIXME: Block directory creation must block any
-	 * transactions that may create or update indexes such as insert, vacuum
-	 * and create-index.  Concurrent sequential scans (select) transactions
-	 * need not be blocked.  Index scans cannot happen because the fact that
-	 * we are creating block directory implies no index is yet defined on this
-	 * appendoptimized table.  ShareRowExclusiveLock seems appropriate for
-	 * this purpose.  See if using that instead of the sledgehammer of
-	 * AccessExclusiveLock.  New tests will be needed to validate concurrent
-	 * select with index creation.
+	 * Block directory creation must block any transactions that may create
+	 * or update indexes such as insert, vacuum and create-index. Concurrent
+	 * sequential scans (select) transactions need not be blocked. Index scans
+	 * cannot happen because the fact that we are creating block directory
+	 * implies no index is yet defined on this appendoptimized table.
+	 * Using ShareRowExclusiveLock for this purpose as we allow read-only transactions
+	 * being running concurrently. 
+	 * 
+	 * P.S. GPDB has specific behavior on select statement with locking clause,
+	 * refer to comments around checkCanOptSelectLockingClause() for detail. 
 	 */
-	rel = table_open(relOid, AccessExclusiveLock);
+	rel = table_open(relOid, ShareRowExclusiveLock);
 
 	/* Create a tuple descriptor */
 	tupdesc = CreateTemplateTupleDesc(4);
@@ -118,3 +121,67 @@ AlterTableCreateAoBlkdirTable(Oid relOid)
 	table_close(rel, NoLock);
 }
 
+/*
+ * In relation versions older than AORelationVersion_PG12, block directory
+ * entries can lie about the continuity of rows *within* their range, due to
+ * legacy hole filling logic. Since unique index checks rely on this continuity,
+ * such indexes cannot be created on these relations.
+ *
+ * Called only when rel has a block directory.
+ */
+void
+ValidateRelationVersionForUniqueIndex(Relation rel)
+{
+	bool	error = false;
+	int 	errsegno;
+	int		errversion;
+	int		totalsegs;
+
+	Assert(RelationIsAppendOptimized(rel));
+
+	if (RelationIsAoRows(rel))
+	{
+		FileSegInfo **fsInfo = GetAllFileSegInfo(rel, NULL, &totalsegs, NULL);
+		for (int i = 0; i < totalsegs; i++)
+		{
+			if (fsInfo[i]->formatversion < AORelationVersion_PG12)
+			{
+				error = true;
+				errsegno = fsInfo[i]->segno;
+				errversion = fsInfo[i]->formatversion;
+				break;
+			}
+		}
+	}
+	else
+	{
+		AOCSFileSegInfo **aocsFsInfo = GetAllAOCSFileSegInfo(rel, NULL, &totalsegs, NULL);
+		for (int i = 0; i < totalsegs; i++)
+		{
+			if (aocsFsInfo[i]->formatversion < AORelationVersion_PG12)
+			{
+				error = true;
+				errsegno = aocsFsInfo[i]->segno;
+				errversion = aocsFsInfo[i]->formatversion;
+				break;
+			}
+		}
+	}
+
+	/*
+	 * We currently raise an error in this scenario. We could alternatively
+	 * recreate the block directory (and perform a relfile swap of the block
+	 * directory relation, similar to alter table rewrites). Such a solution is
+	 * complex enough and can be explored with appropriate user need. Block
+	 * directory creation during DefineIndex() has exposed complexities in the
+	 * past too, especially around locking when multiple indexes are being
+	 * created at a time.
+	 */
+	if (error)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					errmsg("append-only tables with older relation versions do not support unique indexes"),
+					errdetail("in segno = %d: version found = %d, minimum version required = %d",
+							  errsegno, errversion, AORelationVersion_PG12),
+					errhint("truncate and reload the table data before creating the unique index")));
+}

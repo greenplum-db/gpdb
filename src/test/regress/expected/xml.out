@@ -1154,6 +1154,9 @@ EXPLAIN (COSTS OFF, VERBOSE) SELECT * FROM xmltableview1;
  Settings: optimizer=off
 (13 rows)
 
+-- errors
+SELECT * FROM XMLTABLE (ROW () PASSING null COLUMNS v1 timestamp) AS f (v1, v2);
+ERROR:  XMLTABLE function has 1 columns available but 2 columns specified
 -- XMLNAMESPACES tests
 SELECT * FROM XMLTABLE(XMLNAMESPACES('http://x.y' AS zz),
                       '/zz:rows/zz:row'
@@ -1179,6 +1182,14 @@ SELECT * FROM XMLTABLE(XMLNAMESPACES(DEFAULT 'http://x.y'),
                       PASSING '<rows xmlns="http://x.y"><row><a>10</a></row></rows>'
                       COLUMNS a int PATH 'a');
 ERROR:  DEFAULT namespace is not supported
+SELECT * FROM XMLTABLE('.'
+                       PASSING '<foo/>'
+                       COLUMNS a text PATH 'foo/namespace::node()');
+                  a                   
+--------------------------------------
+ http://www.w3.org/XML/1998/namespace
+(1 row)
+
 -- used in prepare statements
 PREPARE pp AS
 SELECT  xmltable.*

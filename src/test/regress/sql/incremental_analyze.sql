@@ -880,3 +880,84 @@ truncate foo_1_prt_20210201;
 insert into foo select a, '20210101'::date+a from (select generate_series(31,40) a) t1;
 analyze verbose foo_1_prt_20210201;
 rollback;
+
+-- test behavior of "analyze_hll_non_part_table" create table option
+create table hll_part (i int, j int) distributed by (i)
+partition by range(j)
+(start(1) end(10) every(1));
+insert into hll_part select i, i%9+1 from generate_series(1,100)i;
+analyze hll_part;
+
+create table hll_default_heap (i int, j int) distributed by (i);
+select reloptions from pg_class where relname='hll_default_heap';
+insert into hll_default_heap values (777,6);
+analyze hll_default_heap; -- hll stats should not be collected in non-partition heap table by default
+select 1 from pg_statistic where starelid='hll_default_heap'::regclass and stavalues5 is not null;
+
+create table hll_default_ao (i int, j int) with (appendonly=true) distributed by (i);
+select reloptions from pg_class where relname='hll_default_ao';
+insert into hll_default_ao values (777,6);
+analyze hll_default_ao;
+-- hll stats should not be collected in non-partition ao table by default
+select 1 from pg_statistic where starelid='hll_default_ao'::regclass and stavalues5 is not null;
+
+create table hll_off (i int, j int) with (analyze_hll_non_part_table=false) distributed by (i);
+select reloptions from pg_class where relname='hll_off';
+insert into hll_off values (777,6);
+analyze hll_off;
+-- hll stats should not be collected in non-partition table when disabled
+select 1 from pg_statistic where starelid='hll_off'::regclass and stavalues5 is not null;
+
+-- alter table, set analyze_hll_non_part_table on, ensure hll stats collected
+alter table hll_off set (analyze_hll_non_part_table=true);
+select reloptions from pg_class where relname='hll_off';
+analyze hll_off;
+select 1 from pg_statistic where starelid='hll_off'::regclass and stavalues5 is not null;
+
+-- alter table, set analyze_hll_non_part_table off, ensure hll stats not collected
+alter table hll_off set (analyze_hll_non_part_table=false);
+select reloptions from pg_class where relname='hll_off';
+analyze hll_off;
+select 1 from pg_statistic where starelid='hll_off'::regclass and stavalues5 is not null;
+
+create table hll_on_ao (i int, j int) with (analyze_hll_non_part_table=true) distributed by (i);
+select reloptions from pg_class where relname='hll_on_ao';
+insert into hll_on_ao values (777,6);
+analyze hll_on_ao;
+-- hll stats should be collected in non-partition AO table when enabled
+select 1 from pg_statistic where starelid='hll_on_ao'::regclass and stavalues5 is not null;
+
+create table hll_on_heap (i int, j int) with (analyze_hll_non_part_table=true) distributed by (i);
+select reloptions from pg_class where relname='hll_on_heap';
+insert into hll_on_heap values (777,6);
+analyze hll_on_heap;
+-- hll stats should be collected in non-partition heap table when enabled
+select 1 from pg_statistic where starelid='hll_on_heap'::regclass and stavalues5 is not null;
+
+alter table hll_part exchange partition for (6)  with table hll_on_heap;
+select reloptions from pg_class where relname='hll_part_1_prt_6';
+
+-- hll stats should be present after partition exchange of table with "analyze_hll_non_part_table" enabled
+select 1 from pg_statistic where starelid='hll_part_1_prt_6'::regclass and stavalues5 is not null;
+
+-- verify that reloption is correctly set for partitioned table
+create table hll_part_def (i int, j int) with (analyze_hll_non_part_table=false) distributed by (i)
+partition by range(j)
+(start(1) end(3) every(1));
+
+select reloptions from pg_class where relname='hll_part_def';
+select reloptions from pg_class where relname='hll_part_def_1_prt_2';
+
+-- see if altering the reloption at the partition root with the ONLY keyword
+-- only modifies the reloption for the root and future children (should NOT
+-- touch existing children)
+alter table only hll_part_def set (analyze_hll_non_part_table=true);
+select reloptions from pg_class where relname='hll_part_def';
+select reloptions from pg_class where relname='hll_part_def_1_prt_2';
+
+-- see if altering the reloption at the partition root without the ONLY keyword
+-- modifies the reloption for all existing children AND all future children
+alter table hll_part_def set (analyze_hll_non_part_table=true);
+select reloptions from pg_class where relname='hll_part_def';
+select reloptions from pg_class where relname='hll_part_def_1_prt_2';
+

@@ -40,8 +40,9 @@ public:
 	// specification method
 	enum EFrameSpec
 	{
-		EfsRows,   // frame is specified using Rows construct
-		EfsRange,  // frame is specified using Range construct
+		EfsRows,	// frame is specified using Rows construct
+		EfsRange,	// frame is specified using Range construct
+		EfsGroups,	// frame is specified using Groups construct
 
 		EfsSentinel
 	};
@@ -97,6 +98,21 @@ private:
 	// singelton empty frame -- used with any unspecified window function frame
 	static const CWindowFrame m_wfEmpty;
 
+	// in_range function for startOffset
+	OID m_start_in_range_func;
+
+	// in_range function for endOffset
+	OID m_end_in_range_func;
+
+	// collation for in_range tests
+	OID m_in_range_coll;
+
+	// use ASC sort order for in_range tests
+	BOOL m_in_range_asc;
+
+	// nulls sort first for in_range tests
+	BOOL m_in_range_nulls_first;
+
 	// private dummy ctor used to create empty frame
 	CWindowFrame();
 
@@ -106,7 +122,10 @@ public:
 	// ctor
 	CWindowFrame(CMemoryPool *mp, EFrameSpec efs, EFrameBoundary efbLeading,
 				 EFrameBoundary efbTrailing, CExpression *pexprLeading,
-				 CExpression *pexprTrailing, EFrameExclusionStrategy efes);
+				 CExpression *pexprTrailing, EFrameExclusionStrategy efes,
+				 OID start_in_range_func, OID end_in_range_func,
+				 OID in_range_coll, bool in_range_asc,
+				 bool in_range_nulls_first);
 
 	// dtor
 	~CWindowFrame() override;
@@ -196,6 +215,36 @@ public:
 	PwfEmpty()
 	{
 		return &m_wfEmpty;
+	}
+
+	OID
+	StartInRangeFunc() const
+	{
+		return m_start_in_range_func;
+	}
+
+	OID
+	EndInRangeFunc() const
+	{
+		return m_end_in_range_func;
+	}
+
+	OID
+	InRangeColl() const
+	{
+		return m_in_range_coll;
+	}
+
+	BOOL
+	InRangeAsc() const
+	{
+		return m_in_range_asc;
+	}
+
+	BOOL
+	InRangeNullsFirst() const
+	{
+		return m_in_range_nulls_first;
 	}
 
 };	// class CWindowFrame
