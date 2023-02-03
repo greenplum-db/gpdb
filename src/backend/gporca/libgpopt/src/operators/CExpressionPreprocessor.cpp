@@ -1989,7 +1989,7 @@ MapConstantConjunctiveScalarPredicates(CMemoryPool *mp,
 			(*pexprFilter)[1]->Pop()->AddRef();
 			phmIdentToExpr->Insert(
 				CScalarIdent::PopConvert((*pexprFilter)[1]->Pop()),
-				(*pexprFilter)[2]);
+				(*pexprFilter)[0]);
 		}
 	}
 	else if (CPredicateUtils::FAnd(pexprFilter))
