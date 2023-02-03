@@ -6551,7 +6551,7 @@ CreateMatViewStmt:
 
 					$$ = (Node *) ctas;
 				}
-		| CREATE OptNoLog MATERIALIZED VIEW IF_P NOT EXISTS create_mv_target AS SelectStmt opt_with_data
+		| CREATE OptNoLog MATERIALIZED VIEW IF_P NOT EXISTS create_mv_target AS SelectStmt opt_with_data OptDistributedBy
 				{
 					CreateTableAsStmt *ctas = makeNode(CreateTableAsStmt);
 					ctas->query = $10;
@@ -6562,6 +6562,8 @@ CreateMatViewStmt:
 					/* cram additional flags into the IntoClause */
 					$8->rel->relpersistence = $2;
 					$8->skipData = !($11);
+					ctas->into->distributedBy = $12;
+
 					$$ = (Node *) ctas;
 				}
 		;
