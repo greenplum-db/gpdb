@@ -128,12 +128,6 @@ OBJS        = CDXLColDescr.o \
               CDXLScalarOneTimeFilter.o \
               CDXLScalarOpExpr.o \
               CDXLScalarOpList.o \
-              CDXLScalarPartBound.o \
-              CDXLScalarPartBoundInclusion.o \
-              CDXLScalarPartBoundOpen.o \
-              CDXLScalarPartDefault.o \
-              CDXLScalarPartListNullTest.o \
-              CDXLScalarPartListValues.o \
               CDXLScalarProjElem.o \
               CDXLScalarProjList.o \
               CDXLScalarRecheckCondFilter.o \

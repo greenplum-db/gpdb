@@ -1011,41 +1011,6 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 	return index;
 }
 
-#if 0
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorRelcacheToDXL::LevelHasDefaultPartition
-//
-//	@doc:
-//		Check whether the default partition at level one is included
-//
-//---------------------------------------------------------------------------
-BOOL
-CTranslatorRelcacheToDXL::LevelHasDefaultPartition
-	(
-	List *default_levels,
-	ULONG level
-	)
-{
-	if (NIL == default_levels)
-	{
-		return false;
-	}
-	
-	ListCell *lc = NULL;
-	ForEach (lc, default_levels)
-	{
-		ULONG default_level = (ULONG) lfirst_int(lc);
-		if (level == default_level)
-		{
-			return true;
-		}
-	}
-	
-	return false;
-}
-#endif
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorRelcacheToDXL::ComputeIncludedCols

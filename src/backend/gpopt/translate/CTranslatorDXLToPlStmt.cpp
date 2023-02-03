@@ -28,12 +28,9 @@ extern "C" {
 #include "nodes/primnodes.h"
 #include "partitioning/partdesc.h"
 #include "storage/lmgr.h"
-#include "utils/partcache.h"
-#if 0
-#include "cdb/partitionselection.h"
-#endif
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
+#include "utils/partcache.h"
 #include "utils/rel.h"
 #include "utils/typcache.h"
 #include "utils/uri.h"
@@ -244,11 +241,6 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
 	planned_stmt->subplans = m_dxl_to_plstmt_context->GetSubplanEntriesList();
 	planned_stmt->planTree = plan;
 
-#if 0
-	// store partitioned table indexes in planned stmt
-	planned_stmt->queryPartOids = m_dxl_to_plstmt_context->GetPartitionedTablesList();
-	planned_stmt->numSelectorsPerScanId = m_dxl_to_plstmt_context->GetNumPartitionSelectorsList();
-#endif
 	planned_stmt->canSetTag = can_set_tag;
 	planned_stmt->relationOids = oids_list;
 

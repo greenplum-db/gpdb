@@ -116,12 +116,6 @@ enum Edxlopid
 
 	EdxlopScalarDMLAction,
 	EdxlopScalarOpList,
-	EdxlopScalarPartDefault,
-	EdxlopScalarPartBound,
-	EdxlopScalarPartBoundInclusion,
-	EdxlopScalarPartBoundOpen,
-	EdxlopScalarPartListValues,
-	EdxlopScalarPartListNullTest,
 	EdxlopScalarValuesList,
 	EdxlopScalarSortGroupClause,
 

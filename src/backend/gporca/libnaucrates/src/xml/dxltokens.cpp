@@ -255,12 +255,6 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenPartLevelFilterList, GPOS_WSZ_LIT("PartFilters")},
 		{EdxltokenPartLevel, GPOS_WSZ_LIT("Level")},
 		{EdxltokenScalarPartDefault, GPOS_WSZ_LIT("DefaultPart")},
-		{EdxltokenScalarPartBound, GPOS_WSZ_LIT("PartBound")},
-		{EdxltokenScalarPartBoundLower, GPOS_WSZ_LIT("LowerBound")},
-		{EdxltokenScalarPartBoundInclusion, GPOS_WSZ_LIT("PartBoundInclusion")},
-		{EdxltokenScalarPartBoundOpen, GPOS_WSZ_LIT("PartBoundOpen")},
-		{EdxltokenScalarPartListValues, GPOS_WSZ_LIT("PartListValues")},
-		{EdxltokenScalarPartListNullTest, GPOS_WSZ_LIT("PartListNullTest")},
 		{EdxltokenScalarResidualFilter, GPOS_WSZ_LIT("ResidualFilter")},
 		{EdxltokenScalarPartFilterExpr, GPOS_WSZ_LIT("PartFilterExpr")},
 

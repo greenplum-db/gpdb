@@ -154,12 +154,6 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerScalarOp.o \
               CParseHandlerScalarOpExpr.o \
               CParseHandlerScalarOpList.o \
-              CParseHandlerScalarPartBound.o \
-              CParseHandlerScalarPartBoundInclusion.o \
-              CParseHandlerScalarPartBoundOpen.o \
-              CParseHandlerScalarPartDefault.o \
-              CParseHandlerScalarPartListNullTest.o \
-              CParseHandlerScalarPartListValues.o \
               CParseHandlerScalarSubPlan.o \
               CParseHandlerScalarSubPlanParam.o \
               CParseHandlerScalarSubPlanParamList.o \
