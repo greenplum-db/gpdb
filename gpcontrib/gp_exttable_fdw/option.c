@@ -67,7 +67,6 @@ static const GpExttableFdwOption gp_exttable_fdw_options[] = {
 /*
  * Helper functions
  */
-static bool is_valid_option(const char *keyword, Oid context);
 static bool is_must_option(const char *keyword, Oid context);
 static void is_valid_locationuris(List *location_list, bool is_writable);
 static void is_valid_rejectlimit(const char *reject_limit_type, const int32 reject_limit);
@@ -105,30 +104,6 @@ gp_exttable_permission_check(PG_FUNCTION_ARGS)
     foreach(cell, options_list)
 	{
 		DefElem    *def = (DefElem *) lfirst(cell);
-
-		if (!is_valid_option(def->defname, catalog))
-		{
-			/*
-			 * Unknown option specified, complain about it. Provide a hint
-			 * with list of valid options for the object.
-			 */
-			const GpExttableFdwOption *opt;
-			StringInfoData buf;
-
-			initStringInfo(&buf);
-			for (opt = gp_exttable_fdw_options; opt->keyword; opt++)
-			{
-				if (catalog == opt->optcontext)
-					appendStringInfo(&buf, "%s%s", (buf.len > 0) ? ", " : "",
-									 opt->keyword);
-			}
-
-			ereport(ERROR,
-					(errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
-					 errmsg("invalid option \"%s\"", def->defname),
-					 errhint("Valid options in this context are: %s",
-							 buf.data)));
-		}
 
         /*
 		 * Validate option value, when we can do so without any context.
@@ -223,22 +198,9 @@ gp_exttable_permission_check(PG_FUNCTION_ARGS)
 }
 
 /*
- * Check whether the given option is one of the valid gp_exttable_fdw options.
+ * Check whether the given option is a must for gp_exttable_fdw.
  * context is the Oid of the catalog holding the object the option is for.
  */
-static bool
-is_valid_option(const char *keyword, Oid context)
-{
-	const GpExttableFdwOption *opt;
-
-	for (opt = gp_exttable_fdw_options; opt->keyword; opt++)
-	{
-		if (context == opt->optcontext && strcmp(opt->keyword, keyword) == 0)
-			return true;
-	}
-	return false;
-}
-
 static bool
 is_must_option(const char *keyword, Oid context)
 {

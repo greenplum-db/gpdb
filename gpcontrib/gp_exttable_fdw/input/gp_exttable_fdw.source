@@ -9,11 +9,6 @@ CREATE SERVER IF NOT EXISTS gp_exttable_server FOREIGN DATA WRAPPER gp_exttable_
 -- ===================================================================
 -- tests for validator
 -- ===================================================================
--- Error, undefined option
-CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
-SERVER gp_exttable_server
-OPTIONS (undefined_option ',');
-
 -- Error, miss format_type option
 CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
 SERVER gp_exttable_server

@@ -8,12 +8,6 @@ NOTICE:  server "gp_exttable_server" already exists, skipping
 -- ===================================================================
 -- tests for validator
 -- ===================================================================
--- Error, undefined option
-CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
-SERVER gp_exttable_server
-OPTIONS (undefined_option ',');
-ERROR:  invalid option "undefined_option"  (seg2 127.0.0.1:7004 pid=5174)
-HINT:  Valid options in this context are: location_uris, execute_on, command, format_type, reject_limit, reject_limit_type, log_errors, encoding, is_writable, delimiter, null, header, quote, escape, force_not_null, force_quote, fill_missing_fields, newline, quote, format
 -- Error, miss format_type option
 CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
 SERVER gp_exttable_server
