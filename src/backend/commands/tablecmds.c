@@ -810,7 +810,8 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 
 		/*
 		 * For partitioned children, when no reloptions is specified, we
-		 * default to the parent table's reloptions.
+		 * default to the parent table's reloptions. If partitioned
+		 * children has different access method with parent. Do not do it.
 		 */
 		Assert(list_length(inheritOids) == 1);
 		parentrelid = linitial_oid(inheritOids);

@@ -5,7 +5,7 @@ Deallocates a prepared statement.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-DEALLOCATE [PREPARE] <name>
+DEALLOCATE [PREPARE] { <name> | ALL }
 ```
 
 ## <a id="section3"></a>Description 
@@ -22,9 +22,12 @@ PREPARE
 name
 :   The name of the prepared statement to deallocate.
 
+ALL
+:   Deallocate all prepared statements
+
 ## <a id="section5"></a>Examples 
 
-Deallocated the previously prepared statement named `insert_names`:
+Deallocate the previously prepared statement named `insert_names`:
 
 ```
 DEALLOCATE insert_names;

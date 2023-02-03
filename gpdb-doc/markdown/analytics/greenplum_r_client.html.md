@@ -60,7 +60,7 @@ You can use GreenplumR with Greenplum Database and the PL/R and PL/Container pro
 
 GreenplumR is an R package. You obtain the package from VMware Tanzu Network (or the GreenplumR `github` repository) and install the package within the R console.
 
-1.  Download the package from the *Greenplum Procedural Languages* filegroup on [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). The naming format of the downloaded file is `greenplumR‑<version>‑gp6.tar.gz`.
+1.  Download the package from the *Greenplum Procedural Languages* filegroup on [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). The naming format of the downloaded file is `greenplumR‑<version>‑gp7.tar.gz`.
 
     Note the file system location of the downloaded file.
 
@@ -79,7 +79,7 @@ GreenplumR is an R package. You obtain the package from VMware Tanzu Network (or
 4.  Install the GreenplumR R package:
 
     ```
-    > install.packages("/path/to/greenplumR‑<version>‑gp6.tar.gz", repos = NULL, type = "source")
+    > install.packages("/path/to/greenplumR‑<version>‑gp7.tar.gz", repos = NULL, type = "source")
     ```
 
 5.  Install the `Rdpack` documentation package:

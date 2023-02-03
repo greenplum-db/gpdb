@@ -7,17 +7,17 @@ Changes the definition of an operator family.
 ``` {#sql_command_synopsis}
 ALTER OPERATOR FAMILY <name> USING <index_method> ADD
   {  OPERATOR <strategy_number> <operator_name> ( <op_type>, <op_type> ) [ FOR SEARCH | FOR ORDER BY <sort_family_name> ]
-    | FUNCTION <support_number> [ ( <op_type> [ , <op_type> ] ) ] <funcname> ( <argument_type> [, ...] )
+    | FUNCTION <support_number> [ ( <op_type> [ , <op_type> ] ) ] <function_name> ( <argument_type> [, ...] )
   } [, ... ]
 
 ALTER OPERATOR FAMILY <name> USING <index_method> DROP
-  {  OPERATOR <strategy_number> ( <op_type>, <op_type> ) 
-    | FUNCTION <support_number> [ ( <op_type> [ , <op_type> ] ) 
+  {  OPERATOR <strategy_number> ( <op_type> [ , <op_type> ] ) 
+    | FUNCTION <support_number> ( <op_type> [ , <op_type> ] ) 
   } [, ... ]
 
 ALTER OPERATOR FAMILY <name> USING <index_method> RENAME TO <new_name>
 
-ALTER OPERATOR FAMILY <name> USING <index_method> OWNER TO <new_owner>
+ALTER OPERATOR FAMILY <name> USING <index_method> OWNER TO { <new_owner> | CURRENT_USER | SESSION_USER }
 
 ALTER OPERATOR FAMILY <name> USING <index_method> SET SCHEMA <new_schema>
 ```
@@ -31,8 +31,6 @@ When operators and support functions are added to a family with `ALTER OPERATOR 
 You must be a superuser to use `ALTER OPERATOR FAMILY`. \(This restriction is made because an erroneous operator family definition could confuse or even crash the server.\)
 
 `ALTER OPERATOR FAMILY` does not presently check whether the operator family definition includes all the operators and functions required by the index method, nor whether the operators and functions form a self-consistent set. It is the user's responsibility to define a valid operator family.
-
-`OPERATOR` and `FUNCTION` clauses can appear in any order.
 
 ## <a id="section4"></a>Parameters 
 
@@ -49,7 +47,9 @@ operator\_name
 :   The name \(optionally schema-qualified\) of an operator associated with the operator family.
 
 op\_type
-:   In an `OPERATOR` clause, the operand data type\(s\) of the operator, or `NONE` to signify a left-unary or right-unary operator. Unlike the comparable syntax in `CREATE OPERATOR CLASS`, the operand data types must always be specified. In an `ADD FUNCTION` clause, the operand data type\(s\) the function is intended to support, if different from the input data type\(s\) of the function. For B-tree comparison functions it is not necessary to specify op\_type since the function's input data type\(s\) are always the correct ones to use. For B-tree sort support functions and all functions in GiST, SP-GiST, and GIN operator classes, it is necessary to specify the operand data type\(s\) the function is to be used with.
+:   In an `OPERATOR` clause, the operand data type\(s\) of the operator, or `NONE` to signify a left-unary or right-unary operator. Unlike the comparable syntax in `CREATE OPERATOR CLASS`, the operand data types must always be specified.
+:   In an `ADD FUNCTION` clause, the operand data type\(s\) the function is intended to support, if different from the input data type\(s\) of the function. For B-tree comparison functions and hash functions it is not necessary to specify op\_type since the function's input data type\(s\) are always the correct ones to use. For B-tree sort support functions and all functions in GiST, SP-GiST, and GIN operator classes, it is necessary to specify the operand data type\(s\) the function is to be used with.
+:   In a `DROP FUNCTION` clause, the operand data type\(s\) the function is intended to support must be specified.
 
 sort\_family\_name
 :   The name \(optionally schema-qualified\) of an existing `btree` operator family that describes the sort ordering associated with an ordering operator.
@@ -57,12 +57,12 @@ sort\_family\_name
 :   If neither `FOR SEARCH` nor `FOR ORDER BY` is specified, `FOR SEARCH` is the default.
 
 support\_number
-:   The index method's support procedure number for a function associated with the operator family.
+:   The index method's support function number for a function associated with the operator family.
 
-funcname
-:   The name \(optionally schema-qualified\) of a function that is an index method support procedure for the operator family.
+function\_name
+:   The name \(optionally schema-qualified\) of a function that is an index method support function for the operator family. If no argument list is specified, the name must be unique in its schema.
 
-argument\_types
+argument\_type
 :   The parameter data type\(s\) of the function.
 
 new\_name
@@ -74,9 +74,7 @@ new\_owner
 new\_schema
 :   The new schema for the operator family.
 
-## <a id="section5"></a>Compatibility 
-
-There is no `ALTER OPERATOR FAMILY` statement in the SQL standard.
+The `OPERATOR` and `FUNCTION` clauses can appear in any order.
 
 ## <a id="section6"></a>Notes 
 
@@ -90,7 +88,7 @@ Before Greenplum Database 6.0, the `OPERATOR` clause could include a `RECHECK` o
 
 ## <a id="section7"></a>Examples 
 
-The following example command adds cross-data-type operators and support functions to an operator family that already contains B-tree operator classes for data types int4 and int2.:
+The following example command adds cross-data-type operators and support functions to an operator family that already contains B-tree operator classes for data types `int4` and `int2`.:
 
 ```
 ALTER OPERATOR FAMILY integer_ops USING btree ADD
@@ -133,6 +131,10 @@ ALTER OPERATOR FAMILY integer_ops USING btree DROP
   OPERATOR 5 (int2, int4) ,
   FUNCTION 1 (int2, int4) ;
 ```
+
+## <a id="section5"></a>Compatibility 
+
+There is no `ALTER OPERATOR FAMILY` statement in the SQL standard.
 
 ## <a id="section8"></a>See Also 
 

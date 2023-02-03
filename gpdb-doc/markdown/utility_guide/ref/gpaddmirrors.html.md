@@ -147,18 +147,18 @@ When enabling a mirroring configuration that adds hosts to the Greenplum system,
 
 If hosts systems are configured with multiple NICs, you can initialize a Greenplum Database system to use each NIC as a Greenplum host system. You must ensure that the host systems are configured with sufficient resources to support all the segment instances being added to the host. Also, if you enable segment mirroring, you must ensure that the Greenplum system configuration supports failover if a host system fails. For information about Greenplum Database mirroring schemes, see [Segment Mirroring Configurations](../../best_practices/ha.html#topic_ngz_qf4_tt).
 
-For example, this is a segment instance configuration for a simple Greenplum system. The segment host `gp6m` is configured with two NICs, `gp6m-1` and `gp6m-2`, where the Greenplum Database system uses `gp6m-1` for the coordinator segment and `gp6m-2` for segment instances.
+For example, this is a segment instance configuration for a simple Greenplum system. The segment host `gp7c` is configured with two NICs, `gp7c-1` and `gp7c-2`, where the Greenplum Database system uses `gp7c-1` for the coordinator segment and `gp7c-2` for segment instances.
 
 ```
 select content, role, port, hostname, address from gp_segment_configuration ;
 
  content | role | port  | hostname | address
 ---------+------+-------+----------+----------
-      -1 | p    |  5432 | gp6m     | gp6m-1
-       0 | p    | 40000 | gp6m     | gp6m-2
-       0 | m    | 50000 | gp6s     | gp6s
-       1 | p    | 40000 | gp6s     | gp6s
-       1 | m    | 50000 | gp6m     | gp6m-2
+      -1 | p    |  5432 | gp7c     | gp7c-1
+       0 | p    | 40000 | gp7c     | gp7c-2
+       0 | m    | 50000 | gp7s     | gp7s
+       1 | p    | 40000 | gp7s     | gp7s
+       1 | m    | 50000 | gp7c     | gp7c-2
 (5 rows) 
 ```
 

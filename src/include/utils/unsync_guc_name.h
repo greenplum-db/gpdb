@@ -373,6 +373,7 @@
 		"optimizer_enable_space_pruning",
 		"optimizer_enable_streaming_material",
 		"optimizer_enable_tablescan",
+		"optimizer_enable_foreign_table",
 		"optimizer_enforce_subplans",
 		"optimizer_enumerate_plans",
 		"optimizer_expand_fulljoin",

@@ -11,8 +11,8 @@ This topic describes the Greenplum Database 6 platform and operating system soft
 Greenplum Database 6 runs on the following operating system platforms:
 
 -   Red Hat Enterprise Linux 64-bit 8.7 or later 
--   Oracle Linux 64-bit 8, using the Red Hat Compatible Kernel \(RHCK\)
--   Rocky Linux 8
+-   Oracle Linux 64-bit 8.7 or later, using the Red Hat Compatible Kernel \(RHCK\)
+-   Rocky Linux 8.7 or later
 
 > **Important** A kernel issue in Red Hat Enterprise Linux 8.5 and 8.6 can cause I/O freezes and synchronization problems with XFS filesystems. This issue is fixed in RHEL 8.7. See [RHEL8: xfs_buf deadlock between inode deletion and block allocation](https://access.redhat.com/solutions/6984334).
 

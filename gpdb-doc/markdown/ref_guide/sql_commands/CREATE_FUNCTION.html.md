@@ -9,34 +9,41 @@ CREATE [OR REPLACE] FUNCTION <name>    
     ( [ [<argmode>] [<argname>] <argtype> [ { DEFAULT | = } <default_expr> ] [, ...] ] )
       [ RETURNS <rettype> 
         | RETURNS TABLE ( <column_name> <column_type> [, ...] ) ]
-    { LANGUAGE <langname>
+  { LANGUAGE <lang_name>
+    | TRANSFORM { FOR TYPE <type_name> } [, ... ]
     | WINDOW
-    | IMMUTABLE | STABLE | VOLATILE | [NOT] LEAKPROOF
-    | CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT
-    | NO SQL | CONTAINS SQL | READS SQL DATA | MODIFIES SQL
-    | [EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINER
+    | { IMMUTABLE | STABLE | VOLATILE }
+    | [ NOT ] LEAKPROOF
+    | { CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT }
+    | { [ EXTERNAL ] SECURITY INVOKER | [ EXTERNAL ] SECURITY DEFINER }
     | EXECUTE ON { ANY | MASTER | ALL SEGMENTS | INITPLAN }
+    | PARALLEL { UNSAFE | RESTRICTED | SAFE }
     | COST <execution_cost>
+    | ROWS <result_rows>
+    | SUPPORT <support_function>
     | SET <configuration_parameter> { TO <value> | = <value> | FROM CURRENT }
     | AS '<definition>'
-    | AS '<obj_file>', '<link_symbol>' } ...
-    [ WITH ({ DESCRIBE = describe_function
-           } [, ...] ) ]
+    | AS '<obj_file>', '<link_symbol>' 
+  } ...
 ```
 
 ## <a id="section3"></a>Description 
 
-`CREATE FUNCTION` defines a new function. `CREATE OR REPLACE FUNCTION` either creates a new function, or replaces an existing definition.
+`CREATE FUNCTION` defines a new function. `CREATE OR REPLACE FUNCTION` either creates a new function, or replaces an existing definition. To define a function, the user must have the `USAGE` privilege on the language.
 
-The name of the new function must not match any existing function with the same input argument types in the same schema. However, functions of different argument types may share a name \(overloading\).
+If a schema name is included, then the function is created in the specified schema. Otherwise it is created in the current schema. The name of the new function must not match any existing function with the same input argument types in the same schema. However, functions of different argument types may share a name \(overloading\).
 
-To update the definition of an existing function, use `CREATE OR REPLACE FUNCTION`. It is not possible to change the name or argument types of a function this way \(this would actually create a new, distinct function\). Also, `CREATE OR REPLACE FUNCTION` will not let you change the return type of an existing function. To do that, you must drop and recreate the function. When using `OUT` parameters, that means you cannot change the types of any `OUT` parameters except by dropping the function. If you drop and then recreate a function, you will have to drop existing objects \(rules, views, triggers, and so on\) that refer to the old function. Use `CREATE OR REPLACE FUNCTION` to change a function definition without breaking objects that refer to the function.
+To update the current definition of an existing function, use `CREATE OR REPLACE FUNCTION`. It is not possible to change the name or argument types of a function this way \(this would actually create a new, distinct function\). Also, `CREATE OR REPLACE FUNCTION` will not let you change the return type of an existing function. To do that, you must drop and recreate the function. \(When using `OUT` parameters, that means you cannot change the types of any `OUT` parameters except by dropping the function.\)
+
+When `CREATE OR REPLACE FUNCTION` is used to replace an existing function, the ownership and permissions of the function do not change. All other function properties are assigned the values specified or implied in the command. You must own the function to replace it \(this includes being a member of the owning role\).
+
+If you drop and then recreate a function, the new function is not the same entity as the old; you will have to drop existing objects \(rules, views, triggers, and so on\) that refer to the old function. Use `CREATE OR REPLACE FUNCTION` to change a function definition without breaking objects that refer to the function. Also, [ALTER FUNCTION](ALTER_FUNCTION.html) can be used to change most of the auxiliary properties of an existing function.
 
 The user that creates the function becomes the owner of the function.
 
 To be able to create a function, you must have `USAGE` privilege on the argument types and the return type.
 
-For more information about creating functions, see the [User Defined Functions](https://www.postgresql.org/docs/12/xfunc.html) section of the PostgreSQL documentation.
+For more information about creating functions, refer to the [User Defined Functions](https://www.postgresql.org/docs/12/xfunc.html) section of the PostgreSQL documentation.
 
 **Limited Use of VOLATILE and STABLE Functions**
 
@@ -69,6 +76,7 @@ See [Using Functions and Operators](../../admin_guide/query/topics/functions-ope
 
 A user-defined function that runs only `SELECT` commands on replicated tables can run on segments. Replicated tables, created with the `DISTRIBUTED REPLICATED` clause, store all of their rows on every segment. It is safe for a function to read them on the segments, but updates to replicated tables must run on the coordinator instance.
 
+
 ## <a id="section5"></a>Parameters 
 
 name
@@ -85,10 +93,10 @@ argtype
 
 :   Depending on the implementation language it may also be allowed to specify pseudotypes such as `cstring`. Pseudotypes indicate that the actual argument type is either incompletely specified, or outside the set of ordinary SQL data types.
 
-:   The type of a column is referenced by writing `tablename.columnname%TYPE`. Using this feature can sometimes help make a function independent of changes to the definition of a table.
+:   The type of a column is referenced by writing `table_name.column_name%TYPE`. Using this feature can sometimes help make a function independent of changes to the definition of a table.
 
 default\_expr
-:   An expression to be used as the default value if the parameter is not specified. The expression must be coercible to the argument type of the parameter. Only `IN` and `INOUT` parameters can have a default value. Each input parameter in the argument list that follows a parameter with a default value must have a default value as well.
+:   An expression to be used as the default value if the parameter is not specified. The expression must be coercible to the argument type of the parameter. Only input \(including `INOUT`\) parameters can have a default value. Each input parameter in the argument list that follows a parameter with a default value must have a default value as well.
 
 rettype
 :   The return data type \(optionally schema-qualified\). The return type can be a base, composite, or domain type, or may reference the type of a table column. Depending on the implementation language it may also be allowed to specify pseudotypes such as `cstring`. If the function is not supposed to return a value, specify `void` as the return type.
@@ -97,7 +105,7 @@ rettype
 
 :   The `SETOF` modifier indicates that the function will return a set of items, rather than a single item.
 
-:   The type of a column is referenced by writing `tablename.columnname%TYPE`.
+:   The type of a column is referenced by writing `table_name.column_name%TYPE`.
 
 column\_name
 :   The name of an output column in the `RETURNS TABLE` syntax. This is effectively another way of declaring a named `OUT` parameter, except that `RETURNS TABLE` also implies `RETURNS SETOF`.
@@ -105,8 +113,11 @@ column\_name
 column\_type
 :   The data type of an output column in the `RETURNS TABLE` syntax.
 
-langname
-:   The name of the language that the function is implemented in. May be `SQL`, `C`, `internal`, or the name of a user-defined procedural language. See [CREATE LANGUAGE](CREATE_LANGUAGE.html) for the procedural languages supported in Greenplum Database. For backward compatibility, the name may be enclosed by single quotes.
+lang\_name
+:   The name of the language that the function is implemented in. May be `SQL`, `C`, `internal`, or the name of a user-defined procedural language, e.g. `plpgsql`. Enclosing the name in single quotes is deprecated and requires matching case.
+
+TRANSFORM { FOR TYPE type\_name } [, ... ] }
+:   Lists which transforms a call to the function should apply. Transforms convert between SQL types and language-specific data types. Procedural language implementations usually have hardcoded knowledge of the built-in types, so those don't need to be listed here. If a procedural language implementation does not know how to handle a type and no transform is supplied, it will fall back to a default behavior for converting data types, but this depends on the implementation.
 
 WINDOW
 :   `WINDOW` indicates that the function is a window function rather than a plain function. This is currently only useful for functions written in C. The `WINDOW` attribute cannot be changed when replacing an existing function definition.
@@ -114,39 +125,28 @@ WINDOW
 IMMUTABLE
 STABLE
 VOLATILE
-LEAKPROOF
 :   These attributes inform the query optimizer about the behavior of the function. At most one choice may be specified. If none of these appear, `VOLATILE` is the default assumption. Since Greenplum Database currently has limited use of `VOLATILE` functions, if a function is truly `IMMUTABLE`, you must declare it as so to be able to use it without restrictions.
 
 :   `IMMUTABLE` indicates that the function cannot modify the database and always returns the same result when given the same argument values. It does not do database lookups or otherwise use information not directly present in its argument list. If this option is given, any call of the function with all-constant arguments can be immediately replaced with the function value.
 
-:   `STABLE` indicates that the function cannot modify the database, and that within a single table scan it will consistently return the same result for the same argument values, but that its result could change across SQL statements. This is the appropriate selection for functions whose results depend on database lookups, parameter values \(such as the current time zone\), and so on. Also note that the current\_timestamp family of functions qualify as stable, since their values do not change within a transaction.
+:   `STABLE` indicates that the function cannot modify the database, and that within a single table scan it will consistently return the same result for the same argument values, but that its result could change across SQL statements. This is the appropriate selection for functions whose results depend on database lookups, parameter variables \(such as the current time zone\), and so on. Also note that the `current_timestamp()` family of functions qualify as stable, since their values do not change within a transaction.
 
 :   `VOLATILE` indicates that the function value can change even within a single table scan, so no optimizations can be made. Relatively few database functions are volatile in this sense; some examples are `random()`, `timeofday()`. But note that any function that has side-effects must be classified volatile, even if its result is quite predictable, to prevent calls from being optimized away; an example is `setval()`.
 
-:   `LEAKPROOF` indicates that the function has no side effects. It reveals no information about its arguments other than by its return value. For example, a function that throws an error message for some argument values but not others, or that includes the argument values in any error message, is not leakproof. The query planner may push leakproof functions \(but not others\) into views created with the `security_barrier` option. See [CREATE VIEW](CREATE_VIEW.html) and [CREATE RULE](CREATE_RULE.html). This option can only be set by the superuser.
+LEAKPROOF
+:   `LEAKPROOF` indicates that the function has no side effects. It reveals no information about its arguments other than by its return value. For example, a function that throws an error message for some argument values but not others, or that includes the argument values in any error message, is not leakproof. This affects how the system executes queries against views created with the `security_barrier` option or tables with row level security enabled. The system will enforce conditions from security policies and security barrier views before any user-supplied conditions from the query itself that contain non-leakproof functions, in order to prevent the inadvertent exposure of data. Functions and operators marked as leakproof are assumed to be trustworthy, and may be executed before conditions from security policies and security barrier views. In addition, functions which do not take arguments or which are not passed any arguments from the security barrier view or table do not have to be marked as leakproof to be executed before security conditions. See [CREATE VIEW](CREATE_VIEW.html). This option can only be set by the superuser.
 
 CALLED ON NULL INPUT
 RETURNS NULL ON NULL INPUT
 STRICT
-:   `CALLED ON NULL INPUT` \(the default\) indicates that the function will be called normally when some of its arguments are null. It is then the function author's responsibility to check for null values if necessary and respond appropriately. `RETURNS NULL ON NULL INPUT` or `STRICT` indicates that the function always returns null whenever any of its arguments are null. If this parameter is specified, the function is not run when there are null arguments; instead a null result is assumed automatically.
-
-NO SQL
-CONTAINS SQL
-READS SQL DATA
-MODIFIES SQL
-:   These attributes inform the query optimizer about whether or not the function contains SQL statements and whether, if it does, those statements read and/or write data.
-
-:   `NO SQL` indicates that the function does not contain SQL statements.
-
-:   `CONTAINS SQL` indicates that the function contains SQL statements, none of which either read or write data.
-
-:   `READS SQL DATA` indicates that the function contains SQL statements that read data but none that modify data.
-
-:   `MODIFIES SQL` indicates that the function contains statements that may write data.
+:   `CALLED ON NULL INPUT` \(the default\) indicates that the function will be called normally when some of its arguments are null. It is then the function author's responsibility to check for null values if necessary and respond appropriately.
+:    `RETURNS NULL ON NULL INPUT` or `STRICT` indicates that the function always returns null whenever any of its arguments are null. If this parameter is specified, the function is not run when there are null arguments; instead a null result is assumed automatically.
 
 \[EXTERNAL\] SECURITY INVOKER
 \[EXTERNAL\] SECURITY DEFINER
-:   `SECURITY INVOKER` \(the default\) indicates that the function is to be run with the privileges of the user that calls it. `SECURITY DEFINER` specifies that the function is to be run with the privileges of the user that created it. The key word `EXTERNAL` is allowed for SQL conformance, but it is optional since, unlike in SQL, this feature applies to all functions not just external ones.
+:   `SECURITY INVOKER` \(the default\) indicates that the function is to be run with the privileges of the user that calls it.
+:   `SECURITY DEFINER` specifies that the function is to be run with the privileges of the user that created it.
+:   The key word `EXTERNAL` is allowed for SQL conformance, but it is optional since, unlike in SQL, this feature applies to all functions not just external ones.
 
 EXECUTE ON ANY
 EXECUTE ON MASTER
@@ -181,29 +181,39 @@ EXECUTE ON INITPLAN
 
 :   For information about using `EXECUTE ON` attributes, see [Notes](#section6).
 
+PARALLEL
+:   `PARALLEL UNSAFE` indicates that the function can't be executed in parallel mode and the presence of such a function in an SQL statement forces a serial execution plan. This is the default. `PARALLEL RESTRICTED` indicates that the function can be executed in parallel mode, but the execution is restricted to parallel group leader. `PARALLEL SAFE` indicates that the function is safe to run in parallel mode without restriction.
+:   Functions should be labeled parallel unsafe if they modify any database state, or if they make changes to the transaction such as using sub-transactions, or if they access sequences or attempt to make persistent changes to settings (e.g., `setval()`). They should be labeled as parallel restricted if they access temporary tables, client connection state, cursors, prepared statements, or miscellaneous backend-local state which the system cannot synchronize in parallel mode (e.g., `setseed()` cannot be executed other than by the group leader because a change made by another process would not be reflected in the leader). In general, if a function is labeled as being safe when it is restricted or unsafe, or if it is labeled as being restricted when it is in fact unsafe, it may throw errors or produce wrong answers when used in a parallel query. C-language functions could in theory exhibit totally undefined behavior if mislabeled, since there is no way for the system to protect itself against arbitrary C code, but in most likely cases the result will be no worse than for any other function. If in doubt, functions should be labeled as `UNSAFE`, which is the default.
+
 COST execution\_cost
-:   A positive number identifying the estimated execution cost for the function, in [cpu\_operator\_cost](https://www.postgresql.org/docs/12/runtime-config-query.html#GUC-CPU-OPERATOR-COST) units. If the function returns a set, execution\_cost identifies the cost per returned row. If the cost is not specified, C-language and internal functions default to 1 unit, while functions in other languages default to 100 units. The planner tries to evaluate the function less often when you specify larger execution\_cost values.
+:   A positive number identifying the estimated execution cost for the function, in units of [cpu\_operator\_cost](https://www.postgresql.org/docs/12/runtime-config-query.html). If the function returns a set, execution\_cost identifies the cost per returned row. If the cost is not specified, C-language and internal functions default to 1 unit, while functions in other languages default to 100 units. Larger values cause the planner to try to avoid evaluating the function more often than necessary.
+
+ROWS result\_rows
+:   A positive number giving the estimated number of rows that the planner should expect the function to return. This is only allowed when the function is declared to return a set. The default assumption is 1000 rows.
+
+SUPPORT support\_function
+:   The name \(optionally schema-qualified\) of a planner support function to use for this function. You must be superuser to use this option.
 
 configuration\_parameter
 value
 :   The `SET` clause applies a value to a session configuration parameter when the function is entered. The configuration parameter is restored to its prior value when the function exits. `SET FROM CURRENT` saves the value of the parameter that is current when `CREATE FUNCTION` is run as the value to be applied when the function is entered.
+:   If a `SET` clause is attached to a function, then the effects of a `SET LOCAL` command executed inside the function for the same variable are restricted to the function: the configuration parameter's prior value is still restored at function exit. However, an ordinary `SET` command \(without `LOCAL`\) overrides the `SET` clause, much as it would do for a previous `SET LOCAL` command: the effects of such a command will persist after function exit, unless the current transaction is rolled back.
+:   See [SET](SET.html) for more information about allowed parameter names and values.
 
 definition
 :   A string constant defining the function; the meaning depends on the language. It may be an internal function name, the path to an object file, an SQL command, or text in a procedural language.
 
+:   It is often helpful to use dollar quoting \(refer to [Dollar-Quoted String Constants
+](https://www.postgresql.org/docs/12/sql-syntax-lexical.html#SQL-SYNTAX-DOLLAR-QUOTING) in the PostgreSQL documentation\) to write the function definition string, rather than the normal single quote syntax. Without dollar quoting, any single quotes or backslashes in the function definition must be escaped by doubling them.
+
 obj\_file, link\_symbol
-:   This form of the `AS` clause is used for dynamically loadable C language functions when the function name in the C language source code is not the same as the name of the SQL function. The string obj\_file is the name of the file containing the dynamically loadable object, and link\_symbol is the name of the function in the C language source code. If the link symbol is omitted, it is assumed to be the same as the name of the SQL function being defined. The C names of all functions must be different, so you must give overloaded SQL functions different C names \(for example, use the argument types as part of the C names\). It is recommended to locate shared libraries either relative to `$libdir` \(which is located at `$GPHOME/lib`\) or through the dynamic library path \(set by the `dynamic_library_path` server configuration parameter\). This simplifies version upgrades if the new installation is at a different location.
+:   This form of the `AS` clause is used for dynamically loadable C language functions when the function name in the C language source code is not the same as the name of the SQL function. The string obj\_file is the name of the file containing the dynamically loadable object, and is interpreted as for the [LOAD](LOAD.html) command. The string link\_symbol is the name of the function in the C language source code. If the link symbol is omitted, it is assumed to be the same as the name of the SQL function being defined. The C names of all functions must be different, so you must give overloaded SQL functions different C names \(for example, use the argument types as part of the C names\).
+:   When repeated `CREATE FUNCTION` calls refer to the same object file, the file is only loaded once per session. To unload and reload the file \(perhaps during development\), start a new session.
+:   Locating shared libraries either relative to `$libdir` \(which is located at `$GPHOME/lib`\) or through the dynamic library path \(set by the `dynamic_library_path` server configuration parameter\) will simplify version upgrades if the new installation is at a different location.
 
-describe\_function
-:   The name of a callback function to run when a query that calls this function is parsed. The callback function returns a tuple descriptor that indicates the result type.
+## <a id="section5o"></a>Overloading 
 
-## <a id="section6"></a>Notes 
-
-Any compiled code \(shared library files\) for custom functions must be placed in the same location on every host in your Greenplum Database array \(coordinator and all segments\). This location must also be in the `LD_LIBRARY_PATH` so that the server can locate the files. It is recommended to locate shared libraries either relative to `$libdir` \(which is located at `$GPHOME/lib`\) or through the dynamic library path \(set by the `dynamic_library_path` server configuration parameter\) on all coordinator segment instances in the Greenplum array.
-
-The full SQL type syntax is allowed for input arguments and return value. However, some details of the type specification \(such as the precision field for type numeric\) are the responsibility of the underlying function implementation and are not recognized or enforced by the `CREATE FUNCTION` command.
-
-Greenplum Database allows function overloading. The same name can be used for several different functions so long as they have distinct input argument types. However, the C names of all functions must be different, so you must give overloaded C functions different C names \(for example, use the argument types as part of the C names\).
+Greenplum Database allows function overloading; that is, the same name can be used for several different functions so long as they have distinct input argument types. Whether or not you use it, this capability entails security precautions when calling functions in databases where some users mistrust other users; refer to [Functions](https://www.postgresql.org/docs/12/typeconv-func.html) in the PostgreSQL documentation for more information.
 
 Two functions are considered the same if they have the same names and input argument types, ignoring any `OUT` parameters. Thus for example these declarations conflict:
 
@@ -212,31 +222,24 @@ CREATE FUNCTION foo(int) ...
 CREATE FUNCTION foo(int, out text) ...
 ```
 
-Functions that have different argument type lists are not considered to conflict at creation time, but if argument defaults are provided, they might conflict in use. For example, consider:
+Functions that have different argument type lists will not be considered to conflict at creation time, but if defaults are provided they might conflict in use. For example, consider:
 
 ```
 CREATE FUNCTION foo(int) ...
 CREATE FUNCTION foo(int, int default 42) ...
 ```
 
-The call `foo(10)`, will fail due to the ambiguity about which function should be called.
+A call `foo(10)` will fail due to the ambiguity about which function should be called.
 
-When repeated `CREATE FUNCTION` calls refer to the same object file, the file is only loaded once. To unload and reload the file, use the `LOAD` command.
+## <a id="section6"></a>Notes 
 
-You must have the `USAGE` privilege on a language to be able to define a function using that language.
+Any compiled code \(shared library files\) for custom functions must be placed in the same location on every host in your Greenplum Database cluster \(master and all segments\). This location must also be in the `LD_LIBRARY_PATH` so that the server can locate the files. It is recommended that you locate shared libraries either relative to `$libdir` \(which is located at `$GPHOME/lib`\) or through the dynamic library path \(set by the `dynamic_library_path` server configuration parameter\) on all master segment instances in the Greenplum cluster.
 
-It is often helpful to use dollar quoting to write the function definition string, rather than the normal single quote syntax. Without dollar quoting, any single quotes or backslashes in the function definition must be escaped by doubling them. A dollar-quoted string constant consists of a dollar sign \(`$`\), an optional tag of zero or more characters, another dollar sign, an arbitrary sequence of characters that makes up the string content, a dollar sign, the same tag that began this dollar quote, and a dollar sign. Inside the dollar-quoted string, single quotes, backslashes, or any character can be used without escaping. The string content is always written literally. For example, here are two different ways to specify the string "Dianne's horse" using dollar quoting:
-
-```
-$$Dianne's horse$$
-$SomeTag$Dianne's horse$SomeTag$
-```
-
-If a `SET` clause is attached to a function, the effects of a `SET LOCAL` command run inside the function for the same variable are restricted to the function; the configuration parameter's prior value is still restored when the function exits. However, an ordinary `SET` command \(without `LOCAL`\) overrides the `CREATE FUNCTION` `SET` clause, much as it would for a previous `SET LOCAL` command. The effects of such a command will persist after the function exits, unless the current transaction is rolled back.
-
-If a function with a `VARIADIC` argument is declared as `STRICT`, the strictness check tests that the variadic array as a whole is non-null. PL/pgSQL will still call the function if the array has null elements.
+The full SQL type syntax is allowed for input arguments and return value. However, parenthesized type modifiers \(e.g., the precision field for type `numeric`\) are discarded by `CREATE FUNCTION`. Thus for example `CREATE FUNCTION foo (varchar(10)) ...` is exactly the same as `CREATE FUNCTION foo (varchar) ...`.
 
 When replacing an existing function with `CREATE OR REPLACE FUNCTION`, there are restrictions on changing parameter names. You cannot change the name already assigned to any input parameter \(although you can add names to parameters that had none before\). If there is more than one output parameter, you cannot change the names of the output parameters, because that would change the column names of the anonymous composite type that describes the function's result. These restrictions are made to ensure that existing calls of the function do not stop working when it is replaced.
+
+If a function is declared `STRICT` with a `VARIADIC` argument, the strictness check tests that the variadic array as a whole is non-null. The function will still be called if the array has null elements.
 
 **Using Functions with Queries on Distributed Data**
 
@@ -318,7 +321,7 @@ SELECT my_ctas('t1');
 
 ## <a id="section8"></a>Examples 
 
-A very simple addition function:
+Add two integers using a SQL function:
 
 ```
 CREATE FUNCTION add(integer, integer) RETURNS integer
@@ -338,6 +341,40 @@ integer AS $$
         END;
 $$ LANGUAGE plpgsql;
 ```
+
+Return a record containing multiple output parameters:
+
+```
+CREATE FUNCTION dup(in int, out f1 int, out f2 text)
+    AS $$ SELECT $1, CAST($1 AS text) || ' is text' $$
+    LANGUAGE SQL;
+
+SELECT * FROM dup(42);
+```
+
+You can do the same thing more verbosely with an explicitly named composite type:
+
+```
+CREATE TYPE dup_result AS (f1 int, f2 text);
+
+CREATE FUNCTION dup(int) RETURNS dup_result
+    AS $$ SELECT $1, CAST($1 AS text) || ' is text' $$
+    LANGUAGE SQL;
+
+SELECT * FROM dup(42);
+```
+
+Another way to return multiple columns is to use a `TABLE` function:
+
+```
+CREATE FUNCTION dup(int) RETURNS TABLE(f1 int, f2 text)
+    AS $$ SELECT $1, CAST($1 AS text) || ' is text' $$
+    LANGUAGE SQL;
+
+SELECT * FROM dup(42);
+```
+
+However, a `TABLE` function is different from the preceding examples, because it actually returns a set of records, not just one record.
 
 Increase the default segment host memory per query for a PL/pgSQL function:
 
@@ -362,38 +399,6 @@ CREATE FUNCTION return_enum_as_array( anyenum, anyelement, anyelement )
 $$ LANGUAGE SQL STABLE;
 
 SELECT * FROM return_enum_as_array('red'::rainbow, 'green'::rainbow, 'blue'::rainbow);
-```
-
-Return a record containing multiple output parameters:
-
-```
-CREATE FUNCTION dup(in int, out f1 int, out f2 text)
-    AS $$ SELECT $1, CAST($1 AS text) || ' is text' $$
-    LANGUAGE SQL;
-
-SELECT * FROM dup(42);
-```
-
-You can do the same thing more verbosely with an explicitly named composite type:
-
-```
-CREATE TYPE dup_result AS (f1 int, f2 text);
-CREATE FUNCTION dup(int) RETURNS dup_result
-    AS $$ SELECT $1, CAST($1 AS text) || ' is text' $$
-    LANGUAGE SQL;
-
-SELECT * FROM dup(42);
-```
-
-Another way to return multiple columns is to use a `TABLE` function:
-
-```
-CREATE FUNCTION dup(int) RETURNS TABLE(f1 int, f2 text)
-    AS $$ SELECT $1, CAST($1 AS text) || ' is text' $$
-    LANGUAGE SQL;
-
-SELECT * FROM dup(4);
-
 ```
 
 This function is defined with the `EXECUTE ON ALL SEGMENTS` to run on all primary segment instances. The `SELECT` command runs the function that returns the time it was run on each segment instance.
@@ -428,6 +433,39 @@ If you run `SELECT get_part_name(100);` at the coordinator the function runs on 
 `SELECT order_id, get_part_name(orders.part_no) FROM orders;`
 ```
 
+## <a id="section8sd"></a>Writing SECURITY DEFINER Functions Safely
+
+Because a `SECURITY DEFINER` function is executed with the privileges of the user that created it, care is needed to ensure that the function cannot be misused. For security, `search_path` should be set to exclude any schemas writable by untrusted users. This prevents malicious users from creating objects that mask objects used by the function. Particularly important in this regard is the temporary-table schema, which is searched first by default, and is normally writable by anyone. A secure arrangement can be had by forcing the temporary schema to be searched last. To do this, write `pg_temp` as the last entry in `search_path`. This function illustrates safe usage:
+
+```
+CREATE FUNCTION check_password(uname TEXT, pass TEXT)
+RETURNS BOOLEAN AS $$
+DECLARE passed BOOLEAN;
+BEGIN
+        SELECT  (pwd = $2) INTO passed
+        FROM    pwds
+        WHERE   username = $1;
+
+        RETURN passed;
+END;
+$$  LANGUAGE plpgsql
+    SECURITY DEFINER
+    -- Set a secure search_path: trusted schema(s), then 'pg_temp'.
+    SET search_path = admin, pg_temp;
+```
+
+The `SET` option was not available in earlier versions of Greenplum Database, and so older functions may contain rather complicated logic to save, set, and restore `search_path`. The `SET` option is far easier to use for this purpose.
+
+Another point to keep in mind is that by default, execute privilege is granted to `PUBLIC` for newly created functions \(see [GRANT](GRANT.html) for more information\). Frequently you will wish to restrict use of a security definer function to only some users. To do that, you must revoke the default `PUBLIC` privileges and then grant `EXECUTE` privilege selectively. To avoid having a window where the new function is accessible to all, create it and set the privileges within a single transaction. For example:
+
+```
+BEGIN;
+CREATE FUNCTION check_password(uname TEXT, pass TEXT) ... SECURITY DEFINER;
+REVOKE ALL ON FUNCTION check_password(uname TEXT, pass TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION check_password(uname TEXT, pass TEXT) TO admins;
+COMMIT;
+```
+
 ## <a id="section9"></a>Compatibility 
 
 `CREATE FUNCTION` is defined in SQL:1999 and later. The Greenplum Database version is similar but not fully compatible. The attributes are not portable, neither are the different available languages.
@@ -438,7 +476,7 @@ For parameter defaults, the SQL standard specifies only the syntax with the `DEF
 
 ## <a id="section10"></a>See Also 
 
-[ALTER FUNCTION](ALTER_FUNCTION.html), [DROP FUNCTION](DROP_FUNCTION.html), [LOAD](LOAD.html)
+[ALTER FUNCTION](ALTER_FUNCTION.html), [DROP FUNCTION](DROP_FUNCTION.html), [GRANT](GRANT.html), [LOAD](LOAD.html), [REVOKE](REVOKE.html), [createlang](../../utility_guide/ref/createdb.html)
 
 **Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

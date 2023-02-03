@@ -62,8 +62,7 @@
 
 
 static AOCSFileSegInfo **GetAllAOCSFileSegInfo_pg_aocsseg_rel(
-									 int numOfColumsn,
-									 char *relationName,
+									 Relation rel,
 									 Relation pg_aocsseg_rel,
 									 Snapshot appendOnlyMetaDataSnapshot,
 									 int32 *totalseg);
@@ -123,6 +122,68 @@ InsertInitialAOCSFileSegInfo(Relation prel, int32 segno, int32 nvp, Oid segrelid
 	pfree(vpinfo);
 	pfree(nulls);
 	pfree(values);
+}
+
+/*
+ * This is a routine to extract the vpinfo underlying the untoasted datum from
+ * the pg_aocsseg relation row, given the aocs relation's relnatts, into the supplied
+ * AOCSFileSegInfo structure.
+ *
+ * Sometimes the number of columns represented in the vpinfo inside pg_aocsseg
+ * the row may not match pg_class.relnatts. For instance, when we do an ADD
+ * COLUMN operation, we will have lesser number of columns in the table row
+ * than pg_class.relnatts.
+ * On the other hand, following an aborted ADD COLUMN operation,
+ * the number of columns in the table row will be
+ * greater than pg_class.relnatts.
+ */
+static void
+deformAOCSVPInfo(Relation rel, struct varlena *v, AOCSFileSegInfo *aocs_seginfo)
+{
+	int16 relnatts = RelationGetNumberOfAttributes(rel);
+	struct varlena *dv = pg_detoast_datum(v);
+	int source_size = VARSIZE(dv);
+	int target_size = aocs_vpinfo_size(relnatts);
+
+
+	if (source_size <= target_size)
+	{
+		/* The source fits into the target, simply memcpy. */
+		memcpy(&aocs_seginfo->vpinfo, dv, source_size);
+		Assert(aocs_seginfo->vpinfo.nEntry <= relnatts);
+	}
+	else
+	{
+		/*
+		 * We have more columns represented in the vpinfo recorded inside the
+		 * pg_aocsseg row, than pg_class.relnatts. Perform additional validation
+		 * on these extra column entries and then simply copy over relnatts
+		 * worth of entries from within the datum.
+		 */
+		AOCSVPInfo *vpInfo = (AOCSVPInfo *) dv;
+
+		for (int i = relnatts; i < vpInfo->nEntry; ++i)
+		{
+			/*
+			 * These extra entries must have be the initial frozen inserts
+			 * from when InsertInitialAOCSFileSegInfo() was called during
+			 * an aborted ADD COLUMN operation. Such entries should have eofs = 0,
+			 * indicating that there is no data. If not, there is something
+			 * seriously wrong. Yell appropriately.
+			 */
+			if(vpInfo->entry[i].eof > 0 || vpInfo->entry[i].eof_uncompressed > 0)
+				ereport(ERROR,
+						(errcode(ERRCODE_INTERNAL_ERROR),
+							errmsg("For relation \"%s\" aborted column %d has non-zero eof %d or non-zero uncompressed eof %d",
+								   RelationGetRelationName(rel), i, (int) vpInfo->entry[i].eof, (int) vpInfo->entry[i].eof_uncompressed)));
+		}
+
+		memcpy(&aocs_seginfo->vpinfo, dv, aocs_vpinfo_size(relnatts));
+		aocs_seginfo->vpinfo.nEntry = relnatts;
+	}
+
+	if (dv != v)
+		pfree(dv);
 }
 
 /*
@@ -240,15 +301,9 @@ GetAOCSFileSegInfo(Relation prel,
 	seginfo   ->state = DatumGetInt16(d[Anum_pg_aocs_state - 1]);
 
 	Assert(!null[Anum_pg_aocs_vpinfo - 1]);
-	{
-		struct varlena *v = (struct varlena *) DatumGetPointer(d[Anum_pg_aocs_vpinfo - 1]);
-		struct varlena *dv = pg_detoast_datum(v);
-
-		Assert(VARSIZE(dv) <= aocs_vpinfo_size(nvp));
-		memcpy(&seginfo->vpinfo, dv, aocs_vpinfo_size(nvp));
-		if (dv != v)
-			pfree(dv);
-	}
+	deformAOCSVPInfo(prel,
+					 (struct varlena *) DatumGetPointer(d[Anum_pg_aocs_vpinfo - 1]),
+						 seginfo);
 
 	pfree(d);
 	pfree(null);
@@ -286,9 +341,7 @@ GetAllAOCSFileSegInfo(Relation prel,
 
 	pg_aocsseg_rel = relation_open(segrelid, AccessShareLock);
 
-	results = GetAllAOCSFileSegInfo_pg_aocsseg_rel(
-												   RelationGetNumberOfAttributes(prel),
-												   RelationGetRelationName(prel),
+	results = GetAllAOCSFileSegInfo_pg_aocsseg_rel(prel,
 												   pg_aocsseg_rel,
 												   appendOnlyMetaDataSnapshot,
 												   totalseg);
@@ -316,16 +369,12 @@ aocsFileSegInfoCmp(const void *left, const void *right)
 
 	return 0;
 }
-
 static AOCSFileSegInfo **
-GetAllAOCSFileSegInfo_pg_aocsseg_rel(int numOfColumns,
-									 char *relationName,
+GetAllAOCSFileSegInfo_pg_aocsseg_rel(Relation rel,
 									 Relation pg_aocsseg_rel,
 									 Snapshot snapshot,
 									 int32 *totalseg)
 {
-
-	int32		nvp = numOfColumns;
 
 	SysScanDesc scan;
 	HeapTuple	tup;
@@ -358,7 +407,7 @@ GetAllAOCSFileSegInfo_pg_aocsseg_rel(int numOfColumns,
 			allseg = (AOCSFileSegInfo **) repalloc(allseg, sizeof(AOCSFileSegInfo *) * seginfo_slot_no);
 		}
 
-		aocs_seginfo = (AOCSFileSegInfo *) palloc0(aocsfileseginfo_size(nvp));
+		aocs_seginfo = (AOCSFileSegInfo *) palloc0(aocsfileseginfo_size(RelationGetNumberOfAttributes(rel)));
 
 		allseg[cur_seg] = aocs_seginfo;
 
@@ -390,20 +439,7 @@ GetAllAOCSFileSegInfo_pg_aocsseg_rel(int numOfColumns,
 			aocs_seginfo->state = DatumGetInt16(d[Anum_pg_aocs_state - 1]);
 
 		Assert(!null[Anum_pg_aocs_vpinfo - 1]);
-		{
-			struct varlena *v = (struct varlena *) DatumGetPointer(d[Anum_pg_aocs_vpinfo - 1]);
-			struct varlena *dv = pg_detoast_datum(v);
-
-			/*
-			 * VARSIZE(dv) may be less than aocs_vpinfo_size, in case of add
-			 * column, we try to do a ctas from old table to new table.
-			 */
-			Assert(VARSIZE(dv) <= aocs_vpinfo_size(nvp));
-
-			memcpy(&aocs_seginfo->vpinfo, dv, VARSIZE(dv));
-			if (dv != v)
-				pfree(dv);
-		}
+		deformAOCSVPInfo(rel, (struct varlena *) DatumGetPointer(d[Anum_pg_aocs_vpinfo - 1]), aocs_seginfo);
 		++cur_seg;
 	}
 
@@ -1248,8 +1284,7 @@ gp_aocsseg_internal(PG_FUNCTION_ARGS, Oid aocsRelOid)
 		pg_aocsseg_rel = heap_open(segrelid, AccessShareLock);
 
 		context->aocsSegfileArray = GetAllAOCSFileSegInfo_pg_aocsseg_rel(
-																		 aocsRel->rd_rel->relnatts,
-																		 RelationGetRelationName(aocsRel),
+																		 aocsRel,
 																		 pg_aocsseg_rel,
 																		 appendOnlyMetaDataSnapshot,
 																		 &context->totalAocsSegFiles);
@@ -1462,8 +1497,7 @@ gp_aocsseg_history(PG_FUNCTION_ARGS)
 		pg_aocsseg_rel = heap_open(segrelid, AccessShareLock);
 
 		context->aocsSegfileArray = GetAllAOCSFileSegInfo_pg_aocsseg_rel(
-																		 RelationGetNumberOfAttributes(aocsRel),
-																		 RelationGetRelationName(aocsRel),
+																		 aocsRel,
 																		 pg_aocsseg_rel,
 																		 SnapshotAny, //Get ALL tuples from pg_aocsseg_ % including aborted and in - progress ones.
 																		 & context->totalAocsSegFiles);

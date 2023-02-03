@@ -3622,3 +3622,17 @@ SELECT * FROM pg_compression WHERE compname='rle_type';
  rle_type | gp_rle_type_constructor | gp_rle_type_destructor | gp_rle_type_compress | gp_rle_type_decompress | gp_rle_type_validator |        10
 (1 row)
 
+-- Check ALTER TYPE SET DEFAULT ENCODING propagates to the dependent array type
+DROP type if exists mood_encoded cascade;
+CREATE TYPE mood_encoded AS ENUM ('sad', 'ok', 'happy');
+ALTER TYPE public.mood_encoded SET DEFAULT ENCODING (compresstype=zlib, blocksize=65536, compresslevel=4);
+SELECT t.typname, te.typoptions
+FROM pg_type t
+LEFT JOIN pg_type_encoding te ON (t.oid=te.typid)
+WHERE t.typname in ('mood_encoded', '_mood_encoded');
+    typname    |                     typoptions                      
+---------------+-----------------------------------------------------
+ _mood_encoded | {compresstype=zlib,blocksize=65536,compresslevel=4}
+ mood_encoded  | {compresstype=zlib,blocksize=65536,compresslevel=4}
+(2 rows)
+

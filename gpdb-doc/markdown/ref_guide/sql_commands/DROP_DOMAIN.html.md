@@ -10,7 +10,7 @@ DROP DOMAIN [IF EXISTS] <name> [, ...]  [CASCADE | RESTRICT]
 
 ## <a id="section3"></a>Description 
 
-`DROP DOMAIN` removes a previously defined domain. You must be the owner of a domain to drop it.
+`DROP DOMAIN` removes a previously defined domain. Only the owner of a domain can remove it.
 
 ## <a id="section4"></a>Parameters 
 
@@ -21,17 +21,17 @@ name
 :   The name \(optionally schema-qualified\) of an existing domain.
 
 CASCADE
-:   Automatically drop objects that depend on the domain \(such as table columns\).
+:   Automatically drop objects that depend on the domain \(such as table columns\), and in turn all objects that depend on those objects.
 
 RESTRICT
 :   Refuse to drop the domain if any objects depend on it. This is the default.
 
 ## <a id="section5"></a>Examples 
 
-Drop the domain named `zipcode`:
+Remove the domain named `us_postal_code`:
 
 ```
-DROP DOMAIN zipcode;
+DROP DOMAIN us_postal_code;
 ```
 
 ## <a id="section6"></a>Compatibility 
