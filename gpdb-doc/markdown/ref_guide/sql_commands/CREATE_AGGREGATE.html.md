@@ -79,7 +79,6 @@ If a schema name is given \(for example, `CREATE AGGREGATE myschema.myagg ...`\)
 An aggregate function is identified by its name and input data type\(s\). Two aggregate functions in the same schema can have the same name if they operate on different input types. The name and input data type(s) of an aggregate function must also be distinct from the name and input data type(s) of every ordinary function in the same schema. This behavior is identical to overloading of ordinary function names. See [CREATE FUNCTION](CREATE_FUNCTION.html).
 
 A simple aggregate function is made from one or two ordinary functions; a state transition function sfunc, and an optional final calculation function ffunc.
- \(which must be `IMMUTABLE` functions\):
 
 These functions are used as follows:
 
@@ -214,7 +213,7 @@ The parameters of `CREATE AGGREGATE` can be written in any order, not just the o
 
 ## <a id="section6"></a>Notes 
 
-The ordinary functions used to define a new aggregate function must be defined first. Note that in this release of Greenplum Database, it is required that the sfunc, ffunc, and combinefunc functions used to create the aggregate are defined as `IMMUTABLE`.
+The ordinary functions used to define a new aggregate function must be defined first.
 
 If the value of the Greenplum Database server configuration parameter `gp_enable_multiphase_agg` is `off`, only single-level aggregation is performed by the Postgres Planner. There is no equivalent parameter for the Pivotal Query Optimizer.
 
@@ -243,7 +242,6 @@ CREATE FUNCTION mysfunc_accum(numeric, numeric, numeric)
   RETURNS numeric
    AS 'select $1 + $2 + $3'
    LANGUAGE SQL
-   IMMUTABLE
    RETURNS NULL ON NULL INPUT;
 ```
 
@@ -254,7 +252,6 @@ CREATE FUNCTION mycombine_accum(numeric, numeric )
   RETURNS numeric
    AS 'select $1 + $2'
    LANGUAGE SQL
-   IMMUTABLE
    RETURNS NULL ON NULL INPUT;
 ```
 
