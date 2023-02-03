@@ -589,3 +589,16 @@ SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1, null, (1, 2)::named_
 SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1, 2)) a SCATTER BY 1));
 
 DROP FUNCTION test_anytable(t anytable);
+
+CREATE OR REPLACE FUNCTION test_anytable_column_name(t anytable) RETURNS void
+LANGUAGE plpython3u
+AS $$
+column_name = t.get_column_name()
+for i in t:
+   tuple_dict = dict(zip(column_name, i))
+   plpy.info(str(tuple_dict))
+$$;
+
+SELECT * FROM test_anytable_column_name(TABLE(SELECT 1 as a, 2 as b, 3 as c FROM (VALUES (1)) a));
+-- if there are 2 columns with same name, overwirte is expected
+SELECT * FROM test_anytable_column_name(TABLE(SELECT 1 as a, 2 as a, 3 as c, 4 as c FROM (VALUES (1)) a));
