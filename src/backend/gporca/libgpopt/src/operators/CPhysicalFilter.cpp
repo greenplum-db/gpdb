@@ -127,7 +127,7 @@ CPhysicalFilter::PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 	if (CDistributionSpec::EdtNonSingleton == pdsRequired->Edt() &&
 		!CDistributionSpecNonSingleton::PdsConvert(pdsRequired)
-			->FAllowReplicated())
+			 ->FAllowReplicated())
 	{
 		pdsRequired->AddRef();
 		return pdsRequired;

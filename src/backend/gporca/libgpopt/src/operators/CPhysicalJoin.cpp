@@ -507,7 +507,7 @@ CPhysicalJoin::PrsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 //---------------------------------------------------------------------------
 CEnfdProp::EPropEnforcingType
 CPhysicalJoin::EpetDistribution(CExpressionHandle &exprhdl,
-							const CEnfdDistribution *ped) const
+								const CEnfdDistribution *ped) const
 {
 	GPOS_ASSERT(nullptr != ped);
 
@@ -517,7 +517,7 @@ CPhysicalJoin::EpetDistribution(CExpressionHandle &exprhdl,
 	{
 		if (CDistributionSpec::EdtNonSingleton == ped->PdsRequired()->Edt() &&
 			!CDistributionSpecNonSingleton::PdsConvert(ped->PdsRequired())
-				->FAllowReplicated() &&
+				 ->FAllowReplicated() &&
 			CDistributionSpec::EdtStrictReplicated == pds->Edt())
 		{
 			return CEnfdProp::EpetProhibited;
