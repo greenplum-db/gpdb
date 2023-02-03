@@ -317,8 +317,9 @@ CStatisticsTest::PtabdescTwoColumnSource(CMemoryPool *mp,
 		nameTable,
 		false,	// convert_hash_to_random
 		IMDRelation::EreldistrRandom, IMDRelation::ErelstorageHeap,
-		0,	// ulExecuteAsUser
-		-1	// lockmode
+		0,	 // ulExecuteAsUser
+		-1,	 // lockmode
+		0	 // UNASSIGNED_QUERYID
 	);
 
 	for (ULONG i = 0; i < 2; i++)
@@ -717,7 +718,8 @@ CStatisticsTest::EresUnittest_CStatisticsCopy()
 	CStatistics *pstats = GPOS_NEW(mp) CStatistics(
 		mp, phmulhist, phmuldoubleWidth, 100.0 /* rows */, false /* is_empty */,
 		ULONG(5) /* relpages */, ULONG(10) /* relallvisible */,
-		CDouble(100.0) /* rebinds */, ULONG(3) /* num predicates */);
+		CDouble(100.0) /* rebinds */, ULONG(3) /* num predicates */, nullptr,
+		GPOS_NEW(mp) UlongToIntMap(mp));
 
 	IStatistics *stats_copy = pstats->CopyStats(mp);
 

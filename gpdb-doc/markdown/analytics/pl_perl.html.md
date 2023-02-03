@@ -15,7 +15,7 @@ With the Greenplum Database PL/Perl extension, you can write user-defined functi
 
 PL/Perl is embedded in your Greenplum Database distribution. Greenplum Database PL/Perl requires Perl to be installed on the system of each database host.
 
-Refer to the [PostgreSQL PL/Perl documentation](https://www.postgresql.org/docs/9.4/plperl.html) for additional information.
+Refer to the [PostgreSQL PL/Perl documentation](https://www.postgresql.org/docs/12/plperl.html) for additional information.
 
 ## <a id="topic3"></a>Greenplum Database PL/Perl Limitations 
 
@@ -35,13 +35,13 @@ The PL/Perl trusted language is named `plperl`. The trusted PL/Perl language res
 
 The PL/Perl untrusted language is named `plperlu`. You cannot restrict the operation of functions you create with the `plperlu` untrusted language. Only database superusers have privileges to create untrusted PL/Perl user-defined functions. And only database superusers and other database users that are explicitly granted the permissions can run untrusted PL/Perl user-defined functions.
 
-PL/Perl has limitations with respect to communication between interpreters and the number of interpreters running in a single process. Refer to the PostgreSQL [Trusted and Untrusted PL/Perl](https://www.postgresql.org/docs/9.4/plperl-trusted.html) documentation for additional information.
+PL/Perl has limitations with respect to communication between interpreters and the number of interpreters running in a single process. Refer to the PostgreSQL [Trusted and Untrusted PL/Perl](https://www.postgresql.org/docs/12/plperl-trusted.html) documentation for additional information.
 
 ## <a id="topic6"></a>Enabling and Removing PL/Perl Support 
 
 You must register the PL/Perl language with a database before you can create and run a PL/Perl user-defined function within that database. To remove PL/Perl support, you must explicitly remove the extension from each database in which it was registered. You must be a database superuser or owner to register or remove trusted languages in Greenplum databases.
 
-**Note:** Only database superusers may register or remove support for the *untrusted* PL/Perl language `plperlu`.
+> **Note** Only database superusers may register or remove support for the *untrusted* PL/Perl language `plperlu`.
 
 Before you enable or remove PL/Perl support in a database, ensure that:
 
@@ -104,7 +104,7 @@ SELECT perl_max( 1, null );
 
 PL/Perl considers anything in a function argument that is not a reference to be a string, the standard Greenplum Database external text representation. The argument values supplied to a PL/Perl function are simply the input arguments converted to text form \(just as if they had been displayed by a `SELECT` statement\). In cases where the function argument is not an ordinary numeric or text type, you must convert the Greenplum Database type to a form that is more usable by Perl. Conversely, the `return` and `return_next` statements accept any string that is an acceptable input format for the function's declared return type.
 
-Refer to the PostgreSQL [PL/Perl Functions and Arguments](https://www.postgresql.org/docs/9.4/plperl-funcs.html) documentation for additional information, including composite type and result set manipulation.
+Refer to the PostgreSQL [PL/Perl Functions and Arguments](https://www.postgresql.org/docs/12/plperl-funcs.html) documentation for additional information, including composite type and result set manipulation.
 
 ### <a id="topic3311"></a>Built-in PL/Perl Functions 
 
@@ -156,7 +156,7 @@ SELECT return_match( 'iff' );
 
 ```
 
-Refer to the PostgreSQL PL/Perl [Built-in Functions](https://www.postgresql.org/docs/9.4/plperl-builtins.html) documentation for a detailed discussion of available functions.
+Refer to the PostgreSQL PL/Perl [Built-in Functions](https://www.postgresql.org/docs/12/plperl-builtins.html) documentation for a detailed discussion of available functions.
 
 ### <a id="topic331"></a>Global Values in PL/Perl 
 

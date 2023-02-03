@@ -199,22 +199,22 @@ inline static char extended_char(char* token, size_t length)
 /* Read an attribute number array */
 #define READ_ATTRNUMBER_ARRAY(fldname, len) \
 	token = pg_strtok(&length);		/* skip :fldname */ \
-	local_node->fldname = readAttrNumberCols(len);
+	local_node->fldname = readAttrNumberCols(len)
 
 /* Read an oid array */
 #define READ_OID_ARRAY(fldname, len) \
 	token = pg_strtok(&length);		/* skip :fldname */ \
-	local_node->fldname = readOidCols(len);
+	local_node->fldname = readOidCols(len)
 
 /* Read an int array */
 #define READ_INT_ARRAY(fldname, len) \
 	token = pg_strtok(&length);		/* skip :fldname */ \
-	local_node->fldname = readIntCols(len);
+	local_node->fldname = readIntCols(len)
 
 /* Read a bool array */
 #define READ_BOOL_ARRAY(fldname, len) \
 	token = pg_strtok(&length);		/* skip :fldname */ \
-	local_node->fldname = readBoolCols(len);
+	local_node->fldname = readBoolCols(len)
 
 /* Routine exit */
 #define READ_DONE() \
@@ -980,6 +980,9 @@ _readAlteredTableInfo(void)
 	READ_NODE_FIELD(changedIndexOids);
 	READ_NODE_FIELD(changedIndexDefs);
 	unwrapStringList(local_node->changedIndexDefs);
+
+	READ_STRING_FIELD(replicaIdentityIndex);
+	READ_STRING_FIELD(clusterOnIndex);
 
 	READ_DONE();
 }
@@ -2471,9 +2474,6 @@ _readPlannedStmt(void)
 
 	READ_UINT64_FIELD(query_mem);
 
-	READ_INT_FIELD(total_memory_coordinator);
-	READ_INT_FIELD(nsegments_coordinator);
-
 	READ_NODE_FIELD(intoClause);
 	READ_NODE_FIELD(copyIntoClause);
 	READ_NODE_FIELD(refreshClause);
@@ -2798,6 +2798,7 @@ _readIndexOnlyScan(void)
 
 	READ_OID_FIELD(indexid);
 	READ_NODE_FIELD(indexqual);
+	READ_NODE_FIELD(recheckqual);
 	READ_NODE_FIELD(indexorderby);
 	READ_NODE_FIELD(indextlist);
 	READ_ENUM_FIELD(indexorderdir, ScanDirection);
@@ -3162,6 +3163,9 @@ _readHashJoin(void)
 
 	READ_NODE_FIELD(hashclauses);
 	READ_NODE_FIELD(hashqualclauses);
+	READ_NODE_FIELD(hashoperators);
+	READ_NODE_FIELD(hashcollations);
+	READ_NODE_FIELD(hashkeys);
 
 	READ_DONE();
 }
@@ -3357,7 +3361,8 @@ _readHash(void)
 
 	ReadCommonPlan(&local_node->plan);
 
-    READ_BOOL_FIELD(rescannable);           /*CDB*/
+	READ_BOOL_FIELD(rescannable); /*CDB*/
+	READ_NODE_FIELD(hashkeys);
 	READ_OID_FIELD(skewTable);
 	READ_INT_FIELD(skewColumn);
 	READ_BOOL_FIELD(skewInherit);

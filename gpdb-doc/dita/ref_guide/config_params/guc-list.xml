@@ -4828,39 +4828,6 @@
       </table>
     </body>
   </topic>
-  <topic id="gp_safefswritesize">
-    <title>gp_safefswritesize</title>
-    <body>
-      <p>Specifies a minimum size for safe write operations to append-optimized tables in a
-        non-mature file system. When a number of bytes greater than zero is specified, the
-        append-optimized writer adds padding data up to that number in order to prevent data
-        corruption due to file system errors. Each non-mature file system has a known safe write
-        size that must be specified here when using Greenplum Database with that type of file
-        system. This is commonly set to a multiple of the extent size of the file system; for
-        example, Linux ext3 is 4096 bytes, so a value of 32768 is commonly used.</p>
-      <table id="gp_safefswritesize_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">integer</entry>
-              <entry colname="col2">0</entry>
-              <entry colname="col3">local<p>system</p><p>reload</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
   <topic id="gp_segment_connect_timeout">
     <title>gp_segment_connect_timeout</title>
     <body>

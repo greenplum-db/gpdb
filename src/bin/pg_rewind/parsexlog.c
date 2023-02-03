@@ -58,6 +58,9 @@ static int	SimpleXLogPageRead(XLogReaderState *xlogreader,
  * Read WAL from the datadir/pg_wal, starting from 'startpoint' on timeline
  * index 'tliIndex' in target timeline history, until 'endpoint'. Make note of
  * the data blocks touched by the WAL records, and return them in a page map.
+ *
+ * 'endpoint' is the end of the last record to read. The record starting at
+ * 'endpoint' is the first one that is not read.
  */
 void
 extractPageMap(const char *datadir, XLogRecPtr startpoint, int tliIndex,
@@ -98,7 +101,17 @@ extractPageMap(const char *datadir, XLogRecPtr startpoint, int tliIndex,
 
 		startpoint = InvalidXLogRecPtr; /* continue reading at next record */
 
-	} while (xlogreader->ReadRecPtr != endpoint);
+	} while (xlogreader->EndRecPtr < endpoint);
+
+	/*
+	 * If 'endpoint' didn't point exactly at a record boundary, the caller
+	 * messed up.
+	 */
+	if (xlogreader->EndRecPtr != endpoint)
+		pg_fatal("end pointer %X/%X is not a valid end point; expected %X/%X",
+				 (uint32) (endpoint >> 32), (uint32) (endpoint),
+				 (uint32) (xlogreader->EndRecPtr >> 32), (uint32)
+				 (xlogreader->EndRecPtr));
 
 	XLogReaderFree(xlogreader);
 	if (xlogreadfd != -1)

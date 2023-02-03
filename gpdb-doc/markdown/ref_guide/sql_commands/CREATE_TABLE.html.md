@@ -2,7 +2,7 @@
 
 Defines a new table.
 
-**Note:** Referential integrity syntax \(foreign key constraints\) is accepted but not enforced.
+> **Note** Referential integrity syntax \(foreign key constraints\) is accepted but not enforced.
 
 ## <a id="section2"></a>Synopsis 
 
@@ -262,7 +262,7 @@ data\_type
 COLLATE collation
 :   The `COLLATE` clause assigns a collation to the column \(which must be of a collatable data type\). If not specified, the column data type's default collation is used.
 
-    **Note:** GPORCA supports collation only when all columns in the query use the same collation. If columns in the query use different collations, then Greenplum uses the Postgres Planner.
+    > **Note** GPORCA supports collation only when all columns in the query use the same collation. If columns in the query use different collations, then Greenplum uses the Postgres Planner.
 
 DEFAULT default\_expr
 :   The `DEFAULT` clause assigns a default data value for the column whose column definition it appears within. The value is any variable-free expression \(subqueries and cross-references to other columns in the current table are not allowed\). The data type of the default expression must match the data type of the column. The default expression will be used in any insert operation that does not specify a value for the column. If there is no default for a column, then the default is null.
@@ -276,7 +276,7 @@ ENCODING \( storage_directive \[, ...\] \)
 
 :   The `column_reference_storage_directive` parameter specifies a column along with its storage directive.
 
-For more information on storage directives, see [Adding Column Level Compression](../../admin_guide-ddl-ddl-storage.html#adding-column-level-compression).
+For more information on storage directives, see [Adding Column Level Compression](../../admin_guide/ddl/ddl-storage.html#topic43).
 
 INHERITS \( parent\_table \[, …\]\)
 :   The optional `INHERITS` clause specifies a list of tables from which the new table automatically inherits all columns. Use of `INHERITS` creates a persistent relationship between the new child table and its parent table\(s\). Schema modifications to the parent\(s\) normally propagate to children as well, and by default the data of the child table is included in scans of the parent\(s\).
@@ -292,7 +292,7 @@ INHERITS \( parent\_table \[, …\]\)
 LIKE source\_table like\_option `...`\]
 :   The `LIKE` clause specifies a table from which the new table automatically copies all column names, their data types, not-null constraints, and distribution policy. Unlike `INHERITS`, the new table and original table are completely decoupled after creation is complete.
 
-:   **Note:** Storage properties like append-optimized or partition structure are not copied.
+:   > **Note** Storage properties like append-optimized or partition structure are not copied.
 
 :   Default expressions for the copied column definitions will only be copied if `INCLUDING DEFAULTS` is specified. The default behavior is to exclude default expressions, resulting in the copied columns in the new table having null defaults.
 
@@ -315,7 +315,7 @@ LIKE source\_table like\_option `...`\]
 CONSTRAINT constraint\_name
 :   An optional name for a column or table constraint. If the constraint is violated, the constraint name is present in error messages, so constraint names like column must be positive can be used to communicate helpful constraint information to client applications. \(Double-quotes are needed to specify constraint names that contain spaces.\) If a constraint name is not specified, the system generates a name.
 
-    **Note:** The specified constraint\_name is used for the constraint, but a system-generated unique name is used for the index name. In some prior releases, the provided name was used for both the constraint name and the index name.
+    > **Note** The specified constraint\_name is used for the constraint, but a system-generated unique name is used for the index name. In some prior releases, the provided name was used for both the constraint name and the index name.
 
 NULL \| NOT NULL
 :   Specifies if the column is or is not allowed to contain null values. `NULL` is the default.
@@ -382,7 +382,7 @@ WITH \( storage\_parameter=value \)
 
 :   **compresstype** — Set to `ZLIB` \(the default\), `ZSTD`, `RLE_TYPE`, or `QUICKLZ`1 to specify the type of compression used. The value `NONE` deactivates compression. Zstd provides for both speed or a good compression ratio, tunable with the `compresslevel` option. QuickLZ and zlib are provided for backwards-compatibility. Zstd outperforms these compression types on usual workloads. The `compresstype` option is only valid if `appendoptimized=TRUE`.
 
-    **Note:** 1QuickLZ compression is available only in the commercial release of Tanzu Greenplum.
+    > **Note** 1QuickLZ compression is available only in the commercial release of VMware Greenplum.
 
     The value `RLE_TYPE`, which is supported only if `orientation`=`column` is specified, enables the run-length encoding \(RLE\) compression algorithm. RLE compresses data better than the Zstd, zlib, or QuickLZ compression algorithms when the same data value occurs in many consecutive rows.
 
@@ -442,7 +442,7 @@ PARTITION BY
 
 :   For each partition level \(each hierarchy level of tables\), a partitioned table can have a maximum of 32,767 partitions.
 
-:   **Note:** Greenplum Database stores partitioned table data in the leaf child tables, the lowest-level tables in the hierarchy of child tables for use by the partitioned table.
+:   > **Note** Greenplum Database stores partitioned table data in the leaf child tables, the lowest-level tables in the hierarchy of child tables for use by the partitioned table.
 
 :   partition\_type
 :   Declares partition type: `LIST` \(list of values\) or `RANGE` \(a numeric or date range\).
@@ -485,7 +485,7 @@ SUBPARTITION TEMPLATE
 
     A primary key constraint is simply a combination of a unique constraint and a not-null constraint.
 
-    Greenplum Database automatically creates a `UNIQUE` index for each `UNIQUE` or `PRIMARY KEY` constraint to enforce uniqueness. Thus, it is not necessary to create an index explicitly for primary key columns. `UNIQUE` and `PRIMARY KEY` constraints are not allowed on append-optimized tables because the `UNIQUE` indexes that are created by the constraints are not allowed on append-optimized tables.
+    Greenplum Database automatically creates a `UNIQUE` index for each `UNIQUE` or `PRIMARY KEY` constraint to enforce uniqueness. Thus, it is not necessary to create an index explicitly for primary key columns.
 
     Foreign key constraints are not supported in Greenplum Database.
 
@@ -504,7 +504,7 @@ SUBPARTITION TEMPLATE
     The defaults can be set for the system, a database, or a user. For information about setting storage options, see the server configuration parameter [gp\_default\_storage\_options](../config_params/guc-list.html).
 
 
-**Important:** The current Postgres Planner allows list partitions with multi-column \(composite\) partition keys. GPORCA does not support composite keys, so using composite partition keys is not recommended.
+> **Important** The current Postgres Planner allows list partitions with multi-column \(composite\) partition keys. GPORCA does not support composite keys, so using composite partition keys is not recommended.
 
 ## <a id="section6"></a>Examples 
 

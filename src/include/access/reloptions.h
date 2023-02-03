@@ -276,7 +276,7 @@ extern void add_int_reloption(bits32 kinds, const char *name, const char *desc,
 							  int default_val, int min_val, int max_val,
 							  LOCKMODE lockmode);
 extern void add_real_reloption(bits32 kinds, const char *name, const char *desc,
-							   double default_val, double min_val,double max_val,
+							   double default_val, double min_val, double max_val,
 							   LOCKMODE lockmode);
 extern void add_string_reloption(bits32 kinds, const char *name, const char *desc,
 								 const char *default_val, validate_string_relopt validator,
@@ -309,11 +309,11 @@ extern LOCKMODE AlterTableGetRelOptionsLockLevel(List *defList);
 
 
 /* in reloptions_gp.c */
-extern Datum transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts);
+extern Datum transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts, bool hasStorage);
 
 extern bool relOptionsEquals(Datum oldOptions, Datum newOptions);
 
-extern void validateAppendOnlyRelOptions(int blocksize, int writesize,
+extern void validateAppendOnlyRelOptions(int blocksize,
 										 int complevel, char* comptype,
 										 bool checksum, bool co);
 extern void parse_validate_reloptions(StdRdOptions *result, Datum reloptions,

@@ -21,6 +21,7 @@ Greenplum Database provides the following system views not available in PostgreS
 -   [pg\_partition\_columns](pg_partition_columns.html)
 -   [pg\_partition\_templates](pg_partition_templates.html)
 -   [pg\_partitions](pg_partitions.html)
+-   [pg\_policies](pg_policies.html)
 -   [pg\_resqueue\_attributes](pg_resqueue_attributes.html)
 -   pg\_resqueue\_status \(Deprecated. Use [gp\_toolkit.gp\_resqueue\_status](../gp_toolkit.html).\)
 -   [pg\_stat\_activity](pg_stat_activity.html)
@@ -28,13 +29,15 @@ Greenplum Database provides the following system views not available in PostgreS
 -   [pg\_stat\_all\_tables](pg_stat_tables.html)
 -   [pg\_stat\_replication](pg_stat_replication.html)
 -   [pg\_stat\_resqueues](pg_stats_resqueue.html)
+-   [pg\_stats](pg_stats.html)
+-   [pg\_stats\_ext](pg_stats_ext.html)
 -   session\_level\_memory\_consumption \(See [Monitoring a Greenplum System](../../admin_guide/managing/monitor.html#topic_slt_ddv_1q).\)
 
 For more information about the standard system views supported in PostgreSQL and Greenplum Database, see the following sections of the PostgreSQL documentation:
 
--   [System Views](https://www.postgresql.org/docs/9.4/views-overview.html)
--   [Statistics Collector Views](https://www.postgresql.org/docs/9.4/monitoring-stats.html#MONITORING-STATS-VIEWS-TABLE)
--   [The Information Schema](https://www.postgresql.org/docs/9.4/information-schema.html)
+-   [System Views](https://www.postgresql.org/docs/12/views-overview.html)
+-   [Statistics Collector Views](https://www.postgresql.org/docs/12/monitoring-stats.html#MONITORING-STATS-VIEWS)
+-   [The Information Schema](https://www.postgresql.org/docs/12/information-schema.html)
 
 **Parent topic:** [System Catalogs](../system_catalogs/catalog_ref.html)
 

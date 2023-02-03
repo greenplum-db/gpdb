@@ -289,6 +289,29 @@ Rules:
   WHERE (dcomptable.d1).i > 0::double precision
 Distributed Replicated
 
+create function makedcomp(r float8, i float8) returns dcomptype
+as 'select row(r, i)::dcomptype' language sql;
+select makedcomp(1,2);
+ makedcomp 
+-----------
+ (1,2)
+(1 row)
+
+select makedcomp(2,1);  -- fail
+ERROR:  value for domain dcomptype violates check constraint "c1"
+select * from makedcomp(1,2) m;
+ r | i 
+---+---
+ 1 | 2
+(1 row)
+
+-- GPDB_12_12_MERGE_FIXME
+-- https://github.com/greenplum-db/gpdb/pull/14517
+-- start_ignore
+select m, m is not null from makedcomp(1,2) m;
+ERROR:  type dcomptype is not composite
+-- end_ignore
+drop function makedcomp(float8, float8);
 drop table dcomptable;
 drop type comptype cascade;
 NOTICE:  drop cascades to type dcomptype
@@ -532,6 +555,30 @@ LINE 1: update dposintatable set (f1[2])[1] = array[98];
 drop table dposintatable;
 drop domain posint cascade;
 NOTICE:  drop cascades to type dposinta
+-- Test arrays over domains of composite
+create type comptype as (cf1 int, cf2 int);
+create domain dcomptype as comptype check ((value).cf1 > 0);
+create table dcomptable (f1 dcomptype[]);
+insert into dcomptable values (null);
+update dcomptable set f1[1].cf2 = 5;
+table dcomptable;
+    f1    
+----------
+ {"(,5)"}
+(1 row)
+
+update dcomptable set f1[1].cf1 = -1;  -- fail
+ERROR:  value for domain dcomptype violates check constraint "dcomptype_check"
+update dcomptable set f1[1].cf1 = 1;
+table dcomptable;
+    f1     
+-----------
+ {"(1,5)"}
+(1 row)
+
+drop table dcomptable;
+drop type comptype cascade;
+NOTICE:  drop cascades to type dcomptype
 -- Test not-null restrictions
 create domain dnotnull varchar(15) NOT NULL;
 create domain dnull    varchar(15);
@@ -1144,5 +1191,68 @@ from
  count 
 -------
      1
+(1 row)
+
+--
+-- ORCA shouldn't fail for data corruption while translating query to DXL
+-- for a constant domain value of the following text related types:
+-- char, bpchar, name.
+-- github issue: https://github.com/greenplum-db/gpdb/issues/14155
+--
+create table test_table_14155(txtime timestamptz default now(), user_role text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'txtime' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create domain domainname as name;
+create function test_func_name(
+    i_msg text,
+    i_caller domainname = current_user
+) returns void language plpgsql as $$
+begin
+    insert into test_table_14155 (
+        txtime, user_role
+    )
+    select now(), i_caller;
+end
+$$;
+select * from test_func_name('test');
+ test_func_name 
+----------------
+ 
+(1 row)
+
+create domain domainchar as char;
+create function test_func_char(
+    i_msg text,
+    i_caller domainchar = 'a'
+) returns void language plpgsql as $$
+begin
+    insert into test_table_14155 (
+        txtime, user_role
+    )
+    select now(), i_caller;
+end
+$$;
+select * from test_func_char('test');
+ test_func_char 
+----------------
+ 
+(1 row)
+
+create domain domainbpchar as bpchar;
+create function test_func_bpchar(
+    i_msg text,
+    i_caller domainbpchar = 'test'
+) returns void language plpgsql as $$
+begin
+    insert into test_table_14155 (
+        txtime, user_role
+    )
+    select now(), i_caller;
+end
+$$;
+select * from test_func_bpchar('test');
+ test_func_bpchar 
+------------------
+ 
 (1 row)
 

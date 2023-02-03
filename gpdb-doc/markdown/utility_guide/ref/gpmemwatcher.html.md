@@ -26,7 +26,7 @@ You may use this utility if Greenplum Database is reporting `Out of memory` erro
 :   Indicates the hostfile input file that lists the hosts from which the utility should collect memory usage information. The file must include the hostnames and a working directory that exists on each one of the hosts. For example:
 
     ```
-    mdw:/home/gpadmin/gpmemwatcher_dir/working
+    cdw:/home/gpadmin/gpmemwatcher_dir/working
     sdw1:/home/gpadmin/gpmemwatcher_dir/working
     sdw2:/home/gpadmin/gpmemwatcher_dir/working
     sdw3:/home/gpadmin/gpmemwatcher_dir/working
@@ -49,7 +49,7 @@ You may use this utility if Greenplum Database is reporting `Out of memory` erro
 Create the file `/home/gpadmin/hostmap.txt` that contains the following:
 
 ```
-mdw:/home/gpadmin/gpmemwatcher_dir/working
+cdw:/home/gpadmin/gpmemwatcher_dir/working
 sdw1:/home/gpadmin/gpmemwatcher_dir/working
 sdw2:/home/gpadmin/gpmemwatcher_dir/working
 sdw3:/home/gpadmin/gpmemwatcher_dir/working
@@ -76,7 +76,7 @@ The results `.gz` files will be dumped into the directory where you are running 
 
 ```
 $ [gpadmin@gpdb-m]$ ls -thrl
--rw-rw-r--. 1 gpadmin gpadmin 2.8K Nov 19 15:17 mdw.ps.out.gz
+-rw-rw-r--. 1 gpadmin gpadmin 2.8K Nov 19 15:17 cdw.ps.out.gz
 -rw-rw-r--. 1 gpadmin gpadmin 2.8K Nov 19 15:17 sdw1.ps.out.gz
 -rw-rw-r--. 1 gpadmin gpadmin 2.8K Nov 19 15:17 sdw2.ps.out.gz
 -rw-rw-r--. 1 gpadmin gpadmin 2.8K Nov 19 15:17 sdw3.ps.out.gz

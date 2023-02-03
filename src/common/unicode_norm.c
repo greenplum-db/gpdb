@@ -300,7 +300,7 @@ decompose_code(pg_wchar code, pg_wchar **result, int *current)
  * The input is a 0-terminated array of codepoints.
  *
  * In frontend, returns a 0-terminated array of codepoints, allocated with
- * malloc. Or NULL if we run out of memory. In frontend, the returned
+ * malloc. Or NULL if we run out of memory. In backend, the returned
  * string is palloc'd instead, and OOM is reported with ereport().
  */
 pg_wchar *
@@ -341,6 +341,10 @@ unicode_normalize_kc(const pg_wchar *input)
 		decompose_code(*p, &decomp_chars, &current_size);
 	decomp_chars[decomp_size] = '\0';
 	Assert(decomp_size == current_size);
+
+	/* Leave if there is nothing to decompose */
+	if (decomp_size == 0)
+		return decomp_chars;
 
 	/*
 	 * Now apply canonical ordering.

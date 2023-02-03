@@ -1420,7 +1420,7 @@ vac_update_relstats(Relation relation,
 	 */
 	if (num_pages < 1.0)
 	{
-		/*
+		/* (1) For NOT foreign table
 		 * When running in utility mode in the QD node, we get the number of
 		 * tuples of an AO table from the pg_aoseg table, but we don't know
 		 * the file size, so that's always 0. Ignore the tuple count we got,
@@ -1432,8 +1432,20 @@ vac_update_relstats(Relation relation,
 		 * relpages/reltuples estimates in utility mode, but that's what we
 		 * do for heap tables, too, because we don't have even a tuple count
 		 * for them. At least this is consistent.
+		 *
+		 * (2) For foreign table
+		 * For many foreign tables, num_pages < 1.0 && num_tuples >= 1.0
+		 * might arise and is reasonable.
+		 *
+		 * For example, while ANALYZE kafka_fdw foreign tables, num_pages < 1.0
+		 * && num_tuples >= 1.0 always arises.
+		 * Because num_pages is meaningless for kafka, kafka_fdw won't compute it.
+		 *
+		 * To avoid the crash of GPDB and ensure the quality of query plan,
+		 * we won't reset num_tuples to 0 when num_pages < 1.0 && num_tuples >= 1.0
+		 * for foreign tables.
 		 */
-		if (num_tuples >= 1.0)
+		if (get_rel_relkind(relid) != RELKIND_FOREIGN_TABLE && num_tuples >= 1.0)
 		{
 			Assert(Gp_role == GP_ROLE_UTILITY);
 			Assert(!IsSystemRelation(relation));
@@ -1441,7 +1453,6 @@ vac_update_relstats(Relation relation,
 			num_tuples = 0;
 		}
 
-		Assert(num_tuples < 1.0);
 		num_pages = 1.0;
 	}
 
@@ -1616,6 +1627,14 @@ vac_update_datfrozenxid(void)
 	bool		dirty = false;
 
 	/*
+	 * Restrict this task to one backend per database.  This avoids race
+	 * conditions that would move datfrozenxid or datminmxid backward.  It
+	 * avoids calling vac_truncate_clog() with a datfrozenxid preceding a
+	 * datfrozenxid passed to an earlier vac_truncate_clog() call.
+	 */
+	LockDatabaseFrozenIds(ExclusiveLock);
+
+	/*
 	 * Initialize the "min" calculation with GetOldestXmin, which is a
 	 * reasonable approximation to the minimum relfrozenxid for not-yet-
 	 * committed pg_class entries for new tables; see AddNewRelationTuple().
@@ -1724,7 +1743,10 @@ vac_update_datfrozenxid(void)
 
 	/* chicken out if bogus data found */
 	if (bogus)
+	{
+		LockDatabaseFrozenIds(ExclusiveLock);
 		return;
+	}
 
 	Assert(TransactionIdIsNormal(newFrozenXid));
 	Assert(MultiXactIdIsValid(newMinMulti));
@@ -1793,6 +1815,14 @@ vac_update_datfrozenxid(void)
 	if (dirty || ForceTransactionIdLimitUpdate())
 		vac_truncate_clog(newFrozenXid, newMinMulti,
 						  lastSaneFrozenXid, lastSaneMinMulti);
+
+	// GPDB_12_12_MERGE_FIXME: @(interma) upstream lock it in the **whole** tranaction (released by ResourceOwnerRelease())
+	// https://github.com/greenplum-db/gpdb-postgres-merge/commit/30e68a2abb3890c3292ff0b2422a7ea04d62acdd#
+	// 
+	// But in GP, it will cause deadlock in QEs, details: GPSERVER-370
+	// So I tried to release it at the end of this function.
+	// But it may be risks, need to understand upstream commit deeper.
+	UnLockDatabaseFrozenIds(ExclusiveLock);
 }
 
 
@@ -1827,6 +1857,9 @@ vac_truncate_clog(TransactionId frozenXID,
 	Oid			minmulti_datoid;
 	bool		bogus = false;
 	bool		frozenAlreadyWrapped = false;
+
+	/* Restrict task to one backend per cluster; see SimpleLruTruncate(). */
+	LWLockAcquire(WrapLimitsVacuumLock, LW_EXCLUSIVE);
 
 	/* init oldest datoids to sync with my frozenXID/minMulti values */
 	oldestxid_datoid = MyDatabaseId;
@@ -1937,6 +1970,8 @@ vac_truncate_clog(TransactionId frozenXID,
 	 */
 	SetTransactionIdLimit(frozenXID, oldestxid_datoid);
 	SetMultiXactIdLimit(minMulti, minmulti_datoid, false);
+
+	LWLockRelease(WrapLimitsVacuumLock);
 }
 
 

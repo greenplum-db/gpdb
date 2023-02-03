@@ -11434,7 +11434,7 @@ SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f =
 ---+---+---+---+---
 (0 rows)
 
-explain SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f = 10 AND a IN ( SELECT b + 1 FROM non_part1);
+explain analyze SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f = 10 AND a IN ( SELECT b + 1 FROM non_part1);
                                                  QUERY PLAN                                                  
 -------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000004.33..10000000039.45 rows=7 width=20)
@@ -11547,7 +11547,8 @@ INSERT INTO tc0 VALUES (NULL);
 SELECT * from tc0 where a IS NULL;
  a 
 ---
-(0 rows)
+  
+(1 row)
 
 CREATE TABLE tc1 (a int check (a between 1 and 2 or a != 3 and a > 5));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.

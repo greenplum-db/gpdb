@@ -31,12 +31,12 @@
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
       <dxl:TraceFlags Value="102001,102002,102003,102074,102113,102120,102144,102147,103001,103014,103015,103022,103027,103029,103033,104003,104004,104005,104006,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.20355.1.0" Name="test" Rows="100000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.20355.1.0" Name="test" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="4">
+      <dxl:Relation Mdid="6.20355.1.0" Name="test" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.2950.1.0" Nullable="true" ColWidth="16">
             <dxl:DefaultValue/>
@@ -65,7 +65,7 @@
           <dxl:Partition Mdid="6.20355004.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.20355001.1.0" Name="test_prt_1" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.20355001.1.0" Name="test_prt_1" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.2950.1.0" Nullable="true" ColWidth="16">
             <dxl:DefaultValue/>
@@ -103,7 +103,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.20355002.1.0" Name="test_prt_2" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.20355002.1.0" Name="test_prt_2" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.2950.1.0" Nullable="true" ColWidth="16">
             <dxl:DefaultValue/>
@@ -141,7 +141,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.20355003.1.0" Name="test_prt_3" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.20355003.1.0" Name="test_prt_3" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.2950.1.0" Nullable="true" ColWidth="16">
             <dxl:DefaultValue/>
@@ -179,7 +179,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.20355004.1.0" Name="test_prt_4" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.20355004.1.0" Name="test_prt_4" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.2950.1.0" Nullable="true" ColWidth="16">
             <dxl:DefaultValue/>

@@ -211,6 +211,8 @@ StartupDecodingContext(List *output_plugin_options,
  *
  * plugin -- contains the name of the output plugin
  * output_plugin_options -- contains options passed to the output plugin
+ * need_full_snapshot -- if true, must obtain a snapshot able to read all
+ *		tables; if false, one that can read only catalogs is acceptable.
  * restart_lsn -- if given as invalid, it's this routine's responsibility to
  *		mark WAL as reserved by setting a convenient restart_lsn for the slot.
  *		Otherwise, we set for decoding to start from the given LSN without
@@ -622,6 +624,7 @@ startup_cb_wrapper(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool i
 
 	/* set output state */
 	ctx->accept_writes = false;
+	ctx->end_xact = false;
 
 	/* do the actual work: call callback */
 	ctx->callbacks.startup_cb(ctx, opt, is_init);
@@ -649,6 +652,7 @@ shutdown_cb_wrapper(LogicalDecodingContext *ctx)
 
 	/* set output state */
 	ctx->accept_writes = false;
+	ctx->end_xact = false;
 
 	/* do the actual work: call callback */
 	ctx->callbacks.shutdown_cb(ctx);
@@ -684,6 +688,7 @@ begin_cb_wrapper(ReorderBuffer *cache, ReorderBufferTXN *txn)
 	ctx->accept_writes = true;
 	ctx->write_xid = txn->xid;
 	ctx->write_location = txn->first_lsn;
+	ctx->end_xact = false;
 
 	/* do the actual work: call callback */
 	ctx->callbacks.begin_cb(ctx, txn);
@@ -715,6 +720,7 @@ commit_cb_wrapper(ReorderBuffer *cache, ReorderBufferTXN *txn,
 	ctx->accept_writes = true;
 	ctx->write_xid = txn->xid;
 	ctx->write_location = txn->end_lsn; /* points to the end of the record */
+	ctx->end_xact = true;
 
 	/* do the actual work: call callback */
 	ctx->callbacks.commit_cb(ctx, txn, commit_lsn);
@@ -753,6 +759,8 @@ change_cb_wrapper(ReorderBuffer *cache, ReorderBufferTXN *txn,
 	 * commit to be confirmed with one message.
 	 */
 	ctx->write_location = change->lsn;
+
+	ctx->end_xact = false;
 
 	ctx->callbacks.change_cb(ctx, txn, relation, change);
 
@@ -794,6 +802,8 @@ truncate_cb_wrapper(ReorderBuffer *cache, ReorderBufferTXN *txn,
 	 */
 	ctx->write_location = change->lsn;
 
+	ctx->end_xact = false;
+
 	ctx->callbacks.truncate_cb(ctx, txn, nrelations, relations, change);
 
 	/* Pop the error context stack */
@@ -820,6 +830,7 @@ filter_by_origin_cb_wrapper(LogicalDecodingContext *ctx, RepOriginId origin_id)
 
 	/* set output state */
 	ctx->accept_writes = false;
+	ctx->end_xact = false;
 
 	/* do the actual work: call callback */
 	ret = ctx->callbacks.filter_by_origin_cb(ctx, origin_id);
@@ -857,6 +868,7 @@ message_cb_wrapper(ReorderBuffer *cache, ReorderBufferTXN *txn,
 	ctx->accept_writes = true;
 	ctx->write_xid = txn != NULL ? txn->xid : InvalidTransactionId;
 	ctx->write_location = message_lsn;
+	ctx->end_xact = false;
 
 	/* do the actual work: call callback */
 	ctx->callbacks.message_cb(ctx, txn, message_lsn, transactional, prefix,
@@ -972,6 +984,7 @@ LogicalIncreaseRestartDecodingForSlot(XLogRecPtr current_lsn, XLogRecPtr restart
 	{
 		slot->candidate_restart_valid = current_lsn;
 		slot->candidate_restart_lsn = restart_lsn;
+		SpinLockRelease(&slot->mutex);
 
 		elog(DEBUG1, "got new restart lsn %X/%X at %X/%X",
 			 (uint32) (restart_lsn >> 32), (uint32) restart_lsn,
@@ -979,18 +992,25 @@ LogicalIncreaseRestartDecodingForSlot(XLogRecPtr current_lsn, XLogRecPtr restart
 	}
 	else
 	{
+		XLogRecPtr	candidate_restart_lsn;
+		XLogRecPtr	candidate_restart_valid;
+		XLogRecPtr	confirmed_flush;
+
+		candidate_restart_lsn = slot->candidate_restart_lsn;
+		candidate_restart_valid = slot->candidate_restart_valid;
+		confirmed_flush = slot->data.confirmed_flush;
+		SpinLockRelease(&slot->mutex);
+
 		elog(DEBUG1, "failed to increase restart lsn: proposed %X/%X, after %X/%X, current candidate %X/%X, current after %X/%X, flushed up to %X/%X",
 			 (uint32) (restart_lsn >> 32), (uint32) restart_lsn,
 			 (uint32) (current_lsn >> 32), (uint32) current_lsn,
-			 (uint32) (slot->candidate_restart_lsn >> 32),
-			 (uint32) slot->candidate_restart_lsn,
-			 (uint32) (slot->candidate_restart_valid >> 32),
-			 (uint32) slot->candidate_restart_valid,
-			 (uint32) (slot->data.confirmed_flush >> 32),
-			 (uint32) slot->data.confirmed_flush
-			);
+			 (uint32) (candidate_restart_lsn >> 32),
+			 (uint32) candidate_restart_lsn,
+			 (uint32) (candidate_restart_valid >> 32),
+			 (uint32) candidate_restart_valid,
+			 (uint32) (confirmed_flush >> 32),
+			 (uint32) confirmed_flush);
 	}
-	SpinLockRelease(&slot->mutex);
 
 	/* candidates are already valid with the current flush position, apply */
 	if (updated_lsn)

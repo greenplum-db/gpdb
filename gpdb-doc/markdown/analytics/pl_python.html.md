@@ -183,7 +183,7 @@ SELECT * FROM composite_type_as_list();
 (1 row) 
 ```
 
-Refer to the PostgreSQL [Arrays, Lists](https://www.postgresql.org/docs/9.4/plpython-data.html#PLPYTHON-ARRAYS) documentation for additional information on PL/Python handling of arrays and composite types.
+Refer to the PostgreSQL [Arrays, Lists](https://www.postgresql.org/docs/12/plpython-data.html#PLPYTHON-ARRAYS) documentation for additional information on PL/Python handling of arrays and composite types.
 
 ### <a id="topic_setresult"></a>Set-Returning Functions 
 
@@ -217,7 +217,7 @@ select greet('hello');
 
 The PL/Python `plpy` module provides two Python functions to run an SQL query and prepare an execution plan for a query, `plpy.execute` and `plpy.prepare`. Preparing the execution plan for a query is useful if you run the query from multiple Python functions.
 
-PL/Python also supports the `plpy.subtransaction()` function to help manage `plpy.execute` calls in an explicit subtransaction. See [Explicit Subtransactions](https://www.postgresql.org/docs/9.4/plpython-subtransaction.html) in the PostgreSQL documentation for additional information about `plpy.subtransaction()`.
+PL/Python also supports the `plpy.subtransaction()` function to help manage `plpy.execute` calls in an explicit subtransaction. See [Explicit Subtransactions](https://www.postgresql.org/docs/12/plpython-subtransaction.html) in the PostgreSQL documentation for additional information about `plpy.subtransaction()`.
 
 #### <a id="topic_jnf_45f_zt"></a>plpy.execute 
 
@@ -257,7 +257,7 @@ rv = plpy.execute(plan, [ "Fred" ], 5)
 
 The third argument is the limit for the number of rows returned and is optional.
 
-When you prepare an execution plan using the PL/Python module the plan is automatically saved. See the Postgres Server Programming Interface \(SPI\) documentation for information about the execution plans [https://www.postgresql.org/docs/9.4/spi.html](https://www.postgresql.org/docs/9.4/spi.html).
+When you prepare an execution plan using the PL/Python module the plan is automatically saved. See the Postgres Server Programming Interface \(SPI\) documentation for information about the execution plans [https://www.postgresql.org/docs/12/spi.html](https://www.postgresql.org/docs/12/spi.html).
 
 To make effective use of saved plans across function calls you use one of the Python persistent storage dictionaries SD or GD.
 
@@ -390,11 +390,11 @@ You can use `gpssh` to run the commands on the Greenplum Database hosts. This ex
 ```
 $ gpssh -s -f gpdb_hosts
 => python -m ensurepip --default-pip
-[centos6-mdw1] Ignoring indexes: https://pypi.python.org/simple
-[centos6-mdw1] Collecting setuptools
-[centos6-mdw1] Collecting pip
-[centos6-mdw1] Installing collected packages: setuptools, pip
-[centos6-mdw1] Successfully installed pip-8.1.1 setuptools-20.10.1
+[centos6-cdw1] Ignoring indexes: https://pypi.python.org/simple
+[centos6-cdw1] Collecting setuptools
+[centos6-cdw1] Collecting pip
+[centos6-cdw1] Installing collected packages: setuptools, pip
+[centos6-cdw1] Successfully installed pip-8.1.1 setuptools-20.10.1
 [centos6-sdw1] Ignoring indexes: https://pypi.python.org/simple
 [centos6-sdw1] Collecting setuptools
 [centos6-sdw1] Collecting pip
@@ -465,7 +465,7 @@ testdb=# SET plpython3.python_path='/home/gpadmin/my_python';
 
 Greenplum uses the value of `plpython3.python_path` to set `PLPYTHONPATH` in the environment used to create or call `plpython3u` functions.
 
-**Note:** `plpython3.python_path` is provided as part of the `plpython3u` extension, so you _must_ load the extension (with `load 'plpython3';`) before you can set this configuration parameter in a session.
+> **Note** `plpython3.python_path` is provided as part of the `plpython3u` extension, so you _must_ load the extension (with `load 'plpython3';`) before you can set this configuration parameter in a session.
 
 Ensure that you configure `plpython3.python_path` _before_ you create or call `plpython3` functions in a session. If you set or change the parameter after `plpython3u` is initialized you receive the error:
 
@@ -536,10 +536,10 @@ If `FAILURE` is returned, these are some possible causes:
 
 -   A problem accessing required libraries. For the NumPy example, a Greenplum Database might have a problem accessing the OpenBLAS libraries or the Python libraries on a segment host.
 
-    Make sure you get no errors when running command on the segment host as the `gpadmin` user. This `gpssh` command tests importing the numpy module on the segment host `mdw1`.
+    Make sure you get no errors when running command on the segment host as the `gpadmin` user. This `gpssh` command tests importing the numpy module on the segment host `cdw1`.
 
     ```
-    gpssh -s -h mdw1 python -c "import numpy"
+    gpssh -s -h cdw1 python -c "import numpy"
     ```
 
 -   If the Python `import` command does not return an error, environment variables might not be configured in the Greenplum Database environment. For example, the Greenplum Database might not have been restarted after installing the Python Package on the host system.
@@ -661,7 +661,7 @@ $$ language plpythonu;
 
 For information about the Python language, see [https://www.python.org/](https://www.python.org/).
 
-For information about PL/Python see the PostgreSQL documentation at [https://www.postgresql.org/docs/9.4/plpython.html](https://www.postgresql.org/docs/9.4/plpython.html).
+For information about PL/Python see the PostgreSQL documentation at [https://www.postgresql.org/docs/12/plpython.html](https://www.postgresql.org/docs/12/plpython.html).
 
 For information about Python Package Index \(PyPI\), see [https://pypi.python.org/pypi](https://pypi.python.org/pypi).
 

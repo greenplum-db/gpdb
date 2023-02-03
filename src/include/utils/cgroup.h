@@ -25,6 +25,7 @@
 #define GPDB_SYSTEM_CGROUP 		6441
 
 #define MAX_CGROUP_PATHLEN 256
+#define MAX_CGROUP_CONTENTLEN 1024  
 
 #define CGROUP_ERROR(...) elog(ERROR, __VA_ARGS__)
 #define CGROUP_CONFIG_ERROR(...) \
@@ -42,10 +43,12 @@
  * can't be seen in gpdb.
  */
 #define DEFAULT_CPUSET_GROUP_ID 1
+
 /*
- * If cpu_rate_limit is set to this value, it means this feature is disabled
+ * If cpu_hard_quota_limit is set to this value, it means this feature is disabled.
+ * And meanwhile, it also means the process can use CPU resource infinitely.
  */
-#define CPU_RATE_LIMIT_DISABLED (-1)
+#define CPU_HARD_QUOTA_LIMIT_DISABLED (-1)
 
 /* This is the default value about Linux Control Group */
 #define DEFAULT_CPU_PERIOD_US 100000LL
@@ -66,7 +69,6 @@ typedef enum
 	 */
 	CGROUP_COMPONENT_CPU			= 0,
 	CGROUP_COMPONENT_CPUACCT,
-	CGROUP_COMPONENT_MEMORY,
 	CGROUP_COMPONENT_CPUSET,
 
 	CGROUP_COMPONENT_COUNT,
@@ -132,7 +134,6 @@ extern bool deleteDir(Oid group, CGroupComponentType component, const char *file
 
 extern int getCPUCores(void);
 extern bool getCgroupMountDir(void);
-extern int getTotalMemory(void);
 
 /*
  * Interfaces for OS dependent operations
@@ -167,17 +168,12 @@ typedef int (*lockcgroup_function) (Oid group, CGroupComponentType component, bo
 typedef void (*unlockcgroup_function) (int fd);
 
 /* Set the cpu limit. */
-typedef void (*setcpulimit_function) (Oid group, int cpu_rate_limit);
+typedef void (*setcpulimit_function) (Oid group, int cpu_hard_quota_limit);
 /* Set the cpu share. */
-typedef void (*setcpushare_function) (Oid group, int cpu_share);
+typedef void (*setcpupriority_function) (Oid group, int cpu_soft_priority);
 
 /* Get the cpu usage of the OS group. */
 typedef int64 (*getcpuusage_function) (Oid group);
-
-typedef int32 (*getmemoryusage_function) (Oid group);
-typedef int32 (*getmemorylimitchunks_function) (Oid group);
-typedef void (*setmemorylimit_function) (Oid group, int memory_limit);
-typedef void (*setmemorylimitchunks_function) (Oid group, int32 chunks);
 
 /* Get the cpuset configuration of a cgroup. */
 typedef void (*getcpuset_function) (Oid group, char *cpuset, int len);
@@ -211,14 +207,9 @@ typedef struct CGroupOpsRoutine
 
 	setcpulimit_function 	setcpulimit;
 
-	setcpushare_function 	setcpushare;
+	setcpupriority_function	setcpupriority;
 
 	getcpuusage_function 	getcpuusage;
-
-	getmemoryusage_function getmemoryusage;
-	setmemorylimit_function setmemorylimit;
-	getmemorylimitchunks_function getmemorylimitchunks;
-	setmemorylimitchunks_function setmemorylimitbychunks;
 
 	getcpuset_function 		getcpuset;
 	setcpuset_function		setcpuset;

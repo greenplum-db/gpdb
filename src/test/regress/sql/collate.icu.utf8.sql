@@ -333,6 +333,15 @@ CREATE INDEX collate_test1_idx6 ON collate_test1 ((a COLLATE "C")); -- fail
 
 SELECT relname, pg_get_indexdef(oid) FROM pg_class WHERE relname LIKE 'collate_test%_idx%' ORDER BY 1;
 
+set enable_seqscan = off;
+explain (costs off)
+select * from collate_test1 where b ilike 'abc';
+select * from collate_test1 where b ilike 'abc';
+explain (costs off)
+select * from collate_test1 where b ilike 'ABC';
+select * from collate_test1 where b ilike 'ABC';
+reset enable_seqscan;
+
 
 -- schema manipulation commands
 
@@ -466,6 +475,14 @@ SELECT * FROM test6;
 SELECT * FROM test6 WHERE b = 'äbc' COLLATE ctest_det;
 SELECT * FROM test6 WHERE b = 'äbc' COLLATE ctest_nondet;
 
+-- same with arrays
+CREATE TABLE test6a (a int, b text[]);
+INSERT INTO test6a VALUES (1, ARRAY[U&'\00E4bc']);
+INSERT INTO test6a VALUES (2, ARRAY[U&'\0061\0308bc']);
+SELECT * FROM test6a;
+SELECT * FROM test6a WHERE b = ARRAY['äbc'] COLLATE ctest_det;
+SELECT * FROM test6a WHERE b = ARRAY['äbc'] COLLATE ctest_nondet;
+
 CREATE COLLATION case_sensitive (provider = icu, locale = '');
 CREATE COLLATION case_insensitive (provider = icu, locale = '@colStrength=secondary', deterministic = false);
 
@@ -586,8 +603,10 @@ SELECT 'ὀδυσσεύς' = 'ὈΔΥΣΣΕΎΣ' COLLATE case_insensitive;
 SELECT relname FROM pg_class WHERE relname = 'PG_CLASS'::text COLLATE case_insensitive;
 SELECT relname FROM pg_class WHERE 'PG_CLASS'::text = relname COLLATE case_insensitive;
 
-SELECT typname FROM pg_type WHERE typname LIKE 'int_' AND typname <> 'INT2'::text COLLATE case_insensitive;
-SELECT typname FROM pg_type WHERE typname LIKE 'int_' AND 'INT2'::text <> typname COLLATE case_insensitive;;
+SELECT typname FROM pg_type WHERE typname LIKE 'int_' AND typname <> 'INT2'::text
+  COLLATE case_insensitive ORDER BY typname;
+SELECT typname FROM pg_type WHERE typname LIKE 'int_' AND 'INT2'::text <> typname
+  COLLATE case_insensitive ORDER BY typname;
 
 -- test case adapted from subselect.sql
 CREATE TEMP TABLE outer_text (f1 text COLLATE case_insensitive, f2 text);
@@ -666,6 +685,15 @@ INSERT INTO test22 VALUES (2, 'DEF');
 -- they end up in different partitions
 SELECT (SELECT count(*) FROM test22_0) = (SELECT count(*) FROM test22_1);
 
+-- same with arrays
+CREATE TABLE test22a (a int, b text[] COLLATE case_sensitive) PARTITION BY HASH (b);
+CREATE TABLE test22a_0 PARTITION OF test22a FOR VALUES WITH (MODULUS 2, REMAINDER 0);
+CREATE TABLE test22a_1 PARTITION OF test22a FOR VALUES WITH (MODULUS 2, REMAINDER 1);
+INSERT INTO test22a VALUES (1, ARRAY['def']);
+INSERT INTO test22a VALUES (2, ARRAY['DEF']);
+-- they end up in different partitions
+SELECT (SELECT count(*) FROM test22a_0) = (SELECT count(*) FROM test22a_1);
+
 CREATE TABLE test23 (a int, b text COLLATE case_insensitive) PARTITION BY HASH (b);
 CREATE TABLE test23_0 PARTITION OF test23 FOR VALUES WITH (MODULUS 2, REMAINDER 0);
 CREATE TABLE test23_1 PARTITION OF test23 FOR VALUES WITH (MODULUS 2, REMAINDER 1);
@@ -673,6 +701,15 @@ INSERT INTO test23 VALUES (1, 'def');
 INSERT INTO test23 VALUES (2, 'DEF');
 -- they end up in the same partition (but it's platform-dependent which one)
 SELECT (SELECT count(*) FROM test23_0) <> (SELECT count(*) FROM test23_1);
+
+-- same with arrays
+CREATE TABLE test23a (a int, b text[] COLLATE case_insensitive) PARTITION BY HASH (b);
+CREATE TABLE test23a_0 PARTITION OF test23a FOR VALUES WITH (MODULUS 2, REMAINDER 0);
+CREATE TABLE test23a_1 PARTITION OF test23a FOR VALUES WITH (MODULUS 2, REMAINDER 1);
+INSERT INTO test23a VALUES (1, ARRAY['def']);
+INSERT INTO test23a VALUES (2, ARRAY['DEF']);
+-- they end up in the same partition (but it's platform-dependent which one)
+SELECT (SELECT count(*) FROM test23a_0) <> (SELECT count(*) FROM test23a_1);
 
 CREATE TABLE test30 (a int, b char(3) COLLATE case_insensitive) PARTITION BY LIST (b);
 CREATE TABLE test30_1 PARTITION OF test30 FOR VALUES IN ('abc');
@@ -704,9 +741,10 @@ SELECT (SELECT count(*) FROM test33_0) <> (SELECT count(*) FROM test33_1);
 
 
 -- cleanup
+RESET search_path;
 SET client_min_messages TO warning;
 DROP SCHEMA collate_tests CASCADE;
-RESET search_path;
+RESET client_min_messages;
 
 -- leave a collation for pg_upgrade test
 CREATE COLLATION coll_icu_upgrade FROM "und-x-icu";

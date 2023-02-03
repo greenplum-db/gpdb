@@ -798,7 +798,7 @@ Select * from X where X.a < ANY (select a from P);
           <dxl:Partition Mdid="6.35837767003.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.35837767001.1.1" Name="p_prt_1" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.35837767001.1.1" Name="p_prt_1" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -834,7 +834,7 @@ Select * from X where X.a < ANY (select a from P);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.35837767002.1.1" Name="p_prt_2" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.35837767002.1.1" Name="p_prt_2" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -870,7 +870,7 @@ Select * from X where X.a < ANY (select a from P);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.35837767003.1.1" Name="p_prt_3" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.35837767003.1.1" Name="p_prt_3" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

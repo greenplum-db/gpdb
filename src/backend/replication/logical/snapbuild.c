@@ -696,6 +696,8 @@ SnapBuildGetOrBuildSnapshot(SnapBuild *builder, TransactionId xid)
 void
 SnapBuildClearExportedSnapshot(void)
 {
+	ResourceOwner tmpResOwner;
+
 	/* nothing exported, that is the usual case */
 	if (!ExportInProgress)
 		return;
@@ -703,10 +705,24 @@ SnapBuildClearExportedSnapshot(void)
 	if (!IsTransactionState())
 		elog(ERROR, "clearing exported snapshot in wrong transaction state");
 
-	/* make sure nothing  could have ever happened */
+	/*
+	 * AbortCurrentTransaction() takes care of resetting the snapshot state,
+	 * so remember SavedResourceOwnerDuringExport.
+	 */
+	tmpResOwner = SavedResourceOwnerDuringExport;
+
+	/* make sure nothing could have ever happened */
 	AbortCurrentTransaction();
 
-	CurrentResourceOwner = SavedResourceOwnerDuringExport;
+	CurrentResourceOwner = tmpResOwner;
+}
+
+/*
+ * Clear snapshot export state during transaction abort.
+ */
+void
+SnapBuildResetExportedSnapshotState(void)
+{
 	SavedResourceOwnerDuringExport = NULL;
 	ExportInProgress = false;
 }
@@ -1484,7 +1500,7 @@ static void
 SnapBuildSerialize(SnapBuild *builder, XLogRecPtr lsn)
 {
 	Size		needed_length;
-	SnapBuildOnDisk *ondisk;
+	SnapBuildOnDisk *ondisk = NULL;
 	char	   *ondisk_c;
 	int			fd;
 	char		tmppath[MAXPGPATH];
@@ -1683,6 +1699,9 @@ SnapBuildSerialize(SnapBuild *builder, XLogRecPtr lsn)
 out:
 	ReorderBufferSetRestartPoint(builder->reorder,
 								 builder->last_serialized_snapshot);
+	/* be tidy */
+	if (ondisk)
+		pfree(ondisk);
 }
 
 /*

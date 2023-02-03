@@ -759,6 +759,9 @@ intorel_shutdown(DestReceiver *self)
 
 	table_finish_bulk_insert(myState->rel, myState->ti_options);
 
+	if (myState->rel->rd_tableam)
+		table_dml_finish(myState->rel);
+
 	/* close rel, but keep lock until commit */
 	table_close(myState->rel, NoLock);
 	myState->rel = NULL;

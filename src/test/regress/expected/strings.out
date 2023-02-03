@@ -426,6 +426,21 @@ SELECT SUBSTRING('1234567890' FROM 4 FOR 3) = '456' AS "456";
  t
 (1 row)
 
+-- test overflow cases
+SELECT SUBSTRING('string' FROM 2 FOR 2147483646) AS "tring";
+ tring 
+-------
+ tring
+(1 row)
+
+SELECT SUBSTRING('string' FROM -10 FOR 2147483646) AS "string";
+ string 
+--------
+ string
+(1 row)
+
+SELECT SUBSTRING('string' FROM -10 FOR -2147483646) AS "error";
+ERROR:  negative substring length not allowed
 -- T581 regular expression substring (with SQL's bizarre regexp syntax)
 SELECT SUBSTRING('abcdefg' FROM 'a#"(b_d)#"%' FOR '#') AS "bcd";
  bcd 
@@ -1493,6 +1508,24 @@ SELECT strpos('abcdef', 'xy') AS "pos_0";
      0
 (1 row)
 
+SELECT strpos('abcdef', '') AS "pos_1";
+ pos_1 
+-------
+     1
+(1 row)
+
+SELECT strpos('', 'xy') AS "pos_0";
+ pos_0 
+-------
+     0
+(1 row)
+
+SELECT strpos('', '') AS "pos_1";
+ pos_1 
+-------
+     1
+(1 row)
+
 --
 -- test replace
 --
@@ -1698,6 +1731,82 @@ SELECT sha512('The quick brown fox jumps over the lazy dog.');
  \x91ea1245f20d46ae9a037a989f54f1f790f0a47607eeb8a14d12890cea77a1bbc6c7ed9cf205e67b7f2b8fd4c7dfd3a7a8617e45f3c463d481c7e586c39ac1ed
 (1 row)
 
+--
+-- encode/decode
+--
+SELECT encode('\x1234567890abcdef00', 'hex');
+       encode       
+--------------------
+ 1234567890abcdef00
+(1 row)
+
+SELECT decode('1234567890abcdef00', 'hex');
+        decode        
+----------------------
+ \x1234567890abcdef00
+(1 row)
+
+SELECT encode(('\x' || repeat('1234567890abcdef0001', 7))::bytea, 'base64');
+                                    encode                                    
+------------------------------------------------------------------------------
+ EjRWeJCrze8AARI0VniQq83vAAESNFZ4kKvN7wABEjRWeJCrze8AARI0VniQq83vAAESNFZ4kKvN+
+ 7wABEjRWeJCrze8AAQ==
+(1 row)
+
+SELECT decode(encode(('\x' || repeat('1234567890abcdef0001', 7))::bytea,
+                     'base64'), 'base64');
+                                                                     decode                                                                     
+------------------------------------------------------------------------------------------------------------------------------------------------
+ \x1234567890abcdef00011234567890abcdef00011234567890abcdef00011234567890abcdef00011234567890abcdef00011234567890abcdef00011234567890abcdef0001
+(1 row)
+
+SELECT encode('\x1234567890abcdef00', 'escape');
+           encode            
+-----------------------------
+ \x124Vx\220\253\315\357\000
+(1 row)
+
+SELECT decode(encode('\x1234567890abcdef00', 'escape'), 'escape');
+        decode        
+----------------------
+ \x1234567890abcdef00
+(1 row)
+
+--
+-- get_bit/set_bit etc
+--
+SELECT get_bit('\x1234567890abcdef00'::bytea, 43);
+ get_bit 
+---------
+       1
+(1 row)
+
+SELECT get_bit('\x1234567890abcdef00'::bytea, 99);  -- error
+ERROR:  index 99 out of valid range, 0..71
+SELECT set_bit('\x1234567890abcdef00'::bytea, 43, 0);
+       set_bit        
+----------------------
+ \x1234567890a3cdef00
+(1 row)
+
+SELECT set_bit('\x1234567890abcdef00'::bytea, 99, 0);  -- error
+ERROR:  index 99 out of valid range, 0..71
+SELECT get_byte('\x1234567890abcdef00'::bytea, 3);
+ get_byte 
+----------
+      120
+(1 row)
+
+SELECT get_byte('\x1234567890abcdef00'::bytea, 99);  -- error
+ERROR:  index 99 out of valid range, 0..8
+SELECT set_byte('\x1234567890abcdef00'::bytea, 7, 11);
+       set_byte       
+----------------------
+ \x1234567890abcd0b00
+(1 row)
+
+SELECT set_byte('\x1234567890abcdef00'::bytea, 99, 11);  -- error
+ERROR:  index 99 out of valid range, 0..8
 --
 -- test behavior of escape_string_warning and standard_conforming_strings options
 --
@@ -1931,6 +2040,32 @@ SELECT repeat('Pg', -4);
  
 (1 row)
 
+SELECT SUBSTRING('1234567890'::bytea FROM 3) "34567890";
+ 34567890 
+----------
+ 34567890
+(1 row)
+
+SELECT SUBSTRING('1234567890'::bytea FROM 4 FOR 3) AS "456";
+ 456 
+-----
+ 456
+(1 row)
+
+SELECT SUBSTRING('string'::bytea FROM 2 FOR 2147483646) AS "tring";
+ tring 
+-------
+ tring
+(1 row)
+
+SELECT SUBSTRING('string'::bytea FROM -10 FOR 2147483646) AS "string";
+ string 
+--------
+ string
+(1 row)
+
+SELECT SUBSTRING('string'::bytea FROM -10 FOR -2147483646) AS "error";
+ERROR:  negative substring length not allowed
 SELECT trim(E'\\000'::bytea from E'\\000Tom\\000'::bytea);
  btrim 
 -------

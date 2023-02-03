@@ -27,12 +27,6 @@
 CATALOG(pg_appendonly,6105,AppendOnlyRelationId)
 {
 	Oid				relid;				/* relation id */
-	int32			blocksize;			/* the max block size of this relation */
-	int32			safefswritesize;	/* min write size in bytes to prevent torn-write */
-	int16			compresslevel;		/* the (per seg) total number of varblocks */
-	bool			checksum;			/* true if checksum is stored with data and checked */
-	NameData		compresstype;		/* the compressor used (e.g. zlib) */
-    bool            columnstore;        /* true if orientation is column */ 
     Oid             segrelid;           /* OID of aoseg table; 0 if none */
     Oid             blkdirrelid;        /* OID of aoblkdir table; 0 if none */
     Oid             blkdiridxid;        /* if aoblkdir table, OID of aoblkdir index */
@@ -101,23 +95,8 @@ static inline void AORelationVersion_CheckValid(int version)
 	(version > AORelationVersion_Original) \
 )
 
-/*
- * Are numerics stored in old, pre-PostgreSQL 8.3 format, and need converting?
- */
-#define PG82NumericConversionNeeded(version) \
-( \
-	AORelationVersion_CheckValid(version), \
-	(version < AORelationVersion_PG83) \
-)
-
 extern void
 InsertAppendOnlyEntry(Oid relid,
-					  int blocksize,
-					  int safefswritesize,
-					  int compresslevel,
-					  bool checksum,
-					  bool columnstore,
-					  char* compresstype,
 					  Oid segrelid,
 					  Oid blkdirrelid,
 					  Oid blkdiridxid,
@@ -127,7 +106,6 @@ InsertAppendOnlyEntry(Oid relid,
 void
 GetAppendOnlyEntryAttributes(Oid relid,
 							 int32 *blocksize,
-							 int32 *safefswritesize,
 							 int16 *compresslevel,
 							 bool *checksum,
 							 NameData *compresstype);

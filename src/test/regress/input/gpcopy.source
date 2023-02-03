@@ -703,6 +703,8 @@ COPY segment_reject_limit_from to STDOUT log errors segment reject limit 3 rows;
 \copy segment_reject_limit_from from 'stdin';
 \copy segment_reject_limit_from to 'stdout';
 \copy segment_reject_limit_from from 'stdout';
+\!rm stdin
+\!rm stdout
 
 -- gp_initial_bad_row_limit guc test. This guc allows user to set the initial
 -- number of rows which can contain errors before the database stops loading

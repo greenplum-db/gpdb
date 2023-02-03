@@ -91,7 +91,7 @@ filename
 -S username \| --superuser=username
 :   Specify the superuser user name to use when deactivating triggers. This is only relevant if `--disable-triggers` is used.
 
-    **Note:** Greenplum Database does not support user-defined triggers.
+    > **Note** Greenplum Database does not support user-defined triggers.
 
 -t table \| --table=table
 :   Restore definition and/or data of named table only. Multiple tables may be specified with multiple `-t` switches. This can be combined with the `-n` option to specify a schema.
@@ -99,7 +99,7 @@ filename
 -T trigger \| --trigger=trigger
 :   Restore named trigger only.
 
-    **Note:** Greenplum Database does not support user-defined triggers.
+    > **Note** Greenplum Database does not support user-defined triggers.
 
 -v \| --verbose
 :   Specifies verbose mode.
@@ -116,7 +116,7 @@ filename
 --disable-triggers
 :   This option is relevant only when performing a data-only restore. It instructs `pg_restore` to run commands to temporarily deactivate triggers on the target tables while the data is reloaded. Use this if you have triggers on the tables that you do not want to invoke during data reload. The commands emitted for `--disable-triggers` must be done as superuser. So you should also specify a superuser name with `-S` or, preferably, run `pg_restore` as a superuser.
 
-    **Note:** Greenplum Database does not support user-defined triggers.
+    > **Note** Greenplum Database does not support user-defined triggers.
 
 --no-data-for-failed-tables
 :   By default, table data is restored even if the creation command for the table failed \(e.g., because it already exists\). With this option, data for such a table is skipped. This behavior is useful when the target database may already contain the desired table contents. Specifying this option prevents duplicate or obsolete data from being loaded. This option is effective only when restoring directly into a database, not when producing SQL script output.

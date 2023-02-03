@@ -103,13 +103,21 @@ typedef struct ReorderBufferTupleCidEnt
 	CommandId	combocid;		/* just for debugging */
 } ReorderBufferTupleCidEnt;
 
+/* Virtual file descriptor with file offset tracking */
+typedef struct TXNEntryFile
+{
+	File		vfd;			/* -1 when the file is closed */
+	off_t		curOffset;		/* offset for next write or read. Reset to 0
+								 * when vfd is opened. */
+} TXNEntryFile;
+
 /* k-way in-order change iteration support structures */
 typedef struct ReorderBufferIterTXNEntry
 {
 	XLogRecPtr	lsn;
 	ReorderBufferChange *change;
 	ReorderBufferTXN *txn;
-	int			fd;
+	TXNEntryFile file;
 	XLogSegNo	segno;
 } ReorderBufferIterTXNEntry;
 
@@ -178,7 +186,8 @@ static void AssertTXNLsnOrder(ReorderBuffer *rb);
  * subtransactions
  * ---------------------------------------
  */
-static ReorderBufferIterTXNState *ReorderBufferIterTXNInit(ReorderBuffer *rb, ReorderBufferTXN *txn);
+static void ReorderBufferIterTXNInit(ReorderBuffer *rb, ReorderBufferTXN *txn,
+									 ReorderBufferIterTXNState *volatile *iter_state);
 static ReorderBufferChange *ReorderBufferIterTXNNext(ReorderBuffer *rb, ReorderBufferIterTXNState *state);
 static void ReorderBufferIterTXNFinish(ReorderBuffer *rb,
 									   ReorderBufferIterTXNState *state);
@@ -194,7 +203,7 @@ static void ReorderBufferSerializeTXN(ReorderBuffer *rb, ReorderBufferTXN *txn);
 static void ReorderBufferSerializeChange(ReorderBuffer *rb, ReorderBufferTXN *txn,
 										 int fd, ReorderBufferChange *change);
 static Size ReorderBufferRestoreChanges(ReorderBuffer *rb, ReorderBufferTXN *txn,
-										int *fd, XLogSegNo *segno);
+										TXNEntryFile *file, XLogSegNo *segno);
 static void ReorderBufferRestoreChange(ReorderBuffer *rb, ReorderBufferTXN *txn,
 									   char *change);
 static void ReorderBufferRestoreCleanup(ReorderBuffer *rb, ReorderBufferTXN *txn);
@@ -350,6 +359,9 @@ ReorderBufferReturnTXN(ReorderBuffer *rb, ReorderBufferTXN *txn)
 		txn->invalidations = NULL;
 	}
 
+	/* Reset the toast hash */
+	ReorderBufferToastReset(rb, txn);
+
 	pfree(txn);
 }
 
@@ -417,6 +429,7 @@ ReorderBufferReturnChange(ReorderBuffer *rb, ReorderBufferChange *change)
 			}
 			break;
 		case REORDER_BUFFER_CHANGE_INTERNAL_SPEC_CONFIRM:
+		case REORDER_BUFFER_CHANGE_INTERNAL_SPEC_ABORT:
 		case REORDER_BUFFER_CHANGE_INTERNAL_COMMAND_ID:
 		case REORDER_BUFFER_CHANGE_INTERNAL_TUPLECID:
 			break;
@@ -778,9 +791,6 @@ ReorderBufferAssignChild(ReorderBuffer *rb, TransactionId xid,
 	txn = ReorderBufferTXNByXid(rb, xid, true, &new_top, lsn, true);
 	subtxn = ReorderBufferTXNByXid(rb, subxid, true, &new_sub, lsn, false);
 
-	if (new_top && !new_sub)
-		elog(ERROR, "subtransaction logged without previous top-level txn record");
-
 	if (!new_sub)
 	{
 		if (subtxn->is_known_as_subxact)
@@ -945,14 +955,22 @@ ReorderBufferIterCompare(Datum a, Datum b, void *arg)
 /*
  * Allocate & initialize an iterator which iterates in lsn order over a
  * transaction and all its subtransactions.
+ *
+ * Note: The iterator state is returned through iter_state parameter rather
+ * than the function's return value.  This is because the state gets cleaned up
+ * in a PG_CATCH block in the caller, so we want to make sure the caller gets
+ * back the state even if this function throws an exception.
  */
-static ReorderBufferIterTXNState *
-ReorderBufferIterTXNInit(ReorderBuffer *rb, ReorderBufferTXN *txn)
+static void
+ReorderBufferIterTXNInit(ReorderBuffer *rb, ReorderBufferTXN *txn,
+						 ReorderBufferIterTXNState *volatile *iter_state)
 {
 	Size		nr_txns = 0;
 	ReorderBufferIterTXNState *state;
 	dlist_iter	cur_txn_i;
 	int32		off;
+
+	*iter_state = NULL;
 
 	/*
 	 * Calculate the size of our heap: one element for every transaction that
@@ -988,7 +1006,7 @@ ReorderBufferIterTXNInit(ReorderBuffer *rb, ReorderBufferTXN *txn)
 
 	for (off = 0; off < state->nr_txns; off++)
 	{
-		state->entries[off].fd = -1;
+		state->entries[off].file.vfd = -1;
 		state->entries[off].segno = 0;
 	}
 
@@ -996,6 +1014,9 @@ ReorderBufferIterTXNInit(ReorderBuffer *rb, ReorderBufferTXN *txn)
 	state->heap = binaryheap_allocate(state->nr_txns,
 									  ReorderBufferIterCompare,
 									  state);
+
+	/* Now that the state fields are initialized, it is safe to return it. */
+	*iter_state = state;
 
 	/*
 	 * Now insert items into the binary heap, in an unordered fashion.  (We
@@ -1013,7 +1034,7 @@ ReorderBufferIterTXNInit(ReorderBuffer *rb, ReorderBufferTXN *txn)
 		{
 			/* serialize remaining changes */
 			ReorderBufferSerializeTXN(rb, txn);
-			ReorderBufferRestoreChanges(rb, txn, &state->entries[off].fd,
+			ReorderBufferRestoreChanges(rb, txn, &state->entries[off].file,
 										&state->entries[off].segno);
 		}
 
@@ -1043,7 +1064,7 @@ ReorderBufferIterTXNInit(ReorderBuffer *rb, ReorderBufferTXN *txn)
 				/* serialize remaining changes */
 				ReorderBufferSerializeTXN(rb, cur_txn);
 				ReorderBufferRestoreChanges(rb, cur_txn,
-											&state->entries[off].fd,
+											&state->entries[off].file,
 											&state->entries[off].segno);
 			}
 			cur_change = dlist_head_element(ReorderBufferChange, node,
@@ -1059,8 +1080,6 @@ ReorderBufferIterTXNInit(ReorderBuffer *rb, ReorderBufferTXN *txn)
 
 	/* assemble a valid binary heap */
 	binaryheap_build(state->heap);
-
-	return state;
 }
 
 /*
@@ -1124,7 +1143,7 @@ ReorderBufferIterTXNNext(ReorderBuffer *rb, ReorderBufferIterTXNState *state)
 		dlist_delete(&change->node);
 		dlist_push_tail(&state->old_change, &change->node);
 
-		if (ReorderBufferRestoreChanges(rb, entry->txn, &entry->fd,
+		if (ReorderBufferRestoreChanges(rb, entry->txn, &entry->file,
 										&state->entries[off].segno))
 		{
 			/* successfully restored changes from disk */
@@ -1163,8 +1182,8 @@ ReorderBufferIterTXNFinish(ReorderBuffer *rb,
 
 	for (off = 0; off < state->nr_txns; off++)
 	{
-		if (state->entries[off].fd != -1)
-			CloseTransientFile(state->entries[off].fd);
+		if (state->entries[off].file.vfd != -1)
+			FileClose(state->entries[off].file.vfd);
 	}
 
 	/* free memory we might have "leaked" in the last *Next call */
@@ -1316,7 +1335,7 @@ ReorderBufferBuildTupleCidHash(ReorderBuffer *rb, ReorderBufferTXN *txn)
 		ent = (ReorderBufferTupleCidEnt *)
 			hash_search(txn->tuplecid_hash,
 						(void *) &key,
-						HASH_ENTER | HASH_FIND,
+						HASH_ENTER,
 						&found);
 		if (!found)
 		{
@@ -1500,7 +1519,7 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 
 		rb->begin(rb, txn);
 
-		iterstate = ReorderBufferIterTXNInit(rb, txn);
+		ReorderBufferIterTXNInit(rb, txn, &iterstate);
 		while ((change = ReorderBufferIterTXNNext(rb, iterstate)) != NULL)
 		{
 			Relation	relation = NULL;
@@ -1553,7 +1572,7 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 
 					relation = RelationIdGetRelation(reloid);
 
-					if (relation == NULL)
+					if (!RelationIsValid(relation))
 						elog(ERROR, "could not open relation with OID %u (for filenode \"%s\")",
 							 reloid,
 							 relpathperm(change->data.tp.relnode,
@@ -1613,8 +1632,8 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 			change_done:
 
 					/*
-					 * Either speculative insertion was confirmed, or it was
-					 * unsuccessful and the record isn't needed anymore.
+					 * If speculative insertion was confirmed, the record isn't
+					 * needed anymore.
 					 */
 					if (specinsert != NULL)
 					{
@@ -1671,7 +1690,7 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 
 							relation = RelationIdGetRelation(relid);
 
-							if (relation == NULL)
+							if (!RelationIsValid(relation))
 								elog(ERROR, "could not open relation with OID %u", relid);
 
 							if (!RelationIsLogicallyLogged(relation))
@@ -1687,6 +1706,32 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 
 						break;
 					}
+
+				case REORDER_BUFFER_CHANGE_INTERNAL_SPEC_ABORT:
+
+					/*
+					 * Abort for speculative insertion arrived. So cleanup the
+					 * specinsert tuple and toast hash.
+					 *
+					 * Note that we get the spec abort change for each toast
+					 * entry but we need to perform the cleanup only the first
+					 * time we get it for the main table.
+					 */
+					if (specinsert != NULL)
+					{
+						/*
+						 * We must clean the toast hash before processing a
+						 * completely new tuple to avoid confusion about the
+						 * previous tuple's toast chunks.
+						 */
+						Assert(change->data.tp.clear_toast_afterwards);
+						ReorderBufferToastReset(rb, txn);
+
+						/* We don't need this record anymore. */
+						ReorderBufferReturnChange(rb, specinsert);
+						specinsert = NULL;
+					}
+					break;
 
 				case REORDER_BUFFER_CHANGE_MESSAGE:
 					rb->message(rb, txn, change->lsn, true,
@@ -1763,16 +1808,8 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 			}
 		}
 
-		/*
-		 * There's a speculative insertion remaining, just clean in up, it
-		 * can't have been successful, otherwise we'd gotten a confirmation
-		 * record.
-		 */
-		if (specinsert)
-		{
-			ReorderBufferReturnChange(rb, specinsert);
-			specinsert = NULL;
-		}
+		/* speculative insertion record must be freed by now */
+		Assert(!specinsert);
 
 		/* clean up the iterator */
 		ReorderBufferIterTXNFinish(rb, iterstate);
@@ -1898,21 +1935,6 @@ ReorderBufferAbortOld(ReorderBuffer *rb, TransactionId oldestRunningXid)
 
 		if (TransactionIdPrecedes(txn->xid, oldestRunningXid))
 		{
-			/*
-			 * We set final_lsn on a transaction when we decode its commit or
-			 * abort record, but we never see those records for crashed
-			 * transactions.  To ensure cleanup of these transactions, set
-			 * final_lsn to that of their last change; this causes
-			 * ReorderBufferRestoreCleanup to do the right thing.
-			 */
-			if (txn->serialized && txn->final_lsn == 0)
-			{
-				ReorderBufferChange *last =
-				dlist_tail_element(ReorderBufferChange, node, &txn->changes);
-
-				txn->final_lsn = last->lsn;
-			}
-
 			elog(DEBUG2, "aborting old transaction %u", txn->xid);
 
 			/* remove potential on-disk data, and deallocate this tx */
@@ -2435,8 +2457,7 @@ ReorderBufferSerializeChange(ReorderBuffer *rb, ReorderBufferTXN *txn,
 
 				sz += sizeof(SnapshotData) +
 					sizeof(TransactionId) * snap->xcnt +
-					sizeof(TransactionId) * snap->subxcnt
-					;
+					sizeof(TransactionId) * snap->subxcnt;
 
 				/* make sure we have enough space */
 				ReorderBufferSerializeReserve(rb, sz);
@@ -2484,6 +2505,7 @@ ReorderBufferSerializeChange(ReorderBuffer *rb, ReorderBufferTXN *txn,
 				break;
 			}
 		case REORDER_BUFFER_CHANGE_INTERNAL_SPEC_CONFIRM:
+		case REORDER_BUFFER_CHANGE_INTERNAL_SPEC_ABORT:
 		case REORDER_BUFFER_CHANGE_INTERNAL_COMMAND_ID:
 		case REORDER_BUFFER_CHANGE_INTERNAL_TUPLECID:
 			/* ReorderBufferChange contains everything important */
@@ -2509,6 +2531,17 @@ ReorderBufferSerializeChange(ReorderBuffer *rb, ReorderBufferTXN *txn,
 	}
 	pgstat_report_wait_end();
 
+	/*
+	 * Keep the transaction's final_lsn up to date with each change we send to
+	 * disk, so that ReorderBufferRestoreCleanup works correctly.  (We used to
+	 * only do this on commit and abort records, but that doesn't work if a
+	 * system crash leaves a transaction without its abort record).
+	 *
+	 * Make sure not to move it backwards.
+	 */
+	if (txn->final_lsn < change->lsn)
+		txn->final_lsn = change->lsn;
+
 	Assert(ondisk->change.action == change->action);
 }
 
@@ -2517,11 +2550,12 @@ ReorderBufferSerializeChange(ReorderBuffer *rb, ReorderBufferTXN *txn,
  */
 static Size
 ReorderBufferRestoreChanges(ReorderBuffer *rb, ReorderBufferTXN *txn,
-							int *fd, XLogSegNo *segno)
+							TXNEntryFile *file, XLogSegNo *segno)
 {
 	Size		restored = 0;
 	XLogSegNo	last_segno;
 	dlist_mutable_iter cleanup_iter;
+	File	   *fd = &file->vfd;
 
 	Assert(txn->first_lsn != InvalidXLogRecPtr);
 	Assert(txn->final_lsn != InvalidXLogRecPtr);
@@ -2562,7 +2596,11 @@ ReorderBufferRestoreChanges(ReorderBuffer *rb, ReorderBufferTXN *txn,
 			ReorderBufferSerializedPath(path, MyReplicationSlot, txn->xid,
 										*segno);
 
-			*fd = OpenTransientFile(path, O_RDONLY | PG_BINARY);
+			*fd = PathNameOpenFile(path, O_RDONLY | PG_BINARY);
+
+			/* No harm in resetting the offset even in case of failure */
+			file->curOffset = 0;
+
 			if (*fd < 0 && errno == ENOENT)
 			{
 				*fd = -1;
@@ -2582,14 +2620,14 @@ ReorderBufferRestoreChanges(ReorderBuffer *rb, ReorderBufferTXN *txn,
 		 * end of this file.
 		 */
 		ReorderBufferSerializeReserve(rb, sizeof(ReorderBufferDiskChange));
-		pgstat_report_wait_start(WAIT_EVENT_REORDER_BUFFER_READ);
-		readBytes = read(*fd, rb->outbuf, sizeof(ReorderBufferDiskChange));
-		pgstat_report_wait_end();
+		readBytes = FileRead(file->vfd, rb->outbuf,
+							 sizeof(ReorderBufferDiskChange),
+							 file->curOffset, WAIT_EVENT_REORDER_BUFFER_READ);
 
 		/* eof */
 		if (readBytes == 0)
 		{
-			CloseTransientFile(*fd);
+			FileClose(*fd);
 			*fd = -1;
 			(*segno)++;
 			continue;
@@ -2605,16 +2643,19 @@ ReorderBufferRestoreChanges(ReorderBuffer *rb, ReorderBufferTXN *txn,
 							readBytes,
 							(uint32) sizeof(ReorderBufferDiskChange))));
 
+		file->curOffset += readBytes;
+
 		ondisk = (ReorderBufferDiskChange *) rb->outbuf;
 
 		ReorderBufferSerializeReserve(rb,
 									  sizeof(ReorderBufferDiskChange) + ondisk->size);
 		ondisk = (ReorderBufferDiskChange *) rb->outbuf;
 
-		pgstat_report_wait_start(WAIT_EVENT_REORDER_BUFFER_READ);
-		readBytes = read(*fd, rb->outbuf + sizeof(ReorderBufferDiskChange),
-						 ondisk->size - sizeof(ReorderBufferDiskChange));
-		pgstat_report_wait_end();
+		readBytes = FileRead(file->vfd,
+							 rb->outbuf + sizeof(ReorderBufferDiskChange),
+							 ondisk->size - sizeof(ReorderBufferDiskChange),
+							 file->curOffset,
+							 WAIT_EVENT_REORDER_BUFFER_READ);
 
 		if (readBytes < 0)
 			ereport(ERROR,
@@ -2626,6 +2667,8 @@ ReorderBufferRestoreChanges(ReorderBuffer *rb, ReorderBufferTXN *txn,
 					 errmsg("could not read from reorderbuffer spill file: read %d instead of %u bytes",
 							readBytes,
 							(uint32) (ondisk->size - sizeof(ReorderBufferDiskChange)))));
+
+		file->curOffset += readBytes;
 
 		/*
 		 * ok, read a full change from disk, now restore it into proper
@@ -2777,6 +2820,7 @@ ReorderBufferRestoreChange(ReorderBuffer *rb, ReorderBufferTXN *txn,
 				break;
 			}
 		case REORDER_BUFFER_CHANGE_INTERNAL_SPEC_CONFIRM:
+		case REORDER_BUFFER_CHANGE_INTERNAL_SPEC_ABORT:
 		case REORDER_BUFFER_CHANGE_INTERNAL_COMMAND_ID:
 		case REORDER_BUFFER_CHANGE_INTERNAL_TUPLECID:
 			break;
@@ -3031,6 +3075,10 @@ ReorderBufferToastReplace(ReorderBuffer *rb, ReorderBufferTXN *txn,
 	desc = RelationGetDescr(relation);
 
 	toast_rel = RelationIdGetRelation(relation->rd_rel->reltoastrelid);
+	if (!RelationIsValid(toast_rel))
+		elog(ERROR, "could not open toast relation with OID %u (base relation \"%s\")",
+			 relation->rd_rel->reltoastrelid, RelationGetRelationName(relation));
+
 	toast_desc = RelationGetDescr(toast_rel);
 
 	/* should we allocate from stack instead? */

@@ -85,14 +85,15 @@ CREATE VIEW cancel_all AS
     WHERE query LIKE 'SELECT * FROM % WHERE busy%';
 
 -- create two resource groups
-CREATE RESOURCE GROUP rg1_cpu_test WITH (concurrency=5, cpu_rate_limit=10, memory_limit=20);
-CREATE RESOURCE GROUP rg2_cpu_test WITH (concurrency=5, cpu_rate_limit=20, memory_limit=20);
+CREATE RESOURCE GROUP rg1_cpu_test WITH (concurrency=5, cpu_hard_quota_limit=-1, cpu_soft_priority=100);
+CREATE RESOURCE GROUP rg2_cpu_test WITH (concurrency=5, cpu_hard_quota_limit=-1, cpu_soft_priority=200);
 
 --
 -- check gpdb cgroup configuration
 --
 DO LANGUAGE PLPYTHON3U $$
     import subprocess
+    import os
 
     cgroot = '@cgroup_mnt_point@'
 
@@ -116,7 +117,7 @@ DO LANGUAGE PLPYTHON3U $$
     shares = get_cgroup_prop('/cpu/gpdb/cpu.shares')
 
     # get system props
-    ncores = int(run_command('nproc'))
+    ncores = os.cpu_count()
 
     # get global gucs
     gp_resource_group_cpu_limit = float(show_guc('gp_resource_group_cpu_limit'))
@@ -128,20 +129,19 @@ DO LANGUAGE PLPYTHON3U $$
     # shares := 1024 * gp_resource_group_cpu_priority
     assert shares == 1024 * gp_resource_group_cpu_priority
 
-    # SUB/shares := TOP/shares * cpu_rate_limit
     def check_group_shares(name):
-        cpu_rate_limit = int(plpy.execute('''
+        cpu_soft_priority = int(plpy.execute('''
             SELECT value
               FROM pg_resgroupcapability c, pg_resgroup g
              WHERE c.resgroupid=g.oid
-               AND reslimittype=2
+               AND reslimittype=3
                AND g.rsgname='{}'
         '''.format(name))[0]['value'])
         oid = int(plpy.execute('''
             SELECT oid FROM pg_resgroup WHERE rsgname='{}'
         '''.format(name))[0]['oid'])
         sub_shares = get_cgroup_prop('/cpu/gpdb/{}/cpu.shares'.format(oid))
-        assert sub_shares == int(shares * cpu_rate_limit / 100)
+        assert sub_shares == int(cpu_soft_priority * 1024 / 100)
 
     # check default groups
     check_group_shares('default_group')
@@ -152,8 +152,8 @@ DO LANGUAGE PLPYTHON3U $$
     check_group_shares('rg2_cpu_test')
 $$;
 
--- lower admin_group's cpu_rate_limit to minimize its side effect
-ALTER RESOURCE GROUP admin_group SET cpu_rate_limit 1;
+-- lower admin_group's cpu_hard_quota_limit to minimize its side effect
+ALTER RESOURCE GROUP admin_group SET cpu_hard_quota_limit 1;
 
 -- create two roles and assign them to above groups
 CREATE ROLE role1_cpu_test RESOURCE GROUP rg1_cpu_test;
@@ -180,16 +180,6 @@ GRANT ALL ON FUNCTION busy() TO role2_cpu_test;
 -- on empty load the cpu usage shall be 0%
 --
 
---
--- a group should burst to use all the cpu usage
--- when it's the only one with running queries.
---
--- however the overall cpu usage is controlled by a GUC
--- gp_resource_group_cpu_limit which is 90% by default.
---
--- so the cpu usage shall be 90%
---
-
 10&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;
 11&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;
 12&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;
@@ -197,6 +187,7 @@ GRANT ALL ON FUNCTION busy() TO role2_cpu_test;
 14&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;
 
 -- start_ignore
+-- Gather CPU usage statistics into cpu_usage_samples
 TRUNCATE TABLE cpu_usage_samples;
 SELECT fetch_sample();
 SELECT pg_sleep(1.7);
@@ -247,9 +238,9 @@ SELECT * FROM cancel_all;
 
 --
 -- when there are multiple groups with parallel queries,
--- they should share the cpu usage by their cpu_usage settings,
+-- they should share the cpu usage by their cpu_soft_priority settings,
 --
--- rg1_cpu_test:rg2_cpu_test is 0.1:0.2 => 1:2, so:
+-- rg1_cpu_test:rg2_cpu_test is 100:200 => 1:2, so:
 --
 -- - rg1_cpu_test gets 90% * 1/3 => 30%;
 -- - rg2_cpu_test gets 90% * 2/3 => 60%;
@@ -324,10 +315,11 @@ SELECT * FROM cancel_all;
 24q:
 -- end_ignore
 
--- start_ignore
-! gpconfig -c gp_resource_group_cpu_ceiling_enforcement -v on;
-! gpstop -rai;
--- end_ignore
+
+
+-- Test hard quota limit
+ALTER RESOURCE GROUP rg1_cpu_test set cpu_hard_quota_limit 10;
+ALTER RESOURCE GROUP rg2_cpu_test set cpu_hard_quota_limit 20;
 
 -- prepare parallel queries in the two groups
 10: SET ROLE TO role1_cpu_test;
@@ -385,6 +377,7 @@ SELECT * FROM cancel_all;
 1:SELECT pg_sleep(1.7);
 -- end_ignore
 
+-- verify it
 1:SELECT verify_cpu_usage('rg1_cpu_test', 10, 2);
 
 -- start_ignore
@@ -411,9 +404,9 @@ SELECT * FROM cancel_all;
 
 --
 -- when there are multiple groups with parallel queries,
--- they should follow the ceiling enforcement of the cpu usage.
+-- they should follow the enforcement of the cpu usage.
 --
--- rg1_cpu_test:rg2_cpu_test is 0.1:0.2, so:
+-- rg1_cpu_test:rg2_cpu_test is 10:20, so:
 --
 -- - rg1_cpu_test gets 10%;
 -- - rg2_cpu_test gets 20%;
@@ -490,13 +483,8 @@ SELECT * FROM cancel_all;
 1q:
 -- end_ignore
 
--- start_ignore
-! gpconfig -c gp_resource_group_cpu_ceiling_enforcement -v off;
-! gpstop -rai;
--- end_ignore
-
--- restore admin_group's cpu_rate_limit
-2:ALTER RESOURCE GROUP admin_group SET cpu_rate_limit 10;
+-- restore admin_group's cpu_hard_quota_limit
+2:ALTER RESOURCE GROUP admin_group SET cpu_hard_quota_limit 10;
 
 -- cleanup
 2:REVOKE ALL ON FUNCTION busy() FROM role1_cpu_test;

@@ -31,7 +31,7 @@ OBJS        = CDXLColDescr.o \
               CDXLLogicalCTEProducer.o \
               CDXLLogicalConstTable.o \
               CDXLLogicalDelete.o \
-              CDXLLogicalExternalGet.o \
+              CDXLLogicalForeignGet.o \
               CDXLLogicalGet.o \
               CDXLLogicalGroupBy.o \
               CDXLLogicalInsert.o \
@@ -61,7 +61,7 @@ OBJS        = CDXLColDescr.o \
               CDXLPhysicalDynamicBitmapTableScan.o \
               CDXLPhysicalDynamicIndexScan.o \
               CDXLPhysicalDynamicTableScan.o \
-              CDXLPhysicalExternalScan.o \
+              CDXLPhysicalForeignScan.o \
               CDXLPhysicalGatherMotion.o \
               CDXLPhysicalHashJoin.o \
               CDXLPhysicalIndexOnlyScan.o \
@@ -134,7 +134,6 @@ OBJS        = CDXLColDescr.o \
               CDXLScalarPartDefault.o \
               CDXLScalarPartListNullTest.o \
               CDXLScalarPartListValues.o \
-              CDXLScalarPartOid.o \
               CDXLScalarProjElem.o \
               CDXLScalarProjList.o \
               CDXLScalarRecheckCondFilter.o \

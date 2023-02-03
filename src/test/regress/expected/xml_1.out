@@ -1025,6 +1025,9 @@ EXPLAIN (COSTS OFF, VERBOSE) SELECT * FROM xmltableview1;
  Settings: optimizer=off
 (13 rows)
 
+-- errors
+SELECT * FROM XMLTABLE (ROW () PASSING null COLUMNS v1 timestamp) AS f (v1, v2);
+ERROR:  XMLTABLE function has 1 columns available but 2 columns specified
 -- XMLNAMESPACES tests
 SELECT * FROM XMLTABLE(XMLNAMESPACES('http://x.y' AS zz),
                       '/zz:rows/zz:row'
@@ -1055,6 +1058,14 @@ SELECT * FROM XMLTABLE(XMLNAMESPACES(DEFAULT 'http://x.y'),
 ERROR:  unsupported XML feature
 LINE 3:                       PASSING '<rows xmlns="http://x.y"><row...
                                       ^
+DETAIL:  This functionality requires the server to be built with libxml support.
+HINT:  You need to rebuild PostgreSQL using --with-libxml.
+SELECT * FROM XMLTABLE('.'
+                       PASSING '<foo/>'
+                       COLUMNS a text PATH 'foo/namespace::node()');
+ERROR:  unsupported XML feature
+LINE 2:                        PASSING '<foo/>'
+                                       ^
 DETAIL:  This functionality requires the server to be built with libxml support.
 HINT:  You need to rebuild PostgreSQL using --with-libxml.
 -- used in prepare statements

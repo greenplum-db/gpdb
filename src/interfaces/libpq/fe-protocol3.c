@@ -56,6 +56,8 @@
 	 (id) == 'E' || (id) == 'N' || (id) == 'A' || (id) == 'Y' || \
 	 (id) == 'y' || (id) == 'o')
 
+#define PQmblenBounded(s, e)  strnlen(s, PQmblen(s, e))
+
 
 static void handleSyncLoss(PGconn *conn, char id, int msgLength);
 static int	getRowDescriptions(PGconn *conn, int msgLength);
@@ -326,8 +328,6 @@ pqParseInput3(PGconn *conn)
 						/* First 'T' in a query sequence */
 						if (getRowDescriptions(conn, msgLength))
 							return;
-						/* getRowDescriptions() moves inStart itself */
-						continue;
 					}
 					else
 					{
@@ -373,8 +373,7 @@ pqParseInput3(PGconn *conn)
 				case 't':		/* Parameter Description */
 					if (getParamDescriptions(conn, msgLength))
 						return;
-					/* getParamDescriptions() moves inStart itself */
-					continue;
+					break;
 				case 'D':		/* Data Row */
 					if (conn->result != NULL &&
 						conn->result->resultStatus == PGRES_TUPLES_OK)
@@ -382,8 +381,6 @@ pqParseInput3(PGconn *conn)
 						/* Read another tuple of a normal query response */
 						if (getAnotherTuple(conn, msgLength))
 							return;
-						/* getAnotherTuple() moves inStart itself */
-						continue;
 					}
 					else if (conn->result != NULL &&
 							 conn->result->resultStatus == PGRES_FATAL_ERROR)
@@ -601,7 +598,6 @@ handleSyncLoss(PGconn *conn, char id, int msgLength)
  * command for a prepared statement) containing the attribute data.
  * Returns: 0 if processed message successfully, EOF to suspend parsing
  * (the latter case is not actually used currently).
- * In the former case, conn->inStart has been advanced past the message.
  */
 static int
 getRowDescriptions(PGconn *conn, int msgLength)
@@ -706,18 +702,8 @@ getRowDescriptions(PGconn *conn, int msgLength)
 			result->binary = 0;
 	}
 
-	/* Sanity check that we absorbed all the data */
-	if (conn->inCursor != conn->inStart + 5 + msgLength)
-	{
-		errmsg = libpq_gettext("extraneous data in \"T\" message");
-		goto advance_and_error;
-	}
-
 	/* Success! */
 	conn->result = result;
-
-	/* Advance inStart to show that the "T" message has been processed. */
-	conn->inStart = conn->inCursor;
 
 	/*
 	 * If we're doing a Describe, we're done, and ready to pass the result
@@ -742,9 +728,6 @@ advance_and_error:
 	if (result && result != conn->result)
 		PQclear(result);
 
-	/* Discard the failed message by pretending we read it */
-	conn->inStart += 5 + msgLength;
-
 	/*
 	 * Replace partially constructed result with an error result. First
 	 * discard the old result to try to win back some memory.
@@ -764,6 +747,12 @@ advance_and_error:
 	pqSaveErrorResult(conn);
 
 	/*
+	 * Show the message as fully consumed, else pqParseInput3 will overwrite
+	 * our error with a complaint about that.
+	 */
+	conn->inCursor = conn->inStart + 5 + msgLength;
+
+	/*
 	 * Return zero to allow input parsing to continue.  Subsequent "D"
 	 * messages will be ignored until we get to end of data, since an error
 	 * result is already set up.
@@ -774,12 +763,8 @@ advance_and_error:
 /*
  * parseInput subroutine to read a 't' (ParameterDescription) message.
  * We'll build a new PGresult structure containing the parameter data.
- * Returns: 0 if completed message, EOF if not enough data yet.
- * In the former case, conn->inStart has been advanced past the message.
- *
- * Note that if we run out of data, we have to release the partially
- * constructed PGresult, and rebuild it again next time.  Fortunately,
- * that shouldn't happen often, since 't' messages usually fit in a packet.
+ * Returns: 0 if processed message successfully, EOF to suspend parsing
+ * (the latter case is not actually used currently).
  */
 static int
 getParamDescriptions(PGconn *conn, int msgLength)
@@ -819,32 +804,18 @@ getParamDescriptions(PGconn *conn, int msgLength)
 		result->paramDescs[i].typid = typid;
 	}
 
-	/* Sanity check that we absorbed all the data */
-	if (conn->inCursor != conn->inStart + 5 + msgLength)
-	{
-		errmsg = libpq_gettext("extraneous data in \"t\" message");
-		goto advance_and_error;
-	}
-
 	/* Success! */
 	conn->result = result;
-
-	/* Advance inStart to show that the "t" message has been processed. */
-	conn->inStart = conn->inCursor;
 
 	return 0;
 
 not_enough_data:
-	PQclear(result);
-	return EOF;
+	errmsg = libpq_gettext("insufficient data in \"t\" message");
 
 advance_and_error:
 	/* Discard unsaved result, if any */
 	if (result && result != conn->result)
 		PQclear(result);
-
-	/* Discard the failed message by pretending we read it */
-	conn->inStart += 5 + msgLength;
 
 	/*
 	 * Replace partially constructed result with an error result. First
@@ -864,6 +835,12 @@ advance_and_error:
 	pqSaveErrorResult(conn);
 
 	/*
+	 * Show the message as fully consumed, else pqParseInput3 will overwrite
+	 * our error with a complaint about that.
+	 */
+	conn->inCursor = conn->inStart + 5 + msgLength;
+
+	/*
 	 * Return zero to allow input parsing to continue.  Essentially, we've
 	 * replaced the COMMAND_OK result with an error result, but since this
 	 * doesn't affect the protocol state, it's fine.
@@ -876,7 +853,6 @@ advance_and_error:
  * We fill rowbuf with column pointers and then call the row processor.
  * Returns: 0 if processed message successfully, EOF to suspend parsing
  * (the latter case is not actually used currently).
- * In the former case, conn->inStart has been advanced past the message.
  */
 static int
 getAnotherTuple(PGconn *conn, int msgLength)
@@ -949,28 +925,14 @@ getAnotherTuple(PGconn *conn, int msgLength)
 		}
 	}
 
-	/* Sanity check that we absorbed all the data */
-	if (conn->inCursor != conn->inStart + 5 + msgLength)
-	{
-		errmsg = libpq_gettext("extraneous data in \"D\" message");
-		goto advance_and_error;
-	}
-
-	/* Advance inStart to show that the "D" message has been processed. */
-	conn->inStart = conn->inCursor;
-
 	/* Process the collected row */
 	errmsg = NULL;
 	if (pqRowProcessor(conn, &errmsg))
 		return 0;				/* normal, successful exit */
 
-	goto set_error_result;		/* pqRowProcessor failed, report it */
+	/* pqRowProcessor failed, fall through to report it */
 
 advance_and_error:
-	/* Discard the failed message by pretending we read it */
-	conn->inStart += 5 + msgLength;
-
-set_error_result:
 
 	/*
 	 * Replace partially constructed result with an error result. First
@@ -989,6 +951,12 @@ set_error_result:
 
 	printfPQExpBuffer(&conn->errorMessage, "%s\n", errmsg);
 	pqSaveErrorResult(conn);
+
+	/*
+	 * Show the message as fully consumed, else pqParseInput3 will overwrite
+	 * our error with a complaint about that.
+	 */
+	conn->inCursor = conn->inStart + 5 + msgLength;
 
 	/*
 	 * Return zero to allow input parsing to continue.  Subsequent "D"
@@ -1437,7 +1405,7 @@ reportErrorPosition(PQExpBuffer msg, const char *query, int loc, int encoding)
 			if (w <= 0)
 				w = 1;
 			scroffset += w;
-			qoffset += pg_encoding_mblen(encoding, &wquery[qoffset]);
+			qoffset += PQmblenBounded(&wquery[qoffset], encoding);
 		}
 		else
 		{
@@ -1505,7 +1473,7 @@ reportErrorPosition(PQExpBuffer msg, const char *query, int loc, int encoding)
 		 * width.
 		 */
 		scroffset = 0;
-		for (; i < msg->len; i += pg_encoding_mblen(encoding, &msg->data[i]))
+		for (; i < msg->len; i += PQmblenBounded(&msg->data[i], encoding))
 		{
 			int			w = pg_encoding_dsplen(encoding, &msg->data[i]);
 

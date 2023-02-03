@@ -23,20 +23,16 @@
 #include <stdio.h>
 #include <mntent.h>
 
-
-CGroupOpsRoutine *cgroupOpsRoutine;
-CGroupSystemInfo *cgroupSystemInfo;
-
 /* cgroup component names. */
 const char *component_names[CGROUP_COMPONENT_COUNT] =
 {
-	"cpu", "cpuacct", "memory", "cpuset"
+	"cpu", "cpuacct", "cpuset"
 };
 
 /* cgroup component dirs. */
 char component_dirs[CGROUP_COMPONENT_COUNT][MAX_CGROUP_PATHLEN] =
 {
-	FALLBACK_COMP_DIR, FALLBACK_COMP_DIR, FALLBACK_COMP_DIR, FALLBACK_COMP_DIR
+	FALLBACK_COMP_DIR, FALLBACK_COMP_DIR, FALLBACK_COMP_DIR
 };
 
 
@@ -398,7 +394,7 @@ void
 readStr(Oid group, BaseDirType base, CGroupComponentType component,
 		const char *filename, char *str, int len)
 {
-	char data[MAX_INT_STRING_LEN];
+	char data[MAX_CGROUP_CONTENTLEN];
 	size_t data_size = sizeof(data);
 	char path[MAX_CGROUP_PATHLEN];
 	size_t path_size = sizeof(path);
@@ -577,84 +573,4 @@ getCgroupMountDir()
 	endmntent(fp);
 
 	return strlen(cgroupSystemInfo->cgroup_dir) != 0;
-}
-
-/* get vm.overcommit_ratio */
-static int
-getOvercommitRatio(void)
-{
-	int ratio;
-	char data[MAX_INT_STRING_LEN];
-	size_t datasize = sizeof(data);
-	const char *path = "/proc/sys/vm/overcommit_ratio";
-
-	readData(path, data, datasize);
-
-	if (sscanf(data, "%d", &ratio) != 1)
-		elog(ERROR, "invalid number '%s' in '%s'", data, path);
-
-	return ratio;
-}
-
-/* get cgroup ram and swap (in Byte) */
-static void
-getCgMemoryInfo(uint64 *cgram, uint64 *cgmemsw)
-{
-	CGroupComponentType component = CGROUP_COMPONENT_MEMORY;
-
-	*cgram = readInt64(CGROUP_ROOT_ID, BASEDIR_PARENT,
-					   component, "memory.limit_in_bytes");
-
-	if (gp_resource_group_enable_cgroup_swap)
-	{
-		*cgmemsw = readInt64(CGROUP_ROOT_ID, BASEDIR_PARENT,
-							 component, "memory.memsw.limit_in_bytes");
-	}
-	else
-	{
-		elog(DEBUG1, "swap memory is unlimited");
-		*cgmemsw = (uint64) -1LL;
-	}
-}
-
-/* get total ram and total swap (in Byte) from sysinfo */
-static void
-getMemoryInfo(unsigned long *ram, unsigned long *swap)
-{
-	struct sysinfo info;
-	if (sysinfo(&info) < 0)
-		elog(ERROR, "can't get memory information: %m");
-	*ram = info.totalram;
-	*swap = info.totalswap;
-}
-
-int
-getTotalMemory(void)
-{
-	unsigned long ram, swap, total;
-	int overcommitRatio;
-	uint64 cgram, cgmemsw;
-	uint64 memsw;
-	uint64 outTotal;
-
-	overcommitRatio = getOvercommitRatio();
-	getMemoryInfo(&ram, &swap);
-	/* Get sysinfo total ram and swap size. */
-	memsw = ram + swap;
-	outTotal = swap + ram * overcommitRatio / 100;
-	getCgMemoryInfo(&cgram, &cgmemsw);
-	ram = Min(ram, cgram);
-	/*
-	 * In the case that total ram and swap read from sysinfo is larger than
-	 * from cgroup, ram and swap must both be limited, otherwise swap must
-	 * not be limited(we can safely use the value from sysinfo as swap size).
-	 */
-	if (cgmemsw < memsw)
-		swap = cgmemsw - ram;
-	/*
-	 * If it is in container, the total memory is limited by both the total
-	 * memoery outside and the memsw of the container.
-	 */
-	total = Min(outTotal, swap + ram);
-	return total >> BITS_IN_MB;
 }

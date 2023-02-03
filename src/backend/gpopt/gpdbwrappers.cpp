@@ -22,6 +22,8 @@
 
 #include "gpopt/gpdbwrappers.h"
 
+#include <limits>  // std::numeric_limits
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoExceptionStack.h"
 #include "gpos/error/CException.h"
@@ -33,6 +35,7 @@
 extern "C" {
 #include "access/external.h"
 #include "catalog/pg_inherits.h"
+#include "foreign/fdwapi.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/optimizer.h"
@@ -742,6 +745,40 @@ gpdb::GetAttStats(Oid relid, AttrNumber attnum)
 	{
 		/* catalog tables: pg_statistic */
 		return get_att_stats(relid, attnum);
+	}
+	GP_WRAP_END;
+	return nullptr;
+}
+
+List *
+gpdb::GetExtStats(Relation rel)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_statistic_ext */
+		return GetRelationExtStatistics(rel);
+	}
+	GP_WRAP_END;
+	return nullptr;
+}
+
+char *
+gpdb::GetExtStatsName(Oid statOid)
+{
+	GP_WRAP_START;
+	{
+		return GetExtStatisticsName(statOid);
+	}
+	GP_WRAP_END;
+	return nullptr;
+}
+
+List *
+gpdb::GetExtStatsKinds(Oid statOid)
+{
+	GP_WRAP_START;
+	{
+		return GetExtStatisticsKinds(statOid);
 	}
 	GP_WRAP_END;
 	return nullptr;
@@ -1729,17 +1766,6 @@ gpdb::HasSubclassSlow(Oid rel_oid)
 	return false;
 }
 
-bool
-gpdb::RelIsExternalTable(Oid relid)
-{
-	GP_WRAP_START;
-	{
-		return rel_is_external_table(relid);
-	}
-	GP_WRAP_END;
-	return false;
-}
-
 GpPolicy *
 gpdb::GetDistributionPolicy(Relation rel)
 {
@@ -1814,6 +1840,26 @@ gpdb::GetRelationIndexes(Relation relation)
 	return NIL;
 }
 
+MVNDistinct *
+gpdb::GetMVNDistinct(Oid stat_oid)
+{
+	GP_WRAP_START;
+	{
+		return statext_ndistinct_load(stat_oid);
+	}
+	GP_WRAP_END;
+}
+
+MVDependencies *
+gpdb::GetMVDependencies(Oid stat_oid)
+{
+	GP_WRAP_START;
+	{
+		return statext_dependencies_load(stat_oid);
+	}
+	GP_WRAP_END;
+}
+
 gpdb::RelationWrapper
 gpdb::GetRelation(Oid rel_oid)
 {
@@ -1825,26 +1871,14 @@ gpdb::GetRelation(Oid rel_oid)
 	GP_WRAP_END;
 }
 
-ExtTableEntry *
-gpdb::GetExternalTableEntry(Oid rel_oid)
-{
-	GP_WRAP_START;
-	{
-		return GetExtTableEntry(rel_oid);
-	}
-	GP_WRAP_END;
-	return nullptr;
-}
-
-
 ForeignScan *
-gpdb::CreateForeignScanForExternalTable(Oid rel_oid, Index scanrelid,
-										List *qual, List *targetlist)
+gpdb::CreateForeignScan(Oid rel_oid, Index scanrelid, List *qual,
+						List *targetlist, Query *query, RangeTblEntry *rte)
 {
 	GP_WRAP_START;
 	{
-		return BuildForeignScanForExternalTable(rel_oid, scanrelid, qual,
-												targetlist);
+		return BuildForeignScan(rel_oid, scanrelid, qual, targetlist, query,
+								rte);
 	}
 	GP_WRAP_END;
 	return nullptr;
@@ -2090,7 +2124,8 @@ gpdb::HasUpdateTriggers(Oid relid)
 
 // get index op family properties
 void
-gpdb::IndexOpProperties(Oid opno, Oid opfamily, int *strategy, Oid *righttype)
+gpdb::IndexOpProperties(Oid opno, Oid opfamily, StrategyNumber *strategynumber,
+						Oid *righttype)
 {
 	GP_WRAP_START;
 	{
@@ -2099,9 +2134,15 @@ gpdb::IndexOpProperties(Oid opno, Oid opfamily, int *strategy, Oid *righttype)
 		// Only the right type is returned to the caller, the left
 		// type is simply ignored.
 		Oid lefttype;
+		INT strategy;
 
-		get_op_opfamily_properties(opno, opfamily, false, strategy, &lefttype,
+		get_op_opfamily_properties(opno, opfamily, false, &strategy, &lefttype,
 								   righttype);
+
+		// Ensure the value of strategy doesn't get truncated when converted to StrategyNumber
+		GPOS_ASSERT(strategy >= 0 &&
+					strategy <= std::numeric_limits<StrategyNumber>::max());
+		*strategynumber = static_cast<StrategyNumber>(strategy);
 		return;
 	}
 	GP_WRAP_END;
@@ -2177,6 +2218,22 @@ gpdb::GetMergeJoinOpFamilies(Oid opno)
 	return NIL;
 }
 
+
+// get the OID of base elementtype for a given typid
+// eg.: CREATE DOMAIN text_domain as text;
+// SELECT oid, typbasetype from pg_type where typname = 'text_domain';
+// oid         | XXXXX  --> Oid for text_domain
+// typbasetype | 25     --> Oid for base element ie, TEXT
+Oid
+gpdb::GetBaseType(Oid typid)
+{
+	GP_WRAP_START;
+	{
+		return getBaseType(typid);
+	}
+	GP_WRAP_END;
+	return InvalidOid;
+}
 
 // Evaluates 'expr' and returns the result as an Expr.
 // Caller keeps ownership of 'expr' and takes ownership of the result

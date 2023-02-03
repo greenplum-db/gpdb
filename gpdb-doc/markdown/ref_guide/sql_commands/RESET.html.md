@@ -14,7 +14,7 @@ RESET ALL
 
 `RESET` restores system configuration parameters to their default values. `RESET` is an alternative spelling for `SET configuration\_parameter TO DEFAULT`.
 
-The default value is defined as the value that the parameter would have had, had no `SET` ever been issued for it in the current session. The actual source of this value might be a compiled-in default, the master `postgresql.conf` configuration file, command-line options, or per-database or per-user default settings. See [Server Configuration Parameters](../config_params/guc_config.html) for more information.
+The default value is defined as the value that the parameter would have had, had no `SET` ever been issued for it in the current session. The actual source of this value might be a compiled-in default, the coordinator `postgresql.conf` configuration file, command-line options, or per-database or per-user default settings. See [Server Configuration Parameters](../config_params/guc_config.html) for more information.
 
 ## <a id="section4"></a>Parameters 
 

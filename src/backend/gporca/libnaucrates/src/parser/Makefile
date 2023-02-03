@@ -35,7 +35,7 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerDynamicIndexScan.o \
               CParseHandlerDynamicTableScan.o \
               CParseHandlerEnumeratorConfig.o \
-              CParseHandlerExternalScan.o \
+              CParseHandlerForeignScan.o \
               CParseHandlerFactory.o \
               CParseHandlerFilter.o \
               CParseHandlerGatherMotion.o \
@@ -55,7 +55,7 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerLogicalCTEProducer.o \
               CParseHandlerLogicalConstTable.o \
               CParseHandlerLogicalDelete.o \
-              CParseHandlerLogicalExternalGet.o \
+              CParseHandlerLogicalForeignGet.o \
               CParseHandlerLogicalGet.o \
               CParseHandlerLogicalGroupBy.o \
               CParseHandlerLogicalInsert.o \
@@ -78,7 +78,6 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerMDIndexInfoList.o \
               CParseHandlerMDRelation.o \
               CParseHandlerMDRelationCtas.o \
-              CParseHandlerMDRelationExternal.o \
               CParseHandlerMDRequest.o \
               CParseHandlerMDScCmp.o \
               CParseHandlerMDType.o \
@@ -116,6 +115,13 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerRandomMotion.o \
               CParseHandlerRedistributeMotion.o \
               CParseHandlerRelStats.o \
+              CParseHandlerRelationExtendedStats.o \
+              CParseHandlerExtStatsInfo.o \
+              CParseHandlerExtStats.o \
+              CParseHandlerExtStatsDependency.o \
+              CParseHandlerExtStatsDependencies.o \
+              CParseHandlerExtStatsNDistinct.o \
+              CParseHandlerExtStatsNDistinctList.o \
               CParseHandlerResult.o \
               CParseHandlerRoutedMotion.o \
               CParseHandlerScalarAggref.o \
@@ -154,7 +160,6 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerScalarPartDefault.o \
               CParseHandlerScalarPartListNullTest.o \
               CParseHandlerScalarPartListValues.o \
-              CParseHandlerScalarPartOid.o \
               CParseHandlerScalarSubPlan.o \
               CParseHandlerScalarSubPlanParam.o \
               CParseHandlerScalarSubPlanParamList.o \

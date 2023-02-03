@@ -443,14 +443,14 @@ alter table aocs_with_compress alter column c type integer;
 
 -- test case: alter AOCS table add column, the preference of the storage setting is: the encoding clause > table setting > gp_default_storage_options
 CREATE TABLE aocs_alter_add_col(a int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=4, blocksize=65536);
-SET gp_default_storage_options ='compresstype=zlib, compresslevel=2';
 -- use statement encoding 
 ALTER TABLE aocs_alter_add_col ADD COLUMN b int ENCODING(compresstype=zlib, compresslevel=3, blocksize=16384);
 -- use table setting
 ALTER TABLE aocs_alter_add_col ADD COLUMN c int;
-RESET gp_default_storage_options;
--- use table setting
+-- table setting > gp_default_storage_options
+SET gp_default_storage_options ='compresstype=zlib, compresslevel=2';
 ALTER TABLE aocs_alter_add_col ADD COLUMN d int;
+RESET gp_default_storage_options;
 \d+ aocs_alter_add_col
 DROP TABLE aocs_alter_add_col;
 
@@ -458,7 +458,7 @@ CREATE TABLE aocs_alter_add_col_no_compress(a int) WITH (appendonly=true, orient
 SET gp_default_storage_options ='compresstype=zlib, compresslevel=2, blocksize=8192';
 -- use statement encoding
 ALTER TABLE aocs_alter_add_col_no_compress ADD COLUMN b int ENCODING(compresstype=rle_type, compresslevel=3, blocksize=16384);
--- use gp_default_storage_options
+-- use table setting
 ALTER TABLE aocs_alter_add_col_no_compress ADD COLUMN c int;
 RESET gp_default_storage_options;
 -- use default value 
@@ -479,3 +479,18 @@ RESET gp_default_storage_options;
 ALTER TABLE aocs_alter_add_col_reorganize ADD COLUMN d int;
 \d+ aocs_alter_add_col_reorganize
 DROP TABLE aocs_alter_add_col_reorganize;
+
+-- test case: Ensure that reads don't fail after aborting an add column + insert operation and we don't project the aborted column
+CREATE TABLE aocs_addcol_abort(a int, b int) USING ao_column;
+INSERT INTO aocs_addcol_abort SELECT i,i FROM generate_series(1,10)i;
+BEGIN;
+ALTER TABLE aocs_addcol_abort ADD COLUMN c int;
+INSERT INTO aocs_addcol_abort SELECT i,i,i FROM generate_series(1,10)i;
+-- check state of aocsseg for entries of add column + insert
+SELECT * FROM gp_toolkit.__gp_aocsseg('aocs_addcol_abort') ORDER BY segment_id, column_num;
+SELECT * FROM aocs_addcol_abort;
+ABORT;
+-- check state of aocsseg if entries for new column are rolled back correctly
+SELECT * FROM gp_toolkit.__gp_aocsseg('aocs_addcol_abort') ORDER BY segment_id, column_num;
+SELECT * FROM aocs_addcol_abort;
+DROP TABLE aocs_addcol_abort;

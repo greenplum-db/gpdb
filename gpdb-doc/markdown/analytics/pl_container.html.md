@@ -34,7 +34,7 @@ Running UDFs inside the Docker container ensures that:
 
 **Example of the process flow**:
 
-Consider a query that selects table data using all available segments, and transforms the data using a PL/Container function. On the first call to a function in a segment container, the query executor on the master host starts the container on that segment host. It then contacts the running container to obtain the results. The container might respond with a Service Provider Interface \(SPI\) - a SQL query run by the container to get some data back from the database - returning the result to the query executor.
+Consider a query that selects table data using all available segments, and transforms the data using a PL/Container function. On the first call to a function in a segment container, the query executor on the coordinator host starts the container on that segment host. It then contacts the running container to obtain the results. The container might respond with a Service Provider Interface \(SPI\) - a SQL query run by the container to get some data back from the database - returning the result to the query executor.
 
 A container running in standby mode waits on the socket and does not consume any CPU resources. PL/Container memory consumption depends on the amount of data cached in global dictionaries.
 
@@ -67,7 +67,7 @@ The following sections describe these tasks in detail.
 
 -   For PL/Container 2.1.x use Greenplum Database 6 on CentOS 7.x \(or later\), RHEL 7.x \(or later\), or Ubuntu 18.04.
 
-    **Note:** PL/Container 2.1.x supports Docker images with Python 3 installed.
+    > **Note** PL/Container 2.1.x supports Docker images with Python 3 installed.
 
 -   For PL/Container 3 Beta use Greenplum Database 6.1 or later on CentOS 7.x \(or later\), RHEL 7.x \(or later\), or Ubuntu 18.04.
 -   The minimum Linux OS kernel version supported is 3.10. To verify your kernel release use:
@@ -152,7 +152,7 @@ For a list of observations while using Docker and PL/Container, see the [Notes](
 Install the PL/Container language extension using the `gppkg` utility.
 
 1.  Download the "PL/Container for RHEL 7" package that applies to your Greenplum Database version, from the [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb/). PL/Container is listed under Greenplum Procedural Languages.
-2.  As `gpadmin`, copy the PL/Container language extension package to the master host.
+2.  As `gpadmin`, copy the PL/Container language extension package to the coordinator host.
 3.  Follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the **Greenplum Procedural Languages PL/Container** software.
 4.  Run the package installation command:
 
@@ -214,40 +214,40 @@ Install the PL/Container language extension using the `gppkg` utility.
 
 Install the Docker images that PL/Container will use to create language-specific containers to run the UDFs.
 
-**Note:** The PL/Container open source module contains dockerfiles to build Docker images that can be used with PL/Container. You can build a Docker image to run PL/Python UDFs and a Docker image to run PL/R UDFs. See the dockerfiles in the GitHub repository at [https://github.com/greenplum-db/plcontainer](https://github.com/greenplum-db/plcontainer).
+> **Note** The PL/Container open source module contains dockerfiles to build Docker images that can be used with PL/Container. You can build a Docker image to run PL/Python UDFs and a Docker image to run PL/R UDFs. See the dockerfiles in the GitHub repository at [https://github.com/greenplum-db/plcontainer](https://github.com/greenplum-db/plcontainer).
 
--   Download the files that contain the Docker images from the [VMware Tanzu Network](https://network.pivotal.io). For example, for Greenplum 6.22, click on "PL/Container Image for Python 2.2.0" which downloads **plcontainer-python3-image-2.2.0-gp6.tar.gz** with Python 3.9 and the *Python 3.9 Data Science Module Package*.
+-   Download the files that contain the Docker images from the [VMware Tanzu Network](https://network.pivotal.io). For example, for Greenplum 6.22, click on "PL/Container Image for Python 2.2.0" which downloads **plcontainer-python3-image-2.2.0-gp7.tar.gz** with Python 3.9 and the *Python 3.9 Data Science Module Package*.
 
-    If you require different images from the ones provided by Tanzu Greenplum, you can create custom Docker images, install the image and add the image to the PL/ Container configuration.
+    If you require different images from the ones provided by VMware Greenplum, you can create custom Docker images, install the image and add the image to the PL/ Container configuration.
 
--   If you are using PL/Container 3 Beta, note that this Beta version is compatible only with the associated `plcontainer-r-image-3.0.0-beta-gp6.tar.gz` image.
+-   If you are using PL/Container 3 Beta, note that this Beta version is compatible only with the associated `plcontainer-r-image-3.0.0-beta-gp7.tar.gz` image.
 -   Follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the **Greenplum Procedural Languages PL/Container Image** software.
 -   Use the `plcontainer image-add` command to install an image on all Greenplum Database hosts. Provide the `-f` option to specify the file system location of a downloaded image file. For example:
 
     ```
     # Install a Python 2 based Docker image
-    plcontainer image-add -f /home/gpadmin/plcontainer-python-image-2.2.0-gp6.tar.gz
+    plcontainer image-add -f /home/gpadmin/plcontainer-python-image-2.2.0-gp7.tar.gz
                 
     # Install a Python 3 based Docker image
-    plcontainer image-add -f /home/gpadmin/plcontainer-python3-image-2.2.0-gp6.tar.gz
+    plcontainer image-add -f /home/gpadmin/plcontainer-python3-image-2.2.0-gp7.tar.gz
                 
     # Install an R based Docker image
-    plcontainer image-add -f /home/gpadmin/plcontainer-r-image-2.1.3-gp6.tar.gz
+    plcontainer image-add -f /home/gpadmin/plcontainer-r-image-2.1.3-gp7.tar.gz
     
     # Install the Beta R image for use with PL/Container 3.0.0 Beta
-    plcontainer image-add -f /home/gpadmin/plcontainer-r-image-3.0.0-beta-gp6.tar.gz
+    plcontainer image-add -f /home/gpadmin/plcontainer-r-image-3.0.0-beta-gp7.tar.gz
     ```
 
     The utility displays progress information, similar to:
 
     ```
-    20200127:21:54:43:004607 plcontainer:mdw:gpadmin-[INFO]:-Checking whether docker is installed on all hosts...
-    20200127:21:54:43:004607 plcontainer:mdw:gpadmin-[INFO]:-Distributing image file /home/gpadmin/plcontainer-python-images-1.5.0.tar to all hosts...
-    20200127:21:54:55:004607 plcontainer:mdw:gpadmin-[INFO]:-Loading image on all hosts...
-    20200127:21:55:37:004607 plcontainer:mdw:gpadmin-[INFO]:-Removing temporary image files on all hosts...
+    20200127:21:54:43:004607 plcontainer:cdw:gpadmin-[INFO]:-Checking whether docker is installed on all hosts...
+    20200127:21:54:43:004607 plcontainer:cdw:gpadmin-[INFO]:-Distributing image file /home/gpadmin/plcontainer-python-images-1.5.0.tar to all hosts...
+    20200127:21:54:55:004607 plcontainer:cdw:gpadmin-[INFO]:-Loading image on all hosts...
+    20200127:21:55:37:004607 plcontainer:cdw:gpadmin-[INFO]:-Removing temporary image files on all hosts...
     ```
 
-    By default, the `image-add` command copies the image to each Greenplum Database segment and standby master host, and installs the image. When you specify the `[-ulc | --use_local_copy]` option, `plcontainer` installs the image only on the host on which you run the command. Use this option when the PL/Container image already resides on disk on a host.
+    By default, the `image-add` command copies the image to each Greenplum Database segment and standby coordinator host, and installs the image. When you specify the `[-ulc | --use_local_copy]` option, `plcontainer` installs the image only on the host on which you run the command. Use this option when the PL/Container image already resides on disk on a host.
 
     For more information on `image-add` options, visit the [plcontainer](../utility_guide/ref/plcontainer.html) reference page.
 
@@ -373,9 +373,9 @@ For further details and examples about using PL/Container functions, see [PL/Con
 
 To upgrade PL/Container, you save the current configuration, upgrade PL/Container, and then restore the configuration after upgrade. There is no need to update the Docker images when you upgrade PL/Container.
 
-**Note:** Before you perform this upgrade procedure, ensure that you have migrated your PL/Container package from your previous Greenplum Database installation to your new Greenplum Database installation. Refer to the [gppkg](../utility_guide/ref/gppkg.html) command for package installation and migration information.
+> **Note** Before you perform this upgrade procedure, ensure that you have migrated your PL/Container package from your previous Greenplum Database installation to your new Greenplum Database installation. Refer to the [gppkg](../utility_guide/ref/gppkg.html) command for package installation and migration information.
 
-**Note:** You cannot upgrade to PL/Container 3 Beta. To install PL/Container 3 Beta, first save and then uninstall your existing PL/Container software. Then follow the instructions in [Install PL/Container](#install_pl_utility).
+> **Note** You cannot upgrade to PL/Container 3 Beta. To install PL/Container 3 Beta, first save and then uninstall your existing PL/Container software. Then follow the instructions in [Install PL/Container](#install_pl_utility).
 
 To upgrade, perform the following procedure:
 
@@ -388,7 +388,7 @@ To upgrade, perform the following procedure:
 2.  Use the Greenplum Database `gppkg` utility with the `-u` option to update the PL/Container language extension. For example, the following command updates the PL/Container language extension to version 2.2.0 on a Linux system:
 
     ```
-    $ gppkg -u plcontainer-2.2.0-gp6-rhel7_x86_64.gppkg
+    $ gppkg -u plcontainer-2.2.0-gp7-rhel7_x86_64.gppkg
     ```
 
 3.  Source the Greenplum Database environment file `$GPHOME/greenplum_path.sh`.

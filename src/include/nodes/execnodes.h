@@ -408,12 +408,15 @@ typedef struct OnConflictSetState
  * relation, and perhaps also fire triggers.  ResultRelInfo holds all the
  * information needed about a result relation, including indexes.
  *
- * Normally, a ResultRelInfo refers to a table that is in the query's
- * range table; then ri_RangeTableIndex is the RT index and ri_RelationDesc
- * is just a copy of the relevant es_relations[] entry.  But sometimes,
- * in ResultRelInfos used only for triggers, ri_RangeTableIndex is zero
- * and ri_RelationDesc is a separately-opened relcache pointer that needs
- * to be separately closed.  See ExecGetTriggerResultRel.
+ * Normally, a ResultRelInfo refers to a table that is in the query's range
+ * table; then ri_RangeTableIndex is the RT index and ri_RelationDesc is
+ * just a copy of the relevant es_relations[] entry.  However, in some
+ * situations we create ResultRelInfos for relations that are not in the
+ * range table, namely for targets of tuple routing in a partitioned table,
+ * and when firing triggers in tables other than the target tables (See
+ * ExecGetTriggerResultRel).  In these situations, ri_RangeTableIndex is 0
+ * and ri_RelationDesc is a separately-opened relcache pointer that needs to
+ * be separately closed.
  */
 typedef struct ResultRelInfo
 {
@@ -503,8 +506,13 @@ typedef struct ResultRelInfo
 	/* partition check expression state */
 	ExprState  *ri_PartitionCheckExpr;
 
-	/* relation descriptor for root partitioned table */
-	Relation	ri_PartitionRoot;
+	/*
+	 * RootResultRelInfo gives the target relation mentioned in the query, if
+	 * it's a partitioned table. It is not set if the target relation
+	 * mentioned in the query is an inherited table, nor when tuple routing is
+	 * not needed.
+	 */
+	struct ResultRelInfo *ri_RootResultRelInfo;
 
 	/* Additional information specific to partition tuple routing */
 	struct PartitionRoutingInfo *ri_PartitionInfo;
@@ -601,17 +609,12 @@ typedef struct EState
 	ExprContext *es_per_tuple_exprcontext;
 
 	/*
-	 * These fields are for re-evaluating plan quals when an updated tuple is
-	 * substituted in READ COMMITTED mode.  es_epqTupleSlot[] contains test
-	 * tuples that scan plan nodes should return instead of whatever they'd
-	 * normally return, or an empty slot if there is nothing to return; if
-	 * es_epqTupleSlot[] is not NULL if a particular array entry is valid; and
-	 * es_epqScanDone[] is state to remember if the tuple has been returned
-	 * already.  Arrays are of size es_range_table_size and are indexed by
-	 * scan node scanrelid - 1.
+	 * If not NULL, this is an EPQState's EState. This is a field in EState
+	 * both to allow EvalPlanQual aware executor nodes to detect that they
+	 * need to perform EPQ related work, and to provide necessary information
+	 * to do so.
 	 */
-	TupleTableSlot **es_epqTupleSlot;	/* array of EPQ substitute tuples */
-	bool	   *es_epqScanDone; /* true if EPQ tuple has been fetched */
+	struct EPQState *es_epq_active;
 
 	bool		es_use_parallel_mode;	/* can we use parallel workers? */
 
@@ -964,6 +967,7 @@ typedef struct SubPlanState
 	MemoryContext hashtablecxt; /* memory context containing hash tables */
 	MemoryContext hashtempcxt;	/* temp memory context for hash tables */
 	ExprContext *innerecontext; /* econtext for computing inner tuples */
+	/* each of the following fields is an array of length numCols: */
 	AttrNumber *keyColIdx;		/* control data for hash tables */
 	Oid		   *tab_eq_funcoids;	/* equality func oids for table
 									 * datatype(s) */
@@ -973,6 +977,7 @@ typedef struct SubPlanState
 	FmgrInfo   *lhs_hash_funcs; /* hash functions for lefthand datatype(s) */
 	FmgrInfo   *cur_eq_funcs;	/* equality functions for LHS vs. table */
 	ExprState  *cur_eq_comp;	/* equality comparator for LHS vs. table */
+	int			numCols;		/* number of columns being hashed */
 
 	Tuplestorestate *ts_state;
 } SubPlanState;
@@ -1167,17 +1172,73 @@ extern uint64 PlanStateOperatorMemKB(const PlanState *ps);
 
 /*
  * EPQState is state for executing an EvalPlanQual recheck on a candidate
- * tuple in ModifyTable or LockRows.  The estate and planstate fields are
- * NULL if inactive.
+ * tuples e.g. in ModifyTable or LockRows.
+ *
+ * To execute EPQ a separate EState is created (stored in ->recheckestate),
+ * which shares some resources, like the rangetable, with the main query's
+ * EState (stored in ->parentestate). The (sub-)tree of the plan that needs to
+ * be rechecked (in ->plan), is separately initialized (into
+ * ->recheckplanstate), but shares plan nodes with the corresponding nodes in
+ * the main query. The scan nodes in that separate executor tree are changed
+ * to return only the current tuple of interest for the respective
+ * table. Those tuples are either provided by the caller (using
+ * EvalPlanQualSlot), and/or found using the rowmark mechanism (non-locking
+ * rowmarks by the EPQ machinery itself, locking ones by the caller).
+ *
+ * While the plan to be checked may be changed using EvalPlanQualSetPlan() -
+ * e.g. so all source plans for a ModifyTable node can be processed - all such
+ * plans need to share the same EState.
  */
 typedef struct EPQState
 {
-	EState	   *estate;			/* subsidiary EState */
-	PlanState  *planstate;		/* plan state tree ready to be executed */
-	TupleTableSlot *origslot;	/* original output tuple to be rechecked */
+	/* Initialized at EvalPlanQualInit() time: */
+
+	EState	   *parentestate;	/* main query's EState */
+	int			epqParam;		/* ID of Param to force scan node re-eval */
+
+	/*
+	 * Tuples to be substituted by scan nodes. They need to set up, before
+	 * calling EvalPlanQual()/EvalPlanQualNext(), into the slot returned by
+	 * EvalPlanQualSlot(scanrelid). The array is indexed by scanrelid - 1.
+	 */
+	List	   *tuple_table;	/* tuple table for relsubs_slot */
+	TupleTableSlot **relsubs_slot;
+
+	/*
+	 * Initialized by EvalPlanQualInit(), may be changed later with
+	 * EvalPlanQualSetPlan():
+	 */
+
 	Plan	   *plan;			/* plan tree to be executed */
 	List	   *arowMarks;		/* ExecAuxRowMarks (non-locking only) */
-	int			epqParam;		/* ID of Param to force scan node re-eval */
+
+
+	/*
+	 * The original output tuple to be rechecked.  Set by
+	 * EvalPlanQualSetSlot(), before EvalPlanQualNext() or EvalPlanQual() may
+	 * be called.
+	 */
+	TupleTableSlot *origslot;
+
+
+	/* Initialized or reset by EvalPlanQualBegin(): */
+
+	EState	   *recheckestate;	/* EState for EPQ execution, see above */
+
+	/*
+	 * Rowmarks that can be fetched on-demand using
+	 * EvalPlanQualFetchRowMark(), indexed by scanrelid - 1. Only non-locking
+	 * rowmarks.
+	 */
+	ExecAuxRowMark **relsubs_rowmark;
+
+	/*
+	 * True if a relation's EPQ tuple has been fetched for relation, indexed
+	 * by scanrelid - 1.
+	 */
+	bool	   *relsubs_done;
+
+	PlanState  *recheckplanstate;	/* EPQ specific exec nodes, for ->plan */
 } EPQState;
 
 
@@ -1580,7 +1641,7 @@ typedef struct DynamicIndexScanState
 /* ----------------
  *	 IndexOnlyScanState information
  *
- *		indexqual		   execution state for indexqual expressions
+ *		recheckqual		   execution state for recheckqual expressions
  *		ScanKeys		   Skey structures for index quals
  *		NumScanKeys		   number of ScanKeys
  *		OrderByKeys		   Skey structures for index ordering operators
@@ -1599,7 +1660,7 @@ typedef struct DynamicIndexScanState
 typedef struct IndexOnlyScanState
 {
 	ScanState	ss;				/* its first field is NodeTag */
-	ExprState  *indexqual;
+	ExprState  *recheckqual;
 	struct ScanKeyData *ioss_ScanKeys;
 	int			ioss_NumScanKeys;
 	struct ScanKeyData *ioss_OrderByKeys;
@@ -1775,11 +1836,6 @@ typedef struct DynamicBitmapHeapScanState
 	BitmapHeapScanState *bhsState;
 
 	/*
-	 * The first partition requires initialization of expression states,
-	 * such as qual, regardless of whether we need to re-map varattno
-	 */
-	bool		firstPartition;
-	/*
 	 * lastRelOid is the last relation that corresponds to the
 	 * varattno mapping of qual and target list. Each time we open a new partition, we will
 	 * compare the last relation with current relation by using varattnos_map()
@@ -1916,7 +1972,8 @@ typedef struct TableFunctionState
  *
  *		rowcontext			per-expression-list context
  *		exprlists			array of expression lists being evaluated
- *		array_len			size of array
+ *		exprstatelists		array of expression state lists, for SubPlans only
+ *		array_len			size of above arrays
  *		curr_idx			current array index (0-based)
  *
  *	Note: ss.ps.ps_ExprContext is used to evaluate any qual or projection
@@ -1924,6 +1981,12 @@ typedef struct TableFunctionState
  *	rowcontext, in which to build the executor expression state for each
  *	Values sublist.  Resetting this context lets us get rid of expression
  *	state for each row, avoiding major memory leakage over a long values list.
+ *	However, that doesn't work for sublists containing SubPlans, because a
+ *	SubPlan has to be connected up to the outer plan tree to work properly.
+ *	Therefore, for only those sublists containing SubPlans, we do expression
+ *	state construction at executor start, and store those pointers in
+ *	exprstatelists[].  NULL entries in that array correspond to simple
+ *	subexpressions that are handled as described above.
  * ----------------
  */
 typedef struct ValuesScanState
@@ -1933,6 +1996,8 @@ typedef struct ValuesScanState
 	List	  **exprlists;
 	int			array_len;
 	int			curr_idx;
+	/* in back branches, put this at the end to avoid ABI break: */
+	List	  **exprstatelists;
 } ValuesScanState;
 
 /* ----------------
@@ -2054,11 +2119,6 @@ typedef struct DynamicSeqScanState
 	int			eflags;
 	SeqScanState *seqScanState;
 
-	/*
-	 * The first partition requires initialization of expression states,
-	 * such as qual and targetlist, regardless of whether we need to re-map varattno
-	 */
-	bool		firstPartition;
 	/*
 	 * lastRelOid is the last relation that corresponds to the
 	 * varattno mapping of qual and target list. Each time we open a new partition, we will
@@ -2216,7 +2276,6 @@ typedef struct MergeJoinState
  *
  *		hashclauses				original form of the hashjoin condition
  *		hj_OuterHashKeys		the outer hash keys in the hashjoin condition
- *		hj_InnerHashKeys		the inner hash keys in the hashjoin condition
  *		hj_HashOperators		the join operators in the hashjoin condition
  *		hj_HashTable			hash table for the hashjoin
  *								(NULL if table not built yet)
@@ -2249,7 +2308,6 @@ typedef struct HashJoinState
 	ExprState  *hashclauses;
 	ExprState  *hashqualclauses;	/* CDB: ExprState node (match) */
 	List	   *hj_OuterHashKeys;	/* list of ExprState nodes */
-	List	   *hj_InnerHashKeys;	/* list of ExprState nodes */
 	List	   *hj_HashOperators;	/* list of operator OIDs */
 	List	   *hj_Collations;
 	HashJoinTable hj_HashTable;
