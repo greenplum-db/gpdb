@@ -1093,3 +1093,4 @@ INFO:  [('a', 2), ('c', 4)]
  
 (1 row)
 
+DROP FUNCTION test_anytable_column_name(t anytable);

@@ -602,3 +602,5 @@ $$;
 SELECT * FROM test_anytable_column_name(TABLE(SELECT 1 as a, 2 as b, 3 as c FROM (VALUES (1)) a));
 -- if there are 2 columns with same name, overwirte is expected
 SELECT * FROM test_anytable_column_name(TABLE(SELECT 1 as a, 2 as a, 3 as c, 4 as c FROM (VALUES (1)) a));
+
+DROP FUNCTION test_anytable_column_name(t anytable);
