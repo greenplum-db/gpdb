@@ -124,6 +124,8 @@ Greenplum Database can be deployed to virtualized systems only if the storage is
 
 Greenplum Database is supported on Amazon Web Services \(AWS\) servers using either Amazon instance store \(Amazon uses the volume names `ephemeral[0-23]`\) or Amazon Elastic Block Store \(Amazon EBS\) storage. If using Amazon EBS storage the storage should be RAID of Amazon EBS volumes and mounted with the XFS file system for it to be a supported configuration.
 
+<!--- VERIFY 7X interoperablity with DDBOOST
+
 #### <a id="fixme"></a>Data Domain Boost \(VMware Greenplum\) 
 
 VMware Greenplum 7 supports Data Domain Boost for backup on Red Hat Enterprise Linux. This table lists the versions of Data Domain Boost SDK and DDOS supported by VMware Greenplum 7.
@@ -133,6 +135,8 @@ VMware Greenplum 7 supports Data Domain Boost for backup on Red Hat Enterprise L
 |6.x|3.3|6.1 \(all versions\), 6.0 \(all versions\)|
 
 > **Note** In addition to the DDOS versions listed in the previous table, VMware Greenplum supports all minor patch releases \(fourth digit releases\) later than the certified version.
+
+-->
 
 ### <a id="topic31"></a>VMware Greenplum Tools and Extensions Compatibility 
 
