@@ -22,7 +22,6 @@ CREATE [TEMPORARY | TEMP] SEQUENCE [IF NOT EXISTS] <name>
 
 If a schema name is given, then the sequence is created in the specified schema. Otherwise it is created in the current schema. Temporary sequences exist in a special schema, so you may not provide a schema name when creating a temporary sequence. The sequence name must be distinct from the name of any other sequence, table, index, view, or foreign table in the same schema.
 
-XXX
 After a sequence is created, you use the `nextval()` function to operate on the sequence. For example, to insert a row into a table that gets the next value of a sequence:
 
 ```
@@ -40,6 +39,7 @@ But the following query will be rejected in Greenplum Database because it operat
 ```
 INSERT INTO product VALUES (setval('myserial', 201), 'gizmo');
 ```
+
 In a regular \(non-distributed\) database, functions that operate on the sequence go to the local sequence table to get values as they are needed. In Greenplum Database, however, keep in mind that each segment is its own distinct database process. Therefore the segments need a single point of truth to go for sequence values so that all segments get incremented correctly and the sequence moves forward in the right order. A sequence server process runs on the master and is the point-of-truth for a sequence in a Greenplum distributed database. Segments get sequence values at runtime from the master.
 
 Because of this distributed sequence design, there are some limitations on the functions that operate on a sequence in Greenplum Database:
@@ -47,7 +47,9 @@ Because of this distributed sequence design, there are some limitations on the f
 -   `lastval()` and `currval()` functions are not supported.
 -   `setval()` can only be used to set the value of the sequence generator on the master, it cannot be used in subqueries to update records on distributed table data.
 -   `nextval()` sometimes grabs a block of values from the master for a segment to use, depending on the query. So values may sometimes be skipped in the sequence if all of the block turns out not to be needed at the segment level. Note that a regular PostgreSQL database does this too, so this is not something unique to Greenplum Database.
-XXX
+
+> **Note**
+> The default sequence cache size in Greenplum Database is `20`.
 
 Although you cannot update a sequence directly, you can use a query like:
 
