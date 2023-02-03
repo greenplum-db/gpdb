@@ -547,25 +547,42 @@ ALTER TABLE myschema.distributors SET SCHEMA yourschema;
 Change a table's access method to ao_row:
 
 ```
-ALTER TABLE sales_1_prt_1 SET ACCESS METHOD ao_row;
+ALTER TABLE distributors SET ACCESS METHOD ao_row;
 ```
 
 Change a table's blocksize to 32768:
 
 ```
-ALTER TABLE SET (blocksize = 32768);
+ALTER TABLE distributors SET (blocksize = 32768);
 ```
 
 Change a table's access method to ao_row, compression type to zstd and compression level to 4:
 
 ```
-ALTER TABLE sales_1_prt_1 SET ACCESS METHOD ao_row with (compresstype=zstd,compresslevel=4);
+ALTER TABLE sales SET ACCESS METHOD ao_row with (compresstype=zstd,compresslevel=4);
+```
+
+Change access method for all existing partitions of a table:
+
+```
+ALTER TABLE sales SET ACCESS METHOD ao_row;
 ```
 
 Change all future partitions of a table to have an access method of `heap`, leaving the access method of current partitions as is:
 
-ALTER TABLE ONLY sales_1_prt_1 SET ACCESS METHOD heap;
+ALTER TABLE ONLY sales SET ACCESS METHOD heap;
 
+Add a column and change the table's access method, simultaneously:
+
+```
+ALTER TABLE distributors SET ACCESS METHOD ao_row, ADD column j int;
+```
+
+Add a column and change table storage parameters simultaneously:
+
+```
+ALTER TABLE distributors SET (compresslevel=7), ADD COLUMN k int;
+```
 
 Change the distribution policy of a table to replicated:
 
