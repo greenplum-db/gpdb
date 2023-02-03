@@ -424,7 +424,7 @@ The Postgres Planner will merge sub-queries into upper queries if the resulting 
 
 Sets the maximum size of a GIN index's pending list, which is used when `fastupdate` is enabled. If the list grows larger than this maximum size, it is cleaned up by moving the entries in it to the index's main GIN data structure in bulk.
 
-A value specified without units it is taken to be kilobytes. The default is four megabytes (4MB).
+A value specified without units is taken to be kilobytes. The default is four megabytes (4MB).
 
 You can override this setting for individual GIN indexes by changing index storage parameters.
 
