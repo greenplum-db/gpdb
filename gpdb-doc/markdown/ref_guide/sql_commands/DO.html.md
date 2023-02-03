@@ -10,37 +10,41 @@ DO [ LANGUAGE <lang_name> ] <code>
 
 ## <a id="section3"></a>Description 
 
-`DO` Runs an anonymous code block, or in other words a transient anonymous function in a procedural language.
+`DO` runs an anonymous code block, or in other words a transient anonymous function in a procedural language.
 
-The code block is treated as though it were the body of a function with no parameters, returning void. It is parsed and run a single time.
+The code block is treated as though it were the body of a function with no parameters, returning `void`. It is parsed and run a single time.
 
 The optional `LANGUAGE` clause can appear either before or after the code block.
 
+XXX
 Anonymous blocks are procedural language structures that provide the capability to create and run procedural code on the fly without persistently storing the code as database objects in the system catalogs. The concept of anonymous blocks is similar to UNIX shell scripts, which enable several manually entered commands to be grouped and run as one step. As the name implies, anonymous blocks do not have a name, and for this reason they cannot be referenced from other objects. Although built dynamically, anonymous blocks can be easily stored as scripts in the operating system files for repetitive execution.
 
 Anonymous blocks are standard procedural language blocks. They carry the syntax and obey the rules that apply to the procedural language, including declaration and scope of variables, execution, exception handling, and language usage.
 
 The compilation and execution of anonymous blocks are combined in one step, while a user-defined function needs to be re-defined before use each time its definition changes.
+XXX
 
 ## <a id="section4"></a>Parameters 
 
 code
-:   The procedural language code to be run. This must be specified as a string literal, just as with the `CREATE FUNCTION` command. Use of a dollar-quoted literal is recommended. Optional keywords have no effect. These procedural languages are supported: PL/pgSQL \(`plpgsql`\), PL/Python \(`plpythonu`\), and PL/Perl \(`plperl` and `plperlu`\).
+:   The procedural language code to be run. This must be specified as a string literal, just as with the `CREATE FUNCTION` command. Use of a dollar-quoted literal is recommended.
 
 lang\_name
-:   The name of the procedural language that the code is written in. The default is `plpgsql`. The language must be installed on the Greenplum Database system and registered in the database.
+:   The name of the procedural language in which the code is written. The default is `plpgsql`.
 
 ## <a id="section5"></a>Notes 
 
-The PL/pgSQL language is installed on the Greenplum Database system and is registered in a user created database. The PL/Python and PL/Perl languages are installed by default, but not registered. Other languages are not installed or registered. The system catalog `pg_language` contains information about the registered languages in a database.
+The procedural language to be used must already have been installed into the current database by means of `CREATE EXTENSION`. The PL/pgSQL language is installed wih Greenplum Database and is registered by default every user-created database. The PL/Python and PL/Perl languages are installed by default, but not registered. Other languages are neither installed nor registered. The [pg_language](../system_catalogs/pg_language.html) system catalog contains information about the registered languages in a database.
 
 The user must have `USAGE` privilege for the procedural language, or must be a superuser if the language is untrusted. This is the same privilege requirement as for creating a function in the language.
 
-Anonymous blocks do not support function volatility or `EXECUTE ON` attributes.
+If `DO` is run in a transaction block, then the procedure code cannot execute transaction control statements. Transaction control statements are allowed only if `DO` is run in its own transaction.
+
+XXX Anonymous blocks do not support function volatility or `EXECUTE ON` attributes.
 
 ## <a id="Examples"></a>Examples 
 
-This PL/pgSQL example grants all privileges on all views in schema *public* to role `webuser`:
+This PL/pgSQL example grants all privileges on all views in schema `public` to role `webuser`:
 
 ```
 DO $$DECLARE r record;
@@ -52,28 +56,6 @@ BEGIN
     END LOOP;
 END$$;
 ```
-
-This PL/pgSQL example determines if a Greenplum Database user is a superuser. In the example, the anonymous block retrieves the input value from a temporary table.
-
-```
-CREATE TEMP TABLE list AS VALUES ('gpadmin') DISTRIBUTED RANDOMLY;
-
-DO $$ 
-DECLARE
-  name TEXT := 'gpadmin' ;
-  superuser TEXT := '' ;
-  t1_row   pg_authid%ROWTYPE;
-BEGIN
-  SELECT * INTO t1_row FROM pg_authid, list 
-     WHERE pg_authid.rolname = name ;
-  IF t1_row.rolsuper = 'f' THEN
-    superuser := 'not ';
-  END IF ;
-  RAISE NOTICE 'user % is %a superuser', t1_row.rolname, superuser ;
-END $$ LANGUAGE plpgsql ;
-```
-
-> **Note** The example PL/pgSQL uses `SELECT` with the `INTO` clause. It is different from the SQL command `SELECT INTO`.
 
 ## <a id="section6"></a>Compatibility 
 
