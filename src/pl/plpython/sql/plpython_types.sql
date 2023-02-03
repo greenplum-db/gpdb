@@ -596,7 +596,7 @@ AS $$
 column_name = t.get_column_name()
 for i in t:
    tuple_dict = dict(zip(column_name, i))
-   plpy.info(str(tuple_dict))
+   plpy.info(str(sorted(tuple_dict.items())))
 $$;
 
 SELECT * FROM test_anytable_column_name(TABLE(SELECT 1 as a, 2 as b, 3 as c FROM (VALUES (1)) a));
