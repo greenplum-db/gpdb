@@ -1285,7 +1285,6 @@ CExpression::FValidPlan(const CReqdPropPlan *prpp,
 
 	CDrvdPropRelational *pdprel = GetDrvdPropRelational();
 
-	// GPDB_12_MERGE_FIXME: Also check FValidPartEnforcers()
 	return prpp->FCompatible(exprhdl, CPhysical::PopConvert(m_pop), pdprel,
 							 pdpplan) &&
 		   FValidChildrenDistribution(pdpctxtplan);
