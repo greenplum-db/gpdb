@@ -13,6 +13,7 @@
 
 #include "gpopt/base/CCastUtils.h"
 #include "gpopt/base/CDistributionSpecAny.h"
+#include "gpopt/base/CDistributionSpecNonSingleton.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CUtils.h"
@@ -493,6 +494,40 @@ CPhysicalJoin::PrsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 		return GPOS_NEW(mp) CRewindabilitySpec(
 			CRewindabilitySpec::ErtRescannable, motion_hazard);
 	}
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CPhysicalJoin::EpetDistribution
+//
+//	@doc:
+//		Return the enforcing type for distribution property based on this operator
+//
+//---------------------------------------------------------------------------
+CEnfdProp::EPropEnforcingType
+CPhysicalJoin::EpetDistribution(CExpressionHandle &exprhdl,
+							const CEnfdDistribution *ped) const
+{
+	GPOS_ASSERT(nullptr != ped);
+
+	// get distribution delivered by the physical node
+	CDistributionSpec *pds = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pds();
+	if (ped->FCompatible(pds))
+	{
+		if (CDistributionSpec::EdtNonSingleton == ped->PdsRequired()->Edt() &&
+			!CDistributionSpecNonSingleton::PdsConvert(ped->PdsRequired())
+				->FAllowReplicated() &&
+			CDistributionSpec::EdtStrictReplicated == pds->Edt())
+		{
+			return CEnfdProp::EpetProhibited;
+		}
+		// required distribution is already provided
+		return CEnfdProp::EpetUnnecessary;
+	}
+
+	// required distribution will be enforced on Assert's output
+	return CEnfdProp::EpetRequired;
 }
 
 
