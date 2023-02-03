@@ -203,10 +203,12 @@ anchors:
 groups:
 - name: all
   jobs:
+  {% if os_type == default_os_type %}
   - check_format
+  - compile_gpdb_clients_windows
+  {% endif %}
   - compile_gpdb_[[ os_type ]]
   - test_gpdb_clients_[[ os_type ]]
-  - compile_gpdb_clients_windows
 {% if "ICW" in test_sections %}
   ## --------------------------------------------------------------------
   - icw_gporca_[[ os_type ]]
@@ -273,7 +275,9 @@ groups:
   jobs:
   - compile_gpdb_[[ os_type ]]
   - test_gpdb_clients_[[ os_type ]]
+  {% if os_type == default_os_type %}
   - compile_gpdb_clients_windows
+  {% endif %}
 
 {% if "ICW" in test_sections %}
 ## ======================================================================
@@ -541,12 +545,14 @@ resources:
     regexp: server/published/main/server-build-(.*)-[[ os_type ]]_x86_64((rc-build-type-gcs)).tar.gz
 {% endif %}
 
+{% if os_type == default_os_type %}
 - name: bin_gpdb_clients_windows
   type: gcs
   source:
     bucket: ((gcs-bucket-intermediates))
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/bin_gpdb_clients_windows/greenplum-clients-x86_64.tar.gz
+{% endif %}
 
 {% if os_type != default_os_type and pipeline_target == "prod" %}
 - name: reduced-frequency-trigger
@@ -578,6 +584,7 @@ jobs:
 ##         |_|
 ## ======================================================================
 
+{% if os_type == default_os_type %}
 - name: check_format
   plan:
     - get: gpdb_src
@@ -589,7 +596,7 @@ jobs:
       {% if use_ICW_workers %}
       tags: [icw-worker]
       {% endif %}
-
+{% endif %}
 
 ## ======================================================================
 ##   ____                      _ _
@@ -610,7 +617,9 @@ jobs:
       {% endif %}
       - get: gpdb_src
         passed:
+          {% if os_type == default_os_type %}
           - check_format
+          {% endif %}
         {% if os_type != default_os_type and pipeline_target == "prod" %}
         trigger: false
         {% else %}
@@ -651,6 +660,7 @@ jobs:
       image: gpdb7-[[ os_type ]]-test
       file: gpdb_src/concourse/tasks/test_gpdb_clients.yml
 
+{% if os_type == default_os_type %}
 - name: compile_gpdb_clients_windows
   serial: true
   plan:
@@ -670,6 +680,7 @@ jobs:
   - put: bin_gpdb_clients_windows
     params:
       file: "gpdb_artifacts/greenplum-clients-x86_64.tar.gz"
+{% endif %}
 
 {% if "ICW" in test_sections %}
 ## ======================================================================
@@ -1463,7 +1474,9 @@ jobs:
       - get: gpdb_src
         trigger: true
         passed:
+        {% if os_type == default_os_type %}
         - check_format
+        {% endif %}
         - compile_gpdb_[[ os_type ]]
         - icw_gporca_[[ os_type ]]
         - icw_gporca_jit_[[ os_type ]]
