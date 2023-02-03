@@ -407,7 +407,7 @@
         </dxl:LogicalGroupBy>
       </dxl:Union>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="49476">
+    <dxl:Plan Id="0" SpaceSize="62776">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.002353" Rows="13.000000" Width="8"/>
