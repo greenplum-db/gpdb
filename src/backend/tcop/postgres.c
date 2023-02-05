@@ -5389,7 +5389,7 @@ PostgresMain(int argc, char *argv[],
 					 * Since PortalDefineQuery() does not take NULL query string,
 					 * we initialize it with a constant empty string.
 					 */
-					const char *query_string = pstrdup("");
+					const char *query_string = "";
 
 					const char *serializedDtxContextInfo = NULL;
 					const char *serializedPlantree = NULL;
