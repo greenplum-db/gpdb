@@ -127,18 +127,6 @@
         <dxl:Opfamily Mdid="0.3027.1.0"/>
         <dxl:Opfamily Mdid="0.3027.1.0"/>
       </dxl:Opfamilies>
-      <dxl:PartConstraint DefaultPartition="" Unbounded="false">
-        <dxl:And>
-          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-            <dxl:Ident ColId="7" ColName="d_year" TypeMdid="0.23.1.0"/>
-            <dxl:ConstValue TypeMdid="0.23.1.0" Value="1900"/>
-          </dxl:Comparison>
-          <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.523.1.0">
-            <dxl:Ident ColId="7" ColName="d_year" TypeMdid="0.23.1.0"/>
-            <dxl:ConstValue TypeMdid="0.23.1.0" Value="2100"/>
-          </dxl:Comparison>
-        </dxl:And>
-      </dxl:PartConstraint>
     </dxl:Index>
     <dxl:Relation Mdid="6.1259.5.1" Name="S" IsTemporary="true" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Random">
       <dxl:Columns>
@@ -262,18 +250,6 @@
     </dxl:CheckConstraint>
     <dxl:Index Mdid="0.17027.1.0" Name="r_ind" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8">
       <dxl:Opfamilies/>
-      <dxl:PartConstraint DefaultPartition="0" Unbounded="false">
-        <dxl:And>
-          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
-            <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-          </dxl:Comparison>
-          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
-            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
-            <dxl:ConstValue TypeMdid="0.23.1.0" Value="3"/>
-          </dxl:Comparison>
-        </dxl:And>
-      </dxl:PartConstraint>
     </dxl:Index>
     <dxl:Relation Mdid="6.378383.1.0" Name="ext_1" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="10,4">
       <dxl:Columns>

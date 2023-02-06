@@ -83,18 +83,6 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE c < 10 AND d > 20;
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
-        <dxl:PartConstraint DefaultPartition="" Unbounded="false">
-          <dxl:And>
-            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-              <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-            </dxl:Comparison>
-            <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.523.1.0">
-              <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
-            </dxl:Comparison>
-          </dxl:And>
-        </dxl:PartConstraint>
       </dxl:Index>
       <dxl:Type Mdid="0.23.1.0" Name="int4" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
         <dxl:EqualityOp Mdid="0.96.1.0"/>
@@ -279,30 +267,6 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE c < 10 AND d > 20;
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
-        <dxl:PartConstraint DefaultPartition="" Unbounded="false">
-          <dxl:Or>
-            <dxl:And>
-              <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-                <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
-                <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-              </dxl:Comparison>
-              <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.523.1.0">
-                <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
-                <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
-              </dxl:Comparison>
-            </dxl:And>
-            <dxl:And>
-              <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-                <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
-                <dxl:ConstValue TypeMdid="0.23.1.0" Value="11"/>
-              </dxl:Comparison>
-              <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.523.1.0">
-                <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
-                <dxl:ConstValue TypeMdid="0.23.1.0" Value="20"/>
-              </dxl:Comparison>
-            </dxl:And>
-          </dxl:Or>
-        </dxl:PartConstraint>
       </dxl:Index>
       <dxl:ColumnStatistics Mdid="1.29993.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="false">
         <dxl:StatsBucket Frequency="0.054937" DistinctValues="1.000000">

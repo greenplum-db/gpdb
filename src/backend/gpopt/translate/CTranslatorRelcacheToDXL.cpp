@@ -1001,11 +1001,10 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 		child_index_oids = GPOS_NEW(mp) IMdIdArray(mp);
 	}
 
-	CMDIndexGPDB *index = GPOS_NEW(mp) CMDIndexGPDB(
-		mp, mdid_index, mdname, index_clustered, index_partitioned, index_type,
-		mdid_item_type, index_key_cols_array, included_cols, op_families_mdids,
-		nullptr,  // mdpart_constraint
-		child_index_oids);
+	CMDIndexGPDB *index = GPOS_NEW(mp)
+		CMDIndexGPDB(mp, mdid_index, mdname, index_clustered, index_partitioned,
+					 index_type, mdid_item_type, index_key_cols_array,
+					 included_cols, op_families_mdids, child_index_oids);
 
 	GPOS_DELETE_ARRAY(attno_mapping);
 	return index;
