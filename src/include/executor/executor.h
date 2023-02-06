@@ -497,5 +497,6 @@ extern ResultRelInfo *values_get_partition(Datum *values, bool *nulls,
 					 TupleDesc desc, EState *estate, bool openIndices);
 
 extern void SendAOTupCounts(EState *estate);
+extern bool already_under_executor_run(void);
 
 #endif   /* EXECUTOR_H  */

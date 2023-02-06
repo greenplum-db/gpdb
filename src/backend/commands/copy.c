@@ -1201,7 +1201,7 @@ DoCopy(const CopyStmt *stmt, const char *queryString, uint64 *processed)
 
 	/* Issue automatic ANALYZE if conditions are satisfied (MPP-4082). */
 	if (Gp_role == GP_ROLE_DISPATCH && is_from)
-		auto_stats(AUTOSTATS_CMDTYPE_COPY, relid, *processed, false /* inFunction */);
+		auto_stats(AUTOSTATS_CMDTYPE_COPY, relid, *processed, already_under_executor_run());
 
 	return relid;
 }
