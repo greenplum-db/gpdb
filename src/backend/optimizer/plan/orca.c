@@ -105,8 +105,7 @@ optimize_query(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	ListCell	   *lp;
 
 	/*
-	 * GPDB_12_MERGE_FIXME: we can forward-port this change to master now
-	 * and pull out optimizer_trace_fallback processing in here
+	 * Fall back for updatable cursor
 	 */
 	if ((cursorOptions & CURSOR_OPT_UPDATABLE) != 0)
 		return NULL;
