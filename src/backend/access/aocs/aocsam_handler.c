@@ -525,11 +525,11 @@ extractcolumns_from_node(Node *expr, bool *cols, AttrNumber natts)
 static TableScanDesc
 aoco_beginscan_extractcolumns(Relation rel, Snapshot snapshot,
 							  List *targetlist, List *qual, bool *proj,
-							  uint32 flags)
+							  List* constraintList, uint32 flags)
 {
 	AOCSScanDesc	aoscan;
 
-	AssertImply(list_length(targetlist) || list_length(qual), !proj);
+	AssertImply(list_length(targetlist) || list_length(qual) || list_length(constraintList), !proj);
 
 	if (!proj)
 	{
@@ -538,6 +538,7 @@ aoco_beginscan_extractcolumns(Relation rel, Snapshot snapshot,
 		proj = palloc0(sizeof(bool*) * natts);
 		found |= extractcolumns_from_node((Node *)targetlist, proj, natts);
 		found |= extractcolumns_from_node((Node *)qual, proj, natts);
+		found |= extractcolumns_from_node((Node *)constraintList, proj, natts);
 		/*
 		* In some cases (for example, count(*)), targetlist and qual may be null,
 		* extractcolumns_walker will return immediately, so no columns are specified.
@@ -1671,6 +1672,7 @@ aoco_index_build_range_scan(Relation heapRelation,
 									  snapshot,		/* snapshot */
 									  tlist,		/* targetlist */
 									  qual,			/* qual */
+									  NULL,			/* constraintList */
 									  NULL);
 		}
 	}
