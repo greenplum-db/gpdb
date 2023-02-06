@@ -1284,6 +1284,7 @@ CTranslatorExprToDXLUtils::GetDXLDirectDispatchInfo(
 	const ULONG ulHashExpr = pdrgpexprHashed->Size();
 	GPOS_ASSERT(0 < ulHashExpr);
 
+	// If we have single distribution key for table
 	if (1 == ulHashExpr)
 	{
 		CExpression *pexprHashed = (*pdrgpexprHashed)[0];
@@ -1293,6 +1294,7 @@ CTranslatorExprToDXLUtils::GetDXLDirectDispatchInfo(
 	BOOL fSuccess = true;
 	CDXLDatumArray *pdrgpdxldatum = GPOS_NEW(mp) CDXLDatumArray(mp);
 
+	// If we have multiple distribution keys for the table
 	for (ULONG ul = 0; ul < ulHashExpr && fSuccess; ul++)
 	{
 		CExpression *pexpr = (*pdrgpexprHashed)[ul];
