@@ -155,6 +155,7 @@ drop table tmp_test_auto_stats_in_function;
 -- reset GUCs
 
 reset gp_autostats_mode;
+reset gp_autostats_mode_in_functions;
 reset gp_autostats_on_change_threshold;
 reset log_autostats;
 reset gp_autostats_allow_nonowner;
