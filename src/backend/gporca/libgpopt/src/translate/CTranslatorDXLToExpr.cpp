@@ -2318,8 +2318,8 @@ CTranslatorDXLToExpr::PtabdescFromCTAS(CDXLLogicalCTAS *pdxlopCTAS)
 	CTableDescriptor *ptabdesc = GPOS_NEW(m_mp) CTableDescriptor(
 		m_mp, mdid, CName(m_mp, &strName), pmdrel->ConvertHashToRandom(),
 		rel_distr_policy, rel_storage_type,
-		0,	 // TODO:  - Mar 5, 2014; ulExecuteAsUser
-		-1,	 // GPDB_12_MERGE_FIXME: Extract the lockmode from CTE
+		0,	// ulExecuteAsUser, use permissions of current user
+		3,	// CTEs always use a RowExclusiveLock on the table. See createas.c
 		UNASSIGNED_QUERYID);
 
 	// populate column information from the dxl table descriptor
