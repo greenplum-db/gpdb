@@ -4753,7 +4753,7 @@ static int decompress_data(request_t* r, zstd_buffer *in, zstd_buffer *out){
 	ZSTD_outBuffer obuf = {out->buf, out->size, out->pos};
 	
 	if(!r->zstd_dctx) {
-		gwarning(stderr, "%s", "Out of memory when ZSTD_createDCtx");
+		gwarning(NULL, "%s", "Out of memory when ZSTD_createDCtx");
 		return -1;
 	}
 
