@@ -871,3 +871,30 @@ ROLLBACK;
 VACUUM aocs_alter_add_col_no_compress;
 DROP TABLE aocs_alter_add_col_no_compress;
 RESET gp_default_storage_options;
+-- Ensure no seg entries are created when there are no tuples to add.
+-- Note: Having empty pg_aoseg entries caused post-upgrade vacuum freeze errors.
+-- For example, while upgrading the primaries a VACUUM FREEZE on a root AOCO
+-- table with a non-empty pg_aocsseg table on the master resulted in:
+--  "ERROR","58P01","could not open Append-Only segment file
+--  ""base/16410/20863.1665"": No such file or directory",,,,,,"VACUUM
+--    (FREEZE);",0,,"aomd.c"
+-- Scenario 1: Alter Distribution of AOCO partition table
+CREATE TABLE alter_dist_key_for_aoco_partition_table (a integer, b text, c integer)
+    WITH (APPENDONLY=TRUE, ORIENTATION=COLUMN) DISTRIBUTED BY (a)
+    PARTITION BY RANGE(c) (START(1) END(3) EVERY(1));
+ALTER TABLE alter_dist_key_for_aoco_partition_table SET DISTRIBUTED BY (b);
+-- assert non-empty seg entries
+SELECT * FROM gp_toolkit.__gp_aocsseg('alter_dist_key_for_aoco_partition_table'::regclass);
+ gp_tid | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+--------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+(0 rows)
+
+-- Scenario 2: Inserting an empty row into AOCO table
+CREATE table aoco_insert_empty_row (a integer, b text, c integer) WITH (APPENDONLY=TRUE, ORIENTATION=COLUMN) DISTRIBUTED BY (a);
+INSERT INTO aoco_insert_empty_row SELECT 1,'a',1 FROM gp_id WHERE dbid=-999;
+-- assert non-empty seg entries
+SELECT * FROM gp_toolkit.__gp_aocsseg('aoco_insert_empty_row'::regclass);
+ gp_tid | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+--------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+(0 rows)
+

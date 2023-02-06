@@ -430,11 +430,6 @@ Alter table stat_part_co_t3 set distributed by (j);
 
 select  count(*) from pg_class where relname like 'stat_part_co_t3';
 
--- Drop table as its not supported by pg_upgrade.
--- See check_parent_partitions_with_seg_entries pg_upgrade check and associated
--- test in gpupgrade repo.
-DROP TABLE stat_part_co_t3;
-
 \echo '-- start_ignore'
 drop schema stat_heap4 cascade;
 create schema stat_heap4;
@@ -597,11 +592,6 @@ Alter table stat_part_co_t4 set with (reorganize=true);
 
 select  count(*) from pg_class where relname like 'stat_part_co_t4';
 
--- Drop table as its not supported by pg_upgrade.
--- See check_parent_partitions_with_seg_entries pg_upgrade check and associated
--- test in gpupgrade repo.
-DROP TABLE stat_part_co_t4;
-
 \echo '-- start_ignore'
 drop schema stat_heap5 cascade;
 create schema stat_heap5;
@@ -740,11 +730,6 @@ select  count(*) from pg_class where relname like 'stat_part_co_t5';
 Alter table stat_part_co_t5 set distributed by (j);
 
 select  count(*) from pg_class where relname like 'stat_part_co_t5';
-
--- Drop table as its not supported by pg_upgrade.
--- See check_parent_partitions_with_seg_entries pg_upgrade check and associated
--- test in gpupgrade repo.
-DROP TABLE stat_part_co_t5;
 
 \echo '-- start_ignore'
 drop schema stat_heap6 cascade;
@@ -915,11 +900,6 @@ select  count(*) from pg_class where relname like 'stat_part_co_t6';
 Alter table stat_part_co_t6 set with (reorganize=true);
 
 select  count(*) from pg_class where relname like 'stat_part_co_t6';
-
--- Drop table as its not supported by pg_upgrade.
--- See check_parent_partitions_with_seg_entries pg_upgrade check and associated
--- test in gpupgrade repo.
-DROP TABLE stat_part_co_t6;
 
 \echo '-- start_ignore'
 drop schema stat_heap7 cascade;

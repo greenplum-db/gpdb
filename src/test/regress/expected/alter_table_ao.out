@@ -705,3 +705,32 @@ NOTICE:  dropped partition "p_split_tupdesc_leak_ym" for relation "split_tupdesc
 NOTICE:  CREATE TABLE will create partition "split_tupdesc_leak_1_prt_p_split_tupdesc_leak_ym_201412" for table "split_tupdesc_leak"
 NOTICE:  CREATE TABLE will create partition "split_tupdesc_leak_1_prt_p_split_tupdesc_leak_ym" for table "split_tupdesc_leak"
 DROP TABLE split_tupdesc_leak;
+-- Ensure no seg entries are created when there are no tuples to add.
+-- Note: Having empty pg_aoseg entries caused post-upgrade vacuum freeze errors.
+-- For example, while upgrading the primaries a VACUUM FREEZE on a root AOCO
+-- table with a non-empty pg_aocsseg table on the master resulted in:
+--  "ERROR","58P01","could not open Append-Only segment file
+--  ""base/16410/20863.1665"": No such file or directory",,,,,,"VACUUM
+--    (FREEZE);",0,,"aomd.c"
+-- Scenario 1: Alter Distribution of AO partition table
+CREATE TABLE alter_dist_key_for_ao_partition_table (a integer, b text, c integer)
+    WITH (APPENDONLY=TRUE) DISTRIBUTED BY (a)
+    PARTITION BY RANGE(c) (START(1) END(3) EVERY(1));
+NOTICE:  CREATE TABLE will create partition "alter_dist_key_for_ao_partition_table_1_prt_1" for table "alter_dist_key_for_ao_partition_table"
+NOTICE:  CREATE TABLE will create partition "alter_dist_key_for_ao_partition_table_1_prt_2" for table "alter_dist_key_for_ao_partition_table"
+ALTER TABLE alter_dist_key_for_ao_partition_table SET DISTRIBUTED BY (b);
+-- assert non-empty seg entries
+SELECT * FROM gp_toolkit.__gp_aoseg('alter_dist_key_for_ao_partition_table'::regclass);
+ segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
+-------+-----+----------+---------------+------------------+----------+---------------+-------
+(0 rows)
+
+-- Scenario 2: Inserting an empty row into AO table
+CREATE table ao_insert_empty_row (a integer, b text, c integer) WITH (APPENDONLY=TRUE) DISTRIBUTED BY (a);
+INSERT INTO ao_insert_empty_row SELECT 1,'a',1 FROM gp_id WHERE dbid=-999;
+-- assert non-empty seg entries
+SELECT * FROM gp_toolkit.__gp_aoseg('ao_insert_empty_row'::regclass);
+ segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
+-------+-----+----------+---------------+------------------+----------+---------------+-------
+(0 rows)
+

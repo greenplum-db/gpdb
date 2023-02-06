@@ -657,10 +657,6 @@ select  count(*) from pg_class where relname like 'stat_part_co_t3';
      1
 (1 row)
 
--- Drop table as its not supported by pg_upgrade.
--- See check_parent_partitions_with_seg_entries pg_upgrade check and associated
--- test in gpupgrade repo.
-DROP TABLE stat_part_co_t3;
 \echo '-- start_ignore'
 -- start_ignore
 drop schema stat_heap4 cascade;
@@ -908,10 +904,6 @@ select  count(*) from pg_class where relname like 'stat_part_co_t4';
      1
 (1 row)
 
--- Drop table as its not supported by pg_upgrade.
--- See check_parent_partitions_with_seg_entries pg_upgrade check and associated
--- test in gpupgrade repo.
-DROP TABLE stat_part_co_t4;
 \echo '-- start_ignore'
 -- start_ignore
 drop schema stat_heap5 cascade;
@@ -1117,10 +1109,6 @@ select  count(*) from pg_class where relname like 'stat_part_co_t5';
      1
 (1 row)
 
--- Drop table as its not supported by pg_upgrade.
--- See check_parent_partitions_with_seg_entries pg_upgrade check and associated
--- test in gpupgrade repo.
-DROP TABLE stat_part_co_t5;
 \echo '-- start_ignore'
 -- start_ignore
 drop schema stat_heap6 cascade;
@@ -1387,10 +1375,6 @@ select  count(*) from pg_class where relname like 'stat_part_co_t6';
      1
 (1 row)
 
--- Drop table as its not supported by pg_upgrade.
--- See check_parent_partitions_with_seg_entries pg_upgrade check and associated
--- test in gpupgrade repo.
-DROP TABLE stat_part_co_t6;
 \echo '-- start_ignore'
 -- start_ignore
 drop schema stat_heap7 cascade;
