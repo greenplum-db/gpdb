@@ -4017,17 +4017,19 @@ CTranslatorQueryToDXL::TranslateTargetListToDXLProject(
 
 		BOOL is_grouping_col =
 			CTranslatorUtils::IsGroupingColumn(target_entry, plgrpcl);
-		if (!is_groupby || (is_groupby && is_grouping_col))
+		if (!is_groupby || is_grouping_col)
 		{
 			// Insist projection for any outer refs to ensure any decorelation of a
 			// subquery results in a correct plan using the projected reference,
 			// instead of the outer ref directly.
 			// TODO: Remove is_grouping_col from this check once const projections in
 			// subqueries no longer prevent decorrelation
+			BOOL is_orderby_col = CTranslatorUtils::IsSortingColumn(
+				target_entry, m_query->sortClause);
 			BOOL insist_proj =
-				(IsA(target_entry->expr, Var) &&
-				 ((Var *) (target_entry->expr))->varlevelsup > 0 &&
-				 !is_grouping_col);
+				IsA(target_entry->expr, Var) &&
+				((Var *) (target_entry->expr))->varlevelsup > 0 &&
+				!is_orderby_col && !is_grouping_col;
 			CDXLNode *project_elem_dxlnode = TranslateExprToDXLProject(
 				target_entry->expr, target_entry->resname,
 				insist_proj /* insist_new_colids */);
