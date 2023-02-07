@@ -93,6 +93,26 @@ Foreign keys are not supported. You can declare them, but referential integrity 
 
 Foreign key constraints specify that the values in a column or a group of columns must match the values appearing in some row of another table to maintain referential integrity between two related tables. Referential integrity checks cannot be enforced between the distributed table segments of a Greenplum database.
 
+#### <a id="exclusion"></a>Exclusion Constraints
+
+Exclusion constraints ensure that if any two rows are compared on the specified columns or expressions using the specified operators, at least one of these operator comparisons will return false or null. The syntax is:
+
+``` sql
+CREATE TABLE circles (
+    c circle,
+    EXCLUDE USING gist (c WITH &&)
+);
+```
+
+Similar to unique constraints, an exclusion constraint is permitted only for replicated tables or when the distribution key columns are part of the constraint.
+
+Exclusion constraints are not supported for partitioned tables.
+
+See also [CREATE TABLE ... CONSTRAINT ... EXCLUDE](../../ref_guide/sql_commands/CREATE_TABLE.html) for details.
+
+Adding an exclusion constraint automatically creates an index of the type specified in the constraint declaration.
+
+
 ### <a id="topic34"></a>Choosing the Table Distribution Policy 
 
 All Greenplum Database tables are distributed. When you create or alter a table, you optionally specify `DISTRIBUTED BY` \(hash distribution\), `DISTRIBUTED RANDOMLY` \(round-robin distribution\), or `DISTRIBUTED REPLICATED` \(fully distributed\) to determine the table row distribution.
