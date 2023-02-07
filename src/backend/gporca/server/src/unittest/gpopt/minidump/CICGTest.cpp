@@ -162,8 +162,6 @@ GPOS_RESULT
 CICGTest::EresUnittest_RunTestsWithoutAdditionalTraceFlags()
 {
 	const CHAR *rgszFileNames[] = {
-		// GPDB_12_MERGE_FIXME: Needs review: Join order change
-		// "../data/dxl/minidump/Union-On-HJNs.mdp",
 		"../data/dxl/minidump/Tpcds-NonPart-Q70a.mdp"};
 	return CTestUtils::EresUnittest_RunTestsWithoutAdditionalTraceFlags(
 		rgszFileNames, &m_ulTestCounterNoAdditionTraceFlag,
