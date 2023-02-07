@@ -4823,9 +4823,13 @@ BeginCopyFrom(ParseState *pstate,
 			 cstate->rel && cstate->rel->rd_cdbpolicy &&
 			 cstate->rel->rd_cdbpolicy->ptype != POLICYTYPE_ENTRY)
 		cstate->dispatch_mode = COPY_DISPATCH;
-	// handle case where fdw executes on coordinator while it's acting as a segment
-	// This occurs when fdw is under a redistribute on the coordinator
-	else if (Gp_role == GP_ROLE_EXECUTE && cstate->rel->rd_fdwroutine != NULL)
+	/*
+	 * Handle case where fdw executes on coordinator while it's acting as a segment
+	 * This occurs when fdw is under a redistribute on the coordinator
+	 */
+	else if (Gp_role == GP_ROLE_EXECUTE &&
+			 cstate->rel && cstate->rel->rd_cdbpolicy &&
+			 cstate->rel->rd_cdbpolicy->ptype == POLICYTYPE_ENTRY)
 		cstate->dispatch_mode = COPY_DIRECT;
 	else if (Gp_role == GP_ROLE_EXECUTE)
 		cstate->dispatch_mode = COPY_EXECUTOR;

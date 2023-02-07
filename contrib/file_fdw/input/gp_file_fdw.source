@@ -55,7 +55,6 @@ select word1 from text_csv_all union all select word1 from text_csv_coordinator;
 create table bar (a text);
 insert into bar values ('AAA'),('XYZ'),('hji');
 analyze bar;
-
 explain  select word1 from text_csv_coordinator ft1, bar where ft1.word1 = bar.a;
 select word1 from text_csv_coordinator ft1, bar where ft1.word1 = bar.a;
 
