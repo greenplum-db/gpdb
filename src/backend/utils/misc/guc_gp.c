@@ -1641,6 +1641,18 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+
+		{"gp_log_resgroup_memory", PGC_USERSET, LOGGING_WHAT,
+			gettext_noop("Prints out messages related to resource group's memory management."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_log_resgroup_memory,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"gp_resqueue_print_operator_memory_limits", PGC_USERSET, LOGGING_WHAT,
 			gettext_noop("Prints out the memory limit for operators (in explain) assigned by resource queue's "
 						 "memory management."),
@@ -3834,6 +3846,17 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"gp_resgroup_memory_query_fixed_mem", PGC_USERSET, RESOURCES_MEM,
+			gettext_noop("Sets the fixed amount of memory reserved for a query."),
+			NULL,
+			GUC_UNIT_KB | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_resgroup_memory_query_fixed_mem,
+		0, 0, INT_MAX,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"gp_resqueue_memory_policy_auto_fixed_mem", PGC_USERSET, RESOURCES_MEM,
 			gettext_noop("Sets the fixed amount of memory reserved for non-memory intensive operators in the AUTO policy."),
 			NULL,
@@ -3843,6 +3866,17 @@ struct config_int ConfigureNamesInt_gp[] =
 		100, 50, INT_MAX,
 		NULL, NULL, NULL
 	},
+	{
+		{"gp_resgroup_memory_policy_auto_fixed_mem", PGC_USERSET, RESOURCES_MEM,
+			gettext_noop("Sets the fixed amount of memory reserved for non-memory intensive operators in the AUTO policy."),
+			NULL,
+			GUC_UNIT_KB | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_resgroup_memory_policy_auto_fixed_mem,
+		100, 50, INT_MAX,
+		NULL, NULL, NULL
+	},
+
 
 	{
 		{"gp_global_deadlock_detector_period", PGC_SIGHUP, LOCK_MANAGEMENT,
@@ -4643,6 +4677,15 @@ struct config_enum ConfigureNamesEnum_gp[] =
 		&gp_resqueue_memory_policy,
 		RESMANAGER_MEMORY_POLICY_NONE, gp_resqueue_memory_policies,
 		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_resgroup_memory_policy", PGC_SUSET, RESOURCES_MGM,
+			gettext_noop("Sets the policy for memory allocation of queries."),
+			gettext_noop("Valid values are AUTO, EAGER_FREE.")
+		},
+		&gp_resgroup_memory_policy,
+		RESMANAGER_MEMORY_POLICY_EAGER_FREE, gp_resqueue_memory_policies, NULL, NULL
 	},
 
 	{

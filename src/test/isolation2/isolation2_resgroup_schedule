@@ -20,6 +20,7 @@ test: resgroup/resgroup_cpu_rate_limit
 test: resgroup/resgroup_cpuset
 test: resgroup/resgroup_cpuset_empty_default
 test: resgroup/resgroup_cancel_terminate_concurrency
+test: resgroup/resgroup_memory_limit
 test: resgroup/resgroup_move_query
 
 # regression tests
