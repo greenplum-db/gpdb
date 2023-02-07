@@ -64,7 +64,8 @@
 using namespace gpopt;
 
 static BOOL MapConstantConjunctiveScalarPredicates(
-	CMemoryPool *mp, CExpression *pexprFilter, IdentToExprMap *phmIdentToExpr);
+	CMemoryPool *mp, CExpression *pexprFilter, IdentToExprMap *phmIdentToExpr,
+	BOOL doInsert);
 
 static CExpression *SubstituteConstantIdentifier(
 	CMemoryPool *mp, CExpression *pexpr, IdentToExprMap *phmIdentToExpr);
@@ -1972,7 +1973,8 @@ CExpressionPreprocessor::PexprRemoveUnusedCTEs(CMemoryPool *mp,
 static BOOL
 MapConstantConjunctiveScalarPredicates(CMemoryPool *mp,
 									   CExpression *pexprFilter,
-									   IdentToExprMap *phmIdentToExpr)
+									   IdentToExprMap *phmIdentToExpr,
+									   BOOL doInsert)
 {
 	COperator *pop = pexprFilter->Pop();
 	if (COperator::EopScalarCmp == pop->Eopid() &&
@@ -1982,22 +1984,38 @@ MapConstantConjunctiveScalarPredicates(CMemoryPool *mp,
 		if (COperator::EopScalarIdent == (*pexprFilter)[0]->Pop()->Eopid() &&
 			COperator::EopScalarConst == (*pexprFilter)[1]->Pop()->Eopid())
 		{
-			(*pexprFilter)[0]->Pop()->AddRef();
-			(*pexprFilter)[1]->AddRef();
-			phmIdentToExpr->Insert(
-				CScalarIdent::PopConvert((*pexprFilter)[0]->Pop()),
-				(*pexprFilter)[1]);
+			if (doInsert)
+			{
+				(*pexprFilter)[0]->Pop()->AddRef();
+				(*pexprFilter)[1]->AddRef();
+				phmIdentToExpr->Insert(
+					CScalarIdent::PopConvert((*pexprFilter)[0]->Pop()),
+					(*pexprFilter)[1]);
+			}
+			else
+			{
+				phmIdentToExpr->Delete(
+					CScalarIdent::PopConvert((*pexprFilter)[0]->Pop()));
+			}
 		}
 		// the following section handles predicates of the kind (10 = a)
 		else if (COperator::EopScalarConst ==
 					 (*pexprFilter)[0]->Pop()->Eopid() &&
 				 COperator::EopScalarIdent == (*pexprFilter)[1]->Pop()->Eopid())
 		{
-			(*pexprFilter)[0]->AddRef();
-			(*pexprFilter)[1]->Pop()->AddRef();
-			phmIdentToExpr->Insert(
-				CScalarIdent::PopConvert((*pexprFilter)[1]->Pop()),
-				(*pexprFilter)[0]);
+			if (doInsert)
+			{
+				(*pexprFilter)[0]->AddRef();
+				(*pexprFilter)[1]->Pop()->AddRef();
+				phmIdentToExpr->Insert(
+					CScalarIdent::PopConvert((*pexprFilter)[1]->Pop()),
+					(*pexprFilter)[0]);
+			}
+			else
+			{
+				phmIdentToExpr->Delete(
+					CScalarIdent::PopConvert((*pexprFilter)[1]->Pop()));
+			}
 		}
 	}
 	else if (CPredicateUtils::FAnd(pexprFilter))
@@ -2005,8 +2023,8 @@ MapConstantConjunctiveScalarPredicates(CMemoryPool *mp,
 		const ULONG ulChildren = pexprFilter->Arity();
 		for (ULONG ul = 0; ul < ulChildren; ul++)
 		{
-			if (!MapConstantConjunctiveScalarPredicates(mp, (*pexprFilter)[ul],
-														phmIdentToExpr))
+			if (!MapConstantConjunctiveScalarPredicates(
+					mp, (*pexprFilter)[ul], phmIdentToExpr, doInsert))
 			{
 				return false;
 			}
@@ -2111,30 +2129,32 @@ SubstituteConstantIdentifier(CMemoryPool *mp, CExpression *pexpr,
 //       +--CScalarConst (2)
 CExpression *
 CExpressionPreprocessor::PexprReplaceColWithConst(
-	CMemoryPool *mp, CExpression *pexpr, IdentToExprMap *phmIdentToExpr)
+	CMemoryPool *mp, CExpression *pexpr, IdentToExprMap *phmIdentToExpr,
+	BOOL checkFilterForConstants)
 {
 	GPOS_ASSERT(nullptr != pexpr);
 
 	COperator *pop = pexpr->Pop();
-	if (nullptr == phmIdentToExpr &&
+	if (checkFilterForConstants &&
 		COperator::EopLogicalSelect == pexpr->Pop()->Eopid() &&
 		(COperator::EopLogicalLeftOuterJoin == ((*pexpr)[0])->Pop()->Eopid() ||
 		 COperator::EopLogicalNAryJoin == ((*pexpr)[0])->Pop()->Eopid()))
 	{
-		phmIdentToExpr = GPOS_NEW(mp) IdentToExprMap(mp);
 		BOOL isConjunctiveEqualityFilter =
 			MapConstantConjunctiveScalarPredicates(
-				mp, (*pexpr)[pexpr->Arity() - 1], phmIdentToExpr);
+				mp, (*pexpr)[pexpr->Arity() - 1], phmIdentToExpr, true);
 		if (!isConjunctiveEqualityFilter || phmIdentToExpr->Size() == 0)
 		{
 			pexpr->AddRef();
-			phmIdentToExpr->Release();
 			return pexpr;
 		}
 
 		CExpression *pexprNew =
-			PexprReplaceColWithConst(mp, pexpr, phmIdentToExpr);
-		phmIdentToExpr->Release();
+			PexprReplaceColWithConst(mp, pexpr, phmIdentToExpr, false);
+
+		// erase values from map...
+		MapConstantConjunctiveScalarPredicates(mp, (*pexpr)[pexpr->Arity() - 1],
+											   phmIdentToExpr, false);
 
 		return pexprNew;
 	}
@@ -2146,12 +2166,12 @@ CExpressionPreprocessor::PexprReplaceColWithConst(
 	for (ULONG ul = 0; ul < ulChildren; ul++)
 	{
 		CExpression *pexprChild =
-			PexprReplaceColWithConst(mp, (*pexpr)[ul], phmIdentToExpr);
+			PexprReplaceColWithConst(mp, (*pexpr)[ul], phmIdentToExpr, true);
 		pdrgpexpr->Append(pexprChild);
 	}
 
 	if (COperator::EopLogicalNAryJoin == pexpr->Pop()->Eopid() &&
-		phmIdentToExpr)
+		phmIdentToExpr->Size() > 0)
 	{
 		CExpression *pexprFilter = SubstituteConstantIdentifier(
 			mp, (*pexpr)[pexpr->Arity() - 1], phmIdentToExpr);
@@ -3303,9 +3323,11 @@ CExpressionPreprocessor::PexprPreprocess(
 	pexprOuterRefsEleminated->Release();
 
 	// (7) substitute constant predicates
+	IdentToExprMap *phmIdentToExpr = GPOS_NEW(mp) IdentToExprMap(mp);
 	CExpression *pexprPredWithConstReplaced =
-		PexprReplaceColWithConst(mp, pexprTrimmed2, nullptr);
+		PexprReplaceColWithConst(mp, pexprTrimmed2, phmIdentToExpr, true);
 	GPOS_CHECK_ABORT;
+	phmIdentToExpr->Release();
 	pexprTrimmed2->Release();
 
 	// (8) simplify quantified subqueries

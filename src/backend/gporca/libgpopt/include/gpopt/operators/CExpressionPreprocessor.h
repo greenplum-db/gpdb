@@ -159,8 +159,10 @@ private:
 	static CExpression *PexprRemoveUnusedCTEs(CMemoryPool *mp,
 											  CExpression *pexpr);
 
-	static CExpression *PexprReplaceColWithConst(
-		CMemoryPool *mp, CExpression *pexpr, IdentToExprMap *phmIdentToExpr);
+	static CExpression *PexprReplaceColWithConst(CMemoryPool *mp,
+												 CExpression *pexpr,
+												 IdentToExprMap *phmIdentToExpr,
+												 BOOL checkFilterForConstants);
 
 	// collect CTE predicates from consumers
 	static void CollectCTEPredicates(CMemoryPool *mp, CExpression *pexpr,
