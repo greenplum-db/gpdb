@@ -63,12 +63,12 @@
 
 using namespace gpopt;
 
-static BOOL MapConstantConjunctiveScalarPredicates(
-	CMemoryPool *mp, CExpression *pexprFilter, IdentToExprMap *phmIdentToExpr,
-	BOOL doInsert);
+static BOOL UpdateExprToConstantPredicateMapping(
+	CMemoryPool *mp, CExpression *pexprFilter,
+	ExprToConstantMap *phmExprToConst, BOOL doInsert);
 
 static CExpression *SubstituteConstantIdentifier(
-	CMemoryPool *mp, CExpression *pexpr, IdentToExprMap *phmIdentToExpr);
+	CMemoryPool *mp, CExpression *pexpr, ExprToConstantMap *phmExprToConst);
 
 // maximum number of equality predicates to be derived from existing equalities
 #define GPOPT_MAX_DERIVED_PREDS 50
@@ -1971,50 +1971,43 @@ CExpressionPreprocessor::PexprRemoveUnusedCTEs(CMemoryPool *mp,
 // identifier and a constant value. If an expression inside the filter is found
 // to be disjunctive, then return false.
 static BOOL
-MapConstantConjunctiveScalarPredicates(CMemoryPool *mp,
-									   CExpression *pexprFilter,
-									   IdentToExprMap *phmIdentToExpr,
-									   BOOL doInsert)
+UpdateExprToConstantPredicateMapping(CMemoryPool *mp, CExpression *pexprFilter,
+									 ExprToConstantMap *phmExprToConst,
+									 BOOL doInsert)
 {
 	COperator *pop = pexprFilter->Pop();
 	if (COperator::EopScalarCmp == pop->Eopid() &&
 		IMDType::EcmptEq == CScalarCmp::PopConvert(pop)->ParseCmpType())
 	{
 		// the following section handles predicates of the kind (a = 10)
-		if (COperator::EopScalarIdent == (*pexprFilter)[0]->Pop()->Eopid() &&
+		if (COperator::EopScalarConst != (*pexprFilter)[0]->Pop()->Eopid() &&
 			COperator::EopScalarConst == (*pexprFilter)[1]->Pop()->Eopid())
 		{
 			if (doInsert)
 			{
-				(*pexprFilter)[0]->Pop()->AddRef();
+				(*pexprFilter)[0]->AddRef();
 				(*pexprFilter)[1]->AddRef();
-				phmIdentToExpr->Insert(
-					CScalarIdent::PopConvert((*pexprFilter)[0]->Pop()),
-					(*pexprFilter)[1]);
+				phmExprToConst->Insert((*pexprFilter)[0], (*pexprFilter)[1]);
 			}
 			else
 			{
-				phmIdentToExpr->Delete(
-					CScalarIdent::PopConvert((*pexprFilter)[0]->Pop()));
+				phmExprToConst->Delete((*pexprFilter)[0]);
 			}
 		}
 		// the following section handles predicates of the kind (10 = a)
 		else if (COperator::EopScalarConst ==
 					 (*pexprFilter)[0]->Pop()->Eopid() &&
-				 COperator::EopScalarIdent == (*pexprFilter)[1]->Pop()->Eopid())
+				 COperator::EopScalarConst != (*pexprFilter)[1]->Pop()->Eopid())
 		{
 			if (doInsert)
 			{
 				(*pexprFilter)[0]->AddRef();
-				(*pexprFilter)[1]->Pop()->AddRef();
-				phmIdentToExpr->Insert(
-					CScalarIdent::PopConvert((*pexprFilter)[1]->Pop()),
-					(*pexprFilter)[0]);
+				(*pexprFilter)[1]->AddRef();
+				phmExprToConst->Insert((*pexprFilter)[1], (*pexprFilter)[0]);
 			}
 			else
 			{
-				phmIdentToExpr->Delete(
-					CScalarIdent::PopConvert((*pexprFilter)[1]->Pop()));
+				phmExprToConst->Delete((*pexprFilter)[1]);
 			}
 		}
 	}
@@ -2023,8 +2016,8 @@ MapConstantConjunctiveScalarPredicates(CMemoryPool *mp,
 		const ULONG ulChildren = pexprFilter->Arity();
 		for (ULONG ul = 0; ul < ulChildren; ul++)
 		{
-			if (!MapConstantConjunctiveScalarPredicates(
-					mp, (*pexprFilter)[ul], phmIdentToExpr, doInsert))
+			if (!UpdateExprToConstantPredicateMapping(mp, (*pexprFilter)[ul],
+													  phmExprToConst, doInsert))
 			{
 				return false;
 			}
@@ -2044,7 +2037,7 @@ MapConstantConjunctiveScalarPredicates(CMemoryPool *mp,
 // Create a new expression from an exression and map of ident to const
 static CExpression *
 SubstituteConstantIdentifier(CMemoryPool *mp, CExpression *pexpr,
-							 IdentToExprMap *phmIdentToExpr)
+							 ExprToConstantMap *phmExprToConst)
 {
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
 
@@ -2052,19 +2045,17 @@ SubstituteConstantIdentifier(CMemoryPool *mp, CExpression *pexpr,
 	for (ULONG ul = 0; ul < ulChildren; ul++)
 	{
 		CExpression *pexprChild = nullptr;
-		if (COperator::EopScalarIdent == (*pexpr)[ul]->Pop()->Eopid() &&
-			phmIdentToExpr->Find(
-				CScalarIdent::PopConvert((*pexpr)[ul]->Pop())) != nullptr)
+		if (COperator::EopScalarConst != (*pexpr)[ul]->Pop()->Eopid() &&
+			phmExprToConst->Find((*pexpr)[ul]) != nullptr)
 		{
 			// substitute with constant
-			pexprChild = phmIdentToExpr->Find(
-				CScalarIdent::PopConvert((*pexpr)[ul]->Pop()));
+			pexprChild = phmExprToConst->Find((*pexpr)[ul]);
 			pexprChild->AddRef();
 		}
 		else
 		{
 			pexprChild =
-				SubstituteConstantIdentifier(mp, (*pexpr)[ul], phmIdentToExpr);
+				SubstituteConstantIdentifier(mp, (*pexpr)[ul], phmExprToConst);
 		}
 		pdrgpexpr->Append(pexprChild);
 	}
@@ -2129,7 +2120,7 @@ SubstituteConstantIdentifier(CMemoryPool *mp, CExpression *pexpr,
 //       +--CScalarConst (2)
 CExpression *
 CExpressionPreprocessor::PexprReplaceColWithConst(
-	CMemoryPool *mp, CExpression *pexpr, IdentToExprMap *phmIdentToExpr,
+	CMemoryPool *mp, CExpression *pexpr, ExprToConstantMap *phmExprToConst,
 	BOOL checkFilterForConstants)
 {
 	GPOS_ASSERT(nullptr != pexpr);
@@ -2140,21 +2131,20 @@ CExpressionPreprocessor::PexprReplaceColWithConst(
 		(COperator::EopLogicalLeftOuterJoin == ((*pexpr)[0])->Pop()->Eopid() ||
 		 COperator::EopLogicalNAryJoin == ((*pexpr)[0])->Pop()->Eopid()))
 	{
-		BOOL isConjunctiveEqualityFilter =
-			MapConstantConjunctiveScalarPredicates(
-				mp, (*pexpr)[pexpr->Arity() - 1], phmIdentToExpr, true);
-		if (!isConjunctiveEqualityFilter || phmIdentToExpr->Size() == 0)
+		BOOL isConjunctiveEqualityFilter = UpdateExprToConstantPredicateMapping(
+			mp, (*pexpr)[pexpr->Arity() - 1], phmExprToConst, true);
+		if (!isConjunctiveEqualityFilter || phmExprToConst->Size() == 0)
 		{
 			pexpr->AddRef();
 			return pexpr;
 		}
 
 		CExpression *pexprNew =
-			PexprReplaceColWithConst(mp, pexpr, phmIdentToExpr, false);
+			PexprReplaceColWithConst(mp, pexpr, phmExprToConst, false);
 
 		// erase values from map...
-		MapConstantConjunctiveScalarPredicates(mp, (*pexpr)[pexpr->Arity() - 1],
-											   phmIdentToExpr, false);
+		UpdateExprToConstantPredicateMapping(mp, (*pexpr)[pexpr->Arity() - 1],
+											 phmExprToConst, false);
 
 		return pexprNew;
 	}
@@ -2166,15 +2156,15 @@ CExpressionPreprocessor::PexprReplaceColWithConst(
 	for (ULONG ul = 0; ul < ulChildren; ul++)
 	{
 		CExpression *pexprChild =
-			PexprReplaceColWithConst(mp, (*pexpr)[ul], phmIdentToExpr, true);
+			PexprReplaceColWithConst(mp, (*pexpr)[ul], phmExprToConst, true);
 		pdrgpexpr->Append(pexprChild);
 	}
 
 	if (COperator::EopLogicalNAryJoin == pexpr->Pop()->Eopid() &&
-		phmIdentToExpr->Size() > 0)
+		phmExprToConst->Size() > 0)
 	{
 		CExpression *pexprFilter = SubstituteConstantIdentifier(
-			mp, (*pexpr)[pexpr->Arity() - 1], phmIdentToExpr);
+			mp, (*pexpr)[pexpr->Arity() - 1], phmExprToConst);
 
 		pop->AddRef();
 		return GPOS_NEW(mp) CExpression(
@@ -3323,11 +3313,11 @@ CExpressionPreprocessor::PexprPreprocess(
 	pexprOuterRefsEleminated->Release();
 
 	// (7) substitute constant predicates
-	IdentToExprMap *phmIdentToExpr = GPOS_NEW(mp) IdentToExprMap(mp);
+	ExprToConstantMap *phmExprToConst = GPOS_NEW(mp) ExprToConstantMap(mp);
 	CExpression *pexprPredWithConstReplaced =
-		PexprReplaceColWithConst(mp, pexprTrimmed2, phmIdentToExpr, true);
+		PexprReplaceColWithConst(mp, pexprTrimmed2, phmExprToConst, true);
 	GPOS_CHECK_ABORT;
-	phmIdentToExpr->Release();
+	phmExprToConst->Release();
 	pexprTrimmed2->Release();
 
 	// (8) simplify quantified subqueries
