@@ -210,6 +210,7 @@ Doc Index
             - [gpexpand.status\_detail](./system_catalogs/gp_expansion_tables.md)
             - [gp\_fastsequence](./system_catalogs/gp_fastsequence.md)
             - [gp\_id](./system_catalogs/gp_id.md)
+            - [gp\_partition\_template](./system_catalogs/gp_partition_template.md)
             - [gp\_pgdatabase](./system_catalogs/gp_pgdatabase.md)
             - [gp\_resgroup\_config](./system_catalogs/gp_resgroup_config.md)
             - [gp\_resgroup\_status](./system_catalogs/gp_resgroup_status.md)

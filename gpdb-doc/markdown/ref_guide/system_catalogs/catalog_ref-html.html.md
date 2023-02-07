@@ -34,6 +34,8 @@ System catalog table and view definitions in alphabetical order.
 
 -   [gp\_id](../system_catalogs/gp_id.html)  
 
+-   [gp\_partition\_template](../system_catalogs/gp_partition_template.html)  
+
 -   [gp\_pgdatabase](../system_catalogs/gp_pgdatabase.html)  
 
 -   [gp\_resgroup\_config](../system_catalogs/gp_resgroup_config.html)  

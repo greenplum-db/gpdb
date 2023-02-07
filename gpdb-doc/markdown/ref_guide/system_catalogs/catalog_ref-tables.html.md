@@ -5,6 +5,7 @@
 -   [gp\_fastsequence](gp_fastsequence.html)
 -   [gp\_global\_sequence](gp_global_sequence.html)
 -   [gp\_id](gp_id.html)
+-   [gp\_partition\_template](gp_partition_template.html)
 -   [gp\_stat\_replication](gp_stat_replication.html)
 -   [gp\_segment\_configuration](gp_segment_configuration.html)
 -   [gp\_version\_at\_initdb](gp_version_at_initdb.html)
