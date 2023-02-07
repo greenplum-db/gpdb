@@ -12494,7 +12494,6 @@ insert into tcorr1 values (1,99);
 insert into tcorr2 values (1,1);
 analyze tcorr1;
 analyze tcorr2;
-set optimizer_trace_fallback to on;
 explain
 select *
 from tcorr1 out
@@ -12799,7 +12798,6 @@ analyze tbitmap;
 set optimizer_join_order = query;
 set optimizer_enable_hashjoin = off;
 set optimizer_enable_groupagg = off;
-set optimizer_trace_fallback = on;
 set enable_sort = off;
 -- 1 simple btree
 explain (costs off)
@@ -13306,7 +13304,6 @@ explain (costs off) select count(*), t2.c from roj1 t1 left join roj2 t2 on t1.a
 (12 rows)
 
 reset optimizer_enable_motion_redistribute;
-reset optimizer_trace_fallback;
 reset enable_sort;
 -- simple check for btree indexes on AO tables
 create table t_ao_btree(a int, b int)
@@ -13327,7 +13324,6 @@ create index t_ao_btree_ix on t_ao_btree using btree(a,b);
 analyze t_ao_btree;
 analyze tpart_ao_btree;
 analyze tpart_dim;
-set optimizer_trace_fallback to on;
 set optimizer_enable_hashjoin to off;
 -- this should use a bitmap scan on the btree index
 select * from t_ao_btree where a = 3 and b = 3;
@@ -13467,10 +13463,8 @@ select enable_xform('CXformInnerJoin2NLJoin');
 
 -- end_ignore
 reset optimizer_enable_hashjoin;
-reset optimizer_trace_fallback;
 -- Tests converted from MDPs that use tables partitioned on text columns and similar types,
 -- which can't be handled in ORCA MDPs, since they would require calling the GPDB executor
-set optimizer_trace_fallback = on;
 -- GroupingOnSameTblCol-2.mdp
 -- from dxl
 create table asset_records(
@@ -13856,7 +13850,6 @@ select * from v where year > 1;
  2019
 (1 row)
 
-reset optimizer_trace_fallback;
 create table sqall_t1(a int) distributed by (a);
 insert into sqall_t1 values (1), (2), (3);
 set optimizer_join_order='query';
@@ -14132,7 +14125,6 @@ reset optimizer_xform_bind_threshold;
 reset statement_timeout;
 -- an agg of a non-SRF with a nested SRF should be treated as a SRF, the
 -- optimizer must not eliminate the SRF or it can produce incorrect results
-set optimizer_trace_fallback = on;
 create table nested_srf(a text);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -14201,7 +14193,6 @@ DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet nod
      0
 (1 row)
 
-reset optimizer_trace_fallback;
 --- if the inner child is already distributed on the join column, orca should
 --- not place any motion on the inner child
 CREATE TABLE tone (a int, b int, c int);
@@ -14525,14 +14516,18 @@ explain select c2 from quad_func_cast();
 (2 rows)
 
 explain select (c1).r from quad_func_cast();
-                             QUERY PLAN                             
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: FIELDSELECT
+                            QUERY PLAN                             
 -------------------------------------------------------------------
  Function Scan on quad_func_cast  (cost=0.00..0.01 rows=1 width=8)
  Optimizer: Postgres query optimizer
 (2 rows)
 
 explain select (c2).i from quad_func_cast();
-                             QUERY PLAN                             
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: FIELDSELECT
+                            QUERY PLAN                             
 -------------------------------------------------------------------
  Function Scan on quad_func_cast  (cost=0.00..0.01 rows=1 width=8)
  Optimizer: Postgres query optimizer
@@ -14551,12 +14546,16 @@ select c2 from quad_func_cast();
 (1 row)
 
 select (c1).r from quad_func_cast();
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: FIELDSELECT
   r  
 -----
  1.1
 (1 row)
 
 select (c2).i from quad_func_cast();
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: FIELDSELECT
  i 
 ---
   
@@ -14610,7 +14609,6 @@ NOTICE:  table "empty_cte_tl_test" does not exist, skipping
 create table empty_cte_tl_test(id int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-set optimizer_trace_fallback = on;
 with cte as (
   select from empty_cte_tl_test
 )
@@ -14623,4 +14621,19 @@ DETAIL:  Feature not supported: Empty target list
 ----
 (0 rows)
 
-reset optimizer_trace_fallback;
+-- test that we use default cardinality estimate (40) for non-comparable types
+create table ts_tbl (ts timestamp);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'ts' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create index ts_tbl_idx on ts_tbl(ts);
+insert into ts_tbl select to_timestamp('99991231'::text, 'YYYYMMDD'::text) from generate_series(1,100);
+analyze ts_tbl;
+explain select * from ts_tbl where ts = to_timestamp('99991231'::text, 'YYYYMMDD'::text);
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.01 rows=40 width=8)
+   ->  Index Scan using ts_tbl_idx on ts_tbl  (cost=0.00..6.00 rows=14 width=8)
+         Index Cond: (ts = 'Fri Dec 31 00:00:00 9999 PST'::timestamp with time zone)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+

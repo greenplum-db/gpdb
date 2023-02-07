@@ -22,6 +22,7 @@
 #include "gpopt/base/CDefaultComparator.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
+#include "gpopt/exception.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "naucrates/base/CDatumInt8GPDB.h"
 #include "naucrates/md/CMDIdGPDB.h"
@@ -98,8 +99,7 @@ CConstraintTest::EresUnittest()
 			CConstraintTest::EresUnittest_CConstraintIntervalFromArrayExpr),
 #ifdef GPOS_DEBUG
 		GPOS_UNITTEST_FUNC_THROW(CConstraintTest::EresUnittest_NegativeTests,
-								 gpos::CException::ExmaSystem,
-								 gpos::CException::ExmiAssert),
+								 gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp),
 #endif	// GPOS_DEBUG
 		GPOS_UNITTEST_FUNC(CConstraintTest::EresUnittest_ConstraintsOnDates),
 	};
