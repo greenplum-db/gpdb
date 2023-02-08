@@ -1016,6 +1016,17 @@ CPredicateUtils::PexprINDFConjunction(CMemoryPool *mp,
 BOOL
 CPredicateUtils::FCompareIdentToConst(CExpression *pexpr)
 {
+	CExpression *pexprIdent;
+	CExpression *pexprConst;
+
+	return FCompareIdentToConst(pexpr, pexprIdent, pexprConst);
+}
+
+BOOL
+CPredicateUtils::FCompareIdentToConst(CExpression *pexpr,
+									  CExpression *&pexprIdent,
+									  CExpression *&pexprConst)
+{
 	COperator *pop = pexpr->Pop();
 
 	if (COperator::EopScalarCmp != pop->Eopid())
@@ -1032,6 +1043,8 @@ CPredicateUtils::FCompareIdentToConst(CExpression *pexpr)
 		(CUtils::FScalarConst(pexprRight) ||
 		 CCastUtils::FBinaryCoercibleCastedConst(pexprRight)))
 	{
+		pexprIdent = pexprLeft;
+		pexprConst = pexprRight;
 		return true;
 	}
 
@@ -1041,6 +1054,8 @@ CPredicateUtils::FCompareIdentToConst(CExpression *pexpr)
 		(CUtils::FScalarConst(pexprLeft) ||
 		 CCastUtils::FBinaryCoercibleCastedConst(pexprLeft)))
 	{
+		pexprIdent = pexprRight;
+		pexprConst = pexprLeft;
 		return true;
 	}
 
