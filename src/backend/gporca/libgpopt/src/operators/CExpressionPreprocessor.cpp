@@ -2806,8 +2806,6 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 			CConstraint::PcnstrFromScalarExpr(mp, filter_pred, &pdrgpcrsChild);
 		CRefCount::SafeRelease(pdrgpcrsChild);
 
-		// GPDB_12_MERGE_FIXME: skip all this if pred_cnstr = NULL
-
 		IMdIdArray *selected_partition_mdids = GPOS_NEW(mp) IMdIdArray(mp);
 		CConstraintArray *selected_partition_cnstrs =
 			GPOS_NEW(mp) CConstraintArray(mp);
