@@ -12,12 +12,6 @@
 #include "sqlca.h"
 #include <string.h>
 
-#ifdef ENABLE_NLS
-extern char *ecpg_gettext(const char *msgid) pg_attribute_format_arg(1);
-#else
-#define ecpg_gettext(x) (x)
-#endif
-
 #ifndef __cplusplus
 #ifndef bool
 #define bool char
@@ -55,10 +49,6 @@ bool		ECPGdisconnect(int, const char *);
 bool		ECPGprepare(int, const char *, const bool, const char *, const char *);
 bool		ECPGdeallocate(int, int, const char *, const char *);
 bool		ECPGdeallocate_all(int, int, const char *);
-bool		ECPGdeclare(int, const char *, const char *);
-bool		ECPGopen(const char *, const char *, const int, const int, const int, const char *, const bool, const int, const char *,...);
-bool		ECPGfetch(const char *, const int, const int, const int, const char *, const bool, const int, const char *,...);
-bool		ECPGclose(const char *, const int, const int, const int, const char *, const bool, const int, const char *,...);
 char	   *ECPGprepared_statement(const char *, const char *, int);
 PGconn	   *ECPGget_PGconn(const char *);
 PGTransactionStatusType ECPGtransactionStatus(const char *);

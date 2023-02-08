@@ -69,7 +69,12 @@ typedef struct ReplicationSlotPersistentData
 	 */
 	TransactionId catalog_xmin;
 
-	/* oldest LSN that might be required by this replication slot */
+	/*
+	 * oldest LSN that might be required by this replication slot
+	 *
+	 * GPDB sets this value more conservatively for physical replication slots
+	 * than Postgres. See comments in PhysicalConfirmReceivedLocation().
+	 */
 	XLogRecPtr	restart_lsn;
 
 	/*
@@ -151,8 +156,8 @@ typedef struct ReplicationSlot
 	XLogRecPtr	candidate_restart_lsn;
 } ReplicationSlot;
 
-#define SlotIsPhysical(slot) (slot->data.database == InvalidOid)
-#define SlotIsLogical(slot) (slot->data.database != InvalidOid)
+#define SlotIsPhysical(slot) ((slot)->data.database == InvalidOid)
+#define SlotIsLogical(slot) ((slot)->data.database != InvalidOid)
 
 #define INTERNAL_WAL_REPLICATION_SLOT_NAME	"internal_wal_replication_slot"
 

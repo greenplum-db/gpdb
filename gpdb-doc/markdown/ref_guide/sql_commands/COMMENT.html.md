@@ -91,7 +91,7 @@ argtype
 large\_object\_oid
 :   The OID of the large object.
 
-:   > **Note** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/9.4/largeobjects.html) for streaming user data that is stored in large-object structures.
+:   > **Note** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/12/largeobjects.html) for streaming user data that is stored in large-object structures.
 
 left\_type
 right\_type

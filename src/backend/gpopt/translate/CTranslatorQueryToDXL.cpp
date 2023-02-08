@@ -142,6 +142,8 @@ CTranslatorQueryToDXL::CTranslatorQueryToDXL(
 	GPOS_ASSERT(nullptr != query);
 	CheckSupportedCmdType(query);
 
+	m_query_id = m_context->GetNextQueryId();
+
 	CheckRangeTable(query);
 
 	// GPDB_94_MERGE_FIXME: WITH CHECK OPTION views are not supported yet.
@@ -769,8 +771,9 @@ CTranslatorQueryToDXL::TranslateInsertQueryToDXL()
 				   GPOS_WSZ_LIT("Inserts with foreign tables"));
 	}
 	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(
-		m_mp, m_md_accessor, m_context->m_colid_counter, rte,
+		m_mp, m_md_accessor, m_context->m_colid_counter, rte, m_query_id,
 		&m_context->m_has_distributed_tables);
+
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
 
 	BOOL rel_has_constraints = CTranslatorUtils::RelHasConstraints(md_rel);
@@ -1200,8 +1203,9 @@ CTranslatorQueryToDXL::TranslateDeleteQueryToDXL()
 				   GPOS_WSZ_LIT("Deletes with foreign tables"));
 	}
 	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(
-		m_mp, m_md_accessor, m_context->m_colid_counter, rte,
+		m_mp, m_md_accessor, m_context->m_colid_counter, rte, m_query_id,
 		&m_context->m_has_distributed_tables);
+
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
 
 	// make note of the operator classes used in the distribution key
@@ -1265,8 +1269,9 @@ CTranslatorQueryToDXL::TranslateUpdateQueryToDXL()
 				   GPOS_WSZ_LIT("Updates with foreign tables"));
 	}
 	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(
-		m_mp, m_md_accessor, m_context->m_colid_counter, rte,
+		m_mp, m_md_accessor, m_context->m_colid_counter, rte, m_query_id,
 		&m_context->m_has_distributed_tables);
+
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
 
 	if (!optimizer_enable_dml_constraints &&
@@ -3309,6 +3314,7 @@ CTranslatorQueryToDXL::UnsupportedRTEKind(RTEKind rtekind)
 					   GPOS_WSZ_LIT("RangeTableEntry of type Void"));
 		}
 		case RTE_TABLEFUNCTION:
+		case RTE_TABLEFUNC:
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 					   GPOS_WSZ_LIT("RangeTableEntry of type Table Function"));
@@ -3339,10 +3345,20 @@ CTranslatorQueryToDXL::TranslateRTEToDXLLogicalGet(const RangeTblEntry *rte,
 				   GPOS_WSZ_LIT("ONLY in the FROM clause"));
 	}
 
+	// query_id_for_target_rel is used to tag table descriptors assigned to target
+	// (result) relations one. In case of possible nested DML subqueries it's
+	// field points to target relation of corresponding Query structure of subquery.
+	ULONG query_id_for_target_rel = UNASSIGNED_QUERYID;
+	if (m_query->resultRelation > 0 &&
+		ULONG(m_query->resultRelation) == rt_index)
+	{
+		query_id_for_target_rel = m_query_id;
+	}
+
 	// construct table descriptor for the scan node from the range table entry
 	CDXLTableDescr *dxl_table_descr = CTranslatorUtils::GetTableDescr(
 		m_mp, m_md_accessor, m_context->m_colid_counter, rte,
-		&m_context->m_has_distributed_tables);
+		query_id_for_target_rel, &m_context->m_has_distributed_tables);
 
 	CDXLLogicalGet *dxl_op = nullptr;
 	const IMDRelation *md_rel =

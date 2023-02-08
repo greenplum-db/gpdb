@@ -10,5 +10,5 @@ The `hstore` module is installed when you install Greenplum Database. Before you
 
 ## <a id="topic_info"></a>Module Documentation 
 
-See [hstore](https://www.postgresql.org/docs/9.4/hstore.html) in the PostgreSQL documentation for detailed information about the data types and functions defined in this module.
+See [hstore](https://www.postgresql.org/docs/12/hstore.html) in the PostgreSQL documentation for detailed information about the data types and functions defined in this module.
 

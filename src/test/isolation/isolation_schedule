@@ -44,6 +44,9 @@
 # don't pass in normal mode for GPDB as SELECT..FOR SHARE/UPDATE can
 # block each other in gpdb if GDD does not open.
 #
+# GPDB_12_MERGE_FRATURE_NOT_SUPPORTED: disable test predicate-lock-hot-tuple, update-conflict-out
+# because Greenplum does not support serializable transactions.
+#
 #############################################################
 #
 # IMPORTANT: Isolation tests are run with gp_role=utility
@@ -80,9 +83,11 @@ test: deadlock-soft-2
 #test: fk-partitioned-1
 #test: fk-partitioned-2
 #test: eval-plan-qual
+#test: eval-plan-qual-trigger
 #test: lock-update-delete
 #test: lock-update-traversal
 test: inherit-temp
+test: temp-schema-cleanup
 #test: insert-conflict-do-nothing
 #test: insert-conflict-do-nothing-2
 #test: insert-conflict-do-update
@@ -103,6 +108,7 @@ test: update-locked-tuple
 #test: tuplelock-conflict
 #test: tuplelock-update
 #test: tuplelock-upgrade-no-deadlock
+#test: tuplelock-partition
 #test: freeze-the-dead
 #test: nowait
 #test: nowait-2
@@ -133,6 +139,7 @@ test: vacuum-skip-locked
 #test: predicate-gist
 #test: predicate-gin
 
+test: partition-concurrent-attach
 test: partition-drop-index-locking
 
 # GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: Disabled test partition-key-update-1

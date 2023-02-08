@@ -7,14 +7,13 @@ Changes the definition of an aggregate function
 ``` {#sql_command_synopsis}
 ALTER AGGREGATE <name> ( <aggregate_signature> )  RENAME TO <new_name>
 
-ALTER AGGREGATE <name> ( <aggregate_signature> ) OWNER TO <new_owner>
+ALTER AGGREGATE <name> ( <aggregate_signature> )
+                 OWNER TO { <new_owner> | CURRENT_USER | SESSION_USER }
 
 ALTER AGGREGATE <name> ( <aggregate_signature> ) SET SCHEMA <new_schema>
-```
 
-where aggregate\_signature is:
+where <aggregate_signature> is:
 
-```
 * |
 [ <argmode> ] [ <argname> ] <argtype> [ , ... ] |
 [ [ <argmode> ] [ <argname> ] <argtype> [ , ... ] ] ORDER BY [ <argmode> ] [ <argname> ] <argtype> [ , ... ]
@@ -38,7 +37,7 @@ argname
 :   The name of an argument. Note that `ALTER AGGREGATE` does not actually pay any attention to argument names, since only the argument data types are needed to determine the aggregate function's identity.
 
 argtype
-:   An input data type on which the aggregate function operates. To reference a zero-argument aggregate function, write `*` in place of the list of input data types. To reference an ordered-set aggregate function, write `ORDER BY` between the direct and aggregated argument specifications.
+:   An input data type on which the aggregate function operates. To reference a zero-argument aggregate function, write `*` in place of the list of argument specifications  To reference an ordered-set aggregate function, write `ORDER BY` between the direct and aggregated argument specifications.
 
 new\_name
 :   The new name of the aggregate function.
@@ -67,10 +66,16 @@ To change the owner of the aggregate function `myavg` for type `integer` to `joe
 ALTER AGGREGATE myavg(integer) OWNER TO joe;
 ```
 
-To move the aggregate function `myavg` for type `integer` into schema `myschema`:
+To move the ordered-set aggregate `mypercentile` with direct argument of type `float8` and aggregated argument of type `integer` into schema `myschema`:
 
 ```
-ALTER AGGREGATE myavg(integer) SET SCHEMA myschema;
+ALTER AGGREGATE mypercentile(float8 ORDER BY integer) SET SCHEMA myschema;
+```
+
+This will work too:
+
+```
+ALTER AGGREGATE mypercentile(float8, integer) SET SCHEMA myschema;
 ```
 
 ## <a id="section6"></a>Compatibility 

@@ -182,8 +182,10 @@ bt_page_stats(PG_FUNCTION_ARGS)
 	rel = relation_openrv(relrv, AccessShareLock);
 
 	if (!IS_INDEX(rel) || !IS_BTREE(rel))
-		elog(ERROR, "relation \"%s\" is not a btree index",
-			 RelationGetRelationName(rel));
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("\"%s\" is not a %s index",
+						RelationGetRelationName(rel), "btree")));
 
 	/*
 	 * Reject attempts to read non-local temporary relations; we would be
@@ -336,8 +338,10 @@ bt_page_items(PG_FUNCTION_ARGS)
 		rel = relation_openrv(relrv, AccessShareLock);
 
 		if (!IS_INDEX(rel) || !IS_BTREE(rel))
-			elog(ERROR, "relation \"%s\" is not a btree index",
-				 RelationGetRelationName(rel));
+			ereport(ERROR,
+					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+					 errmsg("\"%s\" is not a %s index",
+							RelationGetRelationName(rel), "btree")));
 
 		/*
 		 * Reject attempts to read non-local temporary relations; we would be
@@ -425,7 +429,6 @@ bt_page_items_bytea(PG_FUNCTION_ARGS)
 	Datum		result;
 	FuncCallContext *fctx;
 	struct user_args *uargs;
-	int			raw_page_size;
 
 	if (!superuser())
 		ereport(ERROR,
@@ -438,21 +441,29 @@ bt_page_items_bytea(PG_FUNCTION_ARGS)
 		MemoryContext mctx;
 		TupleDesc	tupleDesc;
 
-		raw_page_size = VARSIZE(raw_page) - VARHDRSZ;
-
-		if (raw_page_size < SizeOfPageHeaderData)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("input page too small (%d bytes)", raw_page_size)));
-
 		fctx = SRF_FIRSTCALL_INIT();
 		mctx = MemoryContextSwitchTo(fctx->multi_call_memory_ctx);
 
 		uargs = palloc(sizeof(struct user_args));
 
-		uargs->page = VARDATA(raw_page);
+		uargs->page = get_page_from_raw(raw_page);
+
+		if (PageIsNew(uargs->page))
+		{
+			MemoryContextSwitchTo(mctx);
+			PG_RETURN_NULL();
+		}
 
 		uargs->offset = FirstOffsetNumber;
+
+		/* verify the special space has the expected size */
+		if (PageGetSpecialSize(uargs->page) != MAXALIGN(sizeof(BTPageOpaqueData)))
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("input page is not a valid %s page", "btree"),
+					 errdetail("Expected special size %d, got %d.",
+							   (int) MAXALIGN(sizeof(BTPageOpaqueData)),
+							   (int) PageGetSpecialSize(uargs->page))));
 
 		opaque = (BTPageOpaque) PageGetSpecialPointer(uargs->page);
 
@@ -460,6 +471,11 @@ bt_page_items_bytea(PG_FUNCTION_ARGS)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("block is a meta page")));
+
+		if (P_ISLEAF(opaque) && opaque->btpo.level != 0)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("block is not a valid btree leaf page")));
 
 		if (P_ISDELETED(opaque))
 			elog(NOTICE, "page is deleted");
@@ -526,8 +542,10 @@ bt_metap(PG_FUNCTION_ARGS)
 	rel = relation_openrv(relrv, AccessShareLock);
 
 	if (!IS_INDEX(rel) || !IS_BTREE(rel))
-		elog(ERROR, "relation \"%s\" is not a btree index",
-			 RelationGetRelationName(rel));
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("\"%s\" is not a %s index",
+						RelationGetRelationName(rel), "btree")));
 
 	/*
 	 * Reject attempts to read non-local temporary relations; we would be
@@ -563,7 +581,12 @@ bt_metap(PG_FUNCTION_ARGS)
 	 */
 	if (metad->btm_version >= BTREE_NOVAC_VERSION)
 	{
-		values[j++] = psprintf("%u", metad->btm_oldest_btpo_xact);
+		/*
+		 * kludge: btm_oldest_btpo_xact is declared as int4, which is wrong.
+		 * We should at least avoid raising an error when its value happens to
+		 * exceed PG_INT32_MAX, though.
+		 */
+		values[j++] = psprintf("%d", (int) metad->btm_oldest_btpo_xact);
 		values[j++] = psprintf("%f", metad->btm_last_cleanup_num_heap_tuples);
 	}
 	else

@@ -114,20 +114,12 @@ CDXLTableDescr *
 CTranslatorUtils::GetTableDescr(CMemoryPool *mp, CMDAccessor *md_accessor,
 								CIdGenerator *id_generator,
 								const RangeTblEntry *rte,
+								ULONG assigned_query_id_for_target_rel,
 								BOOL *is_distributed_table	// output
 )
 {
 	// generate an MDId for the table desc.
 	OID rel_oid = rte->relid;
-
-#if 0
-	if (gpdb::HasExternalPartition(rel_oid))
-	{
-		// fall back to the planner for queries with partition tables that has an external table in one of its leaf
-		// partitions.
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Query over external partitions"));
-	}
-#endif
 
 	CMDIdGPDB *mdid = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, rel_oid);
 
@@ -137,8 +129,9 @@ CTranslatorUtils::GetTableDescr(CMemoryPool *mp, CMDAccessor *md_accessor,
 	const CWStringConst *tablename = rel->Mdname().GetMDName();
 	CMDName *table_mdname = GPOS_NEW(mp) CMDName(mp, tablename);
 
-	CDXLTableDescr *table_descr = GPOS_NEW(mp) CDXLTableDescr(
-		mp, mdid, table_mdname, rte->checkAsUser, rte->rellockmode);
+	CDXLTableDescr *table_descr = GPOS_NEW(mp)
+		CDXLTableDescr(mp, mdid, table_mdname, rte->checkAsUser,
+					   rte->rellockmode, assigned_query_id_for_target_rel);
 
 	const ULONG len = rel->ColumnCount();
 

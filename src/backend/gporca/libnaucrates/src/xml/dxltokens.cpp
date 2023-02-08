@@ -255,12 +255,6 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenPartLevelFilterList, GPOS_WSZ_LIT("PartFilters")},
 		{EdxltokenPartLevel, GPOS_WSZ_LIT("Level")},
 		{EdxltokenScalarPartDefault, GPOS_WSZ_LIT("DefaultPart")},
-		{EdxltokenScalarPartBound, GPOS_WSZ_LIT("PartBound")},
-		{EdxltokenScalarPartBoundLower, GPOS_WSZ_LIT("LowerBound")},
-		{EdxltokenScalarPartBoundInclusion, GPOS_WSZ_LIT("PartBoundInclusion")},
-		{EdxltokenScalarPartBoundOpen, GPOS_WSZ_LIT("PartBoundOpen")},
-		{EdxltokenScalarPartListValues, GPOS_WSZ_LIT("PartListValues")},
-		{EdxltokenScalarPartListNullTest, GPOS_WSZ_LIT("PartListNullTest")},
 		{EdxltokenScalarResidualFilter, GPOS_WSZ_LIT("ResidualFilter")},
 		{EdxltokenScalarPartFilterExpr, GPOS_WSZ_LIT("PartFilterExpr")},
 
@@ -512,6 +506,8 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenExtendedStats, GPOS_WSZ_LIT("ExtendedStatistics")},
 		{EdxltokenMVDependencyList, GPOS_WSZ_LIT("MVDependencyList")},
 		{EdxltokenMVDependency, GPOS_WSZ_LIT("MVDependency")},
+		{EdxltokenMVNDistinctList, GPOS_WSZ_LIT("MVNDistinctList")},
+		{EdxltokenMVNDistinct, GPOS_WSZ_LIT("MVNDistinct")},
 		{EdxltokenDegree, GPOS_WSZ_LIT("Degree")},
 		{EdxltokenFrom, GPOS_WSZ_LIT("From")},
 		{EdxltokenTo, GPOS_WSZ_LIT("To")},
@@ -520,6 +516,8 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenIsNull, GPOS_WSZ_LIT("IsNull")},
 		{EdxltokenLintValue, GPOS_WSZ_LIT("LintValue")},
 		{EdxltokenDoubleValue, GPOS_WSZ_LIT("DoubleValue")},
+		{EdxltokenAssignedQueryIdForTargetRel,
+		 GPOS_WSZ_LIT("AssignedQueryIdForTargetRel")},
 
 		{EdxltokenRelTemporary, GPOS_WSZ_LIT("IsTemporary")},
 
@@ -557,7 +555,6 @@ CDXLTokens::Init(CMemoryPool *mp)
 
 		{EdxltokenPartKeys, GPOS_WSZ_LIT("PartitionColumns")},
 		{EdxltokenPartTypes, GPOS_WSZ_LIT("PartitionTypes")},
-		{EdxltokenNumLeafPartitions, GPOS_WSZ_LIT("NumberLeafPartitions")},
 
 		{EdxltokenTypeInt4, GPOS_WSZ_LIT("Int4")},
 		{EdxltokenTypeBool, GPOS_WSZ_LIT("Bool")},

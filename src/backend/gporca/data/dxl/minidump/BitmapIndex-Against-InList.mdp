@@ -236,7 +236,7 @@ SELECT * FROM bitmap_test WHERE a in (1, 47);
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.4513648.1.1" Name="bitmap_test" Rows="1000809.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.4513648.1.1" Name="bitmap_test" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.4513648.1.1" Name="bitmap_test" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

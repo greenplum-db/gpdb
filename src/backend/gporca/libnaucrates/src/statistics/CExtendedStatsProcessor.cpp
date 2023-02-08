@@ -9,11 +9,11 @@
 //		Statistics helper routines for processing extended statistics.
 //
 //		Many functions in this file are mirrored versions of functions in
-//		dependencies.c. Ideally they should stay in sync. Unfortunately, the
-//		duplication is necessary due ORCA's DXL abstraction that by design
-//		allows it to be independent of backend core. In other words, we do not
-//		necessarily have access to backend core functions. Hence the need to
-//		mirror them here.
+//		dependencies.c and selfuncs.c. Ideally they should stay in sync.
+//		Unfortunately, the duplication is necessary due ORCA's DXL abstraction
+//		that by design it to be independent of backend core. In other words, we
+//		do not necessarily have access to backend core functions. Hence the
+//		need to mirror them here.
 //---------------------------------------------------------------------------
 
 #include "naucrates/statistics/CExtendedStatsProcessor.h"
@@ -25,6 +25,9 @@
 
 
 #define STATS_MAX_DIMENSIONS 8 /* max number of attributes */
+
+#define InvalidOid 0
+
 
 using namespace gpopt;
 
@@ -227,7 +230,7 @@ find_strongest_dependency(CMDDependencyArray *dependencies, CBitSet *attnums)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CExtendedStatsProcessor::ApplyExtendedStatistics
+//		CExtendedStatsProcessor::ApplyCorrelatedStatsToScaleFactorFilterCalculation
 //
 //	@doc:
 //		This function is essentially an ORCA version of the dependencies.c
@@ -237,7 +240,7 @@ find_strongest_dependency(CMDDependencyArray *dependencies, CBitSet *attnums)
 //
 //---------------------------------------------------------------------------
 void
-CExtendedStatsProcessor::ApplyExtendedStatistics(
+CExtendedStatsProcessor::ApplyCorrelatedStatsToScaleFactorFilterCalculation(
 	CDoubleArray *scale_factors, CStatsPredConj *conjunctive_pred_stats,
 	const IMDExtStatsInfo *md_statsinfo, UlongToIntMap *colid_to_attno_mapping,
 	CMemoryPool *mp, UlongToHistogramMap *result_histograms)
@@ -388,4 +391,151 @@ CExtendedStatsProcessor::ApplyExtendedStatistics(
 	scale_factors->Append(GPOS_NEW(mp) CDouble(s1));
 
 	clauses_attnums->Release();
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CExtendedStatsProcessor::ApplyCorrelatedStatsToNDistinctCalculation
+//
+//	@doc:
+//		This function is essentially an ORCA version of the selfuncs.c
+//		function estimate_multivariate_ndistinct(). It determines the most
+//		suitable extended statistic to apply and calculate ndistinct.
+//---------------------------------------------------------------------------
+bool
+CExtendedStatsProcessor::ApplyCorrelatedStatsToNDistinctCalculation(
+	CMemoryPool *mp, const IMDExtStatsInfo *md_statsinfo,
+	const UlongToIntMap *colid_to_attno_mapping,
+	ULongPtrArray *&src_grouping_cols, DOUBLE *ndistinct)
+{
+	int nmatches;
+	OID statOid = InvalidOid;
+	const IMDExtStats *stats;
+	CBitSet *attnums = nullptr;
+	CBitSet *matched = nullptr;
+
+	/* bail out immediately if the table has no extended statistics */
+	if (!md_statsinfo || !colid_to_attno_mapping)
+	{
+		return false;
+	}
+
+	attnums = GPOS_NEW(mp) CBitSet(mp);
+	for (ULONG ul = 0; ul < src_grouping_cols->Size(); ul++)
+	{
+		ULONG colid = *(*src_grouping_cols)[ul];
+
+		INT *attnum = colid_to_attno_mapping->Find(&colid);
+		if (!attnum)
+		{
+			attnums->Release();
+			return false;
+		}
+		attnums->ExchangeSet(*attnum);
+	}
+
+	/* look for the ndistinct statistics matching the most vars */
+	nmatches = 1; /* we require at least two matches */
+
+	CMDExtStatsInfoArray *md_statsinfo_array =
+		md_statsinfo->GetExtStatInfoArray();
+	for (ULONG ul = 0; ul < md_statsinfo_array->Size(); ul++)
+	{
+		CMDExtStatsInfo *info = (*md_statsinfo_array)[ul];
+		CBitSet *shared = GPOS_NEW(mp) CBitSet(mp, *attnums);
+		int nshared;
+
+		/* skip statistics of other kinds */
+		if (info->GetStatKind() != CMDExtStatsInfo::EstatNDistinct)
+		{
+			shared->Release();
+			continue;
+		}
+
+		/* compute attnums shared by the vars and the statistics object */
+		shared->Intersection(info->GetStatKeys());
+		nshared = shared->Size();
+
+		/*
+		 * Does this statistics object match more columns than the currently
+		 * best object?  If so, use this one instead.
+		 *
+		 * XXX This should break ties using name of the object, or something
+		 * like that, to make the outcome stable.
+		 */
+		if (nshared > nmatches)
+		{
+			CRefCount::SafeRelease(matched);
+
+			statOid = info->GetStatOid();
+			nmatches = nshared;
+			matched = shared;
+		}
+		else
+		{
+			shared->Release();
+		}
+	}
+
+	/* No match? */
+	if (statOid == InvalidOid)
+	{
+		CRefCount::SafeRelease(matched);
+		attnums->Release();
+		return false;
+	}
+
+	const COptCtxt *poctxt = COptCtxt::PoctxtFromTLS();
+	CMDAccessor *md_accessor = poctxt->Pmda();
+
+	CMDIdGPDB *pmdid = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidExtStats, statOid);
+	stats = md_accessor->RetrieveExtStats(pmdid);
+	pmdid->Release();
+
+	/*
+	 * If we have a match, search it for the specific item that matches (there
+	 * must be one), and construct the output values.
+	 */
+	if (stats)
+	{
+		CMDNDistinct *item = nullptr;
+
+		/* Find the specific item that exactly matches the combination */
+		for (ULONG i = 0; i < stats->GetNDistinctList()->Size(); i++)
+		{
+			CMDNDistinct *tmpitem = (*stats->GetNDistinctList())[i];
+
+			if (tmpitem->GetAttrs()->Equals(matched))
+			{
+				item = tmpitem;
+				break;
+			}
+		}
+
+		/* Form the output varinfo list, keeping only unmatched ones */
+		ULongPtrArray *new_src_grouping_cols = GPOS_NEW(mp) ULongPtrArray(mp);
+		for (ULONG ul = 0; ul < src_grouping_cols->Size(); ul++)
+		{
+			ULONG colid = *(*src_grouping_cols)[ul];
+
+			INT *attnum = colid_to_attno_mapping->Find(&colid);
+			if (!matched->Get(*attnum))
+			{
+				new_src_grouping_cols->Append(GPOS_NEW(mp) ULONG(colid));
+			}
+		}
+		src_grouping_cols->Release();
+		src_grouping_cols = new_src_grouping_cols;
+
+		matched->Release();
+		attnums->Release();
+
+		*ndistinct = item->GetNDistinct().Get();
+		return true;
+	}
+
+	matched->Release();
+
+	attnums->Release();
+	return false;
 }

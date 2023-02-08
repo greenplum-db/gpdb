@@ -124,7 +124,7 @@ Configure Greenplum Database to use Kerberos.
     host all all 0.0.0.0/0 gss include_realm=0 krb_realm=GPDB.KRB
     ```
 
-    Setting the `krb_realm` option to a realm name ensures that only users from that realm can successfully authenticate with Kerberos. Setting the `include_realm` option to `0` excludes the realm name from the authenticated user name. For information about the `pg_hba.conf` file, see [The pg\_hba.conf file](https://www.postgresql.org/docs/9.4/auth-pg-hba-conf.html) in the PostgreSQL documentation.
+    Setting the `krb_realm` option to a realm name ensures that only users from that realm can successfully authenticate with Kerberos. Setting the `include_realm` option to `0` excludes the realm name from the authenticated user name. For information about the `pg_hba.conf` file, see [The pg\_hba.conf file](https://www.postgresql.org/docs/12/auth-pg-hba-conf.html) in the PostgreSQL documentation.
 
 5.  Restart Greenplum Database after updating the `krb_server_keyfile` parameter and the `pg_hba.conf` file.
 
@@ -204,7 +204,7 @@ host all all 0.0.0.0/0 gss include_realm=0 krb_realm=GPDB.KRB map=mymap
 
 The first map entry matches the Kerberos principal admin@GPDB.KRB and replaces it with the Greenplum Database gpadmin role name. The second entry uses a wildcard to match any Kerberos principal in the GPDB-KRB realm with a name ending with the characters `_gp` and replaces it with the initial portion of the principal name. Greenplum Database applies the first matching map entry in the `pg_ident.conf` file, so the order of entries is significant.
 
-For more information about using username maps see [Username maps](https://www.postgresql.org/docs/9.4/auth-username-maps.html) in the PostgreSQL documentation.
+For more information about using username maps see [Username maps](https://www.postgresql.org/docs/12/auth-username-maps.html) in the PostgreSQL documentation.
 
 ## <a id="topic9"></a>Configuring JDBC Kerberos Authentication for Greenplum Database 
 

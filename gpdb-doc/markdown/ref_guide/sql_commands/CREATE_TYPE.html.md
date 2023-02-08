@@ -60,7 +60,7 @@ To be able to create a composite type, you must have `USAGE` privilege on all at
 
 **Enumerated Types**
 
-The second form of `CREATE TYPE` creates an enumerated \(`ENUM`\) type, as described in [Enumerated Types](https://www.postgresql.org/docs/9.4/datatype-enum.html) in the PostgreSQL documentation. `ENUM` types take a list of quoted labels, each of which must be less than `NAMEDATALEN` bytes long \(64 in a standard build\).
+The second form of `CREATE TYPE` creates an enumerated \(`ENUM`\) type, as described in [Enumerated Types](https://www.postgresql.org/docs/12/datatype-enum.html) in the PostgreSQL documentation. `ENUM` types take a list of quoted labels, each of which must be less than `NAMEDATALEN` bytes long \(64 in a standard build\).
 
 It is possible to create an enumerated type with zero labels, but such a type cannot be used to hold values before at least one label is added using [ALTER TYPE](ALTER_TYPE.html).
 

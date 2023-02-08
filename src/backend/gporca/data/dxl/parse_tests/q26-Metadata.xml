@@ -16,7 +16,7 @@
         <dxl:UpperBound Closed="false" TypeMdid="0.23.1.0" Value="20"/>
       </dxl:StatsBucket>
     </dxl:ColumnStatistics>
-    <dxl:Relation Mdid="6.2013612.1.0" Name="Toid" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+    <dxl:Relation Mdid="6.2013612.1.0" Name="Toid" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -25,7 +25,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.1234.1.2" Name="T" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+    <dxl:Relation Mdid="6.1234.1.2" Name="T" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           <dxl:DefaultValue/>
@@ -40,7 +40,7 @@
     <dxl:Index Mdid="0.2345.2.1" Name="T_a" IsClustered="false" IndexType="B-tree" KeyColumns="1" IncludedColumns="1">
       <dxl:Opfamilies/>
     </dxl:Index>
-    <dxl:Relation Mdid="6.1258.5.1" Name="S" IsTemporary="true" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="0;0,1" PartitionColumns="1" NumberLeafPartitions="2">
+    <dxl:Relation Mdid="6.1258.5.1" Name="S" IsTemporary="true" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="0;0,1" PartitionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue>
@@ -60,7 +60,7 @@
         <dxl:Partition Mdid="6.1258002.5.1"/>
       </dxl:Partitions>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.1258001.5.1" Name="S_prt_1" IsTemporary="true" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="0;0,1" NumberLeafPartitions="0">
+    <dxl:Relation Mdid="6.1258001.5.1" Name="S_prt_1" IsTemporary="true" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="0;0,1">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue>
@@ -91,7 +91,7 @@
         </dxl:And>
       </dxl:PartConstraint>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.1258002.5.1" Name="S_prt_2" IsTemporary="true" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="0;0,1" NumberLeafPartitions="0">
+    <dxl:Relation Mdid="6.1258002.5.1" Name="S_prt_2" IsTemporary="true" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="0;0,1">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue>
@@ -127,20 +127,8 @@
         <dxl:Opfamily Mdid="0.3027.1.0"/>
         <dxl:Opfamily Mdid="0.3027.1.0"/>
       </dxl:Opfamilies>
-      <dxl:PartConstraint DefaultPartition="" Unbounded="false">
-        <dxl:And>
-          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-            <dxl:Ident ColId="7" ColName="d_year" TypeMdid="0.23.1.0"/>
-            <dxl:ConstValue TypeMdid="0.23.1.0" Value="1900"/>
-          </dxl:Comparison>
-          <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.523.1.0">
-            <dxl:Ident ColId="7" ColName="d_year" TypeMdid="0.23.1.0"/>
-            <dxl:ConstValue TypeMdid="0.23.1.0" Value="2100"/>
-          </dxl:Comparison>
-        </dxl:And>
-      </dxl:PartConstraint>
     </dxl:Index>
-    <dxl:Relation Mdid="6.1259.5.1" Name="S" IsTemporary="true" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Random" NumberLeafPartitions="0">
+    <dxl:Relation Mdid="6.1259.5.1" Name="S" IsTemporary="true" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue>
@@ -156,7 +144,7 @@
       </dxl:IndexInfoList>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.1260.5.1" Name="S" IsTemporary="true" StorageType="AppendOnly, Column-oriented" DistributionPolicy="MasterOnly" NumberLeafPartitions="0">
+    <dxl:Relation Mdid="6.1260.5.1" Name="S" IsTemporary="true" StorageType="AppendOnly, Column-oriented" DistributionPolicy="MasterOnly">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue>
@@ -174,7 +162,7 @@
         <dxl:CheckConstraint Mdid="0.561000.1.0"/>
       </dxl:CheckConstraints>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.2669066.1.0" Name="intint" IsTemporary="false" StorageType="Foreign" DistributionPolicy="MasterOnly" NumberLeafPartitions="0">
+    <dxl:Relation Mdid="6.2669066.1.0" Name="intint" IsTemporary="false" StorageType="Foreign" DistributionPolicy="MasterOnly">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -262,20 +250,8 @@
     </dxl:CheckConstraint>
     <dxl:Index Mdid="0.17027.1.0" Name="r_ind" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8">
       <dxl:Opfamilies/>
-      <dxl:PartConstraint DefaultPartition="0" Unbounded="false">
-        <dxl:And>
-          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
-            <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-          </dxl:Comparison>
-          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
-            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
-            <dxl:ConstValue TypeMdid="0.23.1.0" Value="3"/>
-          </dxl:Comparison>
-        </dxl:And>
-      </dxl:PartConstraint>
     </dxl:Index>
-    <dxl:Relation Mdid="6.378383.1.0" Name="ext_1" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="10,4" NumberLeafPartitions="0">
+    <dxl:Relation Mdid="6.378383.1.0" Name="ext_1" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="10,4">
       <dxl:Columns>
         <dxl:Column Name="n_nationkey" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -314,7 +290,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.378406.1.0" Name="ext_2" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="7,1" NumberLeafPartitions="0">
+    <dxl:Relation Mdid="6.378406.1.0" Name="ext_2" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="7,1">
       <dxl:Columns>
         <dxl:Column Name="x" Attno="1" Mdid="0.25.1.0" Nullable="true">
           <dxl:DefaultValue/>
@@ -344,7 +320,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.378429.1.0" Name="ext_3" IsTemporary="false" StorageType="Foreign" DistributionPolicy="MasterOnly" Keys="7,1" NumberLeafPartitions="0">
+    <dxl:Relation Mdid="6.378429.1.0" Name="ext_3" IsTemporary="false" StorageType="Foreign" DistributionPolicy="MasterOnly" Keys="7,1">
       <dxl:Columns>
         <dxl:Column Name="x" Attno="1" Mdid="0.25.1.0" Nullable="true">
           <dxl:DefaultValue/>
@@ -374,7 +350,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.876377.1.0" Name="ext_4" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="8,2" NumberLeafPartitions="0">
+    <dxl:Relation Mdid="6.876377.1.0" Name="ext_4" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="8,2">
       <dxl:Columns>
         <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -407,7 +383,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.363445.1.0" Name="S" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0" NumberLeafPartitions="0">
+    <dxl:Relation Mdid="6.363445.1.0" Name="S" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue>

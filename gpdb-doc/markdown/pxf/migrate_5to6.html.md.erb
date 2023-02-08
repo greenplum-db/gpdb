@@ -74,7 +74,7 @@ After you upgrade to Greenplum Database 6.x, and table definitions and data from
 1. Log in to the Greenplum Database 6.x coordinator node. For example:
 
     ``` shell
-    $ ssh gpadmin@<gp6coordinator>
+    $ ssh gpadmin@<gp7coordinator>
     ```
 
 2. Identify and note the version number of your Greenplum Database 6.x installation.
@@ -85,12 +85,12 @@ After you upgrade to Greenplum Database 6.x, and table definitions and data from
         1. Copy the PXF extension control file from the PXF installation directory to the new Greenplum 6.x install directory:
 
             ``` shell
-            gpadmin@gp6coordinator$ pxf cluster register
+            gpadmin@gp7coordinator$ pxf cluster register
             ```
         1. Start PXF on each host:
 
             ``` shell
-            gpadmin@gp6coordinator$ pxf cluster start
+            gpadmin@gp7coordinator$ pxf cluster start
             ```
         1. Skip the following steps and exit this procedure.
 
@@ -101,13 +101,13 @@ After you upgrade to Greenplum Database 6.x, and table definitions and data from
 1. Identify and note the PXF (to) version number. For example:
 
     ``` shell
-    gpadmin@gp6coordinator$ pxf version
+    gpadmin@gp7coordinator$ pxf version
     ```
 
 2. If you installed Greenplum Database 6.x on a new set of hosts, copy the `$PXF_CONF` directory from your Greenplum 5.x installation to the coordinator node. Consider copying the directory to the same file system location at which it resided in the 5.x cluster. For example, if `PXF_CONF=/usr/local/greenplum-pxf`:
 
     ``` shell
-    gpadmin@gp6coordinator$ scp -r gpadmin@<gp5coordinator>:/usr/local/greenplum-pxf /usr/local/
+    gpadmin@gp7coordinator$ scp -r gpadmin@<gp5coordinator>:/usr/local/greenplum-pxf /usr/local/
     ```
 
 3. Initialize PXF on each segment host as described in [Initializing PXF](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-init_pxf.html), specifying the `PXF_CONF` directory that you copied in the step above.
@@ -150,13 +150,13 @@ After you upgrade to Greenplum Database 6.x, and table definitions and data from
 5. Synchronize the PXF configuration from the Greenplum Database 6.x coordinator host to the standby coordinator and each segment host in the cluster. For example:
 
     ``` shell
-    gpadmin@gp6coordinator$ pxf cluster sync
+    gpadmin@gp7coordinator$ pxf cluster sync
     ```
  
 6. Start PXF on each Greenplum Database 6.x segment host:
 
     ``` shell
-    gpadmin@gp6coordinator$ pxf cluster start
+    gpadmin@gp7coordinator$ pxf cluster start
     ```
 
     Your Greenplum Database cluster is now running version 5.16.x of PXF, and running it from the PXF installation directory (`/usr/local/pxf-gp<greenplum-major-version>`). Should you wish to upgrade PXF in the future, consult the [PXF upgrade documentation](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-upgrade_landing.html).

@@ -122,7 +122,7 @@ The SQL script will be written to the standard output. Use the `[-f | --file]` o
 **Connection Options**
 
 -d connstr \| --dbname=connstr
-:   Specifies parameters used to connect to the server, as a connection string. See [Connection Strings](https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-CONNSTRING) in the PostgreSQL documentation for more information.
+:   Specifies parameters used to connect to the server, as a connection string. See [Connection Strings](https://www.postgresql.org/docs/12/libpq-connect.html#LIBPQ-CONNSTRING) in the PostgreSQL documentation for more information.
 
 :   The option is called `--dbname` for consistency with other client applications, but because `pg_dumpall` needs to connect to many databases, the database name in the connection string will be ignored. Use the `-l` option to specify the name of the database used to dump global objects and to discover what other databases should be dumped.
 

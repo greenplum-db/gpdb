@@ -29,7 +29,7 @@ name
 :   The name of an installed extension.
 
 CASCADE
-:   Automatically drop objects that depend on the extension, and in turn all objects that depend on those objects. See the PostgreSQL information about [Dependency Tracking](https://www.postgresql.org/docs/9.6/ddl-depend.html).
+:   Automatically drop objects that depend on the extension, and in turn all objects that depend on those objects. See the PostgreSQL information about [Dependency Tracking](https://www.postgresql.org/docs/12/ddl-depend.html).
 
 RESTRICT
 :   Refuse to drop an extension if any objects depend on it, other than the extension member objects. This is the default.

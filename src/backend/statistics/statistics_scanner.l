@@ -8,6 +8,9 @@
 static YY_BUFFER_STATE scanbufhandle;
 %}
 
+
+%option noinput
+%option nounput
 %option noyywrap
 %option prefix="statistic_yy"
 
@@ -54,7 +57,7 @@ yyerror(const char *message)
 }
 
 void
-statistics_scanner_init(const char *str)
+statistic_scanner_init(const char *str)
 {
 	Size		slen = strlen(str);
 	char	   *scanbuf;

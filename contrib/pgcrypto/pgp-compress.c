@@ -115,13 +115,13 @@ compress_process(PushFilter *next, void *priv, const uint8 *data, int len)
 	/*
 	 * process data
 	 */
-	while (len > 0)
+	st->stream.next_in = unconstify(uint8 *, data);
+	st->stream.avail_in = len;
+	while (st->stream.avail_in > 0)
 	{
-		st->stream.next_in = unconstify(uint8 *, data);
-		st->stream.avail_in = len;
 		st->stream.next_out = st->buf;
 		st->stream.avail_out = st->buf_len;
-		res = deflate(&st->stream, 0);
+		res = deflate(&st->stream, Z_NO_FLUSH);
 		if (res != Z_OK)
 			return PXE_PGP_COMPRESSION_ERROR;
 
@@ -132,7 +132,6 @@ compress_process(PushFilter *next, void *priv, const uint8 *data, int len)
 			if (res < 0)
 				return res;
 		}
-		len = st->stream.avail_in;
 	}
 
 	return 0;
@@ -155,6 +154,7 @@ compress_flush(PushFilter *next, void *priv)
 		zres = deflate(&st->stream, Z_FINISH);
 		if (zres != Z_STREAM_END && zres != Z_OK)
 			return PXE_PGP_COMPRESSION_ERROR;
+
 		n_out = st->buf_len - st->stream.avail_out;
 		if (n_out > 0)
 		{
@@ -287,7 +287,28 @@ restart:
 
 	dec->buf_data = dec->buf_len - dec->stream.avail_out;
 	if (res == Z_STREAM_END)
+	{
+		uint8	   *tmp;
+
+		/*
+		 * A stream must be terminated by a normal packet.  If the last stream
+		 * packet in the source stream is a full packet, a normal empty packet
+		 * must follow.  Since the underlying packet reader doesn't know that
+		 * the compressed stream has been ended, we need to to consume the
+		 * terminating packet here.  This read does not harm even if the
+		 * stream has already ended.
+		 */
+		res = pullf_read(src, 1, &tmp);
+
+		if (res < 0)
+			return res;
+		else if (res > 0)
+		{
+			px_debug("decompress_read: extra bytes after end of stream");
+			return PXE_PGP_CORRUPT_DATA;
+		}
 		dec->eof = 1;
+	}
 	goto restart;
 }
 

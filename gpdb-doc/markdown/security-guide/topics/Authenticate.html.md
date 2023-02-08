@@ -14,7 +14,7 @@ When a Greenplum Database system is first initialized, the system contains one p
 
 ## <a id="topic_ln1_ptd_jr"></a>Allowing Connections to Greenplum Database 
 
-Client access and authentication is controlled by a configuration file named `pg_hba.conf` \(the standard PostgreSQL host-based authentication file\). For detailed information about this file, see [The pg\_hba.conf File](https://www.postgresql.org/docs/9.4/auth-pg-hba-conf.html) in the PostgreSQL documentation.
+Client access and authentication is controlled by a configuration file named `pg_hba.conf` \(the standard PostgreSQL host-based authentication file\). For detailed information about this file, see [The pg\_hba.conf File](https://www.postgresql.org/docs/12/auth-pg-hba-conf.html) in the PostgreSQL documentation.
 
 In Greenplum Database, the `pg_hba.conf` file of the coordinator instance controls client access and authentication to your Greenplum system. The segments also have `pg_hba.conf` files, but these are already correctly configured to only allow client connections from the coordinator host. The segments never accept outside client connections, so there is no need to alter the `pg_hba.conf` file on segments.
 
@@ -181,7 +181,7 @@ GSSAPI is an industry-standard protocol for secure authentication defined in RFC
 
 The `gss` authentication method is only available for TCP/IP connections.
 
-When GSSAPI uses Kerberos, it uses a standard principal in the format `servicename/hostname@realm`. The Greenplum Database server will accept any principal that is included in the keytab file used by the server, but care needs to be taken to specify the correct principal details when making the connection from the client using the `krbsrvname` connection parameter. \(See [Connection Parameter Key Words](https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-PARAMKEYWORDS) in the PostgreSQL documentation.\) In most environments, this parameter never needs to be changed. Some Kerberos implementations might require a different service name, such as Microsoft Active Directory, which requires the service name to be in upper case \(POSTGRES\).
+When GSSAPI uses Kerberos, it uses a standard principal in the format `servicename/hostname@realm`. The Greenplum Database server will accept any principal that is included in the keytab file used by the server, but care needs to be taken to specify the correct principal details when making the connection from the client using the `krbsrvname` connection parameter. \(See [Connection Parameter Key Words](https://www.postgresql.org/docs/12/libpq-connect.html#LIBPQ-PARAMKEYWORDS) in the PostgreSQL documentation.\) In most environments, this parameter never needs to be changed. Some Kerberos implementations might require a different service name, such as Microsoft Active Directory, which requires the service name to be in upper case \(POSTGRES\).
 
 `hostname` is the fully qualified host name of the server machine. The service principal's realm is the preferred realm of the server machine.
 
@@ -196,7 +196,7 @@ kadmin% **ank -randkey postgres/server.my.domain.org**
 kadmin% **ktadd -k krb5.keytab postgres/server.my.domain.org**
 ```
 
-When connecting to the database make sure you have a ticket for a principal matching the requested database user name. For example, for database user name `fred`, principal `fred@EXAMPLE.COM` would be able to connect. To also allow principal `fred/users.example.com@EXAMPLE.COM`, use a user name map, as described in [User Name Maps](https://www.postgresql.org/docs/9.4/auth-username-maps.html) in the PostgreSQL documentation.
+When connecting to the database make sure you have a ticket for a principal matching the requested database user name. For example, for database user name `fred`, principal `fred@EXAMPLE.COM` would be able to connect. To also allow principal `fred/users.example.com@EXAMPLE.COM`, use a user name map, as described in [User Name Maps](https://www.postgresql.org/docs/12/auth-username-maps.html) in the PostgreSQL documentation.
 
 The following configuration options are supported for GSSAPI:
 

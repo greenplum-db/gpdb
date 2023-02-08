@@ -348,7 +348,7 @@ To use `pgcrypto` functions, register the `pgcrypto` extension in each database 
 $ psql -d testdb -c "CREATE EXTENSION pgcrypto"
 ```
 
-See [pgcrypto](https://www.postgresql.org/docs/9.4/pgcrypto.html) in the PostgreSQL documentation for more information about individual functions.
+See [pgcrypto](https://www.postgresql.org/docs/12/pgcrypto.html) in the PostgreSQL documentation for more information about individual functions.
 
 ## <a id="topic9"></a>Protecting Passwords in Greenplum Database 
 

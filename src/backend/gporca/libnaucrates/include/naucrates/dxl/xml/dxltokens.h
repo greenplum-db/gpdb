@@ -215,12 +215,6 @@ enum Edxltoken
 	EdxltokenPartLevelFilterList,
 	EdxltokenPartLevel,
 	EdxltokenScalarPartDefault,
-	EdxltokenScalarPartBound,
-	EdxltokenScalarPartBoundLower,
-	EdxltokenScalarPartBoundInclusion,
-	EdxltokenScalarPartBoundOpen,
-	EdxltokenScalarPartListValues,
-	EdxltokenScalarPartListNullTest,
 	EdxltokenScalarResidualFilter,
 	EdxltokenScalarPartFilterExpr,
 	EdxltokenScalarBitmapIndexProbe,
@@ -466,6 +460,8 @@ enum Edxltoken
 	EdxltokenExtendedStatsInfo,
 	EdxltokenMVDependencyList,
 	EdxltokenMVDependency,
+	EdxltokenMVNDistinctList,
+	EdxltokenMVNDistinct,
 	EdxltokenDegree,
 	EdxltokenFrom,
 	EdxltokenTo,
@@ -473,6 +469,7 @@ enum Edxltoken
 	EdxltokenIsNull,
 	EdxltokenLintValue,
 	EdxltokenDoubleValue,
+	EdxltokenAssignedQueryIdForTargetRel,
 
 	EdxltokenRelTemporary,
 
@@ -486,7 +483,6 @@ enum Edxltoken
 
 	EdxltokenPartKeys,
 	EdxltokenPartTypes,
-	EdxltokenNumLeafPartitions,
 
 	EdxltokenRelDistrPolicy,
 	EdxltokenRelDistrMasterOnly,

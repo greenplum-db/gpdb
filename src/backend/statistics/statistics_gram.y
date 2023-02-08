@@ -17,8 +17,6 @@ MVDependencies *mvdependencies_parse_result;
 #define YYMALLOC palloc
 #define YYFREE   pfree
 
-int attrCount = 0;
-
 %}
 
 %expect 0
@@ -51,7 +49,6 @@ int attrCount = 0;
 %type <dependencies>	dependencies
 %type <list>	dependency_item_list
 %type <dependency>	dependency_item
-%type <bitmap>	dependency_attrs
 
 %type <bitmap>	attrs
 
@@ -109,15 +106,12 @@ attrs:
 	attrs ',' UCONST
 		{
 			$$ = bms_add_member($1, $3);
-			attrCount += 1;
 
 		}
 	| UCONST ',' UCONST
 		{
 			$$ = bms_make_singleton($1);
 			$$ = bms_add_member($$, $3);
-
-			attrCount += 2;
 		}
 	;
 
@@ -134,14 +128,13 @@ dependencies:
 			mvdependencies_parse_result = $$;
 
 			$$->magic = STATS_DEPS_MAGIC;
-                        $$->type = STATS_DEPS_TYPE_BASIC;
-                        $$->ndeps = list_length($2);
+			$$->type = STATS_DEPS_TYPE_BASIC;
+			$$->ndeps = list_length($2);
 
 			for (int i=0; i<$$->ndeps; i++)
-                        {
+			{
 				$$->deps[i] = list_nth($2, i);
-                        }
-			attrCount = 0;
+			}
 		}
 	;
 
@@ -154,37 +147,28 @@ dependency_item_list:
 	;
 
 dependency_item:
-	'"' dependency_attrs '"' ':' DOUBLE
+	'"' attrs ARROW UCONST '"' ':' DOUBLE
 	{
-		$$ = (MVDependency *)palloc0(sizeof(MVDependency));
-		$$->degree = $5;
-		$$->nattributes = attrCount;
-
-		AttrNumber *ptr = build_attnums_array($2, &$$->nattributes);
-		for (int i = 0; i < $$->nattributes; i++)
+		int attrCount = 0;
+		AttrNumber *ptr = build_attnums_array($2, &attrCount);
+		$$ = (MVDependency *)palloc0(sizeof(MVDependency) + sizeof(AttrNumber) * (attrCount + 1));
+		$$->nattributes = attrCount + 1;
+		$$->degree = $7;
+		for (int i = 0; i < attrCount; i++)
 		{
 			$$->attributes[i] = *(ptr+i);
 		}
-		attrCount = 0;
+		$$->attributes[$$->nattributes - 1] = $4;
+	}
+	| '"' UCONST ARROW UCONST '"' ':' DOUBLE
+	{
+		$$ = (MVDependency *)palloc0(sizeof(MVDependency) + sizeof(AttrNumber) * 2);
+		$$->nattributes = 2;
+		$$->degree = $7;
+		$$->attributes[0] = $2;
+		$$->attributes[1] = $4;
 	}
 	;
-
-dependency_attrs:
-
-	UCONST ARROW UCONST
-	{
-		$$ = bms_make_singleton($1);
-		$$ = bms_add_member($$, $3);
-		attrCount += 2;
-	}
-	| attrs ARROW UCONST
-	{
-		$$ = bms_add_member($1, $3);
-		attrCount += 1;
-	}
-
-	;
-
 %%
 
 #include "statistics_scanner.c"

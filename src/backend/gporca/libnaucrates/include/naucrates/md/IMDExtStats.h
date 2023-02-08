@@ -15,6 +15,7 @@
 #include "gpos/base.h"
 
 #include "naucrates/md/CMDDependency.h"
+#include "naucrates/md/CMDNDistinct.h"
 #include "naucrates/md/IMDCacheObject.h"
 #include "naucrates/statistics/IStatistics.h"
 
@@ -46,6 +47,8 @@ public:
 	}
 
 	virtual CMDDependencyArray *GetDependencies() const = 0;
+
+	virtual CMDNDistinctArray *GetNDistinctList() const = 0;
 };
 
 }  // namespace gpmd

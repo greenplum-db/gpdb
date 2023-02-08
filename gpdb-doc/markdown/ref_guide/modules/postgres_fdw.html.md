@@ -2,7 +2,7 @@
 
 The `postgres_fdw` module is a foreign data wrapper \(FDW\) that you can use to access data stored in a remote PostgreSQL or Greenplum database.
 
-The Greenplum Database `postgres_fdw` module is a modified version of the PostgreSQL `postgres_fdw` module. The module behaves as described in the PostgreSQL [postgres\_fdw](https://www.postgresql.org/docs/9.4/postgres-fdw.html) documentation when you use it to access a remote PostgreSQL database.
+The Greenplum Database `postgres_fdw` module is a modified version of the PostgreSQL `postgres_fdw` module. The module behaves as described in the PostgreSQL [postgres\_fdw](https://www.postgresql.org/docs/12/postgres-fdw.html) documentation when you use it to access a remote PostgreSQL database.
 
 > **Note** There are some restrictions and limitations when you use this foreign data wrapper module to access Greenplum Database, described below.
 
@@ -26,5 +26,5 @@ When you use the foreign data wrapper to access Greenplum Database, `postgres_fd
 
 ## <a id="topic_info"></a>Additional Module Documentation 
 
-Refer to the [postgres\_fdw](https://www.postgresql.org/docs/9.4/postgres-fdw.html) PostgreSQL documentation for detailed information about this module.
+Refer to the [postgres\_fdw](https://www.postgresql.org/docs/12/postgres-fdw.html) PostgreSQL documentation for detailed information about this module.
 

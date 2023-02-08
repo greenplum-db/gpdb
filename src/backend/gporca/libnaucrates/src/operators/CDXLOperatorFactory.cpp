@@ -1535,7 +1535,12 @@ CDXLOperatorFactory::MakeDXLTableDescr(CDXLMemoryManager *dxl_memory_manager,
 			EdxltokenTableDescr);
 	}
 
-	return GPOS_NEW(mp) CDXLTableDescr(mp, mdid, mdname, user_id, lockmode);
+	ULONG assigned_query_id_for_target_rel = ExtractConvertAttrValueToUlong(
+		dxl_memory_manager, attrs, EdxltokenAssignedQueryIdForTargetRel,
+		EdxltokenTableDescr, true /* is_optional */, UNASSIGNED_QUERYID);
+
+	return GPOS_NEW(mp) CDXLTableDescr(mp, mdid, mdname, user_id, lockmode,
+									   assigned_query_id_for_target_rel);
 }
 
 //---------------------------------------------------------------------------
@@ -2944,6 +2949,18 @@ CDXLOperatorFactory::ExtractConvertValuesToIntArray(
 
 	return ExtractIntsToIntArray(dxl_memory_manager, xml_val, target_attr,
 								 target_elem);
+}
+
+CBitSet *
+CDXLOperatorFactory::ExtractConvertValuesToIntBitSet(
+	CDXLMemoryManager *dxl_memory_manager, const Attributes &attrs,
+	Edxltoken target_attr, Edxltoken target_elem)
+{
+	const XMLCh *xml_val =
+		CDXLOperatorFactory::ExtractAttrValue(attrs, target_attr, target_elem);
+
+	return ExtractIntsToIntBitSet(dxl_memory_manager, xml_val, target_attr,
+								  target_elem);
 }
 
 //---------------------------------------------------------------------------

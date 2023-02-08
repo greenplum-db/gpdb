@@ -46,7 +46,7 @@ ALTER TEXT SEARCH CONFIGURATION astro_en
     ADD MAPPING FOR asciiword WITH astrosyn, english_ispell, english_stem;
 ```
 
-A filtering dictionary can be placed anywhere in the list, except at the end where it'd be useless. Filtering dictionaries are useful to partially normalize words to simplify the task of later dictionaries. For example, a filtering dictionary could be used to remove accents from accented letters, as is done by the [unaccent](https://www.postgresql.org/docs/9.4/unaccent.html) module.
+A filtering dictionary can be placed anywhere in the list, except at the end where it'd be useless. Filtering dictionaries are useful to partially normalize words to simplify the task of later dictionaries. For example, a filtering dictionary could be used to remove accents from accented letters, as is done by the [unaccent](https://www.postgresql.org/docs/12/unaccent.html) module.
 
 ## <a id="stop-words"></a>Stop Words 
 

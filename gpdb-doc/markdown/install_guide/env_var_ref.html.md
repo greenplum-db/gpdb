@@ -83,7 +83,7 @@ The password used if the server demands password authentication. Use of this env
 
 ### <a id="topic13"></a>PGPASSFILE 
 
-The name of the password file to use for lookups. If not set, it defaults to `~/.pgpass`. See the topic about [The Password File](https://www.postgresql.org/docs/9.4/libpq-pgpass.html) in the PostgreSQL documentation for more information.
+The name of the password file to use for lookups. If not set, it defaults to `~/.pgpass`. See the topic about [The Password File](https://www.postgresql.org/docs/12/libpq-pgpass.html) in the PostgreSQL documentation for more information.
 
 ### <a id="topic14"></a>PGOPTIONS 
 

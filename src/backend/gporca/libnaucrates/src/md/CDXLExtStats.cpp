@@ -24,11 +24,13 @@ using namespace gpmd;
 
 CDXLExtStats::CDXLExtStats(CMemoryPool *mp, IMDId *rel_stats_mdid,
 						   CMDName *mdname,
-						   CMDDependencyArray *extstats_dependency_array)
+						   CMDDependencyArray *extstats_dependency_array,
+						   CMDNDistinctArray *ndistinct_array)
 	: m_mp(mp),
 	  m_rel_stats_mdid(rel_stats_mdid),
 	  m_mdname(mdname),
-	  m_dependency_array(extstats_dependency_array)
+	  m_dependency_array(extstats_dependency_array),
+	  m_ndistinct_array(ndistinct_array)
 {
 	GPOS_ASSERT(rel_stats_mdid->IsValid());
 	m_dxl_str = CDXLUtils::SerializeMDObj(
@@ -41,6 +43,7 @@ CDXLExtStats::~CDXLExtStats()
 	GPOS_DELETE(m_dxl_str);
 	m_rel_stats_mdid->Release();
 	m_dependency_array->Release();
+	m_ndistinct_array->Release();
 }
 
 //---------------------------------------------------------------------------
@@ -117,6 +120,18 @@ CDXLExtStats::Serialize(CXMLSerializer *xml_serializer) const
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
 		CDXLTokens::GetDXLTokenStr(EdxltokenMVDependencyList));
 
+	// serialize ndistincts
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+		CDXLTokens::GetDXLTokenStr(EdxltokenMVNDistinctList));
+	for (ULONG i = 0; i < m_ndistinct_array->Size(); i++)
+	{
+		(*m_ndistinct_array)[i]->Serialize(xml_serializer);
+	}
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+		CDXLTokens::GetDXLTokenStr(EdxltokenMVNDistinctList));
+
 	xml_serializer->CloseElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
 		CDXLTokens::GetDXLTokenStr(EdxltokenExtendedStats));
@@ -144,8 +159,12 @@ CDXLExtStats::CreateDXLDummyExtStats(CMemoryPool *mp, IMDId *mdid)
 	CMDDependencyArray *extstats_dependency_array =
 		GPOS_NEW(mp) CMDDependencyArray(mp);
 
+	CMDNDistinctArray *extstats_ndistinct_array =
+		GPOS_NEW(mp) CMDNDistinctArray(mp);
+
 	ext_stats_dxl = GPOS_NEW(mp)
-		CDXLExtStats(mp, mdid, mdname.Value(), extstats_dependency_array);
+		CDXLExtStats(mp, mdid, mdname.Value(), extstats_dependency_array,
+					 extstats_ndistinct_array);
 	mdname.Reset();
 	return ext_stats_dxl.Reset();
 }

@@ -36,6 +36,7 @@ typedef struct DimensionInfo
 {
 	int			nvalues;		/* number of deduplicated values */
 	int			nbytes;			/* number of bytes (serialized) */
+	int			nbytes_aligned;	/* size of deserialized data with alignment */
 	int			typlen;			/* pg_type.typlen */
 	bool		typbyval;		/* pg_type.typbyval */
 } DimensionInfo;
@@ -96,6 +97,8 @@ extern SortItem *build_sorted_items(int numrows, int *nitems, HeapTuple *rows,
 									TupleDesc tdesc, MultiSortSupport mss,
 									int numattrs, AttrNumber *attnums);
 
+extern bool examine_opclause_expression(OpExpr *expr, Var **varp,
+										Const **cstp, bool *varonleftp);
 
 extern Selectivity mcv_clauselist_selectivity(PlannerInfo *root,
 											  StatisticExtInfo *stat,

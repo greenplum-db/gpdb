@@ -16,15 +16,15 @@ CREATE OPERATOR <% (
 );
 CREATE OPERATOR @#@ (
    rightarg = int8,		-- left unary
-   procedure = numeric_fac
+   procedure = factorial
 );
 CREATE OPERATOR #@# (
    leftarg = int8,		-- right unary
-   procedure = numeric_fac
+   procedure = factorial
 );
 CREATE OPERATOR #%# (
    leftarg = int8,		-- right unary
-   procedure = numeric_fac
+   procedure = factorial
 );
 -- Test operator created above
 SELECT point '(1,2)' <% widget '(0,0,3)' AS t,
@@ -40,7 +40,7 @@ ERROR:  operator does not exist: integer ######
 -- => is disallowed now
 CREATE OPERATOR => (
    leftarg = int8,		-- right unary
-   procedure = numeric_fac
+   procedure = factorial
 );
 ERROR:  syntax error at or near "=>"
 LINE 1: CREATE OPERATOR => (
@@ -50,7 +50,7 @@ LINE 1: CREATE OPERATOR => (
 -- this is legal because ! is not allowed in sql ops
 CREATE OPERATOR !=- (
    leftarg = int8,		-- right unary
-   procedure = numeric_fac
+   procedure = factorial
 );
 SELECT 2 !=-;
  ?column? 
@@ -129,7 +129,7 @@ NOTICE:  no privileges could be revoked
 SET ROLE regress_rol_op1;
 CREATE OPERATOR schema_op1.#*# (
    leftarg = int8,		-- right unary
-   procedure = numeric_fac
+   procedure = factorial
 );
 ERROR:  permission denied for schema schema_op1
 ROLLBACK;
@@ -137,7 +137,7 @@ ROLLBACK;
 BEGIN TRANSACTION;
 CREATE OPERATOR #*# (
    leftarg = SETOF int8,
-   procedure = numeric_fac
+   procedure = factorial
 );
 ERROR:  SETOF type not allowed for operator argument
 ROLLBACK;
@@ -145,7 +145,7 @@ ROLLBACK;
 BEGIN TRANSACTION;
 CREATE OPERATOR #*# (
    rightarg = SETOF int8,
-   procedure = numeric_fac
+   procedure = factorial
 );
 ERROR:  SETOF type not allowed for operator argument
 ROLLBACK;
@@ -169,13 +169,13 @@ ROLLBACK;
 -- Should fail. Invalid attribute
 CREATE OPERATOR #@%# (
    leftarg = int8,		-- right unary
-   procedure = numeric_fac,
+   procedure = factorial,
    invalid_att = int8
 );
 WARNING:  operator attribute "invalid_att" not recognized
 -- Should fail. At least leftarg or rightarg should be mandatorily specified
 CREATE OPERATOR #@%# (
-   procedure = numeric_fac
+   procedure = factorial
 );
 ERROR:  at least one of leftarg or rightarg must be specified
 -- Should fail. Procedure should be mandatorily specified

@@ -6,11 +6,13 @@ Garbage-collects and analyzes a database.
 
 ``` {#client_util_synopsis}
 vacuumdb [<connection-option>...] [--full | -f] [--freeze | -F] [--verbose | -v]
-    [--analyze | -z] [--analyze-only | -Z] [--table | -t <table> [( <column> [,...] )] ] [<dbname>]
+    [--analyze | -z] [--analyze-only | -Z] [--disable-page-skipping] [--skip-locked] [--table | -t <table> [( <column> [,...] )] ] [<dbname>]
 
 vacuumdb [<connection-option>...] [--all | -a] [--full | -f] [-F] 
     [--verbose | -v] [--analyze | -z]
     [--analyze-only | -Z]
+    [--disable-page-skipping]
+    [--skip-locked]
 
 vacuumdb -? | --help
 
@@ -56,6 +58,12 @@ vacuumdb -V | --version
 
 -Z \| --analyze-only
 :   Only calculate statistics for use by the query planner \(no vacuum\).
+
+--disable-page-skipping
+:   Disable all page-skipping behavior.
+
+--skip-locked
+:   Skip relations that cannot be immediately locked.
 
 -V \| --version
 :   Print the `vacuumdb` version and exit.

@@ -145,5 +145,5 @@ Refer to [SSL Client Authentication](../../security-guide/topics/Authenticate.ht
 
 ## <a id="topic_info"></a>Additional Module Documentation 
 
-Refer to the [dblink](https://www.postgresql.org/docs/9.4/dblink.html) PostgreSQL documentation for detailed information about the individual functions in this module.
+Refer to the [dblink](https://www.postgresql.org/docs/12/dblink.html) PostgreSQL documentation for detailed information about the individual functions in this module.
 

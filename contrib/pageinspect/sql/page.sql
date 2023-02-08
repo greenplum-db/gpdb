@@ -3,7 +3,7 @@ CREATE EXTENSION pageinspect;
 CREATE TABLE test1 (a int, b int);
 INSERT INTO test1 VALUES (16777217, 131584);
 
-VACUUM test1;  -- set up FSM
+VACUUM (DISABLE_PAGE_SKIPPING) test1;  -- set up FSM
 
 -- The page contents can vary, so just test that it can be read
 -- successfully, but don't keep the output.
@@ -52,3 +52,18 @@ select t_bits, t_data from heap_page_items(get_raw_page('test8', 0));
 select tuple_data_split('test8'::regclass, t_data, t_infomask, t_infomask2, t_bits)
     from heap_page_items(get_raw_page('test8', 0));
 drop table test8;
+
+-- Failure with incorrect page size
+-- Suppress the DETAIL message, to allow the tests to work across various
+-- page sizes.
+\set VERBOSITY terse
+SELECT fsm_page_contents('aaa'::bytea);
+SELECT page_checksum('bbb'::bytea, 0);
+SELECT page_header('ccc'::bytea);
+\set VERBOSITY default
+
+-- Tests with all-zero pages.
+SHOW block_size \gset
+SELECT fsm_page_contents(decode(repeat('00', :block_size), 'hex'));
+SELECT page_header(decode(repeat('00', :block_size), 'hex'));
+SELECT page_checksum(decode(repeat('00', :block_size), 'hex'), 1);

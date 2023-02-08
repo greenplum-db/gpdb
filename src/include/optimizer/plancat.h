@@ -49,6 +49,7 @@ extern int32 get_relation_data_width(Oid relid, int32 *attr_widths);
 extern List *GetRelationExtStatistics(Relation relation);
 
 extern char *GetExtStatisticsName(Oid statOid);
+extern List *GetExtStatisticsKinds(Oid statOid);
 
 extern bool relation_excluded_by_constraints(PlannerInfo *root,
 											 RelOptInfo *rel, RangeTblEntry *rte);

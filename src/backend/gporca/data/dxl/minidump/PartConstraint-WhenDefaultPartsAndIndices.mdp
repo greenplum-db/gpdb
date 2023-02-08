@@ -175,7 +175,7 @@ EXPLAIN SELECT * FROM date_parts WHERE month BETWEEN 1 AND 4;
       <dxl:ColumnStatistics Mdid="1.3748460.1.0.7" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.3748460.1.0.6" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.3748460.1.0" Name="date_parts" Rows="3650.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.3748460.1.0" Name="date_parts" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="1,2,3" PartitionTypes="r,l,r" NumberLeafPartitions="45">
+      <dxl:Relation Mdid="6.3748460.1.0" Name="date_parts" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="1,2,3" PartitionTypes="r,l,r">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

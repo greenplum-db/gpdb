@@ -27,8 +27,8 @@ not NULL AND visimapidxid is not NULL AND relid='uao_blocksize_8k'::regclass;
               1
 (1 row)
 
-select 1 as block8k_present from pg_appendonly WHERE blocksize=8192
-AND relid='uao_blocksize_8k'::regclass;
+select 1 as block8k_present from pg_class, unnest(reloptions) as reloption
+where oid='uao_blocksize_8k'::regclass and reloption='blocksize=8192';
  block8k_present 
 -----------------
                1
@@ -97,8 +97,8 @@ relid='uao_blocksize_2048k'::regclass;
               1
 (1 row)
 
-select 1 as block2048k_present from pg_appendonly WHERE
-blocksize=2097152 AND relid='uao_blocksize_2048k'::regclass;
+select 1 as block2048k_present from pg_class, unnest(reloptions) as reloption WHERE
+oid='uao_blocksize_2048k'::regclass and reloption='blocksize=2097152';
  block2048k_present 
 --------------------
                   1

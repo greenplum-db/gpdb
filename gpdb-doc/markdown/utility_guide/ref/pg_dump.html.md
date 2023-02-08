@@ -42,7 +42,7 @@ dbname
 -b \| --blobs
 :   Include large objects in the dump. This is the default behavior except when `--schema`, `--table`, or `--schema-only` is specified. The `-b` switch is only useful add large objects to dumps where a specific schema or table has been requested. Note that blobs are considered data and therefore will be included when `--data-only` is used, but not when `--schema-only` is.
 
-    > **Note** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/9.4/largeobjects.html) for streaming user data that is stored in large-object structures.
+    > **Note** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/12/largeobjects.html) for streaming user data that is stored in large-object structures.
 
 -c \| --clean
 :   Adds commands to the text output file to clean \(drop\) database objects prior to outputting the commands for creating them. \(Restore might generate some harmless error messages, if any objects were not present in the destination database.\) Note that objects are not dropped before the dump operation begins, but `DROP` commands are added to the DDL dump output files so that when you use those files to do a restore, the `DROP` commands are run prior to the `CREATE` commands. This option is only meaningful for the plain-text format. For the archive formats, you may specify the option when you call [pg\_restore](pg_restore.html).
@@ -219,7 +219,7 @@ dbname
 -d dbname \| --dbname=dbname
 :   Specifies the name of the database to connect to. This is equivalent to specifying dbname as the first non-option argument on the command line.
 
-:   If this parameter contains an `=` sign or starts with a valid URI prefix \(`postgresql://` or `postgres://`\), it is treated as a conninfo string. See [Connection Strings](https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-CONNSTRING) in the PostgreSQL documentation for more information.
+:   If this parameter contains an `=` sign or starts with a valid URI prefix \(`postgresql://` or `postgres://`\), it is treated as a conninfo string. See [Connection Strings](https://www.postgresql.org/docs/12/libpq-connect.html#LIBPQ-CONNSTRING) in the PostgreSQL documentation for more information.
 
 -h host \| --host=host
 :   The host name of the machine on which the Greenplum Database coordinator database server is running. If not specified, reads from the environment variable `PGHOST` or defaults to localhost.

@@ -1,4 +1,7 @@
-<!-- doc/src/sgml/ref/pgarchivecleanup.sgml -->
+<!--
+doc/src/sgml/ref/pgarchivecleanup.sgml
+PostgreSQL documentation
+-->
 
 <refentry id="pgarchivecleanup">
  <indexterm zone="pgarchivecleanup">
@@ -147,6 +150,18 @@ pg_archivecleanup:  removing file "archive/00000001000000370000000E"
    </para>
  </refsect1>
 
+ <refsect1>
+  <title>Environment</title>
+
+  <para>
+   The environment variable <envar>PG_COLOR</envar> specifies whether to use
+   color in diagnostic messages. Possible values are
+   <literal>always</literal>, <literal>auto</literal> and
+   <literal>never</literal>.
+  </para>
+ </refsect1>
+ 
+ 
  <refsect1>
   <title>Notes</title>
 

@@ -36,7 +36,7 @@ Rows out:  0 rows with 0.010 ms to end.
           </dxl:Array>
         </dxl:ArrayComp>
       </dxl:CheckConstraint>
-      <dxl:Relation Mdid="6.16388.1.0" Name="tb" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16388.1.0" Name="tb" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="b" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>

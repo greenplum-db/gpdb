@@ -14,7 +14,7 @@ The types *anyelement*, *anyarray*, *anynonarray*, and *anyenum* are pseudo-type
 
 The pseudo-type *anytable* is a Greenplum Database type that specifies a table expression—an expression that computes a table. Greenplum Database allows this type only as an argument to a user-defined function. See [Table Value Expressions](#topic_ig2_1pc_qfb) for more about the *anytable* pseudo-type.
 
-For more information about pseudo-types, see the PostgreSQL documentation about [Pseudo-Types](https://www.postgresql.org/docs/9.4/datatype-pseudo.html).
+For more information about pseudo-types, see the PostgreSQL documentation about [Pseudo-Types](https://www.postgresql.org/docs/12/datatype-pseudo.html).
 
 **Parent topic:** [Data Types](data_types.html)
 
@@ -32,7 +32,7 @@ Note that *anynonarray* and *anyenum* do not represent separate type variables; 
 
 A variadic function \(one taking a variable number of arguments\) is polymorphic when its last parameter is declared as `VARIADIC *anyarray*`. For purposes of argument matching and determining the actual result type, such a function behaves the same as if you had declared the appropriate number of *anynonarray* parameters.
 
-For more information about polymorphic types, see the PostgreSQL documentation about [Polymorphic Arguments and Return Types](https://www.postgresql.org/docs/9.4/xfunc-c.html#AEN56822).
+For more information about polymorphic types, see the PostgreSQL documentation about [Polymorphic Arguments and Return Types](https://www.postgresql.org/docs/12/xfunc-c.html#AEN56822).
 
 ## <a id="topic_ig2_1pc_qfb"></a>Table Value Expressions 
 

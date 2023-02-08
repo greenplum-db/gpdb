@@ -144,7 +144,7 @@ Transactions allow you to bundle multiple SQL statements in one all-or-nothing o
 
 The following are the Greenplum Database SQL transaction commands:
 
--   `BEGIN` or `START TRANSACTION`starts a transaction block.
+-   `BEGIN` or `START TRANSACTION` starts a transaction block.
 -   `END` or `COMMIT` commits the results of a transaction.
 -   `ROLLBACK` abandons a transaction without making any changes.
 -   `SAVEPOINT` marks a place in a transaction and enables partial rollback. You can roll back commands run after a savepoint while maintaining commands run before the savepoint.

@@ -1225,7 +1225,7 @@ explain (costs off) delete from srt_dd where name='ABA'::text;
                   QUERY PLAN                  
 ----------------------------------------------
  Delete on srt_dd
-   ->  Seq Scan on srt_dd srt_dd_1
+   ->  Seq Scan on srt_dd
          Filter: ((name)::text = 'ABA'::text)
  Optimizer: Pivotal Optimizer (GPORCA)
 (4 rows)
@@ -1346,7 +1346,7 @@ explain (costs off) delete from t_hash_partition where r_regionkey=1;
                           QUERY PLAN                           
 ---------------------------------------------------------------
  Delete on t_hash_partition
-   ->  Dynamic Seq Scan on t_hash_partition t_hash_partition_1
+   ->  Dynamic Seq Scan on t_hash_partition
          Number of partitions to scan: 1 (out of 3)
          Filter: (r_regionkey = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -1370,7 +1370,7 @@ explain (costs off) update t_hash_partition set r_name = 'CHINA' where r_regionk
                           QUERY PLAN                           
 ---------------------------------------------------------------
  Update on t_hash_partition
-   ->  Dynamic Seq Scan on t_hash_partition t_hash_partition_1
+   ->  Dynamic Seq Scan on t_hash_partition
          Number of partitions to scan: 1 (out of 3)
          Filter: (r_regionkey = 1)
  Optimizer: Pivotal Optimizer (GPORCA)

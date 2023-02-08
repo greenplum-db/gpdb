@@ -19,7 +19,7 @@ You can configure Microsoft Windows client applications to connect to a Greenplu
 
 ## <a id="topic2"></a>Allowing Connections to Greenplum Database 
 
-Client access and authentication is controlled by the standard PostgreSQL host-based authentication file, pg\_hba.conf. For detailed information about this file, see [The pg\_hba.conf File](https://www.postgresql.org/docs/9.4/auth-pg-hba-conf.html) in the PostgreSQL documentation.
+Client access and authentication is controlled by the standard PostgreSQL host-based authentication file, pg\_hba.conf. For detailed information about this file, see [The pg\_hba.conf File](https://www.postgresql.org/docs/12/auth-pg-hba-conf.html) in the PostgreSQL documentation.
 
 In Greenplum Database, the pg\_hba.conf file of the coordinator instance controls client access and authentication to your Greenplum Database system. The Greenplum Database segments also have pg\_hba.conf files, but these are already correctly configured to allow only client connections from the coordinator host. The segments never accept outside client connections, so there is no need to alter the `pg_hba.conf` file on segments.
 
@@ -135,7 +135,7 @@ The following table describes meaning of each field.
             <tr class="row">
               <td class="entry" headers="topic2__ip141709__entry__1">authentication-method</td>
               <td class="entry" headers="topic2__ip141709__entry__2">Specifies the authentication method to use when connecting.
-                Greenplum supports the <a class="xref" href="https://www.postgresql.org/docs/9.4/auth-methods.html" target="_blank" rel="external noopener">authentication methods</a> supported by PostgreSQL 9.4.</td>
+                Greenplum supports the <a class="xref" href="https://www.postgresql.org/docs/12/auth-methods.html" target="_blank" rel="external noopener">authentication methods</a> supported by PostgreSQL 9.4.</td>
             </tr>
           </tbody></table>
 

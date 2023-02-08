@@ -205,21 +205,6 @@ extern bool verify_gpfdists_cert;
 extern int gp_command_count;
 
 /*
- * gp_safefswritesize
- *
- * should only be set to <N bytes> on file systems that the so called
- * 'torn-write' problem may occur. This guc should be set for the minimum
- * write size that is always safe on this particular file system. The side
- * effect of increasing this value for torn write protection is that single row
- * INSERTs into append only tables will use <N bytes> of space and therefore
- * also slow down SELECTs and become strongly discouraged.
- *
- * On mature file systems where torn write may not occur this GUC should be
- * set to 0 (the default).
- */
-extern int gp_safefswritesize;
-
-/*
  * Gp_write_shared_snapshot
  *
  * The value of this variable is actually meaningless. We use it simply

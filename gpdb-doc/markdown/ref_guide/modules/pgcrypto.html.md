@@ -90,5 +90,5 @@ When this parameter is enabled, these changes occur:
 
 ## <a id="topic_info"></a>Additional Module Documentation 
 
-Refer to [pgcrypto](https://www.postgresql.org/docs/9.4/pgcrypto.html) in the PostgreSQL documentation for more information about the individual functions in this module.
+Refer to [pgcrypto](https://www.postgresql.org/docs/12/pgcrypto.html) in the PostgreSQL documentation for more information about the individual functions in this module.
 

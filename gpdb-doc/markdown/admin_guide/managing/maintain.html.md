@@ -61,7 +61,7 @@ When Greenplum Database reaches the `xid_stop_limit` transaction ID limit due to
 
 For information about the configuration parameters, see the *Greenplum Database Reference Guide*.
 
-For information about transaction ID wraparound see the [PostgreSQL documentation](https://www.postgresql.org/docs/9.4/index.html).
+For information about transaction ID wraparound see the [PostgreSQL documentation](https://www.postgresql.org/docs/12/index.html).
 
 ### <a id="topic4"></a>System Catalog Maintenance 
 

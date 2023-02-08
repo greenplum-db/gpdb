@@ -296,6 +296,8 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 			info->amhasgettuple = (amroutine->amgettuple != NULL);
 			info->amhasgetbitmap = amroutine->amgetbitmap != NULL &&
 				relation->rd_tableam->scan_bitmap_next_block != NULL;
+			info->amcanmarkpos = (amroutine->ammarkpos != NULL &&
+								  amroutine->amrestrpos != NULL);
 			info->amcostestimate = amroutine->amcostestimate;
 			Assert(info->amcostestimate != NULL);
 
@@ -1534,6 +1536,48 @@ GetExtStatisticsName(Oid statOid)
 	staForm = (Form_pg_statistic_ext) GETSTRUCT(htup);
 	ReleaseSysCache(htup);
 	return NameStr(staForm->stxname);
+}
+
+/*
+ *	GetExtStatisticsKinds
+ *
+ * Retrieve the kinds of an extended statistic object
+ */
+List *
+GetExtStatisticsKinds(Oid statOid)
+{
+	Form_pg_statistic_ext staForm;
+	HeapTuple	htup;
+	Datum		datum;
+	bool		isnull;
+	ArrayType  *arr;
+	char	   *enabled;
+
+	List	  *types = NULL;
+	int			i;
+
+	htup = SearchSysCache1(STATEXTOID, ObjectIdGetDatum(statOid));
+	if (!HeapTupleIsValid(htup))
+		elog(ERROR, "cache lookup failed for statistics object %u", statOid);
+
+	staForm = (Form_pg_statistic_ext) GETSTRUCT(htup);
+
+	datum = SysCacheGetAttr(STATEXTOID, htup,
+							Anum_pg_statistic_ext_stxkind, &isnull);
+	arr = DatumGetArrayTypeP(datum);
+	if (ARR_NDIM(arr) != 1 ||
+		ARR_HASNULL(arr) ||
+		ARR_ELEMTYPE(arr) != CHAROID)
+		elog(ERROR, "stxkind is not a 1-D char array");
+	enabled = (char *) ARR_DATA_PTR(arr);
+	for (i = 0; i < ARR_DIMS(arr)[0]; i++)
+	{
+		types = lappend_int(types, (int) enabled[i]);
+	}
+
+	ReleaseSysCache(htup);
+
+	return types;
 }
 
 /*

@@ -16,13 +16,16 @@
 { resgroupid => '6437', reslimittype => '2', value => '20' },
 { resgroupid => '6437', reslimittype => '3', value => '100' },
 { resgroupid => '6437', reslimittype => '4', value => '-1' },
+{ resgroupid => '6437', reslimittype => '5', value => '-1' },
 { resgroupid => '6438', reslimittype => '1', value => '10' },
 { resgroupid => '6438', reslimittype => '2', value => '10' },
 { resgroupid => '6438', reslimittype => '3', value => '100' },
 { resgroupid => '6438', reslimittype => '4', value => '-1' },
+{ resgroupid => '6438', reslimittype => '5', value => '-1' },
 { resgroupid => '6441', reslimittype => '1', value => '0' },
 { resgroupid => '6441', reslimittype => '2', value => '10' },
 { resgroupid => '6441', reslimittype => '3', value => '100' },
 { resgroupid => '6441', reslimittype => '4', value => '-1' },
+{ resgroupid => '6441', reslimittype => '5', value => '-1' },
 
 ]

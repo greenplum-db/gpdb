@@ -1609,13 +1609,17 @@ OptResourceGroupElem:
 				{
 					$$ = makeDefElem("cpu_hard_quota_limit", (Node *) makeInteger($2), @1);
 				}
-            | CPU_SOFT_PRIORITY SignedIconst
-                {
-                    $$ = makeDefElem("cpu_soft_priority", (Node *) makeInteger($2), @1);
-                }
+			| CPU_SOFT_PRIORITY SignedIconst
+				{
+					$$ = makeDefElem("cpu_soft_priority", (Node *) makeInteger($2), @1);
+				}
 			| CPUSET Sconst
 				{
 					$$ = makeDefElem("cpuset", (Node *) makeString($2), @1);
+				}
+			| MEMORY_LIMIT SignedIconst
+				{
+					$$ = makeDefElem("memory_limit", (Node *) makeInteger($2), @1);
 				}
 		;
 
@@ -5068,6 +5072,7 @@ TableLikeClause:
 					TableLikeClause *n = makeNode(TableLikeClause);
 					n->relation = $2;
 					n->options = $3;
+					n->relationOid = InvalidOid;
 					$$ = (Node *)n;
 				}
 		;
@@ -6550,7 +6555,7 @@ CreateMatViewStmt:
 
 					$$ = (Node *) ctas;
 				}
-		| CREATE OptNoLog MATERIALIZED VIEW IF_P NOT EXISTS create_mv_target AS SelectStmt opt_with_data
+		| CREATE OptNoLog MATERIALIZED VIEW IF_P NOT EXISTS create_mv_target AS SelectStmt opt_with_data OptDistributedBy
 				{
 					CreateTableAsStmt *ctas = makeNode(CreateTableAsStmt);
 					ctas->query = $10;
@@ -6561,6 +6566,8 @@ CreateMatViewStmt:
 					/* cram additional flags into the IntoClause */
 					$8->rel->relpersistence = $2;
 					$8->skipData = !($11);
+					ctas->into->distributedBy = $12;
+
 					$$ = (Node *) ctas;
 				}
 		;
@@ -19143,7 +19150,7 @@ makeOrderedSetArgs(List *directargs, List *orderedargs,
 				   core_yyscan_t yyscanner)
 {
 	FunctionParameter *lastd = (FunctionParameter *) llast(directargs);
-	int			ndirectargs;
+	Value	   *ndirectargs;
 
 	/* No restriction unless last direct arg is VARIADIC */
 	if (lastd->mode == FUNC_PARAM_VARIADIC)
@@ -19167,10 +19174,10 @@ makeOrderedSetArgs(List *directargs, List *orderedargs,
 	}
 
 	/* don't merge into the next line, as list_concat changes directargs */
-	ndirectargs = list_length(directargs);
+	ndirectargs = makeInteger(list_length(directargs));
 
 	return list_make2(list_concat(directargs, orderedargs),
-					  makeInteger(ndirectargs));
+					  ndirectargs);
 }
 
 /* insertSelectOptions()

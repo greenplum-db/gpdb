@@ -139,6 +139,9 @@ private:
 	static BOOL SetIndexVarAttnoWalker(
 		Node *node, SContextIndexVarAttno *ctxt_index_var_attno_walker);
 
+	// walker to set inner var to outer
+	static BOOL SetHashKeysVarnoWalker(Node *node, void *context);
+
 public:
 	// ctor
 	CTranslatorDXLToPlStmt(CMemoryPool *mp, CMDAccessor *md_accessor,
@@ -426,9 +429,9 @@ private:
 		CDXLTranslateContextBaseTable *base_table_context);
 
 	// create range table entry from a table descriptor
-	RangeTblEntry *TranslateDXLTblDescrToRangeTblEntry(
-		const CDXLTableDescr *table_descr, Index index,
-		CDXLTranslateContextBaseTable *base_table_context);
+	Index ProcessDXLTblDescr(const CDXLTableDescr *table_descr,
+							 CDXLTranslateContextBaseTable *base_table_context,
+							 AclMode acl_mode);
 
 	// translate DXL projection list into a target list
 	List *TranslateDXLProjList(

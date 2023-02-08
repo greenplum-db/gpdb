@@ -221,8 +221,9 @@ CTestUtils::PtabdescPlainWithColNameFormat(
 		mp, mdid, nameTable,
 		false,	// convert_hash_to_random
 		IMDRelation::EreldistrRandom, IMDRelation::ErelstorageHeap,
-		0,	// ulExecuteAsUser
-		-1	// lockmode
+		0,	 // ulExecuteAsUser
+		-1,	 // lockmode
+		0	 // UNASSIGNED_QUERYID
 	);
 
 	for (ULONG i = 0; i < num_cols; i++)

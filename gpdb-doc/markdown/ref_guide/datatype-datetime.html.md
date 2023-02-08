@@ -1,6 +1,6 @@
 # Date/Time Types 
 
-Greenplum supports the full set of SQL date and time types, shown in [Table 1](#datatype-datetime-table). The operations available on these data types are described in [Date/Time Functions and Operators](https://www.postgresql.org/docs/9.4/functions-datetime.html) in the PostgreSQL documentation. Dates are counted according to the Gregorian calendar, even in years before that calendar was introduced \(see [History of Units](https://www.postgresql.org/docs/9.4/datetime-units-history.html) in the PostgreSQL documentation for more information\).
+Greenplum supports the full set of SQL date and time types, shown in [Table 1](#datatype-datetime-table). The operations available on these data types are described in [Date/Time Functions and Operators](https://www.postgresql.org/docs/12/functions-datetime.html) in the PostgreSQL documentation. Dates are counted according to the Gregorian calendar, even in years before that calendar was introduced \(see [History of Units](https://www.postgresql.org/docs/12/datetime-units-history.html) in the PostgreSQL documentation for more information\).
 
 |Name|Storage Size|Description|Low Value|High Value|Resolution|
 |----|------------|-----------|---------|----------|----------|
@@ -65,7 +65,7 @@ In Greenplum Database 6, this command returns a timestamp.
 
 Date and time input is accepted in almost any reasonable format, including ISO 8601, SQL-compatible, traditional POSTGRES, and others. For some formats, ordering of day, month, and year in date input is ambiguous and there is support for specifying the expected ordering of these fields. Set the [DateStyle](config_params/guc-list.html) parameter to `MDY` to select month-day-year interpretation, `DMY` to select day-month-year interpretation, or `YMD` to select year-month-day interpretation.
 
-Greenplum is more flexible in handling date/time input than the SQL standard requires. See [Appendix B. Date/Time Support](https://www.postgresql.org/docs/9.4/datetime-appendix.html) in the PostgreSQL documentation for the exact parsing rules of date/time input and for the recognized text fields including months, days of the week, and time zones.
+Greenplum is more flexible in handling date/time input than the SQL standard requires. See [Appendix B. Date/Time Support](https://www.postgresql.org/docs/12/datetime-appendix.html) in the PostgreSQL documentation for the exact parsing rules of date/time input and for the recognized text fields including months, days of the week, and time zones.
 
 Remember that any date or time literal input needs to be enclosed in single quotes, like text strings. SQL requires the following syntax
 
@@ -142,7 +142,7 @@ The SQL standard differentiates `timestamp without time zone` and `timestamp wit
 
 For `timestamp with time zone`, the internally stored value is always in UTC \(Universal Coordinated Time, traditionally known as Greenwich Mean Time, GMT\). An input value that has an explicit time zone specified is converted to UTC using the appropriate offset for that time zone. If no time zone is stated in the input string, then it is assumed to be in the time zone indicated by the system's `TimeZone` parameter, and is converted to UTC using the offset for the timezone zone.
 
-When a `timestamp with time zone` value is output, it is always converted from UTC to the current timezone zone, and displayed as local time in that zone. To see the time in another time zone, either change timezone or use the `AT TIME ZONE` construct \(see [AT TIME ZONE](https://www.postgresql.org/docs/9.4/functions-datetime.html#FUNCTIONS-DATETIME-ZONECONVERT) in the PostgreSQL documentation\).
+When a `timestamp with time zone` value is output, it is always converted from UTC to the current timezone zone, and displayed as local time in that zone. To see the time in another time zone, either change timezone or use the `AT TIME ZONE` construct \(see [AT TIME ZONE](https://www.postgresql.org/docs/12/functions-datetime.html#FUNCTIONS-DATETIME-ZONECONVERT) in the PostgreSQL documentation\).
 
 Conversions between `timestamp without time zone` and `timestamp with time zone` normally assume that the `timestamp without time zone` value should be taken or given as timezone local time. A different time zone can be specified for the conversion using `AT TIME ZONE`.
 
@@ -161,7 +161,7 @@ Greenplum supports several special date/time input values for convenience, as sh
 |`yesterday`|`date`, `timestamp`|midnight yesterday|
 |`allballs`|`time`|00:00:00.00 UTC|
 
-The following SQL-compatible functions can also be used to obtain the current time value for the corresponding data type: `CURRENT_DATE`, `CURRENT_TIME`, `CURRENT_TIMESTAMP`, `LOCALTIME`, `LOCALTIMESTAMP`. The latter four accept an optional subsecond precision specification. \(See [Current Date/Time](https://www.postgresql.org/docs/9.4/functions-datetime.html#FUNCTIONS-DATETIME-CURRENT) in the PostgreSQL documentation.\) Note that these are SQL functions and are *not* recognized in data input strings.
+The following SQL-compatible functions can also be used to obtain the current time value for the corresponding data type: `CURRENT_DATE`, `CURRENT_TIME`, `CURRENT_TIMESTAMP`, `LOCALTIME`, `LOCALTIMESTAMP`. The latter four accept an optional subsecond precision specification. \(See [Current Date/Time](https://www.postgresql.org/docs/12/functions-datetime.html#FUNCTIONS-DATETIME-CURRENT) in the PostgreSQL documentation.\) Note that these are SQL functions and are *not* recognized in data input strings.
 
 ## <a id="datatype-datetime-output"></a>Date/Time Output 
 
@@ -186,7 +186,7 @@ In the SQL and POSTGRES styles, day appears before month if DMY field ordering h
 
 The date/time style can be selected by the user using the `SET datestyle` command, the `DateStyle` parameter in the `postgresql.conf` configuration file, or the `PGDATESTYLE` environment variable on the server or client.
 
-The formatting function `to_char` \(see [Data Type Formatting Functions](https://www.postgresql.org/docs/9.4/functions-formatting.html)\) is also available as a more flexible way to format date/time output.
+The formatting function `to_char` \(see [Data Type Formatting Functions](https://www.postgresql.org/docs/12/functions-formatting.html)\) is also available as a more flexible way to format date/time output.
 
 ## <a id="datatype-timezones"></a>Time Zones 
 

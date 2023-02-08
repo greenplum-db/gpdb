@@ -55,6 +55,7 @@ typedef enum ResGroupLimitType
 	RESGROUP_LIMIT_TYPE_CPU,			/* cpu_hard_quota_limit */
 	RESGROUP_LIMIT_TYPE_CPU_SHARES,		/* cpu_soft_priority */
 	RESGROUP_LIMIT_TYPE_CPUSET,			/* cpuset */
+	RESGROUP_LIMIT_TYPE_MEMORY_LIMIT,		/* memory_limit */
 
 	RESGROUP_LIMIT_TYPE_COUNT,
 } ResGroupLimitType;

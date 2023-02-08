@@ -135,7 +135,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.434189.1.0" Name="t" Rows="10000.000000" RelPages="13" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.434189.1.0" Name="t" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.434189.1.0" Name="t" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -976,7 +976,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationExtendedStatistics Mdid="10.434189.1.0" Name="t">
-        <dxl:ExtendedStatisticsInfo Oid="434192" Name="stts" Keys="1,2" Kind="FunctionalDependencies"/>
+        <dxl:ExtendedStatisticsInfo Oid="434192" Name="stts" Keys="1,2" Kind="MVDependency"/>
       </dxl:RelationExtendedStatistics>
       <dxl:MDCast Mdid="3.23.1.0;23.1.0" Name="int4" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.23.1.0" CastFuncId="0.0.0.0" CoercePathType="0"/>
       <dxl:ExtendedStatistics Mdid="9.434192.1.0" Name="stts">
@@ -984,6 +984,7 @@
           <dxl:MVDependency Degree="1.000000" From="1" To="2"/>
           <dxl:MVDependency Degree="1.000000" From="2" To="1"/>
         </dxl:MVDependencyList>
+        <dxl:MVNDistinctList/>
       </dxl:ExtendedStatistics>
       <dxl:GPDBScalarOp Mdid="0.96.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
         <dxl:LeftType Mdid="0.23.1.0"/>

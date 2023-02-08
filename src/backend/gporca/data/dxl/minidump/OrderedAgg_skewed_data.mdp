@@ -54,7 +54,7 @@ EXPLAIN ANALYZE SELECT percentile_cont(0.25) WITHIN GROUP (ORDER BY a ASC nulls 
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.24579.1.0" Name="t" Rows="9999918.000000" RelPages="11002" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.24579.1.0" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.24579.1.0" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

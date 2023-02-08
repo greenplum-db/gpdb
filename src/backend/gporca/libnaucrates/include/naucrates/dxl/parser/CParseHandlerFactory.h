@@ -187,6 +187,16 @@ private:
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 		CParseHandlerBase *parse_handler_root);
 
+	// construct an extended stats ndistinct list parse handler
+	static CParseHandlerBase *CreateExtStatsNDistinctListParseHandler(
+		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+		CParseHandlerBase *parse_handler_root);
+
+	// construct an extended stats ndistinct parse handler
+	static CParseHandlerBase *CreateExtStatsNDistinctParseHandler(
+		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+		CParseHandlerBase *parse_handler_root);
+
 	// construct a column stats parse handler
 	static CParseHandlerBase *CreateColStatsParseHandler(
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,

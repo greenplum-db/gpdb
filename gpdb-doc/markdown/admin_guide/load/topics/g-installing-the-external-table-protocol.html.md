@@ -12,7 +12,7 @@ The flag `-shared` specifies creating a shared object \(shared library\) and the
 
 The header files that are declared as include files in `gpextprotocal.c` are located in subdirectories of `$GPHOME/include/postgresql/.`
 
-For more information on compiling and linking dynamically-loaded functions and examples of compiling C source code to create a shared library on other operating systems, see the PostgreSQL documentation at [https://www.postgresql.org/docs/9.4/xfunc-c.html\#DFUNC](https://www.postgresql.org/docs/9.4/xfunc-c.html#DFUNC).
+For more information on compiling and linking dynamically-loaded functions and examples of compiling C source code to create a shared library on other operating systems, see the PostgreSQL documentation at [https://www.postgresql.org/docs/12/xfunc-c.html\#DFUNC](https://www.postgresql.org/docs/12/xfunc-c.html#DFUNC).
 
 The manual pages for the C compiler `cc` and the link editor `ld` for your operating system also contain information on compiling and linking source code on your system.
 

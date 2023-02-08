@@ -17,8 +17,7 @@
 
 struct LogicalDecodingContext;
 
-typedef void (*LogicalOutputPluginWriterWrite) (
-												struct LogicalDecodingContext *lr,
+typedef void (*LogicalOutputPluginWriterWrite) (struct LogicalDecodingContext *lr,
 												XLogRecPtr Ptr,
 												TransactionId xid,
 												bool last_write
@@ -26,8 +25,7 @@ typedef void (*LogicalOutputPluginWriterWrite) (
 
 typedef LogicalOutputPluginWriterWrite LogicalOutputPluginWriterPrepareWrite;
 
-typedef void (*LogicalOutputPluginWriterUpdateProgress) (
-														 struct LogicalDecodingContext *lr,
+typedef void (*LogicalOutputPluginWriterUpdateProgress) (struct LogicalDecodingContext *lr,
 														 XLogRecPtr Ptr,
 														 TransactionId xid
 );
@@ -51,6 +49,9 @@ typedef struct LogicalDecodingContext
 	 * are unused.
 	 */
 	bool		fast_forward;
+
+	/* Are we processing the end LSN of a transaction? */
+	bool		end_xact;
 
 	OutputPluginCallbacks callbacks;
 	OutputPluginOptions options;
@@ -102,8 +103,7 @@ extern LogicalDecodingContext *CreateInitDecodingContext(char *plugin,
 														 LogicalOutputPluginWriterPrepareWrite prepare_write,
 														 LogicalOutputPluginWriterWrite do_write,
 														 LogicalOutputPluginWriterUpdateProgress update_progress);
-extern LogicalDecodingContext *CreateDecodingContext(
-													 XLogRecPtr start_lsn,
+extern LogicalDecodingContext *CreateDecodingContext(XLogRecPtr start_lsn,
 													 List *output_plugin_options,
 													 bool fast_forward,
 													 XLogPageReadCB read_page,

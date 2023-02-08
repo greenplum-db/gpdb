@@ -209,6 +209,7 @@ HeapTuple GetAttStats(Oid relid, AttrNumber attnum);
 List *GetExtStats(Relation rel);
 
 char *GetExtStatsName(Oid statOid);
+List *GetExtStatsKinds(Oid statOid);
 
 // does a function exist with the given oid
 bool FunctionExists(Oid oid);
@@ -519,6 +520,8 @@ List *GetRelationIndexes(Relation relation);
 // build an array of triggers for this relation
 void BuildRelationTriggers(Relation rel);
 
+MVNDistinct *GetMVNDistinct(Oid stat_oid);
+
 MVDependencies *GetMVDependencies(Oid stat_oid);
 
 // get relation with given oid
@@ -594,7 +597,8 @@ void CheckRTPermissions(List *rtable);
 bool HasUpdateTriggers(Oid relid);
 
 // get index operator family properties
-void IndexOpProperties(Oid opno, Oid opfamily, int *strategy, Oid *righttype);
+void IndexOpProperties(Oid opno, Oid opfamily, StrategyNumber *strategynumber,
+					   Oid *righttype);
 
 // get oids of families this operator belongs to
 List *GetOpFamiliesForScOp(Oid opno);

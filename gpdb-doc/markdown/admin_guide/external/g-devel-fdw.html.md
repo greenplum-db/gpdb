@@ -29,7 +29,7 @@ This topic includes the following sections:
 When you develop with the Greenplum Database foreign-data wrapper API:
 
 -   You must develop your code on a system with the same hardware and software architecture as that of your Greenplum Database hosts.
--   Your code must be written in a compiled language such as C, using the version-1 interface. For details on C language calling conventions and dynamic loading, refer to [C Language Functions](https://www.postgresql.org/docs/9.4/xfunc-c.html) in the PostgreSQL documentation.
+-   Your code must be written in a compiled language such as C, using the version-1 interface. For details on C language calling conventions and dynamic loading, refer to [C Language Functions](https://www.postgresql.org/docs/12/xfunc-c.html) in the PostgreSQL documentation.
 -   Symbol names in your object files must not conflict with each other nor with symbols defined in the Greenplum Database server. You must rename your functions or variables if you get error messages to this effect.
 -   Review the foreign table introduction described in [Accessing External Data with Foreign Tables](g-foreign.html).
 
@@ -277,7 +277,7 @@ IsForeignRelUpdatable (Relation rel)</code></pre></td>
             </tr>
           </tbody></table>
 
-Refer to [Foreign Data Wrapper Callback Routines](https://www.postgresql.org/docs/9.4/fdw-callbacks.html) in the PostgreSQL documentation for detailed information about the inputs and outputs of the FDW callback functions.
+Refer to [Foreign Data Wrapper Callback Routines](https://www.postgresql.org/docs/12/fdw-callbacks.html) in the PostgreSQL documentation for detailed information about the inputs and outputs of the FDW callback functions.
 
 ## <a id="helper"></a>Foreign Data Wrapper Helper Functions 
 
@@ -287,7 +287,7 @@ The FDW API exports several helper functions from the Greenplum Database core se
 #include "foreign/foreign.h"
 ```
 
-The FDW API includes the helper functions listed in the table below. Refer to [Foreign Data Wrapper Helper Functions](https://www.postgresql.org/docs/9.4/fdw-helpers.html) in the PostgreSQL documentation for more information about these functions.
+The FDW API includes the helper functions listed in the table below. Refer to [Foreign Data Wrapper Helper Functions](https://www.postgresql.org/docs/12/fdw-helpers.html) in the PostgreSQL documentation for more information about these functions.
 
 <table class="table" id="helper__fdw_helper"><caption></caption><colgroup><col style="width:35.573122529644266%"><col style="width:64.42687747035573%"></colgroup><thead class="thead">
             <tr class="row">
@@ -385,7 +385,7 @@ You can use the PostgreSQL build extension infrastructure \(PGXS\) to build the 
 
 To use the PGXS infrastructure to generate a shared library for your FDW, create a simple `Makefile` that sets PGXS-specific variables.
 
-> **Note** Refer to [Extension Building Infrastructure](https://www.postgresql.org/docs/9.4/extend-pgxs.html) in the PostgreSQL documentation for information about the `Makefile` variables supported by PGXS.
+> **Note** Refer to [Extension Building Infrastructure](https://www.postgresql.org/docs/12/extend-pgxs.html) in the PostgreSQL documentation for information about the `Makefile` variables supported by PGXS.
 
 For example, the following `Makefile` generates a shared library in the current working directory named `base_fdw.so` from two C source files, base\_fdw\_1.c and base\_fdw\_2.c:
 
@@ -411,7 +411,7 @@ A description of the directives used in this `Makefile` follows:
 
 To package the foreign-data wrapper as a Greenplum Database extension, you create script \(`newfdw--version.sql`\) and control \(`newfdw.control`\) files that register the FDW *handler* and *validator* functions, create the foreign data wrapper, and identify the characteristics of the FDW shared library file.
 
-> **Note** [Packaging Related Objects into an Extension](https://www.postgresql.org/docs/9.4/extend-extensions.html) in the PostgreSQL documentation describes how to package an extension.
+> **Note** [Packaging Related Objects into an Extension](https://www.postgresql.org/docs/12/extend-extensions.html) in the PostgreSQL documentation describes how to package an extension.
 
 Example foreign-data wrapper extension script file named `base_fdw--1.0.sql`:
 

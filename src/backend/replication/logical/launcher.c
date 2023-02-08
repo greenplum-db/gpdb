@@ -372,11 +372,11 @@ retry:
 	}
 
 	/*
-	 * If we reached the sync worker limit per subscription, just exit
-	 * silently as we might get here because of an otherwise harmless race
-	 * condition.
+	 * We don't allow to invoke more sync workers once we have reached the sync
+	 * worker limit per subscription. So, just return silently as we might get
+	 * here because of an otherwise harmless race condition.
 	 */
-	if (nsyncworkers >= max_sync_workers_per_subscription)
+	if (OidIsValid(relid) && nsyncworkers >= max_sync_workers_per_subscription)
 	{
 		LWLockRelease(LogicalRepWorkerLock);
 		return;
@@ -716,8 +716,8 @@ static void
 logicalrep_worker_onexit(int code, Datum arg)
 {
 	/* Disconnect gracefully from the remote side. */
-	if (wrconn)
-		walrcv_disconnect(wrconn);
+	if (LogRepWorkerWalRcvConn)
+		walrcv_disconnect(LogRepWorkerWalRcvConn);
 
 	logicalrep_worker_detach();
 
@@ -1133,7 +1133,7 @@ pg_stat_get_subscription(PG_FUNCTION_ARGS)
 	/* Make sure we get consistent view of the workers. */
 	LWLockAcquire(LogicalRepWorkerLock, LW_SHARED);
 
-	for (i = 0; i <= max_logical_replication_workers; i++)
+	for (i = 0; i < max_logical_replication_workers; i++)
 	{
 		/* for each row */
 		Datum		values[PG_STAT_GET_SUBSCRIPTION_COLS];

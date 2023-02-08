@@ -44,7 +44,7 @@ static double estimate_ndistinct(double totalrows, int numrows, int d, int f1);
 static int	n_choose_k(int n, int k);
 static int	num_combinations(int n);
 
-extern void statistics_scanner_init(const char *query_string);
+extern void statistic_scanner_init(const char *query_string);
 
 /* size of the struct header fields (magic, type, nitems) */
 #define SizeOfHeader		(3 * sizeof(uint32))
@@ -156,7 +156,7 @@ statext_ndistinct_load(Oid mvoid)
 							Anum_pg_statistic_ext_data_stxdndistinct, &isnull);
 	if (isnull)
 		elog(ERROR,
-			 "requested statistic kind \"%c\" is not yet built for statistics object %u",
+			 "requested statistics kind \"%c\" is not yet built for statistics object %u",
 			 STATS_EXT_NDISTINCT, mvoid);
 
 	result = statext_ndistinct_deserialize(DatumGetByteaPP(ndist));
@@ -353,7 +353,7 @@ pg_ndistinct_in(PG_FUNCTION_ARGS)
 	MVNDistinct	   *mvndistinct;
 	int				parse_rc;
 
-	statistics_scanner_init(str);
+	statistic_scanner_init(str);
 	parse_rc = statistic_yyparse();
 	if (parse_rc != 0)
 		ereport(ERROR,
@@ -491,7 +491,7 @@ ndistinct_for_combination(double totalrows, int numrows, HeapTuple *rows,
 				 colstat->attrtypid);
 
 		/* prepare the sort function for this dimension */
-		multi_sort_add_dimension(mss, i, type->lt_opr, type->typcollation);
+		multi_sort_add_dimension(mss, i, type->lt_opr, colstat->attrcollid);
 
 		/* accumulate all the data for this dimension into the arrays */
 		for (j = 0; j < numrows; j++)

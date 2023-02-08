@@ -62,6 +62,12 @@
 /*
  * GUC variables.
  */
+int							gp_resgroup_memory_policy = RESMANAGER_MEMORY_POLICY_NONE;
+bool						gp_log_resgroup_memory = false;
+int							gp_resgroup_memory_query_fixed_mem;
+int							gp_resgroup_memory_policy_auto_fixed_mem;
+bool						gp_resgroup_print_operator_memory_limits = false;
+
 bool						gp_resgroup_debug_wait_queue = true;
 int							gp_resource_group_queuing_timeout = 0;
 
@@ -1425,6 +1431,8 @@ SerializeResGroupInfo(StringInfo str)
 	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
 	itmp = htonl(caps->cpuSoftPriority);
 	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
+	itmp = htonl(caps->memory_limit);
+	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
 
 	cpuset_len = strlen(caps->cpuset);
 	itmp = htonl(cpuset_len);
@@ -1461,6 +1469,9 @@ DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 	capsOut->cpuHardQuotaLimit = ntohl(itmp);
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
 	capsOut->cpuSoftPriority = ntohl(itmp);
+	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
+	capsOut->memory_limit = ntohl(itmp);
+
 
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
 	cpuset_len = ntohl(itmp);
@@ -3288,4 +3299,42 @@ ResGroupGetGroupIdBySessionId(int sessionId)
 	LWLockRelease(SessionStateLock);
 
 	return groupId;
+}
+
+/*
+ * In resource group mode, how much memory should a query take in bytes.
+ */
+uint64
+ResourceGroupGetQueryMemoryLimit(void)
+{
+	ResGroupCaps		*caps;
+	int64	resgLimit = -1;
+	uint64	queryMem = -1;
+
+	Assert(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY);
+
+	if (bypassedGroup)
+		return 0;
+
+	if (gp_resgroup_memory_query_fixed_mem)
+		return (uint64) gp_resgroup_memory_query_fixed_mem * 1024L;
+
+	Assert(selfIsAssigned());
+
+	LWLockAcquire(ResGroupLock, LW_SHARED);
+
+	caps = &self->group->caps;
+	resgLimit = caps->memory_limit;
+
+	AssertImply(resgLimit < 0, resgLimit == -1);
+	if (resgLimit == -1)
+	{
+		LWLockRelease(ResGroupLock);
+		return (uint64) statement_mem * 1024L;
+	}
+
+	queryMem = (uint64)(resgLimit *1024L *1024L / caps->concurrency);
+	LWLockRelease(ResGroupLock);
+
+	return queryMem;
 }

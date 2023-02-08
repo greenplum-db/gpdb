@@ -8,7 +8,10 @@
 //	@doc:
 //		Class representing MD extended stats depencency.
 //
-//		The structure mirrors MVDependency in statistics.h
+//		The structure mirrors MVDependency in statistics.h. One noticable
+//		difference is that that in CMDDependency the attributes are split into
+//		"from" and "to" attributes.  Whereas MVDependency it is a single array
+//		where the last indexed attnum is infered to be the "to" attribute.
 //---------------------------------------------------------------------------
 
 

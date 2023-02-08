@@ -254,3 +254,24 @@ select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n
 select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables where relid = 'mt'::regclass;
 
 reset gp_autostats_mode;
+
+
+-- Test stats creation for AO auxiliary tables
+create table tabstat_ao(i int, j int) using ao_row distributed by (i);
+create index on tabstat_ao(i);
+insert into tabstat_ao select 1,1;
+delete from tabstat_ao;
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+
+select count(*) from pg_stat_all_tables
+where
+    relid = (select segrelid from pg_appendonly where relid = 'tabstat_ao'::regclass)
+    OR relid = (select blkdirrelid from pg_appendonly where relid = 'tabstat_ao'::regclass)
+    OR relid = (select visimaprelid from pg_appendonly where relid = 'tabstat_ao'::regclass);
+
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+select n_tup_ins from pg_stat_all_tables where relid = (select segrelid from pg_appendonly where relid = 'tabstat_ao'::regclass);
+select n_tup_ins from pg_stat_all_tables where relid = (select blkdirrelid from pg_appendonly where relid = 'tabstat_ao'::regclass);
+select n_tup_ins from pg_stat_all_tables where relid = (select visimaprelid from pg_appendonly where relid = 'tabstat_ao'::regclass);
+
+drop table tabstat_ao;

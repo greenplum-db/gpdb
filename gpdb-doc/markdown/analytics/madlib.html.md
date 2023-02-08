@@ -73,13 +73,13 @@ Before you install the MADlib package, make sure that your Greenplum database is
 4.  Unpack the MADlib distribution package. For example:
 
     ```
-    $ tar xzvf madlib-1.18.0+2-gp6-rhel7-x86_64.tar.gz
+    $ tar xzvf madlib-1.18.0+2-gp7-rhel7-x86_64.tar.gz
     ```
 
 5.  Install the software package by running the `gppkg` command. For example:
 
     ```
-    $ gppkg -i ./madlib-1.18.0+2-gp6-rhel7-x86_64/madlib-1.18.0+2-gp6-rhel7-x86_64.gppkg
+    $ gppkg -i ./madlib-1.18.0+2-gp7-rhel7-x86_64/madlib-1.18.0+2-gp7-rhel7-x86_64.gppkg
     ```
 
 
@@ -118,7 +118,7 @@ For information about the upgrade paths that MADlib supports, see the MADlib sup
 To upgrade MADlib, run the `gppkg` utility with the `-u` option. This command upgrades an installed MADlib package to MADlib 1.18.0+2.
 
 ```
-$ gppkg -u madlib-1.18.0+2-gp6-rhel7-x86_64.gppkg
+$ gppkg -u madlib-1.18.0+2-gp7-rhel7-x86_64.gppkg
 ```
 
 ### <a id="topic_bql_bgd_3w"></a>Upgrading MADlib Functions 

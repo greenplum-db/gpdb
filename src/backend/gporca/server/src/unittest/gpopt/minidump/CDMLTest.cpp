@@ -47,6 +47,7 @@ const CHAR *rgszDMLFileNames[] = {
 	"../data/dxl/minidump/InsertSortDistributed2MasterOnly.mdp",
 	"../data/dxl/minidump/InsertProjectSort.mdp",
 	"../data/dxl/minidump/InsertAssertSort.mdp",
+	"../data/dxl/minidump/Delete-Check-AssignedQueryIdForTargetRel.mdp",
 	"../data/dxl/minidump/UpdateRandomDistr.mdp",
 	"../data/dxl/minidump/DeleteRandomDistr.mdp",
 	"../data/dxl/minidump/DeleteRandomlyDistributedTableJoin.mdp",

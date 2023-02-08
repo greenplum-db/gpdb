@@ -255,7 +255,7 @@ In the Python 2 language container, the module `plpy` is implemented. The module
 -   `plpy.warning(msg)` - Sends a WARNING message to the Greenplum Database log.
 -   `plpy.error(msg)` - Sends an ERROR message to the Greenplum Database log. An ERROR message raised in Greenplum Database causes the query execution process to stop and the transaction to rollback.
 -   `plpy.fatal(msg)` - Sends a FATAL message to the Greenplum Database log. A FATAL message causes Greenplum Database session to be closed and transaction to be rolled back.
--   `plpy.subtransaction()` - Manages `plpy.execute` calls in an explicit subtransaction. See [Explicit Subtransactions](https://www.postgresql.org/docs/9.4/plpython-subtransaction.html) in the PostgreSQL documentation for additional information about `plpy.subtransaction()`.
+-   `plpy.subtransaction()` - Manages `plpy.execute` calls in an explicit subtransaction. See [Explicit Subtransactions](https://www.postgresql.org/docs/12/plpython-subtransaction.html) in the PostgreSQL documentation for additional information about `plpy.subtransaction()`.
 
 If an error of level `ERROR` or `FATAL` is raised in a nested Python function call, the message includes the list of enclosing functions.
 
@@ -275,7 +275,7 @@ Also, the Python module has two global dictionary objects that retain the data b
 
 For information about PL/Python, see [PL/Python Language](pl_python.html).
 
-For information about the `plpy` methods, see [https://www.postgresql.org/docs/9.4/plpython-database.htm](https://www.postgresql.org/docs/9.4/plpython-database.html).
+For information about the `plpy` methods, see [https://www.postgresql.org/docs/12/plpython-database.htm](https://www.postgresql.org/docs/12/plpython-database.html).
 
 ### <a id="topic_plc_py3"></a>About PL/Python 3 Functions in PL/Container 
 
@@ -319,11 +319,11 @@ Record the name of the GPU device ID (0 in the above example) or the device UUID
 
 #### Install and Customize the PL/Container Image
 
-1. Download the `plcontainer-python3-image-2.2.0-gp6.tar.gz` file from the **Greenplum Procedural Languages** section on [Tanzu Network](https://network.pivotal.io/products/vmware-tanzu-greenplum).
+1. Download the `plcontainer-python3-image-2.2.0-gp7.tar.gz` file from the **Greenplum Procedural Languages** section on [Tanzu Network](https://network.pivotal.io/products/vmware-tanzu-greenplum).
 
 2. Load the downloaded PL/Container image into Docker:
     ```
-    $ docker image load < plcontainer-python3-image-2.2.0-gp6.tar.gz
+    $ docker image load < plcontainer-python3-image-2.2.0-gp7.tar.gz
     ```
 
 3. Customize the PL/Container image to add the required CUDA runtime and `pycuda` library. The following example Dockerfile contents show how to add CUDA 11.7 and `pycuda` 2021.1 to the PL/Container image. Use a text editor to create the Dockerfile:

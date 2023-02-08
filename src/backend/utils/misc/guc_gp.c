@@ -333,6 +333,7 @@ bool		optimizer_prune_unused_columns;
 bool		optimizer_enable_redistribute_nestloop_loj_inner_child;
 bool		optimizer_force_comprehensive_join_implementation;
 bool		optimizer_enable_replicated_table;
+bool		optimizer_enable_foreign_table;
 
 /* Optimizer plan enumeration related GUCs */
 bool		optimizer_enumerate_plans;
@@ -1639,6 +1640,18 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+
+		{"gp_log_resgroup_memory", PGC_USERSET, LOGGING_WHAT,
+			gettext_noop("Prints out messages related to resource group's memory management."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_log_resgroup_memory,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"gp_resqueue_print_operator_memory_limits", PGC_USERSET, LOGGING_WHAT,
 			gettext_noop("Prints out the memory limit for operators (in explain) assigned by resource queue's "
 						 "memory management."),
@@ -2873,20 +2886,29 @@ struct config_bool ConfigureNamesBool_gp[] =
 		 gettext_noop("Enable replicated tables."),
 		 NULL,
 		 GUC_NOT_IN_SAMPLE
-		 },
-		 &optimizer_enable_replicated_table,
-		 true,
-		 NULL, NULL, NULL
+		},
+		&optimizer_enable_replicated_table,
+		true,
+		NULL, NULL, NULL
 	},
-
+	{
+		{"optimizer_enable_foreign_table", PGC_USERSET, DEVELOPER_OPTIONS,
+		 gettext_noop("Enable foreign tables in Orca."),
+		 NULL,
+		 GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_enable_foreign_table,
+		true,
+		NULL, NULL, NULL
+	},
 	{
 		{"gp_log_suboverflow_statement", PGC_SUSET, LOGGING_WHAT,
 		 gettext_noop("Enable logging of statements that cause subtransaction overflow."),
 		 NULL,
-		 },
-		 &gp_log_suboverflow_statement,
-		 false,
-		 NULL, NULL, NULL
+		},
+		&gp_log_suboverflow_statement,
+		false,
+		NULL, NULL, NULL
 	},
 
 	/* End-of-list marker */
@@ -2959,16 +2981,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&Debug_dtm_action_nestinglevel,
 		DEBUG_DTM_ACTION_NESTINGLEVEL_DEFAULT, 0, 1000,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_safefswritesize", PGC_BACKEND, RESOURCES,
-			gettext_noop("Minimum FS safe write size."),
-			NULL
-		},
-		&gp_safefswritesize,
-		DEFAULT_FS_SAFE_WRITE_SIZE, 0, INT_MAX,
 		NULL, NULL, NULL
 	},
 
@@ -3824,6 +3836,17 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"gp_resgroup_memory_query_fixed_mem", PGC_USERSET, RESOURCES_MEM,
+			gettext_noop("Sets the fixed amount of memory reserved for a query."),
+			NULL,
+			GUC_UNIT_KB | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_resgroup_memory_query_fixed_mem,
+		0, 0, INT_MAX,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"gp_resqueue_memory_policy_auto_fixed_mem", PGC_USERSET, RESOURCES_MEM,
 			gettext_noop("Sets the fixed amount of memory reserved for non-memory intensive operators in the AUTO policy."),
 			NULL,
@@ -3833,6 +3856,17 @@ struct config_int ConfigureNamesInt_gp[] =
 		100, 50, INT_MAX,
 		NULL, NULL, NULL
 	},
+	{
+		{"gp_resgroup_memory_policy_auto_fixed_mem", PGC_USERSET, RESOURCES_MEM,
+			gettext_noop("Sets the fixed amount of memory reserved for non-memory intensive operators in the AUTO policy."),
+			NULL,
+			GUC_UNIT_KB | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_resgroup_memory_policy_auto_fixed_mem,
+		100, 50, INT_MAX,
+		NULL, NULL, NULL
+	},
+
 
 	{
 		{"gp_global_deadlock_detector_period", PGC_SIGHUP, LOCK_MANAGEMENT,
@@ -4633,6 +4667,15 @@ struct config_enum ConfigureNamesEnum_gp[] =
 		&gp_resqueue_memory_policy,
 		RESMANAGER_MEMORY_POLICY_NONE, gp_resqueue_memory_policies,
 		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_resgroup_memory_policy", PGC_SUSET, RESOURCES_MGM,
+			gettext_noop("Sets the policy for memory allocation of queries."),
+			gettext_noop("Valid values are AUTO, EAGER_FREE.")
+		},
+		&gp_resgroup_memory_policy,
+		RESMANAGER_MEMORY_POLICY_EAGER_FREE, gp_resqueue_memory_policies, NULL, NULL
 	},
 
 	{

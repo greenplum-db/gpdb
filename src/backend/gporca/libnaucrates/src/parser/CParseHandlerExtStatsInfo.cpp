@@ -52,6 +52,33 @@ CParseHandlerExtStatsInfo::GetInfo() const
 	return m_extinfo;
 }
 
+CMDExtStatsInfo::Estattype
+CParseHandlerExtStatsInfo::ParseStatKind(const Attributes &attrs) const
+{
+	const XMLCh *parsed_stat_kind = CDXLOperatorFactory::ExtractAttrValue(
+		attrs, EdxltokenKind, EdxltokenExtendedStatsInfo);
+
+	if (0 ==
+		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenMVDependency),
+								 parsed_stat_kind))
+	{
+		return CMDExtStatsInfo::EstatDependencies;
+	}
+	else if (0 == XMLString::compareString(
+					  CDXLTokens::XmlstrToken(EdxltokenMVNDistinct),
+					  parsed_stat_kind))
+	{
+		return CMDExtStatsInfo::EstatNDistinct;
+	}
+	else
+	{
+		// unexpected kind...
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLInvalidAttributeValue,
+				   CDXLTokens::GetDXLTokenStr(EdxltokenKind)->GetBuffer(),
+				   CDXLTokens::GetDXLTokenStr(EdxltokenErrorCode)->GetBuffer());
+	}
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CParseHandlerExtStatsInfo::StartElement
@@ -101,9 +128,8 @@ CParseHandlerExtStatsInfo::StartElement(
 	}
 	keys->Release();
 
-	// TODO: parse kind..
-	m_extinfo = GPOS_NEW(m_mp) CMDExtStatsInfo(
-		m_mp, stat_oid, stat_name, CMDExtStatsInfo::EstatDependencies, bs_keys);
+	m_extinfo = GPOS_NEW(m_mp) CMDExtStatsInfo(m_mp, stat_oid, stat_name,
+											   ParseStatKind(attrs), bs_keys);
 }
 
 //---------------------------------------------------------------------------

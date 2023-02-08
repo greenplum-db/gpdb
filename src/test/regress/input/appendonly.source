@@ -86,9 +86,9 @@ RESET default_table_access_method;
 -- catalog checks
 --------------------
 
--- check pg_appendonly
-SELECT c.relname, a.blocksize, a.compresstype, a.compresslevel, a.checksum FROM pg_class c, pg_appendonly a
-       WHERE c.relname LIKE 'tenk_ao%' AND c.oid=a.relid AND c.relname not like 'tenk_aocs%' ORDER BY c.relname;
+-- check reloptions
+SELECT c.relname, c.reloptions, c.relkind FROM pg_class c
+       WHERE c.relname LIKE 'tenk_ao%' AND c.relname not like 'tenk_aocs%' ORDER BY c.relname;
 
 --------------------
 -- fn needed later
@@ -302,8 +302,8 @@ ANALYZE tenk_ao1;
 ANALYZE tenk_ao2;
 ANALYZE tenk_ao3;
 ANALYZE tenk_ao4;
-SELECT c.relname, a.blocksize, a.compresstype, a.compresslevel, a.checksum FROM pg_class c, pg_appendonly a
-       WHERE c.relname LIKE 'tenk_ao%' AND c.oid=a.relid AND c.relname not like 'tenk_aocs%' ORDER BY c.relname;
+SELECT c.relname, c.reloptions, c.relkind FROM pg_class c
+       WHERE c.relname LIKE 'tenk_ao%' AND c.relname not like 'tenk_aocs%' ORDER BY c.relname;
 SELECT count(*) FROM tenk_ao1;
 SELECT count(*) FROM tenk_ao2;
 SELECT count(*) FROM tenk_ao3;
