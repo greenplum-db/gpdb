@@ -530,7 +530,7 @@ pivotal=# explain select a, c from r, s where a in (select c from r) order by a,
         </dxl:LogicalJoin>
       </dxl:LogicalLimit>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="3164">
+    <dxl:Plan Id="0" SpaceSize="3124">
       <dxl:Limit>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1724.005263" Rows="10.000000" Width="8"/>

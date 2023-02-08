@@ -2776,11 +2776,11 @@ where dt < '2010-01-01'::date;
          Join Filter: true
          ->  Seq Scan on subselect_gp.extra_flow_dist1
                Output: extra_flow_dist1.a, extra_flow_dist1.b
-         ->  Result
+         ->  Materialize
                Output: ((SubPlan 1))
-               Filter: (((SubPlan 1)) < '01-01-2010'::date)
-               ->  Materialize
+               ->  Result
                      Output: ((SubPlan 1))
+                     Filter: (((SubPlan 1)) < '01-01-2010'::date)
                      ->  Seq Scan on subselect_gp.extra_flow_rand
                            Output: (SubPlan 1)
                            SubPlan 1

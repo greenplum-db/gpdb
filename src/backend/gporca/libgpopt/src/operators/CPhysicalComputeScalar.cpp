@@ -261,7 +261,12 @@ CPhysicalComputeScalar::PrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 ) const
 {
 	GPOS_ASSERT(0 == child_index);
-
+	if (prsRequired->IsOriginNLJoin())
+	{
+		CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
+			CRewindabilitySpec::ErtNone, prsRequired->Emht());
+		return prs;
+	}
 	return PrsPassThru(mp, exprhdl, prsRequired, child_index);
 }
 

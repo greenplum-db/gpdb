@@ -453,7 +453,7 @@
         </dxl:LogicalGet>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="22026">
+    <dxl:Plan Id="0" SpaceSize="22142">
       <dxl:HashJoin JoinType="Inner">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1724.001472" Rows="1.000000" Width="8"/>
