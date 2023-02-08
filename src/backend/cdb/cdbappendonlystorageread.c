@@ -914,7 +914,7 @@ AppendOnlyStorageRead_ReadNextBlock(AppendOnlyStorageRead *storageRead)
 		/* UNDONE: Finish the read for the information only header. */
 	}
 
-	SIMPLE_FAULT_INJECTOR("AppendOnlyStorageRead_ReadNextBlock_success");
+	FaultInjector_InjectFaultIfSet("AppendOnlyStorageRead_ReadNextBlock_success", DDLNotSpecified, "", storageRead->relationName);
 
 	return true;
 }
