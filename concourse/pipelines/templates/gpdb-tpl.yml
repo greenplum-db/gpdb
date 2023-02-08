@@ -57,6 +57,9 @@
 ## NOTE: only one anchors section is allowed per file, so we define this
 ##  at the top of the file so anchors are usable as early as possible.
 anchors:
+- &default_platform
+  PLATFORM: [[ os_type ]]-gpdb6
+
 - &ccp_default_params
   action: create
   delete_on_failure: true
@@ -66,7 +69,7 @@ anchors:
 
 - &ccp_default_vars
   instance_type: n1-standard-1
-  PLATFORM: [[ os_type ]]
+  <<: *default_platform
 
 - &destroy_common
   action: destroy
@@ -106,7 +109,7 @@ anchors:
   BUCKET_PATH: clusters-google/
   BUCKET_NAME: ((tf-bucket-name))
   CLOUD_PROVIDER: google
-  PLATFORM: [[ os_type ]]
+  <<: *default_platform
 
 - &set_failed
   do:
@@ -637,12 +640,16 @@ resources:
 {% endif %}
 {% endif %}
 
+{% if pipeline_configuration == "prod" or directed_release %}
+{% if not directed_release %}
 - name: bin_gpdb_[[ os_type ]]_rc
   type: gcs
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: server/published/gpdb6/server-rc-(.*)-[[ os_type ]]_x86_64((rc-build-type-gcs)).tar.gz
+{% endif %}
+{% endif %}
 
 {% if pipeline_configuration == "prod" or build_test_rc_rpm %}
 {% if os_type != "ubuntu18.04" %}
@@ -1007,6 +1014,8 @@ jobs:
           {% if os_type == "ubuntu18.04" %}
           globs: [greenplum-db-6*-[[ dist ]]-amd64.deb]
           {% elif os_type == "rocky8" %}
+          globs: [greenplum-db-6*-rhel8-x86_64.rpm]
+          {% elif os_type == "oel8" %}
           globs: [greenplum-db-6*-rhel8-x86_64.rpm]
           {% else %}
           globs: [greenplum-db-6*-[[ dist ]]-x86_64.rpm]
@@ -1597,13 +1606,11 @@ jobs:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
-        PLATFORM: [[ os_type ]]
         instance_type: n1-standard-2
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-      PLATFORM: [[ os_type ]]
   - task: gpinitsystem
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
