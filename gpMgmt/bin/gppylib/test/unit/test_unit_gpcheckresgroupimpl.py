@@ -30,7 +30,7 @@ class GpCheckResGroupImplCGroup(unittest.TestCase):
         os.mkdir(os.path.join(self.cgroup_mntpnt, "cpuacct"), 0o755)
         os.mkdir(os.path.join(self.cgroup_mntpnt, "cpuset"), 0o755)
 
-        self.cgroup = gpcheckresgroupimpl.CgroupValidationVersionAlpha()
+        self.cgroup = gpcheckresgroupimpl.CgroupValidationVersionOne()
         self.cgroup.mount_point = self.cgroup_mntpnt
         self.cgroup.die = self.mock_cgroup_die
         self.cgroup.compdirs = self.cgroup.fallback_comp_dirs()

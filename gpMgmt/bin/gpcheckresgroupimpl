@@ -37,7 +37,7 @@ class CgroupValidation(object):
         return ""
 
 
-class CgroupValidationVersionAlpha(CgroupValidation):
+class CgroupValidationVersionOne(CgroupValidation):
     def __init__(self):
         self.mount_point = self.detect_cgroup_mount_point()
         self.tab = {"r": os.R_OK, "w": os.W_OK, "x": os.X_OK, "f": os.F_OK}
@@ -181,7 +181,7 @@ class CgroupValidationVersionAlpha(CgroupValidation):
 if __name__ == '__main__':
     if sys.platform.startswith('linux'):
         try:
-            CgroupValidationVersionAlpha().validate_all()
+            CgroupValidationVersionOne().validate_all()
         except ValidationException as e:
             exit(e.message)
     else:
