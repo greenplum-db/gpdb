@@ -63,6 +63,12 @@
 
 using namespace gpopt;
 
+static BOOL MapConstantConjunctiveScalarPredicates(
+	CMemoryPool *mp, CExpression *pexprFilter, IdentToExprMap *phmIdentToExpr);
+
+static CExpression *SubstituteConstantIdentifier(
+	CMemoryPool *mp, CExpression *pexpr, IdentToExprMap *phmIdentToExpr);
+
 // maximum number of equality predicates to be derived from existing equalities
 #define GPOPT_MAX_DERIVED_PREDS 50
 
@@ -1972,6 +1978,7 @@ MapConstantConjunctiveScalarPredicates(CMemoryPool *mp,
 	if (COperator::EopScalarCmp == pop->Eopid() &&
 		IMDType::EcmptEq == CScalarCmp::PopConvert(pop)->ParseCmpType())
 	{
+		// the following section handles predicates of the kind (a = 10)
 		if (COperator::EopScalarIdent == (*pexprFilter)[0]->Pop()->Eopid() &&
 			COperator::EopScalarConst == (*pexprFilter)[1]->Pop()->Eopid())
 		{
@@ -1981,6 +1988,7 @@ MapConstantConjunctiveScalarPredicates(CMemoryPool *mp,
 				CScalarIdent::PopConvert((*pexprFilter)[0]->Pop()),
 				(*pexprFilter)[1]);
 		}
+		// the following section handles predicates of the kind (10 = a)
 		else if (COperator::EopScalarConst ==
 					 (*pexprFilter)[0]->Pop()->Eopid() &&
 				 COperator::EopScalarIdent == (*pexprFilter)[1]->Pop()->Eopid())
@@ -2015,6 +2023,7 @@ MapConstantConjunctiveScalarPredicates(CMemoryPool *mp,
 	return true;
 }
 
+// Create a new expression from an exression and map of ident to const
 static CExpression *
 SubstituteConstantIdentifier(CMemoryPool *mp, CExpression *pexpr,
 							 IdentToExprMap *phmIdentToExpr)
@@ -2073,7 +2082,7 @@ SubstituteConstantIdentifier(CMemoryPool *mp, CExpression *pexpr,
 //
 // Notice that the join predicate references columns (a, b, and c) coming from
 // both sides of the join. Typically this means the predicate cannot be pushed
-// down.  However, the select filter above the join predicate filters on c=0.
+// down.  However, the select filter above the join predicate filters on c=2.
 // We can utilize that in conjunction with the join condition to filter out
 // more rows. We do that outputing:
 //
@@ -2101,7 +2110,7 @@ SubstituteConstantIdentifier(CMemoryPool *mp, CExpression *pexpr,
 //       |--CScalarIdent "c" (0)
 //       +--CScalarConst (2)
 CExpression *
-CExpressionPreprocessor::PexprSubstitutePredicateConstants(
+CExpressionPreprocessor::PexprReplaceColWithConst(
 	CMemoryPool *mp, CExpression *pexpr, IdentToExprMap *phmIdentToExpr)
 {
 	GPOS_ASSERT(nullptr != pexpr);
@@ -2113,9 +2122,10 @@ CExpressionPreprocessor::PexprSubstitutePredicateConstants(
 		 COperator::EopLogicalNAryJoin == ((*pexpr)[0])->Pop()->Eopid()))
 	{
 		phmIdentToExpr = GPOS_NEW(mp) IdentToExprMap(mp);
-		if (!MapConstantConjunctiveScalarPredicates(
-				mp, (*pexpr)[pexpr->Arity() - 1], phmIdentToExpr) ||
-			phmIdentToExpr->Size() == 0)
+		BOOL isConjunctiveEqualityFilter =
+			MapConstantConjunctiveScalarPredicates(
+				mp, (*pexpr)[pexpr->Arity() - 1], phmIdentToExpr);
+		if (!isConjunctiveEqualityFilter || phmIdentToExpr->Size() == 0)
 		{
 			pexpr->AddRef();
 			phmIdentToExpr->Release();
@@ -2123,7 +2133,7 @@ CExpressionPreprocessor::PexprSubstitutePredicateConstants(
 		}
 
 		CExpression *pexprNew =
-			PexprSubstitutePredicateConstants(mp, pexpr, phmIdentToExpr);
+			PexprReplaceColWithConst(mp, pexpr, phmIdentToExpr);
 		phmIdentToExpr->Release();
 
 		return pexprNew;
@@ -2136,7 +2146,7 @@ CExpressionPreprocessor::PexprSubstitutePredicateConstants(
 	for (ULONG ul = 0; ul < ulChildren; ul++)
 	{
 		CExpression *pexprChild =
-			PexprSubstitutePredicateConstants(mp, (*pexpr)[ul], phmIdentToExpr);
+			PexprReplaceColWithConst(mp, (*pexpr)[ul], phmIdentToExpr);
 		pdrgpexpr->Append(pexprChild);
 	}
 
@@ -3293,16 +3303,16 @@ CExpressionPreprocessor::PexprPreprocess(
 	pexprOuterRefsEleminated->Release();
 
 	// (7) substitute constant predicates
-	CExpression *pexprSubstitutePredicateConstants =
-		PexprSubstitutePredicateConstants(mp, pexprTrimmed2, nullptr);
+	CExpression *pexprPredWithConstReplaced =
+		PexprReplaceColWithConst(mp, pexprTrimmed2, nullptr);
 	GPOS_CHECK_ABORT;
 	pexprTrimmed2->Release();
 
 	// (8) simplify quantified subqueries
-	CExpression *pexprSubqSimplified = PexprSimplifyQuantifiedSubqueries(
-		mp, pexprSubstitutePredicateConstants);
+	CExpression *pexprSubqSimplified =
+		PexprSimplifyQuantifiedSubqueries(mp, pexprPredWithConstReplaced);
 	GPOS_CHECK_ABORT;
-	pexprSubstitutePredicateConstants->Release();
+	pexprPredWithConstReplaced->Release();
 
 	// (9) do preliminary unnesting of scalar subqueries
 	CExpression *pexprSubqUnnested =
