@@ -351,7 +351,7 @@ USING <access_method>
 
   <p class="note">
 <strong>Note:</strong>
-Although you can specify the table's access method using <code>WITH (appendoptimized=true|false, orientation=row|column)</code> VMware recommends that you use <code>USING &ltaccess_method></code> instead.
+Although you can specify the table's access method using <code>WITH (appendoptimized=true|false, orientation=row|column)</code> VMware recommends that you use <code>USING access_method></code> instead.
 </p>
   
 WITH \( storage\_parameter=value \)
@@ -452,9 +452,9 @@ checksum
 : This option is valid only for append-optimized tables \(`appendoptimized=TRUE`\). The value `TRUE` is the default and enables CRC checksum validation for append-optimized tables. The checksum is calculated during block creation and is stored on disk. Checksum validation is performed during block reads. If the checksum calculated during the read does not match the stored checksum, the transaction is cancelled. If you set the value to `FALSE` to deactivate checksum validation, checking the table data for on-disk corruption will not be performed.
 
 compresstype
-: Set to `ZLIB` \(the default\), `ZSTD`, `RLE_TYPE`, or `QUICKLZ`[^1] to specify the type of compression used. The value `NONE` deactivates compression. Zstd provides for both speed and a good compression ratio, tunable with the `compresslevel` option. QuickLZ and zlib are provided for backwards-compatibility. Zstd outperforms these compression types on usual workloads. The `compresstype` option is only valid if `appendoptimized=TRUE`.
+: Set to `ZLIB` \(the default\), `ZSTD`, `RLE_TYPE`, or `QUICKLZ` <sup>1</sup> to specify the type of compression used. The value `NONE` deactivates compression. Zstd provides for both speed and a good compression ratio, tunable with the `compresslevel` option. QuickLZ and zlib are provided for backwards-compatibility. Zstd outperforms these compression types on usual workloads. The `compresstype` option is only valid if `appendoptimized=TRUE`.
 
-    [^1]1QuickLZ compression is available only in the commercial release of VMware Greenplum.
+    <sup>1<sup>QuickLZ compression is available only in the commercial release of VMware Greenplum.
 
     The value `RLE_TYPE`, which is supported only if `orientation`=`column` is specified, enables the run-length encoding \(RLE\) compression algorithm. RLE compresses data better than the Zstd, zlib, or QuickLZ compression algorithms when the same data value occurs in many consecutive rows.
 
