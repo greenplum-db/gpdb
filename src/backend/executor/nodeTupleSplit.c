@@ -103,8 +103,6 @@ ExecInitTupleSplit(TupleSplit *node, EState *estate, int eflags)
 		i ++;
 	}
 
-	tup_spl_state->maxAttrNum = maxAttrNum;
-
 	/*
 	 * fetch group by expr bitmap set
 	 */
@@ -142,6 +140,15 @@ ExecInitTupleSplit(TupleSplit *node, EState *estate, int eflags)
 			bms_union(orig_bms, skip_split_bms);
 		bms_free(orig_bms);
 	}
+
+	/*
+	 * Update maxAttrNum which is used to calculate projection number
+	 * of ExecTupleSplit
+	 */
+	int x = bms_prev_member(skip_split_bms, -1);
+	if (x > maxAttrNum)
+		maxAttrNum = x;
+	tup_spl_state->maxAttrNum = maxAttrNum;
 
 	bms_free(skip_split_bms);
 

@@ -541,3 +541,13 @@ explain (verbose on, costs off) select sum(Distinct b), count(c) filter(where c 
 select sum(Distinct b), count(c) filter(where c > 1), sum(a) from dqa_f3;
 
 drop table dqa_f3;
+
+-- Test some corner case of dqa ex.NULL
+create table dqa_f4(a int, b int, c int);
+insert into dqa_f4 values(null, null, null);
+insert into dqa_f4 values(1, 1, 1);
+insert into dqa_f4 values(2, 2, 2);
+
+select count(distinct a), count(distinct b) from dqa_f4 group by c;
+
+drop table dqa_f4;
