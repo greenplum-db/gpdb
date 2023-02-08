@@ -191,3 +191,6 @@ int gp_vmem_protect_gang_cache_limit = 500;
 
 /* Parallel cursor concurrency limit */
 int	gp_max_parallel_cursors = -1;
+
+/* Utility mode restriction */
+bool should_reject_connection = false;

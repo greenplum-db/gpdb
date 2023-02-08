@@ -4605,6 +4605,10 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 									 errmsg("-c %s requires a value",
 											optarg)));
 					}
+
+					if (strcmp(name, "gp_role") == 0 && strcmp(value, "utility") == 0)
+						should_reject_connection = false;
+
 					SetConfigOption(name, value, ctx, gucsource);
 					free(name);
 					if (value)
