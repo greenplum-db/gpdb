@@ -13864,13 +13864,13 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			for (int i = 0; i < numExternalPartitions; i++)
 			{
 				int maxParLevel = atoi(PQgetvalue(getExternalPartsResult, i, i_parlevel));
-				int lookupSubRootHierarchyIndex[maxParLevel];
+				int *lookupSubRootHierarchyIndex = (int *) pg_malloc(maxParLevel * sizeof(int));
 				Oid relOid = atooid(PQgetvalue(getExternalPartsResult, i, i_reloid));
 				TableInfo *relInfo = findTableByOid(relOid);
 				char *parentOid = PQgetvalue(getExternalPartsResult, i, i_parparentrule);
-				char *qualTmpExtTable = qualTmpExtTable = pg_strdup(fmtQualifiedId(fout->remoteVersion,
-																				   tbinfo->dobj.namespace->dobj.name,
-																				   relInfo->dobj.name));
+				char *qualTmpExtTable = pg_strdup(fmtQualifiedId(fout->remoteVersion,
+																 tbinfo->dobj.namespace->dobj.name,
+																 relInfo->dobj.name));
 
 				/* Start of the ALTER TABLE EXCHANGE PARTITION statement */
 				appendPQExpBuffer(q, "ALTER TABLE %s ", qualrelname);
@@ -13952,6 +13952,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 				appendPQExpBuffer(q, "DROP TABLE %s;\n", qualTmpExtTable);
 
 				free(qualTmpExtTable);
+				free(lookupSubRootHierarchyIndex);
 			}
 
 			PQclear(getPartHierarchyResult);
