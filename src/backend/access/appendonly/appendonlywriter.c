@@ -42,6 +42,7 @@
 #include "utils/guc.h"
 #include "utils/int8.h"
 #include "utils/snapmgr.h"
+#include "utils/syscache.h"
 
 #define SEGFILE_CAPACITY_THRESHOLD	0.9
 
@@ -332,9 +333,6 @@ ChooseSegnoForCompaction(Relation rel, List *avoid_segnos)
 static bool
 ShouldUseReservedSegno(Relation rel, choose_segno_mode mode)
 {
-	Relation pg_class;
-	ScanKeyData scankey[1];
-	SysScanDesc scan;
 	HeapTuple tuple;
 	TransactionId xmin;
 
@@ -345,21 +343,13 @@ ShouldUseReservedSegno(Relation rel, choose_segno_mode mode)
 	if (mode != CHOOSE_MODE_WRITE)
 		return false;
 
-	ScanKeyInit(&scankey[0],
-				Anum_pg_class_oid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(RelationGetRelid(rel)));
-	pg_class = table_open(RelationRelationId, AccessShareLock);
-	scan = systable_beginscan(pg_class, ClassOidIndexId, true,
-							  NULL, 1, scankey);
-	tuple = systable_getnext(scan);
-	if (!tuple)
+	tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(RelationGetRelid(rel)));
+	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "unable to find relation entry in pg_class for %s",
 			 RelationGetRelationName(rel));
 	
 	xmin = HeapTupleHeaderGetXmin(tuple->t_data);
-	systable_endscan(scan);
-	table_close(pg_class, NoLock);
+	ReleaseSysCache(tuple);
 
 	return TransactionIdIsCurrentTransactionId(xmin);
 }
