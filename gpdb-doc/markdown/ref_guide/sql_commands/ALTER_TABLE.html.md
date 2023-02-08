@@ -57,7 +57,7 @@ where <action> is one of:
   CLUSTER ON <index_name>
   SET WITHOUT CLUSTER
   SET WITHOUT OIDS
-  SET ACCESS METHOD <access_method>  WITH (<storage_parameter> = <value>)
+  SET ACCESS METHOD <access_method>  WITH ( <storage_parameter> = <value> )
   SET (<storage_parameter> = <value>)
   RESET (<storage_parameter> [, ... ])
   SET  WITH (<storage_parameter> = <value>)
@@ -117,7 +117,7 @@ where partition\_element is:
   | START ([<datatype>] '<start_value>') [INCLUSIVE | EXCLUSIVE]
      [ END ([<datatype>] '<end_value>') [INCLUSIVE | EXCLUSIVE] ]
   | END ([<datatype>] '<end_value>') [INCLUSIVE | EXCLUSIVE]
-[ WITH ( <storage_parameter>=<value> [, ... ] ) ]
+[ WITH ( <storage_parameter> = value> [ , ... ] ) ]
 [ TABLESPACE <tablespace> ]
 ```
 
@@ -173,7 +173,7 @@ where storage\_parameter when used with the `SET WITH` command is:
    fillfactor={10-100}
    checksum={true | false }
    reorganize={true | false }
-   vacuum_index_cleanup {true | false } 
+   vacuum_index_cleanup { true | false } 
 ```
 
   <p class="note">
@@ -544,7 +544,7 @@ Move a table to a different schema:
 ALTER TABLE myschema.distributors SET SCHEMA yourschema;
 ```
 
-Change a table's access method to ao_row:
+Change a table's access method to `ao_row`:
 
 ```
 ALTER TABLE distributors SET ACCESS METHOD ao_row;
@@ -572,13 +572,13 @@ Change all future partitions of a table to have an access method of `heap`, leav
 
 ALTER TABLE ONLY sales SET ACCESS METHOD heap;
 
-Add a column and change the table's access method, simultaneously:
+Add a column and change the table's access method:
 
 ```
 ALTER TABLE distributors SET ACCESS METHOD ao_row, ADD column j int;
 ```
 
-Add a column and change table storage parameters simultaneously:
+Add a column and change table storage parameters:
 
 ```
 ALTER TABLE distributors SET (compresslevel=7), ADD COLUMN k int;
