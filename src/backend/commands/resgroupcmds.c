@@ -289,7 +289,9 @@ DropResourceGroup(DropResourceGroupStmt *stmt)
 	groupid = ((Form_pg_resgroup) GETSTRUCT(tuple))->oid;
 
 	/* cannot DROP default resource groups  */
-	if (groupid == DEFAULTRESGROUP_OID || groupid == ADMINRESGROUP_OID)
+	if (groupid == DEFAULTRESGROUP_OID
+		|| groupid == ADMINRESGROUP_OID
+		|| groupid == DEFAULTAUXILIARY_OID)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("cannot drop default resource group \"%s\"",

@@ -115,6 +115,7 @@ DROP RESOURCE GROUP non_exist_group;
 -- can't drop reserved resource groups
 DROP RESOURCE GROUP default_group;
 DROP RESOURCE GROUP admin_group;
+DROP RESOURCE GROUP system_group;
 DROP RESOURCE GROUP none;
 
 -- positive

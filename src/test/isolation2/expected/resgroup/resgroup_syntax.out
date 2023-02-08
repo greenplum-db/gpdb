@@ -218,6 +218,8 @@ DROP RESOURCE GROUP default_group;
 ERROR:  cannot drop default resource group "default_group"
 DROP RESOURCE GROUP admin_group;
 ERROR:  cannot drop default resource group "admin_group"
+DROP RESOURCE GROUP system_group;
+ERROR:  cannot drop default resource group "system_group"
 DROP RESOURCE GROUP none;
 ERROR:  resource group "none" does not exist
 
