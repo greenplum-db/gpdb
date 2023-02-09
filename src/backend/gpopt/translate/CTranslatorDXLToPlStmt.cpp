@@ -3094,9 +3094,9 @@ CTranslatorDXLToPlStmt::TranslateDXLSort(
 	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
 {
 	// Ensure operator of sort_dxlnode exists and is EdxlopPhysicalSort
-	CDXLOperator *sort_dxlop = sort_dxlnode->GetOperator();
-	GPOS_ASSERT(nullptr != sort_dxlop);
-	GPOS_ASSERT(EdxlopPhysicalSort == sort_dxlop->GetDXLOperator());
+	GPOS_ASSERT(nullptr != sort_dxlnode->GetOperator());
+	GPOS_ASSERT(EdxlopPhysicalSort ==
+				sort_dxlnode->GetOperator()->GetDXLOperator());
 
 	// create sort plan node
 	Sort *sort = MakeNode(Sort);

@@ -1358,7 +1358,7 @@ CTranslatorExprToDXL::PdxlnDynamicTableScan(
 	{
 		const CBitSet *bs = pps_reqd->SelectorIds(popDTS->ScanId());
 		CBitSetIter bsi(*bs);
-		for (ULONG ul = 0; bsi.Advance(); ul++)
+		while (bsi.Advance())
 		{
 			selector_ids->Append(GPOS_NEW(m_mp) ULONG(bsi.Bit()));
 		}
@@ -1458,7 +1458,7 @@ CTranslatorExprToDXL::PdxlnDynamicBitmapTableScan(
 	{
 		const CBitSet *bs = pps_reqd->SelectorIds(pop->ScanId());
 		CBitSetIter bsi(*bs);
-		for (ULONG ul = 0; bsi.Advance(); ul++)
+		while (bsi.Advance())
 		{
 			selector_ids->Append(GPOS_NEW(m_mp) ULONG(bsi.Bit()));
 		}
@@ -1561,7 +1561,7 @@ CTranslatorExprToDXL::PdxlnDynamicIndexScan(
 	{
 		const CBitSet *bs = pps_reqd->SelectorIds(popDIS->ScanId());
 		CBitSetIter bsi(*bs);
-		for (ULONG ul = 0; bsi.Advance(); ul++)
+		while (bsi.Advance())
 		{
 			selector_ids->Append(GPOS_NEW(m_mp) ULONG(bsi.Bit()));
 		}
@@ -4824,7 +4824,7 @@ CTranslatorExprToDXL::PdxlnPartitionSelector(
 	GPOS_ASSERT(nullptr != bs);
 	ULongPtrArray *parts = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
 	CBitSetIter bsi(*bs);
-	for (ULONG ul = 0; bsi.Advance(); ul++)
+	while (bsi.Advance())
 	{
 		parts->Append(GPOS_NEW(m_mp) ULONG(bsi.Bit()));
 	}
