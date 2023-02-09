@@ -4955,16 +4955,13 @@ EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st1(1, 2);
    ->  Foreign Scan on public.ft1
          Output: ft1.c3
          Remote SQL: SELECT c3 FROM "S 1"."T 1" WHERE (("C 1" = 1))
-   ->  Result
+   ->  Materialize
          Output: ft2.c3
-         Filter: (ft2.c1 = 2)
-         ->  Materialize
-               Output: ft2.c1, ft2.c3
-               ->  Foreign Scan on public.ft2
-                     Output: ft2.c1, ft2.c3
-                     Remote SQL: SELECT "C 1", c3 FROM "S 1"."T 1"
+         ->  Foreign Scan on public.ft2
+               Output: ft2.c3
+               Remote SQL: SELECT c3 FROM "S 1"."T 1" WHERE (("C 1" = 2))
  Optimizer: Pivotal Optimizer (GPORCA)
-(15 rows)
+(12 rows)
 
 EXECUTE st1(1, 1);
   c3   |  c3   

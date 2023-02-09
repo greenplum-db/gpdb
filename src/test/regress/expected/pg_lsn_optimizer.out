@@ -85,12 +85,13 @@ SELECT DISTINCT (i || '/' || j)::pg_lsn f
                      ->  Result
                            Filter: (generate_series_2.generate_series <= 10)
                            ->  Function Scan on generate_series generate_series_2
-                     ->  Result
-                           Filter: ((generate_series_1.generate_series > 0) AND (generate_series_1.generate_series <= 10))
-                           ->  Function Scan on generate_series generate_series_1
+                     ->  Materialize
+                           ->  Result
+                                 Filter: ((generate_series_1.generate_series > 0) AND (generate_series_1.generate_series <= 10))
+                                 ->  Function Scan on generate_series generate_series_1
                ->  Function Scan on generate_series
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(16 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(17 rows)
 
 SELECT DISTINCT (i || '/' || j)::pg_lsn f
   FROM generate_series(1, 10) i,
