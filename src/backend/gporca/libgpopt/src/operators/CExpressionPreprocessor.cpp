@@ -63,7 +63,7 @@
 
 using namespace gpopt;
 
-static BOOL UpdateExprToConstantPredicateMapping(
+static void UpdateExprToConstantPredicateMapping(
 	CMemoryPool *mp, CExpression *pexprFilter,
 	ExprToConstantMap *phmExprToConst, BOOL doInsert);
 
@@ -1968,9 +1968,8 @@ CExpressionPreprocessor::PexprRemoveUnusedCTEs(CMemoryPool *mp,
 // Create an identifier to constant map
 //
 // Given a select filter expression, map all conjunctive equality between an
-// identifier and a constant value. If an expression inside the filter is found
-// to be disjunctive, then return false.
-static BOOL
+// identifier and a constant value.
+static void
 UpdateExprToConstantPredicateMapping(CMemoryPool *mp, CExpression *pexprFilter,
 									 ExprToConstantMap *phmExprToConst,
 									 BOOL doInsert)
@@ -2016,22 +2015,10 @@ UpdateExprToConstantPredicateMapping(CMemoryPool *mp, CExpression *pexprFilter,
 		const ULONG ulChildren = pexprFilter->Arity();
 		for (ULONG ul = 0; ul < ulChildren; ul++)
 		{
-			if (!UpdateExprToConstantPredicateMapping(mp, (*pexprFilter)[ul],
-													  phmExprToConst, doInsert))
-			{
-				return false;
-			}
+			UpdateExprToConstantPredicateMapping(mp, (*pexprFilter)[ul],
+												 phmExprToConst, doInsert);
 		}
 	}
-	else if (CPredicateUtils::FOr(pexprFilter))
-	{
-		// if predicate is (a=42 AND b=42) OR a=100
-		// then neither 'a' nor 'b' can be mapped for substitution...
-		//
-		// bail out...
-		return false;
-	}
-	return true;
 }
 
 // Create a new expression from an exression and map of ident to const
@@ -2131,9 +2118,9 @@ CExpressionPreprocessor::PexprReplaceColWithConst(
 		(COperator::EopLogicalLeftOuterJoin == ((*pexpr)[0])->Pop()->Eopid() ||
 		 COperator::EopLogicalNAryJoin == ((*pexpr)[0])->Pop()->Eopid()))
 	{
-		BOOL isConjunctiveEqualityFilter = UpdateExprToConstantPredicateMapping(
-			mp, (*pexpr)[pexpr->Arity() - 1], phmExprToConst, true);
-		if (!isConjunctiveEqualityFilter || phmExprToConst->Size() == 0)
+		UpdateExprToConstantPredicateMapping(mp, (*pexpr)[pexpr->Arity() - 1],
+											 phmExprToConst, true);
+		if (phmExprToConst->Size() == 0)
 		{
 			pexpr->AddRef();
 			return pexpr;
