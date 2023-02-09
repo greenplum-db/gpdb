@@ -322,20 +322,6 @@ public:
 	// check if the given expression of the form "col is not null"
 	static BOOL FNotNullCheckOnColumn(CExpression *pexpr, CColRef *colref);
 
-	// check if the given expression is a disjunction of scalar cmp
-	// expressions on the given column
-	static BOOL IsDisjunctionOfRangeComparison(CMemoryPool *mp,
-											   CExpression *pexpr,
-											   CColRef *colref,
-											   CColRefSet *pcrsAllowedRefs,
-											   BOOL allowNotEqualPreds);
-
-	// check if the given comparison type is one of the range comparisons, i.e.
-	// LT, GT, LEq, GEq, Eq
-	static BOOL FRangeComparison(CExpression *expr, CColRef *colref,
-								 CColRefSet *pcrsAllowedRefs,
-								 BOOL allowNotEqualPreds);
-
 	// create disjunction
 	static CExpression *PexprDisjunction(CMemoryPool *mp,
 										 CExpressionArray *Pdrgpexpr);

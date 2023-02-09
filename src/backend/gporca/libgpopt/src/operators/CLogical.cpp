@@ -1216,28 +1216,6 @@ CLogical::PstatsDeriveDummy(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CLogical::PexprPartPred
-//
-//	@doc:
-//		Compute partition predicate to pass down to n-th child
-//
-//---------------------------------------------------------------------------
-CExpression *
-CLogical::PexprPartPred(CMemoryPool *,		  //mp,
-						CExpressionHandle &,  //exprhdl,
-						CExpression *,		  //pexprInput,
-						ULONG				  //child_index
-) const
-{
-	GPOS_CHECK_ABORT;
-
-	// the default behavior is to never pass down any partition predicates
-	return nullptr;
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CLogical::PdpCreate
 //
 //	@doc:

@@ -277,12 +277,6 @@ public:
 								 CColRefSet *pcrsInput,
 								 ULONG child_index) const = 0;
 
-	// compute partition predicate to pass down to n-th child
-	virtual CExpression *PexprPartPred(CMemoryPool *mp,
-									   CExpressionHandle &exprhdl,
-									   CExpression *pexprInput,
-									   ULONG child_index) const;
-
 	//-------------------------------------------------------------------------------------
 	// Transformations
 	//-------------------------------------------------------------------------------------

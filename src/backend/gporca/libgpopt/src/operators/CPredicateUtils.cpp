@@ -152,28 +152,6 @@ CPredicateUtils::FComparison(
 	return false;
 }
 
-// Is the given expression a range comparison only between the given column and
-// an expression involving only the allowed columns. If the allowed columns set
-// is NULL, then we only want constant comparisons.
-// Also, the comparison type must be one of: LT, GT, LEq, GEq, Eq
-// NEq is allowed only when requested by the caller
-BOOL
-CPredicateUtils::FRangeComparison(
-	CExpression *pexpr, CColRef *colref,
-	CColRefSet
-		*pcrsAllowedRefs,  // other column references allowed in the comparison
-	BOOL allowNotEqualPreds)
-{
-	if (!FComparison(pexpr, colref, pcrsAllowedRefs))
-	{
-		return false;
-	}
-	IMDType::ECmpType cmp_type =
-		CScalarCmp::PopConvert(pexpr->Pop())->ParseCmpType();
-	return (IMDType::EcmptOther != cmp_type &&
-			(allowNotEqualPreds || IMDType::EcmptNEq != cmp_type));
-}
-
 BOOL
 CPredicateUtils::FIdentCompareOuterRefExprIgnoreCast(
 	CExpression *pexpr,
@@ -1347,6 +1325,7 @@ CPredicateUtils::PexprPartPruningPredicate(
 	CExpression *pexprCol,	// predicate on pcrPartKey obtained from pcnstr
 	CColRefSet *pcrsAllowedRefs, BOOL allow_not_equals_preds)
 {
+	GPOS_ASSERT(nullptr != pcrsAllowedRefs);
 	CExpressionArray *pdrgpexprResult = GPOS_NEW(mp) CExpressionArray(mp);
 
 	// Assert that pexprCol is an expr on pcrPartKey only and no other colref
@@ -1358,45 +1337,17 @@ CPredicateUtils::PexprPartPruningPredicate(
 	{
 		CExpression *pexpr = (*pdrgpexpr)[ul];
 
-		if (nullptr != pcrsAllowedRefs)
+		CExpression *canonical_expr = ValidatePartPruningExpr(
+			mp, pexpr, pcrPartKey, pcrsAllowedRefs, allow_not_equals_preds);
+
+		if (nullptr != canonical_expr)
 		{
-			CExpression *canonical_expr = ValidatePartPruningExpr(
-				mp, pexpr, pcrPartKey, pcrsAllowedRefs, allow_not_equals_preds);
-
-			if (nullptr != canonical_expr)
-			{
-				pdrgpexprResult->Append(canonical_expr);
-			}
-
-			// pexprCol contains a predicate only on partKey, which is useless for
-			// dynamic partition selection, so ignore it here
-			pexprCol = nullptr;
+			pdrgpexprResult->Append(canonical_expr);
 		}
-		else
-		{
-			// This may look like dead code, but it is actually used in
-			// CLogicalSelect::PexprPredPart().
-			// GPDB_12_MERGE_FIXME: Remove this & CLogicalSelect::PexprPredPart()
 
-			// (NULL == pcrsAllowedRefs) implies static partition elimination, since
-			// the expressions we select can only contain the partition key
-			// If EopttraceAllowGeneralPredicatesforDPE is set, allow a larger set
-			// of partition predicates for DPE as well (see note above).
-
-			if (FBoolPredicateOnColumn(pexpr, pcrPartKey) ||
-				FNullCheckOnColumn(pexpr, pcrPartKey) ||
-				IsDisjunctionOfRangeComparison(mp, pexpr, pcrPartKey,
-											   pcrsAllowedRefs,
-											   allow_not_equals_preds) ||
-				(FRangeComparison(pexpr, pcrPartKey, pcrsAllowedRefs,
-								  allow_not_equals_preds) &&
-				 !pexpr->DeriveScalarFunctionProperties()
-					  ->NeedsSingletonExecution()))
-			{
-				pexpr->AddRef();
-				pdrgpexprResult->Append(pexpr);
-			}
-		}
+		// pexprCol contains a predicate only on partKey, which is useless for
+		// dynamic partition selection, so ignore it here
+		pexprCol = nullptr;
 	}
 
 	// Remove any redundant "IS NOT NULL" filter on the partition key that was derived
@@ -1548,37 +1499,6 @@ CPredicateUtils::FScArrayCmpOnColumn(CExpression *pexpr, CColRef *colref,
 	}
 
 	return fSupported;
-}
-
-// check if the given expression is a disjunction of scalar cmp expression
-// on the given column
-BOOL
-CPredicateUtils::IsDisjunctionOfRangeComparison(CMemoryPool *mp,
-												CExpression *pexpr,
-												CColRef *colref,
-												CColRefSet *pcrsAllowedRefs,
-												BOOL allowNotEqualPreds)
-{
-	if (!FOr(pexpr))
-	{
-		return false;
-	}
-
-	CExpressionArray *pdrgpexprDisjuncts = PdrgpexprDisjuncts(mp, pexpr);
-	const ULONG ulDisjuncts = pdrgpexprDisjuncts->Size();
-	for (ULONG ulDisj = 0; ulDisj < ulDisjuncts; ulDisj++)
-	{
-		CExpression *pexprDisj = (*pdrgpexprDisjuncts)[ulDisj];
-		if (!FRangeComparison(pexprDisj, colref, pcrsAllowedRefs,
-							  allowNotEqualPreds))
-		{
-			pdrgpexprDisjuncts->Release();
-			return false;
-		}
-	}
-
-	pdrgpexprDisjuncts->Release();
-	return true;
 }
 
 // extract interesting expressions involving the partitioning keys;
