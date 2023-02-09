@@ -5,8 +5,8 @@ Changes the definition of a user mapping for a foreign server.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-ALTER USER MAPPING FOR { <username> | USER | CURRENT_USER | PUBLIC }
-    SERVER <servername>
+ALTER USER MAPPING FOR { <user_name> | USER | CURRENT_USER | SESSION_USER | PUBLIC }
+    SERVER <server_name>
     OPTIONS ( [ ADD | SET | DROP ] <option> ['<value>'] [, ... ] )
 ```
 
@@ -18,10 +18,10 @@ The owner of a foreign server can alter user mappings for that server for any us
 
 ## <a id="section4"></a>Parameters 
 
-username
+user\_name
 :   User name of the mapping. `CURRENT_USER` and `USER` match the name of the current user. `PUBLIC` is used to match all present and future user names in the system.
 
-servername
+server\_name
 :   Server name of the user mapping.
 
 OPTIONS \( \[ ADD \| SET \| DROP \] option \['value'\] \[, ... \] \)

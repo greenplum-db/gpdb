@@ -220,7 +220,10 @@ For each query run, prints the Greenplum query slice plan. *client\_min\_message
 
 ## <a id="default_statistics_target"></a>default\_statistics\_target 
 
-Sets the default statistics sampling target \(the number of values that are stored in the list of common values\) for table columns that have not had a column-specific target set via `ALTER TABLE SET STATISTICS`. Larger values may improve the quality of the Postgres Planner estimates, particularly for columns with irregular data distributions, at the expense of consuming more space in `pg_statistic` and slightly more time to compute the estimates. Conversely, a lower limit might be sufficient for columns with simple data distributions.
+Sets the default statistics sampling target \(the number of values that are stored in the list of common values\) for table columns that have not had a column-specific target set via `ALTER TABLE SET STATISTICS`. Larger values may improve the quality of the Postgres Planner estimates, particularly for columns with irregular data distributions, at the expense of consuming more space in `pg_statistic` and slightly more time to compute the estimates. Conversely, a lower limit might be sufficient for columns with simple data distributions. The default is 100.
+
+For more information on the use of statistics by the Postgres Planner, refer to [Statistics Used by the Planner](https://www.postgresql.org/docs/12/planner-stats.html) in the PostgreSQL documentation.
+
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -416,6 +419,18 @@ The Postgres Planner will merge sub-queries into upper queries if the resulting 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |1-*n*|20|master, session, reload|
+
+## <a id="gin_pending_list_limit"></a>gin\_pending\_list\_limit
+
+Sets the maximum size of a GIN index's pending list, which is used when `fastupdate` is enabled. If the list grows larger than this maximum size, it is cleaned up by moving the entries in it to the index's main GIN data structure in bulk.
+
+A value specified without units is taken to be kilobytes. The default is four megabytes (4MB).
+
+You can override this setting for individual GIN indexes by changing index storage parameters.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|64 - `MAX_KILOBYTES` |4096|master, session, reload|
 
 ## <a id="gp_adjust_selectivity_for_outerjoins"></a>gp\_adjust\_selectivity\_for\_outerjoins 
 
@@ -2945,6 +2960,16 @@ Enables updating of the process title every time a new SQL command is received b
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |Boolean|on|local, session, reload|
+
+## <a id="vacuum_cleanup_index_scale_factor"></a>vacuum_cleanup_index_scale_factor
+
+Specifies the fraction of the total number of heap tuples counted in the previous statistics collection that can be inserted without incurring an index scan at the `VACUUM` cleanup stage. The purpose of this parameter is to minimize unnecessary vacuum index scans. This setting currently applies to B-tree indexes only. When its value is 0, `VACUUM` cleanup never skips index scans.
+
+If no tuples were deleted from the heap, B-tree indexes are still scanned at the `VACUUM` cleanup stage when at least one of the following conditions is met: the index statistics are stale, or the index contains deleted pages that can be recycled during cleanup. Index statistics are considered to be stale if the number of newly inserted tuples exceeds the `vacuum_cleanup_index_scale_factor` fraction of the total number of heap tuples detected by the previous statistics collection. The total number of heap tuples is stored in the index meta-page. Note that the meta-page does not include this data until `VACUUM` finds no dead tuples, so B-tree index scan at the cleanup stage can only be skipped if the second and subsequent `VACUUM` cycles detect no dead tuples.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|floating point 0 to 10000000000|0.1|local, session, reload|
 
 ## <a id="vacuum_cost_delay"></a>vacuum\_cost\_delay 
 

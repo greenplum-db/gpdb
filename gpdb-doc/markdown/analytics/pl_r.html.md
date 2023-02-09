@@ -74,7 +74,7 @@ Before you install the PL/R extension, make sure that your Greenplum Database is
 4.  Install the software extension package by running the `gppkg` command. This example installs the PL/R extension on a Linux system:
 
     ```
-    $ gppkg -i plr-3.0.3-gp6-rhel7_x86_64.gppkg
+    $ gppkg -i plr-3.0.3-gp7-rhel7_x86_64.gppkg
     ```
 
 5.  Source the file `$GPHOME/greenplum_path.sh`.

@@ -56,54 +56,119 @@ See [Recovering from a Transaction ID Limit Error](../managing/maintain.html#np1
 
 The server configuration parameters `xid_warn_limit` and `xid_stop_limit` control when the warning and error are displayed. The `xid_warn_limit` parameter specifies the number of transaction IDs before the `xid_stop_limit` when the warning is issued. The `xid_stop_limit` parameter specifies the number of transaction IDs before wraparound would occur when the error is issued and new transactions cannot be created.
 
-## <a id="section_f4m_n5n_fs"></a>Transaction Isolation Modes 
+## <a id="section_f4m_n5n_fs"></a>Transaction Isolation Levels 
 
-The SQL standard describes three phenomena that can occur when database transactions run concurrently:
+The SQL standard defines four levels of transaction isolation. The most strict is Serializable, which the standard defines as any concurrent execution of a set of Serializable transactions is guaranteed to produce the same effect as running them one at a time in some order. The other three levels are defined in terms of phenomena, resulting from interaction between concurrent transactions, which must not occur at each level. The standard notes that due to the definition of Serializable, none of these phenomena are possible at that level.
 
--   *Dirty read* – a transaction can read uncommitted data from another concurrent transaction.
--   *Non-repeatable read* – a row read twice in a transaction can change because another concurrent transaction committed changes after the transaction began.
--   *Phantom read* – a query run twice in the same transaction can return two different sets of rows because another concurrent transaction added rows.
+The phenomena which are prohibited at various levels are:
 
-The SQL standard defines four transaction isolation levels that database systems can support, with the phenomena that are allowed when transactions run concurrently for each level.
+-   *dirty read* – A transaction reads data written by a concurrent uncommitted transaction.
+-   *non-repeatable read* – A transaction re-reads data that it has previously read and finds that the data has been modified by another transaction \(that committed since the initial read\).
+-   *phantom read* – A transaction re-executes a query returning a set of rows that satisfy a search condition and finds that the set of rows satisfying the condition has changed due to another recently-committed transaction.
+-   *serialization anomaly* - The result of successfully committing a group of transactions is inconsistent with all possible orderings of running those transactions one at a time.
 
-|Level|Dirty Read|Non-Repeatable|Phantom Read|
-|-----|----------|--------------|------------|
-|Read Uncommitted|Possible|Possible|Possible|
-|Read Committed|Impossible|Possible|Possible|
-|Repeatable Read|Impossible|Impossible|Possible|
-|Serializable|Impossible|Impossible|Impossible|
+The four transaction isolation levels defined in the SQL standard and the corresponding behaviors are described in the table below.
 
-Greenplum Database `READ UNCOMMITTED` and `READ COMMITTED` isolation modes behave like the SQL standard `READ COMMITTED` mode. Greenplum Database `SERIALIZABLE` and `REPEATABLE READ` isolation modes behave like the SQL standard `READ COMMITTED` mode, except that Greenplum Database also prevents phantom reads.
+|Isolation Level|Dirty Read|Non-Repeatable|Phantom Read|Serialization Anomoly|
+|-----|----------|--------------|------------|------|
+|`READ UNCOMMITTED`|Allowed, but not in Greenplum Database|Possible|Possible|Possible|
+|`READ COMMITTED`|Impossible|Possible|Possible|Possible|
+|`REPEATABLE READ`|Impossible|Impossible|Allowed, but not in Greenplum Database|Possible|
+|`SERIALIZABLE`|Impossible|Impossible|Impossible|Impossible|
 
-The difference between `READ COMMITTED` and `REPEATABLE READ` is that with `READ COMMITTED`, each statement in a transaction sees only rows committed before the *statement* started, while in `READ COMMITTED` mode, statements in a transaction see only rows committed before the *transaction* started.
+Greenplum Database implements only two distinct transaction isolation levels, although you can request any of the four described levels. The Greenplum Database `READ UNCOMMITTED` level behaves like `READ COMMITTED`, and the `SERIALIZABLE` level falls back to `REPEATABLE READ`.
 
-With `READ COMMITTED` isolation mode the values in a row retrieved twice in a transaction can differ if another concurrent transaction has committed changes since the transaction began. `READ COMMITTED` mode also permits *phantom reads*, where a query run twice in the same transaction can return two different sets of rows.
+The table also shows that Greenplum Database's `REPEATABLE READ` implementation does not allow phantom reads. This is acceptable under the SQL standard because the standard specifies which anomalies must not occur at certain isolation levels; higher guarantees are acceptable.
 
-The `REPEATABLE READ` isolation mode prevents non-repeatable reads and phantom reads, although the latter is not required by the standard. A transaction that attempts to modify data modified by another concurrent transaction is rolled back. Applications that run transactions in `REPEATABLE READ` mode must be prepared to handle transactions that fail due to serialization errors. If `REPEATABLE READ` isolation mode is not required by the application, it is better to use `READ COMMITTED` mode.
+The following sections detail the behavior of the available isolation levels.
 
-`SERIALIZABLE` mode, which Greenplum Database does not fully support, guarantees that a set of transactions run concurrently produces the same result as if the transactions ran sequentially one after the other. If `SERIALIZABLE` is specified, Greenplum Database falls back to `REPEATABLE READ`. The MVCC Snapshot Isolation \(SI\) model prevents dirty reads, non-repeatable reads, and phantom reads without expensive locking, but there are other interactions that can occur between some `SERIALIZABLE` transactions in Greenplum Database that prevent them from being truly serializable. These anomalies can often be attributed to the fact that Greenplum Database does not perform *predicate locking*, which means that a write in one transaction can affect the result of a previous read in another concurrent transaction.
+*Important*: Some Greenplum Database data types and functions have special rules regarding transactional behavior. In particular, changes made to a sequence \(and therefore the counter of a column declared using `serial`\) are immediately visible to all other transactions, and are not rolled back if the transaction that made the changes aborts.
 
-> **Note** The PostgreSQL 9.1 `SERIALIZABLE` isolation level introduces a new Serializable Snapshot Isolation \(SSI\) model, which is fully compliant with the SQL standard definition of serializable transactions. This model is not available in Greenplum Database. SSI monitors concurrent transactions for conditions that could cause serialization anomalies. When potential serialization problems are found, one transaction is allowed to commit and others are rolled back and must be retried.
+### <a id="til_rc"></a>Read Committed Isolation Level 
 
-Greenplum Database transactions that run concurrently should be examined to identify interactions that may update the same data concurrently. Problems identified can be prevented by using explicit table locks or by requiring the conflicting transactions to update a dummy row introduced to represent the conflict.
+The default isolation level in Greenplum Database is `READ COMMITTED`. When a transaction uses this isolation level, a `SELECT` query \(without a `FOR UPDATE/SHARE` clause\) sees only data committed before the query began; it never sees either uncommitted data or changes committed during query execution by concurrent transactions. In effect, a `SELECT` query sees a snapshot of the database at the instant the query begins to run. However, `SELECT` does see the effects of previous updates executed within its own transaction, even though they are not yet committed. Also note that two successive `SELECT` commands can see different data, even though they are within a single transaction, if other transactions commit changes after the first `SELECT` starts and before the second `SELECT` starts.
 
-The SQL `SET TRANSACTION ISOLATION LEVEL` statement sets the isolation mode for the current transaction. The mode must be set before any `SELECT`, `INSERT`, `DELETE`, `UPDATE`, or `COPY` statements:
+`UPDATE`, `DELETE`, `SELECT FOR UPDATE`, and `SELECT FOR SHARE` commands behave the same as `SELECT` in terms of searching for target rows: they find only the target rows that were committed as of the command start time. However, such a target row might have already been updated \(or deleted or locked\) by another concurrent transaction by the time it is found. In this case, the would-be updater waits for the first updating transaction to commit or roll back \(if it is still in progress\). If the first updater rolls back, then its effects are negated and the second updater can proceed with updating the originally found row. If the first updater commits, the second updater will ignore the row if the first updater deleted it, otherwise it will attempt to apply its operation to the updated version of the row. The search condition of the command \(the `WHERE` clause\) is re-evaluated to see if the updated version of the row still matches the search condition. If so, the second updater proceeds with its operation using the updated version of the row. In the case of `SELECT FOR UPDATE` and `SELECT FOR SHARE`, this means the updated version of the row is locked and returned to the client.
+
+`INSERT` with an `ON CONFLICT DO UPDATE` clause behaves similarly. In `READ COMMITTED` mode, each row proposed for insertion will either insert or update. Unless there are unrelated errors, one of those two outcomes is guaranteed. If a conflict originates in another transaction whose effects are not yet visible to the `INSERT `, the `UPDATE` clause will affect that row, even though possibly no version of that row is conventionally visible to the command.
+
+`INSERT` with an `ON CONFLICT DO NOTHING` clause may have insertion not proceed for a row due to the outcome of another transaction whose effects are not visible to the `INSERT` snapshot. Again, this is only the case in `READ COMMITTED` mode.
+
+Because of the above rules, it is possible for an updating command to see an inconsistent snapshot: it can see the effects of concurrent updating commands on the same rows it is trying to update, but it does not see effects of those commands on other rows in the database. This behavior makes `READ COMMITTED` mode unsuitable for commands that involve complex search conditions; however, it is just right for simpler cases. For example, consider updating bank balances with transactions like:
+
+``` sql
+BEGIN;
+UPDATE accounts SET balance = balance + 100.00 WHERE acctnum = 12345;
+UPDATE accounts SET balance = balance - 100.00 WHERE acctnum = 7534;
+COMMIT;
+```
+
+If two such transactions concurrently try to change the balance of account `12345`, we clearly want the second transaction to start with the updated version of the account's row. Because each command is affecting only a predetermined row, letting it access the updated version of the row does not create any troublesome inconsistency.
+
+More complex usage may produce undesirable results in `READ COMMITTED` mode. For example, consider a `DELETE` command operating on data that is being both added and removed from its restriction criteria by another command; assume `website` is a two-row table with `website.hits` equaling `9` and `10`:
+
+``` sql
+BEGIN;
+UPDATE website SET hits = hits + 1;
+-- run from another session:  DELETE FROM website WHERE hits = 10;
+COMMIT;
+```
+
+The `DELETE` will have no effect even though there is a `website.hits = 10` row before and after the `UPDATE`. This occurs because the pre-update row value `9` is skipped, and when the `UPDATE` completes and `DELETE` obtains a lock, the new row value is no longer `10` but `11`, which no longer matches the criteria.
+
+Because `READ COMMITTED` mode starts each command with a new snapshot that includes all transactions committed up to that instant, subsequent commands in the same transaction will see the effects of the committed concurrent transaction in any case. The point at issue above is whether or not a single command sees an absolutely consistent view of the database.
+
+The partial transaction isolation provided by `READ COMMITTED` mode is adequate for many applications, and this mode is fast and simple to use; however, it is not sufficient for all cases. Applications that do complex queries and updates might require a more rigorously consistent view of the database than `READ COMMITTED` mode provides.
+
+### <a id="til_rr"></a>Repeatable Read Isolation Level
+
+The `REPEATABLE READ` isolation level only sees data committed before the transaction began; it never sees either uncommitted data or changes committed during transaction execution by concurrent transactions. \(However, the query does see the effects of previous updates executed within its own transaction, even though they are not yet committed.\) This is a stronger guarantee than is required by the SQL standard for this isolation level, and prevents all of the phenomena described in the table above. As mentioned previously, this is specifically allowed by the standard, which only describes the minimum protections each isolation level must provide.
+
+The `REPEATABLE READ` isolation level is different from `READ COMMITTED` in that a query in a `REPEATABLE READ` transaction sees a snapshot as of the start of the first non-transaction-control statement in the transaction, not as of the start of the current statement within the transaction. Successive `SELECT` commands within a single transaction see the same data; they do not see changes made by other transactions that committed after their own transaction started.
+
+Applications using this level must be prepared to retry transactions due to serialization failures.
+
+`UPDATE`, `DELETE`, `SELECT FOR UPDATE`, and `SELECT FOR SHARE` commands behave the same as `SELECT` in terms of searching for target rows: they will only find target rows that were committed as of the transaction start time. However, such a target row might have already been updated \(or deleted or locked\) by another concurrent transaction by the time it is found. In this case, the `REPEATABLE READ` transaction will wait for the first updating transaction to commit or roll back \(if it is still in progress\). If the first updater rolls back, then its effects are negated and the `REPEATABLE READ` can proceed with updating the originally found row. But if the first updater commits \(and actually updated or deleted the row, not just locked it\), then Greenplum Database rolls back the `REPEATABLE READ` transaction with the message:
 
 ```
+ERROR:  could not serialize access due to concurrent update
+```
+
+because a `REPEATABLE READ` transaction cannot modify or lock rows changed by other transactions after the `REPEATABLE READ` transaction began.
+
+When an application receives this error message, it should abort the current transaction and retry the whole transaction from the beginning. The second time through, the transaction will see the previously-committed change as part of its initial view of the database, so there is no logical conflict in using the new version of the row as the starting point for the new transaction's update.
+
+Note that you may need to retry only updating transactions; read-only transactions will never have serialization conflicts.
+
+The `REPEATABLE READ` mode provides a rigorous guarantee that each transaction sees a completely stable view of the database. However, this view will not necessarily always be consistent with some serial \(one at a time\) execution of concurrent transactions of the same level. For example, even a read-only transaction at this level may see a control record updated to show that a batch has been completed but not see one of the detail records which is logically part of the batch because it read an earlier revision of the control record. Attempts to enforce business rules by transactions running at this isolation level are not likely to work correctly without careful use of explicit locks to block conflicting transactions.
+
+
+### <a id="til_s"></a>Serializable Isolation Level
+
+The `SERIALIZABLE` level, which Greenplum Database does not fully support, guarantees that a set of transactions run concurrently produces the same result as if the transactions ran sequentially one after the other. If `SERIALIZABLE` is specified, Greenplum Database falls back to `REPEATABLE READ`. The MVCC Snapshot Isolation \(SI\) model prevents dirty reads, non-repeatable reads, and phantom reads without expensive locking, but there are other interactions that can occur between some `SERIALIZABLE` transactions in Greenplum Database that prevent them from being truly serializable. These anomalies can often be attributed to the fact that Greenplum Database does not perform *predicate locking*, which means that a write in one transaction can affect the result of a previous read in another concurrent transaction.
+
+
+## <a id="about_setting_til"></a>About Setting the Transaction Isolation Level
+
+The default transaction isolation level for Greenplum Database is specified by the [default\_transaction\_isolation](../../ref_guide/config_params/guc-list.html#default_transaction_isolation) server configuration parameter, and is initially `READ COMMITTED`.
+
+When you set `default_transaction_isolation` in a session, you specify the default transaction isolation level for all transactions in the session.
+
+To set the isolation level for the current transaction, you can use the [SET TRANSACTION](../../ref_guide/sql_commands/SET_TRANSACTION.html) SQL command. Be sure to set the isolation level before any `SELECT`, `INSERT`, `DELETE`, `UPDATE`, or `COPY` statement:
+
+``` sql
 BEGIN;
 SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 ...
 COMMIT;
-
 ```
 
-The isolation mode can also be specified as part of the `BEGIN` statement:
+You can also specify the isolation mode in a `BEGIN` statement:
 
-```
+``` sql
 BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 ```
 
-The default transaction isolation mode can be changed for a session by setting the default\_transaction\_isolation configuration property.
 
 ## <a id="rmrows"></a>Removing Dead Rows from Tables 
 

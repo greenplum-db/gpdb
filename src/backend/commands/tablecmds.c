@@ -810,7 +810,8 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 
 		/*
 		 * For partitioned children, when no reloptions is specified, we
-		 * default to the parent table's reloptions.
+		 * default to the parent table's reloptions. If partitioned
+		 * children has different access method with parent. Do not do it.
 		 */
 		Assert(list_length(inheritOids) == 1);
 		parentrelid = linitial_oid(inheritOids);
@@ -17432,7 +17433,9 @@ ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
 		ExecutorFinish(queryDesc);
 		ExecutorEnd(queryDesc);
 
-		auto_stats(cmdType, relationOid, queryDesc->es_processed, false);
+		
+		auto_stats(cmdType, relationOid, queryDesc->es_processed,
+				   already_under_executor_run() || utility_nested());
 
 		FreeQueryDesc(queryDesc);
 
@@ -17966,8 +17969,10 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			ExecutorEnd(queryDesc);
 
 			if (Gp_role == GP_ROLE_DISPATCH)
-				auto_stats(cmdType, relationOid, queryDesc->es_processed,
-								false);
+			{
+				bool inFunction = already_under_executor_run() || utility_nested();
+				auto_stats(cmdType, relationOid, queryDesc->es_processed, inFunction);
+			}
 
 			FreeQueryDesc(queryDesc);
 

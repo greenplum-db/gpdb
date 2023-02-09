@@ -311,17 +311,17 @@ $ gpinitsystem -I cluster_init.config
 
 The following example uses a host system configured with multiple NICs. If host systems are configured with multiple NICs, you can initialize a Greenplum Database system to use each NIC as a Greenplum host system. You must ensure that the host systems are configured with sufficient resources to support all the segment instances being added to the host. Also, if high availability is enabled, you must ensure that the Greenplum system configuration supports failover if a host system fails. For information about Greenplum Database mirroring schemes, see [../../best\_practices/ha.html\#topic\_ngz\_qf4\_tt](../../best_practices/ha.html#topic_ngz_qf4_tt).
 
-For this simple coordinator and segment instance configuration, the host system `gp6m` is configured with two NICs `gp6m-1` and `gp6m-2`. In the configuration, the [QD\_PRIMARY\_ARRAY](#array_params) parameter defines the coordinator segment using `gp6m-1`. The [PRIMARY\_ARRAY](#array_params) and [MIRROR\_ARRAY](#array_params) parameters use `gp6m-2` to define a primary and mirror segment instance.
+For this simple coordinator and segment instance configuration, the host system `gp7c` is configured with two NICs `gp7c-1` and `gp7c-2`. In the configuration, the [QD\_PRIMARY\_ARRAY](#array_params) parameter defines the coordinator segment using `gp7c-1`. The [PRIMARY\_ARRAY](#array_params) and [MIRROR\_ARRAY](#array_params) parameters use `gp7c-2` to define a primary and mirror segment instance.
 
 ```
-QD_PRIMARY_ARRAY=gp6m~gp6m-1~5432~/data/coordinator/gpseg-1~1~-1
+QD_PRIMARY_ARRAY=gp7c~gp7c-1~5432~/data/coordinator/gpseg-1~1~-1
 declare -a PRIMARY_ARRAY=(
-gp6m~gp6m-2~40000~/data/data1/gpseg0~2~0
-gp6s~gp6s~40000~/data/data1/gpseg1~3~1
+gp7c~gp7c-2~40000~/data/data1/gpseg0~2~0
+gp7s~gp7s~40000~/data/data1/gpseg1~3~1
 )
 declare -a MIRROR_ARRAY=(
-gp6s~gp6s~50000~/data/mirror1/gpseg0~4~0
-gp6m~gp6m-2~50000~/data/mirror1/gpseg1~5~1
+gp7s~gp7s~50000~/data/mirror1/gpseg0~4~0
+gp7c~gp7c-2~50000~/data/mirror1/gpseg1~5~1
 )
 ```
 

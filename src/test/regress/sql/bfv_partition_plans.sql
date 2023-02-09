@@ -11,6 +11,8 @@
 -- s/Buckets: \d+/Buckets: ###/
 -- m/Batches: \d+/
 -- s/Batches: \d+/Batches: ###/
+-- m/segment \d+/
+-- s/segment \d+/segment ###/
 -- m/using \d+ of \d+ buckets/
 -- s/using \d+ of \d+ buckets/using ## of ### buckets/
 -- end_matchsubs

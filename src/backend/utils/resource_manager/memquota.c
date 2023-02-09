@@ -904,6 +904,8 @@ ResourceManagerGetQueryMemoryLimit(PlannedStmt* stmt)
 
 	if (IsResQueueEnabled())
 		return ResourceQueueGetQueryMemoryLimit(stmt, ActivePortal->queueId);
+	else if (IsResGroupEnabled())
+		return ResourceGroupGetQueryMemoryLimit();
 
 	/* RG FIXME: should we return statement_mem every time? */
 	return (uint64) statement_mem * 1024L;

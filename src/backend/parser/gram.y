@@ -1609,13 +1609,17 @@ OptResourceGroupElem:
 				{
 					$$ = makeDefElem("cpu_hard_quota_limit", (Node *) makeInteger($2), @1);
 				}
-            | CPU_SOFT_PRIORITY SignedIconst
-                {
-                    $$ = makeDefElem("cpu_soft_priority", (Node *) makeInteger($2), @1);
-                }
+			| CPU_SOFT_PRIORITY SignedIconst
+				{
+					$$ = makeDefElem("cpu_soft_priority", (Node *) makeInteger($2), @1);
+				}
 			| CPUSET Sconst
 				{
 					$$ = makeDefElem("cpuset", (Node *) makeString($2), @1);
+				}
+			| MEMORY_LIMIT SignedIconst
+				{
+					$$ = makeDefElem("memory_limit", (Node *) makeInteger($2), @1);
 				}
 		;
 
@@ -6551,7 +6555,7 @@ CreateMatViewStmt:
 
 					$$ = (Node *) ctas;
 				}
-		| CREATE OptNoLog MATERIALIZED VIEW IF_P NOT EXISTS create_mv_target AS SelectStmt opt_with_data
+		| CREATE OptNoLog MATERIALIZED VIEW IF_P NOT EXISTS create_mv_target AS SelectStmt opt_with_data OptDistributedBy
 				{
 					CreateTableAsStmt *ctas = makeNode(CreateTableAsStmt);
 					ctas->query = $10;
@@ -6562,6 +6566,8 @@ CreateMatViewStmt:
 					/* cram additional flags into the IntoClause */
 					$8->rel->relpersistence = $2;
 					$8->skipData = !($11);
+					ctas->into->distributedBy = $12;
+
 					$$ = (Node *) ctas;
 				}
 		;

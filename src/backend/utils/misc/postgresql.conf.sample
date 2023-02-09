@@ -604,6 +604,8 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #autovacuum_vacuum_cost_limit = -1	# default vacuum cost limit for
 					# autovacuum, -1 means use
 					# vacuum_cost_limit
+#gp_autovacuum_scope = 'catalog' # default to autovacuuming only catalog tables
+                    # 'catalog_ao_aux' # autovacuum catalog and append-optimized auxiliary tables
 
 #------------------------------------------------------------------------------
 # CLIENT CONNECTION DEFAULTS

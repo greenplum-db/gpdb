@@ -5,23 +5,25 @@ Removes a user mapping for a foreign server.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-DROP USER MAPPING [ IF EXISTS ] { <username> | USER | CURRENT_USER | PUBLIC } 
-    SERVER <servername>
+DROP USER MAPPING [ IF EXISTS ] { <user_name> | USER | CURRENT_USER | PUBLIC } 
+    SERVER <server_name>
 ```
 
 ## <a id="section3"></a>Description 
 
-`DROP USER MAPPING` removes an existing user mapping from a foreign server. To run this command, the current user must be the owner of the server containing the mapping.
+`DROP USER MAPPING` removes an existing user mapping from a foreign server.
+
+The owner of a foreign server can drop user mappings for that server for any user. Also, a user can drop a user mapping for their own user name if they have been granted the `USAGE` privilege on the server.
 
 ## <a id="section4"></a>Parameters 
 
 IF EXISTS
 :   Do not throw an error if the user mapping does not exist. Greenplum Database issues a notice in this case.
 
-username
+user\_name
 :   User name of the mapping. `CURRENT_USER` and `USER` match the name of the current user. `PUBLIC` is used to match all present and future user names in the system.
 
-servername
+server\_name
 :   Server name of the user mapping.
 
 ## <a id="section6"></a>Examples 

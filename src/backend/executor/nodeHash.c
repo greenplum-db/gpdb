@@ -2122,7 +2122,12 @@ bool
 ExecScanHashBucket(HashState *hashState, HashJoinState *hjstate,
 				   ExprContext *econtext)
 {
-	ExprState  *hjclauses = hjstate->hashclauses;
+	/*
+	 * Greenplum specific behavior.
+	 * Using hashqualclauses to support hash join on 'IS NOT DISTINCT FROM'
+	 * as well as '='.
+	 */
+	ExprState  *hjclauses = hjstate->hashqualclauses;
 	HashJoinTable hashtable = hjstate->hj_HashTable;
 	HashJoinTuple hashTuple = hjstate->hj_CurTuple;
 	uint32		hashvalue = hjstate->hj_CurHashValue;
@@ -2183,7 +2188,12 @@ bool
 ExecParallelScanHashBucket(HashState *hashState, HashJoinState *hjstate,
 						   ExprContext *econtext)
 {
-	ExprState  *hjclauses = hjstate->hashclauses;
+	/*
+	 * Greenplum specific behavior.
+	 * Using hashqualclauses to support hash join on 'IS NOT DISTINCT FROM'
+	 * as well as '='.
+	 */
+	ExprState  *hjclauses = hjstate->hashqualclauses;
 	HashJoinTable hashtable = hjstate->hj_HashTable;
 	HashJoinTuple hashTuple = hjstate->hj_CurTuple;
 	uint32		hashvalue = hjstate->hj_CurHashValue;

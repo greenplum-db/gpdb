@@ -619,7 +619,7 @@ create table gs_group_1 as
 select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
   (select g%1000 as g1000, g%100 as g100, g%10 as g10, g
    from generate_series(0,199999) g) s
-group by cube (g1000,g100,g10);
+group by cube (g1000,g100,g10) distributed by (g1000);
 
 set jit_above_cost to default;
 
@@ -627,13 +627,13 @@ create table gs_group_2 as
 select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
   (select g/20 as g1000, g/200 as g100, g/2000 as g10, g
    from generate_series(0,19999) g) s
-group by cube (g1000,g100,g10);
+group by cube (g1000,g100,g10) distributed by (g1000);
 
 create table gs_group_3 as
 select g100, g10, array_agg(g) as a, count(*) as c, max(g::text) as m from
   (select g/200 as g100, g/2000 as g10, g
    from generate_series(0,19999) g) s
-group by grouping sets (g100,g10);
+group by grouping sets (g100,g10) distributed by (g100);
 
 -- Produce results with hash aggregation.
 
@@ -653,7 +653,7 @@ create table gs_hash_1 as
 select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
   (select g%1000 as g1000, g%100 as g100, g%10 as g10, g
    from generate_series(0,199999) g) s
-group by cube (g1000,g100,g10);
+group by cube (g1000,g100,g10) distributed by (g1000);
 
 set jit_above_cost to default;
 
@@ -661,23 +661,18 @@ create table gs_hash_2 as
 select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
   (select g/20 as g1000, g/200 as g100, g/2000 as g10, g
    from generate_series(0,19999) g) s
-group by cube (g1000,g100,g10);
+group by cube (g1000,g100,g10) distributed by (g1000);
 
 create table gs_hash_3 as
 select g100, g10, array_agg(g) as a, count(*) as c, max(g::text) as m from
   (select g/200 as g100, g/2000 as g10, g
    from generate_series(0,19999) g) s
-group by grouping sets (g100,g10);
+group by grouping sets (g100,g10) distributed by (g100);
 
 set enable_sort = true;
 set work_mem to default;
 
--- GPDB_12_MERGE_FIXME: the following comparison query has an ORCA plan that
--- relies on "IS NOT DISTINCT FROM" Hash Join, a variant that we likely have
--- lost during the merge with upstream Postgres 12. Disable ORCA for this query
-SET optimizer TO off;
-
--- Compare results
+-- Compare results of ORCA plan that relies on "IS NOT DISTINCT FROM" HASH Join
 
 (select * from gs_hash_1 except select * from gs_group_1)
   union all
@@ -693,7 +688,7 @@ SET optimizer TO off;
 (select g100,g10,unnest(a),c,m from gs_group_3 except
   select g100,g10,unnest(a),c,m from gs_hash_3);
 
-RESET optimizer;
+
 
 drop table gs_group_1;
 drop table gs_group_2;

@@ -1001,50 +1001,14 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 		child_index_oids = GPOS_NEW(mp) IMdIdArray(mp);
 	}
 
-	CMDIndexGPDB *index = GPOS_NEW(mp) CMDIndexGPDB(
-		mp, mdid_index, mdname, index_clustered, index_partitioned, index_type,
-		mdid_item_type, index_key_cols_array, included_cols, op_families_mdids,
-		nullptr,  // mdpart_constraint
-		child_index_oids);
+	CMDIndexGPDB *index = GPOS_NEW(mp)
+		CMDIndexGPDB(mp, mdid_index, mdname, index_clustered, index_partitioned,
+					 index_type, mdid_item_type, index_key_cols_array,
+					 included_cols, op_families_mdids, child_index_oids);
 
 	GPOS_DELETE_ARRAY(attno_mapping);
 	return index;
 }
-
-#if 0
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorRelcacheToDXL::LevelHasDefaultPartition
-//
-//	@doc:
-//		Check whether the default partition at level one is included
-//
-//---------------------------------------------------------------------------
-BOOL
-CTranslatorRelcacheToDXL::LevelHasDefaultPartition
-	(
-	List *default_levels,
-	ULONG level
-	)
-{
-	if (NIL == default_levels)
-	{
-		return false;
-	}
-	
-	ListCell *lc = NULL;
-	ForEach (lc, default_levels)
-	{
-		ULONG default_level = (ULONG) lfirst_int(lc);
-		if (level == default_level)
-		{
-			return true;
-		}
-	}
-	
-	return false;
-}
-#endif
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -2480,6 +2444,13 @@ CTranslatorRelcacheToDXL::RetrieveRelStorageType(Relation rel)
 			}
 			else if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
 			{
+				if (!optimizer_enable_foreign_table)
+				{
+					GPOS_RAISE(
+						gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+						GPOS_WSZ_LIT(
+							"Use optimizer_enable_foreign_table to enable Orca with foreign tables"));
+				}
 				rel_storage_type = IMDRelation::ErelstorageForeign;
 			}
 			else

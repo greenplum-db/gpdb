@@ -179,6 +179,7 @@ GetExtFromForeignTableOptions(List *ftoptons, Oid relid)
 	bool				iswritable_found = false;
 	bool				locationuris_found = false;
 	bool				command_found = false;
+	bool				executeon_found = false;
 
 	extentry = (ExtTableEntry *) palloc0(sizeof(ExtTableEntry));
 
@@ -196,6 +197,7 @@ GetExtFromForeignTableOptions(List *ftoptons, Oid relid)
 		if (pg_strcasecmp(def->defname, "execute_on") == 0)
 		{
 			extentry->execlocations = list_make1(makeString(defGetString(def)));
+			executeon_found = true;
 			continue;
 		}
 
@@ -297,6 +299,11 @@ GetExtFromForeignTableOptions(List *ftoptons, Oid relid)
 	}
 	else
 		extentry->rejectlimittype = -1;
+
+	if (!executeon_found)
+	{
+		extentry->execlocations = list_make1(makeString("ALL_SEGMENTS"));
+	}
 
 	if (!PG_VALID_ENCODING(extentry->encoding))
 		elog(ERROR, "invalid encoding found for external table");

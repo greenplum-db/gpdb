@@ -1,18 +1,18 @@
 # Platform Requirements
 
-This topic describes the Greenplum Database 6 platform and operating system software requirements for deploying the software to on-premise hardware, or to public cloud services such as AWS, GCP, or Azure.
+This topic describes the Greenplum Database 7 platform and operating system software requirements for deploying the software to on-premise hardware, or to public cloud services such as AWS, GCP, or Azure.
 
 ## <a id="on-prem"></a>On-Premise Hardware Requirements
 
-This topic describes the Greenplum Database 6 platform and operating system software requirements for deploying to on-premise hardware. It also provides important compatibility information for Greenplum tools and extensions.
+This topic describes the Greenplum Database 7 platform and operating system software requirements for deploying to on-premise hardware. It also provides important compatibility information for Greenplum tools and extensions.
 
 ### <a id="topic13"></a>Operating Systems 
 
-Greenplum Database 6 runs on the following operating system platforms:
+Greenplum Database 7 runs on the following operating system platforms:
 
 -   Red Hat Enterprise Linux 64-bit 8.7 or later 
--   Oracle Linux 64-bit 8, using the Red Hat Compatible Kernel \(RHCK\)
--   Rocky Linux 8
+-   Oracle Linux 64-bit 8.7 or later, using the Red Hat Compatible Kernel \(RHCK\)
+-   Rocky Linux 8.7 or later
 
 > **Important** A kernel issue in Red Hat Enterprise Linux 8.5 and 8.6 can cause I/O freezes and synchronization problems with XFS filesystems. This issue is fixed in RHEL 8.7. See [RHEL8: xfs_buf deadlock between inode deletion and block allocation](https://access.redhat.com/solutions/6984334).
 
@@ -124,15 +124,19 @@ Greenplum Database can be deployed to virtualized systems only if the storage is
 
 Greenplum Database is supported on Amazon Web Services \(AWS\) servers using either Amazon instance store \(Amazon uses the volume names `ephemeral[0-23]`\) or Amazon Elastic Block Store \(Amazon EBS\) storage. If using Amazon EBS storage the storage should be RAID of Amazon EBS volumes and mounted with the XFS file system for it to be a supported configuration.
 
+<!--- VERIFY 7X interoperablity with DDBOOST
+
 #### <a id="fixme"></a>Data Domain Boost \(VMware Greenplum\) 
 
-VMware Greenplum 6 supports Data Domain Boost for backup on Red Hat Enterprise Linux. This table lists the versions of Data Domain Boost SDK and DDOS supported by VMware Greenplum 6.
+VMware Greenplum 7 supports Data Domain Boost for backup on Red Hat Enterprise Linux. This table lists the versions of Data Domain Boost SDK and DDOS supported by VMware Greenplum 7.
 
 |VMware Greenplum|Data Domain Boost|DDOS|
 |---------------|-----------------|----|
 |6.x|3.3|6.1 \(all versions\), 6.0 \(all versions\)|
 
 > **Note** In addition to the DDOS versions listed in the previous table, VMware Greenplum supports all minor patch releases \(fourth digit releases\) later than the certified version.
+
+-->
 
 ### <a id="topic31"></a>VMware Greenplum Tools and Extensions Compatibility 
 
@@ -159,7 +163,7 @@ The Greenplum 7 Clients package includes the client and loader programs plus dat
 
 #### <a id="topic_eyc_l2h_zz"></a>Extensions 
 
-This table lists the versions of the Greenplum Extensions that are compatible with this release of Greenplum Database 6.
+This table lists the versions of the Greenplum Extensions that are compatible with this release of Greenplum Database 7.
 
 <div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic_eyc_l2h_zz__table_b1q_m2h_zz" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap">Greenplum Extensions Compatibility </span></caption><colgroup><col /><col /><col /></colgroup><thead class="thead" style="text-align:left;">
 <tr class="row">
@@ -257,19 +261,11 @@ These Greenplum Database extensions are installed with Greenplum Database
 -   Progress DataDirect ODBC Drivers v7.1.6+7.16.389 - The Progress DataDirect ODBC drivers enable third party applications to connect via a common interface to the VMware Greenplum system.
 -   R2B X-LOG v5.x and v6.x - Real-time data replication solution that achieves high-speed database replication through the use of Redo Log Capturing method.
 
-> **Note** Greenplum 5.x clients (gpload, gpfdist) are supported with Greenplum 6.x Server and Informatica PowerCenter and PowerExchange 10.4.
+> **Note** Greenplum 5.x clients (gpload, gpfdist) are supported with Greenplum 6.x and 7x Server and Informatica PowerCenter and PowerExchange 10.4.
 
-> **Note** VMware Greenplum 6 does not support the ODBC driver for Cognos Analytics V11.
+> **Note** VMware Greenplum 7 does not support the ODBC driver for Cognos Analytics V11.
 
 Connecting to IBM Cognos software with an ODBC driver is not supported. Greenplum Database supports connecting to IBM Cognos software with the DataDirect JDBC driver for VMware Greenplum. This driver is available as a download from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb).
-
-#### <a id="topic_ncl_w1d_r1b"></a>VMware Greenplum Text 
-
-VMware Greenplum 6.0 through 6.4 are compatible with VMware Greenplum Text 3.3.1 through 3.4.1. VMware Greenplum 6.5 and later are compatible with VMware Greenplum Text 3.4.2 and later. See the [Greenplum Text documentation](http://docs.vmware.com/en/VMware-Tanzu-Greenplum-Text/index.html) for additional compatibility information.
-
-#### <a id="topic_zkq_j5b_hbb"></a>Greenplum Command Center 
-
-VMware Greenplum 6.15 is compatible only with VMware Greenplum Command Center 6.4.0 and later. See the [Greenplum Command Center documentation](http://docs.vmware.com/en/VMware-Tanzu-Greenplum-Command-Center/index.html) for additional compatibility information.
 
 ### <a id="topic36"></a>Hadoop Distributions 
 

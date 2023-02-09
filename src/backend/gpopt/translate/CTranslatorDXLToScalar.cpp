@@ -228,16 +228,6 @@ CTranslatorDXLToScalar::TranslateDXLToScalar(const CDXLNode *dxlnode,
 			return TranslateDXLScalarSortGroupClauseToScalar(dxlnode,
 															 colid_var);
 		}
-#if 0
-		// GPDB_12_MERGE_FIXME: These were removed from the server with the v12 merge
-		// of upstream partitioning. Need something to replace? Need to rip out from GPORCA?
-		case EdxlopScalarPartDefault: { return TranslateDXLScalarPartDefaultToScalar(dxlnode, colid_var); }
-		case EdxlopScalarPartBound: { return TranslateDXLScalarPartBoundToScalar(dxlnode, colid_var); }
-		case EdxlopScalarPartBoundInclusion: { return TranslateDXLScalarPartBoundInclusionToScalar(dxlnode, colid_var); }
-		case EdxlopScalarPartBoundOpen: { return TranslateDXLScalarPartBoundOpenToScalar(dxlnode, colid_var); }
-		case EdxlopScalarPartListValues: { return TranslateDXLScalarPartListValuesToScalar(dxlnode, colid_var); }
-		case EdxlopScalarPartListNullTest: { return TranslateDXLScalarPartListNullTestToScalar(dxlnode, colid_var); }
-#endif
 	}
 }
 

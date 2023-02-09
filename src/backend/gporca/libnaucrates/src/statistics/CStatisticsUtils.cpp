@@ -1071,10 +1071,11 @@ CStatisticsUtils::DeriveStatsForDynamicScan(CMemoryPool *mp,
 
 	GPOS_ASSERT(pps_reqd->SelectorIds(scan_id)->Size() > 0);
 
+	// GPDB_12_MERGE_FEATURE_NOT_SUPPORTED:
 	// each Dynamic Scan may have multiple associated PartitionSelectors;
 	// for now just use the first one in the list (similar to 6X, which used
-	// the PartitionSelector on the top-most Join node)
-	// GPDB_12_MERGE_FIXME: combine stats from all associated PartitionSelectors
+	// the PartitionSelector on the top-most Join node). Ideally, we would
+	// combine partition selectors here to get a more accurate stats estimate
 	const SPartSelectorInfoEntry *part_selector_info = nullptr;
 	{
 		CBitSetIter it(*selector_ids);

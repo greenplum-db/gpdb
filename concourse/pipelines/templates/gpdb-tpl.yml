@@ -203,10 +203,12 @@ anchors:
 groups:
 - name: all
   jobs:
+  {% if os_type == default_os_type %}
   - check_format
+  - compile_gpdb_clients_windows
+  {% endif %}
   - compile_gpdb_[[ os_type ]]
   - test_gpdb_clients_[[ os_type ]]
-  - compile_gpdb_clients_windows
 {% if "ICW" in test_sections %}
   ## --------------------------------------------------------------------
   - icw_gporca_[[ os_type ]]
@@ -233,6 +235,7 @@ groups:
   ## --------------------------------------------------------------------
   - gate_resource_groups_start
   - resource_group_[[ os_type ]]
+  - resource_group_v2_[[ os_type ]]
 {% endif %}
 {% if "CLI" in test_sections %}
   ## --------------------------------------------------------------------
@@ -273,7 +276,9 @@ groups:
   jobs:
   - compile_gpdb_[[ os_type ]]
   - test_gpdb_clients_[[ os_type ]]
+  {% if os_type == default_os_type %}
   - compile_gpdb_clients_windows
+  {% endif %}
 
 {% if "ICW" in test_sections %}
 ## ======================================================================
@@ -321,6 +326,7 @@ groups:
   jobs:
   - gate_resource_groups_start
   - resource_group_[[ os_type ]]
+  - resource_group_v2_[[ os_type ]]
   - compile_gpdb_[[ os_type ]]
 
 {% endif %}
@@ -541,21 +547,23 @@ resources:
     regexp: server/published/main/server-build-(.*)-[[ os_type ]]_x86_64((rc-build-type-gcs)).tar.gz
 {% endif %}
 
+{% if os_type == default_os_type %}
 - name: bin_gpdb_clients_windows
   type: gcs
   source:
     bucket: ((gcs-bucket-intermediates))
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/bin_gpdb_clients_windows/greenplum-clients-x86_64.tar.gz
+{% endif %}
 
 {% if os_type != default_os_type and pipeline_target == "prod" %}
 - name: reduced-frequency-trigger
   type: time
   source:
     location: America/Los_Angeles
-    start: ((reduced-frequency-trigger-start))
-    stop: ((reduced-frequency-trigger-stop))
-    interval: 168h
+    start: ((reduced-frequency-trigger-start-[[ os_type ]]))
+    stop: ((reduced-frequency-trigger-stop-[[ os_type ]]))
+    days: [Monday]
 {% endif %}
 
 ## ======================================================================
@@ -578,6 +586,7 @@ jobs:
 ##         |_|
 ## ======================================================================
 
+{% if os_type == default_os_type %}
 - name: check_format
   plan:
     - get: gpdb_src
@@ -589,7 +598,7 @@ jobs:
       {% if use_ICW_workers %}
       tags: [icw-worker]
       {% endif %}
-
+{% endif %}
 
 ## ======================================================================
 ##   ____                      _ _
@@ -610,7 +619,9 @@ jobs:
       {% endif %}
       - get: gpdb_src
         passed:
+          {% if os_type == default_os_type %}
           - check_format
+          {% endif %}
         {% if os_type != default_os_type and pipeline_target == "prod" %}
         trigger: false
         {% else %}
@@ -651,6 +662,7 @@ jobs:
       image: gpdb7-[[ os_type ]]-test
       file: gpdb_src/concourse/tasks/test_gpdb_clients.yml
 
+{% if os_type == default_os_type %}
 - name: compile_gpdb_clients_windows
   serial: true
   plan:
@@ -670,6 +682,7 @@ jobs:
   - put: bin_gpdb_clients_windows
     params:
       file: "gpdb_artifacts/greenplum-clients-x86_64.tar.gz"
+{% endif %}
 
 {% if "ICW" in test_sections %}
 ## ======================================================================
@@ -1028,6 +1041,45 @@ jobs:
       file: ccp_src/ci/tasks/gpinitsystem.yml
     - task: run_tests
       file: gpdb_src/concourse/tasks/ic_gpdb_resgroup.yml
+      image: ccp-image
+      params:
+        TEST_OS: [[ os_type ]]
+      on_success:
+        <<: *ccp_destroy
+  ensure:
+    <<: *set_failed
+
+- name: resource_group_v2_[[ os_type ]]
+  plan:
+    - in_parallel:
+        steps:
+          - get: gpdb_src
+            passed: [gate_resource_groups_start]
+          - get: gpdb_binary
+            resource: bin_gpdb_[[ os_type ]]
+            passed: [gate_resource_groups_start]
+            trigger: [[ test_trigger ]]
+          - get: ccp_src
+          - get: ccp-image
+          - get: terraform.d
+            params:
+              unpack: true
+    - put: terraform
+      params:
+        <<: *ccp_default_params
+        vars:
+          <<: *ccp_default_vars
+          instance_type: n1-standard-2
+          PLATFORM: [[ os_type ]]-cgroup2-gpdb7
+    - task: gen_cluster
+      file: ccp_src/ci/tasks/gen_cluster.yml
+      params:
+        <<: *ccp_gen_cluster_default_params
+        PLATFORM: [[ os_type ]]-cgroup2-gpdb7
+    - task: gpinitsystem
+      file: ccp_src/ci/tasks/gpinitsystem.yml
+    - task: run_tests
+      file: gpdb_src/concourse/tasks/ic_gpdb_resgroup_v2.yml
       image: ccp-image
       params:
         TEST_OS: [[ os_type ]]
@@ -1463,7 +1515,9 @@ jobs:
       - get: gpdb_src
         trigger: true
         passed:
+        {% if os_type == default_os_type %}
         - check_format
+        {% endif %}
         - compile_gpdb_[[ os_type ]]
         - icw_gporca_[[ os_type ]]
         - icw_gporca_jit_[[ os_type ]]
@@ -1481,6 +1535,7 @@ jobs:
 {% for test in CLI_BEHAVE_TESTS %}
         - [[ test.name ]]_[[ os_type ]]
         - resource_group_[[ os_type ]]
+        - resource_group_v2_[[ os_type ]]
         - interconnect_[[ os_type ]]
 {% endfor %}
         - pg_upgrade_[[ os_type ]]
@@ -1500,6 +1555,7 @@ jobs:
         - icw_mirrorless_[[ os_type ]]
         - icw_extensions_gpcloud_[[ os_type ]]
         - resource_group_[[ os_type ]]
+        - resource_group_v2_[[ os_type ]]
         - interconnect_[[ os_type ]]
         - cli_cross_subnet
   {% for test in CLI_BEHAVE_TESTS %}

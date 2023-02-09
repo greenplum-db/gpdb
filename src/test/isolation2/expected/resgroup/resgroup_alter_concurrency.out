@@ -39,14 +39,6 @@ SET
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
 ALTER
 
-SELECT * FROM rg_activity_status;
- rsgname             | wait_event_type | state               | query  
----------------------+-----------------+---------------------+--------
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
- rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
-(3 rows)
-
 11:END;
 END
 11q: ... <quitting>

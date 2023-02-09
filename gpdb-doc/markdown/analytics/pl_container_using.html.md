@@ -319,11 +319,11 @@ Record the name of the GPU device ID (0 in the above example) or the device UUID
 
 #### Install and Customize the PL/Container Image
 
-1. Download the `plcontainer-python3-image-2.2.0-gp6.tar.gz` file from the **Greenplum Procedural Languages** section on [Tanzu Network](https://network.pivotal.io/products/vmware-tanzu-greenplum).
+1. Download the `plcontainer-python3-image-2.2.0-gp7.tar.gz` file from the **Greenplum Procedural Languages** section on [Tanzu Network](https://network.pivotal.io/products/vmware-tanzu-greenplum).
 
 2. Load the downloaded PL/Container image into Docker:
     ```
-    $ docker image load < plcontainer-python3-image-2.2.0-gp6.tar.gz
+    $ docker image load < plcontainer-python3-image-2.2.0-gp7.tar.gz
     ```
 
 3. Customize the PL/Container image to add the required CUDA runtime and `pycuda` library. The following example Dockerfile contents show how to add CUDA 11.7 and `pycuda` 2021.1 to the PL/Container image. Use a text editor to create the Dockerfile:

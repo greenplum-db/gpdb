@@ -85,6 +85,37 @@ cmpSelectivity
  *	  expression clauses.  The list can be empty, in which case 1.0
  *	  must be returned.  List elements may be either RestrictInfos
  *	  or bare expression clauses --- the former is preferred since
+ *	  it allows caching of results. 
+ *
+ * clauselist_selectivity is kept same as upstream here. Because this 
+ * function is called by most fdw (Foreign Data Wrapper) extensions.
+ * This functions just simply call clauselist_selectivity_extended() 
+ * and set use_damping to false.
+ * 
+ * Greenplum specific behavior:
+ * Greenplum calls clauselist_selectivity_extended() directly.
+ * Function clauselist_selectivity() is kept for external fdw.
+ *  
+ * See clauselist_selectivity_extended() for more information.
+ */
+Selectivity
+clauselist_selectivity(PlannerInfo *root,
+					   List *clauses,
+					   int varRelid,
+					   JoinType jointype,
+					   SpecialJoinInfo *sjinfo)
+{
+	return clauselist_selectivity_extended(root, clauses, varRelid,
+											jointype, sjinfo, 
+											false);   /* use_damping, which is false by default */ 
+}
+
+/*
+ * clauselist_selectivity_extended -
+ *	  Compute the selectivity of an implicitly-ANDed list of boolean
+ *	  expression clauses.  The list can be empty, in which case 1.0
+ *	  must be returned.  List elements may be either RestrictInfos
+ *	  or bare expression clauses --- the former is preferred since
  *	  it allows caching of results.
  *
  * See clause_selectivity() for the meaning of the additional parameters.
@@ -96,7 +127,7 @@ cmpSelectivity
  * clauselist_selectivity_simple.
  */
 Selectivity
-clauselist_selectivity(PlannerInfo *root,
+clauselist_selectivity_extended(PlannerInfo *root,
 					   List *clauses,
 					   int varRelid,
 					   JoinType jointype,
@@ -807,8 +838,8 @@ clause_selectivity(PlannerInfo *root,
 	}
 	else if (is_andclause(clause))
 	{
-		/* share code with clauselist_selectivity() */
-		s1 = clauselist_selectivity(root,
+		/* share code with clauselist_selectivity_extended() */
+		s1 = clauselist_selectivity_extended(root,
 									((BoolExpr *) clause)->args,
 									varRelid,
 									jointype,

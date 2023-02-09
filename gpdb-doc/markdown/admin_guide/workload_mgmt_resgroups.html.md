@@ -8,7 +8,7 @@ When you assign a resource group to a role \(a role-based resource group\), the 
 
 Similarly, when you assign a resource group to an external component, the group limits apply to all running instances of the component. For example, if you create a resource group for a PL/Container external component, the memory limit that you define for the group specifies the maximum memory usage for all running instances of each PL/Container runtime to which you assign the group.
 
-When using resource groups to control resources like CPU cores, review the Hyperthreading note in [Hardware and Network](../install_guide/platform-requirements.html#topic_tnl_3mx_zgb).
+When using resource groups to control resources like CPU cores, review the Hyperthreading note in [Hardware and Network](../install_guide/platform-requirements-overview.html#hardware-and-network-3).
 
 This topic includes the following subtopics:
 

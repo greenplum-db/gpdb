@@ -30,7 +30,7 @@ class GpCheckResGroupImplCGroup(unittest.TestCase):
         os.mkdir(os.path.join(self.cgroup_mntpnt, "cpuacct"), 0o755)
         os.mkdir(os.path.join(self.cgroup_mntpnt, "cpuset"), 0o755)
 
-        self.cgroup = gpcheckresgroupimpl.cgroup()
+        self.cgroup = gpcheckresgroupimpl.CgroupValidationVersionOne()
         self.cgroup.mount_point = self.cgroup_mntpnt
         self.cgroup.die = self.mock_cgroup_die
         self.cgroup.compdirs = self.cgroup.fallback_comp_dirs()
@@ -116,13 +116,13 @@ class GpCheckResGroupImplCGroup(unittest.TestCase):
 
     def test_proper_setup_with_non_default_cgroup_comp_dirs(self):
         # set comp dir to comp.dir
-        compdirs = self.cgroup.compdirs
-        self.cgroup.compdirs = {}
-        for comp in list(compdirs.keys()):
-            self.cgroup.compdirs[comp] = comp + '.dir'
+        component_dirs = self.cgroup.component_dirs
+        self.cgroup.component_dirs = {}
+        for comp in list(component_dirs.keys()):
+            self.cgroup.component_dirs[comp] = comp + '.dir'
         # move /sys/fs/cgroup/comp to /sys/fs/cgroup/comp/comp.dir
-        for comp in list(self.cgroup.compdirs.keys()):
-            compdir = self.cgroup.compdirs[comp]
+        for comp in list(self.cgroup.component_dirs.keys()):
+            compdir = self.cgroup.component_dirs[comp]
             olddir = os.path.join(self.cgroup_mntpnt, comp)
             tmpdir = os.path.join(self.cgroup_mntpnt, compdir)
             shutil.move(olddir, tmpdir)

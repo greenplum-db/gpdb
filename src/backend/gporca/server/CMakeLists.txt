@@ -87,7 +87,7 @@ CLikeIDFTest:
 LIKE-Pattern-green LIKE-Pattern-green-2 LIKE-Pattern-Empty Nested-Or-Predicates Join-IDF
 LikePredStatsNotComparable PredStatsNotComparable ExtractPredicateFromDisj CollapseNot
 IDF-NotNullConstant IDF-NullConstant INDF-NotNullConstant INDF-NullConstant NullConstant-INDF-Col
-Join-INDF Join-INDF-NoBroadcast TimeTypeStatsNotComparable Join-INDF-Nulls-Not-Collocated;
+Join-INDF Join-INDF-NoBroadcast Join-INDF-Nulls-Not-Collocated;
 
 CLeftOuterIndexApplyTest:
 IndexApply-LeftOuter-NLJoin LOJ-IndexApply-MultiIndexes LOJ-IndexApply-Negative-NonEqual-Predicate

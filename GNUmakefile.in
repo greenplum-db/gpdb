@@ -130,6 +130,9 @@ distclean maintainer-clean:
 installcheck-resgroup:
 	$(MAKE) -C src/test/isolation2 $@
 
+installcheck-resgroup-v2:
+	$(MAKE) -C src/test/isolation2 $@
+
 # Create or destroy a demo cluster.
 create-demo-cluster:
 	$(MAKE) -C gpAux/gpdemo create-demo-cluster

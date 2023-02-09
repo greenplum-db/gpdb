@@ -1793,7 +1793,10 @@ pgstat_initstats(Relation rel)
 		  relkind == RELKIND_MATVIEW ||
 		  relkind == RELKIND_INDEX ||
 		  relkind == RELKIND_TOASTVALUE ||
-		  relkind == RELKIND_SEQUENCE))
+		  relkind == RELKIND_SEQUENCE ||
+		  relkind == RELKIND_AOSEGMENTS ||
+		  relkind == RELKIND_AOBLOCKDIR ||
+		  relkind == RELKIND_AOVISIMAP))
 	{
 		rel->pgstat_info = NULL;
 		return;

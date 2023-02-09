@@ -54,6 +54,7 @@
 #include "storage/fd.h"
 #include "storage/execute_pipe.h"
 #include "tcop/tcopprot.h"
+#include "tcop/utility.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
@@ -1371,7 +1372,10 @@ DoCopy(ParseState *pstate, const CopyStmt *stmt,
 
 	/* Issue automatic ANALYZE if conditions are satisfied (MPP-4082). */
 	if (Gp_role == GP_ROLE_DISPATCH && is_from)
-		auto_stats(AUTOSTATS_CMDTYPE_COPY, relid, *processed, false /* inFunction */);
+	{
+		bool inFunction = already_under_executor_run() || utility_nested();
+		auto_stats(AUTOSTATS_CMDTYPE_COPY, relid, *processed, inFunction);
+	}
 }
 
 /*
@@ -3018,6 +3022,7 @@ CopyTo(CopyState cstate)
 	int			num_phys_attrs;
 	ListCell   *cur;
 	uint64		processed = 0;
+	bool *proj = NULL;
 
 	if (cstate->rel)
 		tupDesc = RelationGetDescr(cstate->rel);
@@ -3031,9 +3036,12 @@ CopyTo(CopyState cstate)
 
 	/* Get info about the columns we need to process. */
 	cstate->out_functions = (FmgrInfo *) palloc(num_phys_attrs * sizeof(FmgrInfo));
+
+	proj = palloc0(sizeof(bool) * num_phys_attrs);
 	foreach(cur, cstate->attnumlist)
 	{
 		int			attnum = lfirst_int(cur);
+		proj[attnum-1] = true;
 		Oid			out_func_oid;
 		bool		isvarlena;
 		Form_pg_attribute attr = TupleDescAttr(tupDesc, attnum - 1);
@@ -3120,7 +3128,7 @@ CopyTo(CopyState cstate)
 		TupleTableSlot *slot;
 		TableScanDesc scandesc;
 
-		scandesc = table_beginscan(cstate->rel, GetActiveSnapshot(), 0, NULL);
+		scandesc = table_beginscan_es(cstate->rel, GetActiveSnapshot(), 0, NULL, proj);
 		slot = table_slot_create(cstate->rel, NULL);
 
 		processed = 0;
@@ -4815,6 +4823,14 @@ BeginCopyFrom(ParseState *pstate,
 			 cstate->rel && cstate->rel->rd_cdbpolicy &&
 			 cstate->rel->rd_cdbpolicy->ptype != POLICYTYPE_ENTRY)
 		cstate->dispatch_mode = COPY_DISPATCH;
+	/*
+	 * Handle case where fdw executes on coordinator while it's acting as a segment
+	 * This occurs when fdw is under a redistribute on the coordinator
+	 */
+	else if (Gp_role == GP_ROLE_EXECUTE &&
+			 cstate->rel && cstate->rel->rd_cdbpolicy &&
+			 cstate->rel->rd_cdbpolicy->ptype == POLICYTYPE_ENTRY)
+		cstate->dispatch_mode = COPY_DIRECT;
 	else if (Gp_role == GP_ROLE_EXECUTE)
 		cstate->dispatch_mode = COPY_EXECUTOR;
 	else

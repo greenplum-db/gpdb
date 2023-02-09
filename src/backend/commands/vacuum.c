@@ -1420,7 +1420,7 @@ vac_update_relstats(Relation relation,
 	 */
 	if (num_pages < 1.0)
 	{
-		/*
+		/* (1) For NOT foreign table
 		 * When running in utility mode in the QD node, we get the number of
 		 * tuples of an AO table from the pg_aoseg table, but we don't know
 		 * the file size, so that's always 0. Ignore the tuple count we got,
@@ -1432,8 +1432,20 @@ vac_update_relstats(Relation relation,
 		 * relpages/reltuples estimates in utility mode, but that's what we
 		 * do for heap tables, too, because we don't have even a tuple count
 		 * for them. At least this is consistent.
+		 *
+		 * (2) For foreign table
+		 * For many foreign tables, num_pages < 1.0 && num_tuples >= 1.0
+		 * might arise and is reasonable.
+		 *
+		 * For example, while ANALYZE kafka_fdw foreign tables, num_pages < 1.0
+		 * && num_tuples >= 1.0 always arises.
+		 * Because num_pages is meaningless for kafka, kafka_fdw won't compute it.
+		 *
+		 * To avoid the crash of GPDB and ensure the quality of query plan,
+		 * we won't reset num_tuples to 0 when num_pages < 1.0 && num_tuples >= 1.0
+		 * for foreign tables.
 		 */
-		if (num_tuples >= 1.0)
+		if (get_rel_relkind(relid) != RELKIND_FOREIGN_TABLE && num_tuples >= 1.0)
 		{
 			Assert(Gp_role == GP_ROLE_UTILITY);
 			Assert(!IsSystemRelation(relation));
@@ -1441,7 +1453,6 @@ vac_update_relstats(Relation relation,
 			num_tuples = 0;
 		}
 
-		Assert(num_tuples < 1.0);
 		num_pages = 1.0;
 	}
 

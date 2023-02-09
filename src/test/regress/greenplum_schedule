@@ -296,6 +296,8 @@ test: mirror_replay
 test: autovacuum
 test: autovacuum-segment
 test: autovacuum-template0-segment
+test: autovacuum-catalog
+test: autovacuum-ao-aux
 
 # gpexpand introduce the partial tables, check them if they can run correctly
 test: gangsize gang_reuse
@@ -319,5 +321,8 @@ test: uao_dml/uao_dml_unique_index_delete_row uao_dml/uao_dml_unique_index_delet
 
 # test CREATE UNIQUE INDEX on AO/CO tables.
 test: uao_dml/ao_unique_index_build_row uao_dml/ao_unique_index_build_column
+
+# test column projection for various operations
+test: aoco_projection
 
 # end of tests

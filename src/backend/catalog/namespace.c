@@ -3100,11 +3100,33 @@ makeRangeVarFromNameList(List *names)
 			break;
 		case 2:
 			rel->schemaname = strVal(linitial(names));
+
+			/* GPDB: When QD generates query tree and serializes it to string
+			 * and sends it to QE, and QE will deserialize it to a plan tree.
+			 * In this process, Greenplum will not consider the difference
+			 * between NULL and an empty string, so if the original value is
+			 * a NULL, QE may deserialize it to an empty string, which could
+			 * lead to error in the following process.
+			 */
+			if (rel->schemaname && strlen(rel->schemaname) == 0)
+				rel->schemaname = NULL;
+
 			rel->relname = strVal(lsecond(names));
 			break;
 		case 3:
 			rel->catalogname = strVal(linitial(names));
 			rel->schemaname = strVal(lsecond(names));
+
+			/* GPDB: When QD generates query tree and serializes it to string
+			 * and sends it to QE, and QE will deserialize it to a plan tree.
+			 * In this process, Greenplum will not consider the difference
+			 * between NULL and an empty string, so if the original value is
+			 * a NULL, QE may deserialize it to an empty string, which could
+			 * lead to error in the following process.
+			 */
+			if (rel->schemaname && strlen(rel->schemaname) == 0)
+				rel->schemaname = NULL;
+
 			rel->relname = strVal(lthird(names));
 			break;
 		default:

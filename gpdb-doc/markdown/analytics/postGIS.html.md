@@ -33,7 +33,7 @@ Greenplum Database supports the following PostGIS extension versions and compone
 - PostGIS 2.5.4, and components Proj 4.8.0, Geos 3.10.2, GDAL 1.11.1, Json 0.12, Expat 2.4.4
 - PostGIS 2.1.5, and components Proj 4.8.0, Geos 3.4.2, GDAL 1.11.1, Json 0.12, Expat 2.1.0
 
-For information about the supported Greenplum extension packages and software versions, see [Extensions](../install_guide/platform-requirements.html#topic_eyc_l2h_zz) in the _VMware Greenplum Tools and Extensions Compatibility_ topic.
+For information about the supported Greenplum extension packages and software versions, see [Extensions](../install_guide/platform-requirements-overview.html#topic_eyc_l2h_zz).
 
 There are significant changes in PostGIS 2.5.4 compared with 2.1.5. For a list of new and enhanced functions in PostGIS 2.5, see the PostGIS documentation [PostGIS Functions new or enhanced in 2.5](https://postgis.net/docs/manual-2.5/PostGIS_Special_Functions_Index.html#NewFunctions_2_5) and [Release 2.5.4](https://postgis.net/docs/manual-2.5/release_notes.html).
 
@@ -124,7 +124,7 @@ To enable PostGIS support, install the Greenplum PostGIS extension package into 
 Install Greenplum PostGIS extension package with the `gppkg` utility. For example, this command installs the package for RHEL 7.
 
 ```
-gppkg -i postgis-2.5.4+pivotal.2.build.1-gp6-rhel7-x86_64.gppkg
+gppkg -i postgis-2.5.4+pivotal.2.build.1-gp7-rhel7-x86_64.gppkg
 ```
 
 After installing the package, source the `greenplum_path.sh` file and restart Greenplum Database. This command restarts Greenplum Database.

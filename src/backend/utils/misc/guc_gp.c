@@ -39,6 +39,7 @@
 #include "optimizer/planmain.h"
 #include "pgstat.h"
 #include "parser/scansup.h"
+#include "postmaster/autovacuum.h"
 #include "postmaster/syslogger.h"
 #include "postmaster/fts.h"
 #include "replication/walsender.h"
@@ -221,7 +222,6 @@ bool		gp_debug_resqueue_priority = false;
 int			gp_resource_group_cpu_priority;
 double		gp_resource_group_cpu_limit;
 bool		gp_resource_group_bypass;
-bool		gp_resource_group_enable_cgroup_version_two;
 
 /* Metrics collector debug GUC */
 bool		vmem_process_interrupt = false;
@@ -334,6 +334,7 @@ bool		optimizer_prune_unused_columns;
 bool		optimizer_enable_redistribute_nestloop_loj_inner_child;
 bool		optimizer_force_comprehensive_join_implementation;
 bool		optimizer_enable_replicated_table;
+bool		optimizer_enable_foreign_table;
 
 /* Optimizer plan enumeration related GUCs */
 bool		optimizer_enumerate_plans;
@@ -544,6 +545,12 @@ static const struct config_enum_entry optimizer_join_order_options[] = {
 	{"greedy", JOIN_ORDER_GREEDY_SEARCH},
 	{"exhaustive", JOIN_ORDER_EXHAUSTIVE_SEARCH},
 	{"exhaustive2", JOIN_ORDER_EXHAUSTIVE2_SEARCH},
+	{NULL, 0}
+};
+
+static const struct config_enum_entry gp_autovacuum_scope_options[] = {
+	{"catalog", AV_SCOPE_CATALOG},
+	{"catalog_ao_aux", AV_SCOPE_CATALOG_AO_AUX},
 	{NULL, 0}
 };
 
@@ -1635,6 +1642,18 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_log_resqueue_memory,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
+
+		{"gp_log_resgroup_memory", PGC_USERSET, LOGGING_WHAT,
+			gettext_noop("Prints out messages related to resource group's memory management."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_log_resgroup_memory,
 		false,
 		NULL, NULL, NULL
 	},
@@ -2749,15 +2768,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_resource_group_enable_cgroup_version_two", PGC_POSTMASTER, RESOURCES,
-			gettext_noop("Enable linux cgroup version 2"),
-			NULL
-		},
-		&gp_resource_group_enable_cgroup_version_two,
-		false, NULL, NULL
-	},
-
-	{
 		{"stats_queue_level", PGC_SUSET, STATS_COLLECTOR,
 			gettext_noop("Collects resource queue-level statistics on database activity."),
 			NULL
@@ -2883,20 +2893,29 @@ struct config_bool ConfigureNamesBool_gp[] =
 		 gettext_noop("Enable replicated tables."),
 		 NULL,
 		 GUC_NOT_IN_SAMPLE
-		 },
-		 &optimizer_enable_replicated_table,
-		 true,
-		 NULL, NULL, NULL
+		},
+		&optimizer_enable_replicated_table,
+		true,
+		NULL, NULL, NULL
 	},
-
+	{
+		{"optimizer_enable_foreign_table", PGC_USERSET, DEVELOPER_OPTIONS,
+		 gettext_noop("Enable foreign tables in Orca."),
+		 NULL,
+		 GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_enable_foreign_table,
+		true,
+		NULL, NULL, NULL
+	},
 	{
 		{"gp_log_suboverflow_statement", PGC_SUSET, LOGGING_WHAT,
 		 gettext_noop("Enable logging of statements that cause subtransaction overflow."),
 		 NULL,
-		 },
-		 &gp_log_suboverflow_statement,
-		 false,
-		 NULL, NULL, NULL
+		},
+		&gp_log_suboverflow_statement,
+		false,
+		NULL, NULL, NULL
 	},
 
 	/* End-of-list marker */
@@ -3824,6 +3843,17 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"gp_resgroup_memory_query_fixed_mem", PGC_USERSET, RESOURCES_MEM,
+			gettext_noop("Sets the fixed amount of memory reserved for a query."),
+			NULL,
+			GUC_UNIT_KB | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_resgroup_memory_query_fixed_mem,
+		0, 0, INT_MAX,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"gp_resqueue_memory_policy_auto_fixed_mem", PGC_USERSET, RESOURCES_MEM,
 			gettext_noop("Sets the fixed amount of memory reserved for non-memory intensive operators in the AUTO policy."),
 			NULL,
@@ -3833,6 +3863,17 @@ struct config_int ConfigureNamesInt_gp[] =
 		100, 50, INT_MAX,
 		NULL, NULL, NULL
 	},
+	{
+		{"gp_resgroup_memory_policy_auto_fixed_mem", PGC_USERSET, RESOURCES_MEM,
+			gettext_noop("Sets the fixed amount of memory reserved for non-memory intensive operators in the AUTO policy."),
+			NULL,
+			GUC_UNIT_KB | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_resgroup_memory_policy_auto_fixed_mem,
+		100, 50, INT_MAX,
+		NULL, NULL, NULL
+	},
+
 
 	{
 		{"gp_global_deadlock_detector_period", PGC_SIGHUP, LOCK_MANAGEMENT,
@@ -4636,6 +4677,15 @@ struct config_enum ConfigureNamesEnum_gp[] =
 	},
 
 	{
+		{"gp_resgroup_memory_policy", PGC_SUSET, RESOURCES_MGM,
+			gettext_noop("Sets the policy for memory allocation of queries."),
+			gettext_noop("Valid values are AUTO, EAGER_FREE.")
+		},
+		&gp_resgroup_memory_policy,
+		RESMANAGER_MEMORY_POLICY_EAGER_FREE, gp_resqueue_memory_policies, NULL, NULL
+	},
+
+	{
 		{"optimizer_join_order", PGC_USERSET, QUERY_TUNING_OTHER,
 			gettext_noop("Set optimizer join heuristic model."),
 			gettext_noop("Valid values are query, greedy, exhaustive and exhaustive2"),
@@ -4643,6 +4693,17 @@ struct config_enum ConfigureNamesEnum_gp[] =
 		},
 		&optimizer_join_order,
 		JOIN_ORDER_EXHAUSTIVE2_SEARCH, optimizer_join_order_options,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_autovacuum_scope", PGC_SIGHUP, AUTOVACUUM,
+		 gettext_noop("Sets which tables are eligible for autovacuum of dead tuples."),
+		 NULL,
+		 GUC_REPORT | GUC_SUPERUSER_ONLY
+		},
+		&gp_autovacuum_scope,
+		AV_SCOPE_CATALOG, gp_autovacuum_scope_options,
 		NULL, NULL, NULL
 	},
 	/* End-of-list marker */

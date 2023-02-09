@@ -179,6 +179,11 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
 </tr>
 <tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER PUBLICATION</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">NO</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER RESOURCE QUEUE</code></td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Greenplum Database resource management feature - not in
@@ -199,6 +204,11 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER SEQUENCE</code></td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER SUBSCRIPTION</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">NO</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
 </tr>
 <tr class="row">
@@ -418,6 +428,11 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
 </tr>
 <tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE PUBLICATION</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">NO</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE RESOURCE QUEUE</code></td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Greenplum Database resource management feature - not in
@@ -449,6 +464,11 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
                     <code class="ph codeph">setval()</code> function is only allowed in queries that do not
                   operate on distributed data.</p>
 </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE SUBSCRIPTION</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">NO</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
 </tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE TABLE</code></td>
@@ -644,6 +664,11 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
 </tr>
 <tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP PUBLICATION</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">NO</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP RESOURCE QUEUE</code></td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Greenplum Database resource management feature - not in
@@ -667,6 +692,11 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP SEQUENCE</code></td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP SUBSCRIPTION</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">NO</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
 </tr>
 <tr class="row">
