@@ -17,13 +17,6 @@
 
 #include "postgres.h"
 
-/*
- * The pre-occupied group OID, do not change this!
- */
-#define GPDB_DEFAULT_CGROUP 	6437
-#define GPDB_ADMIN_CGROUP 		6438
-#define GPDB_SYSTEM_CGROUP 		6441
-
 #define MAX_CGROUP_PATHLEN 256
 #define MAX_CGROUP_CONTENTLEN 1024  
 

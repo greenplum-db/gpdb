@@ -1200,7 +1200,7 @@ decideResGroup(ResGroupInfo *pGroupInfo)
 
 	if (!group)
 	{
-		groupId = superuser() ? GPDB_ADMIN_CGROUP : GPDB_DEFAULT_CGROUP;
+		groupId = superuser() ? ADMINRESGROUP_OID : DEFAULTRESGROUP_OID;
 		group = groupHashFind(groupId, false);
 	}
 
