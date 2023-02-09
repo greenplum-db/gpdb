@@ -30,10 +30,14 @@ test: copy_eol
 # might not happen if other backends are holding transactions open, preventing
 # vacuum from removing dead tuples. And run gp_toolkit early to make some log
 # file related tests (like gp_log_system, etc) faster.
+# Also, gp_log_system could have issue reading partial log that's generated
+# from concurrent test. So anything that uses it needs to be run alone.
 test: disable_autovacuum
 test: gp_toolkit
 # test gp_fastsequence allocation (early in schedule as log grepping is expensive)
-test: uao_dml/gp_fastsequence_row uao_dml/gp_fastsequence_column
+test: uao_dml/gp_fastsequence_row
+test: uao_dml/gp_fastsequence_column
+
 test: python_processed64bit
 test: enable_autovacuum
 
