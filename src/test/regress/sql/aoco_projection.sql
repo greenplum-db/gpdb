@@ -549,3 +549,301 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', 
 
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
     FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+-- When a sibling DEFAULT PARTITION D is present under an R/SR in a partition hierarchy
+-- and we are attaching a table T, then D's partition bound C will be updated, taking into
+-- account the partition bound clause in the ADD/CREATE PARTITION OF commands.
+-- D will be scanned against the proposed new bound C' for validation. If a row is found
+-- that doesn't match C', an ERROR will be thrown. If D is an AOCO table, only columns
+-- referenced in C' need to be scanned. If D is a partition root, then all of its children
+-- will also need to be scanned to validate C'.
+
+-- Add table T1 as partition of R in presence of default D1, D1 (j) will be scanned
+--     R
+--    / \
+--   D1  T1
+CREATE table create_partof(i int, j bigint, k int) USING ao_column DISTRIBUTED BY (i) PARTITION BY RANGE (j);
+CREATE TABLE create_partof_d1 PARTITION OF create_partof DEFAULT;
+
+INSERT INTO create_partof SELECT 0,0,0 FROM generate_series(1,100000);
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, 100, 0, dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+CREATE TABLE create_partof_t1 PARTITION OF create_partof FOR VALUES FROM (1) TO (2);
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+DROP TABLE create_partof_t1;
+
+-- Validate D1 (j) scanned
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', 'create_partof_d1', 1, 100, 0, dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+CREATE TABLE create_partof_t1 PARTITION OF create_partof FOR VALUES FROM (1) TO (2);
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+-- Create subpartition SR1 of R, D1 (j) will be scanned
+--      R
+--    / | \
+--   D1 T1 SR1
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, 100, 0, dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+CREATE TABLE create_partof_sr PARTITION OF create_partof FOR VALUES FROM (2) TO (3) PARTITION BY RANGE (k);
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+DROP TABLE create_partof_sr;
+
+-- Validate D1 (j) scanned
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', 'create_partof_d1', 1, 100, 0, dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+CREATE TABLE create_partof_sr PARTITION OF create_partof FOR VALUES FROM (2) TO (3) PARTITION BY RANGE (k);
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+
+-- Create table T2 as partition of SR1 in presence of default D2, D2 (k) will be scanned.
+--      R
+--    / | \
+--   D1 T1 SR1
+--         / \
+--        D2  T2
+CREATE TABLE create_partof_d2 PARTITION OF create_partof_sr DEFAULT;
+INSERT INTO create_partof_d2 SELECT 0,2,3 FROM generate_series(1,100000);
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, 100, 0, dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+CREATE TABLE create_partof_t2 PARTITION OF create_partof_sr FOR VALUES FROM (1) TO (2);
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+-- Validate D2 (k) scanned
+DROP TABLE create_partof_t2;
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', 'create_partof_sr_d2', 1, 100, 0, dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+CREATE TABLE create_partof_t2 PARTITION OF create_partof_sr FOR VALUES FROM (1) TO (2);
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+-- Create table T3 as partition of SR1's default partition D3, then create table T4 as partition of SR1. T3 (k) will be scanned
+--      R
+--    / | \
+--   D1 T1   SR1
+--         /  | \
+--    SR2(D3) T2 T4
+--       /
+--      T3
+DROP TABLE create_partof_d2;
+CREATE TABLE create_partof_sr2 PARTITION OF create_partof_sr DEFAULT PARTITION BY RANGE (k);
+CREATE TABLE create_partof_t3 PARTITION OF create_partof_sr2 FOR VALUES FROM (3) TO (4);
+INSERT INTO create_partof_t3 SELECT 0,2,3 FROM generate_series(1,100000);
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, 100, 0, dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+CREATE TABLE create_partof_t4 PARTITION OF create_partof_sr FOR VALUES FROM (4) TO (5);
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+-- Validate T3 (k) scanned
+DROP TABLE create_partof_t4;
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', 'create_partof_t3', 1, 100, 0, dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+CREATE TABLE create_partof_t4 PARTITION OF create_partof_sr FOR VALUES FROM (4) TO (5);
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+
+
+-- ADD table T2 to partition root R in presence of sibling T1 and default D1, D1 (j) will be scanned.
+--      R
+--    / | \
+--   T1 D1 T2
+CREATE table alter_add(i int, j bigint, k int) USING ao_column
+  DISTRIBUTED BY (i)
+  PARTITION BY RANGE (j)
+    (
+      START(1)
+      END(2)
+      EVERY (1),
+      DEFAULT PARTITION d1
+    );
+
+
+INSERT INTO alter_add_1_prt_2 SELECT 0,1,0 FROM generate_series(1,100000) i;  -- T1
+INSERT INTO alter_add_1_prt_d1 SELECT 0,2,0 FROM generate_series(1,100000) i; -- D1
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, 100, 0, dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+ALTER TABLE alter_add ADD PARTITION alter_add_t1 START(3) END(4);
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+-- Validate D1 (j) scanned
+DROP TABLE alter_add_1_prt_alter_add_t1;
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', 'alter_add_1_prt_d1', 1, 100, 0, dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+ALTER TABLE alter_add ADD PARTITION alter_add_t1 START(3) END(4);
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+-- Test ALTER TABLE ... ADD PARTITION with subpartitions
+--     R
+--    / \
+--  SR1  SR2(D1)
+--  / \    / \
+-- T1 D2  T2  D3
+CREATE TABLE alter_add_subpart(i int, j bigint, k int) USING ao_column
+    DISTRIBUTED BY (i)
+    PARTITION BY RANGE (j)
+        SUBPARTITION BY RANGE (k)
+            SUBPARTITION TEMPLATE
+            (
+                START(1)
+                END (2)
+                EVERY(1),
+                DEFAULT SUBPARTITION d_k
+            )
+    (
+        START (1)
+        END (2)
+        EVERY (1),
+        DEFAULT PARTITION d_j
+    );
+
+-- Insert into leaf partitions
+INSERT INTO alter_add_subpart_1_prt_2_2_prt_2 SELECT 0,1,1 FROM generate_series(1,100000) i;  -- T1
+INSERT INTO alter_add_subpart_1_prt_2_2_prt_d_k SELECT 0,1,0 FROM generate_series(1,100000) i;  -- D2
+INSERT INTO alter_add_subpart_1_prt_d_j_2_prt_2 SELECT 0,0,1 FROM generate_series(1,100000) i;  -- T2
+INSERT INTO alter_add_subpart_1_prt_d_j_2_prt_d_k SELECT 0,2,2 FROM generate_series(1,100000) i;-- D3
+
+-- ADD partition SR3 to R, creating table T3 and default D4 under SR3, T2 (j) and D3 (j) will be scanned.
+--        R
+--    /   |    \
+--  SR1 SR2(D1) SR3
+--  / \   / \   / \
+-- T1 D2 T2  D3 T3 D4
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, 100, 0, dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+ALTER TABLE alter_add_subpart ADD PARTITION alter_add_t3 START(3) END(4);
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+-- Validate T2 (j) scanned
+DROP TABLE alter_add_subpart_1_prt_alter_add_t3;
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', 'alter_add_subpart_1_prt_d_j_2_prt_2', 1, 100, 0, dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+ALTER TABLE alter_add_subpart ADD PARTITION alter_add_t3 START(3) END(4);
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+-- Validate D3 (j) scanned
+DROP TABLE alter_add_subpart_1_prt_alter_add_t3;
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', 'alter_add_subpart_1_prt_d_j_2_prt_d_k', 1, 100, 0, dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+ALTER TABLE alter_add_subpart ADD PARTITION alter_add_t3 START(3) END(4);
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+-- Insert data into new leaf partitions
+INSERT INTO alter_add_subpart_1_prt_alter_add_t3_2_prt_2 SELECT 0,3,1 FROM generate_series(1,100000) i;   -- T3
+INSERT INTO alter_add_subpart_1_prt_alter_add_t3_2_prt_d_k SELECT 0,3,2 FROM generate_series(1,100000) i; -- D4
+
+-- ADD table T4 to SR2(D1), D3(k) will be scanned
+--        R
+--    /   |     \
+--  SR1  SR2(D1)  SR3
+--  / \  /  | \    / \
+-- T1 D2 T2 D3 T4 T3 D4
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, 100, 0, dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+ALTER TABLE alter_add_subpart_1_prt_d_j ADD PARTITION alter_add_subpart_t4 START(4) END(5);
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+-- Validate D3 (k) scanned
+DROP TABLE alter_add_subpart_1_prt_d_j_2_prt_alter_add_subpart_t4;
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', 'alter_add_subpart_1_prt_d_j_2_prt_d_k', 1, 100, 0, dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+ALTER TABLE alter_add_subpart_1_prt_d_j ADD PARTITION alter_add_subpart_t4 START(4) END(5);
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
+    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
