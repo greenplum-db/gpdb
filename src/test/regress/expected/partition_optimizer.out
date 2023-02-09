@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/ERROR:  missing operator 3\(\d+,\d+\) in opfamily \d+ \(parse_partition.c:\d+\)/
+-- s/ERROR:  missing operator 3\(\d+,\d+\) in opfamily \d+ \(parse_partition.c:\d+\)/ERROR:  missing operator 3(XX,XX) in opfamily XX (parse_partition.c:XX)/
+-- end_matchsubs
 drop table if exists d;
 NOTICE:  table "d" does not exist, skipping
 drop table if exists c;
@@ -9206,3 +9210,48 @@ drop cascades to table part_op_test.issue_14941_range_part
 drop cascades to table part_op_test.issue_14941_list_part
 drop cascades to table part_op_test.issue_14941_multi_level_part
 drop cascades to table part_op_test.issue_14941_multi_level_multi_key_part
+-- Test that we can list partition by a custom type where its equality
+-- operator is in a different schema.
+CREATE TYPE equal_operator_not_in_search_path_type AS (a int, b int);
+CREATE FUNCTION equal_operator_not_in_search_path_func (equal_operator_not_in_search_path_type, equal_operator_not_in_search_path_type) RETURNS boolean
+  AS 'SELECT $1.a = $2.a;'
+  LANGUAGE SQL IMMUTABLE
+  RETURNS NULL ON NULL INPUT;
+CREATE FUNCTION less_than_operator_not_in_search_path_func (equal_operator_not_in_search_path_type, equal_operator_not_in_search_path_type) RETURNS boolean
+  AS 'SELECT $1.a < $2.a;'
+  LANGUAGE SQL IMMUTABLE
+  RETURNS NULL ON NULL INPUT;
+CREATE SCHEMA equal_operator_not_in_search_path_schema;
+CREATE OPERATOR equal_operator_not_in_search_path_schema.= (
+        LEFTARG = equal_operator_not_in_search_path_type,
+        RIGHTARG = equal_operator_not_in_search_path_type,
+        PROCEDURE = equal_operator_not_in_search_path_func
+);
+CREATE OPERATOR equal_operator_not_in_search_path_schema.< (
+        LEFTARG = equal_operator_not_in_search_path_type,
+        RIGHTARG = equal_operator_not_in_search_path_type,
+        PROCEDURE = less_than_operator_not_in_search_path_func
+);
+CREATE OPERATOR CLASS equal_operator_not_in_search_path_opclass
+  DEFAULT FOR TYPE equal_operator_not_in_search_path_type
+  USING btree AS
+  OPERATOR 1 equal_operator_not_in_search_path_schema.<;
+-- this should fail because no equality operator is found for the opclass
+CREATE TABLE equal_operator_not_in_search_path_table (a int, b equal_operator_not_in_search_path_type)
+DISTRIBUTED BY (a) PARTITION BY LIST(b)
+(
+  PARTITION part1 VALUES('(1,1)')
+);
+ERROR:  missing operator 3(XX,XX) in opfamily XX (parse_partition.c:XX)
+ALTER OPERATOR FAMILY equal_operator_not_in_search_path_opclass USING btree ADD
+  OPERATOR 3 equal_operator_not_in_search_path_schema.= (equal_operator_not_in_search_path_type, equal_operator_not_in_search_path_type);
+CREATE TABLE equal_operator_not_in_search_path_table (a int, b equal_operator_not_in_search_path_type)
+DISTRIBUTED BY (a) PARTITION BY LIST(b)
+(
+  PARTITION part1 VALUES('(1,1)')
+);
+CREATE TABLE equal_operator_not_in_search_path_table_multi_key (a int, b equal_operator_not_in_search_path_type, c int)
+DISTRIBUTED BY (a) PARTITION BY LIST(b, c)
+(
+  PARTITION part1 VALUES(('(1,1)', 1))
+);

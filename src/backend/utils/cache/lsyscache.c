@@ -1292,6 +1292,29 @@ get_opname(Oid opno)
 }
 
 /*
+ * get_opnamespace
+ *	  returns the oid of the operator namespace with the given opno
+ */
+Oid
+get_opnamespace(Oid opno)
+{
+	HeapTuple	tp;
+
+	tp = SearchSysCache1(OPEROID, ObjectIdGetDatum(opno));
+	if (HeapTupleIsValid(tp))
+	{
+		Form_pg_operator optup = (Form_pg_operator) GETSTRUCT(tp);
+		Oid result;
+
+		result = optup->oprnamespace;
+		ReleaseSysCache(tp);
+		return result;
+	}
+	else
+		return InvalidOid;
+}
+
+/*
  * op_input_types
  *
  *		Returns the left and right input datatypes for an operator

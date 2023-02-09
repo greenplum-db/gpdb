@@ -1032,7 +1032,7 @@ make_partition_rules(CreateStmtContext *cxt, CreateStmt *stmt,
 		Node	   *pIndAND = NULL;
 		Node	   *pIndOR = NULL;
 		List	   *colElts = pBy->keys;
-		ListCell   *lc = NULL;
+		List	   *keyOpClassElts = pBy->keyopclass;
 		List	   *valElts = NULL;
 		ListCell   *lc_val = NULL;
 		ListCell   *lc_valent = NULL;
@@ -1052,12 +1052,14 @@ make_partition_rules(CreateStmtContext *cxt, CreateStmt *stmt,
 			lc_val = list_head((List *) lfirst(lc_valent));
 		for (; lc_val;)			/* for all vals */
 		{
-			lc = list_head(colElts);
+			ListCell *lc_col;
+			ListCell *lc_opclass;
 			pIndAND = NULL;
 
-			for (; lc; lc = lnext(lc))	/* for all cols */
+			/* for all columns and their respective opclasses */
+			forboth(lc_col, colElts, lc_opclass, keyOpClassElts)
 			{
-				Node	   *pCol = lfirst(lc);
+				Node	   *pCol = lfirst(lc_col);
 				Node	   *pEq = NULL;
 				Value	   *pColConst;
 				A_Const    *pValConst;
@@ -1124,12 +1126,26 @@ make_partition_rules(CreateStmtContext *cxt, CreateStmt *stmt,
 					pEq = (Node *) nt;
 				}
 				else
+				{
+					char *keyOpNamespace;
+					Oid opcOid = lfirst_oid(lc_opclass);
+					Oid opcFamily = get_opclass_family(opcOid);
+					Oid opcInputType = get_opclass_input_type(opcOid);
+					Oid keyOp = get_opfamily_member(opcFamily, opcInputType, opcInputType, BTEqualStrategyNumber);
+
+					if (!OidIsValid(keyOp))
+						elog(ERROR, "missing operator %d(%u,%u) in opfamily %u",
+							 BTEqualStrategyNumber, opcInputType, opcInputType, opcFamily);
+
+					keyOpNamespace = get_namespace_name(get_opnamespace(keyOp));
+
 					/* equality expression: column = value */
-					pEq = (Node *) makeSimpleA_Expr(AEXPR_OP,
-													"=",
-													(Node *) pCRef,
-													(Node *) pValConst,
-													-1 /* position */ );
+					pEq = (Node *) makeA_Expr(AEXPR_OP,
+											  list_make2(makeString(keyOpNamespace), makeString("=")),
+											  (Node *) pCRef,
+											  (Node *) pValConst,
+											  -1 /* position */ );
+				}
 
 				exprStr = deparse_partition_rule((Node *) pEq, cxt->pstate, (Node *) spec);
 
@@ -1601,7 +1617,12 @@ deparse_partition_rule(Node *pNode, ParseState *pstate, Node *parent)
 				switch (ax->kind)
 				{
 					case AEXPR_OP:		/* normal operator */
-						infix_op = strVal(lfirst(list_head(ax->name)));
+						/* if length is 2, opname is fully-qualified */
+						if (list_length(ax->name) == 2)
+							infix_op = psprintf("%s.%s", strVal(linitial(ax->name)), strVal(lsecond(ax->name)));
+						else
+							infix_op = strVal(lfirst(list_head(ax->name)));
+
 						break;
 					case AEXPR_AND:		/* booleans - name field is unused */
 						infix_op = "AND";
