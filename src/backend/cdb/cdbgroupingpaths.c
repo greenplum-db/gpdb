@@ -2154,6 +2154,10 @@ fetch_multi_dqas_info(PlannerInfo *root,
 	double		num_total_input_rows;
 	List	   *group_exprs;
 	double		dNumDistinctGroups;
+	PathTarget	*partial_target = copy_pathtarget(ctx->partial_grouping_target);
+	partial_target->exprs = copyObject(ctx->partial_grouping_target->exprs);
+	PathTarget	*final_target = copy_pathtarget(ctx->target);
+	final_target->exprs = copyObject(ctx->target->exprs);
 
 	if (CdbPathLocus_IsPartitioned(path->locus))
 		num_input_segments = CdbPathLocus_NumSegments(path->locus);
@@ -2330,12 +2334,43 @@ fetch_multi_dqas_info(PlannerInfo *root,
 			                                          NULL);
 		}
 
-		/* assign an agg_expr_id value to aggref*/
-		aggref->agg_expr_id = agg_expr_id;
 
-		/* rid of filter in aggref */
-		aggref->aggfilter = NULL;
-		aggref_final->aggfilter = NULL;
+		Aggref *pref = NULL;
+		Aggref *fref = NULL;
+		foreach(lc2, partial_target->exprs)
+		{
+			Node *node = (Node *)lfirst(lc2);
+			if (equal(node, aggref))
+			{
+				pref = (Aggref *)node;
+				break;
+			}
+		}
+		foreach(lc2, final_target->exprs)
+		{
+			Node *node = (Node *)lfirst(lc2);
+			List *lst = pull_var_clause(node, PVC_INCLUDE_AGGREGATES |
+											  PVC_INCLUDE_PLACEHOLDERS |
+											  PVC_RECURSE_WINDOWFUNCS);
+
+			ListCell *lc3 = NULL;
+			foreach(lc3, lst)
+			{
+				Node *node1 = (Node *)lfirst(lc3);
+
+				if (equal(node1, aggref_final))
+				{
+					fref = node1;
+					break;
+				}
+			}
+
+			if(fref != NULL)
+				break;
+		}
+
+		pref->agg_expr_id = fref->agg_expr_id = agg_expr_id;
+		pref->aggfilter = fref->aggfilter = NULL;
 	}
 	info->dNumDistinctGroups = dNumDistinctGroups;
 
@@ -2360,8 +2395,8 @@ fetch_multi_dqas_info(PlannerInfo *root,
 	info->dqa_group_clause = list_concat(info->dqa_group_clause,
 										 list_copy(ctx->groupClause));
 
-	info->partial_target= ctx->partial_grouping_target;
-	info->final_target = ctx->target;
+	info->partial_target= partial_target;
+	info->final_target = final_target;
 }
 
 /*
