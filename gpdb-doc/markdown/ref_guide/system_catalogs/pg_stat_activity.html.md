@@ -20,12 +20,16 @@ The maximum length of the query text string stored in the column `query` can be 
 |`xact_start`|timestamptz| |Transaction start time|
 |`query_start`|timestamptz| |Time query began execution|
 |`state_change`|timestampz| |Time when the `state` was last changed|
-|`wait_event_type`|text| |Type of event for which the backend is waiting|
-|`wait_event`|text| |Wait event name if backend is currently waiting|
+|`waiting`|boolean| |True if waiting on a lock, false if not waiting|
 |`state`|text| |Current overall state of this backend. Possible values are:<br/><br/>-   `active`: The backend is running a query.<br/><br/>-   `idle`: The backend is waiting for a new client command.<br/><br/>-   `idle in transaction`: The backend is in a transaction, but is not currently running a query.<br/><br/>-   `idle in transaction (aborted)`: This state is similar to idle in transaction, except one of the statements in the transaction caused an error.<br/><br/>-   `fastpath function call`: The backend is running a fast-path function.<br/><br/>-   `disabled`: This state is reported if `track_activities` is deactivated in this backend.|
 |`query`|text| |Text of this backend's most recent query. If `state` is active this field shows the currently running query. In all other states, it shows the last query that was run.|
+|`waiting_reason`|text| |Reason the server process is waiting. The value can be: lock, replication, or resgroup|
 |`rsgid`|oid|pg\_resgroup.oid|Resource group OID or `0`.<br/><br/>See [Note](#rsg_note).|
 |`rsgname`|text|pg\_resgroup.rsgname|Resource group name or `unknown`.<br/><br/>See [Note](#rsg_note).|
+|`rsgqueueduration`|interval| |For a queued query, the total time the query has been queued.|
+
+> **Note**
+> When resource groups are enabled. Only query dispatcher (QD) processes will have a `rsgid` and `rsgname`. Other server processes such as a query executer (QE) process or session connection processes will have a `rsgid` value of `0` and a `rsgname` value of `unknown`. QE processes are managed by the same resource group as the dispatching QD process.
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 
