@@ -21,7 +21,6 @@ Cursors exist only for the duration of the transaction that defines them, unless
 |`is_binary`|boolean| |`true` if the cursor was declared `BINARY`; `false` otherwise.|
 |`is_scrollable`|boolean| |`true` if the cursor is scrollable \(that is, it allows rows to be retrieved in a nonsequential manner\); `false` otherwise.<br/><br/>> **Note** Greenplum Database does not support scrollable cursors, this value is always `false`.|
 |`creation_time`|timestamptz| |The time at which the cursor was declared.|
-|`is_parallel`|boolean| |`true` if the cursor was declared `PARALLEL RETRIEVE`; `false` otherwise.|
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 
