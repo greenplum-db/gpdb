@@ -4,6 +4,8 @@ The `pg_stat_all_tables` view shows one row for each table in the current databa
 
 The `pg_stat_user_tables` and `pg_stat_sys_table` views contain the same information, but filtered to only show user and system tables respectively.
 
+In Greenplum Database 6, the `pg_stat_*_tables` views display access statistics for tables only from the master instance. Access statistics from segment instances are ignored. You can create views that display usage statistics, see [](#tbl_stats_all_6x).
+
 |Column|Type|Description|
 |------|----|-----------|
 |`relid`|oid|OID of a table|
@@ -31,5 +33,84 @@ The `pg_stat_user_tables` and `pg_stat_sys_table` views contain the same informa
 
 > **Note** <sup>1</sup>In Greenplum Database, the autovacuum daemon is deactivated and not supported for user defined databases.
 
-**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+## <a id="tbl_stats_all_6x"></a>Table Access Statistics from the Master and Segment Instances
 
+To display table access statistics that combine statistics from the master and the segment instances you can create these views. A user requires `SELECT` privilege on the views to use them.
+
+```
+-- Create these table access statistics views
+--   pg_stat_all_tables_gpdb6
+--   pg_stat_sys_tables_gpdb6
+--   pg_stat_user_tables_gpdb6
+
+CREATE VIEW pg_stat_all_tables_gpdb6 AS
+SELECT
+    s.relid,
+    s.schemaname,
+    s.relname,
+    m.seq_scan,
+    m.seq_tup_read,
+    m.idx_scan,
+    m.idx_tup_fetch,
+    m.n_tup_ins,
+    m.n_tup_upd,
+    m.n_tup_del,
+    m.n_tup_hot_upd,
+    m.n_live_tup,
+    m.n_dead_tup,
+    s.n_mod_since_analyze,
+    s.last_vacuum,
+    s.last_autovacuum,
+    s.last_analyze,
+    s.last_autoanalyze,
+    s.vacuum_count,
+    s.autovacuum_count,
+    s.analyze_count,
+    s.autoanalyze_count
+FROM
+    (SELECT
+         relid,
+         schemaname,
+         relname,
+         sum(seq_scan) as seq_scan,
+         sum(seq_tup_read) as seq_tup_read,
+         sum(idx_scan) as idx_scan,
+         sum(idx_tup_fetch) as idx_tup_fetch,
+         sum(n_tup_ins) as n_tup_ins,
+         sum(n_tup_upd) as n_tup_upd,
+         sum(n_tup_del) as n_tup_del,
+         sum(n_tup_hot_upd) as n_tup_hot_upd,
+         sum(n_live_tup) as n_live_tup,
+         sum(n_dead_tup) as n_dead_tup,
+         max(n_mod_since_analyze) as n_mod_since_analyze,
+         max(last_vacuum) as last_vacuum,
+         max(last_autovacuum) as last_autovacuum,
+         max(last_analyze) as last_analyze,
+         max(last_autoanalyze) as last_autoanalyze,
+         max(vacuum_count) as vacuum_count,
+         max(autovacuum_count) as autovacuum_count,
+         max(analyze_count) as analyze_count,
+         max(autoanalyze_count) as autoanalyze_count
+     FROM gp_dist_random('pg_stat_all_tables')
+     WHERE relid >= 16384
+     GROUP BY relid, schemaname, relname
+     UNION ALL
+     SELECT *
+     FROM pg_stat_all_tables
+     WHERE relid &lt; 16384) m, pg_stat_all_tables s
+ WHERE m.relid = s.relid;
+
+
+CREATE VIEW pg_stat_sys_tables_gpdb6 AS
+    SELECT * FROM pg_stat_all_tables_gpdb6
+    WHERE schemaname IN ('pg_catalog', 'information_schema') OR
+          schemaname ~ '^pg_toast';
+
+
+CREATE VIEW pg_stat_user_tables_gpdb6 AS
+    SELECT * FROM pg_stat_all_tables_gpdb6
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+          schemaname !~ '^pg_toast';
+```
+
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
