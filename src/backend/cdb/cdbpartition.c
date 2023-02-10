@@ -161,17 +161,17 @@ static Datum *magic_expr_to_datum(Relation rel, PartitionNode *partnode,
 					Node *expr, bool **ppisnull);
 static Oid	selectPartitionByRank(PartitionNode *partnode, int rnk);
 static bool compare_partn_opfuncid(PartitionNode *partnode,
-					   char *pub, char *compare_op,
+					   int16 strategy,
 					   List *colvals,
 					   Datum *values, bool *isnull,
 					   TupleDesc tupdesc);
 static PartitionNode *selectListPartition(PartitionNode *partnode, Datum *values, bool *isnull,
 					TupleDesc tupdesc, PartitionAccessMethods *accessMethods,
 					Oid *foundOid, PartitionRule **prule);
-static Oid	get_less_than_oper(Oid lhstypid, Oid rhstypid, bool strictlyless);
-static FmgrInfo *get_less_than_comparator(int keyno, PartitionRangeState *rs, Oid ruleTypeOid, Oid exprTypeOid, bool strictlyless, bool is_direct);
+static Oid cdb_retrieve_btree_op(Oid opclass, Oid lhstypid, Oid rhstypid, int16 strategy);
+static FmgrInfo *get_less_than_comparator(int keyno, PartitionRangeState *rs, Oid opclass, Oid ruleTypeOid, Oid exprTypeOid, bool strictlyless, bool is_direct);
 static int range_test(Datum tupval, Oid exprTypeOid, PartitionRangeState *rs, int keyno,
-		   PartitionRule *rule);
+					  PartitionRule *rule, Oid opclass);
 static PartitionNode *selectRangePartition(PartitionNode *partnode, Datum *values, bool *isnull,
 					 TupleDesc tupdesc, PartitionAccessMethods *accessMethods,
 					 Oid *foundOid, int *pSearch, PartitionRule **prule);
@@ -195,8 +195,6 @@ static void atpxSkipper(PartitionNode *pNode, int *skipped);
 static List *build_rename_part_recurse(PartitionRule *rule, const char *old_parentname,
 						  const char *new_parentname,
 						  int *skipped);
-static Oid
-			get_opfuncid_by_opname(List *opname, Oid lhsid, Oid rhsid);
 
 static PgPartRule *get_pprule_from_ATC(Relation rel, AlterTableCmd *cmd);
 
@@ -3941,41 +3939,31 @@ selectPartitionByRank(PartitionNode *partnode, int rnk)
 
 static bool
 compare_partn_opfuncid(PartitionNode *partnode,
-					   char *pub, char *compare_op,
+					   int16 strategy,
 					   List *colvals,
 					   Datum *values, bool *isnull,
 					   TupleDesc tupdesc)
 
 {
 	Partition  *part = partnode->part;
-	List	   *last_opname = list_make2(makeString(pub),
-										 makeString(compare_op));
-	List	   *opname = NIL;
+	int16		last_strategy = strategy;
 	ListCell   *lc;
 	int			numCols = 0;
 	int			colCnt = 0;
 	int			ii = 0;
 
-	if (1 == strlen(compare_op))
-	{
-		/* handle case of less than or greater than */
-		if (0 == strcmp("<", compare_op))
-			compare_op = "<=";
-		if (0 == strcmp(">", compare_op))
-			compare_op = ">=";
-
-		/*
-		 * for a list of values, when performing less than or greater than
-		 * comparison, only the final value is compared using less than or
-		 * greater.  All prior values must be compared with LTE/GTE.  For
-		 * example, comparing the list (1,2,3) to see if it is less than
-		 * (1,2,4), we see that 1 <= 1, 2 <= 2, and 3 < 4.  So the last_opname
-		 * is the specified compare_op, and the prior opnames are LTE or GTE.
-		 */
-
-	}
-
-	opname = list_make2(makeString(pub), makeString(compare_op));
+	/*
+	 * for a list of values, when performing less than or greater than
+	 * comparison, only the final value is compared using less than or
+	 * greater.  All prior values must be compared with LTE/GTE.  For
+	 * example, comparing the list (1,2,3) to see if it is less than
+	 * (1,2,4), we see that 1 <= 1, 2 <= 2, and 3 < 4.  So the last_strategy
+	 * is the specified strategy, and the prior strategy are LTE or GTE.
+	 */
+	if (strategy == BTLessStrategyNumber)
+		strategy = BTLessEqualStrategyNumber;
+	if (strategy == BTGreaterStrategyNumber)
+		strategy = BTGreaterEqualStrategyNumber;
 
 	colCnt = numCols = list_length(colvals);
 
@@ -3983,6 +3971,7 @@ compare_partn_opfuncid(PartitionNode *partnode,
 	{
 		Const	   *c = lfirst(lc);
 		AttrNumber	attno = part->paratts[ii];
+		Oid			opclass = part->parclass[ii];
 
 		if (isnull && isnull[attno - 1])
 		{
@@ -3999,10 +3988,10 @@ compare_partn_opfuncid(PartitionNode *partnode,
 
 			if (1 == colCnt)
 			{
-				opname = last_opname;
+				strategy = last_strategy;
 			}
 
-			opfuncid = get_opfuncid_by_opname(opname, lhsid, rhsid);
+			opfuncid = cdb_retrieve_btree_op(opclass, lhsid, rhsid, strategy);
 			res = OidFunctionCall2Coll(opfuncid, c->constcollid, c->constvalue, d);
 
 			if (!DatumGetBool(res))
@@ -4090,6 +4079,7 @@ selectListPartition(PartitionNode *partnode, Datum *values, bool *isnull,
 			{
 				Const	   *c = lfirst(lc3);
 				AttrNumber	attno = part->paratts[i];
+				Oid			opclass = part->parclass[i];
 
 				if (isnull[attno - 1])
 				{
@@ -4130,11 +4120,7 @@ selectListPartition(PartitionNode *partnode, Datum *values, bool *isnull,
 						 */
 						Oid	rhstypid = c->consttype;
 						Oid	lhstypid = tupdesc->attrs[attno - 1]->atttypid;
-
-						List	   *opname = list_make2(makeString("pg_catalog"),
-														makeString("="));
-
-						Oid			opfuncid = get_opfuncid_by_opname(opname, lhstypid, rhstypid);
+						Oid			opfuncid = cdb_retrieve_btree_op(opclass, lhstypid, rhstypid, BTEqualStrategyNumber);
 
 						fmgr_info(opfuncid, &(ls->eqfuncs[i]));
 						ls->eqinit[i] = true;
@@ -4172,35 +4158,49 @@ selectListPartition(PartitionNode *partnode, Datum *values, bool *isnull,
 		MemoryContextSwitchTo(oldcxt);
 
 	return NULL;
-
 }
 
 /*
- * get_less_than_oper()
+ * cdb_reterieve_btree_op
+ *  Retrieves btree operator according to the opclass, operands types and strategy number.
  *
- * Retrieves the appropriate comparator that knows how to handle
- * the two types lhsid, rhsid.
- *
- * Input parameters:
- * lhstypid: Type oid of the LHS of the comparator
- * rhstypid: Type oid of the RHS of the comparator
- * strictlyless: If true, requests the 'strictly less than' operator instead of 'less or equal than'
- *
- * Returns: The Oid of the appropriate comparator; throws an ERROR if no such comparator exists
- *
+ *  Input:
+ *   opclass: The opclass is used when defining the partition table.
+ *   lhstypid: The left hand side operand type oid.
+ *   rhstypid: The right hand side operand type oid.
+ *   strategy: The strategy number of the operator.
  */
 static Oid
-get_less_than_oper(Oid lhstypid, Oid rhstypid, bool strictlyless)
+cdb_retrieve_btree_op(Oid opclass, Oid lhstypid, Oid rhstypid, int16 strategy)
 {
-	Value	   *str = strictlyless ? makeString("<") : makeString("<=");
-	Value	   *pub = makeString("pg_catalog");
-	List	   *opname = list_make2(pub, str);
+	Oid opfamily = get_opclass_family(opclass);
+	Oid opno = InvalidOid;
+	/*
+	 * There's no associated operator for domain types, we need to fetch the base type
+	 * of these types.
+	 */
+	Oid lbasetypid = OidIsValid(lhstypid) ? getBaseType(lhstypid) : lhstypid;
+	Oid rbasetypid = OidIsValid(rhstypid) ? getBaseType(rhstypid) : rhstypid;
 
-	Oid			funcid = get_opfuncid_by_opname(opname, lhstypid, rhstypid);
+	opno = get_opfamily_member(opfamily, lbasetypid, rbasetypid, strategy);
+	if (!OidIsValid(opno))
+	{
+		/*
+		 * There're cases that we cannot fetch operator based on types of the operands.
+		 * e.g.,
+		 *   CREATE TABLE part_tbl_varchar (a VARCHAR(15) NOT NULL, b VARCHAR(8) NOT NULL)
+		 *     DISTRIBUTED BY (a)
+		 *     PARTITION BY RANGE(b)
+		 *       (START('v1') END('v5'), START('v5') END('v9'), DEFAULT PARTITION def);
+		 * The recorded opclass for the partitioning key is text_ops (3126), though the column
+		 * type is 'VARCHAR'. We use IsBinaryCoercible to handle these binary-compatible types.
+		 */
+		Oid inctypid = get_opclass_input_type(opclass);
+		if (IsBinaryCoercible(lbasetypid, inctypid) && IsBinaryCoercible(rbasetypid, inctypid))
+			opno = get_opfamily_member(opfamily, inctypid, inctypid, strategy);
+	}
 
-	list_free_deep(opname);
-
-	return funcid;
+	return get_opcode(opno);
 }
 
 /*
@@ -4210,6 +4210,7 @@ get_less_than_oper(Oid lhstypid, Oid rhstypid, bool strictlyless)
  *  Input:
  *   keyno: Index in the key array of the partitioning key considered
  *   rs: the current PartitionRangeState
+ *   opclass: the opclass is used when defining the partition table.
  *   ruleTypeOid: Oid for the type of the partition rules
  *   exprTypeOid: Oid for the type of the expressions
  *   strictlyless: If true, the operator for strictly less than (LT) is retrieved. Otherwise,
@@ -4219,7 +4220,8 @@ get_less_than_oper(Oid lhstypid, Oid rhstypid, bool strictlyless)
  *
  */
 static FmgrInfo *
-get_less_than_comparator(int keyno, PartitionRangeState *rs, Oid ruleTypeOid, Oid exprTypeOid, bool strictlyless, bool is_direct)
+get_less_than_comparator(int keyno, PartitionRangeState *rs, Oid opclass,
+						 Oid ruleTypeOid, Oid exprTypeOid, bool strictlyless, bool is_direct)
 {
 
 	Assert(NULL != rs);
@@ -4268,7 +4270,8 @@ get_less_than_comparator(int keyno, PartitionRangeState *rs, Oid ruleTypeOid, Oi
 			rhsOid = exprTypeOid;
 		}
 
-		Oid			funcid = get_less_than_oper(lhsOid, rhsOid, strictlyless);
+		Oid			funcid = cdb_retrieve_btree_op(opclass, lhsOid, rhsOid,
+												   strictlyless ? BTLessStrategyNumber : BTLessEqualStrategyNumber);
 
 		fmgr_info(funcid, funcInfo);
 	}
@@ -4288,11 +4291,11 @@ get_less_than_comparator(int keyno, PartitionRangeState *rs, Oid ruleTypeOid, Oi
  *    rs: The partition range state
  *    keyno: The index of the partitioning key considered (for composite partitioning keys)
  *    rule: The rule whose boundaries we're testing
- *
+ *    opclass: The opclass is used when defining the partition table
  */
 static int
 range_test(Datum tupval, Oid exprTypeOid, PartitionRangeState *rs, int keyno,
-		   PartitionRule *rule)
+		   PartitionRule *rule, Oid opclass)
 {
 	Const	   *c = NULL;
 	FmgrInfo   *finfo;
@@ -4317,7 +4320,7 @@ range_test(Datum tupval, Oid exprTypeOid, PartitionRangeState *rs, int keyno,
 		 * Otherwise, we request comparator ruleVal < exprVal ( ==>
 		 * strictly_less = true)
 		 */
-		finfo = get_less_than_comparator(keyno, rs, c->consttype, exprTypeOid, !rule->parrangestartincl /* strictly_less */ , false /* is_direct */ );
+		finfo = get_less_than_comparator(keyno, rs, opclass, c->consttype, exprTypeOid, !rule->parrangestartincl /* strictly_less */ , false /* is_direct */ );
 		res = FunctionCall2Coll(finfo, c->constcollid, c->constvalue, tupval);
 
 		if (!DatumGetBool(res))
@@ -4339,7 +4342,7 @@ range_test(Datum tupval, Oid exprTypeOid, PartitionRangeState *rs, int keyno,
 		 * Otherwise, we request comparator exprVal < ruleVal ( ==>
 		 * strictly_less = true)
 		 */
-		finfo = get_less_than_comparator(keyno, rs, c->consttype, exprTypeOid, !rule->parrangeendincl /* strictly_less */ , true /* is_direct */ );
+		finfo = get_less_than_comparator(keyno, rs, opclass, c->consttype, exprTypeOid, !rule->parrangeendincl /* strictly_less */ , true /* is_direct */ );
 		res = FunctionCall2Coll(finfo, c->constcollid, tupval, c->constvalue);
 
 		if (!DatumGetBool(res))
@@ -4463,7 +4466,7 @@ selectRangePartition(PartitionNode *partnode, Datum *values, bool *isnull,
 			goto l_fin_range;
 		}
 
-		ret = range_test(exprValue, exprTypeOid, rs, 0, rule);
+		ret = range_test(exprValue, exprTypeOid, rs, 0, rule, partnode->part->parclass[0]);
 
 		if (ret > 0)
 		{
@@ -4524,7 +4527,7 @@ selectRangePartition(PartitionNode *partnode, Datum *values, bool *isnull,
 					goto l_fin_range;
 				}
 
-				ret = range_test(d, dTypeOid, rs, i, rule);
+				ret = range_test(d, dTypeOid, rs, i, rule, partnode->part->parclass[0]);
 				if (ret != 0)
 				{
 					matched = false;
@@ -4577,7 +4580,7 @@ selectRangePartition(PartitionNode *partnode, Datum *values, bool *isnull,
 					goto l_fin_range;
 				}
 
-				ret = range_test(d, dTypeOid, rs, i, rule);
+				ret = range_test(d, dTypeOid, rs, i, rule, partnode->part->parclass[0]);
 				if (ret != 0)
 				{
 					matched = false;
@@ -5724,8 +5727,7 @@ atpxPartAddList(Relation rel,
 				{
 					bstat =
 						compare_partn_opfuncid(pNode,
-											   "pg_catalog",
-											   "<",
+											   BTLessStrategyNumber,
 											   (List *) prule->topRule->parrangeend,
 											   d_end, isnull, tupledesc);
 
@@ -5779,8 +5781,7 @@ atpxPartAddList(Relation rel,
 
 				bstat =
 					compare_partn_opfuncid(pNode,
-										   "pg_catalog",
-										   ">",
+										   BTGreaterStrategyNumber,
 										   (List *) prule->topRule->parrangestart,
 										   d_end, isnull, tupledesc);
 
@@ -5808,7 +5809,7 @@ atpxPartAddList(Relation rel,
 						(ri->partedge == PART_EDGE_INCLUSIVE &&
 						 !prule->topRule->parrangestartincl))
 					{
-						bstat = compare_partn_opfuncid(pNode, "pg_catalog", "=",
+						bstat = compare_partn_opfuncid(pNode, BTEqualStrategyNumber,
 													   (List *) prule->topRule->parrangestart,
 													   d_end, isnull, tupledesc);
 					}
@@ -5891,8 +5892,7 @@ atpxPartAddList(Relation rel,
 				{
 					bstat =
 						compare_partn_opfuncid(pNode,
-											   "pg_catalog",
-											   ">",
+											   BTGreaterStrategyNumber,
 											   (List *) prule->topRule->parrangestart,
 											   d_start, isnull, tupledesc);
 
@@ -5951,8 +5951,7 @@ atpxPartAddList(Relation rel,
 
 				bstat =
 					compare_partn_opfuncid(pNode,
-										   "pg_catalog",
-										   "<",
+										   BTLessStrategyNumber,
 										   (List *) prule->topRule->parrangeend,
 										   d_start, isnull, tupledesc);
 				if (bstat)
@@ -5969,8 +5968,7 @@ atpxPartAddList(Relation rel,
 					/* check for equality */
 					bstat =
 						compare_partn_opfuncid(pNode,
-											   "pg_catalog",
-											   "=",
+											   BTEqualStrategyNumber,
 											   (List *) prule->topRule->parrangeend,
 											   d_start, isnull, tupledesc);
 
@@ -6063,8 +6061,7 @@ atpxPartAddList(Relation rel,
 
 					bstat =
 						compare_partn_opfuncid(pNode,
-											   "pg_catalog",
-											   ">",
+											   BTGreaterStrategyNumber,
 											   (List *) a_rule->parrangeend,
 											   d_start, isnull, tupledesc);
 					if (bstat)
@@ -6083,8 +6080,7 @@ atpxPartAddList(Relation rel,
 					 */
 
 					Assert(compare_partn_opfuncid(pNode,
-												  "pg_catalog",
-												  "=",
+												  BTEqualStrategyNumber,
 												  (List *) a_rule->parrangeend,
 												  d_start, isnull, tupledesc));
 
@@ -6128,8 +6124,7 @@ atpxPartAddList(Relation rel,
 					else
 						bstat =
 							compare_partn_opfuncid(pNode,
-												   "pg_catalog",
-												   "<",
+												   BTLessStrategyNumber,
 												   (List *) a_rule->parrangeend,
 												   d_start, isnull, tupledesc);
 
@@ -6163,8 +6158,7 @@ atpxPartAddList(Relation rel,
 					else
 						bstat =
 							compare_partn_opfuncid(pNode,
-												   "pg_catalog",
-												   "=",
+												   BTEqualStrategyNumber,
 												   (List *) a_rule->parrangeend,
 												   d_start, isnull, tupledesc);
 					if (bstat)
@@ -6207,8 +6201,7 @@ atpxPartAddList(Relation rel,
 						else
 							bstat =
 								compare_partn_opfuncid(pNode,
-													   "pg_catalog",
-													   ">",
+													   BTGreaterStrategyNumber,
 													   (List *) a_rule->parrangestart,
 													   d_start, isnull, tupledesc);
 
@@ -6307,8 +6300,7 @@ atpxPartAddList(Relation rel,
 
 					bstat =
 						compare_partn_opfuncid(pNode,
-											   "pg_catalog",
-											   "<",
+											   BTLessStrategyNumber,
 											   (List *) a_rule->parrangestart,
 											   d_end, isnull, tupledesc);
 					if (bstat)
@@ -6327,8 +6319,7 @@ atpxPartAddList(Relation rel,
 					 */
 
 					Assert(compare_partn_opfuncid(pNode,
-												  "pg_catalog",
-												  "=",
+												  BTEqualStrategyNumber,
 												  (List *) a_rule->parrangestart,
 												  d_end, isnull, tupledesc));
 
@@ -6364,8 +6355,7 @@ atpxPartAddList(Relation rel,
 					else
 						bstat =
 							compare_partn_opfuncid(pNode,
-												   "pg_catalog",
-												   ">",
+												   BTGreaterStrategyNumber,
 												   (List *) a_rule->parrangestart,
 												   d_end, isnull, tupledesc);
 
@@ -6422,8 +6412,7 @@ atpxPartAddList(Relation rel,
 					else
 						bstat =
 							compare_partn_opfuncid(pNode,
-												   "pg_catalog",
-												   "=",
+												   BTEqualStrategyNumber,
 												   (List *) a_rule->parrangestart,
 												   d_end, isnull, tupledesc);
 					if (bstat)
@@ -6491,8 +6480,7 @@ atpxPartAddList(Relation rel,
 
 							bstat =
 								compare_partn_opfuncid(pNode,
-													   "pg_catalog",
-													   "<",
+													   BTLessStrategyNumber,
 													   (List *) a_rule->parrangeend,
 													   d_end, isnull, tupledesc);
 
@@ -6624,8 +6612,7 @@ atpxPartAddList(Relation rel,
 						else
 							bstat =
 								compare_partn_opfuncid(pNode,
-													   "pg_catalog",
-													   "<=",
+													   BTLessEqualStrategyNumber,
 													   (List *) a_rule->parrangeend,
 													   d_start, isnull, tupledesc);
 
@@ -6648,8 +6635,7 @@ atpxPartAddList(Relation rel,
 							 list_length((List *) a_rule->parrangestart))
 							||
 							!compare_partn_opfuncid(pNode,
-													"pg_catalog",
-													">=",
+													BTGreaterEqualStrategyNumber,
 													(List *) a_rule->parrangestart,
 													d_end, isnull, tupledesc))
 						{
@@ -7500,25 +7486,6 @@ atpxRenameList(PartitionNode *pNode,
 
 	return l1;
 }								/* end atpxRenameList */
-
-
-static Oid
-get_opfuncid_by_opname(List *opname, Oid lhsid, Oid rhsid)
-{
-	Oid			opfuncid;
-	Operator	op;
-
-	op = oper(NULL, opname, lhsid, rhsid, false, -1);
-
-	if (op == NULL)				/* should not fail */
-		elog(ERROR, "could not find operator");
-
-	opfuncid = ((Form_pg_operator) GETSTRUCT(op))->oprcode;
-
-	ReleaseSysCache(op);
-	return opfuncid;
-}
-
 
 /* Construct the PgPartRule for a branch of a partitioning hierarchy.
  *
