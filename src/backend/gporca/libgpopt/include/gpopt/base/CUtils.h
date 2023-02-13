@@ -1003,6 +1003,8 @@ public:
 	static CScalarIdent *PscalarIdent(CExpression *pexpr);
 
 	static CScalarConst *PscalarConst(CExpression *pexpr);
+
+	static BOOL FScalarConstOrBinaryCoercible(CExpression *pexpr);
 };	// class CUtils
 
 // hash set from expressions

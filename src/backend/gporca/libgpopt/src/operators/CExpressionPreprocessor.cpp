@@ -1974,13 +1974,11 @@ UpdateExprToConstantPredicateMapping(CMemoryPool *mp, CExpression *pexprFilter,
 									 ExprToConstantMap *phmExprToConst,
 									 BOOL doInsert)
 {
-	COperator *pop = pexprFilter->Pop();
-	if (COperator::EopScalarCmp == pop->Eopid() &&
-		IMDType::EcmptEq == CScalarCmp::PopConvert(pop)->ParseCmpType())
+	if (CPredicateUtils::IsEqualityOp(pexprFilter))
 	{
 		// the following section handles predicates of the kind (a = 10)
-		if (COperator::EopScalarConst != (*pexprFilter)[0]->Pop()->Eopid() &&
-			COperator::EopScalarConst == (*pexprFilter)[1]->Pop()->Eopid())
+		if (!CUtils::FScalarConstOrBinaryCoercible((*pexprFilter)[0]) &&
+			CUtils::FScalarConstOrBinaryCoercible((*pexprFilter)[1]))
 		{
 			if (doInsert)
 			{
@@ -1994,9 +1992,8 @@ UpdateExprToConstantPredicateMapping(CMemoryPool *mp, CExpression *pexprFilter,
 			}
 		}
 		// the following section handles predicates of the kind (10 = a)
-		else if (COperator::EopScalarConst ==
-					 (*pexprFilter)[0]->Pop()->Eopid() &&
-				 COperator::EopScalarConst != (*pexprFilter)[1]->Pop()->Eopid())
+		else if (CUtils::FScalarConstOrBinaryCoercible((*pexprFilter)[0]) &&
+				 !CUtils::FScalarConstOrBinaryCoercible((*pexprFilter)[1]))
 		{
 			if (doInsert)
 			{

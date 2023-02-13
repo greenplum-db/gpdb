@@ -2546,6 +2546,13 @@ CUtils::PscalarIdent(CExpression *pexpr)
 	return popScId;
 }
 
+BOOL
+CUtils::FScalarConstOrBinaryCoercible(CExpression *pexpr)
+{
+	return CUtils::FScalarConst(pexpr) ||
+		   CCastUtils::FBinaryCoercibleCastedConst(pexpr);
+}
+
 CScalarConst *
 CUtils::PscalarConst(CExpression *pexpr)
 {
