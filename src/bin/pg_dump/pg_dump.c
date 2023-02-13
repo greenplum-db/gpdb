@@ -3234,6 +3234,28 @@ binary_upgrade_set_type_oids_by_rel(Archive *fout,
 }
 
 static void
+binary_upgrade_set_type_oids_of_child_partition(Archive *fout,
+										PQExpBuffer upgrade_buffer,
+										const TableInfo *tblinfo)
+{
+	TypeInfo *tyinfo = findTypeByOid(tblinfo->reltype);
+	TableInfo *parenttblinfo = findTableByOid(tblinfo->parrelid);
+
+	simple_oid_list_append(&preassigned_oids, tyinfo->dobj.catId.oid);
+
+	/*
+	 * Child partitions may be in a different schema than it's parent,
+	 * but when they are initially created they have their parent's
+	 * schema.
+	 */
+	appendPQExpBufferStr(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_type oid\n");
+	appendPQExpBuffer(upgrade_buffer,
+			"SELECT binary_upgrade.set_next_pg_type_oid('%u'::pg_catalog.oid, "
+			"'%u'::pg_catalog.oid, $$%s$$::text);\n\n",
+			tyinfo->dobj.catId.oid, parenttblinfo->dobj.namespace->dobj.catId.oid, tyinfo->dobj.name);
+}
+
+static void
 binary_upgrade_set_pg_class_oids(Archive *fout,
 								 PQExpBuffer upgrade_buffer, Oid pg_class_oid,
 								 bool is_index)
@@ -3243,12 +3265,30 @@ binary_upgrade_set_pg_class_oids(Archive *fout,
 		TableInfo *tblinfo = findTableByOid(pg_class_oid);
 		Assert(tblinfo != NULL);
 		simple_oid_list_append(&preassigned_oids, pg_class_oid);
-		appendPQExpBufferStr(upgrade_buffer,
-						"\n-- For binary upgrade, must preserve pg_class oids\n");
-		appendPQExpBuffer(upgrade_buffer,
-						  "SELECT binary_upgrade.set_next_heap_pg_class_oid('%u'::pg_catalog.oid, "
-						  "'%u'::pg_catalog.oid, $$%s$$::text);\n",
-						  tblinfo->dobj.catId.oid, tblinfo->dobj.namespace->dobj.catId.oid, tblinfo->dobj.name);
+		if (tblinfo->parrelid)
+		{
+			/*
+			 * Child partitions may be in a different schema than it's parent,
+			 * but when they are initially created they have their parent's
+			 * schema.
+			 */
+			TableInfo *parenttblinfo = findTableByOid(tblinfo->parrelid);
+			appendPQExpBufferStr(upgrade_buffer,
+							"\n-- For binary upgrade, must preserve pg_class oids\n");
+			appendPQExpBuffer(upgrade_buffer,
+							  "SELECT binary_upgrade.set_next_heap_pg_class_oid('%u'::pg_catalog.oid, "
+							  "'%u'::pg_catalog.oid, $$%s$$::text);\n",
+							  tblinfo->dobj.catId.oid, parenttblinfo->dobj.namespace->dobj.catId.oid, tblinfo->dobj.name);
+		}
+		else
+		{
+			appendPQExpBufferStr(upgrade_buffer,
+							"\n-- For binary upgrade, must preserve pg_class oids\n");
+			appendPQExpBuffer(upgrade_buffer,
+							  "SELECT binary_upgrade.set_next_heap_pg_class_oid('%u'::pg_catalog.oid, "
+							  "'%u'::pg_catalog.oid, $$%s$$::text);\n",
+							  tblinfo->dobj.catId.oid, tblinfo->dobj.namespace->dobj.catId.oid, tblinfo->dobj.name);
+		}
 
 		/* Only tables have toast tables, not indexes */
 		if (OidIsValid(tblinfo->toast_oid))
@@ -13521,7 +13561,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 							hasExternalPartitions = true;
 
 						binary_upgrade_set_pg_class_oids(fout, q, part_oid, false);
-						binary_upgrade_set_type_oids_by_rel(fout, q, tbinfo);
+						binary_upgrade_set_type_oids_of_child_partition(fout, q, tbinfo);
 					}
 				}
 
@@ -14280,6 +14320,52 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			}
 		}
 
+		/*
+		 * Dump ALTER statements for child tables set to a schema that is
+		 * different than the parent.
+		 */
+		if (tbinfo->parparent)
+		{
+			int ntups = 0;
+			int i = 0;
+			int i_oldSchema = 0;
+			int i_newSchema = 0;
+			int i_relname = 0;
+			PQExpBuffer getAlteredChildPartitionSchemas = createPQExpBuffer();
+			PGresult   *res;
+
+			appendPQExpBuffer(getAlteredChildPartitionSchemas,
+							  "SELECT "
+							  "pg_catalog.quote_ident(pgn2.nspname) AS oldschema, "
+							  "pg_catalog.quote_ident(pgn.nspname) AS newschema, "
+							  "pg_catalog.quote_ident(pgc.relname) AS relname "
+							  "FROM pg_catalog.pg_partition_rule pgpr "
+							  "JOIN pg_catalog.pg_partition pgp ON pgp.oid = pgpr.paroid "
+							  "JOIN pg_catalog.pg_class pgc ON pgpr.parchildrelid = pgc.oid "
+							  "JOIN pg_catalog.pg_class pgc2 ON pgp.parrelid = pgc2.oid "
+							  "JOIN pg_catalog.pg_namespace pgn ON pgc.relnamespace = pgn.oid "
+							  "JOIN pg_catalog.pg_namespace pgn2 ON pgc2.relnamespace = pgn2.oid "
+							  "WHERE pgc.relnamespace != pgc2.relnamespace "
+							  "AND pgp.parrelid = %u", tbinfo->dobj.catId.oid);
+			res = ExecuteSqlQuery(fout, getAlteredChildPartitionSchemas->data, PGRES_TUPLES_OK);
+
+			ntups = PQntuples(res);
+			i_oldSchema = PQfnumber(res, "oldschema");
+			i_newSchema = PQfnumber(res, "newschema");
+			i_relname = PQfnumber(res, "relname");
+
+			for (i = 0; i < ntups; i++)
+			{
+				char* oldSchema = PQgetvalue(res, i, i_oldSchema);
+				char* newSchema = PQgetvalue(res, i, i_newSchema);
+				char* relname = PQgetvalue(res, i, i_relname);
+
+				appendPQExpBuffer(q, "\nALTER TABLE %s.%s SET SCHEMA %s;\n", oldSchema, relname, newSchema);
+			}
+
+			PQclear(res);
+			destroyPQExpBuffer(getAlteredChildPartitionSchemas);
+		}
 
 		/* MPP-1890 */
 
