@@ -2094,10 +2094,6 @@ CTranslatorDXLToScalar::TranslateDXLScalarValuesListToScalar(
 
 	return (Expr *) values;
 }
-//
-// GPDB_12_MERGE_FIXME: ArrayRef was renamed in commit 558d77f20e4e9.
-// I've fixed the renamed type and fields but the wording "ArrayRef" is
-// still everywhere. Do we plan to rename them?
 
 //---------------------------------------------------------------------------
 //	@function:
