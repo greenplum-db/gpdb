@@ -202,12 +202,11 @@ ExecTupleSplit(PlanState *pstate)
 				filter_out = true;
 			}
 			else
-			{
-
 				filter_out = false;
-			}
-
 		}
+		else
+			filter_out = false;
+
 	} while(filter_out);
 
 	/* reset the isnull array to the original state */

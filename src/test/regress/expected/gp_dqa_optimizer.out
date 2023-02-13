@@ -2168,6 +2168,15 @@ DETAIL:  Feature not supported: Aggregate functions with FILTER
     13 |     5 |  10
 (1 row)
 
+-- fix hang of multi-dqa with filter (https://github.com/greenplum-db/gpdb/issues/14728)
+select count(distinct a) filter (where a > 3), count(distinct b) from dqa_f1;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Aggregate functions with FILTER
+ count | count 
+-------+-------
+    13 |     5
+(1 row)
+
 explain select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Aggregate functions with FILTER

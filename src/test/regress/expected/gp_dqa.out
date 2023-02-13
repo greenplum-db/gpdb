@@ -2047,6 +2047,13 @@ select count(distinct a) filter (where a > 3),count( distinct b) filter (where a
     13 |     5 |  10
 (1 row)
 
+-- fix hang of multi-dqa with filter (https://github.com/greenplum-db/gpdb/issues/14728)
+select count(distinct a) filter (where a > 3), count(distinct b) from dqa_f1;
+ count | count 
+-------+-------
+    13 |     5
+(1 row)
+
 explain select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1;
                                               QUERY PLAN                                              
 ------------------------------------------------------------------------------------------------------
