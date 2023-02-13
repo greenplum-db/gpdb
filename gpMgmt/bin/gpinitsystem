@@ -1143,7 +1143,7 @@ SET_LOCALE_VARS_BASED_ON_COORDINATOR() {
 	#
 	# --lc-collate=en_US.utf8 --lc-ctype=en_US.utf8 ...
 	psql_cmd="SELECT '--' || REPLACE(name, '_', '-') || '=' || setting FROM pg_settings WHERE name LIKE 'lc_%' ORDER BY name"
-	export LC_ALL_SETTINGS=$($PSQL -d template1 -X -A -t -c "$psql_cmd")
+	export LC_ALL_SETTINGS=$(env PGOPTIONS="-c gp_role=utility" $PSQL -d template1 -X -A -t -c "$psql_cmd")
 }
 
 CREATE_QD_DB () {
