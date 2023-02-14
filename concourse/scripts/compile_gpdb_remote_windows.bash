@@ -1,7 +1,7 @@
 #!/bin/bash
 #shellcheck disable=2153,2087,2035,2140
 
-set -eo pipefail
+set -eox pipefail
 
 ROOT_DIR=$(pwd)
 
@@ -10,7 +10,9 @@ ROOT_DIR=$(pwd)
 # since newline doesn't work well for env variable.
 function setup_ssh_keys() {
     # Setup ssh keys
+    set +x
     echo -n "${REMOTE_KEY}" | base64 -d > ~/remote.key
+    set -x
     chmod 400 ~/remote.key
 
     eval "$(ssh-agent -s)"
