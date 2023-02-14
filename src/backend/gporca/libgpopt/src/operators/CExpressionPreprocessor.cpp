@@ -1969,6 +1969,9 @@ CExpressionPreprocessor::PexprRemoveUnusedCTEs(CMemoryPool *mp,
 //
 // Given a select filter expression, map all conjunctive equality between an
 // identifier and a constant value.
+//
+// NB: This function either inserts or deletes mapped values. Parameter
+//     'doInsert' is used to indicate which of the two to perform.
 static void
 UpdateExprToConstantPredicateMapping(CMemoryPool *mp, CExpression *pexprFilter,
 									 ExprToConstantMap *phmExprToConst,
@@ -2110,6 +2113,17 @@ CExpressionPreprocessor::PexprReplaceColWithConst(
 	GPOS_ASSERT(nullptr != pexpr);
 
 	COperator *pop = pexpr->Pop();
+	// Here we check for following pattern:
+	//
+	//     Select
+	//       |-- NaryJoin/LeftOuterJoin
+	//       |-- ...
+	//       +-- Filter
+	//
+	// Notice that Select is processed twice with different values of
+	// checkFilterForConstants. First time is to create the constant mapping.
+	// The second time is to use the const mapping to process the node and
+	// children to add additional select filters.
 	if (checkFilterForConstants &&
 		COperator::EopLogicalSelect == pexpr->Pop()->Eopid() &&
 		(COperator::EopLogicalLeftOuterJoin == ((*pexpr)[0])->Pop()->Eopid() ||
@@ -2117,11 +2131,6 @@ CExpressionPreprocessor::PexprReplaceColWithConst(
 	{
 		UpdateExprToConstantPredicateMapping(mp, (*pexpr)[pexpr->Arity() - 1],
 											 phmExprToConst, true);
-		if (phmExprToConst->Size() == 0)
-		{
-			pexpr->AddRef();
-			return pexpr;
-		}
 
 		CExpression *pexprNew =
 			PexprReplaceColWithConst(mp, pexpr, phmExprToConst, false);
