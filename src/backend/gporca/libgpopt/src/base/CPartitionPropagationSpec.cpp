@@ -342,6 +342,34 @@ CPartitionPropagationSpec::FSatisfies(
 	return true;
 }
 
+// Check if there is a matching partition propogation between two specs
+// This is used to ensure that there aren't partition selectors in places that
+// are unsupported by the executor
+BOOL
+CPartitionPropagationSpec::IsUnsupportedPartSelector(
+	const CPartitionPropagationSpec *pps_reqd) const
+{
+	if (pps_reqd->m_part_prop_spec_infos == nullptr)
+	{
+		return false;
+	}
+
+	UlongToSPartPropSpecInfoMapIter hmulpi(pps_reqd->m_part_prop_spec_infos);
+	while (hmulpi.Advance())
+	{
+		const SPartPropSpecInfo *reqd_info = hmulpi.Value();
+		SPartPropSpecInfo *found_info =
+			FindPartPropSpecInfo(reqd_info->m_scan_id);
+		if (found_info != nullptr &&
+			found_info->m_scan_id == reqd_info->m_scan_id &&
+			found_info->m_type != reqd_info->m_type)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CPartitionPropagationSpec::AppendEnforcers
