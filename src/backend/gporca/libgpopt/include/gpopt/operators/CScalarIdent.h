@@ -75,6 +75,18 @@ public:
 	// operator specific hash function
 	ULONG HashValue() const;
 
+	static ULONG
+	HashValue(const CScalarIdent *pscalarIdent)
+	{
+		return CColRef::HashValue(pscalarIdent->Pcr());
+	}
+
+	static BOOL
+	Equals(const CScalarIdent *left, const CScalarIdent *right)
+	{
+		return CColRef::Equals(left->Pcr(), right->Pcr());
+	}
+
 	// match function
 	BOOL Matches(COperator *pop) const;
 

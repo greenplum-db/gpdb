@@ -776,7 +776,8 @@ CExpressionPreprocessorTest::EresTestLOJ(
 					{
 						CAutoTrace at(mp);
 						at.Os() << std::endl
-								<< "WindowFunction: " << fAddWindowFunction
+								<< "Test Number: " << ulTestCases
+								<< ", WindowFunction: " << fAddWindowFunction
 								<< ", IntermediateInnerjoin: "
 								<< fIntermediateInnerjoin
 								<< ", CascadedLOJ: " << fCascadedLOJ
