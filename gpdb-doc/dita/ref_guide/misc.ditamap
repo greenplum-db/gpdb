@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
-<map title="Features, Reserved and Key Words, and Compliance">
-  <topicref href="misc.xml">
-    <topicref href="feature_summary.xml" id="feature_summary" linking="none"/>
-    <topicref href="sql-keywords.xml" id="sql_keywords" linking="none"/>
-    <topicref href="SQL2008_support.xml" linking="none"/>
-  </topicref>
-</map>
