@@ -2170,6 +2170,29 @@ explain select count(distinct a) filter (where a > 3),count( distinct b) filter 
  Optimizer: Postgres query optimizer
 (11 rows)
 
+-- MultiDQA with filter (enable_hashagg = off)
+-- Related issue: https://github.com/greenplum-db/gpdb/issues/14728#issuecomment-1422341729
+set enable_hashagg = off;
+set enable_groupagg = on;
+select count(distinct a) filter (where a > 3), count(distinct b) from dqa_f1;
+ count | count 
+-------+-------
+    13 |     5
+(1 row)
+
+explain (verbose, costs off)select count(distinct a) filter (where a > 3), count(distinct b) from dqa_f1;
+QUERY PLAN
+___________
+ Aggregate
+   Output: count(DISTINCT a) FILTER (WHERE (a > 3)), count(DISTINCT b)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: a, b
+         ->  Seq Scan on public.dqa_f1
+               Output: a, b
+GP_IGNORE:(8 rows)
+
+set enable_hashagg = on;
+set enable_groupagg = off;
 -- single DQA with agg
 -- the following SQL should use two stage agg
 explain select count(distinct a), sum(b), sum(c) from dqa_f1;

@@ -2333,7 +2333,7 @@ fetch_multi_dqas_info(PlannerInfo *root,
 		/* assign an agg_expr_id value to aggref*/
 		aggref->agg_expr_id = agg_expr_id;
 
-		/* rid of filter in aggref */
+		/* rid of filter in aggref, will push them down to the TupleSplit node */
 		aggref->aggfilter = NULL;
 		aggref_final->aggfilter = NULL;
 	}

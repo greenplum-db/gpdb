@@ -349,6 +349,17 @@ explain select sum(distinct a) filter (where a in (select x from dqa_f2 where x 
 
 explain select count(distinct a) filter (where a > 3),count( distinct b) filter (where a > 4), sum(distinct b) filter( where a > 4) from dqa_f1;
 
+-- MultiDQA with filter (enable_hashagg = off)
+-- Related issue: https://github.com/greenplum-db/gpdb/issues/14728#issuecomment-1422341729
+set enable_hashagg = off;
+set enable_groupagg = on;
+
+select count(distinct a) filter (where a > 3), count(distinct b) from dqa_f1;
+
+explain (verbose, costs off)select count(distinct a) filter (where a > 3), count(distinct b) from dqa_f1;
+
+set enable_hashagg = on;
+set enable_groupagg = off;
 
 -- single DQA with agg
 -- the following SQL should use two stage agg

@@ -7539,6 +7539,14 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 	{
 		PathTarget *partially_grouped_target;
 
+		/*
+		 * fetch_multi_dqas_info() will push the MultiDQA's filter to TupleSplit, 
+		 * then get rid of final and partial DQA aggref filter. If we use the
+		 * same path target as single-stage aggregation, single-stage aggregation
+		 * will lose the filter of MultiDQA.
+		 */
+		PathTarget *final_target = (PathTarget *)copyObject(grouped_rel->reltarget);
+
 		if (gp_eager_two_phase_agg)
 		{
 			ListCell *lc;
@@ -7564,6 +7572,7 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 			if (parse->hasAggs)
 			{
 				List	   *partial_target_exprs;
+				List	   *final_target_exprs;
 
 				/* partial phase */
 				partial_target_exprs = partially_grouped_target->exprs;
@@ -7572,7 +7581,8 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 									 &extra->agg_partial_costs);
 
 				/* final phase */
-				get_agg_clause_costs(root, (Node *) grouped_rel->reltarget->exprs,
+				final_target_exprs = final_target->exprs;
+				get_agg_clause_costs(root, (Node *) final_target_exprs,
 									 AGGSPLIT_FINAL_DESERIAL,
 									 agg_final_costs);
 				get_agg_clause_costs(root, extra->havingQual,
@@ -7602,7 +7612,7 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 		cdb_create_multistage_grouping_paths(root,
 										   input_rel,
 										   grouped_rel,
-										   grouped_rel->reltarget,
+										   final_target,
 										   partially_grouped_target,
 										   havingQual,
 										   dNumGroupsTotal,
