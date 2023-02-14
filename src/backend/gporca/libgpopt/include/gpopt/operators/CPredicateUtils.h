@@ -17,6 +17,7 @@
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CScalarBoolOp.h"
+#include "gpopt/operators/CScalarIdent.h"
 
 namespace gpopt
 {
@@ -187,6 +188,9 @@ public:
 
 	// is the given expression a comparison between a scalar ident and a constant
 	static BOOL FCompareIdentToConst(CExpression *pexpr);
+	static BOOL FCompareIdentToConst(CExpression *pexpr,
+									 CExpression *&pexprIdent,
+									 CExpression *&pexprConst);
 
 	// is the given expression a comparison between a const and a const
 	static BOOL FCompareConstToConstIgnoreCast(CExpression *pexpr);

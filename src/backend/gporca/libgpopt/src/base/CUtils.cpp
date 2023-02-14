@@ -2416,6 +2416,45 @@ CUtils::FScalarConstBoolNull(CExpression *pexpr)
 	return false;
 }
 
+CScalarIdent *
+CUtils::PscalarIdent(CExpression *pexpr)
+{
+	CScalarIdent *popScId;
+	if (CUtils::FScalarIdent(pexpr))
+	{
+		popScId = CScalarIdent::PopConvert(pexpr->Pop());
+	}
+	else
+	{
+		GPOS_ASSERT(CCastUtils::FBinaryCoercibleCastedScId(pexpr));
+		popScId = CScalarIdent::PopConvert((*pexpr)[0]->Pop());
+	}
+	return popScId;
+}
+
+BOOL
+CUtils::FScalarConstOrBinaryCoercible(CExpression *pexpr)
+{
+	return CUtils::FScalarConst(pexpr) ||
+		   CCastUtils::FBinaryCoercibleCastedConst(pexpr);
+}
+
+CScalarConst *
+CUtils::PscalarConst(CExpression *pexpr)
+{
+	CScalarConst *popScConst;
+	if (CUtils::FScalarConst(pexpr))
+	{
+		popScConst = CScalarConst::PopConvert(pexpr->Pop());
+	}
+	else
+	{
+		GPOS_ASSERT(CCastUtils::FBinaryCoercibleCastedConst(pexpr));
+		popScConst = CScalarConst::PopConvert((*pexpr)[0]->Pop());
+	}
+	return popScConst;
+}
+
 // checks to see if the expression is a scalar const TRUE
 BOOL
 CUtils::FScalarConstTrue(CExpression *pexpr)
