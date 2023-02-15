@@ -536,7 +536,7 @@
 		"wal_compression",
 		"wal_consistency_checking",
 		"wal_init_zero",
-		"wal_keep_segments",
+		"wal_keep_size",
 		"wal_level",
 		"wal_log_hints",
 		"wal_receiver_status_interval",

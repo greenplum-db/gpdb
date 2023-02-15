@@ -2622,7 +2622,7 @@ static struct config_int ConfigureNamesInt[] =
 			GUC_UNIT_MB
 		},
 		&wal_keep_size_mb,
-		0, 0, MAX_KILOBYTES,
+		5 * (DEFAULT_XLOG_SEG_SIZE / (1024 * 1024)), 0, MAX_KILOBYTES,
 		NULL, NULL, NULL
 	},
 

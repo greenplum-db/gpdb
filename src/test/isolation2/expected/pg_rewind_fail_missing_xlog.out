@@ -9,7 +9,7 @@ INSERT INTO tst_missing_tbl values(2),(1),(5);
 INSERT 3
 
 -- Make the test faster by not preserving any extra wal segment files
-!\retcode gpconfig -c wal_keep_segments -v 0;
+!\retcode gpconfig -c wal_keep_size -v 0;
 -- start_ignore
 
 -- end_ignore
@@ -636,7 +636,7 @@ DROP
 
 5: DROP TABLE tst_missing_tbl;
 DROP
-!\retcode gpconfig -r wal_keep_segments;
+!\retcode gpconfig -r wal_keep_size;
 (exited with code 0)
 !\retcode gpconfig -r wal_recycle;
 -- start_ignore
