@@ -1022,6 +1022,31 @@ CPredicateUtils::FCompareIdentToConst(CExpression *pexpr)
 	return true;
 }
 
+// is the given expression an equality between ident/const without cast
+// Return true for the below cases:
+// 	ident = ident
+// 	ident = const
+// 	const = ident
+// 	const = const
+BOOL
+CPredicateUtils::FPlainEqualityIdentConstWithoutCast(CExpression *pexpr)
+{
+	if (IsEqualityOp(pexpr))
+	{
+		COperator::EOperatorId leftChildEopId = ((*pexpr)[0])->Pop()->Eopid();
+		COperator::EOperatorId rightChildEopId = ((*pexpr)[1])->Pop()->Eopid();
+
+		if ((COperator::EopScalarIdent == leftChildEopId ||
+			 COperator::EopScalarConst == leftChildEopId) &&
+			(COperator::EopScalarIdent == rightChildEopId ||
+			 COperator::EopScalarConst == rightChildEopId))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 // is the given expression of the form (col IS DISTINCT FROM const)
 BOOL
 CPredicateUtils::FIdentIDFConst(CExpression *pexpr)

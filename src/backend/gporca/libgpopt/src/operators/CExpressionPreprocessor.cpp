@@ -25,6 +25,7 @@
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/CExpressionFactorizer.h"
 #include "gpopt/operators/CExpressionUtils.h"
+#include "gpopt/operators/CLeftJoinPruningPreprocessor.h"
 #include "gpopt/operators/CLogicalCTEAnchor.h"
 #include "gpopt/operators/CLogicalCTEConsumer.h"
 #include "gpopt/operators/CLogicalCTEProducer.h"
@@ -3364,10 +3365,17 @@ CExpressionPreprocessor::PexprPreprocess(
 		pexprUnnested->Release();
 	}
 
-	// (11) infer predicates from constraints
-	CExpression *pexprInferredPreds = PexprInferPredicates(mp, pexprConvert2In);
+	// (11.a) Left Outer Join Pruning
+	CExpression *pexprJoinPruned =
+		CLeftJoinPruningPreprocessor::PexprPreprocess(mp, pexprConvert2In,
+													  pcrsOutputAndOrderCols);
 	GPOS_CHECK_ABORT;
 	pexprConvert2In->Release();
+
+	// (11.b) infer predicates from constraints
+	CExpression *pexprInferredPreds = PexprInferPredicates(mp, pexprJoinPruned);
+	GPOS_CHECK_ABORT;
+	pexprJoinPruned->Release();
 
 	// (12) eliminate self comparisons
 	CExpression *pexprSelfCompEliminated =

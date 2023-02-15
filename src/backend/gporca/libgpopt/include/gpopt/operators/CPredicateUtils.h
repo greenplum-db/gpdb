@@ -186,6 +186,9 @@ public:
 	// is the given expression a comparison between a scalar ident and a constant
 	static BOOL FCompareIdentToConst(CExpression *pexpr);
 
+	// is the given expression an equality between ident/const without cast
+	static BOOL FPlainEqualityIdentConstWithoutCast(CExpression *pexpr);
+
 	// is the given expression a comparison between a const and a const
 	static BOOL FCompareConstToConstIgnoreCast(CExpression *pexpr);
 
