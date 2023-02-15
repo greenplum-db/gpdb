@@ -539,6 +539,7 @@ create_new_objects(void)
 				  true,
 				  true,
 				  "\"%s/pg_restore\" %s %s --exit-on-error --verbose "
+				  "--binary-upgrade "
 				  "--dbname postgres \"%s\"",
 				  new_cluster.bindir,
 				  cluster_conn_opts(&new_cluster),
