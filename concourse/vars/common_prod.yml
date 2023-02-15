@@ -34,6 +34,8 @@ reduced-frequency-trigger-start-centos7: 4:00 AM
 reduced-frequency-trigger-stop-centos7: 4:59 AM
 reduced-frequency-trigger-start-centos6: 6:00 AM
 reduced-frequency-trigger-stop-centos6: 6:59 AM
+reduced-frequency-trigger-start-oel8: 8:00 AM
+reduced-frequency-trigger-stop-oel8: 8:59 AM
 gpdb_src-trigger-flag: true
 configure_flags: "--enable-cassert --enable-tap-tests"
 configure_flags_with_extensions: "--enable-cassert --enable-tap-tests --enable-debug-extensions"
