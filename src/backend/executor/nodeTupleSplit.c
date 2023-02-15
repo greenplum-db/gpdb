@@ -118,8 +118,11 @@ ExecInitTupleSplit(TupleSplit *node, EState *estate, int eflags)
 	 * fetch all columns which is not referenced by all DQAs
 	 */
 	Bitmapset *all_input_attr_bms = NULL;
-	for (int id = 0; id < list_length(outerPlan(node)->targetlist); id++)
-		all_input_attr_bms = bms_add_member(all_input_attr_bms, id);
+	foreach(lc, outerPlan(node)->targetlist)
+	{
+		TargetEntry *te = (TargetEntry *)lfirst(lc);
+		all_input_attr_bms = bms_add_member(all_input_attr_bms, te->resno);
+	}
 
 	Bitmapset *dqa_not_used_bms = all_input_attr_bms;
 	for (int id = 0; id < tup_spl_state->numDisDQAs; id++)

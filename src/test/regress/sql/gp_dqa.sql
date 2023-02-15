@@ -355,6 +355,13 @@ explain select count(distinct a) filter (where a > 3),count( distinct b) filter 
 explain select count(distinct a), sum(b), sum(c) from dqa_f1;
 select count(distinct a), sum(b), sum(c) from dqa_f1;
 
+-- multi DQA with primary key
+create table dqa_unique(a int, b int, c int, d int, primary key(a, b));
+insert into dqa_unique select i%3, i%5, i%7, i%9 from generate_series(1, 10) i;
+
+explain(verbose on, costs off) select count(distinct a), count(distinct d), c from dqa_unique group by a, b;
+select count(distinct a), count(distinct d), c from dqa_unique group by a, b;
+
 -- multi DQA with type conversions
 create table dqa_f3(a character varying, b bigint) distributed by (a);
 insert into dqa_f3 values ('123', 2), ('213', 0), ('231', 2), ('312', 0), ('321', 2), ('132', 1), ('4', 0);
