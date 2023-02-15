@@ -69,3 +69,18 @@ Feature: Tests for gpcheckperf
     | matrix    | verbose       | M          | -v           | -f          | Full matrix netperf bandwidth test |
     | matrix    | extra verbose | M          | -V           | -v -f       | Full matrix netperf bandwidth test |
 
+  @concourse_cluster
+  Scenario Outline: running gpcheckperf single host <test_name> test case
+     Given the database is running
+     And create a gpcheckperf input host file
+     When  the user runs "gpcheckperf -h cdw -r <cmd_param> -d /data/gpdata/ --duration=10s -v"
+     Then  gpcheckperf should return a return code of 0
+     And   gpcheckperf should print "--  NETPERF TEST" to stdout
+     And   gpcheckperf should print "single host only - abandon netperf test" to stdout
+     And   gpcheckperf should print "TEARDOWN" to stdout
+
+  Examples:
+    | test_name   | cmd_param|
+    | matrix test | M        |
+    | network test| N        |
+
