@@ -498,7 +498,7 @@ vacuum_index_cleanup
 
     For inherited tables, unique constraints, primary key constraints, indexes and table privileges are *not* inherited in the current implementation.
 
--   For append-optimized tables, `UPDATE` and `DELETE` are not allowed in a repeatable read or serializable transaction and will cause the transaction to end prematurely. `DECLARE...FOR UPDATE`, and triggers are not supported with append-optimized tables. `CLUSTER` on append-optimized tables is only supported over B-tree indexes.
+-   For append-optimized tables, `UPDATE` and `DELETE` are not allowed in a repeatable read or serializable transaction and will cause the transaction to end prematurely. `DECLARE...FOR UPDATE`, and triggers are not supported with append-optimized tables. 
 -   To insert data into a partitioned table, you specify the root partitioned table, the table created with the `CREATE TABLE` command. You also can specify a leaf child table of the partitioned table in an `INSERT` command. An error is returned if the data is not valid for the specified leaf child table. Specifying a child table that is not a leaf child table in the `INSERT` command is not supported. Execution of other DML commands such as `UPDATE` and `DELETE` on any child table of a partitioned table is not supported. These commands must be run on the root partitioned table, the table created with the `CREATE TABLE` command.
 -   The default values for these table storage options can be specified with the server configuration parameter `gp_default_storage_option`.
 

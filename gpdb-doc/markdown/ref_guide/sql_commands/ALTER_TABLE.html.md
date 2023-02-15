@@ -227,9 +227,7 @@ Although you can specify the table's access method using the <code>appendoptimiz
 
     > **Note** triggers are not supported in Greenplum Database. Triggers in general have very limited functionality due to the parallelism of Greenplum Database.
 
--   **CLUSTER ON/SET WITHOUT CLUSTER** — Selects or removes the default index for future `CLUSTER` operations. It does not actually re-cluster the table. Note that `CLUSTER` is not the recommended way to physically reorder a table in Greenplum Database because it takes so long. It is better to recreate the table with [CREATE TABLE AS](CREATE_TABLE_AS.html) and order it by the index column\(s\).
-
-    > **Note** `CLUSTER ON` is not supported on append-optimized tables.
+-   **CLUSTER ON/SET WITHOUT CLUSTER** — Selects or removes the default index for future `CLUSTER` operations. It does not actually re-cluster the table.
 
 -   **SET WITHOUT OIDS** — Removes the OID system column from the table.
 
@@ -308,7 +306,7 @@ USER
 :   Deactivate or activate all triggers belonging to the table except for internally generated constraint triggers such as those that are used to implement foreign key constraints or deferrable uniqueness and exclusion constraints.
 
 index\_name
-:   The index name on which the table should be marked for clustering. Note that `CLUSTER` is not the recommended way to physically reorder a table in Greenplum Database because it takes so long. It is better to recreate the table with [CREATE TABLE AS](CREATE_TABLE_AS.html) and order it by the index column\(s\).
+:   The index name on which the table should be marked for clustering.
 
 FILLFACTOR
 :   Set the fillfactor percentage for a table.
