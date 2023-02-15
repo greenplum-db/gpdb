@@ -162,11 +162,12 @@ explain select percentile_cont(0.2) within group (order by a) from generate_seri
                      ->  Nested Loop  (cost=0.00..1324181.29 rows=334 width=20)
                            Join Filter: true
                            ->  Shared Scan (share slice:id -1:0)  (cost=0.00..431.03 rows=334 width=12)
-                           ->  Result  (cost=0.00..431.02 rows=1 width=8)
-                                 ->  Aggregate  (cost=0.00..431.02 rows=1 width=8)
-                                       ->  Shared Scan (share slice:id -1:0)  (cost=0.00..431.02 rows=334 width=8)
+                           ->  Materialize  (cost=0.00..432.02 rows=1 width=8)
+                                 ->  Result  (cost=0.00..431.02 rows=1 width=8)
+                                       ->  Aggregate  (cost=0.00..431.02 rows=1 width=8)
+                                             ->  Shared Scan (share slice:id -1:0)  (cost=0.00..431.02 rows=334 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(17 rows)
+(18 rows)
 
 select percentile_cont(0.2) within group (order by a) from generate_series(1, 100)a;
  percentile_cont 
