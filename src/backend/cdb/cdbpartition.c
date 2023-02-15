@@ -4191,6 +4191,10 @@ cdb_retrieve_btree_op(Oid opclass, Oid lhstypid, Oid rhstypid, int16 strategy)
 		Oid inctypid = get_opclass_input_type(opclass);
 		if (IsBinaryCoercible(lhstypid, inctypid) && IsBinaryCoercible(rhstypid, inctypid))
 			opno = get_opfamily_member(opfamily, inctypid, inctypid, strategy);
+
+		if (!OidIsValid(opno))
+			elog(ERROR, "could not find valid operator, lhstype: %d, rhstype: %d, strategy number: %d",
+				 lhstypid, rhstypid, strategy);
 	}
 
 	return get_opcode(opno);
