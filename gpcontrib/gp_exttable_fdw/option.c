@@ -28,41 +28,20 @@
 /*
  * Describes the valid options for objects that this wrapper uses.
  */
-typedef struct GpExttableFdwOption
+typedef struct GpExttableFdwMustOption
 {
 	const char	*keyword;
 	Oid		optcontext;		/* OID of catalog in which option may appear */
-	bool		ismust;        /* option is must or not */
-} GpExttableFdwOption;
+} GpExttableFdwMustOption;
 
 /*
  * Valid options for gp_exttable_fdw.
  */
-static const GpExttableFdwOption gp_exttable_fdw_options[] = {
-	{"location_uris", ForeignTableRelationId, true},
-	{"execute_on", ForeignTableRelationId, false},
-	{"command", ForeignTableRelationId, true},
-	{"format_type", ForeignTableRelationId, true},
-	{"reject_limit", ForeignTableRelationId, false},
-	{"reject_limit_type", ForeignTableRelationId, false},
-	{"log_errors", ForeignTableRelationId, false},
-	{"encoding", ForeignTableRelationId, false},
-	{"is_writable", ForeignTableRelationId, false},
-	/* formatOptions for all formattype ('t'(text), 'c'(csv), 'b'(custom)) */
-	{"delimiter", ForeignTableRelationId, false},
-	{"null", ForeignTableRelationId, false},
-	{"header", ForeignTableRelationId, false},
-	{"quote", ForeignTableRelationId, false},
-	{"escape", ForeignTableRelationId, false},
-	{"force_not_null", ForeignTableRelationId, false},
-	{"force_quote", ForeignTableRelationId, false},
-	{"fill_missing_fields", ForeignTableRelationId, false},
-	{"newline", ForeignTableRelationId, false},
-	/* formatOptions only for formattype ('b'(custom)) */
-	{"quote", ForeignTableRelationId, false},
-	/* formatOptions only for formattype ('c'(csv)) */
-	{"format", ForeignTableRelationId, false},
-	{NULL, InvalidOid, false}
+static const GpExttableFdwMustOption gp_exttable_fdw_must_options[] = {
+	{"location_uris", ForeignTableRelationId},
+	{"command", ForeignTableRelationId},
+	{"format_type", ForeignTableRelationId},
+	{NULL, InvalidOid}
 };
 
 /*
@@ -203,6 +182,8 @@ gp_exttable_permission_check(PG_FUNCTION_ARGS)
 		is_valid_rejectlimit(reject_limit_type, reject_limit);
 	}
 
+	list_free(location_list);
+	list_free(options_list);
 	PG_RETURN_VOID();
 }
 
@@ -213,12 +194,12 @@ gp_exttable_permission_check(PG_FUNCTION_ARGS)
 static bool
 is_must_option(const char *keyword, Oid context)
 {
-	const GpExttableFdwOption *opt;
+	const GpExttableFdwMustOption *opt;
 
-	for (opt = gp_exttable_fdw_options; opt->keyword; opt++)
+	for (opt = gp_exttable_fdw_must_options; opt->keyword; opt++)
 	{
 		if (context == opt->optcontext && strcmp(opt->keyword, keyword) == 0)
-			return opt->ismust;
+			return true;
 	}
 	return false;
 }
@@ -327,7 +308,7 @@ is_valid_locationuris(List *location_list, bool is_writable)
 	 	ReleaseSysCache(tuple);
 	}
 				
-    FreeExternalTableUri(uri);
+	FreeExternalTableUri(uri);
 	pfree(uri_str);
 }
 
