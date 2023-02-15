@@ -80,9 +80,9 @@ def strcmd(cmd):
     return reduce(lambda x, y: x + ' ' + y, map(lambda x: x.find(' ') > 0 and "'" + x + "'" or x, cmd))
 
 
-def gpssh(cmd):
+def gpssh(cmd, verbose):
     c = ['%s/bin/gpssh' % GPHOME]
-    if GV.opt['-V']:
+    if verbose:
         c.append('-v')
     if GV.opt['-f']:
         c.append('-f')
@@ -324,13 +324,13 @@ def runTeardown():
     for d in GV.opt['-d']:
         dirs = '%s %s/gpcheckperf_$USER' % (dirs, d)
     try:
-        gpssh('rm -rf ' + dirs)
+        gpssh('rm -rf ' + dirs, GV.opt['-V'])
     except:
         pass
 
     try:
         if GV.opt['--net']:
-            gpssh(killall(GV.opt['--netserver']))
+            gpssh(killall(GV.opt['--netserver']), GV.opt['-V'])
     except:
         pass
 
@@ -347,7 +347,7 @@ def runSetup():
         # check python reachable
         if GV.opt['-v']:
             print '[Info] verify python interpreter exists'
-        (ok, out) = gpssh('python -c print')
+        (ok, out) = gpssh('python -c print', GV.opt['-V'])
         if not ok:
             if not GV.opt['-v']:
                 print out
@@ -362,7 +362,7 @@ def runSetup():
             dirs = '%s %s/gpcheckperf_$USER' % (dirs, d)
 
         cmd = 'rm -rf %s ; mkdir -p %s' % (dirs, dirs)
-        (ok, out) = gpssh(cmd)
+        (ok, out) = gpssh(cmd, GV.opt['-V'])
         if not ok:
             print 'failed gpssh: %s' % out
             sys.exit("[Error] unable to make gpcheckperf directory. \n"
@@ -400,7 +400,7 @@ def copyExecOver(fname):
         sys.exit('[Error] command failed: gpscp %s =:%s with output: %s' % (path, target, out))
 
     # chmod +x file
-    (ok, out) = gpssh('chmod a+rx %s' % target)
+    (ok, out) = gpssh('chmod a+rx %s' % target, GV.opt['-V'])
     if not ok:
         sys.exit('[Error] command failed: chmod a+rx %s with output: %s' % (target, out))
 
@@ -450,7 +450,7 @@ def runDiskWriteTest(multidd):
         cmd = cmd + (' -B %d' % GV.opt['-B'])
     if GV.opt['-S']:
         cmd = cmd + (' -S %d' % GV.opt['-S'])
-    (ok, out) = gpssh(cmd)
+    (ok, out) = gpssh(cmd, GV.opt['-V'])
     if not ok:
         sys.exit('[Error] command failed: %s with output: %s' % (cmd, out))
     return parseMultiDDResult(out)
@@ -469,7 +469,7 @@ def runDiskReadTest(multidd):
         cmd = cmd + (' -B %d' % GV.opt['-B'])
     if GV.opt['-S']:
         cmd = cmd + (' -S %d' % GV.opt['-S'])
-    (ok, out) = gpssh(cmd)
+    (ok, out) = gpssh(cmd, GV.opt['-V'])
     if not ok:
         sys.exit('[Error] command failed: %s with output: %s' % (cmd, out))
     return parseMultiDDResult(out)
@@ -482,7 +482,7 @@ def runStreamTest():
     print '--------------------'
 
     cmd = copyExecOver('stream')
-    (ok, out) = gpssh(cmd)
+    (ok, out) = gpssh(cmd, GV.opt['-V'])
     if not ok:
         sys.exit('[Error] command failed: %s with output: %s' % (cmd, out))
     out = StringIO.StringIO(out)
@@ -504,9 +504,9 @@ def startNetServer():
     for i in xrange(5):
         if i > 0:
             print '[Warning] retrying with port %d' % port
-        (ok, out) = gpssh(killall(GV.opt['--netserver']))
+        (ok, out) = gpssh(killall(GV.opt['--netserver']), GV.opt['-V'])
 
-        (ok, out) = gpssh('%s -p %d > /dev/null 2>&1' % (rmtPath, port))
+        (ok, out) = gpssh('%s -p %d > /dev/null 2>&1' % (rmtPath, port), GV.opt['-V'])
         if ok:
             return port
 
@@ -732,13 +732,22 @@ def get_host_map(hostlist):
         uniqhosts =
             uniqhosts['apollo1'] = 'sdw1-1'
             uniqhosts['apollo2'] = 'sdw2-1'
-
     '''
     seglist = dict()  # segment list
     uniqhosts = dict()  # unique host list
 
-    # get list of hostnames
-    rc, out = gpssh('hostname')
+    '''
+     Get hostnames using non-verbose mode since verbose output makes parsing difficult with extra lines as show:
+        $gpssh -v -h sdw2 hostname
+        [WARN] Reference default values as $MASTER_DATA_DIRECTORY/gpssh.conf could not be found
+        Using delaybeforesend 0.05 and prompt_validation_timeout 1.0
+        [Reset ...]
+        [INFO] login sdw2
+        [sdw2] sdw2
+        [INFO] completed successfully
+        [Cleanup...]
+    '''
+    rc, out = gpssh('hostname', False)
     if not rc:
         raise Exception('Encountered error running hostname')
 

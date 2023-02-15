@@ -3968,3 +3968,7 @@ def impl(context):
     cmd =  "sudo mv -f /tmp/hosts_orig /etc/hosts; rm -f /tmp/clusterConfigFile-1; rm -f /tmp/hostfile--1"
     context.execute_steps(u'''Then the user runs command "%s"''' % cmd)
 
+@given('create a gpcheckperf input host file')
+def impl(context):
+     cmd = Command(name='create input host file', cmdStr='echo sdw1 > /tmp/hostfile1;echo cdw >> /tmp/hostfile1;')
+     cmd.run(validateAfter=True)
