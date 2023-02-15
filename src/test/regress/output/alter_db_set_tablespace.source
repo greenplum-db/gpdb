@@ -1337,6 +1337,97 @@ SELECT force_mirrors_to_catch_up();
  
 (1 row)
 
+-- End of tests which require create_restartpoint_on_ckpt_record_replay=on
+--- start_ignore
+\! gpconfig -r create_restartpoint_on_ckpt_record_replay --skipvalidation;
+\! gpstop -u;
+--- end_ignore
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- If a mirror checkpointer doesn't create checkpoint between making changes in a database and moving this database to another tablespace, then attempt to create checkpoint the
+-- next time should not result in the fsync error and restarting of checkpointer. The checkpointer must process all requests.
+--- start_ignore
+CREATE OR REPLACE FUNCTION mirror0() RETURNS gp_segment_configuration.dbid%type
+AS $$
+    SELECT dbid FROM gp_segment_configuration WHERE content = 0 AND role = 'm'
+$$ LANGUAGE SQL;
+--- end_ignore
+-- Checkpointer must not start processing requests until database is moved to another tablespace
+SELECT gp_inject_fault('ckpt_loop_begin', 'infinite_loop', mirror0());
+ gp_inject_fault 
+-----------------
+ Success:
+(1 row)
+
+-- Check the initial value. It will be restored after the test.
+show fsync;
+ fsync 
+-------
+ off
+(1 row)
+
+--- start_ignore
+-- Set fsync on since we need to test the fsync code logic
+\! gpconfig -c fsync -v on --skipvalidation;
+-- Apply settings. Wake up checkpointer to speed up the test.
+\! gpstop -u;
+--- end_ignore
+-- Wait until checkpointer is ready to start processing requests
+SELECT gp_wait_until_triggered_fault('ckpt_loop_begin', 1, mirror0());
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:
+(1 row)
+
+SELECT setup();
+ setup 
+-------
+ 
+(1 row)
+
+-- Create the source and destination tablespaces
+CREATE TABLESPACE adst_source_tablespace LOCATION :'adst_source_tablespace_location';
+CREATE TABLESPACE adst_destination_tablespace LOCATION :'adst_destination_tablespace_location';
+-- Create a database in the source tablespace
+CREATE DATABASE alter_db TABLESPACE adst_source_tablespace;
+-- Make a change in the database, return to the previous database, set search_path again
+\c alter_db
+CREATE TABLE t(i int) DISTRIBUTED RANDOMLY;
+\c regression
+SET search_path TO adst,public;
+-- Prepare fault for waiting
+SELECT gp_inject_fault('ckpt_loop_end', 'skip', mirror0());
+ gp_inject_fault 
+-----------------
+ Success:
+(1 row)
+
+ALTER DATABASE alter_db SET TABLESPACE adst_destination_tablespace;
+-- Ensure that the mirrors have applied the filesystem changes
+SELECT force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
+ 
+(1 row)
+
+-- Checkpointer starts processing requests
+SELECT gp_inject_fault('ckpt_loop_begin', 'reset', mirror0());
+ gp_inject_fault 
+-----------------
+ Success:
+(1 row)
+
+-- Wait until checkpointer finishes processing requests. If the fsync error happens, then server closes the connection and this fault is never reached
+SELECT gp_wait_until_triggered_fault('ckpt_loop_end', 1, mirror0());
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:
+(1 row)
+
+-- Cleanup
+DROP FUNCTION mirror0();
+DROP DATABASE alter_db;
+DROP TABLESPACE adst_source_tablespace;
+DROP TABLESPACE adst_destination_tablespace;
 -- Final cleanup
 DROP SCHEMA adst CASCADE;
 NOTICE:  drop cascades to 5 other objects
@@ -1360,7 +1451,9 @@ SELECT gp_inject_fault('all', 'reset', dbid) FROM gp_segment_configuration;
 
 \!rm -rf @testtablespace@/adst_source
 \!rm -rf @testtablespace@/adst_dest
--- start_ignore
-\! gpconfig -r create_restartpoint_on_ckpt_record_replay --skipvalidation;
+--- start_ignore
+-- Set fsync off because it is the value before the test
+\! gpconfig -c fsync -v off --skipvalidation;
+-- Apply settings
 \! gpstop -u;
--- end_ignore
+--- end_ignore
