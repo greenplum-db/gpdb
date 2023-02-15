@@ -4175,14 +4175,7 @@ cdb_retrieve_btree_op(Oid opclass, Oid lhstypid, Oid rhstypid, int16 strategy)
 {
 	Oid opfamily = get_opclass_family(opclass);
 	Oid opno = InvalidOid;
-	/*
-	 * There's no associated operator for domain types, we need to fetch the base type
-	 * of these types.
-	 */
-	Oid lbasetypid = OidIsValid(lhstypid) ? getBaseType(lhstypid) : lhstypid;
-	Oid rbasetypid = OidIsValid(rhstypid) ? getBaseType(rhstypid) : rhstypid;
-
-	opno = get_opfamily_member(opfamily, lbasetypid, rbasetypid, strategy);
+	opno = get_opfamily_member(opfamily, lhstypid, rhstypid, strategy);
 	if (!OidIsValid(opno))
 	{
 		/*
@@ -4196,7 +4189,7 @@ cdb_retrieve_btree_op(Oid opclass, Oid lhstypid, Oid rhstypid, int16 strategy)
 		 * type is 'VARCHAR'. We use IsBinaryCoercible to handle these binary-compatible types.
 		 */
 		Oid inctypid = get_opclass_input_type(opclass);
-		if (IsBinaryCoercible(lbasetypid, inctypid) && IsBinaryCoercible(rbasetypid, inctypid))
+		if (IsBinaryCoercible(lhstypid, inctypid) && IsBinaryCoercible(rhstypid, inctypid))
 			opno = get_opfamily_member(opfamily, inctypid, inctypid, strategy);
 	}
 
