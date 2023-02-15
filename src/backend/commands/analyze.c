@@ -1658,23 +1658,25 @@ acquire_inherited_sample_rows(Relation onerel, int elevel,
 	bool		has_child;
 
 	/*
-	 * Like in acquire_sample_rows(), if we're in the QD, fetch the sample
-	 * from segments.
-	 */
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		return acquire_sample_rows_dispatcher(onerel,
-											  true, /* inherited stats */
-											  elevel, rows, targrows,
-											  totalrows, totaldeadrows);
-	}
-
-	/*
 	 * Find all members of inheritance set.  We only need AccessShareLock on
 	 * the children.
 	 */
 	tableOIDs =
 		find_all_inheritors(RelationGetRelid(onerel), AccessShareLock, NULL);
+
+	/*
+	 * Like in acquire_sample_rows(), if we're in the QD, fetch the sample
+	 * from segments.
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		if (list_length(tableOIDs) < 2)
+			SetRelationHasSubclass(RelationGetRelid(onerel), false);
+		return acquire_sample_rows_dispatcher(onerel,
+											  true, /* inherited stats */
+											  elevel, rows, targrows,
+											  totalrows, totaldeadrows);
+	}
 
 	/*
 	 * Check that there's at least one descendant, else fail.  This could
