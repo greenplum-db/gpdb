@@ -52,6 +52,12 @@ OPTIONS (format_type 'c', delimiter ',',
          location_uris 'file://@hostname@@abs_srcdir@/data/tableless.csv',
          reject_limit_type 'p', reject_limit '120');
 ERROR:  segment reject limit in PERCENT must be between 1 and 100 (got 120)  (seg1 127.0.0.1:7003 pid=5173)
+-- Error, invalid encoding
+CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
+SERVER gp_exttable_server
+OPTIONS (format_type 'c', delimiter ',', encoding '-1',
+         location_uris 'file://@hostname@@abs_srcdir@/data/tableless.csv');
+ERROR:  invalid encoding found for external table  (seg0 127.0.0.1:7002 pid=8289)
 -- OK, no execute_on | log_errors | encoding | is_writable option
 CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
 SERVER gp_exttable_server

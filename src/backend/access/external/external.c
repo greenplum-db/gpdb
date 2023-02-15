@@ -280,9 +280,6 @@ GetExtFromForeignTableOptions(List *ftoptons, Oid relid)
 	if (!rejectlimittype_found)
 		extentry->rejectlimittype = -1;
 
-	if (!PG_VALID_ENCODING(extentry->encoding))
-		elog(ERROR, "invalid encoding found for external table");
-
 	extentry->options = entryOptions;
 
 	return extentry;

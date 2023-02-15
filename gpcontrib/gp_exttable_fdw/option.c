@@ -24,6 +24,7 @@
 #include "commands/defrem.h"
 #include "access/external.h"
 #include "catalog/pg_extprotocol.h"
+#include "mb/pg_wchar.h"
 /*
  * Describes the valid options for objects that this wrapper uses.
  */
@@ -152,6 +153,14 @@ gp_exttable_permission_check(PG_FUNCTION_ARGS)
 		{
 			reject_limit = atoi((char *) defGetString(def));
 			rejectlimit_found = true;
+		}
+		else if(pg_strcasecmp(def->defname, "encoding") == 0)
+		{
+			char	*encoding = (char *) defGetString(def);
+			if (!PG_VALID_ENCODING(atoi(encoding)))
+				ereport(ERROR,
+				        (errcode(ERRCODE_FDW_INVALID_ATTRIBUTE_VALUE),
+				         errmsg("%s is not a valid encoding code", encoding)));
 		}
 	}
 
