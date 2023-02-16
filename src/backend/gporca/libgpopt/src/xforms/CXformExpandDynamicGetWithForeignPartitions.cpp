@@ -64,9 +64,9 @@ CXformExpandDynamicGetWithForeignPartitions::Exfp(
 
 // The physical plan created after this xform and the corresponding logical->physical xforms will create the following from
 // Dynamic get containing both foreign and non-foreign tables.
-//    +--CPhysicalSerialUnionAll   rows:2000000   width:38  rebinds:1   cost:915.040000   origin: [Grp:0, GrpExpr:2]
-//       |--CPhysicalDynamicTableScan "part" ("part"), Columns: ["a" (9), "b" (10), "ctid" (11), "xmin" (12), "cmin" (13), "xmax" (14), "cmax" (15), "tableoid" (16), "gp_segment_id" (17)] Scan Id: 1 Parts to scan: 2   rows:2000000   width:38  rebinds:1   cost:444.933333   origin: [Grp:1, GrpExpr:1]
-//       +--CPhysicalDynamicForeignScan "part" ("part"), Columns: ["a" (18), "b" (19), "ctid" (20), "xmin" (21), "cmin" (22), "xmax" (23), "cmax" (24), "tableoid" (25), "gp_segment_id" (26)] Scan Id: 1 Parts to scan: 2   rows:2000000   width:38  rebinds:1   cost:444.933333   origin: [Grp:2, GrpExpr:1]
+//    +--CPhysicalSerialUnionAll ]
+//       |--CPhysicalDynamicTableScan "part" ("part"), Columns: ["a" (9), "b" (10), Scan Id: 1 Parts to scan: 5
+//       +--CPhysicalDynamicForeignScan "part" ("part"), Columns: ["a" (18), "b" (19)] Scan Id: 1 Parts to scan: 3]
 
 void
 CXformExpandDynamicGetWithForeignPartitions::Transform(CXformContext *pxfctxt,
@@ -149,7 +149,8 @@ CXformExpandDynamicGetWithForeignPartitions::Transform(CXformContext *pxfctxt,
 	CColRef2dArray *inputColArrayForUnion = GPOS_NEW(mp) CColRef2dArray(mp);
 
 	// Create a regular dynamic from the non-foreign partitions and add to union all expression array
-	if (non_foreign_parts->Size() > 0)
+	ULONG non_foreign_parts_size = non_foreign_parts->Size();
+	if (non_foreign_parts_size > 0)
 	{
 		popGet->Ptabdesc()->AddRef();
 		popGet->PdrgpdrgpcrPart()->AddRef();
@@ -177,7 +178,10 @@ CXformExpandDynamicGetWithForeignPartitions::Transform(CXformContext *pxfctxt,
 		inputColArrayForUnion->Append(nonForeignDynamicGet->PdrgpcrOutput());
 		expressionsForUnion->Append(pexprNonForeignDynamicGet);
 	}
-
+	else
+	{
+		non_foreign_parts->Release();
+	}
 
 	// loop over each key in the map, create a DynamicForeignGet for each
 	// foreign server using the mdid array
@@ -185,11 +189,7 @@ CXformExpandDynamicGetWithForeignPartitions::Transform(CXformContext *pxfctxt,
 		foreign_server_to_part_oid_array_map);
 	BOOL no_union_all =
 		foreign_server_to_part_oid_array_map->GetKeys()->Size() == 1 &&
-		non_foreign_parts->Size() == 0;
-	if (non_foreign_parts->Size() == 0)
-	{
-		non_foreign_parts->Release();
-	}
+		non_foreign_parts_size == 0;
 	while (map_iter.Advance())
 	{
 		SForeignServer foreign_server = *(map_iter.Key());

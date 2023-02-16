@@ -174,8 +174,6 @@ CMDIdGPDB::CMDIdGPDB(const CMDIdGPDB &mdid_source)
 	  m_minor_version(mdid_source.VersionMinor()),
 	  m_str(m_mdid_array, GPOS_ARRAY_SIZE(m_mdid_array))
 {
-	GPOS_ASSERT(mdid_source.IsValid());
-
 	// serialize mdid into static string
 	Serialize();
 }

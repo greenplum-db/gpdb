@@ -45,17 +45,14 @@ CPhysicalDynamicForeignScan::CPhysicalDynamicForeignScan(
 	  m_foreign_server_oid(foreign_server_oid),
 	  m_is_master_only(is_master_only)
 {
-	// otherwise, override the distribution spec for foreign table
-	if (m_pds)
-	{
-		m_pds->Release();
-	}
-	// if this table is master only, then keep the original distribution spec.
+	m_pds->Release();
+	// if this table is master only, use a strict singleton distribution request
 	if (is_master_only)
 	{
 		m_pds = GPOS_NEW(mp) CDistributionSpecStrictSingleton(
 			CDistributionSpecSingleton::EstMaster);
 	}
+	// otherwise, we want to execute on each segment (but can't assume anything about the distribution)
 	else
 	{
 		m_pds = GPOS_NEW(mp) CDistributionSpecRandom();
@@ -80,8 +77,7 @@ CPhysicalDynamicForeignScan::Matches(COperator *pop) const
 
 	CPhysicalDynamicForeignScan *popForeignScan =
 		CPhysicalDynamicForeignScan::PopConvert(pop);
-	return m_ptabdesc == popForeignScan->Ptabdesc() &&
-		   m_pdrgpcrOutput->Equals(popForeignScan->PdrgpcrOutput()) &&
+	return CUtils::FMatchDynamicScan(this, pop) &&
 		   m_foreign_server_oid == popForeignScan->GetForeignServerOid();
 }
 

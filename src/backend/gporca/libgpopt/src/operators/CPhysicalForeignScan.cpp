@@ -41,7 +41,7 @@ CPhysicalForeignScan::CPhysicalForeignScan(CMemoryPool *mp,
 		return;
 	}
 
-	// otherwise, override the distribution spec for external table
+	// otherwise, override the distribution spec for foreign table
 	if (m_pds)
 	{
 		m_pds->Release();
@@ -66,10 +66,10 @@ CPhysicalForeignScan::Matches(COperator *pop) const
 		return false;
 	}
 
-	CPhysicalForeignScan *popForeignScnan =
+	CPhysicalForeignScan *popForeignScan =
 		CPhysicalForeignScan::PopConvert(pop);
-	return m_ptabdesc == popForeignScnan->Ptabdesc() &&
-		   m_pdrgpcrOutput->Equals(popForeignScnan->PdrgpcrOutput());
+	return m_ptabdesc->MDId()->Equals(popForeignScan->Ptabdesc()->MDId()) &&
+		   m_pdrgpcrOutput->Equals(popForeignScan->PdrgpcrOutput());
 }
 
 //---------------------------------------------------------------------------

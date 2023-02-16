@@ -1,18 +1,25 @@
 /*-------------------------------------------------------------------------
  *
  * nodeDynamicForeignscan.c
- *	  Support routines for scanning one or more relations that are
- *	  determined at run time. The relations could be Heap, AppendOnly Row,
- *	  AppendOnly Columnar.
+ *	  Support routines for scanning one or more foreign relations, including
+ *    dynamic partition elimination if corresponding partition selector(s) are
+ *    present
  *
  * DynamicForeignScan node scans each relation one after the other. For each
  * relation, it opens the table, scans the tuple, and returns relevant tuples.
+ * This is fairly similar in structure to nodeDynamicSeqScan.c
  *
  * This has a smaller plan size than using an append with many partitions.
  * Instead of determining the column mapping for each partition during planning,
  * this mapping is determined during execution. When there are many partitions
  * with many columns, the plan size improvement becomes very large, on the order of
- * 100+ MB in some cases.
+ * 100+ MB in some cases. This node also populates the fdw_private field for each
+ * partition. This is determined during planning, as it requires calling out to
+ * the fdw api. If we did this during execution, it would need to be done for each
+ * partition on each segment, which would negatively impact fdws that don't support
+ * many simultaneous calls
+ *
+ *
  *
  * Copyright (C) 2023 VMware Inc.
  *

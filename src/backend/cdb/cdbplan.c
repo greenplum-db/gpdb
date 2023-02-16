@@ -907,7 +907,7 @@ plan_tree_mutator(Node *node,
 					 * A DynamicForeignScan is identical to ForeignScan, except for
 					 * additional fields. This convoluted coding is to avoid
 					 * copy-pasting this code and risking bugs of omission if
-					 * new fields are added to IndexScan in upstream.
+					 * new fields are added to ForeignScan in upstream.
 					 */
 					DynamicForeignScan *newdfdwscan;
 

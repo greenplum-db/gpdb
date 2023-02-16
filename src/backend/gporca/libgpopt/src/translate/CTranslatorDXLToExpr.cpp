@@ -624,7 +624,7 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 			{
 				// not foreign, store as invalid mdid
 				foreign_server_mdid =
-					GPOS_NEW(m_mp) CMDIdGPDB(IMDId::EmdidGeneral, 0, 0, 0);
+					GPOS_NEW(m_mp) CMDIdGPDB(CMDIdGPDB::m_mdid_invalid_key);
 			}
 			foreign_server_mdids->Append(foreign_server_mdid);
 		}

@@ -4231,14 +4231,8 @@ static void
 PopulateForeignScanFields(DynamicForeignScan *dyn_foreign_scan,
 						  ForeignScan *foreign_scan)
 {
-	dyn_foreign_scan->foreignscan.operation = foreign_scan->operation;
-	dyn_foreign_scan->foreignscan.fs_server = foreign_scan->fs_server;
-	dyn_foreign_scan->foreignscan.fdw_exprs = NIL;
-	dyn_foreign_scan->foreignscan.fdw_scan_tlist = NIL;
-	dyn_foreign_scan->foreignscan.fdw_recheck_quals = NIL;
-	dyn_foreign_scan->foreignscan.fs_relids = foreign_scan->fs_relids;
-	dyn_foreign_scan->foreignscan.fsSystemCol = foreign_scan->fsSystemCol;
-	dyn_foreign_scan->foreignscan.fdw_private = foreign_scan->fdw_private;
+	dyn_foreign_scan->foreignscan = *foreign_scan;
+	dyn_foreign_scan->foreignscan.scan.plan.type = T_DynamicForeignScan;
 }
 
 // remaps varnos qual and targetlist from one tuple descriptor to another.
@@ -4361,7 +4355,10 @@ CTranslatorDXLToPlStmt::TranslateDXLDynForeignScan(
 		gpdb::CreateForeignScan(oid_first_child, index, qual, targetlist,
 								m_dxl_to_plstmt_context->m_orig_query, rte);
 
-	PopulateForeignScanFields(dyn_foreign_scan, foreign_scan_first_part);
+	// Set the plan fields to the first partition. We still want the plan type to be
+	// a dynamic foreign scan
+	dyn_foreign_scan->foreignscan = *foreign_scan_first_part;
+	dyn_foreign_scan->foreignscan.scan.plan.type = T_DynamicForeignScan;
 	dyn_foreign_scan->foreignscan.scan.scanrelid = index;
 
 	Plan *plan = &(dyn_foreign_scan->foreignscan.scan.plan);
