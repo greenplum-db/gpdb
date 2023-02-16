@@ -38,7 +38,7 @@ SERVER gp_exttable_server
 OPTIONS (format_type 'c', delimiter ',',
          location_uris 'file://@hostname@@abs_srcdir@/data/tableless.csv',
          reject_limit_type 'invalid_reject_limit_type');
-ERROR:  reject_limit_type must be [r | p], r(ROW) and p(PERCENT)  (seg1 127.0.0.1:7003 pid=5173)
+ERROR:  reject_limit_type must be [r | p], r(ROW) or p(PERCENT)  (seg1 127.0.0.1:7003 pid=5173)
 -- Error, invalid reject_limit option
 CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
 SERVER gp_exttable_server

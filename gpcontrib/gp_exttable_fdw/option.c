@@ -126,7 +126,7 @@ gp_exttable_permission_check(PG_FUNCTION_ARGS)
 			if (pg_strcasecmp(reject_limit_type, "r") != 0 && pg_strcasecmp( reject_limit_type, "p") != 0)
 				ereport(ERROR,
 				        (errcode(ERRCODE_FDW_INVALID_ATTRIBUTE_VALUE),
-				         errmsg("reject_limit_type must be [r | p], r(ROW) and p(PERCENT)")));
+				         errmsg("reject_limit_type must be [r | p], r(ROW) or p(PERCENT)")));
 		}
 		else if(pg_strcasecmp(def->defname, "reject_limit") == 0)
 		{
@@ -337,6 +337,6 @@ static void is_valid_rejectlimit(const char *reject_limit_type, const int32 reje
 		/* invalid reject_limit_type */
 		ereport(ERROR,
 		        (errcode(ERRCODE_FDW_INVALID_ATTRIBUTE_VALUE),
-		         errmsg("reject_limit_type must be [r | p], r(ROW) and p(PERCENT)")));
+		         errmsg("reject_limit_type must be [r | p], r(ROW) or p(PERCENT)")));
 	}
 }
