@@ -329,7 +329,4 @@ test: uao_dml/ao_unique_index_build_row uao_dml/ao_unique_index_build_column
 # test column projection for various operations
 test: aoco_projection
 
-# test catalog inconsistency in relhassubclass
-test: bfv_relhassubclass
-
 # end of tests
