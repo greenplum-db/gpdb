@@ -4,7 +4,7 @@ The `pg_stat_all_tables` view shows one row for each table in the current databa
 
 The `pg_stat_user_tables` and `pg_stat_sys_table` views contain the same information, but filtered to only show user and system tables respectively.
 
-In Greenplum Database 6, the `pg_stat_*_tables` views display access statistics for tables only from the master instance. Access statistics from segment instances are ignored. You can create views that display usage statistics, see [](#tbl_stats_all_6x).
+In Greenplum Database 6, the `pg_stat_*_tables` views display access statistics for tables only from the master instance. Access statistics from segment instances are ignored. You can create views that display usage statistics, see [Table Access Statistics from the Master and Segment Instances](#tbl_stats_all_6x).
 
 |Column|Type|Description|
 |------|----|-----------|
