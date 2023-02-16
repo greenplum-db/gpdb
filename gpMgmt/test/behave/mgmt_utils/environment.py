@@ -185,3 +185,6 @@ def after_scenario(context, scenario):
         execute_sql('postgres', create_fault_query)
         reset_fault_query = "SELECT gp_inject_fault_infinite('all', 'reset', dbid) FROM gp_segment_configuration WHERE status='u';"
         execute_sql('postgres', reset_fault_query)
+
+    if os.getenv('SUSPEND_PG_REWIND') is not None:
+        del os.environ['SUSPEND_PG_REWIND']

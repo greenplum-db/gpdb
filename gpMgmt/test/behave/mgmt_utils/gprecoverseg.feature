@@ -986,6 +986,145 @@ Feature: gprecoverseg tests
     And check segment conf: postgresql.conf
     And the row count from table "test_recoverseg" in "postgres" is verified against the saved data
 
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg gives warning if pg_rewind already running for one of the failed segments
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0
+    And user can start transactions
+    And the environment variable "SUSPEND_PG_REWIND" is set to "true"
+    And the user asynchronously runs "gprecoverseg -a" and the process is saved
+    Then the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And verify that mirror on content 0 is down
+    And the gprecoverseg lock directory is removed
+    And an FTS probe is triggered
+    And user can start transactions
+    When the user runs "gprecoverseg -av"
+    Then gprecoverseg should return a return code of 0
+    And gprecoverseg should print existing pg_rewind warning for segment with content 0
+    And "SUSPEND_PG_REWIND" environment variable should be restored
+    And the user waits until saved async process is completed
+    And recovery_progress.file should not exist in gpAdminLogs
+    And an FTS probe is triggered
+    And the user waits until mirror on content 0,1,2 is up
+    And the cluster is rebalanced
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg gives warning if pg_rewind already running for some of the failed segments
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0,1
+    And user can start transactions
+    And the environment variable "SUSPEND_PG_REWIND" is set to "true"
+    And the user asynchronously runs "gprecoverseg -a" and the process is saved
+    Then the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And verify that mirror on content 0,1 is down
+    And the gprecoverseg lock directory is removed
+    And an FTS probe is triggered
+    And user can start transactions
+    When the user runs "gprecoverseg -av"
+    Then gprecoverseg should return a return code of 0
+    And gprecoverseg should print existing pg_rewind warning for segment with content 0,1
+    And "SUSPEND_PG_REWIND" environment variable should be restored
+    And the user waits until saved async process is completed
+    And recovery_progress.file should not exist in gpAdminLogs
+    And an FTS probe is triggered
+    And the user waits until mirror on content 0,1,2 is up
+    And the cluster is rebalanced
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg gives warning if pg_rewind already running for all of the failed segments
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0,1,2
+    And user can start transactions
+    And the environment variable "SUSPEND_PG_REWIND" is set to "true"
+    And the user asynchronously runs "gprecoverseg -a" and the process is saved
+    Then the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And verify that mirror on content 0,1,2 is down
+    And the gprecoverseg lock directory is removed
+    And an FTS probe is triggered
+    And user can start transactions
+    When the user runs "gprecoverseg -av"
+    Then gprecoverseg should return a return code of 0
+    And gprecoverseg should print existing pg_rewind warning for segment with content 0,1,2
+    And "SUSPEND_PG_REWIND" environment variable should be restored
+    And the user waits until saved async process is completed
+    And recovery_progress.file should not exist in gpAdminLogs
+    And an FTS probe is triggered
+    And the user waits until mirror on content 0,1,2 is up
+    And the cluster is rebalanced
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg -i gives warning if pg_rewind already running for some of the failed segments
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0,2
+    And user can start transactions
+    And the environment variable "SUSPEND_PG_REWIND" is set to "true"
+    And the user asynchronously runs "gprecoverseg -a" and the process is saved
+    And the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And verify that mirror on content 0,2 is down
+    And the gprecoverseg lock directory is removed
+    And an FTS probe is triggered
+    And user can start transactions
+    And a gprecoverseg directory under '/tmp' with mode '0700' is created
+    And a gprecoverseg input file is created
+    And edit the input file to recover mirror with content 0 incremental
+    And edit the input file to recover mirror with content 2 incremental
+    When the user runs gprecoverseg with input file and additional args "-av"
+    Then gprecoverseg should return a return code of 0
+    And gprecoverseg should print existing pg_rewind warning for segment with content 0,2
+    And "SUSPEND_PG_REWIND" environment variable should be restored
+    And the user waits until saved async process is completed
+    And recovery_progress.file should not exist in gpAdminLogs
+    And an FTS probe is triggered
+    And the user waits until mirror on content 0,1,2 is up
+    And the cluster is rebalanced
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg -i gives warning if pg_rewind already running for all of the failed segments
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0,1,2
+    And user can start transactions
+    And the environment variable "SUSPEND_PG_REWIND" is set to "true"
+    And the user asynchronously runs "gprecoverseg -a" and the process is saved
+    And the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And verify that mirror on content 0,1,2 is down
+    And the gprecoverseg lock directory is removed
+    And an FTS probe is triggered
+    And user can start transactions
+    And a gprecoverseg directory under '/tmp' with mode '0700' is created
+    And a gprecoverseg input file is created
+    And edit the input file to recover mirror with content 0 incremental
+    And edit the input file to recover mirror with content 1 incremental
+    And edit the input file to recover mirror with content 2 incremental
+    When the user runs gprecoverseg with input file and additional args "-av"
+    Then gprecoverseg should return a return code of 0
+    And gprecoverseg should print existing pg_rewind warning for segment with content 0,1,2
+    And "SUSPEND_PG_REWIND" environment variable should be restored
+    And the user waits until saved async process is completed
+    And recovery_progress.file should not exist in gpAdminLogs
+    And an FTS probe is triggered
+    And the user waits until mirror on content 0,1,2 is up
+    And the cluster is rebalanced
+
   @concourse_cluster
     Scenario: gprecoverseg behave test requires a cluster with at least 2 hosts
         Given the database is running
