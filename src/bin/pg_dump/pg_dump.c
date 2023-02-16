@@ -16981,7 +16981,7 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 		 * from <= GPDB6.
 		 */
 		if (fout->remoteVersion < GPDB7_MAJOR_PGVERSION &&
-				(*tbinfo->partclause && *tbinfo->partclause != '\0'))
+				(tbinfo->partclause && *tbinfo->partclause != '\0'))
 		{
 			/* partition by clause */
 			appendPQExpBuffer(q, " %s", tbinfo->partclause);
