@@ -21,6 +21,14 @@ Destroying a savepoint makes it unavailable as a rollback point, but it has no o
 savepoint\_name
 :   The name of the savepoint to destroy.
 
+## <a id="section_notes"></a>Notes
+
+Specifying a savepoint name that was not previously defined is an error.
+
+It is not possible to release a savepoint when the transaction is in an aborted state.
+
+If multiple savepoints have the same name, Greenplum Database releases only the most recently defined unreleased savepoint. Repeated commands release progressively older savepoints.
+
 ## <a id="section5"></a>Examples 
 
 To establish and later destroy a savepoint:
@@ -34,7 +42,7 @@ BEGIN;
 COMMIT;
 ```
 
-The above transaction will insert both 3 and 4.
+The above transaction inserts both 3 and 4.
 
 ## <a id="section6"></a>Compatibility 
 
@@ -42,7 +50,7 @@ This command conforms to the SQL standard. The standard specifies that the key w
 
 ## <a id="section7"></a>See Also 
 
-[BEGIN](BEGIN.html), [SAVEPOINT](SAVEPOINT.html), [ROLLBACK TO SAVEPOINT](ROLLBACK_TO_SAVEPOINT.html), [COMMIT](COMMIT.html)
+[BEGIN](BEGIN.html), [COMMIT](COMMIT.html), [ROLLBACK](ROLLBACK.html), [ROLLBACK TO SAVEPOINT](ROLLBACK_TO_SAVEPOINT.html), [SAVEPOINT](SAVEPOINT.html)
 
 **Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 
