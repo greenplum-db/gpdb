@@ -5,11 +5,16 @@ Sierra.
 
 Execute the following, this script will start by caching the `sudo` password:
 
+For x86 processor based Mac
 ```
 ./README.macOS.bash
 source ~/.bash_profile
 ```
-
+For arm processor based Mac
+```bash
+./README.macOS.arm.bash
+source ~/.bashrc
+```
 Note: This will install Homebrew if missing
 
 ## 2. Allow ssh to use the version of python in path, not the system python
