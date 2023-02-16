@@ -585,7 +585,7 @@ calculate_table_size(Relation rel)
 	if (RelationIsAppendOptimized(rel))
 	{
 		Oid	auxRelIds[3];
-		GetAppendOnlyEntryAuxOids(rel->rd_id, NULL, &auxRelIds[0],
+		GetAppendOnlyEntryAuxOids(rel, &auxRelIds[0],
 								 &auxRelIds[1], NULL,
 								 &auxRelIds[2], NULL);
 

@@ -219,8 +219,7 @@ GetAOCSFileSegInfo(Relation prel,
 	bool		isNull;
 
     Oid         segrelid;
-    GetAppendOnlyEntryAuxOids(prel->rd_id,
-                              appendOnlyMetaDataSnapshot,
+    GetAppendOnlyEntryAuxOids(prel,
                               &segrelid, NULL, NULL,
                               NULL, NULL);
 
@@ -327,8 +326,7 @@ GetAllAOCSFileSegInfo(Relation prel,
 
 	Assert(RelationIsAoCols(prel));
 
-	GetAppendOnlyEntryAuxOids(prel->rd_id,
-							  appendOnlyMetaDataSnapshot,
+	GetAppendOnlyEntryAuxOids(prel,
 							  &segrelid, NULL, NULL,
 							  NULL, NULL);
 
@@ -586,8 +584,7 @@ MarkAOCSFileSegInfoAwaitingDrop(Relation prel, int segno)
 	Assert(RelationIsAoCols(prel));
 
 	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
-	GetAppendOnlyEntryAuxOids(prel->rd_id,
-							  appendOnlyMetaDataSnapshot,
+	GetAppendOnlyEntryAuxOids(prel,
 							  &segrelid, NULL, NULL,
 							  NULL, NULL);
 	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
@@ -679,8 +676,7 @@ ClearAOCSFileSegInfo(Relation prel, int segno)
 		   RelationGetRelationName(prel));
 
 	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
-	GetAppendOnlyEntryAuxOids(prel->rd_id,
-							  appendOnlyMetaDataSnapshot,
+	GetAppendOnlyEntryAuxOids(prel,
 							  &segrelid, NULL, NULL,
 							  NULL, NULL);
 	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
@@ -970,8 +966,7 @@ AOCSFileSegInfoAddVpe(Relation prel, int32 segno,
 	}
 
     Oid         segrelid;
-    GetAppendOnlyEntryAuxOids(prel->rd_id,
-                              NULL,
+    GetAppendOnlyEntryAuxOids(prel,
                               &segrelid, NULL, NULL,
                               NULL, NULL);
 	segrel = heap_open(segrelid, RowExclusiveLock);
@@ -1089,8 +1084,7 @@ AOCSFileSegInfoAddCount(Relation prel, int32 segno,
 	TupleDesc	tupdesc;
 
     Oid         segrelid;
-    GetAppendOnlyEntryAuxOids(prel->rd_id,
-                              NULL,
+    GetAppendOnlyEntryAuxOids(prel,
                               &segrelid, NULL, NULL,
                               NULL, NULL);
 
@@ -1277,8 +1271,7 @@ gp_aocsseg_internal(PG_FUNCTION_ARGS, Oid aocsRelOid)
 		context->relnatts = aocsRel->rd_rel->relnatts;
 
         Oid         segrelid;
-        GetAppendOnlyEntryAuxOids(aocsRel->rd_id,
-                                  appendOnlyMetaDataSnapshot,
+        GetAppendOnlyEntryAuxOids(aocsRel,
                                   &segrelid, NULL, NULL,
                                   NULL, NULL);
 		pg_aocsseg_rel = heap_open(segrelid, AccessShareLock);
@@ -1489,8 +1482,7 @@ gp_aocsseg_history(PG_FUNCTION_ARGS)
 		context->relnatts = aocsRel->rd_rel->relnatts;
 
         Oid         segrelid;
-        GetAppendOnlyEntryAuxOids(aocsRel->rd_id,
-                                  NULL,
+        GetAppendOnlyEntryAuxOids(aocsRel,
                                   &segrelid, NULL, NULL,
                                   NULL, NULL);
 
@@ -1613,7 +1605,7 @@ aocol_compression_ratio_internal(Relation parentrel)
 
 	Oid			segrelid = InvalidOid;
 
-	GetAppendOnlyEntryAuxOids(RelationGetRelid(parentrel), NULL,
+	GetAppendOnlyEntryAuxOids(parentrel,
 							  &segrelid, NULL, NULL, NULL, NULL);
 	Assert(OidIsValid(segrelid));
 

@@ -901,8 +901,7 @@ void AppendOnlyVisimap_Init_forUniqueCheck(
 	Assert(snapshot->snapshot_type == SNAPSHOT_DIRTY ||
 			   snapshot->snapshot_type == SNAPSHOT_SELF);
 
-	GetAppendOnlyEntryAuxOids(aoRel->rd_id,
-							  InvalidSnapshot, /* catalog snapshot is enough */
+	GetAppendOnlyEntryAuxOids(aoRel,
 							  NULL, NULL, NULL, &visimaprelid, &visimapidxid);
 	if (!OidIsValid(visimaprelid) || !OidIsValid(visimapidxid))
 		elog(ERROR, "Could not find block directory for relation: %u", aoRel->rd_id);

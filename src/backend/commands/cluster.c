@@ -887,6 +887,7 @@ make_new_heap_with_colname(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMetho
 		CloneAttributeEncodings(OIDOldHeap,
 								OIDNewHeap,
 								RelationGetNumberOfAttributes(OldHeap));
+		CommandCounterIncrement();
 		UpdateAttributeEncodings(OIDNewHeap, NewEncodings);
 	}
 	table_close(OldHeap, NoLock);

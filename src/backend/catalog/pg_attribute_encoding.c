@@ -237,7 +237,6 @@ CloneAttributeEncodings(Oid oldrelid, Oid newrelid, AttrNumber max_attno)
 										 n + 1,
 										 attoptions[n]);
 	}
-	CommandCounterIncrement();
 }
 
 void

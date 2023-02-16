@@ -1051,7 +1051,7 @@ appendonly_relation_nontransactional_truncate(Relation rel)
 	ao_truncate_one_rel(rel);
 
 	/* Also truncate the aux tables */
-	GetAppendOnlyEntryAuxOids(ao_base_relid, NULL,
+	GetAppendOnlyEntryAuxOids(rel,
 							  &aoseg_relid,
 							  &aoblkdir_relid, NULL,
 							  &aovisimap_relid, NULL);
@@ -1450,7 +1450,7 @@ appendonly_index_build_range_scan(Relation heapRelation,
 	Oid blkdirrelid;
 	Oid blkidxrelid;
 
-	GetAppendOnlyEntryAuxOids(RelationGetRelid(aoscan->aos_rd), NULL, NULL,
+	GetAppendOnlyEntryAuxOids(aoscan->aos_rd, NULL,
 							  &blkdirrelid, &blkidxrelid, NULL, NULL);
 	/*
 	 * Note that block directory is created during creation of the first
@@ -1871,7 +1871,7 @@ appendonly_relation_size(Relation rel, ForkNumber forkNumber)
 
 	result = 0;
 
-	GetAppendOnlyEntryAuxOids(rel->rd_id, NULL, &segrelid, NULL,
+	GetAppendOnlyEntryAuxOids(rel, &segrelid, NULL,
 			NULL, NULL, NULL);
 
 	if (segrelid == InvalidOid)

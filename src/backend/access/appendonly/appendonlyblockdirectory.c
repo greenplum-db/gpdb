@@ -181,7 +181,7 @@ AppendOnlyBlockDirectory_Init_forSearch(
 	Oid blkdiridxid;
 
 	blockDirectory->aoRel = aoRel;
-	GetAppendOnlyEntryAuxOids(aoRel->rd_id, NULL, NULL, &blkdirrelid, &blkdiridxid, NULL, NULL);
+	GetAppendOnlyEntryAuxOids(aoRel, NULL, &blkdirrelid, &blkdiridxid, NULL, NULL);
 
 	if (!OidIsValid(blkdirrelid))
 	{
@@ -251,8 +251,7 @@ AppendOnlyBlockDirectory_Init_forUniqueChecks(
 	Assert(snapshot->snapshot_type == SNAPSHOT_DIRTY ||
 			snapshot->snapshot_type == SNAPSHOT_SELF);
 
-	GetAppendOnlyEntryAuxOids(aoRel->rd_id,
-							  InvalidSnapshot, /* catalog snapshot is enough */
+	GetAppendOnlyEntryAuxOids(aoRel,
 							  NULL, &blkdirrelid, &blkdiridxid, NULL, NULL);
 
 	if (!OidIsValid(blkdirrelid) || !OidIsValid(blkdiridxid))
@@ -310,7 +309,7 @@ AppendOnlyBlockDirectory_Init_forInsert(
 	blockDirectory->aoRel = aoRel;
 	blockDirectory->appendOnlyMetaDataSnapshot = appendOnlyMetaDataSnapshot;
 
-	GetAppendOnlyEntryAuxOids(aoRel->rd_id, NULL, NULL, &blkdirrelid, &blkdiridxid, NULL, NULL);
+	GetAppendOnlyEntryAuxOids(aoRel, NULL, &blkdirrelid, &blkdiridxid, NULL, NULL);
 
 	if (!OidIsValid(blkdirrelid))
 	{
@@ -379,7 +378,7 @@ AppendOnlyBlockDirectory_Init_addCol(
 	blockDirectory->aoRel = aoRel;
 	blockDirectory->appendOnlyMetaDataSnapshot = appendOnlyMetaDataSnapshot;
 
-	GetAppendOnlyEntryAuxOids(aoRel->rd_id, NULL, NULL, &blkdirrelid, &blkdiridxid, NULL, NULL);
+	GetAppendOnlyEntryAuxOids(aoRel, NULL, &blkdirrelid, &blkdiridxid, NULL, NULL);
 
 	if (!OidIsValid(blkdirrelid))
 	{
@@ -1035,7 +1034,7 @@ AppendOnlyBlockDirectory_DeleteSegmentFile(Relation aoRel,
 	Oid blkdirrelid;
 	Oid blkdiridxid;
 
-	GetAppendOnlyEntryAuxOids(aoRel->rd_id, NULL, NULL, &blkdirrelid, &blkdiridxid, NULL, NULL);
+	GetAppendOnlyEntryAuxOids(aoRel, NULL, &blkdirrelid, &blkdiridxid, NULL, NULL);
 
 	Assert(OidIsValid(blkdirrelid));
 	Assert(OidIsValid(blkdiridxid));

@@ -637,8 +637,7 @@ vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot, int elevel,
 	num_tuples = (double)fstotal->totaltuples;
 	nblocks = (uint32)RelationGetNumberOfBlocks(aorel);
 
-	GetAppendOnlyEntryAuxOids(aorel->rd_id,
-							  snapshot, 
+	GetAppendOnlyEntryAuxOids(aorel,
 							  NULL, NULL, NULL,
 							  &visimaprelid, &visimapidxid);
 

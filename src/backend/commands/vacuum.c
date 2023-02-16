@@ -1031,9 +1031,10 @@ expand_vacuum_rel(VacuumRelation *vrel, int options)
 				classForm = (Form_pg_class) GETSTRUCT(tuple);
 				if (IsAccessMethodAO(classForm->relam))
 				{
+					Relation aorel = table_open(classForm->oid, AccessShareLock);
 					oldcontext = MemoryContextSwitchTo(vac_context);
 
-					GetAppendOnlyEntryAuxOids(classForm->oid, NULL,
+					GetAppendOnlyEntryAuxOids(aorel,
 											  &aoseg_relid,
 											  &aoblkdir_relid, NULL,
 											  &aovisimap_relid, NULL);
@@ -1047,6 +1048,7 @@ expand_vacuum_rel(VacuumRelation *vrel, int options)
 						ao_aux_vacrels = lappend(ao_aux_vacrels, makeVacuumRelation(NULL, aovisimap_relid, part_vrel->va_cols));
 
 					MemoryContextSwitchTo(oldcontext);
+					table_close(aorel, AccessShareLock);
 				}
 				else
 				{
@@ -2300,7 +2302,7 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 		 * AO_AUX_ONLY option is specified
 		 */
 		Assert(!(params->options & VACOPT_AO_AUX_ONLY));
-		GetAppendOnlyEntryAuxOids(RelationGetRelid(onerel), NULL,
+		GetAppendOnlyEntryAuxOids(onerel,
 								  &aoseg_relid,
 								  &aoblkdir_relid, NULL,
 								  &aovisimap_relid, NULL);

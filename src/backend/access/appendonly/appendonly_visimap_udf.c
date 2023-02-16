@@ -89,7 +89,7 @@ gp_aovisimap(PG_FUNCTION_ARGS)
 
 		Snapshot sst = GetLatestSnapshot();
 
-        GetAppendOnlyEntryAuxOids(context->aorel->rd_id, sst,
+        GetAppendOnlyEntryAuxOids(context->aorel,
                                   NULL, NULL, NULL,
                                   &visimaprelid, &visimapidxid);
 
@@ -204,7 +204,7 @@ gp_aovisimap_hidden_info(PG_FUNCTION_ARGS)
 
         Oid segrelid;
 		snapshot = GetLatestSnapshot();
-        GetAppendOnlyEntryAuxOids(context->parentRelation->rd_id, snapshot,
+        GetAppendOnlyEntryAuxOids(context->parentRelation,
                                   &segrelid, NULL, NULL,
                                   &visimaprelid, &visimapidxid);
 
@@ -384,7 +384,7 @@ gp_aovisimap_entry(PG_FUNCTION_ARGS)
 
         Snapshot sst = GetLatestSnapshot();
 
-        GetAppendOnlyEntryAuxOids(context->parentRelation->rd_id, sst,
+        GetAppendOnlyEntryAuxOids(context->parentRelation,
                                   NULL, NULL, NULL,
                                   &visimaprelid, &visimapidxid);
 

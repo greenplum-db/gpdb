@@ -151,48 +151,18 @@ GetAppendOnlyEntryAttributes(Oid relid,
  *
  * The OIDs will be retrieved only when the corresponding output variable is
  * not NULL.
- *
- * 'appendOnlyMetaDataSnapshot' can be passed as NULL, which means use the
- * latest snapshot, like in systable_beginscan.
  */
 void
-GetAppendOnlyEntryAuxOids(Oid relid,
-						  Snapshot appendOnlyMetaDataSnapshot,
+GetAppendOnlyEntryAuxOids(Relation rel,
 						  Oid *segrelid,
 						  Oid *blkdirrelid,
 						  Oid *blkdiridxid,
 						  Oid *visimaprelid,
 						  Oid *visimapidxid)
 {
-	Relation	pg_appendonly;
-	TupleDesc	tupDesc;
-	ScanKeyData key[1];
-	SysScanDesc scan;
-	HeapTuple	tuple;
 	Form_pg_appendonly	aoForm;
 
-	/*
-	 * Check the pg_appendonly relation to be certain the ao table
-	 * is there.
-	 */
-	pg_appendonly = table_open(AppendOnlyRelationId, AccessShareLock);
-	tupDesc = RelationGetDescr(pg_appendonly);
-
-	ScanKeyInit(&key[0],
-				Anum_pg_appendonly_relid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(relid));
-
-	scan = systable_beginscan(pg_appendonly, AppendOnlyRelidIndexId, true,
-							  appendOnlyMetaDataSnapshot, 1, key);
-	tuple = systable_getnext(scan);
-	if (!HeapTupleIsValid(tuple))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("missing pg_appendonly entry for relation \"%s\"",
-						get_rel_name(relid))));
-
-	aoForm = (Form_pg_appendonly) GETSTRUCT(tuple);
+	aoForm = rel->rd_appendonly;
 
 	if (segrelid != NULL)
 		*segrelid = aoForm->segrelid;
@@ -208,49 +178,15 @@ GetAppendOnlyEntryAuxOids(Oid relid,
 
 	if (visimapidxid != NULL)
 		*visimapidxid = aoForm->visimapidxid;
-
-	/* Finish up scan and close pg_appendonly catalog. */
-	systable_endscan(scan);
-	table_close(pg_appendonly, AccessShareLock);
 }
 
 void
-GetAppendOnlyEntry(Oid relid, Form_pg_appendonly aoEntry)
+GetAppendOnlyEntry(Relation rel, Form_pg_appendonly aoEntry)
 {
-	Relation	pg_appendonly;
-	TupleDesc	tupDesc;
-	ScanKeyData key[1];
-	SysScanDesc scan;
-	HeapTuple	tuple;
 	Form_pg_appendonly	aoForm;
 
-	/*
-	 * Check the pg_appendonly relation to be certain the ao table
-	 * is there.
-	 */
-	pg_appendonly = table_open(AppendOnlyRelationId, AccessShareLock);
-	tupDesc = RelationGetDescr(pg_appendonly);
-
-	ScanKeyInit(&key[0],
-				Anum_pg_appendonly_relid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(relid));
-
-	scan = systable_beginscan(pg_appendonly, AppendOnlyRelidIndexId, true,
-							  NULL, 1, key);
-	tuple = systable_getnext(scan);
-	if (!HeapTupleIsValid(tuple))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("missing pg_appendonly entry for relation \"%s\"",
-						get_rel_name(relid))));
-
-	aoForm = (Form_pg_appendonly) GETSTRUCT(tuple);
+	aoForm = rel->rd_appendonly;
 	memcpy(aoEntry, aoForm, APPENDONLY_TUPLE_SIZE);
-
-	/* Finish up scan and close pg_appendonly catalog. */
-	systable_endscan(scan);
-	table_close(pg_appendonly, AccessShareLock);
 }
 
 /*

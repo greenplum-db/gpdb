@@ -118,8 +118,7 @@ GetAppendOnlyEntryAttributes(Oid relid,
  * not NULL.
  */
 void
-GetAppendOnlyEntryAuxOids(Oid relid,
-						  Snapshot appendOnlyMetaDataSnapshot,
+GetAppendOnlyEntryAuxOids(Relation rel,
 						  Oid *segrelid,
 						  Oid *blkdirrelid,
 						  Oid *blkdiridxid,
@@ -128,7 +127,7 @@ GetAppendOnlyEntryAuxOids(Oid relid,
 
 
 void
-GetAppendOnlyEntry(Oid relid, Form_pg_appendonly aoEntry);
+GetAppendOnlyEntry(Relation rel, Form_pg_appendonly aoEntry);
 /*
  * Update the segrelid and/or blkdirrelid if the input new values
  * are valid OIDs.

@@ -735,7 +735,7 @@ DefineIndex(Oid relationId,
 	rel = table_open(relationId, NoLock);
 	if (RelationIsAppendOptimized(rel))
 	{
-		GetAppendOnlyEntryAuxOids(relationId, NULL, NULL, &blkdirrelid, NULL, NULL, NULL);
+		GetAppendOnlyEntryAuxOids(rel, NULL, &blkdirrelid, NULL, NULL, NULL);
 
 		if (!OidIsValid(blkdirrelid))
 			lockmode = ShareRowExclusiveLock; /* Relation is AO, and has no block directory */

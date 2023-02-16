@@ -192,6 +192,12 @@ typedef struct RelationData
 	void	   *rd_amcache;		/* available for use by index/table AM */
 
 	/*
+	 * AO table support info (used only for AO and AOCS relations)
+	 */
+	Form_pg_appendonly rd_appendonly;
+	struct HeapTupleData *rd_aotuple;		/* all of pg_appendonly tuple */
+
+	/*
 	 * foreign-table support
 	 *
 	 * rd_fdwroutine must point to a single memory chunk palloc'd in
