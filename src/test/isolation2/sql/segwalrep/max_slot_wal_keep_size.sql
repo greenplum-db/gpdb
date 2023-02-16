@@ -25,10 +25,10 @@ $$ language plpgsql;
 
 -- On content 0 primary, retain max 128MB (2 WAL files) for
 -- replication slots.  That makes it necessary to set
--- checkpoint_segments to a lower value, that is 1 WAL file.  Other
+-- max_wal_size to a lower value, that is size of 1 WAL file.  Other
 -- GUCs are needed to make the test run faster.
 0U: ALTER SYSTEM SET max_slot_wal_keep_size TO 128;
-0U: ALTER SYSTEM SET checkpoint_segments TO 1;
+0U: ALTER SYSTEM SET max_wal_size TO 64;
 0U: ALTER SYSTEM SET wal_keep_size TO 0;
 0U: ALTER SYSTEM SET gp_fts_mark_mirror_down_grace_period TO 0;
 0U: select pg_reload_conf();
@@ -41,7 +41,7 @@ CREATE TABLE t_slot_size_limit(a int, fname text);
 ----------
 -- Case 1:
 --
---   Verify that max_slot_wal_keep_size GUC is ignored and more WAL is
+--   Verify that max_slot_wal_keep_size GUC is honored and no more WAL is
 --   retained when the oldest active PREPARE record falls behind the
 --   cutoff specified by the GUC.
 ----------
@@ -52,10 +52,10 @@ CREATE TABLE t_slot_size_limit(a int, fname text);
    FROM gp_segment_configuration WHERE content=-1 AND role='p';
 -- This transaction is prepared on segments but not committed yet.  We
 -- advance WAL beyond max_slot_wal_keep_size in the next few steps.
--- Checkpointer should retain WAL upto this prepare LSN, otherwise we
+-- In 6X_STABLE Checkpointer should retain WAL up to this prepare LSN, otherwise we
 -- will never be able to finish this transaction.  Recording two-phase
--- commit state like this in WAL records in Greenplum specific
--- behavior.  In newer Greenplum versions and PostgreSQL, two-phase
+-- commit state like this in WAL records is legacy Greenplum specific
+-- behavior.  In Greenplum 7+ and PostgreSQL, two-phase
 -- state file is used to record this state, and checkpointer does not
 -- need to be mindful of prepare WAL records.
 3&: INSERT INTO t_slot_size_limit SELECT generate_series(101,120);
@@ -91,21 +91,21 @@ CREATE TABLE t_slot_size_limit(a int, fname text);
 1: SELECT gp_inject_fault('checkpoint', 'reset', dbid)
    FROM gp_segment_configuration WHERE content=0 AND role='p';
 -- At this point:
---    PREPARE LSN < previous checkpoint < restart_lsn
--- The checkpoint should retain WAL even when mirror has lagged behind
+--    PREPARE LSN < previous checkpoint <= restart_lsn
+-- The checkpoint should not retain WAL even when mirror has lagged behind
 -- more than max_slot_wal_keep_size.
 0U: CHECKPOINT;
 
--- Replication slot on content 0 primary should report valid LSN
--- because checkpoint must override max_slot_wal_keep_size GUC in
--- order to retain the PREPARE record created by session 3.
-0U: select restart_lsn is not null as restart_lsn_is_valid from pg_get_replication_slots();
+-- Replication slot on content 0 primary should not report valid LSN
+-- and checkpoint should not override max_slot_wal_keep_size GUC because it
+-- does not need to retain the PREPARE record created by session 3.
+0U: select restart_lsn is not null as restart_lsn_is_valid, wal_status from pg_get_replication_slots();
 -- WAL accumulated should be greater than max_slot_wal_keep_size
 -- (which is set to 128MB above).
-0U: select pg_xlog_location_diff(pg_current_xlog_location(), restart_lsn) / 1024 /1024 > 128
+0U: select pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) / 1024 /1024 > 128
     as max_slot_size_overridden from pg_get_replication_slots();
 
--- The mirror should remain up in FTS configuration.
+-- The mirror should become down in FTS configuration.
 SELECT gp_request_fts_probe_scan();
 SELECT role, preferred_role, status FROM gp_segment_configuration WHERE content = 0;
 
@@ -121,6 +121,10 @@ SELECT role, preferred_role, status FROM gp_segment_configuration WHERE content 
 3<:
 3: select count(*) from t_slot_size_limit;
 3q:
+
+-- do full recovery since replication slot is lost and this is point of no return
+!\retcode gprecoverseg -aF;
+select wait_until_segment_synchronized(0);
 
 ----------
 -- Case 2:
@@ -139,7 +143,7 @@ SELECT role, preferred_role, status FROM gp_segment_configuration WHERE content 
    FROM gp_segment_configuration WHERE content=0 AND role='p';
 
 -- Replication slot should be valid at this time.
-0U: select restart_lsn is not null as restart_lsn_is_valid from pg_get_replication_slots();
+0U: select restart_lsn is not null as restart_lsn_is_valid, wal_status from pg_get_replication_slots();
 
 -- Skip checkpoints on seg0.  So that when new WAL is generated in the
 -- next step, checkpoints don't get triggered asynchronously.
@@ -162,7 +166,7 @@ SELECT role, preferred_role, status FROM gp_segment_configuration WHERE content 
 -- Replication slot on content 0 primary should report invalid LSN
 -- because the WAL files needed by it are removed by previous
 -- checkpoint.
-0U: select restart_lsn is not null as restart_lsn_is_valid from pg_get_replication_slots();
+0U: select restart_lsn is not null as restart_lsn_is_valid, wal_status from pg_get_replication_slots();
 
 1: SELECT gp_inject_fault_infinite('walsnd_skip_send', 'reset', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
 1: SELECT gp_request_fts_probe_scan();
@@ -173,7 +177,7 @@ SELECT role, preferred_role, status FROM gp_segment_configuration WHERE content 
 1: SELECT sync_error FROM gp_stat_replication WHERE gp_segment_id = 0;
 
 0U: ALTER SYSTEM RESET max_slot_wal_keep_size;
-0U: ALTER SYSTEM RESET checkpoint_segments;
+0U: ALTER SYSTEM RESET max_wal_size;
 0U: ALTER SYSTEM RESET wal_keep_size;
 0U: ALTER SYSTEM RESET gp_fts_mark_mirror_down_grace_period;
 0U: select pg_reload_conf();
