@@ -127,13 +127,12 @@ AppendOnlyCompaction_ShouldCompact(Relation aoRelation,
 	AppendOnlyVisimap visiMap;
 	int64		hiddenTupcount;
 	double		hideRatio;
-    Oid         visimaprelid;
-    Oid         visimapidxid;
+	Oid		visimaprelid;
 
 	Assert(RelationIsAppendOptimized(aoRelation));
-    GetAppendOnlyEntryAuxOids(aoRelation,
-                              NULL, NULL, NULL,
-                              &visimaprelid, &visimapidxid);
+	GetAppendOnlyEntryAuxOids(aoRelation,
+					NULL, NULL,
+					&visimaprelid);
 
 	if (!gp_appendonly_compaction)
 	{
@@ -148,7 +147,6 @@ AppendOnlyCompaction_ShouldCompact(Relation aoRelation,
 
 	AppendOnlyVisimap_Init(&visiMap,
 						   visimaprelid,
-						   visimapidxid,
 						   ShareLock,
 						   appendOnlyMetaDataSnapshot);
 	hiddenTupcount = AppendOnlyVisimap_GetSegmentFileHiddenTupleCount(
@@ -390,7 +388,6 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	int64		tupleCount = 0;
 	int64		tuplePerPage = INT_MAX;
     Oid         visimaprelid;
-    Oid         visimapidxid;
     Oid         blkdirrelid;
 
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
@@ -405,12 +402,11 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	relname = RelationGetRelationName(aorel);
 
 	GetAppendOnlyEntryAuxOids(aorel,
-							  NULL, &blkdirrelid, NULL,
-							  &visimaprelid, &visimapidxid);
+							  NULL, &blkdirrelid,
+							  &visimaprelid);
 
 	AppendOnlyVisimap_Init(&visiMap,
 						   visimaprelid,
-						   visimapidxid,
 						   ShareUpdateExclusiveLock,
 						   appendOnlyMetaDataSnapshot);
 
@@ -538,7 +534,7 @@ AppendOptimizedCollectDeadSegments(Relation aorel)
 	Assert(RelationIsAppendOptimized(aorel));
 
 	GetAppendOnlyEntryAuxOids(aorel,
-							  &segrelid, NULL, NULL, NULL, NULL);
+							  &segrelid, NULL, NULL);
 	
 	pg_aoseg_rel = heap_open(segrelid, AccessShareLock);
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
@@ -698,7 +694,7 @@ AppendOptimizedTruncateToEOF(Relation aorel)
 	LockRelationForExtension(aorel, ExclusiveLock);
 
 	GetAppendOnlyEntryAuxOids(aorel,
-							  &segrelid, NULL, NULL, NULL, NULL);
+							  &segrelid, NULL, NULL);
 
 	pg_aoseg_rel = heap_open(segrelid, AccessShareLock);
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);

@@ -25,11 +25,11 @@ select relname, reltuples from pg_class where oid='sto_uao_city_analyze_everydml
  sto_uao_city_analyze_everydml |         0
 (1 row)
 
-SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimaprelid is not NULL AND
- visimapidxid is not NULL AND relid='sto_uao_city_analyze_everydml'::regclass;
+SELECT count(i.indexrelid) = 1 AS VisimapPresent  FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND
+ a.relid='sto_uao_city_analyze_everydml'::regclass;
  visimappresent 
-----------------
-              1
+------------
+ t
 (1 row)
 
 -- Copy 7 rows in table sto_uao_city_analyze_everydml

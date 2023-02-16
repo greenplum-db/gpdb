@@ -501,7 +501,6 @@ aocs_beginscan_internal(Relation relation,
 	AOCSScanDesc	scan;
 	AttrNumber		natts;
 	Oid				visimaprelid;
-	Oid				visimapidxid;
 
 	scan = (AOCSScanDesc) palloc0(sizeof(AOCSScanDescData));
 	scan->rs_base.rs_rd = relation;
@@ -548,13 +547,12 @@ aocs_beginscan_internal(Relation relation,
 								 NULL);
 
 	GetAppendOnlyEntryAuxOids(relation,
-							  NULL, NULL, NULL,
-							  &visimaprelid, &visimapidxid);
+							  NULL, NULL,
+							  &visimaprelid);
 
 	if (scan->total_seg != 0)
 		AppendOnlyVisimap_Init(&scan->visibilityMap,
 							   visimaprelid,
-							   visimapidxid,
 							   AccessShareLock,
 							   appendOnlyMetaDataSnapshot);
 
@@ -840,8 +838,8 @@ aocs_insert_init(Relation rel, int segno, int64 num_rows)
     desc->compType = NameStr(nd);
 
     GetAppendOnlyEntryAuxOids(rel,
-                              &desc->segrelid, &desc->blkdirrelid, NULL,
-                              &desc->visimaprelid, &desc->visimapidxid);
+                              &desc->segrelid, &desc->blkdirrelid,
+                              &desc->visimaprelid);
 
 	OpenAOCSDatumStreams(desc);
 
@@ -1251,10 +1249,9 @@ aocs_fetch_init(Relation relation,
 
     bool checksum = true;
     Oid visimaprelid;
-    Oid visimapidxid;
     GetAppendOnlyEntryAuxOids(relation,
-                              &aocsFetchDesc->segrelid, NULL, NULL,
-                              &visimaprelid, &visimapidxid);
+                              &aocsFetchDesc->segrelid, NULL,
+                              &visimaprelid);
 
     GetAppendOnlyEntryAttributes(relation->rd_id,
                                  NULL,
@@ -1343,7 +1340,6 @@ aocs_fetch_init(Relation relation,
 		pfree(opts);
 	AppendOnlyVisimap_Init(&aocsFetchDesc->visibilityMap,
 						   visimaprelid,
-						   visimapidxid,
 						   AccessShareLock,
 						   appendOnlyMetaDataSnapshot);
 
@@ -1614,7 +1610,6 @@ aocs_delete_init(Relation rel)
 	 * Get the pg_appendonly information
 	 */
 	Oid visimaprelid;
-	Oid visimapidxid;
 	AOCSDeleteDesc aoDeleteDesc = palloc0(sizeof(AOCSDeleteDescData));
 
 	aoDeleteDesc->aod_rel = rel;
@@ -1622,12 +1617,11 @@ aocs_delete_init(Relation rel)
     Snapshot snapshot = GetCatalogSnapshot(InvalidOid);
 
     GetAppendOnlyEntryAuxOids(rel,
-                              NULL, NULL, NULL,
-                              &visimaprelid, &visimapidxid);
+                              NULL, NULL,
+                              &visimaprelid);
 
 	AppendOnlyVisimap_Init(&aoDeleteDesc->visibilityMap,
 						   visimaprelid,
-						   visimapidxid,
 						   RowExclusiveLock,
 						   snapshot);
 

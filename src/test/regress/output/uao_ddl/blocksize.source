@@ -20,11 +20,11 @@ SELECT count(*) from uao_blocksize_8k;
   1000
 (1 row)
 
-SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimaprelid is
-not NULL AND visimapidxid is not NULL AND relid='uao_blocksize_8k'::regclass;
+SELECT count(i.indexrelid) = 1 AS VisimapPresent  FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND
+ a.relid='uao_blocksize_8k'::regclass;
  visimappresent 
 ----------------
-              1
+ t
 (1 row)
 
 select 1 as block8k_present from pg_class, unnest(reloptions) as reloption
@@ -89,12 +89,11 @@ SELECT count(*) from uao_blocksize_2048k;
   1000
 (1 row)
 
-SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE
-visimaprelid is not NULL AND visimapidxid is not NULL AND
-relid='uao_blocksize_2048k'::regclass;
+SELECT count(i.indexrelid) = 1 AS VisimapPresent  FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND
+ a.relid='uao_blocksize_2048k'::regclass;
  visimappresent 
 ----------------
-              1
+ t
 (1 row)
 
 select 1 as block2048k_present from pg_class, unnest(reloptions) as reloption WHERE

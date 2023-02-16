@@ -10,8 +10,8 @@ CREATE TABLE sto_alt_uao_part_splitpartition (
   PARTITION sales_Sep13 START (date '2013-09-01') INCLUSIVE
   END (date '2014-01-01') EXCLUSIVE);
 
-SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimaprelid is
-not NULL AND visimapidxid is not NULL AND relid in (SELECT c.oid FROM
+SELECT count(i.indexrelid) AS VisimapCount FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND
+a.relid in (SELECT c.oid FROM
 pg_class c join pg_namespace n on c.relnamespace = n.oid and
  c.relname like 'sto_alt_uao_part_splitpartition%' and
  n.nspname = 'alter_ao_part_tables_splitpartition_@amname@');
@@ -26,8 +26,8 @@ select count(*) from sto_alt_uao_part_splitpartition;
 -- Alter table add default partition
 Alter table sto_alt_uao_part_splitpartition
  add default partition part_others;
-select count(*) FROM pg_appendonly WHERE visimaprelid is not NULL AND
-visimapidxid is not NULL AND relid in (SELECT c.oid FROM pg_class c
+SELECT count(i.indexrelid) FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND
+a.relid in (SELECT c.oid FROM pg_class c
  join pg_namespace n on c.relnamespace = n.oid and
  c.relname like 'sto_alt_uao_part_splitpartition%' and
  n.nspname = 'alter_ao_part_tables_splitpartition_@amname@');
@@ -46,8 +46,8 @@ Alter table sto_alt_uao_part_splitpartition split default partition
  start(date '2013-01-01') end(date '2013-03-01')
  into (partition p1, partition part_others);
 
-select count(*) FROM pg_appendonly WHERE visimaprelid is not NULL AND
-visimapidxid is not NULL AND relid in (SELECT c.oid FROM pg_class c
+SELECT count(i.indexrelid) FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND
+a.relid in (SELECT c.oid FROM pg_class c
  join pg_namespace n on c.relnamespace = n.oid and
  c.relname like 'sto_alt_uao_part_splitpartition%' and
  n.nspname = 'alter_ao_part_tables_splitpartition_@amname@');

@@ -1812,8 +1812,7 @@ ao_aux_tables_safe_truncate(Relation rel)
 	Oid aovisimap_relid = InvalidOid;
 
 	GetAppendOnlyEntryAuxOids(rel, &aoseg_relid,
-							  &aoblkdir_relid, NULL, &aovisimap_relid,
-							  NULL);
+							  &aoblkdir_relid, &aovisimap_relid);
 
 	relid_set_new_relfilenode(aoseg_relid);
 	relid_set_new_relfilenode(aoblkdir_relid);
@@ -14601,8 +14600,8 @@ ATExecChangeOwner(Oid relationOid, Oid newOwnerId, bool recursing, LOCKMODE lock
 			Oid visimap_relid;
 			GetAppendOnlyEntryAuxOids(target_rel,
 									  &segrelid,
-									  &blkdirrelid, NULL,
-									  &visimap_relid, NULL);
+									  &blkdirrelid,
+									  &visimap_relid);
 
 			/* If it has an AO segment table, recurse to change its
 			 * ownership */
@@ -15282,8 +15281,8 @@ ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, LOCKMODE lockmode)
 	if (RelationIsAppendOptimized(rel))
 		GetAppendOnlyEntryAuxOids(rel,
 								  &relaosegrelid,
-								  &relaoblkdirrelid, &relaoblkdiridxid,
-								  &relaovisimaprelid, &relaovisimapidxid);
+								  &relaoblkdirrelid,
+								  &relaovisimaprelid);
 
 	/* Get the bitmap sub objects */
 	if (RelationIsBitmapIndex(rel))
@@ -15364,13 +15363,29 @@ ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, LOCKMODE lockmode)
 	if (OidIsValid(relaosegrelid))
 		ATExecSetTableSpace(relaosegrelid, newTableSpace, lockmode);
 	if (OidIsValid(relaoblkdirrelid))
+	{
+		Relation	aoblkdir_rel = relation_open(relaoblkdirrelid, lockmode);
+
+		relaoblkdiridxid = AppendonlyGetAuxIndex(aoblkdir_rel);
+		Assert(OidIsValid(relaoblkdiridxid));
+
 		ATExecSetTableSpace(relaoblkdirrelid, newTableSpace, lockmode);
-	if (OidIsValid(relaoblkdiridxid))
 		ATExecSetTableSpace(relaoblkdiridxid, newTableSpace, lockmode);
+
+		relation_close(aoblkdir_rel, lockmode);
+	}
 	if (OidIsValid(relaovisimaprelid))
+	{
+		Relation	aovisimap_rel = relation_open(relaovisimaprelid, lockmode);
+
+		relaovisimapidxid = AppendonlyGetAuxIndex(aovisimap_rel);
+		Assert(OidIsValid(relaovisimapidxid));
+
 		ATExecSetTableSpace(relaovisimaprelid, newTableSpace, lockmode);
-	if (OidIsValid(relaovisimapidxid))
 		ATExecSetTableSpace(relaovisimapidxid, newTableSpace, lockmode);
+
+		relation_close(aovisimap_rel, lockmode);
+	}
 
 	/* 
 	 * MPP-7996 - bitmap index subobjects w/Alter Table Set tablespace

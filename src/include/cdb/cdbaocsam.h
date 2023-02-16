@@ -64,7 +64,6 @@ typedef struct AOCSInsertDescData
     Oid         segrelid;
     Oid         blkdirrelid;
     Oid         visimaprelid;
-    Oid         visimapidxid;
 	struct DatumStreamWrite **ds;
 
 	AppendOnlyBlockDirectory blockDirectory;

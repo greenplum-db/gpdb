@@ -98,8 +98,8 @@ gp_aoblkdir(PG_FUNCTION_ARGS)
 						errmsg("function not supported on non append-optimized relation")));
 		sst = GetLatestSnapshot();
 		GetAppendOnlyEntryAuxOids(context->aorel,
-								  NULL, &blkdirrelid, NULL,
-								  NULL, NULL);
+								  NULL, &blkdirrelid,
+								  NULL);
 		sst = gp_select_invisible ? SnapshotAny : GetLatestSnapshot();
 		if (blkdirrelid == InvalidOid)
 			ereport(ERROR,

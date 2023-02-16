@@ -1036,8 +1036,8 @@ expand_vacuum_rel(VacuumRelation *vrel, int options)
 
 					GetAppendOnlyEntryAuxOids(aorel,
 											  &aoseg_relid,
-											  &aoblkdir_relid, NULL,
-											  &aovisimap_relid, NULL);
+											  &aoblkdir_relid,
+											  &aovisimap_relid);
 
 					/* make new VacuumRelations for each valid member of the 3 auxiliary tables */
 					if (OidIsValid(aoseg_relid))
@@ -2304,8 +2304,8 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 		Assert(!(params->options & VACOPT_AO_AUX_ONLY));
 		GetAppendOnlyEntryAuxOids(onerel,
 								  &aoseg_relid,
-								  &aoblkdir_relid, NULL,
-								  &aovisimap_relid, NULL);
+								  &aoblkdir_relid,
+								  &aovisimap_relid);
 	}
 
 	/*

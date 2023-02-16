@@ -111,7 +111,6 @@ void
 AppendOnlyVisimap_Init(
 					   AppendOnlyVisimap *visiMap,
 					   Oid visimapRelid,
-					   Oid visimapIdxid,
 					   LOCKMODE lockmode,
 					   Snapshot appendOnlyMetaDataSnapshot)
 {
@@ -119,7 +118,6 @@ AppendOnlyVisimap_Init(
 
 	Assert(visiMap);
 	Assert(OidIsValid(visimapRelid));
-	Assert(OidIsValid(visimapIdxid));
 
 	visiMap->memoryContext = AllocSetContextCreate(
 												   CurrentMemoryContext,
@@ -136,7 +134,6 @@ AppendOnlyVisimap_Init(
 
 	AppendOnlyVisimapStore_Init(&visiMap->visimapStore,
 								visimapRelid,
-								visimapIdxid,
 								lockmode,
 								appendOnlyMetaDataSnapshot,
 								visiMap->memoryContext);
@@ -287,15 +284,13 @@ void
 AppendOnlyVisimapScan_Init(
 						   AppendOnlyVisimapScan *visiMapScan,
 						   Oid visimapRelid,
-						   Oid visimapIdxid,
 						   LOCKMODE lockmode,
 						   Snapshot appendonlyMetadataSnapshot)
 {
 	Assert(visiMapScan);
 	Assert(OidIsValid(visimapRelid));
-	Assert(OidIsValid(visimapIdxid));
 
-	AppendOnlyVisimap_Init(&visiMapScan->visimap, visimapRelid, visimapIdxid,
+	AppendOnlyVisimap_Init(&visiMapScan->visimap, visimapRelid,
 						   lockmode,
 						   appendonlyMetadataSnapshot);
 	visiMapScan->indexScan = AppendOnlyVisimapStore_BeginScan(
@@ -896,24 +891,22 @@ void AppendOnlyVisimap_Init_forUniqueCheck(
 	Snapshot snapshot)
 {
 	Oid visimaprelid;
-	Oid visimapidxid;
 
 	Assert(snapshot->snapshot_type == SNAPSHOT_DIRTY ||
 			   snapshot->snapshot_type == SNAPSHOT_SELF);
 
 	GetAppendOnlyEntryAuxOids(aoRel,
-							  NULL, NULL, NULL, &visimaprelid, &visimapidxid);
-	if (!OidIsValid(visimaprelid) || !OidIsValid(visimapidxid))
+							  NULL, NULL, &visimaprelid);
+	if (!OidIsValid(visimaprelid))
 		elog(ERROR, "Could not find block directory for relation: %u", aoRel->rd_id);
 
 	ereportif(Debug_appendonly_print_visimap, LOG,
 			  (errmsg("Append-only visimap init for unique checks"),
-				  errdetail("(aoRel = %u, visimaprel = %u, visimapidxrel = %u)",
-							aoRel->rd_id, visimaprelid, visimapidxid)));
+				  errdetail("(aoRel = %u, visimaprel = %u)",
+							aoRel->rd_id, visimaprelid)));
 
 	AppendOnlyVisimap_Init(visiMap,
 						   visimaprelid,
-						   visimapidxid,
 						   AccessShareLock,
 						   InvalidSnapshot /* appendOnlyMetaDataSnapshot */);
 }

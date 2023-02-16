@@ -49,9 +49,7 @@ void
 InsertAppendOnlyEntry(Oid relid,
 					  Oid segrelid,
 					  Oid blkdirrelid,
-					  Oid blkdiridxid,
-					  Oid visimaprelid,
-					  Oid visimapidxid)
+					  Oid visimaprelid)
 {
 	Relation	pg_appendonly_rel;
 	HeapTuple	pg_appendonly_tuple = NULL;
@@ -71,9 +69,7 @@ InsertAppendOnlyEntry(Oid relid,
 	values[Anum_pg_appendonly_relid - 1] = ObjectIdGetDatum(relid);
 	values[Anum_pg_appendonly_segrelid - 1] = ObjectIdGetDatum(segrelid);
 	values[Anum_pg_appendonly_blkdirrelid - 1] = ObjectIdGetDatum(blkdirrelid);
-	values[Anum_pg_appendonly_blkdiridxid - 1] = ObjectIdGetDatum(blkdiridxid);
 	values[Anum_pg_appendonly_visimaprelid - 1] = ObjectIdGetDatum(visimaprelid);
-	values[Anum_pg_appendonly_visimapidxid - 1] = ObjectIdGetDatum(visimapidxid);
 
 	/*
 	 * form the tuple and insert it
@@ -156,9 +152,7 @@ void
 GetAppendOnlyEntryAuxOids(Relation rel,
 						  Oid *segrelid,
 						  Oid *blkdirrelid,
-						  Oid *blkdiridxid,
-						  Oid *visimaprelid,
-						  Oid *visimapidxid)
+						  Oid *visimaprelid)
 {
 	Form_pg_appendonly	aoForm;
 
@@ -170,14 +164,8 @@ GetAppendOnlyEntryAuxOids(Relation rel,
 	if (blkdirrelid != NULL)
 		*blkdirrelid = aoForm->blkdirrelid;
 
-	if (blkdiridxid != NULL)
-		*blkdiridxid = aoForm->blkdiridxid;
-
 	if (visimaprelid != NULL)
 		*visimaprelid = aoForm->visimaprelid;
-
-	if (visimapidxid != NULL)
-		*visimapidxid = aoForm->visimapidxid;
 }
 
 void
@@ -197,9 +185,7 @@ void
 UpdateAppendOnlyEntryAuxOids(Oid relid,
 							 Oid newSegrelid,
 							 Oid newBlkdirrelid,
-							 Oid newBlkdiridxid,
-							 Oid newVisimaprelid,
-							 Oid newVisimapidxid)
+							 Oid newVisimaprelid)
 {
 	Relation	pg_appendonly;
 	ScanKeyData key[1];
@@ -245,23 +231,12 @@ UpdateAppendOnlyEntryAuxOids(Oid relid,
 		newValues[Anum_pg_appendonly_blkdirrelid - 1] = newBlkdirrelid;
 	}
 	
-	if (OidIsValid(newBlkdiridxid))
-	{
-		replace[Anum_pg_appendonly_blkdiridxid - 1] = true;
-		newValues[Anum_pg_appendonly_blkdiridxid - 1] = newBlkdiridxid;
-	}
-	
 	if (OidIsValid(newVisimaprelid))
 	{
 		replace[Anum_pg_appendonly_visimaprelid - 1] = true;
 		newValues[Anum_pg_appendonly_visimaprelid - 1] = newVisimaprelid;
 	}
 	
-	if (OidIsValid(newVisimapidxid))
-	{
-		replace[Anum_pg_appendonly_visimapidxid - 1] = true;
-		newValues[Anum_pg_appendonly_visimapidxid - 1] = newVisimapidxid;
-	}
 	newTuple = heap_modify_tuple(tuple, RelationGetDescr(pg_appendonly),
 								 newValues, newNulls, replace);
 	CatalogTupleUpdate(pg_appendonly, &newTuple->t_self, newTuple);

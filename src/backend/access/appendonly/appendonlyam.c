@@ -1387,14 +1387,12 @@ appendonly_beginrangescan_internal(Relation relation,
 	if (segfile_count > 0)
 	{
 		Oid			visimaprelid;
-		Oid			visimapidxid;
 
 		GetAppendOnlyEntryAuxOids(relation,
-								  NULL, NULL, NULL, &visimaprelid, &visimapidxid);
+								  NULL, NULL, &visimaprelid);
 
 		AppendOnlyVisimap_Init(&scan->visibilityMap,
 							   visimaprelid,
-							   visimapidxid,
 							   AccessShareLock,
 							   appendOnlyMetaDataSnapshot);
 	}
@@ -2055,7 +2053,6 @@ appendonly_fetch_init(Relation relation,
 
 	AppendOnlyVisimap_Init(&aoFetchDesc->visibilityMap,
 						   aoFormData.visimaprelid,
-						   aoFormData.visimapidxid,
 						   AccessShareLock,
 						   appendOnlyMetaDataSnapshot);
 
@@ -2328,9 +2325,8 @@ appendonly_delete_init(Relation rel)
 	Assert(!IsolationUsesXactSnapshot());
 
 	Oid visimaprelid;
-	Oid visimapidxid;
 
-	GetAppendOnlyEntryAuxOids(rel, NULL, NULL, NULL, &visimaprelid, &visimapidxid);
+	GetAppendOnlyEntryAuxOids(rel, NULL, NULL, &visimaprelid);
 
 	AppendOnlyDeleteDesc aoDeleteDesc = palloc0(sizeof(AppendOnlyDeleteDescData));
 
@@ -2339,7 +2335,6 @@ appendonly_delete_init(Relation rel)
 
 	AppendOnlyVisimap_Init(&aoDeleteDesc->visibilityMap,
 						   visimaprelid,
-						   visimapidxid,
 						   RowExclusiveLock,
 						   aoDeleteDesc->appendOnlyMetaDataSnapshot);
 
@@ -2601,7 +2596,7 @@ appendonly_insert_init(Relation rel, int segno, int64 num_rows)
 	Assert(aoInsertDesc->fsInfo->segno == segno);
 
 	GetAppendOnlyEntryAuxOids(aoInsertDesc->aoi_rel, &aoInsertDesc->segrelid,
-			NULL, NULL, NULL, NULL);
+			NULL, NULL);
 
 	firstSequence = GetFastSequences(aoInsertDesc->segrelid, segno, num_rows);
 	aoInsertDesc->numSequences = num_rows;

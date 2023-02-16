@@ -6923,14 +6923,16 @@ getAOTableInfo(Archive *fout)
 						"ao.relid,"
 						"ao.segrelid, t1.reltype as segreltype, "
 						"ao.blkdirrelid, t3.reltype as blkdirreltype, "
-						"ao.blkdiridxid, "
+						"i1.indexrelid as blkdiridxid, "
 						"ao.visimaprelid, t2.reltype as visimapreltype, "
-						"ao.visimapidxid "
+						"i2.indexrelid as visimapidxid "
 						"\nFROM pg_catalog.pg_appendonly ao\n"
 						"LEFT JOIN pg_class c ON (c.oid=ao.relid)\n"
 						"LEFT JOIN pg_class t1 ON (t1.oid=ao.segrelid)\n"
 						"LEFT JOIN pg_class t2 ON (t2.oid=ao.visimaprelid)\n"
 						"LEFT JOIN pg_class t3 ON (t3.oid=ao.blkdirrelid and ao.blkdirrelid <> 0)\n"
+						"LEFT JOIN pg_index i1 ON (i1.indrelid=ao.blkdirrelid)\n"
+						"LEFT JOIN pg_index i2 ON (i2.indrelid=ao.visimaprelid)\n"
 						"LEFT JOIN pg_am am ON (am.oid=c.relam)\n"
 						"ORDER BY 1");
 

@@ -1711,8 +1711,6 @@ heap_create_with_catalog(const char *relname,
 		InsertAppendOnlyEntry(relid,
 							  InvalidOid,
 							  InvalidOid,
-							  InvalidOid,
-							  InvalidOid,
 							  InvalidOid);
 	}
 

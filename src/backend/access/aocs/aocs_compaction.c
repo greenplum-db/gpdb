@@ -235,7 +235,6 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 
 	AppendOnlyVisimap_Init(&visiMap,
 						   insertDesc->visimaprelid,
-						   insertDesc->visimapidxid,
 						   ShareLock,
 						   snapshot);
 

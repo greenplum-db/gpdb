@@ -102,7 +102,6 @@ typedef struct AppendOnlyVisimapDelete
 void AppendOnlyVisimap_Init(
 					   AppendOnlyVisimap *visiMap,
 					   Oid visimapRelid,
-					   Oid visimalIdxid,
 					   LOCKMODE lockmode,
 					   Snapshot appendonlyMetaDataSnapshot);
 
@@ -128,7 +127,6 @@ int64 AppendOnlyVisimap_GetRelationHiddenTupleCount(
 void AppendOnlyVisimapScan_Init(
 						   AppendOnlyVisimapScan *visiMapScan,
 						   Oid visimapRelid,
-						   Oid visimapIdxid,
 						   LOCKMODE lockmode,
 						   Snapshot appendonlyMetadataSnapshot);
 

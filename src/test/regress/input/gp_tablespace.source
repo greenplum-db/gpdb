@@ -21,11 +21,11 @@ BEGIN
 	when 'blockdir' then
 		select blkdirrelid into relation_id from pg_appendonly where relid = aotablename;
 	when 'blockdirindex' then
-		select blkdiridxid into relation_id from pg_appendonly where relid = aotablename;
+		select i.indexrelid into relation_id from pg_appendonly a, pg_index i where a.blkdirrelid = i.indrelid and relid = aotablename;
 	when 'visimap' then
 		select visimaprelid into relation_id from pg_appendonly where relid = aotablename;
 	when 'visimapindex' then
-		select visimapidxid into relation_id from pg_appendonly where relid = aotablename;
+		select i.indexrelid into relation_id from pg_appendonly a, pg_index i where a.visimaprelid = i.indrelid and relid = aotablename;
 	else
 		raise notice 'Invalid tabletype for has_init_file %', tabletype;
 		return false;
