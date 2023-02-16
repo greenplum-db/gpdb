@@ -1,34 +1,32 @@
 -- when the WAL replication lag exceeds 'max_slot_wal_keep_size', the extra WAL
 -- log will be removed on the primary and the replication slot will be marked as
 -- obsoleted. In this case, the mirror will be marked down as well and need full
--- recovery to brought it back. 
-
-include: helpers/server_helpers.sql;
+-- recovery to brought it back.
 
 CREATE OR REPLACE FUNCTION advance_xlog(num int) RETURNS void AS
 $$
 DECLARE
-	i int; 
+	i int; /* in func */
 BEGIN 
-    i := 0; 
-	CREATE TABLE t_dummy_switch(i int) DISTRIBUTED BY (i); 
+    i := 0; /* in func */
+	CREATE TABLE t_dummy_switch(i int) DISTRIBUTED BY (i); /* in func */
 	LOOP 
 		IF i >= num THEN 
-			DROP TABLE t_dummy_switch; 
-			RETURN; 
-		END IF; 
-		PERFORM pg_switch_xlog() FROM gp_dist_random('gp_id') WHERE gp_segment_id=0; 
-		INSERT INTO t_dummy_switch SELECT generate_series(1,10); 
-		i := i + 1; 
-	END LOOP; 
-	DROP TABLE t_dummy_switch; 
-END; 
+			DROP TABLE t_dummy_switch; /* in func */
+			RETURN; /* in func */
+		END IF; /* in func */
+		PERFORM pg_switch_wal() FROM gp_dist_random('gp_id') WHERE gp_segment_id=0; /* in func */
+		INSERT INTO t_dummy_switch SELECT generate_series(1,10); /* in func */
+		i := i + 1; /* in func */
+	END LOOP; /* in func */
+	DROP TABLE t_dummy_switch; /* in func */
+END; /* in func */
 $$ language plpgsql;
 
 -- On content 0 primary, retain max 64MB (1 WAL file) for replication
 -- slots.  The other GUCs are needed to make the test run faster.
 0U: ALTER SYSTEM SET max_slot_wal_keep_size TO 64;
-0U: ALTER SYSTEM SET wal_keep_segments TO 0;
+0U: ALTER SYSTEM SET wal_keep_size TO 0;
 0U: ALTER SYSTEM SET gp_fts_mark_mirror_down_grace_period TO 0;
 0U: select pg_reload_conf();
 -- And on coordinator, also to make the test faster.
@@ -55,8 +53,8 @@ CHECKPOINT;
 
 -- Count of WAL files in pg_xlog should not exceed XLOGfileslop + 1,
 -- where 1 is the max_slot_wal_keep_size set above.
-0U: select count(pg_ls_dir) < current_setting('checkpoint_segments')::int * 2 + 2
-    from pg_ls_dir('pg_xlog') where pg_ls_dir like '________________________';
+0U: select count(pg_ls_dir) < pg_size_bytes(current_setting('max_wal_size'))::float / (64 * 1024 * 1024) + 1
+    from pg_ls_dir('pg_wal') where pg_ls_dir like '________________________';
 
 -- Replication slot on content 0 primary should report invalid LSN
 -- because the WAL file it needs is already removed when checkpoint
@@ -81,7 +79,7 @@ select wait_until_segment_synchronized(0);
 1: SELECT state, sync_error FROM gp_stat_replication WHERE gp_segment_id = 0;
 
 0U: ALTER SYSTEM RESET max_slot_wal_keep_size;
-0U: ALTER SYSTEM RESET wal_keep_segments;
+0U: ALTER SYSTEM RESET wal_keep_size;
 0U: ALTER SYSTEM RESET gp_fts_mark_mirror_down_grace_period;
 0U: select pg_reload_conf();
 0Uq:

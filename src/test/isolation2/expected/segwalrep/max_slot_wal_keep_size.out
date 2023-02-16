@@ -3,17 +3,14 @@
 -- obsoleted. In this case, the mirror will be marked down as well and need full
 -- recovery to brought it back.
 
-include: helpers/server_helpers.sql;
-CREATE
-
-CREATE OR REPLACE FUNCTION advance_xlog(num int) RETURNS void AS $$ DECLARE i int; BEGIN i := 0; CREATE TABLE t_dummy_switch(i int) DISTRIBUTED BY (i); LOOP IF i >= num THEN DROP TABLE t_dummy_switch; RETURN; END IF; PERFORM pg_switch_xlog() FROM gp_dist_random('gp_id') WHERE gp_segment_id=0; INSERT INTO t_dummy_switch SELECT generate_series(1,10); i := i + 1; END LOOP; DROP TABLE t_dummy_switch; END; $$ language plpgsql;
+CREATE OR REPLACE FUNCTION advance_xlog(num int) RETURNS void AS $$ DECLARE i int; /* in func */ BEGIN i := 0; /* in func */ CREATE TABLE t_dummy_switch(i int) DISTRIBUTED BY (i); /* in func */ LOOP IF i >= num THEN DROP TABLE t_dummy_switch; /* in func */ RETURN; /* in func */ END IF; /* in func */ PERFORM pg_switch_wal() FROM gp_dist_random('gp_id') WHERE gp_segment_id=0; /* in func */ INSERT INTO t_dummy_switch SELECT generate_series(1,10); /* in func */ i := i + 1; /* in func */ END LOOP; /* in func */ DROP TABLE t_dummy_switch; /* in func */ END; /* in func */ $$ language plpgsql;
 CREATE
 
 -- On content 0 primary, retain max 64MB (1 WAL file) for replication
 -- slots.  The other GUCs are needed to make the test run faster.
 0U: ALTER SYSTEM SET max_slot_wal_keep_size TO 64;
 ALTER
-0U: ALTER SYSTEM SET wal_keep_segments TO 0;
+0U: ALTER SYSTEM SET wal_keep_size TO 0;
 ALTER
 0U: ALTER SYSTEM SET gp_fts_mark_mirror_down_grace_period TO 0;
 ALTER
@@ -65,7 +62,7 @@ CHECKPOINT
 
 -- Count of WAL files in pg_xlog should not exceed XLOGfileslop + 1,
 -- where 1 is the max_slot_wal_keep_size set above.
-0U: select count(pg_ls_dir) < current_setting('checkpoint_segments')::int * 2 + 2 from pg_ls_dir('pg_xlog') where pg_ls_dir like '________________________';
+0U: select count(pg_ls_dir) < pg_size_bytes(current_setting('max_wal_size'))::float / (64 * 1024 * 1024) + 1 from pg_ls_dir('pg_wal') where pg_ls_dir like '________________________';
  ?column? 
 ----------
  t        
@@ -75,9 +72,9 @@ CHECKPOINT
 -- because the WAL file it needs is already removed when checkpoint
 -- was created.
 0U: select * from pg_get_replication_slots();
- slot_name                     | plugin | slot_type | datoid | active | xmin | catalog_xmin | restart_lsn 
--------------------------------+--------+-----------+--------+--------+------+--------------+-------------
- internal_wal_replication_slot |        | physical  |        | t      |      |              |             
+ slot_name                     | plugin | slot_type | datoid | temporary | active | active_pid | xmin | catalog_xmin | restart_lsn | confirmed_flush_lsn | wal_status | safe_wal_size 
+-------------------------------+--------+-----------+--------+-----------+--------+------------+------+--------------+-------------+---------------------+------------+---------------
+ internal_wal_replication_slot |        | physical  |        | f         | f      |            |      |              |             |                     | lost       |               
 (1 row)
 0Uq: ... <quitting>
 
@@ -110,47 +107,156 @@ END
 -- do full recovery
 !\retcode gprecoverseg -aF;
 -- start_ignore
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Starting gprecoverseg with args: -aF
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 6.9.0+dev.60.g75932a9ebe5 build dev'
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-master Greenplum Version: 'PostgreSQL 9.4.24 (Greenplum Database 6.9.0+dev.60.g75932a9ebe5 build dev) on x86_64-unknown-linux-gnu, compiled by gcc (GCC) 6.2.0, 64-bit compiled on Jul 26 2020 15:49:04 (with assert checking)'
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Obtaining Segment details from master...
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Heap checksum setting is consistent between master and the segments that are candidates for recoverseg
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Greenplum instance recovery parameters
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Recovery type              = Standard
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Recovery 1 of 1
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Synchronization mode                 = Full
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Failed instance host                 = 09c5497cf854
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Failed instance address              = 09c5497cf854
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Failed instance directory            = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Failed instance port                 = 6005
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Source instance host        = 09c5497cf854
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Source instance address     = 09c5497cf854
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Source instance directory   = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Source instance port        = 6002
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Target                      = in-place
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-1 segment(s) to recover
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Ensuring 1 failed segment(s) are stopped
-20200727:10:49:05:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-384857: /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
-20200727:10:49:05:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Ensuring that shared memory is cleaned up for stopped segments
-20200727:10:49:05:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Validating remote directories
-20200727:10:49:05:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Configuring new segments
-09c5497cf854 (dbid 5): pg_basebackup: base backup completed
-20200727:10:49:06:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Updating configuration with new mirrors
-20200727:10:49:06:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Updating mirrors
-20200727:10:49:06:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Starting mirrors
-20200727:10:49:06:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-era is e4307b9cbf2d16a8_200727100220
-20200727:10:49:06:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Commencing parallel segment instance startup, please wait...
-20200727:10:49:07:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Process results...
-20200727:10:49:07:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Triggering FTS probe
-20200727:10:49:07:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-******************************************************************
-20200727:10:49:07:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Updating segments for streaming is completed.
-20200727:10:49:07:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-For segments updated successfully, streaming will continue in the background.
-20200727:10:49:07:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Use  gpstate -s  to check the streaming progress.
-20200727:10:49:07:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-******************************************************************
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-Starting gprecoverseg with args: -aF
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 7.0.0-beta.1+dev.82.g0281df93bb6 build dev'
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-coordinator Greenplum Version: 'PostgreSQL 12.12 (Greenplum Database 7.0.0-beta.1+dev.82.g0281df93bb6 build dev) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 11.3.0-1ubuntu1~22.04) 11.3.0, 64-bit compiled on Feb 15 2023 19:30:23 (with assert checking) Bhuvnesh C.'
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-Obtaining Segment details from coordinator...
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-Successfully finished pg_controldata /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0 for dbid 2:
+stdout: pg_control version number:            12010700
+Catalog version number:               302302141
+Database system identifier:           7200505323110788637
+Database cluster state:               in production
+pg_control last modified:             Thu 16 Feb 2023 01:56:55 AM PST
+Latest checkpoint location:           0/8C000520
+Latest checkpoint's REDO location:    0/8C0004B0
+Latest checkpoint's REDO WAL file:    000000050000000000000023
+Latest checkpoint's TimeLineID:       5
+Latest checkpoint's PrevTimeLineID:   5
+Latest checkpoint's full_page_writes: on
+Latest checkpoint's NextXID:          0:1218
+Latest checkpoint's NextGxid:         73757
+Latest checkpoint's NextOID:          41058
+Latest checkpoint's NextRelfilenode:  73731
+Latest checkpoint's NextMultiXactId:  1
+Latest checkpoint's NextMultiOffset:  0
+Latest checkpoint's oldestXID:        477
+Latest checkpoint's oldestXID's DB:   13379
+Latest checkpoint's oldestActiveXID:  1217
+Latest checkpoint's oldestMultiXid:   1
+Latest checkpoint's oldestMulti's DB: 24577
+Latest checkpoint's oldestCommitTsXid:0
+Latest checkpoint's newestCommitTsXid:0
+Time of latest checkpoint:            Thu 16 Feb 2023 01:56:55 AM PST
+Fake LSN counter for unlogged rels:   0/3E8
+Minimum recovery ending location:     0/0
+Min recovery ending loc's timeline:   0
+Backup start location:                0/0
+Backup end location:                  0/0
+End-of-backup record required:        no
+wal_level setting:                    replica
+wal_log_hints setting:                off
+max_connections setting:              750
+max_worker_processes setting:         12
+max_wal_senders setting:              10
+max_prepared_xacts setting:           250
+max_locks_per_xact setting:           128
+track_commit_timestamp setting:       off
+Maximum data alignment:               8
+Database block size:                  32768
+Blocks per segment of large relation: 32768
+WAL block size:                       32768
+Bytes per WAL segment:                67108864
+Maximum length of identifiers:        64
+Maximum columns in an index:          32
+Maximum size of a TOAST chunk:        8140
+Size of a large-object chunk:         8192
+Date/time type storage:               64-bit integers
+Float4 argument passing:              by value
+Float8 argument passing:              by value
+Data page checksum version:           1
+Mock authentication nonce:            e9ead429dc981b3bc7bcbc8068e747bdaaee64e59a97f5e81263341a60865ad4
+
+stderr: 
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-Successfully finished pg_controldata /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0 for dbid 5:
+stdout: pg_control version number:            12010700
+Catalog version number:               302302141
+Database system identifier:           7200505323110788637
+Database cluster state:               in archive recovery
+pg_control last modified:             Thu 16 Feb 2023 01:57:10 AM PST
+Latest checkpoint location:           0/8415B100
+Latest checkpoint's REDO location:    0/8415B0C8
+Latest checkpoint's REDO WAL file:    000000050000000000000021
+Latest checkpoint's TimeLineID:       5
+Latest checkpoint's PrevTimeLineID:   5
+Latest checkpoint's full_page_writes: on
+Latest checkpoint's NextXID:          0:1217
+Latest checkpoint's NextGxid:         73756
+Latest checkpoint's NextOID:          41058
+Latest checkpoint's NextRelfilenode:  65539
+Latest checkpoint's NextMultiXactId:  1
+Latest checkpoint's NextMultiOffset:  0
+Latest checkpoint's oldestXID:        477
+Latest checkpoint's oldestXID's DB:   13379
+Latest checkpoint's oldestActiveXID:  1217
+Latest checkpoint's oldestMultiXid:   1
+Latest checkpoint's oldestMulti's DB: 24577
+Latest checkpoint's oldestCommitTsXid:0
+Latest checkpoint's newestCommitTsXid:0
+Time of latest checkpoint:            Thu 16 Feb 2023 01:56:55 AM PST
+Fake LSN counter for unlogged rels:   0/3E8
+Minimum recovery ending location:     0/8415B188
+Min recovery ending loc's timeline:   5
+Backup start location:                0/0
+Backup end location:                  0/0
+End-of-backup record required:        no
+wal_level setting:                    replica
+wal_log_hints setting:                off
+max_connections setting:              750
+max_worker_processes setting:         12
+max_wal_senders setting:              10
+max_prepared_xacts setting:           250
+max_locks_per_xact setting:           128
+track_commit_timestamp setting:       off
+Maximum data alignment:               8
+Database block size:                  32768
+Blocks per segment of large relation: 32768
+WAL block size:                       32768
+Bytes per WAL segment:                67108864
+Maximum length of identifiers:        64
+Maximum columns in an index:          32
+Maximum size of a TOAST chunk:        8140
+Size of a large-object chunk:         8192
+Date/time type storage:               64-bit integers
+Float4 argument passing:              by value
+Float8 argument passing:              by value
+Data page checksum version:           1
+Mock authentication nonce:            e9ead429dc981b3bc7bcbc8068e747bdaaee64e59a97f5e81263341a60865ad4
+
+stderr: 
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-Heap checksum setting is consistent between coordinator and the segments that are candidates for recoverseg
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-Greenplum instance recovery parameters
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:----------------------------------------------------------
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-Recovery type              = Standard
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:----------------------------------------------------------
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-Recovery 1 of 1
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:----------------------------------------------------------
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-   Synchronization mode                 = Full
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-   Failed instance host                 = station6
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-   Failed instance address              = station6
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-   Failed instance directory            = /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-   Failed instance port                 = 7005
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-   Recovery Source instance host        = station6
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-   Recovery Source instance address     = station6
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-   Recovery Source instance directory   = /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-   Recovery Source instance port        = 7002
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-   Recovery Target                      = in-place
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:----------------------------------------------------------
+20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-Starting to create new pg_hba.conf on primary segments
+20230216:01:58:57:459860 gprecoverseg:station6:pivotal-[INFO]:-Successfully modified pg_hba.conf on primary segments to allow replication connections
+20230216:01:58:57:459860 gprecoverseg:station6:pivotal-[INFO]:-1 segment(s) to recover
+20230216:01:58:57:459860 gprecoverseg:station6:pivotal-[INFO]:-Ensuring 1 failed segment(s) are stopped
+20230216:01:58:58:459860 gprecoverseg:station6:pivotal-[INFO]:-456041: /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
+20230216:01:58:59:459860 gprecoverseg:station6:pivotal-[INFO]:-Setting up the required segments for recovery
+20230216:01:58:59:459860 gprecoverseg:station6:pivotal-[INFO]:-Updating configuration for mirrors
+20230216:01:58:59:459860 gprecoverseg:station6:pivotal-[INFO]:-Initiating segment recovery. Upon completion, will start the successfully recovered segments
+20230216:01:58:59:459860 gprecoverseg:station6:pivotal-[INFO]:-era is 84f970d55cff544c_230216011245
+station6 (dbid 5): pg_basebackup: base backup completed
+20230216:01:59:01:459860 gprecoverseg:station6:pivotal-[INFO]:-Triggering FTS probe
+20230216:01:59:01:459860 gprecoverseg:station6:pivotal-[INFO]:-********************************
+20230216:01:59:01:459860 gprecoverseg:station6:pivotal-[INFO]:-Segments successfully recovered.
+20230216:01:59:01:459860 gprecoverseg:station6:pivotal-[INFO]:-********************************
+20230216:01:59:01:459860 gprecoverseg:station6:pivotal-[INFO]:-Recovered mirror segments need to sync WAL with primary segments.
+20230216:01:59:01:459860 gprecoverseg:station6:pivotal-[INFO]:-Use 'gpstate -e' to check progress of WAL sync remaining bytes
 
 -- end_ignore
 (exited with code 0)
@@ -175,7 +281,7 @@ select wait_until_segment_synchronized(0);
 
 0U: ALTER SYSTEM RESET max_slot_wal_keep_size;
 ALTER
-0U: ALTER SYSTEM RESET wal_keep_segments;
+0U: ALTER SYSTEM RESET wal_keep_size;
 ALTER
 0U: ALTER SYSTEM RESET gp_fts_mark_mirror_down_grace_period;
 ALTER
