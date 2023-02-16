@@ -40,6 +40,11 @@ $node_standby->append_conf('postgresql.conf', "primary_slot_name = 'rep1'");
 
 $node_standby->start;
 
+# Greenplum: perform CHECKPOINT just before recording restart_lsn. We need to
+# do this because Greenplum replication slot's restart_lsn is set to whichever
+# smaller between the confirmed received lsn and the last checkpoint's redo lsn.
+# Refer commit 055c57d for more context.
+$node_master->safe_psql('postgres', "CHECKPOINT;");
 # Wait until standby has replayed enough data
 my $start_lsn = $node_master->lsn('write');
 $node_master->wait_for_catchup($node_standby, 'replay', $start_lsn);
