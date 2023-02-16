@@ -13596,7 +13596,15 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 						 * clean things up later.
 						 */
 						appendPQExpBufferStr(q, " INTEGER /* dummy */");
-						/* Skip all the rest, too */
+
+						/* Dropped columns are dumped during binary upgrade.
+						 * Dump the encoding clause also to maintain a consistent
+						 * catalog entry in pg_attribute_encoding post upgrade.
+						 */
+						if (tbinfo->attencoding[j] != NULL)
+							appendPQExpBuffer(q, " ENCODING (%s)", tbinfo->attencoding[j]);
+
+						/* Skip all the rest */
 						continue;
 					}
 
