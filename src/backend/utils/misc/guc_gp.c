@@ -4974,16 +4974,28 @@ check_gp_default_storage_options(char **newval, void **extra, GucSource source)
 	resetAOStorageOpts(newopts);
 
 	/*
+	 * Discard any existing values in gp_default_storage_options,
+	 * we will only use the new ones.
+	 */
+	resetDefaultAOStorageOpts();
+
+	/*
 	 * Perform identical validations as in case of options specified
 	 * in a WITH() clause.
 	 */
 	if ((*newval)[0])
 	{
 		Datum		newopts_datum;
+		relopt_value 	*options;
+		int		num_options;
 
+		/* Convert the raw string into text array */
 		newopts_datum = parseAOStorageOpts(*newval);
-		parse_validate_reloptions(newopts, newopts_datum,
-								  /* validate */ true, RELOPT_KIND_APPENDOPTIMIZED);
+
+		/* Use the same routine as for "WITH (...)" clause to validate the options. */
+		options = parseRelOptions(newopts_datum, /* validate */ true, RELOPT_KIND_APPENDOPTIMIZED, &num_options);
+		validate_and_adjust_options(newopts, options, num_options, RELOPT_KIND_APPENDOPTIMIZED, /* validate */ true);
+		free_options_deep(options, num_options);
 	}
 
 	/*

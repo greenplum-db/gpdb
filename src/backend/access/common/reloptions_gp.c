@@ -289,8 +289,8 @@ resetAOStorageOpts(StdRdOptions *ao_opts)
 void
 resetDefaultAOStorageOpts(void)
 {
-	resetAOStorageOpts(&ao_storage_opts);
-	ao_storage_opts_changed = false;
+	if (ao_storage_opts)
+		resetAOStorageOpts(ao_storage_opts);
 }
 
 const StdRdOptions *
@@ -837,6 +837,26 @@ validate_and_adjust_options(StdRdOptions *result,
 	relopt_value *complevel_opt;
 	relopt_value *checksum_opt;
 
+	/* 
+	 * Firstly, for AO/CO tables, if anything is not set in the options but has 
+	 * been specified by gp_default_storage_options before, use them. 
+	 */
+	if (ao_storage_opts &&
+		KIND_IS_APPENDOPTIMIZED(kind))
+	{
+		if (!(get_option_set(options, num_options, SOPT_BLOCKSIZE)))
+			result->blocksize = ao_storage_opts->blocksize;
+
+		if (!(get_option_set(options, num_options, SOPT_COMPLEVEL)))
+			result->compresslevel = ao_storage_opts->compresslevel;
+
+		if (!(get_option_set(options, num_options, SOPT_COMPTYPE)))
+			strlcpy(result->compresstype, ao_storage_opts->compresstype, sizeof(result->compresstype));
+
+		if (!(get_option_set(options, num_options, SOPT_CHECKSUM)))
+			result->checksum = ao_storage_opts->checksum;
+	}
+
 	/* blocksize */
 	blocksize_opt = get_option_set(options, num_options, SOPT_BLOCKSIZE);
 	if (blocksize_opt != NULL)
@@ -1017,46 +1037,6 @@ validate_and_adjust_options(StdRdOptions *result,
 	{
 		result->compresslevel = setDefaultCompressionLevel(result->compresstype);
 	}
-}
-
-void
-validate_and_refill_options(StdRdOptions *result, relopt_value *options,
-							int numrelopts, relopt_kind kind, bool validate)
-{
-	/* 
-	 * If anything is not set but it has been specified by 
-	 * gp_default_storage_options before, use them. 
-	 */
-	if (ao_storage_opts &&
-		KIND_IS_APPENDOPTIMIZED(kind))
-	{
-		if (!(get_option_set(options, numrelopts, SOPT_BLOCKSIZE)))
-			result->blocksize = ao_storage_opts->blocksize;
-
-		if (!(get_option_set(options, numrelopts, SOPT_COMPLEVEL)))
-			result->compresslevel = ao_storage_opts->compresslevel;
-
-		if (!(get_option_set(options, numrelopts, SOPT_COMPTYPE)))
-			strlcpy(result->compresstype, ao_storage_opts->compresstype, sizeof(result->compresstype));
-
-		if (!(get_option_set(options, numrelopts, SOPT_CHECKSUM)))
-			result->checksum = ao_storage_opts->checksum;
-	}
-
-	validate_and_adjust_options(result, options, numrelopts, kind, validate);
-}
-
-void
-parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
-						  bool validate, relopt_kind kind)
-{
-	relopt_value *options;
-	int			num_options;
-
-	options = parseRelOptions(reloptions, validate, kind, &num_options);
-
-	validate_and_adjust_options(result, options, num_options, kind, validate);
-	free_options_deep(options, num_options);
 }
 
 /*

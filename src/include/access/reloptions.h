@@ -316,8 +316,6 @@ extern Datum transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts, bool ha
 extern bool relOptionsEquals(Datum oldOptions, Datum newOptions);
 
 extern void validateOrientationRelOptions(char* comptype, bool co);
-extern void parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
-									  bool validate, relopt_kind relkind);
 
 extern void setDefaultAOStorageOpts(StdRdOptions *copy);
 extern const StdRdOptions *currentAOStorageOptions(void);
@@ -326,8 +324,6 @@ extern void resetDefaultAOStorageOpts(void);
 extern void resetAOStorageOpts(StdRdOptions *ao_opts);
 
 extern void initialize_reloptions_gp(void);
-extern void validate_and_refill_options(StdRdOptions *result, relopt_value *options,
-							int numoptions, relopt_kind kind, bool validate);
 extern void validate_and_adjust_options(StdRdOptions *result, relopt_value *options,
 										int num_options, relopt_kind kind, bool validate);
 
