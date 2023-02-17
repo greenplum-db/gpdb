@@ -218,6 +218,12 @@ enum EOptTraceFlag
 	// Discard HashJoin with RedistributeMotion nodes
 	EopttraceDiscardRedistributeHashJoin = 103044,
 
+	// disable hash join alternatives
+	EopttraceDisableInnerHashJoin = 103045,
+
+	// enable nested loop join alternatives
+	EopttraceDisableInnerNLJ = 103046,
+
 	///////////////////////////////////////////////////////
 	///////////////////// statistics flags ////////////////
 	//////////////////////////////////////////////////////

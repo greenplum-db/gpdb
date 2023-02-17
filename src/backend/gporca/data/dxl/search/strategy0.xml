@@ -5,10 +5,10 @@
       <dxl:Xform Name="CXformGet2TableScan"/>
       <dxl:Xform Name="CXformSelect2Filter"/>
       <dxl:Xform Name="CXformExpandNAryJoin"/>
-      <dxl:Xform Name="CXformInnerJoin2NLJoin"/>
+      <dxl:Xform Name="CXformImplementInnerJoin"/>
     </dxl:SearchStage>
     <dxl:SearchStage TimeThreshold="5000" CostThreshold="10E6">
-      <dxl:Xform Name="CXformInnerJoin2HashJoin"/>
+      <dxl:Xform Name="CXformImplementInnerJoin"/>
     </dxl:SearchStage>
   </dxl:SearchStrategy>
 </dxl:DXLMessage>

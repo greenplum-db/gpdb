@@ -78,8 +78,6 @@
 #include "gpopt/xforms/CXformInnerApply2InnerJoin.h"
 #include "gpopt/xforms/CXformInnerApply2InnerJoinNoCorrelations.h"
 #include "gpopt/xforms/CXformInnerApplyWithOuterKey2InnerJoin.h"
-#include "gpopt/xforms/CXformInnerJoin2HashJoin.h"
-#include "gpopt/xforms/CXformInnerJoin2NLJoin.h"
 #include "gpopt/xforms/CXformInnerJoinAntiSemiJoinNotInSwap.h"
 #include "gpopt/xforms/CXformInnerJoinAntiSemiJoinSwap.h"
 #include "gpopt/xforms/CXformInnerJoinSemiJoinSwap.h"

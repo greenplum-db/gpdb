@@ -165,9 +165,9 @@ CXformFactory::Instantiate()
 	Add(GPOS_NEW(m_mp) CXformSubqNAryJoin2Apply(m_mp));
 	SkipUnused(2);
 	Add(GPOS_NEW(m_mp) CXformInnerApplyWithOuterKey2InnerJoin(m_mp));
-	Add(GPOS_NEW(m_mp) CXformInnerJoin2NLJoin(m_mp));
+	SkipUnused(1);
 	Add(GPOS_NEW(m_mp) CXformImplementIndexApply(m_mp));
-	Add(GPOS_NEW(m_mp) CXformInnerJoin2HashJoin(m_mp));
+	SkipUnused(1);
 	Add(GPOS_NEW(m_mp) CXformInnerApply2InnerJoin(m_mp));
 	Add(GPOS_NEW(m_mp) CXformInnerApply2InnerJoinNoCorrelations(m_mp));
 	Add(GPOS_NEW(m_mp) CXformImplementInnerCorrelatedApply(m_mp));
