@@ -1438,6 +1438,8 @@ acquire_sample_rows(Relation onerel, int elevel,
 	ReservoirStateData rstate;
 	TupleTableSlot *slot;
 	TableScanDesc scan;
+	TupleDesc	relDesc = RelationGetDescr(onerel);
+	bool *proj = palloc0(sizeof(bool) * relDesc->natts);
 
 	Assert(targrows > 0);
 
@@ -1485,7 +1487,18 @@ acquire_sample_rows(Relation onerel, int elevel,
 	/* Prepare for sampling rows */
 	reservoir_init_selection_state(&rstate, targrows);
 
-	scan = table_beginscan_analyze(onerel);
+	/* Build column projection excluding dropped columns and pass to table scan */
+	for(int i = 0; i < relDesc->natts; i++)
+	{
+		Form_pg_attribute attr = TupleDescAttr(relDesc, i);
+
+		if (attr->attisdropped)
+			continue;
+
+		proj[i] = true;
+	}
+
+	scan = table_beginscan_analyze(onerel, proj);
 	slot = table_slot_create(onerel, NULL);
 
 	/* Outer loop over blocks to sample */

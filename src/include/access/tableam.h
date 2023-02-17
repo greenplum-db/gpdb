@@ -913,9 +913,14 @@ table_beginscan_tid(Relation rel, Snapshot snapshot)
  * the same data structure although the behavior is rather different.
  */
 static inline TableScanDesc
-table_beginscan_analyze(Relation rel)
+table_beginscan_analyze(Relation rel, bool *proj)
 {
 	uint32		flags = SO_TYPE_ANALYZE;
+
+	if (rel->rd_tableam->scan_begin_extractcolumns)
+		return rel->rd_tableam->scan_begin_extractcolumns(rel, NULL,
+														  NULL, NULL, proj, NULL,
+														  flags);
 
 	return rel->rd_tableam->scan_begin(rel, NULL, 0, NULL, NULL, flags);
 }
