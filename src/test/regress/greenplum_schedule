@@ -75,7 +75,9 @@ test: gp_connections
 
 # bitmap_index triggers recovery, run it seperately
 test: bitmap_index
-test: gp_dump_query_oids analyze gp_owner_permission incremental_analyze
+# 'analyze' utilizes fault injectors so it needs to be in a group by itself
+test: analyze
+test: gp_dump_query_oids gp_owner_permission incremental_analyze
 test: indexjoin as_alias regex_gp gpparams with_clause transient_types gp_rules dispatch_encoding motion_gp
 # dispatch should always run seperately from other cases.
 test: dispatch

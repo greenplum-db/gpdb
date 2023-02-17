@@ -6,6 +6,9 @@
 DROP DATABASE IF EXISTS testanalyze;
 CREATE DATABASE testanalyze;
 \c testanalyze
+-- start_ignore
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+-- end_ignore
 set client_min_messages='WARNING';
 -- Case 1: Analyzing root table with GUC optimizer_analyze_root_partition and optimizer_analyze_midlevel_partition set off should only populate stats for leaf tables
 set optimizer_analyze_root_partition=off;
@@ -469,6 +472,37 @@ insert into analyze_dropped_col values('a','bbb', repeat('x', 5000), 'dddd');
 alter table analyze_dropped_col drop column b;
 analyze analyze_dropped_col;
 select attname, null_frac, avg_width, n_distinct from pg_stats where tablename ='analyze_dropped_col';
+
+-- Test ANALYZE on an aoco table does not scan a dropped column
+-- First record total blocks scanned for the ANALYZE, then record blocks scanned after
+-- issuing an ALTER TABLE .. DROP COLUMN.
+create table aoco_analyze_dropped_col(i int, j bigint, k int) WITH (appendonly=true, orientation=column);
+insert into aoco_analyze_dropped_col select 0, i, 1 from generate_series(1, 100000) i;
+
+select gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid)
+    from gp_segment_configuration where content = 1 AND role = 'p';
+
+analyze aoco_analyze_dropped_col;
+
+select gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
+    from gp_segment_configuration where content = 1 AND role = 'p';
+
+select gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
+    from gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+alter table aoco_analyze_dropped_col drop column j;
+
+select gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid)
+    from gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+analyze aoco_analyze_dropped_col;
+
+select gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
+    from gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+select gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
+    from gp_segment_configuration WHERE content = 1 AND role = 'p';
+
 -- Test analyze without USAGE privilege on schema
 create schema test_ns;
 revoke all on schema test_ns from public;
