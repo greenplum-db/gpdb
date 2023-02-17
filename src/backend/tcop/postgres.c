@@ -5172,12 +5172,6 @@ PostgresMain(int argc, char *argv[],
 		InvalidateCatalogSnapshotConditionally();
 
 		/*
-		 * Also consider releasing our catalog snapshot if any, so that it's
-		 * not preventing advance of global xmin while we wait for the client.
-		 */
-		InvalidateCatalogSnapshotConditionally();
-
-		/*
 		 * (1) If we've reached idle state, tell the frontend we're ready for
 		 * a new query.
 		 *
