@@ -2834,8 +2834,8 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
  CExpressionPreprocessor::PexprCheckLeftOuterJoinPruningConditions(
  	CMemoryPool *mp, CExpression *pexprNew, CColRefSet *output_columns)
  {
- 	GPOS_ASSERT(nullptr != pexprNew);
- 	GPOS_ASSERT(nullptr != output_columns);
+ 	GPOS_ASSERT(NULL != pexprNew);
+ 	GPOS_ASSERT(NULL != output_columns);
 
  	//Check conditions on inner relation
  	if (!CheckJoinPruningCondnOnInnerRel(pexprNew, output_columns))
@@ -2893,8 +2893,8 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
  CExpressionPreprocessor::CheckJoinPruningCondnOnInnerRel(
  	CExpression *pexprNew, CColRefSet *output_columns)
  {
- 	GPOS_ASSERT(nullptr != pexprNew);
- 	GPOS_ASSERT(nullptr != output_columns);
+ 	GPOS_ASSERT(NULL != pexprNew);
+ 	GPOS_ASSERT(NULL != output_columns);
 
  	CExpression *inner_rel = (*pexprNew)[1];
  	CColRefSet *derive_output_columns_inner_rel =
@@ -2904,7 +2904,7 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
  	// columns from the inner relation or inner relation has no unique keys
  	// then join pruning is not done
  	if (output_columns->FIntersects(derive_output_columns_inner_rel) ||
- 		nullptr == inner_rel->DeriveKeyCollection())
+ 		NULL == inner_rel->DeriveKeyCollection())
  	{
  		return false;
  	}
@@ -2916,8 +2916,8 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
  														  CExpression *pexprNew,
  														  CColRefSet *result)
  {
- 	GPOS_ASSERT(nullptr != pexprNew);
- 	GPOS_ASSERT(nullptr != result);
+ 	GPOS_ASSERT(NULL != pexprNew);
+ 	GPOS_ASSERT(NULL != result);
 
  	CExpression *inner_rel = (*pexprNew)[1];
  	CKeyCollection *inner_rel_key_sets = inner_rel->DeriveKeyCollection();
@@ -2990,10 +2990,10 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
  												  CColRefSet *result,
  												  CColRefSet *outer_rel_columns)
  {
- 	GPOS_ASSERT(nullptr != join_cond);
- 	GPOS_ASSERT(nullptr != inner_unique_keys);
- 	GPOS_ASSERT(nullptr != result);
- 	GPOS_ASSERT(nullptr != outer_rel_columns);
+ 	GPOS_ASSERT(NULL != join_cond);
+ 	GPOS_ASSERT(NULL != inner_unique_keys);
+ 	GPOS_ASSERT(NULL != result);
+ 	GPOS_ASSERT(NULL != outer_rel_columns);
 
  	ULONG arity_join = join_cond->Arity();
  	for (ULONG ul = 0; ul < arity_join; ul++)
@@ -3033,8 +3033,8 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
  CExpressionPreprocessor::CheckForFullUniqueKeySetInInnerRel(
  	CMemoryPool *mp, CExpression *pexprNew, CColRefSet *result)
  {
- 	GPOS_ASSERT(nullptr != pexprNew);
- 	GPOS_ASSERT(nullptr != result);
+ 	GPOS_ASSERT(NULL != pexprNew);
+ 	GPOS_ASSERT(NULL != result);
 
  	CExpression *inner_rel = (*pexprNew)[1];
  	CKeyCollection *inner_rel_key_sets = inner_rel->DeriveKeyCollection();
@@ -3076,11 +3076,11 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
  												  CColRefSet *inner_unique_keys,
  												  CColRefSet *outer_rel_columns)
  {
- 	GPOS_ASSERT(nullptr != inner_columns);
- 	GPOS_ASSERT(nullptr != usedColumns);
- 	GPOS_ASSERT(nullptr != result);
- 	GPOS_ASSERT(nullptr != inner_unique_keys);
- 	GPOS_ASSERT(nullptr != outer_rel_columns);
+ 	GPOS_ASSERT(NULL != inner_columns);
+ 	GPOS_ASSERT(NULL != usedColumns);
+ 	GPOS_ASSERT(NULL != result);
+ 	GPOS_ASSERT(NULL != inner_unique_keys);
+ 	GPOS_ASSERT(NULL != outer_rel_columns);
 
  	// If the used column count is 1 then we need to check if that column is
  	// a part of the inner relation unique key
@@ -3127,7 +3127,7 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
  CExpressionPreprocessor::PexprJoinPruningScalar(CMemoryPool *mp,
  												CExpression *pexprScalar)
  {
- 	GPOS_ASSERT(nullptr != pexprScalar);
+ 	GPOS_ASSERT(NULL != pexprScalar);
  	GPOS_ASSERT(pexprScalar->Pop()->FScalar());
 
  	if (COperator::EopScalarSubqueryExists == pexprScalar->Pop()->Eopid() ||
@@ -3141,7 +3141,7 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
  	if (pexprScalar->DeriveHasSubquery())
  	{
  		CColRefSet *subquery_colrefset = GPOS_NEW(mp) CColRefSet(mp);
- 		const CColRef *subquery_colref = nullptr;
+ 		const CColRef *subquery_colref = NULL;
  		if (COperator::EopScalarSubquery == pexprScalar->Pop()->Eopid())
  		{
  			CScalarSubquery *subquery_pop =
@@ -3158,7 +3158,7 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
  		}
 
  		// If we have a subquery inside CScalarCmp then subquery_colref will be null
- 		if (nullptr != subquery_colref)
+ 		if (NULL != subquery_colref)
  		{
  			subquery_colrefset->Include(subquery_colref);
  		}
@@ -3189,10 +3189,10 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
  	CColRefSet *output_columns, CColRefSet *childs_output_columns,
  	CColRefSet *pcrsOutput)
  {
- 	GPOS_ASSERT(nullptr != pexpr);
- 	GPOS_ASSERT(nullptr != derived_output_columns);
- 	GPOS_ASSERT(nullptr != output_columns);
- 	GPOS_ASSERT(nullptr != childs_output_columns);
+ 	GPOS_ASSERT(NULL != pexpr);
+ 	GPOS_ASSERT(NULL != derived_output_columns);
+ 	GPOS_ASSERT(NULL != output_columns);
+ 	GPOS_ASSERT(NULL != childs_output_columns);
 
  	// Computing output columns of the parent
  	CColRefSetIter iter_derived_output_columns(*derived_output_columns);
@@ -3225,8 +3225,8 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
  	CMemoryPool *mp, CExpression *pexpr, CExpressionArray *pdrgpexpr,
  	CColRefSet *childs_output_columns)
  {
- 	GPOS_ASSERT(nullptr != pexpr);
- 	GPOS_ASSERT(nullptr != pdrgpexpr);
+ 	GPOS_ASSERT(NULL != pexpr);
+ 	GPOS_ASSERT(NULL != pdrgpexpr);
 
  	ULONG number_of_childs = pexpr->Arity();
  	for (ULONG ul = 0; ul < number_of_childs; ul++)
@@ -3300,10 +3300,10 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
  CExpressionPreprocessor::PexprJoinPruning(CMemoryPool *mp, CExpression *pexpr,
  										  CColRefSet *pcrsOutput)
  {
- 	GPOS_ASSERT(nullptr != pexpr);
+ 	GPOS_ASSERT(NULL != pexpr);
  	GPOS_ASSERT(pexpr->Pop()->FLogical());
 
- 	if (nullptr == pcrsOutput)
+ 	if (NULL == pcrsOutput)
  	{
  		pexpr->AddRef();
  		return pexpr;
