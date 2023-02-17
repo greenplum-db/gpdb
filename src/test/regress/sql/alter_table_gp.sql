@@ -230,10 +230,19 @@ CREATE TABLE issue_14279_taptest_table_p3000000000 (
     LIKE issue_14279_taptest_table
     INCLUDING DEFAULTS INCLUDING CONSTRAINTS);
 ALTER TABLE issue_14279_taptest_table ATTACH PARTITION issue_14279_taptest_table_p3000000000 FOR VALUES FROM (3000000000) TO (3000000100);
+BEGIN;
+CREATE TABLE issue_14279_taptest_table_p3000000100 (
+    LIKE issue_14279_taptest_table
+    INCLUDING DEFAULTS INCLUDING CONSTRAINTS);
+ALTER TABLE issue_14279_taptest_table ATTACH PARTITION issue_14279_taptest_table_p3000000100 FOR VALUES FROM (3000000100) TO (3000000200);
+END;
 INSERT INTO issue_14279_taptest_table SELECT generate_series(3000000000, 3000000001);
+INSERT INTO issue_14279_taptest_table SELECT generate_series(3000000100, 3000000101);
 -- The parent table shouldn't have anything.
 SELECT * FROM ONLY issue_14279_taptest_table;
 -- The newly attached table should have 2 rows.
 SELECT * FROM issue_14279_taptest_table_p3000000000;
+-- The newly attached table should have 2 rows.
+SELECT * FROM issue_14279_taptest_table_p3000000100;
 DROP TABLE issue_14279_taptest_table;
 DROP TABLE issue_14279_fk_reference;
