@@ -1,6 +1,9 @@
 test: resgroup/enable_resgroup_validate
 test: resgroup/enable_resgroup
 
+# bypass catalog
+test: resgroup/resgroup_bypass_catalog
+
 # basic syntax
 test: resgroup/resgroup_views
 test: resgroup/resgroup_syntax

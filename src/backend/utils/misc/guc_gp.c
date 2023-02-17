@@ -236,6 +236,7 @@ int			gp_perfmon_segment_interval;
 
 /* Perfmon debug GUC */
 bool		gp_perfmon_print_packet_info;
+bool		gp_resource_group_bypass_catalog_query;
 
 bool		vmem_process_interrupt = false;
 bool		execute_pruned_plan = false;
@@ -3080,6 +3081,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&gp_resource_group_enable_recalculate_query_mem,
 		false,
 		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_resource_group_bypass_catalog_query", PGC_USERSET, RESOURCES,
+			gettext_noop("Bypass all catalog only queries."),
+			NULL
+		},
+		&gp_resource_group_bypass_catalog_query,
+		true, NULL, NULL
 	},
 
 	{
