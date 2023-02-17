@@ -2557,11 +2557,12 @@ checkBypassWalker(Node *node, void *context)
 {
 	bool *bypass = context;
 
-	if (node == NULL) return false;
+	if (node == NULL)
+		return false;
 
 	if (IsA(node, RangeVar))
 	{
-		RangeVar *from = (RangeVar *)node;
+		RangeVar *from = (RangeVar *) node;
 		if (from->schemaname == NULL ||
 			strcmp(from->schemaname, "pg_catalog") != 0)
 		{
@@ -2585,7 +2586,7 @@ shouldBypassSelectQuery(Node *node)
 {
 	bool catalog_bypass = false;
 
-	if(gp_resource_group_bypass_catalog_query)
+	if (gp_resource_group_bypass_catalog_query)
 		raw_expression_tree_walker(node, checkBypassWalker, &catalog_bypass);
 
 	return catalog_bypass;
