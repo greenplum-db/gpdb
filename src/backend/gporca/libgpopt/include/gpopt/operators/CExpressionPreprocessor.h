@@ -203,7 +203,50 @@ private:
 	static CExpression *CollapseSelectAndReplaceColref(CMemoryPool *mp,
 													   CExpression *expr,
 													   CColRef *pcolref,
-													   CExpression *pprojExpr);
+                                                       CExpression *pprojExpr);
+
+
+    static CExpression *PexprJoinPruning(CMemoryPool *mp, CExpression *pexpr,
+                                         CColRefSet *pcrsOutput);
+
+    static CExpression *PexprJoinPruningScalar(CMemoryPool *mp,
+                                               CExpression *pexprScalar);
+
+    static void ComputeOutputColumns(CExpression *pexpr,
+                                     CColRefSet *derived_output_columns,
+                                     CColRefSet *output_columns,
+                                     CColRefSet *childs_output_columns,
+                                     CColRefSet *pcrsOutput);
+
+    static void JoinPruningTreeTraversal(CMemoryPool *mp, CExpression *pexpr,
+                                         CExpressionArray *pdrgpexpr,
+                                         CColRefSet *childs_output_columns);
+
+    static CExpression *PexprCheckLeftOuterJoinPruningConditions(
+            CMemoryPool *mp, CExpression *pexprNew, CColRefSet *output_columns);
+
+    static bool CheckJoinPruningCondnOnInnerRel(CExpression *pexprNew,
+                                                CColRefSet *output_columns);
+
+    static bool CheckJoinPruningCondnOnJoinCondn(CMemoryPool *mp,
+                                                 CExpression *pexprNew,
+                                                 CColRefSet *result);
+
+    static bool CheckAndCondnInJoinCondn(CMemoryPool *mp,
+                                         CExpression *join_cond,
+                                         CColRefSet *inner_unique_keys,
+                                         CColRefSet *result,
+                                         CColRefSet *outer_rel_columns);
+
+    static void CheckUniqueKeyInJoinCond(CColRefSet *inner_columns,
+                                         CColRefSet *usedColumns,
+                                         CColRefSet *result,
+                                         CColRefSet *inner_unique_keys,
+                                         CColRefSet *outer_rel_columns);
+
+    static bool CheckForFullUniqueKeySetInInnerRel(CMemoryPool *mp,
+                                                   CExpression *pexprNew,
+                                                   CColRefSet *result);
 
 	// private ctor
 	CExpressionPreprocessor();
