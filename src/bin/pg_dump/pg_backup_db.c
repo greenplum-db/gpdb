@@ -142,14 +142,12 @@ ConnectDatabase(Archive *AHX,
 	 * Start the connection.  Loop until we have a password if requested by
 	 * backend.
 	 */
-	const char *keywords[8];
-	const char *values[8];
+	const char *keywords[9];
+	const char *values[9];
+	int			i;
 	do
 	{
-		const char *keywords[8];
-		const char *values[8];
-		int			i = 0;
-
+		i = 0;
 		/*
 		 * If dbname is a connstring, its entries can override the other
 		 * values obtained from cparams; but in turn, override_dbname can
@@ -173,9 +171,9 @@ ConnectDatabase(Archive *AHX,
 		keywords[i] = "fallback_application_name";
 		values[i++] = progname;
 		keywords[i] = NULL;
-		values[i++] = NULL;
+		values[i] = NULL;
 		Assert(i <= lengthof(keywords));
-
+	
 		new_pass = false;
 		AH->connection = PQconnectdbParams(keywords, values, true);
 
@@ -233,11 +231,12 @@ ConnectDatabase(Archive *AHX,
 	 */
 	if (binary_upgrade)
 	{
-		keywords[6] = "options";
-		values[6] = AH->public.remoteVersion < GPDB7_MAJOR_PGVERSION ?
+		keywords[i] = "options";
+		values[i] = AH->public.remoteVersion < GPDB7_MAJOR_PGVERSION ?
 								"-c gp_session_role=utility" : "-c gp_role=utility";
-		keywords[7] = NULL;
-		values[7] = NULL;
+		keywords[i] = NULL;
+		values[i++] = NULL;
+		Assert(i <= lengthof(keywords));
 		AH->connection = PQconnectdbParams(keywords, values, true);
 	}
 	PQsetNoticeProcessor(AH->connection, notice_processor, NULL);
