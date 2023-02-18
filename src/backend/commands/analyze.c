@@ -1670,6 +1670,7 @@ acquire_inherited_sample_rows(Relation onerel, int elevel,
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
+		// https://github.com/greenplum-db/gpdb/issues/14644
 		if (list_length(tableOIDs) < 2)
 			SetRelationHasSubclass(RelationGetRelid(onerel), false);
 		return acquire_sample_rows_dispatcher(onerel,
