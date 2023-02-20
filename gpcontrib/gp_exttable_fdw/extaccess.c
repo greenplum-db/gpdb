@@ -109,7 +109,7 @@ elog(DEBUG2, "external_getnext returning tuple")
  */
 FileScanDesc
 external_beginscan(Relation relation, uint32 scancounter,
-				   List *uriList, char fmtType, bool isMasterOnly,
+				   List *uriList, char fmtType, bool isCoordinatorOnly,
 				   int rejLimit, bool rejLimitInRows, char logErrors, int encoding,
 				   List *extOptions)
 {
@@ -155,7 +155,7 @@ external_beginscan(Relation relation, uint32 scancounter,
 	 *
 	 * The URI assigned for this segment is normally in the uriList list at
 	 * the index of this segment id. However, if we are executing on COORDINATOR
-	 * ONLY the (one and only) entry which is destined for the master will be
+	 * ONLY the (one and only) entry which is destined for the coordinator will be
 	 * at the first entry of the uriList list.
 	 */
 	if (Gp_role == GP_ROLE_EXECUTE)
@@ -171,7 +171,7 @@ external_beginscan(Relation relation, uint32 scancounter,
 		 * ExecInitExternalScan (probably we should fix this?), then segindex
 		 * = -1 will bomb out here.
 		 */
-		if (isMasterOnly && idx == -1)
+		if (isCoordinatorOnly && idx == -1)
 			idx = 0;
 
 		if (idx >= 0)
@@ -184,9 +184,9 @@ external_beginscan(Relation relation, uint32 scancounter,
 				uri = (char *) strVal(v);
 		}
 	}
-	else if (Gp_role == GP_ROLE_DISPATCH && isMasterOnly)
+	else if (Gp_role == GP_ROLE_DISPATCH && isCoordinatorOnly)
 	{
-		/* this is a ON COORDINATOR table. Only get uri if we are the master */
+		/* this is a ON COORDINATOR table. Only get uri if we are the coordinator */
 		if (segindex == -1)
 		{
 			Value	   *v = list_nth(uriList, 0);
