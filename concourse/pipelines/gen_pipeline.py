@@ -171,7 +171,7 @@ def create_pipeline(args, git_remote, git_branch):
         "rhel8" : "rhel8",
         "ubuntu18.04" : "ubuntu18.04",
         "rocky8" : "rocky8",
-        "oel8" : "oel",
+        "oel8" : "oel8",
     }
     context = {
         'template_filename': args.template_filename,
