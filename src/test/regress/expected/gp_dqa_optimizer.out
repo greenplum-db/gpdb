@@ -2715,7 +2715,7 @@ explain (verbose on, costs off)select sum(Distinct a), count(b), sum(c) from dqa
          ->  Redistribute Motion 3:3  (slice2; segments: 3)
                Output: a, e, (PARTIAL count(b)), (PARTIAL sum(c))
                Hash Key: e
-               ->  Streaming Partial HashAggregate
+               ->  Partial HashAggregate
                      Output: a, e, PARTIAL count(b), PARTIAL sum(c)
                      Group Key: dqa_f3.e, dqa_f3.a
                      ->  Seq Scan on public.dqa_f3
@@ -2744,7 +2744,7 @@ explain (verbose on, costs off) select sum(Distinct e), count(b), sum(c) from dq
    ->  Finalize HashAggregate
          Output: sum(e), count(b), sum(c)
          Group Key: dqa_f3.a
-         ->  Streaming Partial HashAggregate
+         ->  Partial HashAggregate
                Output: PARTIAL count(b), PARTIAL sum(c), a, e
                Group Key: dqa_f3.a, dqa_f3.e
                ->  Seq Scan on public.dqa_f3
