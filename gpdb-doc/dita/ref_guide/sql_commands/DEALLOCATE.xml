@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE topic
-  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ck20941">DEALLOCATE</title><body><p id="sql_command_desc">Deallocates a prepared statement.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DEALLOCATE [PREPARE] &lt;name></codeblock></section><section id="section3"><title>Description</title><p><codeph>DEALLOCATE</codeph> is used to deallocate a previously prepared
-SQL statement. If you do not explicitly deallocate a prepared statement,
-it is deallocated when the session ends. </p><p>For more information on prepared statements, see <xref href="./PREPARE.xml#topic1"
-            type="topic" format="dita"/>. </p></section><section id="section4"><title>Parameters</title><parml><plentry><pt>PREPARE</pt><pd>Optional key word which is ignored. </pd></plentry><plentry><pt><varname>name</varname></pt><pd>The name of the prepared statement to deallocate. </pd></plentry></parml></section><section id="section5"><title>Examples</title><p>Deallocated the previously prepared statement named <codeph>insert_names</codeph>:</p><codeblock>DEALLOCATE insert_names;</codeblock></section><section id="section6"><title>Compatibility</title><p>The SQL standard includes a <codeph>DEALLOCATE</codeph> statement, but
-it is only for use in embedded SQL.</p></section><section id="section7"><title>See Also</title><p><xref href="./EXECUTE.xml#topic1" type="topic" format="dita"/>, <xref
-            href="./PREPARE.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

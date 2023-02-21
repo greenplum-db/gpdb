@@ -434,7 +434,7 @@ Feature: gpcheckcat tests
         Then gpcheckcat should print "Table pg_type has a dependency issue on oid .* at content 0" to stdout
         And the user runs "dropdb gpcheckcat_dependency"
 
-    Scenario: gpcheckcat should report no inconsistency of pg_extension between Master and Segements
+    Scenario: gpcheckcat should report no inconsistency of pg_extension between Coordinator and Segements
         Given database "pgextension_db" is dropped and recreated
         And the user runs sql "set allow_system_table_mods=true;update pg_extension set extconfig='{2130}', extcondition='{2130}';" in "pgextension_db" on first primary segment
         Then the user runs "gpcheckcat -R inconsistent pgextension_db"

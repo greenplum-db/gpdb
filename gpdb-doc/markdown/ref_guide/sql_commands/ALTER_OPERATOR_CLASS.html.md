@@ -7,7 +7,7 @@ Changes the definition of an operator class.
 ``` {#sql_command_synopsis}
 ALTER OPERATOR CLASS <name> USING <index_method> RENAME TO <new_name>
 
-ALTER OPERATOR CLASS <name> USING <index_method> OWNER TO <new_owner>
+ALTER OPERATOR CLASS <name> USING <index_method> OWNER TO { <new_owner> | CURRENT_USER | SESSION_USER }
 
 ALTER OPERATOR CLASS <name> USING <index_method> SET SCHEMA <new_schema>
 ```
@@ -41,7 +41,7 @@ There is no `ALTER OPERATOR CLASS` statement in the SQL standard.
 
 ## <a id="section6"></a>See Also 
 
-[CREATE OPERATOR CLASS](CREATE_OPERATOR_CLASS.html), [DROP OPERATOR CLASS](DROP_OPERATOR_CLASS.html)
+[CREATE OPERATOR CLASS](CREATE_OPERATOR_CLASS.html), [DROP OPERATOR CLASS](DROP_OPERATOR_CLASS.html), [ALTER OPERATOR FAMILY](ALTER_OPERATOR_FAMILY.html)
 
 **Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

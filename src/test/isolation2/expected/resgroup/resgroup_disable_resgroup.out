@@ -1,0 +1,18 @@
+-- reset the GUC and restart cluster.
+-- start_ignore
+! gpconfig -r gp_resource_manager;
+
+! gpstop -rai;
+
+SHOW gp_resource_manager;
+ gp_resource_manager 
+---------------------
+ queue               
+(1 row)
+-- end_ignore
+
+-- reset settings
+ALTER RESOURCE GROUP admin_group SET concurrency 10;
+ALTER
+ALTER RESOURCE GROUP default_group SET concurrency 20;
+ALTER

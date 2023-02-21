@@ -5,11 +5,11 @@ Collects statistics about a database.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-ANALYZE [VERBOSE] [<table> [ (<column> [, ...] ) ]]
+ANALYZE [VERBOSE] [SKIP_LOCKED] [<table> [ (<column> [, ...] ) ]]
 
-ANALYZE [VERBOSE] {<root_partition_table_name>|<leaf_partition_table_name>} [ (<column> [, ...] )] 
+ANALYZE [VERBOSE] [SKIP_LOCKED] {<root_partition_table_name>|<leaf_partition_table_name>} [ (<column> [, ...] )] 
 
-ANALYZE [VERBOSE] ROOTPARTITION {ALL | <root_partition_table_name> [ (<column> [, ...] )]}
+ANALYZE [VERBOSE] [SKIP_LOCKED] ROOTPARTITION {ALL | <root_partition_table_name> [ (<column> [, ...] )]}
 ```
 
 ## <a id="section3"></a>Description 
@@ -25,9 +25,9 @@ For partitioned tables, `ANALYZE` collects additional statistics, HyperLogLog \(
 -   When aggregating NDV estimates across multiple leaf child partitions, HLL statistics generate a more accurate NDV estimates than the standard table statistics.
 -   When updating HLL statistics, `ANALYZE` operations are required only on leaf child partitions that have changed. For example, `ANALYZE` is required if the leaf child partition data has changed, or if the leaf child partition has been exchanged with another table. For more information about updating partitioned table statistics, see [Notes](#section5).
 
-**Important:** If you intend to run queries on partitioned tables with GPORCA enabled \(the default\), then you must collect statistics on the root partition of the partitioned table with the `ANALYZE` or `ANALYZE ROOTPARTITION` command. For information about collecting statistics on partitioned tables and when the `ROOTPARTITION` keyword is required, see [Notes](#section5). For information about GPORCA, see [Overview of GPORCA](../../admin_guide/query/topics/query-piv-opt-overview.html) in the *Greenplum Database Administrator Guide*.
+> **Important** If you intend to run queries on partitioned tables with GPORCA enabled \(the default\), then you must collect statistics on the root partition of the partitioned table with the `ANALYZE` or `ANALYZE ROOTPARTITION` command. For information about collecting statistics on partitioned tables and when the `ROOTPARTITION` keyword is required, see [Notes](#section5). For information about GPORCA, see [Overview of GPORCA](../../admin_guide/query/topics/query-piv-opt-overview.html) in the *Greenplum Database Administrator Guide*.
 
-**Note:** You can also use the Greenplum Database utility `analyzedb` to update table statistics. The `analyzedb` utility can update statistics for multiple tables concurrently. The utility can also check table statistics and update statistics only if the statistics are not current or do not exist. For information about the utility, see the *Greenplum Database Utility Guide*.
+> **Note** You can also use the Greenplum Database utility `analyzedb` to update table statistics. The `analyzedb` utility can update statistics for multiple tables concurrently. The utility can also check table statistics and update statistics only if the statistics are not current or do not exist. For information about the utility, see the *Greenplum Database Utility Guide*.
 
 ## <a id="section4"></a>Parameters 
 
@@ -72,6 +72,9 @@ VERBOSE
     -   The queries that are issued to collect the different statistics for a single column.
     -   The statistics that are collected.
 
+SKIP_LOCKED
+:   Specifies that `ANALYZE` should not wait for any conflicting locks to be released when beginning work on a relation: if it cannot lock a relation immediately without waiting, it skips the relation. Note that even with this option, `ANALYZE` may still block when opening the relation's indexes or when acquiring sample rows from partitions, table inheritance children, and some types of foreign tables. Also, while `ANALYZE` ordinarily processes all partitions of specified partitioned tables, this option will cause `ANALYZE` to skip all partitions if there is a conflicting lock on the partitioned table.
+
 table
 :   The name \(possibly schema-qualified\) of a specific table to analyze. If omitted, all regular tables \(but not foreign tables\) in the current database are analyzed.
 
@@ -94,7 +97,7 @@ If you run `ANALYZE` on a table that does not contain data, statistics are not c
 
 For a partitioned table, specifying which portion of the table to analyze, the root partition or subpartitions \(leaf child partition tables\) can be useful if the partitioned table has a large number of partitions that have been analyzed and only a few leaf child partitions have changed.
 
-**Note:** When you create a partitioned table with the `CREATE TABLE` command, Greenplum Database creates the table that you specify \(the root partition or parent table\), and also creates a hierarchy of tables based on the partition hierarchy that you specified \(the child tables\).
+> **Note** When you create a partitioned table with the `CREATE TABLE` command, Greenplum Database creates the table that you specify \(the root partition or parent table\), and also creates a hierarchy of tables based on the partition hierarchy that you specified \(the child tables\).
 
 -   When you run `ANALYZE` on the root partitioned table, statistics are collected for all the leaf child partitions. Leaf child partitions are the lowest-level tables in the hierarchy of child tables created by Greenplum Database for use by the partitioned table.
 -   When you run `ANALYZE` on a leaf child partition, statistics are collected only for that leaf child partition and the root partition. If data in the leaf partition has changed \(for example, you made significant updates to the leaf child partition data or you exchanged the leaf child partition\), then you can run ANALYZE on the leaf child partition to collect table statistics. By default, if all other leaf child partitions have statistics, the command updates the root partition statistics.

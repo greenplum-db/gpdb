@@ -31,6 +31,7 @@ Use the [ALTER TABLE](ALTER_TABLE.html) command to perform these actions on an e
 -   Set \(change\) the table schema.
 -   Rename the table.
 -   Rename a table column.
+-   Set \(change\) the distribution policy \(writable external table only\).
 
 You must own the external table to use `ALTER EXTERNAL TABLE` or `ALTER TABLE`. To change the schema of an external table, you must also have `CREATE` privilege on the new schema. To alter the owner, you must also be a direct or indirect member of the new owning role, and that role must have `CREATE` privilege on the external table's schema. A superuser has these privileges automatically.
 
@@ -78,7 +79,7 @@ ALTER EXTERNAL TABLE ext_data OWNER TO jojo;
 Change the data type of an external table:
 
 ```
-ALTER EXTERNAL TABLE ext_leads ALTER COLUMN acct_code TYPE integer
+ALTER EXTERNAL TABLE ext_leads ALTER COLUMN acct_code TYPE integer;
 ```
 
 ## <a id="section6"></a>Compatibility 

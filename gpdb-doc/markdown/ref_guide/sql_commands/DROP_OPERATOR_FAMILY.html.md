@@ -26,7 +26,7 @@ index\_method
 :   The name of the index access method the operator family is for.
 
 CASCADE
-:   Automatically drop objects that depend on the operator family.
+:   Automatically drop objects that depend on the operator family, and in turn all objects that depend on those objects.
 
 RESTRICT
 :   Refuse to drop the operator family if any objects depend on it. This is the default.
@@ -47,7 +47,7 @@ There is no `DROP OPERATOR FAMILY` statement in the SQL standard.
 
 ## <a id="section7"></a>See Also 
 
-[ALTER OPERATOR FAMILY](ALTER_OPERATOR_FAMILY.html), [CREATE OPERATOR FAMILY](CREATE_OPERATOR_FAMILY.html), [ALTER OPERATOR CLASS](ALTER_OPERATOR_CLASS.html), [CREATE OPERATOR CLASS](CREATE_OPERATOR_CLASS.html#bx20941), [DROP OPERATOR CLASS](DROP_OPERATOR_CLASS.html)
+[ALTER OPERATOR FAMILY](ALTER_OPERATOR_FAMILY.html), [CREATE OPERATOR FAMILY](CREATE_OPERATOR_FAMILY.html), [ALTER OPERATOR CLASS](ALTER_OPERATOR_CLASS.html), [CREATE OPERATOR CLASS](CREATE_OPERATOR_CLASS.html), [DROP OPERATOR CLASS](DROP_OPERATOR_CLASS.html)
 
 **Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

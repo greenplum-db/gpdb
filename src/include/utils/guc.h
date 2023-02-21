@@ -346,7 +346,6 @@ extern PGDLLIMPORT int log_min_messages;
 extern PGDLLIMPORT int client_min_messages;
 extern int	log_min_duration_statement;
 extern int	log_temp_files;
-extern double log_statement_sample_rate;
 extern double log_xact_sample_rate;
 
 extern int	temp_file_limit;
@@ -483,6 +482,7 @@ extern bool optimizer_enable_outerjoin_rewrite;
 extern bool optimizer_enable_multiple_distinct_aggs;
 extern bool optimizer_enable_hashjoin_redistribute_broadcast_children;
 extern bool optimizer_enable_broadcast_nestloop_outer_child;
+extern bool optimizer_discard_redistribute_hashjoin;
 extern bool optimizer_enable_streaming_material;
 extern bool optimizer_enable_gather_on_segment_for_dml;
 extern bool optimizer_enable_assert_maxonerow;
@@ -508,6 +508,7 @@ extern bool optimizer_prune_unused_columns;
 extern bool optimizer_enable_redistribute_nestloop_loj_inner_child;
 extern bool optimizer_force_comprehensive_join_implementation;
 extern bool optimizer_enable_replicated_table;
+extern bool optimizer_enable_foreign_table;
 
 /* Optimizer plan enumeration related GUCs */
 extern bool optimizer_enumerate_plans;
@@ -540,6 +541,7 @@ extern int optimizer_join_arity_for_associativity_commutativity;
 extern int optimizer_cte_inlining_bound;
 extern int optimizer_push_group_by_below_setop_threshold;
 extern int optimizer_xform_bind_threshold;
+extern int optimizer_skew_factor;
 extern bool optimizer_force_multistage_agg;
 extern bool optimizer_force_three_stage_scalar_dqa;
 extern bool optimizer_force_expanded_distinct_aggs;
@@ -625,8 +627,7 @@ extern IndexCheckType gp_indexcheck_insert;
 extern void SetConfigOption(const char *name, const char *value,
 							GucContext context, GucSource source);
 
-extern void DefineCustomBoolVariable(
-									 const char *name,
+extern void DefineCustomBoolVariable(const char *name,
 									 const char *short_desc,
 									 const char *long_desc,
 									 bool *valueAddr,
@@ -637,8 +638,7 @@ extern void DefineCustomBoolVariable(
 									 GucBoolAssignHook assign_hook,
 									 GucShowHook show_hook);
 
-extern void DefineCustomIntVariable(
-									const char *name,
+extern void DefineCustomIntVariable(const char *name,
 									const char *short_desc,
 									const char *long_desc,
 									int *valueAddr,
@@ -651,8 +651,7 @@ extern void DefineCustomIntVariable(
 									GucIntAssignHook assign_hook,
 									GucShowHook show_hook);
 
-extern void DefineCustomRealVariable(
-									 const char *name,
+extern void DefineCustomRealVariable(const char *name,
 									 const char *short_desc,
 									 const char *long_desc,
 									 double *valueAddr,
@@ -665,8 +664,7 @@ extern void DefineCustomRealVariable(
 									 GucRealAssignHook assign_hook,
 									 GucShowHook show_hook);
 
-extern void DefineCustomStringVariable(
-									   const char *name,
+extern void DefineCustomStringVariable(const char *name,
 									   const char *short_desc,
 									   const char *long_desc,
 									   char **valueAddr,
@@ -677,8 +675,7 @@ extern void DefineCustomStringVariable(
 									   GucStringAssignHook assign_hook,
 									   GucShowHook show_hook);
 
-extern void DefineCustomEnumVariable(
-									 const char *name,
+extern void DefineCustomEnumVariable(const char *name,
 									 const char *short_desc,
 									 const char *long_desc,
 									 int *valueAddr,

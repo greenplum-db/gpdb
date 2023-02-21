@@ -65,7 +65,7 @@ explain select count(*) from r_p, s c, s d, s e where r_p.a = c.c and r_p.a = d.
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="25" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="25" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
       <dxl:TraceFlags Value="102001,102002,102003,102120,102144,103001,103014,103015,103022,103027,103033,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -215,7 +215,7 @@ explain select count(*) from r_p, s c, s d, s e where r_p.a = c.c and r_p.a = d.
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.57425.1.0" Name="r_p" Rows="10.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.57425.1.0" Name="r_p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,10,4" PartitionColumns="0" PartitionTypes="l" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.57425.1.0" Name="r_p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,10,4" PartitionColumns="0" PartitionTypes="l">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -258,7 +258,7 @@ explain select count(*) from r_p, s c, s d, s e where r_p.a = c.c and r_p.a = d.
           <dxl:Partition Mdid="6.57425002.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.57425001.1.0" Name="r_p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.57425001.1.0" Name="r_p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -308,7 +308,7 @@ explain select count(*) from r_p, s c, s d, s e where r_p.a = c.c and r_p.a = d.
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.57425002.1.0" Name="r_p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.57425002.1.0" Name="r_p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -377,7 +377,7 @@ explain select count(*) from r_p, s c, s d, s e where r_p.a = c.c and r_p.a = d.
         <dxl:ResultType Mdid="0.20.1.0"/>
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
-      <dxl:Relation Mdid="6.57461.1.0" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.57461.1.0" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

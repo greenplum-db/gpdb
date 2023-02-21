@@ -64,12 +64,12 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a1), percentile_cont(0
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10" XformBindThreshold="0"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10" XformBindThreshold="0"/>
       <dxl:TraceFlags Value="102001,102002,102003,102043,102074,102120,102144,103001,103014,103022,103026,103027,103029,103033,103038,103040,104002,104003,104004,104005,105000,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.24576.1.0" Name="foo" Rows="0.000000" RelPages="0" RelAllVisible="0" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.24576.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.24576.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="a1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -445,7 +445,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a1), percentile_cont(0
         </dxl:LogicalGet>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="39440">
+    <dxl:Plan Id="0" SpaceSize="21200">
       <dxl:Sequence>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="2712060318.276298" Rows="1.000000" Width="16"/>

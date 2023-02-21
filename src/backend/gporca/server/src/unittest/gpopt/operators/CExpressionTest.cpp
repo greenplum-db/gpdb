@@ -158,7 +158,7 @@ CExpressionTest::EresUnittest_SimpleOps()
 
 	Pfpexpr rgpf[] = {
 		CTestUtils::PexprLogicalGet,
-		CTestUtils::PexprLogicalExternalGet,
+		CTestUtils::PexprLogicalForeignGet,
 		CTestUtils::PexprLogicalGetPartitioned,
 		CTestUtils::PexprLogicalSelect,
 		CTestUtils::PexprLogicalSelectCmpToConst,

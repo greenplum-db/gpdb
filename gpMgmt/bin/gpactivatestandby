@@ -82,7 +82,7 @@ def parseargs():
 
     # Standby activation options section
     optgrp = OptionGroup(parser, 'Standby activation options')
-    optgrp.add_option('-d', '--master-data-directory', dest='coordinator_data_dir',
+    optgrp.add_option('-d', '--master-data-directory', '--coordinator-data-directory', dest='coordinator_data_dir',
                       type='string', help='standby coordinator data directory')
     optgrp.add_option('-f', '--force', action='store_true',
                       help='force activation if standby process not running')
@@ -104,7 +104,7 @@ def parseargs():
 
 
     if not options.coordinator_data_dir:
-        logger.info('Option -d or --master-data-directory not set. Checking environment variable COORDINATOR_DATA_DIRECTORY')
+        logger.info('Option -d or --master-data-directory or --coordinator-data-directory not set. Checking environment variable COORDINATOR_DATA_DIRECTORY')
         env_coordinator_data_dir = gp.get_coordinatordatadir()
         # check for environment variable COORDINATOR_DATA_DIRECTORY
         if not env_coordinator_data_dir:

@@ -67,7 +67,7 @@ def parseargs():
 
     parser.add_option('-i', '--input', dest="input_filename",
                       help="input expansion configuration file.", metavar="FILE")
-    parser.add_option('-d', '--master-data-directory', dest='coordinator_data_directory',
+    parser.add_option('-d', '--master-data-directory', '--coordinator-data-directory', dest='coordinator_data_directory',
                       help='The coordinator data directory for the system. If this option is not specified, \
                             the value is obtained from the $COORDINATOR_DATA_DIRECTORY environment variable.')
     parser.add_option('-B', '--batch-size', dest='batch_size', type='int', default=gp.DEFAULT_COORDINATOR_NUM_WORKERS, metavar="<batch_size>",
@@ -133,14 +133,14 @@ def logOptionValues(options):
     """ """
     logger.info("Option values for this invocation of gpmovemirrors are:")
     logger.info("")
-    logger.info("  --input                 = " + str(options.input_filename))
-    logger.info("  --master-data-directory = " + str(options.coordinator_data_directory))
-    logger.info("  --batch-size            = " + str(options.batch_size))
-    logger.info("  --segment-batch-size    = " + str(options.segment_batch_size))
+    logger.info("  --input                      = " + str(options.input_filename))
+    logger.info("  --coordinator-data-directory = " + str(options.coordinator_data_directory))
+    logger.info("  --batch-size                 = " + str(options.batch_size))
+    logger.info("  --segment-batch-size         = " + str(options.segment_batch_size))
     if options.verbose != None:
-        logger.info("  --verbose               = " + str(options.verbose))
+        logger.info("  --verbose                    = " + str(options.verbose))
     if options.continue_move != None:
-        logger.info("  --continue              = " + str(options.continue_move))
+        logger.info("  --continue                   = " + str(options.continue_move))
     logger.info("")
 
 

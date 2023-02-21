@@ -171,19 +171,7 @@ select '"\b\f\r\n\t\v\"\''\\"'::jsonpath;
  "\b\f\r\n\t\u000b\"'\\"
 (1 row)
 
-select '''\b\f\r\n\t\v\"\''\\'''::jsonpath;
-        jsonpath         
--------------------------
- "\b\f\r\n\t\u000b\"'\\"
-(1 row)
-
 select '"\x50\u0067\u{53}\u{051}\u{00004C}"'::jsonpath;
- jsonpath 
-----------
- "PgSQL"
-(1 row)
-
-select '''\x50\u0067\u{53}\u{051}\u{00004C}'''::jsonpath;
  jsonpath 
 ----------
  "PgSQL"
@@ -193,6 +181,12 @@ select '$.foo\x50\u0067\u{53}\u{051}\u{00004C}\t\"bar'::jsonpath;
       jsonpath       
 ---------------------
  $."fooPgSQL\t\"bar"
+(1 row)
+
+select '"\z"'::jsonpath;  -- unrecognized escape is just the literal char
+ jsonpath 
+----------
+ "z"
 (1 row)
 
 select '$.g ? ($.a == 1)'::jsonpath;
@@ -442,17 +436,15 @@ select '$ ? (@ like_regex "pattern" flag "is")'::jsonpath;
 (1 row)
 
 select '$ ? (@ like_regex "pattern" flag "isim")'::jsonpath;
-               jsonpath               
---------------------------------------
- $?(@ like_regex "pattern" flag "im")
+               jsonpath                
+---------------------------------------
+ $?(@ like_regex "pattern" flag "ism")
 (1 row)
 
 select '$ ? (@ like_regex "pattern" flag "xsms")'::jsonpath;
-               jsonpath               
---------------------------------------
- $?(@ like_regex "pattern" flag "sx")
-(1 row)
-
+ERROR:  XQuery "x" flag (expanded regular expressions) is not implemented
+LINE 1: select '$ ? (@ like_regex "pattern" flag "xsms")'::jsonpath;
+               ^
 select '$ ? (@ like_regex "pattern" flag "q")'::jsonpath;
               jsonpath               
 -------------------------------------
@@ -466,9 +458,9 @@ select '$ ? (@ like_regex "pattern" flag "iq")'::jsonpath;
 (1 row)
 
 select '$ ? (@ like_regex "pattern" flag "smixq")'::jsonpath;
-                jsonpath                
-----------------------------------------
- $?(@ like_regex "pattern" flag "imxq")
+                jsonpath                 
+-----------------------------------------
+ $?(@ like_regex "pattern" flag "ismxq")
 (1 row)
 
 select '$ ? (@ like_regex "pattern" flag "a")'::jsonpath;
@@ -565,15 +557,15 @@ select '$ ? (@.a < +1)'::jsonpath;
 (1 row)
 
 select '$ ? (@.a < .1)'::jsonpath;
-ERROR:  syntax error, unexpected '.' at or near "." of jsonpath input
+ERROR:  syntax error at or near "." of jsonpath input
 LINE 1: select '$ ? (@.a < .1)'::jsonpath;
                ^
 select '$ ? (@.a < -.1)'::jsonpath;
-ERROR:  syntax error, unexpected '.' at or near "." of jsonpath input
+ERROR:  syntax error at or near "." of jsonpath input
 LINE 1: select '$ ? (@.a < -.1)'::jsonpath;
                ^
 select '$ ? (@.a < +.1)'::jsonpath;
-ERROR:  syntax error, unexpected '.' at or near "." of jsonpath input
+ERROR:  syntax error at or near "." of jsonpath input
 LINE 1: select '$ ? (@.a < +.1)'::jsonpath;
                ^
 select '$ ? (@.a < 0.1)'::jsonpath;
@@ -631,15 +623,15 @@ select '$ ? (@.a < +1e1)'::jsonpath;
 (1 row)
 
 select '$ ? (@.a < .1e1)'::jsonpath;
-ERROR:  syntax error, unexpected '.' at or near "." of jsonpath input
+ERROR:  syntax error at or near "." of jsonpath input
 LINE 1: select '$ ? (@.a < .1e1)'::jsonpath;
                ^
 select '$ ? (@.a < -.1e1)'::jsonpath;
-ERROR:  syntax error, unexpected '.' at or near "." of jsonpath input
+ERROR:  syntax error at or near "." of jsonpath input
 LINE 1: select '$ ? (@.a < -.1e1)'::jsonpath;
                ^
 select '$ ? (@.a < +.1e1)'::jsonpath;
-ERROR:  syntax error, unexpected '.' at or near "." of jsonpath input
+ERROR:  syntax error at or near "." of jsonpath input
 LINE 1: select '$ ? (@.a < +.1e1)'::jsonpath;
                ^
 select '$ ? (@.a < 0.1e1)'::jsonpath;
@@ -697,15 +689,15 @@ select '$ ? (@.a < +1e-1)'::jsonpath;
 (1 row)
 
 select '$ ? (@.a < .1e-1)'::jsonpath;
-ERROR:  syntax error, unexpected '.' at or near "." of jsonpath input
+ERROR:  syntax error at or near "." of jsonpath input
 LINE 1: select '$ ? (@.a < .1e-1)'::jsonpath;
                ^
 select '$ ? (@.a < -.1e-1)'::jsonpath;
-ERROR:  syntax error, unexpected '.' at or near "." of jsonpath input
+ERROR:  syntax error at or near "." of jsonpath input
 LINE 1: select '$ ? (@.a < -.1e-1)'::jsonpath;
                ^
 select '$ ? (@.a < +.1e-1)'::jsonpath;
-ERROR:  syntax error, unexpected '.' at or near "." of jsonpath input
+ERROR:  syntax error at or near "." of jsonpath input
 LINE 1: select '$ ? (@.a < +.1e-1)'::jsonpath;
                ^
 select '$ ? (@.a < 0.1e-1)'::jsonpath;
@@ -763,15 +755,15 @@ select '$ ? (@.a < +1e+1)'::jsonpath;
 (1 row)
 
 select '$ ? (@.a < .1e+1)'::jsonpath;
-ERROR:  syntax error, unexpected '.' at or near "." of jsonpath input
+ERROR:  syntax error at or near "." of jsonpath input
 LINE 1: select '$ ? (@.a < .1e+1)'::jsonpath;
                ^
 select '$ ? (@.a < -.1e+1)'::jsonpath;
-ERROR:  syntax error, unexpected '.' at or near "." of jsonpath input
+ERROR:  syntax error at or near "." of jsonpath input
 LINE 1: select '$ ? (@.a < -.1e+1)'::jsonpath;
                ^
 select '$ ? (@.a < +.1e+1)'::jsonpath;
-ERROR:  syntax error, unexpected '.' at or near "." of jsonpath input
+ERROR:  syntax error at or near "." of jsonpath input
 LINE 1: select '$ ? (@.a < +.1e+1)'::jsonpath;
                ^
 select '$ ? (@.a < 0.1e+1)'::jsonpath;
@@ -817,7 +809,7 @@ select '0'::jsonpath;
 (1 row)
 
 select '00'::jsonpath;
-ERROR:  syntax error, unexpected IDENT_P at end of jsonpath input
+ERROR:  syntax error at end of jsonpath input
 LINE 1: select '00'::jsonpath;
                ^
 select '0.0'::jsonpath;
@@ -943,18 +935,18 @@ select '(1.2).e3'::jsonpath;
 (1 row)
 
 select '1..e'::jsonpath;
-ERROR:  syntax error, unexpected '.' at or near "." of jsonpath input
+ERROR:  syntax error at or near "." of jsonpath input
 LINE 1: select '1..e'::jsonpath;
                ^
 select '1..e3'::jsonpath;
-ERROR:  syntax error, unexpected '.' at or near "." of jsonpath input
+ERROR:  syntax error at or near "." of jsonpath input
 LINE 1: select '1..e3'::jsonpath;
                ^
 select '(1.).e'::jsonpath;
-ERROR:  syntax error, unexpected ')' at or near ")" of jsonpath input
+ERROR:  syntax error at or near ")" of jsonpath input
 LINE 1: select '(1.).e'::jsonpath;
                ^
 select '(1.).e3'::jsonpath;
-ERROR:  syntax error, unexpected ')' at or near ")" of jsonpath input
+ERROR:  syntax error at or near ")" of jsonpath input
 LINE 1: select '(1.).e3'::jsonpath;
                ^

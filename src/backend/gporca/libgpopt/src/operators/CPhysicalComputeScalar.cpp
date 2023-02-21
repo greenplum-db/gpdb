@@ -261,7 +261,12 @@ CPhysicalComputeScalar::PrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 ) const
 {
 	GPOS_ASSERT(0 == child_index);
-
+	if (prsRequired->IsOriginNLJoin())
+	{
+		CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
+			CRewindabilitySpec::ErtNone, prsRequired->Emht());
+		return prs;
+	}
 	return PrsPassThru(mp, exprhdl, prsRequired, child_index);
 }
 
@@ -454,6 +459,11 @@ CEnfdProp::EPropEnforcingType
 CPhysicalComputeScalar::EpetRewindability(CExpressionHandle &exprhdl,
 										  const CEnfdRewindability *per) const
 {
+	if (per->PrsRequired()->IsOriginNLJoin())
+	{
+		return CEnfdProp::EpetRequired;
+	}
+
 	CColRefSet *pcrsUsed = exprhdl.DeriveUsedColumns(1);
 	CColRefSet *pcrsCorrelatedApply = exprhdl.DeriveCorrelatedApplyColumns();
 	if (!pcrsUsed->IsDisjoint(pcrsCorrelatedApply))

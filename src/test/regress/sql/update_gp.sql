@@ -391,6 +391,55 @@ update t1_13265 set b = 2 where
 
 select * from t1_13265;
 
+-- test for update on partition table
+CREATE TABLE into_table (
+  a numeric(10,0) NOT NULL,
+  b numeric(10,0) NOT NULL,
+  c numeric(10,0) NOT NULL,
+  d character varying(4),
+  e character varying(10),
+  f int
+) DISTRIBUTED BY (a, b, c) PARTITION BY RANGE(f) (start (1) end(5) every(1));
+
+CREATE TABLE from_table (
+  a numeric(10,0) NOT NULL,
+  b numeric(10,0) NOT NULL,
+  c numeric(10,0) NOT NULL,
+  d character varying(4),
+  e character varying(10),
+  f int
+) DISTRIBUTED BY (a);
+
+insert into into_table select i*1.5,i*2,i*3,'dd'||i,'ee'||i, i from generate_series(1,4) i;
+insert into from_table select i*1.5,i*2,i*3,'xx'||i,'yy'||i, i+1 from generate_series(1,3) i;
+
+explain (costs off)
+update into_table set d=from_table.d, e=from_table.e, f=from_table.f from from_table
+where into_table.a=from_table.a and into_table.b=from_table.b and into_table.c=from_table.c;
+
+update into_table set d=from_table.d, e=from_table.e, f=from_table.f from from_table
+where into_table.a=from_table.a and into_table.b=from_table.b and into_table.c=from_table.c;
+
+select * from into_table order by a;
+
+-- The following tests computing RETURNING when the source and the destination
+-- partitions of a SplitUpdate row movement operation have different tuple
+-- descriptors, which has been shown to be problematic in the cases where the
+-- RETURNING targetlist contains non-target relation attributes that are
+-- computed by referring to the source partition plan's output tuple.
+CREATE TABLE split_update(a text, b int) PARTITION BY RANGE (a,b);
+CREATE TABLE split_update_p1 (like split_update);
+ALTER TABLE split_update ATTACH PARTITION split_update_p1 FOR VALUES FROM ('a', 10) TO ('a', 20);
+CREATE TABLE split_update_p2 (LIKE split_update);
+ALTER TABLE split_update_p2 DROP a, ADD a text;
+ALTER TABLE split_update_p2 SET DISTRIBUTED BY (a);
+ALTER TABLE split_update ATTACH PARTITION split_update_p2 FOR VALUES FROM ('c', 1) TO ('c', 20);
+INSERT INTO split_update VALUES('a', 10);
+
+UPDATE split_update t SET a = 'c' FROM (VALUES ('a', 1), ('a', 10), ('b', 12)) s(x, y) WHERE s.x = t.a AND s.y = t.b RETURNING tableoid::regclass, *;
+
+DROP TABLE split_update;
+
 -- start_ignore
 drop table r;
 drop table s;
@@ -401,4 +450,6 @@ drop table nosplitupdate;
 drop table tsplit_entry;
 drop table t1_13265;
 drop table t2_13265;
+drop table into_table;
+drop table from_table;
 -- end_ignore

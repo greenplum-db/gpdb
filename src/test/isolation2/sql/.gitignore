@@ -1,23 +1,12 @@
 # ignores only for this directory
-/ao_upgrade.sql
 /external_table.sql
 /fts_manual_probe.sql
 /gp_collation.sql
 /pg_basebackup.sql
 /pg_basebackup_with_tablespaces.sql
 /pt_io_in_progress_deadlock.sql
+/distributed_snapshot.sql
 
 # ignores including sub-directories
 autovacuum-analyze.sql
-disable_resgroup.sql
-enable_resgroup.sql
-enable_resgroup_validate.sql
-resgroup_alter_memory.sql
-resgroup_bypass.sql
-resgroup_cpu_rate_limit.sql
-resgroup_cpuset.sql
-resgroup_memory_limit.sql
-resgroup_memory_statistic.sql
-resgroup_memory_runaway.sql
-resgroup_move_query.sql
 workfile_mgr_test.sql

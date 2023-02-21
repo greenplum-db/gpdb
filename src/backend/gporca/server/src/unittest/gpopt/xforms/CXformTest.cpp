@@ -73,7 +73,7 @@ CXformTest::EresUnittest_ApplyXforms()
 		CTestUtils::PexprLogicalApply<CLogicalLeftAntiSemiApplyNotIn>,
 		CTestUtils::PexprLogicalApplyWithOuterRef<CLogicalLeftOuterApply>,
 		CTestUtils::PexprLogicalGet,
-		CTestUtils::PexprLogicalExternalGet,
+		CTestUtils::PexprLogicalForeignGet,
 		CTestUtils::PexprLogicalSelect,
 		CTestUtils::PexprLogicalLimit,
 		CTestUtils::PexprLogicalJoin<CLogicalInnerJoin>,

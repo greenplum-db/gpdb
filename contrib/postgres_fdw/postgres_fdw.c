@@ -18,6 +18,7 @@
 #include "access/sysattr.h"
 #include "access/table.h"
 #include "catalog/pg_class.h"
+#include "catalog/pg_opfamily.h"
 #include "commands/defrem.h"
 #include "commands/explain.h"
 #include "commands/vacuum.h"
@@ -43,6 +44,9 @@
 #include "utils/rel.h"
 #include "utils/sampling.h"
 #include "utils/selfuncs.h"
+
+/* source-code-compatibility hacks for pull_varnos() API change */
+#define make_restrictinfo(a,b,c,d,e,f,g,h,i) make_restrictinfo_new(a,b,c,d,e,f,g,h,i)
 
 PG_MODULE_MAGIC;
 
@@ -281,16 +285,9 @@ typedef struct
  */
 typedef struct ConversionLocation
 {
-	Relation	rel;			/* foreign table's relcache entry. */
 	AttrNumber	cur_attno;		/* attribute number being processed, or 0 */
-
-	/*
-	 * In case of foreign join push down, fdw_scan_tlist is used to identify
-	 * the Var node corresponding to the error location and
-	 * fsstate->ss.ps.state gives access to the RTEs of corresponding relation
-	 * to get the relation name and attribute name.
-	 */
-	ForeignScanState *fsstate;
+	Relation	rel;			/* foreign table being processed, or NULL */
+	ForeignScanState *fsstate;	/* plan node being processed, or NULL */
 } ConversionLocation;
 
 /* Callback argument for ec_member_matches_foreign */
@@ -595,8 +592,9 @@ postgresGetForeignRelSize(PlannerInfo *root,
 	fpinfo->server = GetForeignServer(fpinfo->table->serverid);
 
 	/*
-	 * Extract user-settable option values.  Note that per-table setting of
-	 * use_remote_estimate overrides per-server setting.
+	 * Extract user-settable option values.  Note that per-table settings of
+	 * use_remote_estimate and fetch_size override per-server settings of
+	 * them, respectively.
 	 */
 	fpinfo->use_remote_estimate = false;
 	fpinfo->fdw_startup_cost = DEFAULT_FDW_STARTUP_COST;
@@ -657,8 +655,7 @@ postgresGetForeignRelSize(PlannerInfo *root,
 													 fpinfo->local_conds,
 													 baserel->relid,
 													 JOIN_INNER,
-													 NULL,
-													 false);
+													 NULL);
 
 	cost_qual_eval(&fpinfo->local_conds_cost, fpinfo->local_conds, root);
 
@@ -883,8 +880,6 @@ get_useful_pathkeys_for_relation(PlannerInfo *root, RelOptInfo *rel)
 		foreach(lc, root->query_pathkeys)
 		{
 			PathKey    *pathkey = (PathKey *) lfirst(lc);
-			EquivalenceClass *pathkey_ec = pathkey->pk_eclass;
-			Expr	   *em_expr;
 
 			/*
 			 * The planner and executor don't have any clever strategy for
@@ -892,13 +887,8 @@ get_useful_pathkeys_for_relation(PlannerInfo *root, RelOptInfo *rel)
 			 * getting it to be sorted by all of those pathkeys. We'll just
 			 * end up resorting the entire data set.  So, unless we can push
 			 * down all of the query pathkeys, forget it.
-			 *
-			 * is_foreign_expr would detect volatile expressions as well, but
-			 * checking ec_has_volatile here saves some cycles.
 			 */
-			if (pathkey_ec->ec_has_volatile ||
-				!(em_expr = find_em_expr_for_rel(pathkey_ec, rel)) ||
-				!is_foreign_expr(root, rel, em_expr))
+			if (!is_foreign_pathkey(root, rel, pathkey))
 			{
 				query_pathkeys_ok = false;
 				break;
@@ -945,16 +935,19 @@ get_useful_pathkeys_for_relation(PlannerInfo *root, RelOptInfo *rel)
 	foreach(lc, useful_eclass_list)
 	{
 		EquivalenceClass *cur_ec = lfirst(lc);
-		Expr	   *em_expr;
 		PathKey    *pathkey;
 
 		/* If redundant with what we did above, skip it. */
 		if (cur_ec == query_ec)
 			continue;
 
+		/* Can't push down the sort if the EC's opfamily is not shippable. */
+		if (!is_shippable(linitial_oid(cur_ec->ec_opfamilies),
+						  OperatorFamilyRelationId, fpinfo))
+			continue;
+
 		/* If no pushable expression for this rel, skip it. */
-		em_expr = find_em_expr_for_rel(cur_ec, rel);
-		if (em_expr == NULL || !is_foreign_expr(root, rel, em_expr))
+		if (find_em_for_rel(root, cur_ec, rel) == NULL)
 			continue;
 
 		/* Looks like we can generate a pathkey, so let's do it. */
@@ -1933,7 +1926,7 @@ postgresBeginForeignInsert(ModifyTableState *mtstate,
 	PgFdwModifyState *fmstate;
 	ModifyTable *plan = castNode(ModifyTable, mtstate->ps.plan);
 	EState	   *estate = mtstate->ps.state;
-	Index		resultRelation = resultRelInfo->ri_RangeTableIndex;
+	Index		resultRelation;
 	Relation	rel = resultRelInfo->ri_RelationDesc;
 	RangeTblEntry *rte;
 	TupleDesc	tupdesc = RelationGetDescr(rel);
@@ -1984,7 +1977,8 @@ postgresBeginForeignInsert(ModifyTableState *mtstate,
 	}
 
 	/*
-	 * If the foreign table is a partition, we need to create a new RTE
+	 * If the foreign table is a partition that doesn't have a corresponding
+	 * RTE entry, we need to create a new RTE
 	 * describing the foreign table for use by deparseInsertSql and
 	 * create_foreign_modify() below, after first copying the parent's RTE and
 	 * modifying some fields to describe the foreign partition to work on.
@@ -1992,9 +1986,11 @@ postgresBeginForeignInsert(ModifyTableState *mtstate,
 	 * correspond to this partition if it is one of the UPDATE subplan target
 	 * rels; in that case, we can just use the existing RTE as-is.
 	 */
-	rte = exec_rt_fetch(resultRelation, estate);
-	if (rte->relid != RelationGetRelid(rel))
+	if (resultRelInfo->ri_RangeTableIndex == 0)
 	{
+		ResultRelInfo *rootResultRelInfo = resultRelInfo->ri_RootResultRelInfo;
+
+		rte = exec_rt_fetch(rootResultRelInfo->ri_RangeTableIndex, estate);
 		rte = copyObject(rte);
 		rte->relid = RelationGetRelid(rel);
 		rte->relkind = RELKIND_FOREIGN_TABLE;
@@ -2006,8 +2002,15 @@ postgresBeginForeignInsert(ModifyTableState *mtstate,
 		 * Vars contained in those expressions.
 		 */
 		if (plan && plan->operation == CMD_UPDATE &&
-			resultRelation == plan->rootRelation)
+			rootResultRelInfo->ri_RangeTableIndex == plan->rootRelation)
 			resultRelation = mtstate->resultRelInfo[0].ri_RangeTableIndex;
+		else
+			resultRelation = rootResultRelInfo->ri_RangeTableIndex;
+	}
+	else
+	{
+		resultRelation = resultRelInfo->ri_RangeTableIndex;
+		rte = exec_rt_fetch(resultRelation, estate);
 	}
 
 	/* Construct the SQL command string. */
@@ -2709,8 +2712,7 @@ estimate_path_cost_size(PlannerInfo *root,
 										   local_param_join_conds,
 										   foreignrel->relid,
 										   JOIN_INNER,
-										   NULL,
-										   false);
+										   NULL);
 		local_sel *= fpinfo->local_conds_sel;
 
 		rows = clamp_row_est(rows * local_sel);
@@ -2927,8 +2929,7 @@ estimate_path_cost_size(PlannerInfo *root,
 														 fpinfo->remote_conds,
 														 0,
 														 JOIN_INNER,
-														 NULL,
-														 false));
+														 NULL));
 				/* Factor in the selectivity of the locally-checked quals */
 				rows = clamp_row_est(retrieved_rows * fpinfo->local_conds_sel);
 			}
@@ -3452,6 +3453,14 @@ set_transmission_modes(void)
 								 PGC_USERSET, PGC_S_SESSION,
 								 GUC_ACTION_SAVE, true, 0, false);
 
+	/*
+	 * In addition force restrictive search_path, in case there are any
+	 * regproc or similar constants to be printed.
+	 */
+	(void) set_config_option("search_path", "pg_catalog",
+							 PGC_USERSET, PGC_S_SESSION,
+							 GUC_ACTION_SAVE, true, 0, false);
+
 	return nestlevel;
 }
 
@@ -3576,6 +3585,9 @@ create_foreign_modify(EState *estate,
 
 			Assert(!attr->attisdropped);
 
+			/* Ignore generated columns; they are set to DEFAULT */
+			if (attr->attgenerated)
+				continue;
 			getTypeOutputInfo(attr->atttypid, &typefnoid, &isvarlena);
 			fmgr_info(typefnoid, &fmstate->p_flinfo[fmstate->p_nums]);
 			fmstate->p_nums++;
@@ -3761,6 +3773,7 @@ convert_prep_stmt_params(PgFdwModifyState *fmstate,
 	/* get following parameters from slot */
 	if (slot != NULL && fmstate->target_attrs != NIL)
 	{
+		TupleDesc	tupdesc = RelationGetDescr(fmstate->rel);
 		int			nestlevel;
 		ListCell   *lc;
 
@@ -3769,9 +3782,13 @@ convert_prep_stmt_params(PgFdwModifyState *fmstate,
 		foreach(lc, fmstate->target_attrs)
 		{
 			int			attnum = lfirst_int(lc);
+			Form_pg_attribute attr = TupleDescAttr(tupdesc, attnum - 1);
 			Datum		value;
 			bool		isnull;
 
+			/* Ignore generated columns; they are set to DEFAULT */
+			if (attr->attgenerated)
+				continue;
 			value = slot_getattr(slot, attnum, &isnull);
 			if (isnull)
 				p_values[pindex] = NULL;
@@ -4682,6 +4699,7 @@ postgresImportForeignSchema(ImportForeignSchemaStmt *stmt, Oid serverOid)
 	List	   *commands = NIL;
 	bool		import_collate = true;
 	bool		import_default = false;
+	bool		import_generated = true;
 	bool		import_not_null = true;
 	ForeignServer *server;
 	UserMapping *mapping;
@@ -4701,6 +4719,8 @@ postgresImportForeignSchema(ImportForeignSchemaStmt *stmt, Oid serverOid)
 			import_collate = defGetBoolean(def);
 		else if (strcmp(def->defname, "import_default") == 0)
 			import_default = defGetBoolean(def);
+		else if (strcmp(def->defname, "import_generated") == 0)
+			import_generated = defGetBoolean(def);
 		else if (strcmp(def->defname, "import_not_null") == 0)
 			import_not_null = defGetBoolean(def);
 		else
@@ -4762,13 +4782,24 @@ postgresImportForeignSchema(ImportForeignSchemaStmt *stmt, Oid serverOid)
 		 * include a schema name for types/functions in other schemas, which
 		 * is what we want.
 		 */
+		appendStringInfoString(&buf,
+							   "SELECT relname, "
+							   "  attname, "
+							   "  format_type(atttypid, atttypmod), "
+							   "  attnotnull, ");
+
+		/* Generated columns are supported since Postgres 12 */
+		if (PQserverVersion(conn) >= 120000)
+			appendStringInfoString(&buf,
+								   "  attgenerated, "
+								   "  pg_get_expr(adbin, adrelid), ");
+		else
+			appendStringInfoString(&buf,
+								   "  NULL, "
+								   "  pg_get_expr(adbin, adrelid), ");
+
 		if (import_collate)
 			appendStringInfoString(&buf,
-								   "SELECT relname, "
-								   "  attname, "
-								   "  format_type(atttypid, atttypmod), "
-								   "  attnotnull, "
-								   "  pg_get_expr(adbin, adrelid), "
 								   "  collname, "
 								   "  collnsp.nspname "
 								   "FROM pg_class c "
@@ -4785,11 +4816,6 @@ postgresImportForeignSchema(ImportForeignSchemaStmt *stmt, Oid serverOid)
 								   "    collnsp.oid = collnamespace ");
 		else
 			appendStringInfoString(&buf,
-								   "SELECT relname, "
-								   "  attname, "
-								   "  format_type(atttypid, atttypmod), "
-								   "  attnotnull, "
-								   "  pg_get_expr(adbin, adrelid), "
 								   "  NULL, NULL "
 								   "FROM pg_class c "
 								   "  JOIN pg_namespace n ON "
@@ -4865,6 +4891,7 @@ postgresImportForeignSchema(ImportForeignSchemaStmt *stmt, Oid serverOid)
 				char	   *attname;
 				char	   *typename;
 				char	   *attnotnull;
+				char	   *attgenerated;
 				char	   *attdefault;
 				char	   *collname;
 				char	   *collnamespace;
@@ -4876,12 +4903,14 @@ postgresImportForeignSchema(ImportForeignSchemaStmt *stmt, Oid serverOid)
 				attname = PQgetvalue(res, i, 1);
 				typename = PQgetvalue(res, i, 2);
 				attnotnull = PQgetvalue(res, i, 3);
-				attdefault = PQgetisnull(res, i, 4) ? (char *) NULL :
+				attgenerated = PQgetisnull(res, i, 4) ? (char *) NULL :
 					PQgetvalue(res, i, 4);
-				collname = PQgetisnull(res, i, 5) ? (char *) NULL :
+				attdefault = PQgetisnull(res, i, 5) ? (char *) NULL :
 					PQgetvalue(res, i, 5);
-				collnamespace = PQgetisnull(res, i, 6) ? (char *) NULL :
+				collname = PQgetisnull(res, i, 6) ? (char *) NULL :
 					PQgetvalue(res, i, 6);
+				collnamespace = PQgetisnull(res, i, 7) ? (char *) NULL :
+					PQgetvalue(res, i, 7);
 
 				if (first_item)
 					first_item = false;
@@ -4909,8 +4938,19 @@ postgresImportForeignSchema(ImportForeignSchemaStmt *stmt, Oid serverOid)
 									 quote_identifier(collname));
 
 				/* Add DEFAULT if needed */
-				if (import_default && attdefault != NULL)
+				if (import_default && attdefault != NULL &&
+					(!attgenerated || !attgenerated[0]))
 					appendStringInfo(&buf, " DEFAULT %s", attdefault);
+
+				/* Add GENERATED if needed */
+				if (import_generated && attgenerated != NULL &&
+					attgenerated[0] == ATTRIBUTE_GENERATED_STORED)
+				{
+					Assert(attdefault != NULL);
+					appendStringInfo(&buf,
+									 " GENERATED ALWAYS AS (%s) STORED",
+									 attdefault);
+				}
 
 				/* Add NOT NULL if needed */
 				if (import_not_null && attnotnull[0] == 't')
@@ -5477,8 +5517,7 @@ postgresGetForeignJoinPaths(PlannerInfo *root,
 													 fpinfo->local_conds,
 													 0,
 													 JOIN_INNER,
-													 NULL,
-													 false);
+													 NULL);
 	cost_qual_eval(&fpinfo->local_conds_cost, fpinfo->local_conds, root);
 
 	/*
@@ -5488,8 +5527,7 @@ postgresGetForeignJoinPaths(PlannerInfo *root,
 	if (!fpinfo->use_remote_estimate)
 		fpinfo->joinclause_sel = clauselist_selectivity(root, fpinfo->joinclauses,
 														0, fpinfo->jointype,
-														extra->sjinfo,
-														false);
+														extra->sjinfo);
 
 	/* Estimate costs for bare join relation */
 	estimate_path_cost_size(root, joinrel, NIL, NIL, NULL,
@@ -5682,7 +5720,8 @@ foreign_grouping_ok(PlannerInfo *root, RelOptInfo *grouped_rel,
 			 * RestrictInfos, so we must make our own.
 			 */
 			Assert(!IsA(expr, RestrictInfo));
-			rinfo = make_restrictinfo(expr,
+			rinfo = make_restrictinfo(root,
+									  expr,
 									  true,
 									  false,
 									  false,
@@ -5875,8 +5914,7 @@ add_foreign_grouping_paths(PlannerInfo *root, RelOptInfo *input_rel,
 													 fpinfo->local_conds,
 													 0,
 													 JOIN_INNER,
-													 NULL,
-													 false);
+													 NULL);
 
 	cost_qual_eval(&fpinfo->local_conds_cost, fpinfo->local_conds, root);
 
@@ -5980,7 +6018,6 @@ add_foreign_ordered_paths(PlannerInfo *root, RelOptInfo *input_rel,
 	{
 		PathKey    *pathkey = (PathKey *) lfirst(lc);
 		EquivalenceClass *pathkey_ec = pathkey->pk_eclass;
-		Expr	   *sort_expr;
 
 		/*
 		 * is_foreign_expr would detect volatile expressions as well, but
@@ -5989,13 +6026,20 @@ add_foreign_ordered_paths(PlannerInfo *root, RelOptInfo *input_rel,
 		if (pathkey_ec->ec_has_volatile)
 			return;
 
-		/* Get the sort expression for the pathkey_ec */
-		sort_expr = find_em_expr_for_input_target(root,
-												  pathkey_ec,
-												  input_rel->reltarget);
+		/*
+		 * Can't push down the sort if pathkey's opfamily is not shippable.
+		 */
+		if (!is_shippable(pathkey->pk_opfamily, OperatorFamilyRelationId,
+						  fpinfo))
+			return;
 
-		/* If it's unsafe to remote, we cannot push down the final sort */
-		if (!is_foreign_expr(root, input_rel, sort_expr))
+		/*
+		 * The EC must contain a shippable EM that is computed in input_rel's
+		 * reltarget, else we can't push down the sort.
+		 */
+		if (find_em_for_rel_target(root,
+								   pathkey_ec,
+								   input_rel) == NULL)
 			return;
 	}
 
@@ -6273,7 +6317,12 @@ add_foreign_final_paths(PlannerInfo *root, RelOptInfo *input_rel,
  * rel is the local representation of the foreign table, attinmeta is
  * conversion data for the rel's tupdesc, and retrieved_attrs is an
  * integer list of the table column numbers present in the PGresult.
+ * fsstate is the ForeignScan plan node's execution state.
  * temp_context is a working context that can be reset after each tuple.
+ *
+ * Note: either rel or fsstate, but not both, can be NULL.  rel is NULL
+ * if we're processing a remote join, while fsstate is NULL in a non-query
+ * context such as ANALYZE, or if we're processing a non-scan query node.
  */
 static HeapTuple
 make_tuple_from_result_row(PGresult *res,
@@ -6304,6 +6353,10 @@ make_tuple_from_result_row(PGresult *res,
 	 */
 	oldcontext = MemoryContextSwitchTo(temp_context);
 
+	/*
+	 * Get the tuple descriptor for the row.  Use the rel's tupdesc if rel is
+	 * provided, otherwise look to the scan node's ScanTupleSlot.
+	 */
 	if (rel)
 		tupdesc = RelationGetDescr(rel);
 	else
@@ -6320,8 +6373,8 @@ make_tuple_from_result_row(PGresult *res,
 	/*
 	 * Set up and install callback to report where conversion error occurs.
 	 */
-	errpos.rel = rel;
 	errpos.cur_attno = 0;
+	errpos.rel = rel;
 	errpos.fsstate = fsstate;
 	errcallback.callback = conversion_error_callback;
 	errcallback.arg = (void *) &errpos;
@@ -6423,110 +6476,152 @@ make_tuple_from_result_row(PGresult *res,
 /*
  * Callback function which is called when error occurs during column value
  * conversion.  Print names of column and relation.
+ *
+ * Note that this function mustn't do any catalog lookups, since we are in
+ * an already-failed transaction.  Fortunately, we can get the needed info
+ * from the relation or the query's rangetable instead.
  */
 static void
 conversion_error_callback(void *arg)
 {
+	ConversionLocation *errpos = (ConversionLocation *) arg;
+	Relation	rel = errpos->rel;
+	ForeignScanState *fsstate = errpos->fsstate;
 	const char *attname = NULL;
 	const char *relname = NULL;
 	bool		is_wholerow = false;
-	ConversionLocation *errpos = (ConversionLocation *) arg;
 
-	if (errpos->rel)
+	/*
+	 * If we're in a scan node, always use aliases from the rangetable, for
+	 * consistency between the simple-relation and remote-join cases.  Look at
+	 * the relation's tupdesc only if we're not in a scan node.
+	 */
+	if (fsstate)
 	{
-		/* error occurred in a scan against a foreign table */
-		TupleDesc	tupdesc = RelationGetDescr(errpos->rel);
-		Form_pg_attribute attr = TupleDescAttr(tupdesc, errpos->cur_attno - 1);
-
-		if (errpos->cur_attno > 0 && errpos->cur_attno <= tupdesc->natts)
-			attname = NameStr(attr->attname);
-		else if (errpos->cur_attno == SelfItemPointerAttributeNumber)
-			attname = "ctid";
-
-		relname = RelationGetRelationName(errpos->rel);
-	}
-	else
-	{
-		/* error occurred in a scan against a foreign join */
-		ForeignScanState *fsstate = errpos->fsstate;
+		/* ForeignScan case */
 		ForeignScan *fsplan = castNode(ForeignScan, fsstate->ss.ps.plan);
-		EState	   *estate = fsstate->ss.ps.state;
-		TargetEntry *tle;
+		int			varno = 0;
+		AttrNumber	colno = 0;
 
-		tle = list_nth_node(TargetEntry, fsplan->fdw_scan_tlist,
-							errpos->cur_attno - 1);
-
-		/*
-		 * Target list can have Vars and expressions.  For Vars, we can get
-		 * its relation, however for expressions we can't.  Thus for
-		 * expressions, just show generic context message.
-		 */
-		if (IsA(tle->expr, Var))
+		if (fsplan->scan.scanrelid > 0)
 		{
-			RangeTblEntry *rte;
-			Var		   *var = (Var *) tle->expr;
-
-			rte = exec_rt_fetch(var->varno, estate);
-
-			if (var->varattno == 0)
-				is_wholerow = true;
-			else
-				attname = get_attname(rte->relid, var->varattno, false);
-
-			relname = get_rel_name(rte->relid);
+			/* error occurred in a scan against a foreign table */
+			varno = fsplan->scan.scanrelid;
+			colno = errpos->cur_attno;
 		}
 		else
-			errcontext("processing expression at position %d in select list",
-					   errpos->cur_attno);
+		{
+			/* error occurred in a scan against a foreign join */
+			TargetEntry *tle;
+
+			tle = list_nth_node(TargetEntry, fsplan->fdw_scan_tlist,
+								errpos->cur_attno - 1);
+
+			/*
+			 * Target list can have Vars and expressions.  For Vars, we can
+			 * get some information, however for expressions we can't.  Thus
+			 * for expressions, just show generic context message.
+			 */
+			if (IsA(tle->expr, Var))
+			{
+				Var		   *var = (Var *) tle->expr;
+
+				varno = var->varno;
+				colno = var->varattno;
+			}
+		}
+
+		if (varno > 0)
+		{
+			EState	   *estate = fsstate->ss.ps.state;
+			RangeTblEntry *rte = exec_rt_fetch(varno, estate);
+
+			relname = rte->eref->aliasname;
+
+			if (colno == 0)
+				is_wholerow = true;
+			else if (colno > 0 && colno <= list_length(rte->eref->colnames))
+				attname = strVal(list_nth(rte->eref->colnames, colno - 1));
+			else if (colno == SelfItemPointerAttributeNumber)
+				attname = "ctid";
+		}
+	}
+	else if (rel)
+	{
+		/* Non-ForeignScan case (we should always have a rel here) */
+		TupleDesc	tupdesc = RelationGetDescr(rel);
+
+		relname = RelationGetRelationName(rel);
+		if (errpos->cur_attno > 0 && errpos->cur_attno <= tupdesc->natts)
+		{
+			Form_pg_attribute attr = TupleDescAttr(tupdesc,
+												   errpos->cur_attno - 1);
+
+			attname = NameStr(attr->attname);
+		}
+		else if (errpos->cur_attno == SelfItemPointerAttributeNumber)
+			attname = "ctid";
 	}
 
-	if (relname)
-	{
-		if (is_wholerow)
-			errcontext("whole-row reference to foreign table \"%s\"", relname);
-		else if (attname)
-			errcontext("column \"%s\" of foreign table \"%s\"", attname, relname);
-	}
+	if (relname && is_wholerow)
+		errcontext("whole-row reference to foreign table \"%s\"", relname);
+	else if (relname && attname)
+		errcontext("column \"%s\" of foreign table \"%s\"", attname, relname);
+	else
+		errcontext("processing expression at position %d in select list",
+				   errpos->cur_attno);
 }
 
 /*
- * Find an equivalence class member expression, all of whose Vars, come from
- * the indicated relation.
+ * Given an EquivalenceClass and a foreign relation, find an EC member
+ * that can be used to sort the relation remotely according to a pathkey
+ * using this EC.
+ *
+ * If there is more than one suitable candidate, return an arbitrary
+ * one of them.  If there is none, return NULL.
+ *
+ * This checks that the EC member expression uses only Vars from the given
+ * rel and is shippable.  Caller must separately verify that the pathkey's
+ * ordering operator is shippable.
  */
-Expr *
-find_em_expr_for_rel(EquivalenceClass *ec, RelOptInfo *rel)
+EquivalenceMember *
+find_em_for_rel(PlannerInfo *root, EquivalenceClass *ec, RelOptInfo *rel)
 {
-	ListCell   *lc_em;
+	ListCell   *lc;
 
-	foreach(lc_em, ec->ec_members)
+	foreach(lc, ec->ec_members)
 	{
-		EquivalenceMember *em = lfirst(lc_em);
+		EquivalenceMember *em = (EquivalenceMember *) lfirst(lc);
 
+		/*
+		 * Note we require !bms_is_empty, else we'd accept constant
+		 * expressions which are not suitable for the purpose.
+		 */
 		if (bms_is_subset(em->em_relids, rel->relids) &&
-			!bms_is_empty(em->em_relids))
-		{
-			/*
-			 * If there is more than one equivalence member whose Vars are
-			 * taken entirely from this relation, we'll be content to choose
-			 * any one of those.
-			 */
-			return em->em_expr;
-		}
+			!bms_is_empty(em->em_relids) &&
+			is_foreign_expr(root, rel, em->em_expr))
+			return em;
 	}
 
-	/* We didn't find any suitable equivalence class expression */
 	return NULL;
 }
 
 /*
- * Find an equivalence class member expression to be computed as a sort column
- * in the given target.
+ * Find an EquivalenceClass member that is to be computed as a sort column
+ * in the given rel's reltarget, and is shippable.
+ *
+ * If there is more than one suitable candidate, return an arbitrary
+ * one of them.  If there is none, return NULL.
+ *
+ * This checks that the EC member expression uses only Vars from the given
+ * rel and is shippable.  Caller must separately verify that the pathkey's
+ * ordering operator is shippable.
  */
-Expr *
-find_em_expr_for_input_target(PlannerInfo *root,
-							  EquivalenceClass *ec,
-							  PathTarget *target)
+EquivalenceMember *
+find_em_for_rel_target(PlannerInfo *root, EquivalenceClass *ec,
+					   RelOptInfo *rel)
 {
+	PathTarget *target = rel->reltarget;
 	ListCell   *lc1;
 	int			i;
 
@@ -6569,15 +6664,18 @@ find_em_expr_for_input_target(PlannerInfo *root,
 			while (em_expr && IsA(em_expr, RelabelType))
 				em_expr = ((RelabelType *) em_expr)->arg;
 
-			if (equal(em_expr, expr))
-				return em->em_expr;
+			if (!equal(em_expr, expr))
+				continue;
+
+			/* Check that expression (including relabels!) is shippable */
+			if (is_foreign_expr(root, rel, em->em_expr))
+				return em;
 		}
 
 		i++;
 	}
 
-	elog(ERROR, "could not find pathkey item to sort");
-	return NULL;				/* keep compiler quiet */
+	return NULL;
 }
 
 static int

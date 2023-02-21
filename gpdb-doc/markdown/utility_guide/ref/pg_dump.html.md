@@ -42,7 +42,7 @@ dbname
 -b \| --blobs
 :   Include large objects in the dump. This is the default behavior except when `--schema`, `--table`, or `--schema-only` is specified. The `-b` switch is only useful add large objects to dumps where a specific schema or table has been requested. Note that blobs are considered data and therefore will be included when `--data-only` is used, but not when `--schema-only` is.
 
-    **Note:** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/9.4/largeobjects.html) for streaming user data that is stored in large-object structures.
+    > **Note** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/12/largeobjects.html) for streaming user data that is stored in large-object structures.
 
 -c \| --clean
 :   Adds commands to the text output file to clean \(drop\) database objects prior to outputting the commands for creating them. \(Restore might generate some harmless error messages, if any objects were not present in the destination database.\) Note that objects are not dropped before the dump operation begins, but `DROP` commands are added to the DDL dump output files so that when you use those files to do a restore, the `DROP` commands are run prior to the `CREATE` commands. This option is only meaningful for the plain-text format. For the archive formats, you may specify the option when you call [pg\_restore](pg_restore.html).
@@ -70,7 +70,7 @@ dbname
 -j njobs \| --jobs=njobs
 :   Run the dump in parallel by dumping njobs tables simultaneously. This option reduces the time of the dump but it also increases the load on the database server. You can only use this option with the directory output format because this is the only output format where multiple processes can write their data at the same time.
 
-:   **Note:** Parallel dumps using `pg_dump` are parallelized only on the query dispatcher \(coordinator\) node, not across the query executor \(segment\) nodes as is the case when you use `gpbackup`.
+:   > **Note** Parallel dumps using `pg_dump` are parallelized only on the query dispatcher \(coordinator\) node, not across the query executor \(segment\) nodes as is the case when you use `gpbackup`.
 
 :   `pg_dump` will open njobs + 1 connections to the database, so make sure your [max\_connections](../../ref_guide/config_params/guc-list.html) setting is high enough to accommodate all connections.
 
@@ -85,7 +85,7 @@ dbname
 
 :   Note: When -n is specified, `pg_dump` makes no attempt to dump any other database objects that the selected schema\(s\) may depend upon. Therefore, there is no guarantee that the results of a specific-schema dump can be successfully restored by themselves into a clean database.
 
-    **Note:** Non-schema objects such as blobs are not dumped when `-n` is specified. You can add blobs back to the dump with the `--blobs` switch.
+    > **Note** Non-schema objects such as blobs are not dumped when `-n` is specified. You can add blobs back to the dump with the `--blobs` switch.
 
 -N schema \| --exclude-schema=schema
 :   Do not dump any schemas matching the schema pattern. The pattern is interpreted according to the same rules as for `-n`. `-N` can be given more than once to exclude schemas matching any of several patterns. When both `-n` and `-N` are given, the behavior is to dump just the schemas that match at least one `-n` switch but no `-N` switches. If `-N` appears without `-n`, then schemas matching `-N` are excluded from what is otherwise a normal dump.
@@ -108,14 +108,14 @@ dbname
 -S username \| --superuser=username
 :   Specify the superuser user name to use when deactivating triggers. This is relevant only if `--disable-triggers` is used. It is better to leave this out, and instead start the resulting script as a superuser.
 
-    **Note:** Greenplum Database does not support user-defined triggers.
+    > **Note** Greenplum Database does not support user-defined triggers.
 
 -t table \| --table=table
 :   Dump only tables \(or views or sequences or foreign tables\) matching the table pattern. Specify the table in the format `schema.table`.
 
 :   Multiple tables can be selected by writing multiple `-t` switches. Also, the table parameter is interpreted as a pattern according to the same rules used by `psql`'s `\d` commands, so multiple tables can also be selected by writing wildcard characters in the pattern. When using wildcards, be careful to quote the pattern if needed to prevent the shell from expanding the wildcards. The `-n` and `-N` switches have no effect when `-t` is used, because tables selected by `-t` will be dumped regardless of those switches, and non-table objects will not be dumped.
 
-    **Note:** When `-t` is specified, `pg_dump` makes no attempt to dump any other database objects that the selected table\(s\) may depend upon. Therefore, there is no guarantee that the results of a specific-table dump can be successfully restored by themselves into a clean database.
+    > **Note** When `-t` is specified, `pg_dump` makes no attempt to dump any other database objects that the selected table\(s\) may depend upon. Therefore, there is no guarantee that the results of a specific-table dump can be successfully restored by themselves into a clean database.
 
     Also, `-t` cannot be used to specify a child table partition. To dump a partitioned table, you must specify the parent table name.
 
@@ -148,7 +148,7 @@ dbname
 --disable-triggers
 :   This option is relevant only when creating a data-only dump. It instructs `pg_dump` to include commands to temporarily deactivate triggers on the target tables while the data is reloaded. Use this if you have triggers on the tables that you do not want to invoke during data reload. The commands emitted for `--disable-triggers` must be done as superuser. So, you should also specify a superuser name with `-S`, or preferably be careful to start the resulting script as a superuser. This option is only meaningful for the plain-text format. For the archive formats, you may specify the option when you call [pg\_restore](pg_restore.html).
 
-    **Note:** Greenplum Database does not support user-defined triggers.
+    > **Note** Greenplum Database does not support user-defined triggers.
 
 `--exclude-table-data=table`
 :   Do not dump data for any tables matching the table pattern. The pattern is interpreted according to the same rules as for `-t`. `--exclude-table-data` can be given more than once to exclude tables matching any of several patterns. This option is useful when you need the definition of a particular table even though you do not need the data in it.
@@ -193,7 +193,7 @@ dbname
 
 :   This option will make no difference if there are no read-write transactions active when `pg_dump` is started. If read-write transactions are active, the start of the dump may be delayed for an indeterminate length of time. Once running, performance with or without the switch is the same.
 
-:   **Note:** Because Greenplum Database does not support serializable transactions, the `--serializable-deferrable` option has no effect in Greenplum Database.
+:   > **Note** Because Greenplum Database does not support serializable transactions, the `--serializable-deferrable` option has no effect in Greenplum Database.
 
 --use-set-session-authorization
 :   Output SQL-standard `SET SESSION AUTHORIZATION` commands instead of `ALTER OWNER` commands to determine object ownership. This makes the dump more standards-compatible, but depending on the history of the objects in the dump, may not restore properly. A dump using `SET SESSION AUTHORIZATION` will require superuser privileges to restore correctly, whereas `ALTER OWNER` requires lesser privileges.
@@ -204,12 +204,12 @@ dbname
 --function-oids oids
 :   Dump the function\(s\) specified in the oids list of object identifiers.
 
-    **Note:** This option is provided solely for use by other administration utilities; its use for any other purpose is not recommended or supported. The behavior of the option may change in future releases without notice.
+    > **Note** This option is provided solely for use by other administration utilities; its use for any other purpose is not recommended or supported. The behavior of the option may change in future releases without notice.
 
 --relation-oids oids
 :   Dump the relation\(s\) specified in the oids list of object identifiers.
 
-    **Note:** This option is provided solely for use by other administration utilities; its use for any other purpose is not recommended or supported. The behavior of the option may change in future releases without notice.
+    > **Note** This option is provided solely for use by other administration utilities; its use for any other purpose is not recommended or supported. The behavior of the option may change in future releases without notice.
 
 -? \| --help
 :   Show help about `pg_dump` command line arguments, and exit.
@@ -219,7 +219,7 @@ dbname
 -d dbname \| --dbname=dbname
 :   Specifies the name of the database to connect to. This is equivalent to specifying dbname as the first non-option argument on the command line.
 
-:   If this parameter contains an `=` sign or starts with a valid URI prefix \(`postgresql://` or `postgres://`\), it is treated as a conninfo string. See [Connection Strings](https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-CONNSTRING) in the PostgreSQL documentation for more information.
+:   If this parameter contains an `=` sign or starts with a valid URI prefix \(`postgresql://` or `postgres://`\), it is treated as a conninfo string. See [Connection Strings](https://www.postgresql.org/docs/12/libpq-connect.html#LIBPQ-CONNSTRING) in the PostgreSQL documentation for more information.
 
 -h host \| --host=host
 :   The host name of the machine on which the Greenplum Database coordinator database server is running. If not specified, reads from the environment variable `PGHOST` or defaults to localhost.

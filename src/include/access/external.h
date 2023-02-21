@@ -47,7 +47,6 @@ extern ExtTableEntry *GetExtTableEntryIfExists(Oid relid);
 extern ExtTableEntry *GetExtFromForeignTableOptions(List *ftoptons, Oid relid);
 
 extern ExternalScanInfo *MakeExternalScanInfo(ExtTableEntry *extEntry);
-extern ForeignScan *BuildForeignScanForExternalTable(Oid relid, Index scanrelid, List *qual, List *targetlist);
 
 
 #endif   /* EXTERNAL_H */

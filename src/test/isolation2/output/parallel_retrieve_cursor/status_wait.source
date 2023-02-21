@@ -1451,3 +1451,78 @@ ROLLBACK
  ?column? | ?column? | state 
 ----------+----------+-------
 (0 rows)
+0Rq: ... <quitting>
+1Rq: ... <quitting>
+
+--------- Test11: Test t1 has large amount of tuples, only retreive small number of tuples, we can still close cursor.
+1:DROP TABLE IF EXISTS t2;
+DROP
+1:CREATE TABLE t2 (id integer, data text) DISTRIBUTED by (id);
+CREATE
+1:INSERT INTO t2 select id, 'test ' || id from generate_series(1,100000) id;
+INSERT 100000
+
+1: BEGIN;
+BEGIN
+1: DECLARE c11 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t2;
+DECLARE
+1: @post_run 'parse_endpoint_info 11 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c11';
+ endpoint_id11 | token_id | host_id | port_id | READY
+ endpoint_id11 | token_id | host_id | port_id | READY
+ endpoint_id11 | token_id | host_id | port_id | READY
+(3 rows)
+0R: @pre_run 'set_endpoint_variable @ENDPOINT11': RETRIEVE 5 FROM ENDPOINT "@ENDPOINT11";
+ id | data   
+----+--------
+ 2  | test 2 
+ 3  | test 3 
+ 4  | test 4 
+ 7  | test 7 
+ 8  | test 8 
+(5 rows)
+1R: @pre_run 'set_endpoint_variable @ENDPOINT11': RETRIEVE 5 FROM ENDPOINT "@ENDPOINT11";
+ id | data    
+----+---------
+ 1  | test 1  
+ 12 | test 12 
+ 15 | test 15 
+ 20 | test 20 
+ 23 | test 23 
+(5 rows)
+2R: @pre_run 'set_endpoint_variable @ENDPOINT11': RETRIEVE 5 FROM ENDPOINT "@ENDPOINT11";
+ id | data    
+----+---------
+ 5  | test 5  
+ 6  | test 6  
+ 9  | test 9  
+ 10 | test 10 
+ 11 | test 11 
+(5 rows)
+
+1: CLOSE c11;
+CLOSE
+1: ROLLBACK;
+ROLLBACK
+
+-- check no endpoint info
+1: SELECT auth_token,state FROM gp_get_endpoints() WHERE cursorname='c11';
+ auth_token | state 
+------------+-------
+(0 rows)
+-- check no token info on QE after close PARALLEL RETRIEVE CURSOR
+*U: SELECT * FROM gp_get_segment_endpoints() WHERE cursorname='c11';
+ auth_token | databaseid | senderpid | receiverpid | state | gp_segment_id | sessionid | username | endpointname | cursorname 
+------------+------------+-----------+-------------+-------+---------------+-----------+----------+--------------+------------
+(0 rows)
+
+ auth_token | databaseid | senderpid | receiverpid | state | gp_segment_id | sessionid | username | endpointname | cursorname 
+------------+------------+-----------+-------------+-------+---------------+-----------+----------+--------------+------------
+(0 rows)
+
+ auth_token | databaseid | senderpid | receiverpid | state | gp_segment_id | sessionid | username | endpointname | cursorname 
+------------+------------+-----------+-------------+-------+---------------+-----------+----------+--------------+------------
+(0 rows)
+
+ auth_token | databaseid | senderpid | receiverpid | state | gp_segment_id | sessionid | username | endpointname | cursorname 
+------------+------------+-----------+-------------+-------+---------------+-----------+----------+--------------+------------
+(0 rows)

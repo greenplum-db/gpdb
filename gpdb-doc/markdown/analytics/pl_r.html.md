@@ -23,11 +23,9 @@ For information about supported PL/R versions, see the *Greenplum Database Relea
 
 ### <a id="topic_irz_m3l_v3b"></a>Installing R 
 
-For RHEL and CentOS, installing the PL/R package installs R in `$GPHOME/ext/R-<version>` and updates `$GPHOME/greenplum_path.sh` for Greenplum Database to use R.
+For RHEL/Oracle/Rocky, installing the PL/R package installs R in `$GPHOME/ext/R-<version>` and updates `$GPHOME/greenplum_path.sh` for Greenplum Database to use R.
 
-To use PL/R on Ubuntu host systems, you must install and configure R on all Greenplum Database host systems before installing PL/R.
-
-**Note:** You can use the [gpssh](../utility_guide/ref/gpssh.html) utility to run bash shell commands on multiple remote hosts.
+> **Note** You can use the [gpssh](../utility_guide/ref/gpssh.html) utility to run bash shell commands on multiple remote hosts.
 
 1.  To install R, run these `apt` commands on all host systems.
 
@@ -50,7 +48,7 @@ To use PL/R on Ubuntu host systems, you must install and configure R on all Gree
     export R_HOME=/usr/lib/R
     ```
 
-3.  Source `$GPHOME/greenplum_path.sh` and restart Greenplum Database. For example, run these commands on the Greenplum Database master host.
+3.  Source `$GPHOME/greenplum_path.sh` and restart Greenplum Database. For example, run these commands on the Greenplum Database coordinator host.
 
     ```
     $ source $GPHOME/greenplum_path.sh
@@ -70,11 +68,11 @@ Before you install the PL/R extension, make sure that your Greenplum Database is
 
 1.  Download the PL/R extension package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb).
 2.  Follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the **Greenplum Procedural Languages PL/R** software.
-3.  Copy the PL/R package to the Greenplum Database master host.
+3.  Copy the PL/R package to the Greenplum Database coordinator host.
 4.  Install the software extension package by running the `gppkg` command. This example installs the PL/R extension on a Linux system:
 
     ```
-    $ gppkg -i plr-3.0.3-gp6-rhel7_x86_64.gppkg
+    $ gppkg -i plr-3.0.3-gp7-rhel8_x86_64.gppkg
     ```
 
 5.  Source the file `$GPHOME/greenplum_path.sh`.
@@ -121,17 +119,10 @@ If no databases have PL/R as a registered language, uninstall the Greenplum PL/R
 $ gppkg -r plr-3.0.3
 ```
 
-On RHEL and CentOS systems, uninstalling the extension uninstalls the R software that was installed with the extension.
+On RHEL/Oracle/Rocky systems, uninstalling the extension uninstalls the R software that was installed with the extension.
 
 You can run the `gppkg` utility with the options `-q --all` to list the installed extensions and their versions.
 
-For Ubuntu systems, remove the `R_HOME` environment variable from `greenplum_path.sh` on all Greenplum Database host systems.
-
-Source the file `$GPHOME/greenplum_path.sh` and restart the database.
-
-```
-$ gpstop -r
-```
 
 #### <a id="topic_ifv_tsf_w3b"></a>Uninstall R \(Ubuntu\) 
 
@@ -239,7 +230,7 @@ R packages are modules that contain R functions and data sets. You can install R
 
 Greenplum Database provides a collection of data science-related R libraries that can be used with the Greenplum Database PL/R language. You can download these libraries in `.gppkg` format from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). For information about the libraries, see [R Data Science Library Package](../install_guide/install_r_dslib.html#topic1).
 
-**Note:** If you expand Greenplum Database and add segment hosts, you must install the R packages in the R installation of the new hosts.
+> **Note** If you expand Greenplum Database and add segment hosts, you must install the R packages in the R installation of the new hosts.
 
 1.  For an R package, identify all dependent R packages and each package web URL. The information can be found by selecting the given package from the following navigation page:
 
@@ -251,7 +242,7 @@ Greenplum Database provides a collection of data science-related R libraries tha
 
     For the R installation included with the Greenplum Database PL/R extension, the required R packages are installed with the PL/R extension. However, the Matrix package requires a newer version.
 
-2.  From the command line, use the `wget` utility to download the `tar.gz` files for the arm package to the Greenplum Database master host:
+2.  From the command line, use the `wget` utility to download the `tar.gz` files for the arm package to the Greenplum Database coordinator host:
 
     ```
     wget https://cran.r-project.org/src/contrib/Archive/arm/arm_1.5-03.tar.gz

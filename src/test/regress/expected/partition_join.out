@@ -497,6 +497,83 @@ SELECT t1.a, ss.t2a, ss.t2c FROM prt1 t1 LEFT JOIN LATERAL
  550 |     | 
 (12 rows)
 
+-- bug with inadequate sort key representation
+SET enable_partitionwise_aggregate TO true;
+SET enable_hashjoin TO false;
+EXPLAIN (COSTS OFF)
+SELECT a, b FROM prt1 FULL JOIN prt2 p2(b,a,c) USING(a,b)
+  WHERE a BETWEEN 490 AND 510
+  GROUP BY 1, 2 ORDER BY 1, 2;
+                                                       QUERY PLAN                                                        
+-------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: (COALESCE(prt1_p1.a, p2.a)), (COALESCE(prt1_p1.b, p2.b))
+   ->  GroupAggregate
+         Group Key: (COALESCE(prt1_p1.a, p2.a)), (COALESCE(prt1_p1.b, p2.b))
+         ->  Sort
+               Sort Key: (COALESCE(prt1_p1.a, p2.a)), (COALESCE(prt1_p1.b, p2.b))
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: (COALESCE(prt1_p1.a, p2.a)), (COALESCE(prt1_p1.b, p2.b))
+                     ->  Append
+                           ->  Merge Full Join
+                                 Merge Cond: ((prt1_p1.a = p2.a) AND (prt1_p1.b = p2.b))
+                                 Filter: ((COALESCE(prt1_p1.a, p2.a) >= 490) AND (COALESCE(prt1_p1.a, p2.a) <= 510))
+                                 ->  Sort
+                                       Sort Key: prt1_p1.a, prt1_p1.b
+                                       ->  Seq Scan on prt1_p1
+                                 ->  Sort
+                                       Sort Key: p2.a, p2.b
+                                       ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                             Hash Key: p2.a
+                                             ->  Seq Scan on prt2_p1 p2
+                           ->  Merge Full Join
+                                 Merge Cond: ((prt1_p2.a = p2_1.a) AND (prt1_p2.b = p2_1.b))
+                                 Filter: ((COALESCE(prt1_p2.a, p2_1.a) >= 490) AND (COALESCE(prt1_p2.a, p2_1.a) <= 510))
+                                 ->  Sort
+                                       Sort Key: prt1_p2.a, prt1_p2.b
+                                       ->  Seq Scan on prt1_p2
+                                 ->  Sort
+                                       Sort Key: p2_1.a, p2_1.b
+                                       ->  Redistribute Motion 3:3  (slice4; segments: 3)
+                                             Hash Key: p2_1.a
+                                             ->  Seq Scan on prt2_p2 p2_1
+                           ->  Merge Full Join
+                                 Merge Cond: ((prt1_p3.a = p2_2.a) AND (prt1_p3.b = p2_2.b))
+                                 Filter: ((COALESCE(prt1_p3.a, p2_2.a) >= 490) AND (COALESCE(prt1_p3.a, p2_2.a) <= 510))
+                                 ->  Sort
+                                       Sort Key: prt1_p3.a, prt1_p3.b
+                                       ->  Seq Scan on prt1_p3
+                                 ->  Sort
+                                       Sort Key: p2_2.a, p2_2.b
+                                       ->  Redistribute Motion 3:3  (slice5; segments: 3)
+                                             Hash Key: p2_2.a
+                                             ->  Seq Scan on prt2_p3 p2_2
+ Optimizer: Postgres query optimizer
+(43 rows)
+
+SELECT a, b FROM prt1 FULL JOIN prt2 p2(b,a,c) USING(a,b)
+  WHERE a BETWEEN 490 AND 510
+  GROUP BY 1, 2 ORDER BY 1, 2;
+  a  | b  
+-----+----
+ 490 | 15
+ 492 | 17
+ 494 | 19
+ 495 | 20
+ 496 | 21
+ 498 | 23
+ 500 |  0
+ 501 |  1
+ 502 |  2
+ 504 |  4
+ 506 |  6
+ 507 |  7
+ 508 |  8
+ 510 | 10
+(14 rows)
+
+RESET enable_partitionwise_aggregate;
+RESET enable_hashjoin;
 --
 -- partitioned by expression
 --
@@ -2227,8 +2304,8 @@ SELECT t1.a, t1.c, t2.b, t2.c FROM prt1_m t1 LEFT JOIN prt2_m t2 ON t1.c = t2.c;
  Optimizer: Postgres query optimizer
 (17 rows)
 
--- partitionwise join can not be applied between tables with different
--- partition lists
+-- partitionwise join can not be applied for a join between list and range
+-- partitioned tables
 EXPLAIN (COSTS OFF)
 SELECT t1.a, t1.c, t2.b, t2.c FROM prt1_n t1 LEFT JOIN prt2_n t2 ON (t1.c = t2.c);
                             QUERY PLAN                            
@@ -2250,6 +2327,8 @@ SELECT t1.a, t1.c, t2.b, t2.c FROM prt1_n t1 LEFT JOIN prt2_n t2 ON (t1.c = t2.c
  Optimizer: Postgres query optimizer
 (15 rows)
 
+-- partitionwise join can not be applied between tables with different
+-- partition lists
 EXPLAIN (COSTS OFF)
 SELECT t1.a, t1.c, t2.b, t2.c FROM prt1_n t1 JOIN prt2_n t2 ON (t1.c = t2.c) JOIN plt1 t3 ON (t1.c = t3.c);
                                QUERY PLAN                               
@@ -2280,8 +2359,8 @@ SELECT t1.a, t1.c, t2.b, t2.c FROM prt1_n t1 JOIN prt2_n t2 ON (t1.c = t2.c) JOI
  Optimizer: Postgres query optimizer
 (24 rows)
 
--- partitionwise join can not be applied for a join between list and range
--- partitioned table
+-- partitionwise join can not be applied for a join between key column and
+-- non-key column
 EXPLAIN (COSTS OFF)
 SELECT t1.a, t1.c, t2.b, t2.c FROM prt1_n t1 FULL JOIN prt1 t2 ON (t1.c = t2.c);
                             QUERY PLAN                            
@@ -2304,7 +2383,7 @@ SELECT t1.a, t1.c, t2.b, t2.c FROM prt1_n t1 FULL JOIN prt1 t2 ON (t1.c = t2.c);
  Optimizer: Postgres query optimizer
 (16 rows)
 
--- partitionwise join can not be applied if only one of joining table has
+-- partitionwise join can not be applied if only one of joining tables has
 -- default partition
 ALTER TABLE prt2 DETACH PARTITION prt2_p3;
 ALTER TABLE prt2 ATTACH PARTITION prt2_p3 FOR VALUES FROM (500) TO (600);
@@ -2336,4 +2415,98 @@ SELECT t1.a, t1.c, t2.b, t2.c FROM prt1 t1, prt2 t2 WHERE t1.a = t2.b AND t1.b =
                                              Filter: (b = 0)
  Optimizer: Postgres query optimizer
 (22 rows)
+
+--
+-- Test some other plan types in a partitionwise join (unfortunately,
+-- we need larger tables to get the planner to choose these plan types)
+--
+create temp table prtx1 (a integer, b integer, c integer)
+  partition by range (a);
+create temp table prtx1_1 partition of prtx1 for values from (1) to (11);
+create temp table prtx1_2 partition of prtx1 for values from (11) to (21);
+create temp table prtx1_3 partition of prtx1 for values from (21) to (31);
+create temp table prtx2 (a integer, b integer, c integer)
+  partition by range (a);
+create temp table prtx2_1 partition of prtx2 for values from (1) to (11);
+create temp table prtx2_2 partition of prtx2 for values from (11) to (21);
+create temp table prtx2_3 partition of prtx2 for values from (21) to (31);
+insert into prtx1 select 1 + i%30, i, i
+  from generate_series(1,1000) i;
+insert into prtx2 select 1 + i%30, i, i
+  from generate_series(1,500) i, generate_series(1,10) j;
+create index on prtx2 (b);
+create index on prtx2 (c);
+analyze prtx1;
+analyze prtx2;
+explain (costs off)
+select * from prtx1
+where not exists (select 1 from prtx2
+                  where prtx2.a=prtx1.a and prtx2.b=prtx1.b and prtx2.c=123)
+  and a<20 and c=120;
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Hash Anti Join
+               Hash Cond: ((prtx1_1.a = prtx2_1.a) AND (prtx1_1.b = prtx2_1.b))
+               ->  Seq Scan on prtx1_1
+                     Filter: ((a < 20) AND (c = 120))
+               ->  Hash
+                     ->  Bitmap Heap Scan on prtx2_1
+                           Recheck Cond: (c = 123)
+                           ->  Bitmap Index Scan on prtx2_1_c_idx
+                                 Index Cond: (c = 123)
+         ->  Hash Anti Join
+               Hash Cond: ((prtx1_2.a = prtx2_2.a) AND (prtx1_2.b = prtx2_2.b))
+               ->  Seq Scan on prtx1_2
+                     Filter: ((a < 20) AND (c = 120))
+               ->  Hash
+                     ->  Seq Scan on prtx2_2
+                           Filter: (c = 123)
+ Optimizer: Postgres query optimizer
+(19 rows)
+
+select * from prtx1
+where not exists (select 1 from prtx2
+                  where prtx2.a=prtx1.a and prtx2.b=prtx1.b and prtx2.c=123)
+  and a<20 and c=120;
+ a |  b  |  c  
+---+-----+-----
+ 1 | 120 | 120
+(1 row)
+
+explain (costs off)
+select * from prtx1
+where not exists (select 1 from prtx2
+                  where prtx2.a=prtx1.a and (prtx2.b=prtx1.b+1 or prtx2.c=99))
+  and a<20 and c=91;
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Hash Anti Join
+               Hash Cond: (prtx1_1.a = prtx2_1.a)
+               Join Filter: ((prtx2_1.b = (prtx1_1.b + 1)) OR (prtx2_1.c = 99))
+               ->  Seq Scan on prtx1_1
+                     Filter: ((a < 20) AND (c = 91))
+               ->  Hash
+                     ->  Seq Scan on prtx2_1
+         ->  Hash Anti Join
+               Hash Cond: (prtx1_2.a = prtx2_2.a)
+               Join Filter: ((prtx2_2.b = (prtx1_2.b + 1)) OR (prtx2_2.c = 99))
+               ->  Seq Scan on prtx1_2
+                     Filter: ((a < 20) AND (c = 91))
+               ->  Hash
+                     ->  Seq Scan on prtx2_2
+ Optimizer: Postgres query optimizer
+(17 rows)
+
+select * from prtx1
+where not exists (select 1 from prtx2
+                  where prtx2.a=prtx1.a and (prtx2.b=prtx1.b+1 or prtx2.c=99))
+  and a<20 and c=91;
+ a | b  | c  
+---+----+----
+ 2 | 91 | 91
+(1 row)
 

@@ -2698,7 +2698,6 @@ insert into tcorr2 values (1,1);
 analyze tcorr1;
 analyze tcorr2;
 
-set optimizer_trace_fallback to on;
 
 explain
 select *
@@ -2843,7 +2842,6 @@ analyze tbitmap;
 set optimizer_join_order = query;
 set optimizer_enable_hashjoin = off;
 set optimizer_enable_groupagg = off;
-set optimizer_trace_fallback = on;
 set enable_sort = off;
 
 -- 1 simple btree
@@ -2953,7 +2951,6 @@ select count(*), t2.c from roj1 t1 left join roj2 t2 on t1.a = t2.c group by t2.
 explain (costs off) select count(*), t2.c from roj1 t1 left join roj2 t2 on t1.a = t2.c group by t2.c;
 reset optimizer_enable_motion_redistribute;
 
-reset optimizer_trace_fallback;
 reset enable_sort;
 
 -- simple check for btree indexes on AO tables
@@ -2979,7 +2976,6 @@ analyze t_ao_btree;
 analyze tpart_ao_btree;
 analyze tpart_dim;
 
-set optimizer_trace_fallback to on;
 set optimizer_enable_hashjoin to off;
 
 -- this should use a bitmap scan on the btree index
@@ -3013,11 +3009,9 @@ select enable_xform('CXformInnerJoin2NLJoin');
 -- end_ignore
 
 reset optimizer_enable_hashjoin;
-reset optimizer_trace_fallback;
 
 -- Tests converted from MDPs that use tables partitioned on text columns and similar types,
 -- which can't be handled in ORCA MDPs, since they would require calling the GPDB executor
-set optimizer_trace_fallback = on;
 
 -- GroupingOnSameTblCol-2.mdp
 -- from dxl
@@ -3263,7 +3257,6 @@ with v(year) as (
     select 2019::int)
 select * from v where year > 1;
 
-reset optimizer_trace_fallback;
 
 create table sqall_t1(a int) distributed by (a);
 insert into sqall_t1 values (1), (2), (3);
@@ -3394,7 +3387,6 @@ reset statement_timeout;
 
 -- an agg of a non-SRF with a nested SRF should be treated as a SRF, the
 -- optimizer must not eliminate the SRF or it can produce incorrect results
-set optimizer_trace_fallback = on;
 create table nested_srf(a text);
 insert into nested_srf values ('abc,def,ghi');
 
@@ -3414,7 +3406,6 @@ insert into nested_srf values (NULL);
 select * from (select trim(regexp_split_to_table((a)::text, ','::text)) from nested_srf)a;
 select count(*) from (select trim(regexp_split_to_table((a)::text, ','::text)) from nested_srf)a;
 
-reset optimizer_trace_fallback;
 --- if the inner child is already distributed on the join column, orca should
 --- not place any motion on the inner child
 CREATE TABLE tone (a int, b int, c int);
@@ -3535,14 +3526,20 @@ select c from mix_func_cast();
 drop table if exists empty_cte_tl_test;
 create table empty_cte_tl_test(id int);
 
-set optimizer_trace_fallback = on;
 with cte as (
   select from empty_cte_tl_test
 )
 select * 
 from empty_cte_tl_test
 where id in(select id from cte);
-reset optimizer_trace_fallback;
+
+-- test that we use default cardinality estimate (40) for non-comparable types
+create table ts_tbl (ts timestamp);
+create index ts_tbl_idx on ts_tbl(ts);
+insert into ts_tbl select to_timestamp('99991231'::text, 'YYYYMMDD'::text) from generate_series(1,100);
+analyze ts_tbl;
+explain select * from ts_tbl where ts = to_timestamp('99991231'::text, 'YYYYMMDD'::text);
+
 
 -- start_ignore
 DROP SCHEMA orca CASCADE;

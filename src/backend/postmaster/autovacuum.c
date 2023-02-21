@@ -176,6 +176,7 @@ double		autovacuum_vac_cost_delay;
 int			autovacuum_vac_cost_limit;
 
 int			Log_autovacuum_min_duration = 0;
+int			gp_autovacuum_scope;
 
 /* how long to keep pgstat data in the launcher, in milliseconds */
 #define STATS_READ_DELAY 1000
@@ -1636,6 +1637,9 @@ AutoVacWorkerMain(int argc, char *argv[])
 	 */
 	if (sigsetjmp(local_sigjmp_buf, 1) != 0)
 	{
+		/* since not using PG_TRY, must reset error stack by hand */
+		error_context_stack = NULL;
+
 		/* Prevents interrupts while cleaning up */
 		HOLD_INTERRUPTS();
 
@@ -2169,9 +2173,10 @@ do_autovacuum(void)
 
 			/*
 			 * We just ignore it if the owning backend is still active and
-			 * using the temporary schema.
+			 * using the temporary schema.  Also, for safety, ignore it if the
+			 * namespace doesn't exist or isn't a temp namespace after all.
 			 */
-			if (!isTempNamespaceInUse(classForm->relnamespace))
+			if (checkTempNamespaceStatus(classForm->relnamespace) == TEMP_NAMESPACE_IDLE)
 			{
 				/*
 				 * The table seems to be orphaned -- although it might be that
@@ -2341,7 +2346,7 @@ do_autovacuum(void)
 			continue;
 		}
 
-		if (isTempNamespaceInUse(classForm->relnamespace))
+		if (checkTempNamespaceStatus(classForm->relnamespace) != TEMP_NAMESPACE_IDLE)
 		{
 			UnlockRelationOid(relid, AccessExclusiveLock);
 			continue;
@@ -3219,12 +3224,18 @@ relation_needs_vacanalyze(Oid relid,
 			*doanalyze = false;
 	}
 
-	/*
-	 * GPDB: Autovacuum VACUUM is only enabled for catalog tables. (But ignore
-	 * if at risk of wrap around and proceed to vacuum)
-	 */
-	if (!IsSystemClass(relid, classForm) && !force_vacuum)
-		*dovacuum = false;
+	if (!force_vacuum && gp_autovacuum_scope == AV_SCOPE_CATALOG)
+	{
+		/* GPDB: autovacuum on pg_catalog relations */
+		if (!IsCatalogRelationOid(relid))
+			*dovacuum = false;
+	}
+	else if (!force_vacuum && gp_autovacuum_scope == AV_SCOPE_CATALOG_AO_AUX)
+	{
+		/* GPDB: autovacuum only pg_catalog, pg_toast, and pg_aoseg relations */
+		if (!IsSystemClass(relid, classForm))
+			*dovacuum = false;
+	}
 }
 
 /*

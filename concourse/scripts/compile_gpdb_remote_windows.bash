@@ -1,7 +1,7 @@
 #!/bin/bash
 #shellcheck disable=2153,2087,2035,2140
 
-set -eo pipefail
+set -eox pipefail
 
 ROOT_DIR=$(pwd)
 
@@ -10,7 +10,9 @@ ROOT_DIR=$(pwd)
 # since newline doesn't work well for env variable.
 function setup_ssh_keys() {
     # Setup ssh keys
+    set +x
     echo -n "${REMOTE_KEY}" | base64 -d > ~/remote.key
+    set -x
     chmod 400 ~/remote.key
 
     eval "$(ssh-agent -s)"
@@ -33,8 +35,8 @@ function remote_setup() {
     pushd gpdb_src
         GIT_URI=$(git config --get remote.origin.url)
         GIT_COMMIT=$(git rev-parse HEAD)
-        GIT_TAG=$(git describe --tags --abbrev=0 | grep -E -o '[0-9]\.[0-9]+\.[0-9]+')
         GPDB_VERSION=$(./getversion --short)
+        GIT_TAG=$(echo $GPDB_VERSION | grep -E -o '[0-9]\.[0-9]+\.[0-9]+')
     popd
 }
 

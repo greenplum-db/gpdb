@@ -190,7 +190,7 @@
           <dxl:Partition Mdid="6.250652005.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.250652001.1.1" Name="r6756_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.250652001.1.1" Name="r6756_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -244,7 +244,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.250652002.1.1" Name="r6756_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.250652002.1.1" Name="r6756_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -298,7 +298,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.250652003.1.1" Name="r6756_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.250652003.1.1" Name="r6756_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -352,7 +352,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.250652004.1.1" Name="r6756_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.250652004.1.1" Name="r6756_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -406,7 +406,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.250652005.1.1" Name="r6756_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.250652005.1.1" Name="r6756_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

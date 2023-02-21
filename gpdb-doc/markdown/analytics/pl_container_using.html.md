@@ -19,7 +19,7 @@ You cannot, by default, restrict the number of running PL/Container container in
 
 With PL/Container 1.2.0 and later, you can use Greenplum Database resource groups to manage and limit the total CPU and memory resources of containers in PL/Container runtimes. For more information about enabling, configuring, and using Greenplum Database resource groups, refer to [Using Resource Groups](../admin_guide/workload_mgmt_resgroups.html) in the *Greenplum Database Administrator Guide*.
 
-**Note:** If you do not explicitly configure resource groups for a PL/Container runtime, its container instances are limited only by system resources. The containers may consume resources at the expense of the Greenplum Database server.
+> **Note** If you do not explicitly configure resource groups for a PL/Container runtime, its container instances are limited only by system resources. The containers may consume resources at the expense of the Greenplum Database server.
 
 Resource groups for external components such as PL/Container use Linux control groups \(cgroups\) to manage component-level use of memory and CPU resources. When you manage PL/Container resources with resource groups, you configure both a memory limit and a CPU limit that Greenplum Database applies to all container instances that share the same PL/Container runtime configuration.
 
@@ -62,7 +62,7 @@ Perform the following procedure to configure PL/Container to use Greenplum Datab
 
 1.  If you have not already configured and enabled resource groups in your Greenplum Database deployment, configure cgroups and enable Greenplum Database resource groups as described in [Using Resource Groups](../admin_guide/workload_mgmt_resgroups.html#topic71717999) in the *Greenplum Database Administrator Guide*.
 
-    **Note:** If you have previously configured and enabled resource groups in your deployment, ensure that the Greenplum Database resource group `gpdb.conf` cgroups configuration file includes a `memory { }` block as described in the previous link.
+    > **Note** If you have previously configured and enabled resource groups in your deployment, ensure that the Greenplum Database resource group `gpdb.conf` cgroups configuration file includes a `memory { }` block as described in the previous link.
 
 2.  Analyze the resource usage of your Greenplum Database deployment. Determine the percentage of resource group CPU and memory resources that you want to allocate to PL/Container Docker containers.
 3.  Determine how you want to distribute the total PL/Container CPU and memory resources that you identified in the step above among the PL/Container runtimes. Identify:
@@ -108,15 +108,15 @@ Perform the following procedure to configure PL/Container to use Greenplum Datab
 When PL/Container logging is enabled, you can set the log level with the Greenplum Database server configuration parameter [log\_min\_messages](../ref_guide/config_params/guc-list.html). The default log level is `warning`. The parameter controls the PL/Container log level and also controls the Greenplum Database log level.
 
 -   PL/Container logging is enabled or deactivated for each runtime ID with the `setting` attribute `use_container_logging`. The default is no logging.
--   The PL/Container log information is the information from the UDF that is run in the Docker container. By default, the PL/Container log information is sent to a system service. On Red Hat 7 or CentOS 7 systems, the log information is sent to the `journald` service.
--   The Greenplum Database log information is sent to log file on the Greenplum Database master.
+-   The PL/Container log information is the information from the UDF that is run in the Docker container. By default, the PL/Container log information is sent to a system service. On Red Hat 8 systems, the log information is sent to the `journald` service.
+-   The Greenplum Database log information is sent to log file on the Greenplum Database coordinator.
 -   When testing or troubleshooting a PL/Container UDF, you can change the Greenplum Database log level with the `SET` command. You can set the parameter in the session before you run your PL/Container UDF. This example sets the log level to `debug1`.
 
     ```
     SET log_min_messages='debug1' ;
     ```
 
-    **Note:** The parameter `log_min_messages` controls both the Greenplum Database and PL/Container logging, increasing the log level might affect Greenplum Database performance even if a PL/Container UDF is not running.
+    > **Note** The parameter `log_min_messages` controls both the Greenplum Database and PL/Container logging, increasing the log level might affect Greenplum Database performance even if a PL/Container UDF is not running.
 
 
 ## <a id="topic_rh3_p3q_dw"></a>PL/Container Function Limitations 
@@ -152,7 +152,7 @@ The PL/Container configuration file is read only on the first invocation of a PL
 SELECT * FROM plcontainer_refresh_config;
 ```
 
-The command runs a PL/Container function that updates the configuration on the master and segment instances and returns the status of the refresh.
+The command runs a PL/Container function that updates the configuration on the coordinator and segment instances and returns the status of the refresh.
 
 ```
  gp_segment_id | plcontainer_refresh_local_config
@@ -169,7 +169,7 @@ Also, you can show all the configurations in the session by performing a `SELECT
 SELECT * FROM plcontainer_show_config;
 ```
 
-Running the command executes a PL/Container function that displays configuration information from the master and segment instances. This is an example of the start and end of the view output.
+Running the command executes a PL/Container function that displays configuration information from the coordinator and segment instances. This is an example of the start and end of the view output.
 
 ```
 INFO:  plcontainer: Container 'plc_py_test' configuration
@@ -214,7 +214,7 @@ If a normal \(non-superuser\) Greenplum Database user runs the function, the fun
 
 When Greenplum Database runs a PL/Container UDF, Query Executer \(QE\) processes start Docker containers and reuse them as needed. After a certain amount of idle time, a QE process quits and destroys its Docker containers. You can control the amount of idle time with the Greenplum Database server configuration parameter [gp\_vmem\_idle\_resource\_timeout](../ref_guide/config_params/guc-list.html). Controlling the idle time might help with Docker container reuse and avoid the overhead of creating and starting a Docker container.
 
-**Warning:** Changing `gp_vmem_idle_resource_timeout` value, might affect performance due to resource issues. The parameter also controls the freeing of Greenplum Database resources other than Docker containers.
+> **Caution** Changing `gp_vmem_idle_resource_timeout` value, might affect performance due to resource issues. The parameter also controls the freeing of Greenplum Database resources other than Docker containers.
 
 ### <a id="function_examples"></a>Basic Function Examples 
 
@@ -255,7 +255,7 @@ In the Python 2 language container, the module `plpy` is implemented. The module
 -   `plpy.warning(msg)` - Sends a WARNING message to the Greenplum Database log.
 -   `plpy.error(msg)` - Sends an ERROR message to the Greenplum Database log. An ERROR message raised in Greenplum Database causes the query execution process to stop and the transaction to rollback.
 -   `plpy.fatal(msg)` - Sends a FATAL message to the Greenplum Database log. A FATAL message causes Greenplum Database session to be closed and transaction to be rolled back.
--   `plpy.subtransaction()` - Manages `plpy.execute` calls in an explicit subtransaction. See [Explicit Subtransactions](https://www.postgresql.org/docs/9.4/plpython-subtransaction.html) in the PostgreSQL documentation for additional information about `plpy.subtransaction()`.
+-   `plpy.subtransaction()` - Manages `plpy.execute` calls in an explicit subtransaction. See [Explicit Subtransactions](https://www.postgresql.org/docs/12/plpython-subtransaction.html) in the PostgreSQL documentation for additional information about `plpy.subtransaction()`.
 
 If an error of level `ERROR` or `FATAL` is raised in a nested Python function call, the message includes the list of enclosing functions.
 
@@ -271,11 +271,11 @@ PL/Container does not support this Greenplum Database PL/Python feature:
 
 -   Multi-dimensional arrays.
 
-Also, the Python module has two global dictionary objects that retain the data between function calls. They are named GD and SD. GD is used to share the data between all the function running within the same container, while SD is used for sharing the data between multiple calls of each separate function. Be aware that accessing the data is possible only within the same session, when the container process lives on a segment or master. Be aware that for idle sessions Greenplum Database terminates segment processes, which means the related containers would be shut down and the data from GD and SD lost.
+Also, the Python module has two global dictionary objects that retain the data between function calls. They are named GD and SD. GD is used to share the data between all the function running within the same container, while SD is used for sharing the data between multiple calls of each separate function. Be aware that accessing the data is possible only within the same session, when the container process lives on a segment or coordinator. Be aware that for idle sessions Greenplum Database terminates segment processes, which means the related containers would be shut down and the data from GD and SD lost.
 
 For information about PL/Python, see [PL/Python Language](pl_python.html).
 
-For information about the `plpy` methods, see [https://www.postgresql.org/docs/9.4/plpython-database.htm](https://www.postgresql.org/docs/9.4/plpython-database.html).
+For information about the `plpy` methods, see [https://www.postgresql.org/docs/12/plpython-database.htm](https://www.postgresql.org/docs/12/plpython-database.html).
 
 ### <a id="topic_plc_py3"></a>About PL/Python 3 Functions in PL/Container 
 
@@ -319,11 +319,11 @@ Record the name of the GPU device ID (0 in the above example) or the device UUID
 
 #### Install and Customize the PL/Container Image
 
-1. Download the `plcontainer-python3-image-2.2.0-gp6.tar.gz` file from the **Greenplum Procedural Languages** section on [Tanzu Network](https://network.pivotal.io/products/vmware-tanzu-greenplum).
+1. Download the `plcontainer-python3-image-2.2.0-gp7.tar.gz` file from the **Greenplum Procedural Languages** section on [Tanzu Network](https://network.pivotal.io/products/vmware-tanzu-greenplum).
 
 2. Load the downloaded PL/Container image into Docker:
     ```
-    $ docker image load < plcontainer-python3-image-2.2.0-gp6.tar.gz
+    $ docker image load < plcontainer-python3-image-2.2.0-gp7.tar.gz
     ```
 
 3. Customize the PL/Container image to add the required CUDA runtime and `pycuda` library. The following example Dockerfile contents show how to add CUDA 11.7 and `pycuda` 2021.1 to the PL/Container image. Use a text editor to create the Dockerfile:
@@ -362,7 +362,7 @@ Record the name of the GPU device ID (0 in the above example) or the device UUID
     ```
     $ docker build . -t localhost/plcontainer_python3_cuda_shared:latest
     ```
-    **Note:** The remaining instructions use the example image tag `localhost/plcontainer_python3_cuda_shared:latest`. Substitute the actual tag name as needed.
+    > **Note** The remaining instructions use the example image tag `localhost/plcontainer_python3_cuda_shared:latest`. Substitute the actual tag name as needed.
 
 6. Import the image runtime to PL/Container:
     ```
@@ -390,7 +390,7 @@ Record the name of the GPU device ID (0 in the above example) or the device UUID
 
 1. Connect to a Greenplum database where PL/Container is installed:
     ```
-    $ psql -d mytest -h master_host -p 5432 -U `gpadmin`
+    $ psql -d mytest -h coordinator_host -p 5432 -U `gpadmin`
     ```
 
 2. Create a sample PL/Container function that uses the container you customized (`plc_python_cuda_shared` in this example). This simple function multiplies randomized, single-precision numbers by sending them to the CUDA constructor of `pycuda.compiler.SourceModule`:

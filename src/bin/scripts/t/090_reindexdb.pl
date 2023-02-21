@@ -3,7 +3,7 @@ use warnings;
 
 use PostgresNode;
 use TestLib;
-use Test::More tests => 34;
+use Test::More tests => 32;
 
 program_help_ok('reindexdb');
 program_version_ok('reindexdb');
@@ -67,11 +67,11 @@ $node->issues_sql_like(
 	'reindex specific schema concurrently');
 $node->command_fails([ 'reindexdb', '--concurrently', '-s', 'postgres' ],
 	'reindex system tables concurrently');
-} # end SKIP
 $node->issues_sql_like(
-	[ 'reindexdb', '-v', '-t', 'test1', 'postgres' ],
-	qr/statement: REINDEX \(VERBOSE\) TABLE public\.test1;/,
-	'reindex with verbose output');
+	[ 'reindexdb', '--concurrently', '-v', '-t', 'test1', 'postgres' ],
+	qr/statement: REINDEX \(VERBOSE\) TABLE CONCURRENTLY public\.test1;/,
+	'reindex with verbose output concurrently');
+} # end SKIP
 
 # connection strings
 $node->command_ok([qw(reindexdb --echo --table=pg_am dbname=template1)],

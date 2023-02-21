@@ -48,7 +48,7 @@
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
       <dxl:TraceFlags Value="101013,102029,102046,102048,102053,102054,102074,102120,102146,102152,103001,103014,103022,103027,103029,103038,104002,104003,104004,104005,105000,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -632,7 +632,7 @@
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="9"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Relation Mdid="6.33087.1.0" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.33087.1.0" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="dist_a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -689,7 +689,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.33090.1.0" Name="t2" Rows="1000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.33090.1.0" Name="t2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.33090.1.0" Name="t2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="dist_e" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

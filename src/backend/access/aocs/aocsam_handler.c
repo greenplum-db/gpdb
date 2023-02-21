@@ -29,6 +29,7 @@
 #include "catalog/storage_xlog.h"
 #include "cdb/cdbaocsam.h"
 #include "cdb/cdbvars.h"
+#include "commands/progress.h"
 #include "commands/vacuum.h"
 #include "executor/executor.h"
 #include "nodes/makefuncs.h"
@@ -523,34 +524,35 @@ extractcolumns_from_node(Node *expr, bool *cols, AttrNumber natts)
 
 static TableScanDesc
 aoco_beginscan_extractcolumns(Relation rel, Snapshot snapshot,
-							  List *targetlist, List *qual,
-							  uint32 flags)
+							  List *targetlist, List *qual, bool *proj,
+							  List* constraintList, uint32 flags)
 {
 	AOCSScanDesc	aoscan;
-	AttrNumber		natts = RelationGetNumberOfAttributes(rel);
-	bool		   *cols;
-	bool			found = false;
 
-	cols = palloc0(natts * sizeof(*cols));
+	AssertImply(list_length(targetlist) || list_length(qual) || list_length(constraintList), !proj);
 
-	found |= extractcolumns_from_node((Node *)targetlist, cols, natts);
-	found |= extractcolumns_from_node((Node *)qual, cols, natts);
-
-	/*
-	 * In some cases (for example, count(*)), targetlist and qual may be null,
-	 * extractcolumns_walker will return immediately, so no columns are specified.
-	 * We always scan the first column.
-	 */
-	if (!found)
-		cols[0] = true;
-
+	if (!proj)
+	{
+		AttrNumber		natts = RelationGetNumberOfAttributes(rel);
+		bool			found = false;
+		proj = palloc0(sizeof(bool*) * natts);
+		found |= extractcolumns_from_node((Node *)targetlist, proj, natts);
+		found |= extractcolumns_from_node((Node *)qual, proj, natts);
+		found |= extractcolumns_from_node((Node *)constraintList, proj, natts);
+		/*
+		* In some cases (for example, count(*)), targetlist and qual may be null,
+		* extractcolumns_walker will return immediately, so no columns are specified.
+		* We always scan the first column.
+		*/
+		if (!found)
+			proj[0] = true;
+	}
 	aoscan = aocs_beginscan(rel,
 							snapshot,
-							cols,
+							proj,
 							flags);
 
-	pfree(cols);
-
+	pfree(proj);
 	return (TableScanDesc)aoscan;
 }
 
@@ -940,20 +942,29 @@ aoco_tuple_insert(Relation relation, TupleTableSlot *slot, CommandId cid,
 	pgstat_count_heap_insert(relation, 1);
 }
 
+/*
+ * We don't support speculative inserts on appendoptimized tables, i.e. we don't
+ * support INSERT ON CONFLICT DO NOTHING or INSERT ON CONFLICT DO UPDATE. Thus,
+ * the following functions are left unimplemented.
+ */
+
 static void
 aoco_tuple_insert_speculative(Relation relation, TupleTableSlot *slot,
                                     CommandId cid, int options,
                                     BulkInsertState bistate, uint32 specToken)
 {
-	/* GPDB_12_MERGE_FIXME: not supported. Can this function be left out completely? Or ereport()? */
-	elog(ERROR, "speculative insertion not supported on AO_COLUMN tables");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("speculative insert is not supported on appendoptimized relations")));
 }
 
 static void
 aoco_tuple_complete_speculative(Relation relation, TupleTableSlot *slot,
                                       uint32 specToken, bool succeeded)
 {
-	elog(ERROR, "speculative insertion not supported on AO_COLUMN tables");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("speculative insert is not supported on appendoptimized relations")));
 }
 
 /*
@@ -1049,23 +1060,45 @@ aoco_tuple_update(Relation relation, ItemPointer otid, TupleTableSlot *slot,
 	return result;
 }
 
+/*
+ * This API is called for a variety of purposes, which are either not supported
+ * for AO/CO tables or not supported for GPDB in general:
+ *
+ * (1) UPSERT: ExecOnConflictUpdate() calls this, but clearly upsert is not
+ * supported for AO/CO tables.
+ *
+ * (2) DELETE and UPDATE triggers: GetTupleForTrigger() calls this, but clearly
+ * these trigger types are not supported for AO/CO tables.
+ *
+ * (3) Logical replication: RelationFindReplTupleByIndex() and
+ * RelationFindReplTupleSeq() calls this, but clearly we don't support logical
+ * replication yet for GPDB.
+ *
+ * (4) For DELETEs/UPDATEs, when a state of TM_Updated is returned from
+ * table_tuple_delete() and table_tuple_update() respectively, this API is invoked.
+ * However, that is impossible for AO/CO tables as an AO/CO tuple cannot be
+ * deleted/updated while another transaction is updating it (see CdbTryOpenTable()).
+ *
+ * (5) Row-level locking (SELECT FOR ..): ExecLockRows() calls this but a plan
+ * containing the LockRows plan node is never generated for AO/CO tables. In fact,
+ * we lock at the table level instead.
+ */
 static TM_Result
 aoco_tuple_lock(Relation relation, ItemPointer tid, Snapshot snapshot,
                       TupleTableSlot *slot, CommandId cid, LockTupleMode mode,
                       LockWaitPolicy wait_policy, uint8 flags,
                       TM_FailureData *tmfd)
 {
-	/* GPDB_12_MERGE_FIXME: not supported. Can this function be left out completely? Or ereport()? */
-	elog(ERROR, "speculative insertion not supported on AO tables");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("tuple locking is not supported on appendoptimized tables")));
 }
 
 static void
 aoco_finish_bulk_insert(Relation relation, int options)
 {
-	aoco_dml_finish(relation);
+	/* nothing for co tables */
 }
-
-
 
 
 /* ------------------------------------------------------------------------
@@ -1144,8 +1177,17 @@ aoco_compute_xid_horizon_for_tuples(Relation rel,
                                           ItemPointerData *tids,
                                           int nitems)
 {
-	// GPDB_12_MERGE_FIXME: vacuum related call back.
-	elog(ERROR, "not implemented yet");
+	/*
+	 * This API is only useful for hot standby snapshot conflict resolution
+	 * (for eg. see btree_xlog_delete()), in the context of index page-level
+	 * vacuums (aka page-level cleanups). This operation is only done when
+	 * IndexScanDesc->kill_prior_tuple is true, which is never for AO/CO tables
+	 * (we always return all_dead = false in the index_fetch_tuple() callback
+	 * as we don't support HOT)
+	 */
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("feature not supported on appendoptimized relations")));
 }
 
 /* ------------------------------------------------------------------------
@@ -1529,6 +1571,7 @@ aoco_index_build_range_scan(Relation heapRelation,
 	List	   *qual = indexInfo->ii_Predicate;
 	Oid			blkdirrelid;
 	Oid			blkidxrelid;
+	int64 		previous_blkno = -1;
 
 	/*
 	 * sanity checks
@@ -1628,7 +1671,9 @@ aoco_index_build_range_scan(Relation heapRelation,
 			scan = table_beginscan_es(heapRelation,	/* relation */
 									  snapshot,		/* snapshot */
 									  tlist,		/* targetlist */
-									  qual);		/* qual */
+									  qual,			/* qual */
+									  NULL,			/* constraintList */
+									  NULL);
 		}
 	}
 	else
@@ -1668,27 +1713,35 @@ aoco_index_build_range_scan(Relation heapRelation,
 	}
 
 
-	/* GPDB_12_MERGE_FIXME */
-#if 0
 	/* Publish number of blocks to scan */
 	if (progress)
 	{
-		BlockNumber nblocks;
+		FileSegTotals	*fileSegTotals;
+		BlockNumber		totalBlocks;
 
-		if (aoscan->rs_base.rs_parallel != NULL)
-		{
-			ParallelBlockTableScanDesc pbscan;
+		/* XXX: How can we report for builds with parallel scans? */
+		Assert(!aocoscan->rs_base.rs_parallel);
 
-			pbscan = (ParallelBlockTableScanDesc) aoscan->rs_base.rs_parallel;
-			nblocks = pbscan->phs_nblocks;
-		}
+		/*
+		 * We will need to scan the entire table if we need to create a block
+		 * directory, otherwise we need to scan only the columns projected. So,
+		 * calculate the total blocks accordingly.
+		 */
+		if (need_create_blk_directory)
+			fileSegTotals = GetAOCSSSegFilesTotals(heapRelation,
+												   aocoscan->appendOnlyMetaDataSnapshot);
 		else
-			nblocks = aoscan->rs_nblocks;
+			fileSegTotals = GetAOCSSSegFilesTotalsWithProj(heapRelation,
+														   aocoscan->appendOnlyMetaDataSnapshot,
+														   aocoscan->columnScanInfo.proj_atts,
+														   aocoscan->columnScanInfo.num_proj_atts);
 
+		Assert(fileSegTotals->totalbytes >= 0);
+
+		totalBlocks = RelationGuessNumberOfBlocksFromSize(fileSegTotals->totalbytes);
 		pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_TOTAL,
-									 nblocks);
+									 totalBlocks);
 	}
-#endif
 
 	/* set our scan endpoints */
 	if (!allow_sync)
@@ -1722,21 +1775,23 @@ aoco_index_build_range_scan(Relation heapRelation,
 			(numblocks != InvalidBlockNumber && ItemPointerGetBlockNumber(&slot->tts_tid) >= numblocks))
 			continue;
 
-		/* GPDB_12_MERGE_FIXME */
-#if 0
 		/* Report scan progress, if asked to. */
 		if (progress)
 		{
-			BlockNumber blocks_done = appendonly_scan_get_blocks_done(aoscan);
+			int64 current_blkno =
+					  RelationGuessNumberOfBlocksFromSize(aocoscan->totalBytesRead);
 
-			if (blocks_done != previous_blkno)
+			/* XXX: How can we report for builds with parallel scans? */
+			Assert(!aocoscan->rs_base.rs_parallel);
+
+			/* As soon as a new block starts, report it as scanned */
+			if (current_blkno != previous_blkno)
 			{
 				pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_DONE,
-											 blocks_done);
-				previous_blkno = blocks_done;
+											 current_blkno);
+				previous_blkno = current_blkno;
 			}
 		}
-#endif
 
 		aoTupleId = (AOTupleId *) &slot->tts_tid;
 		/*
@@ -1792,28 +1847,6 @@ aoco_index_build_range_scan(Relation heapRelation,
 		         callback_state);
 
 	}
-
-	/* GPDB_12_MERGE_FIXME */
-#if 0
-	/* Report scan progress one last time. */
-	if (progress)
-	{
-		BlockNumber blks_done;
-
-		if (aoscan->rs_base.rs_parallel != NULL)
-		{
-			ParallelBlockTableScanDesc pbscan;
-
-			pbscan = (ParallelBlockTableScanDesc) aoscan->rs_base.rs_parallel;
-			blks_done = pbscan->phs_nblocks;
-		}
-		else
-			blks_done = aoscan->rs_nblocks;
-
-		pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_DONE,
-									 blks_done);
-	}
-#endif
 
 	table_endscan(scan);
 

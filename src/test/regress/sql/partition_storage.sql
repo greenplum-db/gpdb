@@ -478,3 +478,23 @@ drop table if exists co_can cascade;
 
 -- Split default partition
  alter table pt_co_tab_rng split default partition start(45) end(60) into (partition dft, partition two);
+
+-- Add partition with different table am
+ SET gp_default_storage_options = 'blocksize=32768,compresstype=zstd,compresslevel=9';
+ SET default_table_access_method TO ao_column;
+ CREATE TABLE pt_co_to_heap
+ (
+    col1 int,
+    col2 decimal,
+    col3 text,
+    col4 bool
+ )
+ distributed by (col1)
+ partition by list(col2)
+ (
+    partition part1 values(1,2,3)
+ );
+ ALTER TABLE pt_co_to_heap ADD PARTITION p4 values(4) WITH (appendonly=false);
+ DROP TABLE pt_co_to_heap;
+ SET gp_default_storage_options TO DEFAULT;
+ SET default_table_access_method TO DEFAULT;

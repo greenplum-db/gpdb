@@ -109,6 +109,7 @@ typedef struct AppendOnlyInsertDescData
 
 	/* The block directory for the appendonly relation. */
 	AppendOnlyBlockDirectory blockDirectory;
+	Oid segrelid;
 } AppendOnlyInsertDescData;
 
 typedef AppendOnlyInsertDescData *AppendOnlyInsertDesc;
@@ -236,6 +237,12 @@ typedef struct AppendOnlyScanDescData
 	/* For Bitmap scan */
 	int			rs_cindex;		/* current tuple's index in tbmres->offsets */
 	struct AppendOnlyFetchDescData *aofetch;
+
+	/*
+	 * The total number of bytes read, compressed, across all segment files, so
+	 * far. This is used for scan progress reporting.
+	 */
+	int64		totalBytesRead;
 
 }	AppendOnlyScanDescData;
 
@@ -442,5 +449,21 @@ extern TM_Result appendonly_delete(
 		AppendOnlyDeleteDesc aoDeleteDesc,
 		AOTupleId* aoTupleId);
 extern void appendonly_delete_finish(AppendOnlyDeleteDesc aoDeleteDesc);
+
+/*
+ * Update total bytes read for the entire scan. If the block was compressed,
+ * update it with the compressed length. If the block was not compressed, update
+ * it with the uncompressed length.
+ */
+static inline void
+AppendOnlyScanDesc_UpdateTotalBytesRead(AppendOnlyScanDesc scan)
+{
+	Assert(scan->storageRead.isActive);
+
+	if (scan->storageRead.current.isCompressed)
+		scan->totalBytesRead += scan->storageRead.current.compressedLen;
+	else
+		scan->totalBytesRead += scan->storageRead.current.uncompressedLen;
+}
 
 #endif   /* CDBAPPENDONLYAM_H */

@@ -454,38 +454,20 @@ CConstraintInterval::PciIntervalFromScalarCmp(CMemoryPool *mp,
 	GPOS_ASSERT(nullptr != pexpr);
 	GPOS_ASSERT(CUtils::FScalarCmp(pexpr) || CUtils::FScalarArrayCmp(pexpr));
 
-	// TODO:  - May 28, 2012; add support for other expression forms
-	// besides (column relop const)
-	if (CPredicateUtils::FCompareIdentToConst(pexpr))
+	// Currently we support expression of the form
+	//         (column relop const)
+	//         (const reolop column)
+	CExpression *pexprIdent, *pexprConst;
+	if (CPredicateUtils::FCompareIdentToConst(pexpr, pexprIdent, pexprConst))
 	{
 		// column
 #ifdef GPOS_DEBUG
-		CScalarIdent *popScId;
-		CExpression *pexprLeft = (*pexpr)[0];
-		if (CUtils::FScalarIdent((*pexpr)[0]))
-		{
-			popScId = CScalarIdent::PopConvert(pexprLeft->Pop());
-		}
-		else
-		{
-			GPOS_ASSERT(CCastUtils::FBinaryCoercibleCastedScId(pexprLeft));
-			popScId = CScalarIdent::PopConvert((*pexprLeft)[0]->Pop());
-		}
+		CScalarIdent *popScId = CUtils::PscalarIdent(pexprIdent);
 		GPOS_ASSERT(colref == (CColRef *) popScId->Pcr());
 #endif	// GPOS_DEBUG
 
 		// constant
-		CExpression *pexprRight = (*pexpr)[1];
-		CScalarConst *popScConst;
-		if (CUtils::FScalarConst(pexprRight))
-		{
-			popScConst = CScalarConst::PopConvert(pexprRight->Pop());
-		}
-		else
-		{
-			GPOS_ASSERT(CCastUtils::FBinaryCoercibleCastedConst(pexprRight));
-			popScConst = CScalarConst::PopConvert((*pexprRight)[0]->Pop());
-		}
+		CScalarConst *popScConst = CUtils::PscalarConst(pexprConst);
 		CScalarCmp *popScCmp = CScalarCmp::PopConvert(pexpr->Pop());
 
 		return PciIntervalFromColConstCmp(mp, colref, popScCmp->ParseCmpType(),

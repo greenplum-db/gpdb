@@ -382,11 +382,18 @@ explain_ExecutorEnd(QueryDesc *queryDesc)
 {
 	if (queryDesc->totaltime && auto_explain_enabled())
 	{
+		MemoryContext oldcxt;
 		double		msec;
 
 		/* Wait for completion of all qExec processes. */
 		if (queryDesc->estate->dispatcherState && queryDesc->estate->dispatcherState->primaryResults)
 			cdbdisp_checkDispatchResult(queryDesc->estate->dispatcherState, DISPATCH_WAIT_NONE);
+
+		/*
+		 * Make sure we operate in the per-query context, so any cruft will be
+		 * discarded later during ExecutorEnd.
+		 */
+		oldcxt = MemoryContextSwitchTo(queryDesc->estate->es_query_cxt);
 
 		/*
 		 * Make sure stats accumulation is done.  (Note: it's okay if several
@@ -440,9 +447,9 @@ explain_ExecutorEnd(QueryDesc *queryDesc)
 					(errmsg("duration: %.3f ms  plan:\n%s",
 							msec, es->str->data),
 					 errhidestmt(true)));
-
-			pfree(es->str->data);
 		}
+
+		MemoryContextSwitchTo(oldcxt);
 	}
 
 	if (prev_ExecutorEnd)

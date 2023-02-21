@@ -66,6 +66,9 @@ ALTER SUBSCRIPTION regress_testsub CONNECTION 'dbname=regress_doesnotexist2';
 ALTER SUBSCRIPTION regress_testsub SET (slot_name = 'newname');
 
 -- fail
+ALTER SUBSCRIPTION regress_testsub SET (slot_name = '');
+
+-- fail
 ALTER SUBSCRIPTION regress_doesnotexist CONNECTION 'dbname=regress_doesnotexist2';
 ALTER SUBSCRIPTION regress_testsub SET (create_slot = false);
 
@@ -108,6 +111,8 @@ DROP SUBSCRIPTION regress_testsub;
 COMMIT;
 
 ALTER SUBSCRIPTION regress_testsub SET (slot_name = NONE);
+
+\dRs+
 
 -- now it works
 BEGIN;

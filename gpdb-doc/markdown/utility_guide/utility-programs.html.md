@@ -6,11 +6,11 @@ Greenplum Database uses the standard PostgreSQL client and server programs and p
 
 Several utilities are installed when you install the Greenplum Database server. These utilities reside in `$GPHOME/bin`. Other utilities must be downloaded from VMware Tanzu Network and installed separately. These include:
 
--   The [Tanzu Greenplum Backup and Restore](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/index.html) utilities.
--   The [Tanzu Greenplum Copy Utility](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Data-Copy-Utility/index.html).
--   The [Tanzu Greenplum Streaming Server](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Streaming-Server/index.html) utilities.
+-   The [VMware Greenplum Backup and Restore](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/index.html) utilities.
+-   The [VMware Greenplum Copy Utility](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Data-Copy-Utility/index.html).
+-   The [VMware Greenplum Streaming Server](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Streaming-Server/index.html) utilities.
 
-Additionally, the [Tanzu Clients](/vmware/client_tool_guides/about.html) package is a separate download from VMware Tanzu Network that includes selected utilities from the Greenplum Database server installation that you can install on a client system.
+Additionally, the [VMware Greenplum Clients](/vmware/client_tool_guides/about.html) package is a separate download from VMware Tanzu Network that includes selected utilities from the Greenplum Database server installation that you can install on a client system.
 
 Greenplum Database provides the following utility programs. Superscripts identify those utilities that require separate downloads, as well as those utilities that are also installed with the Client and Loader Tools Packages. \(See the Note following the table.\) All utilities are installed when you install the Greenplum Database server, unless specifically identified by a superscript.
 
@@ -41,7 +41,7 @@ Greenplum Database provides the following utility programs. Superscripts identif
 - [gpmovemirrors](ref/gpmovemirrors.html)
 - [gpmt](ref/gpmt.html)
 - [gppkg](ref/gppkg.html)
-- [gpcr](https://docs.vmware.com/en/VMware-Greenplum-Cluster-Recovery/1.0/vmware-greenplum-cluster-recovery/GUID-ref-gpcr.html)
+- [gpcr](https://docs.vmware.com/en/VMware-Greenplum-Cluster-Recovery/1.0/greenplum-cluster-recovery/GUID-ref-gpcr.html)
 - [gprecoverseg](ref/gprecoverseg.html)
 - [gpreload](ref/gpreload.html)
 - [gprestore](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/index.html)<sup>1</sup>
@@ -64,13 +64,11 @@ Greenplum Database provides the following utility programs. Superscripts identif
 - [reindexdb](ref/reindexdb.html)
 - [vacuumdb](ref/vacuumdb.html)
 
-**Note:**
+> **Note** <sup>1</sup> The utility program can be obtained from the *Greenplum Backup and Restore* tile on [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb-backup-restore).
 
-<sup>1</sup> The utility program can be obtained from the *Greenplum Backup and Restore* tile on [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb-backup-restore).
+> <sup>2</sup> The utility program can be obtained from the *Greenplum Data Copy Utility* tile on [VMware Tanzu Network](https://network.pivotal.io/products/gpdb-data-copy).
 
-<sup>2</sup> The utility program can be obtained from the *Greenplum Data Copy Utility* tile on [VMware Tanzu Network](https://network.pivotal.io/products/gpdb-data-copy).
+> <sup>3</sup> The utility program is also installed with the _Greenplum Client and Loader Tools Package_ for Linux and Windows. You can obtain these packages from the Greenplum Database _Greenplum Clients_ filegroup on [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb).
 
-<sup>3</sup> The utility program is also installed with the _Greenplum Client and Loader Tools Package_ for Linux and Windows. You can obtain these packages from the Greenplum Database _Greenplum Clients_ filegroup on [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb).
-
-<sup>4</sup> The utility program is also installed with the _Greenplum Client and Loader Tools Package_ for Linux. You can obtain the most up-to-date version of the _Greenplum Streaming Server_ from [VMware Tanzu Network](https://network.pivotal.io/products/greenplum-streaming-server).
+> <sup>4</sup> The utility program is also installed with the _Greenplum Client and Loader Tools Package_ for Linux. You can obtain the most up-to-date version of the _Greenplum Streaming Server_ from [VMware Tanzu Network](https://network.pivotal.io/products/greenplum-streaming-server).
 

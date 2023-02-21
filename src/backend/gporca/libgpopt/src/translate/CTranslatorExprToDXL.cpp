@@ -103,7 +103,7 @@
 #include "naucrates/dxl/operators/CDXLPhysicalDynamicBitmapTableScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalDynamicIndexScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalDynamicTableScan.h"
-#include "naucrates/dxl/operators/CDXLPhysicalExternalScan.h"
+#include "naucrates/dxl/operators/CDXLPhysicalForeignScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalGatherMotion.h"
 #include "naucrates/dxl/operators/CDXLPhysicalHashJoin.h"
 #include "naucrates/dxl/operators/CDXLPhysicalIndexOnlyScan.h"
@@ -157,9 +157,6 @@
 #include "naucrates/dxl/operators/CDXLScalarOneTimeFilter.h"
 #include "naucrates/dxl/operators/CDXLScalarOpExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarOpList.h"
-#include "naucrates/dxl/operators/CDXLScalarPartBound.h"
-#include "naucrates/dxl/operators/CDXLScalarPartDefault.h"
-#include "naucrates/dxl/operators/CDXLScalarPartListNullTest.h"
 #include "naucrates/dxl/operators/CDXLScalarProjElem.h"
 #include "naucrates/dxl/operators/CDXLScalarProjList.h"
 #include "naucrates/dxl/operators/CDXLScalarRecheckCondFilter.h"
@@ -338,7 +335,7 @@ CTranslatorExprToDXL::CreateDXLNode(CExpression *pexpr,
 	GPOS_ASSERT(nullptr != pexpr);
 	ULONG ulOpId = (ULONG) pexpr->Pop()->Eopid();
 	if (COperator::EopPhysicalTableScan == ulOpId ||
-		COperator::EopPhysicalExternalScan == ulOpId)
+		COperator::EopPhysicalForeignScan == ulOpId)
 	{
 		CDXLNode *dxlnode = PdxlnTblScan(
 			pexpr, nullptr /*pcrsOutput*/, colref_array, pdrgpdsBaseTables,
@@ -693,8 +690,8 @@ CTranslatorExprToDXL::PdxlnTblScan(CExpression *pexprTblScan,
 	}
 	else
 	{
-		GPOS_ASSERT(COperator::EopPhysicalExternalScan == op_id);
-		pdxlopTS = GPOS_NEW(m_mp) CDXLPhysicalExternalScan(m_mp, table_descr);
+		GPOS_ASSERT(COperator::EopPhysicalForeignScan == op_id);
+		pdxlopTS = GPOS_NEW(m_mp) CDXLPhysicalForeignScan(m_mp, table_descr);
 	}
 
 	CDXLNode *pdxlnTblScan = GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopTS);
@@ -1250,7 +1247,8 @@ CTranslatorExprToDXL::MakeTableDescForPart(const IMDRelation *part,
 		m_mp, part_mdid, part->Mdname().GetMDName(),
 		part->ConvertHashToRandom(), part->GetRelDistribution(),
 		part->RetrieveRelStorageType(), root_table_desc->GetExecuteAsUserId(),
-		root_table_desc->LockMode());
+		root_table_desc->LockMode(),
+		root_table_desc->GetAssignedQueryIdForTargetRel());
 
 	for (ULONG ul = 0; ul < part->ColumnCount(); ++ul)
 	{
@@ -1360,7 +1358,7 @@ CTranslatorExprToDXL::PdxlnDynamicTableScan(
 	{
 		const CBitSet *bs = pps_reqd->SelectorIds(popDTS->ScanId());
 		CBitSetIter bsi(*bs);
-		for (ULONG ul = 0; bsi.Advance(); ul++)
+		while (bsi.Advance())
 		{
 			selector_ids->Append(GPOS_NEW(m_mp) ULONG(bsi.Bit()));
 		}
@@ -1460,7 +1458,7 @@ CTranslatorExprToDXL::PdxlnDynamicBitmapTableScan(
 	{
 		const CBitSet *bs = pps_reqd->SelectorIds(pop->ScanId());
 		CBitSetIter bsi(*bs);
-		for (ULONG ul = 0; bsi.Advance(); ul++)
+		while (bsi.Advance())
 		{
 			selector_ids->Append(GPOS_NEW(m_mp) ULONG(bsi.Bit()));
 		}
@@ -1563,7 +1561,7 @@ CTranslatorExprToDXL::PdxlnDynamicIndexScan(
 	{
 		const CBitSet *bs = pps_reqd->SelectorIds(popDIS->ScanId());
 		CBitSetIter bsi(*bs);
-		for (ULONG ul = 0; bsi.Advance(); ul++)
+		while (bsi.Advance())
 		{
 			selector_ids->Append(GPOS_NEW(m_mp) ULONG(bsi.Bit()));
 		}
@@ -1919,7 +1917,7 @@ CTranslatorExprToDXL::PdxlnFromFilter(CExpression *pexprFilter,
 	switch (eopidRelational)
 	{
 		case COperator::EopPhysicalTableScan:
-		case COperator::EopPhysicalExternalScan:
+		case COperator::EopPhysicalForeignScan:
 		{
 			// if there is a structure of the form
 			// 		filter->tablescan, or filter->CTG then
@@ -3914,7 +3912,7 @@ UlIndexFilter(Edxlopid edxlopid)
 	switch (edxlopid)
 	{
 		case EdxlopPhysicalTableScan:
-		case EdxlopPhysicalExternalScan:
+		case EdxlopPhysicalForeignScan:
 			return EdxltsIndexFilter;
 		case EdxlopPhysicalBitmapTableScan:
 		case EdxlopPhysicalDynamicBitmapTableScan:
@@ -3960,7 +3958,7 @@ CTranslatorExprToDXL::PdxlnResultFromNLJoinOuter(
 	switch (edxlopid)
 	{
 		case EdxlopPhysicalTableScan:
-		case EdxlopPhysicalExternalScan:
+		case EdxlopPhysicalForeignScan:
 		case EdxlopPhysicalBitmapTableScan:
 		case EdxlopPhysicalDynamicTableScan:
 		case EdxlopPhysicalIndexScan:
@@ -4826,7 +4824,7 @@ CTranslatorExprToDXL::PdxlnPartitionSelector(
 	GPOS_ASSERT(nullptr != bs);
 	ULongPtrArray *parts = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
 	CBitSetIter bsi(*bs);
-	for (ULONG ul = 0; bsi.Advance(); ul++)
+	while (bsi.Advance())
 	{
 		parts->Append(GPOS_NEW(m_mp) ULONG(bsi.Bit()));
 	}
@@ -4866,7 +4864,6 @@ CTranslatorExprToDXL::PdxlnDML(CExpression *pexpr,
 	GPOS_ASSERT(1 == pexpr->Arity());
 
 	ULONG action_colid = 0;
-	ULONG oid_colid = 0;
 	ULONG ctid_colid = 0;
 	ULONG segid_colid = 0;
 
@@ -4888,12 +4885,6 @@ CTranslatorExprToDXL::PdxlnDML(CExpression *pexpr,
 	GPOS_ASSERT(nullptr != pcrAction);
 	action_colid = pcrAction->Id();
 
-	CColRef *pcrOid = popDML->PcrTableOid();
-	if (pcrOid != nullptr)
-	{
-		oid_colid = pcrOid->Id();
-	}
-
 	CColRef *pcrCtid = popDML->PcrCtid();
 	CColRef *pcrSegmentId = popDML->PcrSegmentId();
 	if (nullptr != pcrCtid)
@@ -4914,9 +4905,8 @@ CTranslatorExprToDXL::PdxlnDML(CExpression *pexpr,
 	CDXLDirectDispatchInfo *dxl_direct_dispatch_info =
 		GetDXLDirectDispatchInfo(pexpr);
 	CDXLPhysicalDML *pdxlopDML = GPOS_NEW(m_mp) CDXLPhysicalDML(
-		m_mp, dxl_dml_type, table_descr, pdrgpul, action_colid, oid_colid,
-		ctid_colid, segid_colid, dxl_direct_dispatch_info,
-		popDML->IsInputSortReq(), popDML->FSplit());
+		m_mp, dxl_dml_type, table_descr, pdrgpul, action_colid, ctid_colid,
+		segid_colid, dxl_direct_dispatch_info, popDML->FSplit());
 
 	// project list
 	CColRefSet *pcrsOutput = pexpr->Prpp()->PcrsRequired();
@@ -6588,9 +6578,9 @@ CTranslatorExprToDXL::MakeDXLTableDescr(
 	CMDIdGPDB *mdid = CMDIdGPDB::CastMdid(ptabdesc->MDId());
 	mdid->AddRef();
 
-	CDXLTableDescr *table_descr = GPOS_NEW(m_mp)
-		CDXLTableDescr(m_mp, mdid, pmdnameTbl, ptabdesc->GetExecuteAsUserId(),
-					   ptabdesc->LockMode());
+	CDXLTableDescr *table_descr = GPOS_NEW(m_mp) CDXLTableDescr(
+		m_mp, mdid, pmdnameTbl, ptabdesc->GetExecuteAsUserId(),
+		ptabdesc->LockMode(), ptabdesc->GetAssignedQueryIdForTargetRel());
 
 	const ULONG ulColumns = ptabdesc->ColumnCount();
 	// translate col descriptors

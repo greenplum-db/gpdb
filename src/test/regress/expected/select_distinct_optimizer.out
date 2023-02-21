@@ -331,10 +331,8 @@ SELECT null IS NOT DISTINCT FROM null as "yes";
 (1 row)
 
 -- join cases
--- test IS DISTINCT FROM and IS NOT DISTINCT FROM join qual. the postgres planner doesn't support hash join
--- on IS NOT DISTINCT FROM for now, ORCA support "IS NOT DISTINCT FROM" Hash Join but generates wrong result,
--- DISABLE ORCA. Please fix me later if ORCA resolve the problem.
-SET optimizer TO off;
+-- test IS DISTINCT FROM and IS NOT DISTINCT FROM join qual.The postgres planner doesn't support hash join on
+-- IS NOT DISTINCT FROM for now, ORCA supports Hash Join on "IS NOT DISTINCT FROM".
 CREATE TABLE distinct_1(a int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -344,37 +342,103 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 INSERT INTO distinct_1 VALUES(1),(2),(NULL);
 INSERT INTO distinct_2 VALUES(1),(NULL);
 EXPLAIN SELECT * FROM distinct_1, distinct_2 WHERE distinct_1.a IS DISTINCT FROM distinct_2.a;
-                                               QUERY PLAN                                                
----------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10214778180.80 rows=9264416310 width=8)
-   ->  Nested Loop  (cost=10000000000.00..10091252630.00 rows=3088138770 width=8)
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.54 rows=1 width=8)
+   ->  Nested Loop  (cost=0.00..1324032.54 rows=1 width=8)
          Join Filter: (distinct_1.a IS DISTINCT FROM distinct_2.a)
-         ->  Seq Scan on distinct_1  (cost=0.00..355.00 rows=32100 width=4)
-         ->  Materialize  (cost=0.00..2120.50 rows=96300 width=4)
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1639.00 rows=96300 width=4)
-                     ->  Seq Scan on distinct_2  (cost=0.00..355.00 rows=32100 width=4)
- Optimizer: Postgres query optimizer
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+               ->  Seq Scan on distinct_1  (cost=0.00..431.00 rows=1 width=4)
+         ->  Seq Scan on distinct_2  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+EXPLAIN SELECT * FROM distinct_1 left join distinct_2 on distinct_1.a IS DISTINCT FROM distinct_2.a;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.55 rows=2 width=8)
+   ->  Nested Loop Left Join  (cost=0.00..1324032.55 rows=1 width=8)
+         Join Filter: (distinct_1.a IS DISTINCT FROM distinct_2.a)
+         ->  Seq Scan on distinct_1  (cost=0.00..431.00 rows=1 width=4)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Seq Scan on distinct_2  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+EXPLAIN SELECT * FROM distinct_1 right join distinct_2 on distinct_1.a IS DISTINCT FROM distinct_2.a;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.55 rows=2 width=8)
+   ->  Nested Loop Left Join  (cost=0.00..1324032.55 rows=1 width=8)
+         Join Filter: (distinct_1.a IS DISTINCT FROM distinct_2.a)
+         ->  Seq Scan on distinct_2  (cost=0.00..431.00 rows=1 width=4)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Seq Scan on distinct_1  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
 EXPLAIN SELECT * FROM distinct_1, distinct_2 WHERE distinct_1.a IS NOT DISTINCT FROM distinct_2.a;
-                                               QUERY PLAN                                               
---------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10091376279.20 rows=9273690 width=8)
-   ->  Nested Loop  (cost=10000000000.00..10091252630.00 rows=3091230 width=8)
-         Join Filter: (NOT (distinct_1.a IS DISTINCT FROM distinct_2.a))
-         ->  Seq Scan on distinct_1  (cost=0.00..355.00 rows=32100 width=4)
-         ->  Materialize  (cost=0.00..2120.50 rows=96300 width=4)
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1639.00 rows=96300 width=4)
-                     ->  Seq Scan on distinct_2  (cost=0.00..355.00 rows=32100 width=4)
- Optimizer: Postgres query optimizer
-(8 rows)
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
+         Hash Cond: (NOT (distinct_1.a IS DISTINCT FROM distinct_2.a))
+         ->  Seq Scan on distinct_1  (cost=0.00..431.00 rows=1 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+               ->  Seq Scan on distinct_2  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+EXPLAIN SELECT * FROM distinct_1 left join distinct_2 on distinct_1.a IS NOT DISTINCT FROM distinct_2.a;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=2 width=8)
+   ->  Hash Left Join  (cost=0.00..862.00 rows=1 width=8)
+         Hash Cond: (NOT (distinct_1.a IS DISTINCT FROM distinct_2.a))
+         ->  Seq Scan on distinct_1  (cost=0.00..431.00 rows=1 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+               ->  Seq Scan on distinct_2  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+EXPLAIN SELECT * FROM distinct_1 right join  distinct_2 on distinct_1.a IS NOT DISTINCT FROM distinct_2.a;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=2 width=8)
+   ->  Hash Left Join  (cost=0.00..862.00 rows=1 width=8)
+         Hash Cond: (NOT (distinct_2.a IS DISTINCT FROM distinct_1.a))
+         ->  Seq Scan on distinct_2  (cost=0.00..431.00 rows=1 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+               ->  Seq Scan on distinct_1  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
 
 SELECT * FROM distinct_1, distinct_2 WHERE distinct_1.a IS DISTINCT FROM distinct_2.a;
+ a | a 
+---+---
+ 1 |  
+ 2 |  
+ 2 | 1
+   | 1
+(4 rows)
+
+SELECT * FROM distinct_1 left join  distinct_2 on distinct_1.a IS DISTINCT FROM distinct_2.a;
  a | a 
 ---+---
  2 |  
  2 | 1
    | 1
+ 1 |  
+(4 rows)
+
+SELECT * FROM distinct_1 right join  distinct_2 on distinct_1.a IS DISTINCT FROM distinct_2.a;
+ a | a 
+---+---
+ 2 | 1
+   | 1
+ 2 |  
  1 |  
 (4 rows)
 
@@ -385,9 +449,23 @@ SELECT * FROM distinct_1, distinct_2 WHERE distinct_1.a IS NOT DISTINCT FROM dis
  1 | 1
 (2 rows)
 
+SELECT * FROM distinct_1 left join distinct_2 on distinct_1.a IS NOT DISTINCT FROM distinct_2.a;
+ a | a 
+---+---
+ 1 | 1
+ 2 |  
+   |  
+(3 rows)
+
+SELECT * FROM distinct_1 right join distinct_2 on distinct_1.a IS NOT DISTINCT FROM distinct_2.a;
+ a | a 
+---+---
+ 1 | 1
+   |  
+(2 rows)
+
 DROP TABLE distinct_1;
 DROP TABLE distinct_2;
-RESET optimizer;
 -- gpdb start: test inherit/partition table distinct when gp_statistics_pullup_from_child_partition is on
 set gp_statistics_pullup_from_child_partition to on;
 CREATE TABLE sales (id int, date date, amt decimal(10,2))

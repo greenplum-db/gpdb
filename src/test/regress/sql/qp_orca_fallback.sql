@@ -103,6 +103,9 @@ set optimizer_enable_hashagg = off;
 set optimizer_enable_groupagg = off;
 explain select count(*) from foo group by a;
 
+-- Orca should fallback for RTE_TABLEFUNC RTE type
+explain SELECT * FROM xmltable('/root' passing '' COLUMNS element text);
+
 create table ext_part(a int) partition by list(a);
 create table p1(a int);
 create external web table p2_ext (like p1) EXECUTE 'cat something.txt' FORMAT 'TEXT';

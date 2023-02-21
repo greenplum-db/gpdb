@@ -2065,9 +2065,9 @@ select 1 from pg_statistic where starelid='hll_default_heap'::regclass and stava
 
 create table hll_default_ao (i int, j int) with (appendonly=true) distributed by (i);
 select reloptions from pg_class where relname='hll_default_ao';
- reloptions 
-------------
- 
+                            reloptions                             
+-------------------------------------------------------------------
+ {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
 (1 row)
 
 insert into hll_default_ao values (777,6);

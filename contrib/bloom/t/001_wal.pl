@@ -3,7 +3,18 @@ use strict;
 use warnings;
 use PostgresNode;
 use TestLib;
-use Test::More tests => 31;
+use Test::More;
+
+if (TestLib::has_wal_read_bug)
+{
+	# We'd prefer to use Test::More->builder->todo_start, but the bug causes
+	# this test file to die(), not merely to fail.
+	plan skip_all => 'filesystem bug';
+}
+else
+{
+	plan tests => 31;
+}
 
 my $node_master;
 my $node_standby;
@@ -13,12 +24,10 @@ sub test_index_replay
 {
 	my ($test_name) = @_;
 
+	local $Test::Builder::Level = $Test::Builder::Level + 1;
+
 	# Wait for standby to catch up
-	my $applname = $node_standby->name;
-	my $caughtup_query =
-	  "SELECT pg_current_wal_lsn() <= write_lsn FROM pg_stat_replication WHERE application_name = '$applname';";
-	$node_master->poll_query_until('postgres', $caughtup_query)
-	  or die "Timed out while waiting for standby 1 to catch up";
+	$node_master->wait_for_catchup($node_standby);
 
 	my $queries = qq(SET enable_seqscan=off;
 SET enable_bitmapscan=on;

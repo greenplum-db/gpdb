@@ -23,8 +23,9 @@ ALTER TABLE [IF EXISTS] <name>
 ALTER TABLE ALL IN TABLESPACE <name> [ OWNED BY <role_name> [, ... ] ]
     SET TABLESPACE <new_tablespace> [ NOWAIT ]
 
-ALTER TABLE [IF EXISTS] [ONLY] <name>
-   | DISTRIBUTED BY ({<column_name> [<opclass>]} [, ... ] )
+ALTER TABLE [IF EXISTS] [ONLY] <name> SET
+   [ WITH (reorganize=true|false) ]
+     DISTRIBUTED BY ({<column_name> [<opclass>]} [, ... ] )
    | DISTRIBUTED RANDOMLY
    | DISTRIBUTED REPLICATED 
 
@@ -56,7 +57,7 @@ where <action> is one of:
   CLUSTER ON <index_name>
   SET WITHOUT CLUSTER
   SET WITHOUT OIDS
-  SET ACCESS METHOD <access_method>
+  SET ACCESS METHOD <access_method>  WITH ( <storage_parameter> = <value> )
   SET (<storage_parameter> = <value>)
   RESET (<storage_parameter> [, ... ])
   SET  WITH (<storage_parameter> = <value>)
@@ -116,7 +117,7 @@ where partition\_element is:
   | START ([<datatype>] '<start_value>') [INCLUSIVE | EXCLUSIVE]
      [ END ([<datatype>] '<end_value>') [INCLUSIVE | EXCLUSIVE] ]
   | END ([<datatype>] '<end_value>') [INCLUSIVE | EXCLUSIVE]
-[ WITH ( <partition_storage_parameter>=<value> [, ... ] ) ]
+[ WITH ( <storage_parameter> = value> [ , ... ] ) ]
 [ TABLESPACE <tablespace> ]
 ```
 
@@ -138,7 +139,7 @@ and subpartition\_element is:
   | [SUBPARTITION <subpartition_name>] 
      END ([<datatype>] '<end_value>') [INCLUSIVE | EXCLUSIVE]
      [ EVERY ( [<number | datatype>] '<interval_value>') ]
-[ WITH ( <partition_storage_parameter>=<value> [, ... ] ) ]
+[ WITH ( <storage_parameter>=<value> [, ... ] ) ]
 [ TABLESPACE <tablespace> ]
 ```
 
@@ -172,6 +173,7 @@ where storage\_parameter when used with the `SET WITH` command is:
    fillfactor={10-100}
    checksum={true | false }
    reorganize={true | false }
+   vacuum_index_cleanup { true | false } 
 ```
 
   <p class="note">
@@ -197,7 +199,7 @@ Although you can specify the table's access method using the <code>appendoptimiz
 -   **IF EXISTS** — Do not throw an error if the table does not exist. A notice is issued in this case.
 -   **SET DATA TYPE** — This form changes the data type of a column of a table. Note that you cannot alter column data types that are being used as distribution or partitioning keys. Indexes and simple table constraints involving the column will be automatically converted to use the new column type by reparsing the originally supplied expression. The optional `COLLATE` clause specifies a collation for the new column; if omitted, the collation is the default for the new column type. The optional `USING` clause specifies how to compute the new column value from the old. If omitted, the default conversion is the same as an assignment cast from old data type to new. A `USING` clause must be provided if there is no implicit or assignment cast from old to new type.
 
-    **Note:** GPORCA supports collation only when all columns in the query use the same collation. If columns in the query use different collations, then Greenplum uses the Postgres Planner.
+    > **Note** GPORCA supports collation only when all columns in the query use the same collation. If columns in the query use different collations, then Greenplum uses the Postgres Planner.
 
     Changing a column data type requires a table rewrite. For information about table rewrites performed by `ALTER TABLE`, see [Notes](#section5).
 
@@ -223,18 +225,16 @@ Although you can specify the table's access method using the <code>appendoptimiz
 -   **DROP CONSTRAINT \[IF EXISTS\]** — Drops the specified constraint on a table. If `IF EXISTS` is specified and the constraint does not exist, no error is thrown. In this case a notice is issued instead.
 -   **DISABLE/ENABLE TRIGGER** — Deactivates or activates trigger\(s\) belonging to the table. A deactivated trigger is still known to the system, but is not run when its triggering event occurs. For a deferred trigger, the enable status is checked when the event occurs, not when the trigger function is actually run. One may deactivate or activate a single trigger specified by name, or all triggers on the table, or only user-created triggers. Deactivating or activating constraint triggers requires superuser privileges.
 
-    **Note:** triggers are not supported in Greenplum Database. Triggers in general have very limited functionality due to the parallelism of Greenplum Database.
+    > **Note** triggers are not supported in Greenplum Database. Triggers in general have very limited functionality due to the parallelism of Greenplum Database.
 
--   **CLUSTER ON/SET WITHOUT CLUSTER** — Selects or removes the default index for future `CLUSTER` operations. It does not actually re-cluster the table. Note that `CLUSTER` is not the recommended way to physically reorder a table in Greenplum Database because it takes so long. It is better to recreate the table with [CREATE TABLE AS](CREATE_TABLE_AS.html) and order it by the index column\(s\).
-
-    **Note:** `CLUSTER ON` is not supported on append-optimized tables.
+-   **CLUSTER ON/SET WITHOUT CLUSTER** — Selects or removes the default index for future `CLUSTER` operations. It does not actually re-cluster the table.
 
 -   **SET WITHOUT OIDS** — Removes the OID system column from the table.
 
-    **Warning:** VMware does not support using `SET WITH OIDS` or `oids=TRUE` to assign an OID system column.On large tables, such as those in a typical Greenplum Database system, using OIDs for table rows can cause wrap-around of the 32-bit OID counter. Once the counter wraps around, OIDs can no longer be assumed to be unique, which not only makes them useless to user applications, but can also cause problems in the Greenplum Database system catalog tables. In addition, excluding OIDs from a table reduces the space required to store the table on disk by 4 bytes per row, slightly improving performance. You cannot create OIDS on a partitioned or column-oriented table \(an error is displayed\). This syntax is deprecated and will be removed in a future Greenplum release.
+    > **Caution** VMware does not support using `SET WITH OIDS` or `oids=TRUE` to assign an OID system column.On large tables, such as those in a typical Greenplum Database system, using OIDs for table rows can cause wrap-around of the 32-bit OID counter. Once the counter wraps around, OIDs can no longer be assumed to be unique, which not only makes them useless to user applications, but can also cause problems in the Greenplum Database system catalog tables. In addition, excluding OIDs from a table reduces the space required to store the table on disk by 4 bytes per row, slightly improving performance. You cannot create OIDS on a partitioned or column-oriented table \(an error is displayed\). This syntax is deprecated and will be removed in a future Greenplum release.
 
 -   **SET \( FILLFACTOR = value\) / RESET \(FILLFACTOR\)** — Changes the fillfactor for the table. The fillfactor for a table is a percentage between 10 and 100. 100 \(complete packing\) is the default. When a smaller fillfactor is specified, `INSERT` operations pack table pages only to the indicated percentage; the remaining space on each page is reserved for updating rows on that page. This gives `UPDATE` a chance to place the updated copy of a row on the same page as the original, which is more efficient than placing it on a different page. For a table whose entries are never updated, complete packing is the best choice, but in heavily updated tables smaller fillfactors are appropriate. Note that the table contents will not be modified immediately by this command. You will need to rewrite the table to get the desired effects. That can be done with [VACUUM](VACUUM.html) or one of the forms of `ALTER TABLE` that forces a table rewrite. For information about the forms of `ALTER TABLE` that perform a table rewrite, see [Notes](#section5).
--   **SET DISTRIBUTED** — Changes the distribution policy of a table. Changing a hash distribution policy, or changing to or from a replicated policy, will cause the table data to be physically redistributed on disk, which can be resource intensive.
+-   **SET DISTRIBUTED** — Changes the distribution policy of a table. Changing a hash distribution policy, or changing to or from a replicated policy, will cause the table data to be physically redistributed on disk, which can be resource intensive. *While Greenplum Database permits changing the distribution policy of a writable external table, the operation never results in physical redistribution of the external data.*
 -   **INHERIT parent\_table / NO INHERIT parent\_table** — Adds or removes the target table as a child of the specified parent table. Queries against the parent will include records of its child table. To be added as a child, the target table must already contain all the same columns as the parent \(it could have additional columns, too\). The columns must have matching data types, and if they have `NOT NULL` constraints in the parent then they must also have `NOT NULL` constraints in the child. There must also be matching child-table constraints for all `CHECK` constraints of the parent, except those marked non-inheritable \(that is, created with `ALTER TABLE ... ADD CONSTRAINT ... NO INHERIT`\) in the parent, which are ignored; all child-table constraints matched must not be marked non-inheritable. Currently `UNIQUE`, `PRIMARY KEY`, and `FOREIGN KEY` constraints are not considered, but this may change in the future.
 -   OF type\_name — This form links the table to a composite type as though `CREATE TABLE OF` had formed it. The table's list of column names and types must precisely match that of the composite type; the presence of an `oid` system column is permitted to differ. The table must not inherit from any other table. These restrictions ensure that `CREATE TABLE OF` would permit an equivalent table definition.
 -   **NOT OF** — This form dissociates a typed table from its type.
@@ -244,13 +244,13 @@ Although you can specify the table's access method using the <code>appendoptimiz
 -   **SET SCHEMA** — Moves the table into another schema. Associated indexes, constraints, and sequences owned by table columns are moved as well.
 -   **ALTER PARTITION \| DROP PARTITION \| RENAME PARTITION \| TRUNCATE PARTITION \| ADD PARTITION \| SPLIT PARTITION \| EXCHANGE PARTITION \| SET SUBPARTITION TEMPLATE**— Changes the structure of a partitioned table. In most cases, you must go through the parent table to alter one of its child table partitions.
 
-**Note:** If you add a partition to a table that has subpartition encodings, the new partition inherits the storage directives for the subpartitions. For more information about the precedence of compression settings, see [Using Compression](../../admin_guide/ddl/ddl-storage.html#topic40).
+> **Note** If you add a partition to a table that has subpartition encodings, the new partition inherits the storage directives for the subpartitions. For more information about the precedence of compression settings, see [Using Compression](../../admin_guide/ddl/ddl-storage.html#topic40).
 
 All the forms of `ALTER TABLE` that act on a single table, except `RENAME` and `SET SCHEMA`, can be combined into a list of multiple alterations to apply together. For example, it is possible to add several columns and/or alter the type of several columns in a single command. This is particularly useful with large tables, since only one pass over the table need be made.
 
 You must own the table to use `ALTER TABLE`. To change the schema or tablespace of a table, you must also have `CREATE` privilege on the new schema or tablespace. To add the table as a new child of a parent table, you must own the parent table as well. To alter the owner, you must also be a direct or indirect member of the new owning role, and that role must have `CREATE` privilege on the table's schema. To add a column or alter a column type or use the `OF` clause, you must also have `USAGE` privilege on the data type. A superuser has these privileges automatically.
 
-**Note:** Memory usage increases significantly when a table has many partitions, if a table has compression, or if the blocksize for a table is large. If the number of relations associated with the table is large, this condition can force an operation on the table to use more memory. For example, if the table is a CO table and has a large number of columns, each column is a relation. An operation like `ALTER TABLE ALTER COLUMN` opens all the columns in the table allocates associated buffers. If a CO table has 40 columns and 100 partitions, and the columns are compressed and the blocksize is 2 MB \(with a system factor of 3\), the system attempts to allocate 24 GB, that is \(40 ×100\) × \(2 ×3\) MB or 24 GB.
+> **Note** Memory usage increases significantly when a table has many partitions, if a table has compression, or if the blocksize for a table is large. If the number of relations associated with the table is large, this condition can force an operation on the table to use more memory. For example, if the table is a CO table and has a large number of columns, each column is a relation. An operation like `ALTER TABLE ALTER COLUMN` opens all the columns in the table allocates associated buffers. If a CO table has 40 columns and 100 partitions, and the columns are compressed and the blocksize is 2 MB \(with a system factor of 3\), the system attempts to allocate 24 GB, that is \(40 ×100\) × \(2 ×3\) MB or 24 GB.
 
 ## <a id="section4"></a>Parameters 
 
@@ -265,12 +265,12 @@ Although you can specify the table's access method using <code>SET &lt;storage_p
 ONLY
 :   Only perform the operation on the table name specified. If the `ONLY` keyword is not used, the operation will be performed on the named table and any child table partitions associated with that table.
 
-    **Note:** Adding or dropping a column, or changing a column's type, in a parent or descendant table only is not permitted. The parent table and its descendents must always have the same columns and types.
+    > **Note** Adding or dropping a column, or changing a column's type, in a parent or descendant table only is not permitted. The parent table and its descendents must always have the same columns and types.
 
 name
 :   The name \(possibly schema-qualified\) of an existing table to alter. If `ONLY` is specified, only that table is altered. If `ONLY` is not specified, the table and all its descendant tables \(if any\) are updated.
 
-    **Note:** Constraints can only be added to an entire table, not to a partition. Because of that restriction, the name parameter can only contain a table name, not a partition name.
+    > **Note** Constraints can only be added to an entire table, not to a partition. Because of that restriction, the name parameter can only contain a table name, not a partition name.
 
 column\_name
 :   Name of a new or existing column. Note that Greenplum Database distribution key columns must be treated with special care. Altering or dropping these columns can change the distribution policy for the table.
@@ -306,7 +306,7 @@ USER
 :   Deactivate or activate all triggers belonging to the table except for internally generated constraint triggers such as those that are used to implement foreign key constraints or deferrable uniqueness and exclusion constraints.
 
 index\_name
-:   The index name on which the table should be marked for clustering. Note that `CLUSTER` is not the recommended way to physically reorder a table in Greenplum Database because it takes so long. It is better to recreate the table with [CREATE TABLE AS](CREATE_TABLE_AS.html) and order it by the index column\(s\).
+:   The index name on which the table should be marked for clustering.
 
 FILLFACTOR
 :   Set the fillfactor percentage for a table.
@@ -316,14 +316,15 @@ value
 
 DISTRIBUTED BY \(\{column\_name \[opclass\]\}\) \| DISTRIBUTED RANDOMLY \| DISTRIBUTED REPLICATED
 :   Specifies the distribution policy for a table. Changing a hash distribution policy causes the table data to be physically redistributed, which can be resource intensive. If you declare the same hash distribution policy or change from hash to random distribution, data will not be redistributed unless you declare `SET WITH (reorganize=true)`.
-
-:   Changing to or from a replicated distribution policy causes the table data to be redistributed.
+:   Changing to or from a replicated distribution policy always causes the table data to be redistributed.
 
 analyze_hll_non_part_table=true|false
 :   Use `analyze_hll_non_part_table=true` to force collection of HLL statistics even if the table is not part of a partitioned table. The default is `false`.
 
 reorganize=true\|false
 :   Use `reorganize=true` when the hash distribution policy has not changed or when you have changed from a hash to a random distribution, and you want to redistribute the data anyway.
+:   If you are setting the distribution policy, you must specify the `WITH (reorganize=<value>)` clause before the `DISTRIBUTED ...` clause.   
+:   Any attempt to reorganize an external table fails with an error.
 
 parent\_table
 :   A parent table to associate or de-associate with this table.
@@ -375,12 +376,6 @@ ADD PARTITION
 EXCHANGE \[DEFAULT\] PARTITION
 :   Exchanges another table into the partition hierarchy into the place of an existing partition. In a multi-level partition design, you can only exchange the lowest level partitions \(those that contain data\).
 
-:   The Greenplum Database server configuration parameter `gp_enable_exchange_default_partition` controls availability of the `EXCHANGE DEFAULT PARTITION` clause. The default value for the parameter is `off`. The clause is not available and Greenplum Database returns an error if the clause is specified in an `ALTER TABLE` command.
-
-:   For information about the parameter, see [Server Configuration Parameters](../config_params/guc_config.html).
-
-    **Warning:** Before you exchange the default partition, you must ensure the data in the table to be exchanged, the new default partition, is valid for the default partition. For example, the data in the new default partition must not contain data that would be valid in other leaf child partitions of the partitioned table. Otherwise, queries against the partitioned table with the exchanged default partition that are run by GPORCA might return incorrect results.
-
 :   **WITH TABLE** table\_name - The name of the table you are swapping into the partition design. You can exchange a table where the table data is stored in the database. For example, the table is created with the `CREATE TABLE` command. The table must have the same number of columns, column order, column names, column types, and distribution policy as the parent table.
 
 :   With the `EXCHANGE PARTITION` clause, you can also exchange a readable external table \(created with the `CREATE EXTERNAL TABLE` command\) into the partition hierarchy in the place of an existing leaf child partition. If you specify a readable external table, you must also specify the `WITHOUT VALIDATION` clause to skip table validation against the `CHECK` constraint of the partition you are exchanging.
@@ -391,7 +386,7 @@ EXCHANGE \[DEFAULT\] PARTITION
 
 :   **WITH** \| **WITHOUT VALIDATION** - Validates that the data in the table matches the `CHECK` constraint of the partition you are exchanging. The default is to validate the data against the `CHECK` constraint.
 
-    **Warning:** If you specify the `WITHOUT VALIDATION` clause, you must ensure that the data in table that you are exchanging for an existing child leaf partition is valid against the `CHECK` constraints on the partition. Otherwise, queries against the partitioned table might return incorrect results.
+    > **Caution** If you specify the `WITHOUT VALIDATION` clause, you must ensure that the data in table that you are exchanging for an existing child leaf partition is valid against the `CHECK` constraints on the partition. Otherwise, queries against the partitioned table might return incorrect results.
 
 SET SUBPARTITION TEMPLATE
 :   Modifies the subpartition template for an existing partition. After a new subpartition template is set, all new partitions added will have the new subpartition design \(existing partitions are not modified\).
@@ -441,11 +436,11 @@ This table lists the `ALTER TABLE` operations that require a table rewrite when 
 |`ADD COLUMN`|No|Yes|Yes|
 | `ALTER COLUMN SET ENCODING`|Yes|N/A|N/A|
 
-**Note:** Dropping a system `oid` column also requires a table rewrite.
+> **Note** Dropping a system `oid` column also requires a table rewrite.
 
 When a column is added with `ADD COLUMN`, all existing rows in the table are initialized with the column's default value, or `NULL` if no `DEFAULT` clause is specified. Adding a column with a non-null default or changing the type of an existing column will require the entire table and indexes to be rewritten. As an exception, if the `USING` clause does not change the column contents and the old type is either binary coercible to the new type or an unconstrained domain over the new type, a table rewrite is not needed, but any indexes on the affected columns must still be rebuilt. Table and/or index rebuilds may take a significant amount of time for a large table; and will temporarily require as much as double the disk space.
 
-**Important:** The forms of `ALTER TABLE` that perform a table rewrite on an append-optimized table are not MVCC-safe. After a table rewrite, the table will appear empty to concurrent transactions if they are using a snapshot taken before the rewrite occurred. See [MVCC Caveats](https://www.postgresql.org/docs/9.4/mvcc-caveats.html) for more details.
+> **Important** The forms of `ALTER TABLE` that perform a table rewrite on an append-optimized table are not MVCC-safe. After a table rewrite, the table will appear empty to concurrent transactions if they are using a snapshot taken before the rewrite occurred. See [MVCC Caveats](https://www.postgresql.org/docs/12/mvcc-caveats.html) for more details.
 
 You can specify multiple changes in a single `ALTER TABLE` command, which will be done in a single pass over the table.
 
@@ -545,6 +540,46 @@ Move a table to a different schema:
 
 ```
 ALTER TABLE myschema.distributors SET SCHEMA yourschema;
+```
+
+Change a table's access method to `ao_row`:
+
+```
+ALTER TABLE distributors SET ACCESS METHOD ao_row;
+```
+
+Change a table's blocksize to 32768:
+
+```
+ALTER TABLE distributors SET (blocksize = 32768);
+```
+
+Change a table's access method to ao_row, compression type to zstd and compression level to 4:
+
+```
+ALTER TABLE sales SET ACCESS METHOD ao_row with (compresstype=zstd,compresslevel=4);
+```
+
+Change access method for all existing partitions of a table:
+
+```
+ALTER TABLE sales SET ACCESS METHOD ao_row;
+```
+
+Change all future partitions of a table to have an access method of `heap`, leaving the access method of current partitions as is:
+
+ALTER TABLE ONLY sales SET ACCESS METHOD heap;
+
+Add a column and change the table's access method:
+
+```
+ALTER TABLE distributors SET ACCESS METHOD ao_row, ADD column j int;
+```
+
+Add a column and change table storage parameters:
+
+```
+ALTER TABLE distributors SET (compresslevel=7), ADD COLUMN k int;
 ```
 
 Change the distribution policy of a table to replicated:

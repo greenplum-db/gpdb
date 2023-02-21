@@ -26,9 +26,9 @@ where forward\_direction can be empty or one of:
 
 `FETCH` retrieves rows using a previously-created cursor.
 
-**Note:** You cannot `FETCH` from a `PARALLEL RETRIEVE CURSOR`, you must [RETRIEVE](RETRIEVE.html) the rows from it.
+> **Note** You cannot `FETCH` from a `PARALLEL RETRIEVE CURSOR`, you must [RETRIEVE](RETRIEVE.html) the rows from it.
 
-**Note:** This page describes usage of cursors at the SQL command level. If you are trying to use cursors inside a PL/pgSQL function, the rules are different. See [PL/pgSQL function](../../analytics/pl_sql.html#topic1).
+> **Note** This page describes usage of cursors at the SQL command level. If you are trying to use cursors inside a PL/pgSQL function, the rules are different. See [PL/pgSQL function](../../analytics/pl_sql.html#topic1).
 
 A cursor has an associated position, which is used by `FETCH`. The cursor position can be before the first row of the query result, on any particular row of the result, or after the last row of the result. When created, a cursor is positioned before the first row. After fetching some rows, the cursor is positioned on the row most recently retrieved. If `FETCH` runs off the end of the available rows then the cursor is left positioned after the last row. `FETCH ALL` will always leave the cursor positioned after the last row.
 

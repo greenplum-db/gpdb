@@ -126,7 +126,7 @@
           <dxl:Partition Mdid="6.802906002.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.802906001.1.0" Name="date_dim_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;34,28" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.802906001.1.0" Name="date_dim_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -254,7 +254,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.802906002.1.0" Name="date_dim_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;34,28" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.802906002.1.0" Name="date_dim_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1501,7 +1501,7 @@
           <dxl:Partition Mdid="6.802906002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.802906001.1.1" Name="date_dim_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;34,28" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.802906001.1.1" Name="date_dim_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1629,7 +1629,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.802906002.1.1" Name="date_dim_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;34,28" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.802906002.1.1" Name="date_dim_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -2405,7 +2405,7 @@
           <dxl:Partition Mdid="6.810176005.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.810176001.1.1" Name="inventory_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.810176001.1.1" Name="inventory_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;10,4">
         <dxl:Columns>
           <dxl:Column Name="inv_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -2459,7 +2459,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.810176002.1.1" Name="inventory_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.810176002.1.1" Name="inventory_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;10,4">
         <dxl:Columns>
           <dxl:Column Name="inv_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -2513,7 +2513,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.810176003.1.1" Name="inventory_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.810176003.1.1" Name="inventory_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;10,4">
         <dxl:Columns>
           <dxl:Column Name="inv_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -2567,7 +2567,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.810176004.1.1" Name="inventory_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.810176004.1.1" Name="inventory_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;10,4">
         <dxl:Columns>
           <dxl:Column Name="inv_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -2621,7 +2621,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.810176005.1.1" Name="inventory_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.810176005.1.1" Name="inventory_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;10,4">
         <dxl:Columns>
           <dxl:Column Name="inv_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -2812,7 +2812,7 @@
           <dxl:Partition Mdid="6.802597005.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.802597001.1.1" Name="catalog_sales_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="15,17" Keys="15,17,0;40,34" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.802597001.1.1" Name="catalog_sales_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="15,17" Keys="15,17,0;40,34">
         <dxl:Columns>
           <dxl:Column Name="cs_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -2956,7 +2956,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.802597002.1.1" Name="catalog_sales_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="15,17" Keys="15,17,0;40,34" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.802597002.1.1" Name="catalog_sales_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="15,17" Keys="15,17,0;40,34">
         <dxl:Columns>
           <dxl:Column Name="cs_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -3100,7 +3100,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.802597003.1.1" Name="catalog_sales_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="15,17" Keys="15,17,0;40,34" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.802597003.1.1" Name="catalog_sales_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="15,17" Keys="15,17,0;40,34">
         <dxl:Columns>
           <dxl:Column Name="cs_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -3244,7 +3244,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.802597004.1.1" Name="catalog_sales_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="15,17" Keys="15,17,0;40,34" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.802597004.1.1" Name="catalog_sales_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="15,17" Keys="15,17,0;40,34">
         <dxl:Columns>
           <dxl:Column Name="cs_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -3388,7 +3388,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.802597005.1.1" Name="catalog_sales_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="15,17" Keys="15,17,0;40,34" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.802597005.1.1" Name="catalog_sales_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="15,17" Keys="15,17,0;40,34">
         <dxl:Columns>
           <dxl:Column Name="cs_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -4746,7 +4746,7 @@
         </dxl:LogicalJoin>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="16648">
+    <dxl:Plan Id="0" SpaceSize="16564">
       <dxl:HashJoin JoinType="Inner">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1749361.683589" Rows="321694266.492042" Width="355"/>

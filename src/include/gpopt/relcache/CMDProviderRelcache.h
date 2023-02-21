@@ -45,15 +45,11 @@ using namespace gpos;
 //---------------------------------------------------------------------------
 class CMDProviderRelcache : public IMDProvider
 {
-private:
-	// memory pool
-	CMemoryPool *m_mp;
-
 public:
 	CMDProviderRelcache(const CMDProviderRelcache &) = delete;
 
 	// ctor/dtor
-	explicit CMDProviderRelcache(CMemoryPool *mp);
+	CMDProviderRelcache() = default;
 
 	~CMDProviderRelcache() override = default;
 

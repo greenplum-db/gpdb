@@ -944,19 +944,7 @@ checkWellFormedRecursionWalker(Node *node, CteState *cstate)
 		checkWellFormedRecursionWalker(sl->testexpr, cstate);
 		return false;
 	}
-	if (IsA(node, RangeSubselect))
-	{
-		RangeSubselect *rs = (RangeSubselect *) node;
 
-		/*
-		 * we intentionally override outer context, since subquery is
-		 * independent
-		 */
-		cstate->context = RECURSION_SUBLINK;
-		checkWellFormedRecursionWalker(rs->subquery, cstate);
-		cstate->context = save_context;
-		return false;
-	}
 	return raw_expression_tree_walker(node,
 									  checkWellFormedRecursionWalker,
 									  (void *) cstate);

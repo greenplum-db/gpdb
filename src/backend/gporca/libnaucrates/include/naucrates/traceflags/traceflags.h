@@ -215,6 +215,9 @@ enum EOptTraceFlag
 
 	EopttraceForceComprehensiveJoinImplementation = 103041,
 
+	// Discard HashJoin with RedistributeMotion nodes
+	EopttraceDiscardRedistributeHashJoin = 103044,
+
 	///////////////////////////////////////////////////////
 	///////////////////// statistics flags ////////////////
 	//////////////////////////////////////////////////////

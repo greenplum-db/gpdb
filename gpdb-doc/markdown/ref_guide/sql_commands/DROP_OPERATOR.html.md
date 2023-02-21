@@ -5,8 +5,8 @@ Removes an operator.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-DROP OPERATOR [IF EXISTS] <name> ( {<lefttype> | NONE} , 
-    {<righttype> | NONE} ) [CASCADE | RESTRICT]
+DROP OPERATOR [IF EXISTS] <name> ( {<left_type> | NONE} , 
+    {<right_type> | NONE} ) [, ...] [CASCADE | RESTRICT]
 ```
 
 ## <a id="section3"></a>Description 
@@ -21,14 +21,14 @@ IF EXISTS
 name
 :   The name \(optionally schema-qualified\) of an existing operator.
 
-lefttype
+left\_type
 :   The data type of the operator's left operand; write `NONE` if the operator has no left operand.
 
-righttype
+right\_type
 :   The data type of the operator's right operand; write `NONE` if the operator has no right operand.
 
 CASCADE
-:   Automatically drop objects that depend on the operator.
+:   Automatically drop objects that depend on the operator \(such as views using it\), and in turn all objects that depend on those objects.
 
 RESTRICT
 :   Refuse to drop the operator if any objects depend on it. This is the default.
@@ -51,6 +51,12 @@ Remove the right unary factorial operator `x!` for type `bigint`:
 
 ```
 DROP OPERATOR ! (bigint, none);
+```
+
+Remove multiple operators in one command:
+
+```
+DROP OPERATOR ~ (none, bit), ! (bigint, none);
 ```
 
 ## <a id="section6"></a>Compatibility 

@@ -293,6 +293,48 @@ execute p3(1);
 execute p3(1);
 drop table test_prepare;
 
+-- Tests to check direct dispatch if the table is randomly distributed and the
+-- filter has condition on gp_segment_id
+
+-- NOTE: Only EXPLAIN query included, output of SELECT query is not shown.
+-- Since the table is distributed randomly, the output of SELECT query
+-- will differ everytime new table is created, and hence the during comparision
+-- the tests will fail.
+
+drop table if exists bar_randDistr;
+create table bar_randDistr(col1 int, col2 int) distributed randomly;
+insert into bar_randDistr select i,i*2 from generate_series(1, 10)i;
+
+-- Case 1 : simple conditions on gp_segment_id
+explain (costs off) select gp_segment_id, * from bar_randDistr where gp_segment_id=0;
+explain (costs off) select gp_segment_id, * from bar_randDistr where gp_segment_id=1 or gp_segment_id=2;
+explain (costs off) select gp_segment_id, count(*) from bar_randDistr group by gp_segment_id;
+
+-- Case2: Conjunction scenario with filter condition on gp_segment_id and column
+explain (costs off) select gp_segment_id, * from bar_randDistr where gp_segment_id=0 and col1 between 1 and 10;
+
+-- Case3: Disjunction scenario with filter condition on gp_segment_id and column
+explain (costs off) select gp_segment_id, * from bar_randDistr where gp_segment_id=1 or (col1=6 and gp_segment_id=2);
+
+-- Case4: Scenario with constant/variable column and constant/variable gp_segment_id
+explain (costs off) select gp_segment_id, * from bar_randDistr where col1 =3 and gp_segment_id in (0,1);
+explain (costs off) select gp_segment_id, * from bar_randDistr where col1 =3 and gp_segment_id <>1;
+explain (costs off) select gp_segment_id, * from bar_randDistr where col1 between 1 and 5 and gp_segment_id =0;
+explain (costs off) select gp_segment_id, * from bar_randDistr where col1 in (1,5) and gp_segment_id <> 0;
+explain (costs off) select gp_segment_id, * from bar_randDistr where col1 in (1,5) and gp_segment_id in (0,1);
+
+-- Case5: Scenarios with special conditions
+create function afunc() returns integer as $$ begin return 42; end; $$ language plpgsql;
+create function immutable_func() returns integer as $$ begin return 42; end; $$ language plpgsql immutable;
+
+explain (costs off) select * from bar_randDistr where col1 = 1;
+explain (costs off) select * from bar_randDistr where gp_segment_id % 2 = 0;
+explain (costs off) select * from bar_randDistr where gp_segment_id=immutable_func();
+explain (costs off) select * from bar_randDistr where gp_segment_id=afunc();
+
+drop table if exists bar_randDistr;
+
+
 -- test direct dispatch via gp_segment_id qual
 create table t_test_dd_via_segid(id int);
 insert into t_test_dd_via_segid select * from generate_series(1, 6);
@@ -348,6 +390,88 @@ select gp_segment_id, * from t_test_dd_via_segid_conj where a in (1,3) and gp_se
 
 explain (costs off) select gp_segment_id, * from t_test_dd_via_segid_conj where a in (1,3) and gp_segment_id in (0,1);
 select gp_segment_id, * from t_test_dd_via_segid_conj where a in (1,3) and gp_segment_id in (0,1);
+
+--test direct dispatch if distribution column is of varchar type
+drop table if exists t1_varchar;
+create table t1_varchar(col1_varchar varchar, col2_int int);
+insert into t1_varchar values ('a',1);
+insert into t1_varchar values ('b',2);
+insert into t1_varchar values ('c',3);
+insert into t1_varchar values ('d',4);
+insert into t1_varchar values ('e',5);
+insert into t1_varchar values ('97',6);
+
+explain (costs off) select gp_segment_id,  * from t1_varchar where col1_varchar = 'c';
+select gp_segment_id,  * from t1_varchar where col1_varchar = 'c';
+
+explain (costs off) select gp_segment_id,  * from t1_varchar where col1_varchar <>'c';
+select gp_segment_id,  * from t1_varchar where col1_varchar <>'c';
+
+--test direct dispatch if distribution column is of varchar type and disjunction scenario
+explain (costs off) select gp_segment_id, * from t1_varchar where col1_varchar in ('a','b');
+select gp_segment_id, * from t1_varchar where col1_varchar in ('a','b');
+
+explain (costs off) select gp_segment_id, * from t1_varchar where col1_varchar = 'a' or col1_varchar = 'b';
+select gp_segment_id, * from t1_varchar where col1_varchar = 'a' or col1_varchar = 'b';
+
+--test direct dispatch if distribution column is of varchar type, having disjunction condition
+-- or an additional conjunction constraint using another table column or both
+explain (costs off) select gp_segment_id, * from t1_varchar where col1_varchar = 'c' and col2_int=3;
+select gp_segment_id, * from t1_varchar where col1_varchar = 'c' and col2_int=3;
+
+explain (costs off) select gp_segment_id, * from t1_varchar where col1_varchar = 'a' and col2_int in (1,3);
+select gp_segment_id, * from t1_varchar where col1_varchar = 'a' and col2_int in (1,3);
+
+explain (costs off) select gp_segment_id, * from t1_varchar where col1_varchar = 'a' and col2_int not in (2,3);
+select gp_segment_id, * from t1_varchar where col1_varchar = 'a' and col2_int not in (2,3);
+
+explain (costs off) select gp_segment_id, * from t1_varchar where col1_varchar in ('a', 'b') and col2_int=2;
+select gp_segment_id, * from t1_varchar where col1_varchar in ('a', 'b') and col2_int=2;
+
+explain (costs off) select gp_segment_id, * from t1_varchar where (col1_varchar = 'a' or col1_varchar = 'b') and col2_int=1;
+select gp_segment_id, * from t1_varchar where (col1_varchar = 'a' or col1_varchar = 'b') and col2_int=1;
+
+--Test direct dispatch with explicit typecasting
+explain (costs off) select gp_segment_id, * from t1_varchar where col1_varchar = 97::VARCHAR;
+select gp_segment_id, * from t1_varchar where col1_varchar = 97::VARCHAR;
+
+-- explicit cast using "char", generates a scenario of cast function from Dist Colm to datum in CTranslatorExprToDXLUtils::FDirectDispatchable(,,)
+explain (costs off) select gp_segment_id,  * from t1_varchar where col1_varchar = 'c'::char;
+select gp_segment_id,  * from t1_varchar where col1_varchar = 'c'::char;
+
+explain (costs off) select gp_segment_id,  * from t1_varchar where col1_varchar = '2'::char;
+select gp_segment_id,  * from t1_varchar where col1_varchar = '2'::char;
+
+--No direct dispatch case, scenario: cast exists but not binary coercible
+drop table if exists t3;
+create table t3 (c1 timestamp without time zone);
+insert into t3 values ('2015-07-03 00:00:00'::timestamp without time zone);
+
+explain (costs off) select c1 from t3 where c1 = '2015-07-03'::date;
+select c1 from t3 where c1 = '2015-07-03'::date;
+
+drop table t3;
+drop table t1_varchar;
+
+--check direct dispatch working based on the distribution policy of relation
+drop extension if exists citext cascade;
+drop table if exists srt_dd;
+CREATE EXTENSION citext;
+create table srt_dd (name CITEXT);
+INSERT INTO srt_dd (name)
+VALUES ('abb'),
+       ('ABA'),
+       ('ABC'),
+       ('abd');
+
+explain (costs off) select LOWER(name) as aba FROM srt_dd WHERE name = 'ABA'::text;
+select LOWER(name) as aba FROM srt_dd WHERE name = 'ABA'::text;
+
+explain (costs off) delete from srt_dd where name='ABA'::text;
+delete from srt_dd where name='ABA'::text;
+
+drop extension if exists citext cascade;
+drop table if exists srt_dd;
 
 -- test direct dispatch via SQLValueFunction and FuncExpr for single row insertion.
 create table t_sql_value_function1 (a int, b date);

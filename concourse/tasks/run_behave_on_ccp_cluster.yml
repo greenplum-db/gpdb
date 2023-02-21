@@ -17,7 +17,7 @@ run:
     ccp_src/scripts/setup_ssh_to_cluster.sh
 
     # TODO: ask CCP maintainers for a feature to do this for us
-    scp cluster_env_files/hostfile_all mdw:/tmp
+    scp cluster_env_files/hostfile_all cdw:/tmp
 
     # Install patchelf. We need to SSH as root, hence the use of
     # cluster_env_files.
@@ -27,17 +27,17 @@ run:
 
     # Set max_connections values if specified
     if (( $COORDINATOR_MAX_CONNECT > 0 && $SEGMENT_MAX_CONNECT > 0 )); then
-        ssh -n mdw "
+        ssh -n cdw "
           source /usr/local/greenplum-db-devel/greenplum_path.sh
-          export COORDINATOR_DATA_DIRECTORY='/data/gpdata/master/gpseg-1'
+          export COORDINATOR_DATA_DIRECTORY='/data/gpdata/coordinator/gpseg-1'
           gpconfig -c max_connections -v $SEGMENT_MAX_CONNECT -m $COORDINATOR_MAX_CONNECT
         "
     fi
 
     # ensure cluster is stopped
-    ssh -n mdw "
+    ssh -n cdw "
         source /usr/local/greenplum-db-devel/greenplum_path.sh
-        export COORDINATOR_DATA_DIRECTORY='/data/gpdata/master/gpseg-1'
+        export COORDINATOR_DATA_DIRECTORY='/data/gpdata/coordinator/gpseg-1'
         if [ -d \$COORDINATOR_DATA_DIRECTORY ]; then gpstop -a; fi
     "
 
@@ -84,20 +84,20 @@ run:
     # One use is to modify networking on the cluster machines, as is done to
     # add/delete blackhole routes in the gprecoverseg_newhost tests.
     SUDO_ACCESS_ON_HOSTS=${SUDO_ACCESS_ON_HOSTS:-0}
-    SUDO_MDW_USERNAME=${SUDO_MDW_USERNAME:-centos}
+    SUDO_CDW_USERNAME=${SUDO_CDW_USERNAME:-centos}
     if (( $SUDO_ACCESS_ON_HOSTS )); then
         while read LINE; do
             host=$(echo $LINE | awk '{ print $3 }')
-            ssh -n $SUDO_MDW_USERNAME@$host "
+            ssh -n $SUDO_CDW_USERNAME@$host "
               sudo usermod -a -G google-sudoers gpadmin
             "
         done <cluster_env_files/etc_hostfile
     fi
 
     # start cluster back up
-    ssh -n mdw "
+    ssh -n cdw "
         source /usr/local/greenplum-db-devel/greenplum_path.sh
-        export COORDINATOR_DATA_DIRECTORY='/data/gpdata/master/gpseg-1'
+        export COORDINATOR_DATA_DIRECTORY='/data/gpdata/coordinator/gpseg-1'
         if [ -d \$COORDINATOR_DATA_DIRECTORY ]; then gpstart -a; fi
     "
 
@@ -105,7 +105,7 @@ run:
         scp -qr "pip-cache-dir" $host:pip-cache-dir
     done < cluster_env_files/hostfile_all
 
-    ssh -t mdw "
+    ssh -t cdw "
         source /home/gpadmin/gpdb_src/concourse/scripts/common.bash
         install_python_requirements_on_multi_host /home/gpadmin/gpdb_src/gpMgmt/requirements-dev.txt
 
@@ -117,10 +117,10 @@ run:
     "
 
     # Refresh the Concourse container cache with the updated contents
-    # from the CCP mdw node.
+    # from the CCP cdw node.
 
     rm -rf "pip-cache-dir/http"
-    scp -qr mdw:pip-cache-dir/http "pip-cache-dir"
+    scp -qr cdw:pip-cache-dir/http "pip-cache-dir"
 
     # collect coverage
     while read -r host; do

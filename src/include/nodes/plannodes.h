@@ -144,9 +144,6 @@ typedef struct PlannedStmt
 	/* What is the memory reserved for this query's execution? */
 	uint64		query_mem;
 
-	int			total_memory_coordinator;	/* GPDB: The total usable virtual memory on coordinator node in MB */
-	int			nsegments_coordinator;		/* GPDB: The number of primary segments on coordinator node  */
-
 	/*
 	 * GPDB: Used to keep target information for CTAS and it is needed
 	 * to be dispatched to QEs.
@@ -640,15 +637,29 @@ typedef struct DynamicIndexScan
  * index-only scan, in which the data comes from the index not the heap.
  * Because of this, *all* Vars in the plan node's targetlist, qual, and
  * index expressions reference index columns and have varno = INDEX_VAR.
- * Hence we do not need separate indexqualorig and indexorderbyorig lists,
- * since their contents would be equivalent to indexqual and indexorderby.
+ *
+ * We could almost use indexqual directly against the index's output tuple
+ * when rechecking lossy index operators, but that won't work for quals on
+ * index columns that are not retrievable.  Hence, recheckqual is needed
+ * for rechecks: it expresses the same condition as indexqual, but using
+ * only index columns that are retrievable.  (We will not generate an
+ * index-only scan if this is not possible.  An example is that if an
+ * index has table column "x" in a retrievable index column "ind1", plus
+ * an expression f(x) in a non-retrievable column "ind2", an indexable
+ * query on f(x) will use "ind2" in indexqual and f(ind1) in recheckqual.
+ * Without the "ind1" column, an index-only scan would be disallowed.)
+ *
+ * We don't currently need a recheckable equivalent of indexorderby,
+ * because we don't support lossy operators in index ORDER BY.
  *
  * To help EXPLAIN interpret the index Vars for display, we provide
  * indextlist, which represents the contents of the index as a targetlist
  * with one TLE per index column.  Vars appearing in this list reference
  * the base table, and this is the only field in the plan node that may
- * contain such Vars.
- *
+ * contain such Vars.  Also, for the convenience of setrefs.c, TLEs in
+ * indextlist are marked as resjunk if they correspond to columns that
+ * the index AM cannot reconstruct.
+ * 
  * GPDB: We need indexqualorig to determine direct dispatch, however there
  * is no need to dispatch it.
  * ----------------
@@ -658,10 +669,10 @@ typedef struct IndexOnlyScan
 	Scan		scan;
 	Oid			indexid;		/* OID of index to scan */
 	List	   *indexqual;		/* list of index quals (usually OpExprs) */
-	List	   *indexqualorig;	/* the same in original form (GPDB keeps it) */
 	List	   *indexorderby;	/* list of index ORDER BY exprs */
 	List	   *indextlist;		/* TargetEntry list describing index's cols */
 	ScanDirection indexorderdir;	/* forward or backward or don't care */
+	List	   *recheckqual;	/* index quals in recheckable form */
 } IndexOnlyScan;
 
 /* ----------------
@@ -901,15 +912,15 @@ typedef struct WorkTableScan
 typedef struct ExternalScanInfo
 {
 	NodeTag		type;
-	List		*uriList;       /* data uri or null for each segment  */
-	char		fmtType;        /* data format type                   */
-	bool		isMasterOnly;   /* true for EXECUTE on master seg only */
-	int			rejLimit;       /* reject limit (-1 for no sreh)      */
-	bool		rejLimitInRows; /* true if ROWS false if PERCENT      */
-	char		logErrors;      /* 't', 'p' to log errors into file. 'p' makes persistent error log */
-	int			encoding;		/* encoding of external table data    */
-	uint32      scancounter;	/* counter incr per scan node created */
-	List	   *extOptions;		/* external options */
+	List		*uriList;            /* data uri or null for each segment  */
+	char		fmtType;             /* data format type                   */
+	bool		isCoordinatorOnly;   /* true for EXECUTE on coordinator seg only */
+	int			rejLimit;            /* reject limit (-1 for no sreh)      */
+	bool		rejLimitInRows;      /* true if ROWS false if PERCENT      */
+	char		logErrors;           /* 't', 'p' to log errors into file. 'p' makes persistent error log */
+	int			encoding;		     /* encoding of external table data    */
+	uint32      scancounter;	     /* counter incr per scan node created */
+	List	   *extOptions;		     /* external options */
 } ExternalScanInfo;
 
 /* ----------------
@@ -1091,6 +1102,14 @@ typedef struct HashJoin
 	Join		join;
 	List	   *hashclauses;
 	List	   *hashqualclauses;
+	List	   *hashoperators;
+	List	   *hashcollations;
+
+	/*
+	 * List of expressions to be hashed for tuples from the outer plan, to
+	 * perform lookups in the hashtable over the inner plan.
+	 */
+	List	   *hashkeys;
 } HashJoin;
 
 #define SHARE_ID_NOT_SHARED (-1)
@@ -1343,6 +1362,12 @@ typedef struct Hash
 {
 	Plan		plan;
 	bool		rescannable;            /* CDB: true => save rows for rescan */
+
+	/*
+	 * List of expressions to be hashed for tuples from Hash's outer plan,
+	 * needed to put them into the hashtable.
+	 */
+	List	   *hashkeys;		/* hash keys for the hashjoin condition */
 	Oid			skewTable;		/* outer join key's table OID, or InvalidOid */
 	AttrNumber	skewColumn;		/* outer join key's column #, or zero */
 	bool		skewInherit;	/* is outer join rel an inheritance tree? */

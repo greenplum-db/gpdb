@@ -1198,11 +1198,11 @@ explain select c1 from t1 where c1::absint not in
          Filter: (NOT CASE WHEN ((count((true))) > '0'::bigint) THEN CASE WHEN ((sum((CASE WHEN (((t1.c1)::absint = ((t1n.c1n)::absint)) IS NULL) THEN 1 ELSE 0 END))) = (count((true)))) THEN NULL::boolean ELSE true END ELSE false END)
          ->  HashAggregate  (cost=0.00..1324035.89 rows=4 width=20)
                Group Key: t1.c1, t1.ctid, t1.gp_segment_id
-               ->  Nested Loop Left Join  (cost=0.00..1324035.88 rows=11 width=19)
+               ->  Nested Loop Left Join  (cost=0.00..1324035.89 rows=11 width=19)
                      Join Filter: (((t1.c1)::absint = ((t1n.c1n)::absint)) IS NOT FALSE)
                      ->  Seq Scan on t1  (cost=0.00..431.00 rows=4 width=14)
-                     ->  Result  (cost=0.00..431.00 rows=7 width=5)
-                           ->  Materialize  (cost=0.00..431.00 rows=7 width=4)
+                     ->  Materialize  (cost=0.00..431.00 rows=7 width=5)
+                           ->  Result  (cost=0.00..431.00 rows=7 width=5)
                                  ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=7 width=4)
                                        ->  Seq Scan on t1n  (cost=0.00..431.00 rows=3 width=4)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
@@ -1685,6 +1685,28 @@ from
 where a = age.c;
 drop table t1p;
 drop table t2p;
+-- test for github issue 14858
+create table t1_14858(a varchar(32), b varchar(32), c int, d int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table t2_14858(a varchar(32), b varchar(32), c int, d int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table t3_14858(a varchar(32), b varchar(32), c int, d int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create view mv_14858 as select * from t1_14858 full join
+(select a, b, count(c) from t2_14858 group by a,b union
+ select a, b, count(c) from t3_14858 group by a, b) x using (a, b);
+select * from mv_14858 where a not in (select a from t1_14858);
+ a | b | c | d | count 
+---+---+---+---+-------
+(0 rows)
+
+drop view mv_14858;
+drop table t1_14858;
+drop table t2_14858;
+drop table t3_14858;
 reset search_path;
 drop schema notin cascade;
 NOTICE:  drop cascades to 22 other objects

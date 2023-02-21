@@ -31,12 +31,12 @@
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
       <dxl:TraceFlags Value="102001,102002,102003,102024,102025,102074,102119,102120,102128,102131,102132,102133,102134,102135,102136,102140,102141,102142,102143,102144,103001,103014,103015,103022,103027,103033,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.16648.1.0" Name="t1" Rows="10000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.16648.1.0" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="14,8" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16648.1.0" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="14,8">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

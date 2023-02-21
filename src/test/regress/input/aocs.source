@@ -68,8 +68,8 @@ CREATE TABLE tenk_aocs_bad (like tenk_heap_for_aocs) with (orientation=column) d
 -- catalog checks
 --------------------
 
--- check pg_appendonly
-SELECT c.relname, a.blocksize, a.compresstype, a.compresslevel, a.checksum FROM pg_class c, pg_appendonly a WHERE c.relname LIKE 'tenk_aocs%' AND c.oid=a.relid ORDER BY c.relname;
+-- check reloptions
+SELECT c.relname, c.reloptions, c.relkind FROM pg_class c join pg_am a on a.oid=c.relam WHERE a.amname in ('ao_row','ao_column') AND c.relname LIKE 'tenk_aocs%' ORDER BY c.relname;
 SELECT c.relname, count(a.attnum) FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'tenk_aocs%' GROUP BY c.relname;
 
 --------------------
@@ -220,7 +220,7 @@ CREATE TABLE tenk_aocs1 with(appendonly=true, orientation=column, checksum=true)
 CREATE TABLE tenk_aocs2 with(appendonly=true, orientation=column, compresslevel=0, blocksize=262144) AS SELECT * FROM tenk_heap_for_aocs;
 CREATE TABLE tenk_aocs3 with(appendonly=true, orientation=column, compresslevel=6, blocksize=1048576, checksum=true) AS SELECT * FROM tenk_heap_for_aocs;
 CREATE TABLE tenk_aocs4 with(appendonly=true, orientation=column, compresslevel=1, compresstype=zlib) AS SELECT * FROM tenk_heap_for_aocs;
-SELECT c.relname, a.blocksize, a.compresstype, a.compresslevel, a.checksum FROM pg_class c, pg_appendonly a WHERE c.relname LIKE 'tenk_aocs%' AND c.oid=a.relid ORDER BY c.relname;
+SELECT relname, reloptions, relkind from pg_class c join pg_am a on a.oid=c.relam where a.amname in ('ao_row','ao_column') AND relname LIKE 'tenk_aocs%' ORDER BY relname;
 SELECT count(*) FROM tenk_aocs1;
 SELECT count(*) FROM tenk_aocs2;
 SELECT count(*) FROM tenk_aocs3;

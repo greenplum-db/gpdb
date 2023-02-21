@@ -3,6 +3,7 @@ CREATE FUNCTION dumptestfunc(t text) RETURNS integer AS $$ SELECT 123 $$ LANGUAG
 CREATE FUNCTION dumptestfunc2(t text) RETURNS integer AS $$ SELECT 123 $$ LANGUAGE SQL;
 create table base(a int);
 create materialized view base_mv as select a from base;
+create view base_v as select a from base;
 
 -- The function returns OIDs. We need to replace them with something reproducable.
 CREATE FUNCTION sanitize_output(t text) RETURNS text AS $$
@@ -11,16 +12,19 @@ declare
   dumptestfunc2_oid oid;
   base_oid oid;
   base_mv_oid oid;
+  base_v_oid oid;
 begin
     dumptestfunc_oid = 'dumptestfunc'::regproc::oid;
     dumptestfunc2_oid = 'dumptestfunc2'::regproc::oid;
     base_oid = 'base'::regclass::oid;
     base_mv_oid = 'base_mv'::regclass::oid;
+    base_v_oid = 'base_v'::regclass::oid;
 
     t := replace(t, dumptestfunc_oid::text, '<dumptestfunc>');
     t := replace(t, dumptestfunc2_oid::text, '<dumptestfunc2>');
     t := replace(t, base_oid::text, '<base_table>');
     t := replace(t, base_mv_oid::text, '<base_mv>');
+    t := replace(t, base_v_oid::text, '<base_v>');
 
     RETURN t;
 end;
@@ -83,10 +87,20 @@ SELECT array['ptable'::regclass::oid::text,
              'cctable'::regclass::oid::text] <@  (string_to_array((SELECT info->>'relids' FROM minirepro_partition_test WHERE id = 2),','));
 SELECT array['pg_class'::regclass::oid::text] <@  (string_to_array((SELECT info->>'relids' FROM minirepro_partition_test WHERE id = 3),','));
 SELECT sanitize_output(gp_dump_query_oids('SELECT * FROM base_mv'));
+SELECT sanitize_output(gp_dump_query_oids('SELECT * FROM base_v'));
+-- gp_dump_query_oids should output relids of view/materialized view and used/accessed objects when query contains explain command
+SELECT sanitize_output(gp_dump_query_oids('EXPLAIN SELECT * FROM base_mv'));
+SELECT sanitize_output(gp_dump_query_oids('EXPLAIN SELECT * FROM base_v'));
+-- gp_dump_query_oids should output relids of view/materialized view and used/accessed objects when query contains explain analyze command
+SELECT sanitize_output(gp_dump_query_oids('EXPLAIN ANALYZE SELECT * FROM base_mv'));
+SELECT sanitize_output(gp_dump_query_oids('EXPLAIN ANALYZE SELECT * FROM base_v'));
 DROP TABLE foo;
 DROP TABLE cctable;
 DROP TABLE ctable;
 DROP TABLE ptable;
 DROP TABLE minirepro_partition_test;
+DROP MATERIALIZED VIEW base_mv;
+DROP VIEW base_v;
+DROP TABLE base;
 DROP FUNCTION dumptestfunc(text);
 DROP FUNCTION dumptestfunc2(text);

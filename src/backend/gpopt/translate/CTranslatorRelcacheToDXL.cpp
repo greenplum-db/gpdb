@@ -23,6 +23,7 @@ extern "C" {
 #include "catalog/pg_am.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_statistic.h"
+#include "catalog/pg_statistic_ext.h"
 #include "cdb/cdbhash.h"
 #include "partitioning/partdesc.h"
 #include "utils/array.h"
@@ -53,6 +54,8 @@ extern "C" {
 #include "naucrates/dxl/xml/dxltokens.h"
 #include "naucrates/exception.h"
 #include "naucrates/md/CDXLColStats.h"
+#include "naucrates/md/CDXLExtStats.h"
+#include "naucrates/md/CDXLExtStatsInfo.h"
 #include "naucrates/md/CDXLRelStats.h"
 #include "naucrates/md/CMDArrayCoerceCastGPDB.h"
 #include "naucrates/md/CMDCastGPDB.h"
@@ -131,6 +134,14 @@ CTranslatorRelcacheToDXL::RetrieveObject(CMemoryPool *mp,
 
 		case IMDId::EmdidCheckConstraint:
 			md_obj = RetrieveCheckConstraints(mp, md_accessor, mdid);
+			break;
+
+		case IMDId::EmdidExtStats:
+			md_obj = RetrieveExtStats(mp, mdid);
+			break;
+
+		case IMDId::EmdidExtStatsInfo:
+			md_obj = RetrieveExtStatsInfo(mp, mdid);
 			break;
 
 		default:
@@ -260,7 +271,7 @@ CTranslatorRelcacheToDXL::RetrieveRelIndexInfo(CMemoryPool *mp, Relation rel)
 		{
 			CMDIdGPDB *mdid_index =
 				GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidInd, index_oid);
-			// for a regular table, external table or leaf partition, an index is always complete
+			// for a regular table, foreign table or leaf partition, an index is always complete
 			CMDIndexInfo *md_index_info =
 				GPOS_NEW(mp) CMDIndexInfo(mdid_index, false /* is_partial */);
 			md_index_info_array->Append(md_index_info);
@@ -317,6 +328,142 @@ CTranslatorRelcacheToDXL::CheckUnsupportedRelation(OID rel_oid)
 
 //---------------------------------------------------------------------------
 //	@function:
+//		CTranslatorRelcacheToDXL::RetrieveExtStats
+//
+//	@doc:
+//		Retrieve extended statistics from relcache
+//
+//---------------------------------------------------------------------------
+IMDCacheObject *
+CTranslatorRelcacheToDXL::RetrieveExtStats(CMemoryPool *mp, IMDId *mdid)
+{
+	OID stat_oid = CMDIdGPDB::CastMdid(mdid)->Oid();
+	List *kinds = gpdb::GetExtStatsKinds(stat_oid);
+
+	CMDDependencyArray *deps = GPOS_NEW(mp) CMDDependencyArray(mp);
+	if (list_member_int(kinds, STATS_EXT_DEPENDENCIES))
+	{
+		MVDependencies *dependencies = gpdb::GetMVDependencies(stat_oid);
+
+		for (ULONG i = 0; i < dependencies->ndeps; i++)
+		{
+			MVDependency *dep = dependencies->deps[i];
+
+			// Note: MVDependency->attributes's last index is the dependent "to"
+			//       column.
+			IntPtrArray *from_attnos = GPOS_NEW(mp) IntPtrArray(mp);
+			for (INT j = 0; j < dep->nattributes - 1; j++)
+			{
+				from_attnos->Append(GPOS_NEW(mp) INT(dep->attributes[j]));
+			}
+			deps->Append(GPOS_NEW(mp) CMDDependency(
+				mp, dep->degree, from_attnos,
+				dep->attributes[dep->nattributes - 1]));
+		}
+	}
+
+	CMDNDistinctArray *md_ndistincts = GPOS_NEW(mp) CMDNDistinctArray(mp);
+	if (list_member_int(kinds, STATS_EXT_NDISTINCT))
+	{
+		MVNDistinct *ndistinct = gpdb::GetMVNDistinct(stat_oid);
+
+		for (ULONG i = 0; i < ndistinct->nitems; i++)
+		{
+			MVNDistinctItem item = ndistinct->items[i];
+
+			CBitSet *attnos = GPOS_NEW(mp) CBitSet(mp);
+
+			int attno = -1;
+			while ((attno = bms_next_member(item.attrs, attno)) >= 0)
+			{
+				attnos->ExchangeSet(attno);
+			}
+			md_ndistincts->Append(GPOS_NEW(mp)
+									  CMDNDistinct(mp, item.ndistinct, attnos));
+		}
+	}
+
+	const CWStringConst *statname =
+		GPOS_NEW(mp) CWStringConst(CDXLUtils::CreateDynamicStringFromCharArray(
+									   mp, gpdb::GetExtStatsName(stat_oid))
+									   ->GetBuffer());
+	CMDName *mdname = GPOS_NEW(mp) CMDName(mp, statname);
+
+	return GPOS_NEW(mp) CDXLExtStats(mp, mdid, mdname, deps, md_ndistincts);
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorRelcacheToDXL::RetrieveExtStats
+//
+//	@doc:
+//		Retrieve extended statistics metadata from relcache
+//
+//---------------------------------------------------------------------------
+IMDCacheObject *
+CTranslatorRelcacheToDXL::RetrieveExtStatsInfo(CMemoryPool *mp, IMDId *mdid)
+{
+	OID rel_oid = CMDIdGPDB::CastMdid(mdid)->Oid();
+
+	CMDExtStatsInfoArray *extstats_info_array =
+		GPOS_NEW(mp) CMDExtStatsInfoArray(mp);
+
+	gpdb::RelationWrapper rel = gpdb::GetRelation(rel_oid);
+	List *extstats = gpdb::GetExtStats(rel.get());
+
+	ListCell *lc = nullptr;
+	ForEach(lc, extstats)
+	{
+		StatisticExtInfo *info = (StatisticExtInfo *) lfirst(lc);
+
+		CBitSet *keys = GPOS_NEW(mp) CBitSet(mp);
+
+		int attno = -1;
+		while ((attno = bms_next_member(info->keys, attno)) >= 0)
+		{
+			keys->ExchangeSet(attno);
+		}
+
+		CMDExtStatsInfo::Estattype statkind = CMDExtStatsInfo::EstatSentinel;
+		switch (info->kind)
+		{
+			case STATS_EXT_DEPENDENCIES:
+			{
+				statkind = CMDExtStatsInfo::EstatDependencies;
+				break;
+			}
+			case STATS_EXT_NDISTINCT:
+			{
+				statkind = CMDExtStatsInfo::EstatNDistinct;
+				break;
+			}
+			case STATS_EXT_MCV:
+			{
+				statkind = CMDExtStatsInfo::EstatMCV;
+				break;
+			}
+			default:
+			{
+				GPOS_ASSERT(false && "Unknown extended stat type");
+			}
+		}
+
+		const CWStringConst *statname = GPOS_NEW(mp)
+			CWStringConst(CDXLUtils::CreateDynamicStringFromCharArray(
+							  mp, gpdb::GetExtStatsName(info->statOid))
+							  ->GetBuffer());
+		CMDName *mdname = GPOS_NEW(mp) CMDName(mp, statname);
+
+		extstats_info_array->Append(GPOS_NEW(mp) CMDExtStatsInfo(
+			mp, info->statOid, mdname, statkind, keys));
+	}
+
+	return GPOS_NEW(mp) CDXLExtStatsInfo(mp, mdid, GetRelName(mp, rel.get()),
+										 extstats_info_array);
+}
+
+//---------------------------------------------------------------------------
+//	@function:
 //		CTranslatorRelcacheToDXL::RetrieveRel
 //
 //	@doc:
@@ -359,7 +506,6 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	CMDIndexInfoArray *md_index_info_array = nullptr;
 	ULongPtrArray *part_keys = nullptr;
 	CharPtrArray *part_types = nullptr;
-	ULONG num_leaf_partitions = 0;
 	BOOL convert_hash_to_random = false;
 	ULongPtr2dArray *keyset_array = nullptr;
 	IMdIdArray *check_constraint_mdids = nullptr;
@@ -398,7 +544,7 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	md_index_info_array = RetrieveRelIndexInfo(mp, rel.get());
 
 	// get partition keys
-	if (IMDRelation::ErelstorageExternal != rel_storage_type)
+	if (IMDRelation::ErelstorageForeign != rel_storage_type)
 	{
 		RetrievePartKeysAndTypes(mp, rel.get(), oid, &part_keys, &part_types);
 	}
@@ -407,9 +553,6 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	// get number of leaf partitions
 	if (gpdb::RelIsPartitioned(oid))
 	{
-		// FIXME_GPDB_12_MERGE_FIXME: misestimate (most likely underestimate) the number of leaf partitions
-		// ORCA doesn't really care, except to determine whether to sort before inserting
-		num_leaf_partitions = rel->rd_partdesc->nparts;
 		partition_oids = GPOS_NEW(mp) IMdIdArray(mp);
 
 		for (int i = 0; i < rel->rd_partdesc->nparts; ++i)
@@ -443,38 +586,18 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 
 	mdid->AddRef();
 
-	if (IMDRelation::ErelstorageExternal == rel_storage_type)
-	{
-		ExtTableEntry *extentry = gpdb::GetExternalTableEntry(oid);
+	CDXLNode *mdpart_constraint = nullptr;
 
-		md_rel = GPOS_NEW(mp) CMDRelationExternalGPDB(
-			mp, mdid, mdname, dist, mdcol_array, distr_cols, distr_op_families,
-			convert_hash_to_random, keyset_array, md_index_info_array,
-			check_constraint_mdids, extentry->rejectlimit,
-			('r' == extentry->rejectlimittype),
-			nullptr /* it's sufficient to pass NULL here since ORCA
-								doesn't really make use of the logerrors value.
-								In case of converting the DXL returned from to
-								PlanStmt, currently the code looks up the information
-								from catalog and fill in the required values into the ExternalScan */
-		);
-	}
-	else
-	{
-		CDXLNode *mdpart_constraint = nullptr;
+	// retrieve the part constraints if relation is partitioned
+	// FIMXE: Do this only if Relation::rd_rel::relispartition is true
+	mdpart_constraint =
+		RetrievePartConstraintForRel(mp, md_accessor, rel.get(), mdcol_array);
 
-		// retrieve the part constraints if relation is partitioned
-		// FIMXE: Do this only if Relation::rd_rel::relispartition is true
-		mdpart_constraint = RetrievePartConstraintForRel(
-			mp, md_accessor, rel.get(), mdcol_array);
-
-		md_rel = GPOS_NEW(mp) CMDRelationGPDB(
-			mp, mdid, mdname, is_temporary, rel_storage_type, dist, mdcol_array,
-			distr_cols, distr_op_families, part_keys, part_types,
-			num_leaf_partitions, partition_oids, convert_hash_to_random,
-			keyset_array, md_index_info_array, check_constraint_mdids,
-			mdpart_constraint);
-	}
+	md_rel = GPOS_NEW(mp) CMDRelationGPDB(
+		mp, mdid, mdname, is_temporary, rel_storage_type, dist, mdcol_array,
+		distr_cols, distr_op_families, part_keys, part_types, partition_oids,
+		convert_hash_to_random, keyset_array, md_index_info_array,
+		check_constraint_mdids, mdpart_constraint);
 
 	return md_rel;
 }
@@ -878,50 +1001,14 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 		child_index_oids = GPOS_NEW(mp) IMdIdArray(mp);
 	}
 
-	CMDIndexGPDB *index = GPOS_NEW(mp) CMDIndexGPDB(
-		mp, mdid_index, mdname, index_clustered, index_partitioned, index_type,
-		mdid_item_type, index_key_cols_array, included_cols, op_families_mdids,
-		nullptr,  // mdpart_constraint
-		child_index_oids);
+	CMDIndexGPDB *index = GPOS_NEW(mp)
+		CMDIndexGPDB(mp, mdid_index, mdname, index_clustered, index_partitioned,
+					 index_type, mdid_item_type, index_key_cols_array,
+					 included_cols, op_families_mdids, child_index_oids);
 
 	GPOS_DELETE_ARRAY(attno_mapping);
 	return index;
 }
-
-#if 0
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorRelcacheToDXL::LevelHasDefaultPartition
-//
-//	@doc:
-//		Check whether the default partition at level one is included
-//
-//---------------------------------------------------------------------------
-BOOL
-CTranslatorRelcacheToDXL::LevelHasDefaultPartition
-	(
-	List *default_levels,
-	ULONG level
-	)
-{
-	if (NIL == default_levels)
-	{
-		return false;
-	}
-	
-	ListCell *lc = NULL;
-	ForEach (lc, default_levels)
-	{
-		ULONG default_level = (ULONG) lfirst_int(lc);
-		if (level == default_level)
-		{
-			return true;
-		}
-	}
-	
-	return false;
-}
-#endif
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -2355,15 +2442,21 @@ CTranslatorRelcacheToDXL::RetrieveRelStorageType(Relation rel)
 			{
 				rel_storage_type = IMDRelation::ErelstorageCompositeType;
 			}
-			else if (gpdb::RelIsExternalTable(rel->rd_id))
+			else if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
 			{
-				rel_storage_type = IMDRelation::ErelstorageExternal;
+				if (!optimizer_enable_foreign_table)
+				{
+					GPOS_RAISE(
+						gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+						GPOS_WSZ_LIT(
+							"Use optimizer_enable_foreign_table to enable Orca with foreign tables"));
+				}
+				rel_storage_type = IMDRelation::ErelstorageForeign;
 			}
 			else
 			{
-				// GPORCA does not support foreign data wrappers
 				GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
-						   GPOS_WSZ_LIT("Foreign Data"));
+						   GPOS_WSZ_LIT("Unsupported table AM"));
 			}
 			break;
 		default:
@@ -2758,7 +2851,7 @@ CTranslatorRelcacheToDXL::RetrievePartConstraintFromNode(
 //	@doc:
 //		Does given relation type have system columns.
 //		Currently regular relations, sequences, toast values relations,
-//		AO segment relations and foreign/external tables have system columns
+//		AO segment relations and foreign tables have system columns
 //
 //---------------------------------------------------------------------------
 BOOL
@@ -2912,7 +3005,7 @@ CTranslatorRelcacheToDXL::RetrieveStorageTypeForPartitionedTable(Relation rel)
 
 		// fall back if any external partitions, we need additional logic to
 		// handle distribution or will get wrong results
-		if (child_storage == IMDRelation::ErelstorageExternal)
+		if (child_storage == IMDRelation::ErelstorageForeign)
 		{
 			GPOS_RAISE(
 				gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,

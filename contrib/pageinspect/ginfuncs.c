@@ -50,6 +50,17 @@ gin_metapage_info(PG_FUNCTION_ARGS)
 
 	page = get_page_from_raw(raw_page);
 
+	if (PageIsNew(page))
+		PG_RETURN_NULL();
+
+	if (PageGetSpecialSize(page) != MAXALIGN(sizeof(GinPageOpaqueData)))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("input page is not a valid GIN metapage"),
+				 errdetail("Expected special size %d, got %d.",
+						   (int) MAXALIGN(sizeof(GinPageOpaqueData)),
+						   (int) PageGetSpecialSize(page))));
+
 	opaq = (GinPageOpaque) PageGetSpecialPointer(page);
 	if (opaq->flags != GIN_META)
 		ereport(ERROR,
@@ -107,6 +118,17 @@ gin_page_opaque_info(PG_FUNCTION_ARGS)
 				 (errmsg("must be superuser to use raw page functions"))));
 
 	page = get_page_from_raw(raw_page);
+
+	if (PageIsNew(page))
+		PG_RETURN_NULL();
+
+	if (PageGetSpecialSize(page) != MAXALIGN(sizeof(GinPageOpaqueData)))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("input page is not a valid GIN data leaf page"),
+				 errdetail("Expected special size %d, got %d.",
+						   (int) MAXALIGN(sizeof(GinPageOpaqueData)),
+						   (int) PageGetSpecialSize(page))));
 
 	opaq = (GinPageOpaque) PageGetSpecialPointer(page);
 
@@ -184,13 +206,19 @@ gin_leafpage_items(PG_FUNCTION_ARGS)
 
 		page = get_page_from_raw(raw_page);
 
+		if (PageIsNew(page))
+		{
+			MemoryContextSwitchTo(mctx);
+			PG_RETURN_NULL();
+		}
+
 		if (PageGetSpecialSize(page) != MAXALIGN(sizeof(GinPageOpaqueData)))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("input page is not a valid GIN data leaf page"),
-					 errdetail("Special size %d, expected %d",
-							   (int) PageGetSpecialSize(page),
-							   (int) MAXALIGN(sizeof(GinPageOpaqueData)))));
+					 errdetail("Expected special size %d, got %d.",
+							   (int) MAXALIGN(sizeof(GinPageOpaqueData)),
+							   (int) PageGetSpecialSize(page))));
 
 		opaq = (GinPageOpaque) PageGetSpecialPointer(page);
 		if (opaq->flags != (GIN_DATA | GIN_LEAF | GIN_COMPRESSED))

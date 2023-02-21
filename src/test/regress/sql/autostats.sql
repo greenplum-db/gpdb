@@ -74,7 +74,150 @@ select COUNT(*) from autostats_test;
 drop table if exists autostats_test;
 drop user autostats_nonowner;
 
+-- test inFunction
+-- udf
+create function test_auto_stats_in_function(sql text, load_data boolean, check_relname text) returns void as
+$$
+declare
+  ntuples int;
+begin
+  execute 'create table t_test_auto_stats_in_function(a int) distributed randomly';
+  set gp_autostats_mode=none;
+  set gp_autostats_mode_in_functions=none;
+  if load_data then execute 'insert into t_test_auto_stats_in_function values (1)'; end if;
+  execute sql;
+  select reltuples into ntuples from pg_class where relname = check_relname;
+  raise info 'gp_autostats_mode=none, gp_autostats_mode_in_functions=none, ntuples=%', ntuples;
+  execute 'drop table t_test_auto_stats_in_function';
+  execute 'drop table if exists tmp_test_auto_stats_in_function';
+
+  execute 'create table t_test_auto_stats_in_function(a int) distributed randomly';
+  set gp_autostats_mode=on_no_stats;
+  set gp_autostats_mode_in_functions=none;
+  if load_data then execute 'insert into t_test_auto_stats_in_function values (1)'; end if;
+  execute sql;
+  select reltuples into ntuples from pg_class where relname = check_relname;
+  raise info 'gp_autostats_mode=on_no_stats, gp_autostats_mode_in_functions=none, ntuples=%', ntuples;
+  execute 'drop table t_test_auto_stats_in_function';
+  execute 'drop table if exists tmp_test_auto_stats_in_function';
+
+  execute 'create table t_test_auto_stats_in_function(a int) distributed randomly';
+  set gp_autostats_mode=none;
+  set gp_autostats_mode_in_functions=on_no_stats;
+  if load_data then execute 'insert into t_test_auto_stats_in_function values (1)'; end if;
+  execute sql;
+  select reltuples into ntuples from pg_class where relname = check_relname;
+  raise info 'gp_autostats_mode=none, gp_autostats_mode_in_functions=on_no_stats, ntuples=%', ntuples;
+  execute 'drop table t_test_auto_stats_in_function';
+  execute 'drop table if exists tmp_test_auto_stats_in_function';
+
+  execute 'create table t_test_auto_stats_in_function(a int) distributed randomly';
+  set gp_autostats_mode=none;
+  set gp_autostats_mode_in_functions=on_no_stats;
+  if load_data then execute 'insert into t_test_auto_stats_in_function values (1)'; end if;
+  select reltuples into ntuples from pg_class where relname = check_relname;
+  raise info 'gp_autostats_mode=none, gp_autostats_mode_in_functions=on_no_stats, ntuples=%', ntuples;
+  set gp_autostats_mode_in_functions=on_change;
+  set gp_autostats_on_change_threshold=0;
+  execute sql;
+  select reltuples into ntuples from pg_class where relname = check_relname;
+  raise info 'gp_autostats_mode=none, gp_autostats_mode_in_functions=on_change, ntuples=%', ntuples;
+  execute 'drop table t_test_auto_stats_in_function';
+  execute 'drop table if exists tmp_test_auto_stats_in_function';
+end;
+$$
+language plpgsql;
+
+select test_auto_stats_in_function('copy t_test_auto_stats_in_function from program ''echo 1''',
+                                   false, 't_test_auto_stats_in_function');
+select test_auto_stats_in_function('create table tmp_test_auto_stats_in_function as select * from t_test_auto_stats_in_function distributed randomly',
+                                   true, 'tmp_test_auto_stats_in_function');
+select test_auto_stats_in_function('delete from t_test_auto_stats_in_function',
+                                   true, 't_test_auto_stats_in_function');
+
+drop function test_auto_stats_in_function(text, boolean, text);
+-- procedure
+create procedure test_auto_stats_in_function(sql text, load_data boolean, check_relname text) as
+$$
+declare
+  ntuples int;
+begin
+  execute 'create table t_test_auto_stats_in_function(a int) distributed randomly';
+  set gp_autostats_mode=none;
+  set gp_autostats_mode_in_functions=none;
+  if load_data then execute 'insert into t_test_auto_stats_in_function values (1)'; end if;
+  execute sql;
+  select reltuples into ntuples from pg_class where relname = check_relname;
+  raise info 'gp_autostats_mode=none, gp_autostats_mode_in_functions=none, ntuples=%', ntuples;
+  execute 'drop table t_test_auto_stats_in_function';
+  execute 'drop table if exists tmp_test_auto_stats_in_function';
+
+  execute 'create table t_test_auto_stats_in_function(a int) distributed randomly';
+  set gp_autostats_mode=on_no_stats;
+  set gp_autostats_mode_in_functions=none;
+  if load_data then execute 'insert into t_test_auto_stats_in_function values (1)'; end if;
+  execute sql;
+  select reltuples into ntuples from pg_class where relname = check_relname;
+  raise info 'gp_autostats_mode=on_no_stats, gp_autostats_mode_in_functions=none, ntuples=%', ntuples;
+  execute 'drop table t_test_auto_stats_in_function';
+  execute 'drop table if exists tmp_test_auto_stats_in_function';
+
+  execute 'create table t_test_auto_stats_in_function(a int) distributed randomly';
+  set gp_autostats_mode=none;
+  set gp_autostats_mode_in_functions=on_no_stats;
+  if load_data then execute 'insert into t_test_auto_stats_in_function values (1)'; end if;
+  execute sql;
+  select reltuples into ntuples from pg_class where relname = check_relname;
+  raise info 'gp_autostats_mode=none, gp_autostats_mode_in_functions=on_no_stats, ntuples=%', ntuples;
+  execute 'drop table t_test_auto_stats_in_function';
+  execute 'drop table if exists tmp_test_auto_stats_in_function';
+
+  execute 'create table t_test_auto_stats_in_function(a int) distributed randomly';
+  set gp_autostats_mode=none;
+  set gp_autostats_mode_in_functions=on_no_stats;
+  if load_data then execute 'insert into t_test_auto_stats_in_function values (1)'; end if;
+  select reltuples into ntuples from pg_class where relname = check_relname;
+  raise info 'gp_autostats_mode=none, gp_autostats_mode_in_functions=on_no_stats, ntuples=%', ntuples;
+  set gp_autostats_mode_in_functions=on_change;
+  set gp_autostats_on_change_threshold=0;
+  execute sql;
+  select reltuples into ntuples from pg_class where relname = check_relname;
+  raise info 'gp_autostats_mode=none, gp_autostats_mode_in_functions=on_change, ntuples=%', ntuples;
+  execute 'drop table t_test_auto_stats_in_function';
+  execute 'drop table if exists tmp_test_auto_stats_in_function';
+end;
+$$
+language plpgsql;
+
+call test_auto_stats_in_function('copy t_test_auto_stats_in_function from program ''echo 1''',
+                                   false, 't_test_auto_stats_in_function');
+call test_auto_stats_in_function('create table tmp_test_auto_stats_in_function as select * from t_test_auto_stats_in_function distributed randomly',
+                                   true, 'tmp_test_auto_stats_in_function');
+call test_auto_stats_in_function('delete from t_test_auto_stats_in_function',
+                                   true, 't_test_auto_stats_in_function');
+
+drop procedure test_auto_stats_in_function(text, boolean, text);
+
+create table t_test_auto_stats_in_function(a int);
+set gp_autostats_mode_in_functions = none;
+set gp_autostats_mode = on_no_stats;
+copy t_test_auto_stats_in_function from program 'echo 1';
+select reltuples from pg_class where relname = 't_test_auto_stats_in_function';
+drop table t_test_auto_stats_in_function;
+
+create table t_test_auto_stats_in_function(a int);
+copy t_test_auto_stats_in_function from program 'echo 1';
+set gp_autostats_mode_in_functions = none;
+set gp_autostats_mode = on_no_stats;
+create table tmp_test_auto_stats_in_function as select * from t_test_auto_stats_in_function distributed randomly;
+select reltuples from pg_class where relname = 't_test_auto_stats_in_function';
+drop table t_test_auto_stats_in_function;
+drop table tmp_test_auto_stats_in_function;
+
+-- reset GUCs
+
 reset gp_autostats_mode;
+reset gp_autostats_mode_in_functions;
 reset gp_autostats_on_change_threshold;
 reset log_autostats;
 reset gp_autostats_allow_nonowner;

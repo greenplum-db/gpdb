@@ -8,7 +8,7 @@ For Greenplum Database 6, you can upgrade from PostGIS 2.1.5 to 2.5.4, or from a
 -   [Upgrade a PostGIS 2.5.4 Package from pivotal.1 or pivotal.2 to pivotal.3](#topic_k4x_dp3_kmb)
 -   [Checking the PostGIS Version](#topic_yzz_l3h_kmb)
 
-**Note:** For Greenplum Database 6, you can upgrade from PostGIS 2.1.5 to 2.5.4, or from a PostGIS 2.5.4 package to a newer PostGIS 2.5.4 package using the `postgis_manager.sh` script described in the upgrade instructions.
+> **Note** For Greenplum Database 6, you can upgrade from PostGIS 2.1.5 to 2.5.4, or from a PostGIS 2.5.4 package to a newer PostGIS 2.5.4 package using the `postgis_manager.sh` script described in the upgrade instructions.
 
 Upgrading PostGIS using the `postgis_manager.sh` script does not require you to remove PostGIS support and re-enable it.
 
@@ -24,7 +24,7 @@ After upgrading the Greenplum PostGIS package, you can remove the PostGIS 2.1.5 
 2.  Install the PostGIS 2.5.4 package into the Greenplum Database system with the `gppkg` utility.
 
     ```
-    gppkg -i postgis-2.5.4+pivotal.3.build.1-gp6-rhel7-x86_64.gppkg
+    gppkg -i postgis-2.5.4+pivotal.3.build.1-gp7-rhel8-x86_64.gppkg
     ```
 
     Run the `gppkg -q --all` command to verify the updated package version is installed in the Greenplum Database system.
@@ -65,7 +65,7 @@ The `pivotal.3` minor release supports using the `CREATE EXTENSION` command and 
 2.  Upgrade the PostGIS package in the Greenplum Database system using the `gppkg` option `-u`. The command updates the package to the `postgis-2.5.4+pivotal.3.build.1` package.
 
     ```
-    gppkg -u postgis-2.5.4+pivotal.3.build.1-gp6-rhel7-x86_64.gppkg
+    gppkg -u postgis-2.5.4+pivotal.3.build.1-gp7-rhel8-x86_64.gppkg
     ```
 
 3.  Run the `gppkg -q --all` command to verify the updated package version is installed in the Greenplum Database system.

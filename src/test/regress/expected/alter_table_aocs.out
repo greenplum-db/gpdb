@@ -459,7 +459,6 @@ select * from addcol8 order by a;
  b      | character varying(20) |           |          | 
  d      | integer               |           |          | 
  e      | double precision      |           |          | 1
-Checksum: t
 Distributed by: (a)
 
 -- try renaming table and see if stuff still works
@@ -768,14 +767,14 @@ alter table aocs_with_compress set with (reorganize=true);
 alter table aocs_with_compress alter column c type integer;
 -- test case: alter AOCS table add column, the preference of the storage setting is: the encoding clause > table setting > gp_default_storage_options
 CREATE TABLE aocs_alter_add_col(a int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=4, blocksize=65536);
-SET gp_default_storage_options ='compresstype=zlib, compresslevel=2';
 -- use statement encoding 
 ALTER TABLE aocs_alter_add_col ADD COLUMN b int ENCODING(compresstype=zlib, compresslevel=3, blocksize=16384);
 -- use table setting
 ALTER TABLE aocs_alter_add_col ADD COLUMN c int;
-RESET gp_default_storage_options;
--- use table setting
+-- table setting > gp_default_storage_options
+SET gp_default_storage_options ='compresstype=zlib, compresslevel=2';
 ALTER TABLE aocs_alter_add_col ADD COLUMN d int;
+RESET gp_default_storage_options;
 \d+ aocs_alter_add_col
                                                       Table "public.aocs_alter_add_col"
  Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
@@ -784,16 +783,15 @@ ALTER TABLE aocs_alter_add_col ADD COLUMN d int;
  b      | integer |           |          |         | plain   |              | zlib             | 3                 | 16384      | 
  c      | integer |           |          |         | plain   |              | rle_type         | 4                 | 65536      | 
  d      | integer |           |          |         | plain   |              | rle_type         | 4                 | 65536      | 
-Checksum: t
 Distributed by: (a)
-Options: compresstype=rle_type, compresslevel=4, blocksize=65536
+Options: compresstype=rle_type, compresslevel=4, blocksize=65536, checksum=true
 
 DROP TABLE aocs_alter_add_col;
 CREATE TABLE aocs_alter_add_col_no_compress(a int) WITH (appendonly=true, orientation=column);
 SET gp_default_storage_options ='compresstype=zlib, compresslevel=2, blocksize=8192';
 -- use statement encoding
 ALTER TABLE aocs_alter_add_col_no_compress ADD COLUMN b int ENCODING(compresstype=rle_type, compresslevel=3, blocksize=16384);
--- use gp_default_storage_options
+-- use table setting
 ALTER TABLE aocs_alter_add_col_no_compress ADD COLUMN c int;
 RESET gp_default_storage_options;
 -- use default value 
@@ -804,10 +802,10 @@ ALTER TABLE aocs_alter_add_col_no_compress ADD COLUMN d int;
 --------+---------+-----------+----------+---------+---------+--------------+------------------+-------------------+------------+-------------
  a      | integer |           |          |         | plain   |              | none             | 0                 | 32768      | 
  b      | integer |           |          |         | plain   |              | rle_type         | 3                 | 16384      | 
- c      | integer |           |          |         | plain   |              | zlib             | 2                 | 32768      | 
+ c      | integer |           |          |         | plain   |              | none             | 2                 | 32768      | 
  d      | integer |           |          |         | plain   |              | none             | 0                 | 32768      | 
-Checksum: t
 Distributed by: (a)
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=true
 
 DROP TABLE aocs_alter_add_col_no_compress;
 -- test case: ensure reorganize keep default compresstype, compresslevel and blocksize table options
@@ -829,8 +827,97 @@ ALTER TABLE aocs_alter_add_col_reorganize ADD COLUMN d int;
  b      | integer |           |          |         | plain   |              | zlib             | 3                 | 16384      | 
  c      | integer |           |          |         | plain   |              | rle_type         | 4                 | 65536      | 
  d      | integer |           |          |         | plain   |              | rle_type         | 4                 | 65536      | 
-Checksum: t
 Distributed by: (a)
-Options: compresstype=rle_type, compresslevel=4, blocksize=65536
+Options: compresstype=rle_type, compresslevel=4, blocksize=65536, checksum=true
 
 DROP TABLE aocs_alter_add_col_reorganize;
+-- test case: Ensure that reads don't fail after aborting an add column + insert operation and we don't project the aborted column
+CREATE TABLE aocs_addcol_abort(a int, b int) USING ao_column;
+INSERT INTO aocs_addcol_abort SELECT i,i FROM generate_series(1,10)i;
+BEGIN;
+ALTER TABLE aocs_addcol_abort ADD COLUMN c int;
+INSERT INTO aocs_addcol_abort SELECT i,i,i FROM generate_series(1,10)i;
+-- check state of aocsseg for entries of add column + insert
+SELECT * FROM gp_toolkit.__gp_aocsseg('aocs_addcol_abort') ORDER BY segment_id, column_num;
+ segment_id | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+          0 |     0 |          0 |              0 |        5 |  64 |               64 |        1 |             4 |     1
+          0 |     1 |          0 |              1 |        5 |  64 |               64 |        2 |             4 |     1
+          0 |     0 |          1 |            128 |        5 |  64 |               64 |        1 |             4 |     1
+          0 |     1 |          1 |            129 |        5 |  64 |               64 |        2 |             4 |     1
+          0 |     0 |          2 |            256 |        5 |  64 |               64 |        1 |             4 |     1
+          0 |     1 |          2 |            257 |        5 |  48 |               48 |        2 |             4 |     1
+          1 |     0 |          0 |              0 |        1 |  48 |               48 |        1 |             4 |     1
+          1 |     1 |          0 |              1 |        1 |  48 |               48 |        2 |             4 |     1
+          1 |     0 |          1 |            128 |        1 |  48 |               48 |        1 |             4 |     1
+          1 |     1 |          1 |            129 |        1 |  48 |               48 |        2 |             4 |     1
+          1 |     0 |          2 |            256 |        1 |  48 |               48 |        1 |             4 |     1
+          1 |     1 |          2 |            257 |        1 |  48 |               48 |        2 |             4 |     1
+          2 |     0 |          0 |              0 |        4 |  56 |               56 |        1 |             4 |     1
+          2 |     1 |          0 |              1 |        4 |  56 |               56 |        2 |             4 |     1
+          2 |     0 |          1 |            128 |        4 |  56 |               56 |        1 |             4 |     1
+          2 |     1 |          1 |            129 |        4 |  56 |               56 |        2 |             4 |     1
+          2 |     0 |          2 |            256 |        4 |  56 |               56 |        1 |             4 |     1
+          2 |     1 |          2 |            257 |        4 |  48 |               48 |        2 |             4 |     1
+(18 rows)
+
+SELECT * FROM aocs_addcol_abort;
+ a  | b  | c  
+----+----+----
+  5 |  5 |  5
+  6 |  6 |  6
+  9 |  9 |  9
+ 10 | 10 | 10
+  5 |  5 |   
+  6 |  6 |   
+  9 |  9 |   
+ 10 | 10 |   
+  1 |  1 |  1
+  1 |  1 |   
+  2 |  2 |  2
+  3 |  3 |  3
+  4 |  4 |  4
+  7 |  7 |  7
+  8 |  8 |  8
+  2 |  2 |   
+  3 |  3 |   
+  4 |  4 |   
+  7 |  7 |   
+  8 |  8 |   
+(20 rows)
+
+ABORT;
+-- check state of aocsseg if entries for new column are rolled back correctly
+SELECT * FROM gp_toolkit.__gp_aocsseg('aocs_addcol_abort') ORDER BY segment_id, column_num;
+ segment_id | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+          0 |     0 |          0 |              0 |        0 |   0 |                0 |        0 |             4 |     1
+          0 |     1 |          0 |              1 |        5 |  64 |               64 |        1 |             4 |     1
+          0 |     0 |          1 |            128 |        0 |   0 |                0 |        0 |             4 |     1
+          0 |     1 |          1 |            129 |        5 |  64 |               64 |        1 |             4 |     1
+          1 |     0 |          0 |              0 |        0 |   0 |                0 |        0 |             4 |     1
+          1 |     1 |          0 |              1 |        1 |  48 |               48 |        1 |             4 |     1
+          1 |     0 |          1 |            128 |        0 |   0 |                0 |        0 |             4 |     1
+          1 |     1 |          1 |            129 |        1 |  48 |               48 |        1 |             4 |     1
+          2 |     0 |          0 |              0 |        0 |   0 |                0 |        0 |             4 |     1
+          2 |     1 |          0 |              1 |        4 |  56 |               56 |        1 |             4 |     1
+          2 |     0 |          1 |            128 |        0 |   0 |                0 |        0 |             4 |     1
+          2 |     1 |          1 |            129 |        4 |  56 |               56 |        1 |             4 |     1
+(12 rows)
+
+SELECT * FROM aocs_addcol_abort;
+ a  | b  
+----+----
+  5 |  5
+  6 |  6
+  9 |  9
+ 10 | 10
+  1 |  1
+  2 |  2
+  3 |  3
+  4 |  4
+  7 |  7
+  8 |  8
+(10 rows)
+
+DROP TABLE aocs_addcol_abort;

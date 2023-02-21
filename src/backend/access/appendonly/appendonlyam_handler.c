@@ -33,6 +33,7 @@
 #include "catalog/storage_xlog.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbvars.h"
+#include "commands/progress.h"
 #include "commands/vacuum.h"
 #include "executor/executor.h"
 #include "pgstat.h"
@@ -767,8 +768,17 @@ appendonly_compute_xid_horizon_for_tuples(Relation rel,
 										  ItemPointerData *tids,
 										  int nitems)
 {
-	// GPDB_12_MERGE_FIXME: vacuum related call back.
-	elog(ERROR, "not implemented yet");
+	/*
+	 * This API is only useful for hot standby snapshot conflict resolution
+	 * (for eg. see btree_xlog_delete()), in the context of index page-level
+	 * vacuums (aka page-level cleanups). This operation is only done when
+	 * IndexScanDesc->kill_prior_tuple is true, which is never for AO/CO tables
+	 * (we always return all_dead = false in the index_fetch_tuple() callback
+	 * as we don't support HOT)
+	 */
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("feature not supported on appendoptimized relations")));
 }
 
 /* ----------------------------------------------------------------------------
@@ -803,20 +813,29 @@ appendonly_tuple_insert(Relation relation, TupleTableSlot *slot, CommandId cid,
 	appendonly_free_memtuple(mtuple);
 }
 
+/*
+ * We don't support speculative inserts on appendoptimized tables, i.e. we don't
+ * support INSERT ON CONFLICT DO NOTHING or INSERT ON CONFLICT DO UPDATE. Thus,
+ * the following functions are left unimplemented.
+ */
+
 static void
 appendonly_tuple_insert_speculative(Relation relation, TupleTableSlot *slot,
 								CommandId cid, int options,
 								BulkInsertState bistate, uint32 specToken)
 {
- 	/* GPDB_12_MERGE_FIXME: not supported. Can this function be left out completely? Or ereport()? */
-	elog(ERROR, "speculative insertion not supported on AO tables");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("speculative insert is not supported on appendoptimized relations")));
 }
 
 static void
 appendonly_tuple_complete_speculative(Relation relation, TupleTableSlot *slot,
 								  uint32 specToken, bool succeeded)
 {
-	elog(ERROR, "speculative insertion not supported on AO tables");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("speculative insert is not supported on appendoptimized relations")));
 }
 
 /*
@@ -917,20 +936,44 @@ appendonly_tuple_update(Relation relation, ItemPointer otid, TupleTableSlot *slo
 	return result;
 }
 
+/*
+ * This API is called for a variety of purposes, which are either not supported
+ * for AO/CO tables or not supported for GPDB in general:
+ *
+ * (1) UPSERT: ExecOnConflictUpdate() calls this, but clearly upsert is not
+ * supported for AO/CO tables.
+ *
+ * (2) DELETE and UPDATE triggers: GetTupleForTrigger() calls this, but clearly
+ * these trigger types are not supported for AO/CO tables.
+ *
+ * (3) Logical replication: RelationFindReplTupleByIndex() and
+ * RelationFindReplTupleSeq() calls this, but clearly we don't support logical
+ * replication yet for GPDB.
+ *
+ * (4) For DELETEs/UPDATEs, when a state of TM_Updated is returned from
+ * table_tuple_delete() and table_tuple_update() respectively, this API is invoked.
+ * However, that is impossible for AO/CO tables as an AO/CO tuple cannot be
+ * deleted/updated while another transaction is updating it (see CdbTryOpenTable()).
+ *
+ * (5) Row-level locking (SELECT FOR ..): ExecLockRows() calls this but a plan
+ * containing the LockRows plan node is never generated for AO/CO tables. In fact,
+ * we lock at the table level instead.
+ */
 static TM_Result
 appendonly_tuple_lock(Relation relation, ItemPointer tid, Snapshot snapshot,
 				  TupleTableSlot *slot, CommandId cid, LockTupleMode mode,
 				  LockWaitPolicy wait_policy, uint8 flags,
 				  TM_FailureData *tmfd)
 {
- 	/* GPDB_12_MERGE_FIXME: not supported. Can this function be left out completely? Or ereport()? */
-	elog(ERROR, "speculative insertion not supported on AO tables");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("tuple locking is not supported on appendoptimized tables")));
 }
 
 static void
 appendonly_finish_bulk_insert(Relation relation, int options)
 {
-	appendonly_dml_finish(relation);
+	/* nothing for ao tables */
 }
 
 
@@ -1233,7 +1276,6 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	for (;;)
 	{
 		HeapTuple	tuple;
-		uint32		prev_memtuple_len = 0;
 		uint32		len;
 		uint32		null_save_len;
 		bool		has_nulls;
@@ -1247,17 +1289,14 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 		heap_deform_tuple(tuple, oldTupDesc, values, isnull);
 
 		len = compute_memtuple_size(mt_bind, values, isnull, &null_save_len, &has_nulls);
-		if (len > prev_memtuple_len)
+		if (len > 0)
 		{
-			/* Here we are trying to avoid reallocation of temp mtuple */
 			if (mtuple != NULL)
 				pfree(mtuple);
-			mtuple = palloc(len);
-			prev_memtuple_len = len;
+			mtuple = NULL;
 		}
 
-		memtuple_form_to(mt_bind, values, isnull, len, null_save_len, has_nulls,
-					mtuple);
+		mtuple = memtuple_form_to(mt_bind, values, isnull, len, null_save_len, has_nulls, mtuple);
 
 		appendonly_insert(aoInsertDesc, mtuple, &aoTupleId);
 	}
@@ -1333,6 +1372,7 @@ appendonly_index_build_range_scan(Relation heapRelation,
 	EState	   *estate;
 	ExprContext *econtext;
 	Snapshot	snapshot;
+	int64 previous_blkno = -1;
 
 	/*
 	 * sanity checks
@@ -1435,27 +1475,24 @@ appendonly_index_build_range_scan(Relation heapRelation,
 	relation_close(blkdir, NoLock);
 
 
-	/* GPDB_12_MERGE_FIXME */
-#if 0
 	/* Publish number of blocks to scan */
 	if (progress)
 	{
-		BlockNumber nblocks;
+		FileSegTotals	*fileSegTotals;
+		BlockNumber		totalBlocks;
 
-		if (aoscan->rs_base.rs_parallel != NULL)
-		{
-			ParallelBlockTableScanDesc pbscan;
+		/* XXX: How can we report for builds with parallel scans? */
+		Assert(!aoscan->rs_base.rs_parallel);
 
-			pbscan = (ParallelBlockTableScanDesc) aoscan->rs_base.rs_parallel;
-			nblocks = pbscan->phs_nblocks;
-		}
-		else
-			nblocks = aoscan->rs_nblocks;
+		fileSegTotals = GetSegFilesTotals(heapRelation, aoscan->appendOnlyMetaDataSnapshot);
 
+		Assert(fileSegTotals->totalbytes >= 0);
+
+		totalBlocks =
+			RelationGuessNumberOfBlocksFromSize((uint64) fileSegTotals->totalbytes);
 		pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_TOTAL,
-									 nblocks);
+									 totalBlocks);
 	}
-#endif
 
 	/* set our scan endpoints */
 	if (!allow_sync)
@@ -1489,21 +1526,23 @@ appendonly_index_build_range_scan(Relation heapRelation,
 			(numblocks != InvalidBlockNumber && ItemPointerGetBlockNumber(&slot->tts_tid) >= numblocks))
 			continue;
 
-	/* GPDB_12_MERGE_FIXME */
-#if 0
 		/* Report scan progress, if asked to. */
 		if (progress)
 		{
-			BlockNumber blocks_done = appendonly_scan_get_blocks_done(aoscan);
+			int64 current_blkno =
+				RelationGuessNumberOfBlocksFromSize(aoscan->totalBytesRead);
 
-			if (blocks_done != previous_blkno)
+			/* XXX: How can we report for builds with parallel scans? */
+			Assert(!aoscan->rs_base.rs_parallel);
+
+			/* As soon as a new block starts, report it as scanned */
+			if (current_blkno != previous_blkno)
 			{
 				pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_DONE,
-											 blocks_done);
-				previous_blkno = blocks_done;
+											 current_blkno);
+				previous_blkno = current_blkno;
 			}
 		}
-#endif
 
 		aoTupleId = (AOTupleId *) &slot->tts_tid;
 		/*
@@ -1559,28 +1598,6 @@ appendonly_index_build_range_scan(Relation heapRelation,
 				 callback_state);
 
 	}
-
-	/* GPDB_12_MERGE_FIXME */
-#if 0
-	/* Report scan progress one last time. */
-	if (progress)
-	{
-		BlockNumber blks_done;
-
-		if (aoscan->rs_base.rs_parallel != NULL)
-		{
-			ParallelBlockTableScanDesc pbscan;
-
-			pbscan = (ParallelBlockTableScanDesc) aoscan->rs_base.rs_parallel;
-			blks_done = pbscan->phs_nblocks;
-		}
-		else
-			blks_done = aoscan->rs_nblocks;
-
-		pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_DONE,
-									 blks_done);
-	}
-#endif
 
 	table_endscan(scan);
 
@@ -1655,7 +1672,10 @@ appendonly_index_validate_scan(Relation heapRelation,
 								 false);	/* syncscan not OK */
 	aoscan = (AppendOnlyScanDesc) scan;
 
-	/* GPDB_12_MERGE_FIXME */
+	/*
+	 * GPDB_12_MERGE_FIXME:
+	 * Refer to how we do reporting in appendonly_index_build_range_scan()
+	 */
 #if 0
 	pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_TOTAL,
 								 aoscan->rs_nblocks);
@@ -1674,7 +1694,10 @@ appendonly_index_validate_scan(Relation heapRelation,
 
 		state->htups += 1;
 
-	/* GPDB_12_MERGE_FIXME */
+		/*
+		 * GPDB_12_MERGE_FIXME:
+		 * Refer to how we do reporting in appendonly_index_build_range_scan()
+		 */
 #if 0
 		if ((previous_blkno == InvalidBlockNumber) ||
 			(aoscan->rs_cblock != previous_blkno))

@@ -265,10 +265,12 @@ CLogicalDynamicGet::PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
 								 IStatisticsArray *	 // not used
 ) const
 {
-	CReqdPropRelational *prprel =
-		CReqdPropRelational::GetReqdRelationalProps(exprhdl.Prp());
-	IStatistics *stats =
-		PstatsDeriveFilter(mp, exprhdl, prprel->PexprPartPred());
+	CExpression *expr = nullptr;
+	if (m_partition_cnstrs_disj)
+	{
+		expr = m_partition_cnstrs_disj->PexprScalar(mp);
+	}
+	IStatistics *stats = PstatsDeriveFilter(mp, exprhdl, expr);
 
 	CColRefSet *pcrs = GPOS_NEW(mp) CColRefSet(mp, m_pdrgpcrOutput);
 	CUpperBoundNDVs *upper_bound_NDVs =

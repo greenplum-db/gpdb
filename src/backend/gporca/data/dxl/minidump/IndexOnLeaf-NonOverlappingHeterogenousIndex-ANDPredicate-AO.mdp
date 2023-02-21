@@ -24,7 +24,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE c > 10 AND f > 15;
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
       <dxl:TraceFlags Value="102001,102002,102003,102074,102120,102144,103001,103014,103015,103022,103027,103033,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -135,18 +135,6 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE c > 10 AND f > 15;
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
-        <dxl:PartConstraint DefaultPartition="" Unbounded="false">
-          <dxl:And>
-            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-              <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="11"/>
-            </dxl:Comparison>
-            <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.523.1.0">
-              <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="20"/>
-            </dxl:Comparison>
-          </dxl:And>
-        </dxl:PartConstraint>
       </dxl:Index>
       <dxl:ColumnStatistics Mdid="1.25049.1.0.5" Name="f" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="false">
         <dxl:StatsBucket Frequency="1.000000" DistinctValues="1.000000">
@@ -173,7 +161,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE c > 10 AND f > 15;
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.25049.1.0" Name="foo_1_prt_p2" Rows="10000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.25049.1.0" Name="foo_1_prt_p2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,6" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.25049.1.0" Name="foo_1_prt_p2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,6">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

@@ -52,7 +52,8 @@ PostgreSQL documentation
 
   <para>
    The SQL script will be written to the standard output.  Use the
-   [-f|file] option or shell operators to redirect it into a file.
+   <option>-f</option>/<option>--file</option> option or shell operators to
+   redirect it into a file.
   </para>
 
   <para>
@@ -307,9 +308,9 @@ PostgreSQL documentation
         This option is relevant only when creating a data-only dump.
         It instructs <application>pg_dumpall</application> to include commands
         to temporarily disable triggers on the target tables while
-        the data is reloaded.  Use this if you have referential
+        the data is restored.  Use this if you have referential
         integrity checks or other triggers on the tables that you
-        do not want to invoke during data reload.
+        do not want to invoke during data restore.
        </para>
 
        <para>
@@ -357,7 +358,7 @@ PostgreSQL documentation
       <term><option>--if-exists</option></term>
       <listitem>
        <para>
-        Use conditional commands (i.e. add an <literal>IF EXISTS</literal>
+        Use conditional commands (i.e., add an <literal>IF EXISTS</literal>
         clause) to drop databases and other objects.  This option is not valid
         unless <option>--clean</option> is also specified.
        </para>
@@ -388,7 +389,7 @@ PostgreSQL documentation
         target the root of the partitioning hierarchy that contains it, rather
         than the partition itself.  This causes the appropriate partition to
         be re-determined for each row when the data is loaded.  This may be
-        useful when reloading data on a server where rows do not always fall
+        useful when restoring data on a server where rows do not always fall
         into the same partitions as they did on the original server.  That
         could happen, for example, if the partitioning column is of type text
         and the two systems have different definitions of the collation used
@@ -543,7 +544,7 @@ PostgreSQL documentation
         Dump data as <command>INSERT</command> commands (rather than
         <command>COPY</command>).  Controls the maximum number of rows per
         <command>INSERT</command> command. The value specified must be a
-        number greater than zero.  Any error during reloading will cause only
+        number greater than zero.  Any error during restoring will cause only
         rows that are part of the problematic <command>INSERT</command> to be
         lost, rather than the entire table contents.
        </para>
@@ -586,8 +587,9 @@ PostgreSQL documentation
       <term><option>--dbname=<replaceable class="parameter">connstr</replaceable></option></term>
       <listitem>
        <para>
-        Specifies parameters used to connect to the server, as a connection
-        string. See <xref linkend="libpq-connstring"/> for more information.
+        Specifies parameters used to connect to the server, as a <link
+        linkend="libpq-connstring">connection string</link>;  these
+        will override any conflicting command line options.
        </para>
        <para>
         The option is called <literal>--dbname</literal> for consistency with other
@@ -735,8 +737,8 @@ PostgreSQL documentation
     <term><envar>PG_COLOR</envar></term>
     <listitem>
      <para>
-      Specifies whether to use color in diagnostics messages.  Possible values
-      are <literal>always</literal>, <literal>auto</literal>,
+      Specifies whether to use color in diagnostic messages. Possible values
+      are <literal>always</literal>, <literal>auto</literal> and
       <literal>never</literal>.
      </para>
     </listitem>
@@ -817,7 +819,7 @@ PostgreSQL documentation
   </para>
 
   <para>
-   To reload database(s) from this file, you can use:
+   To restore database(s) from this file, you can use:
 <screen>
 <prompt>$</prompt> <userinput>psql -f db.out postgres</userinput>
 </screen>

@@ -88,7 +88,7 @@ PostgreSQL documentation
    <command>initdb</command> initializes the database cluster's default
    locale and character set encoding. The character set encoding,
    collation order (<literal>LC_COLLATE</literal>) and character set classes
-   (<literal>LC_CTYPE</literal>, e.g. upper, lower, digit) can be set separately
+   (<literal>LC_CTYPE</literal>, e.g., upper, lower, digit) can be set separately
    for a database when it is created. <command>initdb</command> determines
    those settings for the <literal>template1</literal> database, which will
    serve as the default for all other databases.
@@ -216,11 +216,10 @@ PostgreSQL documentation
        <para>
         Use checksums on data pages to help detect corruption by the
         I/O system that would otherwise be silent. Enabling checksums
-        may incur a noticeable performance penalty. This option can only
-        be set during initialization, and cannot be changed later. If
-        set, checksums are calculated for all objects, in all databases. All
-        checksum failures will be reported in the <xref
-        linkend="pg-stat-database-view"/> view.
+        may incur a noticeable performance penalty. If set, checksums
+        are calculated for all objects, in all databases. All checksum
+        failures will be reported in the
+        <xref linkend="pg-stat-database-view"/> view.
        </para>
       </listitem>
      </varlistentry>
@@ -477,8 +476,8 @@ PostgreSQL documentation
     <term><envar>PG_COLOR</envar></term>
     <listitem>
      <para>
-      Specifies whether to use color in diagnostics messages.  Possible values
-      are <literal>always</literal>, <literal>auto</literal>,
+      Specifies whether to use color in diagnostic messages. Possible values
+      are <literal>always</literal>, <literal>auto</literal> and
       <literal>never</literal>.
      </para>
     </listitem>

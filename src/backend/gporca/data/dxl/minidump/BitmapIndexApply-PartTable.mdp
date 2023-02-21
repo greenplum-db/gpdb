@@ -102,7 +102,7 @@ ORDER BY 1 asc ;
           <dxl:Partition Mdid="6.16166659003.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.16166659001.1.0" Name="my_tq_agg_small_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16166659001.1.0" Name="my_tq_agg_small_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -161,7 +161,7 @@ ORDER BY 1 asc ;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.16166659002.1.0" Name="my_tq_agg_small_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16166659002.1.0" Name="my_tq_agg_small_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -220,7 +220,7 @@ ORDER BY 1 asc ;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.16166659003.1.0" Name="my_tq_agg_small_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16166659003.1.0" Name="my_tq_agg_small_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -329,7 +329,7 @@ ORDER BY 1 asc ;
           <dxl:Partition Mdid="6.16166659003.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.16166659001.1.1" Name="my_tq_agg_small_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16166659001.1.1" Name="my_tq_agg_small_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -388,7 +388,7 @@ ORDER BY 1 asc ;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.16166659002.1.1" Name="my_tq_agg_small_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16166659002.1.1" Name="my_tq_agg_small_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -447,7 +447,7 @@ ORDER BY 1 asc ;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.16166659003.1.1" Name="my_tq_agg_small_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16166659003.1.1" Name="my_tq_agg_small_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>

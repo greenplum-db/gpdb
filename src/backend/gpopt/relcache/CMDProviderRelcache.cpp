@@ -27,11 +27,6 @@ using namespace gpos;
 using namespace gpdxl;
 using namespace gpmd;
 
-CMDProviderRelcache::CMDProviderRelcache(CMemoryPool *mp) : m_mp(mp)
-{
-	GPOS_ASSERT(nullptr != m_mp);
-}
-
 CWStringBase *
 CMDProviderRelcache::GetMDObjDXLStr(CMemoryPool *mp, CMDAccessor *md_accessor,
 									IMDId *md_id) const

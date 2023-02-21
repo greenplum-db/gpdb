@@ -1246,7 +1246,7 @@ alter table mpp3816 add column AAA int;
 alter table mpp3816 add column BBB int;
 alter table mpp3816 drop column BBB;
 alter table mpp3816 drop column startDate;
-ERROR:  cannot drop column named in partition key
+ERROR:  cannot drop column "startdate" because it is part of the partition key of relation "mpp3816"
 drop table mpp3816;
 CREATE TABLE mpp3762_cities (
         city     varchar(80) primary key,

@@ -648,12 +648,14 @@ SetTransactionSnapshot(Snapshot sourcesnap, VirtualTransactionId *sourcevxid,
 	CurrentSnapshot->xmax = sourcesnap->xmax;
 	CurrentSnapshot->xcnt = sourcesnap->xcnt;
 	Assert(sourcesnap->xcnt <= GetMaxSnapshotXidCount());
-	memcpy(CurrentSnapshot->xip, sourcesnap->xip,
-		   sourcesnap->xcnt * sizeof(TransactionId));
+	if (sourcesnap->xcnt > 0)
+		memcpy(CurrentSnapshot->xip, sourcesnap->xip,
+			   sourcesnap->xcnt * sizeof(TransactionId));
 	CurrentSnapshot->subxcnt = sourcesnap->subxcnt;
 	Assert(sourcesnap->subxcnt <= GetMaxSnapshotSubxidCount());
-	memcpy(CurrentSnapshot->subxip, sourcesnap->subxip,
-		   sourcesnap->subxcnt * sizeof(TransactionId));
+	if (sourcesnap->subxcnt > 0)
+		memcpy(CurrentSnapshot->subxip, sourcesnap->subxip,
+			   sourcesnap->subxcnt * sizeof(TransactionId));
 	CurrentSnapshot->suboverflowed = sourcesnap->suboverflowed;
 	CurrentSnapshot->takenDuringRecovery = sourcesnap->takenDuringRecovery;
 
@@ -844,9 +846,24 @@ FreeSnapshot(Snapshot snapshot)
 void
 PushActiveSnapshot(Snapshot snap)
 {
+	PushActiveSnapshotWithLevel(snap, GetCurrentTransactionNestLevel());
+}
+
+/*
+ * PushActiveSnapshotWithLevel
+ *		Set the given snapshot as the current active snapshot
+ *
+ * Same as PushActiveSnapshot except that caller can specify the
+ * transaction nesting level that "owns" the snapshot.  This level
+ * must not be deeper than the current top of the snapshot stack.
+ */
+void
+PushActiveSnapshotWithLevel(Snapshot snap, int snap_level)
+{
 	ActiveSnapshotElt *newactive;
 
 	Assert(snap != InvalidSnapshot);
+	Assert(ActiveSnapshot == NULL || snap_level >= ActiveSnapshot->as_level);
 
 	newactive = MemoryContextAlloc(TopTransactionContext, sizeof(ActiveSnapshotElt));
 
@@ -860,7 +877,7 @@ PushActiveSnapshot(Snapshot snap)
 		newactive->as_snap = snap;
 
 	newactive->as_next = ActiveSnapshot;
-	newactive->as_level = GetCurrentTransactionNestLevel();
+	newactive->as_level = snap_level;
 
 	newactive->as_snap->active_count++;
 
@@ -1064,6 +1081,36 @@ xmin_cmp(const pairingheap_node *a, const pairingheap_node *b, void *arg)
 		return -1;
 	else
 		return 0;
+}
+
+/*
+ * Get current RecentGlobalXmin value, as a FullTransactionId.
+ */
+FullTransactionId
+GetFullRecentGlobalXmin(void)
+{
+	FullTransactionId nextxid_full;
+	uint32		nextxid_epoch;
+	TransactionId nextxid_xid;
+	uint32		epoch;
+
+	Assert(TransactionIdIsNormal(RecentGlobalXmin));
+
+	/*
+	 * Compute the epoch from the next XID's epoch. This relies on the fact
+	 * that RecentGlobalXmin must be within the 2 billion XID horizon from the
+	 * next XID.
+	 */
+	nextxid_full = ReadNextFullTransactionId();
+	nextxid_epoch = EpochFromFullTransactionId(nextxid_full);
+	nextxid_xid = XidFromFullTransactionId(nextxid_full);
+
+	if (RecentGlobalXmin > nextxid_xid)
+		epoch = nextxid_epoch - 1;
+	else
+		epoch = nextxid_epoch;
+
+	return FullTransactionIdFromEpochAndXid(epoch, RecentGlobalXmin);
 }
 
 /*
@@ -2594,17 +2641,4 @@ XidInMVCCSnapshot_Local(TransactionId xid, Snapshot snapshot)
 	}
 
 	return false;
-}
-
-DistributedSnapshotWithLocalMapping *
-GetCurrentDistributedSnapshotWithLocalMapping()
-{
-	if (!FirstSnapshotSet)
-		return NULL;
-
-	Assert(CurrentSnapshot);
-	if (CurrentSnapshot->haveDistribSnapshot)
-		return &CurrentSnapshot->distribSnapshotWithLocalMapping;
-
-	return NULL;
 }

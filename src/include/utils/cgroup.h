@@ -17,14 +17,8 @@
 
 #include "postgres.h"
 
-/*
- * The pre-occupied group OID, do not change this!
- */
-#define GPDB_DEFAULT_CGROUP 	6437
-#define GPDB_ADMIN_CGROUP 		6438
-#define GPDB_SYSTEM_CGROUP 		6441
-
 #define MAX_CGROUP_PATHLEN 256
+#define MAX_CGROUP_CONTENTLEN 1024  
 
 #define CGROUP_ERROR(...) elog(ERROR, __VA_ARGS__)
 #define CGROUP_CONFIG_ERROR(...) \
@@ -42,10 +36,12 @@
  * can't be seen in gpdb.
  */
 #define DEFAULT_CPUSET_GROUP_ID 1
+
 /*
- * If cpu_rate_limit is set to this value, it means this feature is disabled
+ * If cpu_hard_quota_limit is set to this value, it means this feature is disabled.
+ * And meanwhile, it also means the process can use CPU resource infinitely.
  */
-#define CPU_RATE_LIMIT_DISABLED (-1)
+#define CPU_HARD_QUOTA_LIMIT_DISABLED (-1)
 
 /* This is the default value about Linux Control Group */
 #define DEFAULT_CPU_PERIOD_US 100000LL
@@ -66,7 +62,6 @@ typedef enum
 	 */
 	CGROUP_COMPONENT_CPU			= 0,
 	CGROUP_COMPONENT_CPUACCT,
-	CGROUP_COMPONENT_MEMORY,
 	CGROUP_COMPONENT_CPUSET,
 
 	CGROUP_COMPONENT_COUNT,
@@ -91,6 +86,39 @@ typedef struct CGroupSystemInfo
 
 } CGroupSystemInfo;
 
+/*
+ * For permission check
+ */
+typedef struct PermItem PermItem;
+typedef struct PermList PermList;
+
+struct PermItem
+{
+	CGroupComponentType comp;
+	/* file name, "" means parent directory */
+	const char			*prop;
+	/* permission, R_OK | W_OK | X_OK */
+	int					perm;
+};
+
+struct PermList
+{
+	const PermItem	*items;
+	bool			optional;
+	bool			*presult;
+};
+
+#define foreach_perm_list(i, lists) \
+	for ((i) = 0; (lists)[(i)].items; (i)++)
+
+#define foreach_perm_item(i, items) \
+	for ((i) = 0; (items)[(i)].comp != CGROUP_COMPONENT_UNKNOWN; (i)++)
+
+#define foreach_comp_type(comp) \
+	for ((comp) = CGROUP_COMPONENT_FIRST; \
+		 (comp) < CGROUP_COMPONENT_COUNT; \
+		 (comp)++)
+
 /* Read at most datasize bytes from a file. */
 extern size_t readData(const char *path, char *data, size_t datasize);
 /* Write datasize bytes to a file. */
@@ -102,6 +130,13 @@ extern int64 readInt64(Oid group, BaseDirType base, CGroupComponentType componen
 /* Write an int64 value to a cgroup interface file. */
 extern void writeInt64(Oid group, BaseDirType base, CGroupComponentType component,
 					   const char *filename, int64 x);
+
+/* Read an int32 value from a cgroup interface file. */
+extern int32 readInt32(Oid group, BaseDirType base, CGroupComponentType component,
+					   const char *filename);
+/* Write an int32 value to a cgroup interface file. */
+extern void writeInt32(Oid group, BaseDirType base, CGroupComponentType component,
+					   const char *filename, int32 x);
 
 /* Read a string value from a cgroup interface file. */
 extern void readStr(Oid group, BaseDirType base, CGroupComponentType component,
@@ -116,6 +151,11 @@ extern bool buildPathSafe(Oid group, BaseDirType base, CGroupComponentType compo
 						  const char *filename, char *pathBuffer, size_t pathBufferSize);
 
 extern bool validateComponentDir(CGroupComponentType component);
+
+/* Permission check */
+extern bool permListCheck(const PermList *permlist, Oid group, bool report);
+extern bool normalPermissionCheck(const PermList *permlists, Oid group, bool report);
+extern bool cpusetPermissionCheck(const PermList *cpusetPermList, Oid group, bool report);
 
 extern const char * getComponentName(CGroupComponentType component);
 extern CGroupComponentType getComponentType(const char *name);
@@ -166,18 +206,12 @@ typedef int (*lockcgroup_function) (Oid group, CGroupComponentType component, bo
 typedef void (*unlockcgroup_function) (int fd);
 
 /* Set the cpu limit. */
-typedef void (*setcpulimit_function) (Oid group, int cpu_rate_limit);
+typedef void (*setcpulimit_function) (Oid group, int cpu_hard_quota_limit);
 /* Set the cpu share. */
-typedef void (*setcpushare_function) (Oid group, int cpu_share);
+typedef void (*setcpupriority_function) (Oid group, int cpu_soft_priority);
 
 /* Get the cpu usage of the OS group. */
 typedef int64 (*getcpuusage_function) (Oid group);
-
-typedef int32 (*gettotalmemory_function) (void);
-typedef int32 (*getmemoryusage_function) (Oid group);
-typedef int32 (*getmemorylimitchunks_function) (Oid group);
-typedef void (*setmemorylimit_function) (Oid group, int memory_limit);
-typedef void (*setmemorylimitchunks_function) (Oid group, int32 chunks);
 
 /* Get the cpuset configuration of a cgroup. */
 typedef void (*getcpuset_function) (Oid group, char *cpuset, int len);
@@ -211,15 +245,9 @@ typedef struct CGroupOpsRoutine
 
 	setcpulimit_function 	setcpulimit;
 
-	setcpushare_function 	setcpushare;
+	setcpupriority_function	setcpupriority;
 
 	getcpuusage_function 	getcpuusage;
-
-	gettotalmemory_function gettotalmemory;
-	getmemoryusage_function getmemoryusage;
-	setmemorylimit_function setmemorylimit;
-	getmemorylimitchunks_function getmemorylimitchunks;
-	setmemorylimitchunks_function setmemorylimitbychunks;
 
 	getcpuset_function 		getcpuset;
 	setcpuset_function		setcpuset;
@@ -228,9 +256,9 @@ typedef struct CGroupOpsRoutine
 } CGroupOpsRoutine;
 
 /* The global function handler. */
-CGroupOpsRoutine *cgroupOpsRoutine;
+extern CGroupOpsRoutine *cgroupOpsRoutine;
 
 /* The global system info. */
-CGroupSystemInfo *cgroupSystemInfo;
+extern CGroupSystemInfo *cgroupSystemInfo;
 
 #endif	/* CGROUP_H */

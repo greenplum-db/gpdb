@@ -18,7 +18,7 @@ see sql/DynamicBitmapIndexScan.sql
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.17408.1.1" Name="foo" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.17408.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17408.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="fid" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
             <dxl:DefaultValue/>
@@ -189,7 +189,7 @@ see sql/DynamicBitmapIndexScan.sql
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.16929.1.1" Name="outer_table" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.16929.1.1" Name="outer_table" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="16,14" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16929.1.1" Name="outer_table" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="16,14">
         <dxl:Columns>
           <dxl:Column Name="flex_value_id" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
             <dxl:DefaultValue/>
@@ -286,7 +286,7 @@ see sql/DynamicBitmapIndexScan.sql
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.16959.1.1" Name="inner_table" Rows="0.000000" EmptyRelation="true"/>
       <dxl:MDCast Mdid="3.1043.1.0;25.1.0" Name="text" BinaryCoercible="true" SourceTypeId="0.1043.1.0" DestinationTypeId="0.25.1.0" CastFuncId="0.0.0.0"/>
-      <dxl:Relation Mdid="6.16959.1.1" Name="inner_table" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,6,4" PartitionColumns="3" PartitionTypes="r" NumberLeafPartitions="6">
+      <dxl:Relation Mdid="6.16959.1.1" Name="inner_table" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,6,4" PartitionColumns="3" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="flex_value_set_id" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -322,7 +322,7 @@ see sql/DynamicBitmapIndexScan.sql
           <dxl:Partition Mdid="6.16959005.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.16959001.1.1" Name="inner_table_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,6,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16959001.1.1" Name="inner_table_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,6,4">
         <dxl:Columns>
           <dxl:Column Name="flex_value_set_id" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -366,7 +366,7 @@ see sql/DynamicBitmapIndexScan.sql
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.16959002.1.1" Name="inner_table_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,6,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16959002.1.1" Name="inner_table_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,6,4">
         <dxl:Columns>
           <dxl:Column Name="flex_value_set_id" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -410,7 +410,7 @@ see sql/DynamicBitmapIndexScan.sql
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.16959003.1.1" Name="inner_table_prt_3" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,6,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16959003.1.1" Name="inner_table_prt_3" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,6,4">
         <dxl:Columns>
           <dxl:Column Name="flex_value_set_id" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -454,7 +454,7 @@ see sql/DynamicBitmapIndexScan.sql
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.16959004.1.1" Name="inner_table_prt_4" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,6,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16959004.1.1" Name="inner_table_prt_4" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,6,4">
         <dxl:Columns>
           <dxl:Column Name="flex_value_set_id" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -498,7 +498,7 @@ see sql/DynamicBitmapIndexScan.sql
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.16959005.1.1" Name="inner_table_prt_5" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,6,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16959005.1.1" Name="inner_table_prt_5" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,6,4">
         <dxl:Columns>
           <dxl:Column Name="flex_value_set_id" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -685,7 +685,7 @@ see sql/DynamicBitmapIndexScan.sql
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="64">
+    <dxl:Plan Id="0" SpaceSize="63">
       <dxl:GatherMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="6763.875569" Rows="1.000000" Width="9"/>

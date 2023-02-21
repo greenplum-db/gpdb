@@ -11,6 +11,8 @@
 -- s/Buckets: \d+/Buckets: ###/
 -- m/Batches: \d+/
 -- s/Batches: \d+/Batches: ###/
+-- m/segment \d+/
+-- s/segment \d+/segment ###/
 -- m/using \d+ of \d+ buckets/
 -- s/using \d+ of \d+ buckets/using ## of ### buckets/
 -- end_matchsubs
@@ -1238,7 +1240,7 @@ EXPLAIN (COSTS OFF) DELETE FROM delete_from_indexed_pt WHERE b=1;
                                 QUERY PLAN                                 
 ---------------------------------------------------------------------------
  Delete on delete_from_indexed_pt
-   ->  Dynamic Seq Scan on delete_from_indexed_pt delete_from_indexed_pt_1
+   ->  Dynamic Seq Scan on delete_from_indexed_pt
          Number of partitions to scan: 1 (out of 3)
          Filter: (b = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -1273,9 +1275,9 @@ EXPLAIN (COSTS OFF, TIMING OFF, SUMMARY OFF, ANALYZE) DELETE FROM delete_from_pt
 ---------------------------------------------------------------------------------------------------------------------------------------------------
  Delete on delete_from_pt (actual rows=0 loops=1)
    ->  Hash Join (actual rows=1 loops=1)
-         Hash Cond: (delete_from_pt_1.b = delete_from_pt_2.b)
+         Hash Cond: (delete_from_pt.b = delete_from_pt_1.b)
          Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 1 of 262144 buckets.
-         ->  Dynamic Seq Scan on delete_from_pt delete_from_pt_1 (actual rows=3 loops=1)
+         ->  Dynamic Seq Scan on delete_from_pt (actual rows=3 loops=1)
                Number of partitions to scan: 3 (out of 3)
                Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
          ->  Hash (actual rows=1 loops=1)
@@ -1283,23 +1285,23 @@ EXPLAIN (COSTS OFF, TIMING OFF, SUMMARY OFF, ANALYZE) DELETE FROM delete_from_pt
                ->  Partition Selector (selector id: $0) (actual rows=1 loops=1)
                      ->  Broadcast Motion 3:3  (slice1; segments: 3) (actual rows=1 loops=1)
                            ->  GroupAggregate (actual rows=1 loops=1)
-                                 Group Key: delete_from_pt_2.b
+                                 Group Key: delete_from_pt_1.b
                                  ->  Sort (actual rows=2 loops=1)
-                                       Sort Key: delete_from_pt_2.b
+                                       Sort Key: delete_from_pt_1.b
                                        Sort Method:  quicksort  Memory: 75kB
                                        Executor Memory: 178kB  Segments: 3  Max: 60kB (segment 0)
                                        ->  Redistribute Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
-                                             Hash Key: delete_from_pt_2.b
+                                             Hash Key: delete_from_pt_1.b
                                              ->  GroupAggregate (actual rows=1 loops=1)
-                                                   Group Key: delete_from_pt_2.b
+                                                   Group Key: delete_from_pt_1.b
                                                    ->  Sort (actual rows=1 loops=1)
-                                                         Sort Key: delete_from_pt_2.b
+                                                         Sort Key: delete_from_pt_1.b
                                                          Sort Method:  quicksort  Memory: 75kB
                                                          Executor Memory: 178kB  Segments: 3  Max: 60kB (segment 0)
                                                          ->  Hash Join (actual rows=1 loops=1)
-                                                               Hash Cond: (delete_from_pt_2.b = t.a)
+                                                               Hash Cond: (delete_from_pt_1.b = t.a)
                                                                Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 1 of 262144 buckets.
-                                                               ->  Dynamic Seq Scan on delete_from_pt delete_from_pt_2 (actual rows=3 loops=1)
+                                                               ->  Dynamic Seq Scan on delete_from_pt delete_from_pt_1 (actual rows=3 loops=1)
                                                                      Number of partitions to scan: 3 (out of 3)
                                                                      Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
                                                                ->  Hash (actual rows=1 loops=1)

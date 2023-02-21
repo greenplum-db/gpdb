@@ -55,13 +55,9 @@ CI_VARS_PATH = os.path.join(os.getcwd(), '..', 'vars')
 # Variables that govern pipeline validation
 RELEASE_VALIDATOR_JOB = ['Release_Candidate', 'Build_Release_Candidate_RPMs']
 JOBS_THAT_ARE_GATES = [
-    'gate_icw_start',
     'gate_icw_end',
-    'gate_replication_start',
     'gate_resource_groups_start',
     'gate_cli_start',
-    'gate_ud_start',
-    'gate_advanced_analytics_start',
     'gate_release_candidate_start'
 ]
 
@@ -69,11 +65,11 @@ JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = (
     [
         'combine_cli_coverage',
         'compile_gpdb_clients_windows',
-        'walrep_2',
         'Publish Server Builds',
     ] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
 )
 
+default_os_type = 'rocky8'
 
 def suggested_git_remote():
     """Try to guess the current git remote"""
@@ -153,12 +149,27 @@ def create_pipeline(args, git_remote, git_branch):
         test_trigger = "false"
 
     variables_type = args.pipeline_target
+    os_username = {
+        "rhel8" : "rhel",
+        "rocky8" : "rocky",
+        "oel8" : "oel"
+    }
+    test_os = {
+        "rhel8" : "centos",
+        "rocky8": "centos",
+        "oel8" : "centos"
+    }
+
 
     context = {
         'template_filename': args.template_filename,
         'generator_filename': os.path.basename(__file__),
         'timestamp': datetime.datetime.now(),
-        'os_types': args.os_types,
+        'os_type': args.os_type,
+        'default_os_type': default_os_type,
+        'os_username': os_username[args.os_type],
+        'test_os': test_os[args.os_type],
+        'pipeline_target': args.pipeline_target,
         'test_sections': args.test_sections,
         'pipeline_configuration': args.pipeline_configuration,
         'test_trigger': test_trigger,
@@ -218,7 +229,7 @@ def header(args):
   Pipeline target: ......... : %s
   Pipeline file ............ : %s
   Template file ............ : %s
-  OS Types ................. : %s
+  OS Type .................. : %s
   Test sections ............ : %s
   test_trigger ............. : %s
   use_ICW_workers .......... : %s
@@ -228,7 +239,7 @@ def header(args):
 ''' % (args.pipeline_target,
        args.output_filepath,
        args.template_filename,
-       args.os_types,
+       args.os_type,
        args.test_sections,
        args.test_trigger_false,
        args.use_ICW_workers,
@@ -249,6 +260,8 @@ def print_fly_commands(args, git_remote, git_branch):
     if args.pipeline_target == 'prod':
         print('NOTE: You can set the production pipelines with the following:\n')
         pipeline_name = "gpdb_%s" % BASE_BRANCH if BASE_BRANCH == "main" else BASE_BRANCH
+        if args.os_type != default_os_type:
+            pipeline_name += "_" + args.os_type
         print(gen_pipeline(args, pipeline_name, ["common_prod.yml"],
                            "https://github.com/greenplum-db/gpdb.git", BASE_BRANCH))
         print(gen_pipeline(args, "%s_without_asserts" % pipeline_name, ["common_prod.yml", "without_asserts_common_prod.yml"],
@@ -287,13 +300,12 @@ def main():
 
     parser.add_argument(
         '-O',
-        '--os_types',
+        '--os_type',
         action='store',
-        dest='os_types',
-        default=['rhel8'],
-        choices=['rhel8', 'win'],
-        nargs='+',
-        help='List of OS values to support'
+        dest='os_type',
+        default=default_os_type,
+        choices=['rhel8', 'rocky8', 'oel8'],
+        help='OS value to support'
     )
 
     parser.add_argument(
@@ -325,12 +337,9 @@ def main():
         dest='test_sections',
         choices=[
             'ICW',
-            'Replication',
             'ResourceGroups',
             'Interconnect',
             'CLI',
-            'UD',
-            'AA',
             'Extensions'
         ],
         default=[],
@@ -405,14 +414,11 @@ def main():
         args.use_ICW_workers = True
 
     if args.pipeline_configuration == 'prod' or args.pipeline_configuration == 'full' or args.directed_release:
-        args.os_types = ['rhel8', 'win']
         args.test_sections = [
             'ICW',
-            'Replication',
             'ResourceGroups',
             'Interconnect',
             'CLI',
-            'UD',
             'Extensions'
         ]
 

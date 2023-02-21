@@ -39,6 +39,7 @@
 #include "optimizer/planmain.h"
 #include "pgstat.h"
 #include "parser/scansup.h"
+#include "postmaster/autovacuum.h"
 #include "postmaster/syslogger.h"
 #include "postmaster/fts.h"
 #include "replication/walsender.h"
@@ -220,11 +221,8 @@ bool		gp_debug_resqueue_priority = false;
 /* Resource group GUCs */
 int			gp_resource_group_cpu_priority;
 double		gp_resource_group_cpu_limit;
-double		gp_resource_group_memory_limit;
 bool		gp_resource_group_bypass;
-bool		gp_resource_group_cpu_ceiling_enforcement;
-bool		gp_resource_group_enable_recalculate_query_mem;
-bool		gp_resource_group_enable_cgroup_version_two;
+bool		gp_resource_group_bypass_catalog_query;
 
 /* Metrics collector debug GUC */
 bool		vmem_process_interrupt = false;
@@ -313,6 +311,7 @@ bool		optimizer_enable_multiple_distinct_aggs;
 bool		optimizer_enable_direct_dispatch;
 bool		optimizer_enable_hashjoin_redistribute_broadcast_children;
 bool		optimizer_enable_broadcast_nestloop_outer_child;
+bool		optimizer_discard_redistribute_hashjoin;
 bool		optimizer_enable_streaming_material;
 bool		optimizer_enable_gather_on_segment_for_dml;
 bool		optimizer_enable_assert_maxonerow;
@@ -336,6 +335,7 @@ bool		optimizer_prune_unused_columns;
 bool		optimizer_enable_redistribute_nestloop_loj_inner_child;
 bool		optimizer_force_comprehensive_join_implementation;
 bool		optimizer_enable_replicated_table;
+bool		optimizer_enable_foreign_table;
 
 /* Optimizer plan enumeration related GUCs */
 bool		optimizer_enumerate_plans;
@@ -368,6 +368,7 @@ int			optimizer_join_order;
 int			optimizer_cte_inlining_bound;
 int			optimizer_push_group_by_below_setop_threshold;
 int			optimizer_xform_bind_threshold;
+int			optimizer_skew_factor;
 bool		optimizer_force_multistage_agg;
 bool		optimizer_force_three_stage_scalar_dqa;
 bool		optimizer_force_expanded_distinct_aggs;
@@ -545,6 +546,12 @@ static const struct config_enum_entry optimizer_join_order_options[] = {
 	{"greedy", JOIN_ORDER_GREEDY_SEARCH},
 	{"exhaustive", JOIN_ORDER_EXHAUSTIVE_SEARCH},
 	{"exhaustive2", JOIN_ORDER_EXHAUSTIVE2_SEARCH},
+	{NULL, 0}
+};
+
+static const struct config_enum_entry gp_autovacuum_scope_options[] = {
+	{"catalog", AV_SCOPE_CATALOG},
+	{"catalog_ao_aux", AV_SCOPE_CATALOG_AO_AUX},
 	{NULL, 0}
 };
 
@@ -735,6 +742,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 			gettext_noop("Sort more efficiently when plan requires the first <n> rows at most.")
 		},
 		&gp_enable_sort_limit,
+		true,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_explain_jit", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enables JIT instrumentation output for EXPLAIN"),
+			NULL
+		},
+		&gp_explain_jit,
 		true,
 		NULL, NULL, NULL
 	},
@@ -1655,18 +1672,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_resgroup_print_operator_memory_limits", PGC_USERSET, LOGGING_WHAT,
-			gettext_noop("Prints out the memory limit for operators (in explain) assigned by resource group's "
-						 "memory management."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_resgroup_print_operator_memory_limits,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gp_resgroup_debug_wait_queue", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Enable the debugging check on the wait queue of resource group."),
 			NULL,
@@ -2371,6 +2376,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		NULL, NULL, NULL
 	},
 	{
+		{"optimizer_discard_redistribute_hashjoin", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Discard hash join with redistribute motion in the optimizer."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_discard_redistribute_hashjoin,
+		false,
+		NULL, NULL, NULL
+	},
+	{
 		{"optimizer_expand_fulljoin", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enables the optimizer's support of expanding full outer joins using union all."),
 			NULL,
@@ -2754,31 +2769,12 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_resource_group_cpu_ceiling_enforcement", PGC_POSTMASTER, RESOURCES,
-			gettext_noop("If the value is true, ceiling enforcement of CPU usage will be enabled"),
+		{"gp_resource_group_bypass_catalog_query", PGC_USERSET, RESOURCES,
+			gettext_noop("Bypass all catalog only queries."),
 			NULL
 		},
-		&gp_resource_group_cpu_ceiling_enforcement,
-		false, NULL, NULL
-	},
-
-	{
-		{"gp_resource_group_enable_recalculate_query_mem", PGC_USERSET, RESOURCES,
-		 	gettext_noop("Enable resource group re-calculate the query_mem on QE"),
-		 	NULL
-		},
-		&gp_resource_group_enable_recalculate_query_mem,
-		true,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_resource_group_enable_cgroup_version_two", PGC_POSTMASTER, RESOURCES,
-			gettext_noop("Enable linux cgroup version 2"),
-			NULL
-		},
-		&gp_resource_group_enable_cgroup_version_two,
-		false, NULL, NULL
+		&gp_resource_group_bypass_catalog_query,
+		true, NULL, NULL
 	},
 
 	{
@@ -2907,20 +2903,29 @@ struct config_bool ConfigureNamesBool_gp[] =
 		 gettext_noop("Enable replicated tables."),
 		 NULL,
 		 GUC_NOT_IN_SAMPLE
-		 },
-		 &optimizer_enable_replicated_table,
-		 true,
-		 NULL, NULL, NULL
+		},
+		&optimizer_enable_replicated_table,
+		true,
+		NULL, NULL, NULL
 	},
-
+	{
+		{"optimizer_enable_foreign_table", PGC_USERSET, DEVELOPER_OPTIONS,
+		 gettext_noop("Enable foreign tables in Orca."),
+		 NULL,
+		 GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_enable_foreign_table,
+		true,
+		NULL, NULL, NULL
+	},
 	{
 		{"gp_log_suboverflow_statement", PGC_SUSET, LOGGING_WHAT,
 		 gettext_noop("Enable logging of statements that cause subtransaction overflow."),
 		 NULL,
-		 },
-		 &gp_log_suboverflow_statement,
-		 false,
-		 NULL, NULL, NULL
+		},
+		&gp_log_suboverflow_statement,
+		false,
+		NULL, NULL, NULL
 	},
 
 	/* End-of-list marker */
@@ -2997,16 +3002,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_safefswritesize", PGC_BACKEND, RESOURCES,
-			gettext_noop("Minimum FS safe write size."),
-			NULL
-		},
-		&gp_safefswritesize,
-		DEFAULT_FS_SAFE_WRITE_SIZE, 0, INT_MAX,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"planner_work_mem", PGC_USERSET, RESOURCES_MEM,
 			gettext_noop("Sets the maximum memory to be used for query workspaces, "
 						 "used in the planner only."),
@@ -3037,22 +3032,12 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"memory_spill_ratio", PGC_USERSET, RESOURCES_MEM,
-			gettext_noop("Sets the memory_spill_ratio for resource group."),
-			NULL
-		},
-		&memory_spill_ratio,
-		20, 0, 100,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gp_resource_group_cpu_priority", PGC_POSTMASTER, RESOURCES,
 			gettext_noop("Sets the cpu priority for postgres processes when resource group is enabled."),
 			NULL
 		},
 		&gp_resource_group_cpu_priority,
-		1, 1, 50,
+		10, 1, 50,
 		NULL, NULL, NULL
 	},
 
@@ -3868,6 +3853,17 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"gp_resgroup_memory_query_fixed_mem", PGC_USERSET, RESOURCES_MEM,
+			gettext_noop("Sets the fixed amount of memory reserved for a query."),
+			NULL,
+			GUC_UNIT_KB | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_resgroup_memory_query_fixed_mem,
+		0, 0, INT_MAX,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"gp_resqueue_memory_policy_auto_fixed_mem", PGC_USERSET, RESOURCES_MEM,
 			gettext_noop("Sets the fixed amount of memory reserved for non-memory intensive operators in the AUTO policy."),
 			NULL,
@@ -3877,7 +3873,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		100, 50, INT_MAX,
 		NULL, NULL, NULL
 	},
-
 	{
 		{"gp_resgroup_memory_policy_auto_fixed_mem", PGC_USERSET, RESOURCES_MEM,
 			gettext_noop("Sets the fixed amount of memory reserved for non-memory intensive operators in the AUTO policy."),
@@ -3888,6 +3883,7 @@ struct config_int ConfigureNamesInt_gp[] =
 		100, 50, INT_MAX,
 		NULL, NULL, NULL
 	},
+
 
 	{
 		{"gp_global_deadlock_detector_period", PGC_SIGHUP, LOCK_MANAGEMENT,
@@ -3975,6 +3971,17 @@ struct config_int ConfigureNamesInt_gp[] =
 		0, 0, INT_MAX,
 		NULL, NULL, NULL
 	},
+
+    {
+            {"optimizer_skew_factor", PGC_USERSET, DEVELOPER_OPTIONS,
+             gettext_noop("Coefficient of skew ratio computed from sample stastics. Default 0: skew computation from sample statistics turned off. [1,100]: skew ratio computed from sample statistics. The skewness used for costing is the product of the optimizer_skew_factor and the skew ratio."),
+             NULL,
+             GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+            },
+            &optimizer_skew_factor,
+            0, 0, 100,
+            NULL, NULL, NULL
+    },
 
 	{
 		{"optimizer_join_order_threshold", PGC_USERSET, QUERY_TUNING_METHOD,
@@ -4150,7 +4157,7 @@ struct config_int ConfigureNamesInt_gp[] =
 
 	{
 		{"gp_max_parallel_cursors", PGC_SUSET, RESOURCES,
-			gettext_noop("Parallel cursor concurrency control from the source cluster side, -1 means no limit, which is the default"),
+			gettext_noop("Parallel cursor concurrency control, -1 means no limit, which is the default"),
 			NULL, GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_max_parallel_cursors,
@@ -4217,16 +4224,6 @@ struct config_real ConfigureNamesReal_gp[] =
 		},
 		&gp_resource_group_cpu_limit,
 		0.9, 0.1, 1.0,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_resource_group_memory_limit", PGC_POSTMASTER, RESOURCES,
-			gettext_noop("Maximum percentage of memory resources assigned to a cluster."),
-			NULL
-		},
-		&gp_resource_group_memory_limit,
-		0.7, 0.0001, 1.0,
 		NULL, NULL, NULL
 	},
 
@@ -4706,6 +4703,17 @@ struct config_enum ConfigureNamesEnum_gp[] =
 		},
 		&optimizer_join_order,
 		JOIN_ORDER_EXHAUSTIVE2_SEARCH, optimizer_join_order_options,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_autovacuum_scope", PGC_SIGHUP, AUTOVACUUM,
+		 gettext_noop("Sets which tables are eligible for autovacuum of dead tuples."),
+		 NULL,
+		 GUC_REPORT | GUC_SUPERUSER_ONLY
+		},
+		&gp_autovacuum_scope,
+		AV_SCOPE_CATALOG, gp_autovacuum_scope_options,
 		NULL, NULL, NULL
 	},
 	/* End-of-list marker */
