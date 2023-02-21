@@ -91,14 +91,6 @@ struct block_t
 	char*		cdata;
 };
 
-typedef struct zstd_buffer zstd_buffer;
-struct zstd_buffer
-{
-	char		*buf;
-	int		size;
-	int		pos;	
-};
-
 /*  Get session id for this request */
 #define GET_SID(r)	((r->sid))
 
@@ -107,6 +99,15 @@ static long SESSION_SEQ = 0;		/*  sequence number for session */
 static sem_t THREAD_NUM;			/* limit total thread number */
 #ifdef USE_ZSTD
 static long OUT_BUFFER_SIZE = 0;	/* zstd out buffer size */
+
+typedef struct zstd_buffer zstd_buffer;
+struct zstd_buffer
+{
+	char		*buf;
+	int		size;
+	int		pos;	
+};
+
 #endif
 static bool base16_decode(char* data);
 
@@ -327,6 +328,7 @@ struct request_t
 									 * Wait it ends and then startup new thread to transfer data. 
 									 */
 	pthread_t		thread_id;		/* recording the thread ID of thread created */
+	int				send_size;		/* record number of sent bytes in multi-thread mode. */
 
 #ifdef USE_SSL
 	/* SSL related */
@@ -394,7 +396,7 @@ static int decompress_data(request_t *r, zstd_buffer *in, zstd_buffer *out);
 static int decompress_zstd(request_t* r, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout);
 static int decompress_write_loop(request_t *r);
 static int local_send_with_zstd(request_t *r);
-static void wait_for_thread_join(request_t *r, size_t *send_size);
+static size_t wait_for_thread_join(request_t *r);
 #endif
 static int request_parse_gp_headers(request_t *r, int opt_g);
 static void free_session_cb(int fd, short event, void* arg);
@@ -600,7 +602,7 @@ static void usage_error(const char* msg, int print_usage)
 #ifdef GPFXDIST
 					    "        -c file    : configuration file for transformations\n"
 #endif
-#ifdef GPFXDIST
+#ifdef USE_ZSTD
 					    "        --compress : open compression transmission\n"
 						"        --mthread num : the max number of working thread for compression transmission\n"
 #endif
@@ -758,14 +760,18 @@ static void parse_command_line(int argc, const char* const argv[],
 		case 258:
 			opt.compress = 1;
 			break;
+		case 259:
+			opt.multi_thread = atoi(arg);
+			opt.compress = 1;
+			break;
 #else
 		case 258:
 			usage_error("ZSTD is not supported by this build", 0);
 			break;
-#endif
 		case 259:
-			opt.multi_thread = atoi(arg);
+			usage_error("Multi-thread transmission relies on zstd, but zstd is not supported by this build", 0);
 			break;
+#endif
 		}
 	}
 
@@ -836,6 +842,7 @@ static void parse_command_line(int argc, const char* const argv[],
 		int num_thread = opt.multi_thread;
 		if (num_thread > MAX_THREAD_NUM)
 		{
+			gwarning(NULL, "%s", "The thread number exceeds the restricted number! Gpfdist will use the restricted number.");
 			num_thread = MAX_THREAD_NUM;
 		}
 		sem_init(&THREAD_NUM, 0, num_thread);
@@ -1301,20 +1308,25 @@ static int local_send(request_t *r, const char* buf, int buflen)
 #ifdef USE_ZSTD
 
 static 
-void wait_for_thread_join(request_t *r, size_t *send_size)
+size_t wait_for_thread_join(request_t *r)
 {
-	pthread_join(r->thread_id, (void*)send_size);
+	size_t res = 0;
+	pthread_join(r->thread_id, &res);
 	r->is_running = 0;
 	r->thread_id = 0;
-	if (r->outblock.lastsize != *send_size)
-		*send_size = -1;
+	if (r->outblock.lastsize != r->send_size)
+		return -1;
+	return r->send_size;
 }
 
 static 
-void * send_compression_data (void *req)
+size_t send_compression_data (void *req)
 {
 	request_t *r = (request_t *)req;
 	int osize = r->outblock.top, res = 0;
+
+	r->send_size = r->outblock.top;
+
 	block_t *outblock = &r->outblock;
 	char *buf = outblock->cdata;
 
@@ -1323,7 +1335,9 @@ void * send_compression_data (void *req)
 		res = compress_zstd(r, outblock, osize);
 		if (res < 0)
 		{
-			return (void *)(size_t)-2;  /* If the error come from compression, '-2' is returned */
+			r->send_size = -2;	/* If the error come from compression, '-2' is returned */
+			sem_post(&THREAD_NUM);
+			return r->send_size;  
 		}
 		outblock->cbot = 0;
 		outblock->ctop = res;
@@ -1332,17 +1346,21 @@ void * send_compression_data (void *req)
 	{
 		res = outblock->ctop - outblock->cbot;
 		buf = outblock->cdata + outblock->cbot;
-		osize = 0;	/* This means that this transmission is for the data that isn't sent totally last time */
+		r->send_size = 0;	/* This means that this transmission is for the data that isn't sent totally last time */
 	}
-
-	int send = local_send(r, buf, res);
+	
+	size_t send = local_send(r, buf, res);
 	if(send < 0)
-		return (void *)(size_t)send;
+	{
+		r->send_size = send;
+		sem_post(&THREAD_NUM);
+		return send;
+	}
 	else
 		outblock->cbot += send;
 	
 	sem_post(&THREAD_NUM);
-	return (void *)(size_t)osize;
+	return r->send_size;
 }
 
 static int 
@@ -1350,15 +1368,15 @@ local_send_with_zstd(request_t *r)
 {
 	size_t send_size = 0;
 	if(opt.multi_thread){
-		r->is_running = 1;
 		sem_wait(&THREAD_NUM);
 		pthread_create(&r->thread_id, 0, send_compression_data, r);
+		r->is_running = 1;
 		send_size = r->outblock.top - r->outblock.bot;
 		r->outblock.lastsize = r->outblock.top - r->outblock.bot;
 	}
 	else
 	{
-		send_size = (size_t)send_compression_data(r);
+		send_size = send_compression_data(r);
 	}
 
 	return send_size;
@@ -1919,10 +1937,10 @@ static int session_active_segs_isempty(session_t* session)
 static 
 size_t recycle_thread(request_t *r)
 {
-	size_t last_send = 0;;
+	size_t last_send = 0;
 	if (r->is_running)
 	{
-		wait_for_thread_join(r, &last_send);
+		last_send = wait_for_thread_join(r);
 
 		if(last_send < 0) 
 		{	
@@ -1965,11 +1983,10 @@ static void do_write(int fd, short event, void* arg)
 	 * request has not finished, main thread should be blocked and
 	 * waiting for recycling corresponding thread.
 	 */
-	int last_send = 0;
 	if (opt.multi_thread)
 	{
 		size_t res = recycle_thread(r);
-		if(last_send < 0)
+		if(res < 0)
 		{
 			return;
 		}
@@ -3721,6 +3738,13 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 		else
 			r->zstd_dctx = ZSTD_createDCtx();
 	}
+	else
+	{
+		if (opt.multi_thread)
+			opt.multi_thread = 0;
+		gwarning(NULL, "%s", "GPDB does not support zstd compression. Multi-thread transmission and ZSTD compression cannot be enabled.");
+	}
+
 #endif
 
 	if (r->line_delim_length > 0)
@@ -4709,9 +4733,8 @@ static void request_cleanup(request_t *r)
 	request_shutdown_sock(r);
 	setup_do_close(r);
 #ifdef USE_ZSTD
-	size_t tmp = 0;
 	if(r->is_running)
-		wait_for_thread_join(r, &tmp);
+		wait_for_thread_join(r);
 	if ( r->zstd && r->is_get )
 	{	
 		ZSTD_freeCCtx(r->zstd_cctx);
