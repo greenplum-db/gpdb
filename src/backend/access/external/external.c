@@ -807,7 +807,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *iscoordinatoronly)
 		 * 3) all segs on host <foo>
 		 * 4) seg <n> only
 		 * 5) <n> random segs
-		 * 6) master only
+		 * 6) coordinator only
 		 */
 		if (strcmp(on_clause, "ALL_SEGMENTS") == 0)
 		{
@@ -951,7 +951,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *iscoordinatoronly)
 		{
 			/*
 			 * store the command in first array entry and indicate that it is
-			 * meant for the master segment (not seg o).
+			 * meant for the coordinator segment (not seg o).
 			 */
 			segdb_file_map[0] = pstrdup(prefixed_command);
 			*iscoordinatoronly = true;

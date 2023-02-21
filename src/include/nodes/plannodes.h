@@ -914,7 +914,7 @@ typedef struct ExternalScanInfo
 	NodeTag		type;
 	List		*uriList;            /* data uri or null for each segment  */
 	char		fmtType;             /* data format type                   */
-	bool		isCoordinatorOnly;   /* true for EXECUTE on master seg only */
+	bool		isCoordinatorOnly;   /* true for EXECUTE on coordinator seg only */
 	int			rejLimit;            /* reject limit (-1 for no sreh)      */
 	bool		rejLimitInRows;      /* true if ROWS false if PERCENT      */
 	char		logErrors;           /* 't', 'p' to log errors into file. 'p' makes persistent error log */
