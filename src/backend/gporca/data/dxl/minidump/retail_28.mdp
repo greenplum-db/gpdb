@@ -4372,7 +4372,7 @@ ORDER BY to_char(order_datetime,'YYYY-Q')
                   <dxl:Ident ColId="6" ColName="item_shipment_status_code" TypeMdid="0.1043.1.0"/>
                 </dxl:HashExpr>
               </dxl:HashExprList>
-              <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
+              <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
                 <dxl:Properties>
                   <dxl:Cost StartupCost="0" TotalCost="852034.836509" Rows="246206051.943378" Width="27"/>
                 </dxl:Properties>

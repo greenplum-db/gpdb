@@ -724,13 +724,11 @@ CXformSplitDQA::PexprMultiLevelAggregation(
 	CExpressionArray *pdrgpexprLastStage = pdrgpexprPrElSecondStage;
 	if (fSplit2LevelsOnly)
 	{
-		// for scalar DQA the local aggregate is responsible for removing duplicates
-		BOOL fLocalAggGeneratesDuplicates = (0 < pdrgpcrLastStage->Size());
-
+		// the local aggregate is responsible for removing duplicates
 		pdrgpcrArgDQA->AddRef();
 		popFirstStage = GPOS_NEW(mp) CLogicalGbAgg(
 			mp, pdrgpcrLocal, COperator::EgbaggtypeLocal,
-			fLocalAggGeneratesDuplicates, pdrgpcrArgDQA, aggStage);
+			false /* fGeneratesDuplicates */, pdrgpcrArgDQA, aggStage);
 		pdrgpcrLastStage->AddRef();
 		popSecondStage = GPOS_NEW(mp) CLogicalGbAgg(
 			mp, pdrgpcrLastStage, COperator::EgbaggtypeGlobal, /* egbaggtype */
