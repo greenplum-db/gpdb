@@ -54,7 +54,7 @@ static ResPortalIncrement *ResIncrementAdd(ResPortalIncrement *incSet,
 										   PROCLOCK *proclock,
 										   ResourceOwner owner,
 										   ResIncrementAddStatus *status);
-static bool ResIncrementRemove(ResPortalTag *portaltag);
+bool ResIncrementRemove(ResPortalTag *portaltag);
 
 static void ResWaitOnLock(LOCALLOCK *locallock, ResourceOwner owner, ResPortalIncrement *incrementSet);
 
@@ -1591,7 +1591,7 @@ ResIncrementFind(ResPortalTag *portaltag)
  *	The resource queue lightweight lock (ResQueueLock) *must* be held for
  *	this operation.
  */
-static bool
+bool
 ResIncrementRemove(ResPortalTag *portaltag)
 {
 	ResPortalIncrement *incrementSet;

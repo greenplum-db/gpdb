@@ -154,6 +154,24 @@ ALTER ROUTINE ptest1(text) RENAME TO ptest1a;
 ALTER ROUTINE ptest1a RENAME TO ptest1;
 
 DROP ROUTINE cp_testfunc1(int);
+-- commit in procedure
+create table procedure_tbl1(a int);
+create table procedure_tbl2(a int);
+insert into procedure_tbl1 values(1),(2),(3),(4),(5);
+CREATE OR REPLACE PROCEDURE test()
+LANGUAGE plpgsql
+AS $procedure$
+    declare tmp_a int;
+    declare queryStr varchar;
+begin
+for tmp_a in (select a from procedure_tbl1 limit 5) loop
+        queryStr := 'insert into procedure_tbl2 values (' || tmp_a || ');';
+execute(queryStr);
+commit;
+end loop;
+end;
+$procedure$;
+call test();call test();
 
 
 -- cleanup

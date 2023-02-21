@@ -1031,10 +1031,28 @@ ResCreatePortalId(const char *name)
 void
 AtCommit_ResScheduler(void)
 {
+	uint32			id;
+	ResPortalTag		portalTag;
+        /* reset the portal id. */
+        if (numHoldPortals == 0)
+	{
+		/* 
+		 * Clean up remaining entry in ResPortalIncrementHash 
+		 * before resetting portalId to zero. 
+		 */
+		for (id = 1; id <= portalId; id++)
+		{
+			MemSet(&portalTag, 0, sizeof(ResPortalTag));
+			portalTag.pid = MyProc->pid;
+			portalTag.portalId = id;
+			if (ResIncrementFind(&portalTag)) 
+			{
+				ResIncrementRemove(&portalTag);
+			}
+		}
 
-	/* reset the portal id. */
-	if (numHoldPortals == 0)
-		portalId = 0;
+                portalId = 0;
+	}
 }
 
 
