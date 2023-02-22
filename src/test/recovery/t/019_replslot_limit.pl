@@ -75,6 +75,11 @@ is($result, "reserved|t", 'check that slot is working');
 # The standby can reconnect to master
 $node_standby->start;
 
+# Greenplum: perform CHECKPOINT just before recording restart_lsn. We need to
+# do this because Greenplum replication slot's restart_lsn is set to whichever
+# smaller between the confirmed received lsn and the last checkpoint's redo lsn.
+# Refer commit 055c57d for more context.
+$node_master->safe_psql('postgres', "CHECKPOINT;");
 $start_lsn = $node_master->lsn('write');
 $node_master->wait_for_catchup($node_standby, 'replay', $start_lsn);
 
@@ -102,6 +107,11 @@ is($result, "reserved", 'check that safe_wal_size gets close to the current LSN'
 
 # The standby can reconnect to master
 $node_standby->start;
+# Greenplum: perform CHECKPOINT just before recording restart_lsn. We need to
+# do this because Greenplum replication slot's restart_lsn is set to whichever
+# smaller between the confirmed received lsn and the last checkpoint's redo lsn.
+# Refer commit 055c57d for more context.
+$node_master->safe_psql('postgres', "CHECKPOINT;");
 $start_lsn = $node_master->lsn('write');
 $node_master->wait_for_catchup($node_standby, 'replay', $start_lsn);
 $node_standby->stop;
@@ -117,6 +127,11 @@ $result = $node_master->safe_psql('postgres', "ALTER SYSTEM SET wal_keep_size to
 
 # The standby can reconnect to master
 $node_standby->start;
+# Greenplum: perform CHECKPOINT just before recording restart_lsn. We need to
+# do this because Greenplum replication slot's restart_lsn is set to whichever
+# smaller between the confirmed received lsn and the last checkpoint's redo lsn.
+# Refer commit 055c57d for more context.
+$node_master->safe_psql('postgres', "CHECKPOINT;");
 $start_lsn = $node_master->lsn('write');
 $node_master->wait_for_catchup($node_standby, 'replay', $start_lsn);
 $node_standby->stop;
