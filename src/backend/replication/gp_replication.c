@@ -433,7 +433,7 @@ FTSReplicationStatusRetrieveDisconnectTime(FTSReplicationStatus *replication_sta
  *
  * Detect the primary-mirror replication attempt count.
  * If the replication keeps crash, we should consider mark
- * mirror down directly. Since the walsender keeps resarting,
+ * mirror down directly. Since the walsender keeps restarting,
  * walsender->replica_disconnected_at keeps updated.
  * So ignore it.
  *

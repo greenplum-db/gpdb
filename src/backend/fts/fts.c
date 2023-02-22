@@ -156,7 +156,7 @@ CdbComponentDatabases *readCdbComponentInfoAndUpdateStatus(void)
 	}
 
 	/*
-	 * Initialize fts_stausVersion after populating the config details in
+	 * Initialize fts_statusVersion after populating the config details in
 	 * shared memory for the first time after FTS startup.
 	 */
 	if (ftsProbeInfo->status_version == 0)

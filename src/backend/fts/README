@@ -5,7 +5,7 @@ Fault Tolerance Service (FTS)
 This document illustrates the mechanism of a GPDB component called
 Fault Tolerance Service (FTS):
 
- - This sections explains how FTS probe process is started. The FTS
+1. This sections explains how FTS probe process is started. The FTS
    probe process is running on the coordinator node only. It starts as a
    background worker process managed by the BackgroundWorker structure
    (see src/include/postmaster/bgworker.h).  Greenplum sets up a group of
