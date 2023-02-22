@@ -1323,8 +1323,10 @@ aoco_vacuum_rel(Relation onerel, VacuumParams *params,
                       BufferAccessStrategy bstrategy)
 {
 	/*
-	 * Implemented but not invoked, we do the AO_COLUMN different phases vacuuming by
-	 * calling ao_vacuum_rel() in vacuum_rel() directly for now.
+	 * We VACUUM an AO_COLUMN table through multiple phases. vacuum_rel()
+	 * orchestrates the phases and calls itself again for each phase, so we
+	 * get here for every phase. ao_vacuum_rel() is a wrapper of dedicated
+	 * ao_vacuum_rel_*() functions for the specific phases.
 	 */
 	ao_vacuum_rel(onerel, params, bstrategy);
 
