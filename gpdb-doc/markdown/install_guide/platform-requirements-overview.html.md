@@ -221,11 +221,6 @@ This table lists the versions of the Greenplum Extensions that are compatible wi
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">R 3.4.4</td>
 </tr>
 <tr class="row">
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/greenplum_r_client.html">GreenplumR</a></td>
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">1.1.0</td>
-<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">Supports R 3.6+.</td>
-</tr>
-<tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/madlib.html">MADlib Machine Learning</a></td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">1.19, 1.18, 1.17, 1.16</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">Support matrix at <a class="xref" href="https://cwiki.apache.org/confluence/display/MADLIB/FAQ#FAQ-Q1-2WhatdatabaseplatformsdoesMADlibsupportandwhatistheupgradematrix?" target="_blank">MADlib FAQ</a>.</td>

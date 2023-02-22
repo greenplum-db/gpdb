@@ -42,9 +42,8 @@ The container connection is closed by closing the Greenplum Database session tha
 
 ### <a id="section_d32_nv1_rqb"></a>About PL/Container 3 Beta 
 
-Greenplum Database 6.5 introduces PL/Container version 3 Beta, which:
+PL/Container version 3 Beta:
 
--   Provides support for the new GreenplumR interface.
 -   Reduces the number of processes created by PL/Container, in order to save system resources.
 -   Supports more containers running concurrently.
 -   Includes improved log messages to help diagnose problems.
