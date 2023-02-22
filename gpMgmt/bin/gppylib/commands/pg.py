@@ -294,10 +294,13 @@ class PgBaseBackup(Command):
 
         cmd_tokens.extend(self._xlog_arguments(replication_slot_name))
 
-        # GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: avoid checking checksum for heap tables
-        # till we code logic to skip/verify checksum for
-        # appendoptimized tables. Enabling this results in basebackup
-        # failures with appendoptimized tables.
+        # GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: avoid checking checksum
+        # for heap tables till we code logic to skip/verify checksum
+        # for appendoptimized tables. Enabling this results in
+        # basebackup failures with appendoptimized tables. Note: Once
+        # this feature is enabled also modify isolation2 pg_basebackup
+        # function in setup.sql to remove this flag and by default
+        # test the checksum functionality.
         cmd_tokens.append('--no-verify-checksums')
 
         if forceoverwrite:
