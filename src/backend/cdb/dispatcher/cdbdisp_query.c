@@ -264,7 +264,21 @@ CdbDispatchPlan(struct QueryDesc *queryDesc,
 	 */
 	if (queryDesc->extended_query)
 	{
-		verify_shared_snapshot_ready(gp_command_count);
+		bool has_lockrows = false;
+		ListCell *lcell;
+
+		foreach(lcell, queryDesc->plannedstmt->rowMarks)
+		{
+			PlanRowMark *rc = lfirst_node(PlanRowMark, lcell);
+
+			if (RowMarkRequiresRowShareLock(rc->markType))
+			{
+				has_lockrows = true;
+				break;
+			}
+		}
+
+		verify_shared_snapshot_ready(gp_command_count, has_lockrows);
 	}
 
 	cdbdisp_dispatchX(queryDesc, planRequiresTxn, cancelOnError);
@@ -1680,3 +1694,4 @@ findParamType(List *params, int paramid)
 
 	return InvalidOid;
 }
+

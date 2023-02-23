@@ -1506,7 +1506,7 @@ insertedDistributedCommitted(void)
  * information.
  */
 void
-verify_shared_snapshot_ready(int cid)
+verify_shared_snapshot_ready(int cid, bool has_lockrows)
 {
 	Assert (Gp_role == GP_ROLE_DISPATCH);
 
@@ -1519,7 +1519,16 @@ verify_shared_snapshot_ready(int cid)
 	if (MySessionState->latestCursorCommandId == cid)
 		return;
 
-	CdbDispatchCommand("set gp_write_shared_snapshot=true",
+	/*
+	 * If current extended query's plan contains a lockrows node, then
+	 * we need to recognize this case and tell the writer to get a local
+	 * transaction xid, which will be synced to readers by shared snapshot.
+	 * So that readers can acquire row level locks without exceptions.
+	 */
+	char *cmd_str = has_lockrows ? "set gp_write_shared_snapshot=snapshot_xid" : \
+				"set gp_write_shared_snapshot=snapshot";
+
+	CdbDispatchCommand(cmd_str,
 					   DF_CANCEL_ON_ERROR |
 					   DF_WITH_SNAPSHOT |
 					   DF_NEED_TWO_PHASE,
@@ -1531,28 +1540,34 @@ verify_shared_snapshot_ready(int cid)
 
 /*
  * Force the writer QE to write the shared snapshot. Will get called
- * after a "set gp_write_shared_snapshot=<true/false>" is executed
- * in dispatch mode.
+ * after a "set gp_write_shared_snapshot=<none/snapshot/snapshot_xid>"
+ * is executed in dispatch mode.
  *
  * See verify_shared_snapshot_ready(...) for additional information.
  */
 void
-assign_gp_write_shared_snapshot(bool newval, void *extra)
+assign_gp_write_shared_snapshot(int newval, void *extra)
 {
 
 #if FALSE
-	elog(DEBUG1, "SET gp_write_shared_snapshot: %s",
-		 (newval ? "true" : "false"));
+	elog(DEBUG1, "SET gp_write_shared_snapshot: %d", newval);
 #endif
 
 	/*
-	 * Make sure newval is "true". if it's "false" this could be a part of a
-	 * ROLLBACK so we don't want to set the snapshot then.
+	 * Make sure newval is not 0. if it's 0 this could be a part of
+	 * a ROLLBACK so we don't want to set the snapshot then.
 	 */
 	if (newval)
 	{
-		if (Gp_role == GP_ROLE_EXECUTE)
+		if (Gp_role == GP_ROLE_EXECUTE && IsTransactionState())
 		{
+			/*
+			 * The extended query contains locking clause, so the writer
+			 * gang must get a valid local transaction id.
+			 */
+			if (newval == SHAREDSNAPSHOT_DUMP_XID)
+				GetCurrentTransactionId();
+
 			PushActiveSnapshot(GetTransactionSnapshot());
 
 			if (Gp_is_writer)

@@ -2129,21 +2129,6 @@ exec_parse_message(const char *query_string,	/* string to execute */
 
 		raw_parse_tree = linitial_node(RawStmt, parsetree_list);
 
-		if (IsA(raw_parse_tree->stmt, SelectStmt))
-		{
-			/*
-			 * For extended query protocol, we cannot optimize to avoid
-			 * ExclusiveLock in case of select-for-update and similar queries.
-			 * If the subsequent 'E' message requests only a specific number
-			 * of rows to be fetched, the command must be executed like a
-			 * cursor and LockRows plan node cannot be executed within a
-			 * reader gang (cursors in Greenplum must be executed by a reader gang).
-			 * For details please refer the mailing list:
-			 * https://groups.google.com/a/greenplum.org/forum/#!msg/gpdb-dev/ugsZca1qLXU/CtUmzEa7CAAJ
-			 */
-			((SelectStmt *)raw_parse_tree->stmt)->disableLockingOptimization = true;
-		}
-
 		/*
 		 * Get the command name for possible use in status display.
 		 */

@@ -46,8 +46,9 @@ typedef struct SharedSnapshotSlot
 
 	volatile int    cur_dump_id;
 	volatile SnapshotDump    dump[SNAPSHOTDUMPARRAYSZ];
+
+	FullTransactionId	fullXid; /* one typical usage is to acquire row-level locks */
 	/* for debugging only */
-	FullTransactionId	fullXid;
 	TimestampTz		startTimestamp;
 } SharedSnapshotSlot;
 

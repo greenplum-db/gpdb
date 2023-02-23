@@ -1733,15 +1733,6 @@ typedef struct SelectStmt
 	struct SelectStmt *larg;	/* left child */
 	struct SelectStmt *rarg;	/* right child */
 	/* Eventually add fields for CORRESPONDING spec here */
-
-	/*
-	 * Greenplum specific field.
-	 * If disableLockingOptimization is true, we do not try to
-	 * optimize the behavior of locking clause, this means
-	 * we will lock the table in Exclusive Mode and do not
-	 * emit lockrows plannode.
-	 */
-	bool disableLockingOptimization;
 } SelectStmt;
 
 

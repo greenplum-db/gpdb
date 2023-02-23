@@ -214,7 +214,7 @@ extern int gp_command_count;
  * before DECLARE'ing a cursor, since a cursor query uses only reader
  * gangs. But should be used for other things if it makes sense to do so.
  */
-extern bool Gp_write_shared_snapshot;
+extern int Gp_write_shared_snapshot;
 
 extern int gp_fts_transition_retries;
 extern int gp_fts_transition_timeout;
