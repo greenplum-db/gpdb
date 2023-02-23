@@ -129,7 +129,6 @@ Review the following limitations when creating and using PL/Container PL/Python 
 -   The `plpy.execute()` methods `nrows()` and `status()` are not supported.
 -   The PL/Python function `plpy.SPIError()` is not supported.
 -   Running the `SAVEPOINT` command with `plpy.execute()` is not supported.
--   The `DO` command \(anonymous code block\) is supported only with PL/Container 3 \(currently a Beta feature\).
 -   Container flow control is not supported.
 -   Triggers are not supported.
 -   `OUT` parameters are not supported.
