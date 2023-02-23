@@ -15,38 +15,7 @@ This topic walks you through migration from an Open Source Greenplum Database to
 
 - Review the Greenplum Database [Platform Requirements topic](platform-requirements-overview.html) to verify that you have all software you need in place to successfully migrate to VMware Greenplum Database.
 
-<!--
-## <a id="dependencies"></a>Software Dependencies
-
-
-| RHEL/CentOS 6/7/8 Packages | Ubuntu 18.04 Packages |
-|---------------|-----------------|
-| apr | libapr1 |
-| apr-util | libaprutil1 |
-| bash | bash |
-| bzip2 | bzip2 |
-| curl | krb5-multidev |
-| krb5 | libcurl3-gnutls |
-| libcurl | libcurl4 |
-| libevent | libevent-2.1-6 |
-| libxml2 | libxml2 |
-| libyaml | libyaml-0-2 |
-| zlib | zlib1g |
-| openldap | libldap-2.4-2 |
-| openssh-client | openssh-client |
-| openssl |	openssl |
-| openssl-libs (RHEL7/Centos7) | iproute2 | 
-| perl | perl |
-| readline | readline |
-| rsync	| less |
-| R | net-tools |
-| sed (used by `gpinitsystem`) | sed |
-| tar |	tar |
-| zip | zip |
-
--->
-
-## <a id="Steps"></a>Steps to Migrate
+## <a id="steps"></a>Steps to Migrate
 
 Migrating from an open source Greenplum Database to a commercial VMware Greenplum database involves stopping the open source Greenplum Database, updating the Greenplum Database binary files (WHAT DOES THIS MEAN, EXACTLY?), and restarting the Greenplum Database. If you are using Greenplum Database extension packages, there are additional requirements, as summarized in the [Prerequisites](#prerequisites) section.
 
