@@ -5,7 +5,6 @@ title: Migrating from Open Source Greenplum Database to VMware Greenplum Databas
 This topic walks you through migration from an Open Source Greenplum Database to the commercial VMware Greenplum Database. Information is presented in the following topics:
 
 [Before You Begin](#before-you-begin)<br>
-[Software Dependencies](#software-dependencies)<br>
 [Steps to Migrate](#steps-to-migrate)<br>
 
 ## <a id="before-you-begin"></a> Before You Begin
