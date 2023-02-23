@@ -1734,7 +1734,7 @@ AutoVacWorkerMain(int argc, char *argv[])
 		InitPostgres(NULL, dbid, NULL, dbname);
 		SetProcessingMode(NormalProcessing);
 		set_ps_display(dbname, false);
-		ereport(LOG,
+		ereport(DEBUG1,
 				(errmsg("autovacuum: processing database \"%s\"", dbname)));
 
 		SIMPLE_FAULT_INJECTOR("auto_vac_worker_before_do_autovacuum");
