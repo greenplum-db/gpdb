@@ -1145,30 +1145,25 @@ openFetchSegmentFile(AOCSFetchDesc aocsFetchDesc,
 					 int openSegmentFileNum,
 					 int colNo)
 {
-	int			i;
-
 	AOCSFileSegInfo *fsInfo;
-	int			segmentFileNum;
 	int64		logicalEof;
 	DatumStreamFetchDesc datumStreamFetchDesc = aocsFetchDesc->datumStreamFetchDesc[colNo];
 
 	Assert(!datumStreamFetchDesc->currentSegmentFile.isOpen);
 
-	i = 0;
-	while (true)
+	int idx = segno2idx(openSegmentFileNum);
+	if (!segno2idx_validate(idx))
 	{
-		if (i >= aocsFetchDesc->totalSegfiles)
-			return false;
-		/* Segment file not visible in catalog information. */
-
-		fsInfo = aocsFetchDesc->segmentFileInfo[i];
-		segmentFileNum = fsInfo->segno;
-		if (openSegmentFileNum == segmentFileNum)
-		{
-			break;
-		}
-		i++;
+		ereport(WARNING,
+                (errcode(ERRCODE_INTERNAL_ERROR),
+                 errmsg("exceeded the range (0 ~ %d) of segment index %d",
+                        AOTupleId_MaxSegmentFileNum, idx)));
+		return false;
 	}
+
+	fsInfo = aocsFetchDesc->segmentFileInfo[idx];
+	Assert(fsInfo != NULL);
+	Assert(fsInfo->segno == openSegmentFileNum);
 
 	/*
 	 * Don't try to open a segment file when its EOF is 0, since the file may
@@ -1289,7 +1284,6 @@ aocs_fetch_init(Relation relation,
 											&aocsFetchDesc->blockDirectory,
 											appendOnlyMetaDataSnapshot,
 											(FileSegInfo **) aocsFetchDesc->segmentFileInfo,
-											aocsFetchDesc->totalSegfiles,
 											aocsFetchDesc->relation,
 											relation->rd_att->natts,
 											true,

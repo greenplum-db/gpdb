@@ -1607,39 +1607,36 @@ static bool
 openFetchSegmentFile(AppendOnlyFetchDesc aoFetchDesc,
 					 int openSegmentFileNum)
 {
-	int			i;
-
 	FileSegInfo *fsInfo;
-	int			segmentFileNum;
 	int64		logicalEof;
 	int32		fileSegNo;
 
 	Assert(!aoFetchDesc->currentSegmentFile.isOpen);
 
-	i = 0;
-	while (true)
+	int idx = segno2idx(openSegmentFileNum);
+	if (!segno2idx_validate(idx))
 	{
-		if (i >= aoFetchDesc->totalSegfiles)
-			return false;
-		/* Segment file not visible in catalog information. */
-
-		fsInfo = aoFetchDesc->segmentFileInfo[i];
-		segmentFileNum = fsInfo->segno;
-		if (openSegmentFileNum == segmentFileNum)
-		{
-			if (fsInfo->state == AOSEG_STATE_AWAITING_DROP)
-			{
-				/*
-				 * File compacted, but not dropped. All information are
-				 * declared invisible
-				 */
-				return false;
-			}
-			logicalEof = (int64) fsInfo->eof;
-			break;
-		}
-		i++;
+		ereport(WARNING,
+                (errcode(ERRCODE_INTERNAL_ERROR),
+                 errmsg("exceeded the range (0 ~ %d) of segment index %d",
+                        AOTupleId_MaxSegmentFileNum, idx)));
+		return false;
 	}
+
+	fsInfo = aoFetchDesc->segmentFileInfo[idx];
+	Assert(fsInfo != NULL);
+	Assert(fsInfo->segno == openSegmentFileNum);
+
+	if (fsInfo->state == AOSEG_STATE_AWAITING_DROP)
+	{
+		/*
+		 * File compacted, but not dropped. All information are
+		 * declared invisible
+		 */
+		return false;
+	}
+
+	logicalEof = (int64) fsInfo->eof;
 
 	/*
 	 * Don't try to open a segment file when its EOF is 0, since the file may
@@ -2047,7 +2044,6 @@ appendonly_fetch_init(Relation relation,
 											&aoFetchDesc->blockDirectory,
 											appendOnlyMetaDataSnapshot,
 											aoFetchDesc->segmentFileInfo,
-											aoFetchDesc->totalSegfiles,
 											aoFetchDesc->relation,
 											1,
 											false,

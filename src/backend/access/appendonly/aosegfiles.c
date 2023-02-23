@@ -545,6 +545,9 @@ GetAllFileSegInfo_pg_aoseg_rel(char *relationName,
 	 */
 	qsort((char *) allseginfo, *totalsegs, sizeof(FileSegInfo *), aoFileSegInfoCmp);
 
+	/* fill SEGNO_MAP accordingly */
+	FILL_SEGNO_MAP(allseginfo, *totalsegs);
+
 	return allseginfo;
 }
 

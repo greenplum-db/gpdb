@@ -436,10 +436,11 @@ AppendOnlyVisimapEntry_GetFirstRowNum(
 bool
 AppendOnlyVisimapEntry_IsVisible(
 								 AppendOnlyVisimapEntry *visiMapEntry,
-								 AOTupleId *tupleId)
+								 AOTupleId *tupleId, Bitmapset **allVisibleSet)
 {
 	int64		rowNum,
-				rowNumOffset;
+				rowNumOffset,
+				rangeNum;
 	bool		visibilityBit;
 
 	Assert(visiMapEntry);
@@ -459,6 +460,8 @@ AppendOnlyVisimapEntry_IsVisible(
 			   "Append-only visi map entry: All entries are visibile: "
 			   "(firstRowNum, rowNum) = (" INT64_FORMAT ", " INT64_FORMAT ")",
 			   visiMapEntry->firstRowNum, rowNum);
+		rangeNum = rowNum / APPENDONLY_VISIMAP_MAX_RANGE;
+		*allVisibleSet = bms_add_member(*allVisibleSet, rangeNum);
 		return true;
 	}
 	Assert(rowNum >= visiMapEntry->firstRowNum);

@@ -104,6 +104,88 @@ AOTupleIdSetInvalid(AOTupleId *h)
 #define AOTupleId_MaxSegmentFileNum    			127
 #define AOTupleId_MultiplierSegmentFileNum    	128	// Next up power of 2 as multiplier.
 
+#define SEGNO_MAP_SIZE							(AOTupleId_MaxSegmentFileNum + 1)
+
+#define	FILL_SEGNO_MAP(seginfos, nsegs)				\
+do {												\
+	segno_map_reset();								\
+	for (int i = 0; i < (nsegs); i++)				\
+		segno_map_set(i, (seginfos)[i]->segno);		\
+	segno_map_set(SEGNO_MAP_SIZE, (nsegs));			\
+} while (0)
+
+#define GET_SEGINFO(seginfos, segfileno, seginfo)							\
+do {																		\
+	int idx = segno2idx((segfileno));										\
+	if (!segno2idx_validate(idx))											\
+		ereport(ERROR,														\
+				(errcode(ERRCODE_INTERNAL_ERROR),							\
+				 errmsg("exceeded the range (0 ~ %d) of segment index %d",	\
+						AOTupleId_MaxSegmentFileNum, idx)));				\
+	Assert((seginfos) != NULL);												\
+	Assert(((seginfos) + idx) != NULL);										\
+	(seginfo) = (seginfos)[idx];											\
+	Assert((seginfo) != NULL);												\
+	Assert((seginfo)->segno == (segfileno));								\
+} while (0)
+
+extern int IDX2SEGNO[SEGNO_MAP_SIZE + 1];
+extern int SEGNO2IDX[SEGNO_MAP_SIZE + 1];
+
+static inline void
+segno_map_reset()
+{
+	memset(IDX2SEGNO, -1, sizeof(IDX2SEGNO));
+	memset(SEGNO2IDX, -1, sizeof(SEGNO2IDX));
+}
+
+static inline void
+segno_map_set(int idx, int segno)
+{
+	IDX2SEGNO[idx] = segno;
+
+	if (idx < SEGNO_MAP_SIZE)
+		SEGNO2IDX[segno] = idx;
+	else
+		/* idx == SEGNO_MAP_SIZE, segno == nsegs */
+		SEGNO2IDX[idx] = segno;
+}
+
+static inline int
+idx2segno(int idx)
+{
+	if (idx < 0 || idx > SEGNO_MAP_SIZE)
+		return -1;
+
+	return IDX2SEGNO[idx];
+}
+
+static inline bool
+idx2segno_validate(int segno)
+{
+	return !(segno < 0 ||
+			 segno > AOTupleId_MaxSegmentFileNum ||
+			 IDX2SEGNO[SEGNO_MAP_SIZE] <= 0);
+}
+
+static inline int
+segno2idx(int segno)
+{
+	if (segno < 0 || segno > AOTupleId_MaxSegmentFileNum)
+		return -1;
+
+	return SEGNO2IDX[segno];
+}
+
+static inline bool
+segno2idx_validate(int idx)
+{
+	return !(idx < 0 ||
+			 idx > AOTupleId_MaxSegmentFileNum ||
+			 SEGNO2IDX[SEGNO_MAP_SIZE] <= 0 ||
+			 idx >= SEGNO2IDX[SEGNO_MAP_SIZE]);
+}
+
 extern char *AOTupleIdToString(AOTupleId *aoTupleId);
 
 #endif							/* APPENDONLYTID_H */

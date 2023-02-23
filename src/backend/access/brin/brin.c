@@ -368,7 +368,6 @@ brin_ao_tid_ranges(Relation rel, BlockNumber *aoblks)
 	BlockNumber nblocks = 0;
     Oid			segrelid;
 	int64		lastSequence;
-	int			segnos[AOTupleId_MaxSegmentFileNum] = {0};
     int			nsegs;
 
 	Assert(RelationIsValid(rel));
@@ -380,9 +379,6 @@ brin_ao_tid_ranges(Relation rel, BlockNumber *aoblks)
 		FileSegInfo **seginfos = GetAllFileSegInfo(rel, snapshot, &nsegs, &segrelid);
 
 		Assert(nsegs <= AOTupleId_MaxSegmentFileNum);
-
-		for (int i = 0; i < nsegs; i++)
-			segnos[i] = seginfos[i]->segno;
 
 		if (seginfos != NULL)
 		{
@@ -396,9 +392,6 @@ brin_ao_tid_ranges(Relation rel, BlockNumber *aoblks)
 
 		Assert(nsegs <= AOTupleId_MaxSegmentFileNum);
 
-		for (int i = 0; i < nsegs; i++)
-			segnos[i] = seginfos[i]->segno;
-
 		if (seginfos != NULL)
 		{
 			FreeAllAOCSSegFileInfo(seginfos, nsegs);
@@ -409,8 +402,22 @@ brin_ao_tid_ranges(Relation rel, BlockNumber *aoblks)
 	/* call ReadLastSequence() only for segnos corresponding to the target relation */
     for (int i = -1, segno; i < nsegs; i++)
     {
-        /* always initailize segment 0 */
-        segno = (i < 0 ? 0 : segnos[i]);
+		if (i < 0)
+			/* always initailize segment 0 */
+			segno = 0;
+		else
+		{
+			segno = idx2segno(i);
+			if (!idx2segno_validate(segno))
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_INTERNAL_ERROR),
+						 errmsg("exceeded the range (0 ~ %d) of segment number %d",
+								AOTupleId_MaxSegmentFileNum, segno)));
+				return InvalidBlockNumber;
+			}
+		}
+
         lastSequence = ReadLastSequence(segrelid, segno);
 
         seg_start_blk = segnoGetCurrentAosegStart(segno);

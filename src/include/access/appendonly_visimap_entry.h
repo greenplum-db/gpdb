@@ -121,7 +121,8 @@ bool AppendOnlyVisimapEntry_CoversTuple(
 
 bool AppendOnlyVisimapEntry_IsVisible(
 								 AppendOnlyVisimapEntry *visiMapEntry,
-								 AOTupleId *aoTupleId);
+								 AOTupleId *aoTupleId,
+								 Bitmapset **allVisibleSet);
 
 TM_Result AppendOnlyVisimapEntry_HideTuple(
 								 AppendOnlyVisimapEntry *visiMapEntry,

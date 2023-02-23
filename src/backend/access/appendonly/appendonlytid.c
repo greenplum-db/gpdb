@@ -18,6 +18,10 @@
 #define MAX_AO_TUPLE_ID_BUFFER 25
 static char AOTupleIdBuffer[MAX_AO_TUPLE_ID_BUFFER];
 
+/* the last elment is used to store the total number of valid file segments */
+int IDX2SEGNO[SEGNO_MAP_SIZE + 1] = {-1};
+int SEGNO2IDX[SEGNO_MAP_SIZE + 1] = {-1};
+
 char *
 AOTupleIdToString(AOTupleId *aoTupleId)
 {
