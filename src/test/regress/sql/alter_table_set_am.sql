@@ -407,7 +407,7 @@ SELECT count(*) FROM gp_toolkit.__gp_aocsseg('ao2co3');
 SELECT * FROM gp_toolkit.__gp_aoblkdir('ao2co3');
 
 -- pg_attribute_encoding should have columns for the AOCO table
-SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'ao2co%';
+SELECT c.relname, a.attnum, a.filenum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'ao2co%';
 
 -- AM and reloptions changed accordingly
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ao2co%';
@@ -437,7 +437,7 @@ SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2heap%';
 -- Check once that the AO tables have relfrozenxid = 0
 SELECT relname, relfrozenxid FROM pg_class WHERE relname LIKE 'co2heap%';
 -- Check once that the pg_attribute_encoding has entries for the AOCO tables.
-SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2heap%';
+SELECT c.relname, a.attnum, a.filenum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2heap%';
 
 CREATE TEMP TABLE relfilebeforeco2heap AS
     SELECT -1 segid, relfilenode FROM pg_class WHERE relname LIKE 'co2heap%'
@@ -491,7 +491,7 @@ SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2heap%';
 SELECT relname, relfrozenxid <> '0' FROM pg_class WHERE relname LIKE 'co2heap%';
 
 -- The pg_attribute_encoding entries for the altered tables should have all gone.
-SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2heap%';
+SELECT c.relname, a.attnum, a.filenum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2heap%';
 
 DROP TABLE co2heap;
 DROP TABLE co2heap2;
@@ -515,7 +515,7 @@ INSERT INTO co2ao4 SELECT i,i FROM generate_series(1,5) i;
 -- Check once that the AOCO tables have the custom reloptions
 SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2ao%';
 -- Check once that the pg_attribute_encoding has entries for the AOCO tables.
-SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2ao%';
+SELECT c.relname, a.attnum, a.filenum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2ao%';
 -- Check once on the aoblkdirs
 SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('co2ao')).* FROM gp_dist_random('gp_id');
 SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('co2ao3')).* FROM gp_dist_random('gp_id');
@@ -569,7 +569,7 @@ SELECT c.relname, a.amname FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE
 SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2ao%';
 
 -- The pg_attribute_encoding entries for the altered tables should have all gone.
-SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2ao%';
+SELECT c.relname, a.attnum, a.filenum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2ao%';
 
 DROP TABLE co2ao;
 DROP TABLE co2ao2;
@@ -635,7 +635,7 @@ SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('heap2co3')).* FROM gp_dist_rand
 SELECT count(*) FROM gp_toolkit.__gp_aocsseg('heap2co3');
 
 -- pg_attribute_encoding should have columns for the AOCO table
-SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'heap2co%';
+SELECT c.relname, a.attnum, a.filenum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'heap2co%';
 
 -- AM and reloptions changed accordingly
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'heap2co%';

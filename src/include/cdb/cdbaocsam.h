@@ -299,6 +299,7 @@ typedef struct IndexFetchAOCOData
 
 typedef struct AOCSHeaderScanDescData
 {
+	Oid   relid;  /* relid of the relation */
 	int32 colno;  /* chosen column number to read headers from */
 
 	AppendOnlyStorageRead ao_read;

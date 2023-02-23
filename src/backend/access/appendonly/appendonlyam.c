@@ -252,7 +252,7 @@ SetNextFileSegForRead(AppendOnlyScanDesc scan)
 		return false;
 	}
 
-	MakeAOSegmentFileName(reln, segno, -1, &fileSegNo, scan->aos_filenamepath);
+	MakeAOSegmentFileName(reln, segno, InvalidFileNumber, &fileSegNo, scan->aos_filenamepath);
 	Assert(strlen(scan->aos_filenamepath) + 1 <= scan->aos_filenamepath_maxlen);
 
 	Assert(scan->initedStorageRoutines);
@@ -326,7 +326,7 @@ SetCurrentFileSegForWrite(AppendOnlyInsertDesc aoInsertDesc)
 
 	/* Make the 'segment' file name */
 	MakeAOSegmentFileName(aoInsertDesc->aoi_rel,
-						  aoInsertDesc->cur_segno, -1,
+						  aoInsertDesc->cur_segno, InvalidFileNumber,
 						  &fileSegNo,
 						  aoInsertDesc->appendFilePathName);
 	Assert(strlen(aoInsertDesc->appendFilePathName) + 1 <= aoInsertDesc->appendFilePathNameMaxLen);
@@ -1648,7 +1648,7 @@ openFetchSegmentFile(AppendOnlyFetchDesc aoFetchDesc,
 
 	MakeAOSegmentFileName(
 						  aoFetchDesc->relation,
-						  openSegmentFileNum, -1,
+						  openSegmentFileNum, InvalidFileNumber,
 						  &fileSegNo,
 						  aoFetchDesc->segmentFileName);
 	Assert(strlen(aoFetchDesc->segmentFileName) + 1 <=

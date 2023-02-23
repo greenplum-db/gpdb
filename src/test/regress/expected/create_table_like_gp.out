@@ -34,18 +34,19 @@ select relname, reloptions from pg_class where relname LIKE 't_ao%' order by rel
 SELECT
 	c.relname,
 	a.attnum,
+	a.filenum,
 	a.attoptions
 FROM
 	pg_catalog.pg_class c
 		JOIN pg_catalog.pg_attribute_encoding a ON (a.attrelid = c.oid)
 WHERE
 	c.relname like 't_ao_enc%';
-  relname   | attnum |                     attoptions                      
-------------+--------+-----------------------------------------------------
- t_ao_enc   |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- t_ao_enc   |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- t_ao_enc_a |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- t_ao_enc_a |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+  relname   | attnum | filenum |                     attoptions                      
+------------+--------+---------+-----------------------------------------------------
+ t_ao_enc   |      2 |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ t_ao_enc   |      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ t_ao_enc_a |      2 |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ t_ao_enc_a |      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
 (4 rows)
 
 -- EXTERNAL TABLE

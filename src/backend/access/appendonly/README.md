@@ -25,7 +25,13 @@ also be larger than 1 GB, and are not expanded in BLCKSZ-sized blocks,
 like heap segments are. Segment zero is empty unless data has been
 inserted during utility mode, in which case it's inserted into segment
 zero. Extending the table by adding attributes via ALTER TABLE will also
-push data to segment zero. Each table can have at most 127 segment files.
+push data to segment zero. Each table can have at most 128 segment files.
+
+AOCS tables can similarly have at most 128 segment files for each column.
+The range of segno is dependent on the filenum value in pg_attribute_encoding.
+`segno 0,1-127 (filenum = 1), segno 128,129-255 (filenum = 2),...`
+To find the file range for an AOCS table column, find the attnum of that column
+and then find the corresponding filenum for that attnum from pg_attribute_encoding.
 
 An append-only segfile consists of a number of variable-sized blocks
 ("varblocks"), one after another. The varblocks are aligned to 4 bytes.

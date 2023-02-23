@@ -346,12 +346,12 @@ Access method: ao_column
 Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=true
 
 --Select from pg_attribute_encoding to see the table entry 
-select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'co_crtb_with_strg_dir_and_col_ref_1' and c.oid=e.attrelid  order by relname, attnum limit 3; 
-               relname               | attnum |                      attoptions                       
--------------------------------------+--------+-------------------------------------------------------
- co_crtb_with_strg_dir_and_col_ref_1 |      1 | {compresstype=zlib,blocksize=8192,compresslevel=1}
- co_crtb_with_strg_dir_and_col_ref_1 |      2 | {compresstype=zlib,compresslevel=1,blocksize=1048576}
- co_crtb_with_strg_dir_and_col_ref_1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+select attrelid::regclass as relname, attnum, filenum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'co_crtb_with_strg_dir_and_col_ref_1' and c.oid=e.attrelid  order by relname, attnum limit 3;
+               relname               | attnum | filenum |                      attoptions                       
+-------------------------------------+--------+---------+-------------------------------------------------------
+ co_crtb_with_strg_dir_and_col_ref_1 |      1 |       1 | {compresstype=zlib,blocksize=8192,compresslevel=1}
+ co_crtb_with_strg_dir_and_col_ref_1 |      2 |       2 | {compresstype=zlib,compresslevel=1,blocksize=1048576}
+ co_crtb_with_strg_dir_and_col_ref_1 |      3 |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (3 rows)
 
 --

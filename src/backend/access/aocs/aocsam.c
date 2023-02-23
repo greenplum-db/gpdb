@@ -63,7 +63,7 @@ static AOCSScanDesc aocs_beginscan_internal(Relation relation,
  */
 static void
 open_datumstreamread_segfile(
-							 char *basepath, RelFileNode node,
+							 char *basepath, Relation rel,
 							 AOCSFileSegInfo *segInfo,
 							 DatumStreamRead *ds,
 							 int colNo)
@@ -71,10 +71,15 @@ open_datumstreamread_segfile(
 	int			segNo = segInfo->segno;
 	char		fn[MAXPGPATH];
 	int32		fileSegNo;
+	RelFileNode node = rel->rd_node;
+	Oid         relid = RelationGetRelid(rel);
+
+	/* Filenum for the column */
+	FileNumber	filenum = GetFilenumForAttribute(relid, colNo + 1);
 
 	AOCSVPInfoEntry *e = getAOCSVPEntry(segInfo, colNo);
 
-	FormatAOSegmentFileName(basepath, segNo, colNo, &fileSegNo, fn);
+	FormatAOSegmentFileName(basepath, segNo, filenum, &fileSegNo, fn);
 	Assert(strlen(fn) + 1 <= MAXPGPATH);
 
 	Assert(ds);
@@ -106,7 +111,7 @@ open_all_datumstreamread_segfiles(AOCSScanDesc scan, AOCSFileSegInfo *segInfo)
 	{
 		AttrNumber	attno = proj_atts[i];
 
-		open_datumstreamread_segfile(basepath, rel->rd_node, segInfo, ds[attno], attno);
+		open_datumstreamread_segfile(basepath, rel, segInfo, ds[attno], attno);
 		datumstreamread_block(ds[attno], blockDirectory, attno);
 
 		AOCSScanDesc_UpdateTotalBytesRead(scan, attno);
@@ -779,7 +784,10 @@ OpenAOCSDatumStreams(AOCSInsertDesc desc)
 	{
 		AOCSVPInfoEntry *e = getAOCSVPEntry(seginfo, i);
 
-		FormatAOSegmentFileName(basepath, seginfo->segno, i, &fileSegNo, fn);
+		/* Filenum for the column */
+		FileNumber filenum = GetFilenumForAttribute(RelationGetRelid(desc->aoi_rel), i + 1);
+
+		FormatAOSegmentFileName(basepath, seginfo->segno, filenum, &fileSegNo, fn);
 		Assert(strlen(fn) + 1 <= MAXPGPATH);
 
 		datumstreamwrite_open_file(desc->ds[i], fn, e->eof, e->eof_uncompressed,
@@ -1179,7 +1187,7 @@ openFetchSegmentFile(AOCSFetchDesc aocsFetchDesc,
 	if (logicalEof == 0)
 		return false;
 
-	open_datumstreamread_segfile(aocsFetchDesc->basepath, aocsFetchDesc->relation->rd_node,
+	open_datumstreamread_segfile(aocsFetchDesc->basepath, aocsFetchDesc->relation,
 								 fsInfo,
 								 datumStreamFetchDesc->datumStream,
 								 colNo);
@@ -1700,6 +1708,7 @@ aocs_begin_headerscan(Relation rel, int colno)
 							   "ALTER TABLE ADD COLUMN scan",
 							   &ao_attr);
 	hdesc->colno = colno;
+	hdesc->relid = RelationGetRelid(rel);
 
 	for (int i = 0; i < RelationGetNumberOfAttributes(rel); i++)
 		pfree(opts[i]);
@@ -1720,10 +1729,13 @@ aocs_headerscan_opensegfile(AOCSHeaderScanDesc hdesc,
 	char		fn[MAXPGPATH];
 	int32		fileSegNo;
 
+	/* Filenum for the column */
+	FileNumber	filenum = GetFilenumForAttribute(hdesc->relid, hdesc->colno + 1);
+
 	/* Close currently open segfile, if any. */
 	AppendOnlyStorageRead_CloseFile(&hdesc->ao_read);
 	FormatAOSegmentFileName(basepath, seginfo->segno,
-							hdesc->colno, &fileSegNo, fn);
+							filenum, &fileSegNo, fn);
 	Assert(strlen(fn) + 1 <= MAXPGPATH);
 	vpe = getAOCSVPEntry(seginfo, hdesc->colno);
 	AppendOnlyStorageRead_OpenFile(&hdesc->ao_read, fn, seginfo->formatversion,
@@ -1840,10 +1852,13 @@ aocs_addcol_newsegfile(AOCSAddColumnDesc desc,
 	{
 		int			version;
 
+		/* New filenum for the column */
+		FileNumber  filenum = GetFilenumForAttribute(RelationGetRelid(desc->rel), colno + 1);
+
 		/* Always write in the latest format */
 		version = AOSegfileFormatVersion_GetLatest();
 
-		FormatAOSegmentFileName(basepath, seginfo->segno, colno,
+		FormatAOSegmentFileName(basepath, seginfo->segno, filenum,
 								&fileSegNo, fn);
 		Assert(strlen(fn) + 1 <= MAXPGPATH);
 		datumstreamwrite_open_file(desc->dsw[i], fn,
