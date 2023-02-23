@@ -747,3 +747,28 @@ ALTER TABLE heapco SET ACCESS METHOD ao_column;
 -- Just checking data is intact.
 SELECT count(*) FROM heapco;
 DROP TABLE heapco;
+
+-- Misc cases
+-- 
+-- ATSETAM with dropped column:
+-- The dropped column should still have an entry in pg_attribute_encoding if it is 
+-- an AOCO table, just like pg_attribute.
+CREATE TABLE atsetam_dropcol(a int, b int, c int, d int);
+INSERT INTO atsetam_dropcol VALUES(1,1,1,1);
+SELECT count(*) FROM pg_attribute WHERE attrelid = 'atsetam_dropcol'::regclass AND attnum > 0;
+SELECT count(*) FROM pg_attribute_encoding WHERE attrelid = 'atsetam_dropcol'::regclass;
+ALTER TABLE atsetam_dropcol DROP COLUMN b;
+ALTER TABLE atsetam_dropcol SET ACCESS METHOD ao_row;
+SELECT count(*) FROM pg_attribute WHERE attrelid = 'atsetam_dropcol'::regclass AND attnum > 0;
+SELECT count(*) FROM pg_attribute_encoding WHERE attrelid = 'atsetam_dropcol'::regclass;
+SELECT * FROM atsetam_dropcol;
+ALTER TABLE atsetam_dropcol DROP COLUMN c;
+ALTER TABLE atsetam_dropcol SET ACCESS METHOD ao_column;
+SELECT count(*) FROM pg_attribute WHERE attrelid = 'atsetam_dropcol'::regclass AND attnum > 0;
+SELECT count(*) FROM pg_attribute_encoding WHERE attrelid = 'atsetam_dropcol'::regclass;
+SELECT * FROM atsetam_dropcol;
+ALTER TABLE atsetam_dropcol DROP COLUMN d;
+ALTER TABLE atsetam_dropcol SET ACCESS METHOD heap;
+SELECT count(*) FROM pg_attribute WHERE attrelid = 'atsetam_dropcol'::regclass AND attnum > 0;
+SELECT count(*) FROM pg_attribute_encoding WHERE attrelid = 'atsetam_dropcol'::regclass;
+SELECT * FROM atsetam_dropcol;

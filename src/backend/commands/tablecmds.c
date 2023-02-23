@@ -4383,6 +4383,14 @@ static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOpti
 								att->atttypid, 
 								att->atttypmod,
 								0);
+
+		/* If the column is dropped, pass on a NULL typeName */
+		if (att->attisdropped)
+		{
+			pfree(cd->typeName);
+			cd->typeName = NULL;
+		}
+
 		colDefs = lappend(colDefs, cd);
 	}
 

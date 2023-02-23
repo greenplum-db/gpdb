@@ -331,6 +331,9 @@ RelationGetAttributeOptions(Relation rel)
  *
  * Simply adds user specified ENCODING () clause information to
  * pg_attribute_encoding. Should be absolutely valid at this point.
+ *
+ * Note that we need to take dropped columns into consideration
+ * as well so we cannot use get_attnum().
  */
 void
 AddRelationAttributeEncodings(Oid relid, List *attr_encodings)
@@ -343,13 +346,22 @@ AddRelationAttributeEncodings(Oid relid, List *attr_encodings)
 		ColumnReferenceStorageDirective *c = lfirst(lc);
 		List *encoding;
 		AttrNumber attnum;
+		HeapTuple	tuple;
+		Form_pg_attribute att_tup;
 
 		Assert(IsA(c, ColumnReferenceStorageDirective));
 
-		attnum = get_attnum(relid, c->column);
-
-		if (attnum == InvalidAttrNumber)
+		tuple = SearchSysCache2(ATTNAME,
+								ObjectIdGetDatum(relid),
+								CStringGetDatum(c->column));
+		if (!HeapTupleIsValid(tuple))
 			elog(ERROR, "column \"%s\" does not exist", c->column);
+
+		att_tup = (Form_pg_attribute) GETSTRUCT(tuple);
+		attnum = att_tup->attnum;
+		Assert(attnum != InvalidAttrNumber);
+
+		ReleaseSysCache(tuple);
 
 		if (attnum < 0)
 			elog(ERROR, "column \"%s\" is a system column", c->column);

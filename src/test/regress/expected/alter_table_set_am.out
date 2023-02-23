@@ -1428,3 +1428,82 @@ SELECT count(*) FROM heapco;
 (1 row)
 
 DROP TABLE heapco;
+-- Misc cases
+-- 
+-- ATSETAM with dropped column:
+-- The dropped column should still have an entry in pg_attribute_encoding if it is 
+-- an AOCO table, just like pg_attribute.
+CREATE TABLE atsetam_dropcol(a int, b int, c int, d int);
+INSERT INTO atsetam_dropcol VALUES(1,1,1,1);
+SELECT count(*) FROM pg_attribute WHERE attrelid = 'atsetam_dropcol'::regclass AND attnum > 0;
+ count 
+-------
+     4
+(1 row)
+
+SELECT count(*) FROM pg_attribute_encoding WHERE attrelid = 'atsetam_dropcol'::regclass;
+ count 
+-------
+     0
+(1 row)
+
+ALTER TABLE atsetam_dropcol DROP COLUMN b;
+ALTER TABLE atsetam_dropcol SET ACCESS METHOD ao_row;
+SELECT count(*) FROM pg_attribute WHERE attrelid = 'atsetam_dropcol'::regclass AND attnum > 0;
+ count 
+-------
+     4
+(1 row)
+
+SELECT count(*) FROM pg_attribute_encoding WHERE attrelid = 'atsetam_dropcol'::regclass;
+ count 
+-------
+     0
+(1 row)
+
+SELECT * FROM atsetam_dropcol;
+ a | c | d 
+---+---+---
+ 1 | 1 | 1
+(1 row)
+
+ALTER TABLE atsetam_dropcol DROP COLUMN c;
+ALTER TABLE atsetam_dropcol SET ACCESS METHOD ao_column;
+SELECT count(*) FROM pg_attribute WHERE attrelid = 'atsetam_dropcol'::regclass AND attnum > 0;
+ count 
+-------
+     4
+(1 row)
+
+SELECT count(*) FROM pg_attribute_encoding WHERE attrelid = 'atsetam_dropcol'::regclass;
+ count 
+-------
+     4
+(1 row)
+
+SELECT * FROM atsetam_dropcol;
+ a | d 
+---+---
+ 1 | 1
+(1 row)
+
+ALTER TABLE atsetam_dropcol DROP COLUMN d;
+ALTER TABLE atsetam_dropcol SET ACCESS METHOD heap;
+SELECT count(*) FROM pg_attribute WHERE attrelid = 'atsetam_dropcol'::regclass AND attnum > 0;
+ count 
+-------
+     4
+(1 row)
+
+SELECT count(*) FROM pg_attribute_encoding WHERE attrelid = 'atsetam_dropcol'::regclass;
+ count 
+-------
+     0
+(1 row)
+
+SELECT * FROM atsetam_dropcol;
+ a 
+---
+ 1
+(1 row)
+
