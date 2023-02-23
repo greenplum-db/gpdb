@@ -24,14 +24,14 @@ ERROR:  format_type must be [t | c | b], t(text), c(csv), b(custom)  (seg2 127.0
 CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
 SERVER gp_exttable_server
 OPTIONS (format_type 'c', delimiter ',');
-ERROR:  must specify one of locationuris and command option  (seg1 127.0.0.1:7003 pid=5173)
+ERROR:  must specify one of location_uris and command option  (seg1 127.0.0.1:7003 pid=5173)
 -- Error, conflict location_uris and command option
 CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
 SERVER gp_exttable_server
 OPTIONS (format_type 'c', delimiter ',',
          location_uris 'file://@hostname@@abs_srcdir@/data/tableless.csv',
          command 'command');
-ERROR:  locationuris and command options conflict with each other  (seg1 127.0.0.1:7003 pid=5173)
+ERROR:  location_uris and command options conflict with each other  (seg1 127.0.0.1:7003 pid=5173)
 -- Error, invalid reject_limit_type option
 CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
 SERVER gp_exttable_server
