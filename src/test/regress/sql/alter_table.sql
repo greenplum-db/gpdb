@@ -1660,23 +1660,46 @@ drop table at_base_table;
 
 -- ensure that rewrites aren't silently optimized away, removing the
 -- value of the test
-CREATE FUNCTION check_ddl_rewrite(p_tablename regclass, p_ddl text)
+CREATE FUNCTION check_ddl_rewrite(p_tablename text, p_ddl text)
 RETURNS boolean
 LANGUAGE plpgsql AS $$
 DECLARE
-    v_relfilenode oid;
+    v_result boolean;
 BEGIN
-    v_relfilenode := relfilenode FROM pg_class WHERE oid = p_tablename;
+    CREATE TEMP TABLE before_ddl(segid int, relfilenode oid);
+    CREATE TEMP TABLE after_ddl(segid int, relfilenode oid);
+
+    INSERT INTO before_ddl SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname = p_tablename ORDER BY segid;
 
     EXECUTE p_ddl;
 
-    RETURN v_relfilenode <> (SELECT relfilenode FROM pg_class WHERE oid = p_tablename);
+    INSERT INTO after_ddl SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname = p_tablename ORDER BY segid;
+
+    v_result := (SELECT count(a.*)=0 FROM before_ddl b INNER JOIN after_ddl a ON b.segid = a.segid AND b.relfilenode = a.relfilenode);
+
+    DROP TABLE before_ddl;
+    DROP TABLE after_ddl;
+
+    RETURN v_result;
 END;
 $$;
 
 CREATE TABLE rewrite_test(col text);
+CREATE TABLE rewrite_test_ao(col text) USING ao_row;
+CREATE TABLE rewrite_test_co(col text) USING ao_column;
+
 INSERT INTO rewrite_test VALUES ('something');
 INSERT INTO rewrite_test VALUES (NULL);
+INSERT INTO rewrite_test_ao VALUES ('something');
+INSERT INTO rewrite_test_ao VALUES (NULL);
+INSERT INTO rewrite_test_co VALUES ('something');
+INSERT INTO rewrite_test_co VALUES (NULL);
+
+-- Testing all three AMs. But note that, the comments are for the heap table ('rewrite_test')
+-- For AO table, always rewrite table in ADD COLUMN (see the FIXME in ATExecAddColumn())
+-- For AOCO table, never table rewrite (just need to write new column)
 
 -- empty[12] don't need rewrite, but notempty[12]_rewrite will force one
 SELECT check_ddl_rewrite('rewrite_test', $$
@@ -1689,6 +1712,27 @@ SELECT check_ddl_rewrite('rewrite_test', $$
         ADD COLUMN notempty2_rewrite serial,
         ADD COLUMN empty2 text;
 $$);
+SELECT check_ddl_rewrite('rewrite_test_ao', $$
+  ALTER TABLE rewrite_test_ao
+      ADD COLUMN empty1 text,
+      ADD COLUMN notempty1_rewrite serial;
+$$);
+SELECT check_ddl_rewrite('rewrite_test_ao', $$
+    ALTER TABLE rewrite_test_ao
+        ADD COLUMN notempty2_rewrite serial,
+        ADD COLUMN empty2 text;
+$$);
+SELECT check_ddl_rewrite('rewrite_test_co', $$
+  ALTER TABLE rewrite_test_co
+      ADD COLUMN empty1 text,
+      ADD COLUMN notempty1_rewrite serial;
+$$);
+SELECT check_ddl_rewrite('rewrite_test_co', $$
+    ALTER TABLE rewrite_test_co
+        ADD COLUMN notempty2_rewrite serial,
+        ADD COLUMN empty2 text;
+$$);
+
 -- also check that fast defaults cause no problem, first without rewrite
 SELECT check_ddl_rewrite('rewrite_test', $$
     ALTER TABLE rewrite_test
@@ -1700,6 +1744,27 @@ SELECT check_ddl_rewrite('rewrite_test', $$
         ADD COLUMN notempty4_norewrite int default 42,
         ADD COLUMN empty4 text;
 $$);
+SELECT check_ddl_rewrite('rewrite_test_ao', $$
+    ALTER TABLE rewrite_test_ao
+        ADD COLUMN empty3 text,
+        ADD COLUMN notempty3_norewrite int default 42;
+$$);
+SELECT check_ddl_rewrite('rewrite_test_ao', $$
+    ALTER TABLE rewrite_test_ao
+        ADD COLUMN notempty4_norewrite int default 42,
+        ADD COLUMN empty4 text;
+$$);
+SELECT check_ddl_rewrite('rewrite_test_co', $$
+    ALTER TABLE rewrite_test_co
+        ADD COLUMN empty3 text,
+        ADD COLUMN notempty3_norewrite int default 42;
+$$);
+SELECT check_ddl_rewrite('rewrite_test_co', $$
+    ALTER TABLE rewrite_test_co
+        ADD COLUMN notempty4_norewrite int default 42,
+        ADD COLUMN empty4 text;
+$$);
+
 -- then with rewrite
 SELECT check_ddl_rewrite('rewrite_test', $$
     ALTER TABLE rewrite_test
@@ -1713,10 +1778,58 @@ SELECT check_ddl_rewrite('rewrite_test', $$
         ADD COLUMN empty6 text,
         ADD COLUMN notempty6_norewrite int default 42;
 $$);
+SELECT check_ddl_rewrite('rewrite_test_ao', $$
+    ALTER TABLE rewrite_test_ao
+        ADD COLUMN empty5 text,
+        ADD COLUMN notempty5_norewrite int default 42,
+        ADD COLUMN notempty5_rewrite serial;
+$$);
+SELECT check_ddl_rewrite('rewrite_test_ao', $$
+    ALTER TABLE rewrite_test_ao
+        ADD COLUMN notempty6_rewrite serial,
+        ADD COLUMN empty6 text,
+        ADD COLUMN notempty6_norewrite int default 42;
+$$);
+SELECT check_ddl_rewrite('rewrite_test_co', $$
+    ALTER TABLE rewrite_test_co
+        ADD COLUMN empty5 text,
+        ADD COLUMN notempty5_norewrite int default 42,
+        ADD COLUMN notempty5_rewrite serial;
+$$);
+SELECT check_ddl_rewrite('rewrite_test_co', $$
+    ALTER TABLE rewrite_test_co
+        ADD COLUMN notempty6_rewrite serial,
+        ADD COLUMN empty6 text,
+        ADD COLUMN notempty6_norewrite int default 42;
+$$);
+
+-- check changing default value won't rewrite, and won't change existing rows
+SELECT check_ddl_rewrite('rewrite_test', $$
+    ALTER TABLE rewrite_test_co
+        ALTER COLUMN notempty6_norewrite SET DEFAULT 43;
+$$);
+
+SELECT check_ddl_rewrite('rewrite_test_ao', $$
+    ALTER TABLE rewrite_test_co
+        ALTER COLUMN notempty6_norewrite SET DEFAULT 43;
+$$);
+
+SELECT check_ddl_rewrite('rewrite_test_co', $$
+    ALTER TABLE rewrite_test_co
+        ALTER COLUMN notempty6_norewrite SET DEFAULT 43;
+$$);
+
+-- check the tables to make sure the data is expected
+-- note that serial order is undetermined for each column
+SELECT empty1, notempty1_rewrite in (1,2), notempty2_rewrite in (1,2), empty2, empty3, notempty3_norewrite, notempty4_norewrite, empty4, empty5, notempty5_norewrite, notempty5_rewrite in (1,2), notempty5_rewrite in (1,2), empty6, notempty6_norewrite FROM rewrite_test;
+SELECT empty1, notempty1_rewrite in (1,2), notempty2_rewrite in (1,2), empty2, empty3, notempty3_norewrite, notempty4_norewrite, empty4, empty5, notempty5_norewrite, notempty5_rewrite in (1,2), notempty5_rewrite in (1,2), empty6, notempty6_norewrite FROM rewrite_test_ao;
+SELECT empty1, notempty1_rewrite in (1,2), notempty2_rewrite in (1,2), empty2, empty3, notempty3_norewrite, notempty4_norewrite, empty4, empty5, notempty5_norewrite, notempty5_rewrite in (1,2), notempty5_rewrite in (1,2), empty6, notempty6_norewrite FROM rewrite_test_co;
 
 -- cleanup
-DROP FUNCTION check_ddl_rewrite(regclass, text);
+DROP FUNCTION check_ddl_rewrite(text, text);
 DROP TABLE rewrite_test;
+DROP TABLE rewrite_test_ao;
+DROP TABLE rewrite_test_co;
 
 --
 -- lock levels
