@@ -1597,7 +1597,7 @@ transformGpPartitionDefinition(Oid parentrelid, const char *queryString,
 	ParseState				*pstate;
 	List					*partDefElems = NIL;
 	List					*encClauses = NIL;
-	GpPartDefElem			*defaultPartDefElem = NULL;
+	bool					defaultPartDefElemFound = false;
 	PartitionKey 			partkey;
 
 	result = makeNode(GpPartitionDefinition);
@@ -1659,23 +1659,34 @@ transformGpPartitionDefinition(Oid parentrelid, const char *queryString,
 
 			if (elem->isDefault)
 			{
-				if (defaultPartDefElem)
+				if (defaultPartDefElemFound)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 							 errmsg("multiple default partitions are not allowed"),
 							 parser_errposition(pstate, elem->location)));
-				defaultPartDefElem = elem;
+				defaultPartDefElemFound = true;
 				partDefElems = lcons(elem, partDefElems);
 			}
 			else
+			{
+				switch (partkey->strategy)
+				{
+					case PARTITION_STRATEGY_RANGE:
+						transformGpPartDefElemWithRangeSpec(pstate, parentrel, elem);
+						break;
+					case PARTITION_STRATEGY_LIST:
+						transformGpPartDefElemWithListSpec(pstate, parentrel, elem);
+						break;
+					default:
+						ereport(ERROR,
+								(errcode(ERRCODE_SYNTAX_ERROR),
+								 errmsg("Not supported partition strategy")));
+				}
 				partDefElems = lappend(partDefElems, elem);
+			}
 		}
 		else
 		{
-			/*
-			 * GPDB_12_MERGE_FIXME: can we optimize grammar to create separate lists
-			 * for elems and encoding in encClauses.
-			 */
 			Assert(IsA(newnode, ColumnReferenceStorageDirective));
 			encClauses = lappend(encClauses, newnode);
 		}
@@ -1683,29 +1694,6 @@ transformGpPartitionDefinition(Oid parentrelid, const char *queryString,
 
 	result->partDefElems = partDefElems;
 	result->encClauses = encClauses;
-
-	foreach(lc, partDefElems)
-	{
-		Node			*n = lfirst(lc);
-		GpPartDefElem	*elem = (GpPartDefElem *) n;
-
-		if (!elem->isDefault)
-		{
-			switch (partkey->strategy)
-			{
-				case PARTITION_STRATEGY_RANGE:
-					transformGpPartDefElemWithRangeSpec(pstate, parentrel, elem);
-					break;
-				case PARTITION_STRATEGY_LIST:
-					transformGpPartDefElemWithListSpec(pstate, parentrel, elem);
-					break;
-				default:
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-								errmsg("Not supported partition strategy")));
-			}
-		}
-	}
 
 	free_parsestate(pstate);
 	table_close(parentrel, NoLock);

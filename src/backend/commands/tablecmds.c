@@ -6667,7 +6667,23 @@ ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap, LOCKMODE lockmode)
 		 * checking all the constraints.
 		 */
 		snapshot = RegisterSnapshot(GetLatestSnapshot());
-		scan = table_beginscan(oldrel, snapshot, 0, NULL);
+
+		/*
+		* GPDB: If a partition constraint exists, and we are not rewriting the table,
+		* we are going to scan the default partition/table being attached for partition
+		* constraint validation. Use the partition constraint to pass down column
+		* projection info that CO tables can use for a speed-up.
+		*
+		* Note: We don't need to pass tab->constraints here as it will either be NULL
+		* or contain foreign key constraints which are not going to be validated along
+		* with this scan. The reason this list will be NULL is that ALTER TABLE VALIDATE
+		* CONSTRAINT and ALTER TABLE ADD CONSTRAINT CHECK cannot be
+		* combined with ATTACH PARTITION.
+		*/
+		if (tab->partition_constraint && tab->rewrite == 0)
+			scan = table_beginscan_es(oldrel, snapshot, NULL, NULL, NULL, lappend(NIL, tab->partition_constraint));
+		else
+			scan = table_beginscan(oldrel, snapshot, 0, NULL);
 
 		if (newrel && newrel->rd_tableam)
 			table_dml_init(newrel);
@@ -12104,6 +12120,7 @@ validateForeignKeyConstraint(char *conname,
 		ereport(WARNING,
 				(errcode(ERRCODE_GP_FEATURE_NOT_YET),
 				 errmsg("referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced")));
+	return;
 
 	/*
 	 * Build a trigger call structure; we'll need it either way.
@@ -20400,8 +20417,14 @@ ATExecAttachPartition(List **wqueue, Relation rel, PartitionCmd *cmd)
 	 * constraint as well.
 	 */
 	partBoundConstraint = get_qual_from_partbound(attachrel, rel, cmd->bound);
-	partConstraint = list_concat(partBoundConstraint,
-								 RelationGetPartitionQual(rel));
+
+	/*
+	 * GPDB: We pass partBoundConstraint as the 2nd arg here because passing it
+	 * as the 1st arg modifies it (adds more list elements unintentionally). This would
+	 * lead to extra columns getting passed down in the column projection list, resulting
+	 * in extra columns being extraneously scanned (for CO tables).
+	 */
+	partConstraint = list_concat(RelationGetPartitionQual(rel), partBoundConstraint);
 
 	/* Skip validation if there are no constraints to validate. */
 	if (partConstraint)

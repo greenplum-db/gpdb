@@ -57,7 +57,7 @@ where <action> is one of:
   CLUSTER ON <index_name>
   SET WITHOUT CLUSTER
   SET WITHOUT OIDS
-  SET ACCESS METHOD <access_method>
+  SET ACCESS METHOD <access_method>  WITH ( <storage_parameter> = <value> )
   SET (<storage_parameter> = <value>)
   RESET (<storage_parameter> [, ... ])
   SET  WITH (<storage_parameter> = <value>)
@@ -117,7 +117,7 @@ where partition\_element is:
   | START ([<datatype>] '<start_value>') [INCLUSIVE | EXCLUSIVE]
      [ END ([<datatype>] '<end_value>') [INCLUSIVE | EXCLUSIVE] ]
   | END ([<datatype>] '<end_value>') [INCLUSIVE | EXCLUSIVE]
-[ WITH ( <partition_storage_parameter>=<value> [, ... ] ) ]
+[ WITH ( <storage_parameter> = value> [ , ... ] ) ]
 [ TABLESPACE <tablespace> ]
 ```
 
@@ -139,7 +139,7 @@ and subpartition\_element is:
   | [SUBPARTITION <subpartition_name>] 
      END ([<datatype>] '<end_value>') [INCLUSIVE | EXCLUSIVE]
      [ EVERY ( [<number | datatype>] '<interval_value>') ]
-[ WITH ( <partition_storage_parameter>=<value> [, ... ] ) ]
+[ WITH ( <storage_parameter>=<value> [, ... ] ) ]
 [ TABLESPACE <tablespace> ]
 ```
 
@@ -173,6 +173,7 @@ where storage\_parameter when used with the `SET WITH` command is:
    fillfactor={10-100}
    checksum={true | false }
    reorganize={true | false }
+   vacuum_index_cleanup { true | false } 
 ```
 
   <p class="note">
@@ -226,9 +227,7 @@ Although you can specify the table's access method using the <code>appendoptimiz
 
     > **Note** triggers are not supported in Greenplum Database. Triggers in general have very limited functionality due to the parallelism of Greenplum Database.
 
--   **CLUSTER ON/SET WITHOUT CLUSTER** — Selects or removes the default index for future `CLUSTER` operations. It does not actually re-cluster the table. Note that `CLUSTER` is not the recommended way to physically reorder a table in Greenplum Database because it takes so long. It is better to recreate the table with [CREATE TABLE AS](CREATE_TABLE_AS.html) and order it by the index column\(s\).
-
-    > **Note** `CLUSTER ON` is not supported on append-optimized tables.
+-   **CLUSTER ON/SET WITHOUT CLUSTER** — Selects or removes the default index for future `CLUSTER` operations. It does not actually re-cluster the table.
 
 -   **SET WITHOUT OIDS** — Removes the OID system column from the table.
 
@@ -307,7 +306,7 @@ USER
 :   Deactivate or activate all triggers belonging to the table except for internally generated constraint triggers such as those that are used to implement foreign key constraints or deferrable uniqueness and exclusion constraints.
 
 index\_name
-:   The index name on which the table should be marked for clustering. Note that `CLUSTER` is not the recommended way to physically reorder a table in Greenplum Database because it takes so long. It is better to recreate the table with [CREATE TABLE AS](CREATE_TABLE_AS.html) and order it by the index column\(s\).
+:   The index name on which the table should be marked for clustering.
 
 FILLFACTOR
 :   Set the fillfactor percentage for a table.
@@ -541,6 +540,46 @@ Move a table to a different schema:
 
 ```
 ALTER TABLE myschema.distributors SET SCHEMA yourschema;
+```
+
+Change a table's access method to `ao_row`:
+
+```
+ALTER TABLE distributors SET ACCESS METHOD ao_row;
+```
+
+Change a table's blocksize to 32768:
+
+```
+ALTER TABLE distributors SET (blocksize = 32768);
+```
+
+Change a table's access method to ao_row, compression type to zstd and compression level to 4:
+
+```
+ALTER TABLE sales SET ACCESS METHOD ao_row with (compresstype=zstd,compresslevel=4);
+```
+
+Change access method for all existing partitions of a table:
+
+```
+ALTER TABLE sales SET ACCESS METHOD ao_row;
+```
+
+Change all future partitions of a table to have an access method of `heap`, leaving the access method of current partitions as is:
+
+ALTER TABLE ONLY sales SET ACCESS METHOD heap;
+
+Add a column and change the table's access method:
+
+```
+ALTER TABLE distributors SET ACCESS METHOD ao_row, ADD column j int;
+```
+
+Add a column and change table storage parameters:
+
+```
+ALTER TABLE distributors SET (compresslevel=7), ADD COLUMN k int;
 ```
 
 Change the distribution policy of a table to replicated:

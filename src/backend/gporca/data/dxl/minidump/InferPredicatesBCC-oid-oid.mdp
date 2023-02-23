@@ -12,17 +12,17 @@
 
   Plan:
 
-                                   QUERY PLAN
----------------------------------------------------------------------------------
+                                  QUERY PLAN
+-------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
    ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
          Hash Cond: (foid.a = foid_1.a)
-         ->  Table Scan on foid  (cost=0.00..431.00 rows=1 width=4)
+         ->  Seq Scan on foid  (cost=0.00..431.00 rows=1 width=4)
+               Filter: (a = '5'::oid)
          ->  Hash  (cost=431.00..431.00 rows=1 width=4)
-               ->  Table Scan on foid foid_1  (cost=0.00..431.00 rows=1 width=4)
-                     Filter: (a = 5::oid)
- Planning time: 162.562 ms
- Optimizer: PQO version 3.9.0
+               ->  Seq Scan on foid foid_1  (cost=0.00..431.00 rows=1 width=4)
+                     Filter: (a = '5'::oid)
+ Optimizer: Pivotal Optimizer (GPORCA)
   ]]>
   </dxl:Comment>
   <dxl:Thread Id="0">
@@ -227,7 +227,7 @@
     <dxl:Plan Id="0" SpaceSize="8">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.000491" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.000524" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -241,7 +241,7 @@
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.000462" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.000494" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -261,14 +261,19 @@
           </dxl:HashCondList>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000019" Rows="1.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000059" Rows="1.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
                 <dxl:Ident ColId="0" ColName="a" TypeMdid="0.26.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:Filter/>
+            <dxl:Filter>
+              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.607.1.0">
+                <dxl:Ident ColId="0" ColName="a" TypeMdid="0.26.1.0"/>
+                <dxl:ConstValue TypeMdid="0.26.1.0" Value="5"/>
+              </dxl:Comparison>
+            </dxl:Filter>
             <dxl:TableDescriptor Mdid="6.16400.1.0" TableName="foid">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.26.1.0" ColWidth="4"/>

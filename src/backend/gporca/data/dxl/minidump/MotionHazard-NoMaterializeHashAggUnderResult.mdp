@@ -444,7 +444,7 @@ explain select f.k, f.subq from (select tab3.k, (select tab2.k from tab2 where t
         <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="150">
+    <dxl:Plan Id="0" SpaceSize="90">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="199109.213873" Rows="9846.000000" Width="16"/>

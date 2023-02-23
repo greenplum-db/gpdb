@@ -52,7 +52,7 @@ MA
 ===
 
 1.  do initdb for all segment except standby QD
-2.  copy data drom master QD to standby QD
-    "scp -r %s %s:%s" % ( seginfo[master_qd_idx].dir,
+2.  copy data from coordinator QD to standby QD
+    "scp -r %s %s:%s" % ( seginfo[coordinator_qd_idx].dir,
 	    seginfo[standby_qd_idx].host,
 	    seginfo[standby_qd_idx].dir)

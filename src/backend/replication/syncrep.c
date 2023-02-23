@@ -162,12 +162,23 @@ SyncRepWaitForLSN(XLogRecPtr lsn, bool commit)
 	const char *old_status;
 	int			mode;
 
+#ifdef FAULT_INJECTOR
+	/*
+	 * If walsender is programmed to skip sending WAL, don't bother waiting.
+	 * Otherwise, tests may block indefinitely.  Tests are typically mindful
+	 * of not performing COMMIT/ABORT operation when walsnd_skip_send fault is
+	 * injected.  This logic is necessary when SyncRepWaitForLSN is called
+	 * from DML (insert/update/delete) code path.
+	 */
+	if (SIMPLE_FAULT_INJECTOR("walsnd_skip_send") == FaultInjectorTypeSkip)
+		return;
+#endif
+
 	/* Cap the level for anything other than commit to remote flush only. */
 	if (commit)
 		mode = SyncRepWaitMode;
 	else
 		mode = Min(SyncRepWaitMode, SYNC_REP_WAIT_FLUSH);
-
 	Assert(!am_walsender);
 	elogif(debug_walrepl_syncrep, LOG,
 			"syncrep wait -- This backend's commit LSN for syncrep is %X/%X.",

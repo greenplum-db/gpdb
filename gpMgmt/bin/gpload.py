@@ -726,7 +726,7 @@ def match_notice_obj(notice):
 
 
 def notice_processor_Notice(notice):
-    # process the notice in master branch
+    # process the notice in main branch
     # notice is a class which is different in 6X, we need a new function to process
     global NUM_WARN_ROWS
     if windowsPlatform == True:

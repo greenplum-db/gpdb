@@ -6,7 +6,7 @@ use File::Basename qw(basename dirname);
 use File::Path qw(rmtree);
 use PostgresNode;
 use TestLib;
-use Test::More tests => 107 + 15;
+use Test::More tests => 107 + 21;
 
 program_help_ok('pg_basebackup');
 program_version_ok('pg_basebackup');
@@ -650,3 +650,21 @@ $node->command_ok([ 'pg_basebackup', '-D', $gpbackup_test_dir, '--target-gp-dbid
 
 ok(! -d "$gpbackup_test_dir/backups", 'gpbackup default backup directory should be excluded');
 rmtree($gpbackup_test_dir);
+
+#GPDB: write config files only
+mkdir("$tempdir/backup");
+
+$node->command_fails([ 'pg_basebackup', '-D', "$tempdir/backup", '--target-gp-dbid', '123',
+	                   '--write-conf-files-only', '--create-slot', '--slot', "wal_replication_slot"],
+	                  'pg_basebackup --write-conf-files-only fails with --create_slot');
+
+$node->command_fails([ 'pg_basebackup', '-D', "$tempdir/backup", '--target-gp-dbid', '123',
+	                   '--write-conf-files-only', '--write-recovery-conf' ],
+	                   'pg_basebackup --write-conf-files-only fails with --write-recovery-conf');
+
+$node->command_ok([ 'pg_basebackup', '-D', "$tempdir/backup", '--target-gp-dbid', '123', '--write-conf-files-only' ],
+	'pg_basebackup runs with write-conf-files-only');
+ok(-f "$tempdir/backup/internal.auto.conf", 'internal.auto.conf was created');
+ok(-f "$tempdir/backup/postgresql.auto.conf", 'postgresql.auto.conf was created');
+ok(-f "$tempdir/backup/standby.signal",       'standby.signal was created');
+rmtree("$tempdir/backup");

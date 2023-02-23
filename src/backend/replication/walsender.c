@@ -593,7 +593,7 @@ StartReplication(StartReplicationCmd *cmd)
 
 	if (cmd->slotname)
 	{
-		ReplicationSlotAcquire(cmd->slotname, true);
+		(void) ReplicationSlotAcquire(cmd->slotname, SAB_Error);
 		if (SlotIsLogical(MyReplicationSlot))
 			ereport(ERROR,
 					(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
@@ -1104,7 +1104,7 @@ StartLogicalReplication(StartReplicationCmd *cmd)
 
 	Assert(!MyReplicationSlot);
 
-	ReplicationSlotAcquire(cmd->slotname, true);
+	(void) ReplicationSlotAcquire(cmd->slotname, SAB_Error);
 
 	/*
 	 * Force a disconnect, so that the decoding code doesn't need to care
@@ -2698,6 +2698,28 @@ XLogSendPhysical(void)
 	/* If requested switch the WAL sender to the stopping state. */
 	if (got_STOPPING)
 		WalSndSetState(WALSNDSTATE_STOPPING);
+
+#ifdef FAULT_INJECTOR
+	/* the walsender skip send WAL to the mirror . */
+	if (SIMPLE_FAULT_INJECTOR("walsnd_skip_send") == FaultInjectorTypeSkip)
+		{
+			if (!WalSndCaughtUp)
+			{
+				/*
+				 * If we have not caugh up, we must wait here.  Otherwise, the
+				 * walsender process keeps spinning the main loop and the csv
+				 * logs are filled with "fault triggered" messages so much that
+				 * in the CI, the disk filled up to 100% within a short time.
+				 */
+				int			wakeEvents;
+
+				wakeEvents = WL_LATCH_SET | WL_POSTMASTER_DEATH | WL_TIMEOUT;
+				WaitLatchOrSocket(MyLatch, wakeEvents,
+								  MyProcPort->sock, 1000, WAIT_EVENT_WAL_SENDER_WAIT_WAL);
+			}
+			return;
+		}
+#endif
 
 	if (streamingDoneSending)
 	{

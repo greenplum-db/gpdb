@@ -175,6 +175,8 @@ typedef struct CopyStateData
 	 */
 	FmgrInfo   *out_functions;	/* lookup info for output functions */
 	MemoryContext rowcontext;	/* per-row evaluation context */
+	/* GPDB_14_MERGE_FIXME: move this to CopyToStateData and CopyFromStateData */
+	uint64	bytes_processed;	/* number of bytes processed so far */
 
 	/*
 	 * Working state for COPY FROM

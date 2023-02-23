@@ -157,7 +157,7 @@ Install the PL/Container language extension using the `gppkg` utility.
 4.  Run the package installation command:
 
     ```
-    gppkg -i plcontainer-2.1.1-rhel7-x86_64.gppkg
+    gppkg -i plcontainer-2.1.1-rhel8-x86_64.gppkg
     ```
 
 5.  Source the file `$GPHOME/greenplum_path.sh`:
@@ -388,7 +388,7 @@ To upgrade, perform the following procedure:
 2.  Use the Greenplum Database `gppkg` utility with the `-u` option to update the PL/Container language extension. For example, the following command updates the PL/Container language extension to version 2.2.0 on a Linux system:
 
     ```
-    $ gppkg -u plcontainer-2.2.0-gp7-rhel7_x86_64.gppkg
+    $ gppkg -u plcontainer-2.2.0-gp7-rhel8_x86_64.gppkg
     ```
 
 3.  Source the Greenplum Database environment file `$GPHOME/greenplum_path.sh`.

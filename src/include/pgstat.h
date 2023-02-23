@@ -57,12 +57,15 @@ typedef enum StatMsgType
 	PGSTAT_MTYPE_RESETCOUNTER,
 	PGSTAT_MTYPE_RESETSHAREDCOUNTER,
 	PGSTAT_MTYPE_RESETSINGLECOUNTER,
+	PGSTAT_MTYPE_RESETSLRUCOUNTER,
 	PGSTAT_MTYPE_AUTOVAC_START,
 	PGSTAT_MTYPE_VACUUM,
 	PGSTAT_MTYPE_ANALYZE,
 	PGSTAT_MTYPE_ARCHIVER,
 	PGSTAT_MTYPE_QUEUESTAT, /* GPDB */
 	PGSTAT_MTYPE_BGWRITER,
+	PGSTAT_MTYPE_WAL,
+	PGSTAT_MTYPE_SLRU,
 	PGSTAT_MTYPE_FUNCSTAT,
 	PGSTAT_MTYPE_FUNCPURGE,
 	PGSTAT_MTYPE_RECOVERYCONFLICT,
@@ -123,7 +126,8 @@ typedef struct PgStat_TableCounts
 typedef enum PgStat_Shared_Reset_Target
 {
 	RESET_ARCHIVER,
-	RESET_BGWRITER
+	RESET_BGWRITER,
+	RESET_WAL
 } PgStat_Shared_Reset_Target;
 
 /* Possible object types for resetting single counters */
@@ -347,6 +351,17 @@ typedef struct PgStat_MsgResetsinglecounter
 } PgStat_MsgResetsinglecounter;
 
 /* ----------
+ * PgStat_MsgResetslrucounter Sent by the backend to tell the collector
+ *								to reset a SLRU counter
+ * ----------
+ */
+typedef struct PgStat_MsgResetslrucounter
+{
+	PgStat_MsgHdr m_hdr;
+	int			m_index;
+} PgStat_MsgResetslrucounter;
+
+/* ----------
  * PgStat_MsgAutovacStart		Sent by the autovacuum daemon to signal
  *								that a database is going to be processed
  * ----------
@@ -440,6 +455,42 @@ typedef struct PgStat_MsgBgWriter
 	PgStat_Counter m_checkpoint_write_time; /* times in milliseconds */
 	PgStat_Counter m_checkpoint_sync_time;
 } PgStat_MsgBgWriter;
+
+/* ----------
+ * PgStat_MsgWal			Sent by backends and background processes to update WAL statistics.
+ * ----------
+ */
+typedef struct PgStat_MsgWal
+{
+	PgStat_MsgHdr m_hdr;
+	PgStat_Counter m_wal_records;
+	PgStat_Counter m_wal_fpw;
+	uint64		m_wal_bytes;
+	PgStat_Counter m_wal_buffers_full;
+	PgStat_Counter m_wal_write;
+	PgStat_Counter m_wal_sync;
+	PgStat_Counter m_wal_write_time;	/* time spent writing wal records in
+										 * microseconds */
+	PgStat_Counter m_wal_sync_time; /* time spent syncing wal records in
+									 * microseconds */
+} PgStat_MsgWal;
+
+/* ----------
+ * PgStat_MsgSLRU			Sent by a backend to update SLRU statistics.
+ * ----------
+ */
+typedef struct PgStat_MsgSLRU
+{
+	PgStat_MsgHdr m_hdr;
+	PgStat_Counter m_index;
+	PgStat_Counter m_blocks_zeroed;
+	PgStat_Counter m_blocks_hit;
+	PgStat_Counter m_blocks_read;
+	PgStat_Counter m_blocks_written;
+	PgStat_Counter m_blocks_exists;
+	PgStat_Counter m_flush;
+	PgStat_Counter m_truncate;
+} PgStat_MsgSLRU;
 
 /* ----------
  * PgStat_MsgRecoveryConflict	Sent by the backend upon recovery conflict
@@ -578,12 +629,15 @@ typedef union PgStat_Msg
 	PgStat_MsgResetcounter msg_resetcounter;
 	PgStat_MsgResetsharedcounter msg_resetsharedcounter;
 	PgStat_MsgResetsinglecounter msg_resetsinglecounter;
+	PgStat_MsgResetslrucounter msg_resetslrucounter;
 	PgStat_MsgAutovacStart msg_autovacuum_start;
 	PgStat_MsgVacuum msg_vacuum;
 	PgStat_MsgAnalyze msg_analyze;
 	PgStat_MsgArchiver msg_archiver;
 	PgStat_MsgQueuestat msg_queuestat;  /* GPDB */
 	PgStat_MsgBgWriter msg_bgwriter;
+	PgStat_MsgWal msg_wal;
+	PgStat_MsgSLRU msg_slru;
 	PgStat_MsgFuncstat msg_funcstat;
 	PgStat_MsgFuncpurge msg_funcpurge;
 	PgStat_MsgRecoveryConflict msg_recoveryconflict;
@@ -601,7 +655,7 @@ typedef union PgStat_Msg
  * ------------------------------------------------------------
  */
 
-#define PGSTAT_FILE_FORMAT_ID	0x01A5BC9D
+#define PGSTAT_FILE_FORMAT_ID	0x01A5BC9F
 
 /* ----------
  * PgStat_StatDBEntry			The collector's data per database
@@ -772,6 +826,37 @@ typedef struct PgStat_GlobalStats
 	PgStat_Counter buf_alloc;
 	TimestampTz stat_reset_timestamp;
 } PgStat_GlobalStats;
+
+/*
+ * WAL statistics kept in the stats collector
+ */
+typedef struct PgStat_WalStats
+{
+	PgStat_Counter wal_records;
+	PgStat_Counter wal_fpw;
+	uint64		wal_bytes;
+	PgStat_Counter wal_buffers_full;
+	PgStat_Counter wal_write;
+	PgStat_Counter wal_sync;
+	PgStat_Counter wal_write_time;
+	PgStat_Counter wal_sync_time;
+	TimestampTz stat_reset_timestamp;
+} PgStat_WalStats;
+
+/*
+ * SLRU statistics kept in the stats collector
+ */
+typedef struct PgStat_SLRUStats
+{
+	PgStat_Counter blocks_zeroed;
+	PgStat_Counter blocks_hit;
+	PgStat_Counter blocks_read;
+	PgStat_Counter blocks_written;
+	PgStat_Counter blocks_exists;
+	PgStat_Counter flush;
+	PgStat_Counter truncate;
+	TimestampTz stat_reset_timestamp;
+} PgStat_SLRUStats;
 
 
 /* ----------
@@ -1040,8 +1125,11 @@ typedef enum ProgressCommandType
 {
 	PROGRESS_COMMAND_INVALID,
 	PROGRESS_COMMAND_VACUUM,
+	PROGRESS_COMMAND_ANALYZE,
 	PROGRESS_COMMAND_CLUSTER,
-	PROGRESS_COMMAND_CREATE_INDEX
+	PROGRESS_COMMAND_CREATE_INDEX,
+	PROGRESS_COMMAND_BASEBACKUP,
+	PROGRESS_COMMAND_COPY
 } ProgressCommandType;
 
 #define PGSTAT_NUM_PROGRESS_PARAM	20
@@ -1312,6 +1400,11 @@ extern bool pgstat_collect_queuelevel;
 extern PgStat_MsgBgWriter BgWriterStats;
 
 /*
+ * WAL statistics counter is updated by backends and background processes
+ */
+extern PgStat_MsgWal WalStats;
+
+/*
  * Updated by pgstat_count_buffer_*_time macros
  */
 extern PgStat_Counter pgStatBlockReadTime;
@@ -1350,6 +1443,7 @@ extern void pgstat_clear_snapshot(void);
 extern void pgstat_reset_counters(void);
 extern void pgstat_reset_shared_counters(const char *);
 extern void pgstat_reset_single_counter(Oid objectid, PgStat_Single_Reset_Type type);
+extern void pgstat_reset_slru_counter(const char *);
 
 extern void pgstat_report_autovac(Oid dboid);
 extern void pgstat_report_vacuum(Oid tableoid, bool shared,
@@ -1604,6 +1698,8 @@ extern void pgstat_twophase_postabort(TransactionId xid, uint16 info,
 
 extern void pgstat_send_archiver(const char *xlog, bool failed);
 extern void pgstat_send_bgwriter(void);
+extern void pgstat_report_wal(void);
+extern bool pgstat_send_wal(bool force);
 
 struct CdbDispatchResults;
 struct pg_result;
@@ -1629,5 +1725,17 @@ extern PgStat_StatFuncEntry *pgstat_fetch_stat_funcentry(Oid funcid);
 extern int	pgstat_fetch_stat_numbackends(void);
 extern PgStat_ArchiverStats *pgstat_fetch_stat_archiver(void);
 extern PgStat_GlobalStats *pgstat_fetch_global(void);
+extern PgStat_WalStats *pgstat_fetch_stat_wal(void);
+extern PgStat_SLRUStats *pgstat_fetch_slru(void);
+
+extern void pgstat_count_slru_page_zeroed(int slru_idx);
+extern void pgstat_count_slru_page_hit(int slru_idx);
+extern void pgstat_count_slru_page_read(int slru_idx);
+extern void pgstat_count_slru_page_written(int slru_idx);
+extern void pgstat_count_slru_page_exists(int slru_idx);
+extern void pgstat_count_slru_flush(int slru_idx);
+extern void pgstat_count_slru_truncate(int slru_idx);
+extern const char *pgstat_slru_name(int slru_idx);
+extern int	pgstat_slru_index(const char *name);
 
 #endif							/* PGSTAT_H */

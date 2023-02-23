@@ -32,7 +32,7 @@
 #include "utils/lsyscache.h"
 #include "utils/uri.h"
 
-static List *create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly);
+static List *create_external_scan_uri_list(ExtTableEntry *ext, bool *iscoordinatoronly);
 
 void
 gfile_printf_then_putc_newline(const char *format,...)
@@ -318,7 +318,7 @@ MakeExternalScanInfo(ExtTableEntry *extEntry)
 {
 	ExternalScanInfo *node = makeNode(ExternalScanInfo);
 	List	   *urilist;
-	bool		ismasteronly = false;
+	bool		iscoordinatoronly = false;
 	bool		islimitinrows = false;
 	int			rejectlimit = -1;
 	char		logerrors = LOG_ERRORS_DISABLE;
@@ -337,7 +337,7 @@ MakeExternalScanInfo(ExtTableEntry *extEntry)
 	}
 
 	/* assign Uris to segments. */
-	urilist = create_external_scan_uri_list(extEntry, &ismasteronly);
+	urilist = create_external_scan_uri_list(extEntry, &iscoordinatoronly);
 
 	/* single row error handling */
 	if (extEntry->rejectlimit != -1)
@@ -349,7 +349,7 @@ MakeExternalScanInfo(ExtTableEntry *extEntry)
 
 	node->uriList = urilist;
 	node->fmtType = extEntry->fmtcode;
-	node->isMasterOnly = ismasteronly;
+	node->isCoordinatorOnly = iscoordinatoronly;
 	node->rejLimit = rejectlimit;
 	node->rejLimitInRows = islimitinrows;
 	node->logErrors = logerrors;
@@ -361,7 +361,7 @@ MakeExternalScanInfo(ExtTableEntry *extEntry)
 }
 
 static List *
-create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
+create_external_scan_uri_list(ExtTableEntry *ext, bool *iscoordinatoronly)
 {
 	ListCell   *c;
 	List	   *modifiedloclist = NIL;
@@ -388,7 +388,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 	Uri		   *uri;
 	char	   *on_clause;
 
-	*ismasteronly = false;
+	*iscoordinatoronly = false;
 
 	/* is this an EXECUTE table or a LOCATION (URI) table */
 	if (ext->command)
@@ -606,7 +606,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 		{
 			const char *uri_str = strVal(linitial(ext->urilocations));
 			segdb_file_map[0] = pstrdup(uri_str);
-			*ismasteronly = true;
+			*iscoordinatoronly = true;
 		}
 		else
 		{
@@ -807,7 +807,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 		 * 3) all segs on host <foo>
 		 * 4) seg <n> only
 		 * 5) <n> random segs
-		 * 6) master only
+		 * 6) coordinator only
 		 */
 		if (strcmp(on_clause, "ALL_SEGMENTS") == 0)
 		{
@@ -951,10 +951,10 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 		{
 			/*
 			 * store the command in first array entry and indicate that it is
-			 * meant for the master segment (not seg o).
+			 * meant for the coordinator segment (not seg o).
 			 */
 			segdb_file_map[0] = pstrdup(prefixed_command);
-			*ismasteronly = true;
+			*iscoordinatoronly = true;
 		}
 		else
 		{

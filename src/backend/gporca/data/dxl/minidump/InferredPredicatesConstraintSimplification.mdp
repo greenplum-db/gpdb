@@ -399,7 +399,7 @@
     <dxl:Plan Id="0" SpaceSize="108">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1293.001072" Rows="1.000000" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.001138" Rows="1.000000" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -416,7 +416,7 @@
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1293.000982" Rows="1.000000" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.001048" Rows="1.000000" Width="24"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -439,14 +439,19 @@
           </dxl:HashCondList>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000018" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000065" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="8" Alias="b">
                 <dxl:Ident ColId="8" ColName="b" TypeMdid="0.1042.1.0" TypeModifier="6"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:Filter/>
+            <dxl:Filter>
+              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
+                <dxl:Ident ColId="8" ColName="b" TypeMdid="0.1042.1.0" TypeModifier="6"/>
+                <dxl:ConstValue TypeMdid="0.1042.1.0" Value="AAAAHDlFd0g4SWV6RWVteldnQlFWZ0lWbkFBIA==" LintValue="2019149050"/>
+              </dxl:Comparison>
+            </dxl:Filter>
             <dxl:TableDescriptor Mdid="6.49159.1.0" TableName="t2">
               <dxl:Columns>
                 <dxl:Column ColId="8" Attno="1" ColName="b" TypeMdid="0.1042.1.0" TypeModifier="6" ColWidth="2"/>
@@ -462,7 +467,7 @@
           </dxl:TableScan>
           <dxl:HashJoin JoinType="Inner">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.000589" Rows="1.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.000622" Rows="1.000000" Width="16"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -512,14 +517,21 @@
             </dxl:TableScan>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000030" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000077" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="16" Alias="c">
                   <dxl:Ident ColId="16" ColName="c" TypeMdid="0.1043.1.0" TypeModifier="28"/>
                 </dxl:ProjElem>
               </dxl:ProjList>
-              <dxl:Filter/>
+              <dxl:Filter>
+                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
+                  <dxl:Cast TypeMdid="0.1042.1.0" FuncId="0.0.0.0">
+                    <dxl:Ident ColId="16" ColName="c" TypeMdid="0.1043.1.0" TypeModifier="28"/>
+                  </dxl:Cast>
+                  <dxl:ConstValue TypeMdid="0.1042.1.0" Value="AAAAHDlFd0g4SWV6RWVteldnQlFWZ0lWbkFBIA==" LintValue="2019149050"/>
+                </dxl:Comparison>
+              </dxl:Filter>
               <dxl:TableDescriptor Mdid="6.49162.1.0" TableName="t3">
                 <dxl:Columns>
                   <dxl:Column ColId="16" Attno="1" ColName="c" TypeMdid="0.1043.1.0" TypeModifier="28" ColWidth="24"/>

@@ -882,6 +882,28 @@ def impl(context, msg):
                 pass
     conn.close()
 
+
+@then('gprecoverseg should print existing pg_rewind warning for segment with content {contentids}')
+def impl(context, contentids):
+
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    segments_pairs = gparray.segmentPairs
+    content_ids = [int(i) for i in contentids.split(',')]
+
+    for segpair in segments_pairs:
+        primary = segpair.primaryDB
+        mirror = segpair.mirrorDB
+        if primary.content in content_ids:
+            msg = "Skipping incremental recovery of segment on host {} and port {} because it has an active pg_rewind " \
+                  "connection with segment on host {} and port {}".format(mirror.getSegmentHostName(), mirror.getSegmentPort(),
+                                                                          primary.getSegmentHostName(), primary.getSegmentPort())
+
+        try:
+            context.execute_steps(''' Then gprecoverseg should print "{}" to stdout'''.format(msg))
+        except:
+            raise Exception("Could not find expected warning message for content {} in stdout".format(primary.content))
+
+
 def lines_matching_both(in_str, str_1, str_2):
     lines = [x.strip() for x in in_str.split('\n')]
     return [line for line in lines if line.count(str_1) and line.count(str_2)]
@@ -3897,7 +3919,7 @@ def impl(context):
      cmd.run(validateAfter=True)
 
      # Update hostfile location
-     cmd = Command(name='update master hostname in config file',
+     cmd = Command(name='update coordinator hostname in config file',
                    cmdStr= "sed 's/MACHINE_LIST_FILE=.*/MACHINE_LIST_FILE=\/tmp\/hostfile--1/g' -i /tmp/clusterConfigFile-1")
      cmd.run(validateAfter=True)
 

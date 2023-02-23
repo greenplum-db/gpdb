@@ -536,7 +536,7 @@ where e < 10;
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="78">
+    <dxl:Plan Id="0" SpaceSize="64">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="8620.170543" Rows="324.000000" Width="28"/>

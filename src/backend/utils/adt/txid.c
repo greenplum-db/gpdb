@@ -107,7 +107,7 @@ load_xid_epoch(TxidEpoch *state)
  * to the low 32 bits of the transaction ID (i.e. the actual XID, without the
  * epoch).
  *
- * The caller must hold CLogTruncationLock since it's dealing with arbitrary
+ * The caller must hold XactTruncationLock since it's dealing with arbitrary
  * XIDs, and must continue to hold it until it's done with any clog lookups
  * relating to those XIDs.
  */
@@ -142,13 +142,13 @@ TransactionIdInRecentPast(uint64 xid_with_epoch, TransactionId *extracted_xid)
 						psprintf(UINT64_FORMAT, xid_with_epoch))));
 
 	/*
-	 * ShmemVariableCache->oldestClogXid is protected by CLogTruncationLock,
+	 * ShmemVariableCache->oldestClogXid is protected by XactTruncationLock,
 	 * but we don't acquire that lock here.  Instead, we require the caller to
 	 * acquire it, because the caller is presumably going to look up the
 	 * returned XID.  If we took and released the lock within this function, a
 	 * CLOG truncation could occur before the caller finished with the XID.
 	 */
-	Assert(LWLockHeldByMe(CLogTruncationLock));
+	Assert(LWLockHeldByMe(XactTruncationLock));
 
 	/*
 	 * If the transaction ID has wrapped around, it's definitely too old to
@@ -755,7 +755,7 @@ txid_status(PG_FUNCTION_ARGS)
 	 * We must protect against concurrent truncation of clog entries to avoid
 	 * an I/O error on SLRU lookup.
 	 */
-	LWLockAcquire(CLogTruncationLock, LW_SHARED);
+	LWLockAcquire(XactTruncationLock, LW_SHARED);
 	if (TransactionIdInRecentPast(xid_with_epoch, &xid))
 	{
 		Assert(TransactionIdIsValid(xid));
@@ -782,7 +782,7 @@ txid_status(PG_FUNCTION_ARGS)
 	{
 		status = NULL;
 	}
-	LWLockRelease(CLogTruncationLock);
+	LWLockRelease(XactTruncationLock);
 
 	if (status == NULL)
 		PG_RETURN_NULL();

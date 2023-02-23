@@ -1,0 +1,65 @@
+Parsed test spec with 2 sessions
+
+starting permutation: begin_and_drop vac_specified commit
+step begin_and_drop: 
+    BEGIN;
+    DROP TABLE ao_vac_conc;
+
+step vac_specified: VACUUM AO_AUX_ONLY ao_vac_conc; <waiting ...>
+step commit: 
+	COMMIT;
+
+step vac_specified: <... completed>
+ERROR:  relation "ao_vac_conc" does not exist
+
+starting permutation: begin_and_drop vac_all_aux_tables commit
+step begin_and_drop: 
+    BEGIN;
+    DROP TABLE ao_vac_conc;
+
+step vac_all_aux_tables: VACUUM AO_AUX_ONLY; <waiting ...>
+step commit: 
+	COMMIT;
+
+step vac_all_aux_tables: <... completed>
+
+starting permutation: begin_and_drop vac_all_tables commit
+step begin_and_drop: 
+    BEGIN;
+    DROP TABLE ao_vac_conc;
+
+step vac_all_tables: VACUUM; <waiting ...>
+step commit: 
+	COMMIT;
+
+step vac_all_tables: <... completed>
+
+starting permutation: begin vac_specified drop_and_commit
+step begin: 
+	BEGIN;
+
+step vac_specified: VACUUM AO_AUX_ONLY ao_vac_conc;
+step drop_and_commit: 
+    DROP TABLE ao_vac_conc;
+	COMMIT;
+
+
+starting permutation: begin vac_all_aux_tables drop_and_commit
+step begin: 
+	BEGIN;
+
+step vac_all_aux_tables: VACUUM AO_AUX_ONLY;
+step drop_and_commit: 
+    DROP TABLE ao_vac_conc;
+	COMMIT;
+
+
+starting permutation: begin vac_all_tables drop_and_commit
+step begin: 
+	BEGIN;
+
+step vac_all_tables: VACUUM;
+step drop_and_commit: 
+    DROP TABLE ao_vac_conc;
+	COMMIT;
+

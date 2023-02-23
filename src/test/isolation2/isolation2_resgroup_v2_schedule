@@ -4,6 +4,9 @@
 # enable resource group v2
 test: resgroup/resgroup_auxiliary_tools_v2
 
+# bypass catalog
+test: resgroup/resgroup_bypass_catalog
+
 # basic syntax
 test: resgroup/resgroup_views
 test: resgroup/resgroup_syntax

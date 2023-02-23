@@ -290,6 +290,15 @@ ic_proxy_peer_on_data_pkt(void *opaque, const void *data, uint16 size)
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
 		   "ic-proxy: %s: received %s", peer->name, ic_proxy_pkt_to_str(pkt));
 
+	/* sanity check: drop the packet with incorrect magic number */
+	if (!ic_proxy_pkt_is_valid(pkt))
+	{
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+			"ic-proxy: %s: received %s, dropping the invalid package (magic number mismatch)",
+					peer->name, ic_proxy_pkt_to_str(pkt));
+		return;
+	}
+
 	if (!(peer->state & IC_PROXY_PEER_STATE_READY_FOR_DATA))
 	{
 		elog(WARNING, "ic-proxy: %s: not ready to receive DATA yet: %s",
@@ -529,6 +538,15 @@ ic_proxy_peer_on_hello_pkt(void *opaque, const void *data, uint16 size)
 	ICProxyPeer *peer = opaque;
 	ICProxyKey	key;
 
+	/* sanity check: drop the packet with incorrect magic number */
+	if (!ic_proxy_pkt_is_valid(pkt))
+	{
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+			"ic-proxy: %s: received %s, dropping the invalid package (magic number mismatch)",
+					peer->name, ic_proxy_pkt_to_str(pkt));
+		return;
+	}
+
 	/* we only expect one hello message */
 	uv_read_stop((uv_stream_t *) &peer->tcp);
 
@@ -635,6 +653,15 @@ ic_proxy_peer_on_hello_ack_pkt(void *opaque, const void *data, uint16 size)
 	if (size < sizeof(*pkt) || size != pkt->len)
 		elog(ERROR, "ic-proxy: %s: received incomplete HELLO ACK: size = %d",
 					 peer->name, size);
+
+	/* sanity check: drop the packet with incorrect magic number */
+	if (!ic_proxy_pkt_is_valid(pkt))
+	{
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+			"ic-proxy: %s: received %s, dropping the invalid package (magic number mismatch)",
+					peer->name, ic_proxy_pkt_to_str(pkt));
+		return;
+	}
 
 	if (peer->state & IC_PROXY_PEER_STATE_RECEIVED_HELLO_ACK)
 	{

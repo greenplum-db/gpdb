@@ -259,3 +259,53 @@ SELECT * FROM dropped_col_v;
 ----
 (0 rows)
 
+-- Test that we are able to attach a newly created partition table when it has foreign key reference.
+CREATE TABLE issue_14279_fk_reference (col2 text unique not null);
+INSERT INTO issue_14279_fk_reference VALUES ('stuff');
+CREATE TABLE issue_14279_taptest_table (
+    col1 BIGINT,
+    col2 TEXT NOT NULL DEFAULT 'stuff', FOREIGN KEY (col2) REFERENCES issue_14279_fk_reference(col2))
+  PARTITION BY RANGE (col1);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
+CREATE TABLE issue_14279_taptest_table_p3000000000 (
+    LIKE issue_14279_taptest_table
+    INCLUDING DEFAULTS INCLUDING CONSTRAINTS);
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+ALTER TABLE issue_14279_taptest_table ATTACH PARTITION issue_14279_taptest_table_p3000000000 FOR VALUES FROM (3000000000) TO (3000000100);
+WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
+BEGIN;
+CREATE TABLE issue_14279_taptest_table_p3000000100 (
+    LIKE issue_14279_taptest_table
+    INCLUDING DEFAULTS INCLUDING CONSTRAINTS);
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+ALTER TABLE issue_14279_taptest_table ATTACH PARTITION issue_14279_taptest_table_p3000000100 FOR VALUES FROM (3000000100) TO (3000000200);
+WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
+END;
+INSERT INTO issue_14279_taptest_table SELECT generate_series(3000000000, 3000000001);
+INSERT INTO issue_14279_taptest_table SELECT generate_series(3000000100, 3000000101);
+-- The parent table shouldn't have anything.
+SELECT * FROM ONLY issue_14279_taptest_table;
+ col1 | col2 
+------+------
+(0 rows)
+
+-- The newly attached table should have 2 rows.
+SELECT * FROM issue_14279_taptest_table_p3000000000;
+    col1    | col2  
+------------+-------
+ 3000000000 | stuff
+ 3000000001 | stuff
+(2 rows)
+
+-- The newly attached table should have 2 rows.
+SELECT * FROM issue_14279_taptest_table_p3000000100;
+    col1    | col2  
+------------+-------
+ 3000000100 | stuff
+ 3000000101 | stuff
+(2 rows)
+
+DROP TABLE issue_14279_taptest_table;
+DROP TABLE issue_14279_fk_reference;

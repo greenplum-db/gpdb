@@ -50,22 +50,6 @@ CReqdPropRelational::CReqdPropRelational(CColRefSet *pcrs) : m_pcrsStat(pcrs)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdPropRelational::CReqdPropRelational
-//
-//	@doc:
-//		Ctor
-//
-//---------------------------------------------------------------------------
-CReqdPropRelational::CReqdPropRelational(CColRefSet *pcrs,
-										 CExpression *pexprPartPred)
-	: m_pcrsStat(pcrs), m_pexprPartPred(pexprPartPred)
-{
-	GPOS_ASSERT(nullptr != pcrs);
-	GPOS_ASSERT_IMP(nullptr != pexprPartPred, pexprPartPred->Pop()->FScalar());
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CReqdPropRelational::~CReqdPropRelational
 //
 //	@doc:
@@ -75,7 +59,6 @@ CReqdPropRelational::CReqdPropRelational(CColRefSet *pcrs,
 CReqdPropRelational::~CReqdPropRelational()
 {
 	CRefCount::SafeRelease(m_pcrsStat);
-	CRefCount::SafeRelease(m_pexprPartPred);
 }
 
 //---------------------------------------------------------------------------
@@ -101,9 +84,6 @@ CReqdPropRelational::Compute(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 	m_pcrsStat =
 		popLogical->PcrsStat(mp, exprhdl, prprelInput->PcrsStat(), child_index);
-	m_pexprPartPred = popLogical->PexprPartPred(
-		mp, exprhdl, prprelInput->PexprPartPred(), child_index);
-
 	exprhdl.DeriveProducerStats(child_index, m_pcrsStat);
 }
 
@@ -170,10 +150,6 @@ IOstream &
 CReqdPropRelational::OsPrint(IOstream &os) const
 {
 	os << "req stat columns: [" << *m_pcrsStat << "]";
-	if (nullptr != m_pexprPartPred)
-	{
-		os << ", partition predicate: " << *m_pexprPartPred;
-	}
 
 	return os;
 }

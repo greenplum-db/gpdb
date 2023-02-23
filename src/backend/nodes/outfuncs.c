@@ -738,7 +738,7 @@ _outExternalScanInfo(StringInfo str, const ExternalScanInfo *node)
 
 	WRITE_NODE_FIELD(uriList);
 	WRITE_CHAR_FIELD(fmtType);
-	WRITE_BOOL_FIELD(isMasterOnly);
+	WRITE_BOOL_FIELD(isCoordinatorOnly);
 	WRITE_INT_FIELD(rejLimit);
 	WRITE_BOOL_FIELD(rejLimitInRows);
 	WRITE_CHAR_FIELD(logErrors);

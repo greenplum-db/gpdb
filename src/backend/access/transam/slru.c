@@ -161,6 +161,17 @@ SimpleLruShmemSize(int nslots, int nlsns)
 	return BUFFERALIGN(sz) + BLCKSZ * nslots;
 }
 
+/*
+ * Initialize, or attach to, a simple LRU cache in shared memory.
+ *
+ * ctl: address of local (unshared) control structure.
+ * name: name of SLRU.  (This is user-visible, pick with care!)
+ * nslots: number of page slots to use.
+ * nlsns: number of LSN groups per page (set to zero if not relevant).
+ * ctllock: LWLock to use to control access to the shared control structure.
+ * subdir: PGDATA-relative subdirectory that will contain the files.
+ * tranche_id: LWLock tranche ID to use for the SLRU's per-buffer LWLocks.
+ */
 void
 SimpleLruInit(SlruCtl ctl, const char *name, int nslots, int nlsns,
 			  LWLock *ctllock, const char *subdir, int tranche_id)
@@ -192,6 +203,8 @@ SimpleLruInit(SlruCtl ctl, const char *name, int nslots, int nlsns,
 
 		/* shared->latest_page_number will be set later */
 
+		shared->slru_stats_idx = pgstat_slru_index(name);
+
 		ptr = (char *) shared;
 		offset = MAXALIGN(sizeof(SlruSharedData));
 		shared->page_buffer = (char **) (ptr + offset);
@@ -215,15 +228,11 @@ SimpleLruInit(SlruCtl ctl, const char *name, int nslots, int nlsns,
 			offset += MAXALIGN(nslots * nlsns * sizeof(XLogRecPtr));
 		}
 
-		Assert(strlen(name) + 1 < SLRU_MAX_NAME_LENGTH);
-		strlcpy(shared->lwlock_tranche_name, name, SLRU_MAX_NAME_LENGTH);
-		shared->lwlock_tranche_id = tranche_id;
-
 		ptr += BUFFERALIGN(offset);
 		for (slotno = 0; slotno < nslots; slotno++)
 		{
 			LWLockInitialize(&shared->buffer_locks[slotno].lock,
-							 shared->lwlock_tranche_id);
+							 tranche_id);
 
 			shared->page_buffer[slotno] = ptr;
 			shared->page_status[slotno] = SLRU_PAGE_EMPTY;
@@ -239,8 +248,7 @@ SimpleLruInit(SlruCtl ctl, const char *name, int nslots, int nlsns,
 		Assert(found);
 
 	/* Register SLRU tranche in the main tranches array */
-	LWLockRegisterTranche(shared->lwlock_tranche_id,
-						  shared->lwlock_tranche_name);
+	LWLockRegisterTranche(tranche_id, name);
 
 	/*
 	 * Initialize the unshared control struct, including directory path. We
@@ -286,6 +294,9 @@ SimpleLruZeroPage(SlruCtl ctl, int pageno)
 
 	/* Assume this page is now the latest active page */
 	shared->latest_page_number = pageno;
+
+	/* update the stats counter of zeroed pages */
+	pgstat_count_slru_page_zeroed(shared->slru_stats_idx);
 
 	return slotno;
 }
@@ -404,6 +415,10 @@ SimpleLruReadPage(SlruCtl ctl, int pageno, bool write_ok,
 			}
 			/* Otherwise, it's ready to use */
 			SlruRecentlyUsed(shared, slotno);
+
+			/* update the stats counter of pages found in the SLRU */
+			pgstat_count_slru_page_hit(shared->slru_stats_idx);
+
 			return slotno;
 		}
 
@@ -445,6 +460,10 @@ SimpleLruReadPage(SlruCtl ctl, int pageno, bool write_ok,
 			SlruReportIOError(ctl, pageno, xid);
 
 		SlruRecentlyUsed(shared, slotno);
+
+		/* update the stats counter of pages not found in SLRU */
+		pgstat_count_slru_page_read(shared->slru_stats_idx);
+
 		return slotno;
 	}
 }
@@ -481,6 +500,10 @@ SimpleLruReadPage_ReadOnly(SlruCtl ctl, int pageno, TransactionId xid)
 		{
 			/* See comments for SlruRecentlyUsed macro */
 			SlruRecentlyUsed(shared, slotno);
+
+			/* update the stats counter of pages found in the SLRU */
+			pgstat_count_slru_page_hit(shared->slru_stats_idx);
+
 			return slotno;
 		}
 	}
@@ -596,6 +619,9 @@ SimpleLruDoesPhysicalPageExist(SlruCtl ctl, int pageno)
 	int			fd;
 	bool		result;
 	off_t		endpos;
+
+	/* update the stats counter of checked pages */
+	pgstat_count_slru_page_exists(ctl->shared->slru_stats_idx);
 
 	SlruFileName(ctl, path, segno);
 
@@ -730,6 +756,9 @@ SlruPhysicalWritePage(SlruCtl ctl, int pageno, int slotno, SlruFlush fdata)
 	int			offset = rpageno * BLCKSZ;
 	char		path[MAXPGPATH];
 	int			fd = -1;
+
+	/* update the stats counter of written pages */
+	pgstat_count_slru_page_written(shared->slru_stats_idx);
 
 	/*
 	 * Honor the write-WAL-before-data rule, if appropriate, so that we do not
@@ -1126,6 +1155,9 @@ SimpleLruFlush(SlruCtl ctl, bool allow_redirtied)
 	int			i;
 	bool		ok;
 
+	/* update the stats counter of flushes */
+	pgstat_count_slru_flush(shared->slru_stats_idx);
+
 	/*
 	 * Find and write dirty pages
 	 */
@@ -1198,6 +1230,9 @@ SimpleLruTruncate_internal(SlruCtl ctl, int cutoffPage, bool lockHeld)
 {
 	SlruShared	shared = ctl->shared;
 	int			slotno;
+
+	/* update the stats counter of truncates */
+	pgstat_count_slru_truncate(shared->slru_stats_idx);
 
 	/*
 	 * Scan shared memory and remove any pages preceding the cutoff page, to
@@ -1455,7 +1490,7 @@ SlruPagePrecedesTestOffset(SlruCtl ctl, int per_page, uint32 offset)
  *
  * This assumes every uint32 >= FirstNormalTransactionId is a valid key.  It
  * assumes each value occupies a contiguous, fixed-size region of SLRU bytes.
- * (MultiXactMemberCtl separates flags from XIDs.  AsyncCtl has
+ * (MultiXactMemberCtl separates flags from XIDs.  NotifyCtl has
  * variable-length entries, no keys, and no random access.  These unit tests
  * do not apply to them.)
  */

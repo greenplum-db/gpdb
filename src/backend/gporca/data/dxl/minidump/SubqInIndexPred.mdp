@@ -516,7 +516,7 @@ ON a = c
         </dxl:LogicalJoin>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="48688">
+    <dxl:Plan Id="0" SpaceSize="36848">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="2206721.811317" Rows="1.000000" Width="1"/>

@@ -79,7 +79,7 @@ static const char *excludeDirContents[] =
 
 	/*
 	 * Old contents are loaded for possible debugging but are not required for
-	 * normal operation, see OldSerXidInit().
+	 * normal operation, see SerialInit().
 	 */
 	"pg_serial",
 

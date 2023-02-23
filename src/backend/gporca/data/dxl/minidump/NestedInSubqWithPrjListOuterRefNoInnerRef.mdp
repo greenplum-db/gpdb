@@ -699,7 +699,7 @@ EXPLAIN SELECT * FROM foo WHERE foo.a IN (SELECT foo.b + 1 FROM (SELECT * FROM b
         </dxl:LogicalGet>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="6340">
+    <dxl:Plan Id="0" SpaceSize="5912">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="2155.006784" Rows="40.000000" Width="8"/>

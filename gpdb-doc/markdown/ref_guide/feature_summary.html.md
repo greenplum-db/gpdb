@@ -219,8 +219,7 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER TABLE</code></td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Unsupported Clauses / Options:</strong><p class="p"><code class="ph codeph">CLUSTER
-        ON</code></p>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Unsupported Clauses / Options:</strong>
 <p class="p"><code class="ph codeph">ENABLE/DISABLE TRIGGER</code></p>
 <p class="p"><strong class="ph b">Greenplum
                     Database Clauses:</strong></p>

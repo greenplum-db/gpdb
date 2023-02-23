@@ -310,6 +310,18 @@ main(int argc, char **argv)
 	sanityChecks();
 
 	/*
+	 * SUSPEND_PG_REWIND is used for testing purposes. If set to true, the pg_rewind process will be
+	 * suspended indefinitely, so that it's entry can be checked in the pg_stat_activity table. The goal
+	 * being that we can run another instance of gprecoverseg and assert that it ignores recovery for
+	 * segments that already have an active pg_rewind process.
+	 */
+	while(getenv("SUSPEND_PG_REWIND") != NULL && getenv("SUSPEND_PG_REWIND") == "true")
+	{
+		sleep(1);
+		pg_log_info("pg_rewind suspended");
+	}
+
+	/*
 	 * If both clusters are already on the same timeline, there's nothing to
 	 * do.
 	 */

@@ -167,10 +167,10 @@ SELECT * FROM "S 1"."GP 1" ORDER BY f1;
 TRUNCATE TABLE "S 1"."GP 1";
 
 -- ===================================================================
--- validate writes on master (mpp_execute set to master)
+-- validate writes on coordinator (mpp_execute set to coordinator)
 -- ===================================================================
 
-ALTER FOREIGN TABLE gp_ft1 OPTIONS ( SET mpp_execute 'master' );
+ALTER FOREIGN TABLE gp_ft1 OPTIONS ( SET mpp_execute 'coordinator' );
 
 EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
 INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;

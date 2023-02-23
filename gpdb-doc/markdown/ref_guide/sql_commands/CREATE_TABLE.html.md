@@ -119,7 +119,7 @@ and storage_directive for a column is:
     [blocksize={8192-2097152} ]
 ```
 
-and storage\_parameter for the table is:
+and `storage_parameter` for a table or partition is:
 
 ```
    appendoptimized={TRUE|FALSE}
@@ -129,6 +129,9 @@ and storage\_parameter for the table is:
    compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
    compresslevel={0-9}
    fillfactor={10-100}
+   analyze_hll_non_part_table={TRUE|FALSE}
+   reorganize={TRUE|FALSE}
+   vacuum_index_cleanup={TRUE|FALSE}
 ```
 
 
@@ -164,12 +167,12 @@ and partition\_element is:
   | [PARTITION <name>] 
      START ([<datatype>] '<start_value>') [INCLUSIVE | EXCLUSIVE]
      [ END ([<datatype>] '<end_value>') [INCLUSIVE | EXCLUSIVE] ]
-     [ EVERY ([<datatype>] [<number | >INTERVAL] '<interval_value>') ]
+     [ EVERY ([<datatype>] [<number> | INTERVAL] '<interval_value>') ]
   | [PARTITION <name>] 
      END ([<datatype>] '<end_value>') [INCLUSIVE | EXCLUSIVE]
-     [ EVERY ([<datatype>] [<number | >INTERVAL] '<interval_value>') ]
-[ WITH ( <partition_storage_parameter>=<value> [, ... ] ) ]
-[ <column_reference_storage_directive> [, ...] ]
+     [ EVERY ([<datatype>] [<number> | INTERVAL] '<interval_value>') ]
+[ WITH ( <storage_parameter> = <value> [ , ... ] ) ]
+[ <column_reference_storage_directive> [ , ... ] ]
 [ TABLESPACE <tablespace> ]
 ```
 
@@ -187,27 +190,13 @@ and subpartition\_element is:
   | [SUBPARTITION <name>] 
      START ([<datatype>] '<start_value>') [INCLUSIVE | EXCLUSIVE]
      [ END ([<datatype>] '<end_value>') [INCLUSIVE | EXCLUSIVE] ]
-     [ EVERY ([<datatype>] [<number | >INTERVAL] '<interval_value>') ]
+     [ EVERY ([<datatype>] [<number> | INTERVAL] '<interval_value>') ]
   | [SUBPARTITION <name>] 
      END ([<datatype>] '<end_value>') [INCLUSIVE | EXCLUSIVE]
-     [ EVERY ([<datatype>] [<number | >INTERVAL] '<interval_value>') ]
-[ WITH ( <partition_storage_parameter>=<value> [, ... ] ) ]
+     [ EVERY ([<datatype>] [<number> | INTERVAL] '<interval_value>') ]
+[ WITH ( <storage_parameter> = <value> [ , ... ] ) ]
 [ <column_reference_storage_directive> [, ...] ]
 [ TABLESPACE <tablespace> ]
-```
-
-where storage\_parameter for a partition is:
-
-```
-   appendoptimized={TRUE|FALSE}
-   blocksize={8192-2097152}
-   orientation={COLUMN|ROW}
-   checksum={TRUE|FALSE}
-   compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
-   compresslevel={1-19}
-   fillfactor={10-100}
-   analyze_hll_non_part_table={TRUE|FALSE}
-   [oids=FALSE]
 ```
 
 ## <a id="section3"></a>Description 
@@ -362,41 +351,11 @@ USING <access_method>
 
   <p class="note">
 <strong>Note:</strong>
-Although you can specify the table's access method using <code>WITH (appendoptimized=true|false, orientation=row|column)</code> VMware recommends that you use <code>USING &ltaccess_method></code> instead.
+Although you can specify the table's access method using <code>WITH (appendoptimized=true|false, orientation=row|column)</code> VMware recommends that you use <code>USING <access_method></code> instead.
 </p>
   
 WITH \( storage\_parameter=value \)
-:   The `WITH` clause can specify storage parameters for tables, and for indexes associated with a `UNIQUE` or `PRIMARY` constraint. Note that you can also set storage parameters on a particular partition or subpartition by declaring the `WITH` clause in the partition specification. The lowest-level settings have priority.
-
-:   The defaults for some of the table storage options can be specified with the server configuration parameter `gp_default_storage_options`. For information about setting default storage options, see [Notes](#section5).
-
-:   The following storage options are available:
-
-:   **appendoptimized** — Set to `TRUE` to create the table as an append-optimized table. If `FALSE` or not declared, the table will be created as a regular heap-storage table.
-
-:   **blocksize** — Set to the size, in bytes, for each block in a table. The `blocksize` must be between 8192 and 2097152 bytes, and be a multiple of 8192. The default is 32768. The `blocksize` option is valid only if `appendoptimized=TRUE`.
-
-:   **orientation** — Set to `column` for column-oriented storage, or `row` \(the default\) for row-oriented storage. This option is only valid if `appendoptimized=TRUE`. Heap-storage tables can only be row-oriented.
-
-:   **checksum** — This option is valid only for append-optimized tables \(`appendoptimized=TRUE`\). The value `TRUE` is the default and enables CRC checksum validation for append-optimized tables. The checksum is calculated during block creation and is stored on disk. Checksum validation is performed during block reads. If the checksum calculated during the read does not match the stored checksum, the transaction is cancelled. If you set the value to `FALSE` to deactivate checksum validation, checking the table data for on-disk corruption will not be performed.
-
-:   **compresstype** — Set to `ZLIB` \(the default\), `ZSTD`, `RLE_TYPE`, or `QUICKLZ`1 to specify the type of compression used. The value `NONE` deactivates compression. Zstd provides for both speed or a good compression ratio, tunable with the `compresslevel` option. QuickLZ and zlib are provided for backwards-compatibility. Zstd outperforms these compression types on usual workloads. The `compresstype` option is only valid if `appendoptimized=TRUE`.
-
-    > **Note** 1QuickLZ compression is available only in the commercial release of VMware Greenplum.
-
-    The value `RLE_TYPE`, which is supported only if `orientation`=`column` is specified, enables the run-length encoding \(RLE\) compression algorithm. RLE compresses data better than the Zstd, zlib, or QuickLZ compression algorithms when the same data value occurs in many consecutive rows.
-
-    For columns of type `BIGINT`, `INTEGER`, `DATE`, `TIME`, or `TIMESTAMP`, delta compression is also applied if the `compresstype` option is set to `RLE_TYPE` compression. The delta compression algorithm is based on the delta between column values in consecutive rows and is designed to improve compression when data is loaded in sorted order or the compression is applied to column data that is in sorted order.
-
-    For information about using table compression, see [Choosing the Table Storage Model](../../admin_guide/ddl/ddl-storage.html#topic1) in the *Greenplum Database Administrator Guide*.
-
-:   **compresslevel** — For Zstd compression of append-optimized tables, set to an integer value from 1 \(fastest compression\) to 19 \(highest compression ratio\). For zlib compression, the valid range is from 1 to 9. QuickLZ compression level can only be set to 1. If not declared, the default is 1. For `RLE_TYPE`, the compression level can be an integer value from 1 \(fastest compression\) to 4 \(highest compression ratio\).
-
-:   The `compresslevel` option is valid only if `appendoptimized=TRUE`.
-
-:   **fillfactor** — The fillfactor for a table is a percentage between 10 and 100. 100 \(complete packing\) is the default. When a smaller fillfactor is specified, `INSERT` operations pack table pages only to the indicated percentage; the remaining space on each page is reserved for updating rows on that page. This gives `UPDATE` a chance to place the updated copy of a row on the same page as the original, which is more efficient than placing it on a different page. For a table whose entries are never updated, complete packing is the best choice, but in heavily updated tables smaller fillfactors are appropriate. This parameter cannot be set for TOAST tables.
-
-:   **analyze_hll_non_part_table** — Set this storage parameter to `true` to force collection of HLL statistics even if the table is not part of a partitioned table. This is useful if the table will be exchanged or added to a partitioned table, so that the table does not need to be re-analyzed. The default is `false`.
+:   The `WITH` clause can specify storage parameters for tables, and for indexes associated with a `UNIQUE` or `PRIMARY` constraint. See [Storage Parameters](#storage-parameters), below, for details.  
 
 ON COMMIT
 :   The behavior of temporary tables at the end of a transaction block can be controlled using `ON COMMIT`. The three options are:
@@ -462,7 +421,7 @@ partition\_specification
 
 :   **`EVERY`** — For range partitions, defines how to increment the values from `START` to `END` to create individual partitions. Typically the data type of the `EVERY` expression is the same type as the partition key column. If that is not the case, then you must explicitly cast to the intended data type.
 
-:   **`WITH`**— Sets the table storage options for a partition. For example, you may want older partitions to be append-optimized tables and newer partitions to be regular heap tables.
+:   **`WITH`**— Sets the table storage options for a partition. For example, you may want older partitions to be append-optimized tables and newer partitions to be regular heap tables. See [Storage Parameters](#storage-parameters), below.
 
 :   **`TABLESPACE`** — The name of the tablespace in which the partition is to be created.
 
@@ -471,6 +430,54 @@ SUBPARTITION BY
 
 SUBPARTITION TEMPLATE
 :   Instead of declaring each subpartition definition individually for each partition, you can optionally declare a subpartition template to be used to create the subpartitions \(lower level child tables\). This subpartition specification would then apply to all parent partitions.
+
+### <a id="storage_parameters"></a>Storage Parameters
+
+The `WITH` clause can specify storage parameters for tables, and for indexes associated with a `UNIQUE` or `PRIMARY` constraint. Storage parameters for indexes are documented on the [CREATE INDEX](CREATE_INDEX.html.md) reference page. Note that you can also set storage parameters for a particular partition or subpartition by declaring the `WITH` clause in the partition specification. The lowest-level partition's settings have priority. 
+
+The defaults for some of the table storage options can be specified with the server configuration parameter `gp_default_storage_options`. For information about setting default storage options, see [Notes](#section5).
+
+Greenplum Database supports the following storage parameters for tables and partitions:
+
+appendoptimized
+: Set to `TRUE` to create the table as an append-optimized table. If `FALSE` or not declared, the table will be created as a regular heap-storage table.
+
+blocksize
+: Set to the size, in bytes, for each block in a table. The `blocksize` must be between 8192 and 2097152 bytes, and be a multiple of 8192. The default is 32768. The `blocksize` option is valid only if `appendoptimized=TRUE`.
+
+orientation
+: Set to `column` for column-oriented storage, or `row` \(the default\) for row-oriented storage. This option is only valid if `appendoptimized=TRUE`. Heap-storage tables can only be row-oriented.
+
+checksum
+: This option is valid only for append-optimized tables \(`appendoptimized=TRUE`\). The value `TRUE` is the default and enables CRC checksum validation for append-optimized tables. The checksum is calculated during block creation and is stored on disk. Checksum validation is performed during block reads. If the checksum calculated during the read does not match the stored checksum, the transaction is cancelled. If you set the value to `FALSE` to deactivate checksum validation, checking the table data for on-disk corruption will not be performed.
+
+compresstype
+: Set to `ZLIB` \(the default\), `ZSTD`, `RLE_TYPE`, or `QUICKLZ` <sup>1</sup> to specify the type of compression used. The value `NONE` deactivates compression. Zstd provides for both speed and a good compression ratio, tunable with the `compresslevel` option. QuickLZ and zlib are provided for backwards-compatibility. Zstd outperforms these compression types on usual workloads. The `compresstype` option is only valid if `appendoptimized=TRUE`.
+
+<sup>1</sup>QuickLZ compression is available only in the commercial release of VMware Greenplum.
+
+:    The value `RLE_TYPE`, which is supported only if `orientation`=`column` is specified, enables the run-length encoding \(RLE\) compression algorithm. RLE compresses data better than the Zstd, zlib, or QuickLZ compression algorithms when the same data value occurs in many consecutive rows.
+
+:    For columns of type `BIGINT`, `INTEGER`, `DATE`, `TIME`, or `TIMESTAMP`, delta compression is also applied if the `compresstype` option is set to `RLE_TYPE` compression. The delta compression algorithm is based on the delta between column values in consecutive rows and is designed to improve compression when data is loaded in sorted order or the compression is applied to column data that is in sorted order.
+
+:    For information about using table compression, see [Choosing the Table Storage Model](../../admin_guide/ddl/ddl-storage.html#topic1) in the *Greenplum Database Administrator Guide*.
+
+compresslevel
+: For Zstd compression of append-optimized tables, set to an integer value from 1 \(fastest compression\) to 19 \(highest compression ratio\). For zlib compression, the valid range is from 1 to 9. QuickLZ compression level can only be set to 1. If not declared, the default is 1. For `RLE_TYPE`, the compression level can be an integer value from 1 \(fastest compression\) to 4 \(highest compression ratio\).
+
+:   The `compresslevel` option is valid only if `appendoptimized=TRUE`.
+
+fillfactor
+: The fillfactor for a table is a percentage between 10 and 100. 100 \(complete packing\) is the default. When a smaller fillfactor is specified, `INSERT` operations pack table pages only to the indicated percentage; the remaining space on each page is reserved for updating rows on that page. This gives `UPDATE` a chance to place the updated copy of a row on the same page as the original, which is more efficient than placing it on a different page. For a table whose entries are never updated, complete packing is the best choice, but in heavily updated tables smaller fillfactors are appropriate. This parameter cannot be set for TOAST tables.
+
+analyze_hll_non_part_table
+: Set this storage parameter to `true` to force collection of HLL statistics even if the table is not part of a partitioned table. This is useful if the table will be exchanged or added to a partitioned table, so that the table does not need to be re-analyzed. The default is `false`.
+
+reorganize
+: Set this storage parameter to `true` when the hash distribution policy has not changed or when you have changed from a hash to a random distribution, and you want to redistribute the data anyway.
+
+vacuum_index_cleanup
+: Specifies whether `VACUUM` attempts to remove index entries pointing to dead tuples. The default is `true`. Setting this to false may be useful when you need to run `VACUUM` as quickly as possible, for example to prevent imminent transaction ID wraparound. However, if you do not perform index cleanup regularly, performance may suffer, because as the table is modified, indexes accumulate dead tuples and the table itself accumulates dead line pointers that cannot be removed until index cleanup completes.
 
 ## <a id="section5"></a>Notes 
 

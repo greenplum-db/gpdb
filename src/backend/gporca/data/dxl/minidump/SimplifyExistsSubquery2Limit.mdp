@@ -712,7 +712,7 @@ explain select * from foo where foo.a = 10 and exists (select * from bar);
         </dxl:LogicalGet>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="86">
+    <dxl:Plan Id="0" SpaceSize="82">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1311.703352" Rows="1.000000" Width="8"/>

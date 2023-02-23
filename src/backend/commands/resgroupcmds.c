@@ -291,7 +291,7 @@ DropResourceGroup(DropResourceGroupStmt *stmt)
 	/* cannot DROP default resource groups  */
 	if (groupid == DEFAULTRESGROUP_OID
 		|| groupid == ADMINRESGROUP_OID
-		|| groupid == DEFAULTAUXILIARY_OID)
+		|| groupid == SYSTEMRESGROUP_OID)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("cannot drop default resource group \"%s\"",

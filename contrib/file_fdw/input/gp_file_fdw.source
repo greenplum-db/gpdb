@@ -19,7 +19,7 @@ CREATE SERVER file_server FOREIGN DATA WRAPPER file_fdw OPTIONS (mpp_execute 'an
 
 -- create user mappings and grant privilege to test users
 SET ROLE file_fdw_superuser;
-CREATE USER MAPPING FOR file_fdw_superuser SERVER file_server OPTIONS (mpp_execute 'master'); -- error
+CREATE USER MAPPING FOR file_fdw_superuser SERVER file_server OPTIONS (mpp_execute 'coordinator'); -- error
 CREATE USER MAPPING FOR file_fdw_superuser SERVER file_server;
 
 -- MPP tests

@@ -693,7 +693,7 @@ pg_dependencies_in(PG_FUNCTION_ARGS)
 	statistic_scanner_finish();
 	mvdependencies = mvdependencies_parse_result;
 
-	PG_RETURN_MVNDistinct_P(statext_dependencies_serialize(mvdependencies));
+	PG_RETURN_MVDependencies_P(statext_dependencies_serialize(mvdependencies));
 }
 
 /*

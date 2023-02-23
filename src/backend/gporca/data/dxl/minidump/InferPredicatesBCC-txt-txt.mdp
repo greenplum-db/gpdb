@@ -16,17 +16,17 @@
 
   Plan:
 
-                                         QUERY PLAN
----------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.08 rows=1 width=6)
-   ->  Hash Join  (cost=0.00..862.08 rows=1 width=6)
+                                       QUERY PLAN
+-----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.03 rows=1 width=6)
+   ->  Hash Join  (cost=0.00..862.03 rows=1 width=6)
          Hash Cond: (infer_txt.a = infer_txt_1.a)
-         ->  Table Scan on infer_txt  (cost=0.00..431.02 rows=1 width=3)
+         ->  Seq Scan on infer_txt  (cost=0.00..431.02 rows=1 width=3)
                Filter: (a = 'K'::text)
-         ->  Hash  (cost=431.01..431.01 rows=334 width=3)
-               ->  Table Scan on infer_txt infer_txt_1  (cost=0.00..431.01 rows=334 width=3)
- Planning time: 131.476 ms
- Optimizer: PQO version 3.9.0
+         ->  Hash  (cost=431.02..431.02 rows=1 width=3)
+               ->  Seq Scan on infer_txt infer_txt_1  (cost=0.00..431.02 rows=1 width=3)
+                     Filter: (a = 'K'::text)
+ Optimizer: Pivotal Optimizer (GPORCA)
   ]]>
   </dxl:Comment>
   <dxl:Thread Id="0">
@@ -250,7 +250,7 @@
     <dxl:Plan Id="0" SpaceSize="8">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.081171" Rows="1.000000" Width="6"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.034418" Rows="1.000000" Width="6"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -264,7 +264,7 @@
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.081148" Rows="1.000000" Width="6"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.034395" Rows="1.000000" Width="6"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -312,14 +312,19 @@
           </dxl:TableScan>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.006050" Rows="1000.000000" Width="3"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.017022" Rows="1.000000" Width="3"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="8" Alias="a">
                 <dxl:Ident ColId="8" ColName="a" TypeMdid="0.25.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:Filter/>
+            <dxl:Filter>
+              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
+                <dxl:Ident ColId="8" ColName="a" TypeMdid="0.25.1.0"/>
+                <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABUs=" LintValue="160784940"/>
+              </dxl:Comparison>
+            </dxl:Filter>
             <dxl:TableDescriptor Mdid="6.40960.1.0" TableName="infer_txt">
               <dxl:Columns>
                 <dxl:Column ColId="8" Attno="1" ColName="a" TypeMdid="0.25.1.0" ColWidth="3"/>

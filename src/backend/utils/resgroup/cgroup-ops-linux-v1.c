@@ -611,8 +611,8 @@ initcgroup_v1(void)
 	 * the child process to limit the resource usage of the parent process
 	 * and all child processes.
 	 */
-	createcgroup_v1(GPDB_SYSTEM_CGROUP);
-	attachcgroup_v1(GPDB_SYSTEM_CGROUP, PostmasterPid, false);
+	createcgroup_v1(SYSTEMRESGROUP_OID);
+	attachcgroup_v1(SYSTEMRESGROUP_OID, PostmasterPid, false);
 }
 
 /* Adjust GUCs for this OS group implementation */
@@ -848,7 +848,7 @@ detachcgroup_v1(Oid group, CGroupComponentType component, int fd_dir)
 	if (buf_len == 0)
 		return;
 
-	buildPath(GPDB_DEFAULT_CGROUP, BASEDIR_GPDB, component, "cgroup.procs",
+	buildPath(DEFAULTRESGROUP_OID, BASEDIR_GPDB, component, "cgroup.procs",
 			  path, path_size);
 
 	fdw = open(path, O_WRONLY);

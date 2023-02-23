@@ -40,7 +40,7 @@ my $tmp_folder = TestLib::tempdir;
 my $node_1 = get_new_node('node_1');
 $node_1->init(allows_streaming => 1);
 $node_1->append_conf('postgresql.conf', qq(
-wal_keep_segments='5'
+wal_keep_size='320MB'
 ));
 
 $node_1->start;

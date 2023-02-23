@@ -611,7 +611,7 @@ _copyExternalScanInfo(const ExternalScanInfo *from)
 
 	COPY_NODE_FIELD(uriList);
 	COPY_SCALAR_FIELD(fmtType);
-	COPY_SCALAR_FIELD(isMasterOnly);
+	COPY_SCALAR_FIELD(isCoordinatorOnly);
 	COPY_SCALAR_FIELD(rejLimit);
 	COPY_SCALAR_FIELD(rejLimitInRows);
 	COPY_SCALAR_FIELD(logErrors);

@@ -4631,25 +4631,23 @@ select sum(q.a), count(q.b) from ft4 left join (select 13, avg(ft1.c1), sum(ft2.
          ->  Foreign Scan on public.ft4
                Output: ft4.c1
                Remote SQL: SELECT c1 FROM "S 1"."T 3"
-         ->  Result
-               Output: 13, (avg(ft1.c1))
-               ->  Materialize
-                     Output: (avg(ft1.c1))
-                     ->  Aggregate
-                           Output: avg(ft1.c1)
-                           ->  Hash Left Join
+         ->  Materialize
+               Output: (13), (avg(ft1.c1))
+               ->  Aggregate
+                     Output: 13, avg(ft1.c1)
+                     ->  Hash Left Join
+                           Output: ft1.c1
+                           Hash Cond: (ft2.c1 = ft1.c1)
+                           ->  Foreign Scan on public.ft2
+                                 Output: ft2.c1
+                                 Remote SQL: SELECT "C 1" FROM "S 1"."T 1"
+                           ->  Hash
                                  Output: ft1.c1
-                                 Hash Cond: (ft2.c1 = ft1.c1)
-                                 ->  Foreign Scan on public.ft2
-                                       Output: ft2.c1
-                                       Remote SQL: SELECT "C 1" FROM "S 1"."T 1"
-                                 ->  Hash
+                                 ->  Foreign Scan on public.ft1
                                        Output: ft1.c1
-                                       ->  Foreign Scan on public.ft1
-                                             Output: ft1.c1
-                                             Remote SQL: SELECT "C 1" FROM "S 1"."T 1"
+                                       Remote SQL: SELECT "C 1" FROM "S 1"."T 1"
  Optimizer: Pivotal Optimizer (GPORCA)
-(26 rows)
+(24 rows)
 
 select sum(q.a), count(q.b) from ft4 left join (select 13, avg(ft1.c1), sum(ft2.c1) from ft1 right join ft2 on (ft1.c1 = ft2.c1)) q(a, b, c) on (ft4.c1 <= q.b);
  sum | count 
@@ -4957,16 +4955,13 @@ EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st1(1, 2);
    ->  Foreign Scan on public.ft1
          Output: ft1.c3
          Remote SQL: SELECT c3 FROM "S 1"."T 1" WHERE (("C 1" = 1))
-   ->  Result
+   ->  Materialize
          Output: ft2.c3
-         Filter: (ft2.c1 = 2)
-         ->  Materialize
-               Output: ft2.c1, ft2.c3
-               ->  Foreign Scan on public.ft2
-                     Output: ft2.c1, ft2.c3
-                     Remote SQL: SELECT "C 1", c3 FROM "S 1"."T 1"
+         ->  Foreign Scan on public.ft2
+               Output: ft2.c3
+               Remote SQL: SELECT c3 FROM "S 1"."T 1" WHERE (("C 1" = 2))
  Optimizer: Pivotal Optimizer (GPORCA)
-(15 rows)
+(12 rows)
 
 EXECUTE st1(1, 1);
   c3   |  c3   

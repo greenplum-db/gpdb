@@ -38,7 +38,7 @@ Greenplum Database 7 requires the following software packages on RHEL systems. T
 -   openldap
 -   openssh-client
 -   openssl
--   openssl-libs \(RHEL7/Centos7\)
+-   openssl-libs
 -   perl
 -   readline
 -   rsync

@@ -215,6 +215,7 @@ typedef struct TableAmRoutine
 												  List *targetlist,
 												  List *qual,
 												  bool *proj,
+												  List *constraintList,
 												  uint32 flags);
 
 	/*
@@ -787,14 +788,14 @@ table_beginscan(Relation rel, Snapshot snapshot,
  */
 static inline TableScanDesc
 table_beginscan_es(Relation rel, Snapshot snapshot,
-				   List *targetList, List *qual, bool *proj)
+				   List *targetList, List *qual, bool *proj, List *constraintList)
 {
 	uint32		flags = SO_TYPE_SEQSCAN |
 	SO_ALLOW_STRAT | SO_ALLOW_SYNC | SO_ALLOW_PAGEMODE;
 
 	if (rel->rd_tableam->scan_begin_extractcolumns)
 		return rel->rd_tableam->scan_begin_extractcolumns(rel, snapshot,
-														  targetList, qual, proj,
+														  targetList, qual, proj, constraintList,
 														  flags);
 
 	return rel->rd_tableam->scan_begin(rel, snapshot,

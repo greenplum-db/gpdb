@@ -477,10 +477,16 @@ pg_stat_get_progress_info(PG_FUNCTION_ARGS)
 	/* Translate command name into command type code. */
 	if (pg_strcasecmp(cmd, "VACUUM") == 0)
 		cmdtype = PROGRESS_COMMAND_VACUUM;
+	else if (pg_strcasecmp(cmd, "ANALYZE") == 0)
+		cmdtype = PROGRESS_COMMAND_ANALYZE;
 	else if (pg_strcasecmp(cmd, "CLUSTER") == 0)
 		cmdtype = PROGRESS_COMMAND_CLUSTER;
 	else if (pg_strcasecmp(cmd, "CREATE INDEX") == 0)
 		cmdtype = PROGRESS_COMMAND_CREATE_INDEX;
+	else if (pg_strcasecmp(cmd, "BASEBACKUP") == 0)
+		cmdtype = PROGRESS_COMMAND_BASEBACKUP;
+	else if (pg_strcasecmp(cmd, "COPY") == 0)
+		cmdtype = PROGRESS_COMMAND_COPY;
 	else
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
@@ -1714,6 +1720,152 @@ pg_stat_get_buf_alloc(PG_FUNCTION_ARGS)
 	PG_RETURN_INT64(pgstat_fetch_global()->buf_alloc);
 }
 
+/*
+ * Returns statistics of WAL activity
+ */
+Datum
+pg_stat_get_wal(PG_FUNCTION_ARGS)
+{
+#define PG_STAT_GET_WAL_COLS	9
+	TupleDesc	tupdesc;
+	Datum		values[PG_STAT_GET_WAL_COLS];
+	bool		nulls[PG_STAT_GET_WAL_COLS];
+	char		buf[256];
+	PgStat_WalStats *wal_stats;
+
+	/* Initialise values and NULL flags arrays */
+	MemSet(values, 0, sizeof(values));
+	MemSet(nulls, 0, sizeof(nulls));
+
+	/* Initialise attributes information in the tuple descriptor */
+	tupdesc = CreateTemplateTupleDesc(PG_STAT_GET_WAL_COLS);
+	TupleDescInitEntry(tupdesc, (AttrNumber) 1, "wal_records",
+					   INT8OID, -1, 0);
+	TupleDescInitEntry(tupdesc, (AttrNumber) 2, "wal_fpw",
+					   INT8OID, -1, 0);
+	TupleDescInitEntry(tupdesc, (AttrNumber) 3, "wal_bytes",
+					   NUMERICOID, -1, 0);
+	TupleDescInitEntry(tupdesc, (AttrNumber) 4, "wal_buffers_full",
+					   INT8OID, -1, 0);
+	TupleDescInitEntry(tupdesc, (AttrNumber) 5, "wal_write",
+					   INT8OID, -1, 0);
+	TupleDescInitEntry(tupdesc, (AttrNumber) 6, "wal_sync",
+					   INT8OID, -1, 0);
+	TupleDescInitEntry(tupdesc, (AttrNumber) 7, "wal_write_time",
+					   FLOAT8OID, -1, 0);
+	TupleDescInitEntry(tupdesc, (AttrNumber) 8, "wal_sync_time",
+					   FLOAT8OID, -1, 0);
+	TupleDescInitEntry(tupdesc, (AttrNumber) 9, "stats_reset",
+					   TIMESTAMPTZOID, -1, 0);
+
+	BlessTupleDesc(tupdesc);
+
+	/* Get statistics about WAL activity */
+	wal_stats = pgstat_fetch_stat_wal();
+
+	/* Fill values and NULLs */
+	values[0] = Int64GetDatum(wal_stats->wal_records);
+	values[1] = Int64GetDatum(wal_stats->wal_fpw);
+
+	/* Convert to numeric. */
+	snprintf(buf, sizeof buf, UINT64_FORMAT, wal_stats->wal_bytes);
+	values[2] = DirectFunctionCall3(numeric_in,
+									CStringGetDatum(buf),
+									ObjectIdGetDatum(0),
+									Int32GetDatum(-1));
+
+	values[3] = Int64GetDatum(wal_stats->wal_buffers_full);
+	values[4] = Int64GetDatum(wal_stats->wal_write);
+	values[5] = Int64GetDatum(wal_stats->wal_sync);
+
+	/* Convert counters from microsec to millisec for display */
+	values[6] = Float8GetDatum(((double) wal_stats->wal_write_time) / 1000.0);
+	values[7] = Float8GetDatum(((double) wal_stats->wal_sync_time) / 1000.0);
+
+	values[8] = TimestampTzGetDatum(wal_stats->stat_reset_timestamp);
+
+	/* Returns the record as Datum */
+	PG_RETURN_DATUM(HeapTupleGetDatum(heap_form_tuple(tupdesc, values, nulls)));
+}
+
+/*
+ * Returns statistics of SLRU caches.
+ */
+Datum
+pg_stat_get_slru(PG_FUNCTION_ARGS)
+{
+#define PG_STAT_GET_SLRU_COLS	9
+	ReturnSetInfo  *rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
+	TupleDesc		tupdesc;
+	Tuplestorestate *tupstore;
+	MemoryContext 	per_query_ctx;
+	MemoryContext 	oldcontext;
+	int				i;
+	PgStat_SLRUStats *stats;
+
+	/* check to see if caller supports us returning a tuplestore */
+	if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("set-valued function called in context that cannot accept a set")));
+	if (!(rsinfo->allowedModes & SFRM_Materialize))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("materialize mode required, but it is not allowed in this context")));
+
+	/* Build a tuple descriptor for our result type */
+	if (get_call_result_type(fcinfo, NULL, &tupdesc) != TYPEFUNC_COMPOSITE)
+		elog(ERROR, "return type must be a row type");
+
+	per_query_ctx = rsinfo->econtext->ecxt_per_query_memory;
+	oldcontext = MemoryContextSwitchTo(per_query_ctx);
+
+	tupstore = tuplestore_begin_heap(true, false, work_mem);
+	rsinfo->returnMode = SFRM_Materialize;
+	rsinfo->setResult = tupstore;
+	rsinfo->setDesc = tupdesc;
+
+	MemoryContextSwitchTo(oldcontext);
+
+	/* request SLRU stats from the stat collector */
+	stats = pgstat_fetch_slru();
+
+	for (i = 0; ; i++)
+	{
+		/* for each row */
+		Datum		values[PG_STAT_GET_SLRU_COLS];
+		bool		nulls[PG_STAT_GET_SLRU_COLS];
+		PgStat_SLRUStats stat;
+		const char *name;
+
+		name = pgstat_slru_name(i);
+
+		if (!name)
+			break;
+
+		stat = stats[i];
+		MemSet(values, 0, sizeof(values));
+		MemSet(nulls, 0, sizeof(nulls));
+
+		values[0] = PointerGetDatum(cstring_to_text(name));
+		values[1] = Int64GetDatum(stat.blocks_zeroed);
+		values[2] = Int64GetDatum(stat.blocks_hit);
+		values[3] = Int64GetDatum(stat.blocks_read);
+		values[4] = Int64GetDatum(stat.blocks_written);
+		values[5] = Int64GetDatum(stat.blocks_exists);
+		values[6] = Int64GetDatum(stat.flush);
+		values[7] = Int64GetDatum(stat.truncate);
+		values[8] = Int64GetDatum(stat.stat_reset_timestamp);
+
+		tuplestore_putvalues(tupstore, tupdesc, values, nulls);
+	}
+
+	/* clean up and return the tuplestore */
+	tuplestore_donestoring(tupstore);
+
+	return (Datum) 0;
+}
+
 Datum
 pg_stat_get_xact_numscans(PG_FUNCTION_ARGS)
 {
@@ -2043,6 +2195,20 @@ pg_stat_reset_single_function_counters(PG_FUNCTION_ARGS)
 	Oid			funcoid = PG_GETARG_OID(0);
 
 	pgstat_reset_single_counter(funcoid, RESET_FUNCTION);
+
+	PG_RETURN_VOID();
+}
+
+/* Reset SLRU counters (a specific one or all of them). */
+Datum
+pg_stat_reset_slru(PG_FUNCTION_ARGS)
+{
+	char	   *target = NULL;
+
+	if (!PG_ARGISNULL(0))
+		target = text_to_cstring(PG_GETARG_TEXT_PP(0));
+
+	pgstat_reset_slru_counter(target);
 
 	PG_RETURN_VOID();
 }

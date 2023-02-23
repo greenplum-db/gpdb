@@ -23,7 +23,7 @@ $node->init(allows_streaming => 1);
 $node->append_conf(
 	'postgresql.conf', qq(
 autovacuum = off
-wal_keep_segments = 16
+wal_keep_size = 1GB
 ));
 $node->start;
 

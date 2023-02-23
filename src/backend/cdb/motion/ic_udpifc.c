@@ -378,6 +378,9 @@ struct SendControlInfo
  */
 static SendControlInfo snd_control_info;
 
+/* WaitEventSet for the icudp */
+static WaitEventSet *ICWaitSet = NULL;
+
 /*
  * ICGlobalControlInfo
  *
@@ -3673,7 +3676,6 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 	int 		nFds = 0;
 	int 		*waitFds = NULL;
 	int 		nevent = 0;
-	WaitEventSet	*waitset = NULL;
 	TupleChunkListItem	tcItem = NULL;
 
 #ifdef AMS_VERBOSE_LOGGING
@@ -3705,8 +3707,8 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 			nevent += nFds;
 	}
 
-	/* init WaitEventSet */
-	waitset = CreateWaitEventSet(CurrentMemoryContext, nevent);
+	/* reset WaitEventSet */
+	ResetWaitEventSet(&ICWaitSet, TopMemoryContext, nevent);
 
 	/*
 	 * Use PG_TRY() - PG_CATCH() to make sure destroy the waiteventset (close the epoll fd)
@@ -3714,26 +3716,23 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 	 */
 	PG_TRY();
 	{
-		AddWaitEventToSet(waitset, WL_LATCH_SET, PGINVALID_SOCKET, &ic_control_info.latch, NULL);
-		AddWaitEventToSet(waitset, WL_POSTMASTER_DEATH, PGINVALID_SOCKET, NULL, NULL);
+		AddWaitEventToSet(ICWaitSet, WL_LATCH_SET, PGINVALID_SOCKET, &ic_control_info.latch, NULL);
+		AddWaitEventToSet(ICWaitSet, WL_POSTMASTER_DEATH, PGINVALID_SOCKET, NULL, NULL);
 		for (int i = 0; i < nFds; i++)
 		{
-			AddWaitEventToSet(waitset, WL_SOCKET_READABLE, waitFds[i], NULL, NULL);
+			AddWaitEventToSet(ICWaitSet, WL_SOCKET_READABLE, waitFds[i], NULL, NULL);
 		}
 
-		tcItem = receiveChunksUDPIFCLoop(pTransportStates, pEntry, srcRoute, conn, waitset, nevent);
+		tcItem = receiveChunksUDPIFCLoop(pTransportStates, pEntry, srcRoute, conn, ICWaitSet, nevent);
 	}
 	PG_CATCH();
 	{
-		FreeWaitEventSet(waitset);
 		if (waitFds != NULL)
 			pfree(waitFds);
-
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
 
-	FreeWaitEventSet(waitset);
 	if (waitFds != NULL)
 		pfree(waitFds);
 

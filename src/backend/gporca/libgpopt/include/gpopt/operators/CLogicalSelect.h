@@ -102,11 +102,6 @@ public:
 		return exprhdl.DeriveTableDescriptor(0);
 	}
 
-	// compute partition predicate to pass down to n-th child
-	CExpression *PexprPartPred(CMemoryPool *mp, CExpressionHandle &exprhdl,
-							   CExpression *pexprInput,
-							   ULONG child_index) const override;
-
 	//-------------------------------------------------------------------------------------
 	// Transformations
 	//-------------------------------------------------------------------------------------

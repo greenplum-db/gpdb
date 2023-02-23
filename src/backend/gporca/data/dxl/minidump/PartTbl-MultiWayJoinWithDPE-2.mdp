@@ -2557,7 +2557,7 @@
     <dxl:Plan Id="0" SpaceSize="261">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="23515.903551" Rows="12277684.984863" Width="246"/>
+          <dxl:Cost StartupCost="0" TotalCost="23478.203110" Rows="12277684.984527" Width="246"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="ss_sold_date_sk">
@@ -2718,7 +2718,7 @@
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="9954.709378" Rows="12277684.984863" Width="246"/>
+            <dxl:Cost StartupCost="0" TotalCost="9917.008937" Rows="12277684.984527" Width="246"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="ss_sold_date_sk">
@@ -2883,9 +2883,9 @@
               <dxl:Ident ColId="30" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
             </dxl:Comparison>
           </dxl:HashCondList>
-          <dxl:DynamicTableScan PartIndexId="1" SelectorIds="0">
+          <dxl:DynamicTableScan SelectorIds="0">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1001.605410" Rows="12277684.984863" Width="139"/>
+              <dxl:Cost StartupCost="0" TotalCost="1001.605410" Rows="12277684.984527" Width="139"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="ss_sold_date_sk">
@@ -3003,7 +3003,7 @@
           </dxl:DynamicTableScan>
           <dxl:PartitionSelector RelationMdid="6.904881.1.1" SelectorId="0" ScanId="1" Partitions="0,1,2,3,4">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="493.754101" Rows="60.823481" Width="107"/>
+              <dxl:Cost StartupCost="0" TotalCost="456.101758" Rows="24.329392" Width="107"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="30" Alias="d_date_sk">
@@ -3099,7 +3099,7 @@
             </dxl:PartFilterExpr>
             <dxl:BroadcastMotion InputSegments="-1" OutputSegments="0,1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="493.754101" Rows="60.823481" Width="107"/>
+                <dxl:Cost StartupCost="0" TotalCost="456.101758" Rows="24.329392" Width="107"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="30" Alias="d_date_sk">
@@ -3191,7 +3191,7 @@
               <dxl:SortingColumnList/>
               <dxl:HashJoin JoinType="Inner">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="493.583751" Rows="30.411740" Width="107"/>
+                  <dxl:Cost StartupCost="0" TotalCost="456.033618" Rows="12.164696" Width="107"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="30" Alias="d_date_sk">
@@ -3289,7 +3289,7 @@
                 </dxl:HashCondList>
                 <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="476.116158" Rows="73049.000000" Width="107"/>
+                    <dxl:Cost StartupCost="0" TotalCost="449.046463" Rows="29219.600000" Width="107"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="30" Alias="d_date_sk">
@@ -3379,9 +3379,9 @@
                   </dxl:ProjList>
                   <dxl:Filter/>
                   <dxl:SortingColumnList/>
-                  <dxl:DynamicTableScan PartIndexId="2" SelectorIds="">
+                  <dxl:DynamicTableScan SelectorIds="">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="433.752121" Rows="73049.000000" Width="107"/>
+                      <dxl:Cost StartupCost="0" TotalCost="432.100848" Rows="29219.600000" Width="107"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="30" Alias="d_date_sk">

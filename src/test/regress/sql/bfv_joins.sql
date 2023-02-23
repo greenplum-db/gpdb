@@ -410,6 +410,49 @@ where
 
 drop table t_13722;
 
+-- This test is introduced to verify incorrect result
+-- from hash join of char columns is fixed
+-- Notice when varchar/text is cast to bpchar and used for
+-- comparison, the trailing spaces are ignored
+-- When char is cast to varchar/text, it's considered
+-- comparison, and the trailing spaces are also ignored
+
+-- Prior to the fix, opclasses belonging to different
+-- opfamilies could be grouped as equivalent, and thence
+-- deriving incorrect equality hash join conditions
+
+--start_ignore
+drop table foo;
+drop table bar;
+drop table baz;
+--end_ignore
+create table foo (varchar_3 varchar(3)) distributed by (varchar_3);
+create table bar (char_3 char(3)) distributed by (char_3);
+create table baz (text_any text) distributed by (text_any);
+insert into foo values ('cd'); -- 0 trailing spaces
+insert into bar values ('cd '); -- 1 trailing space
+insert into baz values ('cd  '); -- 2 trailing spaces
+
+-- varchar cast to bpchar
+-- 'cd' matches 'cd', returns 1 row
+explain select varchar_3, char_3 from foo join bar on varchar_3=char_3;
+select varchar_3, char_3 from foo join bar on varchar_3=char_3;
+
+-- char cast to text
+-- 'cd' doesn't match 'cd  ', returns 0 rows
+explain select char_3, text_any from bar join baz on char_3=text_any;
+select char_3, text_any from bar join baz on char_3=text_any;
+
+-- foo - bar join: varchar cast to bpchar
+-- 'cd' matches 'cd'
+-- foo - baz join: no cast
+-- 'cd' doesn't match 'cd  '
+-- returns 0 rows
+-- Notice ORCA changes join order to minimize motion
+explain select varchar_3, char_3, text_any from foo join bar on varchar_3=char_3
+join baz on varchar_3=text_any;
+select varchar_3, char_3, text_any from foo join bar on varchar_3=char_3
+join baz on varchar_3=text_any;
 
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;

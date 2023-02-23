@@ -23,7 +23,7 @@ You must install Greenplum Database on each host machine of the Greenplum Databa
 
 VMware distributes the Greenplum Database software as a downloadable package that you install on each host system with the operating system's package management system. 
 
-Open source Greenplum Database releases are available as: source code tarballs, RPM installers for CentOS, and DEB packages for Debian and Ubuntu. See [https://greenplum.org/download/](https://greenplum.org/download/) for links to source code and instructions to compile Greenplum Database from source, and for links to download pre-built binaries in RPM and DEB format. For the Ubuntu operating system, Greenplum also offers a binary that can be installed via the `apt-get` command with the Ubuntu Personal Package Archive system.
+Open source Greenplum Database releases are available as: source code tarballs or RPM installers for RHEL/Oracle/Rocky Linux. See [https://greenplum.org/download/](https://greenplum.org/download/) for links to source code and instructions to compile Greenplum Database from source, and for links to download pre-built binaries in RPM format.
 
 ### <a id="topic_download"></a>Downloading the Greenplum Database Server Software (VMware Greenplum)
 
@@ -53,19 +53,12 @@ Follow these instructions to install Greenplum Database from a pre-built binary.
 
     > **Note** For Oracle Linux or Rocky Linux installations, download and install the `rhel8-x86_64`distribution files.
 
-2.  With sudo \(or as root\), install the Greenplum Database package on each host machine using your system's package manager software.
-    -   For RHEL/Oracle Linux/Rocky Linux systems, run the `yum` command:
+2.  With sudo \(or as root\), install the Greenplum Database package on each host machine using your system's package manager software:
+    ```
+    $ sudo yum install ./greenplum-db-<version>-<platform>.rpm
+    ```
 
-        ```
-        $ sudo yum install ./greenplum-db-<version>-<platform>.rpm
-        ```
-    -   For Ubuntu systems, run the `apt` command:
-
-        ```
-        $ sudo apt install ./greenplum-db-<version>-<platform>.deb
-        ```
-
-    The `yum` or `apt` command automatically installs software dependencies, copies the Greenplum Database software files into a version-specific directory under `/usr/local`, `/usr/local/greenplum-db-<version>`, and creates the symbolic link `/usr/local/greenplum-db` to the installation directory.
+    The `yum` command automatically installs software dependencies, copies the Greenplum Database software files into a version-specific directory under `/usr/local`, `/usr/local/greenplum-db-<version>`, and creates the symbolic link `/usr/local/greenplum-db` to the installation directory.
 
 3.  Change the owner and group of the installed files to `gpadmin`:
 
@@ -77,13 +70,13 @@ Follow these instructions to install Greenplum Database from a pre-built binary.
 
 ## <a id="topic_dj4_ssr_cmb"></a>\(Optional\) Installing to a Non-Default Directory 
 
-On RHEL/CentOS systems, you can use the `rpm` command with the `--prefix` option to install Greenplum Database to a non-default directory \(instead of under `/usr/local`\). Note, however, that using `rpm` does not automatically install Greenplum Database dependencies; you must manually install dependencies to each host system.
+On RHEL systems, you can use the `rpm` command with the `--prefix` option to install Greenplum Database to a non-default directory \(instead of under `/usr/local`\). Note, however, that using `rpm` does not automatically install Greenplum Database dependencies; you must manually install dependencies to each host system.
 
 Follow these instructions to install Greenplum Database to a specific directory.
 
 > **Important** You require sudo or root user access to install from a pre-built RPM file.
 
-1.  Download and copy the Greenplum Database package to the `gpadmin` user's home directory on the coordinator, standby coordinator, and every segment host machine. The distribution file name has the format `greenplum-db-<version>-<platform>.rpm` for RHEL systems, or `greenplum-db-<version>-<platform>.deb` for Ubuntu systems, where `<platform>` is similar to `rhel8-x86_64` \(Red Hat 8 64-bit\).
+1.  Download and copy the Greenplum Database package to the `gpadmin` user's home directory on the coordinator, standby coordinator, and every segment host machine. The distribution file name has the format `greenplum-db-<version>-rhel8-x86_64.rpm` for RHEL/Oracle/Rocky Linux systems.
 2.  Manually install the Greenplum Database dependencies to each host system:
 
     ```

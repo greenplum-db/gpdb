@@ -514,7 +514,7 @@ COptTasks::OptimizeTask(void *ptr)
 
 		// set up relcache MD provider
 		CMDProviderRelcache *relcache_provider =
-			GPOS_NEW(mp) CMDProviderRelcache(mp);
+			GPOS_NEW(mp) CMDProviderRelcache();
 
 		{
 			// scope for MD accessor
