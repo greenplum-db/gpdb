@@ -99,6 +99,16 @@ load_old_db_data() {
         unxz < /tmp/dump.sql.xz | '"${psql_env}"' psql '"${psql_opts}"' -f - postgres
     '
 
+    # Make sure to ANALYZE the catalog tables after loading in the
+    # dump to ensure that the pg_dump catalog queries will generate
+    # good query plans instead of bad plans from bad statistics.
+    ssh -n ${MASTER_HOST} '
+        source '"${OLD_GPHOME}"'/greenplum_path.sh
+        for datname in $(psql --tuples-only -c "SELECT datname FROM pg_database WHERE datallowconn = true" postgres); do
+            MASTER_DATA_DIRECTORY='"${OLD_MASTER_DATA_DIRECTORY}"' analyzedb -a -s pg_catalog -d $datname;
+        done
+    '
+
     # There are some states, important for upgrade, that can't be reached
     # by restoring from a dump file only, so we explicitly setup these cases here.
     scp "${DIRNAME}"/../../src/test/regress/sql/gp_upgrade_cornercases.sql ${MASTER_HOST}:/tmp/
