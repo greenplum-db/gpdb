@@ -32,6 +32,7 @@
 #include "utils/elog.h"
 #include "cdb/memquota.h"
 #include "utils/workfile_mgr.h"
+#include "utils/faultinjector.h"
 
 #include "access/hash.h"
 
@@ -467,6 +468,10 @@ lookup_agg_hash_entry(AggState *aggstate,
 	uint64 bloomval;			/* bloom filter value */
    
 	Assert(mt_bind != NULL);
+
+	if (SIMPLE_FAULT_INJECTOR("force_hashagg_stream_hashtable") == FaultInjectorTypeSkip)
+		if (((Agg *) aggstate->ss.ps.plan)->streaming)
+			return NULL;
 
 	if (p_isnew != NULL)
 		*p_isnew = false;
