@@ -4,16 +4,19 @@ title: Migrating from Open Source Greenplum Database to VMware Greenplum Databas
 
 This topic walks you through migration from an Open Source Greenplum Database to the commercial VMware Greenplum Database. Information is presented in the following topics:
 
-[Prerequisites](#prerequisites)
+[Before You Begin](#before-you-begin)
 [Software Dependencies](#software-dependencies)
 [Steps to Migrate](#steps-to-migrate)
 
-## <a id="prequisites"></a>Prerequisites
+## <a id="before-you-begin"></a> Before You Begin
 
 - If you have configured the Greenplum Platform Extension Framework (PXF) in your previous Greenplum Database installation, you must stop the PXF service, and you might need to back up PXF configuration files before upgrading to a new version of Greenplum Database. Refer to [PXF Pre-Upgrade Actions topic](../pxf/upgrade_pxf_6x.html#pxfpre)] for instructions. 
 
 - If you were previously using any Greenplum Database extensions such as `gpbackup`, and want to upgrade from an Open Source Greenplum Database to a commercial VMware Greenplum Database -- for example, upgrading from a 6.22.0 open source Greenplum Database to a 6.23.0 commercial VMware Greenplum Databse, you might need to re-install the extensions. You can download the corresponding packages from VMware Tanzu Network, and use the `gppkg` utility to re-install the extensions. 
 
+- Review the Greenplum Database [Platform Requirements topic](platform-requirements-overview.html) to verify that you have all software you need in place to successfully migrate to VMware Greenplum Database.
+
+<!--
 ## <a id="dependencies"></a>Software Dependencies
 
 
@@ -41,6 +44,8 @@ This topic walks you through migration from an Open Source Greenplum Database to
 | sed (used by `gpinitsystem`) | sed |
 | tar |	tar |
 | zip | zip |
+
+-->
 
 ## <a id="Steps"></a>Steps to Migrate
 
