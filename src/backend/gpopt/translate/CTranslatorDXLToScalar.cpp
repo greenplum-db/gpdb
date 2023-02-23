@@ -1535,8 +1535,9 @@ CTranslatorDXLToScalar::TranslateDXLScalarArrayCoerceExprToScalar(
 		FuncExpr *func_expr = MakeNode(FuncExpr);
 		func_expr->funcid = elemfuncid;
 		func_expr->funcformat = COERCE_EXPLICIT_CAST;
-		// GPDB_12_MERGE_FIXME: shouldn't this come from the DXL as well?
-		func_expr->funcresulttype = gpdb::GetFuncRetType(elemfuncid);
+		func_expr->funcresulttype =
+			CMDIdGPDB::CastMdid(dxlop->GetResultTypeMdId())->Oid();
+
 		// FIXME: this is a giant hack. We really should know the arity of the
 		//   function we're calling. Instead, we're jamming three arguments,
 		//   _always_

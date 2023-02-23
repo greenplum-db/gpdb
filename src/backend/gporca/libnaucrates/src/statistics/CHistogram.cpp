@@ -1750,7 +1750,7 @@ CHistogram::CombineBuckets(CMemoryPool *mp, CBucketArray *buckets,
 				CDouble(0.0) + CStatistics::Epsilon);
 #endif
 
-	// GPDB_12_MERGE_FIXME: the desired_num_buckets handling is broken for singleton buckets
+	// FIXME: the desired_num_buckets handling is broken for singleton buckets
 	// While it limits the number of buckets for non-singleton buckets, singleton buckets
 	// are not merged, and thus we can get cases where the number of result buckets is
 	// larger than the desired number of buckets
