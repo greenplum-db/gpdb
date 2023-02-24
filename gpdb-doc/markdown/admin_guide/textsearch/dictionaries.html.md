@@ -50,10 +50,10 @@ A filtering dictionary can be placed anywhere in the list, except at the end whe
 
 ## <a id="stop-words"></a>Stop Words 
 
-Stop words are words that are very common, appear in almost every document, and have no discrimination value. Therefore, they can be ignored in the context of full text searching. For example, every English text contains words like a and the, so it is useless to store them in an index. However, stop words do affect the positions in `tsvector`, which in turn affect ranking:
+Stop words are words that are very common, appear in almost every document, and have no discrimination value. Therefore, they can be ignored in the context of full text searching. For example, every English text contains words like `a` and `the`, so it is useless to store them in an index. However, stop words do affect the positions in `tsvector`, which in turn affect ranking:
 
 ```
-SELECT to_tsvector('english','in the list of stop words');
+SELECT to_tsvector('english', 'in the list of stop words');
         to_tsvector
 ----------------------------
  'list':3 'stop':5 'word':6
@@ -62,12 +62,12 @@ SELECT to_tsvector('english','in the list of stop words');
 The missing positions 1,2,4 are because of stop words. Ranks calculated for documents with and without stop words are quite different:
 
 ```
-SELECT ts_rank_cd (to_tsvector('english','in the list of stop words'), to_tsquery('list & stop'));
+SELECT ts_rank_cd (to_tsvector('english', 'in the list of stop words'), to_tsquery('list & stop'));
  ts_rank_cd
 ------------
        0.05
 
-SELECT ts_rank_cd (to_tsvector('english','list stop words'), to_tsquery('list & stop'));
+SELECT ts_rank_cd (to_tsvector('english', 'list stop words'), to_tsquery('list & stop'));
  ts_rank_cd
 ------------
         0.1
@@ -93,12 +93,12 @@ Here, `english` is the base name of a file of stop words. The file's full name w
 Now we can test our dictionary:
 
 ```
-SELECT ts_lexize('public.simple_dict','YeS');
+SELECT ts_lexize('public.simple_dict', 'YeS');
  ts_lexize
 -----------
  {yes}
 
-SELECT ts_lexize('public.simple_dict','The');
+SELECT ts_lexize('public.simple_dict', 'The');
  ts_lexize
 -----------
  {}
@@ -109,12 +109,12 @@ We can also choose to return `NULL`, instead of the lower-cased word, if it is n
 ```
 ALTER TEXT SEARCH DICTIONARY public.simple_dict ( Accept = false );
 
-SELECT ts_lexize('public.simple_dict','YeS');
+SELECT ts_lexize('public.simple_dict', 'YeS');
  ts_lexize
 -----------
  {yes}
 
-SELECT ts_lexize('public.simple_dict','The');
+SELECT ts_lexize('public.simple_dict', 'The');
  ts_lexize
 -----------
  {}
@@ -124,7 +124,7 @@ With the default setting of `Accept = true`, it is only useful to place a simple
 
 CAUTION:
 
-Most types of dictionaries rely on configuration files, such as files of stop words. These files must be stored in UTF-8 encoding. They will be translated to the actual database encoding, if that is different, when they are read into the server.
+Most types of dictionaries rely on configuration files, such as files of stop words. These files _must_ be stored in UTF-8 encoding. They will be translated to the actual database encoding, if that is different, when they are read into the server.
 
 CAUTION:
 
@@ -171,7 +171,7 @@ Then we will get these results:
 
 ```
 mydb=# CREATE TEXT SEARCH DICTIONARY syn (template=synonym, synonyms='synonym_sample');
-mydb=# SELECT ts_lexize('syn','indices');
+mydb=# SELECT ts_lexize('syn', 'indices');
  ts_lexize
 -----------
  {index}
@@ -179,13 +179,13 @@ mydb=# SELECT ts_lexize('syn','indices');
 
 mydb=# CREATE TEXT SEARCH CONFIGURATION tst (copy=simple);
 mydb=# ALTER TEXT SEARCH CONFIGURATION tst ALTER MAPPING FOR asciiword WITH syn;
-mydb=# SELECT to_tsvector('tst','indices');
+mydb=# SELECT to_tsvector('tst', 'indices');
  to_tsvector
 -------------
  'index':1
 (1 row)
 
-mydb=# SELECT to_tsquery('tst','indices');
+mydb=# SELECT to_tsquery('tst', 'indices');
  to_tsquery
 ------------
  'index':*
@@ -197,7 +197,7 @@ mydb=# SELECT 'indexes are very useful'::tsvector;
  'are' 'indexes' 'useful' 'very'
 (1 row)
 
-mydb=# SELECT 'indexes are very useful'::tsvector @@ to_tsquery('tst','indices');
+mydb=# SELECT 'indexes are very useful'::tsvector @@ to_tsquery('tst', 'indices');
  ?column?
 ----------
  t
@@ -328,20 +328,64 @@ The Ispell dictionary template supports *morphological dictionaries*, which can 
 
 The standard Greenplum Database distribution does not include any Ispell configuration files. Dictionaries for a large number of languages are available from [Ispell](https://www.cs.hmc.edu/~geoff/ispell.html). Also, some more modern dictionary file formats are supported — [MySpell](http://en.wikipedia.org/wiki/MySpell) \(OO < 2.0.1\) and [Hunspell](http://sourceforge.net/projects/hunspell/) \(OO \>= 2.0.2\). A large list of dictionaries is available on the [OpenOffice Wiki](http://wiki.services.openoffice.org/wiki/Dictionaries).
 
-To create an Ispell dictionary, use the built-in `ispell` template and specify several parameters:
+To create an Ispell dictionary perform these steps:
 
-```
-CREATE TEXT SEARCH DICTIONARY english_ispell (
+1. Download dictionary configuration files. OpenOffice extension files have the `.oxt` extension. It is necessary to extract `.aff` and `.dic` files, change extensions to `.affix` and `.dict`. For some dictionary files it is also needed to convert characters to the UTF-8 encoding with commands (for example, for a Norwegian language dictionary):
+    ```
+    iconv -f ISO_8859-1 -t UTF-8 -o nn_no.affix nn_NO.aff
+    iconv -f ISO_8859-1 -t UTF-8 -o nn_no.dict nn_NO.dic
+    ```
+
+2. Copy files to the `$SHAREDIR/tsearch_data` directory.
+3. Load files into PostgreSQL with the following command:
+    ```
+    CREATE TEXT SEARCH DICTIONARY english_hunspell (
     TEMPLATE = ispell,
-    DictFile = english,
-    AffFile = english,
-    StopWords = english
-);
-```
+    DictFile = en_us,
+    AffFile = en_us,
+    Stopwords = english);
+    ```
 
 Here, `DictFile`, `AffFile`, and `StopWords` specify the base names of the dictionary, affixes, and stop-words files. The stop-words file has the same format explained above for the `simple` dictionary type. The format of the other files is not specified here but is available from the above-mentioned web sites.
 
 Ispell dictionaries usually recognize a limited set of words, so they should be followed by another broader dictionary; for example, a Snowball dictionary, which recognizes everything.
+
+The `.affix` file of Ispell has the following structure:
+
+```
+prefixes
+flag *A:
+    .           >   RE      # As in enter > reenter
+suffixes
+flag T:
+    E           >   ST      # As in late > latest
+    [^AEIOU]Y   >   -Y,IEST # As in dirty > dirtiest
+    [AEIOU]Y    >   EST     # As in gray > grayest
+    [^EY]       >   EST     # As in small > smallest
+```
+
+And the `.dict` file has the following structure:
+
+```
+lapse/ADGRS
+lard/DGRS
+large/PRTY
+lark/MRS
+```
+
+Format of the `.dict` file is:
+
+```
+basic_form/affix_class_name
+```
+
+In the `.affix` file every affix flag is described in the following format:
+
+```
+condition > [-stripping_letters,] adding_affix
+```
+
+Here, condition has a format similar to the format of regular expressions. It can use groupings `[...]` and `[^...]`. For example, `[AEIOU]Y` means that the last letter of the word is "y" and the penultimate letter is "a", "e", "i", "o" or "u". `[^EY]` means that the last letter is neither "e" nor "y".
 
 Ispell dictionaries support splitting compound words; a useful feature. Notice that the affix file should specify a special flag using the `compoundwords controlled` statement that marks dictionary words that can participate in compound formation:
 
@@ -356,6 +400,39 @@ SELECT ts_lexize('norwegian_ispell', 'overbuljongterningpakkmesterassistent');
    {over,buljong,terning,pakk,mester,assistent}
 SELECT ts_lexize('norwegian_ispell', 'sjokoladefabrikk');
    {sjokoladefabrikk,sjokolade,fabrikk}
+```
+
+MySpell format is a subset of Hunspell. The `.affix` file of Hunspell has the following structure:
+
+```
+PFX A Y 1
+PFX A   0     re         .
+SFX T N 4
+SFX T   0     st         e
+SFX T   y     iest       [^aeiou]y
+SFX T   0     est        [aeiou]y
+SFX T   0     est        [^ey]
+```
+
+The first line of an affix class is the header. Fields of an affix rules are listed after the header:
+
+- parameter name (PFX or SFX)
+
+- flag (name of the affix class)
+
+- stripping characters from beginning (at prefix) or end (at suffix) of the word
+
+- adding affix
+
+- condition that has a format similar to the format of regular expressions.
+
+The `.dict` file looks like the `.dict` file of Ispell:
+
+```
+larder/M
+lardy/RT
+large/RSPMYT
+largehearted
 ```
 
 > **Note** MySpell does not support compound words. Hunspell has sophisticated support for compound words. At present, Greenplum Database implements only the basic compound word operations of Hunspell.
