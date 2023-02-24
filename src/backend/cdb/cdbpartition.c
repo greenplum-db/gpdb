@@ -482,6 +482,64 @@ rel_partition_keys_kinds_ordered(Oid relid, List **pkeys, List **pkinds)
 	list_free(kindsUnordered);
 }
 
+/*
+ * Output an integer list of the attribute numbers of the partitioning
+ * key of the partitioned table identified by the argument and an oid
+ * list of the used opclass of partitioning keys.
+ */
+void
+rel_partition_keys_attrs_with_parclass(Oid relid, List **pkeys, List **parclass)
+{
+	Relation	rel;
+	ScanKeyData key;
+	SysScanDesc scan;
+	HeapTuple	tuple;
+
+	/*
+	 * Table pg_partition is only populated on the entry database, however, we
+	 * disable calls from outside dispatch to foil use of utility mode.  (Full
+	 * UCS may may this test obsolete.)
+	 */
+	if (Gp_session_role != GP_ROLE_DISPATCH)
+		elog(ERROR, "mode not dispatch");
+
+	rel = heap_open(PartitionRelationId, AccessShareLock);
+
+	ScanKeyInit(&key,
+				Anum_pg_partition_parrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+
+
+	scan = systable_beginscan(rel, PartitionParrelidIndexId, true,
+							  NULL, 1, &key);
+
+	tuple = systable_getnext(scan);
+
+	while (HeapTupleIsValid(tuple))
+	{
+		Index		i;
+		Form_pg_partition p = (Form_pg_partition) GETSTRUCT(tuple);
+
+		if (p->paristemplate)
+		{
+			tuple = systable_getnext(scan);
+			continue;
+		}
+
+		for (i = 0; i < p->parnatts; i++)
+		{
+			*pkeys = lappend_int(*pkeys, p->paratts.values[i]);
+			*parclass = lappend_oid(*parclass, (Oid) p->parclass.values[i]);
+		}
+
+		tuple = systable_getnext(scan);
+	}
+
+	systable_endscan(scan);
+	heap_close(rel, AccessShareLock);
+}
+
  /*
   * Does relation have a external partition? Returns true only when the input
   * is the root partition of a partitioned table and it has external

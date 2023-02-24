@@ -1571,10 +1571,11 @@ expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
 		dsinfo->parentOid = parentOID;
 		dsinfo->rtindex = rti;
 		dsinfo->hasSelector = false;
-
+		dsinfo->partKeyAttnos = NIL;
+		dsinfo->partKeyOpclass = NIL;
 		dsinfo->children = child_relids;
 
-		dsinfo->partKeyAttnos = rel_partition_key_attrs(parentOID);
+		rel_partition_keys_attrs_with_parclass(parentOID, &dsinfo->partKeyAttnos, &dsinfo->partKeyOpclass);
 
 		root->dynamicScans = lappend(root->dynamicScans, dsinfo);
 		dsinfo->dynamicScanId = list_length(root->dynamicScans);

@@ -360,6 +360,7 @@ typedef struct
 
 	/* Partitioning key information */
 	List	   *partKeyAttnos;
+	List	   *partKeyOpclass;
 
 	/* Set to true, if a PartitionSelector has been created for this scan */
 	bool		hasSelector;

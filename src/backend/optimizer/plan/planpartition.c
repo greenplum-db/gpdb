@@ -27,7 +27,7 @@
 #include "cdb/cdbvars.h"
 #include "parser/parse_oper.h"
 
-static Expr *FindEqKey(PlannerInfo *root, Bitmapset *inner_relids, DynamicScanInfo *dyninfo, int partKeyAttno);
+static Expr *FindEqKey(PlannerInfo *root, Bitmapset *inner_relids, DynamicScanInfo *dyninfo, int partKeyAttno, Oid partKeyOpclass);
 
 static void add_restrictinfos(PlannerInfo *root, DynamicScanInfo *dsinfo, Bitmapset *childrelids);
 
@@ -174,6 +174,7 @@ inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path,
 	{
 		DynamicScanInfo *dyninfo = (DynamicScanInfo *) lfirst(lc);
 		ListCell   *lpk;
+		ListCell   *lpkopclass;
 		List	   *partKeyAttnos = NIL;
 		List	   *partKeyExprs = NIL;
 		Bitmapset  *childrelids;
@@ -191,12 +192,13 @@ inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path,
 		 * Find equivalence conditions between the partitioning keys and
 		 * the relations on the inner side of the join.
 		 */
-		foreach(lpk, dyninfo->partKeyAttnos)
+		forboth(lpk, dyninfo->partKeyAttnos, lpkopclass, dyninfo->partKeyOpclass)
 		{
 			int			partKeyAttno = lfirst_int(lpk);
+			Oid			partKeyOpclass = lfirst_oid(lpkopclass);
 			Expr	   *expr;
 
-			expr = FindEqKey(root, inner_relids, dyninfo, partKeyAttno);
+			expr = FindEqKey(root, inner_relids, dyninfo, partKeyAttno, partKeyOpclass);
 
 			if (expr)
 			{
@@ -308,11 +310,15 @@ create_partition_selector_path(PlannerInfo *root,
 
 static Expr *
 FindEqKey(PlannerInfo *root, Bitmapset *inner_relids,
-		  DynamicScanInfo *dyninfo, int partKeyAttno)
+		  DynamicScanInfo *dyninfo, int partKeyAttno, Oid partKeyOpclass)
 {
 	ListCell   *lem;
 	ListCell   *lem2;
 	ListCell   *lec;
+	Oid			partkey_opfamily;
+
+	partkey_opfamily = get_opclass_family(partKeyOpclass);
+	Assert(OidIsValid(partkey_opfamily));
 
 	/*
 	 * NOTE: The equivalence class logic ensures that we don't get fooled
@@ -322,6 +328,14 @@ FindEqKey(PlannerInfo *root, Bitmapset *inner_relids,
 	foreach(lec, root->eq_classes)
 	{
 		EquivalenceClass *cur_ec = (EquivalenceClass *) lfirst(lec);
+
+		/*
+		 * If the partition key's btree operator's family is not in the
+		 * equivalence opclass opfamilies of the join equality operator,
+		 * we shouldn't performing partition pruning.
+		 */
+		if (!list_member_oid(cur_ec->ec_opfamilies, partkey_opfamily))
+			continue;
 
 		/*
 		 * If the EquivalenceClass contains a const, the partitions should be

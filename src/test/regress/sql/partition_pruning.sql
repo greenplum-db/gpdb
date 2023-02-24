@@ -973,4 +973,194 @@ where  trg.key1 = src.key1
 
 DROP TABLE t_part1;
 
+-- Test that the dynamic partition pruning should not be performed if the partition's opclass and the
+-- join condition's operator are not in the same opfamily.
+--
+-- The main idea for this test is:
+-- 1. We define two opclasses: abs_int4_ops and abs_int8_ops, both of them belong to the same opfamily: abs_int_ops.
+-- 2. We create two partition tables, one is partitioned by int4 typed column and one is partitioned by int8.
+--    CREATE TABLE t1 (a int4, b int4) PARTITION BY LIST (b) (PARTITION p1 VALUES (1), PARTITION p2 VALUES (-1));
+--    CREATE TABLE t2 (a int8, b int8) PARTITION BY LIST (b) (PARTITION p1 VALUES (1), PARTITION p2 VALUES (-1));
+-- 3. Run the following query:
+--    SELECT * FROM t1, t2 WHERE t1.a = t2.a AND t1.b |=| t2.b AND t2.b = 1;
+-- Previously, planner is generating wrong plan for the above query:
+--    Gather Motion 3:1  (slice1; segments: 3)
+--      ->  Hash Join
+--            Hash Cond: (t1_1_prt_p1.a = t2_1_prt_p1.a)
+--            Join Filter: (t1_1_prt_p1.b |=| t2_1_prt_p1.b)
+--            ->  Append
+--                  ->  Result
+--                        One-Time Filter: PartSelected <--- t1's partitions are selected according to t2.b
+--                        ->  Seq Scan on t1_1_prt_p1
+--                  ->  Result
+--                        One-Time Filter: PartSelected <--- t1's partitions are selected according to t2.b
+--                        ->  Seq Scan on t1_1_prt_p2
+--            ->  Hash
+--                  ->  Partition Selector for t1 (dynamic scan id: 1)
+--                        Filter: t2_1_prt_p1.b
+--                        ->  Append
+--                              ->  Seq Scan on t2_1_prt_p1
+--                                    Filter: (b = 1)
+-- In the above plan, t1's partitions are dynamically pruned according to the value of t2.b. It's incorrect, because the
+-- partition selection is using the operator '=(int4, int8)' which belongs to integer_ops, but the join condition is
+-- '|=|(int4, int8)' which belongs abs_int_ops. We shouldn't perform partition pruning for such query.
+CREATE SCHEMA issue_14982;
+SET search_path TO issue_14982;
+CREATE FUNCTION abseq4(int4, int4) RETURNS BOOL AS $$ BEGIN RETURN abs($1) = abs($2); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+CREATE FUNCTION abslt4(int4, int4) RETURNS BOOL AS $$ BEGIN RETURN abs($1) < abs($2); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+CREATE FUNCTION absle4(int4, int4) RETURNS BOOL AS $$ BEGIN RETURN abs($1) <= abs($2); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+CREATE FUNCTION absge4(int4, int4) RETURNS BOOL AS $$ BEGIN RETURN abs($1) >= abs($2); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+CREATE FUNCTION absgt4(int4, int4) RETURNS BOOL AS $$ BEGIN RETURN abs($1) > abs($2); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+CREATE FUNCTION abscmp4(int4, int4) RETURNS INT AS $$ BEGIN RETURN btint4cmp(abs($1), abs($2)); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+
+CREATE FUNCTION abseq8(int8, int8) RETURNS BOOL AS $$ BEGIN RETURN abs($1) = abs($2); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+CREATE FUNCTION abslt8(int8, int8) RETURNS BOOL AS $$ BEGIN RETURN abs($1) < abs($2); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+CREATE FUNCTION absle8(int8, int8) RETURNS BOOL AS $$ BEGIN RETURN abs($1) <= abs($2); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+CREATE FUNCTION absge8(int8, int8) RETURNS BOOL AS $$ BEGIN RETURN abs($1) >= abs($2); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+CREATE FUNCTION absgt8(int8, int8) RETURNS BOOL AS $$ BEGIN RETURN abs($1) > abs($2); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+CREATE FUNCTION abscmp8(int8, int8) RETURNS INT AS $$ BEGIN RETURN btint8cmp(abs($1), abs($2)); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+
+CREATE FUNCTION abseq48(int4, int8) RETURNS BOOL AS $$ BEGIN RETURN abs($1) = abs($2); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+CREATE FUNCTION abslt48(int4, int8) RETURNS BOOL AS $$ BEGIN RETURN abs($1) < abs($2); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+CREATE FUNCTION absle48(int4, int8) RETURNS BOOL AS $$ BEGIN RETURN abs($1) <= abs($2); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+CREATE FUNCTION absge48(int4, int8) RETURNS BOOL AS $$ BEGIN RETURN abs($1) >= abs($2); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+CREATE FUNCTION absgt48(int4, int8) RETURNS BOOL AS $$ BEGIN RETURN abs($1) > abs($2); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+CREATE FUNCTION abscmp48(int4, int8) RETURNS INT AS $$ BEGIN RETURN btint48cmp(abs($1), abs($2)); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+
+CREATE FUNCTION abseq84(int8, int4) RETURNS BOOL AS $$ BEGIN RETURN abs($1) = abs($2); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+CREATE FUNCTION abslt84(int8, int4) RETURNS BOOL AS $$ BEGIN RETURN abs($1) < abs($2); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+CREATE FUNCTION absle84(int8, int4) RETURNS BOOL AS $$ BEGIN RETURN abs($1) <= abs($2); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+CREATE FUNCTION absge84(int8, int4) RETURNS BOOL AS $$ BEGIN RETURN abs($1) >= abs($2); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+CREATE FUNCTION absgt84(int8, int4) RETURNS BOOL AS $$ BEGIN RETURN abs($1) > abs($2); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+CREATE FUNCTION abscmp84(int8, int4) RETURNS INT AS $$ BEGIN RETURN btint84cmp(abs($1), abs($2)); END; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+
+CREATE OPERATOR |=| (procedure = abseq4, leftarg = int4, rightarg = int4, commutator = |=|, merges);
+CREATE OPERATOR |=| (procedure = abseq8, leftarg = int8, rightarg = int8, commutator = |=|, merges);
+CREATE OPERATOR |=| (procedure = abseq48, leftarg = int4, rightarg = int8, commutator = |=|, merges);
+CREATE OPERATOR |=| (procedure = abseq84, leftarg = int8, rightarg = int4, commutator = |=|, merges);
+CREATE OPERATOR |<| (procedure = abslt4, leftarg = int4, rightarg = int4, commutator = |<|);
+CREATE OPERATOR |<| (procedure = abslt8, leftarg = int8, rightarg = int8, commutator = |<|);
+CREATE OPERATOR |<| (procedure = abslt48, leftarg = int4, rightarg = int8, commutator = |<|);
+CREATE OPERATOR |<| (procedure = abslt84, leftarg = int8, rightarg = int4, commutator = |<|);
+CREATE OPERATOR |>| (procedure = absgt4, leftarg = int4, rightarg = int4, commutator = |>|);
+CREATE OPERATOR |>| (procedure = absgt8, leftarg = int8, rightarg = int8, commutator = |>|);
+CREATE OPERATOR |>| (procedure = absgt48, leftarg = int4, rightarg = int8, commutator = |>|);
+CREATE OPERATOR |>| (procedure = absgt84, leftarg = int8, rightarg = int4, commutator = |>|);
+CREATE OPERATOR |<=| (procedure = absle4, leftarg = int4, rightarg = int4, commutator = |<=|);
+CREATE OPERATOR |<=| (procedure = absle8, leftarg = int8, rightarg = int8, commutator = |<=|);
+CREATE OPERATOR |<=| (procedure = absle48, leftarg = int4, rightarg = int8, commutator = |<=|);
+CREATE OPERATOR |<=| (procedure = absle84, leftarg = int8, rightarg = int4, commutator = |<=|);
+CREATE OPERATOR |>=| (procedure = absge4, leftarg = int4, rightarg = int4, commutator = |>=|);
+CREATE OPERATOR |>=| (procedure = absge8, leftarg = int8, rightarg = int8, commutator = |>=|);
+CREATE OPERATOR |>=| (procedure = absge48, leftarg = int4, rightarg = int8, commutator = |>=|);
+CREATE OPERATOR |>=| (procedure = absge84, leftarg = int8, rightarg = int4, commutator = |>=|);
+
+CREATE OPERATOR FAMILY abs_int_ops USING btree;
+CREATE OPERATOR CLASS abs_int4_ops FOR TYPE int4
+  USING btree FAMILY abs_int_ops  AS
+  OPERATOR 1 |<|,
+  OPERATOR 3 |=|,
+  OPERATOR 5 |>|,
+  FUNCTION 1 abscmp4(int4, int4);
+
+CREATE OPERATOR CLASS abs_int8_ops FOR TYPE int8
+  USING btree FAMILY abs_int_ops AS
+  OPERATOR 1 |<|,
+  OPERATOR 3 |=|,
+  OPERATOR 5 |>|,
+  FUNCTION 1 abscmp8(int8, int8);
+
+ALTER OPERATOR FAMILY abs_int_ops USING btree ADD
+  -- cross-type comparisons int4 vs int8
+  OPERATOR 1 |<| (int4, int8),
+  OPERATOR 2 |<=| (int4, int8),
+  OPERATOR 3 |=| (int4, int8),
+  OPERATOR 4 |>=| (int4, int8),
+  OPERATOR 5 |>| (int4, int8),
+  FUNCTION 1 abscmp48(int4, int8),
+  
+  -- cross-type comparisons int8 vs int4
+  OPERATOR 1 |<| (int8, int4),
+  OPERATOR 2 |<=| (int8, int4),
+  OPERATOR 3 |=| (int8, int4),
+  OPERATOR 4 |>=| (int8, int4),
+  OPERATOR 5 |>| (int8, int4),
+  FUNCTION 1 abscmp84(int8, int4);
+
+CREATE TABLE issue_14982_t1 (a int, b int4) PARTITION BY LIST (b)
+(
+  PARTITION p1 VALUES (1),
+  PARTITION p2 VALUES (-1)
+);
+
+CREATE TABLE issue_14982_t2 (a int, b int8) PARTITION BY LIST (b)
+(
+  PARTITION p1 VALUES (1),
+  PARTITION p2 VALUES (-1)
+);
+
+-- Insert some value to make sure the result of the correct plan is distinct
+-- from the wrong plan.
+INSERT INTO issue_14982_t1 VALUES (1,1), (1,-1), (-1,1), (-1,-1);
+INSERT INTO issue_14982_t2 VALUES (1,1), (1,-1), (-1,1), (-1,-1);
+
+SET enable_hashjoin TO 'ON';
+SET enable_mergejoin TO 'OFF';
+
+-- Cannot perform dynamic partition pruning for the following query, since the opfamily of
+-- the operator in 't1.b |=| t2.b' is different from the opfamily of the operator used for
+-- defining the partitioned table.
+EXPLAIN (costs off)
+  SELECT * FROM issue_14982_t1 t1, issue_14982_t2 t2
+    WHERE t1.a = t2.a AND t1.b |=| t2.b AND t2.b = 1;
+
+SELECT * FROM issue_14982_t1 t1, issue_14982_t2 t2
+  WHERE t1.a = t2.a AND t1.b |=| t2.b AND t2.b = 1;
+
+-- Can perform dynamic partition pruning for the following query, since the operator in
+-- 't1.b = t2.b' and the operator used for defining the partitioned table are of same opfamily.
+EXPLAIN (costs off)
+  SELECT * FROM issue_14982_t1 t1, issue_14982_t2 t2
+    WHERE t1.a = t2.a AND t1.b = t2.b AND t2.b |=| 1;
+
+SELECT * FROM issue_14982_t1 t1, issue_14982_t2 t2
+  WHERE t1.a = t2.a AND t1.b = t2.b AND t2.b |=| 1;
+
+-- Test this behavior in range partitioned table.
+CREATE TABLE issue_14982_t1_part_range (a int, b int4) PARTITION BY RANGE (b)
+(
+  PARTITION p1 START (-2) END (0),
+  PARTITION p2 START (0)  END (2)
+);
+
+CREATE TABLE issue_14982_t2_part_range (a int, b int8) PARTITION BY RANGE (b)
+(
+  PARTITION p1 START (-2) END (0),
+  PARTITION p2 START (0)  END (2)
+);
+
+INSERT INTO issue_14982_t1_part_range VALUES (1,1), (1,-1), (-1,1), (-1,-1);
+INSERT INTO issue_14982_t2_part_range VALUES (1,1), (1,-1), (-1,1), (-1,-1);
+
+-- Cannot perform dynamic partition pruning for the following query, since the opfamily of
+-- the operator in 't1.b |=| t2.b' is different from the opfamily of the operator used for
+-- defining the partitioned table.
+EXPLAIN (costs off)
+  SELECT * FROM issue_14982_t1_part_range t1, issue_14982_t2_part_range t2
+    WHERE t1.a = t2.a AND t1.b |=| t2.b AND t2.b = 1;
+
+SELECT * FROM issue_14982_t1_part_range t1, issue_14982_t2_part_range t2
+  WHERE t1.a = t2.a AND t1.b |=| t2.b AND t2.b = 1;
+
+-- Can perform dynamic partition pruning for the following query, since the operator in
+-- 't1.b = t2.b' and the operator used for defining the partitioned table are of same opfamily.
+EXPLAIN (costs off)
+  SELECT * FROM issue_14982_t1_part_range t1, issue_14982_t2_part_range t2
+    WHERE t1.a = t2.a AND t1.b = t2.b AND t2.b |=| 1;
+
+SELECT * FROM issue_14982_t1_part_range t1, issue_14982_t2_part_range t2
+  WHERE t1.a = t2.a AND t1.b = t2.b AND t2.b |=| 1;
+
+DROP SCHEMA issue_14982 CASCADE;
+
 RESET ALL;
