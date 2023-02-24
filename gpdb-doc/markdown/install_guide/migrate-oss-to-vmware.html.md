@@ -1,23 +1,28 @@
 ---
-title: Migrating from Open Source Greenplum Database to VMware Greenplum Database
+title: Migrating from Open Source Greenplum Database to VMware Greenplum
 ---
 
-This topic walks you through migration from an Open Source Greenplum Database to the commercial VMware Greenplum Database. Information is presented in the following topics:
+This topic walks you through migration from an Open Source Greenplum Database to commercial VMware Greenplum. 
+
+>**Note**
+>This process involves replacement of the application and software but does not migrate any data. 
+
+Information is presented in the following topics:
 
 [Before You Begin](#before-you-begin)<br>
 [Steps to Migrate](#steps)<br>
 
 ## <a id="before-you-begin"></a> Before You Begin
 
-- If you have configured the Greenplum Platform Extension Framework (PXF) in your previous Greenplum Database installation, you must stop the PXF service, and you might need to back up PXF configuration files before upgrading to a new version of Greenplum Database. Refer to [PXF Pre-Upgrade Actions topic](../pxf/upgrade_pxf_6x.html#pxfpre)] for instructions. 
+- If you have configured the Greenplum Platform Extension Framework (PXF) in your previous Greenplum Database installation, you must stop the PXF service, and you must back up PXF configuration files before upgrading to a new version of Greenplum Database. Refer to [PXF Pre-Upgrade Actions topic](../pxf/upgrade_pxf_6x.html#pxfpre) for instructions. 
 
-- If you were previously using any Greenplum Database extensions such as `gpbackup`, and want to upgrade from an Open Source Greenplum Database to a commercial VMware Greenplum Database -- for example, upgrading from a 6.22.0 open source Greenplum Database to a 6.23.0 commercial VMware Greenplum Databse, you might need to re-install the extensions. You can download the corresponding packages from VMware Tanzu Network, and use the `gppkg` utility to re-install the extensions. 
+- If you were previously using any Greenplum Database extensions such as `gpbackup`, and want to migrate from an Open Source Greenplum Database to a commercial VMware Greenplum -- for example, migrating from a 6.22 open source Greenplum Database to a 6.22 commercial VMware Greenplum Database, you must reinstall the extensions. You can download the corresponding packages from VMware Tanzu Network, and use the `gppkg` utility to reinstall the extensions. 
 
-- Review the Greenplum Database [Platform Requirements topic](platform-requirements-overview.html) to verify that you have all software you need in place to successfully migrate to VMware Greenplum Database.
+- Review the Greenplum Database [Platform Requirements topic](platform-requirements-overview.html) to verify that you have all software you need in place to successfully migrate to VMware Greenplum.
 
 ## <a id="steps"></a>Steps to Migrate
 
-Migrating from an open source Greenplum Database to a commercial VMware Greenplum database involves stopping the open source Greenplum Database, updating the Greenplum Database binary files (WHAT DOES THIS MEAN, EXACTLY?), and restarting the Greenplum Database. If you are using Greenplum Database extension packages, there are additional requirements, as summarized in the [Prerequisites](#prerequisites) section.
+Migrating from an open source Greenplum Database to commercial VMware Greenplum involves stopping the open source Greenplum Database, replacing the Greenplum Database software, and restarting the database. If your open source Greenplum Database includes optional extension packages, there are additional requirements, as summarized in the [Prerequisites](#prerequisites) section.
 
 Here are the detailed migration steps:
 
@@ -35,12 +40,12 @@ $ gpstop -a
 
 3. Download the commercial VMware Greenplum package from [VMware Tanzu Network](https://network.pivotal.io/), and then copy the package to the `gpadmin` user's home directory on each coordinator, standby, and segment host.
 
-4. If you used `yum` or `apt` to install Greenplum Database to the default location, run the following commands on each host to upgrade to the new software release. (I DON'T KNOW WHAT YOU MEAN BY "upgrade to the new software release"):
+4. If you used `yum` or `apt` to install Greenplum Database to the default location, run the following commands on each host to replace the software:
 
 For RHEL/CentOS systems:
 
 ```
-$ sudo yum upgrade ./greenplum-db-<version>-<platform>.rpm
+$ sudo yum install ./greenplum-db-<version>-<platform>.rpm
 ```
 
 For Ubuntu systems:
@@ -49,9 +54,9 @@ For Ubuntu systems:
 # apt install ./greenplum-db-<version>-<platform>.deb
 ```
 
-The `yum` or `apt` command installs the commercial VMware Greenplum Database software files into a version-specific directory under `/usr/local` and updates the symbolic link `/usr/local/greenplum-db` to point to the new installation directory.
+The `yum` or `apt` command installs commercial VMware Greenplum software files into a version-specific directory under `/usr/local` and updates the symbolic link `/usr/local/greenplum-db` to point to the new installation directory.
 
-5. If you used `rpm` to install Greenplum Database to a non-default location on RHEL/CentOS systems, run `rpm` on each host to upgrade to the new software release (AGAIN, I DON'T KNOW WHAT THIS MEANS) and specify the same custom installation directory with the `--prefix` option, as in the following example:
+5. If you used `rpm` to install Greenplum Database to a non-default location on RHEL/CentOS systems, run `rpm` on each host to replace the software and specify the same custom installation directory with the `--prefix` option, as in the following example:
 
 ```
 $ sudo rpm -U ./greenplum-db-<version>-<platform>.rpm --prefix=<directory>
@@ -65,7 +70,7 @@ The `rpm` command installs the new Greenplum Database software files into a vers
 $ sudo chown -R gpadmin:gpadmin /usr/local/greenplum*
 ```
 
-7. If doing an upgrade (WHAT KIND OF UPGRADE ARE YOU REERRING TO? FROM WHAT TO WHAT?), edit the environment of the Greenplum Database superuser (gpadmin) and verify that you are sourcing the `greenplum_path.sh` file for the new installation. For example, update the following line in the `.bashrc` file or in  your profile file:
+If, during this process, you are replacing the open source Greenplum Databse software with a newer version of VMware Greenplum software, edit the environment of the Greenplum Database superuser (`gpadmin`) and verify that you are sourcing the `greenplum_path.sh` file for the new installation. For example, update the following line in the `.bashrc` file or in  your profile file:
 
 `source /usr/local/greenplum-db-<current_version>/greenplum_path.sh`
 
@@ -76,20 +81,20 @@ to
 >**Note**
 >if you are sourcing a symbolic link (`/usr/local/greenplum-db`) in your profile files, the symbolic link will redirect to the newly installed gpdb folder; no action is necessary.
 
-8. Source the environment file you just edited. For example:
+7. Source the environment file you just edited. For example:
 
 ```
 $ source ~/.bashrc
 ```
 
-9. Once all segment hosts have been updated, log into the database as the `gpadmin` user and restart your Greenplum Database system:
+9. Once all segment hosts have been updated, log into the Greenplum databse coordinator as the `gpadmin` user and restart your Greenplum Database system:
 
 ```
 $ su - gpadmin
 $ gpstart
 ```
 
-10. Log into the commercial VMware Greenplum Database coordinator host as the Greenplum administrative user and check the database version: 
+10. Check the database version: 
 
 ```
 $ su - gpadmin
@@ -99,3 +104,4 @@ $ psql -d postgres
 $ select versions(); 
 ```
 
+The output version string should no longer include "open source".
