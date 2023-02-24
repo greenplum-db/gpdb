@@ -13,7 +13,6 @@
 
 #include "gpopt/base/CCastUtils.h"
 #include "gpopt/base/CDistributionSpecAny.h"
-#include "gpopt/base/CDistributionSpecNonSingleton.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CUtils.h"
