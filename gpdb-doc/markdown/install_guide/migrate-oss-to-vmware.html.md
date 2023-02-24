@@ -14,9 +14,9 @@ Information is presented in the following topics:
 
 ## <a id="before-you-begin"></a> Before You Begin
 
-- If you have configured the Greenplum Platform Extension Framework (PXF) in your previous Greenplum Database installation, you must stop the PXF service, and you must back up PXF configuration files before upgrading to a new version of Greenplum Database. Refer to [PXF Pre-Upgrade Actions topic](../pxf/upgrade_pxf_6x.html#pxfpre) for instructions. 
+- If you have configured the Greenplum Platform Extension Framework (PXF) in your previous Greenplum Database installation, you must stop the PXF service, and you must back up PXF configuration files before upgrading to a new version of Greenplum Database. See the  [PXF Pre-Upgrade Actions topic](../pxf/upgrade_pxf_6x.html#pxfpre) for instructions. 
 
-- If you were previously using any Greenplum Database extensions such as `gpbackup`, and want to migrate from an Open Source Greenplum Database to a commercial VMware Greenplum -- for example, migrating from a 6.22 open source Greenplum Database to a 6.22 commercial VMware Greenplum Database, you must reinstall the extensions. You can download the corresponding packages from VMware Tanzu Network, and use the `gppkg` utility to reinstall the extensions. 
+- If you were previously using any Greenplum Database extensions such as `gpbackup` and want to migrate from an Open Source Greenplum Database to VMware Greenplum -- for example, migrating from a 6.22 version of Open Source Greenplum Database to a 6.22 version of commercial VMware Greenplum Databse -- you must reinstall the extensions. You can download the corresponding packages from VMware Tanzu Network, and use the `gppkg` utility to reinstall the extensions. 
 
 - Review the Greenplum Database [Platform Requirements topic](platform-requirements-overview.html) to verify that you have all software you need in place to successfully migrate to VMware Greenplum.
 
