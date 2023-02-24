@@ -107,7 +107,7 @@ def render_template(template_filename, context):
     return TEMPLATE_ENVIRONMENT.get_template(template_filename).render(context)
 
 
-def validate_pipeline_release_jobs(raw_pipeline_yml):
+def validate_pipeline_release_jobs(raw_pipeline_yml, os_type):
     """Make sure all jobs in specified pipeline that don't block release are accounted
     for (they should belong to JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE, defined above)"""
     print("======================================================================")
@@ -121,21 +121,22 @@ def validate_pipeline_release_jobs(raw_pipeline_yml):
     jobs_raw = pipeline['jobs']
     all_job_names = [job['name'] for job in jobs_raw]
 
-    rc_name = 'gate_release_candidate_start'
-    release_candidate_job = [j for j in jobs_raw if j['name'] == rc_name][0]
+    if os_type != "rhel8" and os_type != "oel8":
+        rc_name = 'gate_release_candidate_start'
+        release_candidate_job = [j for j in jobs_raw if j['name'] == rc_name][0]
 
-    release_blocking_jobs = release_candidate_job['plan'][0]['in_parallel']['steps'][0]['passed']
+        release_blocking_jobs = release_candidate_job['plan'][0]['in_parallel']['steps'][0]['passed']
 
-    non_release_blocking_jobs = [j for j in all_job_names if j not in release_blocking_jobs]
+        non_release_blocking_jobs = [j for j in all_job_names if j not in release_blocking_jobs]
 
-    unaccounted_for_jobs = \
-        [j for j in non_release_blocking_jobs if j not in JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE]
+        unaccounted_for_jobs = \
+            [j for j in non_release_blocking_jobs if j not in JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE]
 
-    if unaccounted_for_jobs:
-        print("Please add the following jobs as a Release_Candidate dependency or ignore them")
-        print("by adding them to JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE in " + __file__)
-        print(unaccounted_for_jobs)
-        return False
+        if unaccounted_for_jobs:
+            print("Please add the following jobs as a Release_Candidate dependency or ignore them")
+            print("by adding them to JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE in " + __file__)
+            print(unaccounted_for_jobs)
+            return False
 
     print("Pipeline validated: all jobs accounted for")
     return True
@@ -183,7 +184,7 @@ def create_pipeline(args, git_remote, git_branch):
 
     pipeline_yml = render_template(args.template_filename, context)
     if args.pipeline_target == 'prod':
-        validated = validate_pipeline_release_jobs(pipeline_yml)
+        validated = validate_pipeline_release_jobs(pipeline_yml, args.os_type)
         if not validated:
             print("Refusing to update the pipeline file")
             return False
@@ -431,7 +432,7 @@ def main():
         pipeline_file_suffix = suggested_git_branch()
         if args.user != os.getlogin():
             pipeline_file_suffix = args.user
-        default_dev_output_filename = 'gpdb-' + args.pipeline_target + '-' + pipeline_file_suffix + '.yml'
+        default_dev_output_filename = 'gpdb-' + args.pipeline_target + '-' + pipeline_file_suffix + '-' + args.os_type + '.yml'
         args.output_filepath = os.path.join(PIPELINES_DIR, default_dev_output_filename)
 
     if args.directed_release:
