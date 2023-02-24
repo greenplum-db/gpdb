@@ -586,12 +586,13 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=2197.59..3301.17 rows=77900 widt
         ->  Seq Scan on public.boxes  (cost=0.00..293.67 rows=25967 width=12) (actual time=0.000..0.010 rows=0 loops=1)
               Output: id, apple_id, location_id
 Optimizer: Postgres query optimizer
+Settings: optimizer = 'off'
 Planning Time: 0.439 ms
   (slice0)    Executor memory: 40K bytes.
   (slice1)    Executor memory: 59K bytes avg x 3 workers, 59K bytes max (seg0).  Work_mem: 59K bytes max.
 Memory used:  128000kB
 Execution Time: 4.032 ms
-(17 rows)
+(18 rows)
 EXPLAIN (ANALYZE, VERBOSE, FORMAT YAML) SELECT * from boxes ORDER BY apple_id;
 QUERY PLAN
 - Plan: 
@@ -677,6 +678,8 @@ QUERY PLAN
               - "apple_id"
               - "location_id"
   Optimizer: "Postgres query optimizer"
+  Settings: 
+    optimizer: "off"
   Planning Time: 0.612
   Triggers: 
   Slice statistics: 

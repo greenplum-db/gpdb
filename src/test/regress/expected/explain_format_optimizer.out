@@ -518,6 +518,8 @@ QUERY PLAN
 -- s/^Settings:[,\s]*/Settings: /
 -- end_matchsubs
 --- Check explain analyze sort infomation in verbose mode
+RESET random_page_cost;
+RESET cpu_index_tuple_cost;
 EXPLAIN (ANALYZE, VERBOSE) SELECT * from boxes ORDER BY apple_id;
 QUERY PLAN
 Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12) (actual time=0.388..0.388 rows=0 loops=1)
@@ -526,21 +528,119 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12) (a
   ->  Sort  (cost=0.00..431.00 rows=1 width=12) (actual time=0.000..0.072 rows=0 loops=1)
         Output: id, apple_id, location_id
         Sort Key: boxes.apple_id
-        Sort Method:  quicksort  Memory: 75kB  Max Memory: 25kB  Avg Memory: 25kB (3 segments)
+        Sort Method:  quicksort  Memory: ###kB  Max Memory: ###kB  Peak Memory: ###kB  Avg Memory: ###kB (3 segments)
         Executor Memory: 177kB  Segments: 3  Max: 59kB (segment 0)
         work_mem: 177kB  Segments: 3  Max: 59kB (segment 0)  Workfile: (0 spilling)
         ->  Seq Scan on public.boxes  (cost=0.00..431.00 rows=1 width=12) (actual time=0.000..0.014 rows=0 loops=1)
               Output: id, apple_id, location_id
 Optimizer: Pivotal Optimizer (GPORCA)
-Settings: cpu_index_tuple_cost = '0.1', random_page_cost = '1'
 Planning Time: 4.622 ms
   (slice0)    Executor memory: 40K bytes.
   (slice1)    Executor memory: 59K bytes avg x 3 workers, 59K bytes max (seg0).  Work_mem: 59K bytes max.
 Memory used:  128000kB
 Execution Time: 0.846 ms
-(18 rows)
-RESET random_page_cost;
-RESET cpu_index_tuple_cost;
+(17 rows)
+EXPLAIN (ANALYZE, VERBOSE, FORMAT YAML) SELECT * from boxes ORDER BY apple_id;
+QUERY PLAN
+- Plan: 
+    Node Type: "Gather Motion"
+    Senders: 3
+    Receivers: 1
+    Slice: 1
+    Segments: 3
+    Gang Type: "primary reader"
+    Parallel Aware: false
+    Startup Cost: 0.00
+    Total Cost: 431.00
+    Plan Rows: 1
+    Plan Width: 12
+    Actual Startup Time: 0.299
+    Actual Total Time: 0.300
+    Actual Rows: 0
+    Actual Loops: 1
+    Output: 
+      - "id"
+      - "apple_id"
+      - "location_id"
+    Merge Key: 
+      - "apple_id"
+    Plans: 
+      - Node Type: "Sort"
+        Parent Relationship: "Outer"
+        Slice: 1
+        Segments: 3
+        Gang Type: "primary reader"
+        Parallel Aware: false
+        Startup Cost: 0.00
+        Total Cost: 431.00
+        Plan Rows: 1
+        Plan Width: 12
+        Actual Startup Time: 0.000
+        Actual Total Time: 0.075
+        Actual Rows: 0
+        Actual Loops: 1
+        Output: 
+          - "id"
+          - "apple_id"
+          - "location_id"
+        Sort Key: 
+          - "boxes.apple_id"
+        Sort Method: "quicksort"
+        Sort Space Used: 75
+        Sort Space Type: "Memory"
+        Sort Max Segment Memory: 75
+        Sort Avg Segment Memory: 25
+        Sort Peak Segment Memory: 25
+        Sort Segments: 3
+        Executor Memory: 76
+        Executor Memory Segments: 3
+        Executor Max Memory: 26
+        Executor Max Memory Segment: 0
+        work_mem: 
+          Used: 76
+          Segments: 3
+          Max Memory: 26
+          Max Memory Segment: 0
+          Workfile Spilling: 0
+        Plans: 
+          - Node Type: "Seq Scan"
+            Parent Relationship: "Outer"
+            Slice: 1
+            Segments: 3
+            Gang Type: "primary reader"
+            Parallel Aware: false
+            Relation Name: "boxes"
+            Schema: "public"
+            Alias: "boxes"
+            Startup Cost: 0.00
+            Total Cost: 431.00
+            Plan Rows: 1
+            Plan Width: 12
+            Actual Startup Time: 0.000
+            Actual Total Time: 0.011
+            Actual Rows: 0
+            Actual Loops: 1
+            Output: 
+              - "id"
+              - "apple_id"
+              - "location_id"
+  Optimizer: "Pivotal Optimizer (GPORCA)"
+  Settings: 
+  Planning Time: 7.125
+  Triggers: 
+  Slice statistics: 
+    - Slice: 0
+      Executor Memory: 40504
+    - Slice: 1
+      Executor Memory: 
+        Average: 40120
+        Workers: 3
+        Maximum Memory Used: 40120
+      Work Maximum Memory: 25664
+  Statement statistics: 
+    Memory used: 128000
+  Execution Time: 0.761
+(1 row)
 -- explain_processing_on
 --
 -- Test a simple case with JSON and XML output, too.
