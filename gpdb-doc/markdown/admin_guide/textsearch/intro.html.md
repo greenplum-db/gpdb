@@ -52,7 +52,7 @@ WHERE mid = 12;
 
 SELECT m.title || ' ' || m.author || ' ' || m.abstract || ' ' || d.body AS document
 FROM messages m, docs d
-WHERE mid = did AND mid = 12;
+WHERE m.mid = d.did AND m.mid = 12;
 ```
 
 > **Note** In these example queries, `coalesce` should be used to prevent a single `NULL` attribute from causing a `NULL` result for the whole document.
@@ -77,7 +77,7 @@ SELECT 'fat & cow'::tsquery @@ 'a fat cat sat on a mat and ate a fat rat'::tsvec
  f
 ```
 
-As the above example suggests, a `tsquery` is not just raw text, any more than a `tsvector` is. A `tsquery` contains search terms, which must be already-normalized lexemes, and may combine multiple terms using AND, OR, and NOT operators. \(For details see.\) There are functions `to_tsquery` and `plainto_tsquery` that are helpful in converting user-written text into a proper `tsquery`, for example by normalizing words appearing in the text. Similarly, `to_tsvector` is used to parse and normalize a document string. So in practice a text search match would look more like this:
+As the above example suggests, a `tsquery` is not just raw text, any more than a `tsvector` is. A `tsquery` contains search terms, which must be already-normalized lexemes, and may combine multiple terms using AND, OR, NOT, and FOLLOWED BY operators. \(For details see [Text Search Data Types](../../ref_guide/datatype-textsearch.html)) There are functions `to_tsquery`, `plainto_tsquery`, and `phraseto_query` that are helpful in converting user-written text into a proper `tsquery`, for example by normalizing words appearing in the text. Similarly, `to_tsvector` is used to parse and normalize a document string. So in practice a text search match would look more like this:
 
 ```
 SELECT to_tsvector('fat cats ate fat rats') @@ to_tsquery('fat & rat');
@@ -107,6 +107,42 @@ text @@ text
 ```
 
 The first two of these we saw already. The form `text @@ tsquery` is equivalent to `to_tsvector(x) @@ y`. The form `text @@ text` is equivalent to `to_tsvector(x) @@ plainto_tsquery(y)`.
+
+Within a `tsquery`, the `&` (AND) operator specifies that both its arguments must appear in the document to have a match.  Similarly, the `|` (OR) operator specifies that at least one of its arguments must appear, while the `!` (NOT) operator specifies that its argument must _not_ appear in order to have a match. For example, the query `fat & ! rat` matches documents that contain `fat` but not `rat`.
+
+Searching for phrases is possible with the help of the `<->` (FOLLOWED BY) `tsquery` operator, which matches only if its arguments have matches that are adjacent and in the given order. For example:
+
+```
+SELECT to_tsvector('fatal error') @@ to_tsquery('fatal <-> error');
+ ?column? 
+----------
+ t
+
+SELECT to_tsvector('error is not fatal') @@ to_tsquery('fatal <-> error');
+ ?column? 
+----------
+ f
+```
+
+There is a more general version of the FOLLOWED BY operator having the form `<N>`, where _N_ is an integer standing for the difference between the positions of the matching lexemes. `<1>` is the same as `<->`, while `<2>` allows exactly one other lexeme to appear between the matches, and so on. The `phraseto_tsquery` function makes use of this operator to construct a `tsquery` that can match a multi-word phrase when some of the words are stop words. For example:
+
+```
+SELECT phraseto_tsquery('cats ate rats');
+       phraseto_tsquery        
+-------------------------------
+ 'cat' <-> 'ate' <-> 'rat'
+
+SELECT phraseto_tsquery('the cats ate the rats');
+       phraseto_tsquery        
+-------------------------------
+ 'cat' <-> 'ate' <2> 'rat'
+ ```
+
+A special case that's sometimes useful is that `<0>` can be used to require that two patterns match the same word.
+
+Parentheses can be used to control nesting of the tsquery operators. Without parentheses, `|` binds least tightly, then `&`, then `<->`, and `!` most tightly.
+
+It's worth noticing that the AND/OR/NOT operators mean something subtly different when they are within the arguments of a FOLLOWED BY operator than when they are not, because within FOLLOWED BY the exact position of the match is significant. For example, normally `!x` matches only documents that do not contain `x` anywhere. But `!x <-> y` matches `y` if it is not immediately after an `x`; an occurrence of `x` elsewhere in the document does not prevent a match. Another example is that `x & y` normally only requires that `x` and `y` both appear somewhere in the document, but `(x & y) <-> z` requires `x` and `y` to match at the same place, immediately before a `z`. Thus this query behaves differently from `x <-> z & y <-> z`, which will match a document containing two separate sequences `x z` and `y z`. (This specific query is useless as written, since `x` and `y` could not match at the same place; but with more complex situations such as prefix-match patterns, a query of this form could be useful.)
 
 ## <a id="configurations"></a>Configurations 
 
