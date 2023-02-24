@@ -9,6 +9,7 @@ The current limitations of Greenplum Database's text search features are:
 -   The `tsvector` and `tsquery` types are not supported in the distribution key for a Greenplum Database table
 -   The length of each lexeme must be less than 2K bytes
 -   The length of a `tsvector` \(lexemes + positions\) must be less than 1 megabyte
+-   The match distance in a `<N>` (FOLLOWED BY) `tsquery` operator cannot be more than 16,384
 -   The number of lexemes must be less than 264
 -   Position values in `tsvector` must be greater than 0 and no more than 16,383
 -   No more than 256 positions per lexeme
