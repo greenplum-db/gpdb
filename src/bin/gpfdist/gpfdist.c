@@ -2668,7 +2668,8 @@ http_setup(void)
 							  opt.p,
 							  saved_errno,
 							  strerror(saved_errno));
-				continue;
+				create_failed = true;
+				break;
 			}
 			gcb.listen_socks[gcb.listen_sock_count++] = f;
 
