@@ -2577,7 +2577,15 @@ http_setup(void)
 							  opt.p,
 							  saved_errno,
 							  strerror(saved_errno));
-				continue;
+#ifdef WIN32
+				if ( 1 )
+#else
+				if ( errno == EADDRINUSE )
+#endif
+				{
+					create_failed = true;
+					break;
+				}
 			}
 			gcb.listen_socks[gcb.listen_sock_count++] = f;
 
