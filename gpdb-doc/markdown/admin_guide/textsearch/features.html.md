@@ -29,7 +29,9 @@ Note that weight labels apply to **positions**, not **lexemes**. If the input ve
 :   Returns the number of lexemes stored in the vector.
 
 `strip(vector tsvector) returns tsvector`
-:   Returns a vector which lists the same lexemes as the given vector, but which lacks any position or weight information. While the returned vector is much less useful than an unstripped vector for relevance ranking, it will usually be much smaller.
+:   Returns a vector that lists the same lexemes as the given vector, but lacks any position or weight information. The result is usually much smaller than an unstripped vector, but it is also less useful. Relevance ranking does not work as well on stripped vectors as unstripped ones. Also, the `<->` (FOLLOWED BY) `tsquery` operator will never match stripped input, since it cannot determine the distance between lexeme occurrences.
+
+A full list of tsvector-related functions is available in [Text Search Functions and Operators](https://www.postgresql.org/docs/12/functions-textsearch.html) in the PostgreSQL documentation.
 
 ## <a id="manipulate_queries"></a>Manipulating Queries 
 
@@ -43,6 +45,26 @@ Note that weight labels apply to **positions**, not **lexemes**. If the input ve
 
 `!! tsquery`
 :   Returns the negation \(NOT\) of the given query.
+
+`tsquery <-> tsquery`
+:   Returns a query that searches for a match to the first given query immediately followed by a match to the second given query, using the `<->` (FOLLOWED BY) `tsquery` operator. For example:
+
+```
+SELECT to_tsquery('fat') <-> to_tsquery('cat | rat');
+          ?column?
+----------------------------
+ 'fat' <-> ( 'cat' | 'rat' )
+```
+
+`tsquery_phrase(<query1> tsquery, <query2> tsquery [, <distance> integer ]) returns tsquery`
+:   Returns a query that searches for a match to the first given query followed by a match to the second given query at a distance of exactly `<distance>` lexemes, using the `<N>` `tsquery` operator. For example:
+
+```
+SELECT tsquery_phrase(to_tsquery('fat'), to_tsquery('cat'), 10);
+  tsquery_phrase
+------------------
+ 'fat' <10> 'cat'
+```
 
 `numnode(<query> tsquery) returns integer`
 :   Returns the number of nodes \(lexemes plus operators\) in a tsquery. This function is useful to determine if the **query** is meaningful \(returns \> 0\), or contains only stop words \(returns 0\). Examples:
