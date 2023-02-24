@@ -77,6 +77,7 @@ Parser: "pg_catalog.default"
                             List of text search dictionaries
    Schema   |      Name       |                        Description                        
 ------------+-----------------+-----------------------------------------------------------
+ pg_catalog | arabic_stem     | snowball stemmer for arabic language
  pg_catalog | danish_stem     | snowball stemmer for danish language
  pg_catalog | dutch_stem      | snowball stemmer for dutch language
  pg_catalog | english_stem    | snowball stemmer for english language
@@ -84,7 +85,11 @@ Parser: "pg_catalog.default"
  pg_catalog | french_stem     | snowball stemmer for french language
  pg_catalog | german_stem     | snowball stemmer for german language
  pg_catalog | hungarian_stem  | snowball stemmer for hungarian language
+ pg_catalog | indonesian_stem | snowball stemmer for indonesian language
+ pg_catalog | irish_stem      | snowball stemmer for irish language
  pg_catalog | italian_stem    | snowball stemmer for italian language
+ pg_catalog | lithuanian_stem | snowball stemmer for lithuanian language
+ pg_catalog | nepali_stem     | snowball stemmer for nepali language
  pg_catalog | norwegian_stem  | snowball stemmer for norwegian language
  pg_catalog | portuguese_stem | snowball stemmer for portuguese language
  pg_catalog | romanian_stem   | snowball stemmer for romanian language
@@ -92,6 +97,7 @@ Parser: "pg_catalog.default"
  pg_catalog | simple          | simple dictionary: just lower case and check for stopword
  pg_catalog | spanish_stem    | snowball stemmer for spanish language
  pg_catalog | swedish_stem    | snowball stemmer for swedish language
+ pg_catalog | tamil_stem      | snowball stemmer for tamil language
  pg_catalog | turkish_stem    | snowball stemmer for turkish language
 ```
 
