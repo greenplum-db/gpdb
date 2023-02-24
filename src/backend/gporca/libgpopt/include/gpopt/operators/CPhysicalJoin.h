@@ -169,11 +169,6 @@ public:
 	// Enforced Properties
 	//-------------------------------------------------------------------------------------
 
-	// return distribution property enforcing type for this operator
-	CEnfdProp::EPropEnforcingType EpetDistribution(
-		CExpressionHandle &exprhdl,
-		const CEnfdDistribution *ped) const override;
-
 	// return rewindability property enforcing type for this operator
 	CEnfdProp::EPropEnforcingType EpetRewindability(
 		CExpressionHandle &exprhdl,
