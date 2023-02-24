@@ -461,7 +461,7 @@ def main():
         pipeline_file_suffix = suggested_git_branch()
         if args.user != os.getlogin():
             pipeline_file_suffix = args.user
-        default_dev_output_filename = 'gpdb-' + args.pipeline_target + '-' + pipeline_file_suffix + '.yml'
+        default_dev_output_filename = 'gpdb-' + args.pipeline_target + '-' + pipeline_file_suffix + '-' + args.os_type + '.yml'
         args.output_filepath = os.path.join(PIPELINES_DIR, default_dev_output_filename)
 
     if args.directed_release:
