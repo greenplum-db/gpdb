@@ -2,19 +2,14 @@
 title: Migrating from Open Source Greenplum Database to VMware Greenplum
 ---
 
-This topic walks you through migration from an Open Source Greenplum Database to commercial VMware Greenplum. 
+Use this procedure to migrate an Open Source Greenplum Database installation to commercial VMware Greenplum. 
 
 >**Note**
->This process involves replacement of the application and software but does not migrate any data. 
+>This process replaces the application and software but does not migrate any data. 
 
-Information is presented in the following topics:
+## <a id="prerequisites"></a> Prerequisites
 
-[Before You Begin](#before-you-begin)<br>
-[Steps to Migrate](#steps)<br>
-
-## <a id="before-you-begin"></a> Before You Begin
-
-- If you have configured the Greenplum Platform Extension Framework (PXF) in your previous Greenplum Database installation, you must stop the PXF service, and you must back up PXF configuration files before upgrading to a new version of Greenplum Database. See the  [PXF Pre-Upgrade Actions topic](../pxf/upgrade_pxf_6x.html#pxfpre) for instructions. 
+- If you have configured the Greenplum Platform Extension Framework (PXF) in your previous Greenplum Database installation, you must stop the PXF service, and you must back up PXF configuration files before upgrading to a new version of Greenplum Database. See [PXF Pre-Upgrade Actions](../pxf/upgrade_pxf_6x.html#pxfpre) for instructions. 
 
 - If you were previously using any Greenplum Database extensions such as `gpbackup` and want to migrate from an Open Source Greenplum Database to VMware Greenplum -- for example, migrating from a 6.22 version of Open Source Greenplum Database to a 6.22 version of commercial VMware Greenplum Databse -- you must reinstall the extensions. You can download the corresponding packages from VMware Tanzu Network, and use the `gppkg` utility to reinstall the extensions. 
 
@@ -38,7 +33,7 @@ $ su - gpadmin
 $ gpstop -a
 ```
 
-3. Download the commercial VMware Greenplum package from [VMware Tanzu Network](https://network.pivotal.io/), and then copy the package to the `gpadmin` user's home directory on each coordinator, standby, and segment host.
+3. Download the VMware Greenplum package from [VMware Tanzu Network](https://network.pivotal.io/), and then copy it to the `gpadmin` user's home directory on each coordinator, standby, and segment host.
 
 4. If you used `yum` or `apt` to install Greenplum Database to the default location, run the following commands on each host to replace the software:
 
@@ -51,12 +46,12 @@ $ sudo yum install ./greenplum-db-<version>-<platform>.rpm
 For Ubuntu systems:
 
 ```
-# apt install ./greenplum-db-<version>-<platform>.deb
+# sudo apt install ./greenplum-db-<version>-<platform>.deb
 ```
 
 The `yum` or `apt` command installs commercial VMware Greenplum software files into a version-specific directory under `/usr/local` and updates the symbolic link `/usr/local/greenplum-db` to point to the new installation directory.
 
-5. If you used `rpm` to install Greenplum Database to a non-default location on RHEL/CentOS systems, run `rpm` on each host to replace the software and specify the same custom installation directory with the `--prefix` option, as in the following example:
+5. If you used `rpm` to install Open Source Greenplum Database to a non-default location on RHEL/CentOS systems, run `rpm` on each host to replace the software and specify the same custom installation directory with the `--prefix` option, as in the following example:
 
 ```
 $ sudo rpm -U ./greenplum-db-<version>-<platform>.rpm --prefix=<directory>
@@ -87,7 +82,7 @@ to
 $ source ~/.bashrc
 ```
 
-9. Once all segment hosts have been updated, log into the Greenplum databse coordinator as the `gpadmin` user and restart your Greenplum Database system:
+9. Once all segment hosts have been updated, log into the Greenplum Database coordinator as the `gpadmin` user and restart your Greenplum Database system:
 
 ```
 $ su - gpadmin
@@ -105,3 +100,5 @@ $ select versions();
 ```
 
 The output version string should no longer include "open source".
+
+11. Reinstall any Greenplum Database extensions that you used with the earlier Open Source Greenplum Database installation.
