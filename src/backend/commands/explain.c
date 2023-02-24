@@ -2558,8 +2558,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		show_buffer_usage(es, &planstate->instrument->bufusage);
 
 	/* Show worker detail */
-	/* GPDB_12_MERGE_FIXME Greenplum hasn't enabled it yet */
-	if (false && es->analyze && es->verbose && planstate->worker_instrument)
+	if (es->analyze && es->verbose && planstate->worker_instrument)
 	{
 		WorkerInstrumentation *w = planstate->worker_instrument;
 		bool		opened_group = false;
