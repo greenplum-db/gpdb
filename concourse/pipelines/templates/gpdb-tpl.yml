@@ -640,15 +640,13 @@ resources:
 {% endif %}
 {% endif %}
 
-{% if pipeline_configuration == "prod" or directed_release %}
-{% if not directed_release %}
+{% if os_type == default_os_type %}
 - name: bin_gpdb_[[ os_type ]]_rc
   type: gcs
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: server/published/gpdb6/server-rc-(.*)-[[ os_type ]]_x86_64((rc-build-type-gcs)).tar.gz
-{% endif %}
 {% endif %}
 
 {% if pipeline_configuration == "prod" or build_test_rc_rpm %}
@@ -767,7 +765,7 @@ resources:
 {% endif %}
 
 {% if not directed_release %}
-{% if os_type == default_os_type %}
+{% if os_type == default_os_type and pipeline_configuration == "prod" %}
 - name: bin_gpdb_clients_windows_rc
   type: gcs
   source:
