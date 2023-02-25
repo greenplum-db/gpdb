@@ -165,7 +165,7 @@ private:
 	);
 
 	// check and fall back for unsupported relations
-	static void CheckUnsupportedRelation(OID rel_oid);
+	static void CheckUnsupportedRelation(Relation rel);
 
 	// get type name from the relcache
 	static CMDName *GetTypeName(CMemoryPool *mp, IMDId *mdid);

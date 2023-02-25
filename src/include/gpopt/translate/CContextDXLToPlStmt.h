@@ -109,12 +109,6 @@ private:
 	// list of all rtable entries
 	List *m_rtable_entries_list;
 
-	// list of oids of partitioned tables
-	List *m_partitioned_tables_list;
-
-	// number of partition selectors for each dynamic scan
-	ULongPtrArray *m_num_partition_selectors_array;
-
 	// list of all subplan entries
 	List *m_subplan_entries_list;
 	List *m_subplan_sliceids_list;
@@ -179,16 +173,6 @@ public:
 		return m_rtable_entries_list;
 	}
 
-	// return list of partitioned table indexes
-	List *
-	GetPartitionedTablesList() const
-	{
-		return m_partitioned_tables_list;
-	}
-
-	// return list containing number of partition selectors for every scan id
-	List *GetNumPartitionSelectorsList() const;
-
 	List *
 	GetSubplanEntriesList() const
 	{
@@ -209,12 +193,6 @@ public:
 
 	// add a range table entry
 	void AddRTE(RangeTblEntry *rte, BOOL is_result_relation = false);
-
-	// add a partitioned table index
-	void AddPartitionedTable(OID oid);
-
-	// increment the number of partition selectors for the given scan id
-	void IncrementPartitionSelectors(ULONG scan_id);
 
 	void AddSubplan(Plan *);
 

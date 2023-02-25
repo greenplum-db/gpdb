@@ -486,10 +486,6 @@ Node *MutateExpressionTree(Node *node, Node *(*mutator)(), void *context);
 Node *MutateQueryOrExpressionTree(Node *node, Node *(*mutator)(), void *context,
 								  int flags);
 
-bool RelIsPartitioned(Oid relid);
-
-bool IndexIsPartitioned(Oid relid);
-
 // check whether a relation is inherited
 bool HasSubclassSlow(Oid rel_oid);
 
@@ -501,16 +497,6 @@ GpPolicy *GetDistributionPolicy(Relation rel);
 // the child partitions is randomly distributed
 gpos::BOOL IsChildPartDistributionMismatched(Relation rel);
 
-#if 0
-    // return true if the table is partitioned and any of the child partitions
-    // have a trigger of the given type
-    gpos::BOOL ChildPartHasTriggers(Oid oid, int trigger_type);
-#endif
-
-// estimate the relation size using the real number of blocks and tuple density
-void CdbEstimateRelationSize(RelOptInfo *relOptInfo, Relation rel,
-							 int32 *attr_widths, BlockNumber *pages,
-							 double *tuples, double *allvisfrac);
 double CdbEstimatePartitionedNumTuples(Relation rel);
 
 // close the given relation
@@ -549,21 +535,6 @@ bool Equals(void *p1, void *p2);
 bool IsCompositeType(Oid typid);
 
 bool IsTextRelatedType(Oid typid);
-
-// get integer value from an Integer value node
-int GetIntFromValue(Node *node);
-
-// parse external table URI
-Uri *ParseExternalTableUri(const char *uri);
-
-// returns ComponentDatabases
-CdbComponentDatabases *GetComponentDatabases(void);
-
-// compare two strings ignoring case
-int StrCmpIgnoreCase(const char *s1, const char *s2);
-
-// construct random segment map
-bool *ConstructRandomSegMap(int total_primaries, int total_to_skip);
 
 // create an empty 'StringInfoData' & return a pointer to it
 StringInfo MakeStringInfo(void);

@@ -223,18 +223,10 @@ extern bool	get_index_isreplident(Oid index_oid);
 extern bool get_index_isvalid(Oid index_oid);
 extern bool get_index_isclustered(Oid index_oid);
 
-extern bool relation_is_partitioned(Oid oid);
-extern bool index_is_partitioned(Oid oid);
-extern List *relation_get_leaf_partitions(Oid oid);
-extern bool relation_exists(Oid oid);
-extern bool index_exists(Oid oid);
-extern bool type_exists(Oid oid);
 extern bool function_exists(Oid oid);
-extern bool operator_exists(Oid oid);
 extern bool aggregate_exists(Oid oid);
 extern Oid get_aggregate(const char *aggname, Oid oidType);
 extern List *get_relation_keys(Oid relid);
-extern bool trigger_exists(Oid oid);
 
 extern bool check_constraint_exists(Oid oidCheckconstraint);
 extern List *get_check_constraint_oids(Oid relid);
