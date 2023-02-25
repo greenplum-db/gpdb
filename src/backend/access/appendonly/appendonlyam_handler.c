@@ -1042,8 +1042,6 @@ appendonly_relation_set_new_filenode(Relation rel,
 static void
 appendonly_relation_nontransactional_truncate(Relation rel)
 {
-	Oid ao_base_relid = RelationGetRelid(rel);
-
 	Oid			aoseg_relid = InvalidOid;
 	Oid			aoblkdir_relid = InvalidOid;
 	Oid			aovisimap_relid = InvalidOid;

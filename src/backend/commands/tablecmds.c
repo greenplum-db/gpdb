@@ -1807,8 +1807,6 @@ ao_aux_tables_safe_truncate(Relation rel)
 	if (!RelationIsAppendOptimized(rel))
 		return;
 
-	Oid relid = RelationGetRelid(rel);
-
 	Oid aoseg_relid = InvalidOid;
 	Oid aoblkdir_relid = InvalidOid;
 	Oid aovisimap_relid = InvalidOid;
