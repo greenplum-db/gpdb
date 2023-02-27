@@ -2814,7 +2814,6 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 		CConstraintArray *selected_partition_cnstrs =
 			GPOS_NEW(mp) CConstraintArray(mp);
 
-		BOOL contains_foreign_parts = false;
 		IMdIdArray *foreign_server_mdids = GPOS_NEW(mp) IMdIdArray(mp);
 		IMdIdArray *all_partition_mdids = dyn_get->GetPartitionMdids();
 		for (ULONG ul = 0; ul < all_partition_mdids->Size(); ++ul)
@@ -2847,10 +2846,6 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 			{
 				IMDId *foreign_server_mdid =
 					(*dyn_get->ForeignServerMdIds())[ul];
-				if (foreign_server_mdid->IsValid())
-				{
-					contains_foreign_parts = true;
-				}
 				foreign_server_mdid->AddRef();
 				foreign_server_mdids->Append(foreign_server_mdid);
 				part_mdid->AddRef();
@@ -2894,7 +2889,7 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 			mp, new_alias, dyn_get->Ptabdesc(), dyn_get->ScanId(),
 			dyn_get->PdrgpcrOutput(), dyn_get->PdrgpdrgpcrPart(),
 			selected_partition_mdids, selected_part_cnstr_disj, true,
-			foreign_server_mdids, contains_foreign_parts);
+			foreign_server_mdids);
 
 		CExpressionArray *select_children = GPOS_NEW(mp) CExpressionArray(mp);
 		select_children->Append(GPOS_NEW(mp) CExpression(mp, new_dyn_get));

@@ -597,7 +597,6 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 					EdxlopLogicalForeignGet == edxlopid);
 
 		IMdIdArray *partition_mdids = pmdrel->ChildPartitionMdids();
-		BOOL contains_foreign_parts = false;
 		IMdIdArray *foreign_server_mdids = GPOS_NEW(m_mp) IMdIdArray(m_mp);
 		for (ULONG ul = 0; ul < partition_mdids->Size(); ++ul)
 		{
@@ -616,7 +615,6 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 			if (IMDRelation::ErelstorageForeign ==
 				partrel->RetrieveRelStorageType())
 			{
-				contains_foreign_parts = true;
 				foreign_server_mdid = partrel->ForeignServer();
 				foreign_server_mdid->AddRef();
 			}
@@ -632,9 +630,9 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 		// generate a part index id
 		ULONG part_idx_id = COptCtxt::PoctxtFromTLS()->UlPartIndexNextVal();
 		partition_mdids->AddRef();
-		popGet = GPOS_NEW(m_mp) CLogicalDynamicGet(
-			m_mp, pname, ptabdesc, part_idx_id, partition_mdids,
-			foreign_server_mdids, contains_foreign_parts);
+		popGet = GPOS_NEW(m_mp)
+			CLogicalDynamicGet(m_mp, pname, ptabdesc, part_idx_id,
+							   partition_mdids, foreign_server_mdids);
 		CLogicalDynamicGet *popDynamicGet =
 			CLogicalDynamicGet::PopConvert(popGet);
 

@@ -57,16 +57,15 @@ CLogicalDynamicGet::CLogicalDynamicGet(
 	ULONG ulPartIndex, CColRefArray *pdrgpcrOutput,
 	CColRef2dArray *pdrgpdrgpcrPart, IMdIdArray *partition_mdids,
 	CConstraint *partition_cnstrs_disj, BOOL static_pruned,
-	IMdIdArray *foreign_server_mdids, BOOL contains_foreign_parts)
+	IMdIdArray *foreign_server_mdids)
 	: CLogicalDynamicGetBase(mp, pnameAlias, ptabdesc, ulPartIndex,
 							 pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids),
 	  m_partition_cnstrs_disj(partition_cnstrs_disj),
 	  m_static_pruned(static_pruned),
-	  m_foreign_server_mdids(foreign_server_mdids),
-	  m_contains_foreign_parts(contains_foreign_parts)
+	  m_foreign_server_mdids(foreign_server_mdids)
 {
 	GPOS_ASSERT(static_pruned || (nullptr == partition_cnstrs_disj));
-	GPOS_ASSERT_IMP(contains_foreign_parts, nullptr != foreign_server_mdids);
+	GPOS_ASSERT(nullptr != foreign_server_mdids);
 }
 
 
@@ -82,14 +81,12 @@ CLogicalDynamicGet::CLogicalDynamicGet(CMemoryPool *mp, const CName *pnameAlias,
 									   CTableDescriptor *ptabdesc,
 									   ULONG ulPartIndex,
 									   IMdIdArray *partition_mdids,
-									   IMdIdArray *foreign_server_mdids,
-									   BOOL contains_foreign_parts)
+									   IMdIdArray *foreign_server_mdids)
 	: CLogicalDynamicGetBase(mp, pnameAlias, ptabdesc, ulPartIndex,
 							 partition_mdids),
-	  m_foreign_server_mdids(foreign_server_mdids),
-	  m_contains_foreign_parts(contains_foreign_parts)
+	  m_foreign_server_mdids(foreign_server_mdids)
 {
-	GPOS_ASSERT_IMP(contains_foreign_parts, nullptr != foreign_server_mdids);
+	GPOS_ASSERT(nullptr != foreign_server_mdids);
 }
 
 //---------------------------------------------------------------------------
@@ -187,7 +184,7 @@ CLogicalDynamicGet::PopCopyWithRemappedColumns(CMemoryPool *mp,
 	return GPOS_NEW(mp) CLogicalDynamicGet(
 		mp, pnameAlias, m_ptabdesc, m_scan_id, pdrgpcrOutput, pdrgpdrgpcrPart,
 		m_partition_mdids, partition_cnstrs_disj, m_static_pruned,
-		m_foreign_server_mdids, m_contains_foreign_parts);
+		m_foreign_server_mdids);
 }
 
 //---------------------------------------------------------------------------
@@ -380,4 +377,18 @@ CLogicalDynamicGet::PstatsDeriveFilter(CMemoryPool *mp,
 	return result_stats;
 }
 
+// returns whether table contains foreign partitions
+BOOL
+CLogicalDynamicGet::ContainsForeignParts() const
+{
+	for (ULONG ul = 0; ul < m_foreign_server_mdids->Size(); ++ul)
+	{
+		IMDId *foreign_server_mdid = (*m_foreign_server_mdids)[ul];
+		if (foreign_server_mdid->IsValid())
+		{
+			return true;
+		}
+	}
+	return false;
+}
 // EOF

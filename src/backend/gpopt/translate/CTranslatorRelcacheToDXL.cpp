@@ -3006,8 +3006,7 @@ CTranslatorRelcacheToDXL::RetrieveStorageTypeForPartitionedTable(Relation rel)
 	{
 		return IMDRelation::ErelstorageHeap;
 	}
-	// for partitioned tables with foreign partitions, we want to ignore the foreign partitions
-	// for storage-type purposes unless all of the partitions are foreign as we'll be separating them out later
+
 	BOOL all_foreign = true;
 	for (int i = 0; i < rel->rd_partdesc->nparts; ++i)
 	{
@@ -3017,6 +3016,8 @@ CTranslatorRelcacheToDXL::RetrieveStorageTypeForPartitionedTable(Relation rel)
 			RetrieveRelStorageType(child_rel.get());
 		if (child_storage == IMDRelation::ErelstorageForeign)
 		{
+			// for partitioned tables with foreign partitions, we want to ignore the foreign partitions
+			// for determining the storage-type (unless all of the partitions are foreign) as we'll be separating them out to different scans later in CXformExpandDynamicGetWithForeignPartitions
 			if (!optimizer_enable_foreign_table)
 			{
 				GPOS_RAISE(

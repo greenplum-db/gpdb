@@ -1628,7 +1628,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			{
 				case CMD_SELECT:
 					pname = "Dynamic Foreign Scan";
-					operation = "SELECT";
+					operation = "Select";
 					break;
 				case CMD_INSERT:
 					pname = "Dynamic Foreign Insert";

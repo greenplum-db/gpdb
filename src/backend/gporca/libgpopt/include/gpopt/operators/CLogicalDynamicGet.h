@@ -42,9 +42,6 @@ protected:
 	// Indexes correspond to partitions
 	IMdIdArray *m_foreign_server_mdids{nullptr};
 
-	// Are any foreign partitions present?
-	BOOL m_contains_foreign_parts{false};
-
 public:
 	CLogicalDynamicGet(const CLogicalDynamicGet &) = delete;
 
@@ -57,13 +54,11 @@ public:
 					   CColRef2dArray *pdrgpdrgpcrPart,
 					   IMdIdArray *partition_mdids,
 					   CConstraint *partition_cnstrs_disj, BOOL static_pruned,
-					   IMdIdArray *foreign_server_mdids,
-					   BOOL contains_foreign_parts);
+					   IMdIdArray *foreign_server_mdids);
 	CLogicalDynamicGet(CMemoryPool *mp, const CName *pnameAlias,
 					   CTableDescriptor *ptabdesc, ULONG ulPartIndex,
 					   IMdIdArray *partition_mdids,
-					   IMdIdArray *foreign_server_mdids,
-					   BOOL contains_foreign_parts);
+					   IMdIdArray *foreign_server_mdids);
 
 	// dtor
 	~CLogicalDynamicGet() override;
@@ -106,11 +101,7 @@ public:
 	BOOL FInputOrderSensitive() const override;
 
 	// returns whether table contains foreign partitions
-	BOOL
-	ContainsForeignParts() const
-	{
-		return m_contains_foreign_parts;
-	}
+	BOOL ContainsForeignParts() const;
 
 	// returns mdid list containing foreign server mdids corresponding to partititons in m_partition_mdids.
 	// Mdid is marked as invalid (0) if not a foreign partition
