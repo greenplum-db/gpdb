@@ -739,3 +739,7 @@ ALTER RESOURCE QUEUE pg_default ACTIVE THRESHOLD -10;
 ERROR:  active threshold cannot be less than -1 or equal to 0
 -- Reset
 RESET log_statement;
+-- Try to set statement_mem > max_statement_mem
+SET statement_mem = '4000MB';
+ERROR:  Invalid input for statement_mem, must be less than max_statement_mem (2048000 kB)
+RESET statement_mem;
