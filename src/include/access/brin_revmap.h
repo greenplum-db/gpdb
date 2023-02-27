@@ -57,6 +57,5 @@ extern bool brinRevmapDesummarizeRange(Relation idxrel, BlockNumber heapBlk);
 
 extern void brin_init_upper_pages(Relation index, BlockNumber pagesPerRange);
 extern BlockNumber heapBlockGetCurrentAosegStart(BlockNumber heapBlk);
-extern BlockNumber segnoGetCurrentAosegStart(int segno);
 
 #endif							/* BRIN_REVMAP_H */

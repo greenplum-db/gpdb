@@ -5,10 +5,11 @@
 -- We are using gp_ao_or_aocs_seg() helper UDF to obtain the number of AO/CO segfiles (segnos),
 -- then plus 1 to count in segfile0 due to the implementation constraint.
 -- For BTREE index, we verify the equation: post_nscans - pre_nscans == segnos + 1;
--- for BRIN index, we verify the equation: post_nscans - pre_nscans == (segnos + 1) * 2.
+-- for BRIN index, we verify the equation: post_nscans - pre_nscans == ((segnos + 1) * 2 - 1).
 -- BRIN index doubles the number of nscans of BTREE because lastSequence was initialized twice
 -- during BRIN indexed bitmapheapscan (in index_getbitmap and ao/co fetch_init), which is probably
--- optimizable, too.
+-- optimizable, too. We also deduct 1 because gp_fastsequence is not scanned for
+-- seg0 to determine block sequences for AO/CO tables (if seg0 is absent).
 
 create or replace function test_iscan_inits_same_as_aosegs(tablename text, icol text, itype text) returns bool as $$
 declare
@@ -27,8 +28,8 @@ begin
         select post_nscans - pre_nscans = segnos + 1 into result; /* calculate the diff and compare to segnos plus 1 to count in segfile0, expect equal */
         raise notice '[BTREE] expect: post_nscans - pre_nscans == segnos + 1'; /* in func */
     elsif quote_ident(itype) = 'brin' then /* for BRIN index */
-        select post_nscans - pre_nscans = (segnos + 1) * 2 into result; /* BRIN doubles nscans(of BTREE) due to implementation constraint */
-        raise notice '[BRIN] expect: post_nscans - pre_nscans == (segnos + 1) * 2'; /* in func */
+        select post_nscans - pre_nscans = ((segnos + 1) * 2 - 1) into result; /* BRIN doubles nscans(of BTREE) due to implementation constraint */
+        raise notice '[BRIN] expect: post_nscans - pre_nscans == ((segnos + 1) * 2 - 1)'; /* in func */
     else /* in func */
         raise exception 'unexpected type of index %', itype::text; /* in func */
     end if; /* in func */

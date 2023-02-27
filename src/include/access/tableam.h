@@ -151,6 +151,34 @@ typedef void (*IndexBuildCallback) (Relation index,
 									void *state);
 
 /*
+ * GPDB: Tables in GPDB can be thought of a set of BlockSequences, each of which
+ * is a monotonically increasing sequence of tids. The tids may or may not be
+ * contiguous. For eg. in AO/CO tables, row number allocations are batched for
+ * each insert(-like) command and the row numbers may have holes.
+ *
+ * Furthermore, each sequence of tids is represented in terms of BlockNumbers,
+ * for brevity. The BlockNumbers inside a BlockSequence are contiguous.
+ * BlockSequences do not overlap with each other and need not be contiguous
+ * between themselves.
+ *
+ * This generalization helps to unify code for heap vs AO/CO tables (eg. BRIN).
+ *
+ * Heap tables can be thought of as having only one BlockSequence having range:
+ * [0,num_blocks]. AO/CO tables will have one such sequence for every segno:
+ * [0,blocks_seg0], [33554432,33554432+blocks_seg1], [67108864,67108864+blocks_seg2], ...
+ * where blocks_segi is the number of heap blocks represented in that segment.
+ *
+ * To be clear, this does NOT mean that there must be (blocks_segi * BLCKSZ)
+ * number of bytes in that segment. Please refer to how AOTupleIds can be
+ * treated as ItemPointers.
+ */
+typedef struct BlockSequence
+{
+	BlockNumber startblknum; /* starting block number in sequence */
+	BlockNumber nblocks; /* number of heap blocks represented in sequence */
+} BlockSequence;
+
+/*
  * API struct for a table AM.  Note this must be allocated in a
  * server-lifetime manner, typically as a static const struct, which then gets
  * returned by FormData_pg_am.amhandler.
@@ -610,6 +638,11 @@ typedef struct TableAmRoutine
 	 */
 	uint64		(*relation_size) (Relation rel, ForkNumber forkNumber);
 
+	/*
+	 * See table_relation_get_block_sequences()
+	 */
+	BlockSequence		*(*relation_get_block_sequences) (Relation rel,
+														  int *numSequences);
 
 	/*
 	 * This callback should return true if the relation requires a TOAST table
@@ -1737,6 +1770,16 @@ static inline uint64
 table_relation_size(Relation rel, ForkNumber forkNumber)
 {
 	return rel->rd_tableam->relation_size(rel, forkNumber);
+}
+
+/*
+ * GPDB: Returns the block sequences contained in this relation. See
+ * BlockSequence for details. Currently used by BRIN.
+ */
+static inline BlockSequence *
+table_relation_get_block_sequences(Relation rel, int *numSequences)
+{
+	return rel->rd_tableam->relation_get_block_sequences(rel, numSequences);
 }
 
 /*

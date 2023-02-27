@@ -1923,6 +1923,60 @@ aoco_relation_size(Relation rel, ForkNumber forkNumber)
 	return totalbytes;
 }
 
+/*
+ * For each AO segment, get the starting heap block number and the number of
+ * heap blocks (together termed as a BlockSequence). The starting heap block
+ * number is always deterministic given a segment number. See AOtupleId.
+ *
+ * The number of heap blocks can be determined from the last row number present
+ * in the segment. See appendonlytid.h for details.
+ */
+static BlockSequence *
+aoco_relation_get_block_sequences(Relation rel, int *numSequences)
+{
+	Snapshot			snapshot;
+	Oid					segrelid;
+	int					nsegs;
+	BlockSequence		*sequences;
+	AOCSFileSegInfo 	**seginfos;
+
+	Assert(RelationIsValid(rel));
+	Assert(numSequences);
+
+	snapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
+
+	seginfos = GetAllAOCSFileSegInfo(rel, snapshot, &nsegs, &segrelid);
+	Assert(nsegs <= AOTupleId_MaxSegmentFileNum);
+	sequences = (BlockSequence *) palloc(sizeof(BlockSequence) * nsegs);
+	*numSequences = nsegs;
+
+	/*
+	 * For each aoseg, the sequence starts at a fixed heap block number and
+	 * contains up to the highest numbered heap block corresponding to the
+	 * lastSequence value of that segment.
+	 */
+	for (int i = 0; i < nsegs; i++)
+	{
+		int segno = seginfos[i]->segno;
+		int64 lastSequence = ReadLastSequence(segrelid, segno);
+
+		sequences[i].startblknum = AOSegmentGet_startHeapBlock(segno);
+		sequences[i].nblocks = lastSequence / AO_MAX_TUPLES_PER_HEAP_BLOCK;
+		if (lastSequence % AO_MAX_TUPLES_PER_HEAP_BLOCK > 0)
+			sequences[i].nblocks += 1;
+	}
+
+	UnregisterSnapshot(snapshot);
+
+	if (seginfos != NULL)
+	{
+		FreeAllAOCSSegFileInfo(seginfos, nsegs);
+		pfree(seginfos);
+	}
+
+	return sequences;
+}
+
 static bool
 aoco_relation_needs_toast_table(Relation rel)
 {
@@ -2180,6 +2234,7 @@ static const TableAmRoutine ao_column_methods = {
 	.index_validate_scan = aoco_index_validate_scan,
 
 	.relation_size = aoco_relation_size,
+	.relation_get_block_sequences = aoco_relation_get_block_sequences,
 	.relation_needs_toast_table = aoco_relation_needs_toast_table,
 
 	.relation_estimate_size = aoco_estimate_rel_size,
