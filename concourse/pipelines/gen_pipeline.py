@@ -107,7 +107,7 @@ def render_template(template_filename, context):
     return TEMPLATE_ENVIRONMENT.get_template(template_filename).render(context)
 
 
-def validate_pipeline_release_jobs(raw_pipeline_yml, jobs_that_should_not_block_release):
+def validate_pipeline_release_jobs(raw_pipeline_yml, jobs_that_should_not_block_release, os_type):
     """Make sure all jobs in specified pipeline that don't block release are accounted
     for (they should belong to jobs_that_should_not_block_release, defined above)"""
     print("======================================================================")
@@ -121,21 +121,22 @@ def validate_pipeline_release_jobs(raw_pipeline_yml, jobs_that_should_not_block_
     jobs_raw = pipeline['jobs']
     all_job_names = [job['name'] for job in jobs_raw]
 
-    rc_name = 'gate_release_candidate_start'
-    release_candidate_job = [j for j in jobs_raw if j['name'] == rc_name][0]
+    if os_type != "rhel8" and os_type != "oel8":
+        rc_name = 'gate_release_candidate_start'
+        release_candidate_job = [j for j in jobs_raw if j['name'] == rc_name][0]
 
-    release_blocking_jobs = release_candidate_job['plan'][0]['in_parallel']['steps'][0]['passed']
+        release_blocking_jobs = release_candidate_job['plan'][0]['in_parallel']['steps'][0]['passed']
 
-    non_release_blocking_jobs = [j for j in all_job_names if j not in release_blocking_jobs]
+        non_release_blocking_jobs = [j for j in all_job_names if j not in release_blocking_jobs]
 
-    unaccounted_for_jobs = \
-        [j for j in non_release_blocking_jobs if j not in jobs_that_should_not_block_release]
+        unaccounted_for_jobs = \
+            [j for j in non_release_blocking_jobs if j not in jobs_that_should_not_block_release]
 
-    if unaccounted_for_jobs:
-        print("Please add the following jobs as a Release_Candidate dependency or ignore them")
-        print("by adding them to JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE in " + __file__)
-        print(unaccounted_for_jobs)
-        return False
+        if unaccounted_for_jobs:
+            print("Please add the following jobs as a Release_Candidate dependency or ignore them")
+            print("by adding them to JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE in " + __file__)
+            print(unaccounted_for_jobs)
+            return False
 
     print("Pipeline validated: all jobs accounted for")
     return True
@@ -150,8 +151,8 @@ def create_pipeline(args, git_remote, git_branch):
 
     variables_type = args.pipeline_target
     os_username = {
-        "centos6" : "centos",
-        "centos7" : "centos",
+        "rhel6" : "centos",
+        "rhel7" : "centos",
         "rhel8" : "rhel",
         "ubuntu18.04" : "ubuntu",
         "rocky8" : "rocky",
@@ -159,8 +160,8 @@ def create_pipeline(args, git_remote, git_branch):
         "oel7" : "oel"
     }
     test_os = {
-        "centos6" : "centos",
-        "centos7" : "centos",
+        "rhel6" : "centos",
+        "rhel7" : "centos",
         "rhel8" : "centos",
         "ubuntu18.04" : "ubuntu",
         "rocky8" : "centos",
@@ -168,12 +169,12 @@ def create_pipeline(args, git_remote, git_branch):
         "oel7" : "centos"
     }
     dist = {
-        "centos6" : "rhel6",
-        "centos7" : "rhel7",
-        "rhel8" : "rhel8",
+        "rhel6" : "rhel6",
+        "rhel7" : "rhel7",
+        "rhel8" : "el8",
         "ubuntu18.04" : "ubuntu18.04",
-        "rocky8" : "rocky8",
-        "oel8" : "oel8",
+        "rocky8" : "el8",
+        "oel8" : "el8",
         "oel7" : "oel7"
     }
     context = {
@@ -210,7 +211,7 @@ def create_pipeline(args, git_remote, git_branch):
 
     pipeline_yml = render_template(args.template_filename, context)
     if args.pipeline_target == 'prod':
-        validated = validate_pipeline_release_jobs(pipeline_yml, jobs_that_should_not_block_release)
+        validated = validate_pipeline_release_jobs(pipeline_yml, jobs_that_should_not_block_release, args.os_type)
         if not validated:
             print("Refusing to update the pipeline file")
             return False
@@ -331,7 +332,7 @@ def main():
         action='store',
         dest='os_type',
         default=default_os_type,
-        choices=['centos6', 'centos7', 'rhel8','ubuntu18.04', 'rocky8', 'oel8', 'oel7'],
+        choices=['rhel6', 'rhel7', 'rhel8','ubuntu18.04', 'rocky8', 'oel8', 'oel7'],
         help='OS value to support'
     )
 
@@ -464,7 +465,7 @@ def main():
         pipeline_file_suffix = suggested_git_branch()
         if args.user != os.getlogin():
             pipeline_file_suffix = args.user
-        default_dev_output_filename = 'gpdb-' + args.pipeline_target + '-' + pipeline_file_suffix + '.yml'
+        default_dev_output_filename = 'gpdb-' + args.pipeline_target + '-' + pipeline_file_suffix + '-' + args.os_type + '.yml'
         args.output_filepath = os.path.join(PIPELINES_DIR, default_dev_output_filename)
 
     if args.directed_release:

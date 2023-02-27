@@ -210,7 +210,9 @@ groups:
   - compile_gpdb_sles12
   - test_gpdb_clients_sles12
   - compile_gpdb_clients_windows
+  {% if pipeline_configuration == "prod" and not directed_release %}
   - test_gpdb_clients_windows
+  {% endif %}
   {% endif %}
 {% if "ICW" in test_sections %}
   ## --------------------------------------------------------------------
@@ -270,9 +272,9 @@ groups:
 {% endif %}
 
 
-{% if pipeline_configuration == "prod" or build_test_rc_rpm or directed_release %}
 ## ======================================================================
-
+{% if pipeline_configuration == "prod" or build_test_rc_rpm or directed_release %}
+{% if os_type != "rhel8" and os_type != "oel8" %}
 - name: Release
   jobs:
 {% if pipeline_configuration == "prod" or directed_release %}
@@ -282,11 +284,12 @@ groups:
   - Publish Server Builds
 {% endif %}
 {% endif %}
+
 {% if not directed_release %}
   {% if os_type != "ubuntu18.04" %}
   - Build_Release_Candidate_RPMs
   {% endif %}
-
+{% endif %}
 {% endif %}
 {% endif %}
 ## ======================================================================
@@ -502,6 +505,14 @@ resources:
     product_slug: pivotal-gpdb
     product_version: ((pivotal-gpdb-pivnet-product-version))
 
+{% if os_type == "oel8" or os_type == "rhel8"  %}
+- name: gpdb6-[[ default_os_type ]]-build
+  type: registry-image
+  source:
+    tag: latest
+    repository: gcr.io/data-gpdb-public-images/gpdb6-[[ default_os_type ]]-build
+{% endif %}
+
 - name: gpdb6-[[ os_type ]]-build
   type: registry-image
   source:
@@ -554,19 +565,19 @@ resources:
     username: _json_key
     password: ((data-gpdb-private-images-container-registry-readonly-service-account-key))
 {% endif %}
-- name: bin_gpdb_[[ os_type ]]
+- name: bin_gpdb
   type: gcs
   source:
     bucket: ((gcs-bucket-intermediates))
     json_key: ((concourse-gcs-resources-service-account-key))
-    versioned_file: ((pipeline-name))/bin_gpdb_[[ os_type ]]/bin_gpdb.tar.gz
+    versioned_file: ((pipeline-name))/bin_gpdb/bin_gpdb.tar.gz
 
-- name: bin_gpdb_clients_[[ os_type ]]
+- name: bin_gpdb_clients
   type: gcs
   source:
     bucket: ((gcs-bucket-intermediates))
     json_key: ((concourse-gcs-resources-service-account-key))
-    versioned_file: ((pipeline-name))/bin_gpdb_clients_[[ os_type ]]/bin_gpdb_clients.tar.gz
+    versioned_file: ((pipeline-name))/bin_gpdb_clients/bin_gpdb_clients.tar.gz
 
 {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" or os_type == "ubuntu18.04" %}
 - name: bin_gpdb_[[ os_type ]]_without_scram-sha-256
@@ -586,21 +597,27 @@ resources:
 
 {% if pipeline_configuration == "prod" or directed_release %}
 {% if not directed_release %}
-- name: bin_gpdb_[[ os_type ]]_icw_green
+- name: bin_gpdb_icw_green
   type: s3
   source:
     access_key_id: ((aws-bucket-access-key-id))
     bucket: ((aws-bucket))
     region_name: ((aws-region))
     secret_access_key: ((aws-bucket-secret-access-key))
-    versioned_file: bin_gpdb_[[ os_type ]]/gpdb_branch_6X_STABLE/icw_green/bin_gpdb.tar.gz
+    versioned_file: bin_gpdb/gpdb_branch_6X_STABLE/icw_green/bin_gpdb.tar.gz
 
+{% if os_type != "rhel8" and os_type != "oel8" %}
 - name: bin_gpdb_clients_[[ os_type ]]_rc
   type: gcs
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
+    {% if os_type == default_os_type %}
+    regexp: clients/published/gpdb6/clients-rc-(.*)-el8_x86_64((rc-build-type-gcs)).tar.gz
+    {% else %}
     regexp: clients/published/gpdb6/clients-rc-(.*)-[[ os_type ]]_x86_64((rc-build-type-gcs)).tar.gz
+    {% endif %}
+{% endif %}
 
 {% if os_type == default_os_type %}
 - name: bin_gpdb_photon3_rc
@@ -640,25 +657,31 @@ resources:
 {% endif %}
 {% endif %}
 
-{% if pipeline_configuration == "prod" or directed_release %}
-{% if not directed_release %}
+{% if pipeline_configuration == "prod" and not directed_release %}
 - name: bin_gpdb_[[ os_type ]]_rc
   type: gcs
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
+{% if os_type == default_os_type or os_type == "oel8" or os_type == "rhel8" %}
+    regexp: server/published/gpdb6/server-rc-(.*)-el8_x86_64((rc-build-type-gcs)).tar.gz
+{% else %}
     regexp: server/published/gpdb6/server-rc-(.*)-[[ os_type ]]_x86_64((rc-build-type-gcs)).tar.gz
 {% endif %}
 {% endif %}
 
 {% if pipeline_configuration == "prod" or build_test_rc_rpm %}
-{% if os_type != "ubuntu18.04" %}
+{% if os_type != "ubuntu18.04" and os_type != "rhel8" and os_type != "oel8" %}
 - name: gpdb_rpm_installer_[[ os_type ]]
   type: gcs
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
+{% if os_type == default_os_type %}
+    regexp: server/published/gpdb6/greenplum-db-(.*)-el8-x86_64((rc-build-type-gcs)).rpm
+{% else %}
     regexp: server/published/gpdb6/greenplum-db-(.*)-[[ os_type ]]-x86_64((rc-build-type-gcs)).rpm
+{% endif %}
 
 - name: greenplum-database-release
   type: git
@@ -692,12 +715,18 @@ resources:
     versioned_file: ((pipeline-name))/binary_swap_gpdb_[[ os_type ]]/bin_gpdb.tar.gz
 
 {% if pipeline_configuration == "prod" %}
+{% if os_type != "rhel8" and os_type != "oel8" %}
 - name: server-build-[[ os_type ]]
   type: gcs
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
+    {% if os_type == default_os_type %}
+    regexp: server/published/gpdb6/server-build-(.*)-el8_x86_64((rc-build-type-gcs)).tar.gz
+    {% else %}
     regexp: server/published/gpdb6/server-build-(.*)-[[ os_type ]]_x86_64((rc-build-type-gcs)).tar.gz
+    {% endif %}
+{% endif %}
 {% endif %}
 
 {% if os_type == default_os_type %}
@@ -745,6 +774,7 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/bin_gpdb_clients_windows/greenplum-clients-x86_64.tar.gz
 
+{% if pipeline_configuration == "prod" and not directed_release %}
 - name: terraform_windows
   type: terraform
   source:
@@ -765,9 +795,10 @@ resources:
       bucket: gpdb5-pipeline-dynamic-terraform
       bucket_path: gp-clients-windows-tests-google/
 {% endif %}
+{% endif %}
 
 {% if not directed_release %}
-{% if os_type == default_os_type %}
+{% if os_type == default_os_type and pipeline_configuration == "prod" %}
 - name: bin_gpdb_clients_windows_rc
   type: gcs
   source:
@@ -913,7 +944,11 @@ jobs:
       - get: reduced-frequency-trigger
         trigger: true
       {% endif %}
+      {% if os_type == "oel8" or os_type == "rhel8" %}
+      - get: gpdb6-[[ default_os_type ]]-build
+      {% else %}
       - get: gpdb6-[[ os_type ]]-build
+      {% endif %}
       {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" or os_type == "ubuntu18.04" %}
       - get: gpdb_src_without_scram-sha-256
         trigger: true
@@ -921,17 +956,21 @@ jobs:
       {% endif %}
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
+    {% if os_type == "oel8" or os_type == "rhel8" %}
+    image: gpdb6-[[ default_os_type ]]-build
+    {% else %}
     image: gpdb6-[[ os_type ]]-build
+    {% endif %}
     params:
       CONFIGURE_FLAGS: ((configure_flags_with_extensions))
       BLD_TARGETS: "clients"
       RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
   - in_parallel:
       steps:
-      - put: bin_gpdb_[[ os_type ]]
+      - put: bin_gpdb
         params:
           file: gpdb_artifacts/bin_gpdb.tar.gz
-      - put: bin_gpdb_clients_[[ os_type ]]
+      - put: bin_gpdb_clients
         params:
           file: gpdb_artifacts/bin_gpdb_clients.tar.gz
 {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" or os_type == "ubuntu18.04" %}
@@ -966,7 +1005,6 @@ jobs:
         resource: bin_gpdb_[[ os_type ]]_without_scram-sha-256
         passed: [compile_gpdb_[[ os_type ]]]
       - get: bin_gpdb_clients
-        resource: bin_gpdb_clients_[[ os_type ]]
         passed: [compile_gpdb_[[ os_type ]]]
       - get: gpdb6-[[ os_type ]]-test
   - task: run_tests
@@ -987,7 +1025,6 @@ jobs:
       - get: gpdb_src_without_scram-sha-256
         passed: [compile_gpdb_[[ os_type ]]]
       - get: bin_gpdb
-        resource: bin_gpdb_[[ os_type ]]
         passed: [compile_gpdb_[[ os_type ]]]
       - get: bin_gpdb_clients
         resource: bin_gpdb_clients_[[ os_type ]]_without_scram-sha-256
@@ -1017,15 +1054,25 @@ jobs:
           globs: [greenplum-db-6*-rhel8-x86_64.rpm]
           {% elif os_type == "oel8" %}
           globs: [greenplum-db-6*-rhel8-x86_64.rpm]
+          {% elif os_type == "rhel8" %}
+          globs: [greenplum-db-6*-rhel8-x86_64.rpm]
           {% elif os_type == "oel7" %}
           globs: [greenplum-db-6*-rhel7-x86_64.rpm]
           {% else %}
           globs: [greenplum-db-6*-[[ dist ]]-x86_64.rpm]
           {% endif %}
+      {% if os_type == "oel8" or os_type == "rhel8" %}
+      - get: gpdb6-[[ default_os_type ]]-build
+      {% else %}
       - get: gpdb6-[[ os_type ]]-build
+      {% endif %}
   - task: generate_previous_bin_gpdb
     file: gpdb_src/concourse/tasks/extract_package.yml
+    {% if os_type == "oel8" or os_type == "rhel8" %}
+    image: gpdb6-[[ default_os_type ]]-build
+    {% else %}
     image: gpdb6-[[ os_type ]]-build
+    {% endif %}
   - put: binary_swap_gpdb_[[ os_type ]]
     params:
       file: gpdb_artifacts/bin_gpdb.tar.gz
@@ -1038,14 +1085,12 @@ jobs:
             trigger: true
             passed: [compile_gpdb_[[ os_type ]]]
           - get: bin_gpdb
-            resource: bin_gpdb_[[ os_type ]]
             passed: [compile_gpdb_[[ os_type ]]]
           - get: bin_gpdb_clients
-            resource: bin_gpdb_clients_[[ os_type ]]
             passed: [compile_gpdb_[[ os_type ]]]
-          - get: gpdb6-[[ os_type ]]-build
+          - get: gpdb6-[[ os_type ]]-test
     - task: run_tests
-      image: gpdb6-[[ os_type ]]-build
+      image: gpdb6-[[ os_type ]]-test
       file: gpdb_src/concourse/tasks/test_gpdb_clients.yml
 
 {% if os_type == default_os_type %}
@@ -1159,6 +1204,7 @@ jobs:
     params:
       file: "gpdb_artifacts/greenplum-clients-x86_64.tar.gz"
 
+{% if pipeline_configuration == "prod" and not directed_release %}
 - name: test_gpdb_clients_windows
   plan:
   - in_parallel:
@@ -1199,6 +1245,7 @@ jobs:
         aws_ebs_volume_type: standard
     get_params:
       action: destroy
+{% endif %}
 
 {% endif %}
 
@@ -1219,7 +1266,6 @@ jobs:
         passed: [compile_gpdb_[[ os_type ]]]
       - get: bin_gpdb
         passed: [compile_gpdb_[[ os_type ]]]
-        resource: bin_gpdb_[[ os_type ]]
         trigger: [[ test_trigger ]]
       - get: binary_swap_gpdb
         passed: [prepare_binary_swap_gpdb_[[ os_type ]]]
@@ -1253,7 +1299,6 @@ jobs:
       - get: gpdb_src
         passed: [compile_gpdb_[[ os_type ]]]
       - get: bin_gpdb
-        resource: bin_gpdb_[[ os_type ]]
         passed: [compile_gpdb_[[ os_type ]]]
         trigger: [[ test_trigger ]]
       - get: postgres_for_fdw
@@ -1280,7 +1325,6 @@ jobs:
         passed: [compile_gpdb_[[ os_type ]]]
       - get: bin_gpdb
         passed: [compile_gpdb_[[ os_type ]]]
-        resource: bin_gpdb_[[ os_type ]]
         trigger: [[ test_trigger ]]
       - get: postgres_for_fdw
         params:
@@ -1305,7 +1349,6 @@ jobs:
       - get: gpdb_src
         passed: [compile_gpdb_[[ os_type ]]]
       - get: bin_gpdb
-        resource: bin_gpdb_[[ os_type ]]
         passed: [compile_gpdb_[[ os_type ]]]
         trigger: [[ test_trigger ]]
       - get: postgres_for_fdw
@@ -1331,7 +1374,6 @@ jobs:
       - get: gpdb_src
         passed: [compile_gpdb_[[ os_type ]]]
       - get: bin_gpdb
-        resource: bin_gpdb_[[ os_type ]]
         passed: [compile_gpdb_[[ os_type ]]]
         trigger: [[ test_trigger ]]
       - get: postgres_for_fdw
@@ -1357,7 +1399,6 @@ jobs:
         passed: [compile_gpdb_[[ os_type ]]]
       - get: bin_gpdb
         passed: [compile_gpdb_[[ os_type ]]]
-        resource: bin_gpdb_[[ os_type ]]
         trigger: [[ test_trigger ]]
       - get: postgres_for_fdw
         params:
@@ -1404,7 +1445,6 @@ jobs:
             passed: [compile_gpdb_[[ os_type ]]]
           - get: bin_gpdb
             passed: [compile_gpdb_[[ os_type ]]]
-            resource: bin_gpdb_[[ os_type ]]
             trigger: [[ test_trigger ]]
           - get: gpdb6-[[ os_type ]]-test
     - task: gpdb_pitr
@@ -1422,7 +1462,7 @@ jobs:
     - get: gpdb_src
       passed: [compile_gpdb_[[ os_type ]]]
     - get: gpdb_binary
-      resource: bin_gpdb_[[ os_type ]]
+      resource: bin_gpdb
       passed: [compile_gpdb_[[ os_type ]]]
       trigger: true
     - get: ccp_src
@@ -1493,7 +1533,7 @@ jobs:
   plan:
   - in_parallel:
       steps:
-      - get: bin_gpdb_[[ os_type ]]
+      - get: bin_gpdb
         passed:
         - icw_gporca_[[ os_type ]]
         - icw_planner_[[ os_type ]]
@@ -1525,9 +1565,9 @@ jobs:
 {% endif %}
         trigger: true
 {% if pipeline_configuration == "prod" %}
-  - put: bin_gpdb_[[ os_type ]]_icw_green
+  - put: bin_gpdb_icw_green
     params:
-      file: bin_gpdb_[[ os_type ]]/bin_gpdb.tar.gz
+      file: bin_gpdb/bin_gpdb.tar.gz
 {% endif %}
 {% endif %}
 
@@ -1547,7 +1587,6 @@ jobs:
         passed: [compile_gpdb_[[ os_type ]]]
       - get: bin_gpdb
         passed: [compile_gpdb_[[ os_type ]]]
-        resource: bin_gpdb_[[ os_type ]]
         trigger: [[ test_trigger ]]
       - get: gpdb6-[[ os_type ]]-test
   - task: ic_gpdb
@@ -1576,7 +1615,7 @@ jobs:
         passed:
         - compile_gpdb_[[ os_type ]]
         trigger: true
-      - get: bin_gpdb_[[ os_type ]]
+      - get: bin_gpdb
         passed:
         - compile_gpdb_[[ os_type ]]
       - get: binary_swap_gpdb_[[ os_type ]]
@@ -1591,7 +1630,7 @@ jobs:
       - get: gpdb_src
         passed: [gate_resource_groups_start]
       - get: gpdb_binary
-        resource: bin_gpdb_[[ os_type ]]
+        resource: bin_gpdb
         passed: [gate_resource_groups_start]
         trigger: [[ test_trigger ]]
       - get: ccp_src
@@ -1644,7 +1683,7 @@ jobs:
         passed:
         - compile_gpdb_[[ os_type ]]
         trigger: true
-      - get: bin_gpdb_[[ os_type ]]
+      - get: bin_gpdb
         passed:
         - compile_gpdb_[[ os_type ]]
       - get: binary_swap_gpdb_[[ os_type ]]
@@ -1662,7 +1701,6 @@ jobs:
           - gpMgmt/bin/pythonSrc/ext
         passed: [gate_gpperfmon_start]
       - get: bin_gpdb
-        resource: bin_gpdb_[[ os_type ]]
         passed: [gate_gpperfmon_start]
         trigger: true
       - get: gpdb6-[[ os_type ]]-test
@@ -1690,7 +1728,7 @@ jobs:
         passed:
         - compile_gpdb_[[ os_type ]]
         trigger: true
-      - get: bin_gpdb_[[ os_type ]]
+      - get: bin_gpdb
         passed:
         - compile_gpdb_[[ os_type ]]
 
@@ -1701,7 +1739,6 @@ jobs:
       - get: gpdb_src
         passed: [gate_cli_start]
       - get: bin_gpdb
-        resource: bin_gpdb_[[ os_type ]]
         passed: [gate_cli_start]
         trigger: [[ test_trigger ]]
       - get: gpdb6-[[ os_type ]]-test
@@ -1727,7 +1764,7 @@ jobs:
       {% if test.use_concourse_cluster %}
         - do:
           - get: gpdb_binary
-            resource: bin_gpdb_[[ os_type ]]
+            resource: bin_gpdb
             passed: [gate_cli_start]
             trigger: [[ test_trigger ]]
           - get: ccp_src
@@ -1784,7 +1821,6 @@ jobs:
         {% endif %}
         - do:
           - get: bin_gpdb
-            resource: bin_gpdb_[[ os_type ]]
             passed: [gate_cli_start]
             trigger: [[ test_trigger ]]
           - task: [[ test.name ]]_demo_cluster_tests
@@ -1805,7 +1841,7 @@ jobs:
         passed: [gate_cli_start]
       - get: gpdb6-[[ os_type ]]-test
       - get: gpdb_binary
-        resource: bin_gpdb_[[ os_type ]]
+        resource: bin_gpdb
         passed: [gate_cli_start]
         trigger: [[ test_trigger ]]
       - get: ccp_src
@@ -1948,7 +1984,7 @@ jobs:
       steps:
       - get: gpdb_src
         passed: [icw_gporca_[[ os_type ]]]
-      - get: bin_gpdb_[[ os_type ]]
+      - get: bin_gpdb
         passed: [icw_gporca_[[ os_type ]]]
         trigger: [[ test_trigger ]]
       - get: icw_planner_[[ os_type ]]_dump
@@ -1969,7 +2005,7 @@ jobs:
     params:
       <<: *ccp_gen_cluster_default_params
     input_mapping:
-      gpdb_binary: bin_gpdb_[[ os_type ]]
+      gpdb_binary: bin_gpdb
   - task: set_gpinitsystem_config
     file: gpdb_src/concourse/tasks/set_gpinitsystem_config.yml
     params:
@@ -1980,7 +2016,6 @@ jobs:
     file: gpdb_src/concourse/tasks/test_upgrade.yml
     input_mapping:
       sqldump: icw_planner_[[ os_type ]]_dump
-      bin_gpdb: bin_gpdb_[[ os_type ]]
     params:
       NUMBER_OF_NODES: 2
 
@@ -1994,7 +2029,7 @@ jobs:
           - gpMgmt/bin/pythonSrc/ext
         passed: [icw_gporca_[[ os_type ]]]
       - get: gpdb_binary
-        resource: bin_gpdb_[[ os_type ]]
+        resource: bin_gpdb
         passed: [icw_gporca_[[ os_type ]]]
         trigger: [[ test_trigger ]]
       - get: ccp_src
@@ -2052,7 +2087,7 @@ jobs:
         passed:
         - compile_gpdb_[[ os_type ]]
         trigger: true
-      - get: bin_gpdb_[[ os_type ]]
+      - get: bin_gpdb
         passed:
         - compile_gpdb_[[ os_type ]]
 {% if os_type == "ubuntu18.04" %}
@@ -2068,7 +2103,7 @@ jobs:
       - get: boost
       - get: gpdb_src
         passed: [gate_advanced_analytics_start]
-      - get: bin_gpdb_[[ os_type ]]
+      - get: bin_gpdb
         trigger: [[ test_trigger ]]
         passed: [gate_advanced_analytics_start]
       - get: gpdb6-[[ os_type ]]-test
@@ -2076,8 +2111,6 @@ jobs:
     - task: build_madlib_debian
       file: madlib_ci/concourse/tasks/madlib_master_build_ubuntu.yml
       image: gpdb6-[[ os_type ]]-test
-      input_mapping:
-        bin_gpdb: bin_gpdb_[[ os_type ]]
       params:
         TEST_OS: ubuntu18
         DB_TYPE: all
@@ -2100,7 +2133,7 @@ jobs:
       - get: boost
       - get: gpdb_src
         passed: [gate_advanced_analytics_start]
-      - get: bin_gpdb_[[ os_type ]]
+      - get: bin_gpdb
         trigger: [[ test_trigger ]]
         passed: [gate_advanced_analytics_start]
       {% if os_type == "centos6" or os_type == "centos7" %}
@@ -2116,8 +2149,6 @@ jobs:
       {% else %}
       image: gpdb6-[[ os_type ]]-test
       {% endif %}
-      input_mapping:
-        bin_gpdb: bin_gpdb_[[ os_type ]]
       output_mapping:
         madlib_master_artifacts: madlib_master_artifacts_[[ os_type ]]
       params:
@@ -2137,7 +2168,6 @@ jobs:
       - get: gpdb_src
         passed: [madlib_build_gppkg_[[ os_type ]]]
       - get: bin_gpdb
-        resource: bin_gpdb_[[ os_type ]]
         passed: [madlib_build_gppkg_[[ os_type ]]]
       - get: gpdb6-[[ os_type ]]-test
       {% if os_type == "ubuntu18.04" %}
@@ -2180,7 +2210,6 @@ jobs:
       - get: gpdb_src
         passed: [madlib_build_gppkg_[[ os_type ]]]
       - get: bin_gpdb
-        resource: bin_gpdb_[[ os_type ]]
         passed: [madlib_build_gppkg_[[ os_type ]]]
       - get: gpdb6-[[ os_type ]]-test
       {% if os_type == "ubuntu18.04" %}
@@ -2224,7 +2253,7 @@ jobs:
 ## |  _ <  __/ |  __/ (_| \__ \  __/
 ## |_| \_\___|_|\___|\__,_|___/\___|
 ## ======================================================================
-
+{% if os_type != "rhel8" and os_type != "oel8" %}
 {% if pipeline_configuration == "prod" or directed_release %}
 - name: gate_release_candidate_start
   plan:
@@ -2275,7 +2304,7 @@ jobs:
         {% if os_type != "ubuntu18.04" %}
         - fips_[[ os_type ]]
         {% endif %}
-      - get: bin_gpdb_[[ os_type ]]
+      - get: bin_gpdb
         trigger: true
         passed:
         - compile_gpdb_[[ os_type ]]
@@ -2296,7 +2325,7 @@ jobs:
         - MADlib_Test_planner_[[ os_type ]]
         - gpexpand_[[ os_type ]]
         - check_[[ os_type ]]
-      - get: bin_gpdb_clients_[[ os_type ]]
+      - get: bin_gpdb_clients
         passed:
         - compile_gpdb_[[ os_type ]]
       {% if os_type == default_os_type %}
@@ -2330,7 +2359,7 @@ jobs:
       - get: bin_gpdb_photon3
         passed: [compile_gpdb_photon3]
       {% endif %}
-      - get: bin_gpdb_[[ os_type ]]
+      - get: bin_gpdb
         passed: [compile_gpdb_[[ os_type ]]]
   - task: rename server build artifacts
     image: gpdb6-[[ os_type ]]-build
@@ -2338,7 +2367,7 @@ jobs:
       platform: linux
       inputs:
         - name: gpdb_src
-        - name: bin_gpdb_[[ os_type ]]
+        - name: bin_gpdb
         {% if os_type == default_os_type %}
         - name: bin_gpdb_photon3
         {% endif %}
@@ -2352,7 +2381,7 @@ jobs:
           - -exc
           - |
             server_version="$(./gpdb_src/getversion --short)"
-            cp bin_gpdb_[[ os_type ]]/bin_gpdb.tar.gz "output/server-build-${server_version}-[[ dist ]]_x86_64${RC_BUILD_TYPE_GCS}.tar.gz"
+            cp bin_gpdb/bin_gpdb.tar.gz "output/server-build-${server_version}-[[ dist ]]_x86_64${RC_BUILD_TYPE_GCS}.tar.gz"
             {% if os_type == default_os_type %}
             cp bin_gpdb_photon3/bin_gpdb.tar.gz "output/server-build-${server_version}-photon3_x86_64${RC_BUILD_TYPE_GCS}.tar.gz"
             {% endif %}
@@ -2365,8 +2394,8 @@ jobs:
       params:
         file: output/server-build-*-photon3*.tar.gz
     {% endif %}
-
 {% endif %}
+
 - name: Release_Candidate
   plan:
   - in_parallel:
@@ -2375,10 +2404,10 @@ jobs:
         trigger: true
         passed: [gate_release_candidate_start]
 {% if not directed_release %}
-      - get: bin_gpdb_[[ os_type ]]
+      - get: bin_gpdb
         trigger: true
         passed: [gate_release_candidate_start]
-      - get: bin_gpdb_clients_[[ os_type ]]
+      - get: bin_gpdb_clients
         trigger: true
         passed: [gate_release_candidate_start]
       {% if os_type == default_os_type %}
@@ -2405,8 +2434,8 @@ jobs:
           platform: linux
           inputs:
             - name: gpdb_src
-            - name: bin_gpdb_[[ os_type ]]
-            - name: bin_gpdb_clients_[[ os_type ]]
+            - name: bin_gpdb
+            - name: bin_gpdb_clients
             {% if os_type == default_os_type %}
             - name: bin_gpdb_photon3
             - name: bin_gpdb_clients_photon3
@@ -2423,8 +2452,8 @@ jobs:
               - -ec
               - |
                 gpdb_semver=$(gpdb_src/getversion | cut -d' ' -f1)
-                cp -v bin_gpdb_[[ os_type ]]/bin_gpdb.tar.gz release_candidates/server-rc-${gpdb_semver}-[[ dist ]]_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
-                cp -v bin_gpdb_clients_[[ os_type ]]/bin_gpdb_clients.tar.gz release_candidates/clients-rc-${gpdb_semver}-[[ dist ]]_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
+                cp -v bin_gpdb/bin_gpdb.tar.gz release_candidates/server-rc-${gpdb_semver}-[[ dist ]]_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
+                cp -v bin_gpdb_clients/bin_gpdb_clients.tar.gz release_candidates/clients-rc-${gpdb_semver}-[[ dist ]]_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
                 {% if os_type == default_os_type %}
                 cp -v bin_gpdb_photon3/bin_gpdb.tar.gz release_candidates/server-rc-${gpdb_semver}-photon3_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
                 cp -v bin_gpdb_clients_photon3/bin_gpdb_clients.tar.gz release_candidates/clients-rc-${gpdb_semver}-photon3_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
@@ -2436,8 +2465,6 @@ jobs:
                 {% endif %}
       - task: verify_gpdb_versions
         file: gpdb_src/concourse/tasks/verify_gpdb_versions.yml
-        input_mapping:
-          bin_gpdb: bin_gpdb_[[ os_type ]]
 {% endif %}
       - task: tar_git_repo
         file: gpdb_src/concourse/tasks/tar_git_repo.yml
@@ -2477,8 +2504,8 @@ jobs:
         params:
           file: "server_tar/*server-src-rc-*.tar.gz"
       {% endif %}
-
 {% endif %}
+
 {% if not directed_release %}
 {% if os_type != "ubuntu18.04" %}
 - name: Build_Release_Candidate_RPMs
@@ -2490,7 +2517,7 @@ jobs:
 {% if not build_test_rc_rpm %}
         passed: [gate_release_candidate_start]
 {% endif %}
-      - get: bin_gpdb_[[ os_type ]]
+      - get: bin_gpdb
         trigger: true
 {% if not build_test_rc_rpm %}
         passed: [gate_release_candidate_start]
@@ -2523,12 +2550,10 @@ jobs:
   - task: create_gpdb_rpm_package_[[ os_type ]]
     file: greenplum-database-release/ci/concourse/tasks/build-gpdb-rpm.yml
     image: gpdb6-[[ os_type ]]-build
-    input_mapping:
-      bin_gpdb: bin_gpdb_[[ os_type ]]
     output_mapping:
       gpdb_rpm_installer: gpdb_rpm_[[ os_type ]]
     params:
-      PLATFORM: [[ dist ]]
+      PLATFORM: [[ os_type ]]
       GPDB_NAME: greenplum-db-6
       GPDB_RELEASE: 1
       GPDB_LICENSE: Pivotal Software EULA
@@ -2583,6 +2608,7 @@ jobs:
 {% endif %}
 {% endif %}
 {% endif %}
+{% endif %}
 
 ## ======================================================================
 ##    __      _                 _
@@ -2600,7 +2626,7 @@ jobs:
       - get: gpdb_src
         passed: [compile_gpdb_[[ os_type ]]]
         trigger: [[ test_trigger ]]
-      - get: bin_gpdb_[[ os_type ]]
+      - get: bin_gpdb
         passed: [compile_gpdb_[[ os_type ]]]
       - get: gpdb6-[[ os_type ]]-test
   - in_parallel:
@@ -2611,8 +2637,6 @@ jobs:
         params:
           TARGET_OS: [[ test_os ]]
       - task: regression_tests_gpcloud_[[ os_type ]]
-        input_mapping:
-          bin_gpdb: bin_gpdb_[[ os_type ]]
         file: gpdb_src/concourse/tasks/regression_tests_gpcloud.yml
         image: gpdb6-[[ os_type ]]-test
         params:
@@ -2620,8 +2644,6 @@ jobs:
           gpcloud_secret_access_key: ((gpcloud-secret-access-key))
           TARGET_OS: [[ test_os ]]
       - task: gpcheckcloud_tests_gpcloud_[[ os_type ]]
-        input_mapping:
-          bin_gpdb: bin_gpdb_[[ os_type ]]
         file: gpdb_src/concourse/tasks/gpcheckcloud_tests_gpcloud.yml
         image: gpdb6-[[ os_type ]]-test
         params:
