@@ -25,13 +25,13 @@ Follow these steps to migrate Open Source Greenplum Database to VMware Greenplum
     $ su - gpadmin
     ```
 
-    2. Terminate any active connections to the database, and then perform a smart shutdown of your Greenplum Database 6.x system. This example uses the `-a` option to deactivate confirmation prompts:
+2. Terminate any active connections to the database, and then perform a smart shutdown of your Greenplum Database 6.x system. This example uses the `-a` option to deactivate confirmation prompts:
 
     ```
     $ gpstop -a
     ```
 
-    3. Download the VMware Greenplum package from [VMware Tanzu Network](https://network.pivotal.io/), and then copy it to the `gpadmin` user's home directory on each coordinator, standby, and segment host.
+3. Download the VMware Greenplum package from [VMware Tanzu Network](https://network.pivotal.io/), and then copy it to the `gpadmin` user's home directory on each coordinator, standby, and segment host.
 
     4. If you used `yum` or `apt` to install Greenplum Database to the default location, run the following commands on each host to replace the software:
 
