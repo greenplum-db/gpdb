@@ -1024,12 +1024,6 @@ brin_summarize_range_internal(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
 				 errmsg("block number out of range: %s", blk)));
 	}
-	if (heapBlk64 != BRIN_ALL_BLOCKRANGES)
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("Greenplum could not summarize indicated page range")));
-	}
 	heapBlk = (BlockNumber) heapBlk64;
 
 	/*
@@ -1055,6 +1049,12 @@ brin_summarize_range_internal(PG_FUNCTION_ARGS)
 		SetUserIdAndSecContext(heapRel->rd_rel->relowner,
 							   save_sec_context | SECURITY_RESTRICTED_OPERATION);
 		save_nestlevel = NewGUCNestLevel();
+		if (RelationIsAppendOptimized(heapRel) && heapBlk64 != BRIN_ALL_BLOCKRANGES)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						errmsg("cannot summarize specific page range for append-optimized tables")));
+		}
 	}
 	else
 	{

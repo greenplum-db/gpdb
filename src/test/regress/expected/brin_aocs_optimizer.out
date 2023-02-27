@@ -1,4 +1,7 @@
-CREATE TABLE brintest_aocs (byteacol bytea,
+-- Most of these test steps are modified such that the tables' tuples are
+-- co-located on one QE.
+CREATE TABLE brintest_aocs (id int,
+	byteacol bytea,
 	charcol "char",
 	namecol name,
 	int8col bigint,
@@ -28,6 +31,7 @@ CREATE TABLE brintest_aocs (byteacol bytea,
 	boxcol box
 ) WITH (appendonly = true, orientation=column);
 INSERT INTO brintest_aocs SELECT
+	1,
 	repeat(stringu1, 8)::bytea,
 	substr(stringu1, 1, 1)::"char",
 	stringu1::name, 142857 * tenthous,
@@ -57,7 +61,8 @@ INSERT INTO brintest_aocs SELECT
 	box(point(odd, even), point(thousand, twothousand))
 FROM tenk1 ORDER BY unique2 LIMIT 100;
 -- throw in some NULL's and different values
-INSERT INTO brintest_aocs (inetcol, cidrcol, int4rangecol) SELECT
+INSERT INTO brintest_aocs (id, inetcol, cidrcol, int4rangecol) SELECT
+	1,
 	inet 'fe80::6e40:8ff:fea9:8c46' + tenthous,
 	cidr 'fe80::6e40:8ff:fea9:8c46' + tenthous,
 	'empty'::int4range
@@ -429,6 +434,7 @@ RESET enable_bitmapscan;
 RESET optimizer_enable_tablescan;
 RESET optimizer_enable_bitmapscan;
 INSERT INTO brintest_aocs SELECT
+	1,
 	repeat(stringu1, 42)::bytea,
 	substr(stringu1, 1, 1)::"char",
 	stringu1::name, 142857 * tenthous,
@@ -463,20 +469,70 @@ UPDATE brintest_aocs SET textcol = '' WHERE textcol IS NOT NULL;
 -- Vaccum again so that a new segment file is created.
 VACUUM brintest_aocs;
 INSERT INTO brintest_aocs SELECT * FROM brintest_aocs;
--- We should have two segment files per Greenplum segment (QE).
--- start_ignore
-SELECT segment_id, segno, tupcount, state FROM gp_toolkit.__gp_aoseg('brintest_aocs');
- segment_id | segno | tupcount | state 
-------------+-------+----------+-------
-          1 |     1 |       78 |     1
-          1 |     2 |       78 |     1
-          2 |     1 |       80 |     1
-          2 |     2 |       80 |     1
-          0 |     1 |      102 |     1
-          0 |     2 |      102 |     1
-(6 rows)
+-- We should have two segment files.
+SELECT segment_id, segno, column_num FROM gp_toolkit.__gp_aocsseg('brintest_aocs');
+ segment_id | segno | column_num 
+------------+-------+------------
+          1 |     1 |          0
+          1 |     1 |          1
+          1 |     1 |          2
+          1 |     1 |          3
+          1 |     1 |          4
+          1 |     1 |          5
+          1 |     1 |          6
+          1 |     1 |          7
+          1 |     1 |          8
+          1 |     1 |          9
+          1 |     1 |         10
+          1 |     1 |         11
+          1 |     1 |         12
+          1 |     1 |         13
+          1 |     1 |         14
+          1 |     1 |         15
+          1 |     1 |         16
+          1 |     1 |         17
+          1 |     1 |         18
+          1 |     1 |         19
+          1 |     1 |         20
+          1 |     1 |         21
+          1 |     1 |         22
+          1 |     1 |         23
+          1 |     1 |         24
+          1 |     1 |         25
+          1 |     1 |         26
+          1 |     1 |         27
+          1 |     1 |         28
+          1 |     2 |          0
+          1 |     2 |          1
+          1 |     2 |          2
+          1 |     2 |          3
+          1 |     2 |          4
+          1 |     2 |          5
+          1 |     2 |          6
+          1 |     2 |          7
+          1 |     2 |          8
+          1 |     2 |          9
+          1 |     2 |         10
+          1 |     2 |         11
+          1 |     2 |         12
+          1 |     2 |         13
+          1 |     2 |         14
+          1 |     2 |         15
+          1 |     2 |         16
+          1 |     2 |         17
+          1 |     2 |         18
+          1 |     2 |         19
+          1 |     2 |         20
+          1 |     2 |         21
+          1 |     2 |         22
+          1 |     2 |         23
+          1 |     2 |         24
+          1 |     2 |         25
+          1 |     2 |         26
+          1 |     2 |         27
+          1 |     2 |         28
+(58 rows)
 
--- end_ignore
 -- Tests for brin_summarize_new_values
 SELECT brin_summarize_new_values('brintest_aocs'); -- error, not an index
 ERROR:  "brintest_aocs" is not an index
@@ -490,3 +546,7 @@ SELECT brin_summarize_new_values('brinaocsidx'); -- ok, no change expected
                          0
 (1 row)
 
+-- We don't allow specific range summarization for AO tables at the moment.
+SELECT brin_summarize_range('brinaocsidx', 1);
+ERROR:  cannot summarize specific page range for append-optimized tables  (seg1 slice1 192.168.0.148:7003 pid=3082856)
+CONTEXT:  SQL function "brin_summarize_range" statement 1

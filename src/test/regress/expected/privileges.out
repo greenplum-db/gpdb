@@ -1424,8 +1424,11 @@ SELECT brin_desummarize_range('sro_brin', 0);
 (1 row)
 
 SELECT brin_summarize_range('sro_brin', 0);
-ERROR:  Greenplum could not summarize indicated page range  (seg0 slice1 127.0.0.1:40000 pid=1132546)
-CONTEXT:  SQL function "brin_summarize_range" statement 1
+ brin_summarize_range 
+----------------------
+                    0
+(1 row)
+
 DROP TABLE sro_tab;
 -- Check with a partitioned table
 CREATE TABLE sro_ptab (a int) PARTITION BY RANGE (a);

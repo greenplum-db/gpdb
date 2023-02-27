@@ -1,4 +1,8 @@
-CREATE TABLE brintest (byteacol bytea,
+-- GPDB: Most of these test steps are modified such that the tables' tuples are
+-- co-located on one QE.
+
+CREATE TABLE brintest (id int,
+    byteacol bytea,
 	charcol "char",
 	namecol name,
 	int8col bigint,
@@ -29,6 +33,7 @@ CREATE TABLE brintest (byteacol bytea,
 ) WITH (fillfactor=10, autovacuum_enabled=off);
 
 INSERT INTO brintest SELECT
+	1,
 	repeat(stringu1, 8)::bytea,
 	substr(stringu1, 1, 1)::"char",
 	stringu1::name, 142857 * tenthous,
@@ -59,7 +64,8 @@ INSERT INTO brintest SELECT
 FROM tenk1 ORDER BY unique2 LIMIT 100;
 
 -- throw in some NULL's and different values
-INSERT INTO brintest (inetcol, cidrcol, int4rangecol) SELECT
+INSERT INTO brintest (id, inetcol, cidrcol, int4rangecol) SELECT
+	1,
 	inet 'fe80::6e40:8ff:fea9:8c46' + tenthous,
 	cidr 'fe80::6e40:8ff:fea9:8c46' + tenthous,
 	'empty'::int4range
@@ -407,6 +413,7 @@ RESET optimizer_enable_tablescan;
 RESET optimizer_enable_bitmapscan;
 
 INSERT INTO brintest SELECT
+	1,
 	repeat(stringu1, 42)::bytea,
 	substr(stringu1, 1, 1)::"char",
 	stringu1::name, 142857 * tenthous,
@@ -463,22 +470,27 @@ DO $$
 DECLARE curtid tid;
 BEGIN
   LOOP
+    -- GPDB: INSERT of value = 1 guarantees that all values are on one segment.
     INSERT INTO brin_summarize VALUES (1) RETURNING ctid INTO curtid;
-    EXIT WHEN curtid > tid '(2, 0)';
+    EXIT WHEN curtid > tid '(6, 0)';
   END LOOP;
 END;
 $$;
 
--- summarize one range
+-- range [0,1] is already summarized since current (at start of insert) range is
+-- summarized by the DO..INSERT above
 SELECT brin_summarize_range('brin_summarize_idx', 0);
--- nothing: already summarized
 SELECT brin_summarize_range('brin_summarize_idx', 1);
--- summarize one range
+
+-- summarize one range: [2,3]
 SELECT brin_summarize_range('brin_summarize_idx', 2);
--- summarize all pages
+
+-- summarize all pages: should summarize ranges [3,4] and [5,6] only
 SELECT brin_summarize_range('brin_summarize_idx', 4294967295);
+
 -- nothing: page doesn't exist in table
-SELECT brin_summarize_range('brin_summarize_idx', 4294967295);
+SELECT brin_summarize_range('brin_summarize_idx', 5);
+
 -- invalid block number values
 SELECT brin_summarize_range('brin_summarize_idx', -1);
 SELECT brin_summarize_range('brin_summarize_idx', 4294967296);
