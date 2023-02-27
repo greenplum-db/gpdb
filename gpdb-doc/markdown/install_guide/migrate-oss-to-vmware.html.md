@@ -19,7 +19,7 @@ Migrating from Open Source Greenplum Database to commercial VMware Greenplum inv
 
 Follow these steps to migrate Open Source Greenplum Database to VMware Greenplum:
 
-    1. Log into your Open Source Greenplum Database coordinator host as the Greenplum administrative user:
+1. Log into your Open Source Greenplum Database coordinator host as the Greenplum administrative user:
 
     ```
     $ su - gpadmin
