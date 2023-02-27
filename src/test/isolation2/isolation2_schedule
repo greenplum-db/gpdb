@@ -25,6 +25,7 @@ test: unlogged_heap_tables
 test: unlogged_appendonly_tables
 test: udf_exception_blocks_panic_scenarios
 test: ao_same_trans_truncate_crash
+test: frozen_insert_crash
 
 test: prevent_ao_wal
 
