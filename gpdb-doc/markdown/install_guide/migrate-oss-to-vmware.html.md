@@ -33,7 +33,7 @@ Follow these steps to migrate Open Source Greenplum Database to VMware Greenplum
 
 3. Download the VMware Greenplum package from [VMware Tanzu Network](https://network.pivotal.io/), and then copy it to the `gpadmin` user's home directory on each coordinator, standby, and segment host.
 
-    4. If you used `yum` or `apt` to install Greenplum Database to the default location, run the following commands on each host to replace the software:
+4. If you used `yum` or `apt` to install Greenplum Database to the default location, run the following commands on each host to replace the software:
 
     For RHEL/CentOS systems:
 
@@ -49,7 +49,7 @@ Follow these steps to migrate Open Source Greenplum Database to VMware Greenplum
 
     The `yum` or `apt` command installs commercial VMware Greenplum software files into a version-specific directory under `/usr/local` and updates the symbolic link `/usr/local/greenplum-db` to point to the new installation directory.
 
-    5. If you used `rpm` to install Open Source Greenplum Database to a non-default location on RHEL/CentOS systems, run `rpm` on each host to replace the software and specify the same custom installation directory with the `--prefix` option, as in the following example:
+5. If you used `rpm` to install Open Source Greenplum Database to a non-default location on RHEL/CentOS systems, run `rpm` on each host to replace the software and specify the same custom installation directory with the `--prefix` option, as in the following example:
 
     ```
     $ sudo rpm -U ./greenplum-db-<version>-<platform>.rpm --prefix=<directory>
@@ -57,7 +57,7 @@ Follow these steps to migrate Open Source Greenplum Database to VMware Greenplum
 
     The `rpm` command installs the new Greenplum Database software files into a version-specific directory under the directory you specify, and updates the symbolic link <directory>/greenplum-db to point to the new installation directory.
 
-    6. Update the permissions for the new installation. For example, run the following command as root to change the user and group of the installed files to `gpadmin`:
+6. Update the permissions for the new installation. For example, run the following command as root to change the user and group of the installed files to `gpadmin`:
 
     ```
     $ sudo chown -R gpadmin:gpadmin /usr/local/greenplum*
@@ -74,20 +74,20 @@ Follow these steps to migrate Open Source Greenplum Database to VMware Greenplum
     >**Note**
     >If you are sourcing a symbolic link (`/usr/local/greenplum-db`) in your profile files, the symbolic link will redirect to the newly installed gpdb folder; no action is necessary.
 
-    7. Source the environment file you just edited. For example:
+7. Source the environment file you just edited. For example:
 
     ```
     $ source ~/.bashrc
     ```
 
-    8. Once all segment hosts have been updated, log into the Greenplum Database coordinator as the `gpadmin` user and restart your Greenplum Database system:
+8. Once all segment hosts have been updated, log into the Greenplum Database coordinator as the `gpadmin` user and restart your Greenplum Database system:
 
     ```
     $ su - gpadmin
     $ gpstart
     ```
 
-    10. Check the database version: 
+9. Check the database version: 
 
     ```
     $ su - gpadmin
@@ -99,4 +99,4 @@ Follow these steps to migrate Open Source Greenplum Database to VMware Greenplum
 
     The output version string should no longer include "open source".
 
-    11. Reinstall any Greenplum Database extensions that you used with the earlier Open Source Greenplum Database installation.
+10. Reinstall any Greenplum Database extensions that you used with the earlier Open Source Greenplum Database installation.
