@@ -232,6 +232,8 @@ test: workfile_mgr_test
 test: pg_basebackup
 test: pg_basebackup_with_tablespaces
 test: pg_basebackup_large_database_oid
+test: vacuum_progress_row
+test: vacuum_progress_column
 test: enable_autovacuum
 test: idle_gang_cleaner
 # test idle_in_transaction_session_timeout

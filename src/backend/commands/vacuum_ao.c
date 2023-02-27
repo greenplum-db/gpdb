@@ -116,6 +116,7 @@
 
 #include "access/table.h"
 #include "access/aocs_compaction.h"
+#include "access/aomd.h"
 #include "access/appendonlywriter.h"
 #include "access/appendonly_compaction.h"
 #include "access/genam.h"
@@ -126,6 +127,7 @@
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
+#include "commands/progress.h"
 #include "commands/vacuum.h"
 #include "pgstat.h"
 #include "postmaster/autovacuum.h"
@@ -147,7 +149,8 @@ static void vacuum_appendonly_index(Relation indexRelation,
 									Relation aoRelation,
 									Bitmapset *dead_segs,
 									int elevel,
-									BufferAccessStrategy bstrategy);
+									BufferAccessStrategy bstrategy,
+									AOVacuumRelStats *vacrelstats);
 
 static bool appendonly_tid_reaped(ItemPointer itemptr, void *state);
 
@@ -155,16 +158,25 @@ static void vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot, int 
 										 BlockNumber *rel_pages, double *rel_tuples,
 										 bool *relhasindex);
 static int vacuum_appendonly_indexes(Relation aoRelation, int options, Bitmapset *dead_segs,
-									 BufferAccessStrategy bstrategy);
+									 BufferAccessStrategy bstrategy, AOVacuumRelStats *vacrelstats);
 static void ao_vacuum_rel_recycle_dead_segments(Relation onerel, VacuumParams *params,
-												BufferAccessStrategy bstrategy);
+												BufferAccessStrategy bstrategy, AOVacuumRelStats *vacrelstats);
+static AOVacuumRelStats *init_vacrelstats();
+static void cleanup_vacrelstats(AOVacuumRelStats **vacrelstatsp);
 
 static void
-ao_vacuum_rel_pre_cleanup(Relation onerel, VacuumParams *params, BufferAccessStrategy bstrategy)
+ao_vacuum_rel_pre_cleanup(Relation onerel, VacuumParams *params, BufferAccessStrategy bstrategy, AOVacuumRelStats *vacrelstats)
 {
 	char	   *relname;
 	int			elevel;
 	int			options = params->options;
+	FileSegTotals *fstotal;
+	const int	initprog_index[] = {
+		PROGRESS_VACUUM_PHASE,
+		PROGRESS_VACUUM_TOTAL_HEAP_BLKS,
+		PROGRESS_VACUUM_MAX_DEAD_TUPLES
+	};
+	int64		initprog_val[3];
 
 	if (options & VACOPT_VERBOSE)
 		elevel = INFO;
@@ -180,6 +192,25 @@ ao_vacuum_rel_pre_cleanup(Relation onerel, VacuumParams *params, BufferAccessStr
 					get_namespace_name(RelationGetNamespace(onerel)),
 					relname)));
 
+	/* Get statistics from the pg_aoseg table for progress reporting */
+	if (RelationIsAoRows(onerel))
+		fstotal = GetSegFilesTotals(onerel, GetActiveSnapshot());
+	else
+	{
+		Assert(RelationIsAoCols(onerel));
+		fstotal = GetAOCSSSegFilesTotals(onerel, GetActiveSnapshot());
+	}
+
+	/*
+	 * Report that we are now in pre-cleanup phase, advertising total # of
+	 * heap-equivalent blocks
+	 */
+	initprog_val[0] = PROGRESS_VACUUM_PHASE_AO_PRE_CLEANUP;
+	initprog_val[1] = RelationGuessNumberOfBlocksFromSize(
+		ao_rel_get_physical_size(onerel));
+	initprog_val[2] = fstotal->totaltuples;
+	pgstat_progress_update_multi_param(3, initprog_index, initprog_val);
+
 	/* 
 	 * Recycle AWAITING_DROP segments that are no longer visible to anyone.
 	 *
@@ -189,18 +220,18 @@ ao_vacuum_rel_pre_cleanup(Relation onerel, VacuumParams *params, BufferAccessStr
 	 *
 	 * This could run in a local transaction.
 	 */
-	ao_vacuum_rel_recycle_dead_segments(onerel, params, bstrategy);
+	ao_vacuum_rel_recycle_dead_segments(onerel, params, bstrategy, vacrelstats);
 
 	/*
 	 * Also truncate all live segments to the EOF values stored in pg_aoseg.
 	 * This releases space left behind by aborted inserts.
 	 */
-	AppendOptimizedTruncateToEOF(onerel);
+	AppendOptimizedTruncateToEOF(onerel, vacrelstats);
 }
 
 
 static void
-ao_vacuum_rel_post_cleanup(Relation onerel, VacuumParams *params, BufferAccessStrategy bstrategy)
+ao_vacuum_rel_post_cleanup(Relation onerel, VacuumParams *params, BufferAccessStrategy bstrategy, AOVacuumRelStats *vacrelstats)
 {
 	BlockNumber	relpages;
 	double		reltuples;
@@ -234,8 +265,12 @@ ao_vacuum_rel_post_cleanup(Relation onerel, VacuumParams *params, BufferAccessSt
 	 * 4. Update statistics.
 	 */
 	Assert(RelationIsAoRows(onerel) || RelationIsAoCols(onerel));
+	Assert(vacrelstats != NULL);
 
-	ao_vacuum_rel_recycle_dead_segments(onerel, params, bstrategy);
+	pgstat_progress_update_param(PROGRESS_VACUUM_PHASE,
+								 PROGRESS_VACUUM_PHASE_AO_POST_CLEANUP);
+
+	ao_vacuum_rel_recycle_dead_segments(onerel, params, bstrategy, vacrelstats);
 
 	/* Update statistics in pg_class */
 	vacuum_appendonly_fill_stats(onerel, GetActiveSnapshot(),
@@ -262,10 +297,12 @@ ao_vacuum_rel_post_cleanup(Relation onerel, VacuumParams *params, BufferAccessSt
 						MultiXactCutoff,
 						false,
 						true /* isvacuum */);
+
+	SIMPLE_FAULT_INJECTOR("vacuum_ao_post_cleanup_end");
 }
 
 static void
-ao_vacuum_rel_compact(Relation onerel, VacuumParams *params, BufferAccessStrategy bstrategy)
+ao_vacuum_rel_compact(Relation onerel, VacuumParams *params, BufferAccessStrategy bstrategy, AOVacuumRelStats *vacrelstats)
 {
 	int			compaction_segno;
 	int			insert_segno;
@@ -285,6 +322,7 @@ ao_vacuum_rel_compact(Relation onerel, VacuumParams *params, BufferAccessStrateg
 		   DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER ||
 		   DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER);
 	Assert(RelationIsAoRows(onerel) || RelationIsAoCols(onerel));
+	Assert(vacrelstats != NULL);
 
 	if (options & VACOPT_VERBOSE)
 		elevel = INFO;
@@ -300,6 +338,8 @@ ao_vacuum_rel_compact(Relation onerel, VacuumParams *params, BufferAccessStrateg
 					get_namespace_name(RelationGetNamespace(onerel)),
 					relname)));
 
+	pgstat_progress_update_param(PROGRESS_VACUUM_PHASE,
+								 PROGRESS_VACUUM_PHASE_AO_COMPACT);
 	/*
 	 * Compact all the segfiles. Repeat as many times as required.
 	 *
@@ -329,7 +369,8 @@ ao_vacuum_rel_compact(Relation onerel, VacuumParams *params, BufferAccessStrateg
 							  compaction_segno,
 							  &insert_segno,
 							  (options & VACOPT_FULL) != 0,
-							  compacted_segments);
+							  compacted_segments,
+							  vacrelstats);
 		else
 		{
 			Assert(RelationIsAoCols(onerel));
@@ -337,7 +378,8 @@ ao_vacuum_rel_compact(Relation onerel, VacuumParams *params, BufferAccessStrateg
 						compaction_segno,
 						&insert_segno,
 						(options & VACOPT_FULL) != 0,
-						compacted_segments);
+						compacted_segments,
+						vacrelstats);
 		}
 
 		if (insert_segno != -1)
@@ -350,6 +392,8 @@ ao_vacuum_rel_compact(Relation onerel, VacuumParams *params, BufferAccessStrateg
 		 */
 		CommandCounterIncrement();
 	}
+
+	SIMPLE_FAULT_INJECTOR("vacuum_ao_after_compact");
 }
 
 /*
@@ -360,20 +404,33 @@ ao_vacuum_rel_compact(Relation onerel, VacuumParams *params, BufferAccessStrateg
 void
 ao_vacuum_rel(Relation rel, VacuumParams *params, BufferAccessStrategy bstrategy)
 {
+	static AOVacuumRelStats *vacrelstats = NULL;
 	Assert(RelationIsAppendOptimized(rel));
 	Assert(params != NULL);
 
 	int ao_vacuum_phase = (params->options & VACUUM_AO_PHASE_MASK);
 
+	if (!vacrelstats)
+	{
+		Assert(ao_vacuum_phase == VACOPT_AO_PRE_CLEANUP_PHASE || Gp_role != GP_ROLE_EXECUTE);
+
+		pgstat_progress_start_command(PROGRESS_COMMAND_VACUUM, RelationGetRelid(rel));
+		vacrelstats = init_vacrelstats();
+	}
+
 	/*
 	 * Do the actual work --- either FULL or "lazy" vacuum
 	 */
 	if (ao_vacuum_phase == VACOPT_AO_PRE_CLEANUP_PHASE)
-		ao_vacuum_rel_pre_cleanup(rel, params, bstrategy);
+		ao_vacuum_rel_pre_cleanup(rel, params, bstrategy, vacrelstats);
 	else if (ao_vacuum_phase == VACOPT_AO_COMPACT_PHASE)
-		ao_vacuum_rel_compact(rel, params, bstrategy);
+		ao_vacuum_rel_compact(rel, params, bstrategy, vacrelstats);
 	else if (ao_vacuum_phase == VACOPT_AO_POST_CLEANUP_PHASE)
-		ao_vacuum_rel_post_cleanup(rel, params, bstrategy);
+	{
+		ao_vacuum_rel_post_cleanup(rel, params, bstrategy, vacrelstats);
+		pgstat_progress_end_command();
+		cleanup_vacrelstats(&vacrelstats);
+	}
 	else
 		/* Do nothing here, we will launch the stages later */
 		Assert(ao_vacuum_phase == 0);
@@ -383,7 +440,8 @@ ao_vacuum_rel(Relation rel, VacuumParams *params, BufferAccessStrategy bstrategy
  * Recycling AWAITING_DROP segments.
  */
 static void
-ao_vacuum_rel_recycle_dead_segments(Relation onerel, VacuumParams *params, BufferAccessStrategy bstrategy)
+ao_vacuum_rel_recycle_dead_segments(Relation onerel, VacuumParams *params,
+									BufferAccessStrategy bstrategy, AOVacuumRelStats *vacrelstats)
 {
 	Bitmapset	*dead_segs;
 	int			options = params->options;
@@ -413,7 +471,7 @@ ao_vacuum_rel_recycle_dead_segments(Relation onerel, VacuumParams *params, Buffe
 		 * (AWAITING_DROP state in pg_aoseg) to cleanup dead index tuples
 		 * effectively.
 		 */
-		vacuum_appendonly_indexes(onerel, options, dead_segs, bstrategy);
+		vacuum_appendonly_indexes(onerel, options, dead_segs, bstrategy, vacrelstats);
 		/*
 		 * Truncate above collected AWAITING_DROP segments to 0 byte.
 		 * AppendOptimizedCollectDeadSegments() should guarantee that
@@ -422,7 +480,7 @@ ao_vacuum_rel_recycle_dead_segments(Relation onerel, VacuumParams *params, Buffe
 		 * ExclusiveLock will be held in case of concurrent VACUUM being
 		 * on the same file.
 		 */
-		AppendOptimizedDropDeadSegments(onerel, dead_segs);
+		AppendOptimizedDropDeadSegments(onerel, dead_segs, vacrelstats);
 	}
 	else
 	{
@@ -432,7 +490,7 @@ ao_vacuum_rel_recycle_dead_segments(Relation onerel, VacuumParams *params, Buffe
 		 * for updating statistics.
 		 */
 		if ((options & VACUUM_AO_PHASE_MASK) == VACOPT_AO_POST_CLEANUP_PHASE)
-			vacuum_appendonly_indexes(onerel, options, dead_segs, bstrategy);
+			vacuum_appendonly_indexes(onerel, options, dead_segs, bstrategy, vacrelstats);
 	}
 
 	bms_free(dead_segs);
@@ -447,7 +505,7 @@ ao_vacuum_rel_recycle_dead_segments(Relation onerel, VacuumParams *params, Buffe
  */
 static int
 vacuum_appendonly_indexes(Relation aoRelation, int options, Bitmapset *dead_segs,
-						  BufferAccessStrategy bstrategy)
+						  BufferAccessStrategy bstrategy, AOVacuumRelStats *vacrelstats)
 {
 	int			i;
 	Relation   *Irel;
@@ -458,6 +516,8 @@ vacuum_appendonly_indexes(Relation aoRelation, int options, Bitmapset *dead_segs
 	if (Debug_appendonly_print_compaction)
 		elog(LOG, "Vacuum indexes for append-only relation %s",
 			 RelationGetRelationName(aoRelation));
+	pgstat_progress_update_param(PROGRESS_VACUUM_PHASE,
+								 PROGRESS_VACUUM_PHASE_VACUUM_INDEX);
 
 	/* Now open all indexes of the relation */
 	if ((options & VACOPT_FULL))
@@ -494,12 +554,16 @@ vacuum_appendonly_indexes(Relation aoRelation, int options, Bitmapset *dead_segs
 										aoRelation,
 										dead_segs,
 										elevel,
-										bstrategy);
+										bstrategy,
+										vacrelstats);
 			}
 		}
 	}
 
 	vac_close_indexes(nindexes, Irel, NoLock);
+	pgstat_progress_update_param(PROGRESS_VACUUM_PHASE,
+								 ((options & VACUUM_AO_PHASE_MASK) == VACOPT_AO_POST_CLEANUP_PHASE) ?
+								 PROGRESS_VACUUM_PHASE_AO_POST_CLEANUP : PROGRESS_VACUUM_PHASE_AO_PRE_CLEANUP);
 	return nindexes;
 }
 
@@ -514,7 +578,8 @@ vacuum_appendonly_index(Relation indexRelation,
 						Relation aoRelation,
 						Bitmapset *dead_segs,
 						int elevel,
-						BufferAccessStrategy bstrategy)
+						BufferAccessStrategy bstrategy,
+						AOVacuumRelStats *vacrelstats)
 {
 	IndexBulkDeleteResult *stats;
 	IndexVacuumInfo ivinfo = {0};
@@ -538,6 +603,9 @@ vacuum_appendonly_index(Relation indexRelation,
 	/* Do bulk deletion */
 	stats = index_bulk_delete(&ivinfo, NULL, appendonly_tid_reaped,
 							  (void *) dead_segs);
+	vacrelstats->num_index_vacuumed++;
+	pgstat_progress_update_param(PROGRESS_VACUUM_NUM_INDEX_VACUUMS,
+								 vacrelstats->num_index_vacuumed);
 
 	SIMPLE_FAULT_INJECTOR("vacuum_ao_after_index_delete");
 
@@ -664,6 +732,26 @@ vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot, int elevel,
 			(errmsg("\"%s\": found %.0f rows in %u pages.",
 					relname, num_tuples, nblocks)));
 	pfree(fstotal);
+}
+
+static AOVacuumRelStats *
+init_vacrelstats()
+{
+	AOVacuumRelStats *vacrelstats;
+	MemoryContext old_context;
+
+	old_context = MemoryContextSwitchTo(TopMemoryContext);
+	vacrelstats = (AOVacuumRelStats *) palloc0(sizeof(AOVacuumRelStats));
+	MemoryContextSwitchTo(old_context);
+
+	return vacrelstats;
+}
+
+static void
+cleanup_vacrelstats(AOVacuumRelStats **vacrelstats)
+{
+	pfree(*vacrelstats);
+	*vacrelstats = NULL;
 }
 
 /*

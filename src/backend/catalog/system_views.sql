@@ -1398,6 +1398,9 @@ CREATE VIEW pg_stat_progress_vacuum AS
                       WHEN 4 THEN 'cleaning up indexes'
                       WHEN 5 THEN 'truncating heap'
                       WHEN 6 THEN 'performing final cleanup'
+                      WHEN 7 THEN 'append-optimized pre-cleanup'
+                      WHEN 8 THEN 'append-optimized compact'
+                      WHEN 9 THEN 'append-optimized post-cleanup'
                       END AS phase,
         S.param2 AS heap_blks_total, S.param3 AS heap_blks_scanned,
         S.param4 AS heap_blks_vacuumed, S.param5 AS index_vacuum_count,
