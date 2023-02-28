@@ -3155,6 +3155,8 @@ drop table agg_hash_3;
 drop table agg_hash_4;
 -- GitHub issue https://github.com/greenplum-db/gpdb/issues/12061
 -- numsegments of the general locus should be -1 on create_minmaxagg_path
+-- This test can be nondeterministic depending on the number of entries in pg_class
+set enable_indexonlyscan=off;
 explain analyze select count(*) from pg_class, (select count(*) > 0 from (select count(*) from pg_class where relnatts > 8) x) y;
                                                       QUERY PLAN                                                       
 -----------------------------------------------------------------------------------------------------------------------
@@ -3170,3 +3172,4 @@ explain analyze select count(*) from pg_class, (select count(*) > 0 from (select
  Execution Time: 0.302 ms
 (10 rows)
 
+reset enable_indexonlyscan;
