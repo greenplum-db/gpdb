@@ -14,30 +14,19 @@ CREATE EXTENSION timestamp9;
 
 Refer to [Installing Additional Supplied Modules](../../install_guide/install_modules.html) for more information.
 
-## Supported Datatypes
+## Supported Data Types
 
-The Greenplum Database `timestamp9` extension supports three kinds of datatatypes: `TIMESTAMP9`, `TIMESTAMP9_LTZ` and `TIMESTAMP9_NTZ`. (The `TIMESTAMP9_LTZ` data type is an alias for `TIMESTAMP9` datatype.) 
+The Greenplum Database `timestamp9` extension supports three kinds of datatatypes: `TIMESTAMP9`, `TIMESTAMP9_LTZ` and `TIMESTAMP9_NTZ`. (The `TIMESTAMP9_LTZ` data type is an alias for `TIMESTAMP9` data type.) 
 
-The following table summarizes key information about the `TIMESTAMP9_LTZ` and `TIMESTAMP9_NTZ` datatypes:
+The following table summarizes key information about the `timestamp9` data types:
 
-|Datatype|Storage Size|Description|Max Value|Min Value
-|-------------|-----------------|-----------|--------|
-|IMMUTABLE|Yes|Relies only on information directly in its argument list. Given the same argument values, always returns the same result.| |
-|STABLE|Yes, in most cases|Within a single table scan, returns the same result for same argument values, but results change across SQL statements.|Results depend on database lookups or parameter values. `current_timestamp` family of functions is `STABLE`; values do not change within an execution.|
-|VOLATILE|Restricted|Function values can change within a single table scan. For example: `random()`, `timeofday()`.|Any function with side effects is volatile, even if its result is predictable. For example: `setval()`.|
-
-
-
-|Datatype|Storage Size|Description|Max Value|Min Value|Resolution|
+|Data Type|Storage Size|Description|Max Value|Min Value|Resolution|
 |--------|-------|----|-----------|---------|---------|----------|
 |`TIMESTAMP9`|8 bytes|Like TIMESTAMP9_LTZ. Timestamp with local time zone. |2262-04-11 00:00:00.000000000 +0000 |1970-01-01 00:00:00.000000000 +0000 | 1 nanosecond |
+|`TIMESTAMP9_LTZ`|8 bytes|Timestamp with local time zone. |2262-04-11 00:00:00.000000000 +0000 |1970-01-01 00:00:00.000000000 +0000 | 1 nanosecond |
+|`TIMESTAMP9_NTZ`|8 bytes|Timestamp without time zone. |2262-04-11 00:00:00.000000000 +0000 |1970-01-01 00:00:00.000000000 +0000 | 1 nanosecond|
 
-
-## <a id="topic_info"></a>Module Documentation 
-
-Refer to the [timestamp9 github documentation](https://github.com/fvannee/timestamp9) for detailed information about using the module.
-
-## <a id="topic_gp"></a>Additional Documentation
+## <a id="topic_gp"></a>The TimeZone Configuration Parameter and `timestamp9`
 
 You can set the [TimeZone](../config_params/guc-list.html#TimeZone) server configuration parameter to specify the time zone that Greenplum Database uses when it prints a `timestamp9` timestamp. When you set this parameter, Greenplum Database displays the timestamp value in that time zone. For example:
 
@@ -56,6 +45,11 @@ testdb=# SELECT now()::timestamp9;
  2022-08-24 08:08:12.995542000 -0200
 (1 row)
 ```
+
+## <a id="topic_info"></a>Module Documentation 
+
+Refer to the [timestamp9 github documentation](https://github.com/fvannee/timestamp9) for detailed information about using the module.
+
 
 ## <a id="topic_limit"></a>Limitations
 
