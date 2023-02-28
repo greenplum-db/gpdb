@@ -20,8 +20,16 @@ The Greenplum Database `timestamp9` extension supports three kinds of datatatype
 
 The following table summarizes key information about the `TIMESTAMP9_LTZ` and `TIMESTAMP9_NTZ` datatypes:
 
-|Datatype|Storage Size|Description|Maximum Value|Minimum Value|Resolution|
-|====|============|===========|=============|=============|==========|
+|Datatype|Storage Size|Description|Max Value|Min Value
+|-------------|-----------------|-----------|--------|
+|IMMUTABLE|Yes|Relies only on information directly in its argument list. Given the same argument values, always returns the same result.| |
+|STABLE|Yes, in most cases|Within a single table scan, returns the same result for same argument values, but results change across SQL statements.|Results depend on database lookups or parameter values. `current_timestamp` family of functions is `STABLE`; values do not change within an execution.|
+|VOLATILE|Restricted|Function values can change within a single table scan. For example: `random()`, `timeofday()`.|Any function with side effects is volatile, even if its result is predictable. For example: `setval()`.|
+
+
+
+|Datatype|Storage Size|Description|Max Value|Min Value|Resolution|
+|--------|-------|----|-----------|---------|---------|----------|
 |`TIMESTAMP9`|8 bytes|Like TIMESTAMP9_LTZ. Timestamp with local time zone. |2262-04-11 00:00:00.000000000 +0000 |1970-01-01 00:00:00.000000000 +0000 | 1 nanosecond |
 
 
