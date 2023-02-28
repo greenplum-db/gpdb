@@ -2,7 +2,7 @@
 
 The `timestamp9` module provides an efficient, nanosecond-precision timestamp data type and related functions and operators.
 
-The Greenplum Database `timestamp9` module is based on version 1.1.0 of the `timestamp9` module used with PostgreSQL.
+The Greenplum Database `timestamp9` module is based on version 1.2.0 of the `timestamp9` module used with PostgreSQL.
 
 ## <a id="topic_reg"></a>Installing and Registering the Module 
 
@@ -13,6 +13,17 @@ CREATE EXTENSION timestamp9;
 ```
 
 Refer to [Installing Additional Supplied Modules](../../install_guide/install_modules.html) for more information.
+
+## Supported Datatypes
+
+The Greenplum Database `timestamp9` extension supports three kinds of datatatypes: `TIMESTAMP9`, `TIMESTAMP9_LTZ` and `TIMESTAMP9_NTZ`. (The `TIMESTAMP9_LTZ` data type is an alias for `TIMESTAMP9` datatype.) 
+
+The following table summarizes key information about the `TIMESTAMP9_LTZ` and `TIMESTAMP9_NTZ` datatypes:
+
+|Datatype|Storage Size|Description|Maximum Value|Minimum Value|Resolution|
+|====|============|===========|=============|=============|==========|
+|`TIMESTAMP9`|8 bytes|Like TIMESTAMP9_LTZ. Timestamp with local time zone. |2262-04-11 00:00:00.000000000 +0000 |1970-01-01 00:00:00.000000000 +0000 | 1 nanosecond |
+
 
 ## <a id="topic_info"></a>Module Documentation 
 
