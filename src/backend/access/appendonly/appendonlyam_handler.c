@@ -23,8 +23,8 @@
 #include "access/tableam.h"
 #include "access/tuptoaster.h"
 #include "access/xact.h"
+#include "catalog/aoseg.h"
 #include "catalog/catalog.h"
-#include "catalog/gp_fastsequence.h"
 #include "catalog/heap.h"
 #include "catalog/index.h"
 #include "catalog/pg_am.h"
@@ -1706,7 +1706,6 @@ appendonly_relation_get_block_sequences(Relation rel,
 	snapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 
 	seginfos = GetAllFileSegInfo(rel, snapshot, &nsegs, &segrelid);
-	Assert(nsegs <= AOTupleId_MaxSegmentFileNum);
 	sequences = (BlockSequence *) palloc(sizeof(BlockSequence) * nsegs);
 	*numSequences = nsegs;
 
@@ -1716,15 +1715,7 @@ appendonly_relation_get_block_sequences(Relation rel,
 	 * lastSequence value of that segment.
 	 */
 	for (int i = 0; i < nsegs; i++)
-	{
-		int segno = seginfos[i]->segno;
-		int64 lastSequence = ReadLastSequence(segrelid, segno);
-
-		sequences[i].startblknum = AOSegmentGet_startHeapBlock(segno);
-		sequences[i].nblocks = lastSequence / AO_MAX_TUPLES_PER_HEAP_BLOCK;
-		if (lastSequence % AO_MAX_TUPLES_PER_HEAP_BLOCK > 0)
-			sequences[i].nblocks += 1;
-	}
+		AOSegment_PopulateBlockSequence(&sequences[i], segrelid, seginfos[i]->segno);
 
 	UnregisterSnapshot(snapshot);
 
@@ -1735,6 +1726,21 @@ appendonly_relation_get_block_sequences(Relation rel,
 	}
 
 	return sequences;
+}
+
+/*
+ * Return the BlockSequence corresponding to the AO segment in which the logical
+ * heap block 'blkNum' falls.
+ */
+static void
+appendonly_relation_get_block_sequence(Relation rel,
+									   BlockNumber blkNum,
+									   BlockSequence *sequence)
+{
+	Oid segrelid;
+
+	GetAppendOnlyEntryAuxOids(rel, &segrelid, NULL, NULL, NULL, NULL);
+	AOSegment_PopulateBlockSequence(sequence, segrelid, AOSegmentGet_segno(blkNum));
 }
 
 /*
@@ -2020,6 +2026,7 @@ static const TableAmRoutine ao_row_methods = {
 
 	.relation_size = appendonly_relation_size,
 	.relation_get_block_sequences = appendonly_relation_get_block_sequences,
+	.relation_get_block_sequence = appendonly_relation_get_block_sequence,
 	.relation_needs_toast_table = appendonly_relation_needs_toast_table,
 
 	.relation_estimate_size = appendonly_estimate_rel_size,

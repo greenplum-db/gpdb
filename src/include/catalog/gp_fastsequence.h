@@ -44,6 +44,16 @@ typedef FormData_gp_fastsequence *Form_gp_fastsequence;
 extern void InsertInitialFastSequenceEntries(Oid objid);
 
 /*
+ * Populate the number of logical heap blocks provided a lastSequence value from
+ * the gp_fastsequence catalog table.
+ */
+#define FastSequenceGetNumHeapBlocks(lastSequence, nblocks) \
+do { \
+	*(nblocks) = (lastSequence) / AO_MAX_TUPLES_PER_HEAP_BLOCK; \
+	if (lastSequence % AO_MAX_TUPLES_PER_HEAP_BLOCK > 0) \
+		*(nblocks) += 1; \
+} while (0)
+/*
  * GetFastSequences
  *
  * Get a list of consecutive sequence numbers. The starting sequence

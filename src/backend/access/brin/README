@@ -212,6 +212,9 @@ Once we have the list of BlockSequences, we introduce an outer loop for
 iterating over these. Within the outer loop the existing upstream loop is
 leveraged. This applies to both bringetbitmap() and brinsummarize().
 
+Sometimes, an alternative API is also needed: to get the block sequence, given
+a logical heap block number. For that purpose, we have introduced
+relation_get_block_sequence().
 
 BRIN on append only tables
 --------------------------

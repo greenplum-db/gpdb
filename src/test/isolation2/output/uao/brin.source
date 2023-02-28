@@ -1,0 +1,44 @@
+-- Test cases with concurrency for BRIN indexes on AO/CO tables.
+
+-- Note: We use loops to populate logical heap pages in one aoseg. These logical
+-- heap blocks can start at a large number. See AOSegmentGet_startHeapBlock(segno).
+
+-- Ensure that we don't summarize the last partial range in case it was extended
+-- by another transaction, while summarization was in flight.
+
+CREATE TABLE brin_range_extended_@amname@(i int) USING @amname@;
+CREATE
+CREATE INDEX ON brin_range_extended_@amname@ USING brin(i) WITH (pages_per_range=5);
+CREATE
+-- Insert 4 blocks of data on 1 QE, in 1 aoseg; 3 blocks full, 1 block with 1 tuple.
+DO $$ /* in func */ DECLARE curtid tid; /* in func */ BEGIN /* in func */ LOOP /* in func */ INSERT INTO brin_range_extended_@amname@ VALUES (1) RETURNING ctid INTO curtid; /* in func */ EXIT WHEN curtid > tid '(33554435, 0)'; /* in func */ END LOOP; /* in func */ END; /* in func */ $$; /* in func */ 
+-- Set up to suspend execution when will attempt to summarize the final partial
+-- range below: [33554435, 33554437].
+SELECT gp_inject_fault('summarize_last_partial_range', 'suspend', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1&: SELECT brin_summarize_new_values('brin_range_extended_@amname@_i_idx');  <waiting ...>
+
+SELECT gp_wait_until_triggered_fault('summarize_last_partial_range', 1, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- Extend the last partial range by 1 block.
+DO $$ /* in func */ DECLARE curtid tid; /* in func */ BEGIN /* in func */ LOOP /* in func */ INSERT INTO brin_range_extended_@amname@ VALUES (1) RETURNING ctid INTO curtid; /* in func */ EXIT WHEN curtid > tid '(33554436, 0)'; /* in func */ END LOOP; /* in func */ END; /* in func */ $$; /* in func */ 
+SELECT gp_inject_fault('summarize_last_partial_range', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Summarize should only have summarized the first full range: [33554432, 33554434]
+1<:  <... completed>
+ brin_summarize_new_values 
+---------------------------
+ 1                         
+(1 row)

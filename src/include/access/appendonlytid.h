@@ -63,6 +63,15 @@ typedef struct AOTupleId
  */
 #define AO_MAX_TUPLES_PER_HEAP_BLOCK	(1 << 15)
 
+/*
+ * This represents the maximum number of logical heap blocks that an AO segment
+ * file can contain. The 25 bits in the middle, describe in AOTupleId gives us
+ * this value.
+ */
+#define AO_MAX_HEAP_BLOCKS_PER_SEGMENT	(1 << 25)
+
+#define AOSegmentGet_segno(heapBlk) ((heapBlk) / AO_MAX_HEAP_BLOCKS_PER_SEGMENT)
+
 #define AOTupleIdGet_segmentFileNum(h)        ((((h)->bytes_0_1&0xFE00)>>9)) // 7 bits
 
 /*

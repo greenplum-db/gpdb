@@ -109,6 +109,7 @@ test: disable_autovacuum
 # Tests on Append-Optimized tables (row-oriented).
 test: concurrent_index_creation_should_not_deadlock
 test: uao/alter_while_vacuum_row uao/alter_while_vacuum2_row
+test: uao/brin_row
 test: uao/compaction_full_stats_row
 test: uao/compaction_utility_row
 test: uao/compaction_utility_insert_row
@@ -164,6 +165,7 @@ test: segwalrep/master_wal_switch
 
 # Tests on Append-Optimized tables (column-oriented).
 test: uao/alter_while_vacuum_column uao/alter_while_vacuum2_column
+test: uao/brin_column
 test: uao/compaction_full_stats_column
 test: uao/compaction_utility_column
 test: uao/compaction_utility_insert_column

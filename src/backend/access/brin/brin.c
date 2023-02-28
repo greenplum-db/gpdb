@@ -44,6 +44,7 @@
 #include "catalog/pg_appendonly.h"
 #include "executor/executor.h"
 #include "storage/procarray.h"
+#include "utils/faultinjector.h"
 #include "utils/snapshot.h"
 
 /*
@@ -1272,6 +1273,11 @@ terminate_brin_buildstate(BrinBuildState *state)
  * table size; if we notice that the requested range lies beyond that size,
  * we re-compute the table size after inserting the placeholder tuple, to
  * avoid missing pages that were appended recently.
+ *
+ * GPDB: Since we have to support the notion of BlockSequences, heapNumBlks
+ * actually behaves as the ending block for the block sequence within which the
+ * supplied range lies, instead of the number of blocks in the relation. We
+ * don't rename the variable to avoid merge conflicts.
  */
 static void
 summarize_range(IndexInfo *indexInfo, BrinBuildState *state, Relation heapRel,
@@ -1295,10 +1301,21 @@ summarize_range(IndexInfo *indexInfo, BrinBuildState *state, Relation heapRel,
 	/*
 	 * Compute range end.  We hold ShareUpdateExclusive lock on table, so it
 	 * cannot shrink concurrently (but it can grow).
+	 *
+	 * GPDB: The following assert only applies to heap tables, as for AO/CO
+	 * tables, heapBlk need not be a multiple of bs_pagesPerRange.
 	 */
-	Assert(heapBlk % state->bs_pagesPerRange == 0);
+	AssertImply(RelationIsHeap(heapRel), heapBlk % state->bs_pagesPerRange == 0);
 	if (heapBlk + state->bs_pagesPerRange > heapNumBlks)
 	{
+		BlockSequence 	blockSequence;
+		BlockNumber 	endblknum;
+
+		table_relation_get_block_sequence(heapRel, heapBlk, &blockSequence);
+		endblknum = blockSequence.startblknum + blockSequence.nblocks;
+
+		SIMPLE_FAULT_INJECTOR("summarize_last_partial_range");
+
 		/*
 		 * If we're asked to scan what we believe to be the final range on the
 		 * table (i.e. a range that might be partial) we need to recompute our
@@ -1310,7 +1327,22 @@ summarize_range(IndexInfo *indexInfo, BrinBuildState *state, Relation heapRel,
 		 *
 		 * Fortunately, this should occur infrequently.
 		 */
-		scanNumBlks = Min(RelationGetNumberOfBlocks(heapRel) - heapBlk,
+
+		if (endblknum != heapNumBlks && RelationIsAppendOptimized(heapRel))
+		{
+			/*
+			 * GPDB: We bail and don't summarize the final partial range if we
+			 * find that the final range was extended (by another inserting
+			 * transaction) while we are summarizing here. Currently, we don't
+			 * have the support to handle the "any visible" mode described below
+			 * in the appendonly AMs. This is why we need to bail.
+			 */
+			brin_free_tuple(phtup);
+			UnlockReleaseBuffer(phbuf);
+			return;
+		}
+
+		scanNumBlks = Min(endblknum - heapBlk,
 						  state->bs_pagesPerRange);
 	}
 	else
@@ -1450,10 +1482,8 @@ brinsummarize(Relation index, Relation heapRel, BlockNumber pageRange,
 		/*
 		 * XXX: This branch contains code that only works for heap tables, and
 		 * assumes that there is only 1 range. To support AO/CO tables, we will
-		 * need to define a table AM API:
-		 * BlockSequence * (* relation_get_block_sequence) (Relation rel,
-		 * 													BlockNumber blkNo)
-		 * with which we can find the endBlk of the specific range we have been
+		 * need to use the table AM API: relation_get_block_sequence(), with
+		 * which we can find the endBlk of the specific range we have been
 		 * asked to scan.
 		 */
 

@@ -645,6 +645,13 @@ typedef struct TableAmRoutine
 														  int *numSequences);
 
 	/*
+	 * See table_relation_get_block_sequence()
+	 */
+	void		(*relation_get_block_sequence) (Relation rel,
+												BlockNumber blkNum,
+												BlockSequence *sequence);
+
+	/*
 	 * This callback should return true if the relation requires a TOAST table
 	 * and false if it does not.  It may wish to examine the relation's tuple
 	 * descriptor before making a decision, but if it uses some other method
@@ -1780,6 +1787,18 @@ static inline BlockSequence *
 table_relation_get_block_sequences(Relation rel, int *numSequences)
 {
 	return rel->rd_tableam->relation_get_block_sequences(rel, numSequences);
+}
+
+/*
+ * GPDB: Determines the block sequence in which the supplied block number falls.
+ * See BlockSequence for details. Currently used by BRIN.
+ */
+static inline void
+table_relation_get_block_sequence(Relation rel,
+								  BlockNumber blkNumber,
+								  BlockSequence *sequence)
+{
+	rel->rd_tableam->relation_get_block_sequence(rel, blkNumber, sequence);
 }
 
 /*

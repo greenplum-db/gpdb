@@ -529,3 +529,30 @@ SELECT brin_summarize_new_values('brin_aoco_summarize_i_idx');
 
 -- We don't allow specific range summarization for AO tables at the moment.
 SELECT brin_summarize_range('brin_aoco_summarize_i_idx', 1);
+
+-- Test summarization of last partial range.
+CREATE TABLE brin_aoco_summarize_partial(i int) USING ao_column;
+CREATE INDEX ON brin_aoco_summarize_partial USING brin(i) WITH (pages_per_range=3);
+
+-- Insert 4 blocks of data on 1 QE, in 1 aoseg; 3 blocks full, 1 block with 1 tuple.
+-- The 1st range [33554432, 33554434] is full and the last range [33554435, 33554437]
+-- is partially full with just 1 block: 33554435.
+DO $$
+DECLARE curtid tid;
+BEGIN
+  LOOP
+    INSERT INTO brin_aoco_summarize_partial VALUES (1) RETURNING ctid INTO curtid;
+    EXIT WHEN curtid > tid '(33554435, 0)';
+  END LOOP;
+END;
+$$;
+
+-- We should successfully summarize the last partial range.
+--
+-- Note: For an empty AOCO table, when INSERTing into the 1st range, we don't
+-- summarize. brininsert() -> brinGetTupleForHeapBlock() actually returns NULL
+-- in this case as revmap_get_blkno_ao() returns InvalidBlockNumber.
+-- This is contrary to heap behavior (where we return 1).
+--
+-- Thus, we will have both ranges summarized here.
+SELECT brin_summarize_new_values('brin_aoco_summarize_partial_i_idx');

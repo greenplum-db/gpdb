@@ -20,8 +20,8 @@
 #include "access/multixact.h"
 #include "access/tableam.h"
 #include "access/xact.h"
+#include "catalog/aoseg.h"
 #include "catalog/catalog.h"
-#include "catalog/gp_fastsequence.h"
 #include "catalog/heap.h"
 #include "catalog/index.h"
 #include "catalog/pg_appendonly.h"
@@ -1946,7 +1946,6 @@ aoco_relation_get_block_sequences(Relation rel, int *numSequences)
 	snapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 
 	seginfos = GetAllAOCSFileSegInfo(rel, snapshot, &nsegs, &segrelid);
-	Assert(nsegs <= AOTupleId_MaxSegmentFileNum);
 	sequences = (BlockSequence *) palloc(sizeof(BlockSequence) * nsegs);
 	*numSequences = nsegs;
 
@@ -1956,15 +1955,7 @@ aoco_relation_get_block_sequences(Relation rel, int *numSequences)
 	 * lastSequence value of that segment.
 	 */
 	for (int i = 0; i < nsegs; i++)
-	{
-		int segno = seginfos[i]->segno;
-		int64 lastSequence = ReadLastSequence(segrelid, segno);
-
-		sequences[i].startblknum = AOSegmentGet_startHeapBlock(segno);
-		sequences[i].nblocks = lastSequence / AO_MAX_TUPLES_PER_HEAP_BLOCK;
-		if (lastSequence % AO_MAX_TUPLES_PER_HEAP_BLOCK > 0)
-			sequences[i].nblocks += 1;
-	}
+		AOSegment_PopulateBlockSequence(&sequences[i], segrelid, seginfos[i]->segno);
 
 	UnregisterSnapshot(snapshot);
 
@@ -1975,6 +1966,21 @@ aoco_relation_get_block_sequences(Relation rel, int *numSequences)
 	}
 
 	return sequences;
+}
+
+/*
+ * Populate the BlockSequence corresponding to the AO segment in which the
+ * logical heap block 'blkNum' falls.
+ */
+static void
+aoco_relation_get_block_sequence(Relation rel,
+								 BlockNumber blkNum,
+								 BlockSequence *sequence)
+{
+	Oid segrelid;
+
+	GetAppendOnlyEntryAuxOids(rel, &segrelid, NULL, NULL, NULL, NULL);
+	AOSegment_PopulateBlockSequence(sequence, segrelid, AOSegmentGet_segno(blkNum));
 }
 
 static bool
@@ -2235,6 +2241,7 @@ static const TableAmRoutine ao_column_methods = {
 
 	.relation_size = aoco_relation_size,
 	.relation_get_block_sequences = aoco_relation_get_block_sequences,
+	.relation_get_block_sequence = aoco_relation_get_block_sequence,
 	.relation_needs_toast_table = aoco_relation_needs_toast_table,
 
 	.relation_estimate_size = aoco_estimate_rel_size,
