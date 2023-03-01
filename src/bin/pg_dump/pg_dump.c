@@ -6915,6 +6915,7 @@ getAOTableInfo(Archive *fout)
 	int			i_visimaprelid;
 	int			i_visimapreltype;
 	int			i_visimapidxid;
+	int			i_columnstore;
 
 	resetPQExpBuffer(query);
 
@@ -6925,7 +6926,17 @@ getAOTableInfo(Archive *fout)
 						"ao.blkdirrelid, t3.reltype as blkdirreltype, "
 						"i1.indexrelid as blkdiridxid, "
 						"ao.visimaprelid, t2.reltype as visimapreltype, "
-						"i2.indexrelid as visimapidxid "
+						"i2.indexrelid as visimapidxid, ");
+
+	/* For AO tables on GPDB5/6, amname is derived from pg_appendonly.columnstore */
+	if (fout->remoteVersion < GPDB7_MAJOR_PGVERSION)
+		appendPQExpBufferStr(query,
+						"ao.columnstore");
+	else
+		appendPQExpBufferStr(query,
+						"NULL as columnstore");
+
+	appendPQExpBufferStr(query,
 						"\nFROM pg_catalog.pg_appendonly ao\n"
 						"LEFT JOIN pg_class c ON (c.oid=ao.relid)\n"
 						"LEFT JOIN pg_class t1 ON (t1.oid=ao.segrelid)\n"
@@ -6949,6 +6960,7 @@ getAOTableInfo(Archive *fout)
 	i_visimaprelid = PQfnumber(res, "visimaprelid");
 	i_visimapreltype = PQfnumber(res, "visimapreltype");
 	i_visimapidxid = PQfnumber(res, "visimapidxid");
+	i_columnstore = PQfnumber(res, "columnstore");
 
 	for (int i = 0; i < ntups; i++)
 	{
@@ -6965,6 +6977,8 @@ getAOTableInfo(Archive *fout)
 			aotblinfo->visimapreltype = atooid(PQgetvalue(res, i, i_visimapreltype));
 			aotblinfo->visimapidxid = atooid(PQgetvalue(res, i, i_visimapidxid));
 			tbinfo->aotbl = aotblinfo;
+			if (!PQgetisnull(res, i, i_columnstore))
+				tbinfo->amname = (PQgetvalue(res, i, i_columnstore)[0] == 't') ? "ao_column" : "ao_row";
 		}
 	}
 	PQclear(res);
