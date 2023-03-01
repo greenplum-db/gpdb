@@ -438,6 +438,8 @@ public:
 	// Helpers for comparisons
 	//-------------------------------------------------------------------
 
+	static CExpression *PexprOpComEquality(CMemoryPool *mp, CExpression *pexpr);
+
 	// deduplicate array of expressions
 	static CExpressionArray *PdrgpexprDedup(CMemoryPool *mp,
 											CExpressionArray *pdrgpexpr);
