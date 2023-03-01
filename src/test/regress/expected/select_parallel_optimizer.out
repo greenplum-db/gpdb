@@ -279,13 +279,15 @@ explain (costs off)
                          QUERY PLAN                         
 ------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  HashAggregate
+   ->  Finalize HashAggregate
          Group Key: (sp_parallel_restricted(unique1))
          ->  Redistribute Motion 3:3  (slice2; segments: 3)
                Hash Key: (sp_parallel_restricted(unique1))
-               ->  Seq Scan on tenk1
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(7 rows)
+               ->  Streaming Partial HashAggregate
+                     Group Key: sp_parallel_restricted(unique1)
+                     ->  Seq Scan on tenk1
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
 
 -- test prepared statement
 prepare tenk1_count(integer) As select  count((unique1)) from tenk1 where hundred > $1;

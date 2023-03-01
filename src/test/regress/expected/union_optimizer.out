@@ -366,9 +366,11 @@ select count(*) from
                                  Group Key: tenk1_1.fivethous
                                  ->  Redistribute Motion 3:3  (slice2; segments: 3)
                                        Hash Key: tenk1_1.fivethous
-                                       ->  Seq Scan on tenk1 tenk1_1
+                                       ->  Streaming HashAggregate
+                                             Group Key: tenk1_1.fivethous
+                                             ->  Seq Scan on tenk1 tenk1_1
  Optimizer: Pivotal Optimizer (GPORCA)
-(15 rows)
+(17 rows)
 
 select count(*) from
   ( select unique1 from tenk1 intersect select fivethous from tenk1 ) ss;
@@ -420,9 +422,11 @@ select count(*) from
                                  Group Key: tenk1_1.fivethous
                                  ->  Redistribute Motion 3:3  (slice2; segments: 3)
                                        Hash Key: tenk1_1.fivethous
-                                       ->  Seq Scan on tenk1 tenk1_1
+                                       ->  Streaming HashAggregate
+                                             Group Key: tenk1_1.fivethous
+                                             ->  Seq Scan on tenk1 tenk1_1
  Optimizer: Pivotal Optimizer (GPORCA)
-(15 rows)
+(17 rows)
 
 select count(*) from
   ( select unique1 from tenk1 intersect select fivethous from tenk1 ) ss;
