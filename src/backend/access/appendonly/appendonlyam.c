@@ -2403,10 +2403,11 @@ appendonly_fetch_init(Relation relation,
 	AppendOnlyStorageAttributes	   *attr;
 	PGFunction					   *fns;
 	StringInfoData					titleBuf;
-	FormData_pg_appendonly			aoFormData;
+	Oid 					segrelid;
+	Oid 					visimaprelid;
 	int								segno;
 
-	GetAppendOnlyEntry(relation, &aoFormData);
+	GetAppendOnlyEntryAuxOids(relation, &segrelid, NULL, &visimaprelid);
 
 	/*
 	 * increment relation ref count while scanning relation
@@ -2489,7 +2490,7 @@ appendonly_fetch_init(Relation relation,
 		/* always initailize segment 0 */
 		segno = (i < 0 ? 0 : aoFetchDesc->segmentFileInfo[i]->segno);
 		/* set corresponding bit for target segment */
-		aoFetchDesc->lastSequence[segno] = ReadLastSequence(aoFormData.segrelid, segno);
+		aoFetchDesc->lastSequence[segno] = ReadLastSequence(segrelid, segno);
 	}
 
 	AppendOnlyStorageRead_Init(
@@ -2539,7 +2540,7 @@ appendonly_fetch_init(Relation relation,
 											NULL);
 
 	AppendOnlyVisimap_Init(&aoFetchDesc->visibilityMap,
-						   aoFormData.visimaprelid,
+						   visimaprelid,
 						   AccessShareLock,
 						   appendOnlyMetaDataSnapshot);
 
