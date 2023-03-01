@@ -420,16 +420,19 @@ analyze try_distinct_array;
 insert into try_distinct_array select 'n',string_to_array('1~1','~')::int[];
 -- Aggregate with grouping column that does not have legacy hashop
 explain (costs off) select distinct test_array from try_distinct_array;
-                      QUERY PLAN                      
-------------------------------------------------------
+                       QUERY PLAN                       
+--------------------------------------------------------
  GroupAggregate
    Group Key: test_array
-   ->  Sort
-         Sort Key: test_array
-         ->  Gather Motion 3:1  (slice1; segments: 3)
-               ->  Seq Scan on try_distinct_array
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_array
+         ->  GroupAggregate
+               Group Key: test_array
+               ->  Sort
+                     Sort Key: test_array
+                     ->  Seq Scan on try_distinct_array
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(10 rows)
 
 select distinct test_array from try_distinct_array;
  test_array 

@@ -593,16 +593,19 @@ set enable_hashagg = true;
 set enable_sort = false;
 explain (costs off)
 select from generate_series(1,5) union select from generate_series(1,3);
-                              QUERY PLAN                              
-----------------------------------------------------------------------
+                                    QUERY PLAN                                    
+----------------------------------------------------------------------------------
  Aggregate
-   ->  Append
-         ->  Aggregate
-               ->  Function Scan on generate_series
-         ->  Aggregate
-               ->  Function Scan on generate_series generate_series_1
+   ->  Aggregate
+         ->  Append
+               ->  Aggregate
+                     ->  Aggregate
+                           ->  Function Scan on generate_series
+               ->  Aggregate
+                     ->  Aggregate
+                           ->  Function Scan on generate_series generate_series_1
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(10 rows)
 
 explain (costs off)
 select from generate_series(1,5) intersect select from generate_series(1,3);
@@ -611,11 +614,13 @@ select from generate_series(1,5) intersect select from generate_series(1,3);
  Nested Loop
    Join Filter: true
    ->  Aggregate
-         ->  Function Scan on generate_series generate_series_1
+         ->  Aggregate
+               ->  Function Scan on generate_series generate_series_1
    ->  Aggregate
-         ->  Function Scan on generate_series
+         ->  Aggregate
+               ->  Function Scan on generate_series
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(9 rows)
 
 select from generate_series(1,5) union select from generate_series(1,3);
 --
@@ -649,13 +654,16 @@ select from generate_series(1,5) union select from generate_series(1,3);
                               QUERY PLAN                              
 ----------------------------------------------------------------------
  Aggregate
-   ->  Append
-         ->  Aggregate
-               ->  Function Scan on generate_series
-         ->  Aggregate
-               ->  Function Scan on generate_series generate_series_1
+   ->  Aggregate
+         ->  Append
+               ->  Aggregate
+                     ->  Aggregate
+                           ->  Function Scan on generate_series
+               ->  Aggregate
+                     ->  Aggregate
+                           ->  Function Scan on generate_series generate_series_1
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(10 rows)
 
 explain (costs off)
 select from generate_series(1,5) intersect select from generate_series(1,3);
@@ -664,9 +672,11 @@ select from generate_series(1,5) intersect select from generate_series(1,3);
  Nested Loop
    Join Filter: true
    ->  Aggregate
-         ->  Function Scan on generate_series generate_series_1
+         ->  Aggregate
+               ->  Function Scan on generate_series generate_series_1
    ->  Aggregate
-         ->  Function Scan on generate_series
+         ->  Aggregate
+               ->  Function Scan on generate_series
  Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 
@@ -763,16 +773,20 @@ explain (costs off)
          Group Key: ((t1.a || t1.b))
          ->  Sort
                Sort Key: ((t1.a || t1.b))
-               ->  Append
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                           Hash Key: ((t1.a || t1.b))
-                           ->  Result
-                                 Filter: (((t1.a || t1.b)) = 'ab'::text)
-                                 ->  Seq Scan on t1
-                     ->  Index Scan using t2_pkey on t2
-                           Index Cond: (ab = 'ab'::text)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(14 rows)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: ((t1.a || t1.b))
+                     ->  GroupAggregate
+                           Group Key: ((t1.a || t1.b))
+                           ->  Sort
+                                 Sort Key: ((t1.a || t1.b))
+                                 ->  Append
+                                       ->  Result
+                                             Filter: (((t1.a || t1.b)) = 'ab'::text)
+                                             ->  Seq Scan on t1
+                                       ->  Index Scan using t2_pkey on t2
+                                             Index Cond: (ab = 'ab'::text)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(18 rows)
 
 --
 -- Test that ORDER BY for UNION ALL can be pushed down to inheritance
@@ -922,12 +936,12 @@ WHERE x < 4
 ORDER BY x;
                             QUERY PLAN                            
 ------------------------------------------------------------------
- Sort
-   Sort Key: (generate_series(1, 10))
+ GroupAggregate
+   Group Key: (1), (generate_series(1, 10))
    ->  GroupAggregate
          Group Key: (1), (generate_series(1, 10))
          ->  Sort
-               Sort Key: (1), (generate_series(1, 10))
+               Sort Key: (generate_series(1, 10)), (1)
                ->  Append
                      ->  Result
                            Filter: ((generate_series(1, 10)) < 4)
@@ -935,7 +949,7 @@ ORDER BY x;
                                  ->  Result
                      ->  Result
                            One-Time Filter: false
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (14 rows)
 
 SELECT * FROM
@@ -1004,19 +1018,26 @@ where q2 = q2;
          Group Key: int8_tbl.q1
          ->  Sort
                Sort Key: int8_tbl.q1
-               ->  Append
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: int8_tbl.q1
                      ->  GroupAggregate
                            Group Key: int8_tbl.q1
                            ->  Sort
                                  Sort Key: int8_tbl.q1
-                                 ->  Seq Scan on int8_tbl
-                                       Filter: (q2 = q2)
-                     ->  GroupAggregate
-                           Group Key: int8_tbl_1.q1
-                           ->  Sort
-                                 Sort Key: int8_tbl_1.q1
-                                 ->  Seq Scan on int8_tbl int8_tbl_1
-                                       Filter: (q2 = q2)
+                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                       ->  Append
+                                             ->  GroupAggregate
+                                                   Group Key: int8_tbl.q1
+                                                   ->  Sort
+                                                         Sort Key: int8_tbl.q1
+                                                         ->  Seq Scan on int8_tbl
+                                                               Filter: (q2 = q2)
+                                             ->  GroupAggregate
+                                                   Group Key: int8_tbl_1.q1
+                                                   ->  Sort
+                                                         Sort Key: int8_tbl_1.q1
+                                                         ->  Seq Scan on int8_tbl int8_tbl_1
+                                                               Filter: (q2 = q2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (26 rows)
 
@@ -1044,19 +1065,26 @@ where -q1 = q2;
          Group Key: int8_tbl.q1
          ->  Sort
                Sort Key: int8_tbl.q1
-               ->  Append
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: int8_tbl.q1
                      ->  GroupAggregate
                            Group Key: int8_tbl.q1
                            ->  Sort
                                  Sort Key: int8_tbl.q1
-                                 ->  Seq Scan on int8_tbl
-                                       Filter: ((- q1) = q2)
-                     ->  GroupAggregate
-                           Group Key: int8_tbl_1.q1
-                           ->  Sort
-                                 Sort Key: int8_tbl_1.q1
-                                 ->  Seq Scan on int8_tbl int8_tbl_1
-                                       Filter: ((- q1) = q2)
+                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                       ->  Append
+                                             ->  GroupAggregate
+                                                   Group Key: int8_tbl.q1
+                                                   ->  Sort
+                                                         Sort Key: int8_tbl.q1
+                                                         ->  Seq Scan on int8_tbl
+                                                               Filter: ((- q1) = q2)
+                                             ->  GroupAggregate
+                                                   Group Key: int8_tbl_1.q1
+                                                   ->  Sort
+                                                         Sort Key: int8_tbl_1.q1
+                                                         ->  Seq Scan on int8_tbl int8_tbl_1
+                                                               Filter: ((- q1) = q2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (26 rows)
 

@@ -269,14 +269,15 @@ create table pc_list_part_def partition of pc_list_parted default;
 prepare pstmt_def_insert (int) as insert into pc_list_part_def values($1);
 -- should fail
 execute pstmt_def_insert(null);
-ERROR:  new row for relation "pc_list_part_def" violates partition constraint
+ERROR:  new row for relation "pc_list_part_def" violates partition constraint  (seg0 127.0.0.1:7002 pid=6152)
 DETAIL:  Failing row contains (null).
 execute pstmt_def_insert(1);
-ERROR:  new row for relation "pc_list_part_def" violates partition constraint
+ERROR:  new row for relation "pc_list_part_def" violates partition constraint  (seg1 127.0.0.1:7003 pid=6153)
 DETAIL:  Failing row contains (1).
 create table pc_list_part_2 partition of pc_list_parted for values in (2);
+NOTICE:  table has parent, setting distribution columns to match parent table
 execute pstmt_def_insert(2);
-ERROR:  new row for relation "pc_list_part_def" violates partition constraint
+ERROR:  new row for relation "pc_list_part_def" violates partition constraint  (seg0 127.0.0.1:7002 pid=6152)
 DETAIL:  Failing row contains (2).
 alter table pc_list_parted detach partition pc_list_part_null;
 -- should be ok
@@ -294,14 +295,15 @@ analyze test_mode;
 prepare test_mode_pp (int) as select count(*) from test_mode where a = $1;
 -- up to 5 executions, custom plan is used
 explain (costs off) execute test_mode_pp(2);
-                        QUERY PLAN                        
-----------------------------------------------------------
- Aggregate
+                           QUERY PLAN                            
+-----------------------------------------------------------------
+ Finalize Aggregate
    ->  Gather Motion 1:1  (slice1; segments: 1)
-         ->  Index Scan using test_mode_a_idx on test_mode
-               Index Cond: (a = 2)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.93.0
-(5 rows)
+         ->  Partial Aggregate
+               ->  Index Scan using test_mode_a_idx on test_mode
+                     Index Cond: (a = 2)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
 
 -- force generic plan
 set plan_cache_mode to force_generic_plan;
@@ -350,26 +352,28 @@ execute test_mode_pp(1); -- 5x
 
 -- we should now get a really bad plan
 explain (costs off) execute test_mode_pp(2);
-         QUERY PLAN          
------------------------------
- Aggregate
+                           QUERY PLAN                            
+-----------------------------------------------------------------
+ Finalize Aggregate
    ->  Gather Motion 1:1  (slice1; segments: 1)
-         ->  Index Scan using test_mode_a_idx on test_mode
-               Index Cond: (a = 2)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.93.0
-(5 rows)
+         ->  Partial Aggregate
+               ->  Index Scan using test_mode_a_idx on test_mode
+                     Index Cond: (a = 2)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
 
 -- but we can force a custom plan
 set plan_cache_mode to force_custom_plan;
 explain (costs off) execute test_mode_pp(2);
-                        QUERY PLAN                        
-----------------------------------------------------------
- Aggregate
+                           QUERY PLAN                            
+-----------------------------------------------------------------
+ Finalize Aggregate
    ->  Gather Motion 1:1  (slice1; segments: 1)
-         ->  Index Scan using test_mode_a_idx on test_mode
-               Index Cond: (a = 2)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.93.0
-(5 rows)
+         ->  Partial Aggregate
+               ->  Index Scan using test_mode_a_idx on test_mode
+                     Index Cond: (a = 2)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
 
 drop table test_mode;
 --
