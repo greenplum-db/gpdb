@@ -5577,8 +5577,10 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			{
 				bool aoopt_changed = false;
 				Datum newOptions;
+				/* discard existing reloptions if we are going to change AM */
+				AlterTableType op = OidIsValid(tab->newAccessMethod) ? AT_ReplaceRelOptions : AT_SetRelOptions; 
 
-				newOptions = ATExecSetRelOptions(rel, (List *) cmd->def, cmd->subtype, &aoopt_changed, tab->newAccessMethod, lockmode);
+				newOptions = ATExecSetRelOptions(rel, (List *) cmd->def, op, &aoopt_changed, tab->newAccessMethod, lockmode);
 				CommandCounterIncrement(); /* make reloptions change visiable */
 
 				/* 
