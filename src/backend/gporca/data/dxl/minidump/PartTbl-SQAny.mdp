@@ -4,6 +4,19 @@
     <dxl:Stacktrace/>
     <dxl:TraceFlags Value="102001,102002,102003,102144,103001,103027,103033"/>
     <dxl:Metadata SystemIds="0.GPDB">
+      <dxl:GPDBScalarOp Mdid="0.419.1.0" Name="&gt;" ComparisonType="GT" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
+        <dxl:LeftType Mdid="0.20.1.0"/>
+        <dxl:RightType Mdid="0.23.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.477.1.0"/>
+        <dxl:Commutator Mdid="0.37.1.0"/>
+        <dxl:InverseOp Mdid="0.420.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.1976.1.0"/>
+          <dxl:Opfamily Mdid="0.4054.1.0"/>
+          <dxl:Opfamily Mdid="0.10009.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
       <dxl:GPDBScalarOp Mdid="0.1095.1.0" Name="&lt;" ComparisonType="LT">
         <dxl:LeftType Mdid="0.1082.1.0"/>
         <dxl:RightType Mdid="0.1082.1.0"/>

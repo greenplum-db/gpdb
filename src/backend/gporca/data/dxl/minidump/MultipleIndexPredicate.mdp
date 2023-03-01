@@ -84,6 +84,18 @@
           <dxl:Opfamily Mdid="0.1994.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
+      <dxl:GPDBScalarOp Mdid="0.2064.1.0" Name="&gt;" ComparisonType="GT" ReturnsNullOnNullInput="true">
+        <dxl:LeftType Mdid="0.1114.1.0"/>
+        <dxl:RightType Mdid="0.1114.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.2057.1.0"/>
+        <dxl:Commutator Mdid="0.2062.1.0"/>
+        <dxl:InverseOp Mdid="0.2063.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.434.1.0"/>
+          <dxl:Opfamily Mdid="0.3041.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
       <dxl:GPDBScalarOp Mdid="0.2060.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true">
         <dxl:LeftType Mdid="0.1114.1.0"/>
         <dxl:RightType Mdid="0.1114.1.0"/>

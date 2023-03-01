@@ -111,6 +111,54 @@
           <dxl:Opfamily Mdid="0.4056.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
+      <dxl:GPDBScalarOp Mdid="0.667.1.0" Name="&gt;=" ComparisonType="GEq" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
+        <dxl:LeftType Mdid="0.25.1.0"/>
+        <dxl:RightType Mdid="0.25.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.743.1.0"/>
+        <dxl:Commutator Mdid="0.665.1.0"/>
+        <dxl:InverseOp Mdid="0.664.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.1994.1.0"/>
+          <dxl:Opfamily Mdid="0.4017.1.0"/>
+          <dxl:Opfamily Mdid="0.4056.1.0"/>
+          <dxl:Opfamily Mdid="0.10018.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
+      <dxl:GPDBScalarOp Mdid="0.1322.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
+        <dxl:LeftType Mdid="0.1184.1.0"/>
+        <dxl:RightType Mdid="0.1184.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.1154.1.0"/>
+        <dxl:Commutator Mdid="0.1324.1.0"/>
+        <dxl:InverseOp Mdid="0.1325.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.434.1.0"/>
+          <dxl:Opfamily Mdid="0.4059.1.0"/>
+          <dxl:Opfamily Mdid="0.10006.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
+      <dxl:GPDBScalarOp Mdid="0.541.1.0" Name="&lt;=" ComparisonType="LEq" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
+        <dxl:LeftType Mdid="0.23.1.0"/>
+        <dxl:RightType Mdid="0.21.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.167.1.0"/>
+        <dxl:Commutator Mdid="0.542.1.0"/>
+        <dxl:InverseOp Mdid="0.537.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.1976.1.0"/>
+          <dxl:Opfamily Mdid="0.4054.1.0"/>
+          <dxl:Opfamily Mdid="0.10009.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
+      <dxl:GPDBScalarOp Mdid="0.76.1.0" Name="&gt;" ComparisonType="GT" ReturnsNullOnNullInput="true">
+        <dxl:LeftType Mdid="0.23.1.0"/>
+        <dxl:RightType Mdid="0.20.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.855.1.0"/>
+        <dxl:Commutator Mdid="0.418.1.0"/>
+        <dxl:InverseOp Mdid="0.80.1.0"/>
+      </dxl:GPDBScalarOp>
       <dxl:GPDBScalarOp Mdid="0.665.1.0" Name="&lt;=" ComparisonType="LEq" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
         <dxl:LeftType Mdid="0.25.1.0"/>
         <dxl:RightType Mdid="0.25.1.0"/>

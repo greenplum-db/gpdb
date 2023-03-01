@@ -174,6 +174,18 @@
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
+      <dxl:GPDBScalarOp Mdid="0.672.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true">
+        <dxl:LeftType Mdid="0.701.1.0"/>
+        <dxl:RightType Mdid="0.701.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.295.1.0"/>
+        <dxl:Commutator Mdid="0.674.1.0"/>
+        <dxl:InverseOp Mdid="0.675.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.1972.1.0"/>
+          <dxl:Opfamily Mdid="0.3024.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
       <dxl:GPDBScalarOp Mdid="0.410.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true">
         <dxl:LeftType Mdid="0.20.1.0"/>
         <dxl:RightType Mdid="0.20.1.0"/>

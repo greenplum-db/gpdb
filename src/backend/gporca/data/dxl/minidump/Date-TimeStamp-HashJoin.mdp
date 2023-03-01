@@ -90,6 +90,14 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
+      <dxl:GPDBScalarOp Mdid="0.2373.1.0" Name="=" ComparisonType="Eq">
+        <dxl:LeftType Mdid="0.1114.1.0"/>
+        <dxl:RightType Mdid="0.1082.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.2366.1.0"/>
+        <dxl:Commutator Mdid="0.2347.1.0"/>
+        <dxl:InverseOp Mdid="0.2376.1.0"/>
+      </dxl:GPDBScalarOp>
       <dxl:GPDBScalarOp Mdid="0.2060.1.0" Name="=" ComparisonType="Eq">
         <dxl:LeftType Mdid="0.1114.1.0"/>
         <dxl:RightType Mdid="0.1114.1.0"/>

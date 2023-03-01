@@ -96,6 +96,18 @@ SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
+      <dxl:GPDBScalarOp Mdid="0.934.1.0" Name="&gt;&gt;=" ComparisonType="Other" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
+        <dxl:LeftType Mdid="0.869.1.0"/>
+        <dxl:RightType Mdid="0.869.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.930.1.0"/>
+        <dxl:Commutator Mdid="0.932.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.3550.1.0"/>
+          <dxl:Opfamily Mdid="0.3794.1.0"/>
+          <dxl:Opfamily Mdid="0.4102.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
       <dxl:GPDBScalarOp Mdid="0.410.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true">
         <dxl:LeftType Mdid="0.20.1.0"/>
         <dxl:RightType Mdid="0.20.1.0"/>

@@ -97,6 +97,14 @@ select * from x where x.i in (select row_number() over(partition by x.i) from y)
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
+      <dxl:GPDBScalarOp Mdid="0.416.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true">
+        <dxl:LeftType Mdid="0.20.1.0"/>
+        <dxl:RightType Mdid="0.23.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.474.1.0"/>
+        <dxl:Commutator Mdid="0.15.1.0"/>
+        <dxl:InverseOp Mdid="0.417.1.0"/>
+      </dxl:GPDBScalarOp>
       <dxl:GPDBScalarOp Mdid="0.15.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true">
         <dxl:LeftType Mdid="0.23.1.0"/>
         <dxl:RightType Mdid="0.20.1.0"/>

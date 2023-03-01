@@ -47,6 +47,14 @@ WHERE
         <dxl:SumAgg Mdid="0.2107.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
+      <dxl:GPDBScalarOp Mdid="0.1869.1.0" Name="&lt;&gt;" ComparisonType="NEq">
+        <dxl:LeftType Mdid="0.20.1.0"/>
+        <dxl:RightType Mdid="0.21.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.1857.1.0"/>
+        <dxl:Commutator Mdid="0.1863.1.0"/>
+        <dxl:InverseOp Mdid="0.1868.1.0"/>
+      </dxl:GPDBScalarOp>
       <dxl:GPDBScalarOp Mdid="0.660.1.0" Name="&lt;" ComparisonType="LT">
         <dxl:LeftType Mdid="0.19.1.0"/>
         <dxl:RightType Mdid="0.19.1.0"/>
