@@ -698,7 +698,7 @@ create table mpp3058 (a char(1), b date, d char(3))
   (           
     partition aa start ('2008-01-01') end ('2009-01-01') every( '1 day')  
      );
-ERROR:  operator is not unique: date pg_catalog.+ unknown
+ERROR:  operator is not unique: date + unknown
 LINE 5: ...aa start ('2008-01-01') end ('2009-01-01') every( '1 day')  
                                                              ^
 HINT:  Could not choose a best candidate operator. You might need to add explicit type casts.

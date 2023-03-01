@@ -15,7 +15,7 @@ PARTITION BY LIST (gender)
 SUBPARTITION BY RANGE (year) 
 SUBPARTITION TEMPLATE (start ('2000') end ('2006') every (interval '1')) 
 (PARTITION girls VALUES ('F'), PARTITION boys VALUES ('M'));
-ERROR:  operator does not exist: smallint pg_catalog.+ interval
+ERROR:  operator does not exist: smallint + interval
 LINE 4: ...TION TEMPLATE (start ('2000') end ('2006') every (interval '...
                                                              ^
 HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
