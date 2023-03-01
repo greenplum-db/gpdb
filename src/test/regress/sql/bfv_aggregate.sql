@@ -1368,7 +1368,7 @@ select c0, c1, array_length(ARRAY[
 from mtup1 where c0 = 'foo' group by c0, c1 limit 10;
 
 reset gp_enable_multiphase_agg;
-reset optimizer_force_multistage_agg=off;
+reset optimizer_force_multistage_agg;
 
 -- MPP-29042 Multistage aggregation plans should have consistent targetlists in
 -- case of same column aliases and grouping on them.

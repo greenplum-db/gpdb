@@ -1267,9 +1267,13 @@ explain (costs off) select a,c from t1 group by a,c,d;
                Sort Key: a, c, d
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
                      Hash Key: a, c, d
-                     ->  Seq Scan on t1
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(9 rows)
+                     ->  GroupAggregate
+                           Group Key: a, c, d
+                           ->  Sort
+                                 Sort Key: a, c, d
+                                 ->  Seq Scan on t1
+ Optimizer: Pivotal Optimizer (GPORCA)
+(13 rows)
 
 -- Test removal across multiple relations
 explain (costs off) select *
@@ -3237,13 +3241,15 @@ explain (costs off)
 select g%100000 as c1, sum(g::numeric) as c2, count(*) as c3
   from generate_series(0, 199999) g
   group by g%100000;
-               QUERY PLAN                
------------------------------------------
- HashAggregate
-   Group Key: (generate_series % 100000)
-   ->  Function Scan on generate_series
+                  QUERY PLAN                   
+-----------------------------------------------
+ Finalize HashAggregate
+   Group Key: ((generate_series % 100000))
+   ->  Streaming Partial HashAggregate
+         Group Key: (generate_series % 100000)
+         ->  Function Scan on generate_series
  Optimizer: Pivotal Optimizer (GPORCA)
-(4 rows)
+(6 rows)
 
 create table agg_group_1 as
 select g%100000 as c1, sum(g::numeric) as c2, count(*) as c3
@@ -3281,13 +3287,15 @@ explain (costs off)
 select g%100000 as c1, sum(g::numeric) as c2, count(*) as c3
   from generate_series(0, 199999) g
   group by g%100000;
-               QUERY PLAN                
------------------------------------------
- HashAggregate
-   Group Key: (generate_series % 100000)
-   ->  Function Scan on generate_series
+                  QUERY PLAN                   
+-----------------------------------------------
+ Finalize HashAggregate
+   Group Key: ((generate_series % 100000))
+   ->  Streaming Partial HashAggregate
+         Group Key: (generate_series % 100000)
+         ->  Function Scan on generate_series
  Optimizer: Pivotal Optimizer (GPORCA)
-(4 rows)
+(6 rows)
 
 create table agg_hash_1 as
 select g%100000 as c1, sum(g::numeric) as c2, count(*) as c3

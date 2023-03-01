@@ -1724,25 +1724,27 @@ SELECT a.x, sum(b.x) FROM pagg_tab1 a FULL OUTER JOIN pagg_tab2 b ON a.x = b.y G
 
 EXPLAIN (COSTS OFF)
 SELECT a.x, b.y, count(*) FROM pagg_tab1 a FULL JOIN pagg_tab2 b ON a.x = b.y GROUP BY a.x, b.y;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  HashAggregate
+   ->  Finalize HashAggregate
          Group Key: pagg_tab1.x, pagg_tab2.y
          ->  Redistribute Motion 3:3  (slice2; segments: 3)
                Hash Key: pagg_tab1.x, pagg_tab2.y
-               ->  Merge Full Join
-                     Merge Cond: (pagg_tab1.x = pagg_tab2.y)
-                     ->  Sort
-                           Sort Key: pagg_tab1.x
-                           ->  Seq Scan on pagg_tab1
-                     ->  Sort
-                           Sort Key: pagg_tab2.y
-                           ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                                 Hash Key: pagg_tab2.y
-                                 ->  Seq Scan on pagg_tab2
+               ->  Streaming Partial HashAggregate
+                     Group Key: pagg_tab1.x, pagg_tab2.y
+                     ->  Merge Full Join
+                           Merge Cond: (pagg_tab1.x = pagg_tab2.y)
+                           ->  Sort
+                                 Sort Key: pagg_tab1.x
+                                 ->  Seq Scan on pagg_tab1
+                           ->  Sort
+                                 Sort Key: pagg_tab2.y
+                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                       Hash Key: pagg_tab2.y
+                                       ->  Seq Scan on pagg_tab2
  Optimizer: Pivotal Optimizer (GPORCA)
-(16 rows)
+(18 rows)
 
 SELECT a.x, b.y, count(*) FROM pagg_tab1 a FULL JOIN pagg_tab2 b ON a.x = b.y GROUP BY a.x, b.y;
  x  | y  | count 
