@@ -1264,7 +1264,7 @@ Identifies the maximum percentage of system CPU resources to allocate to resourc
 
 ## <a id="gp_resource_group_cpu_priority"></a>gp_resource_group_cpu_priority
 
-Sets the CPU priority for Greenplum processes relative to non-Greenplum processes when resource groups are enabled. For example, when setting this parameter to `10` sets the ratio of allotted CPU for Greenplum processes to non-Greenplum processes to 10:1. 
+Sets the CPU priority for Greenplum processes relative to non-Greenplum processes when resource groups are enabled. For example, setting this parameter to `10` sets the ratio of allotted CPU resources for Greenplum processes to non-Greenplum processes to 10:1. 
 
 > **Note** 
 > This ratio calculation applies only when the machine's CPU usage is at 100%.
