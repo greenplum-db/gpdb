@@ -1069,9 +1069,10 @@ def checkOwners():
                     a.rolname, m.rolname as coordinator_rolname
     from gp_dist_random('pg_class') r
       join pg_class c on (c.oid = r.oid)
+      left join pg_index i on (c.oid = i.indexrelid)
       left join pg_appendonly ao on (c.oid = ao.segrelid or
                                      c.oid = ao.blkdirrelid or
-                                     c.oid = ao.blkdiridxid)
+                                     i.indrelid = ao.blkdirrelid)
       left join pg_class o on (o.oid = ao.relid or
                                o.reltoastrelid = c.oid)
       join pg_authid a on (a.oid = r.relowner)
