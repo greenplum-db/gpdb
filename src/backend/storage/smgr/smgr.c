@@ -101,7 +101,6 @@ smgr_init_standard(void)
 		if (smgrsw[i].smgr_init)
 			smgrsw[i].smgr_init();
 	}
-	mdinit();
 }
 
 
