@@ -3651,7 +3651,6 @@ ATVerifyObject(AlterTableStmt *stmt, Relation rel)
 			switch(cmd->subtype)
 			{
 				/* EXTERNAL tables don't support the following AT */
-				case AT_ColumnDefault:
 				case AT_ColumnDefaultRecurse:
 				case AT_DropNotNull:
 				case AT_SetNotNull:

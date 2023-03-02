@@ -8,5 +8,7 @@ data/gpfdist_ssl/tbl2.tbl
 data/gpfdist_ssl/certs_matching
 data/gpfdist_ssl/certs_multiCA
 data/gpfdist_ssl/certs_not_matching/root.crt
+data/external_table_with_serial_column_type.csv
+data/external_table_with_user_type_and_default_value.csv
 regression.diffs
 regression.out

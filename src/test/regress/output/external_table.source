@@ -241,8 +241,7 @@ alter external table ext add column extnewcol int not null; -- should fail (cons
 ERROR:  unsupported ALTER command for external table
 DETAIL:  No constraints allowed.
 alter external table ext add column extnewcol int; -- pass
-alter external table ext alter column extnewcol set default 1; -- should fail (unsupported alter type)
-ERROR:  unsupported ALTER command for external table
+alter external table ext alter column extnewcol set default 1; -- should pass
 alter external table ext alter column x type integer using 123; -- should fail (USING doesn't make sense on external table)
 ERROR:  cannot specify a USING expression when altering an external table
 alter external table ext alter column x type integer; -- pass

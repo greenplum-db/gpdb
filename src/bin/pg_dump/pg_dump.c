@@ -6856,6 +6856,10 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 				/* column will be suppressed, print default separately */
 				attrdefs[j].separate = true;
 			}
+			else if (tbinfo->relstorage == RELSTORAGE_EXTERNAL)
+			{
+				attrdefs[j].separate = true;
+			}
 			else
 			{
 				attrdefs[j].separate = false;
@@ -7045,9 +7049,10 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
  * Normally this is always true, but it's false for dropped columns, as well
  * as those that were inherited without any local definition.  (If we print
  * such a column it will mistakenly get pg_attribute.attislocal set to true.)
- * However, in binary_upgrade mode, we must print all such columns anyway and
- * fix the attislocal/attisdropped state later, so as to keep control of the
- * physical column order.
+ *
+ * In binary_upgrade mode, we must print all columns and fix the attislocal/
+ * attisdropped state later, so as to keep control of the physical column
+ * order.
  *
  * This function exists because there are scattered nonobvious places that
  * must be kept in sync with this decision.
@@ -7056,14 +7061,19 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
  * may or may not be printed depending on whether all the child partitions
  * have the dropped column reference OR all the child partitions do not have
  * the dropped column reference.
+ *
+ * GPDB: External partition tables are dumped by inheriting the parent partition
+ * attributes. This is done by setting the attributes as local. So don't print
+ * those columns. See commit 821b8e10.
  */
 bool
 shouldPrintColumn(TableInfo *tbinfo, int colno)
 {
 	if (binary_upgrade && !tbinfo->ignoreRootPartDroppedAttr)
 		return true;
-	return ((tbinfo->attislocal[colno] || tbinfo->relstorage == RELSTORAGE_EXTERNAL) &&
-	        !tbinfo->attisdropped[colno]);
+	if (tbinfo->attisdropped[colno])
+		return false;
+	return (tbinfo->attislocal[colno] || tbinfo->relstorage == RELSTORAGE_EXTERNAL);
 }
 
 
@@ -13098,6 +13108,10 @@ dumpExternal(Archive *fout, TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer delq)
 		int j;
 		for (j = 0; j < tbinfo->numatts; j++)
 		{
+			/*
+			 * There is no need to preserve dropped columns for external tables
+			 * since they do not have an on-disk format.
+			 */
 			if (!shouldPrintColumn(tbinfo, j) || tbinfo->attisdropped[j])
 				continue;
 

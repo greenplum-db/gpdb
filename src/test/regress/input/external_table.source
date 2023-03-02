@@ -187,7 +187,7 @@ alter external table ext add column a int; -- pass
 alter external table ext drop column a; -- pass
 alter external table ext add column extnewcol int not null; -- should fail (constraints not allowed)
 alter external table ext add column extnewcol int; -- pass
-alter external table ext alter column extnewcol set default 1; -- should fail (unsupported alter type)
+alter external table ext alter column extnewcol set default 1; -- should pass
 
 alter external table ext alter column x type integer using 123; -- should fail (USING doesn't make sense on external table)
 alter external table ext alter column x type integer; -- pass

@@ -791,6 +791,83 @@ select * from exttab1_gpfdist_stop;
 
 -- end_ignore
 -- End Test external table sreh output in gp_read_error_log() print rawbytes with \0 in it.
+-- truncate output files from any previous runs
+\! > @abs_srcdir@/data/external_table_with_serial_column_type.csv
+\! > @abs_srcdir@/data/external_table_with_user_type_and_default_value.csv
+-- start_ignore
+select * from exttab1_gpfdist_stop;
+      x      
+-------------
+ stopping...
+(1 row)
+
+select * from exttab1_gpfdist_start;
+      x      
+-------------
+ starting...
+(1 row)
+
+-- end_ignore
+-- Scenario 1: external table with serial column type can be altered
+CREATE WRITABLE EXTERNAL TABLE writable_external_table_with_serial_column_type (a INT, b BIGSERIAL)
+    LOCATION ('gpfdist://@hostname@:7070/external_table_with_serial_column_type.csv')
+    FORMAT 'CSV' (DELIMITER ',' NULL '' ESCAPE '"' QUOTE '"') ENCODING 'UTF8' DISTRIBUTED RANDOMLY;
+CREATE READABLE EXTERNAL TABLE readable_external_table_with_serial_column_type(LIKE writable_external_table_with_serial_column_type)
+    LOCATION ('gpfdist://@hostname@:7070/external_table_with_serial_column_type.csv')
+    FORMAT 'CSV' (DELIMITER ',' NULL '' ESCAPE '"' QUOTE '"') ENCODING 'UTF8';
+INSERT INTO writable_external_table_with_serial_column_type VALUES (1);
+SELECT setval('writable_external_table_with_serial_column_type_b_seq'::regclass, 99);
+ setval 
+--------
+     99
+(1 row)
+
+ALTER EXTERNAL TABLE writable_external_table_with_serial_column_type ALTER COLUMN b SET DEFAULT nextval('writable_external_table_with_serial_column_type_b_seq'::regclass);
+INSERT INTO writable_external_table_with_serial_column_type VALUES (1);
+SELECT * FROM readable_external_table_with_serial_column_type;
+ a |  b  
+---+-----
+ 1 |   1
+ 1 | 100
+(2 rows)
+
+-- Scenario 2: can create external table with user defined type containing default value
+CREATE TYPE user_type_with_default_value;
+CREATE FUNCTION user_type_with_default_value_in(cstring)
+    RETURNS user_type_with_default_value AS 'int4in'
+    LANGUAGE internal IMMUTABLE STRICT;
+NOTICE:  return type user_type_with_default_value is only a shell
+CREATE FUNCTION user_type_with_default_value_out(user_type_with_default_value)
+    RETURNS cstring AS 'int4out'
+    LANGUAGE internal IMMUTABLE STRICT;
+NOTICE:  argument type user_type_with_default_value is only a shell
+CREATE TYPE user_type_with_default_value(
+    input = user_type_with_default_value_in,
+    output = user_type_with_default_value_out,
+    internallength = 4,
+    default = 99,
+    passedbyvalue);
+CREATE WRITABLE EXTERNAL TABLE writable_external_table_with_user_type_and_default_value (a INT, b user_type_with_default_value)
+    LOCATION ('gpfdist://@hostname@:7070/external_table_with_user_type_and_default_value.csv')
+    FORMAT 'CSV' (DELIMITER ',' NULL '' ESCAPE '"' QUOTE '"') ENCODING 'UTF8' DISTRIBUTED RANDOMLY;
+CREATE READABLE EXTERNAL TABLE readable_external_table_with_user_type_and_default_value(LIKE writable_external_table_with_user_type_and_default_value)
+    LOCATION ('gpfdist://@hostname@:7070/external_table_with_user_type_and_default_value.csv')
+    FORMAT 'CSV' (DELIMITER ',' NULL '' ESCAPE '"' QUOTE '"') ENCODING 'UTF8';
+INSERT INTO writable_external_table_with_user_type_and_default_value VALUES (1);
+SELECT * FROM readable_external_table_with_user_type_and_default_value;
+ a | b  
+---+----
+ 1 | 99
+(1 row)
+
+-- start_ignore
+select * from exttab1_gpfdist_stop;
+      x      
+-------------
+ stopping...
+(1 row)
+
+-- end_ignore
 drop external table ext_whois;
 drop external table exttab1_gpfdist_start;
 drop external table gpfdist_csv_start;
