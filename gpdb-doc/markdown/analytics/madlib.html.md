@@ -125,7 +125,7 @@ $ gppkg -u madlib-1.21.0+1-gp6-rhel7-x86_64.gppkg
 
 After you upgrade the MADlib package from one major version to another, run `madpack upgrade` to upgrade the MADlib functions in a database schema.
 
-> **Note** Use `madpack upgrade` only if you upgraded a major MADlib package version, for example from 1.19 to 1.21.0. You do not need to update the functions within a patch version upgrade, for example from 1.16+1 to 1.16+3.
+> **Note** Use `madpack upgrade` only if you upgraded a major MADlib package version, for example from 1.19.0 to 1.21.0. You do not need to update the functions within a patch version upgrade, for example from 1.16+1 to 1.16+3.
 
 This example command upgrades the MADlib functions in the schema `madlib` of the Greenplum Database `test`.
 
