@@ -107,7 +107,7 @@ EXPLAIN (ANALYZE, FORMAT YAML) SELECT * from boxes LEFT JOIN apples ON apples.id
 -- m/^Settings:.*/
 -- s/,?\s*jit\w*\s*=\s*[^,\n]+//g
 -- m/^Settings:.*/
--- s/^Settings:[,\s]*/Settings: /
+-- s/^Settings:[,\t ]*/Settings: /
 -- end_matchsubs
 --- Check explain analyze sort infomation in verbose mode
 RESET random_page_cost;
