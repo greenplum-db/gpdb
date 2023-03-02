@@ -724,7 +724,7 @@ static bool SendChunkUDPIFC(ChunkTransportState *transportStates,
 				ChunkTransportStateEntry *pEntry, MotionConn *conn, TupleChunkListItem tcItem, int16 motionId);
 
 static void doSendStopMessageUDPIFC(ChunkTransportState *transportStates, int16 motNodeID);
-static bool dispatcherAYT(void);
+static void dispatcherAYT(void);
 static void checkQDConnectionAlive(void);
 
 
@@ -5750,12 +5750,14 @@ doSendStopMessageUDPIFC(ChunkTransportState *transportStates, int16 motNodeID)
 /*
  * dispatcherAYT
  * 		Check the connection from the dispatcher to verify that it is still there.
+ * 		We do this by calling recv() to receive 1 byte.
  *
  * The connection is a struct Port, stored in the global MyProcPort.
  *
- * Return true if the dispatcher connection is still alive.
+ * ERROR out if the connection was closed or if we encountered an unrecoverable
+ * error trying to recv().
  */
-static bool
+static void
 dispatcherAYT(void)
 {
 	ssize_t		ret;
@@ -5766,10 +5768,15 @@ dispatcherAYT(void)
 	 * As a result, MyProcPort is NULL. We should skip dispatcherAYT check here.
 	 */
 	if (MyProcPort == NULL)
-		return true;
+		return;
 
-	if (MyProcPort->sock < 0)
-		return false;
+	if (MyProcPort->sock == PGINVALID_SOCKET)
+	{
+		ereport(COMMERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					errmsg("backend socket is invalid (recv)"),
+					errdetail("it could already have been closed")));
+	}
 
 #ifndef WIN32
 	ret = recv(MyProcPort->sock, &buf, 1, MSG_PEEK | MSG_DONTWAIT);
@@ -5778,37 +5785,36 @@ dispatcherAYT(void)
 #endif
 
 	if (ret == 0)				/* socket has been closed. EOF */
-		return false;
+	{
+		ereport(COMMERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					errmsg("dispatch connection lost (recv)"),
+					errdetail("peer socket has been closed, eof received")));
+	}
 
-	if (ret > 0)				/* data waiting on socket, it must be OK. */
-		return true;
-
-	if (ret == -1)				/* error, or would be block. */
+	if (ret == -1)
 	{
 		if (errno == EAGAIN || errno == EINPROGRESS)
-			return true;		/* connection intact, no data available */
-		else
-			return false;
+			return;		/* connection intact, no data available */
+		else			/* unrecoverable error */
+			ereport(COMMERROR,
+					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+						errmsg("dispatch connection lost (recv): %m")));
 	}
-	/* not reached */
 
-	return true;
+	/* data waiting on socket, it must be OK. */
 }
 
 /*
  * checkQDConnectionAlive
  * 		Check whether QD connection is still alive. If not, report error.
+ * 		Do nothing if we are the QD, or if we are in utility mode.
  */
 static void
 checkQDConnectionAlive(void)
 {
 	if (Gp_role == GP_ROLE_EXECUTE)
-	{
-		if (!dispatcherAYT())
-			ereport(ERROR,
-					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-					 errmsg("interconnect error segment lost contact with master (recv): %m")));
-	}
+		dispatcherAYT();
 }
 
 /*
