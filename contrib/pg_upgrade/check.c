@@ -125,7 +125,6 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	/* old = PG 8.3 checks? */
 	if (GET_MAJOR_VERSION(old_cluster.major_version) == 803)
 	{
-		old_8_3_check_for_name_data_type_usage(&old_cluster);
 		old_8_3_check_for_tsquery_usage(&old_cluster);
 		old_8_3_check_ltree_usage(&old_cluster);
 		check_hash_partition_usage();

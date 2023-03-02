@@ -564,7 +564,6 @@ void old_9_3_check_for_line_data_type_usage(ClusterInfo *cluster);
 #endif
 /* version_old_8_3.c */
 
-void		old_8_3_check_for_name_data_type_usage(ClusterInfo *cluster);
 void		old_8_3_check_for_tsquery_usage(ClusterInfo *cluster);
 void		old_8_3_check_ltree_usage(ClusterInfo *cluster);
 void		old_8_3_rebuild_tsvector_tables(ClusterInfo *cluster, bool check_mode);
