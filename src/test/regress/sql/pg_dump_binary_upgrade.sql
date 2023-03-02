@@ -13,8 +13,8 @@
 
 CREATE SCHEMA dump_this_schema;
 
--- 1) External tables with dropped columns is dumped correctly.
-CREATE EXTERNAL TABLE dump_this_schema.external_table_with_dropped_columns (
+-- Scenario 1a: External tables with dropped columns is dumped correctly.
+CREATE EXTERNAL TABLE dump_this_schema.external_table_with_dropped_columns_does_not_print_alter_ddl (
     a int,
     b int,
     c int
@@ -107,6 +107,8 @@ WHERE a.attisdropped = true AND relname LIKE 'dropped_column_special_homogeneous
 -- Run pg_dump and expect to see an ALTER TABLE DROP COLUMN output
 -- only for the homogeneous partition table where the entire partition
 -- table has the same dropped column reference.
-\! pg_dump --binary-upgrade --schema dump_this_schema regression | grep " DROP COLUMN "
+-- We do not expect to see ALTER TABLE DROP COLUMN output for external tables
+-- because we do not preserve drop columns for external tables.
+\! pg_dump --binary-upgrade --schema dump_this_schema regression | grep ' DROP COLUMN \| SET DEFAULT '
 
 DROP SCHEMA dump_this_schema CASCADE;

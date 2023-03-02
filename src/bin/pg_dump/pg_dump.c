@@ -13098,35 +13098,19 @@ dumpExternal(Archive *fout, TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer delq)
 		int j;
 		for (j = 0; j < tbinfo->numatts; j++)
 		{
-			/* Is the attribute not dropped? */
-			if (shouldPrintColumn(tbinfo, j))
-			{
-				/* Format properly if not first attr */
-				if (actual_atts > 0)
-					appendPQExpBufferChar(q, ',');
-				appendPQExpBufferStr(q, "\n    ");
+			if (!shouldPrintColumn(tbinfo, j) || tbinfo->attisdropped[j])
+				continue;
 
-				/* Attribute name */
-				appendPQExpBuffer(q, "%s ", fmtId(tbinfo->attnames[j]));
+			/* Format properly if not first attr */
+			if (actual_atts > 0)
+				appendPQExpBufferChar(q, ',');
+			appendPQExpBufferStr(q, "\n    ");
 
-				/* Attribute type */
-				if (tbinfo->attisdropped[j])
-				{
-					/*
-					 * ALTER TABLE DROP COLUMN clears
-					 * pg_attribute.atttypid, so we will not have gotten a
-					 * valid type name; insert INTEGER as a stopgap. We'll
-					 * clean things up later.
-					 */
-					appendPQExpBufferStr(q, " INTEGER /* dummy */");
-				}
-				else
-				{
-					appendPQExpBufferStr(q, tbinfo->atttypnames[j]);
-				}
+			/* Attribute name */
+			appendPQExpBuffer(q, "%s ", fmtId(tbinfo->attnames[j]));
+			appendPQExpBufferStr(q, tbinfo->atttypnames[j]);
 
-				actual_atts++;
-			}
+			actual_atts++;
 		}
 
 		appendPQExpBufferStr(q, "\n)");
