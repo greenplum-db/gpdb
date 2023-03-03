@@ -188,7 +188,8 @@ public:
 	static BOOL FCompareIdentToConst(CExpression *pexpr);
 	static BOOL FCompareIdentToConst(CExpression *pexpr,
 									 CExpression *&pexprIdent,
-									 CExpression *&pexprConst);
+									 CExpression *&pexprConst,
+									 IMDType::ECmpType &cmptype);
 
 	// is the given expression a comparison between a const and a const
 	static BOOL FCompareConstToConstIgnoreCast(CExpression *pexpr);

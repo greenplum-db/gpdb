@@ -458,7 +458,9 @@ CConstraintInterval::PciIntervalFromScalarCmp(CMemoryPool *mp,
 	//         (column relop const)
 	//         (const reolop column)
 	CExpression *pexprIdent, *pexprConst;
-	if (CPredicateUtils::FCompareIdentToConst(pexpr, pexprIdent, pexprConst))
+	IMDType::ECmpType cmptype;
+	if (CPredicateUtils::FCompareIdentToConst(pexpr, pexprIdent, pexprConst,
+											  cmptype))
 	{
 		// column
 #ifdef GPOS_DEBUG
@@ -468,10 +470,9 @@ CConstraintInterval::PciIntervalFromScalarCmp(CMemoryPool *mp,
 
 		// constant
 		CScalarConst *popScConst = CUtils::PscalarConst(pexprConst);
-		CScalarCmp *popScCmp = CScalarCmp::PopConvert(pexpr->Pop());
 
-		return PciIntervalFromColConstCmp(mp, colref, popScCmp->ParseCmpType(),
-										  popScConst, infer_nulls_as);
+		return PciIntervalFromColConstCmp(mp, colref, cmptype, popScConst,
+										  infer_nulls_as);
 	}
 
 	return nullptr;

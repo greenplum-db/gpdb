@@ -991,19 +991,36 @@ CPredicateUtils::PexprINDFConjunction(CMemoryPool *mp,
 }
 
 // is the given expression a comparison between a scalar ident and a constant
+//
+// Expression may is of the forms:
+//   (IDENT op CONST)
+//   (CONST op' IDENT)
+//
+// If it is (COST op IDENT) then also check that the comparison operator is the
+// same as the original expression (op==op'). This is to maintain contract of
+// existing callers.
 BOOL
 CPredicateUtils::FCompareIdentToConst(CExpression *pexpr)
 {
 	CExpression *pexprIdent;
 	CExpression *pexprConst;
-
-	return FCompareIdentToConst(pexpr, pexprIdent, pexprConst);
+	IMDType::ECmpType cmptype;
+	return FCompareIdentToConst(pexpr, pexprIdent, pexprConst, cmptype) &&
+		   cmptype == CScalarCmp::PopConvert(pexpr->Pop())->ParseCmpType();
 }
 
+// is the given expression a comparison between a scalar ident and a constant
+//
+// return true if expression is of the form:
+//   (IDENT op CONST)
+//   (CONST op' IDENT)
+//
+// returns the IDENT in pexprIdent, CONST in pexprConst, and op in cmptype.
 BOOL
 CPredicateUtils::FCompareIdentToConst(CExpression *pexpr,
 									  CExpression *&pexprIdent,
-									  CExpression *&pexprConst)
+									  CExpression *&pexprConst,
+									  IMDType::ECmpType &cmptype)
 {
 	COperator *pop = pexpr->Pop();
 
@@ -1023,6 +1040,7 @@ CPredicateUtils::FCompareIdentToConst(CExpression *pexpr,
 	{
 		pexprIdent = pexprLeft;
 		pexprConst = pexprRight;
+		cmptype = CScalarCmp::PopConvert(pexpr->Pop())->ParseCmpType();
 		return true;
 	}
 
@@ -1034,6 +1052,14 @@ CPredicateUtils::FCompareIdentToConst(CExpression *pexpr,
 	{
 		pexprIdent = pexprRight;
 		pexprConst = pexprLeft;
+
+		CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+		const IMDScalarOp *opSc = md_accessor->RetrieveScOp(
+			CScalarCmp::PopConvert(pexpr->Pop())->MdIdOp());
+		const IMDScalarOp *opScComm =
+			md_accessor->RetrieveScOp(opSc->GetCommuteOpMdid());
+
+		cmptype = opScComm->ParseCmpType();
 		return true;
 	}
 
