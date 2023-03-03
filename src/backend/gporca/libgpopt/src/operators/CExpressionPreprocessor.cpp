@@ -2068,11 +2068,7 @@ SubstituteConstantIdentifier(CMemoryPool *mp, CExpression *pexpr,
 	{
 		CExpression *pexprChild = NULL;
 		if (COperator::EopScalarConst != (*pexpr)[ul]->Pop()->Eopid() &&
-			phmExprToConst->Find((*pexpr)[ul]) != NULL &&
-			// make sure the types match
-			CScalar::PopConvert(phmExprToConst->Find((*pexpr)[ul])->Pop())
-				->MdidType()
-				->Equals(CScalar::PopConvert((*pexpr)[ul]->Pop())->MdidType()))
+			phmExprToConst->Find((*pexpr)[ul]) != NULL)
 		{
 			// substitute with constant
 			pexprChild = phmExprToConst->Find((*pexpr)[ul]);
