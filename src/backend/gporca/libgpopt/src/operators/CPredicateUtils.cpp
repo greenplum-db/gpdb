@@ -1012,17 +1012,6 @@ CPredicateUtils::PexprINDFConjunction(CMemoryPool *mp,
 BOOL
 CPredicateUtils::FCompareIdentToConst(CExpression *pexpr)
 {
-	CExpression *pexprIdent;
-	CExpression *pexprConst;
-
-	return FCompareIdentToConst(pexpr, pexprIdent, pexprConst);
-}
-
-BOOL
-CPredicateUtils::FCompareIdentToConst(CExpression *pexpr,
-									  CExpression *&pexprIdent,
-									  CExpression *&pexprConst)
-{
 	COperator *pop = pexpr->Pop();
 
 	if (COperator::EopScalarCmp != pop->Eopid())
@@ -1033,29 +1022,22 @@ CPredicateUtils::FCompareIdentToConst(CExpression *pexpr,
 	CExpression *pexprLeft = (*pexpr)[0];
 	CExpression *pexprRight = (*pexpr)[1];
 
-	// if left side scalar ident then right side must be a const
-	if ((CUtils::FScalarIdent(pexprLeft) ||
-		 CCastUtils::FBinaryCoercibleCastedScId(pexprLeft)) &&
-		(CUtils::FScalarConst(pexprRight) ||
-		 CCastUtils::FBinaryCoercibleCastedConst(pexprRight)))
+	// left side must be scalar ident
+
+	if (!(CUtils::FScalarIdent(pexprLeft) ||
+		  CCastUtils::FBinaryCoercibleCastedScId(pexprLeft)))
 	{
-		pexprIdent = pexprLeft;
-		pexprConst = pexprRight;
-		return true;
+		return false;
 	}
 
-	// if right side scalar ident then left side must be a const
-	if ((CUtils::FScalarIdent(pexprRight) ||
-		 CCastUtils::FBinaryCoercibleCastedScId(pexprRight)) &&
-		(CUtils::FScalarConst(pexprLeft) ||
-		 CCastUtils::FBinaryCoercibleCastedConst(pexprLeft)))
+	// right side must be a constant
+	if (!(CUtils::FScalarConst(pexprRight) ||
+		  CCastUtils::FBinaryCoercibleCastedConst(pexprRight)))
 	{
-		pexprIdent = pexprRight;
-		pexprConst = pexprLeft;
-		return true;
+		return false;
 	}
 
-	return false;
+	return true;
 }
 
 // is the given expression of the form (col IS DISTINCT FROM const)
