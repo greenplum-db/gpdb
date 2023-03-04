@@ -5772,7 +5772,7 @@ dispatcherAYT(void)
 
 	if (MyProcPort->sock == PGINVALID_SOCKET)
 	{
-		ereport(COMMERROR,
+		ereport(ERROR,
 				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 					errmsg("backend socket is invalid (recv)"),
 					errdetail("it could already have been closed")));
@@ -5786,7 +5786,7 @@ dispatcherAYT(void)
 
 	if (ret == 0)				/* socket has been closed. EOF */
 	{
-		ereport(COMMERROR,
+		ereport(ERROR,
 				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 					errmsg("dispatch connection lost (recv)"),
 					errdetail("peer socket has been closed, eof received")));
@@ -5797,7 +5797,7 @@ dispatcherAYT(void)
 		if (errno == EAGAIN || errno == EINPROGRESS)
 			return;		/* connection intact, no data available */
 		else			/* unrecoverable error */
-			ereport(COMMERROR,
+			ereport(ERROR,
 					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 						errmsg("dispatch connection lost (recv): %m")));
 	}
