@@ -89,7 +89,7 @@ update_attribute_encoding_entry(Oid relid, AttrNumber attnum, Datum newattoption
 				ObjectIdGetDatum(relid));
 	ScanKeyInit(&skey[1],
 				Anum_pg_attribute_encoding_attnum,
-				BTEqualStrategyNumber, F_OIDEQ,
+				BTEqualStrategyNumber, F_INT2EQ,
 				Int16GetDatum(attnum));
 	scan = systable_beginscan(rel, AttributeEncodingAttrelidAttnumIndexId, true,
 							  NULL, 2, skey);
