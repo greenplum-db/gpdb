@@ -632,7 +632,7 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns(CMemoryPool *mp,
 		// translate the default column value
 		CDXLNode *dxl_default_col_val = nullptr;
 
-		if (!att->attisdropped && !rel->rd_att->attrs[ul].attgenerated)
+		if (!att->attisdropped && !att->attgenerated)
 		{
 			dxl_default_col_val = GetDefaultColumnValue(
 				mp, md_accessor, rel->rd_att, att->attnum);
@@ -641,46 +641,41 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns(CMemoryPool *mp,
 		ULONG col_len = gpos::ulong_max;
 		CMDIdGPDB *mdid_col =
 			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, att->atttypid);
-		HeapTuple stats_tup = gpdb::GetAttStats(rel->rd_id, ul + 1);
 
-		// Column width priority:
-		// 1. If there is average width kept in the stats for that column, pick that value.
-		// 2. If not, if it is a fixed length text type, pick the size of it. E.g if it is
-		//    varchar(10), assign 10 as the column length.
-		// 3. Else if it not dropped and a fixed length type such as int4, assign the fixed
-		//    length.
-		// 4. Otherwise, assign it to default column width which is 8.
-		if (HeapTupleIsValid(stats_tup))
+		// if the type is of a known fixed width, just use that. If attlen is -1,
+		// it is variable length, and if -2, it is a null-terminated string
+		if (att->attlen > 0)
 		{
-			Form_pg_statistic form_pg_stats =
-				(Form_pg_statistic) GETSTRUCT(stats_tup);
-
-			// column width
-			col_len = form_pg_stats->stawidth;
-			gpdb::FreeHeapTuple(stats_tup);
-		}
-		else if ((mdid_col->Equals(&CMDIdGPDB::m_mdid_bpchar) ||
-				  mdid_col->Equals(&CMDIdGPDB::m_mdid_varchar)) &&
-				 (VARHDRSZ < att->atttypmod))
-		{
-			col_len = (ULONG) att->atttypmod - VARHDRSZ;
+			col_len = att->attlen;
 		}
 		else
 		{
-			DOUBLE width = CStatistics::DefaultColumnWidth.Get();
-			col_len = (ULONG) width;
+			// This is expensive, but luckily we don't need it for most types
+			int32 avg_width = gpdb::GetAttAvgWidth(rel->rd_id, ul + 1);
 
-			if (!att->attisdropped)
+			// Column width priority for non-fixed width:
+			// 1. If there is average width kept in the stats for that column, pick that value.
+			// 2. If not, if it is a fixed length text type, pick the size of it. E.g if it is
+			//    varchar(10), assign 10 as the column length.
+			// 3. Otherwise, assign it to default column width which is 8.
+			if (avg_width > 0)
 			{
-				IMDType *md_type =
-					CTranslatorRelcacheToDXL::RetrieveType(mp, mdid_col);
-				if (md_type->IsFixedLength())
-				{
-					col_len = md_type->Length();
-				}
-				md_type->Release();
+				col_len = avg_width;
+			}
+			else if ((mdid_col->Equals(&CMDIdGPDB::m_mdid_bpchar) ||
+					  mdid_col->Equals(&CMDIdGPDB::m_mdid_varchar)) &&
+					 (VARHDRSZ < att->atttypmod))
+			{
+				col_len = (ULONG) att->atttypmod - VARHDRSZ;
+			}
+			else
+			{
+				DOUBLE width = CStatistics::DefaultColumnWidth.Get();
+				col_len = (ULONG) width;
 			}
 		}
+
+
 
 		CMDColumn *md_col = GPOS_NEW(mp)
 			CMDColumn(md_colname, att->attnum, mdid_col, att->atttypmod,

@@ -762,6 +762,18 @@ gpdb::GetAttStats(Oid relid, AttrNumber attnum)
 	return nullptr;
 }
 
+int32
+gpdb::GetAttAvgWidth(Oid relid, AttrNumber attnum)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_statistic */
+		return get_attavgwidth(relid, attnum);
+	}
+	GP_WRAP_END;
+	return 0;
+}
+
 List *
 gpdb::GetExtStats(Relation rel)
 {
