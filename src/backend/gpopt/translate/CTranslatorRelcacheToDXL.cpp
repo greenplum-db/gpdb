@@ -2508,7 +2508,6 @@ CTranslatorRelcacheToDXL::RetrievePartKeysAndTypes(CMemoryPool *mp,
 {
 	GPOS_ASSERT(nullptr != rel);
 
-	// FIXME: isn't it faster to check rel.rd_partkey?
 	if (!rel->rd_partdesc)
 	{
 		// not a partitioned table
