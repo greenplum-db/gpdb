@@ -182,8 +182,6 @@ gp_exttable_permission_check(PG_FUNCTION_ARGS)
 		is_valid_rejectlimit(reject_limit_type, reject_limit);
 	}
 
-	list_free(location_list);
-	list_free(options_list);
 	PG_RETURN_VOID();
 }
 
