@@ -707,6 +707,7 @@ gpvars_check_statement_mem(int *newval, void **extra, GucSource source)
 	{
 		GUC_check_errmsg("Invalid input for statement_mem, must be less than max_statement_mem (%d kB)",
 						 max_statement_mem);
+		return false;
 	}
 
 	return true;

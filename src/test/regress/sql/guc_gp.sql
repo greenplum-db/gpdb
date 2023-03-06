@@ -397,3 +397,6 @@ SELECT count(nspname) FROM gp_dist_random('pg_namespace') WHERE nspname LIKE 'pg
 DROP TABLE just_a_temp_table;
 RESET search_path;
 
+-- Try to set statement_mem > max_statement_mem
+SET statement_mem = '4000MB';
+RESET statement_mem;
