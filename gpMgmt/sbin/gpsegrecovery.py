@@ -12,7 +12,7 @@ from gppylib.commands.gp import SegmentStart
 from gppylib.gparray import Segment
 from gppylib.commands.gp import ModifyConfSetting
 from gppylib.db.catalog import RemoteQueryCommand
-from gppylib.programs.clsRecoverSegment_triples import is_backup_in_progress
+from gppylib.operations.get_segments_in_recovery import is_seg_in_backup_mode
 from gppylib.operations.segment_tablespace_locations import get_segment_tablespace_locations
 
 
@@ -121,7 +121,7 @@ class DifferentialRecovery(Command):
         finally:
             # Backup is completed, now run pg_stop_backup which will also remove backup_label file from
             # primary data_dir
-            if is_backup_in_progress(self.recovery_info.source_hostname, self.recovery_info.source_port):
+            if is_seg_in_backup_mode(self.recovery_info.source_hostname, self.recovery_info.source_port):
                 self.pg_stop_backup()
 
         """ Write the postresql.auto.conf and internal.auto.conf files """
@@ -196,7 +196,7 @@ class DifferentialRecovery(Command):
         # os.path.join(dir, "") will append a '/' at the end of dir. When using "/" at the end of source,
         # rsync will copy the content of the last directory. When not using "/" at the end of source, rsync
         # will copy the last directory and the content of the directory.
-        cmd = Rsync(name="Sync pg_data dir", srcFile=os.path.join(self.recovery_info.source_datadir, ""),
+        cmd = Rsync(name="Sync pg data_dir", srcFile=os.path.join(self.recovery_info.source_datadir, ""),
                     dstFile=self.recovery_info.target_datadir,
                     srcHost=self.recovery_info.source_hostname, exclude_list=rsync_exclude_list,
                     delete=True, checksum=True, progress=True, progress_file=self.recovery_info.progress_file)
