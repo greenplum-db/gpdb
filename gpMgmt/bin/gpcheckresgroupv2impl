@@ -41,6 +41,8 @@ class CgroupValidationVersionBeta(CgroupValidation):
         if not self.mount_point:
             self.die("failed to detect cgroup v2 mount point.")
 
+        self.validate_permission("cgroup.procs", "rw")
+
         self.validate_permission("gpdb/", "rwx")
         self.validate_permission("gpdb/cgroup.procs", "rw")
 
