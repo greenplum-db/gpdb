@@ -92,6 +92,7 @@ def deserialize_list(serialized_string, class_name=RecoveryInfo):
 class RecoveryErrorType(object):
     VALIDATION_ERROR = 'validation'
     REWIND_ERROR = 'incremental'
+    DIFFERENTIAL_ERROR = 'differential'
     BASEBACKUP_ERROR = 'full'
     START_ERROR = 'start'
     UPDATE_ERROR = 'update'
@@ -122,7 +123,8 @@ class RecoveryResult(object):
         self._setup_recovery_errors = defaultdict(list)
         self._bb_errors = defaultdict(list)
         self._rewind_errors = defaultdict(list)
-        self._dbids_that_failed_bb_rewind = set()
+        self._differential_errors = defaultdict(list)
+        self._dbids_that_failed_bb_rewind_differential = set()
         self._start_errors = defaultdict(list)
         self._update_errors = defaultdict(list)
         self._parse_results(results)
@@ -141,10 +143,13 @@ class RecoveryResult(object):
                     continue
                 if error.error_type == RecoveryErrorType.BASEBACKUP_ERROR:
                     self._bb_errors[host_result.remoteHost].append(error)
-                    self._dbids_that_failed_bb_rewind.add(error.dbid)
+                    self._dbids_that_failed_bb_rewind_differential.add(error.dbid)
                 elif error.error_type == RecoveryErrorType.REWIND_ERROR:
-                    self._dbids_that_failed_bb_rewind.add(error.dbid)
+                    self._dbids_that_failed_bb_rewind_differential.add(error.dbid)
                     self._rewind_errors[host_result.remoteHost].append(error)
+                elif error.error_type == RecoveryErrorType.DIFFERENTIAL_ERROR:
+                    self._dbids_that_failed_bb_rewind_differential.add(error.dbid)
+                    self._differential_errors[host_result.remoteHost].append(error)
                 elif error.error_type == RecoveryErrorType.START_ERROR:
                     self._start_errors[host_result.remoteHost].append(error)
                 elif error.error_type == RecoveryErrorType.VALIDATION_ERROR:
@@ -167,10 +172,10 @@ class RecoveryResult(object):
 
     def recovery_successful(self):
         return len(self._setup_recovery_errors) == 0 and len(self._bb_errors) == 0 and len(self._rewind_errors) == 0 and \
-               len(self._start_errors) == 0 and len(self._invalid_recovery_errors) == 0 and len(self._update_errors) == 0
+               len(self._differential_errors) == 0 and len(self._start_errors) == 0 and len(self._invalid_recovery_errors) == 0 and len(self._update_errors) == 0
 
-    def was_bb_rewind_successful(self, dbid):
-        return dbid not in self._dbids_that_failed_bb_rewind
+    def was_bb_rewind_rsync_successful(self, dbid):
+        return dbid not in self._dbids_that_failed_bb_rewind_differential
 
     def print_setup_recovery_errors(self):
         setup_recovery_error_pattern = " hostname: {}; port: {}; error: {}"
@@ -182,22 +187,30 @@ class RecoveryResult(object):
                     self._logger.error(setup_recovery_error_pattern.format(hostname, error.port, error.error_msg))
         self._print_invalid_errors()
 
-    def print_bb_rewind_update_and_start_errors(self):
-        bb_rewind_error_pattern = " hostname: {}; port: {}; logfile: {}; recoverytype: {}"
-        if len(self._bb_errors) > 0 or len(self._rewind_errors) > 0:
+    def print_bb_rewind_differential_update_and_start_errors(self):
+        bb_rewind_differential_error_pattern = " hostname: {}; port: {}; logfile: {}; recoverytype: {}"
+        if len(self._bb_errors) > 0 or len(self._rewind_errors) > 0 or len(self._differential_errors) > 0:
             self._logger.info("----------------------------------------------------------")
             if len(self._rewind_errors) > 0:
-                self._logger.info("Failed to {} the following segments. You must run gprecoverseg -F for "
-                                  "all incremental failures".format(self.action_name))
+                self._logger.info("Failed to {} the following segments. You must run either gprecoverseg --differential"
+                                  " or gprecoverseg -F for all incremental failures".format(self.action_name))
+            elif len(self._differential_errors) > 0:
+                self._logger.info("Failed to {} the following segments. You must run either gprecoverseg --differential"
+                                  " or gprecoverseg -F for all differential failures".format(self.action_name))
             else:
                 self._logger.info("Failed to {} the following segments".format(self.action_name))
             for hostname, errors in self._rewind_errors.items():
                 for error in errors:
-                    self._logger.info(bb_rewind_error_pattern.format(hostname, error.port, error.progress_file,
+                    self._logger.info(bb_rewind_differential_error_pattern.format(hostname, error.port, error.progress_file,
+                                                                     error.error_type))
+
+            for hostname, errors in self._differential_errors.items():
+                for error in errors:
+                    self._logger.info(bb_rewind_differential_error_pattern.format(hostname, error.port, error.progress_file,
                                                                      error.error_type))
             for hostname, errors in self._bb_errors.items():
                 for error in errors:
-                    self._logger.info(bb_rewind_error_pattern.format(hostname, error.port, error.progress_file,
+                    self._logger.info(bb_rewind_differential_error_pattern.format(hostname, error.port, error.progress_file,
                                                                  error.error_type))
 
         if len(self._start_errors) > 0:
