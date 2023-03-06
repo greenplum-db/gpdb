@@ -4,3 +4,9 @@ aws-bucket: gpdb5-assert-concourse-builds-dev
 google-project-id: data-sandbox-2
 gcs-bucket: pivotal-gpdb-concourse-resources-dev
 gcs-bucket-intermediates: pivotal-gpdb-concourse-resources-intermediates-dev
+########## Compile gpdb clients on windows #############
+remote_win_host_build: 10.0.34.9
+remote_win_user_build: buildbot
+remote_win_port_build: 22
+remote_win_user_test: buildbot
+remote_win_port_test: 22
