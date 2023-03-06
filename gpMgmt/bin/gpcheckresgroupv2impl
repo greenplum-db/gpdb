@@ -25,7 +25,7 @@ class CgroupValidation(object):
         return ""
 
 
-class CgroupValidationVersionBeta(CgroupValidation):
+class CgroupValidationVersionTwo(CgroupValidation):
     def __init__(self):
         self.mount_point = self.detect_cgroup_mount_point()
         self.tab = {"r": os.R_OK, "w": os.W_OK, "x": os.X_OK, "f": os.F_OK}
@@ -83,6 +83,6 @@ class CgroupValidationVersionBeta(CgroupValidation):
 
 if __name__ == '__main__':
     try:
-        CgroupValidationVersionBeta().validate_all()
+        CgroupValidationVersionTwo().validate_all()
     except ValidationException as e:
         exit(e.message)
