@@ -1516,8 +1516,8 @@ CUtils::PdrgpexprDedup(CMemoryPool *mp, CExpressionArray *pdrgpexpr)
 			//        +--CScalarIdent "b" (10)
 			//  2)
 			//     +--CScalarCmp (=)
-			//        +--CScalarIdent "b" (10)
-			//        |--CScalarIdent "a" (1)
+			//        |--CScalarIdent "b" (10)
+			//        +--CScalarIdent "a" (1)
 			CExpression *pexprComm = CUtils::PexprOpComEquality(mp, pexpr);
 			if (pexprComm)
 			{
