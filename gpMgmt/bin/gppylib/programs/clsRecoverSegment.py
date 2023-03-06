@@ -103,7 +103,7 @@ class GpRecoverSegmentProgram:
             return GpSegmentRebalanceOperation(gpEnv, gpArray, self.__options.parallelDegree, self.__options.parallelPerHost)
         else:
             instance = RecoveryTripletsFactory.instance(gpArray, self.__options.recoveryConfigFile, self.__options.newRecoverHosts, self.__options.parallelDegree)
-            segs = [GpMirrorToBuild(t.failed, t.live, t.failover, self.__options.forceFullResynchronization) for t in instance.getTriplets()]
+            segs = [GpMirrorToBuild(t.failed, t.live, t.failover, self.__options.forceFullResynchronization, self.__options.differentialResynchronization) for t in instance.getTriplets()]
             return GpMirrorListToBuild(segs, self.__pool, self.__options.quiet,
                                        self.__options.parallelDegree,
                                        instance.getInterfaceHostnameWarnings(),
@@ -163,7 +163,11 @@ class GpRecoverSegmentProgram:
 
                 tabLog = TableLogger()
 
-                syncMode = "Full" if toRecover.isFullSynchronization() else "Incremental"
+                syncMode = "Incremental"
+                if toRecover.isFullSynchronization():
+                    syncMode = "Full"
+                elif toRecover.isDifferentialSynchronization():
+                    syncMode = "Differential"
                 tabLog.info(["Synchronization mode", "= " + syncMode])
                 programIoUtils.appendSegmentInfoForOutput("Failed", gpArray, toRecover.getFailedSegment(), tabLog)
                 programIoUtils.appendSegmentInfoForOutput("Recovery Source", gpArray, toRecover.getLiveSegment(),
@@ -237,8 +241,18 @@ class GpRecoverSegmentProgram:
             optionCnt += 1
         if self.__options.rebalanceSegments:
             optionCnt += 1
+        if self.__options.differentialResynchronization:
+            optionCnt += 1
         if optionCnt > 1:
-            raise ProgramArgumentValidationException("Only one of -i, -p, and -r may be specified")
+            raise ProgramArgumentValidationException("Only one of -i, -p, -r and --differential may be specified")
+
+        # verify "mode to recover" options
+        if self.__options.forceFullResynchronization and self.__options.differentialResynchronization:
+            raise ProgramArgumentValidationException("Only one of -F and --differential may be specified")
+
+        # verify differential supported options
+        if self.__options.differentialResynchronization and self.__options.outputSampleConfigFile:
+            raise ProgramArgumentValidationException("Invalid -o provided with --differential argument")
 
         faultProberInterface.getFaultProber().initializeProber(gpEnv.getCoordinatorPort())
 
@@ -327,7 +341,11 @@ class GpRecoverSegmentProgram:
             contentsToUpdate = [seg.getLiveSegment().getSegmentContentId() for seg in mirrorBuilder.getMirrorsToBuild()]
             update_pg_hba_on_segments(gpArray, self.__options.hba_hostnames, self.__options.parallelDegree, contentsToUpdate)
             if not mirrorBuilder.recover_mirrors(gpEnv, gpArray):
-                self.logger.error("gprecoverseg failed. Please check the output for more details.")
+                if self.__options.differentialResynchronization:
+                    self.logger.error("gprecoverseg differential recovery failed. Please check the gpsegrecovery.py log"
+                                      " file and rsync log file for more details.")
+                else:
+                    self.logger.error("gprecoverseg failed. Please check the output for more details.")
                 sys.exit(1)
 
             self.logger.info("********************************")
@@ -420,6 +438,10 @@ class GpRecoverSegmentProgram:
                          dest="forceFullResynchronization",
                          metavar="<forceFullResynchronization>",
                          help="Force full segment resynchronization")
+        addTo.add_option('--differential', None, default=False, action='store_true',
+                         dest="differentialResynchronization",
+                         metavar="<differentialResynchronization>",
+                         help="differential segment resynchronization")
         addTo.add_option("-B", None, type="int", default=gp.DEFAULT_COORDINATOR_NUM_WORKERS,
                          dest="parallelDegree",
                          metavar="<parallelDegree>",

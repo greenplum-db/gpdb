@@ -143,6 +143,16 @@ def getPostmasterPID(db):
     sout=cmd.get_results().stdout.lstrip(' ')
     return int(sout.split()[1])
 
+
+def removePostmasterPid(datadir):
+    cmd = Command(name='remove the postmaster.pid file',
+                  cmdStr='rm -f {}'.format(os.path.join(datadir, "postmaster.pid")))
+    cmd.run()
+    return_code = cmd.get_return_code()
+    if return_code != 0:
+        raise ExecutionError("Failed while trying to remove postmaster.pid.", cmd)
+
+
 def killPgProc(db,procname,signal):
     postmasterPID=getPostmasterPID(db)
     hostname=db.getSegmentHostName()
