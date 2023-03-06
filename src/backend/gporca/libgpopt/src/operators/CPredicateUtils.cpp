@@ -996,7 +996,7 @@ CPredicateUtils::PexprINDFConjunction(CMemoryPool *mp,
 //   (IDENT op CONST)
 //   (CONST op' IDENT)
 //
-// If it is (COST op IDENT) then also check that the comparison operator is the
+// If it is (CONST op IDENT) then also check that the comparison operator is the
 // same as the original expression (op==op'). This is to maintain contract of
 // existing callers.
 BOOL
@@ -1056,6 +1056,10 @@ CPredicateUtils::FCompareIdentToConst(CExpression *pexpr,
 		CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 		const IMDScalarOp *opSc = md_accessor->RetrieveScOp(
 			CScalarCmp::PopConvert(pexpr->Pop())->MdIdOp());
+		if (nullptr == opSc->GetCommuteOpMdid())
+		{
+			return false;
+		}
 		const IMDScalarOp *opScComm =
 			md_accessor->RetrieveScOp(opSc->GetCommuteOpMdid());
 
