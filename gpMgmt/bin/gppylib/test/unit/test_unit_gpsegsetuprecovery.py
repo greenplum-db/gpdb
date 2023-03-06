@@ -25,7 +25,8 @@ class ValidationForFullRecoveryTestCase(GpTestCase):
                                               m.getSegmentDbId(),
                                               p.getSegmentHostName(),
                                               p.getSegmentPort(),
-                                              True, '/tmp/test_progress_file')
+                                              p.getSegmentDataDirectory(),
+                                              True, False, '/tmp/test_progress_file')
 
         self.validation_recovery_cmd = gpsegsetuprecovery.ValidationForFullRecovery(
             name='test validation for full recovery', recovery_info=self.seg_recovery_info,
@@ -162,7 +163,8 @@ class SetupForIncrementalRecoveryTestCase(GpTestCase):
                                               m.getSegmentDbId(),
                                               p.getSegmentHostName(),
                                               p.getSegmentPort(),
-                                              True, '/tmp/test_progress_file')
+                                              p.getSegmentDataDirectory(),
+                                              True, False, '/tmp/test_progress_file')
 
         self.setup_for_incremental_recovery_cmd = gpsegsetuprecovery.SetupForIncrementalRecovery(
             name='setup for incremental recovery', recovery_info=self.seg_recovery_info, logger=self.mock_logger)
@@ -206,10 +208,68 @@ class SetupForIncrementalRecoveryTestCase(GpTestCase):
         self._assert_cmd_passed()
         shutil.rmtree(d)
 
-    @patch('gpsegsetuprecovery.Command', return_value=Command('rc1_cmd', 'echo 1 | grep 2'))
+    @patch('gppylib.commands.pg.Command', return_value=Command('rc1_cmd', 'echo 1 | grep 2'))
     def test_remove_pid_failed(self, mock_cmd):
         self.setup_for_incremental_recovery_cmd.run()
         self._assert_checkpoint_query()
+        self._assert_cmd_failed("Failed while trying to remove postmaster.pid.")
+
+
+class SetupForDifferentialRecoveryTestCase(GpTestCase):
+    def setUp(self):
+        self.mock_logger = Mock(spec=['log', 'info', 'debug', 'error', 'warn', 'exception'])
+        self.mock_conn_val = Mock()
+        self.mock_dburl_val = Mock()
+        self.apply_patches([patch('gpsegsetuprecovery.dbconn.connect', return_value=self.mock_conn_val),
+                            patch('gpsegsetuprecovery.dbconn.DbURL', return_value=self.mock_dburl_val),
+                            patch('gpsegsetuprecovery.dbconn.execSQL')])
+        p = Segment.initFromString("1|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
+        m = Segment.initFromString("2|0|m|m|s|u|sdw2|sdw2|50000|/data/mirror0")
+        self.seg_recovery_info = RecoveryInfo(m.getSegmentDataDirectory(),
+                                              m.getSegmentPort(),
+                                              m.getSegmentDbId(),
+                                              p.getSegmentHostName(),
+                                              p.getSegmentPort(),
+                                              p.getSegmentDataDirectory(),
+                                              True, False, '/tmp/test_progress_file')
+
+        self.setup_for_differential_recovery_cmd = gpsegsetuprecovery.SetupForDifferentialRecovery(
+            name='setup for differential recovery', recovery_info=self.seg_recovery_info, logger=self.mock_logger)
+
+    def tearDown(self):
+        super(SetupForDifferentialRecoveryTestCase, self).tearDown()
+
+    def _assert_cmd_passed(self):
+        self.assertEqual(0, self.setup_for_differential_recovery_cmd.get_results().rc)
+        self.assertEqual('', self.setup_for_differential_recovery_cmd.get_results().stdout)
+        self.assertEqual('', self.setup_for_differential_recovery_cmd.get_results().stderr)
+        self.assertEqual(True, self.setup_for_differential_recovery_cmd.get_results().wasSuccessful())
+
+    def _assert_cmd_failed(self, expected_stderr):
+        self.assertEqual(1, self.setup_for_differential_recovery_cmd.get_results().rc)
+        self.assertEqual('', self.setup_for_differential_recovery_cmd.get_results().stdout)
+        self.assertTrue(expected_stderr in self.setup_for_differential_recovery_cmd.get_results().stderr)
+        self.assertEqual(False, self.setup_for_differential_recovery_cmd.get_results().wasSuccessful())
+
+    def test_setup_pid_does_not_exist_passes(self):
+        self.setup_for_differential_recovery_cmd.run()
+        self._assert_cmd_passed()
+
+    def test_setup_pid_exist_passes(self):
+        d = tempfile.mkdtemp()
+        self.seg_recovery_info.target_datadir = d
+        f = open("{}/postmaster.pid".format(d), 'w')
+        f.write('1111')
+        f.close()
+        self.assertTrue(os.path.exists("{}/postmaster.pid".format(d)))
+        self.setup_for_differential_recovery_cmd.run()
+        self.assertFalse(os.path.exists("{}/postmaster.pid".format(d)))
+        self._assert_cmd_passed()
+        shutil.rmtree(d)
+
+    @patch('gppylib.commands.pg.Command', return_value=Command('rc1_cmd', 'echo 1 | grep 2'))
+    def test_remove_pid_failed(self, mock_cmd):
+        self.setup_for_differential_recovery_cmd.run()
         self._assert_cmd_failed("Failed while trying to remove postmaster.pid.")
 
 
@@ -217,13 +277,17 @@ class SegSetupRecoveryTestCase(GpTestCase):
     def setUp(self):
         self.mock_logger = Mock(spec=['log', 'info', 'debug', 'error', 'warn', 'exception'])
         self.full_r1 = RecoveryInfo('target_data_dir1', 5001, 1, 'source_hostname1',
-                                    6001, True, '/tmp/progress_file1')
+                                    6001, 'source_datadir1', True, False, '/tmp/progress_file1')
         self.incr_r1 = RecoveryInfo('target_data_dir2', 5002, 2, 'source_hostname2',
-                                    6002, False, '/tmp/progress_file2')
+                                    6002, 'source_datadir2', False, False, '/tmp/progress_file2')
         self.full_r2 = RecoveryInfo('target_data_dir3', 5003, 3, 'source_hostname3',
-                                    6003, True, '/tmp/progress_file3')
+                                    6003, 'source_datadir3', True, False, '/tmp/progress_file3')
         self.incr_r2 = RecoveryInfo('target_data_dir4', 5004, 4, 'source_hostname4',
-                                    6004, False, '/tmp/progress_file4')
+                                    6004, 'source_datadir4', False, False, '/tmp/progress_file4')
+        self.diff_r1 = RecoveryInfo('target_data_dir5', 5005, 5, 'source_hostname5',
+                                    6005, 'source_datadir5', False, True, '/tmp/progress_file5')
+        self.diff_r2 = RecoveryInfo('target_data_dir6', 5006, 6, 'source_hostname6',
+                                    6006, 'source_datadir6', False, True, '/tmp/progress_file6')
 
     def tearDown(self):
         super(SegSetupRecoveryTestCase, self).tearDown()
@@ -240,6 +304,13 @@ class SegSetupRecoveryTestCase(GpTestCase):
         self.assertTrue(
             isinstance(cmd, gpsegsetuprecovery.SetupForIncrementalRecovery))
         self.assertIn('pg_rewind', cmd.name)
+        self.assertEqual(expected_recovery_info, cmd.recovery_info)
+        self.assertEqual(self.mock_logger, cmd.logger)
+
+    def _assert_setup_diff_call(self, cmd, expected_recovery_info):
+        self.assertTrue(
+            isinstance(cmd, gpsegsetuprecovery.SetupForDifferentialRecovery))
+        self.assertIn('differential', cmd.name)
         self.assertEqual(expected_recovery_info, cmd.recovery_info)
         self.assertEqual(self.mock_logger, cmd.logger)
 
@@ -293,10 +364,10 @@ class SegSetupRecoveryTestCase(GpTestCase):
     @patch('recovery_base.RecoveryBase.main')
     @patch('gpsegsetuprecovery.SegSetupRecovery.get_setup_cmds')
     def test_get_recovery_cmds_is_called(self, mock_get_setup_cmds, mock_recovery_base_main, mock_logger):
-        mix_confinfo = gppylib.recoveryinfo.serialize_list([self.full_r1, self.incr_r2])
+        mix_confinfo = gppylib.recoveryinfo.serialize_list([self.full_r1, self.incr_r2, self.diff_r1])
         sys.argv = ['gpsegsetuprecovery', '-l', '/tmp/logdir', '-f', '-c {}'.format(mix_confinfo)]
         SegSetupRecovery().main()
-        mock_get_setup_cmds.assert_called_once_with([self.full_r1, self.incr_r2], True, mock_logger.return_value)
+        mock_get_setup_cmds.assert_called_once_with([self.full_r1, self.incr_r2, self.diff_r1], True, mock_logger.return_value)
         mock_recovery_base_main.assert_called_once_with(mock_get_setup_cmds.return_value)
 
     def test_empty_recovery_info_list(self):
@@ -315,11 +386,18 @@ class SegSetupRecoveryTestCase(GpTestCase):
         self._assert_setup_incr_call(cmd_list[0], self.incr_r1)
         self._assert_setup_incr_call(cmd_list[1], self.incr_r2)
 
+    def test_get_setup_cmds_differential_recoveryinfo(self):
+        cmd_list = SegSetupRecovery().get_setup_cmds([
+            self.diff_r1, self.diff_r2], False, self.mock_logger)
+        self._assert_setup_diff_call(cmd_list[0], self.diff_r1)
+        self._assert_setup_diff_call(cmd_list[1], self.diff_r2)
+
     def test_get_setup_cmds_mix_recoveryinfo(self):
         cmd_list = SegSetupRecovery().get_setup_cmds([
-            self.full_r1, self.incr_r2], False, self.mock_logger)
+            self.full_r1, self.incr_r2, self.diff_r1], False, self.mock_logger)
         self._assert_validation_full_call(cmd_list[0], self.full_r1)
         self._assert_setup_incr_call(cmd_list[1], self.incr_r2)
+        self._assert_setup_diff_call(cmd_list[2], self.diff_r1)
 
     def test_get_setup_cmds_mix_recoveryinfo_forceoverwrite(self):
         cmd_list = SegSetupRecovery().get_setup_cmds([
