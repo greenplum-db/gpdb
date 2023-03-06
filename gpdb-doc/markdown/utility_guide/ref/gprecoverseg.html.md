@@ -6,7 +6,7 @@ Recovers a primary or mirror segment instance that has been marked as down \(if 
 
 ```
 gprecoverseg [[-p <new_recover_host>[,...]] | -i <recover_config_file>] [-d <coordinator_data_directory>] 
-             [-b <segment_batch_size>] [-B <batch_size>] [-F [-s]] [-a] [-q] 
+             [-b <segment_batch_size>] [-B <batch_size>] [-F [-s]] [-a] [-q] [--differential]
 	      [--hba-hostnames <boolean>] 
              [--no-progress] [-l <logfile_directory>]
 
@@ -88,6 +88,9 @@ The recovery process marks the segment as up again in the Greenplum Database sys
     Also, for a full recovery, the utility does not restore custom files that are stored in the segment instance data directory even if the custom files are also in the active segment instance. You must restore the custom files manually. For example, when using the `gpfdists` protocol \(`gpfdist` with SSL encryption\) to manage external data, client certificate files are required in the segment instance `$PGDATA/gpfdists` directory. These files are not restored. For information about configuring `gpfdists`, see [Encrypting gpfdist Connections](../../security-guide/topics/Encryption.html).
 
     Use the `-s` option to output a new line once per second for each segment. Alternatively, use the `--no-progress` option to completely deactivate progress reports.
+
+--differential \(Differential recovery\)
+:   Optional. Perform a differential copy of the active segment instance in order to recover the failed segment. The default is to only copy over the incremental changes that occurred while the segment was down.
 
 --hba-hostnames boolean
 :   Optional. Controls whether this utility uses IP addresses or host names in the `pg_hba.conf` file when updating this file with addresses that can connect to Greenplum Database. When set to 0 -- the default value -- this utility uses IP addresses when updating this file. When set to 1, this utility uses host names when updating this file. For consistency, use the same value that was specified for `HBA_HOSTNAMES` when the Greenplum Database system was initialized. For information about how Greenplum Database resolves host names in the `pg_hba.conf` file, see [Configuring Client Authentication](../../admin_guide/client_auth.html).
