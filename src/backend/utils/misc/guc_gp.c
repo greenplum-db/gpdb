@@ -4334,6 +4334,17 @@ struct config_string ConfigureNamesString_gp[] =
 	},
 
 	{
+		{"gp_session_role", PGC_BACKEND, COMPAT_OPTIONS_PREVIOUS,
+			gettext_noop("Alias of gp_role for compatibility."),
+			gettext_noop("Valid values are DISPATCH, EXECUTE, and UTILITY."),
+			GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
+		},
+		&gp_role_string,
+		"undefined",
+		check_gp_role, assign_gp_role, show_gp_role
+	},
+
+	{
 		{"gp_role", PGC_BACKEND, GP_WORKER_IDENTITY,
 			gettext_noop("Sets the role for the session."),
 			gettext_noop("Valid values are DISPATCH, EXECUTE, and UTILITY."),
