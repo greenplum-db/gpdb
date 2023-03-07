@@ -2513,6 +2513,117 @@ FROM gp_toolkit.__check_missing_files; -- not checking ext on coordinator
 GRANT SELECT ON gp_toolkit.gp_check_missing_files_ext TO public;
 
 --------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.get_column_size
+-- @in:
+--        oid - oid of table to collect column size data for
+-- @out:
+--        int - segment id
+--        int - attribute number
+--        bigint - size in bytes
+--        bigint - size in bytes if column were uncompressed
+--        numeric - compression ratio
+--
+-- @doc:
+--        Gather column size and compression ratio for given column-oriented table
+--
+--------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION gp_toolkit.get_column_size(ao_oid oid,
+    OUT segment int,
+    OUT attnum int,
+    OUT size bigint,
+    OUT size_uncompressed bigint,
+    OUT compression_ratio numeric)
+    RETURNS SETOF RECORD AS $$
+DECLARE
+    ao_rec RECORD;
+BEGIN
+    FOR ao_rec IN
+    SELECT segment_id, column_num, sum(eof) AS size, sum(eof_uncompressed) AS size_uncompressed
+    FROM gp_toolkit.__gp_aocsseg(ao_oid) GROUP BY segment_id, column_num LOOP
+        segment := ao_rec.segment_id;
+        attnum := ao_rec.column_num + 1; -- user attributes start at attnum=1
+        size := ao_rec.size;
+        size_uncompressed := ao_rec.size_uncompressed;
+        compression_ratio := round(size_uncompressed::numeric / size::numeric, 2);
+        RETURN NEXT;
+    END LOOP;
+    RETURN;
+END;
+$$
+LANGUAGE plpgsql;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.get_column_size TO public;
+
+--------------------------------------------------------------------------------
+-- @view:
+--        gp_toolkit.gp_column_size
+--
+-- @doc:
+--       Gather column size and compression ratio for column-oriented
+--       tables from all segments.
+--
+--------------------------------------------------------------------------------
+CREATE OR REPLACE VIEW gp_toolkit.gp_column_size AS (
+    SELECT
+        s.segment as gp_segment_id,
+        c.oid as relid,
+        n.nspname as schema,
+        c.relname,
+        a.attnum,
+        a.attname,
+        coalesce(s.size, 0) as size,
+        coalesce(s.size_uncompressed, 0) as size_uncompressed,
+        coalesce(s.compression_ratio, 0) as compression_ratio
+    FROM pg_class c
+    LEFT JOIN LATERAL gp_toolkit.get_column_size(oid) s ON true
+    JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum=s.attnum
+    JOIN pg_namespace n ON n.oid=c.relnamespace
+    JOIN pg_am am ON am.oid=c.relam
+    WHERE am.amname='ao_column'
+    AND c.relkind='r'
+    AND a.attisdropped='f'
+    AND s.size is not null
+    ORDER BY s.segment, c.oid, a.attnum, s.size
+);
+
+GRANT SELECT ON gp_toolkit.gp_column_size TO public;
+
+--------------------------------------------------------------------------------
+-- @view:
+--        gp_toolkit.gp_column_size_summary
+--
+-- @doc:
+--       Summary view of gp_column_size. Aggregates column size and
+--       compression ratio for column-oriented tables from all segments.
+--
+--------------------------------------------------------------------------------
+CREATE OR REPLACE VIEW gp_toolkit.gp_column_size_summary AS (
+    SELECT
+        c.oid as relid,
+        n.nspname as schema,
+        c.relname,
+        a.attnum,
+        a.attname,
+        coalesce(sum(s.size), 0) as size,
+        coalesce(sum(s.size_uncompressed), 0) as size_uncompressed,
+        coalesce(round(avg(s.compression_ratio), 2), 0) as compression_ratio
+    FROM pg_class c
+    LEFT JOIN LATERAL gp_toolkit.get_column_size(oid) s ON true
+    JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum=s.attnum
+    JOIN pg_namespace n ON n.oid=c.relnamespace
+    JOIN pg_am am ON am.oid=c.relam
+    WHERE am.amname='ao_column'
+    AND c.relkind='r'
+    AND a.attisdropped='f'
+    AND s.size is not null
+    GROUP BY n.nspname, c.oid, a.attnum, a.attname, c.relname
+    ORDER BY n.nspname, c.oid, a.attnum, size
+);
+
+GRANT SELECT ON gp_toolkit.gp_column_size_summary TO public;
+
+--------------------------------------------------------------------------------
 
 -- Finalize install
 COMMIT;
