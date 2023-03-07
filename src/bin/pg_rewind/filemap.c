@@ -218,11 +218,11 @@ process_source_file(const char *path, file_type_t type, size_t size,
 	Assert(filemap->array == NULL);
 
 	/*
-	 * Pretend that pg_xlog is a directory, even if it's really a symlink.
+	 * Pretend that pg_xlog/pg_log is a directory, even if it's really a symlink.
 	 * We don't want to mess with the symlink itself, nor complain if it's a
 	 * symlink in source but not in target or vice versa.
 	 */
-	if (strcmp(path, "pg_xlog") == 0 && type == FILE_TYPE_SYMLINK)
+	if (((strcmp(path, "pg_xlog") == 0 || strcmp(path, "pg_log") == 0)) && type == FILE_TYPE_SYMLINK)
 		type = FILE_TYPE_DIRECTORY;
 
 	/*
@@ -304,9 +304,9 @@ process_target_file(const char *path, file_type_t type, size_t size,
 	}
 
 	/*
-	 * Like in process_source_file, pretend that xlog is always a directory.
+	 * Like in process_source_file, pretend that pg_xlog/pg_log is always a directory.
 	 */
-	if (strcmp(path, "pg_xlog") == 0 && type == FILE_TYPE_SYMLINK)
+	if (((strcmp(path, "pg_xlog") == 0 || strcmp(path, "pg_log") == 0)) && type == FILE_TYPE_SYMLINK)
 		type = FILE_TYPE_DIRECTORY;
 
 	/* Remember this target file */
