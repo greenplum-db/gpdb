@@ -61,6 +61,7 @@ function _main() {
       ;;
     esac
 
+    yum install -y python39-devel
     time install_and_configure_gpdb
     time setup_gpadmin_user
     time make_cluster
