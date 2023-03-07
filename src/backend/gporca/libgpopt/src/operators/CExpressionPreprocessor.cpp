@@ -3089,7 +3089,7 @@ CExpressionPreprocessor::PexprPreprocess(
 	GPOS_CHECK_ABORT;
 	pexprOuterRefsEleminated->Release();
 
-	// (7) substitute constant predicates
+	// (7.a) substitute constant predicates
 	ExprToConstantMap *phmExprToConst = GPOS_NEW(mp) ExprToConstantMap(mp);
 	CExpression *pexprPredWithConstReplaced =
 		PexprReplaceColWithConst(mp, pexprTrimmed2, phmExprToConst, true);
@@ -3097,11 +3097,22 @@ CExpressionPreprocessor::PexprPreprocess(
 	phmExprToConst->Release();
 	pexprTrimmed2->Release();
 
-	// (8) simplify quantified subqueries
-	CExpression *pexprSubqSimplified =
-		PexprSimplifyQuantifiedSubqueries(mp, pexprPredWithConstReplaced);
+	// (7.b) reorder the children of scalar cmp operator to ensure that left
+	// child is scalar ident and right child is scalar const
+	//
+	// Must happen after 7.a which can insert scalar cmp children with inversed
+	// format (CONST op IDENT) *and* before any step that relies on reorder
+	// format (e.g. "infer predicate form constraints")
+	CExpression *pexprReorderedScalarCmpChildren =
+		PexprReorderScalarCmpChildren(mp, pexprPredWithConstReplaced);
 	GPOS_CHECK_ABORT;
 	pexprPredWithConstReplaced->Release();
+
+	// (8) simplify quantified subqueries
+	CExpression *pexprSubqSimplified =
+		PexprSimplifyQuantifiedSubqueries(mp, pexprReorderedScalarCmpChildren);
+	GPOS_CHECK_ABORT;
+	pexprReorderedScalarCmpChildren->Release();
 
 	// (9) do preliminary unnesting of scalar subqueries
 	CExpression *pexprSubqUnnested =
@@ -3211,25 +3222,19 @@ CExpressionPreprocessor::PexprPreprocess(
 	GPOS_CHECK_ABORT;
 	pexprCollapsedProjects->Release();
 
-	// (26) reorder the children of scalar cmp operator to ensure that left child is scalar ident and right child is scalar const
-	CExpression *pexrReorderedScalarCmpChildren =
-		PexprReorderScalarCmpChildren(mp, pexprSubquery);
+	// (26) rewrite IN subquery to EXIST subquery with a predicate
+	CExpression *pexprExistWithPredFromINSubq =
+		PexprExistWithPredFromINSubq(mp, pexprSubquery);
 	GPOS_CHECK_ABORT;
 	pexprSubquery->Release();
 
-	// (27) rewrite IN subquery to EXIST subquery with a predicate
-	CExpression *pexprExistWithPredFromINSubq =
-		PexprExistWithPredFromINSubq(mp, pexrReorderedScalarCmpChildren);
-	GPOS_CHECK_ABORT;
-	pexrReorderedScalarCmpChildren->Release();
 
-
-	// (28) swap logical select over logical project
+	// (27) swap logical select over logical project
 	CExpression *pexprTransposeSelectAndProject =
 		PexprTransposeSelectAndProject(mp, pexprExistWithPredFromINSubq);
 	pexprExistWithPredFromINSubq->Release();
 
-	// (29) normalize expression again
+	// (28) normalize expression again
 	CExpression *pexprNormalized2 =
 		CNormalizer::PexprNormalize(mp, pexprTransposeSelectAndProject);
 	GPOS_CHECK_ABORT;
