@@ -557,7 +557,7 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 			Oid part_oid = rel->rd_partdesc->oids[i];
 			partition_oids->Append(GPOS_NEW(mp)
 									   CMDIdGPDB(IMDId::EmdidRel, part_oid));
-			gpdb::RelationWrapper rel_part = gpdb::GetRelation(oid);
+			gpdb::RelationWrapper rel_part = gpdb::GetRelation(part_oid);
 			if (rel_part->rd_partdesc)
 			{
 				// Multi-level partitioned tables are unsupported - fall back

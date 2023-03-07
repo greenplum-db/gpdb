@@ -2436,7 +2436,8 @@ ExplainNode(PlanState *planstate, List *ancestors,
 					list_length(((DynamicForeignScan *)plan)->partOids),es);
 				// TODO: Maybe add show_foreignscan_info here? We'd need to populate the planstate
 			}
-			else {
+			else
+			{
 				show_foreignscan_info((ForeignScanState *) planstate, es);
 			}
 			break;

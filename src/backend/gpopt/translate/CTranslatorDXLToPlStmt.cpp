@@ -4225,16 +4225,6 @@ CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan(
 	return (Plan *) dyn_idx_scan;
 }
 
-// Populate each foreign scan field. This isn't a pointer in DynamicForeignScan, so we can't
-// simply assign foreignscan
-static void
-PopulateForeignScanFields(DynamicForeignScan *dyn_foreign_scan,
-						  ForeignScan *foreign_scan)
-{
-	dyn_foreign_scan->foreignscan = *foreign_scan;
-	dyn_foreign_scan->foreignscan.scan.plan.type = T_DynamicForeignScan;
-}
-
 // remaps varnos qual and targetlist from one tuple descriptor to another.
 // eg: remap varnos from a root partition to a child partition, or vice-versa
 static TupleDesc
