@@ -3421,7 +3421,7 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 									 avgSpaceUsed ? avgSpaceUsed : (long) (agg->vsum / agg->vcnt),
 									 agg->vcnt);
 				else
-					appendStringInfo(es->str, "  Max Memory: %ldkB  Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
+					appendStringInfo(es->str, "  Max Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
 									 totalSpaceUsed ? totalSpaceUsed : (long) agg->vmax,
 									 avgSpaceUsed ? avgSpaceUsed : (long) (agg->vsum / agg->vcnt),
 									 agg->vcnt);
