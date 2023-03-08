@@ -101,10 +101,10 @@ Exclusion constraints ensure that if any two rows are compared on the specified 
 CREATE TABLE circles (
     c circle,
     EXCLUDE USING gist (c WITH &&)
-);
+) DISTRIBUTED REPLICATED;
 ```
 
-Similar to unique constraints, an exclusion constraint is permitted only for replicated tables or when the distribution key columns are part of the constraint.
+Similar to unique constraints, an exclusion constraint is permitted only for replicated tables or when the distribution key columns are part of the constraint, with the same `=` operator as in the distribution key's hash operator class.
 
 Exclusion constraints are not supported for partitioned tables.
 
