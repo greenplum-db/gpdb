@@ -675,6 +675,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarFuncExprToScalar(
 		CMDIdGPDB::CastMdid(dxlop->ReturnTypeMdId())->Oid();
 	func_expr->args = TranslateScalarChildren(func_expr->args,
 											  scalar_func_expr_node, colid_var);
+	func_expr->funcvariadic = dxlop->IsFuncVariadic();
 
 	// GPDB_91_MERGE_FIXME: collation
 	func_expr->inputcollid = gpdb::ExprCollation((Node *) func_expr->args);

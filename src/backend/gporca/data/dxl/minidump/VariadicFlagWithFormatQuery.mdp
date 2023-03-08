@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
+  <dxl:Comment><![CDATA[
+         Objective: Check if ORCA generates correct plan, if for a function expression,
+                    variadic flag is true using FORMAT query
+
+         explain SELECT format('%s %s', VARIADIC ARRAY['first', 'second']);
+                            QUERY PLAN
+         ------------------------------------------------
+          Result  (cost=0.00..0.00 rows=1 width=8)
+            ->  Result  (cost=0.00..0.00 rows=1 width=1)
+          Optimizer: Pivotal Optimizer (GPORCA)
+         (3 rows)
+  ]]>
+  </dxl:Comment>
+  <dxl:Thread Id="0">
+    <dxl:OptimizerConfig>
+      <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
+      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.000000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
+      <dxl:CTEConfig CTEInliningCutoff="0"/>
+      <dxl:WindowOids RowNumber="3100" Rank="3101"/>
+      <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="3">
+        <dxl:CostParams>
+          <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
+        </dxl:CostParams>
+      </dxl:CostModelConfig>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10" XformBindThreshold="0" SkewFactor="0"/>
+      <dxl:TraceFlags Value="101013,102074,102120,102146,102155,102156,103001,103003,103014,103022,103027,103029,103038,103041,104002,104003,104004,104005,106000"/>
+    </dxl:OptimizerConfig>
+    <dxl:Metadata SystemIds="0.GPDB">
+      <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="1" PassByValue="true">
+        <dxl:DistrOpfamily Mdid="0.2222.1.0"/>
+        <dxl:LegacyDistrOpfamily Mdid="0.7124.1.0"/>
+        <dxl:EqualityOp Mdid="0.91.1.0"/>
+        <dxl:InequalityOp Mdid="0.85.1.0"/>
+        <dxl:LessThanOp Mdid="0.58.1.0"/>
+        <dxl:LessThanEqualsOp Mdid="0.1694.1.0"/>
+        <dxl:GreaterThanOp Mdid="0.59.1.0"/>
+        <dxl:GreaterThanEqualsOp Mdid="0.1695.1.0"/>
+        <dxl:ComparisonOp Mdid="0.1693.1.0"/>
+        <dxl:ArrayType Mdid="0.1000.1.0"/>
+        <dxl:MinAgg Mdid="0.0.0.0"/>
+        <dxl:MaxAgg Mdid="0.0.0.0"/>
+        <dxl:AvgAgg Mdid="0.0.0.0"/>
+        <dxl:SumAgg Mdid="0.0.0.0"/>
+        <dxl:CountAgg Mdid="0.2147.1.0"/>
+      </dxl:Type>
+      <dxl:Type Mdid="0.25.1.0" Name="text" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="true" IsFixedLength="false" Length="-1" PassByValue="false">
+        <dxl:DistrOpfamily Mdid="0.1995.1.0"/>
+        <dxl:LegacyDistrOpfamily Mdid="0.7105.1.0"/>
+        <dxl:EqualityOp Mdid="0.98.1.0"/>
+        <dxl:InequalityOp Mdid="0.531.1.0"/>
+        <dxl:LessThanOp Mdid="0.664.1.0"/>
+        <dxl:LessThanEqualsOp Mdid="0.665.1.0"/>
+        <dxl:GreaterThanOp Mdid="0.666.1.0"/>
+        <dxl:GreaterThanEqualsOp Mdid="0.667.1.0"/>
+        <dxl:ComparisonOp Mdid="0.360.1.0"/>
+        <dxl:ArrayType Mdid="0.1009.1.0"/>
+        <dxl:MinAgg Mdid="0.2145.1.0"/>
+        <dxl:MaxAgg Mdid="0.2129.1.0"/>
+        <dxl:AvgAgg Mdid="0.0.0.0"/>
+        <dxl:SumAgg Mdid="0.0.0.0"/>
+        <dxl:CountAgg Mdid="0.2147.1.0"/>
+      </dxl:Type>
+      <dxl:GPDBFunc Mdid="0.3539.1.0" Name="format" ReturnsSet="false" Stability="Stable" DataAccess="ContainsSQL" IsStrict="false" IsNDVPreserving="false" IsAllowedForPS="false">
+        <dxl:ResultType Mdid="0.25.1.0"/>
+      </dxl:GPDBFunc>
+      <dxl:Type Mdid="0.1009.1.0" Name="_text" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="false" Length="-1" PassByValue="false">
+        <dxl:DistrOpfamily Mdid="0.627.1.0"/>
+        <dxl:EqualityOp Mdid="0.1070.1.0"/>
+        <dxl:InequalityOp Mdid="0.1071.1.0"/>
+        <dxl:LessThanOp Mdid="0.1072.1.0"/>
+        <dxl:LessThanEqualsOp Mdid="0.1074.1.0"/>
+        <dxl:GreaterThanOp Mdid="0.1073.1.0"/>
+        <dxl:GreaterThanEqualsOp Mdid="0.1075.1.0"/>
+        <dxl:ComparisonOp Mdid="0.382.1.0"/>
+        <dxl:ArrayType Mdid="0.0.0.0"/>
+        <dxl:MinAgg Mdid="0.0.0.0"/>
+        <dxl:MaxAgg Mdid="0.0.0.0"/>
+        <dxl:AvgAgg Mdid="0.0.0.0"/>
+        <dxl:SumAgg Mdid="0.0.0.0"/>
+        <dxl:CountAgg Mdid="0.2147.1.0"/>
+      </dxl:Type>
+    </dxl:Metadata>
+    <dxl:Query>
+      <dxl:OutputColumns>
+        <dxl:Ident ColId="2" ColName="format" TypeMdid="0.25.1.0"/>
+      </dxl:OutputColumns>
+      <dxl:CTEList/>
+      <dxl:LogicalProject>
+        <dxl:ProjList>
+          <dxl:ProjElem ColId="2" Alias="format">
+            <dxl:FuncExpr FuncId="0.3539.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="true">
+              <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAACSVzICVz" LintValue="2338443864"/>
+              <dxl:ConstValue TypeMdid="0.1009.1.0" Value="AAAAMAEAAAAAAAAAGQAAAAIAAAABAAAAAAAACWZpcnN0AAAAAAAACnNlY29u&#10;ZAAA"/>
+            </dxl:FuncExpr>
+          </dxl:ProjElem>
+        </dxl:ProjList>
+        <dxl:LogicalConstTable>
+          <dxl:Columns>
+            <dxl:Column ColId="1" Attno="1" ColName="" TypeMdid="0.16.1.0"/>
+          </dxl:Columns>
+          <dxl:ConstTuple>
+            <dxl:Datum TypeMdid="0.16.1.0" Value="true"/>
+          </dxl:ConstTuple>
+        </dxl:LogicalConstTable>
+      </dxl:LogicalProject>
+    </dxl:Query>
+    <dxl:Plan Id="0" SpaceSize="2">
+      <dxl:Result>
+        <dxl:Properties>
+          <dxl:Cost StartupCost="0" TotalCost="0.000109" Rows="1.000000" Width="8"/>
+        </dxl:Properties>
+        <dxl:ProjList>
+          <dxl:ProjElem ColId="1" Alias="format">
+            <dxl:FuncExpr FuncId="0.3539.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="true">
+              <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAACSVzICVz" LintValue="2338443864"/>
+              <dxl:ConstValue TypeMdid="0.1009.1.0" Value="AAAAMAEAAAAAAAAAGQAAAAIAAAABAAAAAAAACWZpcnN0AAAAAAAACnNlY29u&#10;ZAAA"/>
+            </dxl:FuncExpr>
+          </dxl:ProjElem>
+        </dxl:ProjList>
+        <dxl:Filter/>
+        <dxl:OneTimeFilter/>
+        <dxl:Result>
+          <dxl:Properties>
+            <dxl:Cost StartupCost="0" TotalCost="0.000001" Rows="1.000000" Width="1"/>
+          </dxl:Properties>
+          <dxl:ProjList>
+            <dxl:ProjElem ColId="0" Alias="">
+              <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+            </dxl:ProjElem>
+          </dxl:ProjList>
+          <dxl:Filter/>
+          <dxl:OneTimeFilter/>
+        </dxl:Result>
+      </dxl:Result>
+    </dxl:Plan>
+  </dxl:Thread>
+</dxl:DXLMessage>

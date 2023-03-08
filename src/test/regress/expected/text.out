@@ -1,6 +1,7 @@
 --
 -- TEXT
 --
+set optimizer_trace_fallback to on;
 SELECT text 'this is a text string' = text 'this is a text string' AS true;
  true 
 ------
@@ -463,3 +464,4 @@ select format('>>%2$*1$L<<', 0, 'Hello');
  >>'Hello'<<
 (1 row)
 
+set optimizer_trace_fallback to off;

@@ -57,6 +57,10 @@ protected:
 	// is operator return type BOOL?
 	BOOL m_fBoolReturnType;
 
+	//  It is true if in the function, variadic arguments have been
+	//	combined into an array last argument
+	BOOL m_funcvariadic;
+
 private:
 	// private copy ctor
 	CScalarFunc(const CScalarFunc &);
@@ -67,7 +71,8 @@ public:
 
 	// ctor
 	CScalarFunc(CMemoryPool *mp, IMDId *mdid_func, IMDId *mdid_return_type,
-				INT return_type_modifier, const CWStringConst *pstrFunc);
+				INT return_type_modifier, const CWStringConst *pstrFunc,
+				BOOL funcvariadic);
 
 	// dtor
 	virtual ~CScalarFunc();
@@ -151,6 +156,9 @@ public:
 
 	// print
 	virtual IOstream &OsPrint(IOstream &os) const;
+
+	// Is variadic flag set
+	BOOL IsFuncVariadic() const;
 
 
 };	// class CScalarFunc

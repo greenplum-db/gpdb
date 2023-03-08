@@ -120,3 +120,18 @@ select * from tfunc ('hello', 'morning');
 
 drop table people;
 drop function tfunc(variadic char[]);
+
+set optimizer_trace_fallback to on;
+drop table if exists foo;
+create table foo (a int,b int, c_json json);
+insert into foo values (1,1,'{"1":"10"}');
+insert into foo values (2,2,'{"2":"20"}');
+insert into foo values (3,3,'{"3":"30"}');
+
+select *, (json_extract_path_text(c_json, '1'))  AS jsonValues from foo;
+
+select json_build_array(VARIADIC '{a,b,c}'::text[]);
+
+drop table if exists foo;
+
+set optimizer_trace_fallback to off;

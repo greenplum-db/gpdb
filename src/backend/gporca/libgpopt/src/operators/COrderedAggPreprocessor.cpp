@@ -282,8 +282,11 @@ COrderedAggPreprocessor::SplitPrjList(
 				mp, (cast_func->Mdname().GetMDName())->GetBuffer());
 			mdid_func->AddRef();
 			cast_func->GetResultTypeMdid()->AddRef();
-			CScalarFunc *popCastScalarFunc = GPOS_NEW(mp) CScalarFunc(
-				mp, mdid_func, cast_func->GetResultTypeMdid(), -1, pstrFunc);
+			// We have kept 'funcvariadic' as false here, as we are not reading
+			// it from the catalog and it's information is not available here.
+			CScalarFunc *popCastScalarFunc = GPOS_NEW(mp)
+				CScalarFunc(mp, mdid_func, cast_func->GetResultTypeMdid(), -1,
+							pstrFunc, false /* funcvariadic */);
 			CExpression *pexprCastScalarIdent = GPOS_NEW(mp)
 				CExpression(mp, popCastScalarFunc, pexprScalarIdentSum);
 			CExpressionArray *colref_array1 = GPOS_NEW(mp) CExpressionArray(mp);

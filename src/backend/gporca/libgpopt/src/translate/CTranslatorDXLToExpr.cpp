@@ -2890,7 +2890,8 @@ CTranslatorDXLToExpr::PexprScalarFunc(const CDXLNode *pdxlnFunc)
 		pop = GPOS_NEW(m_mp) CScalarFunc(
 			m_mp, mdid_func, mdid_return_type, pdxlopFuncExpr->TypeModifier(),
 			GPOS_NEW(m_mp) CWStringConst(
-				m_mp, (pmdfunc->Mdname().GetMDName())->GetBuffer()));
+				m_mp, (pmdfunc->Mdname().GetMDName())->GetBuffer()),
+			pdxlopFuncExpr->IsFuncVariadic());
 	}
 
 	CExpression *pexprFunc = NULL;

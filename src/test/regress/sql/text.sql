@@ -1,7 +1,7 @@
 --
 -- TEXT
 --
-
+set optimizer_trace_fallback to on;
 SELECT text 'this is a text string' = text 'this is a text string' AS true;
 
 SELECT text 'this is a text string' = text 'this is a text strin' AS false;
@@ -126,3 +126,5 @@ select format('>>%-s<<', 'Hello');
 select format('>>%10L<<', NULL);
 select format('>>%2$*1$L<<', NULL, 'Hello');
 select format('>>%2$*1$L<<', 0, 'Hello');
+
+set optimizer_trace_fallback to off;
