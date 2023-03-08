@@ -80,14 +80,14 @@
               <dxl:ConstValue TypeMdid="0.1009.1.0" Value="AAAAEAAAAAAAAAAAGQAAAA=="/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="6" Alias="f">
-              <dxl:FuncExpr FuncId="0.1291.1.0" FuncRetSet="false" TypeMdid="0.1014.1.0">
+              <dxl:FuncExpr FuncId="0.1291.1.0" FuncRetSet="false" TypeMdid="0.1014.1.0" FuncVariadic="false">
                 <dxl:ConstValue TypeMdid="0.1014.1.0" Value="AAAAEAAAAAAAAAAAEgQAAA=="/>
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="9"/>
                 <dxl:ConstValue TypeMdid="0.16.1.0" Value="false"/>
               </dxl:FuncExpr>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="7" Alias="g">
-              <dxl:FuncExpr FuncId="0.1291.1.0" FuncRetSet="false" TypeMdid="0.1015.1.0">
+              <dxl:FuncExpr FuncId="0.1291.1.0" FuncRetSet="false" TypeMdid="0.1015.1.0" FuncVariadic="false">
                 <dxl:ConstValue TypeMdid="0.1015.1.0" Value="AAAAEAAAAAAAAAAAEwQAAA=="/>
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="9"/>
                 <dxl:ConstValue TypeMdid="0.16.1.0" Value="false"/>
