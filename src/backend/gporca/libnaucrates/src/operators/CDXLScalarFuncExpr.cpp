@@ -40,6 +40,27 @@ CDXLScalarFuncExpr::CDXLScalarFuncExpr(CMemoryPool *mp, IMDId *mdid_func,
 	GPOS_ASSERT(m_func_mdid->IsValid());
 	GPOS_ASSERT(m_return_type_mdid->IsValid());
 }
+//---------------------------------------------------------------------------
+//	@function:
+//		CDXLScalarFuncExpr::CDXLScalarFuncExpr
+//
+//	@doc:
+//		Constructs a scalar FuncExpr node
+//
+//---------------------------------------------------------------------------
+CDXLScalarFuncExpr::CDXLScalarFuncExpr(CMemoryPool *mp, IMDId *mdid_func,
+									   IMDId *mdid_return_type,
+									   INT return_type_modifier, BOOL fRetSet,BOOL funcvariadic)
+	: CDXLScalar(mp),
+	  m_func_mdid(mdid_func),
+	  m_return_type_mdid(mdid_return_type),
+	  m_return_type_modifier(return_type_modifier),
+	  m_returns_set(fRetSet),
+	  m_funcvariadic(funcvariadic)
+{
+	GPOS_ASSERT(m_func_mdid->IsValid());
+	GPOS_ASSERT(m_return_type_mdid->IsValid());
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -130,6 +151,19 @@ BOOL
 CDXLScalarFuncExpr::ReturnsSet() const
 {
 	return m_returns_set;
+}
+//---------------------------------------------------------------------------
+//	@function:
+//		CDXLScalarFuncExpr::IsFuncVariadic
+//
+//	@doc:
+//		Returns whether the function is variadic
+//
+//---------------------------------------------------------------------------
+BOOL
+CDXLScalarFuncExpr::IsFuncVariadic() const
+{
+	return m_funcvariadic;
 }
 
 //---------------------------------------------------------------------------

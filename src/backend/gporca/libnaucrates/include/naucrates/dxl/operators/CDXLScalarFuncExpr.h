@@ -44,6 +44,10 @@ private:
 	// does the func return a set
 	BOOL m_returns_set;
 
+	//  true if in the function, variadic arguments have been
+	//	combined into an array last argument
+	BOOL m_funcvariadic;
+
 public:
 	CDXLScalarFuncExpr(const CDXLScalarFuncExpr &) = delete;
 
@@ -51,6 +55,10 @@ public:
 	CDXLScalarFuncExpr(CMemoryPool *mp, IMDId *mdid_func,
 					   IMDId *mdid_return_type, INT return_type_modifier,
 					   BOOL returns_set);
+	// ctor
+	CDXLScalarFuncExpr(CMemoryPool *mp, IMDId *mdid_func,
+					   IMDId *mdid_return_type, INT return_type_modifier,
+					   BOOL returns_set, BOOL funcvariadic);
 
 	//dtor
 	~CDXLScalarFuncExpr() override;
@@ -71,6 +79,9 @@ public:
 
 	// does function return a set
 	BOOL ReturnsSet() const;
+
+	// does function has variadic flag set
+	BOOL IsFuncVariadic() const;
 
 	// serialize operator in DXL format
 	void SerializeToDXL(CXMLSerializer *xml_serializer,

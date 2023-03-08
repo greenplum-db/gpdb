@@ -1339,17 +1339,29 @@ CTranslatorScalarToDXL::TranslateFuncExprToDXL(
 		// whether it was called as VARIADIC or with a normal ARRAY argument.
 		// GPDB_93_MERGE_FIXME: Fix ORCA to pass the 'funcvariadic' flag through
 		// the planning.
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-				   GPOS_WSZ_LIT("VARIADIC argument"));
+
+		//GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+			//	   GPOS_WSZ_LIT("VARIADIC argument"));
+		GPOS_ASSERT(func_expr!=nullptr);
+		GPOS_ASSERT(func_expr->funcvariadic==true);
+
 	}
 
 	// create the DXL node holding the scalar funcexpr
-	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(
+	/*CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(
 		m_mp, GPOS_NEW(m_mp) CDXLScalarFuncExpr(
 				  m_mp, mdid_func,
 				  GPOS_NEW(m_mp)
 					  CMDIdGPDB(IMDId::EmdidGeneral, func_expr->funcresulttype),
-				  type_modifier, func_expr->funcretset));
+				  type_modifier, func_expr->funcretset));*/
+	// create the DXL node holding the scalar funcexpr
+	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(
+		m_mp,
+		GPOS_NEW(m_mp) CDXLScalarFuncExpr(
+			m_mp, mdid_func,
+			GPOS_NEW(m_mp)
+				CMDIdGPDB(IMDId::EmdidGeneral, func_expr->funcresulttype),
+			type_modifier, func_expr->funcretset, func_expr->funcvariadic));
 
 	const IMDFunction *md_func = m_md_accessor->RetrieveFunc(mdid_func);
 	if (IMDFunction::EfsVolatile == md_func->GetFuncStability())
