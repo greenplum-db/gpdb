@@ -11127,6 +11127,9 @@
 { oid => 9900, descr => 'decode internal AOCSVPInfo struct',
    proname => 'aocsvpinfo_decode', prorettype => 'int8', proargtypes => 'bytea int4 int4', prosrc => 'aocsvpinfo_decode' },
 
+{ oid => 9996, descr => 'get the GPDB-version directory name for user tablespaces',
+   proname => 'get_tablespace_version_directory_name', proisstrict => 'f', prorettype => 'text', proargtypes => '', prosrc => 'get_tablespace_version_directory_name' },
+
 # raises deprecation error
 { oid => 9997, descr => 'raises function deprecation error',
    proname => 'gp_deprecated', proisstrict => 'f', prorettype => 'void', proargtypes => '', prosrc => 'gp_deprecated' },

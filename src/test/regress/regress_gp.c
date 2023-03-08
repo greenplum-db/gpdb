@@ -2081,13 +2081,6 @@ broken_int4out(PG_FUNCTION_ARGS)
 	return DirectFunctionCall1(int4out, Int32GetDatum(arg));
 }
 
-PG_FUNCTION_INFO_V1(get_tablespace_version_directory_name);
-Datum
-get_tablespace_version_directory_name(PG_FUNCTION_ARGS)
-{
-	PG_RETURN_TEXT_P(CStringGetTextDatum(GP_TABLESPACE_VERSION_DIRECTORY));
-}
-
 #if defined(TCP_KEEPIDLE)
 /* TCP_KEEPIDLE is the name of this option on Linux and *BSD */
 #define PG_TCP_KEEPALIVE_IDLE TCP_KEEPIDLE
