@@ -35,10 +35,8 @@ BEGIN
 END;
 $$ language plpgsql;
 
-CREATE OR REPLACE FUNCTION get_tablespace_version_directory_name()
-	RETURNS TEXT
-	AS '@abs_builddir@/regress.so', 'get_tablespace_version_directory_name'
-    LANGUAGE C;
+-- to get function get_tablespace_version_directory_name()
+CREATE EXTENSION gp_check_functions;
 
 
 -- create tablespaces we can use
@@ -211,4 +209,5 @@ CREATE TABLE t_dir_empty(a int);
 \! rm -rf @testtablespace@/*;
 DROP TABLE IF EXISTS t_dir_empty;
 DROP TABLESPACE testspace_dir_empty;
+DROP EXTENSION gp_check_functions;
 

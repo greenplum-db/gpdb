@@ -1,0 +1,87 @@
+-- Test views/functions to check missing/orphaned data files
+
+-- start_matchsubs
+-- m/aoseg_\d+/
+-- s/aoseg_\d+/aoseg_xxx/g
+-- m/aocsseg_\d+/
+-- s/aocsseg_\d+/aocsseg_xxx/g
+-- m/aovisimap_\d+/
+-- s/aovisimap_\d+/aovisimap_xxx/g
+-- end_matchsubs
+
+checkpoint;
+
+create extension gp_check_functions;
+
+-- we'll use a specific tablespace to test
+CREATE TABLESPACE checkfile_ts LOCATION '@testtablespace@';
+set default_tablespace = checkfile_ts;
+
+-- create a table that we'll delete the files 
+CREATE TABLE checkmissing_heap(a int, b int, c int);
+insert into checkmissing_heap select i,i,i from generate_series(1,100)i;
+
+-- go to seg1's data directory for the tablespace we just created
+\cd @testtablespace@
+select dbid from gp_segment_configuration where content = 1 and role = 'p' \gset
+\cd :dbid
+select get_tablespace_version_directory_name() as version_dir \gset
+\cd :version_dir
+select oid from pg_database where datname = current_database() \gset
+\cd :oid
+
+-- Now remove the data file for the table we just created.
+-- But check to see if the working directory is what we expect (under
+-- the test tablespace). Also just delete one and only one file that
+-- is number-named.
+\! if pwd | grep -q "^@testtablespace@/.*$"; then find . -maxdepth 1 -type f -regex '.*\/[0-9]+' -exec rm {} \; -quit; fi
+
+-- now create AO/CO tables and delete only their extended files
+CREATE TABLE checkmissing_ao(a int, b int, c int) WITH (appendonly=true, orientation=row);
+CREATE TABLE checkmissing_co(a int, b int, c int) WITH (appendonly=true, orientation=column);
+insert into checkmissing_ao select i,i,i from generate_series(1,100)i;
+insert into checkmissing_co select i,i,i from generate_series(1,100)i;
+
+-- Now remove the extended data file '.1' for the AO/CO tables we just created.
+-- Still, check to see if the working directory is what we expect, and only
+-- delete exact two '.1' files.
+\! if pwd | grep -q "^@testtablespace@/.*$"; then find . -maxdepth 1 -type f -regex '.*\/[0-9]+\.1' -exec rm {} \; -quit; fi
+\! if pwd | grep -q "^@testtablespace@/.*$"; then find . -maxdepth 1 -type f -regex '.*\/[0-9]+\.1' -exec rm {} \; -quit; fi
+
+-- create some orphaned files
+\! touch 987654
+\! touch 987654.3
+
+-- create some normal tables
+CREATE TABLE checknormal_heap(a int, b int, c int);
+CREATE TABLE checknormal_ao(a int, b int, c int) WITH (appendonly=true, orientation=row);
+CREATE TABLE checknormal_co(a int, b int, c int) WITH (appendonly=true, orientation=column);
+insert into checknormal_heap select i,i,i from generate_series(1,100)i;
+insert into checknormal_ao select i,i,i from generate_series(1,100)i;
+insert into checknormal_co select i,i,i from generate_series(1,100)i;
+
+-- check non-extended files
+select gp_segment_id, filename from gp_check_orphaned_files;
+select gp_segment_id, regexp_replace(filename, '\d+', 'x'), relname from gp_check_missing_files;
+
+SET client_min_messages = ERROR;
+
+-- check extended files
+select gp_segment_id, filename from gp_check_orphaned_files_ext;
+select gp_segment_id, regexp_replace(filename, '\d+', 'x'), relname from gp_check_missing_files_ext;
+
+RESET client_min_messages;
+
+-- cleanup
+drop table checkmissing_heap;
+drop table checkmissing_ao;
+drop table checkmissing_co;
+drop table checknormal_heap;
+drop table checknormal_ao;
+drop table checknormal_co;
+
+\! rm -rf @testtablespace@/*;
+
+DROP TABLESPACE checkfile_ts;
+DROP EXTENSION gp_check_functions;
+

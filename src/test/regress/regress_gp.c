@@ -2149,13 +2149,6 @@ broken_int4out(PG_FUNCTION_ARGS)
 	return DirectFunctionCall1(int4out, Int32GetDatum(arg));
 }
 
-PG_FUNCTION_INFO_V1(get_tablespace_version_directory_name);
-Datum
-get_tablespace_version_directory_name(PG_FUNCTION_ARGS)
-{
-	PG_RETURN_TEXT_P(CStringGetTextDatum(GP_TABLESPACE_VERSION_DIRECTORY));
-}
-
 PG_FUNCTION_INFO_V1(gp_tablespace_temptablespaceOid);
 Datum
 gp_tablespace_temptablespaceOid(PG_FUNCTION_ARGS)

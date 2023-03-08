@@ -86,3 +86,10 @@ end;
 
 -- the heap table segment file size after truncate should be zero
 select stat_table_segfile_size('regression', 'truncate_with_create_heap');
+
+-- It is a known issue that extended datafiles won't be removed in such case (see #15342),
+-- but since they have 0 size 0 it shouldn't really matter.
+-- However, we do not want these file to create false alarms in the gp_check_files test
+-- later, so drop them now.
+drop table truncate_with_create_ao;
+drop table truncate_with_create_aocs;
