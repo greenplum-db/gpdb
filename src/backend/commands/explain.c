@@ -568,8 +568,6 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
         queryDesc->showstatctx = cdbexplain_showExecStatsBegin(queryDesc,
 															   starttime);
     }
-	else
-		queryDesc->showstatctx = NULL;
 
 	/* Select execution options */
 	if (es->analyze)

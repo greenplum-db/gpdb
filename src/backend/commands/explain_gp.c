@@ -1493,6 +1493,27 @@ cdbexplain_showExecStatsBegin(struct QueryDesc *queryDesc,
 }								/* cdbexplain_showExecStatsBegin */
 
 /*
+ * cdbexplain_showStatCtxFree
+ *	  Release memory allocated for CdbExplain_ShowStatCtx structure and its
+ *	  internals. Memory for insides of the slices array elements is allocated
+ *	  in ExplainPrintPlan(). If ExplainPrintPlan() is called from the
+ *	  auto_explain extension, then this memory is released in
+ *	  standard_ExecutorEnd() -> FreeExecutorState() to avoid memory leak in the
+ *	  case of queries with multiple call of SQL functions.
+ *	  If ExplainPrintPlan() is called from ExplainOnePlan(), then this memory
+ *	  is released in PortalDrop().
+ */
+void
+cdbexplain_showStatCtxFree(struct CdbExplain_ShowStatCtx *ctx)
+{
+	Assert(ctx != NULL);
+
+	pfree(ctx->extratextbuf.data);
+	pfree(ctx->slices);
+	pfree(ctx);
+}
+
+/*
  * nodeSupportWorkfileCaching
  *	 Return true if a given node supports workfile caching.
  */
