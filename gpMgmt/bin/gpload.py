@@ -2677,8 +2677,15 @@ class gpload:
         # should not explicitly specify the DISTRIBUTED BY clause.
         # Only the DISTRIBUTED BY clause can take effect if all selected fields 
         # exist in the CREATE TABLE statement.
-        if set(distcols) <= set(element[0] for element in target_columns):
+        target_column_set = set(quote_ident(element[0]) for element in target_columns)
+        if set(distcols) <= target_column_set:
             sql += " DISTRIBUTED BY (" + ','.join(distcols) + ")"
+        else:
+            match_columns = self.getconfig('gpload:output:match_columns', list)
+            quoted_match_columns = convertListToDelimited(match_columns)
+            if set(quoted_match_columns) <= target_column_set:
+                sql += " DISTRIBUTED BY (" + ','.join(quoted_match_columns) + ")"
+
         self.log(self.LOG, sql)
 
         if not self.options.D:
