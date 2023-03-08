@@ -116,8 +116,8 @@ EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.appl
 -- s/Pivotal Optimizer \(GPORCA\) version \d+\.\d+\.\d+",?/Pivotal Optimizer \(GPORCA\)"/
 -- m/ Memory: \d+$/
 -- s/ Memory: \d+$/ Memory: ###/
--- m/Maximum Memory Used: \d+/
--- s/Maximum Memory Used: \d+/Maximum Memory Used: ###/
+-- m/Used: \d+/
+-- s/Used: \d+/Used: ###/
 -- m/Workers: \d+/
 -- s/Workers: \d+/Workers: ##/
 -- m/Average: \d+/
