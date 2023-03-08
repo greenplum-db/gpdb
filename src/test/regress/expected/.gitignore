@@ -58,3 +58,5 @@
 /external_table_persistent_error_log.out
 /external_table_union_all.out
 /external_table_union_all_optimizer.out
+/external_table_optimizer.out
+/external_table_persistent_error_log_optimizer.out

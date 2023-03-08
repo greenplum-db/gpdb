@@ -85,17 +85,22 @@ CreateAOAuxiliaryTable(
 	switch(relkind)
 	{
 		case RELKIND_AOVISIMAP:
-			GetAppendOnlyEntryAuxOids(relOid, NULL, NULL,
-				NULL, NULL, &aoauxiliary_relid, &aoauxiliary_idxid);
+			GetAppendOnlyEntryAuxOids(rel,
+							NULL,
+							NULL,
+							&aoauxiliary_relid);
 			break;
 		case RELKIND_AOBLOCKDIR:
-			GetAppendOnlyEntryAuxOids(relOid, NULL, NULL,
-				&aoauxiliary_relid, &aoauxiliary_idxid, NULL, NULL);
+			GetAppendOnlyEntryAuxOids(rel,
+							NULL,
+							&aoauxiliary_relid, 
+							NULL);
 			break;
 		case RELKIND_AOSEGMENTS:
-			GetAppendOnlyEntryAuxOids(relOid, NULL,
-				&aoauxiliary_relid,
-				NULL, NULL, NULL, NULL);
+			GetAppendOnlyEntryAuxOids(rel,
+							&aoauxiliary_relid,
+							NULL,
+							NULL);
 			break;
 		default:
 			elog(ERROR, "unsupported auxiliary relkind '%c'", relkind);
@@ -196,13 +201,13 @@ CreateAOAuxiliaryTable(
 	{
 		case RELKIND_AOVISIMAP:
 			UpdateAppendOnlyEntryAuxOids(relOid, InvalidOid,
-								 InvalidOid, InvalidOid,
-								 aoauxiliary_relid, aoauxiliary_idxid);
+								 InvalidOid,
+								 aoauxiliary_relid);
 			break;
 		case RELKIND_AOBLOCKDIR:
 			UpdateAppendOnlyEntryAuxOids(relOid, InvalidOid,
-								 aoauxiliary_relid, aoauxiliary_idxid,
-								 InvalidOid, InvalidOid);
+								 aoauxiliary_relid,
+								 InvalidOid);
 			break;
 		case RELKIND_AOSEGMENTS:
 			/* Add initial entries in gp_fastsequence */
@@ -210,7 +215,6 @@ CreateAOAuxiliaryTable(
 
 			UpdateAppendOnlyEntryAuxOids(relOid,
 								 aoauxiliary_relid,
-								 InvalidOid, InvalidOid,
 								 InvalidOid, InvalidOid);
 			break;
 		default:

@@ -46,10 +46,9 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a5     | timestamp without time zone |           |          |         | plain    |              | rle_type         | 1                 | 32768      | 
  a6     | timestamp with time zone    |           |          |         | plain    |              | rle_type         | 1                 | 32768      | 
  a7     | text                        |           |          |         | extended |              | rle_type         | 4                 | 32768      | 
-Checksum: f
 Distributed by: (a1)
 Access method: ao_column
-Options: checksum=false
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=false
 
 Insert into delta_all select i/5, i/12, date '2012-02-02' + i/5,
     case when i/10=1 then time '20:13:14.343536' when i/10=2 then time '20:13:11.232421' when i/10=3 then time '20:12:13.241122' else '20:02:03' end,
@@ -153,10 +152,9 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a5     | timestamp without time zone |           |          |                                         | plain    |              | rle_type         | 1                 | 32768      | 
  a6     | timestamp with time zone    |           |          |                                         | plain    |              | rle_type         | 1                 | 32768      | 
  a7     | text                        |           |          |                                         | extended |              | rle_type         | 4                 | 32768      | 
-Checksum: f
 Distributed by: (id)
 Access method: ao_column
-Options: checksum=false
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=false
 
 Insert into delta_alter(a1,a2,a3,a4,a5,a6,a7)  select                                                                                                                                           
     i/5, i/12, date '2012-02-02' + i/5,
@@ -202,10 +200,9 @@ Alter table delta_alter Alter column a4 Type interval;
  a5     | timestamp without time zone |           |          |                                         | plain    |              | rle_type         | 1                 | 32768      | 
  a6     | timestamp with time zone    |           |          |                                         | plain    |              | rle_type         | 1                 | 32768      | 
  a7     | text                        |           |          |                                         | extended |              | rle_type         | 4                 | 32768      | 
-Checksum: f
 Distributed by: (id)
 Access method: ao_column
-Options: checksum=false
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=false
 
 select 'compression_ratio' as compr_ratio, get_ao_compression_ratio('delta_alter');
     compr_ratio    | get_ao_compression_ratio 
@@ -244,10 +241,9 @@ Alter table delta_alter Alter column a5 Type timestamp with time zone;
  a5     | timestamp with time zone    |           |          |                                         | plain    |              | rle_type         | 1                 | 32768      | 
  a6     | timestamp without time zone |           |          |                                         | plain    |              | rle_type         | 1                 | 32768      | 
  a7     | text                        |           |          |                                         | extended |              | rle_type         | 4                 | 32768      | 
-Checksum: f
 Distributed by: (id)
 Access method: ao_column
-Options: checksum=false
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=false
 
 select 'compression_ratio' as compr_ratio, get_ao_compression_ratio('delta_alter');
     compr_ratio    | get_ao_compression_ratio 
@@ -308,12 +304,11 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a5     | timestamp without time zone |           |          |         | plain    |              | rle_type         | 1                 | 32768      | 
  a6     | timestamp with time zone    |           |          |         | plain    |              | rle_type         | 1                 | 32768      | 
  a7     | text                        |           |          |         | extended |              | rle_type         | 4                 | 32768      | 
-Checksum: f
 Indexes:
     "dl_ix_bt" bitmap (a1)
 Distributed by: (a1)
 Access method: ao_column
-Options: checksum=false
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=false
 
 Insert into delta_bitmap_ins select
     i/5, i/12, date '2012-02-02' + i/5,
@@ -389,12 +384,11 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a5     | timestamp without time zone |           |          |         | plain    |              | rle_type         | 1                 | 32768      | 
  a6     | timestamp with time zone    |           |          |         | plain    |              | rle_type         | 1                 | 32768      | 
  a7     | text                        |           |          |         | extended |              | rle_type         | 4                 | 32768      | 
-Checksum: f
 Indexes:
     "dl_ix_br" btree (a1)
 Distributed by: (a1)
 Access method: ao_column
-Options: checksum=false
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=false
 
 Insert into delta_btree_ins select
     i/5, i/12, date '2012-02-02' + i/5,
@@ -469,10 +463,9 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a5     | timestamp without time zone |           |          |         | plain    |              | rle_type         | 1                 | 32768      | 
  a6     | timestamp with time zone    |           |          |         | plain    |              | rle_type         | 1                 | 32768      | 
  a7     | text                        |           |          |         | extended |              | rle_type         | 4                 | 32768      | 
-Checksum: f
 Distributed by: (a1)
 Access method: ao_column
-Options: checksum=false
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=false
 
 Insert into delta_ins_bitmap select
     i/5, i/12, date '2012-02-02' + i/5,
@@ -502,12 +495,11 @@ Create index dl_ins_bt_ix on  delta_ins_bitmap using bitmap(a3);
  a5     | timestamp without time zone |           |          |         | plain    |              | rle_type         | 1                 | 32768      | 
  a6     | timestamp with time zone    |           |          |         | plain    |              | rle_type         | 1                 | 32768      | 
  a7     | text                        |           |          |         | extended |              | rle_type         | 4                 | 32768      | 
-Checksum: f
 Indexes:
     "dl_ins_bt_ix" bitmap (a3)
 Distributed by: (a1)
 Access method: ao_column
-Options: checksum=false
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=false
 
 select 'compression_ratio' as compr_ratio, get_ao_compression_ratio('delta_ins_bitmap');
     compr_ratio    | get_ao_compression_ratio 
@@ -566,10 +558,9 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a5     | timestamp without time zone |           |          |         | plain    |              | rle_type         | 1                 | 32768      | 
  a6     | timestamp with time zone    |           |          |         | plain    |              | rle_type         | 1                 | 32768      | 
  a7     | text                        |           |          |         | extended |              | rle_type         | 4                 | 32768      | 
-Checksum: f
 Distributed by: (a1)
 Access method: ao_column
-Options: checksum=false
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=false
 
 Insert into delta_ins_btree select
     i/5, i/12, date '2012-02-02' + i/5,
@@ -599,12 +590,11 @@ Create index dl_br_ix on  delta_ins_btree(a3);
  a5     | timestamp without time zone |           |          |         | plain    |              | rle_type         | 1                 | 32768      | 
  a6     | timestamp with time zone    |           |          |         | plain    |              | rle_type         | 1                 | 32768      | 
  a7     | text                        |           |          |         | extended |              | rle_type         | 4                 | 32768      | 
-Checksum: f
 Indexes:
     "dl_br_ix" btree (a3)
 Distributed by: (a1)
 Access method: ao_column
-Options: checksum=false
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=false
 
 select 'compression_ratio' as compr_ratio, get_ao_compression_ratio('delta_ins_btree');
     compr_ratio    | get_ao_compression_ratio 
@@ -672,7 +662,6 @@ Insert into delta_blocks select
  a4     | time without time zone      |           |          |         | plain   |              | rle_type         | 1                 | 8192       | 
  a5     | timestamp without time zone |           |          |         | plain   |              | rle_type         | 1                 | 8192       | 
  a6     | timestamp with time zone    |           |          |         | plain   |              | rle_type         | 1                 | 8192       | 
-Checksum: f
 Indexes:
     "dl_bt_ix" bitmap (a1)
     "dl_ix" btree (a3)
@@ -741,10 +730,9 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a7     | integer                     |           |          |         | plain    |              | rle_type         | 4                 | 32768      | 
  a8     | bigint                      |           |          |         | plain    |              | none             | 0                 | 32768      | 
  a9     | text                        |           |          |         | extended |              | rle_type         | 2                 | 32768      | 
-Checksum: f
 Distributed by: (a1)
 Access method: ao_column
-Options: checksum=false
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=false
 
 Insert into delta_none select
     i/5, i/12, date '2012-02-02' + i/5,
@@ -811,10 +799,9 @@ DISTRIBUTED BY (b);
  a      | integer        |           |          |         | plain    |              | rle_type         | 1                 | 32768      | 
  b      | integer        |           |          |         | plain    |              | rle_type         | 1                 | 32768      | 
  c      | character(100) |           |          |         | extended |              | rle_type         | 1                 | 32768      | 
-Checksum: f
 Distributed by: (b)
 Access method: ao_column
-Options: compresstype=rle_type, checksum=false
+Options: compresstype=rle_type, blocksize=32768, compresslevel=1, checksum=false
 
 INSERT INTO delta_one SELECT i as a, 0 as b, '' as c FROM generate_series(1, 100000) AS i;
 INSERT INTO delta_one SELECT i as a, 1 as b, '' as c FROM generate_series(1, 100000) AS i;
@@ -1106,10 +1093,9 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a7     | integer                     |           |          |         | plain    |              | zlib             | 6                 | 32768      | 
  a8     | bigint                      |           |          |         | plain    |              | zlib             | 7                 | 32768      | 
  a9     | text                        |           |          |         | extended |              | rle_type         | 2                 | 32768      | 
-Checksum: f
 Distributed by: (a1)
 Access method: ao_column
-Options: checksum=false
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=false
 
 Insert into delta_zlib select 
     i/20, 12/i, date '2012-02-02' + i/5,
@@ -1204,10 +1190,9 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a4     | time without time zone      |           |          |         | plain   |              | rle_type         | 1                 | 32768      | 
  a5     | timestamp without time zone |           |          |         | plain   |              | rle_type         | 1                 | 32768      | 
  a6     | timestamp with time zone    |           |          |         | plain   |              | rle_type         | 1                 | 32768      | 
-Checksum: f
 Distributed by: (a1)
 Access method: ao_column
-Options: compresstype=rle_type, compresslevel=1, checksum=false
+Options: compresstype=rle_type, compresslevel=1, blocksize=32768, checksum=false
 
 Insert into rle_type_1_delta_null values
     (1, 2147483648, '2014-07-29', '14:22:23.776890', '2014-07-30 14:22:58.356229', '2014-07-30 14:22:23.776892-07'),
@@ -1303,10 +1288,9 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a4     | time without time zone      |           |          |         | plain   |              | rle_type         | 2                 | 32768      | 
  a5     | timestamp without time zone |           |          |         | plain   |              | rle_type         | 2                 | 32768      | 
  a6     | timestamp with time zone    |           |          |         | plain   |              | rle_type         | 2                 | 32768      | 
-Checksum: t
 Distributed by: (a1)
 Access method: ao_column
-Options: compresstype=rle_type, compresslevel=2, checksum=true
+Options: compresstype=rle_type, compresslevel=2, checksum=true, blocksize=32768
 
 Insert into rle_type_2_delta_chkt values
     (1, 2147483648, '2014-07-29', '14:22:23.776890', '2014-07-30 14:22:58.356229', '2014-07-30 14:22:23.776892-07'),
@@ -1369,10 +1353,9 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a4     | time without time zone      |           |          |         | plain   |              | rle_type         | 2                 | 32768      | 
  a5     | timestamp without time zone |           |          |         | plain   |              | rle_type         | 2                 | 32768      | 
  a6     | timestamp with time zone    |           |          |         | plain   |              | rle_type         | 2                 | 32768      | 
-Checksum: f
 Distributed by: (a1)
 Access method: ao_column
-Options: compresstype=rle_type, compresslevel=2, checksum=false
+Options: compresstype=rle_type, compresslevel=2, checksum=false, blocksize=32768
 
 Insert into rle_type_2_delta_chkf values
     (1, 2147483648, '2014-07-29', '14:22:23.776890', '2014-07-30 14:22:58.356229', '2014-07-30 14:22:23.776892-07'),
@@ -1438,10 +1421,9 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a4     | time without time zone      |           |          |         | plain   |              | rle_type         | 2                 | 32768      | 
  a5     | timestamp without time zone |           |          |         | plain   |              | rle_type         | 2                 | 32768      | 
  a6     | timestamp with time zone    |           |          |         | plain   |              | rle_type         | 2                 | 32768      | 
-Checksum: f
 Distributed by: (a1)
 Access method: ao_column
-Options: compresstype=rle_type, compresslevel=2, checksum=false
+Options: compresstype=rle_type, compresslevel=2, blocksize=32768, checksum=false
 
 Insert into rle_type_2_delta_null values
     (1, 2147483648, '2014-07-29', '14:22:23.776890', '2014-07-30 14:22:58.356229', '2014-07-30 14:22:23.776892-07'),
@@ -1561,10 +1543,9 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a4     | time without time zone      |           |          |         | plain   |              | rle_type         | 3                 | 32768      | 
  a5     | timestamp without time zone |           |          |         | plain   |              | rle_type         | 3                 | 32768      | 
  a6     | timestamp with time zone    |           |          |         | plain   |              | rle_type         | 3                 | 32768      | 
-Checksum: f
 Distributed by: (a1)
 Access method: ao_column
-Options: compresstype=rle_type, compresslevel=3, checksum=false
+Options: compresstype=rle_type, compresslevel=3, blocksize=32768, checksum=false
 
 Insert into rle_type_3_delta_null values
     (1, 2147483648, '2014-07-29', '14:22:23.776890', '2014-07-30 14:22:58.356229', '2014-07-30 14:22:23.776892-07'),
@@ -1660,10 +1641,9 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a4     | time without time zone      |           |          |         | plain   |              | rle_type         | 4                 | 32768      | 
  a5     | timestamp without time zone |           |          |         | plain   |              | rle_type         | 4                 | 32768      | 
  a6     | timestamp with time zone    |           |          |         | plain   |              | rle_type         | 4                 | 32768      | 
-Checksum: f
 Distributed by: (a1)
 Access method: ao_column
-Options: compresstype=rle_type, compresslevel=4, checksum=false
+Options: compresstype=rle_type, compresslevel=4, blocksize=32768, checksum=false
 
 Insert into rle_type_4_delta_null values
     (1, 2147483648, '2014-07-29', '14:22:23.776890', '2014-07-30 14:22:58.356229', '2014-07-30 14:22:23.776892-07'),

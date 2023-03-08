@@ -68,12 +68,17 @@ public:
 	//------------------------------------------------------------------
 	enum EMDIdType
 	{
-		EmdidGPDB = 0,
+		EmdidGeneral = 0,
 		EmdidColStats = 1,
 		EmdidRelStats = 2,
 		EmdidCastFunc = 3,
 		EmdidScCmp = 4,
 		EmdidGPDBCtas = 5,
+		EmdidRel = 6,
+		EmdidInd = 7,
+		EmdidCheckConstraint = 8,
+		EmdidExtStats = 9,
+		EmdidExtStatsInfo = 10,
 		EmdidSentinel
 	};
 

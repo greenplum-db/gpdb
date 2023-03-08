@@ -69,7 +69,8 @@ CTableDescriptorTest::EresUnittest_Basic()
 					 CTestUtils::GetCostModel(mp));
 
 	CWStringConst strName(GPOS_WSZ_LIT("MyTable"));
-	CMDIdGPDB *mdid = GPOS_NEW(mp) CMDIdGPDB(GPOPT_MDCACHE_TEST_OID, 1, 1);
+	CMDIdGPDB *mdid =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_MDCACHE_TEST_OID, 1, 1);
 	CTableDescriptor *ptabdesc =
 		CTestUtils::PtabdescCreate(mp, 10, mdid, CName(&strName));
 

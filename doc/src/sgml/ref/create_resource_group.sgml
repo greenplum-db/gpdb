@@ -23,12 +23,9 @@ PostgreSQL documentation
 
 CREATE RESOURCE GROUP name WITH (group_attribute=value [, ... ]) 
 where group_attribute is:
-   CPU_RATE_LIMIT=integer | CPUSET=tuple
-   MEMORY_LIMIT=integer
+   CPU_HARD_QUOTA_LIMIT=integer | CPUSET=tuple
    [ CONCURRENCY=integer ]
-   [ MEMORY_SHARED_QUOTA=integer ]
-   [ MEMORY_SPILL_RATIO=integer ]
-   [ MEMORY_AUDITOR= {vmtracker | cgroup} ]
+   [ CPU_SOFT_PRIORITY=integer ]
 
 </synopsis>
  </refsynopsisdiv>

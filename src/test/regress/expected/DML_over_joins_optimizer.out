@@ -81,7 +81,7 @@ explain update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
  Update on s  (cost=0.00..865.66 rows=34 width=1)
    ->  Hash Semi Join  (cost=0.00..862.80 rows=100 width=18)
          Hash Cond: (s_1.a = r.b)
-         ->  Seq Scan on s s_1  (cost=0.00..431.00 rows=100 width=18)
+         ->  Seq Scan on s  (cost=0.00..431.00 rows=100 width=18)
          ->  Hash  (cost=431.15..431.15 rows=10000 width=4)
                ->  Result  (cost=0.00..431.15 rows=10000 width=4)
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.14 rows=10000 width=4)
@@ -97,7 +97,7 @@ explain delete from s where exists (select 1 from r where s.a = r.b);
  Delete on s  (cost=0.00..865.66 rows=34 width=1)
    ->  Hash Semi Join  (cost=0.00..862.80 rows=34 width=18)
          Hash Cond: (s_1.a = r.b)
-         ->  Seq Scan on s s_1  (cost=0.00..431.00 rows=34 width=18)
+         ->  Seq Scan on s  (cost=0.00..431.00 rows=34 width=18)
          ->  Hash  (cost=431.15..431.15 rows=3334 width=4)
                ->  Result  (cost=0.00..431.15 rows=3334 width=4)
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.14 rows=3334 width=4)
@@ -1802,8 +1802,8 @@ explain (costs off) delete from tab1 using tab2 where tab1.a = tab2.a;
 ------------------------------------------------------
  Delete on tab1
    ->  Hash Join
-         Hash Cond: (tab1_1.a = tab2.a)
-         ->  Seq Scan on tab1 tab1_1
+         Hash Cond: (tab1.a = tab2.a)
+         ->  Seq Scan on tab1
          ->  Hash
                ->  Seq Scan on tab2
  Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0
@@ -1816,8 +1816,8 @@ explain (costs off) delete from tab1 using tab2 where tab1.a = tab2.b;
 ------------------------------------------------------------------
  Delete on tab1
    ->  Hash Join
-         Hash Cond: (tab1_1.a = tab2.b)
-         ->  Seq Scan on tab1 tab1_1
+         Hash Cond: (tab1.a = tab2.b)
+         ->  Seq Scan on tab1
          ->  Hash
                ->  Redistribute Motion 3:3  (slice1; segments: 3)
                      Hash Key: tab2.b
@@ -1831,8 +1831,8 @@ explain (costs off) delete from tab1 using tab2 where tab1.b = tab2.b;
 ---------------------------------------------------------------
  Delete on tab1
    ->  Hash Join
-         Hash Cond: (tab1_1.b = tab2.b)
-         ->  Seq Scan on tab1 tab1_1
+         Hash Cond: (tab1.b = tab2.b)
+         ->  Seq Scan on tab1
          ->  Hash
                ->  Broadcast Motion 3:3  (slice1; segments: 3)
                      ->  Seq Scan on tab2
@@ -1872,18 +1872,18 @@ HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For 
  Delete on tab1
    ->  Result
          ->  Redistribute Motion 3:3  (slice1; segments: 3)
-               Hash Key: tab1_1.b
+               Hash Key: tab1.b
                ->  Hash Join
-                     Hash Cond: (tab2.a = tab1_1.a)
+                     Hash Cond: (tab2.a = tab1.a)
                      ->  Seq Scan on tab2
                      ->  Hash
                            ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                 Hash Key: tab1_1.a
+                                 Hash Key: tab1.a
                                  ->  Hash Join
-                                       Hash Cond: (tab3.b = tab1_1.b)
+                                       Hash Cond: (tab3.b = tab1.b)
                                        ->  Seq Scan on tab3
                                        ->  Hash
-                                             ->  Seq Scan on tab1 tab1_1
+                                             ->  Seq Scan on tab1
  Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0
 (16 rows)
 

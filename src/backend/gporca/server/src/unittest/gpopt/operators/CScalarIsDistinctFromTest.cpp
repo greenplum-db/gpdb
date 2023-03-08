@@ -34,7 +34,9 @@ public:
 		  m_aoc(m_amp.Pmp(), &m_mda, nullptr /* pceeval */,
 				CTestUtils::GetCostModel(m_amp.Pmp())),
 		  m_pScalarIDF(GPOS_NEW(m_amp.Pmp()) CScalarIsDistinctFrom(
-			  Pmp(), GPOS_NEW(m_amp.Pmp()) CMDIdGPDB(GPDB_INT4_EQ_OP),
+			  Pmp(),
+			  GPOS_NEW(m_amp.Pmp())
+				  CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP),
 			  GPOS_NEW(m_amp.Pmp()) CWStringConst(GPOS_WSZ_LIT("="))))
 	{
 	}

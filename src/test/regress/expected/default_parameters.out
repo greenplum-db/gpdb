@@ -133,9 +133,9 @@ create function dfunc(a int, b double precision default random()*10) returns dou
 
 create view dview as select random()*10, dfunc(4);
 select pg_get_viewdef('dview',true);
-              pg_get_viewdef              
-------------------------------------------
-  SELECT random() * 10::double precision,+
+                     pg_get_viewdef                     
+--------------------------------------------------------
+  SELECT random() * 10::double precision AS "?column?",+
      dfunc(4) AS dfunc;
 (1 row)
 

@@ -1,5 +1,6 @@
 <!--
 doc/src/sgml/ref/create_function.sgml
+PostgreSQL documentation
 -->
 
 <refentry id="sql-createfunction">
@@ -27,11 +28,12 @@ CREATE [ OR REPLACE ] FUNCTION
   { LANGUAGE <replaceable class="parameter">lang_name</replaceable>
     | TRANSFORM { FOR TYPE <replaceable class="parameter">type_name</replaceable> } [, ... ]
     | WINDOW
-    | IMMUTABLE | STABLE | VOLATILE | [ NOT ] LEAKPROOF
-    | CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT
-    | [ EXTERNAL ] SECURITY INVOKER | [ EXTERNAL ] SECURITY DEFINER
+    | { IMMUTABLE | STABLE | VOLATILE }
+    | [ NOT ] LEAKPROOF
+    | { CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT }
+    | { [ EXTERNAL ] SECURITY INVOKER | [ EXTERNAL ] SECURITY DEFINER }
     | PARALLEL { UNSAFE | RESTRICTED | SAFE }
-    | EXECUTE ON { ANY | MASTER | ALL SEGMENTS }
+    | EXECUTE ON { ANY | MASTER | ALL SEGMENTS | INITPLAN }
     | COST <replaceable class="parameter">execution_cost</replaceable>
     | ROWS <replaceable class="parameter">result_rows</replaceable>
     | SUPPORT <replaceable class="parameter">support_function</replaceable>
@@ -99,6 +101,11 @@ CREATE [ OR REPLACE ] FUNCTION
   <para>
    To be able to create a function, you must have <literal>USAGE</literal>
    privilege on the argument types and the return type.
+  </para>
+
+  <para>
+   Refer to <xref linkend="xfunc"/> for further information on writing
+   functions.
   </para>
  </refsect1>
 
@@ -257,7 +264,7 @@ CREATE [ OR REPLACE ] FUNCTION
        The name of the language that the function is implemented in.
        It can be <literal>sql</literal>, <literal>c</literal>,
        <literal>internal</literal>, or the name of a user-defined
-       procedural language, e.g. <literal>plpgsql</literal>.  Enclosing the
+       procedural language, e.g., <literal>plpgsql</literal>.  Enclosing the
        name in single quotes is deprecated and requires matching case.
       </para>
      </listitem>
@@ -431,11 +438,11 @@ CREATE [ OR REPLACE ] FUNCTION
       Functions should be labeled parallel unsafe if they modify any database
       state, or if they make changes to the transaction such as using
       sub-transactions, or if they access sequences or attempt to make
-      persistent changes to settings (e.g. <literal>setval</literal>).  They should
+      persistent changes to settings (e.g., <literal>setval</literal>).  They should
       be labeled as parallel restricted if they access temporary tables,
       client connection state, cursors, prepared statements, or miscellaneous
       backend-local state which the system cannot synchronize in parallel mode
-      (e.g.  <literal>setseed</literal> cannot be executed other than by the group
+      (e.g.,  <literal>setseed</literal> cannot be executed other than by the group
       leader because a change made by another process would not be reflected
       in the leader).  In general, if a function is labeled as being safe when
       it is restricted or unsafe, or if it is labeled as being restricted when
@@ -578,12 +585,6 @@ CREATE [ OR REPLACE ] FUNCTION
     </varlistentry>
 
    </variablelist>
-
-   <para>
-    Refer to <xref linkend="xfunc"/> for further information on writing
-    functions.
-   </para>
-
  </refsect1>
 
  <refsect1 id="sql-createfunction-overloading">
@@ -661,8 +662,7 @@ CREATE FUNCTION foo(int, int default 42) ...
   <title>Examples</title>
 
   <para>
-   Here are some trivial examples to help you get started.  For more
-   information and examples, see <xref linkend="xfunc"/>.
+   Add two integers using a SQL function:
 <programlisting>
 CREATE FUNCTION add(integer, integer) RETURNS integer
     AS 'select $1 + $2;'

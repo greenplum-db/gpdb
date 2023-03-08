@@ -148,7 +148,9 @@ typedef struct ReplicationStateOnDisk
 
 typedef struct ReplicationStateCtl
 {
+	/* Tranche to use for per-origin LWLocks */
 	int			tranche_id;
+	/* Array of length max_replication_slots */
 	ReplicationState states[FLEXIBLE_ARRAY_MEMBER];
 } ReplicationStateCtl;
 
@@ -165,6 +167,10 @@ TimestampTz replorigin_session_origin_timestamp = 0;
  * max_replication_slots?
  */
 static ReplicationState *replication_states;
+
+/*
+ * Actual shared memory block (replication_states[] is now part of this).
+ */
 static ReplicationStateCtl *replication_states_ctl;
 
 /*
@@ -480,7 +486,7 @@ ReplicationOriginShmemSize(void)
 	/*
 	 * XXX: max_replication_slots is arguably the wrong thing to use, as here
 	 * we keep the replay state of *remote* transactions. But for now it seems
-	 * sufficient to reuse it, lest we introduce a separate GUC.
+	 * sufficient to reuse it, rather than introduce a separate GUC.
 	 */
 	if (max_replication_slots == 0)
 		return size;
@@ -510,9 +516,9 @@ ReplicationOriginShmemInit(void)
 	{
 		int			i;
 
-		replication_states_ctl->tranche_id = LWTRANCHE_REPLICATION_ORIGIN;
+		MemSet(replication_states_ctl, 0, ReplicationOriginShmemSize());
 
-		MemSet(replication_states, 0, ReplicationOriginShmemSize());
+		replication_states_ctl->tranche_id = LWTRANCHE_REPLICATION_ORIGIN;
 
 		for (i = 0; i < max_replication_slots; i++)
 		{
@@ -785,7 +791,7 @@ StartupReplicationOrigin(void)
 	FIN_CRC32C(crc);
 	if (file_crc != crc)
 		ereport(PANIC,
-				(errcode(ERRCODE_CONFIGURATION_LIMIT_EXCEEDED),
+				(errcode(ERRCODE_DATA_CORRUPTED),
 				 errmsg("replication slot checkpoint has wrong checksum %u, expected %u",
 						crc, file_crc)));
 
@@ -1100,7 +1106,7 @@ replorigin_session_setup(RepOriginId node)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_OBJECT_IN_USE),
-					 errmsg("replication identifier %d is already active for PID %d",
+					 errmsg("replication origin with OID %d is already active for PID %d",
 							curstate->roident, curstate->acquired_by)));
 		}
 

@@ -256,7 +256,7 @@ CXformFactory::Instantiate()
 	Add(GPOS_NEW(m_mp) CXformImplementCTEProducer(m_mp));
 	Add(GPOS_NEW(m_mp) CXformImplementCTEConsumer(m_mp));
 	Add(GPOS_NEW(m_mp) CXformExpandFullOuterJoin(m_mp));
-	Add(GPOS_NEW(m_mp) CXformExternalGet2ExternalScan(m_mp));
+	Add(GPOS_NEW(m_mp) CXformForeignGet2ForeignScan(m_mp));
 	Add(GPOS_NEW(m_mp) CXformSelect2BitmapBoolOp(m_mp));
 	Add(GPOS_NEW(m_mp) CXformSelect2DynamicBitmapBoolOp(m_mp));
 	Add(GPOS_NEW(m_mp) CXformImplementBitmapTableGet(m_mp));

@@ -655,6 +655,20 @@ INSERT INTO fract_only VALUES (8, '0.00017');
 SELECT * FROM fract_only;
 DROP TABLE fract_only;
 
+-- Check conversion to integers
+SELECT (-9223372036854775808.5)::int8; -- should fail
+SELECT (-9223372036854775808.4)::int8; -- ok
+SELECT 9223372036854775807.4::int8; -- ok
+SELECT 9223372036854775807.5::int8; -- should fail
+SELECT (-2147483648.5)::int4; -- should fail
+SELECT (-2147483648.4)::int4; -- ok
+SELECT 2147483647.4::int4; -- ok
+SELECT 2147483647.5::int4; -- should fail
+SELECT (-32768.5)::int2; -- should fail
+SELECT (-32768.4)::int2; -- ok
+SELECT 32767.4::int2; -- ok
+SELECT 32767.5::int2; -- should fail
+
 -- Check inf/nan conversion behavior
 SELECT 'NaN'::float8::numeric;
 SELECT 'Infinity'::float8::numeric;
@@ -798,6 +812,14 @@ SELECT '' AS to_char_34, to_char('100'::numeric, 'f"\\ool"999');
 SELECT '' AS to_char_35, to_char('100'::numeric, 'f"ool\"999');
 SELECT '' AS to_char_36, to_char('100'::numeric, 'f"ool\\"999');
 
+-- Test scientific notation with various exponents
+WITH v(exp) AS
+  (VALUES(-16379),(-16378),(-1234),(-789),(-45),(-5),(-4),(-3),(-2),(-1),(0),
+         (1),(2),(3),(4),(5),(38),(275),(2345),(45678),(131070),(131071))
+SELECT exp,
+  to_char(('1.2345e'||exp)::numeric, '9.999EEEE') as numeric
+FROM v;
+
 -- TO_NUMBER()
 --
 SET lc_numeric = 'C';
@@ -864,6 +886,8 @@ select 4770999999999999999999999999999999999999999999999999999999999999999999999
 
 select 4769999999999999999999999999999999999999999999999999999999999999999999999999999999999999 * 9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999;
 
+select (0.1 - 2e-16383) * (0.1 - 3e-16383) = 0.01 as rounds_to_point_zero_one;
+
 --
 -- Test some corner cases for division
 --
@@ -896,10 +920,21 @@ select 3.789 ^ 21;
 select 3.789 ^ 35;
 select 1.2 ^ 345;
 select 0.12 ^ (-20);
+select 1.000000000123 ^ (-2147483648);
+select coalesce(nullif(0.9999999999 ^ 23300000000000, 0), 0) as rounds_to_zero;
+select round(((1 - 1.500012345678e-1000) ^ 1.45e1003) * 1e1000);
 
 -- cases that used to error out
 select 0.12 ^ (-25);
 select 0.5678 ^ (-85);
+select coalesce(nullif(0.9999999999 ^ 70000000000000, 0), 0) as underflows;
+
+-- negative base to integer powers
+select (-1.0) ^ 2147483646;
+select (-1.0) ^ 2147483647;
+select (-1.0) ^ 2147483648;
+select (-1.0) ^ 1000000000000000;
+select (-1.0) ^ 1000000000000001;
 
 --
 -- Tests for raising to non-integer powers
@@ -939,6 +974,8 @@ select 1.234 ^ 5678;
 select exp(0.0);
 select exp(1.0);
 select exp(1.0::numeric(71,70));
+select coalesce(nullif(exp(-5000::numeric), 0), 0) as rounds_to_zero;
+select coalesce(nullif(exp(-10000::numeric), 0), 0) as underflows;
 
 -- cases that used to generate inaccurate results
 select exp(32.999);

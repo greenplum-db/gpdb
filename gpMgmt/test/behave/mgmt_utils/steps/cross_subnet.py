@@ -31,7 +31,7 @@ def impl(context, segment):
     if segment not in ('standby', 'mirrors'):
         raise Exception("invalid segment type")
 
-    context.standby_hostname = 'mdw-2'
+    context.standby_hostname = 'cdw-2'
     context.execute_steps("""
     Given the segments are synchronized
      Then replication connections can be made from the acting {segment}
@@ -40,7 +40,7 @@ def impl(context, segment):
     """.format(segment=segment))
 
     # For the 'standby' case, we set PGHOST back to its original value instead
-    # of 'mdw-1'.  When the function impl() is called, PGHOST is initially unset
+    # of 'cdw-1'.  When the function impl() is called, PGHOST is initially unset
     # by the test framework, and we want to respect that.
     orig_PGHOST = os.environ.get('PGHOST')
 
@@ -55,7 +55,7 @@ def impl(context, segment):
           And the user runs command "gpactivatestandby -a" from standby coordinator
          Then gpactivatestandby should return a return code of 0
          """)
-        os.environ['PGHOST'] = 'mdw-2'
+        os.environ['PGHOST'] = 'cdw-2'
 
     else: # mirrors
         context.execute_steps("""
@@ -79,7 +79,7 @@ def impl(context, segment):
         # the previous coordinator cannot assume the role of standby
         # because it does not have the required recover.conf file.
         context.execute_steps("""
-         When the user runs command "gpinitstandby -a -s mdw-1 -S {datadir}" from standby coordinator
+         When the user runs command "gpinitstandby -a -s cdw-1 -S {datadir}" from standby coordinator
          Then gpinitstandby should return a return code of 0
          """.format(datadir=context.new_standby_data_dir))
         os.environ['COORDINATOR_DATA_DIRECTORY'] = context.new_standby_data_dir
@@ -88,15 +88,15 @@ def impl(context, segment):
             del os.environ['PGHOST']
         else:
             os.environ['PGHOST'] = orig_PGHOST
-        context.standby_hostname = 'mdw-1'
+        context.standby_hostname = 'cdw-1'
         context.execute_steps("""
-         When the coordinator goes down on "mdw-2"
+         When the coordinator goes down on "cdw-2"
           And the user runs "gpactivatestandby -a"
          Then gpactivatestandby should return a return code of 0
         """)
 
         context.execute_steps("""
-         When the user runs "gpinitstandby -a -s mdw-2 -S {datadir}"
+         When the user runs "gpinitstandby -a -s cdw-2 -S {datadir}"
          Then gpinitstandby should return a return code of 0
          """.format(datadir=context.new_standby_data_dir))
 

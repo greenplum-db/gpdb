@@ -499,7 +499,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 
 %type <boolean> opt_instead
 %type <boolean> opt_unique opt_concurrently opt_verbose opt_full
-%type <boolean> opt_freeze opt_analyze opt_default opt_recheck
+%type <boolean> opt_freeze opt_analyze opt_ao_aux_only opt_default opt_recheck
 %type <boolean> opt_dxl
 %type <defelt>	opt_binary copy_delimiter
 
@@ -751,7 +751,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 	LEADING LEAKPROOF LEAST LEFT LEVEL LIKE LIMIT LISTEN LOAD LOCAL
 	LOCALTIME LOCALTIMESTAMP LOCATION LOCK_P LOCKED LOGGED
 
-	MAPPING MATCH MATERIALIZED MAXVALUE MEMORY_LIMIT MEMORY_SHARED_QUOTA MEMORY_SPILL_RATIO
+	MAPPING MATCH MATERIALIZED MAXVALUE MEMORY_LIMIT
 	METHOD MINUTE_P MINVALUE MODE MONTH_P MOVE
 
 	NAME_P NAMES NATIONAL NATURAL NCHAR NEW NEXT NO NONE
@@ -802,9 +802,9 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 
 /* GPDB-added keywords, in alphabetical order */
 %token <keyword>
-	ACTIVE
+	ACTIVE AO_AUX_ONLY
 
-	CONTAINS COORDINATOR CPUSET CPU_RATE_LIMIT
+	CONTAINS COORDINATOR CPUSET CPU_HARD_QUOTA_LIMIT CPU_SOFT_PRIORITY
 
 	CREATEEXTTABLE
 
@@ -917,6 +917,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc AGGREGATE
 			%nonassoc ALSO
 			%nonassoc ALTER
+            %nonassoc AO_AUX_ONLY
 			%nonassoc ASSERTION
 			%nonassoc ASSIGNMENT
 			%nonassoc BACKWARD
@@ -947,7 +948,8 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc COPY
 			%nonassoc COST
 			%nonassoc CPUSET
-			%nonassoc CPU_RATE_LIMIT
+			%nonassoc CPU_HARD_QUOTA_LIMIT
+			%nonassoc CPU_SOFT_PRIORITY
 			%nonassoc CREATEEXTTABLE
 			%nonassoc CSV
 			%nonassoc CURRENT_P
@@ -1031,8 +1033,6 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc MATCH
 			%nonassoc MAXVALUE
 			%nonassoc MEMORY_LIMIT
-			%nonassoc MEMORY_SHARED_QUOTA
-			%nonassoc MEMORY_SPILL_RATIO
 			%nonassoc MINUTE_P
 			%nonassoc MINVALUE
 			%nonassoc MISSING
@@ -1606,25 +1606,21 @@ OptResourceGroupElem:
 					/* was "concurrency" */
 					$$ = makeDefElem("concurrency", (Node *) makeInteger($2), @1);
 				}
-			| CPU_RATE_LIMIT SignedIconst
+			| CPU_HARD_QUOTA_LIMIT SignedIconst
 				{
-					$$ = makeDefElem("cpu_rate_limit", (Node *) makeInteger($2), @1);
+					$$ = makeDefElem("cpu_hard_quota_limit", (Node *) makeInteger($2), @1);
+				}
+			| CPU_SOFT_PRIORITY SignedIconst
+				{
+					$$ = makeDefElem("cpu_soft_priority", (Node *) makeInteger($2), @1);
 				}
 			| CPUSET Sconst
 				{
 					$$ = makeDefElem("cpuset", (Node *) makeString($2), @1);
 				}
-			| MEMORY_SHARED_QUOTA SignedIconst
-				{
-					$$ = makeDefElem("memory_shared_quota", (Node *) makeInteger($2), @1);
-				}
 			| MEMORY_LIMIT SignedIconst
 				{
 					$$ = makeDefElem("memory_limit", (Node *) makeInteger($2), @1);
-				}
-			| MEMORY_SPILL_RATIO SignedIconst
-				{
-					$$ = makeDefElem("memory_spill_ratio", (Node *) makeInteger($2), @1);
 				}
 		;
 
@@ -2910,6 +2906,18 @@ alter_table_cmd:
 					n->subtype = AT_SetStatistics;
 					n->num = (int16) $3;
 					n->def = (Node *) makeInteger($6);
+					$$ = (Node *)n;
+				}
+			/* ALTER TABLE <name> ALTER COLUMN <column> SET ENCODING <coldef> */
+			| ALTER opt_column ColId SET ENCODING definition
+				{
+					ColumnReferenceStorageDirective *c =
+						makeNode(ColumnReferenceStorageDirective);
+					c->column = $3;
+					c->encoding = $6;
+					AlterTableCmd *n = makeNode(AlterTableCmd);
+					n->subtype = AT_SetColumnEncoding;
+					n->def = (Node *)c;
 					$$ = (Node *)n;
 				}
 			/* ALTER TABLE <name> ALTER [COLUMN] <colname> SET ( column_parameter = value [, ... ] ) */
@@ -5065,6 +5073,7 @@ TableLikeClause:
 					TableLikeClause *n = makeNode(TableLikeClause);
 					n->relation = $2;
 					n->options = $3;
+					n->relationOid = InvalidOid;
 					$$ = (Node *)n;
 				}
 		;
@@ -6547,7 +6556,7 @@ CreateMatViewStmt:
 
 					$$ = (Node *) ctas;
 				}
-		| CREATE OptNoLog MATERIALIZED VIEW IF_P NOT EXISTS create_mv_target AS SelectStmt opt_with_data
+		| CREATE OptNoLog MATERIALIZED VIEW IF_P NOT EXISTS create_mv_target AS SelectStmt opt_with_data OptDistributedBy
 				{
 					CreateTableAsStmt *ctas = makeNode(CreateTableAsStmt);
 					ctas->query = $10;
@@ -6558,6 +6567,8 @@ CreateMatViewStmt:
 					/* cram additional flags into the IntoClause */
 					$8->rel->relpersistence = $2;
 					$8->skipData = !($11);
+					ctas->into->distributedBy = $12;
+
 					$$ = (Node *) ctas;
 				}
 		;
@@ -13144,7 +13155,7 @@ cluster_index_specification:
  *
  *****************************************************************************/
 
-VacuumStmt: VACUUM opt_full opt_freeze opt_verbose opt_analyze opt_vacuum_relation_list
+VacuumStmt: VACUUM opt_full opt_freeze opt_verbose opt_analyze opt_ao_aux_only opt_vacuum_relation_list
 				{
 					VacuumStmt *n = makeNode(VacuumStmt);
 					n->options = NIL;
@@ -13160,7 +13171,10 @@ VacuumStmt: VACUUM opt_full opt_freeze opt_verbose opt_analyze opt_vacuum_relati
 					if ($5)
 						n->options = lappend(n->options,
 											 makeDefElem("analyze", NULL, @5));
-					n->rels = $6;
+					if ($6)
+						n->options = lappend(n->options,
+											 makeDefElem("ao_aux_only", NULL, @6));
+					n->rels = $7;
 					n->is_vacuumcmd = true;
 					$$ = (Node *)n;
 				}
@@ -13324,6 +13338,10 @@ opt_vacuum_relation_list:
 			| /*EMPTY*/								{ $$ = NIL; }
 		;
 
+/*GPDB: only vacuum supporting heap tables of given AO table*/
+opt_ao_aux_only:    AO_AUX_ONLY						{ $$ = true; }
+                    | /*EMPTY*/                     { $$ = false; }
+		;
 
 /*****************************************************************************
  *
@@ -17641,11 +17659,11 @@ qualified_name_list_with_only:
 					$2->inh = false; 
 					$$ = list_make1($2);
 				}
-			| qualified_name_list ',' qualified_name
+			| qualified_name_list_with_only ',' qualified_name
 				{
 					$$ = lappend($1, $3);
 				}
-			| qualified_name_list ',' ONLY qualified_name
+			| qualified_name_list_with_only ',' ONLY qualified_name
 				{
 					$4->inh = false; 
 					$$ = lappend($1, $4);
@@ -18026,7 +18044,8 @@ unreserved_keyword:
 			| COPY
 			| COST
 			| CPUSET
-			| CPU_RATE_LIMIT
+			| CPU_HARD_QUOTA_LIMIT
+			| CPU_SOFT_PRIORITY
 			| CREATEEXTTABLE
 			| CSV
 			| CUBE
@@ -18138,8 +18157,6 @@ unreserved_keyword:
 			| MATERIALIZED
 			| MAXVALUE
 			| MEMORY_LIMIT
-			| MEMORY_SHARED_QUOTA
-			| MEMORY_SPILL_RATIO
 			| METHOD
 			| MINUTE_P
 			| MINVALUE
@@ -18386,7 +18403,8 @@ PartitionIdentKeyword: ABORT_P
 			| COPY
 			| COST
 			| CPUSET
-			| CPU_RATE_LIMIT
+			| CPU_HARD_QUOTA_LIMIT
+			| CPU_SOFT_PRIORITY
 			| CREATEEXTTABLE
 			| CSV
 			| CUBE
@@ -18466,8 +18484,6 @@ PartitionIdentKeyword: ABORT_P
 			| MATCH
 			| MAXVALUE
 			| MEMORY_LIMIT
-			| MEMORY_SHARED_QUOTA
-			| MEMORY_SPILL_RATIO
 			| MINVALUE
 			| MISSING
 			| MODE
@@ -18702,7 +18718,8 @@ col_name_keyword:
  * - thomas 2000-11-28
  */
 type_func_name_keyword:
-			  AUTHORIZATION
+            AO_AUX_ONLY
+			| AUTHORIZATION
 			| BINARY
 			| COLLATION
 			| CONCURRENTLY
@@ -19142,7 +19159,7 @@ makeOrderedSetArgs(List *directargs, List *orderedargs,
 				   core_yyscan_t yyscanner)
 {
 	FunctionParameter *lastd = (FunctionParameter *) llast(directargs);
-	int			ndirectargs;
+	Value	   *ndirectargs;
 
 	/* No restriction unless last direct arg is VARIADIC */
 	if (lastd->mode == FUNC_PARAM_VARIADIC)
@@ -19166,10 +19183,10 @@ makeOrderedSetArgs(List *directargs, List *orderedargs,
 	}
 
 	/* don't merge into the next line, as list_concat changes directargs */
-	ndirectargs = list_length(directargs);
+	ndirectargs = makeInteger(list_length(directargs));
 
 	return list_make2(list_concat(directargs, orderedargs),
-					  makeInteger(ndirectargs));
+					  ndirectargs);
 }
 
 /* insertSelectOptions()

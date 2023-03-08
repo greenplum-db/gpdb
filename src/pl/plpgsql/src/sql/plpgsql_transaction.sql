@@ -273,6 +273,47 @@ SELECT * FROM test2;
 SELECT * FROM pg_cursors;
 
 
+-- interaction of FOR UPDATE cursor with subsequent updates (bug #17050)
+TRUNCATE test1;
+
+INSERT INTO test1 VALUES (1,'one'), (2,'two'), (3,'three');
+
+DO LANGUAGE plpgsql $$
+DECLARE
+    l_cur CURSOR FOR SELECT a FROM test1 ORDER BY 1 FOR UPDATE;
+BEGIN
+    FOR r IN l_cur LOOP
+      UPDATE test1 SET b = b || ' ' || b WHERE a = r.a;
+      COMMIT;
+    END LOOP;
+END;
+$$;
+
+SELECT * FROM test1;
+
+SELECT * FROM pg_cursors;
+
+
+-- like bug #17050, but with implicit cursor
+TRUNCATE test1;
+
+INSERT INTO test1 VALUES (1,'one'), (2,'two'), (3,'three');
+
+DO LANGUAGE plpgsql $$
+DECLARE r RECORD;
+BEGIN
+    FOR r IN SELECT a FROM test1 FOR UPDATE LOOP
+      UPDATE test1 SET b = b || ' ' || b WHERE a = r.a;
+      COMMIT;
+    END LOOP;
+END;
+$$;
+
+SELECT * FROM test1;
+
+SELECT * FROM pg_cursors;
+
+
 -- commit inside block with exception handler
 TRUNCATE test1;
 
@@ -311,6 +352,68 @@ END;
 $$;
 
 SELECT * FROM test1;
+
+
+-- test commit/rollback inside exception handler, too
+TRUNCATE test1;
+
+DO LANGUAGE plpgsql $$
+BEGIN
+    FOR i IN 1..10 LOOP
+      BEGIN
+        INSERT INTO test1 VALUES (i, 'good');
+        INSERT INTO test1 VALUES (i/0, 'bad');
+      EXCEPTION
+        WHEN division_by_zero THEN
+            INSERT INTO test1 VALUES (i, 'exception');
+            IF (i % 3) > 0 THEN COMMIT; ELSE ROLLBACK; END IF;
+      END;
+    END LOOP;
+END;
+$$;
+
+SELECT * FROM test1;
+
+
+-- detoast result of simple expression after commit
+CREATE TEMP TABLE test4(f1 text);
+ALTER TABLE test4 ALTER COLUMN f1 SET STORAGE EXTERNAL; -- disable compression
+INSERT INTO test4 SELECT repeat('xyzzy', 2000);
+
+-- immutable mark is a bit of a lie, but it serves to make call a simple expr
+-- that will return a still-toasted value
+CREATE FUNCTION data_source(i int) RETURNS TEXT LANGUAGE sql
+AS 'select f1 from test4' IMMUTABLE;
+
+DO $$
+declare x text;
+begin
+  for i in 1..3 loop
+    x := data_source(i);
+    commit;
+  end loop;
+  raise notice 'length(x) = %', length(x);
+end $$;
+
+
+-- operations on composite types vs. internal transactions
+DO LANGUAGE plpgsql $$
+declare
+  c test1 := row(42, 'hello');
+  r bool;
+begin
+  for i in 1..3 loop
+    r := c is not null;
+    raise notice 'r = %', r;
+    commit;
+  end loop;
+  for i in 1..3 loop
+    r := c is null;
+    raise notice 'r = %', r;
+    rollback;
+  end loop;
+end
+$$;
 
 
 -- COMMIT failures
@@ -423,6 +526,29 @@ END
 $$;
 
 SELECT * FROM test2;
+
+
+-- another snapshot handling case: argument expressions of a CALL need
+-- to be evaluated with an up-to-date snapshot
+CREATE FUNCTION report_count() RETURNS bigint
+STABLE LANGUAGE sql
+AS $$ SELECT COUNT(*) FROM test2 $$;
+
+CREATE PROCEDURE transaction_test9b(cnt bigint)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RAISE NOTICE 'count = %', cnt;
+END
+$$;
+
+DO $$
+BEGIN
+    CALL transaction_test9b(report_count());
+    INSERT INTO test2 VALUES(43);
+    CALL transaction_test9b(report_count());
+END
+$$;
 
 
 -- Test transaction in procedure with output parameters.  This uses a

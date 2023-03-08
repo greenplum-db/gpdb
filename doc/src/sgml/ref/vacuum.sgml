@@ -22,13 +22,14 @@ PostgreSQL documentation
  <refsynopsisdiv>
 <synopsis>
 VACUUM [ ( <replaceable class="parameter">option</replaceable> [, ...] ) ] [ <replaceable class="parameter">table_and_columns</replaceable> [, ...] ]
-VACUUM [ FULL ] [ FREEZE ] [ VERBOSE ] [ ANALYZE ] [ <replaceable class="parameter">table_and_columns</replaceable> [, ...] ]
+VACUUM [ FULL ] [ FREEZE ] [ VERBOSE ] [ AO_AUX_ONLY ]  [ ANALYZE ] [ <replaceable class="parameter">table_and_columns</replaceable> [, ...] ]
 
 <phrase>where <replaceable class="parameter">option</replaceable> can be one of:</phrase>
 
     FULL [ <replaceable class="parameter">boolean</replaceable> ]
     FREEZE [ <replaceable class="parameter">boolean</replaceable> ]
     VERBOSE [ <replaceable class="parameter">boolean</replaceable> ]
+    AO_AUX_ONLY [ <replaceable class="parameter">boolean</replaceable> ]
     ANALYZE [ <replaceable class="parameter">boolean</replaceable> ]
     DISABLE_PAGE_SKIPPING [ <replaceable class="parameter">boolean</replaceable> ]
     SKIP_LOCKED [ <replaceable class="parameter">boolean</replaceable> ]
@@ -61,6 +62,16 @@ VACUUM [ FULL ] [ FREEZE ] [ VERBOSE ] [ ANALYZE ] [ <replaceable class="paramet
   </para>
 
   <para>
+   <command>VACUUM AO_AUX_ONLY</command> performs a <command>VACUUM</command>
+   on all auxiliary tables of an append-optimized table. It does not
+   run <command>VACUUM</command> on the append-optimized table. If no table is
+   indicated, it will <command>VACUUM</command> the auxiliary tables of all
+   append-optimized tables. If a partitioned table is indicated, it
+   will <command>VACUUM</command> the auxiliary tables of all append-optimized
+   partitions.
+  </para>
+
+  <para>
    <command>VACUUM ANALYZE</command> performs a <command>VACUUM</command>
    and then an <command>ANALYZE</command> for each selected table.  This
    is a handy combination form for routine maintenance scripts.  See
@@ -78,7 +89,8 @@ VACUUM [ FULL ] [ FREEZE ] [ VERBOSE ] [ ANALYZE ] [ <replaceable class="paramet
    same table.  <command>VACUUM FULL</command> rewrites the entire contents
    of the table into a new disk file with no extra space, allowing unused
    space to be returned to the operating system.  This form is much slower and
-   requires an exclusive lock on each table while it is being processed.
+   requires an <literal>ACCESS EXCLUSIVE</literal> lock on each table while
+   it is being processed.
   </para>
 
   <para>

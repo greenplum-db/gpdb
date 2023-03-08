@@ -56,7 +56,6 @@ typedef struct AppendOnlyVisimapStore
 void AppendOnlyVisimapStore_Init(
 							AppendOnlyVisimapStore *visiMapStore,
 							Oid visimapRelId,
-							Oid visimapIdxId,
 							LOCKMODE lockmode,
 							Snapshot snapshot,
 							MemoryContext memoryContext);

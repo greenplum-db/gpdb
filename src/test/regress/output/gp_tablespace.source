@@ -20,11 +20,11 @@ BEGIN
 	when 'blockdir' then
 		select blkdirrelid into relation_id from pg_appendonly where relid = aotablename;
 	when 'blockdirindex' then
-		select blkdiridxid into relation_id from pg_appendonly where relid = aotablename;
+		select i.indexrelid into relation_id from pg_appendonly a, pg_index i where a.blkdirrelid = i.indrelid and relid = aotablename;
 	when 'visimap' then
 		select visimaprelid into relation_id from pg_appendonly where relid = aotablename;
 	when 'visimapindex' then
-		select visimapidxid into relation_id from pg_appendonly where relid = aotablename;
+		select i.indexrelid into relation_id from pg_appendonly a, pg_index i where a.visimaprelid = i.indrelid and relid = aotablename;
 	else
 		raise notice 'Invalid tabletype for has_init_file %', tabletype;
 		return false;
@@ -166,9 +166,9 @@ select count(*) from ao_ul_ctas;
 select * from gp_toolkit.__gp_aoseg('ao_ul_ctas');
  segment_id | segno |  eof  | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-------+----------+---------------+------------------+----------+---------------+-------
-          2 |     0 | 84336 |     3247 |             3 |            84336 |        1 |             4 |     1
-          1 |     0 | 87816 |     3385 |             3 |            87816 |        1 |             4 |     1
-          0 |     0 | 87368 |     3368 |             3 |            87368 |        1 |             4 |     1
+          2 |     0 | 84336 |     3247 |             3 |            84336 |        1 |             3 |     1
+          1 |     0 | 87816 |     3385 |             3 |            87816 |        1 |             3 |     1
+          0 |     0 | 87368 |     3368 |             3 |            87368 |        1 |             3 |     1
 (3 rows)
 
 select count(*) from aoco_ul_ctas;
@@ -180,12 +180,12 @@ select count(*) from aoco_ul_ctas;
 select * from gp_toolkit.__gp_aocsseg('aoco_ul_ctas');
  segment_id | segno | column_num | physical_segno | tupcount |  eof  | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+------------+----------------+----------+-------+------------------+----------+---------------+-------
-          0 |     0 |          0 |              0 |     3368 | 13512 |            13512 |        1 |             4 |     1
-          0 |     0 |          1 |            128 |     3368 | 26608 |            26608 |        1 |             4 |     1
-          1 |     0 |          0 |              0 |     3385 | 13584 |            13584 |        1 |             4 |     1
-          1 |     0 |          1 |            128 |     3385 | 26760 |            26760 |        1 |             4 |     1
-          2 |     0 |          0 |              0 |     3247 | 13032 |            13032 |        1 |             4 |     1
-          2 |     0 |          1 |            128 |     3247 | 25656 |            25656 |        1 |             4 |     1
+          0 |     0 |          0 |              0 |     3368 | 13512 |            13512 |        1 |             3 |     1
+          0 |     0 |          1 |            128 |     3368 | 26608 |            26608 |        1 |             3 |     1
+          1 |     0 |          0 |              0 |     3385 | 13584 |            13584 |        1 |             3 |     1
+          1 |     0 |          1 |            128 |     3385 | 26760 |            26760 |        1 |             3 |     1
+          2 |     0 |          0 |              0 |     3247 | 13032 |            13032 |        1 |             3 |     1
+          2 |     0 |          1 |            128 |     3247 | 25656 |            25656 |        1 |             3 |     1
 (6 rows)
 
 -- Check that init fork exists on master

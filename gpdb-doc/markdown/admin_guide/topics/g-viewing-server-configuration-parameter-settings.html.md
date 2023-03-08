@@ -8,7 +8,7 @@ The SQL command `SHOW` allows you to see the current server configuration parame
 $ psql -c 'SHOW ALL;'
 ```
 
-`SHOW` lists the settings for the master instance only. To see the value of a particular parameter across the entire system \(master and all segments\), use the `gpconfig` utility. For example:
+`SHOW` lists the settings for the coordinator instance only. To see the value of a particular parameter across the entire system \( and all segments\), use the `gpconfig` utility. For example:
 
 ```
 $ gpconfig --show max_connections

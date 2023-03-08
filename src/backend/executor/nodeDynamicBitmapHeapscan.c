@@ -68,6 +68,8 @@ ExecInitDynamicBitmapHeapScan(DynamicBitmapHeapScan *node, EState *estate, int e
 	Relation scanRel = ExecOpenScanRelation(estate, node->bitmapheapscan.scan.scanrelid, eflags);
 	ExecInitScanTupleSlot(estate, &state->ss, RelationGetDescr(scanRel), table_slot_callbacks(scanRel));
 
+	state->ss.ps.qual = ExecInitQual(node->bitmapheapscan.scan.plan.qual, (PlanState *) state);
+
 	/*
 	 * Initialize result tuple type and projection info.
 	 */
@@ -75,8 +77,6 @@ ExecInitDynamicBitmapHeapScan(DynamicBitmapHeapScan *node, EState *estate, int e
 
 	reloid = exec_rt_fetch(node->bitmapheapscan.scan.scanrelid, estate)->relid;
 	Assert(OidIsValid(reloid));
-
-	state->firstPartition = true;
 
 	/* lastRelOid is used to remap varattno for heterogeneous partitions */
 	state->lastRelOid = reloid;
@@ -172,28 +172,8 @@ initNextTableToScan(DynamicBitmapHeapScanState *node)
 		 * the new varnos correspond to
 		 */
 		node->lastRelOid = pid;
-	}
-
-	/*
-	 * For the very first partition, the qual of planstate is set to null. So, we must
-	 * initialize quals, regardless of remapping requirements. For later
-	 * partitions, we only initialize quals if a column re-mapping is necessary.
-	 */
-	if (attMap || node->firstPartition)
-	{
-		node->firstPartition = false;
-		MemoryContextReset(node->partitionMemoryContext);
-		MemoryContext oldCxt = MemoryContextSwitchTo(node->partitionMemoryContext);
-
-		/* Initialize child expressions */
-		scanState->ps.qual =
-				ExecInitQual(scanState->ps.plan->qual, (PlanState *) scanState);
-
-		MemoryContextSwitchTo(oldCxt);
-	}
-
-	if (attMap)
 		pfree(attMap);
+	}
 
 	node->bhsState = ExecInitBitmapHeapScanForPartition(&plan->bitmapheapscan, estate, node->eflags,
 													 currentRelation);

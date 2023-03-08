@@ -162,7 +162,7 @@
       <dxl:ColumnStatistics Mdid="1.327458.1.1.0" Name="a" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.327458.1.1.1" Name="b" Width="8.000000"/>
       <dxl:RelationStatistics Mdid="2.327458.1.1" Name="pp" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.327458.1.1" Name="pp" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.327458.1.1" Name="pp" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -195,12 +195,12 @@
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.327458001.1.1"/>
-          <dxl:Partition Mdid="0.327458002.1.1"/>
-          <dxl:Partition Mdid="0.327458003.1.1"/>
+          <dxl:Partition Mdid="6.327458001.1.1"/>
+          <dxl:Partition Mdid="6.327458002.1.1"/>
+          <dxl:Partition Mdid="6.327458003.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.327458001.1.1" Name="pp_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.327458001.1.1" Name="pp_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -248,7 +248,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.327458002.1.1" Name="pp_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.327458002.1.1" Name="pp_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -296,7 +296,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.327458003.1.1" Name="pp_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.327458003.1.1" Name="pp_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -363,7 +363,7 @@
           </dxl:Comparison>
         </dxl:And>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.327458.1.1" TableName="pp">
+          <dxl:TableDescriptor Mdid="6.327458.1.1" TableName="pp">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -419,11 +419,11 @@
             </dxl:And>
           </dxl:Filter>
           <dxl:Partitions>
-            <dxl:Partition Mdid="0.327458001.1.1"/>
-            <dxl:Partition Mdid="0.327458002.1.1"/>
-            <dxl:Partition Mdid="0.327458003.1.1"/>
+            <dxl:Partition Mdid="6.327458001.1.1"/>
+            <dxl:Partition Mdid="6.327458002.1.1"/>
+            <dxl:Partition Mdid="6.327458003.1.1"/>
           </dxl:Partitions>
-          <dxl:TableDescriptor Mdid="0.327458.1.1" TableName="pp">
+          <dxl:TableDescriptor Mdid="6.327458.1.1" TableName="pp">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

@@ -135,10 +135,9 @@ formatOptionsToTextDatum(List *options, char formattype)
 	StringInfoData cfbuf;
 
 	initStringInfo(&cfbuf);
+	bool isfirst = true;
 	if (fmttype_is_text(formattype) || fmttype_is_csv(formattype))
 	{
-		bool isfirst = true;
-
 		/*
 		 * Note: the order of the options should be same with the original
 		 * pg_exttable catalog's fmtopt field.
@@ -176,6 +175,11 @@ formatOptionsToTextDatum(List *options, char formattype)
 			DefElem    *defel = (DefElem *) lfirst(option);
 			char	   *key = defel->defname;
 			char	   *val = (char *) defGetString(defel);
+
+			if (isfirst)
+				isfirst = false;
+			else
+				appendStringInfo(&cfbuf, " ");
 
 			appendStringInfo(&cfbuf, "%s '%s'", key, val);
 		}
@@ -652,7 +656,7 @@ exttable_BeginForeignScan(ForeignScanState *node,
 										 externalscan_info->scancounter,
 										 externalscan_info->uriList,
 										 externalscan_info->fmtType,
-										 externalscan_info->isMasterOnly,
+										 externalscan_info->isCoordinatorOnly,
 										 externalscan_info->rejLimit,
 										 externalscan_info->rejLimitInRows,
 										 externalscan_info->logErrors,

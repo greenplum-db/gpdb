@@ -21,7 +21,7 @@ name
 :   The name of an existing foreign-data wrapper.
 
 CASCADE
-:   Automatically drop objects that depend on the foreign-data wrapper \(such as servers\).
+:   Automatically drop objects that depend on the foreign-data wrapper \(such as foreign tables and servers\), and in turn all objects that depend on those objects.
 
 RESTRICT
 :   Refuse to drop the foreign-data wrapper if any object depends on it. This is the default.

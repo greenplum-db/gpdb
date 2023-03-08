@@ -10,6 +10,8 @@ use Test::More tests => 8;
 # count to reach $num_rows, yet not later than the recovery target.
 sub test_recovery_standby
 {
+	local $Test::Builder::Level = $Test::Builder::Level + 1;
+
 	my $test_name       = shift;
 	my $node_name       = shift;
 	my $node_master     = shift;
@@ -48,6 +50,10 @@ sub test_recovery_standby
 # Initialize master node
 my $node_master = get_new_node('master');
 $node_master->init(has_archiving => 1, allows_streaming => 1);
+
+# Bump the transaction ID epoch.  This is useful to stress the portability
+# of recovery_target_xid parsing.
+system_or_bail('pg_resetwal', '--binary-upgrade', '--epoch', '1', $node_master->data_dir);
 
 # Start it
 $node_master->start;

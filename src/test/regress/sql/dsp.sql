@@ -70,8 +70,6 @@ select * from h1 where a > 5 and a < 10 order by a,b;
 select c.relname, am.amname, c.relkind, c.reloptions
 	from pg_class c left join pg_am am on (c.relam = am.oid)
 	where c.relkind='r' and c.relnamespace=2200 order by relname;
-select relid::regclass, blocksize, compresstype,
-	compresslevel, columnstore, checksum from pg_appendonly order by 1;
 
 \c dsp2
 set default_table_access_method = ao_row;
@@ -113,8 +111,6 @@ select * from t3 order by 1;
 select c.relname, am.amname, c.relkind, c.reloptions
 	from pg_class c left join pg_am am on (c.relam = am.oid)
     where c.relname in ('t1', 't2', 't3') order by 1;
-select relid::regclass, blocksize, compresstype,
-	compresslevel, columnstore, checksum from pg_appendonly order by 1;
 
 -- The GUC has checksum=false. Test that you can still turn it in WITH, and
 -- that it affects partitions and subpartitions, too.
@@ -146,7 +142,7 @@ ALTER TABLE alter_part_tab1 ADD partition p31 values(1) WITH (appendonly=true, o
    subpartition sp1 start(1) end(9) with (appendonly=true,orientation=column,checksum=true,compresstype=rle_type),
    subpartition sp2 start(11) end(20) with(appendonly=true,orientation=column,checksum=true,compresstype=none));
 
-SELECT relname, checksum from pg_appendonly ao, pg_class c where ao.relid = c.oid and relname like 'alter_part_tab1%';
+SELECT relname, reloptions from pg_class c where relname like 'alter_part_tab1%';
 
 drop table alter_part_tab1;
 
@@ -177,8 +173,6 @@ create table co7(
 	b varchar encoding(compresstype=zlib,compresslevel=6),
 	c char encoding(compresstype=rle_type))
 	with (checksum=false) distributed by (a);
-select relid::regclass,compresslevel,compresstype,blocksize,checksum,columnstore
-	from pg_appendonly order by 1;
 select attrelid::regclass,attnum,attoptions
 	from pg_attribute_encoding order by 1,2;
 drop database if exists dsp3;
@@ -213,8 +207,8 @@ set default_table_access_method = ao_row;
 set gp_default_storage_options = "blocksize=32768,compresstype=none,checksum=true";
 create table co5 (a int encoding (blocksize=8192), b float)
 	with (appendonly=true,orientation=column, checksum=false) distributed by (a);
-select relid::regclass,compresslevel,compresstype,blocksize,checksum,columnstore
-	from pg_appendonly order by 1;
+select c.relname, am.amname, c.relkind, c.reloptions from pg_class c left join pg_am am on (c.relam=am.oid)
+where relname in ('co1', 'co2', 'co3', 'co5') order by 1;
 select attrelid::regclass,attnum,attoptions
 	from pg_attribute_encoding order by 1,2;
 
@@ -316,14 +310,12 @@ create table ao4 (a int, b int) with (appendonly=true)
     distributed by (a);
 \d ao4
 select amname, reloptions from pg_class left join pg_am on pg_am.oid = relam where relname = 'ao4';
-select compresstype from pg_appendonly where relid = 'ao4'::regclass;
 set default_table_access_method = ao_row;
 set gp_default_storage_options = "compresstype=NONE";
 create table co10 (a int, b int, c int) with (appendonly=true,orientation=column)
     distributed by (a);
 select attnum,attoptions from pg_attribute_encoding
     where attrelid = 'co10'::regclass order by attnum;
-select compresstype from pg_appendonly where relid = 'co10'::regclass;
 
 -- compression disabled by default, enable in WITH clause
 set default_table_access_method = ao_row;
@@ -461,8 +453,6 @@ select count(*) from dsp_partition1;
 select c.relname, am.amname, c.relkind, c.reloptions
 	from pg_class c left join pg_am am on (c.relam = am.oid)
     where c.relname like 'dsp_partition1%' order by relname;
-select compresslevel, compresstype, blocksize, checksum, columnstore from pg_appendonly
-       where relid in (select oid from pg_class where relname  like 'dsp_partition1%') order by columnstore;
 -- The child partition tables should default to their parent table's AM.
 set default_table_access_method = ao_column;
 set gp_default_storage_options = "blocksize=32768,compresstype=none,checksum=true";

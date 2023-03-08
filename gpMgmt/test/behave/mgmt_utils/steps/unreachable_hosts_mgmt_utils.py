@@ -37,10 +37,10 @@ def impl(context, reconnected, spare):
 # We simulate a physical cutting of the ethernet cable by adding a blackhole
 # route from each other node to it.
 # For multiple disconnected hosts, we must disconnect them from each other first,
-# since otherwise mdw will not be able to reach them to do so.
+# since otherwise cdw will not be able to reach them to do so.
 #           hosts                          disconnected_hosts      spare_hosts
-# ['mdw', 'sdw1', 'sdw2', 'sdw3', 'sdw4'], ['sdw1', 'sdw3'], ['sdw5', 'sdw6'] (disconnect)
-# ['mdw', 'sdw2', 'sdw4', 'sdw5', 'sdw6'], ['sdw1', 'sdw3'], [])              (reconnect)
+# ['cdw', 'sdw1', 'sdw2', 'sdw3', 'sdw4'], ['sdw1', 'sdw3'], ['sdw5', 'sdw6'] (disconnect)
+# ['cdw', 'sdw2', 'sdw4', 'sdw5', 'sdw6'], ['sdw1', 'sdw3'], [])              (reconnect)
 def add_or_remove_blackhole_route(disconnected_hosts, spare_hosts, disconnect=False):
     hosts = GpArray.initFromCatalog(dbconn.DbURL()).getHostList()
     hosts.extend(spare_hosts)
@@ -55,11 +55,11 @@ def add_or_remove_blackhole_route(disconnected_hosts, spare_hosts, disconnect=Fa
             if hosts.count(host):
                 hosts.remove(host)
 
-        # mdw, sdw2, sdw4, sdw5, sdw6 -x- (sdw1, sdw3)
+        # cdw, sdw2, sdw4, sdw5, sdw6 -x- (sdw1, sdw3)
         for host in disconnected_hosts:
             _blackhole_route_helper(host, hosts, disconnect=True)
     else:
-        # mdw, sdw2, sdw4, sdw5, sdw6 --- (sdw1, sdw3)
+        # cdw, sdw2, sdw4, sdw5, sdw6 --- (sdw1, sdw3)
         for host in disconnected_hosts:
             _blackhole_route_helper(host, hosts)
 

@@ -20,12 +20,12 @@ waitflag = (wait ? "-w" : "")
 
 
 
-Start master QD
+Start coordinator QD
 =====================
 
 1.  kill gpsyncmaster
 
-2.  start master QD
+2.  start coordinator QD
 
 waitflag = (wait ? "-w" : "")
 
@@ -50,7 +50,7 @@ fi
 
 
 
-Start Standby Sync master
+Start Standby Sync coordinator
 =========================
 
 $GPHOME/bin/gpsyncmaster -p %d -D %s -i >> %s.log 2>&1 &" % (pgport, datadir, datadir)

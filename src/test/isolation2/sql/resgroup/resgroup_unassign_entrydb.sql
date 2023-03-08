@@ -8,7 +8,7 @@ DROP ROLE IF EXISTS role_test;
 DROP RESOURCE GROUP rg_test;
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=10);
+CREATE RESOURCE GROUP rg_test WITH (concurrency=2, cpu_hard_quota_limit=10);
 CREATE ROLE role_test RESOURCE GROUP rg_test;
 
 -- By pass this session, else this affects the testing session, i.e. 1:

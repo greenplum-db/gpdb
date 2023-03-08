@@ -4,7 +4,7 @@ title: Memory and Resource Management with Resource Queues
 
 Avoid memory errors and manage Greenplum Database resources.
 
-**Note:** Resource groups are a newer resource management scheme that enforces memory, CPU, and concurrent transaction limits in Greenplum Database. The [Managing Resources](../admin_guide/wlmgmt.html) topic provides a comparison of the resource queue and the resource group management schemes. Refer to [Using Resource Groups](../admin_guide/workload_mgmt_resgroups.html) for configuration and usage information for this resource management scheme.
+> **Note** Resource groups are a newer resource management scheme that enforces memory, CPU, and concurrent transaction limits in Greenplum Database. The [Managing Resources](../admin_guide/wlmgmt.html) topic provides a comparison of the resource queue and the resource group management schemes. Refer to [Using Resource Groups](../admin_guide/workload_mgmt_resgroups.html) for configuration and usage information for this resource management scheme.
 
 Memory management has a significant impact on performance in a Greenplum Database cluster. The default settings are suitable for most environments. Do not change the default settings until you understand the memory characteristics and usage on your system.
 

@@ -972,7 +972,7 @@ _readExternalScanInfo(void)
 
 	READ_NODE_FIELD(uriList);
 	READ_CHAR_FIELD(fmtType);
-	READ_BOOL_FIELD(isMasterOnly);
+	READ_BOOL_FIELD(isCoordinatorOnly);
 	READ_INT_FIELD(rejLimit);
 	READ_BOOL_FIELD(rejLimitInRows);
 	READ_CHAR_FIELD(logErrors);

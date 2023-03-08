@@ -17,6 +17,18 @@ FROM
 ORDER BY
 	statime;  
 
+CREATE VIEW
+	pg_stat_last_operation_testview_schema AS
+SELECT lo.staactionname,
+       lo.stasubtype,
+       ns.nspname
+FROM   pg_stat_last_operation lo
+       join pg_class c
+         ON lo.classid = c.oid
+       join pg_namespace ns
+         ON c.relname = 'pg_namespace'
+            AND lo.objid = ns.oid;
+
 SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'CREATE';
  
 -- CREATE TABLE
@@ -119,3 +131,9 @@ DROP TABLE mdt_all_types;
 SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
 DROP TABLE mdt_test_part1;
 SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
+
+-- SCHEMA
+CREATE SCHEMA mdt_schema;
+SELECT * FROM pg_stat_last_operation_testview_schema WHERE nspname LIKE 'mdt_%';
+DROP SCHEMA mdt_schema;
+SELECT * FROM pg_stat_last_operation_testview_schema WHERE nspname LIKE 'mdt_%';

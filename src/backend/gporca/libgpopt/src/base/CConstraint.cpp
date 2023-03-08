@@ -438,8 +438,10 @@ CConstraint::PcnstrFromScalarCmp(
 		const CColRef *pcrLeft = popScIdLeft->Pcr();
 		const CColRef *pcrRight = popScIdRight->Pcr();
 
-		if (!CUtils::FConstrainableType(pcrLeft->RetrieveType()->MDId()) ||
-			!CUtils::FConstrainableType(pcrRight->RetrieveType()->MDId()))
+		IMDId *left_mdid = pcrLeft->RetrieveType()->MDId();
+		IMDId *right_mdid = pcrRight->RetrieveType()->MDId();
+		if (!CUtils::FConstrainableType(left_mdid) ||
+			!CUtils::FConstrainableType(right_mdid))
 		{
 			return nullptr;
 		}
@@ -450,12 +452,22 @@ CConstraint::PcnstrFromScalarCmp(
 			CScalarCmp *sc_cmp = CScalarCmp::PopConvert(pexpr->Pop());
 			const IMDScalarOp *op = mda->RetrieveScOp(sc_cmp->MdIdOp());
 
-			IMDId *left_mdid =
-				CScalar::PopConvert(pexprLeft->Pop())->MdidType();
+			// The left type and right type are both scalar ident types
+			// In case of casting, such as
+			// --CScalarCast
+			//   +--CScalarIdent "a" (0)
+			// We look at the data type before casting, instead of after
+			// This is because equivalent classes are built with columns
+			// based on their input types
+
+			// Eg. foo.a -- varchar, bar.b -- char
+			// Joining foo and bar on foo.a = bar.b requires casting
+			// foo.a to bpchar. But since hash of varchar (before cast)
+			// and hash of char don't belong to the same opfamily, we
+			// cannot generate equivalent classes with foo.a and bar.b
+
 			const IMDType *left_type = mda->RetrieveType(left_mdid);
 
-			IMDId *right_mdid =
-				CScalar::PopConvert(pexprRight->Pop())->MdidType();
 			const IMDType *right_type = mda->RetrieveType(right_mdid);
 
 			// Build constraint (e.g for equivalent classes) only when the hash families

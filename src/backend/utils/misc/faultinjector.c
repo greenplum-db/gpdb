@@ -324,7 +324,7 @@ FaultInjector_InjectFaultIfSet_out_of_line(
 			/* fault injection is not set for the specified database name */
 			break;
 	
-		if (strcmp(entryShared->tableName, tableNameLocal) != 0)
+		if (strlen(entryShared->tableName) > 0 && strcmp(entryShared->tableName, tableNameLocal) != 0)
 			/* fault injection is not set for the specified table name */
 			break;
 

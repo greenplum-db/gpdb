@@ -1,0 +1,29 @@
+-- Validate pg_appendonly.version functioning by unique index creation
+-- as it requires pg_appendonly.version >= AORelationVersion_GP7.
+
+create table @amname@_version_tbl (a int) using @amname@;
+
+-- unique index on AO is supported starting from version 2 (AORelationVersion_GP7)
+select version from pg_appendonly where relid = '@amname@_version_tbl'::regclass;
+create unique index on @amname@_version_tbl(a);
+insert into @amname@_version_tbl select generate_series(1, 10);
+create unique index on @amname@_version_tbl(a);
+set enable_seqscan = off;
+select * from @amname@_version_tbl where a = 2;
+
+-- modify pg_appendonly.version to older such like 1 (AORelationVersion_GP6)
+set allow_system_table_mods = on;
+update pg_appendonly set version = 1 where relid = '@amname@_version_tbl'::regclass;
+
+-- unique index on AO isn't supported on version < AORelationVersion_GP7
+select version from pg_appendonly where relid = '@amname@_version_tbl'::regclass;
+create unique index on @amname@_version_tbl(a);
+
+-- alter table with reorganize to verify pg_appendonly being rewritten
+alter table @amname@_version_tbl set with (reorganize = true);
+select version from pg_appendonly where relid = '@amname@_version_tbl'::regclass;
+create unique index on @amname@_version_tbl(a);
+select * from @amname@_version_tbl where a = 3;
+
+drop table @amname@_version_tbl;
+reset allow_system_table_mods;

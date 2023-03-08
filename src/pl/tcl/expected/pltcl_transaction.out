@@ -96,5 +96,69 @@ SELECT * FROM test1;
 ---+---
 (0 rows)
 
+-- check handling of an error during COMMIT
+-- FOREIGN KEY constraints are not supported in GPDB, simulate an error instead
+CREATE TABLE testpk (id int PRIMARY KEY);
+CREATE TABLE testfk(f1 int REFERENCES testpk DEFERRABLE INITIALLY DEFERRED);
+CREATE PROCEDURE transaction_testfk()
+LANGUAGE pltcl
+AS $$
+# this insert will fail during commit:
+spi_exec "INSERT INTO testfk VALUES (0)"
+spi_exec "select gp_inject_fault('start_prepare', 'error', dbid) from gp_segment_configuration where role = 'p' and status = 'u' and content = 0"
+commit
+elog WARNING "should not get here"
+$$;
+CALL transaction_testfk();
+ERROR:  fault triggered, fault name:'start_prepare' fault type:'error'  (seg0 127.0.1.1:7002 pid=1782107)
+SELECT * FROM testpk;
+ id 
+----
+(0 rows)
+
+SELECT * FROM testfk;
+ f1 
+----
+(0 rows)
+
+select gp_inject_fault('start_prepare', 'reset', dbid) from gp_segment_configuration where role = 'p' and status = 'u' and content = 0;
+ gp_inject_fault 
+-----------------
+ Success:
+(1 row)
+
+CREATE OR REPLACE PROCEDURE transaction_testfk()
+LANGUAGE pltcl
+AS $$
+# this insert will fail during commit:
+spi_exec "INSERT INTO testfk VALUES (0)"
+spi_exec "select gp_inject_fault('start_prepare', 'error', dbid) from gp_segment_configuration where role = 'p' and status = 'u' and content = 0"
+if [catch {commit} msg] {
+    elog INFO $msg
+}
+# these inserts should work:
+spi_exec "INSERT INTO testpk VALUES (1)"
+spi_exec "INSERT INTO testfk VALUES (1)"
+$$;
+CALL transaction_testfk();
+INFO:  fault triggered, fault name:'start_prepare' fault type:'error'  (seg0 127.0.1.1:7002 pid=1782107)
+SELECT * FROM testpk;
+ id 
+----
+  1
+(1 row)
+
+SELECT * FROM testfk;
+ f1 
+----
+  1
+(1 row)
+
+select gp_inject_fault('start_prepare', 'reset', dbid) from gp_segment_configuration where role = 'p' and status = 'u' and content = 0;
+ gp_inject_fault 
+-----------------
+ Success:
+(1 row)
+
 DROP TABLE test1;
 DROP TABLE test2;

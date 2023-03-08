@@ -4,7 +4,5 @@ rc-build-type: prod
 rc-build-type-gcs: ""
 reduced-frequency-trigger-start: 1:00 AM
 reduced-frequency-trigger-stop: 2:00 AM
-reduced-frequency-trigger-flag: true
-gpdb_src-trigger-flag: false
 configure_flags: "--enable-tap-tests"
 configure_flags_with_extensions: "--enable-tap-tests --enable-debug-extensions"

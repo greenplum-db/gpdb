@@ -165,7 +165,7 @@ typedef struct VariableCacheData
 	uint32		GxidCount;		/* Gxids available before must do XLOG work */
 
 	/*
-	 * These fields are protected by CLogTruncationLock
+	 * These fields are protected by XactTruncationLock
 	 */
 	TransactionId oldestClogXid;	/* oldest it's safe to look up in clog */
 

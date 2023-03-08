@@ -26,9 +26,12 @@ Feature: Tests for gpmovemirrors
         Given a standard local demo cluster is created
         And a gpmovemirrors directory under '/tmp/gpmovemirrors' with mode '0700' is created
         And a 'good' gpmovemirrors file is created
+        And verify replication slot internal_wal_replication_slot is available on all the segments
         When the user runs gpmovemirrors
         Then gpmovemirrors should return a return code of 0
         And verify the database has mirrors
+        #gpmovemirrors triggers full recovery where old replication slot is dropped and new one is created
+        And verify replication slot internal_wal_replication_slot is available on all the segments
         And all the segments are running
         And the segments are synchronized
         And check segment conf: postgresql.conf
@@ -38,9 +41,12 @@ Feature: Tests for gpmovemirrors
         Given a standard local demo cluster is created
         And a gpmovemirrors directory under '/tmp/gpmovemirrors' with mode '0700' is created
         And a 'samedir' gpmovemirrors file is created
+        And verify replication slot internal_wal_replication_slot is available on all the segments
         When the user runs gpmovemirrors
         Then gpmovemirrors should return a return code of 0
         And verify the database has mirrors
+        #gpmovemirrors triggers full recovery where old replication slot is dropped and new one is created
+        And verify replication slot internal_wal_replication_slot is available on all the segments
         And all the segments are running
         And the segments are synchronized
         And verify that mirrors are recognized after a restart
@@ -148,6 +154,7 @@ Feature: Tests for gpmovemirrors
         | run gprecoverseg          | some         | 0                  | 1,2            | running in place full recovery for all failed contents |
         | run gprecoverseg          | all          | None               | 0,1,2          | running in place full recovery for all failed contents |
 
+    @skip_cleanup
     Scenario: gpmovemirrors can move mirrors even if start fails for some mirrors
         Given the database is running
         And all the segments are running
@@ -243,10 +250,10 @@ Feature: Tests for gpmovemirrors
     And user immediately stops all mirror processes for content 0,1,2
     And user can start transactions
     And the user suspend the walsender on the primary on content 0
-    And sql "DROP TABLE if exists test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,100000000) AS i" is executed in "postgres" db
-    And the "test_recoverseg" table row count in "postgres" is saved
     And the user asynchronously runs "gprecoverseg -aF" and the process is saved
-    And the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And the user just waits until recovery_progress.file is created in gpAdminLogs
+    And user waits until gp_stat_replication table has no pg_basebackup entries for content 1,2
+    And an FTS probe is triggered
     And the user waits until mirror on content 1,2 is up
     And verify that mirror on content 0 is down
     And the gprecoverseg lock directory is removed
@@ -284,10 +291,10 @@ Feature: Tests for gpmovemirrors
     And user can start transactions
     And the user suspend the walsender on the primary on content 0
     And the user suspend the walsender on the primary on content 1
-    And sql "DROP TABLE if exists test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,100000000) AS i" is executed in "postgres" db
-    And the "test_recoverseg" table row count in "postgres" is saved
     And the user asynchronously runs "gprecoverseg -aF" and the process is saved
-    And the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And the user just waits until recovery_progress.file is created in gpAdminLogs
+    And user waits until gp_stat_replication table has no pg_basebackup entries for content 2
+    And an FTS probe is triggered
     And the user waits until mirror on content 2 is up
     And verify that mirror on content 0,1 is down
     And the gprecoverseg lock directory is removed
@@ -327,10 +334,8 @@ Feature: Tests for gpmovemirrors
     And the user suspend the walsender on the primary on content 0
     And the user suspend the walsender on the primary on content 1
     And the user suspend the walsender on the primary on content 2
-    And sql "DROP TABLE if exists test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,100000000) AS i" is executed in "postgres" db
-    And the "test_recoverseg" table row count in "postgres" is saved
     And the user asynchronously runs "gprecoverseg -aF" and the process is saved
-    And the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And the user just waits until recovery_progress.file is created in gpAdminLogs
     And verify that mirror on content 0,1,2 is down
     And the gprecoverseg lock directory is removed
     Given a gpmovemirrors directory under '/tmp' with mode '0700' is created

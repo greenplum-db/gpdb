@@ -178,12 +178,12 @@ select * from x, y where (x.i > y.j);
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.54648640001.1.0"/>
-          <dxl:Partition Mdid="0.54648640002.1.0"/>
+          <dxl:Partition Mdid="6.54648640001.1.0"/>
+          <dxl:Partition Mdid="6.54648640002.1.0"/>
         </dxl:Partitions>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.54648640001.1.0"/>
-          <dxl:Partition Mdid="0.54648640002.1.0"/>
+          <dxl:Partition Mdid="6.54648640001.1.0"/>
+          <dxl:Partition Mdid="6.54648640002.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
       <dxl:ColumnStatistics Mdid="1.54648535.1.1.5" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -193,7 +193,7 @@ select * from x, y where (x.i > y.j);
       <dxl:ColumnStatistics Mdid="1.54648430.1.1.1" Name="j" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.54648430.1.1.0" Name="i" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.54648535.1.1" Name="y" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.54648535.1.0" Name="y" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.54648535.1.0" Name="y" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -234,11 +234,11 @@ select * from x, y where (x.i > y.j);
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.54648535001.1.0"/>
-          <dxl:Partition Mdid="0.54648535002.1.0"/>
+          <dxl:Partition Mdid="6.54648535001.1.0"/>
+          <dxl:Partition Mdid="6.54648535002.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.54648535001.1.0" Name="y_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.54648535001.1.0" Name="y_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -294,7 +294,7 @@ select * from x, y where (x.i > y.j);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.54648535002.1.0" Name="y_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.54648535002.1.0" Name="y_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -350,7 +350,7 @@ select * from x, y where (x.i > y.j);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.54648535.1.1" Name="y" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.54648535.1.1" Name="y" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -391,11 +391,11 @@ select * from x, y where (x.i > y.j);
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.54648535001.1.1"/>
-          <dxl:Partition Mdid="0.54648535002.1.1"/>
+          <dxl:Partition Mdid="6.54648535001.1.1"/>
+          <dxl:Partition Mdid="6.54648535002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.54648535001.1.1" Name="y_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.54648535001.1.1" Name="y_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -451,7 +451,7 @@ select * from x, y where (x.i > y.j);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.54648535002.1.1" Name="y_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.54648535002.1.1" Name="y_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -512,12 +512,12 @@ select * from x, y where (x.i > y.j);
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.54648659001.1.0"/>
-          <dxl:Partition Mdid="0.54648659002.1.0"/>
+          <dxl:Partition Mdid="6.54648659001.1.0"/>
+          <dxl:Partition Mdid="6.54648659002.1.0"/>
         </dxl:Partitions>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.54648659001.1.0"/>
-          <dxl:Partition Mdid="0.54648659002.1.0"/>
+          <dxl:Partition Mdid="6.54648659001.1.0"/>
+          <dxl:Partition Mdid="6.54648659002.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
       <dxl:GPDBScalarOp Mdid="0.97.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true">
@@ -533,7 +533,7 @@ select * from x, y where (x.i > y.j);
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.54648430.1.1" Name="x" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.54648430.1.0" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.54648430.1.0" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -574,11 +574,11 @@ select * from x, y where (x.i > y.j);
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.54648430001.1.0"/>
-          <dxl:Partition Mdid="0.54648430002.1.0"/>
+          <dxl:Partition Mdid="6.54648430001.1.0"/>
+          <dxl:Partition Mdid="6.54648430002.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.54648430001.1.0" Name="x_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.54648430001.1.0" Name="x_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -634,7 +634,7 @@ select * from x, y where (x.i > y.j);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.54648430002.1.0" Name="x_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.54648430002.1.0" Name="x_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -690,7 +690,7 @@ select * from x, y where (x.i > y.j);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.54648430.1.1" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.54648430.1.1" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -731,11 +731,11 @@ select * from x, y where (x.i > y.j);
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.54648430001.1.1"/>
-          <dxl:Partition Mdid="0.54648430002.1.1"/>
+          <dxl:Partition Mdid="6.54648430001.1.1"/>
+          <dxl:Partition Mdid="6.54648430002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.54648430001.1.1" Name="x_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.54648430001.1.1" Name="x_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -791,7 +791,7 @@ select * from x, y where (x.i > y.j);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.54648430002.1.1" Name="x_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.54648430002.1.1" Name="x_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -867,7 +867,7 @@ select * from x, y where (x.i > y.j);
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.54648430.1.1" TableName="x">
+          <dxl:TableDescriptor Mdid="6.54648430.1.1" TableName="x">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -884,7 +884,7 @@ select * from x, y where (x.i > y.j);
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.54648535.1.1" TableName="y">
+          <dxl:TableDescriptor Mdid="6.54648535.1.1" TableName="y">
             <dxl:Columns>
               <dxl:Column ColId="12" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="13" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -1013,10 +1013,10 @@ select * from x, y where (x.i > y.j);
               </dxl:ProjList>
               <dxl:Filter/>
               <dxl:Partitions>
-                <dxl:Partition Mdid="0.-1186144847.1.1"/>
-                <dxl:Partition Mdid="0.-1186144846.1.1"/>
+                <dxl:Partition Mdid="6.-1186144847.1.1"/>
+                <dxl:Partition Mdid="6.-1186144846.1.1"/>
               </dxl:Partitions>
-              <dxl:TableDescriptor Mdid="0.54648430.1.1" TableName="x">
+              <dxl:TableDescriptor Mdid="6.54648430.1.1" TableName="x">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="1" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -1059,11 +1059,11 @@ select * from x, y where (x.i > y.j);
               </dxl:Comparison>
             </dxl:IndexCondList>
             <dxl:Partitions>
-              <dxl:Partition Mdid="0.-1186039847.1.1"/>
-              <dxl:Partition Mdid="0.-1186039846.1.1"/>
+              <dxl:Partition Mdid="6.-1186039847.1.1"/>
+              <dxl:Partition Mdid="6.-1186039846.1.1"/>
             </dxl:Partitions>
             <dxl:IndexDescriptor Mdid="0.54648659.1.0" IndexName="y_idx_2"/>
-            <dxl:TableDescriptor Mdid="0.54648535.1.1" TableName="y">
+            <dxl:TableDescriptor Mdid="6.54648535.1.1" TableName="y">
               <dxl:Columns>
                 <dxl:Column ColId="11" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="12" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>

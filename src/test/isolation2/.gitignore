@@ -2,9 +2,6 @@ regression.diffs
 regression.out
 */dummy.sql
 */dummy.out
-sql/ao_upgrade.sql
-expected/ao_upgrade.out
-expected/ao_upgrade_optimizer.out
 sql/external_table.sql
 expected/external_table.out
 sql/fts_manual_probe.sql

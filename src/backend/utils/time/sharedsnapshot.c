@@ -381,8 +381,9 @@ retry:
 
 		if (testSlot->slotindex > arrayP->maxSlots)
 		{
+			char *slot_dump = SharedSnapshotDump();
 			LWLockRelease(SharedSnapshotLock);
-			elog(ERROR, "Shared Local Snapshots Array appears corrupted: %s", SharedSnapshotDump());
+			elog(ERROR, "Shared Local Snapshots Array appears corrupted: %s", slot_dump);
 		}
 
 		if (testSlot->slotid == slotId)

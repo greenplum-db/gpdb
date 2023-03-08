@@ -16,5 +16,5 @@ Refer to [Installing Additional Supplied Modules](../../install_guide/install_mo
 
 ## <a id="topic_info"></a>Module Documentation 
 
-See [pg\_trgm](https://www.postgresql.org/docs/9.4/pgtrgm.html) in the PostgreSQL documentation for detailed information about the individual functions in this module.
+See [pg\_trgm](https://www.postgresql.org/docs/12/pgtrgm.html) in the PostgreSQL documentation for detailed information about the individual functions in this module.
 

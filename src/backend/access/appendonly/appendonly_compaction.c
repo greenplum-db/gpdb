@@ -40,11 +40,14 @@
 #include "catalog/pg_appendonly.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbvars.h"
+#include "commands/progress.h"
 #include "commands/vacuum.h"
 #include "executor/executor.h"
 #include "nodes/execnodes.h"
+#include "pgstat.h"
 #include "storage/procarray.h"
 #include "storage/lmgr.h"
+#include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/relcache.h"
@@ -64,7 +67,7 @@
  * segments, including any empty ones we've left behind.
  */
 static void
-AppendOnlyCompaction_DropSegmentFile(Relation aorel, int segno)
+AppendOnlyCompaction_DropSegmentFile(Relation aorel, int segno, AOVacuumRelStats *vacrelstats)
 {
 	char		filenamepath[MAXPGPATH];
 	int32		fileSegNo;
@@ -81,7 +84,7 @@ AppendOnlyCompaction_DropSegmentFile(Relation aorel, int segno)
 	fd = OpenAOSegmentFile(filenamepath, 0);
 	if (fd >= 0)
 	{
-		TruncateAOSegmentFile(fd, aorel, fileSegNo, 0);
+		TruncateAOSegmentFile(fd, aorel, fileSegNo, 0, vacrelstats);
 		CloseAOSegmentFile(fd);
 	}
 	else
@@ -127,13 +130,12 @@ AppendOnlyCompaction_ShouldCompact(Relation aoRelation,
 	AppendOnlyVisimap visiMap;
 	int64		hiddenTupcount;
 	double		hideRatio;
-    Oid         visimaprelid;
-    Oid         visimapidxid;
+	Oid		visimaprelid;
 
 	Assert(RelationIsAppendOptimized(aoRelation));
-    GetAppendOnlyEntryAuxOids(aoRelation->rd_id, appendOnlyMetaDataSnapshot,
-                              NULL, NULL, NULL,
-                              &visimaprelid, &visimapidxid);
+	GetAppendOnlyEntryAuxOids(aoRelation,
+					NULL, NULL,
+					&visimaprelid);
 
 	if (!gp_appendonly_compaction)
 	{
@@ -148,7 +150,6 @@ AppendOnlyCompaction_ShouldCompact(Relation aoRelation,
 
 	AppendOnlyVisimap_Init(&visiMap,
 						   visimaprelid,
-						   visimapidxid,
 						   ShareLock,
 						   appendOnlyMetaDataSnapshot);
 	hiddenTupcount = AppendOnlyVisimap_GetSegmentFileHiddenTupleCount(
@@ -220,7 +221,7 @@ AppendOnlyCompaction_ShouldCompact(Relation aoRelation,
  * For the segment file is truncates to the eof.
  */
 static void
-AppendOnlySegmentFileTruncateToEOF(Relation aorel, int segno, int64 segeof)
+AppendOnlySegmentFileTruncateToEOF(Relation aorel, int segno, int64 segeof, AOVacuumRelStats *vacrelstats)
 {
 	const char *relname = RelationGetRelationName(aorel);
 	File		fd;
@@ -246,7 +247,7 @@ AppendOnlySegmentFileTruncateToEOF(Relation aorel, int segno, int64 segeof)
 	fd = OpenAOSegmentFile(filenamepath, segeof);
 	if (fd >= 0)
 	{
-		TruncateAOSegmentFile(fd, aorel, fileSegNo, segeof);
+		TruncateAOSegmentFile(fd, aorel, fileSegNo, segeof, vacrelstats);
 		CloseAOSegmentFile(fd);
 
 		elogif(Debug_appendonly_print_compaction, LOG,
@@ -374,7 +375,8 @@ static void
 AppendOnlySegmentFileFullCompaction(Relation aorel,
 									AppendOnlyInsertDesc insertDesc,
 									FileSegInfo *fsinfo,
-									Snapshot	appendOnlyMetaDataSnapshot)
+									Snapshot	appendOnlyMetaDataSnapshot,
+									AOVacuumRelStats *vacrelstats)
 {
 	const char *relname;
 	AppendOnlyVisimap visiMap;
@@ -390,8 +392,8 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	int64		tupleCount = 0;
 	int64		tuplePerPage = INT_MAX;
     Oid         visimaprelid;
-    Oid         visimapidxid;
     Oid         blkdirrelid;
+	int64		heap_blks_scanned = 0;
 
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 	Assert(RelationIsAoRows(aorel));
@@ -404,13 +406,12 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	}
 	relname = RelationGetRelationName(aorel);
 
-	GetAppendOnlyEntryAuxOids(aorel->rd_id, appendOnlyMetaDataSnapshot,
-							  NULL, &blkdirrelid, NULL,
-							  &visimaprelid, &visimapidxid);
+	GetAppendOnlyEntryAuxOids(aorel,
+							  NULL, &blkdirrelid,
+							  &visimaprelid);
 
 	AppendOnlyVisimap_Init(&visiMap,
 						   visimaprelid,
-						   visimapidxid,
 						   ShareUpdateExclusiveLock,
 						   appendOnlyMetaDataSnapshot);
 
@@ -477,6 +478,10 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 		{
 			/* Tuple is invisible and needs to be dropped */
 			AppendOnlyThrowAwayTuple(aorel, slot, mt_bind);
+			vacrelstats->num_dead_tuples++;
+			// TODO: need to evaluate performance impact of reporting with such granularity
+			pgstat_progress_update_param(PROGRESS_VACUUM_NUM_DEAD_TUPLES,
+										 vacrelstats->num_dead_tuples);
 		}
 
 		/*
@@ -488,6 +493,11 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 			vacuum_delay_point();
 		}
 	}
+
+	/* Report progress after compacting a segment file. */
+	heap_blks_scanned += RelationGuessNumberOfBlocksFromSize(fsinfo->eof);
+	pgstat_progress_update_param(PROGRESS_VACUUM_HEAP_BLKS_SCANNED,
+								 heap_blks_scanned);
 
 	MarkFileSegInfoAwaitingDrop(aorel, compact_segno);
 
@@ -537,8 +547,8 @@ AppendOptimizedCollectDeadSegments(Relation aorel)
 
 	Assert(RelationIsAppendOptimized(aorel));
 
-	GetAppendOnlyEntryAuxOids(aorel->rd_id, appendOnlyMetaDataSnapshot,
-							  &segrelid, NULL, NULL, NULL, NULL);
+	GetAppendOnlyEntryAuxOids(aorel,
+							  &segrelid, NULL, NULL);
 	
 	pg_aoseg_rel = heap_open(segrelid, AccessShareLock);
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
@@ -640,22 +650,22 @@ AppendOptimizedCollectDeadSegments(Relation aorel)
  * row, though.
  */
 static inline void
-AppendOptimizedDropDeadSegment(Relation aorel, int segno)
+AppendOptimizedDropDeadSegment(Relation aorel, int segno, AOVacuumRelStats *vacrelstats)
 {
 	if (RelationIsAoRows(aorel))
 	{
-		AppendOnlyCompaction_DropSegmentFile(aorel, segno);
+		AppendOnlyCompaction_DropSegmentFile(aorel, segno, vacrelstats);
 		ClearFileSegInfo(aorel, segno);
 	}
 	else
 	{
-		AOCSCompaction_DropSegmentFile(aorel, segno);
+		AOCSCompaction_DropSegmentFile(aorel, segno, vacrelstats);
 		ClearAOCSFileSegInfo(aorel, segno);
 	}
 }
 
 void
-AppendOptimizedDropDeadSegments(Relation aorel, Bitmapset *segnos)
+AppendOptimizedDropDeadSegments(Relation aorel, Bitmapset *segnos, AOVacuumRelStats *vacrelstats)
 {
 	int segno;
 
@@ -666,7 +676,7 @@ AppendOptimizedDropDeadSegments(Relation aorel, Bitmapset *segnos)
 
 	segno = -1;
 	while ((segno = bms_next_member(segnos, segno)) >= 0)
-		AppendOptimizedDropDeadSegment(aorel, segno);
+		AppendOptimizedDropDeadSegment(aorel, segno, vacrelstats);
 	
 	UnlockRelationForExtension(aorel, ExclusiveLock);
 }
@@ -677,7 +687,7 @@ AppendOptimizedDropDeadSegments(Relation aorel, Bitmapset *segnos)
  * the segment file is skipped.
  */
 void
-AppendOptimizedTruncateToEOF(Relation aorel)
+AppendOptimizedTruncateToEOF(Relation aorel, AOVacuumRelStats *vacrelstats)
 {
 	const char *relname;
 	Relation	pg_aoseg_rel;
@@ -697,8 +707,8 @@ AppendOptimizedTruncateToEOF(Relation aorel)
 	 */
 	LockRelationForExtension(aorel, ExclusiveLock);
 
-	GetAppendOnlyEntryAuxOids(aorel->rd_id, appendOnlyMetaDataSnapshot,
-							  &segrelid, NULL, NULL, NULL, NULL);
+	GetAppendOnlyEntryAuxOids(aorel,
+							  &segrelid, NULL, NULL);
 
 	pg_aoseg_rel = heap_open(segrelid, AccessShareLock);
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
@@ -739,7 +749,7 @@ AppendOptimizedTruncateToEOF(Relation aorel)
 											   Anum_pg_aoseg_eof,
 											   pg_aoseg_dsc, &isNull));
 			Assert(!isNull);
-			AppendOnlySegmentFileTruncateToEOF(aorel, segno, segeof);
+			AppendOnlySegmentFileTruncateToEOF(aorel, segno, segeof, vacrelstats);
 		}
 		else
 		{
@@ -748,7 +758,7 @@ AppendOptimizedTruncateToEOF(Relation aorel)
 										pg_aoseg_dsc, &isNull);
 			AOCSVPInfo *vpinfo = (AOCSVPInfo *) PG_DETOAST_DATUM(d);
 
-			AOCSSegmentFileTruncateToEOF(aorel, segno, vpinfo);
+			AOCSSegmentFileTruncateToEOF(aorel, segno, vpinfo, vacrelstats);
 
 			if (DatumGetPointer(d) != (Pointer) vpinfo)
 				pfree(vpinfo);
@@ -778,7 +788,8 @@ AppendOnlyCompact(Relation aorel,
 				  int compaction_segno,
 				  int *insert_segno,
 				  bool isFull,
-				  List *avoid_segnos)
+				  List *avoid_segnos,
+				  AOVacuumRelStats *vacrelstats)
 {
 	const char *relname;
 	AppendOnlyInsertDesc insertDesc = NULL;
@@ -812,7 +823,8 @@ AppendOnlyCompact(Relation aorel,
 			AppendOnlySegmentFileFullCompaction(aorel,
 												insertDesc,
 												fsinfo,
-												appendOnlyMetaDataSnapshot);
+												appendOnlyMetaDataSnapshot,
+												vacrelstats);
 
 			insertDesc->skipModCountIncrement = true;
 			appendonly_insert_finish(insertDesc);

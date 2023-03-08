@@ -82,7 +82,7 @@ using namespace gpdbcost;
 #define AUTO_MEM_POOL(amp) CAutoMemoryPool amp(CAutoMemoryPool::ElcExc)
 
 // default id for the source system
-const CSystemId default_sysid(IMDId::EmdidGPDB, GPOS_WSZ_STR_LENGTH("GPDB"));
+const CSystemId default_sysid(IMDId::EmdidGeneral, GPOS_WSZ_STR_LENGTH("GPDB"));
 
 
 //---------------------------------------------------------------------------
@@ -367,6 +367,7 @@ COptTasks::CreateOptimizerConfig(CMemoryPool *mp, ICostModel *cost_model)
 	ULONG push_group_by_below_setop_threshold =
 		(ULONG) optimizer_push_group_by_below_setop_threshold;
 	ULONG xform_bind_threshold = (ULONG) optimizer_xform_bind_threshold;
+	ULONG skew_factor = (ULONG) optimizer_skew_factor;
 
 	return GPOS_NEW(mp) COptimizerConfig(
 		GPOS_NEW(mp)
@@ -376,13 +377,13 @@ COptTasks::CreateOptimizerConfig(CMemoryPool *mp, ICostModel *cost_model)
 							  damping_factor_groupby, MAX_STATS_BUCKETS),
 		GPOS_NEW(mp) CCTEConfig(cte_inlining_cutoff), cost_model,
 		GPOS_NEW(mp)
-			CHint(gpos::int_max /* optimizer_parts_to_force_sort_on_insert */,
-				  join_arity_for_associativity_commutativity,
+			CHint(join_arity_for_associativity_commutativity,
 				  array_expansion_threshold, join_order_threshold,
 				  broadcast_threshold,
 				  false, /* don't create Assert nodes for constraints, we'll
 								      * enforce them ourselves in the executor */
-				  push_group_by_below_setop_threshold, xform_bind_threshold),
+				  push_group_by_below_setop_threshold, xform_bind_threshold,
+				  skew_factor),
 		GPOS_NEW(mp) CWindowOids(OID(F_WINDOW_ROW_NUMBER), OID(F_WINDOW_RANK)));
 }
 
@@ -513,7 +514,7 @@ COptTasks::OptimizeTask(void *ptr)
 
 		// set up relcache MD provider
 		CMDProviderRelcache *relcache_provider =
-			GPOS_NEW(mp) CMDProviderRelcache(mp);
+			GPOS_NEW(mp) CMDProviderRelcache();
 
 		{
 			// scope for MD accessor
@@ -671,7 +672,7 @@ COptTasks::PrintMissingStatsWarning(CMemoryPool *mp, CMDAccessor *md_accessor,
 		const ULONG pos = mdid_col_stats->Position();
 		const IMDRelation *rel = md_accessor->RetrieveRel(rel_mdid);
 
-		if (IMDRelation::ErelstorageExternal != rel->RetrieveRelStorageType())
+		if (IMDRelation::ErelstorageForeign != rel->RetrieveRelStorageType())
 		{
 			if (!rel_stats->Contains(rel_mdid))
 			{

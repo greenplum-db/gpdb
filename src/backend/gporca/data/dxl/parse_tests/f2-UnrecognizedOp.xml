@@ -14,7 +14,7 @@
         </dxl:ProjElem>
       </dxl:ProjList>
       <dxl:Filter/>
-      <dxl:TableDescriptor Mdid="0.1234.1.1" TableName="R">
+      <dxl:TableDescriptor Mdid="6.1234.1.1" TableName="R">
         <dxl:Columns>
           <dxl:Column ColId="1" Attno="1" ColName="A" TypeMdid="0.23.1.0"/>
           <dxl:Column ColId="2" Attno="2" ColName="B" TypeMdid="0.23.1.0"/>

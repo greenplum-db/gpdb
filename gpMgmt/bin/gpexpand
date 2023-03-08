@@ -290,16 +290,16 @@ status_table_sql = """CREATE TABLE gpexpand.status
                           updated timestamp ) """
 
 status_detail_table_sql = """CREATE TABLE gpexpand.status_detail
-                        ( dbname text,
+                        ( table_oid oid,
+                          dbname text,
                           fq_name text,
-                          table_oid oid,
                           root_partition_oid oid,
                           rank int,
                           external_writable bool,
                           status text,
                           expansion_started timestamp,
                           expansion_finished timestamp,
-                          source_bytes numeric ) """
+                          source_bytes numeric ) distributed by (table_oid)"""
 # gpexpand views
 progress_view_simple_sql = """CREATE VIEW gpexpand.expansion_progress AS
 SELECT
@@ -1621,9 +1621,9 @@ class gpexpand:
 
         final_sql = """{cte_sql}
         select
+          s1.table_oid,
           s1.dbname,
           s1.fq_name,
-          s1.table_oid,
           s1.root_partition_oid,
           s1.rank,
           s1.external_writable,
@@ -1639,9 +1639,9 @@ class gpexpand:
 
     def _populate_regular_tables(self, dbname):
         sql = """SELECT
+                   c.oid as table_oid,
                    current_database() as dbname,
                    quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
-                   c.oid as table_oid,
                    NULL as root_partition_oid,
                    2 as rank,
                    pe.writable is not null as external_writable,
@@ -1728,9 +1728,9 @@ class gpexpand:
 
         get_status_detail_cmd = """
              SELECT
+                c.oid as table_oid,
                 current_database() as dbname,
                 quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
-                c.oid as table_oid,
                 d.oid as root_partition_oid,
                 2 as rank,
                 false as external_writable,
@@ -1991,7 +1991,7 @@ class ExpandTable():
     def __init__(self, options, row=None):
         self.options = options
         if row is not None:
-            (self.dbname, self.fq_name, self.table_oid,
+            (self.table_oid, self.dbname, self.fq_name,
              self.root_partition_oid,
              self.rank, self.external_writable, self.status,
              self.expansion_started, self.expansion_finished,

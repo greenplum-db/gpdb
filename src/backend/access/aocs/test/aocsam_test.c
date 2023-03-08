@@ -42,7 +42,6 @@ test__aocs_begin_headerscan(void **state)
 
 	expect_value(GetAppendOnlyEntryAttributes, relid, 12345);
 	expect_any(GetAppendOnlyEntryAttributes, blocksize);
-	expect_any(GetAppendOnlyEntryAttributes, safefswritesize);
 	expect_any(GetAppendOnlyEntryAttributes, compresslevel);
 	expect_any(GetAppendOnlyEntryAttributes, checksum);
 	expect_any(GetAppendOnlyEntryAttributes, compresstype);
@@ -98,7 +97,6 @@ test__aocs_addcol_init(void **state)
 	expect_value(create_datumstreamwrite, compLevel, 2);
 	expect_value(create_datumstreamwrite, compLevel, 0);
 	expect_any_count(create_datumstreamwrite, checksum, 2);
-	expect_value_count(create_datumstreamwrite, safeFSWriteSize, 0, 2);
 	expect_value(create_datumstreamwrite, maxsz, 8192);
 	expect_value(create_datumstreamwrite, maxsz, 8192 * 2);
 	expect_value(create_datumstreamwrite, needsWAL, true);
@@ -121,7 +119,6 @@ test__aocs_addcol_init(void **state)
 
 	expect_value(GetAppendOnlyEntryAttributes, relid, 12345);
 	expect_any(GetAppendOnlyEntryAttributes, blocksize);
-	expect_any(GetAppendOnlyEntryAttributes, safefswritesize);
 	expect_any(GetAppendOnlyEntryAttributes, compresslevel);
 	expect_any(GetAppendOnlyEntryAttributes, checksum);
 	expect_any(GetAppendOnlyEntryAttributes, compresstype);

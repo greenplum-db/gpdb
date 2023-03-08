@@ -22,6 +22,7 @@
 #include "gpopt/operators/CScalarArrayCmp.h"
 #include "gpopt/operators/CScalarBoolOp.h"
 #include "gpopt/operators/CScalarConst.h"
+#include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/xforms/CXform.h"
 
@@ -243,7 +244,7 @@ public:
 		BOOL is_distinct, EAggfuncStage eaggfuncstage, BOOL fSplit,
 		IMDId *
 			pmdidResolvedReturnType,  // return type to be used if original return type is ambiguous
-		EAggfuncKind aggkind, ULongPtrArray *argtypes);
+		EAggfuncKind aggkind, ULongPtrArray *argtypes, BOOL fRepSafe);
 
 	// generate an aggregate function
 	static CExpression *PexprAggFunc(CMemoryPool *mp, IMDId *pmdidAggFunc,
@@ -436,6 +437,8 @@ public:
 	//-------------------------------------------------------------------
 	// Helpers for comparisons
 	//-------------------------------------------------------------------
+
+	static CExpression *PexprOpComEquality(CMemoryPool *mp, CExpression *pexpr);
 
 	// deduplicate array of expressions
 	static CExpressionArray *PdrgpexprDedup(CMemoryPool *mp,
@@ -998,6 +1001,12 @@ public:
 						 CExpressionArrays *input_exprs);
 
 	static BOOL FScalarConstBoolNull(CExpression *pexpr);
+
+	static CScalarIdent *PscalarIdent(CExpression *pexpr);
+
+	static CScalarConst *PscalarConst(CExpression *pexpr);
+
+	static BOOL FScalarConstOrBinaryCoercible(CExpression *pexpr);
 };	// class CUtils
 
 // hash set from expressions

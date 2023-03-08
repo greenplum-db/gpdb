@@ -24,6 +24,11 @@
 #include "foreign/foreign.h"
 #include "lib/stringinfo.h"
 #include "miscadmin.h"
+#include "optimizer/optimizer.h"
+#include "optimizer/pathnode.h"
+#include "optimizer/planmain.h"
+#include "optimizer/restrictinfo.h"
+#include "optimizer/tlist.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
@@ -961,4 +966,105 @@ GetExistingLocalJoinPath(RelOptInfo *joinrel)
 		return (Path *) joinpath;
 	}
 	return NULL;
+}
+
+/*
+ * Creates a ForeignScan for Orca plans. We call the necessary fdw API calls to populate
+ * fdw_private. This requires making "dummy" or at least somewhat populated
+ * PlannerInfo and RelOptInfo structs here to ensure that fdw_private is properly
+ * populated. Although this isn't used during planning, some FDWs populate and use
+ * this info in the executor, which means Orca needs to call these functions in case.
+ *
+ * The simple_rte_array is used in build_simple_rel, and populates
+ * fields for the fdw. We only need 1 entry here, as we process only 1
+ * scan. However, we need to create the simple_array_size large enough for the relid
+ * that we pass in, as later function calls access the array using this index
+ */
+
+ForeignScan *
+BuildForeignScan(Oid relid, Index scanrelid, List *qual, List *targetlist, Query *query, RangeTblEntry * rte)
+{
+	PlannerInfo		*root;
+	root = makeNode(PlannerInfo);
+	root->is_from_orca = true;
+	root->parse = query;
+
+	int	targetlist_length = scanrelid + 1;
+	/* Arrays are accessed using RT indexes (1..N) */
+	root->simple_rel_array_size = targetlist_length;
+
+	/* simple_rel_array is initialized to all NULLs */
+	root->simple_rel_array = (RelOptInfo **) palloc0(targetlist_length * sizeof(RelOptInfo *));
+
+	/* simple_rte_array is an array equivalent of the rtable list */
+	root->simple_rte_array = (RangeTblEntry **) palloc0(targetlist_length * sizeof(RangeTblEntry *));
+	root->simple_rte_array[scanrelid] = rte;
+
+	// We need to convert qual expression list to a list of restriction expressions
+	// This is an assumption in the deparsing logic of the quals that is used
+	// within the GetForeignPlan API calls
+	ListCell *lc = NULL;
+	List *restrictQuals = NIL;
+	foreach(lc, qual)
+	{
+		Expr *expr = (Expr *) lfirst(lc);
+		restrictQuals = lappend(restrictQuals, make_simple_restrictinfo(expr));
+	}
+
+
+	RelOptInfo *rel = build_simple_rel(root, scanrelid, NULL /*parent*/);
+	// baserestrictinfo is used when separating local vs remote calls
+	rel->baserestrictinfo = restrictQuals;
+	// Used by FDWs, which populate attrs_used from the reltarget
+	rel->reltarget = make_pathtarget_from_tlist(targetlist);
+
+	rel->fdwroutine->GetForeignRelSize(root, rel, relid);
+	rel->fdwroutine->GetForeignPaths(root, rel, relid);
+
+	// Use any path, we really just care about the fdw_private field here
+	ForeignPath *path = (ForeignPath*) linitial(rel->pathlist);
+
+	// We need to call GetForeignPlan as some FDWs (eg: the postgres fdw) populate fdw_private in this function
+	ForeignScan *fscan = rel->fdwroutine->GetForeignPlan(root, rel, relid,
+												path,
+												targetlist, restrictQuals,
+												NULL /*outer_plan*/);
+
+	fscan->fs_server = rel->serverid;
+
+	// Set fsSystemCol if any system attributes are projected
+	fscan->fsSystemCol = false;
+	if (scanrelid > 0)
+	{
+		Bitmapset  *attrs_used = NULL;
+		int			i;
+
+		/*
+		 * First, examine all the attributes needed for joins or final output.
+		 * Note: we must look at rel's targetlist, not the attr_needed data,
+		 * because attr_needed isn't computed for inheritance child rels.
+		 */
+		pull_varattnos((Node *) rel->reltarget->exprs, scanrelid, &attrs_used);
+
+		/* Add all the attributes used by restriction clauses. */
+		foreach(lc, rel->baserestrictinfo)
+		{
+			RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
+
+			pull_varattnos((Node *) rinfo->clause, scanrelid, &attrs_used);
+		}
+
+		/* Now, are any system columns requested from rel? */
+		for (i = FirstLowInvalidHeapAttributeNumber + 1; i < 0; i++)
+		{
+			if (bms_is_member(i - FirstLowInvalidHeapAttributeNumber, attrs_used))
+			{
+				fscan->fsSystemCol = true;
+				break;
+			}
+		}
+
+		bms_free(attrs_used);
+	}
+	return fscan;
 }

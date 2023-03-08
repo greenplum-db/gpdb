@@ -11,6 +11,21 @@
 -- GPDB_12_MERGE_FIXME: Many of these queries are no longer able to constraint
 -- exclusion, like we used to on GPDB 6. Not sure what we should do about it.
 -- See https://github.com/greenplum-db/gpdb/issues/10287.
+-- In GPDB6 this case is partition pruned, but the result is wrong,
+-- in MAIN branch it is not partition pruned, but has right result.
+-- Create test table with two partitions, for values equal to '1' and values equal to '2'.
+create table parttab (n numeric, t text)
+  partition by list (n)(partition one values ('1'), partition two values('2'));
+
+-- Insert three rows. They're all equal to '1', but different number of zeros after decimal point.
+insert into parttab values
+  ('1', 'one'),
+  ('1.0', 'one point zero'),
+  ('1.00', 'one point zero zero');
+
+-- select rows whose text representation is three characters long. This should return the '1.0' row.
+select * from parttab where length(n::text) = 3;
+explain select * from parttab where length(n::text) = 3;
 
 -- Use index scans when possible. That exercises more code, and allows us to
 -- spot the cases where the planner cannot use even when it exists.

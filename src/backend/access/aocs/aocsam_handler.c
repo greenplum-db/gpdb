@@ -20,8 +20,8 @@
 #include "access/multixact.h"
 #include "access/tableam.h"
 #include "access/xact.h"
+#include "catalog/aoseg.h"
 #include "catalog/catalog.h"
-#include "catalog/gp_fastsequence.h"
 #include "catalog/heap.h"
 #include "catalog/index.h"
 #include "catalog/pg_appendonly.h"
@@ -29,6 +29,7 @@
 #include "catalog/storage_xlog.h"
 #include "cdb/cdbaocsam.h"
 #include "cdb/cdbvars.h"
+#include "commands/progress.h"
 #include "commands/vacuum.h"
 #include "executor/executor.h"
 #include "nodes/makefuncs.h"
@@ -221,7 +222,7 @@ find_dml_state(const Oid relationOid)
  *
  * Should be called exactly once per relation.
  */
-static inline AOCODMLState *
+static inline void
 remove_dml_state(const Oid relationOid)
 {
 	AOCODMLState *state;
@@ -238,7 +239,7 @@ remove_dml_state(const Oid relationOid)
 		aocoDMLStates.last_used_state->relationOid == relationOid)
 		aocoDMLStates.last_used_state = NULL;
 
-	return state;
+	return;
 }
 
 /*
@@ -262,7 +263,16 @@ aoco_dml_finish(Relation relation)
 	AOCODMLState *state;
 	bool		 had_delete_desc = false;
 
-	state = remove_dml_state(RelationGetRelid(relation));
+	Oid relationOid = RelationGetRelid(relation);
+
+	Assert(aocoDMLStates.state_table);
+
+	state = (AOCODMLState *) hash_search(aocoDMLStates.state_table,
+										 &relationOid,
+										 HASH_FIND,
+										 NULL);
+
+	Assert(state);
 
 	if (state->deleteDesc)
 	{
@@ -290,7 +300,7 @@ aoco_dml_finish(Relation relation)
 	if (state->uniqueCheckDesc)
 	{
 		/* clean up the block directory */
-		AppendOnlyBlockDirectory_End_forSearch(state->uniqueCheckDesc->blockDirectory);
+		AppendOnlyBlockDirectory_End_forUniqueChecks(state->uniqueCheckDesc->blockDirectory);
 		pfree(state->uniqueCheckDesc->blockDirectory);
 		state->uniqueCheckDesc->blockDirectory = NULL;
 
@@ -301,7 +311,7 @@ aoco_dml_finish(Relation relation)
 		 */
 		if (!had_delete_desc)
 		{
-			AppendOnlyVisimap_Finish(state->uniqueCheckDesc->visimap, AccessShareLock);
+			AppendOnlyVisimap_Finish_forUniquenessChecks(state->uniqueCheckDesc->visimap);
 			pfree(state->uniqueCheckDesc->visimap);
 		}
 		state->uniqueCheckDesc->visimap = NULL;
@@ -310,6 +320,7 @@ aoco_dml_finish(Relation relation)
 		state->uniqueCheckDesc = NULL;
 	}
 
+	remove_dml_state(relationOid);
 }
 
 /*
@@ -401,7 +412,7 @@ get_or_create_delete_descriptor(const Relation relation, bool forUpdate)
 }
 
 static AOCSUniqueCheckDesc
-get_or_create_unique_check_desc(Relation relation)
+get_or_create_unique_check_desc(Relation relation, Snapshot snapshot)
 {
 	AOCODMLState *state = find_dml_state(RelationGetRelid(relation));
 
@@ -409,25 +420,16 @@ get_or_create_unique_check_desc(Relation relation)
 	{
 		MemoryContext oldcxt;
 		AOCSUniqueCheckDesc uniqueCheckDesc;
-		Oid visimaprelid;
-		Oid visimapidxid;
 
 		oldcxt = MemoryContextSwitchTo(aocoDMLStates.stateCxt);
 		uniqueCheckDesc = palloc0(sizeof(AOCSUniqueCheckDescData));
 
 		/* Initialize the block directory */
 		uniqueCheckDesc->blockDirectory = palloc0(sizeof(AppendOnlyBlockDirectory));
-		/*
-		 * Note: we defer setting up the appendOnlyMetaDataSnapshot for the
-		 * block directory to aoco_index_fetch_tuple_exists(). This is because
-		 * snapshots used for unique index lookups may be stack-allocated and a
-		 * new snapshot object may be passed to every unique index check. (for
-		 * SNAPSHOT_DIRTY)
-		 */
-		AppendOnlyBlockDirectory_Init_forSearch(uniqueCheckDesc->blockDirectory,
-												InvalidSnapshot, /* appendOnlyMetaDataSnapshot */
-												NULL, -1, relation,
-												relation->rd_att->natts, false, NULL);
+		AppendOnlyBlockDirectory_Init_forUniqueChecks(uniqueCheckDesc->blockDirectory,
+													  relation,
+													  relation->rd_att->natts, /* numColGroups */
+													  snapshot);
 		/*
 		 * If this is part of an update, we need to reuse the visimap used by
 		 * the delete half of the update. This is to avoid spurious conflicts
@@ -441,22 +443,9 @@ get_or_create_unique_check_desc(Relation relation)
 		{
 			/* Initialize the visimap */
 			uniqueCheckDesc->visimap = palloc0(sizeof(AppendOnlyVisimap));
-			GetAppendOnlyEntryAuxOids(relation->rd_id,
-									  InvalidSnapshot, /* catalog snap is fine for this */
-									  NULL, NULL, NULL,
-									  &visimaprelid, &visimapidxid);
-			/*
-			 * Note: we don't set up the appendOnlyMetadataSnapshot for the
-			 * visimap here. It is deferred to aoco_index_fetch_tuple_exists().
-			 * This is because snapshots used for unique index lookups may be
-			 * stack-allocated and a new snapshot object may be used for every
-			 * unique index check. (for SNAPSHOT_DIRTY)
-			 */
-			AppendOnlyVisimap_Init(uniqueCheckDesc->visimap,
-								   visimaprelid,
-								   visimapidxid,
-								   AccessShareLock,
-								   InvalidSnapshot /* appendOnlyMetaDataSnapshot */);
+			AppendOnlyVisimap_Init_forUniqueCheck(uniqueCheckDesc->visimap,
+												  relation,
+												  snapshot);
 		}
 
 		state->uniqueCheckDesc = uniqueCheckDesc;
@@ -535,34 +524,35 @@ extractcolumns_from_node(Node *expr, bool *cols, AttrNumber natts)
 
 static TableScanDesc
 aoco_beginscan_extractcolumns(Relation rel, Snapshot snapshot,
-							  List *targetlist, List *qual,
-							  uint32 flags)
+							  List *targetlist, List *qual, bool *proj,
+							  List* constraintList, uint32 flags)
 {
 	AOCSScanDesc	aoscan;
-	AttrNumber		natts = RelationGetNumberOfAttributes(rel);
-	bool		   *cols;
-	bool			found = false;
 
-	cols = palloc0(natts * sizeof(*cols));
+	AssertImply(list_length(targetlist) || list_length(qual) || list_length(constraintList), !proj);
 
-	found |= extractcolumns_from_node((Node *)targetlist, cols, natts);
-	found |= extractcolumns_from_node((Node *)qual, cols, natts);
-
-	/*
-	 * In some cases (for example, count(*)), targetlist and qual may be null,
-	 * extractcolumns_walker will return immediately, so no columns are specified.
-	 * We always scan the first column.
-	 */
-	if (!found)
-		cols[0] = true;
-
+	if (!proj)
+	{
+		AttrNumber		natts = RelationGetNumberOfAttributes(rel);
+		bool			found = false;
+		proj = palloc0(sizeof(bool*) * natts);
+		found |= extractcolumns_from_node((Node *)targetlist, proj, natts);
+		found |= extractcolumns_from_node((Node *)qual, proj, natts);
+		found |= extractcolumns_from_node((Node *)constraintList, proj, natts);
+		/*
+		* In some cases (for example, count(*)), targetlist and qual may be null,
+		* extractcolumns_walker will return immediately, so no columns are specified.
+		* We always scan the first column.
+		*/
+		if (!found)
+			proj[0] = true;
+	}
 	aoscan = aocs_beginscan(rel,
 							snapshot,
-							cols,
+							proj,
 							flags);
 
-	pfree(cols);
-
+	pfree(proj);
 	return (TableScanDesc)aoscan;
 }
 
@@ -856,11 +846,7 @@ aoco_index_fetch_tuple_exists(Relation rel,
 {
 	AOCSUniqueCheckDesc 		uniqueCheckDesc;
 	AOTupleId 					*aoTupleId = (AOTupleId *) tid;
-	AppendOnlyBlockDirectory 	*blockDirectory;
-	AppendOnlyVisimap 			*visimap;
-	bool						blkdir_covers;
 	bool						visible;
-	Snapshot 					save_snapshot;
 
 #ifdef USE_ASSERT_CHECKING
 	int			segmentFileNum = AOTupleIdGet_segmentFileNum(aoTupleId);
@@ -899,23 +885,12 @@ aoco_index_fetch_tuple_exists(Relation rel,
 	if (snapshot->snapshot_type == SNAPSHOT_SELF)
 		return true;
 
-	uniqueCheckDesc = get_or_create_unique_check_desc(rel);
+	uniqueCheckDesc = get_or_create_unique_check_desc(rel, snapshot);
 
-	/*
-	 * Check to see if there is a block directory entry for the tuple. If no
-	 * such entry exists, the tuple doesn't exist physically in the segfile.
-	 *
-	 * Note: We need to use the passed in snapshot to perform the block
-	 * directory lookup. See get_or_create_unique_check_desc() for why we don't
-	 * set the snapshot up prior.
-	 */
-	blockDirectory = uniqueCheckDesc->blockDirectory;
-	Assert(blockDirectory->appendOnlyMetaDataSnapshot == InvalidSnapshot);
-	blockDirectory->appendOnlyMetaDataSnapshot = snapshot;
-	blkdir_covers = AppendOnlyBlockDirectory_CoversTuple(blockDirectory,
-														 aoTupleId);
-	blockDirectory->appendOnlyMetaDataSnapshot = InvalidSnapshot;
-	if (!blkdir_covers)
+	/* First, scan the block directory */
+	if (!AppendOnlyBlockDirectory_UniqueCheck(uniqueCheckDesc->blockDirectory,
+											  aoTupleId,
+											  snapshot))
 		return false;
 
 	/*
@@ -924,24 +899,14 @@ aoco_index_fetch_tuple_exists(Relation rel,
 	 * concurrent in-progress transaction inserting the tuple. So, return true
 	 * and have the xwait machinery kick in.
 	 */
+	Assert(snapshot->snapshot_type == SNAPSHOT_DIRTY);
 	if (TransactionIdIsValid(snapshot->xmin) || TransactionIdIsValid(snapshot->xmax))
 		return true;
 
-	/*
-	 * Consult the visimap to check if the tuple was deleted by a *committed*
-	 * transaction.
-	 *
-	 * Note: we need to use the passed in snapshot to perform the visimap lookup.
-	 * See get_or_create_unique_check_desc() for why we don't set the snapshot
-	 * up prior there.
-	 * If this is part of an update, we are reusing the visimap from the delete
-	 * half of the update, so better restore its snapshot once we are done.
-	 */
-	visimap = uniqueCheckDesc->visimap;
-	save_snapshot = visimap->visimapStore.snapshot;
-	visimap->visimapStore.snapshot = snapshot;
-	visible = AppendOnlyVisimap_IsVisible(visimap, aoTupleId);
-	visimap->visimapStore.snapshot = save_snapshot;
+	/* Now, consult the visimap */
+	visible = AppendOnlyVisimap_UniqueCheck(uniqueCheckDesc->visimap,
+											aoTupleId,
+											snapshot);
 
 	/*
 	 * Since we disallow deletes and updates running in parallel with inserts,
@@ -977,20 +942,29 @@ aoco_tuple_insert(Relation relation, TupleTableSlot *slot, CommandId cid,
 	pgstat_count_heap_insert(relation, 1);
 }
 
+/*
+ * We don't support speculative inserts on appendoptimized tables, i.e. we don't
+ * support INSERT ON CONFLICT DO NOTHING or INSERT ON CONFLICT DO UPDATE. Thus,
+ * the following functions are left unimplemented.
+ */
+
 static void
 aoco_tuple_insert_speculative(Relation relation, TupleTableSlot *slot,
                                     CommandId cid, int options,
                                     BulkInsertState bistate, uint32 specToken)
 {
-	/* GPDB_12_MERGE_FIXME: not supported. Can this function be left out completely? Or ereport()? */
-	elog(ERROR, "speculative insertion not supported on AO_COLUMN tables");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("speculative insert is not supported on appendoptimized relations")));
 }
 
 static void
 aoco_tuple_complete_speculative(Relation relation, TupleTableSlot *slot,
                                       uint32 specToken, bool succeeded)
 {
-	elog(ERROR, "speculative insertion not supported on AO_COLUMN tables");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("speculative insert is not supported on appendoptimized relations")));
 }
 
 /*
@@ -1086,23 +1060,45 @@ aoco_tuple_update(Relation relation, ItemPointer otid, TupleTableSlot *slot,
 	return result;
 }
 
+/*
+ * This API is called for a variety of purposes, which are either not supported
+ * for AO/CO tables or not supported for GPDB in general:
+ *
+ * (1) UPSERT: ExecOnConflictUpdate() calls this, but clearly upsert is not
+ * supported for AO/CO tables.
+ *
+ * (2) DELETE and UPDATE triggers: GetTupleForTrigger() calls this, but clearly
+ * these trigger types are not supported for AO/CO tables.
+ *
+ * (3) Logical replication: RelationFindReplTupleByIndex() and
+ * RelationFindReplTupleSeq() calls this, but clearly we don't support logical
+ * replication yet for GPDB.
+ *
+ * (4) For DELETEs/UPDATEs, when a state of TM_Updated is returned from
+ * table_tuple_delete() and table_tuple_update() respectively, this API is invoked.
+ * However, that is impossible for AO/CO tables as an AO/CO tuple cannot be
+ * deleted/updated while another transaction is updating it (see CdbTryOpenTable()).
+ *
+ * (5) Row-level locking (SELECT FOR ..): ExecLockRows() calls this but a plan
+ * containing the LockRows plan node is never generated for AO/CO tables. In fact,
+ * we lock at the table level instead.
+ */
 static TM_Result
 aoco_tuple_lock(Relation relation, ItemPointer tid, Snapshot snapshot,
                       TupleTableSlot *slot, CommandId cid, LockTupleMode mode,
                       LockWaitPolicy wait_policy, uint8 flags,
                       TM_FailureData *tmfd)
 {
-	/* GPDB_12_MERGE_FIXME: not supported. Can this function be left out completely? Or ereport()? */
-	elog(ERROR, "speculative insertion not supported on AO tables");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("tuple locking is not supported on appendoptimized tables")));
 }
 
 static void
 aoco_finish_bulk_insert(Relation relation, int options)
 {
-	aoco_dml_finish(relation);
+	/* nothing for co tables */
 }
-
-
 
 
 /* ------------------------------------------------------------------------
@@ -1181,8 +1177,17 @@ aoco_compute_xid_horizon_for_tuples(Relation rel,
                                           ItemPointerData *tids,
                                           int nitems)
 {
-	// GPDB_12_MERGE_FIXME: vacuum related call back.
-	elog(ERROR, "not implemented yet");
+	/*
+	 * This API is only useful for hot standby snapshot conflict resolution
+	 * (for eg. see btree_xlog_delete()), in the context of index page-level
+	 * vacuums (aka page-level cleanups). This operation is only done when
+	 * IndexScanDesc->kill_prior_tuple is true, which is never for AO/CO tables
+	 * (we always return all_dead = false in the index_fetch_tuple() callback
+	 * as we don't support HOT)
+	 */
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("feature not supported on appendoptimized relations")));
 }
 
 /* ------------------------------------------------------------------------
@@ -1250,7 +1255,6 @@ heap_truncate_one_relid(Oid relid)
 static void
 aoco_relation_nontransactional_truncate(Relation rel)
 {
-	Oid			ao_base_relid = RelationGetRelid(rel);
 	Oid			aoseg_relid = InvalidOid;
 	Oid			aoblkdir_relid = InvalidOid;
 	Oid			aovisimap_relid = InvalidOid;
@@ -1258,10 +1262,10 @@ aoco_relation_nontransactional_truncate(Relation rel)
 	ao_truncate_one_rel(rel);
 
 	/* Also truncate the aux tables */
-	GetAppendOnlyEntryAuxOids(ao_base_relid, NULL,
+	GetAppendOnlyEntryAuxOids(rel,
 	                          &aoseg_relid,
-	                          &aoblkdir_relid, NULL,
-	                          &aovisimap_relid, NULL);
+	                          &aoblkdir_relid,
+	                          &aovisimap_relid);
 
 	heap_truncate_one_relid(aoseg_relid);
 	heap_truncate_one_relid(aoblkdir_relid);
@@ -1319,8 +1323,10 @@ aoco_vacuum_rel(Relation onerel, VacuumParams *params,
                       BufferAccessStrategy bstrategy)
 {
 	/*
-	 * Implemented but not invoked, we do the AO_COLUMN different phases vacuuming by
-	 * calling ao_vacuum_rel() in vacuum_rel() directly for now.
+	 * We VACUUM an AO_COLUMN table through multiple phases. vacuum_rel()
+	 * orchestrates the phases and calls itself again for each phase, so we
+	 * get here for every phase. ao_vacuum_rel() is a wrapper of dedicated
+	 * ao_vacuum_rel_*() functions for the specific phases.
 	 */
 	ao_vacuum_rel(onerel, params, bstrategy);
 
@@ -1565,7 +1571,7 @@ aoco_index_build_range_scan(Relation heapRelation,
 	List	   *tlist = NIL;
 	List	   *qual = indexInfo->ii_Predicate;
 	Oid			blkdirrelid;
-	Oid			blkidxrelid;
+	int64 		previous_blkno = -1;
 
 	/*
 	 * sanity checks
@@ -1608,8 +1614,8 @@ aoco_index_build_range_scan(Relation heapRelation,
 	/*
 	 * If block directory is empty, it must also be built along with the index.
 	 */
-	GetAppendOnlyEntryAuxOids(RelationGetRelid(heapRelation), NULL, NULL,
-							  &blkdirrelid, &blkidxrelid, NULL, NULL);
+	GetAppendOnlyEntryAuxOids(heapRelation, NULL,
+							  &blkdirrelid, NULL);
 
 	Relation blkdir = relation_open(blkdirrelid, AccessShareLock);
 
@@ -1665,7 +1671,9 @@ aoco_index_build_range_scan(Relation heapRelation,
 			scan = table_beginscan_es(heapRelation,	/* relation */
 									  snapshot,		/* snapshot */
 									  tlist,		/* targetlist */
-									  qual);		/* qual */
+									  qual,			/* qual */
+									  NULL,			/* constraintList */
+									  NULL);
 		}
 	}
 	else
@@ -1705,27 +1713,35 @@ aoco_index_build_range_scan(Relation heapRelation,
 	}
 
 
-	/* GPDB_12_MERGE_FIXME */
-#if 0
 	/* Publish number of blocks to scan */
 	if (progress)
 	{
-		BlockNumber nblocks;
+		FileSegTotals	*fileSegTotals;
+		BlockNumber		totalBlocks;
 
-		if (aoscan->rs_base.rs_parallel != NULL)
-		{
-			ParallelBlockTableScanDesc pbscan;
+		/* XXX: How can we report for builds with parallel scans? */
+		Assert(!aocoscan->rs_base.rs_parallel);
 
-			pbscan = (ParallelBlockTableScanDesc) aoscan->rs_base.rs_parallel;
-			nblocks = pbscan->phs_nblocks;
-		}
+		/*
+		 * We will need to scan the entire table if we need to create a block
+		 * directory, otherwise we need to scan only the columns projected. So,
+		 * calculate the total blocks accordingly.
+		 */
+		if (need_create_blk_directory)
+			fileSegTotals = GetAOCSSSegFilesTotals(heapRelation,
+												   aocoscan->appendOnlyMetaDataSnapshot);
 		else
-			nblocks = aoscan->rs_nblocks;
+			fileSegTotals = GetAOCSSSegFilesTotalsWithProj(heapRelation,
+														   aocoscan->appendOnlyMetaDataSnapshot,
+														   aocoscan->columnScanInfo.proj_atts,
+														   aocoscan->columnScanInfo.num_proj_atts);
 
+		Assert(fileSegTotals->totalbytes >= 0);
+
+		totalBlocks = RelationGuessNumberOfBlocksFromSize(fileSegTotals->totalbytes);
 		pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_TOTAL,
-									 nblocks);
+									 totalBlocks);
 	}
-#endif
 
 	/* set our scan endpoints */
 	if (!allow_sync)
@@ -1759,21 +1775,23 @@ aoco_index_build_range_scan(Relation heapRelation,
 			(numblocks != InvalidBlockNumber && ItemPointerGetBlockNumber(&slot->tts_tid) >= numblocks))
 			continue;
 
-		/* GPDB_12_MERGE_FIXME */
-#if 0
 		/* Report scan progress, if asked to. */
 		if (progress)
 		{
-			BlockNumber blocks_done = appendonly_scan_get_blocks_done(aoscan);
+			int64 current_blkno =
+					  RelationGuessNumberOfBlocksFromSize(aocoscan->totalBytesRead);
 
-			if (blocks_done != previous_blkno)
+			/* XXX: How can we report for builds with parallel scans? */
+			Assert(!aocoscan->rs_base.rs_parallel);
+
+			/* As soon as a new block starts, report it as scanned */
+			if (current_blkno != previous_blkno)
 			{
 				pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_DONE,
-											 blocks_done);
-				previous_blkno = blocks_done;
+											 current_blkno);
+				previous_blkno = current_blkno;
 			}
 		}
-#endif
 
 		aoTupleId = (AOTupleId *) &slot->tts_tid;
 		/*
@@ -1829,28 +1847,6 @@ aoco_index_build_range_scan(Relation heapRelation,
 		         callback_state);
 
 	}
-
-	/* GPDB_12_MERGE_FIXME */
-#if 0
-	/* Report scan progress one last time. */
-	if (progress)
-	{
-		BlockNumber blks_done;
-
-		if (aoscan->rs_base.rs_parallel != NULL)
-		{
-			ParallelBlockTableScanDesc pbscan;
-
-			pbscan = (ParallelBlockTableScanDesc) aoscan->rs_base.rs_parallel;
-			blks_done = pbscan->phs_nblocks;
-		}
-		else
-			blks_done = aoscan->rs_nblocks;
-
-		pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_DONE,
-									 blks_done);
-	}
-#endif
 
 	table_endscan(scan);
 
@@ -1926,6 +1922,66 @@ aoco_relation_size(Relation rel, ForkNumber forkNumber)
 	UnregisterSnapshot(snapshot);
 
 	return totalbytes;
+}
+
+/*
+ * For each AO segment, get the starting heap block number and the number of
+ * heap blocks (together termed as a BlockSequence). The starting heap block
+ * number is always deterministic given a segment number. See AOtupleId.
+ *
+ * The number of heap blocks can be determined from the last row number present
+ * in the segment. See appendonlytid.h for details.
+ */
+static BlockSequence *
+aoco_relation_get_block_sequences(Relation rel, int *numSequences)
+{
+	Snapshot			snapshot;
+	Oid					segrelid;
+	int					nsegs;
+	BlockSequence		*sequences;
+	AOCSFileSegInfo 	**seginfos;
+
+	Assert(RelationIsValid(rel));
+	Assert(numSequences);
+
+	snapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
+
+	seginfos = GetAllAOCSFileSegInfo(rel, snapshot, &nsegs, &segrelid);
+	sequences = (BlockSequence *) palloc(sizeof(BlockSequence) * nsegs);
+	*numSequences = nsegs;
+
+	/*
+	 * For each aoseg, the sequence starts at a fixed heap block number and
+	 * contains up to the highest numbered heap block corresponding to the
+	 * lastSequence value of that segment.
+	 */
+	for (int i = 0; i < nsegs; i++)
+		AOSegment_PopulateBlockSequence(&sequences[i], segrelid, seginfos[i]->segno);
+
+	UnregisterSnapshot(snapshot);
+
+	if (seginfos != NULL)
+	{
+		FreeAllAOCSSegFileInfo(seginfos, nsegs);
+		pfree(seginfos);
+	}
+
+	return sequences;
+}
+
+/*
+ * Populate the BlockSequence corresponding to the AO segment in which the
+ * logical heap block 'blkNum' falls.
+ */
+static void
+aoco_relation_get_block_sequence(Relation rel,
+								 BlockNumber blkNum,
+								 BlockSequence *sequence)
+{
+	Oid segrelid;
+
+	GetAppendOnlyEntryAuxOids(rel, &segrelid, NULL, NULL);
+	AOSegment_PopulateBlockSequence(sequence, segrelid, AOSegmentGet_segno(blkNum));
 }
 
 static bool
@@ -2185,6 +2241,8 @@ static const TableAmRoutine ao_column_methods = {
 	.index_validate_scan = aoco_index_validate_scan,
 
 	.relation_size = aoco_relation_size,
+	.relation_get_block_sequences = aoco_relation_get_block_sequences,
+	.relation_get_block_sequence = aoco_relation_get_block_sequence,
 	.relation_needs_toast_table = aoco_relation_needs_toast_table,
 
 	.relation_estimate_size = aoco_estimate_rel_size,

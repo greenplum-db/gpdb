@@ -496,6 +496,22 @@ explain (costs off)
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on tenk1
          Filter: ((unique1 = unique1) OR (unique2 = unique2))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+-- check that we recognize equivalence with dummy domains in the way
+create temp table undername (f1 name, f2 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create temp view overview as
+  select f1::information_schema.sql_identifier as sqli, f2 from undername;
+explain (costs off)  -- this should not require a sort
+  select * from overview where sqli = 'foo' order by sqli;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Seq Scan on undername
+         Filter: (f1 = 'foo'::name)
  Optimizer: Postgres query optimizer
 (4 rows)
 

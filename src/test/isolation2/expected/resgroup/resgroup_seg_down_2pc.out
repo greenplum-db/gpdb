@@ -19,7 +19,7 @@ select pg_reload_conf();
  t              
 (1 row)
 
-1:create resource group rgroup_seg_down with (CPU_RATE_LIMIT=35, MEMORY_LIMIT=35, CONCURRENCY=10);
+1:create resource group rgroup_seg_down with (cpu_hard_quota_limit=35, CONCURRENCY=10);
 CREATE
 
 -- inject an error in function dtm_broadcast_commit_prepared, that is before QD broadcasts commit prepared command to QEs

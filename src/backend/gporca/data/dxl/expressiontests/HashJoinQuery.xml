@@ -7,7 +7,7 @@
     <dxl:CTEList/>
     <dxl:LogicalJoin JoinType="Inner">
       <dxl:LogicalGet>
-        <dxl:TableDescriptor Mdid="0.158021.1.0" TableName="t1">
+        <dxl:TableDescriptor Mdid="6.158021.1.0" TableName="t1">
           <dxl:Columns>
             <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -16,7 +16,7 @@
         </dxl:TableDescriptor>
       </dxl:LogicalGet>
       <dxl:LogicalGet>
-        <dxl:TableDescriptor Mdid="0.158044.1.0" TableName="t2">
+        <dxl:TableDescriptor Mdid="6.158044.1.0" TableName="t2">
           <dxl:Columns>
             <dxl:Column ColId="4" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="5" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

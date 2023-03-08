@@ -16,6 +16,9 @@ endif
 MODULE_big = gpcloud
 OBJS = src/gpcloud.o lib/http_parser.o lib/ini.o $(addprefix src/,$(COMMON_OBJS))
 
+# Avoid building LLVM Bitcode for gpcloud module.
+with_llvm = no
+
 # Launch
 ifdef USE_PGXS
 PGXS := $(shell pg_config --pgxs)

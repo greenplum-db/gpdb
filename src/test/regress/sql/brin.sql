@@ -1,4 +1,8 @@
-CREATE TABLE brintest (byteacol bytea,
+-- GPDB: Most of these test steps are modified such that the tables' tuples are
+-- co-located on one QE.
+
+CREATE TABLE brintest (id int,
+    byteacol bytea,
 	charcol "char",
 	namecol name,
 	int8col bigint,
@@ -26,9 +30,10 @@ CREATE TABLE brintest (byteacol bytea,
 	int4rangecol int4range,
 	lsncol pg_lsn,
 	boxcol box
-) WITH (fillfactor=10);
+) WITH (fillfactor=10, autovacuum_enabled=off);
 
 INSERT INTO brintest SELECT
+	1,
 	repeat(stringu1, 8)::bytea,
 	substr(stringu1, 1, 1)::"char",
 	stringu1::name, 142857 * tenthous,
@@ -59,7 +64,8 @@ INSERT INTO brintest SELECT
 FROM tenk1 ORDER BY unique2 LIMIT 100;
 
 -- throw in some NULL's and different values
-INSERT INTO brintest (inetcol, cidrcol, int4rangecol) SELECT
+INSERT INTO brintest (id, inetcol, cidrcol, int4rangecol) SELECT
+	1,
 	inet 'fe80::6e40:8ff:fea9:8c46' + tenthous,
 	cidr 'fe80::6e40:8ff:fea9:8c46' + tenthous,
 	'empty'::int4range
@@ -407,6 +413,7 @@ RESET optimizer_enable_tablescan;
 RESET optimizer_enable_bitmapscan;
 
 INSERT INTO brintest SELECT
+	1,
 	repeat(stringu1, 42)::bytea,
 	substr(stringu1, 1, 1)::"char",
 	stringu1::name, 142857 * tenthous,
@@ -463,22 +470,27 @@ DO $$
 DECLARE curtid tid;
 BEGIN
   LOOP
+    -- GPDB: INSERT of value = 1 guarantees that all values are on one segment.
     INSERT INTO brin_summarize VALUES (1) RETURNING ctid INTO curtid;
-    EXIT WHEN curtid > tid '(2, 0)';
+    EXIT WHEN curtid > tid '(6, 0)';
   END LOOP;
 END;
 $$;
 
--- summarize one range
+-- range [0,1] is already summarized since current (at start of insert) range is
+-- summarized by the DO..INSERT above
 SELECT brin_summarize_range('brin_summarize_idx', 0);
--- nothing: already summarized
 SELECT brin_summarize_range('brin_summarize_idx', 1);
--- summarize one range
+
+-- summarize one range: [2,3]
 SELECT brin_summarize_range('brin_summarize_idx', 2);
--- summarize all pages
+
+-- summarize all pages: should summarize ranges [3,4] and [5,6] only
 SELECT brin_summarize_range('brin_summarize_idx', 4294967295);
+
 -- nothing: page doesn't exist in table
-SELECT brin_summarize_range('brin_summarize_idx', 4294967295);
+SELECT brin_summarize_range('brin_summarize_idx', 5);
+
 -- invalid block number values
 SELECT brin_summarize_range('brin_summarize_idx', -1);
 SELECT brin_summarize_range('brin_summarize_idx', 4294967296);
@@ -499,3 +511,42 @@ EXPLAIN (COSTS OFF) SELECT * FROM brin_test WHERE a = 1;
 -- Ensure brin index is not used when values are not correlated
 -- (does not yet work for ORCA)
 EXPLAIN (COSTS OFF) SELECT * FROM brin_test WHERE b = 1;
+
+-- make sure data are properly de-toasted in BRIN index
+CREATE TABLE brintest_3 (a text, b text, c text, d text);
+
+-- long random strings (~2000 chars each, so ~6kB for min/max on two
+-- columns) to trigger toasting
+WITH rand_value AS (SELECT string_agg(md5(i::text),'') AS val FROM generate_series(1,60) s(i))
+INSERT INTO brintest_3
+SELECT val, val, val, val FROM rand_value;
+
+CREATE INDEX brin_test_toast_idx ON brintest_3 USING brin (b, c);
+DELETE FROM brintest_3;
+
+-- We need to wait a bit for all transactions to complete, so that the
+-- vacuum actually removes the TOAST rows. Creating an index concurrently
+-- is a one way to achieve that, because it does exactly such wait.
+-- CREATE INDEX CONCURRENTLY brin_test_temp_idx ON brintest_3(a);
+-- DROP INDEX brin_test_temp_idx;
+
+-- vacuum the table, to discard TOAST data
+VACUUM brintest_3;
+
+-- retry insert with a different random-looking (but deterministic) value
+-- the value is different, and so should replace either min or max in the
+-- brin summary
+WITH rand_value AS (SELECT string_agg(md5((-i)::text),'') AS val FROM generate_series(1,60) s(i))
+INSERT INTO brintest_3
+SELECT val, val, val, val FROM rand_value;
+
+-- now try some queries, accessing the brin index
+SET enable_seqscan = off;
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM brintest_3 WHERE b < '0';
+
+SELECT * FROM brintest_3 WHERE b < '0';
+
+DROP TABLE brintest_3;
+RESET enable_seqscan;

@@ -348,3 +348,120 @@ RESET enable_bitmapscan;
 RESET optimizer_enable_tablescan;
 RESET optimizer_enable_indexscan;
 RESET optimizer_enable_indexonlyscan;
+
+--
+-- Test Hash indexes
+--
+
+CREATE TABLE hash_tbl (a int, b int) DISTRIBUTED BY(a);
+INSERT INTO hash_tbl select i,i FROM generate_series(1, 100)i;
+ANALYZE hash_tbl;
+CREATE INDEX hash_idx1 ON hash_tbl USING hash(b);
+
+-- Now check the results by turning on indexscan
+SET enable_seqscan = ON;
+SET enable_indexscan = ON;
+SET enable_bitmapscan = OFF;
+
+SET optimizer_enable_tablescan =ON;
+SET optimizer_enable_indexscan = ON;
+SET optimizer_enable_bitmapscan = OFF;
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl WHERE b=3;
+SELECT * FROM hash_tbl WHERE b=3;
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl WHERE b=3 and a=3;
+SELECT * FROM hash_tbl WHERE b=3 and a=3;
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl WHERE b=3 or b=5;
+SELECT * FROM hash_tbl WHERE b=3 or b=5;
+
+-- Now check the results by turning on bitmapscan
+SET enable_seqscan = OFF;
+SET enable_indexscan = OFF;
+SET enable_bitmapscan = ON;
+
+SET optimizer_enable_tablescan =OFF;
+SET optimizer_enable_indexscan = OFF;
+SET optimizer_enable_bitmapscan = ON;
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl WHERE b=3;
+SELECT * FROM hash_tbl WHERE b=3;
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl WHERE b=3 and a=3;
+SELECT * FROM hash_tbl WHERE b=3 and a=3;
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl WHERE b=3 or b=5;
+SELECT * FROM hash_tbl WHERE b=3 or b=5;
+
+DROP INDEX hash_idx1;
+DROP TABLE hash_tbl;
+
+RESET enable_seqscan;
+RESET enable_indexscan;
+RESET enable_bitmapscan;
+RESET optimizer_enable_tablescan;
+RESET optimizer_enable_indexscan;
+RESET optimizer_enable_bitmapscan;
+
+-- Test Hash indexes with AO tables
+CREATE TABLE hash_tbl_ao (a int, b int) WITH (appendonly = true) DISTRIBUTED BY(a);
+INSERT INTO hash_tbl_ao select i,i FROM generate_series(1, 100)i;
+ANALYZE hash_tbl_ao;
+CREATE INDEX hash_idx2 ON hash_tbl_ao USING hash(b);
+
+-- get results for comparison purposes
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl_ao WHERE b=3;
+SELECT * FROM hash_tbl_ao WHERE b=3;
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl_ao WHERE b=3 and a=3;
+SELECT * FROM hash_tbl_ao WHERE b=3 and a=3;
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl_ao WHERE b=3 or b=5;
+SELECT * FROM hash_tbl_ao WHERE b=3 or b=5;
+
+-- Now check the results by turning off seqscan/tablescan
+SET enable_seqscan = OFF;
+SET optimizer_enable_tablescan =OFF;
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl_ao WHERE b=3;
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl_ao WHERE b=3 and a=3;
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl_ao WHERE b=3 or b=5;
+
+DROP INDEX hash_idx2;
+DROP TABLE hash_tbl_ao;
+RESET enable_seqscan;
+RESET optimizer_enable_tablescan;
+-- Test hash indexes with partition table
+
+CREATE TABLE hash_prt_tbl (a int, b int) DISTRIBUTED BY(a) PARTITION BY RANGE(a)
+(PARTITION p1 START (1) END (500) INCLUSIVE,
+PARTITION p2 START(501) END (1000) INCLUSIVE);
+INSERT INTO hash_prt_tbl select i,i FROM generate_series(1, 1000)i;
+ANALYZE hash_prt_tbl;
+CREATE INDEX hash_idx3 ON hash_prt_tbl USING hash(b);
+
+-- Now check the results by turning off dynamictablescan/seqscan
+SET enable_seqscan = OFF;
+SET optimizer_enable_dynamictablescan =OFF;
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_prt_tbl WHERE b=3;
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_prt_tbl WHERE b=3 and a=3;
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_prt_tbl WHERE b=3 or b=5;
+
+DROP INDEX hash_idx3;
+DROP TABLE hash_prt_tbl;
+
+RESET enable_seqscan;
+RESET optimizer_enable_dynamictablescan;

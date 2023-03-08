@@ -21,7 +21,7 @@ name
 :   The name \(optionally schema-qualified\) of a materialized view to be dropped.
 
 CASCADE
-:   Automatically drop objects that depend on the materialized view \(such as other materialized views, or regular views\).
+:   Automatically drop objects that depend on the materialized view \(such as other materialized views, or regular views\), and in turn all objects that depend on those objects.
 
 RESTRICT
 :   Refuse to drop the materialized view if any objects depend on it. This is the default.

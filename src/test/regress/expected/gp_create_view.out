@@ -109,7 +109,7 @@ CREATE TEMP VIEW view_with_gp_dist_random AS SELECT 1 FROM gp_dist_random('pg_cl
 SELECT pg_get_viewdef('view_with_gp_dist_random');
            pg_get_viewdef            
 -------------------------------------
-  SELECT 1                          +
+  SELECT 1 AS "?column?"            +
     FROM gp_dist_random('pg_class');
 (1 row)
 

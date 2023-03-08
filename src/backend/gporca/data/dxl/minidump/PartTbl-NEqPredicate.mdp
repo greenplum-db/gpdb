@@ -91,7 +91,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.310291.1.0" Name="p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.310291.1.0" Name="p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -130,11 +130,11 @@
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.310291001.1.0"/>
-          <dxl:Partition Mdid="0.310291002.1.0"/>
+          <dxl:Partition Mdid="6.310291001.1.0"/>
+          <dxl:Partition Mdid="6.310291002.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.310291001.1.0" Name="p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.310291001.1.0" Name="p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -188,7 +188,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.310291002.1.0" Name="p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.310291002.1.0" Name="p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -247,12 +247,12 @@
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.310609001.1.0"/>
-          <dxl:Partition Mdid="0.310609002.1.0"/>
+          <dxl:Partition Mdid="6.310609001.1.0"/>
+          <dxl:Partition Mdid="6.310609002.1.0"/>
         </dxl:Partitions>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.310609001.1.0"/>
-          <dxl:Partition Mdid="0.310609002.1.0"/>
+          <dxl:Partition Mdid="6.310609001.1.0"/>
+          <dxl:Partition Mdid="6.310609002.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
       <dxl:Index Mdid="0.327405.1.0" Name="p_1_prt_extra_a_key" IsClustered="false" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8,9">
@@ -260,12 +260,12 @@
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.327405001.1.0"/>
-          <dxl:Partition Mdid="0.327405002.1.0"/>
+          <dxl:Partition Mdid="6.327405001.1.0"/>
+          <dxl:Partition Mdid="6.327405002.1.0"/>
         </dxl:Partitions>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.327405001.1.0"/>
-          <dxl:Partition Mdid="0.327405002.1.0"/>
+          <dxl:Partition Mdid="6.327405001.1.0"/>
+          <dxl:Partition Mdid="6.327405002.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
       <dxl:GPDBScalarOp Mdid="0.97.1.0" Name="&lt;" ComparisonType="LT">
@@ -340,7 +340,7 @@
       <dxl:ColumnStatistics Mdid="1.310291.1.1.3" Name="ctid" Width="6.000000"/>
       <dxl:ColumnStatistics Mdid="1.310291.1.1.2" Name="c" Width="8.000000"/>
       <dxl:RelationStatistics Mdid="2.310291.1.1" Name="p" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.310291.1.1" Name="p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.310291.1.1" Name="p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -379,11 +379,11 @@
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.310291001.1.1"/>
-          <dxl:Partition Mdid="0.310291002.1.1"/>
+          <dxl:Partition Mdid="6.310291001.1.1"/>
+          <dxl:Partition Mdid="6.310291002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.310291001.1.1" Name="p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.310291001.1.1" Name="p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -437,7 +437,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.310291002.1.1" Name="p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.310291002.1.1" Name="p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -509,7 +509,7 @@
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.310291.1.1" TableName="p">
+          <dxl:TableDescriptor Mdid="6.310291.1.1" TableName="p">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -566,10 +566,10 @@
             </dxl:Comparison>
           </dxl:Filter>
           <dxl:Partitions>
-            <dxl:Partition Mdid="0.310291001.1.1"/>
-            <dxl:Partition Mdid="0.310291002.1.1"/>
+            <dxl:Partition Mdid="6.310291001.1.1"/>
+            <dxl:Partition Mdid="6.310291002.1.1"/>
           </dxl:Partitions>
-          <dxl:TableDescriptor Mdid="0.310291.1.1" TableName="p">
+          <dxl:TableDescriptor Mdid="6.310291.1.1" TableName="p">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

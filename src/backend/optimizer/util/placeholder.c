@@ -23,6 +23,9 @@
 #include "optimizer/planmain.h"
 #include "utils/lsyscache.h"
 
+/* source-code-compatibility hacks for pull_varnos() API change */
+#define pull_varnos(a,b) pull_varnos_new(a,b)
+
 /* Local functions */
 static void find_placeholders_recurse(PlannerInfo *root, Node *jtnode);
 static void find_placeholders_in_expr(PlannerInfo *root, Node *expr);
@@ -98,7 +101,7 @@ find_placeholder_info(PlannerInfo *root, PlaceHolderVar *phv,
 	 * ph_eval_at.  If no referenced rels are within the syntactic scope,
 	 * force evaluation at the syntactic location.
 	 */
-	rels_used = pull_varnos((Node *) phv->phexpr);
+	rels_used = pull_varnos(root, (Node *) phv->phexpr);
 	phinfo->ph_lateral = bms_difference(rels_used, phv->phrels);
 	if (bms_is_empty(phinfo->ph_lateral))
 		phinfo->ph_lateral = NULL;	/* make it exactly NULL if empty */
@@ -404,8 +407,10 @@ add_placeholders_to_base_rels(PlannerInfo *root)
  *		and if they contain lateral references, add those references to the
  *		joinrel's direct_lateral_relids.
  *
- * A join rel should emit a PlaceHolderVar if (a) the PHV is needed above
- * this join level and (b) the PHV can be computed at or below this level.
+ * A join rel should emit a PlaceHolderVar if (a) the PHV can be computed
+ * at or below this join level and (b) the PHV is needed above this level.
+ * However, condition (a) is sufficient to add to direct_lateral_relids,
+ * as explained below.
  */
 void
 add_placeholders_to_joinrel(PlannerInfo *root, RelOptInfo *joinrel,
@@ -418,11 +423,11 @@ add_placeholders_to_joinrel(PlannerInfo *root, RelOptInfo *joinrel,
 	{
 		PlaceHolderInfo *phinfo = (PlaceHolderInfo *) lfirst(lc);
 
-		/* Is it still needed above this joinrel? */
-		if (bms_nonempty_difference(phinfo->ph_needed, relids))
+		/* Is it computable here? */
+		if (bms_is_subset(phinfo->ph_eval_at, relids))
 		{
-			/* Is it computable here? */
-			if (bms_is_subset(phinfo->ph_eval_at, relids))
+			/* Is it still needed above this joinrel? */
+			if (bms_nonempty_difference(phinfo->ph_needed, relids))
 			{
 				/* Yup, add it to the output */
 				joinrel->reltarget->exprs = lappend(joinrel->reltarget->exprs,
@@ -450,12 +455,26 @@ add_placeholders_to_joinrel(PlannerInfo *root, RelOptInfo *joinrel,
 					joinrel->reltarget->cost.startup += cost.startup;
 					joinrel->reltarget->cost.per_tuple += cost.per_tuple;
 				}
-
-				/* Adjust joinrel's direct_lateral_relids as needed */
-				joinrel->direct_lateral_relids =
-					bms_add_members(joinrel->direct_lateral_relids,
-									phinfo->ph_lateral);
 			}
+
+			/*
+			 * Also adjust joinrel's direct_lateral_relids to include the
+			 * PHV's source rel(s).  We must do this even if we're not
+			 * actually going to emit the PHV, otherwise join_is_legal() will
+			 * reject valid join orderings.  (In principle maybe we could
+			 * instead remove the joinrel's lateral_relids dependency; but
+			 * that's complicated to get right, and cases where we're not
+			 * going to emit the PHV are too rare to justify the work.)
+			 *
+			 * In principle we should only do this if the join doesn't yet
+			 * include the PHV's source rel(s).  But our caller
+			 * build_join_rel() will clean things up by removing the join's
+			 * own relids from its direct_lateral_relids, so we needn't
+			 * account for that here.
+			 */
+			joinrel->direct_lateral_relids =
+				bms_add_members(joinrel->direct_lateral_relids,
+								phinfo->ph_lateral);
 		}
 	}
 }

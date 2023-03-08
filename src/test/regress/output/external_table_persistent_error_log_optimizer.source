@@ -1,0 +1,299 @@
+--
+-- external tables - short and simple functional tests.
+--
+-- start_matchsubs
+--
+-- # replace return code in error message (platform specific)
+--
+-- m/ERROR\:\s+external table .* command ended with .* not found/
+-- s/nosuchcommand\:\s*(command)? not found/nosuchcommand\: NOT FOUND/
+--
+-- m/ERROR\:\s+external table .* command ended with .*No such file.*/
+-- s/nosuchfile\.txt\:\s*No such file (or directory)?/nosuchfile\.txt\: NO SUCH FILE/
+-- m/ERROR\:\s+external table .* command ended with .*No such file.*/i
+-- s/cat\: (cannot open)? nosuchfile\.txt/cat\: nosuchfile\.txt/
+--
+-- # remove line number - redhat
+-- m/ERROR\:\s+external table .* command ended with .*NOT FOUND.*/i
+-- s/\s+line \d+\://
+-- # remove line number - Debian
+-- m/ERROR\:\s+external table .* command ended with .*sh: 1: .*NOT FOUND.*/i
+-- s/ sh: 1: / sh: /
+--
+-- m/DETAIL:  Found \d+ URLs and \d+ primary segments./
+-- s/Found.+//
+--
+-- end_matchsubs
+SET optimizer_trace_fallback=on;
+COPY (VALUES('1,2'),('1,2,3'),('1,'),('1')) TO '@abs_srcdir@/data/tableerr.csv';
+create external table ext_error_persistent(a int, b int)
+location ('file://@hostname@@abs_srcdir@/data/tableerr.csv')
+format 'csv'
+log errors persistently segment reject limit 10;
+select * from ext_error_persistent;
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
+ a | b 
+---+---
+ 1 |  
+ 1 | 2
+(2 rows)
+
+SELECT (gp_read_persistent_error_log('ext_error_persistent')).errmsg;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: FIELDSELECT
+                errmsg                 
+---------------------------------------
+ extra data after last expected column
+ missing data for column "b"
+(2 rows)
+
+select errmsg from gp_read_error_log('ext_error_persistent');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: unsupported exec location
+ errmsg 
+--------
+(0 rows)
+
+select * from gp_truncate_error_log('ext_error_persistent');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+select * from gp_truncate_error_log('*');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+select * from gp_truncate_error_log('*.*');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+SELECT (gp_read_persistent_error_log('ext_error_persistent')).errmsg;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: FIELDSELECT
+                errmsg                 
+---------------------------------------
+ extra data after last expected column
+ missing data for column "b"
+(2 rows)
+
+SELECT gp_truncate_persistent_error_log('ext_error_persistent');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
+ gp_truncate_persistent_error_log 
+----------------------------------
+ t
+(1 row)
+
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: unsupported exec location
+ relname | linenum | errmsg 
+---------+---------+--------
+(0 rows)
+
+select * from ext_error_persistent;
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
+ a | b 
+---+---
+ 1 |  
+ 1 | 2
+(2 rows)
+
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: unsupported exec location
+       relname        | linenum |                errmsg                 
+----------------------+---------+---------------------------------------
+ ext_error_persistent |       2 | extra data after last expected column
+ ext_error_persistent |       4 | missing data for column "b"
+(2 rows)
+
+SELECT gp_truncate_persistent_error_log('*');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
+ gp_truncate_persistent_error_log 
+----------------------------------
+ t
+(1 row)
+
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: unsupported exec location
+ relname | linenum | errmsg 
+---------+---------+--------
+(0 rows)
+
+select * from ext_error_persistent;
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
+ a | b 
+---+---
+ 1 |  
+ 1 | 2
+(2 rows)
+
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: unsupported exec location
+       relname        | linenum |                errmsg                 
+----------------------+---------+---------------------------------------
+ ext_error_persistent |       2 | extra data after last expected column
+ ext_error_persistent |       4 | missing data for column "b"
+(2 rows)
+
+SELECT gp_truncate_persistent_error_log('*.*');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
+ gp_truncate_persistent_error_log 
+----------------------------------
+ t
+(1 row)
+
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: unsupported exec location
+ relname | linenum | errmsg 
+---------+---------+--------
+(0 rows)
+
+select * from ext_error_persistent;
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
+ a | b 
+---+---
+ 1 |  
+ 1 | 2
+(2 rows)
+
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: unsupported exec location
+       relname        | linenum |                errmsg                 
+----------------------+---------+---------------------------------------
+ ext_error_persistent |       2 | extra data after last expected column
+ ext_error_persistent |       4 | missing data for column "b"
+(2 rows)
+
+DROP EXTERNAL TABLE ext_error_persistent;
+-- error log still exists
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: unsupported exec location
+       relname        | linenum |                errmsg                 
+----------------------+---------+---------------------------------------
+ ext_error_persistent |       2 | extra data after last expected column
+ ext_error_persistent |       4 | missing data for column "b"
+(2 rows)
+
+-- with out the error_log_persistent option, which will use normal error log.
+create external table ext_error_persistent(a int, b int)
+location ('file://@hostname@@abs_srcdir@/data/tableerr.csv')
+format 'csv'
+log errors segment reject limit 10;
+select * from ext_error_persistent;
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
+ a | b 
+---+---
+ 1 |  
+ 1 | 2
+(2 rows)
+
+SELECT relname, linenum, errmsg FROM gp_read_error_log('ext_error_persistent');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: unsupported exec location
+       relname        | linenum |                errmsg                 
+----------------------+---------+---------------------------------------
+ ext_error_persistent |       2 | extra data after last expected column
+ ext_error_persistent |       4 | missing data for column "b"
+(2 rows)
+
+-- persistent error log has no change
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: unsupported exec location
+       relname        | linenum |                errmsg                 
+----------------------+---------+---------------------------------------
+ ext_error_persistent |       2 | extra data after last expected column
+ ext_error_persistent |       4 | missing data for column "b"
+(2 rows)
+
+DROP EXTERNAL TABLE ext_error_persistent;
+SELECT relname, linenum, errmsg FROM gp_read_error_log('ext_error_persistent');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: unsupported exec location
+ relname | linenum | errmsg 
+---------+---------+--------
+(0 rows)
+
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: unsupported exec location
+       relname        | linenum |                errmsg                 
+----------------------+---------+---------------------------------------
+ ext_error_persistent |       2 | extra data after last expected column
+ ext_error_persistent |       4 | missing data for column "b"
+(2 rows)
+
+SELECT gp_truncate_persistent_error_log('ext_error_persistent');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
+ gp_truncate_persistent_error_log 
+----------------------------------
+ t
+(1 row)
+
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: unsupported exec location
+ relname | linenum | errmsg 
+---------+---------+--------
+(0 rows)
+
+CREATE EXTERNAL TABLE ext_bytea (id int, content bytea)
+LOCATION (
+    'file://@hostname@@abs_srcdir@/data/bytea.data'
+) FORMAT 'CSV'
+OPTIONS (error_log_persistent 'true')
+LOG ERRORS SEGMENT REJECT LIMIT 5;
+SELECT * FROM ext_bytea;
+NOTICE:  found 1 data formatting errors (1 or more input rows), rejected related input data
+ id |                   content                    
+----+----------------------------------------------
+  1 | \x546869732069732072617720746578742064617461
+  2 | \x74747474736466736466
+  3 | \x013d7d16d7ad4fefb61bd95b765c8ceb
+(3 rows)
+
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_bytea');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: unsupported exec location
+  relname  | linenum |                     errmsg                     
+-----------+---------+------------------------------------------------
+ ext_bytea |       4 | invalid hexadecimal digit: "T", column content
+(1 row)
+
+SELECT gp_truncate_persistent_error_log('ext_bytea');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
+ gp_truncate_persistent_error_log 
+----------------------------------
+ t
+(1 row)
+
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_bytea');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: unsupported exec location
+ relname | linenum | errmsg 
+---------+---------+--------
+(0 rows)
+
+\! rm @abs_srcdir@/data/tableerr.csv

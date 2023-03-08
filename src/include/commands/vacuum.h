@@ -98,6 +98,10 @@ typedef struct VacAttrStats
 	int			minrows;		/* Minimum # of rows wanted for stats */
 	void	   *extra_data;		/* for extra type-specific data */
 
+	/* These fields are used to compute stawidth during the compute_stats routine. */
+	double                  totalwidelength;/* total length of toowide row */
+	int                     widerow_num;    /* # of toowide row */
+
 	/*
 	 * These fields are to be filled in by the compute_stats routine. (They
 	 * are initialized to zero when the struct is created.)
@@ -149,10 +153,10 @@ typedef enum VacuumOption
 	VACOPT_FULL = 1 << 4,		/* FULL (non-concurrent) vacuum */
 	VACOPT_SKIP_LOCKED = 1 << 5,	/* skip if cannot get lock */
 	VACOPT_SKIPTOAST = 1 << 6,	/* don't process the TOAST table, if any */
-	VACOPT_DISABLE_PAGE_SKIPPING = 1 << 7	/* don't skip any pages */
+	VACOPT_DISABLE_PAGE_SKIPPING = 1 << 7,	/* don't skip any pages */
 
 	/* Extra GPDB options */
-	,
+	VACOPT_AO_AUX_ONLY = 1 << 8,
 	VACOPT_ROOTONLY = 1 << 10,
 	VACOPT_FULLSCAN = 1 << 11,
 

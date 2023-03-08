@@ -111,8 +111,8 @@ numeric(8), a493 polygon, a494 date, a495 real, a496 money, a497 cidr,
 a498 inet, a499 time, a500 text)
  DISTRIBUTED BY (id);
 
-SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimaprelid is not NULL AND
- visimapidxid is not NULL AND relid='sto_uao_500cols'::regclass;
+SELECT count(i.indexrelid) = 1 AS VisimapPresent  FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND
+ a.relid='sto_uao_500cols'::regclass;
 
 INSERT into sto_uao_500cols (a1, a2, a3, a4, a5, a6, a7, a8, a9, a10,
 a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24,

@@ -9,10 +9,10 @@ create database column_compression;
 \c column_compression
 
 prepare ccddlcheck as
-select attrelid::regclass as relname,
-attnum, attoptions from pg_class c, pg_attribute_encoding e
-where c.relname like 'ccddl%' and c.oid=e.attrelid
-order by relname, attnum;
+select e.attrelid::regclass as relname,
+a.attname, e.attoptions from pg_class c, pg_attribute_encoding e, pg_attribute a
+where c.relname like 'ccddl%' and c.oid=e.attrelid and e.attrelid=a.attrelid and e.attnum = a.attnum
+order by relname, e.attnum;
 
 -- default encoding clause
 create table ccddl (
@@ -455,6 +455,30 @@ partition by range(i) subpartition by range(j)
 execute ccddlcheck;
 drop table ccddl;
 
+-- multi level partitioning with column encoding inheritance
+create table ccddl (a int ENCODING (compresslevel=1),
+                    b int ENCODING (compresslevel=1),
+                    c int ENCODING (compresslevel=1),
+                    d int ENCODING (compresslevel=1),
+                    e int, f int, g int, h int)
+    with (appendonly = true, orientation=column, compresslevel=5)
+    partition by range(a) subpartition by range(b)
+        (partition p1 start(1) end(10)
+            (subpartition sp1 start(1) end(5)
+             column a encoding(compresslevel=3),
+             column d encoding(compresslevel=3),
+             column f encoding(compresslevel=3),
+             column g encoding(compresslevel=3)),
+       column a encoding(compresslevel=2),
+       column b encoding(compresslevel=2),
+       column e encoding(compresslevel=2),
+       column g encoding(compresslevel=2));
+
+execute ccddlcheck;
+
+insert into ccddl select 2,3 from generate_series(1, 100);
+select * from ccddl limit 5;
+drop table ccddl;
 
 -- Precedence test: c3 in the partition child must be zlib, not RLE_TYPE
 CREATE TABLE ccddl ( c1 int ENCODING (compresstype=zlib),

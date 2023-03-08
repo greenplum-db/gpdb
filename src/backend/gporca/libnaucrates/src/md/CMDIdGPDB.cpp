@@ -19,97 +19,98 @@ using namespace gpmd;
 
 // initialize static members
 // invalid key
-CMDIdGPDB CMDIdGPDB::m_mdid_invalid_key(0, 0, 0);
+CMDIdGPDB CMDIdGPDB::m_mdid_invalid_key(IMDId::EmdidGeneral, 0, 0, 0);
 
 // int2 mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_int2(GPDB_INT2);
+CMDIdGPDB CMDIdGPDB::m_mdid_int2(IMDId::EmdidGeneral, GPDB_INT2);
 
 // int4 mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_int4(GPDB_INT4);
+CMDIdGPDB CMDIdGPDB::m_mdid_int4(IMDId::EmdidGeneral, GPDB_INT4);
 
 // int8 mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_int8(GPDB_INT8);
+CMDIdGPDB CMDIdGPDB::m_mdid_int8(IMDId::EmdidGeneral, GPDB_INT8);
 
 // bool mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_bool(GPDB_BOOL);
+CMDIdGPDB CMDIdGPDB::m_mdid_bool(IMDId::EmdidGeneral, GPDB_BOOL);
 
 // oid mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_oid(GPDB_OID);
+CMDIdGPDB CMDIdGPDB::m_mdid_oid(IMDId::EmdidGeneral, GPDB_OID);
 
 // numeric mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_numeric(GPDB_NUMERIC);
+CMDIdGPDB CMDIdGPDB::m_mdid_numeric(IMDId::EmdidGeneral, GPDB_NUMERIC);
 
 // date mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_date(GPDB_DATE);
+CMDIdGPDB CMDIdGPDB::m_mdid_date(IMDId::EmdidGeneral, GPDB_DATE);
 
 // time mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_time(GPDB_TIME);
+CMDIdGPDB CMDIdGPDB::m_mdid_time(IMDId::EmdidGeneral, GPDB_TIME);
 
 // time with time zone mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_timeTz(GPDB_TIMETZ);
+CMDIdGPDB CMDIdGPDB::m_mdid_timeTz(IMDId::EmdidGeneral, GPDB_TIMETZ);
 
 // timestamp mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_timestamp(GPDB_TIMESTAMP);
+CMDIdGPDB CMDIdGPDB::m_mdid_timestamp(IMDId::EmdidGeneral, GPDB_TIMESTAMP);
 
 // timestamp with time zone mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_timestampTz(GPDB_TIMESTAMPTZ);
+CMDIdGPDB CMDIdGPDB::m_mdid_timestampTz(IMDId::EmdidGeneral, GPDB_TIMESTAMPTZ);
 
 // absolute time mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_abs_time(GPDB_ABSTIME);
+CMDIdGPDB CMDIdGPDB::m_mdid_abs_time(IMDId::EmdidGeneral, GPDB_ABSTIME);
 
 // relative time mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_relative_time(GPDB_RELTIME);
+CMDIdGPDB CMDIdGPDB::m_mdid_relative_time(IMDId::EmdidGeneral, GPDB_RELTIME);
 
 // interval mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_interval(GPDB_INTERVAL);
+CMDIdGPDB CMDIdGPDB::m_mdid_interval(IMDId::EmdidGeneral, GPDB_INTERVAL);
 
 // time interval mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_time_interval(GPDB_TIMEINTERVAL);
+CMDIdGPDB CMDIdGPDB::m_mdid_time_interval(IMDId::EmdidGeneral,
+										  GPDB_TIMEINTERVAL);
 
 // char mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_char(GPDB_SINGLE_CHAR);
+CMDIdGPDB CMDIdGPDB::m_mdid_char(IMDId::EmdidGeneral, GPDB_SINGLE_CHAR);
 
 // bpchar mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_bpchar(GPDB_CHAR);
+CMDIdGPDB CMDIdGPDB::m_mdid_bpchar(IMDId::EmdidGeneral, GPDB_CHAR);
 
 // varchar mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_varchar(GPDB_VARCHAR);
+CMDIdGPDB CMDIdGPDB::m_mdid_varchar(IMDId::EmdidGeneral, GPDB_VARCHAR);
 
 // text mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_text(GPDB_TEXT);
+CMDIdGPDB CMDIdGPDB::m_mdid_text(IMDId::EmdidGeneral, GPDB_TEXT);
 
 // text mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_name(GPDB_NAME);
+CMDIdGPDB CMDIdGPDB::m_mdid_name(IMDId::EmdidGeneral, GPDB_NAME);
 
 // float4 mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_float4(GPDB_FLOAT4);
+CMDIdGPDB CMDIdGPDB::m_mdid_float4(IMDId::EmdidGeneral, GPDB_FLOAT4);
 
 // float8 mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_float8(GPDB_FLOAT8);
+CMDIdGPDB CMDIdGPDB::m_mdid_float8(IMDId::EmdidGeneral, GPDB_FLOAT8);
 
 // cash mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_cash(GPDB_CASH);
+CMDIdGPDB CMDIdGPDB::m_mdid_cash(IMDId::EmdidGeneral, GPDB_CASH);
 
 // inet mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_inet(GPDB_INET);
+CMDIdGPDB CMDIdGPDB::m_mdid_inet(IMDId::EmdidGeneral, GPDB_INET);
 
 // cidr mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_cidr(GPDB_CIDR);
+CMDIdGPDB CMDIdGPDB::m_mdid_cidr(IMDId::EmdidGeneral, GPDB_CIDR);
 
 // macaddr mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_macaddr(GPDB_MACADDR);
+CMDIdGPDB CMDIdGPDB::m_mdid_macaddr(IMDId::EmdidGeneral, GPDB_MACADDR);
 
 // count(*) mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_count_star(GPDB_COUNT_STAR);
+CMDIdGPDB CMDIdGPDB::m_mdid_count_star(IMDId::EmdidGeneral, GPDB_COUNT_STAR);
 
 // count(Any) mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_count_any(GPDB_COUNT_ANY);
+CMDIdGPDB CMDIdGPDB::m_mdid_count_any(IMDId::EmdidGeneral, GPDB_COUNT_ANY);
 
 // uuid mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_uuid(GPDB_UUID);
+CMDIdGPDB CMDIdGPDB::m_mdid_uuid(IMDId::EmdidGeneral, GPDB_UUID);
 
 // unknown mdid
-CMDIdGPDB CMDIdGPDB::m_mdid_unknown(GPDB_UNKNOWN);
+CMDIdGPDB CMDIdGPDB::m_mdid_unknown(IMDId::EmdidGeneral, GPDB_UNKNOWN);
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -137,50 +138,22 @@ CMDIdGPDB::CMDIdGPDB(CSystemId sysid, OID oid)
 	Serialize();
 }
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CMDIdGPDB::CMDIdGPDB
-//
-//	@doc:
-//		Constructs a metadata identifier with specified oid and default version
-//		of 1.0
-//
-//---------------------------------------------------------------------------
-CMDIdGPDB::CMDIdGPDB(OID oid)
-	: m_sysid(IMDId::EmdidGPDB, GPMD_GPDB_SYSID),
-	  m_oid(oid),
-	  m_major_version(1),
-	  m_minor_version(0),
-	  m_str(m_mdid_array, GPOS_ARRAY_SIZE(m_mdid_array))
-{
-	if (CMDIdGPDB::m_mdid_invalid_key.Oid() == oid)
-	{
-		// construct an invalid mdid 0.0.0
-		m_major_version = 0;
-	}
-
-	// TODO:  - Jan 31, 2012; supply system id in constructor
-
-	// serialize mdid into static string
-	Serialize();
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CMDIdGPDB::CMDIdGPDB
-//
-//	@doc:
-//		Constructs a metadata identifier
-//
-//---------------------------------------------------------------------------
-CMDIdGPDB::CMDIdGPDB(OID oid, ULONG version_major, ULONG version_minor)
-	: m_sysid(IMDId::EmdidGPDB, GPMD_GPDB_SYSID),
+CMDIdGPDB::CMDIdGPDB(EMDIdType mdIdType, OID oid, ULONG version_major,
+					 ULONG version_minor)
+	: m_sysid(mdIdType, GPMD_GPDB_SYSID),
 	  m_oid(oid),
 	  m_major_version(version_major),
 	  m_minor_version(version_minor),
 	  m_str(m_mdid_array, GPOS_ARRAY_SIZE(m_mdid_array))
 {
-	// TODO:  - Jan 31, 2012; supply system id in constructor
+	GPOS_RTL_ASSERT(
+		mdIdType == IMDId::EmdidGeneral ||
+		(mdIdType >= IMDId::EmdidRel && mdIdType < IMDId::EmdidSentinel));
+	if (CMDIdGPDB::m_mdid_invalid_key.Oid() == oid)
+	{
+		// construct an invalid mdid 0.0.0
+		m_major_version = 0;
+	}
 	// serialize mdid into static string
 	Serialize();
 }
@@ -202,7 +175,6 @@ CMDIdGPDB::CMDIdGPDB(const CMDIdGPDB &mdid_source)
 	  m_str(m_mdid_array, GPOS_ARRAY_SIZE(m_mdid_array))
 {
 	GPOS_ASSERT(mdid_source.IsValid());
-	GPOS_ASSERT(IMDId::EmdidGPDB == mdid_source.MdidType());
 
 	// serialize mdid into static string
 	Serialize();
@@ -295,7 +267,7 @@ CMDIdGPDB::VersionMinor() const
 BOOL
 CMDIdGPDB::Equals(const IMDId *mdid) const
 {
-	if (nullptr == mdid || EmdidGPDB != mdid->MdidType())
+	if (nullptr == mdid || MdidType() != mdid->MdidType())
 	{
 		return false;
 	}
@@ -319,7 +291,10 @@ CMDIdGPDB::Equals(const IMDId *mdid) const
 BOOL
 CMDIdGPDB::IsValid() const
 {
-	return !Equals(&CMDIdGPDB::m_mdid_invalid_key);
+	const CMDIdGPDB *invalid = &CMDIdGPDB::m_mdid_invalid_key;
+	return !(m_oid == invalid->Oid() &&
+			 m_major_version == invalid->VersionMajor() &&
+			 m_minor_version == invalid->VersionMinor());
 }
 
 //---------------------------------------------------------------------------
@@ -348,7 +323,7 @@ CMDIdGPDB::Serialize(CXMLSerializer *xml_serializer,
 IOstream &
 CMDIdGPDB::OsPrint(IOstream &os) const
 {
-	os << "(" << Oid() << "," << VersionMajor() << "." << VersionMinor() << ")";
+	os << "(" << m_str.GetBuffer() << ")";
 	return os;
 }
 

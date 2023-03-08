@@ -52,7 +52,7 @@ CASCADE
 
 The extensions currently available for loading can be identified from the *[pg\_available\_extensions](../system_catalogs/pg_available_extensions.html)* or *[pg\_available\_extension\_versions](../system_catalogs/pg_available_extension_versions.html)* system views.
 
-Before you use `CREATE EXTENSION` to load an extension into a database, the supporting extension files must be installed including an extension control file and at least one least one SQL script file. The support files must be installed in the same location on all Greenplum Database hosts. For information about creating new extensions, see PostgreSQL information about [Packaging Related Objects into an Extension](https://www.postgresql.org/docs/9.6/extend-extensions.html).
+Before you use `CREATE EXTENSION` to load an extension into a database, the supporting extension files must be installed including an extension control file and at least one least one SQL script file. The support files must be installed in the same location on all Greenplum Database hosts. For information about creating new extensions, see PostgreSQL information about [Packaging Related Objects into an Extension](https://www.postgresql.org/docs/12/extend-extensions.html).
 
 ## <a id="section7"></a>Compatibility 
 

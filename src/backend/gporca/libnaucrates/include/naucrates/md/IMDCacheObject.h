@@ -71,7 +71,10 @@ public:
 		EmdtRelStats,
 		EmdtColStats,
 		EmdtCastFunc,
-		EmdtScCmp
+		EmdtScCmp,
+		EmdtExtStats,
+		EmdtExtStatsInfo,
+		EmdtSentinel
 	};
 
 	// md id of cache object

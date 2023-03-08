@@ -731,11 +731,15 @@ order by a;
 -- version 8.4.16 (commit 5c4eb9166e.)
 -- ----------------------------------------------------------------------
 select to_date('-4713-11-23', 'yyyy-mm-dd');
-ERROR:  date out of range: "-4713-11-23"
+    to_date    
+---------------
+ 11-23-4713 BC
+(1 row)
+
 select to_date('-4713-11-24', 'yyyy-mm-dd');
     to_date    
 ---------------
- 11-24-4714 BC
+ 11-24-4713 BC
 (1 row)
 
 select to_date('5874897-12-31', 'yyyy-mm-dd');

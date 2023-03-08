@@ -1,4 +1,27 @@
-GPHOME_CLIENTS=`pwd`
+if test -n "${ZSH_VERSION:-}"; then
+    # zsh
+    SCRIPT_PATH="${(%):-%x}"
+elif test -n "${BASH_VERSION:-}"; then
+    # bash
+    SCRIPT_PATH="${BASH_SOURCE[0]}"
+else
+    # Unknown shell, hope below works.
+    # Tested with dash
+    result=$(lsof -p $$ -Fn | tail --lines=1 | xargs --max-args=2 | cut --delimiter=' ' --fields=2)
+    SCRIPT_PATH=${result#n}
+fi
+
+if test -z "$SCRIPT_PATH"; then
+    echo "The shell cannot be identified. \$GPHOME_CLIENTS may not be set correctly." >&2
+fi
+SCRIPT_DIR="$(cd "$(dirname "${SCRIPT_PATH}")" >/dev/null 2>&1 && pwd)"
+
+if [ ! -L "${SCRIPT_DIR}" ]; then
+    GPHOME_CLIENTS=${SCRIPT_DIR}
+else
+    GPHOME_CLIENTS=$(readlink "${SCRIPT_DIR}")
+fi
+
 PATH=${GPHOME_CLIENTS}/bin:${PATH}
 PYTHONPATH=${GPHOME_CLIENTS}/bin/ext:${PYTHONPATH}
 
@@ -19,8 +42,5 @@ else
 fi
 
 if [ "$1" != "-q" ]; then
-  type python >/dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "Warning: Python not found.  Python-2.5.1 or better is required to run gpload."
-  fi
+  command -v python3 >/dev/null || echo "Warning: Python 3 not found, which is required to run gpload."
 fi

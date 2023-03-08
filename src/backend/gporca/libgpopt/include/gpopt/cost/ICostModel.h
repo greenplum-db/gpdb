@@ -98,6 +98,13 @@ public:
 		{
 			return m_pstats->GetNDVs(colref);
 		}
+
+		// root stats getter
+		IStatistics *
+		Pstats()
+		{
+			return m_pstats;
+		}
 	};	// class CCostingStats
 
 	//---------------------------------------------------------------------------

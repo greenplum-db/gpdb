@@ -122,6 +122,10 @@ gp_dump_query_oids(PG_FUNCTION_ARGS)
 
 
 		Query	*query = parse_analyze(parsetree, sqlText, NULL, 0, NULL);
+		if (query->commandType == CMD_UTILITY && IsA(query->utilityStmt, ExplainStmt))
+		{
+			query = (Query *)((ExplainStmt *) query->utilityStmt)->query;
+		}
 		query->expandMatViews = true;
 		queryTree_sublist = pg_rewrite_query(query);
 

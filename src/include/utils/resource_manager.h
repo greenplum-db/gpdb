@@ -27,7 +27,8 @@
  */
 #define IsResGroupEnabled() \
 	(ResourceScheduler && \
-	 Gp_resource_manager_policy == RESOURCE_MANAGER_POLICY_GROUP)
+	 (Gp_resource_manager_policy == RESOURCE_MANAGER_POLICY_GROUP || \
+	  Gp_resource_manager_policy == RESOURCE_MANAGER_POLICY_GROUP_V2))
 
 /*
  * Resource group do not govern the auxiliary processes and special backends
@@ -40,7 +41,8 @@
 typedef enum
 {
 	RESOURCE_MANAGER_POLICY_QUEUE,
-	RESOURCE_MANAGER_POLICY_GROUP,
+	RESOURCE_MANAGER_POLICY_GROUP,			/* Linux Cgroup v1 */
+	RESOURCE_MANAGER_POLICY_GROUP_V2,		/* Linux Cgroup v2 */
 } ResourceManagerPolicy;
 
 /*

@@ -27,7 +27,7 @@ where forward\_direction can be empty or one of:
 
 `MOVE` repositions a cursor without retrieving any data. `MOVE` works exactly like the [FETCH](FETCH.html) command, except it only positions the cursor and does not return rows.
 
-**Note:** You cannot `MOVE` a `PARALLEL RETRIEVE CURSOR`.
+> **Note** You cannot `MOVE` a `PARALLEL RETRIEVE CURSOR`.
 
 It is not possible to move a cursor position backwards in Greenplum Database, since scrollable cursors are not supported. You can only move a cursor forward in position using `MOVE`.
 

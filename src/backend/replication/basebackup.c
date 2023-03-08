@@ -19,6 +19,7 @@
 #include "access/xlog_internal.h"	/* for pg_start/stop_backup */
 #include "catalog/pg_type.h"
 #include "common/file_perm.h"
+#include "commands/progress.h"
 #include "lib/stringinfo.h"
 #include "libpq/libpq.h"
 #include "libpq/pqformat.h"
@@ -86,12 +87,12 @@ static int64 _tarWriteDir(const char *pathbuf, int basepathlen, struct stat *sta
 						  bool sizeonly);
 static void send_int8_string(StringInfoData *buf, int64 intval);
 static void SendBackupHeader(List *tablespaces);
-static void base_backup_cleanup(int code, Datum arg);
 static void perform_base_backup(basebackup_options *opt);
 static void parse_basebackup_options(List *options, basebackup_options *opt);
 static void SendXlogRecPtrResult(XLogRecPtr ptr, TimeLineID tli);
 static int	compareWalFileNames(const void *a, const void *b);
 static void throttle(size_t increment);
+static void update_basebackup_progress(int64 delta);
 static bool is_checksummed_file(const char *fullpath, const char *filename);
 
 /* Was the backup currently in-progress initiated in recovery mode? */
@@ -109,6 +110,18 @@ static char *statrelpath = NULL;
  * How frequently to throttle, as a fraction of the specified rate-second.
  */
 #define THROTTLING_FREQUENCY	8
+
+/*
+ * Checks whether we encountered any error in fread().  fread() doesn't give
+ * any clue what has happened, so we check with ferror().  Also, neither
+ * fread() nor ferror() set errno, so we just throw a generic error.
+ */
+#define CHECK_FREAD_ERROR(fp, filename) \
+do { \
+	if (ferror(fp)) \
+		ereport(ERROR, \
+				(errmsg("could not read from file \"%s\"", filename))); \
+} while (0)
 
 /* The actual number of bytes, transfer of which may cause sleep. */
 static uint64 throttling_sample;
@@ -130,6 +143,27 @@ static int64 total_checksum_failures;
 
 /* Do not verify checksums. */
 static bool noverify_checksums = false;
+
+/*
+ * Total amount of backup data that will be streamed.
+ * -1 means that the size is not estimated.
+ */
+static int64 backup_total = 0;
+
+/* Amount of backup data already streamed */
+static int64 backup_streamed = 0;
+
+/*
+ * Definition of one element part of an exclusion list, used for paths part
+ * of checksum validation or base backups.  "name" is the name of the file
+ * or path to check for exclusion.  If "match_prefix" is true, any items
+ * matching the name as prefix are excluded.
+ */
+struct exclude_list_item
+{
+	const char *name;
+	bool		match_prefix;
+};
 
 /*
  * The contents of these directories are removed or recreated during server
@@ -163,7 +197,7 @@ static const char *excludeDirContents[] =
 
 	/*
 	 * Old contents are loaded for possible debugging but are not required for
-	 * normal operation, see OldSerXidInit().
+	 * normal operation, see SerialInit().
 	 */
 	"pg_serial",
 
@@ -186,16 +220,19 @@ static const char *excludeDirContents[] =
 /*
  * List of files excluded from backups.
  */
-static const char *excludeFiles[] =
+static const struct exclude_list_item excludeFiles[] =
 {
 	/* Skip auto conf temporary file. */
-	PG_AUTOCONF_FILENAME ".tmp",
+	{PG_AUTOCONF_FILENAME ".tmp", false},
 
 	/* Skip current log file temporary file */
-	LOG_METAINFO_DATAFILE_TMP,
+	{LOG_METAINFO_DATAFILE_TMP, false},
 
-	/* Skip relation cache because it is rebuilt on startup */
-	RELCACHE_INIT_FILENAME,
+	/*
+	 * Skip relation cache because it is rebuilt on startup.  This includes
+	 * temporary files.
+	 */
+	{RELCACHE_INIT_FILENAME, true},
 
 	/*
 	 * If there's a backup_label or tablespace_map file, it belongs to a
@@ -203,17 +240,17 @@ static const char *excludeFiles[] =
 	 * for this backup.  Our backup_label/tablespace_map is injected into the
 	 * tar separately.
 	 */
-	BACKUP_LABEL_FILE,
-	TABLESPACE_MAP,
+	{BACKUP_LABEL_FILE, false},
+	{TABLESPACE_MAP, false},
 
-	"postmaster.pid",
-	"postmaster.opts",
+	{"postmaster.pid", false},
+	{"postmaster.opts", false},
 
 	/* GPDB: Default gpbackup directory (top-level directory) */
-	"backups",
+	{"backups", false},
 
 	/* end of list */
-	NULL
+	{NULL, false}
 };
 
 /*
@@ -222,27 +259,16 @@ static const char *excludeFiles[] =
  * Note: this list should be kept in sync with what pg_checksums.c
  * includes.
  */
-static const char *const noChecksumFiles[] = {
-	"pg_control",
-	"pg_filenode.map",
-	"pg_internal.init",
-	"PG_VERSION",
+static const struct exclude_list_item noChecksumFiles[] = {
+	{"pg_control", false},
+	{"pg_filenode.map", false},
+	{"pg_internal.init", true},
+	{"PG_VERSION", false},
 #ifdef EXEC_BACKEND
-	"config_exec_params",
-	"config_exec_params.new",
+	{"config_exec_params", true},
 #endif
-	NULL,
+	{NULL, false}
 };
-
-/*
- * Called when ERROR or FATAL happens in perform_base_backup() after
- * we have started the backup - make sure we end it!
- */
-static void
-base_backup_cleanup(int code, Datum arg)
-{
-	do_pg_abort_backup();
-}
 
 /*
  * Actually do a base backup for the specified tablespaces.
@@ -261,6 +287,22 @@ perform_base_backup(basebackup_options *opt)
 	int			datadirpathlen;
 	List	   *tablespaces = NIL;
 
+	backup_total = 0;
+	backup_streamed = 0;
+	pgstat_progress_start_command(PROGRESS_COMMAND_BASEBACKUP, InvalidOid);
+
+	/*
+	 * If the estimation of the total backup size is disabled, make the
+	 * backup_total column in the view return NULL by setting the parameter to
+	 * -1.
+	 */
+	if (!opt->progress)
+	{
+		backup_total = -1;
+		pgstat_progress_update_param(PROGRESS_BASEBACKUP_BACKUP_TOTAL,
+									 backup_total);
+	}
+
 	datadirpathlen = strlen(DataDir);
 
 	backup_started_in_recovery = RecoveryInProgress();
@@ -270,6 +312,8 @@ perform_base_backup(basebackup_options *opt)
 
 	total_checksum_failures = 0;
 
+	pgstat_progress_update_param(PROGRESS_BASEBACKUP_PHASE,
+								 PROGRESS_BASEBACKUP_PHASE_WAIT_CHECKPOINT);
 	startptr = do_pg_start_backup(opt->label, opt->fastcheckpoint, &starttli,
 								  labelfile, &tablespaces,
 								  tblspc_map_file,
@@ -296,12 +340,11 @@ perform_base_backup(basebackup_options *opt)
 	 * do_pg_stop_backup() should be inside the error cleanup block!
 	 */
 
-	PG_ENSURE_ERROR_CLEANUP(base_backup_cleanup, (Datum) 0);
+	PG_ENSURE_ERROR_CLEANUP(do_pg_abort_backup, BoolGetDatum(false));
 	{
 		ListCell   *lc;
 		tablespaceinfo *ti;
-
-		SendXlogRecPtrResult(startptr, starttli);
+		int			tblspc_streamed = 0;
 
 		/*
 		 * Calculate the relative path of temporary statistics directory in
@@ -319,6 +362,38 @@ perform_base_backup(basebackup_options *opt)
 		ti = palloc0(sizeof(tablespaceinfo));
 		ti->size = opt->progress ? sendDir(".", 1, true, tablespaces, true, opt->exclude) : -1;
 		tablespaces = lappend(tablespaces, ti);
+
+		/*
+		 * Calculate the total backup size by summing up the size of each
+		 * tablespace
+		 */
+		if (opt->progress)
+		{
+			foreach(lc, tablespaces)
+			{
+				tablespaceinfo *tmp = (tablespaceinfo *) lfirst(lc);
+
+				backup_total += tmp->size;
+			}
+		}
+
+		/* Report that we are now streaming database files as a base backup */
+		{
+			const int	index[] = {
+				PROGRESS_BASEBACKUP_PHASE,
+				PROGRESS_BASEBACKUP_BACKUP_TOTAL,
+				PROGRESS_BASEBACKUP_TBLSPC_TOTAL
+			};
+			const int64 val[] = {
+				PROGRESS_BASEBACKUP_PHASE_STREAM_BACKUP,
+				backup_total, list_length(tablespaces)
+			};
+
+			pgstat_progress_update_multi_param(3, index, val);
+		}
+
+		/* Send the starting position of the backup */
+		SendXlogRecPtrResult(startptr, starttli);
 
 		/* Send tablespace header */
 		SendBackupHeader(tablespaces);
@@ -401,11 +476,17 @@ perform_base_backup(basebackup_options *opt)
 			}
 			else
 				pq_putemptymessage('c');	/* CopyDone */
+
+			tblspc_streamed++;
+			pgstat_progress_update_param(PROGRESS_BASEBACKUP_TBLSPC_STREAMED,
+										 tblspc_streamed);
 		}
 
+		pgstat_progress_update_param(PROGRESS_BASEBACKUP_PHASE,
+									 PROGRESS_BASEBACKUP_PHASE_WAIT_WAL_ARCHIVE);
 		endptr = do_pg_stop_backup(labelfile->data, !opt->nowait, &endtli);
 	}
-	PG_END_ENSURE_ERROR_CLEANUP(base_backup_cleanup, (Datum) 0);
+	PG_END_ENSURE_ERROR_CLEANUP(do_pg_abort_backup, BoolGetDatum(false));
 
 
 	if (opt->includewal)
@@ -430,6 +511,9 @@ perform_base_backup(basebackup_options *opt)
 		int			i;
 		ListCell   *lc;
 		TimeLineID	tli;
+
+		pgstat_progress_update_param(PROGRESS_BASEBACKUP_PHASE,
+									 PROGRESS_BASEBACKUP_PHASE_TRANSFER_WAL);
 
 		/*
 		 * I'd rather not worry about timelines here, so scan pg_wal and
@@ -584,6 +668,7 @@ perform_base_backup(basebackup_options *opt)
 				if (pq_putmessage('d', buf, cnt))
 					ereport(ERROR,
 							(errmsg("base backup could not send data, aborting backup")));
+				update_basebackup_progress(cnt);
 
 				len += cnt;
 				throttle(cnt);
@@ -591,6 +676,8 @@ perform_base_backup(basebackup_options *opt)
 				if (len == wal_segment_size)
 					break;
 			}
+
+			CHECK_FREAD_ERROR(fp, pathbuf);
 
 			if (len != wal_segment_size)
 			{
@@ -665,6 +752,7 @@ perform_base_backup(basebackup_options *opt)
 				 errmsg("checksum verification failure during base backup")));
 	}
 
+	pgstat_progress_end_command();
 }
 
 /*
@@ -893,6 +981,12 @@ void
 SendBaseBackup(BaseBackupCmd *cmd)
 {
 	basebackup_options opt;
+	SessionBackupState status = get_backup_status();
+
+	if (status == SESSION_BACKUP_NON_EXCLUSIVE)
+		ereport(ERROR,
+				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+				 errmsg("a backup is already in progress in this session")));
 
 	parse_basebackup_options(cmd->options, &opt);
 
@@ -1095,6 +1189,7 @@ sendFileWithContent(const char *filename, const char *content)
 	_tarWriteHeader(filename, NULL, &statbuf, false);
 	/* Send the contents as a CopyData message */
 	pq_putmessage('d', content, len);
+	update_basebackup_progress(len);
 
 	/* Pad to 512 byte boundary, per tar format requirements */
 	pad = ((len + 511) & ~511) - len;
@@ -1104,6 +1199,7 @@ sendFileWithContent(const char *filename, const char *content)
 
 		MemSet(buf, 0, pad);
 		pq_putmessage('d', buf, pad);
+		update_basebackup_progress(pad);
 	}
 
 	elogif(debug_basebackup, LOG,
@@ -1266,9 +1362,13 @@ sendDir(const char *path, int basepathlen, bool sizeonly, List *tablespaces,
 
 		/* Scan for files that should be excluded */
 		excludeFound = false;
-		for (excludeIdx = 0; excludeFiles[excludeIdx] != NULL; excludeIdx++)
+		for (excludeIdx = 0; excludeFiles[excludeIdx].name != NULL; excludeIdx++)
 		{
-			if (strcmp(de->d_name, excludeFiles[excludeIdx]) == 0)
+			int			cmplen = strlen(excludeFiles[excludeIdx].name);
+
+			if (!excludeFiles[excludeIdx].match_prefix)
+				cmplen++;
+			if (strncmp(de->d_name, excludeFiles[excludeIdx].name, cmplen) == 0)
 			{
 				elog(DEBUG1, "file \"%s\" excluded from backup", de->d_name);
 				excludeFound = true;
@@ -1514,17 +1614,24 @@ sendDir(const char *path, int basepathlen, bool sizeonly, List *tablespaces,
 static bool
 is_checksummed_file(const char *fullpath, const char *filename)
 {
-	const char *const *f;
-
 	/* Check that the file is in a tablespace */
 	if (strncmp(fullpath, "./global/", 9) == 0 ||
 		strncmp(fullpath, "./base/", 7) == 0 ||
 		strncmp(fullpath, "/", 1) == 0)
 	{
-		/* Compare file against noChecksumFiles skiplist */
-		for (f = noChecksumFiles; *f; f++)
-			if (strcmp(*f, filename) == 0)
+		int			excludeIdx;
+
+		/* Compare file against noChecksumFiles skip list */
+		for (excludeIdx = 0; noChecksumFiles[excludeIdx].name != NULL; excludeIdx++)
+		{
+			int			cmplen = strlen(noChecksumFiles[excludeIdx].name);
+
+			if (!noChecksumFiles[excludeIdx].match_prefix)
+				cmplen++;
+			if (strncmp(filename, noChecksumFiles[excludeIdx].name,
+						cmplen) == 0)
 				return false;
+		}
 
 		return true;
 	}
@@ -1626,7 +1733,7 @@ sendFile(const char *readfilename, const char *tarfilename, struct stat *statbuf
 		if (verify_checksum && (cnt % BLCKSZ != 0))
 		{
 			ereport(WARNING,
-					(errmsg("cannot verify checksum in file \"%s\", block "
+					(errmsg("could not verify checksum in file \"%s\", block "
 							"%d: read buffer size %d and page size %d "
 							"differ",
 							readfilename, blkno, (int) cnt, BLCKSZ)));
@@ -1676,6 +1783,20 @@ sendFile(const char *readfilename, const char *tarfilename, struct stat *statbuf
 
 							if (fread(buf + BLCKSZ * i, 1, BLCKSZ, fp) != BLCKSZ)
 							{
+								/*
+								 * If we hit end-of-file, a concurrent
+								 * truncation must have occurred, so break out
+								 * of this loop just as if the initial fread()
+								 * returned 0. We'll drop through to the same
+								 * code that handles that case. (We must fix
+								 * up cnt first, though.)
+								 */
+								if (feof(fp))
+								{
+									cnt = BLCKSZ * i;
+									break;
+								}
+
 								ereport(ERROR,
 										(errcode_for_file_access(),
 										 errmsg("could not reread block %d of file \"%s\": %m",
@@ -1723,11 +1844,12 @@ sendFile(const char *readfilename, const char *tarfilename, struct stat *statbuf
 		if (pq_putmessage('d', buf, cnt))
 			ereport(ERROR,
 					(errmsg("base backup could not send data, aborting backup")));
+		update_basebackup_progress(cnt);
 
 		len += cnt;
 		throttle(cnt);
 
-		if (len >= statbuf->st_size)
+		if (feof(fp) || len >= statbuf->st_size)
 		{
 			/*
 			 * Reached end of file. The file could be longer, if it was
@@ -1738,6 +1860,8 @@ sendFile(const char *readfilename, const char *tarfilename, struct stat *statbuf
 		}
 	}
 
+	CHECK_FREAD_ERROR(fp, readfilename);
+
 	/* If the file was truncated while we were sending it, pad it with zeros */
 	if (len < statbuf->st_size)
 	{
@@ -1746,6 +1870,7 @@ sendFile(const char *readfilename, const char *tarfilename, struct stat *statbuf
 		{
 			cnt = Min(sizeof(buf), statbuf->st_size - len);
 			pq_putmessage('d', buf, cnt);
+			update_basebackup_progress(cnt);
 			len += cnt;
 			throttle(cnt);
 		}
@@ -1760,6 +1885,7 @@ sendFile(const char *readfilename, const char *tarfilename, struct stat *statbuf
 	{
 		MemSet(buf, 0, pad);
 		pq_putmessage('d', buf, pad);
+		update_basebackup_progress(pad);
 	}
 
 	FreeFile(fp);
@@ -1767,8 +1893,10 @@ sendFile(const char *readfilename, const char *tarfilename, struct stat *statbuf
 	if (checksum_failures > 1)
 	{
 		ereport(WARNING,
-				(errmsg("file \"%s\" has a total of %d checksum verification "
-						"failures", readfilename, checksum_failures)));
+				(errmsg_plural("file \"%s\" has a total of %d checksum verification failure",
+							   "file \"%s\" has a total of %d checksum verification failures",
+							   checksum_failures,
+							   readfilename, checksum_failures)));
 
 		pgstat_report_checksum_failures_in_db(dboid, checksum_failures);
 	}
@@ -1812,6 +1940,7 @@ _tarWriteHeader(const char *filename, const char *linktarget,
 		}
 
 		pq_putmessage('d', h, sizeof(h));
+		update_basebackup_progress(sizeof(h));
 	}
 
 	return sizeof(h);
@@ -1908,4 +2037,37 @@ throttle(size_t increment)
 	 * starts now.
 	 */
 	throttled_last = GetCurrentTimestamp();
+}
+
+/*
+ * Increment the counter for the amount of data already streamed
+ * by the given number of bytes, and update the progress report for
+ * pg_stat_progress_basebackup.
+ */
+static void
+update_basebackup_progress(int64 delta)
+{
+	const int	index[] = {
+		PROGRESS_BASEBACKUP_BACKUP_STREAMED,
+		PROGRESS_BASEBACKUP_BACKUP_TOTAL
+	};
+	int64		val[2];
+	int			nparam = 0;
+
+	backup_streamed += delta;
+	val[nparam++] = backup_streamed;
+
+	/*
+	 * Avoid overflowing past 100% or the full size. This may make the total
+	 * size number change as we approach the end of the backup (the estimate
+	 * will always be wrong if WAL is included), but that's better than having
+	 * the done column be bigger than the total.
+	 */
+	if (backup_total > -1 && backup_streamed > backup_total)
+	{
+		backup_total = backup_streamed;
+		val[nparam++] = backup_total;
+	}
+
+	pgstat_progress_update_multi_param(nparam, index, val);
 }

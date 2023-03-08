@@ -5,9 +5,9 @@ Changes the definition of a conversion.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-ALTER CONVERSION <name> RENAME TO <newname>
+ALTER CONVERSION <name> RENAME TO <new_name>
 
-ALTER CONVERSION <name> OWNER TO <newowner>
+ALTER CONVERSION <name> OWNER TO { <new_owner> | CURRENT_USER | SESSION_USER }
 
 ALTER CONVERSION <name> SET SCHEMA <new_schema>
 
@@ -24,10 +24,10 @@ You must own the conversion to use `ALTER CONVERSION`. To alter the owner, you m
 name
 :   The name \(optionally schema-qualified\) of an existing conversion.
 
-newname
+new\_name
 :   The new name of the conversion.
 
-newowner
+new\_owner
 :   The new owner of the conversion.
 
 new\_schema
@@ -38,8 +38,7 @@ new\_schema
 To rename the conversion `iso_8859_1_to_utf8` to `latin1_to_unicode`:
 
 ```
-ALTER CONVERSION iso_8859_1_to_utf8 RENAME TO 
-latin1_to_unicode;
+ALTER CONVERSION iso_8859_1_to_utf8 RENAME TO latin1_to_unicode;
 ```
 
 To change the owner of the conversion `iso_8859_1_to_utf8` to `joe`:

@@ -82,9 +82,9 @@ def strcmd(cmd):
     return reduce(lambda x, y: x + ' ' + y, map(lambda x: x.find(' ') > 0 and "'" + x + "'" or x, cmd))
 
 
-def gpssh(cmd):
+def gpssh(cmd, call_verbose=True):
     c = ['%s/bin/gpssh' % GPHOME]
-    if GV.opt['-V']:
+    if GV.opt['-V'] and call_verbose:
         c.append('-v')
     if GV.opt['-f']:
         c.append('-f')
@@ -133,26 +133,27 @@ def getPlatform():
 
 
 def getMemory():
-    if getPlatform() == 'linux':
-        ok, out = run("sh -c 'cat /proc/meminfo | grep MemTotal'")
-        if not ok:
-            return 0
+    platform = getPlatform()
+
+    if platform == 'linux':
+        rc, out = run("sh -c 'cat /proc/meminfo | grep MemTotal'")
+        if rc != 0:
+            return None
         word_list = out.strip().split(' ')
         val = int(word_list[len(word_list) - 2])
         factor = word_list[len(word_list) - 1]
         if factor == 'kB':
-            return val * 1024
-        return 0
+            return val * 1024 if val else None
 
-    if getPlatform() == 'darwin':
-        ok, out = run("/usr/sbin/sysctl hw.physmem")
-        if not ok:
-            return 0
+    if platform == 'darwin':
+        rc, out = run("/usr/sbin/sysctl hw.physmem")
+        if rc != 0:
+            return None
         word_list = out.strip().split(' ')
         val = int(word_list[1])
-        return val
+        return val if val else None
 
-    return 0
+    return None
 
 
 def parseMemorySize(line):
@@ -261,7 +262,12 @@ def parseCommandLine():
         usage('Error: maximum size for -B parameter is 1MB')
 
     if GV.opt['-S'] == 0:
-        GV.opt['-S'] = 2 * getMemory() / len(GV.opt['-d'])
+        system_mem_size = getMemory()
+        if system_mem_size is not None:
+            GV.opt['-S'] = 2 * system_mem_size / len(GV.opt['-d'])
+        else:
+            sys.exit('[Error] could not get system memory size. Instead, you can use the -S option to provide the file size value')
+
     else:
         GV.opt['-S'] /= len(GV.opt['-d'])
 
@@ -541,7 +547,7 @@ def spawnNetperfTestBetween(x, y, netperf_path, netserver_port, sec=5):
          x, cmd]
     proc = None
     try:
-        if GV.opt['-v']:
+        if GV.opt['-v'] or GV.opt['-V']:
             print('[Info]', strcmd(c))
         proc = subprocess.Popen(c, stdout=subprocess.PIPE)
     except KeyboardInterrupt:
@@ -740,13 +746,23 @@ def get_host_map(hostlist):
     uniqhosts = dict()  # unique host list
 
     # get list of hostnames
-    rc, out = gpssh('hostname')
+    # disabling verbose mode for gpssh as it is adding extra lines of output
+    rc, out = gpssh('hostname', False)
+
     if not rc:
         raise Exception('Encountered error running hostname')
 
+    ''' Sample output:
+        [sdw1] sdw1
+        [sdw2] sdw2
+    '''
+
     # get unique hostname list
     for line in out.splitlines():
-        seg, host = line.translate(None, '[]').split()
+        seg, host = line.translate(str.maketrans('','','[]')).split()
+        # removing \r and b coming in the output of the command in hostname
+        host = host.replace('\\r\'', '')
+        host = host.replace('b\'', '')
         uniqhosts[host] = seg
 
     # get list of segments associated with each host (can't use gpssh since it de-dupes hosts)
@@ -755,7 +771,8 @@ def get_host_map(hostlist):
 
         proc = None
         try:
-            if GV.opt['-v']: print('[Info]', strcmd(cmd))
+            if GV.opt['-v'] or GV.opt['-V']:
+                print('[Info]', strcmd(cmd))
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             out = proc.stdout.read(-1)
             rc = proc.wait()
@@ -781,7 +798,7 @@ def runNetPerfTestMatrix():
     '''
     (netperf, hostlist, netserver_port) = setupNetPerfTest()
     if not netperf:
-        return None
+        return None, None
 
     # dict() of seglist[segname] = hostname, uniqhosts[hostname] = 1 segment name
     seglist, uniqhosts = get_host_map(hostlist)
@@ -807,19 +824,21 @@ def runNetPerfTestMatrix():
 
 
 def printMatrixResult(result, seglist):
+    if not result:
+        return
     print('Full matrix netperf bandwidth test')
 
     # sum up Rx/Tx rate for each host
     netTx = dict()
     netRx = dict()
     for h in result:
-        if netTx.has_key(h[0]):
+        if h[0] in netTx:
             netTx[h[0]] += float(h[6])
         else:
             netTx[h[0]] = float(h[6])
 
         # netRx requires that we lookup the hostname for a given segment name
-        if netRx.has_key(seglist[h[1]]):
+        if seglist[h[1]] in netRx:
             netRx[seglist[h[1]]] += float(h[6])
         else:
             netRx[seglist[h[1]]] = float(h[6])
@@ -850,7 +869,7 @@ def printMatrixResult(result, seglist):
 
     copy = n[:]
     copy.sort()
-    median = copy[len(copy) / 2]
+    median = copy[len(copy) // 2]
 
     print('')
     print('Summary:')
@@ -863,6 +882,8 @@ def printMatrixResult(result, seglist):
 
 
 def printNetResult(result):
+    if not result:
+        return
     print('Netperf bisection bandwidth test')
     for h in result:
         print('%s -> %s = %f' % (h[0], h[1], h[6]))
@@ -894,6 +915,8 @@ def printNetResult(result):
 
 
 def printResult(title, result):
+    if not result:
+        return
     totTime = 0
     totBytes = 0
     totMBPS = 0
@@ -930,50 +953,55 @@ def printResult(title, result):
     print('')
 
 
-try:
-    parseCommandLine()
-    runSetup()
-    diskWriteResult = diskReadResult = streamResult = netResult = None
-    tornDown = False
+def main():
     try:
-        if GV.opt['-r'].find('d') >= 0:
-            multidd = copyExecOver('multidd')
-            diskWriteResult = runDiskWriteTest(multidd)
-            diskReadResult = runDiskReadTest(multidd)
+        parseCommandLine()
+        runSetup()
+        diskWriteResult = diskReadResult = streamResult = netResult = None
+        tornDown = False
+        try:
+            if GV.opt['-r'].find('d') >= 0:
+                print('[Warning] Using %d bytes for disk performance test. This might take some time' % (GV.opt['-S'] * len(GV.opt['-d'])))
+                multidd = copyExecOver('multidd')
+                diskWriteResult = runDiskWriteTest(multidd)
+                diskReadResult = runDiskReadTest(multidd)
 
-        if GV.opt['-r'].find('s') >= 0:
-            streamResult = runStreamTest()
+            if GV.opt['-r'].find('s') >= 0:
+                streamResult = runStreamTest()
 
-        if GV.opt['--net'] == 'netperf':
-            netResult = runNetPerfTest()
-        elif GV.opt['--net'] == 'parallel':
-            netResult = runNetPerfTestParallel()
-        elif GV.opt['--net'] == 'matrix':
-            netResult, seglist = runNetPerfTestMatrix()
+            if GV.opt['--net'] == 'netperf':
+                netResult = runNetPerfTest()
+            elif GV.opt['--net'] == 'parallel':
+                netResult = runNetPerfTestParallel()
+            elif GV.opt['--net'] == 'matrix':
+                netResult, seglist = runNetPerfTestMatrix()
 
-        runTeardown()
+            runTeardown()
 
-    finally:
-        print('')
-        print('====================')
-        print('==  RESULT %s' % datetime.datetime.now().isoformat())
-        print('====================')
+        finally:
+            print('')
+            print('====================')
+            print('==  RESULT %s' % datetime.datetime.now().isoformat())
+            print('====================')
 
-        if diskWriteResult:
-            printResult('disk write', diskWriteResult)
+            if diskWriteResult:
+                printResult('disk write', diskWriteResult)
 
-        if diskReadResult:
-            printResult('disk read', diskReadResult)
+            if diskReadResult:
+                printResult('disk read', diskReadResult)
 
-        if streamResult:
-            printResult('stream', streamResult)
+            if streamResult:
+                printResult('stream', streamResult)
 
-        if netResult and GV.opt['--net'] == 'matrix':
-            printMatrixResult(netResult, seglist)
-        elif netResult and GV.opt['--net']:
-            printNetResult(netResult)
+            if netResult and GV.opt['--net'] == 'matrix':
+                printMatrixResult(netResult, seglist)
+            elif netResult and GV.opt['--net']:
+                printNetResult(netResult)
 
-        runTeardown()
+            runTeardown()
 
-except KeyboardInterrupt:
-    print('[Abort] Keyboard Interrupt ...')
+    except KeyboardInterrupt:
+        print('[Abort] Keyboard Interrupt ...')
+
+if __name__ == '__main__':
+     main()

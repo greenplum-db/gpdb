@@ -119,6 +119,7 @@ main(int argc, char **argv)
 	XLogRecPtr	chkptrec;
 	TimeLineID	chkpttli;
 	XLogRecPtr	chkptredo;
+	XLogRecPtr	target_wal_endrec;
 	size_t		size;
 	char	   *buffer;
 	bool		rewind_needed;
@@ -309,6 +310,18 @@ main(int argc, char **argv)
 	sanityChecks();
 
 	/*
+	 * SUSPEND_PG_REWIND is used for testing purposes. If set to true, the pg_rewind process will be
+	 * suspended indefinitely, so that it's entry can be checked in the pg_stat_activity table. The goal
+	 * being that we can run another instance of gprecoverseg and assert that it ignores recovery for
+	 * segments that already have an active pg_rewind process.
+	 */
+	while(getenv("SUSPEND_PG_REWIND") != NULL && getenv("SUSPEND_PG_REWIND") == "true")
+	{
+		sleep(1);
+		pg_log_info("pg_rewind suspended");
+	}
+
+	/*
 	 * If both clusters are already on the same timeline, there's nothing to
 	 * do.
 	 */
@@ -317,42 +330,55 @@ main(int argc, char **argv)
 		pg_log_info("source and target cluster are on the same timeline: %u",
 			   ControlFile_source.checkPointCopy.ThisTimeLineID);
 		rewind_needed = false;
+		target_wal_endrec = 0;
 	}
 	else
 	{
+		XLogRecPtr	chkptendrec;
+
 		findCommonAncestorTimeline(&divergerec, &lastcommontliIndex);
 		pg_log_info("servers diverged at WAL location %X/%X on timeline %u",
 					(uint32) (divergerec >> 32), (uint32) divergerec,
 					targetHistory[lastcommontliIndex].tli);
 
 		/*
+		 * Determine the end-of-WAL on the target.
+		 *
+		 * The WAL ends at the last shutdown checkpoint, or at
+		 * minRecoveryPoint if it was a standby. (If we supported rewinding a
+		 * server that was not shut down cleanly, we would need to replay
+		 * until we reach the first invalid record, like crash recovery does.)
+		 */
+
+		/* read the checkpoint record on the target to see where it ends. */
+		chkptendrec = readOneRecord(datadir_target,
+									ControlFile_target.checkPoint,
+									targetNentries - 1);
+
+		if (ControlFile_target.minRecoveryPoint > chkptendrec)
+		{
+			target_wal_endrec = ControlFile_target.minRecoveryPoint;
+		}
+		else
+		{
+			target_wal_endrec = chkptendrec;
+		}
+
+		/*
 		 * Check for the possibility that the target is in fact a direct
 		 * ancestor of the source. In that case, there is no divergent history
 		 * in the target that needs rewinding.
 		 */
-		if (ControlFile_target.checkPoint >= divergerec)
+		if (target_wal_endrec > divergerec)
 		{
 			rewind_needed = true;
 		}
 		else
 		{
-			XLogRecPtr	chkptendrec;
+			/* the last common checkpoint record must be part of target WAL */
+			Assert(target_wal_endrec == divergerec);
 
-			/* Read the checkpoint record on the target to see where it ends. */
-			chkptendrec = readOneRecord(datadir_target,
-										ControlFile_target.checkPoint,
-										targetNentries - 1);
-
-			/*
-			 * If the histories diverged exactly at the end of the shutdown
-			 * checkpoint record on the target, there are no WAL records in
-			 * the target that don't belong in the source's history, and no
-			 * rewind is needed.
-			 */
-			if (chkptendrec == divergerec)
-				rewind_needed = false;
-			else
-				rewind_needed = true;
+			rewind_needed = false;
 		}
 	}
 
@@ -386,20 +412,19 @@ main(int argc, char **argv)
 	/*
 	 * Read the target WAL from last checkpoint before the point of fork, to
 	 * extract all the pages that were modified on the target cluster after
-	 * the fork. We can stop reading after reaching the final shutdown record.
-	 * XXX: If we supported rewinding a server that was not shut down cleanly,
-	 * we would need to replay until the end of WAL here.
+	 * the fork.
 	 */
 	if (showprogress)
 		pg_log_info("reading WAL in target");
 	extractPageMap(datadir_target, chkptrec, lastcommontliIndex,
-				   ControlFile_target.checkPoint);
+				   target_wal_endrec);
 
 	/*
 	 * We have collected all information we need from both systems. Decide
 	 * what to do with each file.
 	 */
 	decide_file_actions();
+
 	if (showprogress)
 		calculate_totals();
 
@@ -428,7 +453,6 @@ main(int argc, char **argv)
 	executeFileMap();
 
 	progress_report(true);
-	printf("\n");
 
 	if (showprogress)
 		pg_log_info("creating backup label and updating control file");
@@ -457,7 +481,8 @@ main(int argc, char **argv)
 	ControlFile_new.minRecoveryPoint = endrec;
 	ControlFile_new.minRecoveryPointTLI = endtli;
 	ControlFile_new.state = DB_IN_ARCHIVE_RECOVERY;
-	update_controlfile(datadir_target, &ControlFile_new, do_sync);
+	if (!dry_run)
+		update_controlfile(datadir_target, &ControlFile_new, do_sync);
 
 	if (writerecoveryconf)
 		WriteRecoveryConfig(conn, datadir_target,
@@ -524,11 +549,14 @@ sanityChecks(void)
 /*
  * Print a progress report based on the fetch_size and fetch_done variables.
  *
- * Progress report is written at maximum once per second, unless the
- * force parameter is set to true.
+ * Progress report is written at maximum once per second, except that the
+ * last progress report is always printed.
+ *
+ * If finished is set to true, this is the last progress report. The cursor
+ * is moved to the next line.
  */
 void
-progress_report(bool force)
+progress_report(bool finished)
 {
 	static pg_time_t last_progress_report = 0;
 	int			percent;
@@ -540,7 +568,7 @@ progress_report(bool force)
 		return;
 
 	now = time(NULL);
-	if (now == last_progress_report && !force)
+	if (now == last_progress_report && !finished)
 		return;					/* Max once per second */
 
 	last_progress_report = now;
@@ -570,10 +598,12 @@ progress_report(bool force)
 	fprintf(stderr, _("%*s/%s kB (%d%%) copied"),
 			(int) strlen(fetch_size_str), fetch_done_str, fetch_size_str,
 			percent);
-	if (isatty(fileno(stderr)))
-		fprintf(stderr, "\r");
-	else
-		fprintf(stderr, "\n");
+
+	/*
+	 * Stay on the same line if reporting to a terminal and we're not done
+	 * yet.
+	 */
+	fputc((!finished && isatty(fileno(stderr))) ? '\r' : '\n', stderr);
 }
 
 /*
@@ -628,7 +658,7 @@ getTimelineHistory(ControlFileData *controlFile, int *nentries)
 		else if (controlFile == &ControlFile_target)
 			histfile = slurpFile(datadir_target, path, NULL);
 		else
-			pg_fatal("invalid control file\n");
+			pg_fatal("invalid control file");
 
 		history = rewind_parseTimeLineHistory(histfile, tli, nentries);
 		pg_free(histfile);

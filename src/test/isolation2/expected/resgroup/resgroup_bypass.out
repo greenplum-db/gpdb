@@ -1,0 +1,2 @@
+-- RG FIXME: The bypass mode will be re-design in the latest future, so just remove all the test case, because this
+-- file is deeply dependent on the memory model which has been removed in this PR.

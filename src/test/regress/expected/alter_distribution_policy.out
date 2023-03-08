@@ -173,9 +173,9 @@ insert into atsdb select i, i::text from generate_series(1, 10) i;
 alter table atsdb set with(appendonly = true);
 select relname, segrelid != 0, reloptions from pg_class, pg_appendonly where pg_class.oid =
 'atsdb'::regclass and relid = pg_class.oid;
- relname | ?column? | reloptions 
----------+----------+------------
- atsdb   | t        | 
+ relname | ?column? |                            reloptions                             
+---------+----------+-------------------------------------------------------------------
+ atsdb   | t        | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
 (1 row)
 
 select * from atsdb;
@@ -318,9 +318,9 @@ alter table atsdb drop column n;
 alter table atsdb set with(appendonly = true, compresslevel = 3);
 select relname, segrelid != 0, reloptions from pg_class, pg_appendonly where pg_class.oid =
 'atsdb'::regclass and relid = pg_class.oid;
- relname | ?column? |    reloptions     
----------+----------+-------------------
- atsdb   | t        | {compresslevel=3}
+ relname | ?column? |                            reloptions                             
+---------+----------+-------------------------------------------------------------------
+ atsdb   | t        | {compresslevel=3,blocksize=32768,compresstype=zlib,checksum=true}
 (1 row)
 
 select * from distcheck where rel = 'atsdb';
@@ -443,9 +443,9 @@ select * from distcheck where rel = 'atsdb';
 
 select relname, segrelid != 0, reloptions from pg_class, pg_appendonly where pg_class.oid =
 'atsdb'::regclass and relid = pg_class.oid;
- relname | ?column? |    reloptions     
----------+----------+-------------------
- atsdb   | t        | {compresslevel=3}
+ relname | ?column? |                            reloptions                             
+---------+----------+-------------------------------------------------------------------
+ atsdb   | t        | {compresslevel=3,blocksize=32768,compresstype=zlib,checksum=true}
 (1 row)
 
 select * from atsdb;
@@ -650,11 +650,20 @@ select * from atsdb order by 1, 2, 3;
  11 | 10 | 9
 (9 rows)
 
-select relname, a.blocksize, compresslevel, compresstype, checksum from pg_class c, pg_appendonly a where
-relname  like 'atsdb%' and c.oid = a.relid order by 1;
- relname | blocksize | compresslevel | compresstype | checksum 
----------+-----------+---------------+--------------+----------
-(0 rows)
+select relname, reloptions from pg_class c where relname  like 'atsdb%' order by 1;
+    relname    | reloptions 
+---------------+------------
+ atsdb         | 
+ atsdb_1_prt_1 | 
+ atsdb_1_prt_2 | 
+ atsdb_1_prt_3 | 
+ atsdb_1_prt_4 | 
+ atsdb_1_prt_5 | 
+ atsdb_1_prt_6 | 
+ atsdb_1_prt_7 | 
+ atsdb_1_prt_8 | 
+ atsdb_1_prt_9 | 
+(10 rows)
 
 select * from atsdb order by 1, 2, 3;
  i  | j  | k 

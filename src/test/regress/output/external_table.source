@@ -4951,6 +4951,11 @@ SELECT policytype, distkey FROM gp_distribution_policy WHERE localoid = 'ext_w_d
  p          | 
 (1 row)
 
+CREATE EXTERNAL WEB TABLE ext_r_dist(a int) EXECUTE 'printf ${GP_SEGMENT_ID}' FORMAT 'TEXT' DISTRIBUTED BY (a);
+ERROR:  readable external tables can't specify a DISTRIBUTED BY clause
+CREATE EXTERNAL WEB TABLE ext_r_dist(a int) EXECUTE 'printf ${GP_SEGMENT_ID}' FORMAT 'TEXT';
+ALTER TABLE ext_r_dist SET DISTRIBUTED BY (a); -- should error out altering readable external tables' distribution policy
+ERROR:  cannot set distribution policy of readable external table "ext_r_dist"
 -- Testing external table as the partition child.
 CREATE TABLE part_root(a int) PARTITION BY RANGE(a);
 CREATE TABLE part_child (LIKE part_root);

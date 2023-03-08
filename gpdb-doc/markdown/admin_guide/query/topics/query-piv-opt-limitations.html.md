@@ -32,7 +32,6 @@ These features are unsupported when GPORCA is enabled \(the default\):
 -   Ordered aggregations.
 -   Multi-argument `DISTINCT` qualified aggregates, for example `SELECT corr(DISTINCT a, b) FROM tbl1;`
 -   These analytics extensions:
-    -   CUBE
     -   Multiple grouping sets
 -   These scalar operators:
     -   ROW

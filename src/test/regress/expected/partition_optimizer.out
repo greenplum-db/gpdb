@@ -2204,9 +2204,9 @@ create table list_test(a int, b int, c int) distributed by (a)
   (partition b values(1));
 -- should fail
 alter table list_test drop column b;
-ERROR:  cannot drop column named in partition key
+ERROR:  cannot drop column "b" because it is part of the partition key of relation "list_test"
 alter table list_test drop column c;
-ERROR:  cannot drop column named in partition key
+ERROR:  cannot drop column "c" because it is part of the partition key of relation "list_test_1_prt_b"
 drop table list_test;
 -- MPP-3678: allow exchange and split on tables with subpartitioning
 CREATE TABLE rank_exc (
@@ -2534,7 +2534,7 @@ Partitions: "sg_cal_event_silvertail_hour_1_prt_P2009041607" FOR VALUES FROM ('T
             sg_cal_event_silvertail_hour_1_prt_p2009042907 FOR VALUES FROM ('Wed Apr 29 07:00:00 2009') TO ('Wed Apr 29 08:00:00 2009'),
             sg_cal_event_silvertail_hour_1_prt_st_default DEFAULT
 Distributed by: (ip)
-Options: compresslevel=5
+Options: compresslevel=5, compresstype=zlib
 
 \d+ sg_cal_event_silvertail_hour_1_prt_P2009042907
                                Table "public.sg_cal_event_silvertail_hour_1_prt_p2009042907"
@@ -2547,12 +2547,8 @@ Options: compresslevel=5
  transactiontime | timestamp(2) without time zone |           |          |         | plain    |              | 
 Partition of: sg_cal_event_silvertail_hour FOR VALUES FROM ('Wed Apr 29 07:00:00 2009') TO ('Wed Apr 29 08:00:00 2009')
 Partition constraint: ((transactiontime IS NOT NULL) AND (transactiontime >= 'Wed Apr 29 07:00:00 2009'::timestamp(2) without time zone) AND (transactiontime < 'Wed Apr 29 08:00:00 2009'::timestamp(2) without time zone))
-Compression Type: zlib
-Compression Level: 5
-Block Size: 32768
-Checksum: t
 Distributed by: (ip)
-Options: compresslevel=5
+Options: compresstype=zlib, compresslevel=5, blocksize=32768, checksum=true
 
 drop table sg_cal_event_silvertail_hour;
 -- Make sure we inherit master's storage settings
@@ -2565,10 +2561,10 @@ insert into foo_p select i, i+1, repeat('fooo', 9000) from generate_series(1, 10
 alter table foo_p split default partition start (10) end(20) 
 into (partition p10_20, default partition);
 select c.oid::regclass, relkind, amname, reloptions from pg_class c left join pg_am am on am.oid = relam where c.oid = 'foo_p_1_prt_p10_20'::regclass or c.oid = 'foo_p'::regclass;
-        oid         | relkind | amname |    reloptions     
---------------------+---------+--------+-------------------
- foo_p_1_prt_p10_20 | r       | ao_row | {compresslevel=5}
- foo_p              | p       | ao_row | {compresslevel=5}
+        oid         | relkind | amname |                            reloptions                             
+--------------------+---------+--------+-------------------------------------------------------------------
+ foo_p              | p       | ao_row | {compresslevel=5,compresstype=zlib}
+ foo_p_1_prt_p10_20 | r       | ao_row | {compresstype=zlib,compresslevel=5,blocksize=32768,checksum=true}
 (2 rows)
 
 select count(distinct k) from foo_p;
@@ -2587,10 +2583,10 @@ insert into foo_p select i, i+1, repeat('fooo', 9000) from generate_series(1, 10
 alter table foo_p split default partition start (10) end(20) 
 into (partition p10_20, default partition);
 select c.oid::regclass, relkind, amname, reloptions from pg_class c left join pg_am am on am.oid = relam where c.oid in ('foo_p_1_prt_p10_20'::regclass, 'foo_p_1_prt_def'::regclass);
-        oid         | relkind | amname | reloptions 
---------------------+---------+--------+------------
- foo_p_1_prt_p10_20 | r       | ao_row | 
- foo_p_1_prt_def    | r       | ao_row | 
+        oid         | relkind | amname |                            reloptions                             
+--------------------+---------+--------+-------------------------------------------------------------------
+ foo_p_1_prt_p10_20 | r       | ao_row | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
+ foo_p_1_prt_def    | r       | ao_row | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
 (2 rows)
 
 select count(distinct k) from foo_p;
@@ -4531,8 +4527,8 @@ create table tc
         default partition d,
         start (0) inclusive end(100) inclusive every (50)
     );
+ERROR:  unique constraint on partitioned table must include all partitioning columns
 DETAIL:  PRIMARY KEY constraint on table "tc" lacks column "b" which is part of the partition key.
-ERROR:  insufficient columns in PRIMARY KEY constraint definition
 create table cc
     (a int primary key, b int, c int)
     distributed by (a)
@@ -4541,8 +4537,8 @@ create table cc
         default partition d,
         start (0) inclusive end(100) inclusive every (50)
     );
+ERROR:  unique constraint on partitioned table must include all partitioning columns
 DETAIL:  PRIMARY KEY constraint on table "cc" lacks column "b" which is part of the partition key.
-ERROR:  insufficient columns in PRIMARY KEY constraint definition
 create table at
     (a int, b int, c int)
     distributed by (a)
@@ -4553,14 +4549,14 @@ create table at
     );
 alter table at
     add primary key (a);
+ERROR:  unique constraint on partitioned table must include all partitioning columns
 DETAIL:  PRIMARY KEY constraint on table "at" lacks column "b" which is part of the partition key.
-ERROR:  insufficient columns in PRIMARY KEY constraint definition
 -- MPP-14471 end
 -- MPP-17606 (using table "at" from above)
 alter table at
     alter column b
 	type numeric;
-ERROR:  cannot alter type of column named in partition key
+ERROR:  cannot alter column "b" because it is part of the partition key of relation "at"
 	
 -- MPP-17606 end
 -- MPP-17707 start
@@ -5824,15 +5820,15 @@ select gp_segment_id, attrelid::regclass, attnum, attoptions from gp_dist_random
 (5 rows)
 
 select c.oid::regclass, relkind, amname, reloptions from pg_class c left join pg_am am on am.oid = relam where c.oid = 'pt_tab_encode_1_prt_s_abc'::regclass;
-            oid            | relkind |  amname   |             reloptions              
----------------------------+---------+-----------+-------------------------------------
- pt_tab_encode_1_prt_s_abc | r       | ao_column | {compresstype=zlib,compresslevel=1}
+            oid            | relkind |  amname   |                            reloptions                             
+---------------------------+---------+-----------+-------------------------------------------------------------------
+ pt_tab_encode_1_prt_s_abc | r       | ao_column | {compresstype=zlib,compresslevel=1,blocksize=32768,checksum=true}
 (1 row)
 
 select c.oid::regclass, relkind, amname, reloptions from pg_class c left join pg_am am on am.oid = relam where c.oid = 'pt_tab_encode_1_prt_s_xyz'::regclass;
-            oid            | relkind |  amname   |             reloptions              
----------------------------+---------+-----------+-------------------------------------
- pt_tab_encode_1_prt_s_xyz | r       | ao_column | {compresstype=zlib,compresslevel=1}
+            oid            | relkind |  amname   |                            reloptions                             
+---------------------------+---------+-----------+-------------------------------------------------------------------
+ pt_tab_encode_1_prt_s_xyz | r       | ao_column | {compresstype=zlib,compresslevel=1,blocksize=32768,checksum=true}
 (1 row)
 
 -- Ensure that only the correct type of partitions can be added
@@ -5958,13 +5954,15 @@ ERROR:  operator class "employee_incomplete_op_class" of access method btree is 
 -- We grant default SELECT permission to a new user, this new user should be
 -- able to SELECT from any partition table we create later.
 -- (https://github.com/greenplum-db/gpdb/issues/9524)
-DROP TABLE IF EXISTS public.t_part_acl;
-NOTICE:  table "t_part_acl" does not exist, skipping
+DROP TABLE IF EXISTS user_prt_acl.t_part_acl;
+DROP SCHEMA IF EXISTS user_prt_acl;
 DROP ROLE IF EXISTS user_prt_acl;
 CREATE ROLE user_prt_acl;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO user_prt_acl;
-CREATE TABLE public.t_part_acl (dt date)
+CREATE SCHEMA schema_part_acl;
+GRANT USAGE ON SCHEMA schema_part_acl TO user_prt_acl;
+ALTER DEFAULT PRIVILEGES IN SCHEMA schema_part_acl GRANT SELECT ON TABLES TO user_prt_acl;
+CREATE TABLE schema_part_acl.t_part_acl (dt date)
 PARTITION BY RANGE (dt)
 (
     START (date '2019-12-01') INCLUSIVE
@@ -5973,7 +5971,7 @@ PARTITION BY RANGE (dt)
 );
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'dt' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-INSERT INTO public.t_part_acl VALUES (date '2019-12-01'), (date '2020-01-31');
+INSERT INTO schema_part_acl.t_part_acl VALUES (date '2019-12-01'), (date '2020-01-31');
 -- check if parent and child table have same relacl
 SELECT relname FROM pg_class
 WHERE relname LIKE 't_part_acl%'
@@ -5987,7 +5985,7 @@ WHERE relname LIKE 't_part_acl%'
 
 -- check if new user can SELECT all data
 SET ROLE user_prt_acl;
-SELECT * FROM public.t_part_acl;
+SELECT * FROM schema_part_acl.t_part_acl;
      dt     
 ------------
  12-01-2019
@@ -5995,9 +5993,7 @@ SELECT * FROM public.t_part_acl;
 (2 rows)
 
 RESET ROLE;
-DROP TABLE public.t_part_acl;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT ON TABLES FROM user_prt_acl;
-DROP ROLE user_prt_acl;
+-- we don't drop the table, schema and role here in order to test upgrade
 -- test on commit behavior used on partition table
 -- test on commit delete rows
 begin;
@@ -6143,6 +6139,7 @@ ALTER TABLE part_inherit ENABLE ROW LEVEL SECURITY;
 -- Check the current status 
 SELECT c.relname,
         c.reloptions,
+        c.relkind,
         a.amname as am,
         c.relhasindex as hasindex,
         r.rolname as owner,
@@ -6155,17 +6152,17 @@ FROM pg_class c join pg_roles r on c.relowner = r.oid
         join pg_am a on c.relam = a.oid
 WHERE c.relname LIKE 'part_inherit%' AND 
         c.relkind NOT IN ('i', 'I');
-                     relname                      |    reloptions     |   am   | hasindex |       owner       |                                           acl                                            | numchecks | hasrules | hastriggers | rowsecurity 
---------------------------------------------------+-------------------+--------+----------+-------------------+------------------------------------------------------------------------------------------+-----------+----------+-------------+-------------
- part_inherit                                     | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | t        | t           | t
- part_inherit_1_prt_l1_child1                     | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
- part_inherit_1_prt_l1_child1_2_prt_l2_child      | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
- part_inherit_1_prt_l1_default                    | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
- part_inherit_1_prt_l1_default_2_prt_l2_child     | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
- part_inherit_1_prt_l1_to_exchange                | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
- part_inherit_1_prt_l1_to_exchange_2_prt_l2_child | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
- part_inherit_1_prt_l1_to_split                   | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
- part_inherit_1_prt_l1_to_split_2_prt_l2_child    | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
+                     relname                      |                            reloptions                             | relkind |   am   | hasindex |       owner       |                                           acl                                            | numchecks | hasrules | hastriggers | rowsecurity 
+--------------------------------------------------+-------------------------------------------------------------------+---------+--------+----------+-------------------+------------------------------------------------------------------------------------------+-----------+----------+-------------+-------------
+ part_inherit                                     | {compresslevel=7,compresstype=zlib}                               | p       | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | t        | t           | t
+ part_inherit_1_prt_l1_child1                     | {compresstype=zlib,compresslevel=7}                               | p       | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
+ part_inherit_1_prt_l1_child1_2_prt_l2_child      | {compresstype=zlib,compresslevel=7,blocksize=32768,checksum=true} | r       | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
+ part_inherit_1_prt_l1_default                    | {compresstype=zlib,compresslevel=7}                               | p       | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
+ part_inherit_1_prt_l1_default_2_prt_l2_child     | {compresstype=zlib,compresslevel=7,blocksize=32768,checksum=true} | r       | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
+ part_inherit_1_prt_l1_to_exchange                | {compresstype=zlib,compresslevel=7}                               | p       | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
+ part_inherit_1_prt_l1_to_exchange_2_prt_l2_child | {compresstype=zlib,compresslevel=7,blocksize=32768,checksum=true} | r       | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
+ part_inherit_1_prt_l1_to_split                   | {compresstype=zlib,compresslevel=7}                               | p       | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
+ part_inherit_1_prt_l1_to_split_2_prt_l2_child    | {compresstype=zlib,compresslevel=7,blocksize=32768,checksum=true} | r       | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
 (9 rows)
 
 -- Now create child partitions in various forms 
@@ -6175,6 +6172,7 @@ SET ROLE part_inherit_other_role;
 CREATE TABLE part_inherit_partof PARTITION OF part_inherit FOR VALUES FROM (300) TO (400);
 SELECT c.relname,
         c.reloptions,
+        c.relkind,
         a.amname as am,
         c.relhasindex as hasindex,
         r.rolname as owner,
@@ -6186,9 +6184,9 @@ SELECT c.relname,
 FROM pg_class c join pg_roles r on c.relowner = r.oid
         join pg_am a on c.relam = a.oid
 WHERE c.relname = 'part_inherit_partof';
-       relname       |    reloptions     |   am   | hasindex |          owner          |                                           acl                                            | numchecks | hasrules | hastriggers | rowsecurity 
----------------------+-------------------+--------+----------+-------------------------+------------------------------------------------------------------------------------------+-----------+----------+-------------+-------------
- part_inherit_partof | {compresslevel=7} | ao_row | t        | part_inherit_other_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
+       relname       |                            reloptions                             | relkind |   am   | hasindex |          owner          |                                           acl                                            | numchecks | hasrules | hastriggers | rowsecurity 
+---------------------+-------------------------------------------------------------------+---------+--------+----------+-------------------------+------------------------------------------------------------------------------------------+-----------+----------+-------------+-------------
+ part_inherit_partof | {compresslevel=7,compresstype=zlib,blocksize=32768,checksum=true} | r       | ao_row | t        | part_inherit_other_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
 (1 row)
 
 -- Now create child partitions in various forms 
@@ -6208,6 +6206,7 @@ GRANT UPDATE ON part_inherit_attach TO part_inherit_attach_priv_role;
 ALTER TABLE part_inherit ATTACH PARTITION part_inherit_attach FOR VALUES FROM (400) TO (500);
 SELECT c.relname,
         c.reloptions,
+        c.relkind,
         a.amname as am,
         c.relhasindex as hasindex,
         r.rolname as owner,
@@ -6219,15 +6218,16 @@ SELECT c.relname,
 FROM pg_class c join pg_roles r on c.relowner = r.oid
         join pg_am a on c.relam = a.oid
 WHERE c.relname = 'part_inherit_attach';
-       relname       |   reloptions    |  am  | hasindex |          owner          |                                                        acl                                                        | numchecks | hasrules | hastriggers | rowsecurity 
----------------------+-----------------+------+----------+-------------------------+-------------------------------------------------------------------------------------------------------------------+-----------+----------+-------------+-------------
- part_inherit_attach | {fillfactor=30} | heap | t        | part_inherit_other_role | {part_inherit_other_role=arwdDxt/part_inherit_other_role,part_inherit_attach_priv_role=w/part_inherit_other_role} |         2 | f        | t           | f
+       relname       |   reloptions    | relkind |  am  | hasindex |          owner          |                                                        acl                                                        | numchecks | hasrules | hastriggers | rowsecurity 
+---------------------+-----------------+---------+------+----------+-------------------------+-------------------------------------------------------------------------------------------------------------------+-----------+----------+-------------+-------------
+ part_inherit_attach | {fillfactor=30} | r       | heap | t        | part_inherit_other_role | {part_inherit_other_role=arwdDxt/part_inherit_other_role,part_inherit_attach_priv_role=w/part_inherit_other_role} |         2 | f        | t           | f
 (1 row)
 
 -- ADD PARTITION
 ALTER TABLE part_inherit ADD PARTITION added START(500) END(600);
 SELECT c.relname,
         c.reloptions,
+        c.relkind,
         a.amname as am,
         c.relhasindex as hasindex,
         r.rolname as owner,
@@ -6240,10 +6240,10 @@ FROM pg_class c join pg_roles r on c.relowner = r.oid
         join pg_am a on c.relam = a.oid
 WHERE c.relname LIKE 'part_inherit_1_prt_added%' AND 
         c.relkind NOT IN ('i', 'I');
-                 relname                 |    reloptions     |   am   | hasindex |       owner       |                                           acl                                            | numchecks | hasrules | hastriggers | rowsecurity 
------------------------------------------+-------------------+--------+----------+-------------------+------------------------------------------------------------------------------------------+-----------+----------+-------------+-------------
- part_inherit_1_prt_added                | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
- part_inherit_1_prt_added_2_prt_l2_child | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | f           | f
+                 relname                 |                            reloptions                             | relkind |   am   | hasindex |       owner       |                                           acl                                            | numchecks | hasrules | hastriggers | rowsecurity 
+-----------------------------------------+-------------------------------------------------------------------+---------+--------+----------+-------------------+------------------------------------------------------------------------------------------+-----------+----------+-------------+-------------
+ part_inherit_1_prt_added                | {compresslevel=7,compresstype=zlib}                               | p       | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
+ part_inherit_1_prt_added_2_prt_l2_child | {compresslevel=7,compresstype=zlib,blocksize=32768,checksum=true} | r       | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
 (2 rows)
 
 -- EXCHANGE PARTITION - same behavior as ATTACH PARTITION
@@ -6262,6 +6262,7 @@ GRANT UPDATE ON part_inherit_exchange_out TO part_inherit_exchange_out_priv_role
 ALTER TABLE part_inherit_1_prt_l1_to_exchange EXCHANGE PARTITION l2_child WITH TABLE part_inherit_exchange_out;
 SELECT c.relname,
         c.reloptions,
+        c.relkind,
         a.amname as am,
         c.relhasindex as hasindex,
         r.rolname as owner,
@@ -6274,17 +6275,18 @@ FROM pg_class c join pg_roles r on c.relowner = r.oid
         join pg_am a on c.relam = a.oid
 WHERE (c.relname LIKE 'part_inherit_1_prt_l1_to_exchange%' OR c.relname = 'part_inherit_exchange_out')
 	AND c.relkind NOT IN ('i', 'I');
-                     relname                      |    reloptions     |   am   | hasindex |          owner          |                                                           acl                                                           | numchecks | hasrules | hastriggers | rowsecurity 
---------------------------------------------------+-------------------+--------+----------+-------------------------+-------------------------------------------------------------------------------------------------------------------------+-----------+----------+-------------+-------------
- part_inherit_1_prt_l1_to_exchange                | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
- part_inherit_1_prt_l1_to_exchange_2_prt_l2_child | {fillfactor=30}   | heap   | t        | part_inherit_other_role | {part_inherit_other_role=arwdDxt/part_inherit_other_role,part_inherit_exchange_out_priv_role=w/part_inherit_other_role} |         2 | f        | f           | f
- part_inherit_exchange_out                        | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
+                     relname                      |                            reloptions                             | relkind |   am   | hasindex |          owner          |                                                           acl                                                           | numchecks | hasrules | hastriggers | rowsecurity 
+--------------------------------------------------+-------------------------------------------------------------------+---------+--------+----------+-------------------------+-------------------------------------------------------------------------------------------------------------------------+-----------+----------+-------------+-------------
+ part_inherit_1_prt_l1_to_exchange                | {compresstype=zlib,compresslevel=7}                               | p       | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
+ part_inherit_exchange_out                        | {compresstype=zlib,compresslevel=7,blocksize=32768,checksum=true} | r       | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
+ part_inherit_1_prt_l1_to_exchange_2_prt_l2_child | {fillfactor=30}                                                   | r       | heap   | t        | part_inherit_other_role | {part_inherit_other_role=arwdDxt/part_inherit_other_role,part_inherit_exchange_out_priv_role=w/part_inherit_other_role} |         2 | f        | t           | f
 (3 rows)
 
 -- SPLIT PARTITION
 ALTER TABLE part_inherit_1_prt_l1_to_split SPLIT PARTITION l2_child AT (10150) INTO (PARTITION split1, PARTITION split2);
 SELECT c.relname,
         c.reloptions,
+        c.relkind,
         a.amname as am,
         c.relhasindex as hasindex,
         r.rolname as owner,
@@ -6297,16 +6299,17 @@ FROM pg_class c join pg_roles r on c.relowner = r.oid
         join pg_am a on c.relam = a.oid
 WHERE c.relname LIKE 'part_inherit_1_prt_l1_to_split%' AND 
         c.relkind NOT IN ('i', 'I');
-                   relname                   |    reloptions     |   am   | hasindex |       owner       |                                           acl                                            | numchecks | hasrules | hastriggers | rowsecurity 
----------------------------------------------+-------------------+--------+----------+-------------------+------------------------------------------------------------------------------------------+-----------+----------+-------------+-------------
- part_inherit_1_prt_l1_to_split              | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
- part_inherit_1_prt_l1_to_split_2_prt_split1 | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | f           | f
- part_inherit_1_prt_l1_to_split_2_prt_split2 | {compresslevel=7} | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | f           | f
+                   relname                   |                            reloptions                             | relkind |   am   | hasindex |       owner       |                                           acl                                            | numchecks | hasrules | hastriggers | rowsecurity 
+---------------------------------------------+-------------------------------------------------------------------+---------+--------+----------+-------------------+------------------------------------------------------------------------------------------+-----------+----------+-------------+-------------
+ part_inherit_1_prt_l1_to_split              | {compresstype=zlib,compresslevel=7}                               | p       | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
+ part_inherit_1_prt_l1_to_split_2_prt_split1 | {compresstype=zlib,compresslevel=7,blocksize=32768,checksum=true} | r       | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
+ part_inherit_1_prt_l1_to_split_2_prt_split2 | {compresstype=zlib,compresslevel=7,blocksize=32768,checksum=true} | r       | ao_row | t        | part_inherit_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role} |         1 | f        | t           | f
 (3 rows)
 
 -- Now print everything for comparison
 SELECT c.relname,
         c.reloptions,
+        c.relkind,
         a.amname as am,
         c.relhasindex as hasindex,
         r.rolname as owner,
@@ -6319,23 +6322,23 @@ FROM pg_class c join pg_roles r on c.relowner = r.oid
         join pg_am a on c.relam = a.oid
 WHERE c.relname LIKE 'part_inherit%' AND 
         c.relkind NOT IN ('i', 'I');
-                     relname                      |    reloptions     |   am   | hasindex |          owner          |                                                           acl                                                           | numchecks | hasrules | hastriggers | rowsecurity 
---------------------------------------------------+-------------------+--------+----------+-------------------------+-------------------------------------------------------------------------------------------------------------------------+-----------+----------+-------------+-------------
- part_inherit                                     | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | t        | t           | t
- part_inherit_1_prt_added                         | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
- part_inherit_1_prt_added_2_prt_l2_child          | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | f           | f
- part_inherit_1_prt_l1_child1                     | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
- part_inherit_1_prt_l1_child1_2_prt_l2_child      | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
- part_inherit_1_prt_l1_default                    | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
- part_inherit_1_prt_l1_default_2_prt_l2_child     | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
- part_inherit_1_prt_l1_to_exchange                | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
- part_inherit_1_prt_l1_to_exchange_2_prt_l2_child | {fillfactor=30}   | heap   | t        | part_inherit_other_role | {part_inherit_other_role=arwdDxt/part_inherit_other_role,part_inherit_exchange_out_priv_role=w/part_inherit_other_role} |         2 | f        | f           | f
- part_inherit_1_prt_l1_to_split                   | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
- part_inherit_1_prt_l1_to_split_2_prt_split1      | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | f           | f
- part_inherit_1_prt_l1_to_split_2_prt_split2      | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | f           | f
- part_inherit_attach                              | {fillfactor=30}   | heap   | t        | part_inherit_other_role | {part_inherit_other_role=arwdDxt/part_inherit_other_role,part_inherit_attach_priv_role=w/part_inherit_other_role}       |         2 | f        | t           | f
- part_inherit_exchange_out                        | {compresslevel=7} | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
- part_inherit_partof                              | {compresslevel=7} | ao_row | t        | part_inherit_other_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
+                     relname                      |                            reloptions                             | relkind |   am   | hasindex |          owner          |                                                           acl                                                           | numchecks | hasrules | hastriggers | rowsecurity 
+--------------------------------------------------+-------------------------------------------------------------------+---------+--------+----------+-------------------------+-------------------------------------------------------------------------------------------------------------------------+-----------+----------+-------------+-------------
+ part_inherit                                     | {compresslevel=7,compresstype=zlib}                               | p       | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | t        | t           | t
+ part_inherit_1_prt_added                         | {compresslevel=7,compresstype=zlib}                               | p       | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
+ part_inherit_1_prt_added_2_prt_l2_child          | {compresslevel=7,compresstype=zlib,blocksize=32768,checksum=true} | r       | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
+ part_inherit_1_prt_l1_child1                     | {compresstype=zlib,compresslevel=7}                               | p       | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
+ part_inherit_1_prt_l1_child1_2_prt_l2_child      | {compresstype=zlib,compresslevel=7,blocksize=32768,checksum=true} | r       | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
+ part_inherit_1_prt_l1_default                    | {compresstype=zlib,compresslevel=7}                               | p       | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
+ part_inherit_1_prt_l1_default_2_prt_l2_child     | {compresstype=zlib,compresslevel=7,blocksize=32768,checksum=true} | r       | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
+ part_inherit_1_prt_l1_to_exchange                | {compresstype=zlib,compresslevel=7}                               | p       | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
+ part_inherit_1_prt_l1_to_exchange_2_prt_l2_child | {fillfactor=30}                                                   | r       | heap   | t        | part_inherit_other_role | {part_inherit_other_role=arwdDxt/part_inherit_other_role,part_inherit_exchange_out_priv_role=w/part_inherit_other_role} |         2 | f        | t           | f
+ part_inherit_1_prt_l1_to_split                   | {compresstype=zlib,compresslevel=7}                               | p       | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
+ part_inherit_1_prt_l1_to_split_2_prt_split1      | {compresstype=zlib,compresslevel=7,blocksize=32768,checksum=true} | r       | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
+ part_inherit_1_prt_l1_to_split_2_prt_split2      | {compresstype=zlib,compresslevel=7,blocksize=32768,checksum=true} | r       | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
+ part_inherit_attach                              | {fillfactor=30}                                                   | r       | heap   | t        | part_inherit_other_role | {part_inherit_other_role=arwdDxt/part_inherit_other_role,part_inherit_attach_priv_role=w/part_inherit_other_role}       |         2 | f        | t           | f
+ part_inherit_exchange_out                        | {compresstype=zlib,compresslevel=7,blocksize=32768,checksum=true} | r       | ao_row | t        | part_inherit_role       | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
+ part_inherit_partof                              | {compresslevel=7,compresstype=zlib,blocksize=32768,checksum=true} | r       | ao_row | t        | part_inherit_other_role | {part_inherit_role=arwdDxt/part_inherit_role,part_inherit_priv_role=w/part_inherit_role}                                |         1 | f        | t           | f
 (15 rows)
 
 RESET ROLE;
@@ -6347,3 +6350,184 @@ DROP ROLE part_inherit_other_role;
 DROP ROLE part_inherit_priv_role;
 DROP ROLE part_inherit_attach_priv_role;
 DROP ROLE part_inherit_exchange_out_priv_role;
+--Test cases for data selection from range partitioned tables with predicate on date or timestamp type-------------
+drop table if exists test_rangePartition;
+NOTICE:  table "test_rangepartition" does not exist, skipping
+create table public.test_rangePartition
+(datedday date)
+    WITH (
+        appendonly=false
+        )
+    PARTITION BY RANGE(datedday)
+(
+    PARTITION pn_20221022 START ('2022-10-22'::date) END ('2022-10-23'::date),
+    PARTITION pn_20221023 START ('2022-10-23'::date) END ('2022-10-24'::date),
+    DEFAULT PARTITION pdefault
+    );
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'datedday' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into public.test_rangePartition(datedday)
+select ('2022-10-22'::date)
+union
+select ('2022-10-23'::date);
+--Test case with condition on date and timestamp
+explain (costs off) select max(datedday) from public.test_rangePartition where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+                                                              QUERY PLAN                                                               
+---------------------------------------------------------------------------------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Dynamic Seq Scan on test_rangepartition
+                     Number of partitions to scan: 2 (out of 3)
+                     Filter: ((datedday = '10-23-2022'::date) OR (datedday = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+select max(datedday) from public.test_rangePartition where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+    max     
+------------
+ 10-23-2022
+(1 row)
+
+--Test case with condition on date and timestamp
+explain (costs off) select max(datedday) from public.test_rangePartition where datedday='2022-10-23' or datedday='2022-10-22';
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Dynamic Seq Scan on test_rangepartition
+                     Number of partitions to scan: 2 (out of 3)
+                     Filter: ((datedday = '10-23-2022'::date) OR (datedday = '10-22-2022'::date))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+select max(datedday) from public.test_rangePartition where datedday='2022-10-23' or datedday='2022-10-22';
+    max     
+------------
+ 10-23-2022
+(1 row)
+
+--Test case with condition on timestamp and timestamp
+explain (costs off) select max(datedday) from public.test_rangePartition where datedday=('2022-10-23'::date -interval '0 day') or datedday=('2022-10-23'::date -interval '1 day');
+                                                                                 QUERY PLAN                                                                                 
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Dynamic Seq Scan on test_rangepartition
+                     Number of partitions to scan: 2 (out of 3)
+                     Filter: ((datedday = 'Sun Oct 23 00:00:00 2022'::timestamp without time zone) OR (datedday = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+select max(datedday) from public.test_rangePartition where datedday=('2022-10-23'::date -interval '0 day') or datedday=('2022-10-23'::date -interval '1 day');
+    max     
+------------
+ 10-23-2022
+(1 row)
+
+--Test case with condition on date and timestamp
+explain (costs off) select datedday from public.test_rangePartition where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Dynamic Seq Scan on test_rangepartition
+         Number of partitions to scan: 2 (out of 3)
+         Filter: ((datedday = '10-23-2022'::date) OR (datedday = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+select datedday from public.test_rangePartition where datedday='2022-10-23' or datedday=('2022-10-23'::date -interval '1 day');
+  datedday  
+------------
+ 10-23-2022
+ 10-22-2022
+(2 rows)
+
+drop table test_rangePartition;
+--Test cases for data selection from List partitioned tables with predicate on date or timestamp type-------------
+drop table if exists test_listPartition;
+NOTICE:  table "test_listpartition" does not exist, skipping
+create table test_listPartition (i int, d date)
+    partition by list(d)
+ (partition p1 values('2022-10-22'), partition p2 values('2022-10-23'),
+ default partition pdefault  );
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into test_listPartition values(1,'2022-10-22');
+insert into test_listPartition values(2,'2022-10-23');
+insert into test_listPartition values(3,'2022-10-24');
+--Test case with condition on date and timestamp
+explain (costs off) select max(d) from test_listPartition where d='2022-10-23' or d=('2022-10-23'::date -interval '1 day');
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Dynamic Seq Scan on test_listpartition
+               Number of partitions to scan: 2 (out of 3)
+               Filter: ((d = '10-23-2022'::date) OR (d = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select max(d) from test_listPartition where d='2022-10-23' or d=('2022-10-23'::date -interval '1 day');
+    max     
+------------
+ 10-23-2022
+(1 row)
+
+--Test case with condition on date and date
+explain (costs off) select max(d) from test_listPartition where d='2022-10-23' or d='2022-10-22';
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Dynamic Seq Scan on test_listpartition
+               Number of partitions to scan: 2 (out of 3)
+               Filter: ((d = '10-23-2022'::date) OR (d = '10-22-2022'::date))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select max(d) from test_listPartition where d='2022-10-23' or d='2022-10-22';
+    max     
+------------
+ 10-23-2022
+(1 row)
+
+--Test case with condition on timestamp and timestamp
+explain (costs off) select max(d) from test_listPartition where d=('2022-10-23'::date -interval '0 day') or d=('2022-10-23'::date -interval '1 day');
+                                                                       QUERY PLAN                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Dynamic Seq Scan on test_listpartition
+               Number of partitions to scan: 2 (out of 3)
+               Filter: ((d = 'Sun Oct 23 00:00:00 2022'::timestamp without time zone) OR (d = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select max(d) from test_listPartition where d=('2022-10-23'::date -interval '0 day') or d=('2022-10-23'::date -interval '1 day');
+    max     
+------------
+ 10-23-2022
+(1 row)
+
+--Test case with condition on timestamp and timestamp
+explain (costs off) select d from test_listPartition where d='2022-10-23' or d=('2022-10-23'::date -interval '1 day');
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Dynamic Seq Scan on test_listpartition
+         Number of partitions to scan: 2 (out of 3)
+         Filter: ((d = '10-23-2022'::date) OR (d = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+select d from test_listPartition where d='2022-10-23' or d=('2022-10-23'::date -interval '1 day');
+     d      
+------------
+ 10-23-2022
+ 10-22-2022
+(2 rows)
+
+drop table test_listPartition;

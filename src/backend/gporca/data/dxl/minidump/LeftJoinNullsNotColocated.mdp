@@ -74,12 +74,12 @@ on id2 = id3 distributed by (id1);
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10" XformBindThreshold="0"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10" XformBindThreshold="0"/>
       <dxl:TraceFlags Value="101013,102001,102002,102003,102043,102074,102120,102144,103001,103014,103022,103026,103027,103029,103033,103038,103040,104002,104003,104004,104005,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.CTAS,0.GPDB">
       <dxl:RelationStatistics Mdid="2.24576.1.0" Name="t1" Rows="80413904.000000" RelPages="62859" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.24576.1.0" Name="t1" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.24576.1.0" Name="t1" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="id1" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -113,7 +113,7 @@ on id2 = id3 distributed by (id1);
         </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.24583.1.0" Name="t2" Rows="24360400.000000" RelPages="63655" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.24583.1.0" Name="t2" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.24583.1.0" Name="t2" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="id2" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -147,7 +147,7 @@ on id2 = id3 distributed by (id1);
         </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.24590.1.0" Name="t3" Rows="82916496.000000" RelPages="34975" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.24590.1.0" Name="t3" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.24590.1.0" Name="t3" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="id3" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -362,7 +362,7 @@ on id2 = id3 distributed by (id1);
         <dxl:LogicalJoin JoinType="Left">
           <dxl:LogicalJoin JoinType="Left">
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.24576.1.0" TableName="t1" LockMode="1">
+              <dxl:TableDescriptor Mdid="6.24576.1.0" TableName="t1" LockMode="1">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="id1" TypeMdid="0.20.1.0" ColWidth="8"/>
                   <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -376,7 +376,7 @@ on id2 = id3 distributed by (id1);
               </dxl:TableDescriptor>
             </dxl:LogicalGet>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.24583.1.0" TableName="t2" LockMode="1">
+              <dxl:TableDescriptor Mdid="6.24583.1.0" TableName="t2" LockMode="1">
                 <dxl:Columns>
                   <dxl:Column ColId="9" Attno="1" ColName="id2" TypeMdid="0.20.1.0" ColWidth="8"/>
                   <dxl:Column ColId="10" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -395,7 +395,7 @@ on id2 = id3 distributed by (id1);
             </dxl:Comparison>
           </dxl:LogicalJoin>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.24590.1.0" TableName="t3" LockMode="1">
+            <dxl:TableDescriptor Mdid="6.24590.1.0" TableName="t3" LockMode="1">
               <dxl:Columns>
                 <dxl:Column ColId="17" Attno="1" ColName="id3" TypeMdid="0.20.1.0" ColWidth="8"/>
                 <dxl:Column ColId="18" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -513,7 +513,7 @@ on id2 = id3 distributed by (id1);
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.24576.1.0" TableName="t1" LockMode="1">
+                <dxl:TableDescriptor Mdid="6.24576.1.0" TableName="t1" LockMode="1">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="id1" TypeMdid="0.20.1.0" ColWidth="8"/>
                     <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -536,7 +536,7 @@ on id2 = id3 distributed by (id1);
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.24583.1.0" TableName="t2" LockMode="1">
+                <dxl:TableDescriptor Mdid="6.24583.1.0" TableName="t2" LockMode="1">
                   <dxl:Columns>
                     <dxl:Column ColId="8" Attno="1" ColName="id2" TypeMdid="0.20.1.0" ColWidth="8"/>
                     <dxl:Column ColId="9" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -560,7 +560,7 @@ on id2 = id3 distributed by (id1);
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.24590.1.0" TableName="t3" LockMode="1">
+              <dxl:TableDescriptor Mdid="6.24590.1.0" TableName="t3" LockMode="1">
                 <dxl:Columns>
                   <dxl:Column ColId="16" Attno="1" ColName="id3" TypeMdid="0.20.1.0" ColWidth="8"/>
                   <dxl:Column ColId="17" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

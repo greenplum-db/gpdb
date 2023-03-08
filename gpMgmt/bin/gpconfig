@@ -164,8 +164,12 @@ class Guc:
                 msg = GpResGroup().validate()
                 if msg is not None:
                     return msg
+            elif newval == "'group-v2'":
+                msg = GpResGroup().validate_v2()
+                if msg is not None:
+                    return msg
             elif newval != "'queue'":
-                return "the value of gp_resource_manager must be 'group' or 'queue'"
+                return "the value of gp_resource_manager must be 'group' or 'group-v2' or 'queue'"
 
         elif self.name == 'unix_socket_permissions':
             if newval[0] != '0':

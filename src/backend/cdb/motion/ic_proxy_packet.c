@@ -82,6 +82,7 @@ void
 ic_proxy_message_init(ICProxyPkt *pkt, ICProxyMessageType type,
 					  const ICProxyKey *key)
 {
+	pkt->magicNumber = IC_PROXY_PKT_MAGIC_NUMBER;
 	pkt->type = type;
 	pkt->len = sizeof(*pkt);
 
@@ -156,13 +157,14 @@ ic_proxy_pkt_to_str(const ICProxyPkt *pkt)
 	static char	buf[256];
 
 	snprintf(buf, sizeof(buf),
-			 "%s [con%d,cmd%d,slice[%hd->%hd] %hu bytes seg%hd:dbid%hu:p%d->seg%hd:dbid%hu:p%d]",
+			 "%s [con%d,cmd%d,slice[%hd->%hd] %hu bytes seg%hd:dbid%hu:p%d->seg%hd:dbid%hu:p%d magic%u]",
 			 ic_proxy_message_type_to_str(pkt->type),
 			 pkt->sessionId, pkt->commandId,
 			 pkt->sendSliceIndex, pkt->recvSliceIndex,
 			 pkt->len,
 			 pkt->srcContentId, pkt->srcDbid, pkt->srcPid,
-			 pkt->dstContentId, pkt->dstDbid, pkt->dstPid);
+			 pkt->dstContentId, pkt->dstDbid, pkt->dstPid,
+			 pkt->magicNumber);
 
 	return buf;
 }

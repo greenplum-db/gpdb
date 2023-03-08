@@ -1322,3 +1322,21 @@ drop table sublink_outer_table;
 drop table sublink_inner_table;
 reset optimizer;
 reset enable_hashagg;
+
+-- Ensure sub-queries with order by outer reference can be decorrelated and executed correctly.
+create table r(a int, b int, c int) distributed by (a);
+create table s(a int, b int, c int) distributed by (a);
+insert into r values (1,2,3);
+insert into s values (1,2,10);
+explain (costs off) select * from r where b in (select b from s where c=10 order by r.c);
+select * from r where b in (select b from s where c=10 order by r.c);
+explain (costs off) select * from r where b in (select b from s where c=10 order by r.c limit 2);
+select * from r where b in (select b from s where c=10 order by r.c limit 2);
+explain (costs off) select * from r where b in (select b from s where c=10 order by r.c, b);
+select * from r where b in (select b from s where c=10 order by r.c, b);
+explain (costs off) select * from r where b in (select b from s where c=10 order by r.c, b limit 2);
+select * from r where b in (select b from s where c=10 order by r.c, b limit 2);
+explain (costs off) select * from r where b in (select b from s where c=10 order by c);
+select * from r where b in (select b from s where c=10 order by c);
+explain (costs off) select * from r where b in (select b from s where c=10 order by c limit 2);
+select * from r where b in (select b from s where c=10 order by c limit 2);

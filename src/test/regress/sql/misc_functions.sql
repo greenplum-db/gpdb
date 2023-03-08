@@ -34,6 +34,36 @@ SELECT num_nonnulls();
 SELECT num_nulls();
 
 --
+-- Test some built-in SRFs
+--
+-- The outputs of these are variable, so we can't just print their results
+-- directly, but we can at least verify that the code doesn't fail.
+--
+select setting as segsize
+from pg_settings where name = 'wal_segment_size'
+\gset
+
+select count(*) > 0 as ok from pg_ls_waldir();
+-- Test ProjectSet as well as FunctionScan
+select count(*) > 0 as ok from (select pg_ls_waldir()) ss;
+-- Test not-run-to-completion cases.
+select * from pg_ls_waldir() limit 0;
+select count(*) > 0 as ok from (select * from pg_ls_waldir() limit 1) ss;
+select (w).size = :segsize as ok
+from (select pg_ls_waldir() w) ss where length((w).name) = 24 limit 1;
+
+select count(*) >= 0 as ok from pg_ls_archive_statusdir();
+
+select * from (select pg_ls_dir('.') a) a where a = 'base' limit 1;
+
+select * from (select (pg_timezone_names()).name) ptn where name='UTC' limit 1;
+
+select count(*) > 0 from
+  (select pg_tablespace_databases(oid) as pts from pg_tablespace
+   where spcname = 'pg_default') pts
+  join pg_database db on pts.pts = db.oid;
+
+--
 -- Test adding a support function to a subject function
 --
 

@@ -1,7 +1,6 @@
 create schema uao_dml_unique_index_update_@amname@;
 set search_path=uao_dml_unique_index_update_@amname@;
 set default_table_access_method=@amname@;
-SET gp_appendonly_enable_unique_index TO ON;
 -- Case 1: Inserting tx inserting a key affected by an update--------------------
 CREATE TABLE uao_unique_index_update (a INT unique);
 INSERT INTO uao_unique_index_update VALUES (1);
@@ -158,4 +157,74 @@ INSERT INTO uao_unique_index_update SELECT generate_series(1,5);
 UPDATE uao_unique_index_update SET a=6 WHERE a>2;
 ERROR:  duplicate key value violates unique constraint "uao_unique_index_update_a_key"  (seg2 192.168.0.148:7004 pid=1669359)
 DETAIL:  Key (a)=(6) already exists.
+DROP TABLE uao_unique_index_update;
+-- Case 11: Updating tx updates a key inserted in the same subtx----------------
+CREATE TABLE uao_unique_index_update (a INT unique);
+BEGIN;
+SAVEPOINT a;
+INSERT INTO uao_unique_index_update VALUES(1);
+UPDATE uao_unique_index_update SET a=2 WHERE a=1;
+COMMIT;
+SELECT * FROM uao_unique_index_update;
+ a 
+---
+ 2
+(1 row)
+
+DROP TABLE uao_unique_index_update;
+-- Case 12: Updating tx updates a key updated in the same subtx-----------------
+CREATE TABLE uao_unique_index_update (a INT unique);
+BEGIN;
+SAVEPOINT a;
+INSERT INTO uao_unique_index_update VALUES(1);
+UPDATE uao_unique_index_update SET a=2 WHERE a=1;
+-- should be a no-op
+UPDATE uao_unique_index_update SET a=2 WHERE a=1;
+-- should succeed
+UPDATE uao_unique_index_update SET a=3 WHERE a=2;
+COMMIT;
+SELECT * FROM uao_unique_index_update;
+ a 
+---
+ 3
+(1 row)
+
+DROP TABLE uao_unique_index_update;
+-- Case 13: Updating tx updates a key whose earlier update was rolled back------
+CREATE TABLE uao_unique_index_update (a INT unique);
+INSERT INTO uao_unique_index_update VALUES(1);
+BEGIN;
+SAVEPOINT a;
+UPDATE uao_unique_index_update SET a=2 WHERE a=1;
+ROLLBACK TO SAVEPOINT a;
+-- should be able to run the update again as we have rolled back.
+UPDATE uao_unique_index_update SET a=2 WHERE a=1;
+COMMIT;
+SELECT * FROM uao_unique_index_update;
+ a 
+---
+ 2
+(1 row)
+
+DROP TABLE uao_unique_index_update;
+-- Case 14: Updating tx updates a key to a key inserted in the same subtx-------
+CREATE TABLE uao_unique_index_update (a INT unique);
+INSERT INTO uao_unique_index_update VALUES (1);
+BEGIN;
+SAVEPOINT a;
+INSERT INTO uao_unique_index_update VALUES (2);
+-- should raise a conflict with the key inserted inside the same subtx.
+UPDATE uao_unique_index_update SET a = 2 WHERE a = 1;
+ERROR:  duplicate key value violates unique constraint "uao_unique_index_update_a_key"  (seg0 192.168.0.148:7002 pid=3411438)
+DETAIL:  Key (a)=(2) already exists.
+ROLLBACK TO SAVEPOINT a;
+-- should be able to run the update again as we have rolled back.
+UPDATE uao_unique_index_update SET a = 2 WHERE a = 1;
+COMMIT;
+SELECT * FROM uao_unique_index_update;
+ a 
+---
+ 2
+(1 row)
+
 DROP TABLE uao_unique_index_update;

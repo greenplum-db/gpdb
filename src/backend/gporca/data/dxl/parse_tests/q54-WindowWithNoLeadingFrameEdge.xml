@@ -31,7 +31,7 @@
         </dxl:ProjElem>
       </dxl:ProjList>
       <dxl:LogicalGet>
-        <dxl:TableDescriptor Mdid="0.330308.1.1" TableName="customer">
+        <dxl:TableDescriptor Mdid="6.330308.1.1" TableName="customer">
           <dxl:Columns>
             <dxl:Column ColId="1" Attno="1" ColName="cn" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="2" Attno="2" ColName="cname" TypeMdid="0.25.1.0"/>

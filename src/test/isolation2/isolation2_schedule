@@ -92,7 +92,6 @@ test: distributedlog-bug
 test: invalidated_toast_index
 test: distributed_snapshot
 test: gp_collation
-test: ao_upgrade
 test: ao_blkdir
 test: bitmap_index_concurrent
 test: bitmap_index_crash
@@ -110,6 +109,7 @@ test: disable_autovacuum
 # Tests on Append-Optimized tables (row-oriented).
 test: concurrent_index_creation_should_not_deadlock
 test: uao/alter_while_vacuum_row uao/alter_while_vacuum2_row
+test: uao/brin_row
 test: uao/compaction_full_stats_row
 test: uao/compaction_utility_row
 test: uao/compaction_utility_insert_row
@@ -159,12 +159,17 @@ test: uao/vacuum_index_stats_row
 test: uao/bitmapindex_rescan_row
 test: uao/limit_indexscan_inits_row
 test: uao/create_index_allows_readonly_row
+test: uao/test_pg_appendonly_version_row
+# Refer to the case comment for why it is commented out.
+# test: uao/bad_buffer_on_temp_ao_row
+
 test: reorganize_after_ao_vacuum_skip_drop truncate_after_ao_vacuum_skip_drop mark_all_aoseg_await_drop
 # below test(s) inject faults so each of them need to be in a separate group
 test: segwalrep/master_wal_switch
 
 # Tests on Append-Optimized tables (column-oriented).
 test: uao/alter_while_vacuum_column uao/alter_while_vacuum2_column
+test: uao/brin_column
 test: uao/compaction_full_stats_column
 test: uao/compaction_utility_column
 test: uao/compaction_utility_insert_column
@@ -214,10 +219,14 @@ test: uao/vacuum_index_stats_column
 test: uao/bitmapindex_rescan_column
 test: uao/limit_indexscan_inits_column
 test: uao/create_index_allows_readonly_column
+test: uao/test_pg_appendonly_version_column
+# Refer to the case comment for why it is commented out.
+# test: uao/bad_buffer_on_temp_ao_column
 
 # this case contains fault injection, must be put in a separate test group
 test: terminate_in_gang_creation
 test: prepare_limit
+
 test: add_column_after_vacuum_skip_drop_column
 test: vacuum_after_vacuum_skip_drop_column
 # test workfile_mgr
@@ -225,9 +234,13 @@ test: workfile_mgr_test
 test: pg_basebackup
 test: pg_basebackup_with_tablespaces
 test: pg_basebackup_large_database_oid
+test: vacuum_progress_row
+test: vacuum_progress_column
 test: enable_autovacuum
 test: idle_gang_cleaner
 # test idle_in_transaction_session_timeout
+
+test: ao_index_build_progress
 
 test: segwalrep/die_commit_pending_replication
 
@@ -243,6 +256,7 @@ test: segwalrep/twophase_tolerance_with_mirror_promotion
 test: segwalrep/failover_with_many_records
 test: segwalrep/dtm_recovery_on_standby
 test: segwalrep/commit_blocking_on_standby
+test: segwalrep/max_slot_wal_keep_size
 test: segwalrep/dtx_recovery_wait_lsn
 test: segwalrep/select_throttle
 test: fts_manual_probe
@@ -314,3 +328,5 @@ test: ao_unique_index
 test: aocs_unique_index
 test: uao/ao_unique_index_vacuum_row
 test: uao/ao_unique_index_vacuum_column
+
+test: spilling_hashagg

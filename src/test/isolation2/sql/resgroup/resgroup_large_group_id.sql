@@ -1,7 +1,7 @@
 -- Test resgroup oid larger than int32.
 select gp_inject_fault('bump_oid', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
 
-create resource group rg_large_oid with (cpu_rate_limit=20, memory_limit=10);
+create resource group rg_large_oid with (cpu_hard_quota_limit=20);
 
 select gp_inject_fault('bump_oid', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
 

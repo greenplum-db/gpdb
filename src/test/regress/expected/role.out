@@ -144,3 +144,36 @@ BEGIN;
 ALTER USER ALL SET application_name TO 'alter_user_all_test';
 ALTER USER ALL RESET ALL;
 ROLLBACK;
+-- Various syntax for GRANT/REVOKE with ONLY keywords.
+-- Only cover syntax correctness here, the actual grant behavior
+-- for ONLY is tested in partition.sql
+create table grant_only_syntax1 (a int);
+create table grant_only_syntax2 (a int);
+create role test_role;
+-- These should all work
+grant select on table grant_only_syntax1, grant_only_syntax2 to test_role;
+grant select on table only grant_only_syntax1, grant_only_syntax2 to test_role;
+grant select on table grant_only_syntax1, only grant_only_syntax2 to test_role;
+grant select on table only grant_only_syntax1, only grant_only_syntax2 to test_role;
+grant select on grant_only_syntax1, grant_only_syntax2 to test_role;
+grant select on only grant_only_syntax1, grant_only_syntax2 to test_role;
+grant select on grant_only_syntax1, only grant_only_syntax2 to test_role;
+grant select on only grant_only_syntax1, only grant_only_syntax2 to test_role;
+revoke select on table grant_only_syntax1, grant_only_syntax2 from test_role;
+revoke select on table only grant_only_syntax1, grant_only_syntax2 from test_role;
+NOTICE:  no privileges could be revoked
+revoke select on table grant_only_syntax1, only grant_only_syntax2 from test_role;
+NOTICE:  no privileges could be revoked
+revoke select on table only grant_only_syntax1, only grant_only_syntax2 from test_role;
+NOTICE:  no privileges could be revoked
+revoke select on grant_only_syntax1, grant_only_syntax2 from test_role;
+NOTICE:  no privileges could be revoked
+revoke select on only grant_only_syntax1, grant_only_syntax2 from test_role;
+NOTICE:  no privileges could be revoked
+revoke select on grant_only_syntax1, only grant_only_syntax2 from test_role;
+NOTICE:  no privileges could be revoked
+revoke select on only grant_only_syntax1, only grant_only_syntax2 from test_role;
+NOTICE:  no privileges could be revoked
+drop table grant_only_syntax1;
+drop table grant_only_syntax2;
+drop role test_role;

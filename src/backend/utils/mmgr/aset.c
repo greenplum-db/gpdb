@@ -1469,11 +1469,6 @@ AllocSetRealloc(MemoryContext context, void *pointer, Size size)
 		/* Disallow external access to private part of chunk header. */
 		VALGRIND_MAKE_MEM_NOACCESS(chunk, ALLOCCHUNK_PRIVATE_LEN);
 
-		/*
-		 * no need to update memory accounting summaries, since chunk->size
-		 * didn't change
-		 */
-
 		return pointer;
 	}
 	else

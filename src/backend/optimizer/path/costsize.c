@@ -2521,7 +2521,7 @@ cost_agg(Path *path, PlannerInfo *root,
 		total_cost += qual_cost.startup + output_tuples * qual_cost.per_tuple;
 
 		output_tuples = clamp_row_est(output_tuples *
-									  clauselist_selectivity(root,
+									  clauselist_selectivity_extended(root,
 															 quals,
 															 0,
 															 JOIN_INNER,
@@ -2672,7 +2672,7 @@ cost_group(Path *path, PlannerInfo *root,
 		total_cost += qual_cost.startup + output_tuples * qual_cost.per_tuple;
 
 		output_tuples = clamp_row_est(output_tuples *
-									  clauselist_selectivity(root,
+									  clauselist_selectivity_extended(root,
 															 quals,
 															 0,
 															 JOIN_INNER,
@@ -3152,8 +3152,9 @@ initial_cost_mergejoin(PlannerInfo *root, JoinCostWorkspace *workspace,
 	outer_rows = clamp_row_est(outer_path_rows * outerendsel);
 	inner_rows = clamp_row_est(inner_path_rows * innerendsel);
 
-	Assert(outer_skip_rows <= outer_rows);
-	Assert(inner_skip_rows <= inner_rows);
+	/* skip rows can become NaN when path rows has become infinite */
+	Assert(outer_skip_rows <= outer_rows || isnan(outer_skip_rows));
+	Assert(inner_skip_rows <= inner_rows || isnan(inner_skip_rows));
 
 	/*
 	 * Readjust scan selectivities to account for above rounding.  This is
@@ -3165,8 +3166,9 @@ initial_cost_mergejoin(PlannerInfo *root, JoinCostWorkspace *workspace,
 	outerendsel = outer_rows / outer_path_rows;
 	innerendsel = inner_rows / inner_path_rows;
 
-	Assert(outerstartsel <= outerendsel);
-	Assert(innerstartsel <= innerendsel);
+	/* start sel can become NaN when path rows has become infinite */
+	Assert(outerstartsel <= outerendsel || isnan(outerstartsel));
+	Assert(innerstartsel <= innerendsel || isnan(innerstartsel));
 
 	/* cost of source data */
 
@@ -4419,6 +4421,12 @@ cost_qual_eval_walker(Node *node, cost_qual_eval_context *context)
 		 */
 		return false;			/* don't recurse into children */
 	}
+	else if (IsA(node, GroupingFunc))
+	{
+		/* Treat this as having cost 1 */
+		context->total.per_tuple += cpu_operator_cost;
+		return false;			/* don't recurse into children */
+	}
 	else if (IsA(node, CoerceViaIO))
 	{
 		CoerceViaIO *iocoerce = (CoerceViaIO *) node;
@@ -4635,7 +4643,7 @@ compute_semi_anti_join_factors(PlannerInfo *root,
 	/*
 	 * Get the JOIN_SEMI or JOIN_ANTI selectivity of the join clauses.
 	 */
-	jselec = clauselist_selectivity(root,
+	jselec = clauselist_selectivity_extended(root,
 									joinquals,
 									0,
 									(jointype == JOIN_ANTI) ? JOIN_ANTI : JOIN_SEMI,
@@ -4659,7 +4667,7 @@ compute_semi_anti_join_factors(PlannerInfo *root,
 	norm_sjinfo.semi_operators = NIL;
 	norm_sjinfo.semi_rhs_exprs = NIL;
 
-	nselec = clauselist_selectivity(root,
+	nselec = clauselist_selectivity_extended(root,
 									joinquals,
 									0,
 									JOIN_INNER,
@@ -4866,7 +4874,7 @@ set_baserel_size_estimates(PlannerInfo *root, RelOptInfo *rel)
 	Assert(rel->relid > 0);
 
 	nrows = rel->tuples *
-		clauselist_selectivity(root,
+		clauselist_selectivity_extended(root,
 							   rel->baserestrictinfo,
 							   0,
 							   JOIN_INNER,
@@ -4986,7 +4994,7 @@ get_parameterized_baserel_size(PlannerInfo *root, RelOptInfo *rel,
 	allclauses = list_concat(list_copy(param_clauses),
 							 rel->baserestrictinfo);
 	nrows = rel->tuples *
-		clauselist_selectivity(root,
+		clauselist_selectivity_extended(root,
 							   allclauses,
 							   rel->relid,	/* do not use 0! */
 							   JOIN_INNER,
@@ -5157,13 +5165,13 @@ calc_joinrel_size_estimate(PlannerInfo *root,
 		}
 
 		/* Get the separate selectivities */
-		jselec = clauselist_selectivity(root,
+		jselec = clauselist_selectivity_extended(root,
 										joinquals,
 										0,
 										jointype,
 										sjinfo,
 										gp_selectivity_damping_for_joins);
-		pselec = clauselist_selectivity(root,
+		pselec = clauselist_selectivity_extended(root,
 										pushedquals,
 										0,
 										jointype,
@@ -5186,7 +5194,7 @@ calc_joinrel_size_estimate(PlannerInfo *root,
 	}
 	else
 	{
-		jselec = clauselist_selectivity(root,
+		jselec = clauselist_selectivity_extended(root,
 										restrictlist,
 										0,
 										jointype,

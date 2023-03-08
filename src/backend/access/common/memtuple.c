@@ -612,30 +612,28 @@ memtuple_form(MemTupleBinding *pbind, Datum *values, bool *isnull)
 	uint32		len;
 	uint32		null_save_len;
 	bool		has_nulls;
-	MemTuple	result;
 
 	len = compute_memtuple_size(pbind, values, isnull, &null_save_len, &has_nulls);
 
-	result = palloc(len);
-
-	memtuple_form_to(pbind, values, isnull, len, null_save_len, has_nulls,
-					 result);
-
-	return result;
+	return memtuple_form_to(pbind, values, isnull, len, null_save_len, has_nulls, NULL);
 }
 
 
 /*
- * Form a memtuple from values and isnull, to a prespecified buffer
+ * Form a memtuple from values and isnull, to a prespecified buffer 'mtup'. This
+ * can act as an alternative to memtuple_form(), when we want close control over
+ * the memory allocation for the memtuple.
  *
  * You must call compute_memtuple_size() before this, and verify that
  * the buffer is large enough. Pass through the 'len', 'null_save_len'
  * and 'hasnull' values that compute_memtuple_size() returned.
  *
  * The tuple is written to 'mtup', which must be large enough to hold
- * 'len' bytes.
+ * 'len' bytes. In case 'mtup' is NULL, the tuple is palloced.
+ * 
+ * Returns 'mtup'.
  */
-void
+MemTuple
 memtuple_form_to(MemTupleBinding *pbind,
 				 Datum *values,
 				 bool *isnull,
@@ -653,7 +651,16 @@ memtuple_form_to(MemTupleBinding *pbind,
 
 	colbind = (len <= MEMTUPLE_LEN_FITSHORT) ? &pbind->bind : &pbind->large_bind;
 
-	memset(mtup, 0, len);
+	if (mtup != NULL)
+	{
+		/*
+		 * Use memset instead of the MemSet macro (optimized for word-aligned structures)
+		 * here as MemTuple may not be word-aligned due to its variable member PRIVATE_mt_bits.
+		 */
+		memset(mtup, 0, len);
+	}
+	else
+		mtup = palloc0(len);
 
 	/* Set mtlen, this set the lead bit, len, and clears hasnull bit 
 	 * because the len returned from compute size is always max aligned
@@ -834,6 +841,8 @@ memtuple_form_to(MemTupleBinding *pbind,
 
 	if (hasext)
 		memtuple_set_hasext(mtup);
+
+	return mtup;
 }
 
 bool memtuple_attisnull(MemTuple mtup, MemTupleBinding *pbind, int attnum)

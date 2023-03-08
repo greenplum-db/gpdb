@@ -105,8 +105,8 @@
           <dxl:Opfamily Mdid="0.434.1.0"/>
         </dxl:Opfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.310765001.1.0"/>
-          <dxl:Partition Mdid="0.310765002.1.0"/>
+          <dxl:Partition Mdid="6.310765001.1.0"/>
+          <dxl:Partition Mdid="6.310765002.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
       <dxl:Type Mdid="0.29.1.0" Name="cid" IsRedistributable="false" IsHashable="true" IsMergeJoinable="false" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
@@ -186,8 +186,8 @@
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.318839001.1.0"/>
-          <dxl:Partition Mdid="0.318839002.1.0"/>
+          <dxl:Partition Mdid="6.318839001.1.0"/>
+          <dxl:Partition Mdid="6.318839002.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
       <dxl:ColumnStatistics Mdid="1.310650.1.1.3" Name="ctid" Width="6.000000"/>
@@ -197,7 +197,7 @@
       <dxl:ColumnStatistics Mdid="1.310650.1.1.0" Name="id" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.310650.1.1.1" Name="ship_date" Width="8.000000"/>
       <dxl:RelationStatistics Mdid="2.310650.1.1" Name="test_orders" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.310650.1.1" Name="test_orders" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.310650.1.1" Name="test_orders" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -236,11 +236,11 @@
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.310650001.1.1"/>
-          <dxl:Partition Mdid="0.310650002.1.1"/>
+          <dxl:Partition Mdid="6.310650001.1.1"/>
+          <dxl:Partition Mdid="6.310650002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.310650001.1.1" Name="test_orders_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.310650001.1.1" Name="test_orders_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -294,7 +294,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.310650002.1.1" Name="test_orders_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.310650002.1.1" Name="test_orders_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -362,7 +362,7 @@
           <dxl:ConstValue TypeMdid="0.1082.1.0" Value="PxEAAA==" LintValue="4415"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.310650.1.1" TableName="test_orders">
+          <dxl:TableDescriptor Mdid="6.310650.1.1" TableName="test_orders">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="ship_date" TypeMdid="0.1082.1.0"/>
@@ -420,10 +420,10 @@
             </dxl:Comparison>
           </dxl:IndexCondList>
           <dxl:Partitions>
-            <dxl:Partition Mdid="0.310650001.1.1"/>
+            <dxl:Partition Mdid="6.310650001.1.1"/>
           </dxl:Partitions>
           <dxl:IndexDescriptor Mdid="0.310765.1.0" IndexName="ord_ind_1_prt_orders_1"/>
-          <dxl:TableDescriptor Mdid="0.310650.1.1" TableName="test_orders">
+          <dxl:TableDescriptor Mdid="6.310650.1.1" TableName="test_orders">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="ship_date" TypeMdid="0.1082.1.0"/>

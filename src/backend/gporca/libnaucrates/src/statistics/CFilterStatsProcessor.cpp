@@ -17,6 +17,7 @@
 #include "gpopt/operators/CScalarCmp.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 #include "naucrates/statistics/CBucket.h"
+#include "naucrates/statistics/CExtendedStatsProcessor.h"
 #include "naucrates/statistics/CJoinStatsProcessor.h"
 #include "naucrates/statistics/CScaleFactorUtils.h"
 #include "naucrates/statistics/CStatistics.h"
@@ -231,7 +232,7 @@ CFilterStatsProcessor::MakeStatsFilter(CMemoryPool *mp,
 	{
 		histograms_new = MakeHistHashMapConjOrDisjFilter(
 			mp, stats_config, histograms_copy, input_rows, base_pred_stats,
-			&scale_factor);
+			&scale_factor, input_stats);
 
 		GPOS_ASSERT(CStatistics::MinRows.Get() <= scale_factor.Get());
 		rows_filter = input_rows / scale_factor;
@@ -268,7 +269,8 @@ UlongToHistogramMap *
 CFilterStatsProcessor::MakeHistHashMapConjOrDisjFilter(
 	CMemoryPool *mp, const CStatisticsConfig *stats_config,
 	UlongToHistogramMap *input_histograms, CDouble input_rows,
-	CStatsPred *pred_stats, CDouble *scale_factor)
+	CStatsPred *pred_stats, CDouble *scale_factor,
+	const CStatistics *input_stats)
 {
 	GPOS_ASSERT(nullptr != pred_stats);
 	GPOS_ASSERT(nullptr != stats_config);
@@ -282,14 +284,14 @@ CFilterStatsProcessor::MakeHistHashMapConjOrDisjFilter(
 			CStatsPredConj::ConvertPredStats(pred_stats);
 		return MakeHistHashMapConjFilter(mp, stats_config, input_histograms,
 										 input_rows, conjunctive_pred_stats,
-										 scale_factor);
+										 scale_factor, input_stats);
 	}
 
 	CStatsPredDisj *disjunctive_pred_stats =
 		CStatsPredDisj::ConvertPredStats(pred_stats);
 	result_histograms = MakeHistHashMapDisjFilter(
 		mp, stats_config, input_histograms, input_rows, disjunctive_pred_stats,
-		scale_factor);
+		scale_factor, input_stats);
 
 	GPOS_ASSERT(nullptr != result_histograms);
 
@@ -301,7 +303,8 @@ UlongToHistogramMap *
 CFilterStatsProcessor::MakeHistHashMapConjFilter(
 	CMemoryPool *mp, const CStatisticsConfig *stats_config,
 	UlongToHistogramMap *input_histograms, CDouble input_rows,
-	CStatsPredConj *conjunctive_pred_stats, CDouble *scale_factor)
+	CStatsPredConj *conjunctive_pred_stats, CDouble *scale_factor,
+	const CStatistics *input_stats)
 {
 	GPOS_ASSERT(nullptr != stats_config);
 	GPOS_ASSERT(nullptr != input_histograms);
@@ -316,6 +319,10 @@ CFilterStatsProcessor::MakeHistHashMapConjFilter(
 	UlongToHistogramMap *result_histograms =
 		CStatisticsUtils::CopyHistHashMap(mp, input_histograms);
 
+	CExtendedStatsProcessor::ApplyCorrelatedStatsToScaleFactorFilterCalculation(
+		scale_factors, conjunctive_pred_stats, input_stats->GetExtStatsInfo(),
+		input_stats->GetColidToAttnoMapping(), mp, result_histograms);
+
 	// properties of last seen column
 	CDouble last_scale_factor(1.0);
 	ULONG last_colid = gpos::ulong_max;
@@ -325,6 +332,12 @@ CFilterStatsProcessor::MakeHistHashMapConjFilter(
 	for (ULONG ul = 0; ul < filters; ul++)
 	{
 		CStatsPred *child_pred_stats = conjunctive_pred_stats->GetPredStats(ul);
+
+		// Skip clauses we've already used in our estimate calculation
+		if (child_pred_stats->IsAlreadyUsedInScaleFactorEstimation())
+		{
+			continue;
+		}
 
 		GPOS_ASSERT(CStatsPred::EsptConj !=
 					child_pred_stats->GetPredStatsType());
@@ -409,7 +422,8 @@ CFilterStatsProcessor::MakeHistHashMapConjFilter(
 			UlongToHistogramMap *disjunctive_histograms_after =
 				MakeHistHashMapDisjFilter(
 					mp, stats_config, result_histograms, num_disj_input_rows,
-					disjunctive_pred_stats, &disjunctive_scale_factor);
+					disjunctive_pred_stats, &disjunctive_scale_factor,
+					input_stats);
 
 			// replace intermediate result with the newly generated result from the disjunction
 			if (gpos::ulong_max != colid)
@@ -457,7 +471,8 @@ UlongToHistogramMap *
 CFilterStatsProcessor::MakeHistHashMapDisjFilter(
 	CMemoryPool *mp, const CStatisticsConfig *stats_config,
 	UlongToHistogramMap *input_histograms, CDouble input_rows,
-	CStatsPredDisj *disjunctive_pred_stats, CDouble *scale_factor)
+	CStatsPredDisj *disjunctive_pred_stats, CDouble *scale_factor,
+	const CStatistics *input_stats)
 {
 	GPOS_ASSERT(nullptr != stats_config);
 	GPOS_ASSERT(nullptr != input_histograms);
@@ -542,7 +557,7 @@ CFilterStatsProcessor::MakeHistHashMapDisjFilter(
 		{
 			child_histograms = MakeHistHashMapConjOrDisjFilter(
 				mp, stats_config, input_histograms, input_rows,
-				child_pred_stats, &child_scale_factor);
+				child_pred_stats, &child_scale_factor, input_stats);
 
 			GPOS_ASSERT_IMP(
 				CStatsPred::EsptDisj == child_pred_stats->GetPredStatsType(),

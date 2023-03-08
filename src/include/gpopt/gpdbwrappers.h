@@ -20,6 +20,7 @@ extern "C" {
 
 #include "access/attnum.h"
 #include "parser/parse_coerce.h"
+#include "statistics/statistics.h"
 #include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
 }
@@ -186,6 +187,8 @@ Query *FlattenJoinAliasVar(Query *query, gpos::ULONG query_level);
 // is aggregate ordered
 bool IsOrderedAgg(Oid aggid);
 
+bool IsRepSafeAgg(Oid aggid);
+
 // does aggregate have a combine function (and serial/deserial functions, if needed)
 bool IsAggPartialCapable(Oid aggid);
 
@@ -204,6 +207,11 @@ void FreeAttrStatsSlot(AttStatsSlot *sslot);
 
 // attribute statistics
 HeapTuple GetAttStats(Oid relid, AttrNumber attnum);
+
+List *GetExtStats(Relation rel);
+
+char *GetExtStatsName(Oid statOid);
+List *GetExtStatsKinds(Oid statOid);
 
 // does a function exist with the given oid
 bool FunctionExists(Oid oid);
@@ -225,27 +233,6 @@ char FuncDataAccess(Oid funcid);
 
 // exec location property of given function
 char FuncExecLocation(Oid funcid);
-
-// trigger name
-char *GetTriggerName(Oid triggerid);
-
-// trigger relid
-Oid GetTriggerRelid(Oid triggerid);
-
-// trigger funcid
-Oid GetTriggerFuncid(Oid triggerid);
-
-// trigger type
-int32 GetTriggerType(Oid triggerid);
-
-// is trigger enabled
-bool IsTriggerEnabled(Oid triggerid);
-
-// does trigger exist
-bool TriggerExists(Oid oid);
-
-// does check constraint exist
-bool CheckConstraintExists(Oid check_constraint_oid);
 
 // check constraint name
 char *GetCheckConstraintName(Oid check_constraint_oid);
@@ -325,9 +312,6 @@ bool HeapAttIsNull(HeapTuple tup, int attnum);
 
 // free heap tuple
 void FreeHeapTuple(HeapTuple htup);
-
-// does an index exist with the given oid
-bool IndexExists(Oid oid);
 
 // get the default hash opclass for type
 Oid GetDefaultDistributionOpclassForType(Oid typid);
@@ -484,9 +468,6 @@ bool IsOpNDVPreserving(Oid opno);
 // get input types for a given operator
 void GetOpInputTypes(Oid opno, Oid *lefttype, Oid *righttype);
 
-// does an operator exist with the given oid
-bool OperatorExists(Oid oid);
-
 // expression tree walker
 bool WalkExpressionTree(Node *node, bool (*walker)(), void *context);
 
@@ -505,15 +486,8 @@ Node *MutateExpressionTree(Node *node, Node *(*mutator)(), void *context);
 Node *MutateQueryOrExpressionTree(Node *node, Node *(*mutator)(), void *context,
 								  int flags);
 
-bool RelIsPartitioned(Oid relid);
-
-bool IndexIsPartitioned(Oid relid);
-
 // check whether a relation is inherited
 bool HasSubclassSlow(Oid rel_oid);
-
-// check whether table with given oid is an external table
-bool RelIsExternalTable(Oid relid);
 
 // return the distribution policy of a relation; if the table is partitioned
 // and the parts are distributed differently, return Random distribution
@@ -523,19 +497,6 @@ GpPolicy *GetDistributionPolicy(Relation rel);
 // the child partitions is randomly distributed
 gpos::BOOL IsChildPartDistributionMismatched(Relation rel);
 
-#if 0
-    // return true if the table is partitioned and any of the child partitions
-    // have a trigger of the given type
-    gpos::BOOL ChildPartHasTriggers(Oid oid, int trigger_type);
-#endif
-
-// does a relation exist with the given oid
-bool RelationExists(Oid oid);
-
-// estimate the relation size using the real number of blocks and tuple density
-void CdbEstimateRelationSize(RelOptInfo *relOptInfo, Relation rel,
-							 int32 *attr_widths, BlockNumber *pages,
-							 double *tuples, double *allvisfrac);
 double CdbEstimatePartitionedNumTuples(Relation rel);
 
 // close the given relation
@@ -547,15 +508,17 @@ List *GetRelationIndexes(Relation relation);
 // build an array of triggers for this relation
 void BuildRelationTriggers(Relation rel);
 
+MVNDistinct *GetMVNDistinct(Oid stat_oid);
+
+MVDependencies *GetMVDependencies(Oid stat_oid);
+
 // get relation with given oid
 RelationWrapper GetRelation(Oid rel_oid);
 
-// get external table entry with given oid
-ExtTableEntry *GetExternalTableEntry(Oid rel_oid);
-
-// get ForeignScan node to scan an external table
-ForeignScan *CreateForeignScanForExternalTable(Oid rel_oid, Index scanrelid,
-											   List *qual, List *targetlist);
+// get ForeignScan node to scan a foreign table
+ForeignScan *CreateForeignScan(Oid rel_oid, Index scanrelid, List *qual,
+							   List *targetlist, Query *query,
+							   RangeTblEntry *rte);
 
 // return the first member of the given targetlist whose expression is
 // equal to the given expression, or NULL if no such member exists
@@ -568,28 +531,10 @@ List *FindMatchingMembersInTargetList(Node *node, List *targetlist);
 // check if two gpdb objects are equal
 bool Equals(void *p1, void *p2);
 
-// does a type exist with the given oid
-bool TypeExists(Oid oid);
-
 // check whether a type is composite
 bool IsCompositeType(Oid typid);
 
 bool IsTextRelatedType(Oid typid);
-
-// get integer value from an Integer value node
-int GetIntFromValue(Node *node);
-
-// parse external table URI
-Uri *ParseExternalTableUri(const char *uri);
-
-// returns ComponentDatabases
-CdbComponentDatabases *GetComponentDatabases(void);
-
-// compare two strings ignoring case
-int StrCmpIgnoreCase(const char *s1, const char *s2);
-
-// construct random segment map
-bool *ConstructRandomSegMap(int total_primaries, int total_to_skip);
 
 // create an empty 'StringInfoData' & return a pointer to it
 StringInfo MakeStringInfo(void);
@@ -625,7 +570,8 @@ void CheckRTPermissions(List *rtable);
 bool HasUpdateTriggers(Oid relid);
 
 // get index operator family properties
-void IndexOpProperties(Oid opno, Oid opfamily, int *strategy, Oid *righttype);
+void IndexOpProperties(Oid opno, Oid opfamily, StrategyNumber *strategynumber,
+					   Oid *righttype);
 
 // get oids of families this operator belongs to
 List *GetOpFamiliesForScOp(Oid opno);
@@ -641,6 +587,9 @@ List *GetIndexOpFamilies(Oid index_oid);
 
 // get oids of op classes for the merge join
 List *GetMergeJoinOpFamilies(Oid opno);
+
+// get the OID of base elementtype fora given typid
+Oid GetBaseType(Oid typid);
 
 // returns the result of evaluating 'expr' as an Expr. Caller keeps ownership of 'expr'
 // and takes ownership of the result

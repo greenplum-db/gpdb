@@ -106,12 +106,12 @@ CMDAccessorTest::EresUnittest_Basic()
 					 CTestUtils::GetCostModel(mp));
 
 	// lookup different objects
-	CMDIdGPDB *pmdidObject1 =
-		GPOS_NEW(mp) CMDIdGPDB(GPOPT_MDCACHE_TEST_OID /* OID */,
-							   1 /* major version */, 1 /* minor version */);
-	CMDIdGPDB *pmdidObject2 =
-		GPOS_NEW(mp) CMDIdGPDB(GPOPT_MDCACHE_TEST_OID /* OID */,
-							   12 /* version */, 1 /* minor version */);
+	CMDIdGPDB *pmdidObject1 = GPOS_NEW(mp)
+		CMDIdGPDB(IMDId::EmdidRel, GPOPT_MDCACHE_TEST_OID /* OID */,
+				  1 /* major version */, 1 /* minor version */);
+	CMDIdGPDB *pmdidObject2 = GPOS_NEW(mp)
+		CMDIdGPDB(IMDId::EmdidRel, GPOPT_MDCACHE_TEST_OID /* OID */,
+				  12 /* version */, 1 /* minor version */);
 
 #ifdef GPOS_DEBUG
 	const IMDRelation *pimdrel1 =
@@ -135,9 +135,12 @@ CMDAccessorTest::EresUnittest_Basic()
 	GPOS_ASSERT(pimdrel1 == pimdrel3);
 
 	// access GPDB types, operators and aggregates
-	CMDIdGPDB *mdid_type = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4, 1, 0);
-	CMDIdGPDB *mdid_op = GPOS_NEW(mp) CMDIdGPDB(GPDB_OP_INT4_LT, 1, 0);
-	CMDIdGPDB *agg_mdid = GPOS_NEW(mp) CMDIdGPDB(GPDB_AGG_AVG, 1, 0);
+	CMDIdGPDB *mdid_type =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4, 1, 0);
+	CMDIdGPDB *mdid_op =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_OP_INT4_LT, 1, 0);
+	CMDIdGPDB *agg_mdid =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_AGG_AVG, 1, 0);
 
 #ifdef GPOS_DEBUG
 	const IMDType *pimdtype =
@@ -327,9 +330,9 @@ CMDAccessorTest::EresUnittest_Navigate()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// lookup a function in the MD cache
-	CMDIdGPDB *mdid_func =
-		GPOS_NEW(mp) CMDIdGPDB(GPDB_FUNC_TIMEOFDAY /* OID */,
-							   1 /* major version */, 0 /* minor version */);
+	CMDIdGPDB *mdid_func = GPOS_NEW(mp)
+		CMDIdGPDB(IMDId::EmdidGeneral, GPDB_FUNC_TIMEOFDAY /* OID */,
+				  1 /* major version */, 0 /* minor version */);
 
 	const IMDFunction *pmdfunc = mda.RetrieveFunc(mdid_func);
 
@@ -400,8 +403,9 @@ CMDAccessorTest::EresUnittest_Indexes()
 					 CTestUtils::GetCostModel(mp));
 
 	// lookup a relation in the MD cache
-	CMDIdGPDB *rel_mdid = GPOS_NEW(mp)
-		CMDIdGPDB(GPOPT_MDCACHE_TEST_OID, 1 /* major */, 1 /* minor version */);
+	CMDIdGPDB *rel_mdid =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_MDCACHE_TEST_OID,
+							   1 /* major */, 1 /* minor version */);
 
 	const IMDRelation *pmdrel = mda.RetrieveRel(rel_mdid);
 
@@ -471,8 +475,9 @@ CMDAccessorTest::EresUnittest_CheckConstraint()
 	CColumnFactory *col_factory = COptCtxt::PoctxtFromTLS()->Pcf();
 
 	// lookup a relation in the MD cache
-	CMDIdGPDB *rel_mdid = GPOS_NEW(mp)
-		CMDIdGPDB(GPOPT_TEST_REL_OID21, 1 /* major */, 1 /* minor version */);
+	CMDIdGPDB *rel_mdid =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, GPOPT_TEST_REL_OID21,
+							   1 /* major */, 1 /* minor version */);
 
 	const IMDRelation *pmdrel = mda.RetrieveRel(rel_mdid);
 	GPOS_ASSERT(0 < pmdrel->CheckConstraintCount());
@@ -644,9 +649,9 @@ CMDAccessorTest::EresUnittest_Negative()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// lookup a non-existing objects
-	CMDIdGPDB *pmdidNonExistingObject =
-		GPOS_NEW(mp) CMDIdGPDB(GPOPT_MDCACHE_TEST_OID /* OID */,
-							   15 /* version */, 1 /* minor version */);
+	CMDIdGPDB *pmdidNonExistingObject = GPOS_NEW(mp)
+		CMDIdGPDB(IMDId::EmdidRel, GPOPT_MDCACHE_TEST_OID /* OID */,
+				  15 /* version */, 1 /* minor version */);
 
 	// call should result in an exception
 	(void) mda.RetrieveRel(pmdidNonExistingObject);
@@ -681,9 +686,9 @@ CMDAccessorTest::PvLookupSingleObj(void *pv)
 	GPOS_ASSERT(nullptr != md_accessor);
 
 	// lookup a cache object
-	CMDIdGPDB *mdid =
-		GPOS_NEW(mp) CMDIdGPDB(GPOPT_MDCACHE_TEST_OID /* OID */,
-							   1 /* major version */, 1 /* minor version */);
+	CMDIdGPDB *mdid = GPOS_NEW(mp)
+		CMDIdGPDB(IMDId::EmdidRel, GPOPT_MDCACHE_TEST_OID /* OID */,
+				  1 /* major version */, 1 /* minor version */);
 
 	// lookup object
 	(void) md_accessor->RetrieveRel(mdid);
@@ -721,8 +726,9 @@ CMDAccessorTest::PvLookupMultipleObj(void *pv)
 		GPOS_CHECK_ABORT;
 
 		// lookup relation
-		CMDIdGPDB *mdid = GPOS_NEW(pmdtaskparams->m_mp) CMDIdGPDB(
-			GPOPT_MDCACHE_TEST_OID /*OID*/, 1 /*major*/, ul + 1 /*minor*/);
+		CMDIdGPDB *mdid = GPOS_NEW(pmdtaskparams->m_mp)
+			CMDIdGPDB(IMDId::EmdidRel, GPOPT_MDCACHE_TEST_OID /*OID*/,
+					  1 /*major*/, ul + 1 /*minor*/);
 		(void) md_accessor->RetrieveRel(mdid);
 		mdid->Release();
 	}

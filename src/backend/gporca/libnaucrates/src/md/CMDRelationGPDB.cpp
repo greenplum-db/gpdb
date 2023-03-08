@@ -34,9 +34,9 @@ CMDRelationGPDB::CMDRelationGPDB(
 	Erelstoragetype rel_storage_type, Ereldistrpolicy rel_distr_policy,
 	CMDColumnArray *mdcol_array, ULongPtrArray *distr_col_array,
 	IMdIdArray *distr_opfamilies, ULongPtrArray *partition_cols_array,
-	CharPtrArray *str_part_types_array, ULONG num_of_partitions,
-	IMdIdArray *partition_oids, BOOL convert_hash_to_random,
-	ULongPtr2dArray *keyset_array, CMDIndexInfoArray *md_index_info_array,
+	CharPtrArray *str_part_types_array, IMdIdArray *partition_oids,
+	BOOL convert_hash_to_random, ULongPtr2dArray *keyset_array,
+	CMDIndexInfoArray *md_index_info_array,
 	IMdIdArray *mdid_check_constraint_array, CDXLNode *mdpart_constraint)
 	: m_mp(mp),
 	  m_mdid(mdid),
@@ -51,7 +51,6 @@ CMDRelationGPDB::CMDRelationGPDB(
 	  m_convert_hash_to_random(convert_hash_to_random),
 	  m_partition_cols_array(partition_cols_array),
 	  m_str_part_types_array(str_part_types_array),
-	  m_num_of_partitions(num_of_partitions),
 	  m_partition_oids(partition_oids),
 	  m_keyset_array(keyset_array),
 	  m_mdindex_info_array(md_index_info_array),
@@ -394,20 +393,6 @@ CMDRelationGPDB::IsPartitioned() const
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CMDRelationGPDB::PartitionCount
-//
-//	@doc:
-//		number of partitions
-//
-//---------------------------------------------------------------------------
-ULONG
-CMDRelationGPDB::PartitionCount() const
-{
-	return m_num_of_partitions;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CMDRelationGPDB::PartColumnCount
 //
 //	@doc:
@@ -668,10 +653,6 @@ CMDRelationGPDB::Serialize(CXMLSerializer *xml_serializer) const
 			CDXLTokens::GetDXLTokenStr(EdxltokenConvertHashToRandom),
 			m_convert_hash_to_random);
 	}
-
-	xml_serializer->AddAttribute(
-		CDXLTokens::GetDXLTokenStr(EdxltokenNumLeafPartitions),
-		m_num_of_partitions);
 
 	// serialize columns
 	xml_serializer->OpenElement(
