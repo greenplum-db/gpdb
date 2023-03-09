@@ -332,7 +332,8 @@ struct request_t
 #ifndef WIN32
 	pthread_t		thread_id;		/* recording the thread ID of thread created */
 #endif
-	int				send_size;		/* record number of sent bytes in multi-thread mode. */
+	int				send_size;		/* record number of sent bytes in multi-thread or compression mode. */
+	bool			session_end;	/* mark whether the session should be ended . */
 
 #ifdef USE_SSL
 	/* SSL related */
@@ -401,9 +402,9 @@ static int decompress_zstd(request_t* r, ZSTD_inBuffer* bin, ZSTD_outBuffer* bou
 static int decompress_write_loop(request_t *r);
 static int local_send_with_zstd(request_t *r);
 #ifndef WIN32
-static size_t wait_for_thread_join(request_t *r);
+static int wait_for_thread_join(request_t *r);
 #endif
-static size_t send_compression_data (void *req);
+static void* send_compression_data (void *req);
 #endif
 static int request_parse_gp_headers(request_t *r, int opt_g);
 static void free_session_cb(int fd, short event, void* arg);
@@ -443,6 +444,7 @@ static void delay_watchdog_timer(void);
 #ifndef WIN32
 static apr_time_t shutdown_time;
 static void* watchdog_thread(void*);
+static void session_mark_end(request_t* req);
 #endif
 
 static const char *EMPTY_HTTP_RES = "HTTP/1.0 200 ok\r\n"
@@ -1298,7 +1300,16 @@ static int local_send(request_t *r, const char* buf, int buflen)
 			gwarning(r, "gpfdist_send failed - the connection was terminated by the client (%d: %s)", e, strerror(e));
 			/* close stream and release fd & flock on pipe file*/
 			if (r->session && r->is_get)
-				session_end(r->session, 0);
+			{
+				if (r->is_running || opt.multi_thread)
+				{
+					session_mark_end(r);
+				}
+				else
+				{
+					session_end(r->session, 0);
+				}
+			}
 			/* For post requests, the error msg may not be transmited
  			 * to the client side because of network failure. So the
  			 * session has to be set an error to inform the client
@@ -1322,10 +1333,9 @@ static int local_send(request_t *r, const char* buf, int buflen)
 #ifdef USE_ZSTD
 #ifndef WIN32
 static
-size_t wait_for_thread_join(request_t *r)
+int wait_for_thread_join(request_t *r)
 {
-	size_t res = 0;
-	pthread_join(r->thread_id, &res);
+	pthread_join(r->thread_id, NULL);
 	r->is_running = 0;
 	r->thread_id = 0;
 	if (r->outblock.lastsize != r->send_size)
@@ -1349,23 +1359,22 @@ local_send_with_zstd(request_t *r)
 	else
 #endif
 	{
-		send_size = send_compression_data(r);
+		send_compression_data(r);
+		send_size = r->send_size;
 	}
 
 	return send_size;
 }
 
 static
-size_t send_compression_data (void *req)
+void* send_compression_data (void *req)
 {
 	request_t *r = (request_t *)req;
 
 	if(send_proto_head(r) < 0)
 	{
-#ifndef WIN32
-		sem_post(&THREAD_NUM);
-#endif
-		return -1;
+		r->send_size = -1;
+		goto return_block;
 	}
 
 	int osize = r->outblock.top, res = 0;
@@ -1381,10 +1390,7 @@ size_t send_compression_data (void *req)
 		if (res < 0)
 		{
 			r->send_size = -2;	/* If the error come from compression, '-2' is returned */
-#ifndef WIN32
-			sem_post(&THREAD_NUM);
-#endif
-			return r->send_size;
+			goto return_block;
 		}
 		outblock->cbot = 0;
 		outblock->ctop = res;
@@ -1396,21 +1402,24 @@ size_t send_compression_data (void *req)
 		r->send_size = 0;	/* This means that this transmission is for the data that isn't sent totally last time */
 	}
 
-	size_t send = local_send(r, buf, res);
+	int send = local_send(r, buf, res);
 	if(send < 0)
 	{
 		r->send_size = send;
-#ifndef WIN32
-		sem_post(&THREAD_NUM);
-#endif
-		return send;
+		goto return_block;
 	}
 	else
 		outblock->cbot += send;
+
+	goto return_block;
+
+
+return_block:
 #ifndef WIN32
-	sem_post(&THREAD_NUM);
+	if(opt.multi_thread)
+		sem_post(&THREAD_NUM);
 #endif
-	return r->send_size;
+	return NULL;
 }
 #endif
 
@@ -1966,12 +1975,17 @@ static int session_active_segs_isempty(session_t* session)
 }
 
 static
-size_t recycle_thread(request_t *r)
+int recycle_thread(request_t *r)
 {
-	size_t last_send = 0;
+	int last_send = 0;
 	if (r->is_running)
 	{
 		last_send = wait_for_thread_join(r);
+
+		if (r->session_end)
+		{
+			session_end(r->session, 0);
+		}
 
 		if(last_send < 0)
 		{
@@ -2056,7 +2070,7 @@ static void do_write(int fd, short event, void* arg)
 	 */
 	if (opt.multi_thread)
 	{
-		size_t res = recycle_thread(r);
+		int res = recycle_thread(r);
 		if(res < 0)
 		{
 			return;
@@ -4907,8 +4921,23 @@ static void delay_watchdog_timer()
 	}
 }
 
+/* finish the session - close the file */
+static void session_mark_end(request_t* req)
+{
+	gprintln(NULL, "session mark end. id = %ld", req->session->id);
+
+	if (req->session->fstream)
+	{
+		gprintln(NULL, "mark fstream to be closed");
+		req->session_end = 1;
+	}
+}
+
 #else
 static void delay_watchdog_timer()
+{
+}
+static void session_mark_end(session_t* session)
 {
 }
 #endif

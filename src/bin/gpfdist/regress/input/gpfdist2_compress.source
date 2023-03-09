@@ -470,7 +470,24 @@ FORMAT 'text'
 ;
 SELECT count(*) FROM ext_lineitem;
 DROP EXTERNAL TABLE ext_lineitem;
--- test 2 use a bigger file.
+-- test 2 use false data.
+
+CREATE EXTERNAL TABLE ext_simple (
+                dat CHAR(25),
+                fun int
+                )
+LOCATION
+(
+      'gpfdist://@hostname@:7070/gpfdist2/one_column.txt'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+)
+;
+SELECT count(*) FROM ext_simple;
+DROP EXTERNAL TABLE ext_simple;
+-- test 3 use a bigger file.
 
 CREATE EXTERNAL TABLE ext_lineitem (
                 L_ORDERKEY INT8,
