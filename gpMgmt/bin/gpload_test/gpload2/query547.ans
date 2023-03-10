@@ -1,0 +1,25 @@
+TODAYS_DATE1|INFO|gpload session started TODAYS_DATE2
+TODAYS_DATE1|INFO|setting schema 'public' for table 'testtruncate'
+TODAYS_DATE1|INFO|ports
+TODAYS_DATE1|INFO|did not find a staging table to reuse. creating STAGING_GPLOAD_REUSABLE
+TODAYS_DATE1|INFO|did not find an external table to reuse. creating EXT_GPLOAD_REUSABLE
+TODAYS_DATE1|INFO|running time: RUNNING_TIME seconds
+TODAYS_DATE1|INFO|rows Inserted          = 9
+TODAYS_DATE1|INFO|rows Updated           = 0
+TODAYS_DATE1|INFO|data formatting errors = 0
+TODAYS_DATE1|INFO|gpload succeeded
+Table "public.STAGING_GPLOAD_REUSABLE"
+ Column |            Type             | Modifiers 
+--------+-----------------------------+-----------
+ s1     | text                        | 
+ s2     | text                        | 
+ s3     | text                        | 
+ dt     | timestamp without time zone | 
+ n2     | integer                     | 
+ n3     | bigint                      | 
+ n4     | numeric                     | 
+ n5     | numeric                     | 
+ n6     | real                        | 
+ n7     | double precision            | 
+Distributed by: (dt)
+

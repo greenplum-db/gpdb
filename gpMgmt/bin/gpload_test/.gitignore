@@ -10,6 +10,8 @@ gpload2/data_file1.txt
 gpload2/data_file1.txt.bz2
 gpload2/data_file2.txt
 gpload2/data_file.csv
+gpload2/data/data_file.tbl
+gpload2/large_file.csv
 GPTest.pm
 gpstringsubs.pl
 gpdiff.pl
