@@ -34,6 +34,7 @@
 #include "parser/parse_type.h"
 #include "parser/parse_coerce.h"
 #include "utils/builtins.h"
+#include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 
@@ -787,6 +788,13 @@ parserOpenTable(ParseState *pstate, const RangeVar *relation,
 		}
 	}
 	rel = CdbOpenRelationRv(relation, lockmode, NULL);
+
+#ifdef FAULT_INJECTOR
+	FaultInjector_InjectFaultNameIfSet("parse_open_table_cancel_query",
+								  DDLNotSpecified,
+											   "",	// databaseName
+											   ""); // tableName
+#endif
 
 	cancel_parser_errposition_callback(&pcbstate);
 	return rel;

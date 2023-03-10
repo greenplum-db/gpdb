@@ -1,0 +1,60 @@
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+drop table if exists _tmp_table;
+NOTICE:  table "_tmp_table" does not exist, skipping
+create table _tmp_table (i1 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into _tmp_table select i from generate_series(0, 999) i;
+SELECT gp_inject_fault('parse_open_table_cancel_query', 'reset', 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+SELECT gp_inject_fault('parse_open_table_cancel_query', 'suspend', 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+SELECT * from _tmp_table order by i1 limit 10;
+ i1 
+----
+  0
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+(10 rows)
+
+SELECT pg_cancel_backend(pg_backend_pid());
+ERROR:  canceling statement due to user request
+SELECT gp_inject_fault('parse_open_table_cancel_query', 'status', 1);
+NOTICE:  Success: fault name:'parse_open_table_cancel_query' fault type:'suspend' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'set'  num times hit:'0'
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+SELECT gp_inject_fault('parse_open_table_cancel_query', 'resume', 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+SELECT gp_inject_fault('parse_open_table_cancel_query', 'reset', 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+drop table _tmp_table;
