@@ -47,13 +47,13 @@ Before you install the MADlib package, make sure that your Greenplum atabase is 
 4.  Unpack the MADlib distribution package. For example:
 
     ```
-    $ tar xzvf madlib-1.17.0-gp5-rhel7-x86_64.tar.gz
+    $ tar xzvf madlib-1.21.0+1-gp5-rhel7-x86_64.tar.gz
     ```
 
 5.  Install the software package by running the `gppkg` command. For example:
 
     ```
-    $ gppkg -i ./madlib-1.17.0-gp5-rhel7-x86_64/madlib-1.17.0-gp5-rhel7-x86_64.gppkg
+    $ gppkg -i ./madlib-1.21.0+1-gp5-rhel7-x86_64/madlib-1.21.0+1-gp5-rhel7-x86_64.gppkg
     ```
 
 
@@ -89,57 +89,19 @@ For information about the upgrade paths that MADlib supports, see the MADlib sup
 
 ### Upgrading a MADlib Package 
 
-To upgrade MADlib, run the `gppkg` utility with the `-u` option. This command upgrades an installed MADlib package to MADlib 1.17.
+To upgrade MADlib, run the `gppkg` utility with the `-u` option. This command upgrades an installed MADlib package to MADlib 1.21.0.
 
 ```
-$ gppkg -u madlib-1.17.0-gp5-rhel7-x86_64.gppkg
+$ gppkg -u madlib-1.21.0+1-gp5-rhel7-x86_64.gppkg
 ```
-
-**Note:** Upgrading from MADlib version 1.15 using `gppkg -U` does not work because of a change in the post-uninstall script that was introduced in version 1.15.1. If you are upgrading from MADlib version 1.15 to version 1.15.1 or newer, follow these steps:
-
-1.  Remove the existing MADlib version 1.15 rpm \(this does not affect the Greenplum Database installation\):
-
-    ```
-    gppkg -r madlib-1.15.0
-    ```
-
-2.  Manually remove the remaining MADlib files:
-
-    ```
-    rm -rf /usr/local/greenplum-db-5.13.0/madlib/Versions
-    ```
-
-3.  Install the newer MADlib version. For example:
-
-    ```
-    $ gppkg -i ./madlib-1.17.0-gp5-rhel7-x86_64.gppkg
-    ```
-
-4.  Upgrade the MADlib functions in each database. For example:
-
-    ```
-    madpack -p greenplum -c gpadmin@mdw:5432/testdb upgrade
-    ```
-
 
 ### Upgrading MADlib Functions 
 
-After you upgrade the MADlib package, you run the `madpack upgrade` command to upgrade the MADlib functions in Greenplum Database.
+After you upgrade the MADlib package from one minor version to another, you run the `madpack upgrade` command to upgrade the MADlib functions in Greenplum Database.
 
-**Note:** The upgrade to MADlib 1.13 has a minor issue with some leftover `knn` functions.
+> **Note** Use `madpack upgrade` only if you upgraded a minor MADlib package version, for example from 1.19.0 to 1.21.0. You do not need to update the functions within a patch version upgrade, for example from 1.16+1 to 1.16+3.
 
-Before running the `madpack` command to upgrade to MADlib 1.13, run these `psql` commands as the `gpadmin` user to drop the leftover functions from the databases where MADlib is installed.
-
-```
-psql <db_name> -c "DROP FUNCTION IF EXISTS <schema>.knn(VARCHAR);"
-psql <db_name> -c "DROP FUNCTION IF EXISTS <schema>.knn();"
-```
-
-db\_name is the name of the database. schema is the name of the MADlib schema.
-
-See the [MADlib Installation Guide](https://cwiki.apache.org/confluence/display/MADLIB/Installation+Guide#InstallationGuide-01/11/18-UpgradingMADlibto1.13).
-
-The `madpack upgrade` command upgrades the MADlib functions in the database schema. This example command upgrades the MADlib functions in the schema `madlib` of the Greenplum Database `test`.
+This example command upgrades the MADlib functions in the schema `madlib` of the Greenplum Database `test`.
 
 ```
 madpack -s madlib -p greenplum -c gpadmin@mdw:5432/testdb upgrade
@@ -162,10 +124,10 @@ $ madpack  -s madlib -p greenplum -c gpadmin@mdw:5432/testdb uninstall
 
 ### Uninstall the Greenplum Database MADlib Package 
 
-If no databases use the MADlib functions, use the Greenplum `gppkg` utility with the `-r` option to uninstall the MADlib package. When removing the package you must specify the package and version. This example uninstalls MADlib package version 1.17.
+If no databases use the MADlib functions, use the Greenplum `gppkg` utility with the `-r` option to uninstall the MADlib package. When removing the package you must specify the package and version. This example uninstalls MADlib package version 1.21.0.
 
 ```
-$ gppkg -r madlib-1.17.0-gp5-rhel7-x86_64
+$ gppkg -r madlib-1.21.0+1-gp5-rhel7-x86_64
 ```
 
 You can run the `gppkg` utility with the options `-q --all` to list the installed extensions and their versions.
