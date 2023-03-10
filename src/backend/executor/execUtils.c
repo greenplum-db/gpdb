@@ -2303,6 +2303,7 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 					heap_close(r, NoLock);
 				}
 			}
+			hash_destroy(aopartcounts);
 		}
 		else
 		{
