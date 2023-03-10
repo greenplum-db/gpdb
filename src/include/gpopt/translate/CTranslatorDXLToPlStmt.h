@@ -76,13 +76,6 @@ class CDXLNode;
 class CDXLPhysicalCTAS;
 class CDXLDirectDispatchInfo;
 
-typedef struct
-{
-	List *subplan_tlist;
-	Index newvarno;
-	int rtoffset;
-} fix_upper_expr_context_projectset;
-
 //---------------------------------------------------------------------------
 //	@class:
 //		CTranslatorDXLToPlStmt
@@ -112,6 +105,24 @@ private:
 			GPOS_ASSERT(nullptr != md_index);
 		}
 	};	// SContextIndexVarAttno
+
+	struct fix_upper_expr_context_projectset
+	{
+		List *m_subplan_tlist;
+
+		Index m_newvarno;
+
+		int m_rtoffset;
+
+		fix_upper_expr_context_projectset(List *subplan_tlist, Index newvarno,
+										  int rtoffset)
+			: m_subplan_tlist(subplan_tlist),
+			  m_newvarno(newvarno),
+			  m_rtoffset(rtoffset)
+		{
+		}
+
+	};	// fix_upper_expr_context_projectset
 
 	// memory pool
 	CMemoryPool *m_mp;

@@ -3485,6 +3485,8 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 
 	SetParamIds(plan);
 
+	// Create Pathtarget object from Result node's targetlist which is required
+	// by SplitPathtargetAtSrfs method
 	PathTarget *complete_result_pathtarget =
 		gpdb::MakePathtargetFromTlist(plan->targetlist);
 
@@ -3492,9 +3494,9 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	gpdb::SplitPathtargetAtSrfs(nullptr, complete_result_pathtarget, nullptr,
 								&targets_with_srf, &targets_with_srf_bool);
 
-	// If the PathTarget does not contain any set returning functions then
-	// split_pathtarget_at_srfs method will return the same PathTarget back.
-	// In this case a ProjectSet node is not required.
+	// If the PathTarget created from Result node's targetlist does not contain
+	// any set returning functions then split_pathtarget_at_srfs method will return
+	// the same PathTarget back.In this case a ProjectSet node is not required.
 	if (1 == gpdb::ListLength(targets_with_srf))
 	{
 		result->plan.lefttree = child_plan;
@@ -3513,14 +3515,21 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 
 	ForEach(lc, targets_with_srf)
 	{
-		// The first element of the PathTarget list created by split_pathtarget_at_srfs
-		// method will not contain any SRF's. So skipping it.
+		// The first element of the PathTarget list created by
+		// split_pathtarget_at_srfs method will not contain any
+		// SRF's. So skipping it.
 		if (list_cell_pos == 1)
 		{
 			list_cell_pos++;
 			continue;
 		}
 
+		// If a Result node is required on top of a ProjectSet node
+		// then the last element of PathTarget list created by
+		// split_pathtarget_at_srfs method will contain the PathTarget
+		// of the result node.Since result node is already created before,
+		// breaking out from the loop. If a result node is not required on
+		// top of a ProjectSet node, continue to create a ProjectSet node.
 		if (will_require_result_node &&
 			targets_with_srf_list_length == list_cell_pos)
 		{
@@ -3538,6 +3547,7 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 
 		temp_plan_project_set->qual = plan->qual;
 
+		// Creating the links between all the nested ProjectSet nodes
 		if (nullptr == project_set_final_plan)
 		{
 			project_set_final_plan = temp_plan_project_set;
@@ -3560,6 +3570,7 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	}
 	else
 	{
+		// Setting up the alias value (te->resname)
 		ULONG ul = 0;
 		ListCell *listcell_project_targetentry;
 
@@ -3590,7 +3601,7 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 		final_plan = project_set_final_plan;
 	}
 
-	// Set up upper references
+	// Modifying FUNEXPR in args to VAR for every parent ProjectSet node
 	Plan *it_set_upper_ref = final_plan;
 	while (it_set_upper_ref->lefttree != nullptr &&
 		   it_set_upper_ref->lefttree->type == T_ProjectSet)
@@ -3606,11 +3617,8 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 			Node *newexpr;
 
 
-			fix_upper_expr_context_projectset context;
-			context.subplan_tlist = subplan->targetlist;
-			context.newvarno = OUTER_VAR;
-			context.rtoffset = 0;
-
+			fix_upper_expr_context_projectset context(subplan->targetlist,
+													  OUTER_VAR, 0);
 
 			newexpr =
 				fix_upper_expr_mutator_projectSet((Node *) tle->expr, &context);
@@ -3640,7 +3648,7 @@ CTranslatorDXLToPlStmt::fix_upper_expr_mutator_projectSet(
 	}
 
 	newvar = SearchTlistForNonVarProjectset(
-		(Expr *) node, context->subplan_tlist, context->newvarno);
+		(Expr *) node, context->m_subplan_tlist, context->m_newvarno);
 	if (newvar)
 	{
 		return (Node *) newvar;
@@ -3660,7 +3668,9 @@ CTranslatorDXLToPlStmt::SearchTlistForNonVarProjectset(Expr *node, List *itlist,
 	TargetEntry *tle;
 
 	if (IsA(node, Const))
+	{
 		return nullptr;
+	}
 
 	tle = gpdb::TlistMember(node, itlist);
 	if (tle)
