@@ -76,6 +76,13 @@ class CDXLNode;
 class CDXLPhysicalCTAS;
 class CDXLDirectDispatchInfo;
 
+typedef struct
+{
+	List *subplan_tlist;
+	Index newvarno;
+	int rtoffset;
+} fix_upper_expr_context_projectset;
+
 //---------------------------------------------------------------------------
 //	@class:
 //		CTranslatorDXLToPlStmt
@@ -296,11 +303,7 @@ private:
 			ctxt_translation_prev_siblings	// translation contexts of previous siblings
 	);
 
-	Plan *TranslateDXLProjectSet(
-		const CDXLNode *result_dxlnode, CDXLTranslateContext *output_context,
-		CDXLTranslationContextArray *
-			ctxt_translation_prev_siblings	// translation contexts of previous siblings
-	);
+	Plan *TranslateDXLProjectSet(const CDXLNode *result_dxlnode);
 
 	Plan *TranslateDXLResult(
 		const CDXLNode *result_dxlnode, CDXLTranslateContext *output_context,
@@ -591,6 +594,12 @@ private:
 	static List *TranslateNestLoopParamList(
 		CDXLColRefArray *pdrgdxlcrOuterRefs, CDXLTranslateContext *dxltrctxLeft,
 		CDXLTranslateContext *dxltrctxRight);
+
+	static Node *fix_upper_expr_mutator_projectSet(
+		Node *node, fix_upper_expr_context_projectset *context);
+
+	static Var *SearchTlistForNonVarProjectset(Expr *node, List *itlist,
+											   Index newvarno);
 };
 }  // namespace gpdxl
 

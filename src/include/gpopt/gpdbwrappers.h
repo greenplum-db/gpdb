@@ -647,6 +647,22 @@ void GPDBLockRelationOid(Oid reloid, int lockmode);
 
 char *GetRelFdwName(Oid reloid);
 
+PathTarget *MakePathtargetFromTlist(List *tlist);
+
+void SplitPathtargetAtSrfs(PlannerInfo *root, PathTarget *target,
+						   PathTarget *input_target, List **targets,
+						   List **targets_contain_srfs);
+
+List *MakeTlistFromPathtarget(PathTarget *target);
+
+Node *Expression_tree_mutator(Node *node, Node *(*mutator)(), void *context);
+
+TargetEntry *TlistMember(Expr *node, List *targetlist);
+
+Var *MakeVarFromTargetEntry(Index varno, TargetEntry *tle);
+
+TargetEntry *FlatCopyTargetEntry(TargetEntry *src_tle);
+
 }  //namespace gpdb
 
 #define ForEach(cell, l) \
