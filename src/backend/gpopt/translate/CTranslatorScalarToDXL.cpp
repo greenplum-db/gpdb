@@ -1329,33 +1329,10 @@ CTranslatorScalarToDXL::TranslateFuncExprToDXL(
 
 	CMDIdGPDB *mdid_func =
 		GPOS_NEW(m_mp) CMDIdGPDB(IMDId::EmdidGeneral, func_expr->funcid);
-
-	if (func_expr->funcvariadic)
-	{
-		// DXL doesn't have a field for variadic. We could plan it like a normal,
-		// non-VARIADIC call, and it would work for most functions that don't
-		// care whether they're called as VARIADIC or not. But some functions
-		// care. For example, text_format() checks, with get_fn_expr_variadic(),
-		// whether it was called as VARIADIC or with a normal ARRAY argument.
-		// GPDB_93_MERGE_FIXME: Fix ORCA to pass the 'funcvariadic' flag through
-		// the planning.
-
-		//GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-			//	   GPOS_WSZ_LIT("VARIADIC argument"));
-		GPOS_ASSERT(func_expr!=nullptr);
-		GPOS_ASSERT(func_expr->funcvariadic==true);
-
-	}
+	CDXLNode *dxlnode = nullptr;
 
 	// create the DXL node holding the scalar funcexpr
-	/*CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(
-		m_mp, GPOS_NEW(m_mp) CDXLScalarFuncExpr(
-				  m_mp, mdid_func,
-				  GPOS_NEW(m_mp)
-					  CMDIdGPDB(IMDId::EmdidGeneral, func_expr->funcresulttype),
-				  type_modifier, func_expr->funcretset));*/
-	// create the DXL node holding the scalar funcexpr
-	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(
+	dxlnode = GPOS_NEW(m_mp) CDXLNode(
 		m_mp,
 		GPOS_NEW(m_mp) CDXLScalarFuncExpr(
 			m_mp, mdid_func,

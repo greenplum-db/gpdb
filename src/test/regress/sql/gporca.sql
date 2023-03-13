@@ -3489,6 +3489,46 @@ insert into ts_tbl select to_timestamp('99991231'::text, 'YYYYMMDD'::text) from 
 analyze ts_tbl;
 explain select * from ts_tbl where ts = to_timestamp('99991231'::text, 'YYYYMMDD'::text);
 
+--------------------------------------------------------------------------------------------------
+-- Tests to check the performance ORCA if in a function expression, flagvariadic is true or false
+--------------------------------------------------------------------------------------------------
+drop table if exists foo;
+create table foo (a int,b int, c_json json);
+insert into foo values (1,1,'{"1":"10"}');
+insert into foo values (2,2,'{"2":"20"}');
+insert into foo values (3,3,'{"3":"30"}');
+
+-- For all of the following queries 'funcvariadic' flag (in struct FuncExpr) is 'true'
+-- ORCA raised exception for all such scenarios where this flag was found to be true
+-- After adding this flag in the 'DXL' and passing it through to the planned statement
+-- now this flag is used to generate correct results and the exception is not raised.
+explain (costs off) select *, (json_extract_path_text(c_json, '1'))  AS jsonValues from foo;
+select *, (json_extract_path_text(c_json, '1'))  AS jsonValues from foo;
+
+explain (costs off) select format('%s %s', VARIADIC ARRAY['first', 'second']);
+select format('%s %s', VARIADIC ARRAY['first', 'second']);
+
+explain (costs off) select concat(variadic array[1,2,3]);
+select concat(variadic array[1,2,3]);
+
+explain (costs off) SELECT json_build_array(VARIADIC '{a,b,c}'::text[]);
+SELECT json_build_array(VARIADIC '{a,b,c}'::text[]);
+
+-- For all of the following queries 'funcvariadic' flag (in struct FuncExpr) is 'false'
+drop function if exists concat_values;
+CREATE FUNCTION concat_values(text, VARIADIC anyarray) RETURNS text AS $$
+SELECT array_to_string($2, $1);
+$$ LANGUAGE SQL;
+
+explain (costs off) select concat_values('|', 1, 4, 2);
+select concat_values('|', 1, 4, 2);
+
+explain (costs off) SELECT FORMAT('|%20s|', 'ten');
+SELECT FORMAT('|%20s|', 'ten');
+
+drop table if exists foo;
+drop function if exists concat_values;
+
 
 -- start_ignore
 DROP SCHEMA orca CASCADE;

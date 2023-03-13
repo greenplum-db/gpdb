@@ -30,27 +30,8 @@ using namespace gpdxl;
 //---------------------------------------------------------------------------
 CDXLScalarFuncExpr::CDXLScalarFuncExpr(CMemoryPool *mp, IMDId *mdid_func,
 									   IMDId *mdid_return_type,
-									   INT return_type_modifier, BOOL fRetSet)
-	: CDXLScalar(mp),
-	  m_func_mdid(mdid_func),
-	  m_return_type_mdid(mdid_return_type),
-	  m_return_type_modifier(return_type_modifier),
-	  m_returns_set(fRetSet)
-{
-	GPOS_ASSERT(m_func_mdid->IsValid());
-	GPOS_ASSERT(m_return_type_mdid->IsValid());
-}
-//---------------------------------------------------------------------------
-//	@function:
-//		CDXLScalarFuncExpr::CDXLScalarFuncExpr
-//
-//	@doc:
-//		Constructs a scalar FuncExpr node
-//
-//---------------------------------------------------------------------------
-CDXLScalarFuncExpr::CDXLScalarFuncExpr(CMemoryPool *mp, IMDId *mdid_func,
-									   IMDId *mdid_return_type,
-									   INT return_type_modifier, BOOL fRetSet,BOOL funcvariadic)
+									   INT return_type_modifier, BOOL fRetSet,
+									   BOOL funcvariadic)
 	: CDXLScalar(mp),
 	  m_func_mdid(mdid_func),
 	  m_return_type_mdid(mdid_return_type),

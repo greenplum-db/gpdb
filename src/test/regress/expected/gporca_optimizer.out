@@ -14576,3 +14576,109 @@ explain select * from ts_tbl where ts = to_timestamp('99991231'::text, 'YYYYMMDD
  Optimizer: Pivotal Optimizer (GPORCA)
 (4 rows)
 
+--------------------------------------------------------------------------------------------------
+-- Tests to check the performance ORCA if in a function expression, flagvariadic is true or false
+--------------------------------------------------------------------------------------------------
+drop table if exists foo;
+create table foo (a int,b int, c_json json);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into foo values (1,1,'{"1":"10"}');
+insert into foo values (2,2,'{"2":"20"}');
+insert into foo values (3,3,'{"3":"30"}');
+-- For all of the following queries 'funcvariadic' flag (in struct FuncExpr) is 'true'
+-- ORCA raised exception for all such scenarios where this flag was found to be true
+-- After adding this flag in the 'DXL' and passing it through to the planned statement
+-- now this flag is used to generate correct results and the exception is not raised.
+explain (costs off) select *, (json_extract_path_text(c_json, '1'))  AS jsonValues from foo;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on foo
+ Optimizer: Pivotal Optimizer (GPORCA)
+(3 rows)
+
+select *, (json_extract_path_text(c_json, '1'))  AS jsonValues from foo;
+ a | b |   c_json   | jsonvalues 
+---+---+------------+------------
+ 1 | 1 | {"1":"10"} | 10
+ 2 | 2 | {"2":"20"} | 
+ 3 | 3 | {"3":"30"} | 
+(3 rows)
+
+explain (costs off) select format('%s %s', VARIADIC ARRAY['first', 'second']);
+              QUERY PLAN               
+---------------------------------------
+ Result
+ Optimizer: Pivotal Optimizer (GPORCA)
+(2 rows)
+
+select format('%s %s', VARIADIC ARRAY['first', 'second']);
+    format    
+--------------
+ first second
+(1 row)
+
+explain (costs off) select concat(variadic array[1,2,3]);
+              QUERY PLAN               
+---------------------------------------
+ Result
+ Optimizer: Pivotal Optimizer (GPORCA)
+(2 rows)
+
+select concat(variadic array[1,2,3]);
+ concat 
+--------
+ 123
+(1 row)
+
+explain (costs off) SELECT json_build_array(VARIADIC '{a,b,c}'::text[]);
+              QUERY PLAN               
+---------------------------------------
+ Result
+ Optimizer: Pivotal Optimizer (GPORCA)
+(2 rows)
+
+SELECT json_build_array(VARIADIC '{a,b,c}'::text[]);
+ json_build_array 
+------------------
+ ["a", "b", "c"]
+(1 row)
+
+-- For all of the following queries 'funcvariadic' flag (in struct FuncExpr) is 'false'
+drop function if exists concat_values;
+NOTICE:  function concat_values() does not exist, skipping
+CREATE FUNCTION concat_values(text, VARIADIC anyarray) RETURNS text AS $$
+SELECT array_to_string($2, $1);
+$$ LANGUAGE SQL;
+explain (costs off) select concat_values('|', 1, 4, 2);
+              QUERY PLAN               
+---------------------------------------
+ Result
+ Optimizer: Pivotal Optimizer (GPORCA)
+(2 rows)
+
+select concat_values('|', 1, 4, 2);
+ concat_values 
+---------------
+ 1|4|2
+(1 row)
+
+explain (costs off) SELECT FORMAT('|%20s|', 'ten');
+              QUERY PLAN               
+---------------------------------------
+ Result
+ Optimizer: Pivotal Optimizer (GPORCA)
+(2 rows)
+
+SELECT FORMAT('|%20s|', 'ten');
+         format         
+------------------------
+ |                 ten|
+(1 row)
+
+drop table if exists foo;
+drop function if exists concat_values;
+-- start_ignore
+DROP SCHEMA orca CASCADE;
+-- end_ignore
