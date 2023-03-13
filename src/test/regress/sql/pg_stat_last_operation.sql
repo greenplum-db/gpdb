@@ -124,6 +124,13 @@ INSERT INTO pg_stat_last_operation_test SELECT generate_series(1, 5);
 TRUNCATE pg_stat_last_operation_test;
 SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'TRUNCATE';
 
+-- CREATE INDEX
+CREATE INDEX idx_mt ON mdt_all_types (a);
+REINDEX INDEX idx_mt;
+SELECT * FROM pg_stat_last_operation_testview WHERE objname = 'idx_mt';
+-- QEs shouldn't do meta tracking stuff
+SELECT gp_execution_dbid(), * FROM gp_dist_random('pg_stat_last_operation_testview') WHERE objname = 'idx_mt';
+
 -- DROP TABLE
 SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'DROP';
 SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
