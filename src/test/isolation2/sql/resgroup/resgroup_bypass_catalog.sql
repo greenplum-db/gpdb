@@ -1,13 +1,8 @@
 CREATE RESOURCE GROUP rg_test_catalog WITH (CONCURRENCY=2, cpu_rate_limit=10);
 CREATE ROLE role_test_catalog RESOURCE GROUP rg_test_catalog;
 
-CREATE EXTENSION plpythonu;
 CREATE FUNCTION rg_test_udf()
-RETURNS integer AS
-$$
-return 1
-$$
-LANGUAGE plpythonu;
+RETURNS integer AS $$ SELECT 1; $$ LANGUAGE SQL;
 
 -- take 1 slot
 1: SET ROLE role_test_catalog;
