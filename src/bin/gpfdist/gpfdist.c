@@ -19,7 +19,6 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/sysinfo.h>
 #ifndef WIN32
 #include <strings.h>
 #endif
