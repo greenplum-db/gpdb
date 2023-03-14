@@ -287,6 +287,11 @@ transformExprRecurse(ParseState *pstate, Node *expr)
 				result = expr;
 				break;
 			}
+		case T_OpExpr:
+			{
+				result = (Node *) expr;
+				break;
+			}
 
 		case T_SubLink:
 			result = transformSubLink(pstate, (SubLink *) expr);

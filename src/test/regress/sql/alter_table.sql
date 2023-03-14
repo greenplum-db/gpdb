@@ -3145,6 +3145,10 @@ select c.relname, r.rolname from pg_class c join pg_roles r on c.relowner = r.oi
 alter table only atown_part owner to atown_r2;
 select c.relname, r.rolname from pg_class c join pg_roles r on c.relowner = r.oid where relname like 'atown_part%';
 
+-- please refer to:  https://github.com/greenplum-db/gpdb/issues/15034
+create table transform_r1(c DECIMAL);
+alter table transform_r1 alter c SET DEFAULT (((0.1)>(0.9) IS UNKNOWN)::INT)::MONEY;
+drop table transform_r1;
 drop table atown_part;
 reset role;
 drop role atown_r1;
