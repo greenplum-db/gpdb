@@ -130,10 +130,13 @@ static SimpleStringList schema_exclude_patterns = {NULL, NULL};
 static SimpleOidList schema_exclude_oids = {NULL, NULL};
 
 static SimpleStringList table_include_patterns = {NULL, NULL};
+static SimpleStringList table_include_patterns_and_children = {NULL, NULL};
 static SimpleOidList table_include_oids = {NULL, NULL};
 static SimpleStringList table_exclude_patterns = {NULL, NULL};
+static SimpleStringList table_exclude_patterns_and_children = {NULL, NULL};
 static SimpleOidList table_exclude_oids = {NULL, NULL};
 static SimpleStringList tabledata_exclude_patterns = {NULL, NULL};
+static SimpleStringList tabledata_exclude_patterns_and_children = {NULL, NULL};
 static SimpleOidList tabledata_exclude_oids = {NULL, NULL};
 
 static SimpleStringList relid_string_list = {NULL, NULL};
@@ -196,7 +199,9 @@ static void expand_schema_name_patterns(Archive *fout,
 static void expand_table_name_patterns(Archive *fout,
 									   SimpleStringList *patterns,
 									   SimpleOidList *oids,
-									   bool strict_names);
+									   bool strict_names,
+									   bool with_child_tables);
+
 static NamespaceInfo *findNamespace(Oid nsoid);
 static void dumpTableData(Archive *fout, const TableDataInfo *tdinfo);
 static void refreshMatViewData(Archive *fout, const TableDataInfo *tdinfo);
@@ -465,6 +470,9 @@ main(int argc, char **argv)
 		{"no-sync", no_argument, NULL, 7},
 		{"on-conflict-do-nothing", no_argument, &dopt.do_nothing, 1},
 		{"rows-per-insert", required_argument, NULL, 10},
+		{"table-and-children", required_argument, NULL, 12},
+		{"exclude-table-and-children", required_argument, NULL, 13},
+		{"exclude-table-data-and-children", required_argument, NULL, 14},
 
 		/* START MPP ADDITION */
 
@@ -720,6 +728,22 @@ main(int argc, char **argv)
 				dopt.include_everything = false;
 				break;
 
+			case 12:			/* include table(s) and their children */
+				simple_string_list_append(&table_include_patterns_and_children,
+										  optarg);
+				dopt.include_everything = false;
+				break;
+
+			case 13:			/* exclude table(s) and their children */
+				simple_string_list_append(&table_exclude_patterns_and_children,
+										  optarg);
+				break;
+
+			case 14:			/* exclude data of table(s) and children */
+				simple_string_list_append(&tabledata_exclude_patterns_and_children,
+										  optarg);
+				break;
+
 			default:
 				fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 				exit_nicely(1);
@@ -922,21 +946,30 @@ main(int argc, char **argv)
 	/* non-matching exclusion patterns aren't an error */
 
 	/* Expand table selection patterns into OID lists */
-	if (table_include_patterns.head != NULL)
-	{
-		expand_table_name_patterns(fout, &table_include_patterns,
-								   &table_include_oids,
-								   strict_names);
-		if (table_include_oids.head == NULL)
-			fatal("no matching tables were found");
-	}
+	expand_table_name_patterns(fout, &table_include_patterns,
+							   &table_include_oids,
+							   strict_names, false);
+	expand_table_name_patterns(fout, &table_include_patterns_and_children,
+							   &table_include_oids,
+							   strict_names, true);
+	if ((table_include_patterns.head != NULL ||
+		 table_include_patterns_and_children.head != NULL) &&
+		table_include_oids.head == NULL)
+		fatal("no matching tables were found");
+
 	expand_table_name_patterns(fout, &table_exclude_patterns,
 							   &table_exclude_oids,
-							   false);
+							   false, false);
+	expand_table_name_patterns(fout, &table_exclude_patterns_and_children,
+							   &table_exclude_oids,
+							   false, true);
 
 	expand_table_name_patterns(fout, &tabledata_exclude_patterns,
 							   &tabledata_exclude_oids,
-							   false);
+							   false, false);
+	expand_table_name_patterns(fout, &tabledata_exclude_patterns_and_children,
+							   &tabledata_exclude_oids,
+							   false, true);
 
 	/* non-matching exclusion patterns aren't an error */
 
@@ -1164,7 +1197,7 @@ help(const char *progname)
 			 "                               plain-text format\n"));
 	printf(_("  -s, --schema-only            dump only the schema, no data\n"));
 	printf(_("  -S, --superuser=NAME         superuser user name to use in plain-text format\n"));
-	printf(_("  -t, --table=PATTERN          dump the specified table(s) only\n"));
+	printf(_("  -t, --table=PATTERN          dump only the specified table(s)\n"));
 	printf(_("  -T, --exclude-table=PATTERN  do NOT dump the specified table(s)\n"));
 	printf(_("  -x, --no-privileges          do not dump privileges (grant/revoke)\n"));
 	printf(_("  --binary-upgrade             for use by upgrade utilities only\n"));
@@ -1173,7 +1206,13 @@ help(const char *progname)
 	printf(_("  --disable-triggers           disable triggers during data-only restore\n"));
 	printf(_("  --enable-row-security        enable row security (dump only content user has\n"
 			 "                               access to)\n"));
+	printf(_("  --exclude-table-and-children=PATTERN\n"
+			 "                               do NOT dump the specified table(s),\n"
+			 "                               including child and partition tables\n"));
 	printf(_("  --exclude-table-data=PATTERN do NOT dump data for the specified table(s)\n"));
+	printf(_("  --exclude-table-data-and-children=PATTERN\n"
+			 "                               do NOT dump data for the specified table(s),\n"
+			 "                               including child and partition tables\n"));
 	printf(_("  --extra-float-digits=NUM     override default setting for extra_float_digits\n"));
 	printf(_("  --if-exists                  use IF EXISTS when dropping objects\n"));
 	printf(_("  --inserts                    dump data as INSERT commands, rather than COPY\n"));
@@ -1193,6 +1232,8 @@ help(const char *progname)
 	printf(_("  --snapshot=SNAPSHOT          use given snapshot for the dump\n"));
 	printf(_("  --strict-names               require table and/or schema include patterns to\n"
 			 "                               match at least one entity each\n"));
+	printf(_("  --table-and-children=PATTERN dump only the specified table(s),\n"
+			 "                               including child and partition tables\n"));
 	printf(_("  --use-set-session-authorization\n"
 			 "                               use SET SESSION AUTHORIZATION commands instead of\n"
 			 "                               ALTER OWNER commands to set ownership\n"));
@@ -1520,7 +1561,7 @@ expand_schema_name_patterns(Archive *fout,
 static void
 expand_table_name_patterns(Archive *fout,
 						   SimpleStringList *patterns, SimpleOidList *oids,
-						   bool strict_names)
+						   bool strict_names, bool with_child_tables)
 {
 	PQExpBuffer query;
 	PGresult   *res;
@@ -1543,7 +1584,15 @@ expand_table_name_patterns(Archive *fout,
 		 * Query must remain ABSOLUTELY devoid of unqualified names.  This
 		 * would be unnecessary given a pg_table_is_visible() variant taking a
 		 * search_path argument.
+		 *
+		 * For with_child_tables, we start with the basic query's results and
+		 * recursively search the inheritance tree to add child tables.
 		 */
+		if (with_child_tables)
+		{
+			appendPQExpBuffer(query, "WITH RECURSIVE partition_tree (relid) AS (\n");
+		}
+
 		appendPQExpBuffer(query,
 						  "SELECT c.oid"
 						  "\nFROM pg_catalog.pg_class c"
@@ -1557,6 +1606,17 @@ expand_table_name_patterns(Archive *fout,
 		processSQLNamePattern(GetConnection(fout), query, cell->val, true,
 							  false, "n.nspname", "c.relname", NULL,
 							  "pg_catalog.pg_table_is_visible(c.oid)");
+
+		if (with_child_tables)
+		{
+			appendPQExpBuffer(query, "UNION"
+							  "\nSELECT i.inhrelid"
+							  "\nFROM partition_tree p"
+							  "\n     JOIN pg_catalog.pg_inherits i"
+							  "\n     ON p.relid OPERATOR(pg_catalog.=) i.inhparent"
+							  "\n)"
+							  "\nSELECT relid FROM partition_tree");
+		}
 
 		ExecuteSqlStatement(fout, "RESET search_path");
 		res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
