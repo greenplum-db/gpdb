@@ -685,6 +685,8 @@ ReadNext:
 				}
 
 				AOCSScanDesc_UpdateTotalBytesRead(scan, attno);
+				pgstat_count_buffer_read_ao(scan->rs_base.rs_rd,
+											RelationGuessNumberOfBlocksFromSize(scan->totalBytesRead));
 
 				err = datumstreamread_advance(scan->columnScanInfo.ds[attno]);
 				Assert(err > 0);
