@@ -244,14 +244,8 @@
  */
 
 /*
- * GPDB_12_MERGE_FIXME: we lost the "streaming bottom" feature in the merge.
- * When we add "streaming bottom" feature back, also remember to add fault
- * injector 'force_hashagg_stream_hashtable' used in spilling_hashagg
- * isolation2 test.
- *
- * And the detailed cdb executor instruments to print by explain.
- *
- * They were in execHHashagg.c
+ * GPDB_12_MERGE_FIXME: we lost the detailed cdb executor instruments to print
+ * by explain, which were in execHHashagg.c
  */
 
 #include "postgres.h"
@@ -1891,6 +1885,13 @@ hash_agg_check_limits(AggState *aggstate)
 static void
 hash_agg_enter_spill_mode(AggState *aggstate)
 {
+	if (aggstate->streaming)
+	{
+		/* don't spill, only mark the hash table as filled. */
+		aggstate->table_filled = true;
+		return;
+	}
+
 	aggstate->hash_spill_mode = true;
 	hashagg_recompile_expressions(aggstate, aggstate->table_filled, true);
 
@@ -2090,7 +2091,8 @@ lookup_hash_entry(AggState *aggstate, uint32 hash, bool *in_hash_table)
 	bool		   *p_isnew;
 
 	/* if hash table already spilled, don't create new entries */
-	p_isnew = aggstate->hash_spill_mode ? NULL : &isnew;
+	/* or the hash table is filled on the streaming mode */
+	p_isnew = (aggstate->hash_spill_mode || (aggstate->streaming && aggstate->table_filled)) ? NULL : &isnew;
 
 	/* find or create the hashtable entry using the filtered tuple */
 	entry = LookupTupleHashEntryHash(perhash->hashtable, hashslot, p_isnew,
@@ -2135,6 +2137,11 @@ lookup_hash_entry(AggState *aggstate, uint32 hash, bool *in_hash_table)
 		}
 	}
 
+	/* Fault inject to force the hash table streaming for testing purpose */
+	if (SIMPLE_FAULT_INJECTOR("force_hashagg_stream_hashtable") == FaultInjectorTypeSkip)
+		if (aggstate->streaming)
+			hash_agg_enter_spill_mode(aggstate);
+
 	return entry->additional;
 }
 
@@ -2174,7 +2181,7 @@ lookup_hash_entries(AggState *aggstate)
 		pergroup[setno] = lookup_hash_entry(aggstate, hash, &in_hash_table);
 
 		/* check to see if we need to spill the tuple for this grouping set */
-		if (!in_hash_table)
+		if (!in_hash_table && !aggstate->streaming)
 		{
 			HashAggSpill	*spill	 = &aggstate->hash_spills[setno];
 			TupleTableSlot	*slot	 = aggstate->tmpcontext->ecxt_outertuple;
@@ -2202,13 +2209,7 @@ lookup_hash_entries(AggState *aggstate)
  *	  stored in the expression context to be used when ExecProject evaluates
  *	  the result tuple.
  *
- * Streaming bottom: forces end of passes when no tuple for underlying node.
- *
- * MPP-2614: Btree scan will return null tuple at end of scan.  However,
- * if one calls ExecProNode again on a btree scan, it will restart from
- * beginning even though we did not call rescan.  This is a bug on
- * btree scan, but mask it off here for v3.1.  Really should fix Btree
- * code.
+ * Streaming: forces not spilling, roughly deduplicates to save network I/O.
  */
 static TupleTableSlot *
 ExecAgg(PlanState *pstate)
@@ -2604,9 +2605,28 @@ agg_fill_hash_table(AggState *aggstate)
 	 */
 	for (;;)
 	{
+		/* hash table in memory is filled, done with this round */
+		if (aggstate->streaming && aggstate->table_filled)
+			break;
+
 		outerslot = fetch_input_tuple(aggstate);
 		if (TupIsNull(outerslot))
-			break;
+		{
+			/* outer plan is done */
+			aggstate->input_done = true;
+
+			if (aggstate->hash_ngroups_current == 0)
+			{
+				/* this round got nothing but NULL */
+				aggstate->agg_done = true;
+				return;
+			}
+			else
+			{
+				/* this round got things, break to initialize the hash table */
+				break;
+			}
+		}
 
 		/* set up for lookup_hash_entries and advance_aggregates */
 		tmpcontext->ecxt_outertuple = outerslot;
@@ -2802,7 +2822,44 @@ agg_retrieve_hash_table(AggState *aggstate)
 		result = agg_retrieve_hash_table_in_memory(aggstate);
 		if (result == NULL)
 		{
-			if (!agg_refill_hash_table(aggstate))
+			if (aggstate->streaming)
+			{
+				/* outer plan is already done, halt the agg */
+				if (aggstate->input_done)
+				{
+					aggstate->agg_done = true;
+					break;
+				}
+
+				/*
+				 * reset hash tables and related structures, codes are copied
+				 * from agg_refill_hash_table()
+				 */
+				{
+					/* there could be residual pergroup pointers; clear them */
+					for (int setoff = 0;
+						 setoff < aggstate->maxsets + aggstate->num_hashes;
+						 setoff++)
+						aggstate->all_pergroups[setoff] = NULL;
+
+					/* free memory and reset hash tables */
+					ReScanExprContext(aggstate->hashcontext);
+					for (int setno = 0; setno < aggstate->num_hashes; setno++)
+						ResetTupleHashTable(aggstate->perhash[setno].hashtable);
+
+					aggstate->hash_ngroups_current = 0;
+
+					aggstate->table_filled = false;
+				}
+
+				/* refill the hash table from outer, since streaming doesn't spill */
+				agg_fill_hash_table(aggstate);
+
+				/* halt if outer got nothing but NULL in the above agg_fill_hash_table() */
+				if (aggstate->agg_done)
+					break;
+			}
+			else if (!agg_refill_hash_table(aggstate))
 			{
 				aggstate->agg_done = true;
 				break;
@@ -3319,6 +3376,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 	aggstate->grp_firstTuple = NULL;
 	aggstate->sort_in = NULL;
 	aggstate->sort_out = NULL;
+	aggstate->streaming = node->streaming;
 
 	/*
 	 * phases[0] always exists, but is dummy in sorted/plain mode
@@ -4652,7 +4710,11 @@ ExecReScanAgg(AggState *node)
 
 	node->agg_done = false;
 
-	if (node->aggstrategy == AGG_HASHED)
+	/*
+	 * Greenplum: on streaming mode, the hash table's status is complex, just
+	 * don't reuse it at all.
+	 */
+	if (node->aggstrategy == AGG_HASHED && !node->streaming)
 	{
 		/*
 		 * In the hashed case, if we haven't yet built the hash table then we
@@ -4726,6 +4788,8 @@ ExecReScanAgg(AggState *node)
 	 */
 	if (node->aggstrategy == AGG_HASHED || node->aggstrategy == AGG_MIXED)
 	{
+		node->input_done = false;
+
 		hashagg_reset_spill_state(node);
 
 		node->hash_ever_spilled = false;
@@ -4984,7 +5048,6 @@ ExecEagerFreeAgg(AggState *node)
 		node->sort_out = NULL;
 	}
 
-
 	hashagg_reset_spill_state(node);
 
 	if (node->hash_metacxt != NULL)
@@ -5038,6 +5101,9 @@ ReuseHashTable(AggState *node)
 {
 	PlanState  *outerPlan = outerPlanState(node);
 	Agg     *aggnode = (Agg *) node->ss.ps.plan;
-	return (outerPlan->chgParam == NULL && !node->hash_ever_spilled &&
+
+	return (outerPlan->chgParam == NULL &&
+			!node->hash_ever_spilled &&
+			!node->streaming &&
 			!bms_overlap(node->ss.ps.chgParam, aggnode->aggParams));
 }
