@@ -80,7 +80,7 @@ CPartPruneStepsBuilder::CreatePartPruneInfoForOneLevel(CDXLNode *filterNode)
 	// partitions that survived static partition pruning; iterate over this list
 	// to populate pinfo->subplan_map, pinfo->relid_map & pinfo->present_parts
 	ULONG part_ptr = 0;
-	for (ULONG i = 0; i < pinfo->nparts; ++i)
+	for (ULONG i = 0; (int) i < pinfo->nparts; ++i)
 	{
 		pinfo->subpart_map[i] = -1;
 		if (part_ptr < m_part_indexes->Size() &&

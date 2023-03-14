@@ -161,7 +161,7 @@ static int vacuum_appendonly_indexes(Relation aoRelation, int options, Bitmapset
 									 BufferAccessStrategy bstrategy, AOVacuumRelStats *vacrelstats);
 static void ao_vacuum_rel_recycle_dead_segments(Relation onerel, VacuumParams *params,
 												BufferAccessStrategy bstrategy, AOVacuumRelStats *vacrelstats);
-static AOVacuumRelStats *init_vacrelstats();
+static AOVacuumRelStats *init_vacrelstats(void);
 static void cleanup_vacrelstats(AOVacuumRelStats **vacrelstatsp);
 
 static void
