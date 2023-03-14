@@ -1071,6 +1071,8 @@ getNextBlock(AppendOnlyScanDesc scan)
 											&scan->executorReadBlock);
 
 	AppendOnlyScanDesc_UpdateTotalBytesRead(scan);
+	pgstat_count_buffer_read_ao(scan->aos_rd,
+								RelationGuessNumberOfBlocksFromSize(scan->totalBytesRead));
 
 	return true;
 }

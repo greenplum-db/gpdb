@@ -1684,6 +1684,13 @@ pgstat_report_wait_end(void)
 				(PgStat_Counter)((pentry)->t_wait_end - (pentry)->t_wait_start);			\
 		}																\
 	} while (0)
+
+/* GPDB */
+#define pgstat_count_buffer_read_ao(rel, nblocks)					\
+	do {															\
+		if ((rel)->pgstat_info != NULL)								\
+			(rel)->pgstat_info->t_counts.t_blocks_fetched = nblocks;\
+	} while (0)
 	
 extern void pgstat_count_heap_insert(Relation rel, PgStat_Counter n);
 extern void pgstat_count_heap_update(Relation rel, bool hot);

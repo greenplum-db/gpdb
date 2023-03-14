@@ -5163,7 +5163,6 @@ PgstatCollectorMain(int argc, char *argv[])
 #ifdef WIN32
 			pgwin32_noblock = 1;
 #endif
-
 			len = recv(pgStatSock, (char *) &msg,
 					   sizeof(PgStat_Msg), 0);
 
