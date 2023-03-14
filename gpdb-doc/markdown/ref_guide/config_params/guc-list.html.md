@@ -28,11 +28,27 @@ Maximum time to complete client authentication. This prevents hung clients from 
 
 ## <a id="autovacuum"></a>autovacuum 
 
-When enabled, Greenplum Database starts up the autovacuum daemon, which operates at the database level. After the daemon is running, all databases have their catalog tables automatically vacuumed and their catalog and user tables automatically analyzed.
+When enabled, Greenplum Database starts up the autovacuum daemon, which operates at the database level. When the daemon is running, Greenplum Database:
+
+- Automatically vacuums catalog tables and possibly auxiliary tables (determined by the [gp_autovacuum_scope](#gp_autovacuum_scope) configuration parameter setting).
+- Automatically analyzes the vacuumed tables.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |Boolean|on|master, system, restart|
+
+## <a id="autovacuum_naptime"></a>autovacuum\_naptime
+
+When `autovacuum=on` (the default), specifies the minimum delay between autovacuum runs. In each round, the daemon issues `VACUUM` and `ANALYZE` commands as needed for catalog (and possibly auxiliary) tables.
+
+A value without units it is taken to be seconds. The default is one minute.
+
+This parameter may be set only in the `postgresql.conf` file or on the server command line.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|1 - INT_MAX/1000 | 60 |master, system, restart|
+
 
 ## <a id="backslash_quote"></a>backslash\_quote 
 
@@ -526,6 +542,19 @@ Specifies the threshold for automatic statistics collection when `gp_autostats_m
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |integer|2147483647|master, session, reload|
+
+## <a id="gp_autovacuum_scope"></a>gp\_autovacuum\_scope
+
+When `autovacuum=on` (the default), specifies the types of tables that are eligible for automatic vacuuming of dead tuples. Greenplum Database supports two `gp_autovacuum_scope` values:
+
+- `catalog` - Greenplum Database autovacuums catalog tables only (`pg_catalog` relations).
+- `catalog_ao_aux` - Greenplum Database autovacuums catalog tables and append-optimized auxiliary tables (`pg_catalog`, `pg_toast`, and `pg_aoseg` relations).
+
+Only superusers can change this setting.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|catalog, catalog_ao_aux | catalog |master, system, reload|
 
 ## <a id="gp_cached_segworkers_threshold"></a>gp\_cached\_segworkers\_threshold 
 

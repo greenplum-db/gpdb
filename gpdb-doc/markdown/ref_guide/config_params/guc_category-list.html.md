@@ -294,6 +294,8 @@ These configuration parameters control Greenplum Database logging.
 These parameters pertain to auto-vacuuming databases.
 
 - [autovacuum](guc-list.html#autovacuum)
+- [autovacuum_naptime](guc-list.html#autovacuum_naptime)
+- [gp_autovacuum_scope](guc-list.html#gp_autovacuum_scope)
 
 ## <a id="query-metrics"></a>Query Metrics Collection Parameters 
 
