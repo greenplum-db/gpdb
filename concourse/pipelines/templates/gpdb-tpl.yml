@@ -658,15 +658,17 @@ resources:
 {% endif %}
 
 {% if pipeline_configuration == "prod" and not directed_release %}
+{% if os_type != "oel8" and os_type != "rhel8" %}
 - name: bin_gpdb_[[ os_type ]]_rc
   type: gcs
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-{% if os_type == default_os_type or os_type == "oel8" or os_type == "rhel8" %}
+{% if os_type == default_os_type %}
     regexp: server/published/gpdb6/server-rc-(.*)-el8_x86_64((rc-build-type-gcs)).tar.gz
 {% else %}
     regexp: server/published/gpdb6/server-rc-(.*)-[[ os_type ]]_x86_64((rc-build-type-gcs)).tar.gz
+{% endif %}
 {% endif %}
 {% endif %}
 
