@@ -559,6 +559,10 @@ _outAExpr(StringInfo str, A_Expr *node)
 
 			WRITE_NODE_FIELD(name);
 			break;
+		case AEXPR_NOT_DISTINCT:
+
+			WRITE_NODE_FIELD(name);
+			break;
 		case AEXPR_NULLIF:
 
 			WRITE_NODE_FIELD(name);
