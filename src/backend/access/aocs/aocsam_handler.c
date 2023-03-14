@@ -1358,6 +1358,7 @@ aoco_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	int						write_seg_no;
 	AOCSScanDesc			scan = NULL;
 	TupleTableSlot		   *slot;
+	double					n_tuples_written = 0;
 
 	pg_rusage_init(&ru0);
 
@@ -1450,11 +1451,31 @@ aoco_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 						  NULL /* proj */,
 						  0 /* flags */);
 
+	/* Report cluster progress */
+	{
+		FileSegTotals *fstotal;
+		const int	prog_index[] = {
+			PROGRESS_CLUSTER_PHASE,
+			PROGRESS_CLUSTER_TOTAL_HEAP_BLKS,
+		};
+		int64		prog_val[2];
+
+		fstotal = GetAOCSSSegFilesTotals(OldHeap, GetActiveSnapshot());
+
+		/* Set phase and total heap-size blocks to columns */
+		prog_val[0] = PROGRESS_CLUSTER_PHASE_SEQ_SCAN_AO;
+		prog_val[1] = RelationGuessNumberOfBlocksFromSize(fstotal->totalbytes);
+		pgstat_progress_update_multi_param(2, prog_index, prog_val);
+	}
+	SIMPLE_FAULT_INJECTOR("cluster_ao_seq_scan_begin");
+
 	while (aocs_getnext(scan, ForwardScanDirection, slot))
 	{
 		Datum	   *slot_values;
 		bool	   *slot_isnull;
 		HeapTuple   tuple;
+		BlockNumber	curr_heap_blks = 0;
+		BlockNumber	prev_heap_blks = 0;
 		CHECK_FOR_INTERRUPTS();
 
 		slot_getallattrs(slot);
@@ -1464,6 +1485,16 @@ aoco_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 		tuple = heap_form_tuple(oldTupDesc, slot_values, slot_isnull);
 
 		*num_tuples += 1;
+		pgstat_progress_update_param(PROGRESS_CLUSTER_HEAP_TUPLES_SCANNED,
+									 *num_tuples);
+		curr_heap_blks = RelationGuessNumberOfBlocksFromSize(scan->totalBytesRead);
+		if (curr_heap_blks != prev_heap_blks)
+		{
+			pgstat_progress_update_param(PROGRESS_CLUSTER_HEAP_BLKS_SCANNED,
+										 curr_heap_blks);
+			prev_heap_blks = curr_heap_blks;
+		}
+		SIMPLE_FAULT_INJECTOR("cluster_ao_scanning_tuples");
 		tuplesort_putheaptuple(tuplesort, tuple);
 		heap_freetuple(tuple);
 	}
@@ -1471,14 +1502,19 @@ aoco_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	ExecDropSingleTupleTableSlot(slot);
 	aocs_endscan(scan);
 
+	/* Report that we are now sorting tuples */
+	pgstat_progress_update_param(PROGRESS_CLUSTER_PHASE,
+								 PROGRESS_CLUSTER_PHASE_SORT_TUPLES);
+	SIMPLE_FAULT_INJECTOR("cluster_ao_sorting_tuples");
+	tuplesort_performsort(tuplesort);
 
 	/*
-	 * Сomplete the sort, then read out all tuples
-	 * from the tuplestore and write them to the new relation.
+	 * Report that we are now reading out all tuples from the tuplestore
+	 * and write them to the new relation.
 	 */
-
-	tuplesort_performsort(tuplesort);
-	
+	pgstat_progress_update_param(PROGRESS_CLUSTER_PHASE,
+								 PROGRESS_CLUSTER_PHASE_WRITE_NEW_AO);
+	SIMPLE_FAULT_INJECTOR("cluster_ao_write_begin");
 	write_seg_no = ChooseSegnoForWrite(NewHeap);
 
 	idesc = aocs_insert_init(NewHeap, write_seg_no, (int64) *num_tuples);
@@ -1496,6 +1532,9 @@ aoco_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 
 		heap_deform_tuple(tuple, oldTupDesc, values, isnull);
 		aocs_insert_values(idesc, values, isnull, &aoTupleId);
+		pgstat_progress_update_param(PROGRESS_CLUSTER_HEAP_TUPLES_WRITTEN,
+									 ++n_tuples_written);
+		SIMPLE_FAULT_INJECTOR("cluster_ao_writing_tuples");
 	}
 
 	tuplesort_end(tuplesort);

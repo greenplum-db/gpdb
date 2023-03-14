@@ -160,6 +160,7 @@ test: uao/bitmapindex_rescan_row
 test: uao/limit_indexscan_inits_row
 test: uao/create_index_allows_readonly_row
 test: uao/test_pg_appendonly_version_row
+test: uao/cluster_progress_row
 # Refer to the case comment for why it is commented out.
 # test: uao/bad_buffer_on_temp_ao_row
 
@@ -220,6 +221,7 @@ test: uao/bitmapindex_rescan_column
 test: uao/limit_indexscan_inits_column
 test: uao/create_index_allows_readonly_column
 test: uao/test_pg_appendonly_version_column
+test: uao/cluster_progress_column
 # Refer to the case comment for why it is commented out.
 # test: uao/bad_buffer_on_temp_ao_column
 

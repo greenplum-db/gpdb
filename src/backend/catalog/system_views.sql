@@ -1428,6 +1428,8 @@ CREATE VIEW pg_stat_progress_cluster AS
                       WHEN 5 THEN 'swapping relation files'
                       WHEN 6 THEN 'rebuilding index'
                       WHEN 7 THEN 'performing final cleanup'
+                      WHEN 8 THEN 'seq scanning append-optimized'
+                      WHEN 9 THEN 'writing new append-optimized'
                       END AS phase,
         CAST(S.param3 AS oid) AS cluster_index_relid,
         S.param4 AS heap_tuples_scanned,
