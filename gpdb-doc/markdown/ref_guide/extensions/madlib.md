@@ -101,7 +101,7 @@ After you upgrade the MADlib package from one minor version to another, you run 
 
 > **Note** Use `madpack upgrade` only if you upgraded a minor MADlib package version, for example from 1.19.0 to 1.21.0. You do not need to update the functions within a patch version upgrade, for example from 1.16+1 to 1.16+3.
 
-This example command upgrades the MADlib functions in the schema `madlib` of the Greenplum Database `test`.
+This example command upgrades the MADlib functions in the schema `madlib` of the Greenplum Database `testdb`.
 
 ```
 madpack -s madlib -p greenplum -c gpadmin@mdw:5432/testdb upgrade
