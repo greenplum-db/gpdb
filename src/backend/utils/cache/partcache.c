@@ -189,6 +189,14 @@ RelationBuildPartitionKey(Relation relation)
 								   opclassform->opcintype,
 								   opclassform->opcintype,
 								   procnum);
+
+		if (!OidIsValid(funcid) && key->strategy == PARTITION_STRATEGY_HASH)
+			/* Try to switch the proc number when missing the support function */
+			funcid = get_opfamily_proc(opclassform->opcfamily,
+									   opclassform->opcintype,
+									   opclassform->opcintype,
+									   HASHSTANDARD_PROC);
+
 		if (!OidIsValid(funcid))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),

@@ -955,3 +955,10 @@ create table part_column_drop_1_10 partition of
 \d part_column_drop
 \d part_column_drop_1_10
 drop table part_column_drop;
+
+-- please refer to: https://github.com/greenplum-db/gpdb/issues/15036
+CREATE UNLOGGED TABLE t0_issue_15034(c0 BIT VARYING(209),c1 BIT VARYING(3)) PARTITION BY HASH((t0_issue_15034.c0), (t0_issue_15034.c1));
+CREATE TEMP TABLE t1_issue_15034(c0 int4range , c1 BIT VARYING(241) ) PARTITION BY HASH((t1_issue_15034.c1));
+CREATE TEMP TABLE t2_issue_15034(c0 FLOAT , c1 money  NULL) PARTITION BY HASH((t2_issue_15034.c0)cdbhash_float8_ops);
+CREATE TABLE t3_issue_15034(c0 integer , c1 BIT VARYING(43) ) PARTITION BY HASH((t3_issue_15034.c0)cdbhash_oid_ops);
+CREATE TABLE t4_issue_15034(c0 BIT) PARTITION BY HASH((t4_issue_15034.c0));
