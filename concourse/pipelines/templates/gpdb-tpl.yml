@@ -672,6 +672,15 @@ resources:
 {% endif %}
 {% endif %}
 
+{% if os_type == default_os_type %}
+- name: bin_gpdb_centos7_rc
+  type: gcs
+  source:
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: server/published/gpdb6/server-rc-(.*)-rhel7_x86_64((rc-build-type-gcs)).tar.gz
+{% endif %}
+
 {% if pipeline_configuration == "prod" or build_test_rc_rpm %}
 {% if os_type != "ubuntu18.04" and os_type != "rhel8" and os_type != "oel8" %}
 - name: gpdb_rpm_installer_[[ os_type ]]
@@ -1218,7 +1227,7 @@ jobs:
       - get: bin_gpdb_clients_windows
         passed: [compile_gpdb_clients_windows]
       - get: bin_gpdb
-        resource: bin_gpdb_[[ os_type ]]_rc
+        resource: bin_gpdb_centos7_rc
       - get: terraform.d
         params:
           unpack: true
