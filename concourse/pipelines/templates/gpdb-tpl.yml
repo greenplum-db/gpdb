@@ -2555,7 +2555,7 @@ jobs:
     output_mapping:
       gpdb_rpm_installer: gpdb_rpm_[[ os_type ]]
     params:
-      PLATFORM: [[ os_type ]]
+      PLATFORM: [[ rpm_platform ]]
       GPDB_NAME: greenplum-db-6
       GPDB_RELEASE: 1
       GPDB_LICENSE: Pivotal Software EULA

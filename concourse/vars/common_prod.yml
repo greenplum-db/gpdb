@@ -30,10 +30,10 @@ reduced-frequency-trigger-start-rhel8: 0:00 AM
 reduced-frequency-trigger-stop-rhel8: 0:59 AM
 reduced-frequency-trigger-start-ubuntu18.04: 2:00 AM
 reduced-frequency-trigger-stop-ubuntu18.04: 2:59 AM
-reduced-frequency-trigger-start-rhel7: 4:00 AM
-reduced-frequency-trigger-stop-rhel7: 4:59 AM
-reduced-frequency-trigger-start-rhel6: 6:00 AM
-reduced-frequency-trigger-stop-rhel6: 6:59 AM
+reduced-frequency-trigger-start-centos7: 4:00 AM
+reduced-frequency-trigger-stop-centos7: 4:59 AM
+reduced-frequency-trigger-start-centos6: 6:00 AM
+reduced-frequency-trigger-stop-centos6: 6:59 AM
 reduced-frequency-trigger-start-oel8: 8:00 AM
 reduced-frequency-trigger-stop-oel8: 8:59 AM
 reduced-frequency-trigger-start-oel7: 10:00 AM

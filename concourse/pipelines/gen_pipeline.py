@@ -151,8 +151,8 @@ def create_pipeline(args, git_remote, git_branch):
 
     variables_type = args.pipeline_target
     os_username = {
-        "rhel6" : "centos",
-        "rhel7" : "centos",
+        "centos6" : "centos",
+        "centos7" : "centos",
         "rhel8" : "rhel",
         "ubuntu18.04" : "ubuntu",
         "rocky8" : "rocky",
@@ -160,8 +160,8 @@ def create_pipeline(args, git_remote, git_branch):
         "oel7" : "oel"
     }
     test_os = {
-        "rhel6" : "centos",
-        "rhel7" : "centos",
+        "centos6" : "centos",
+        "centos7" : "centos",
         "rhel8" : "centos",
         "ubuntu18.04" : "ubuntu",
         "rocky8" : "centos",
@@ -169,12 +169,21 @@ def create_pipeline(args, git_remote, git_branch):
         "oel7" : "centos"
     }
     dist = {
-        "rhel6" : "rhel6",
-        "rhel7" : "rhel7",
+        "centos6" : "rhel6",
+        "centos7" : "rhel7",
         "rhel8" : "el8",
         "ubuntu18.04" : "ubuntu18.04",
         "rocky8" : "el8",
         "oel8" : "el8",
+        "oel7" : "oel7"
+    }
+    rpm_platform = {
+        "centos6" : "rhel6",
+        "centos7" : "rhel7",
+        "rhel8" : "rhel8",
+        "ubuntu18.04" : "ubuntu18.04",
+        "rocky8" : "rocky8",
+        "oel8" : "oel8",
         "oel7" : "oel7"
     }
     context = {
@@ -186,6 +195,7 @@ def create_pipeline(args, git_remote, git_branch):
         'os_username': os_username[args.os_type],
         'test_os': test_os[args.os_type],
         'dist': dist[args.os_type],
+        'rpm_platform': rpm_platform[args.os_type],
         'pipeline_target': args.pipeline_target,
         'test_sections': args.test_sections,
         'pipeline_configuration': args.pipeline_configuration,
@@ -332,7 +342,7 @@ def main():
         action='store',
         dest='os_type',
         default=default_os_type,
-        choices=['rhel6', 'rhel7', 'rhel8','ubuntu18.04', 'rocky8', 'oel8', 'oel7'],
+        choices=['centos6', 'centos7', 'rhel8','ubuntu18.04', 'rocky8', 'oel8', 'oel7'],
         help='OS value to support'
     )
 
