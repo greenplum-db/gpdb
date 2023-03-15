@@ -1162,6 +1162,18 @@ Running a query that generates a large number of slices might affect Greenplum D
 |-----------|-------|-------------------|
 |0 - INT\_MAX|0|master, session, reload|
 
+## <a id="max_slot_wal_keep_size"></a>max_slot_wal_keep_size 
+
+Sets the maximum size in megabytes of Write-Ahead Logging (WAL) files on disk per segment instance that can be reserved when Greenplum streams data to the mirror segment instance or standby master to keep it synchronized with the corresponding primary segment instance or master. The default is -1, Greenplum can retain an unlimited amount of WAL files on disk.
+
+If the file size exceeds the maximum size, the files are released and are available for deletion. A mirror or standby may no longer be able to continue replication due to removal of required WAL files.
+
+**WARNING**: If `max_slot_wal_keep_size` is set to a non-default value for acting primaries, full and incremental recovery of their mirrors may not be possible. Depending on the workload on the primary running concurrently with a full recovery, the recovery may fail with a missing WAL error. Therefore, you must ensure that `max_slot_wal_keep_size` is set to the default of `-1` or a high enough value before running full recovery. Similarly, depending on how behind the downed mirror is, an incremental recovery of it may fail with a missing WAL complaint. In this case, full recovery would be the only recourse.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Integer|-1|local, system, reload|
+
 ## <a id="gp_motion_cost_per_row"></a>gp\_motion\_cost\_per\_row 
 
 Sets the Postgres Planner cost estimate for a Motion operator to transfer a row from one segment to another, measured as a fraction of the cost of a sequential page fetch. If 0, then the value used is two times the value of *cpu\_tuple\_cost*.
