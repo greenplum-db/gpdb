@@ -22,9 +22,9 @@ The following table summarizes key information about the `timestamp9` data types
 
 |Data Type|Storage Size|Description|Max Value|Min Value|Resolution|
 |--------|-------|----|-----------|---------|---------|----------|
-|`TIMESTAMP9`|8 bytes|Like TIMESTAMP9_LTZ. Timestamp with local time zone. |2262-04-11 00:00:00.000000000 +0000 |1970-01-01 00:00:00.000000000 +0000 | 1 nanosecond |
-|`TIMESTAMP9_LTZ`|8 bytes|Timestamp with local time zone. |2262-04-11 00:00:00.000000000 +0000 |1970-01-01 00:00:00.000000000 +0000 | 1 nanosecond |
-|`TIMESTAMP9_NTZ`|8 bytes|Timestamp without time zone. |2262-04-11 00:00:00.000000000 +0000 |1970-01-01 00:00:00.000000000 +0000 | 1 nanosecond|
+|`TIMESTAMP9`|8 bytes|Like TIMESTAMP9_LTZ. Timestamp with local time zone. |2261-12-31 23:59:59.999999999 +0000 |1700-01-01 00:00:00.000000000 +0000 | 1 nanosecond |
+|`TIMESTAMP9_LTZ`|8 bytes|Timestamp with local time zone. |2261-12-31 23:59:59.999999999 +0000 |1700-01-01 00:00:00.000000000 +0000 | 1 nanosecond |
+|`TIMESTAMP9_NTZ`|8 bytes|Timestamp without time zone. |2261-12-31 23:59:59.999999999 +0000 |1700-01-01 00:00:00.000000000 +0000 | 1 nanosecond|
 
 ## <a id="topic_gp"></a>The TimeZone Configuration Parameter and `timestamp9`
 
