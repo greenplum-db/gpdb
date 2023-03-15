@@ -893,7 +893,7 @@ def test_546_gpload_merge_staging_DK():
 
 @TestBase.prepare_before_test(num=547, times=1)
 def test_547_gpload_insert_staging_without_DK():
-    """547 test gpload insert distribution key mismatch, use match column instead.
+    """547 test gpload merge distribution key mismatch, use match column instead.
     """
     file = TestBase.mkpath('setup.sql')
     TestBase.runfile(file)
