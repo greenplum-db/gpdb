@@ -2890,11 +2890,6 @@ CommitTransaction(void)
 	 * signals (which may attempt to abort our now partially-completed
 	 * transaction) until we've notified the QEs.
 	 *
-	 * Very important that PGPROC still thinks the transaction is still in progress so
-	 * SnapshotNow reader don't jump to the conclusion this distributed transaction is
-	 * finished.  So, notifyCommittedDtxTransaction will take responsbility to clear
-	 * PGPROC under the ProcArrayLock after the broadcast.  MPP-16087.
-	 *
 	 * And, that we have not master released locks, yet, too.
 	 *
 	 * Note:  do this BEFORE clearing the resource owner, as the dispatch

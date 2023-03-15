@@ -591,10 +591,6 @@ MarkAOCSFileSegInfoAwaitingDrop(Relation prel, int segno)
 	segrel = heap_open(segrelid, RowExclusiveLock);
 	tupdesc = RelationGetDescr(segrel);
 
-	/*
-	 * Since we have the segment-file entry under lock (with
-	 * LockRelationAppendOnlySegmentFile) we can use SnapshotNow.
-	 */
 	scan = table_beginscan_catalog(segrel, 0, NULL);
 	while (segno != tuple_segno && (oldtup = heap_getnext(scan, ForwardScanDirection)) != NULL)
 	{
@@ -683,10 +679,6 @@ ClearAOCSFileSegInfo(Relation prel, int segno)
 	segrel = heap_open(segrelid, RowExclusiveLock);
 	tupdesc = RelationGetDescr(segrel);
 
-	/*
-	 * Since we have the segment-file entry under lock (with
-	 * LockRelationAppendOnlySegmentFile) we can use SnapshotNow.
-	 */
 	scan = table_beginscan_catalog(segrel, 0, NULL);
 	while (segno != tuple_segno && (oldtup = heap_getnext(scan, ForwardScanDirection)) != NULL)
 	{
@@ -774,10 +766,6 @@ UpdateAOCSFileSegInfo(AOCSInsertDesc idesc)
 	segrel = heap_open(idesc->segrelid, RowExclusiveLock);
 	tupdesc = RelationGetDescr(segrel);
 
-	/*
-	 * Since we have the segment-file entry under lock (with
-	 * LockRelationAppendOnlySegmentFile) we can use SnapshotNow.
-	 */
 	scan = systable_beginscan(segrel, InvalidOid, false, idesc->appendOnlyMetaDataSnapshot, 0, NULL);
 	while (idesc->cur_segno != tuple_segno && (oldtup = systable_getnext(scan)) != NULL)
 	{
@@ -971,10 +959,6 @@ AOCSFileSegInfoAddVpe(Relation prel, int32 segno,
 	segrel = heap_open(segrelid, RowExclusiveLock);
 	tupdesc = RelationGetDescr(segrel);
 
-	/*
-	 * Since we have the segment-file entry under lock (with
-	 * LockRelationAppendOnlySegmentFile) we can use SnapshotNow.
-	 */
 	scan = systable_beginscan(segrel, InvalidOid, false, NULL, 0, NULL);
 	while (segno != tuple_segno && (oldtup = systable_getnext(scan)) != NULL)
 	{
@@ -1090,10 +1074,6 @@ AOCSFileSegInfoAddCount(Relation prel, int32 segno,
 	segrel = heap_open(segrelid, RowExclusiveLock);
 	tupdesc = RelationGetDescr(segrel);
 
-	/*
-	 * Since we have the segment-file entry under lock (with
-	 * LockRelationAppendOnlySegmentFile) we can use SnapshotNow.
-	 */
 	scan = systable_beginscan(segrel, InvalidOid, false, NULL, 0, NULL);
 	while (segno != tuple_segno && (oldtup = systable_getnext(scan)) != NULL)
 	{
