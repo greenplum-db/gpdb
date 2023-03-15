@@ -527,6 +527,7 @@ aoco_beginscan_extractcolumns(Relation rel, Snapshot snapshot,
 							  List *targetlist, List *qual, bool *proj,
 							  List* constraintList, uint32 flags)
 {
+	bool needFree = false;
 	AOCSScanDesc	aoscan;
 
 	AssertImply(list_length(targetlist) || list_length(qual) || list_length(constraintList), !proj);
@@ -546,13 +547,15 @@ aoco_beginscan_extractcolumns(Relation rel, Snapshot snapshot,
 		*/
 		if (!found)
 			proj[0] = true;
+		needFree = true;
 	}
 	aoscan = aocs_beginscan(rel,
 							snapshot,
 							proj,
 							flags);
 
-	pfree(proj);
+	if (needFree)
+		pfree(proj);
 	return (TableScanDesc)aoscan;
 }
 

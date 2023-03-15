@@ -1438,9 +1438,14 @@ ALTER TABLE
 DROP TABLE ext_dec17;
 DROP TABLE
 COPY sales TO PROGRAM 'cat > /tmp/test_sales_all' IGNORE EXTERNAL PARTITIONS;
-NOTICE:  COPY ignores external partition(s)
+NOTICE:  COPY ignores external partition(s)  (seg1 10.117.190.237:7003 pid=9154)
+NOTICE:  COPY ignores external partition(s)  (seg2 10.117.190.237:7004 pid=9155)
+NOTICE:  COPY ignores external partition(s)  (seg0 10.117.190.237:7002 pid=9153)
 COPY 24
 COPY sales TO PROGRAM 'cat > /tmp/test_sales_with_external';
+ERROR:  cannot copy from relation "sales" which has external partition(s)
+HINT:  Try the COPY (SELECT ...) TO variant.
+COPY (SELECT * FROM sales) TO PROGRAM 'cat > /tmp/test_sales_with_external';
 COPY 25
 COPY sales TO PROGRAM 'cat > /tmp/test_sales_<SEGID>' ON SEGMENT IGNORE EXTERNAL PARTITIONS;
 NOTICE:  COPY ignores external partition(s)
