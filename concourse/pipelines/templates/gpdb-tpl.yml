@@ -672,7 +672,7 @@ resources:
 {% endif %}
 {% endif %}
 
-{% if os_type == default_os_type %}
+{% if os_type == default_os_type and pipeline_configuration == "prod" and not directed_release %}
 - name: bin_gpdb_centos7_rc
   type: gcs
   source:
