@@ -81,6 +81,7 @@ System catalog table and view definitions in alphabetical order.
 -   [pg\_available\_extension\_versions](../system_catalogs/pg_available_extension_versions.html)  
 
 -   [pg\_available\_extensions](../system_catalogs/pg_available_extensions.html)  
+-   [pg_backend_memory_contexts](../system_catalogs/pg_backend_memory_contexts.html)  
 
 -   [pg\_cast](../system_catalogs/pg_cast.html)  
 

@@ -252,6 +252,7 @@ Doc Index
             - [pg\_authid](./system_catalogs/pg_authid.md)
             - [pg\_available\_extension\_versions](./system_catalogs/pg_available_extension_versions.md)
             - [pg\_available\_extensions](./system_catalogs/pg_available_extensions.md)
+            - [pg_backend_memory_contexts](./system_catalogs/pg_backend_memory_contexts.md)
             - [pg\_cast](./system_catalogs/pg_cast.md)
             - [pg\_class](./system_catalogs/pg_class.md)
             - [pg\_compression](./system_catalogs/pg_compression.md)
