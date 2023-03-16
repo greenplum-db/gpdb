@@ -3213,11 +3213,11 @@ If you set the value to 0, database performance issues might occur under heavy l
 |-----------|-------|-------------------|
 |0 - MAX-INT / 1024|1024|master, system, reload|
 
-## <a id="wal_keep_segments"></a>wal\_keep\_segments 
+## <a id="wal_keep_size"></a>wal_keep_size 
 
-For Greenplum Database coordinator mirroring, sets the maximum number of processed WAL segment files that are saved by the by the active Greenplum Database coordinator if a checkpoint operation occurs.
+Specifies the minimum size of past log file segments kept in the `pg_wal` directory, in case a standby server needs to fetch them for streaming replication. If a standby server connected to the sending server falls behind by more than `wal_keep_size` megabytes, the sending server might remove a WAL segment still needed by the standby, in which case the replication connection will be terminated. Downstream connections will also eventually fail as a result. (However, the standby server can recover by fetching the segment from archive, if WAL archiving is in use.)
 
-The segment files are used to synchronize the active coordinator on the standby coordinator.
+This sets only the minimum size of segments retained in `pg_wal`; the system might need to retain more segments for WAL archival or to recover from a checkpoint. If `wal_keep_size` is zero (the default), the system doesn't keep any extra segments for standby purposes, so the number of old WAL segments available to standby servers is a function of the location of the previous checkpoint and status of WAL archiving. If this value is specified without units, it is taken as megabytes. 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
