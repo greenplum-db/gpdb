@@ -41,7 +41,7 @@ When enabled, Greenplum Database starts up the autovacuum daemon, which operates
 
 When `autovacuum=on` (the default), specifies the minimum delay between autovacuum runs. In each round, the daemon issues `VACUUM` and `ANALYZE` commands as needed for catalog (and possibly auxiliary) tables.
 
-A value without units it is taken to be seconds. The default is one minute.
+A value without units is taken to be seconds. The default is one minute.
 
 This parameter may be set only in the `postgresql.conf` file or on the server command line.
 
