@@ -3963,7 +3963,7 @@ struct config_int ConfigureNamesInt_gp[] =
 
 	{
 		{"optimizer_xform_bind_threshold", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Maximum number bindings per xform per group expression"),
+			gettext_noop("Maximum number bindings per xform per group expression. A value of 0 disables."),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
@@ -4006,7 +4006,7 @@ struct config_int ConfigureNamesInt_gp[] =
 
 	{
 		{"optimizer_penalize_broadcast_threshold", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Maximum number of rows of a relation that can be broadcasted without penalty."),
+			gettext_noop("Maximum number of rows of a relation that can be broadcasted without penalty. A value of 0 disables."),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
