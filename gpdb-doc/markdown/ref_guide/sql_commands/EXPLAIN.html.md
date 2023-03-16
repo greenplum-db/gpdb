@@ -77,7 +77,7 @@ COSTS
 BUFFERS
 :   Include information on buffer usage. This parameter may be specified only when `ANALYZE` is also specified. If omitted, the default value is `false`, buffer usage information is not included.
 > **Note**
-> Greenplum Database does not support specifying `BUFFERS [true]` for distributed queries; buffer usage information that is displayed may be incorrect.
+> Greenplum Database does not support specifying `BUFFERS [true]` for distributed queries; ignore any displayed buffer usage information.
 
 TIMING
 :   Include actual startup time and time spent in each node in the output. The overhead of repeatedly reading the system clock can slow down the query significantly on some systems, so it may be useful to set this parameter to `FALSE` when only actual row counts, and not exact times, are needed. Run time of the entire statement is always measured, even when node-level timing is turned off with this option. This parameter may only be used when `ANALYZE` is also enabled. It defaults to `TRUE`.
