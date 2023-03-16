@@ -2,7 +2,7 @@
 
 The `isn` module provides support for the international product numbering standards EAN13, UPC, ISBN (books), ISMN (music), and ISSN (serials). 
 
-The Greenplum Database `isn` module is equivalent to version XXX of the `isn` module used with PostgreSQL. There are no Greenplum Database or MPP-specific considerations for the module.
+The Greenplum Database `isn` module is equivalent to version 1.2 of the `isn` module used with PostgreSQL. There are no Greenplum Database or MPP-specific considerations for the module.
 
 ## <a id="topic_reg"></a>Installing and Registering the Module 
 
