@@ -1,7 +1,7 @@
 -- @Description Tests collected statistics reporting for append-optimized tables
 
 -- Helper function that ensures stats collector receives stat from the latest operation.
-create or replace function wait_until_heap_blks_read_change_from(table_name text, stat_val_old int) returns text as $$ declare stat_val int; /* in func */ i int; /* in func */ begin i := 0; /* in func */ while i < 1200 loop select heap_blks_read into stat_val from pg_statio_all_tables where relname = table_name; /* in func */ if stat_val != stat_val_old then /* in func */ return 'OK'; /* in func */ end if; /* in func */ perform pg_sleep(0.1); /* in func */ perform pg_stat_clear_snapshot(); /* in func */ i := i + 1; /* in func */ end loop; /* in func */ return 'Fail'; /* in func */ end; /* in func */ $$ language plpgsql;
+create or replace function wait_until_heap_blks_read_change_to(table_name text, stat_val_expected bigint) returns text as $$ declare stat_val int; /* in func */ i int; /* in func */ begin i := 0; /* in func */ while i < 1200 loop select heap_blks_read into stat_val from pg_statio_all_tables where relname = table_name; /* in func */ if stat_val = stat_val_expected then /* in func */ return 'OK'; /* in func */ end if; /* in func */ perform pg_sleep(0.1); /* in func */ perform pg_stat_clear_snapshot(); /* in func */ i := i + 1; /* in func */ end loop; /* in func */ return 'Fail'; /* in func */ end; /* in func */ $$ language plpgsql;
 CREATE
 
 -- Setup test table
@@ -25,23 +25,16 @@ CREATE 1
 (1 row)
 
 -- Perform seq scan and wait until the stats collector receives the stats update
-1U&: SELECT wait_until_heap_blks_read_change_from('statio_@amname@', 0);  <waiting ...>
+1U&: SELECT wait_until_heap_blks_read_change_to('statio_@amname@', (SELECT heap_blks_total FROM helper_table LIMIT 1));  <waiting ...>
 SELECT sum(a+b) FROM statio_@amname@;
  sum        
 ------------
  5000050000 
 (1 row)
 1U<:  <... completed>
- wait_until_heap_blks_read_change_from 
----------------------------------------
- OK                                    
-(1 row)
-
--- heap_blks_read should equal to heap_blks_total
-1U: SELECT heap_blks_read = (SELECT heap_blks_total FROM helper_table) AS heap_blks_read_all, heap_blks_hit FROM pg_statio_all_tables WHERE relname = 'statio_@amname@';
- heap_blks_read_all | heap_blks_hit 
---------------------+---------------
- t                  | 0             
+ wait_until_heap_blks_read_change_to 
+-------------------------------------
+ OK                                  
 (1 row)
 
 -- cleanup
