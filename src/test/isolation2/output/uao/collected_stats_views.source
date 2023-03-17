@@ -5,8 +5,6 @@ create or replace function wait_until_heap_blks_read_change_to(table_name text, 
 CREATE
 
 -- Setup test table
-DROP TABLE IF EXISTS statio_@amname@;
-DROP
 CREATE TABLE statio_@amname@(a int, b int) USING @amname@;
 CREATE
 INSERT INTO statio_@amname@ SELECT 0, i FROM generate_series(1, 100000)i;
@@ -33,3 +31,7 @@ SELECT sum(a+b) FROM statio_@amname@;
 (1 row)
 
 -- cleanup
+DROP TABLE statio_@amname@;
+DROP
+DROP FUNCTION wait_until_heap_blks_read_change_to(table_name text, stat_val_expected bigint);
+DROP
