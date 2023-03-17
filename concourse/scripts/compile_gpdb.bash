@@ -143,6 +143,11 @@ function _main() {
 	## Add CCache Support (?)
 	add_ccache_support "${OS}"
 
+
+	# The WITH_ASSERTIONS state should keep the same between build and test.
+	# Or LLVM_ABI_BREAKING_CHECKS will fail the loading of libllvmjit
+	setup_llvm
+
 	generate_build_number
 	build_gpdb "${BLD_TARGET_OPTION[@]}"
 	git_info
