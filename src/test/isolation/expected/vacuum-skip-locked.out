@@ -147,3 +147,151 @@ step vac_full_all_parts: VACUUM (SKIP_LOCKED, FULL) parted;
 step commit: 
 	COMMIT;
 
+
+starting permutation: lock_share_ao vac_specified_ao commit
+step lock_share_ao: 
+	BEGIN;
+	LOCK part1_ao IN SHARE MODE;
+
+s2: WARNING:  skipping vacuum of "part1_ao" --- lock not available
+step vac_specified_ao: VACUUM (SKIP_LOCKED) part1_ao, part2_ao;
+step commit: 
+	COMMIT;
+
+
+starting permutation: lock_share_ao vac_all_parts_ao commit
+step lock_share_ao: 
+	BEGIN;
+	LOCK part1_ao IN SHARE MODE;
+
+step vac_all_parts_ao: VACUUM (SKIP_LOCKED) parted_ao;
+step commit: 
+	COMMIT;
+
+
+starting permutation: lock_share_ao analyze_specified_ao commit
+step lock_share_ao: 
+	BEGIN;
+	LOCK part1_ao IN SHARE MODE;
+
+s2: WARNING:  skipping analyze of "part1_ao" --- lock not available
+step analyze_specified_ao: ANALYZE (SKIP_LOCKED) part1_ao, part2_ao;
+step commit: 
+	COMMIT;
+
+
+starting permutation: lock_share_ao analyze_all_parts_ao commit
+step lock_share_ao: 
+	BEGIN;
+	LOCK part1_ao IN SHARE MODE;
+
+step analyze_all_parts_ao: ANALYZE (SKIP_LOCKED) parted_ao;
+step commit: 
+	COMMIT;
+
+
+starting permutation: lock_share_ao vac_analyze_specified_ao commit
+step lock_share_ao: 
+	BEGIN;
+	LOCK part1_ao IN SHARE MODE;
+
+s2: WARNING:  skipping vacuum of "part1_ao" --- lock not available
+step vac_analyze_specified_ao: VACUUM (ANALYZE, SKIP_LOCKED) part1_ao, part2_ao;
+step commit: 
+	COMMIT;
+
+
+starting permutation: lock_share_ao vac_analyze_all_parts_ao commit
+step lock_share_ao: 
+	BEGIN;
+	LOCK part1_ao IN SHARE MODE;
+
+step vac_analyze_all_parts_ao: VACUUM (ANALYZE, SKIP_LOCKED) parted_ao;
+step commit: 
+	COMMIT;
+
+
+starting permutation: lock_share_ao vac_full_specified_ao commit
+step lock_share_ao: 
+	BEGIN;
+	LOCK part1_ao IN SHARE MODE;
+
+s2: WARNING:  skipping vacuum of "part1_ao" --- lock not available
+step vac_full_specified_ao: VACUUM (SKIP_LOCKED, FULL) part1_ao, part2_ao;
+step commit: 
+	COMMIT;
+
+
+starting permutation: lock_share_ao vac_full_all_parts_ao commit
+step lock_share_ao: 
+	BEGIN;
+	LOCK part1_ao IN SHARE MODE;
+
+step vac_full_all_parts_ao: VACUUM (SKIP_LOCKED, FULL) parted_ao;
+step commit: 
+	COMMIT;
+
+
+starting permutation: lock_access_exclusive_ao vac_specified_ao commit
+step lock_access_exclusive_ao: 
+	BEGIN;
+	LOCK part1_ao IN ACCESS EXCLUSIVE MODE;
+
+s2: WARNING:  skipping vacuum of "part1_ao" --- lock not available
+step vac_specified_ao: VACUUM (SKIP_LOCKED) part1_ao, part2_ao;
+step commit: 
+	COMMIT;
+
+
+starting permutation: lock_access_exclusive_ao vac_all_parts_ao commit
+step lock_access_exclusive_ao: 
+	BEGIN;
+	LOCK part1_ao IN ACCESS EXCLUSIVE MODE;
+
+step vac_all_parts_ao: VACUUM (SKIP_LOCKED) parted_ao;
+step commit: 
+	COMMIT;
+
+
+starting permutation: lock_access_exclusive_ao analyze_specified_ao commit
+step lock_access_exclusive_ao: 
+	BEGIN;
+	LOCK part1_ao IN ACCESS EXCLUSIVE MODE;
+
+s2: WARNING:  skipping analyze of "part1_ao" --- lock not available
+step analyze_specified_ao: ANALYZE (SKIP_LOCKED) part1_ao, part2_ao;
+step commit: 
+	COMMIT;
+
+
+starting permutation: lock_access_exclusive_ao vac_analyze_specified_ao commit
+step lock_access_exclusive_ao: 
+	BEGIN;
+	LOCK part1_ao IN ACCESS EXCLUSIVE MODE;
+
+s2: WARNING:  skipping vacuum of "part1_ao" --- lock not available
+step vac_analyze_specified_ao: VACUUM (ANALYZE, SKIP_LOCKED) part1_ao, part2_ao;
+step commit: 
+	COMMIT;
+
+
+starting permutation: lock_access_exclusive_ao vac_full_specified_ao commit
+step lock_access_exclusive_ao: 
+	BEGIN;
+	LOCK part1_ao IN ACCESS EXCLUSIVE MODE;
+
+s2: WARNING:  skipping vacuum of "part1_ao" --- lock not available
+step vac_full_specified_ao: VACUUM (SKIP_LOCKED, FULL) part1_ao, part2_ao;
+step commit: 
+	COMMIT;
+
+
+starting permutation: lock_access_exclusive_ao vac_full_all_parts_ao commit
+step lock_access_exclusive_ao: 
+	BEGIN;
+	LOCK part1_ao IN ACCESS EXCLUSIVE MODE;
+
+step vac_full_all_parts_ao: VACUUM (SKIP_LOCKED, FULL) parted_ao;
+step commit: 
+	COMMIT;
+

@@ -1,0 +1,101 @@
+-- Coverage to ensure that reltuples is updated correctly upon an index build
+-- (i.e. CREATE INDEX) on AO/CO tables.
+-- FIXME: Currently doesn't assert reltuples on QD (at the moment, we don't
+-- aggregate the reltuples counts on QD at end of command)
+
+SET default_table_access_method TO @amname@;
+
+-- Case 1: Verify that CREATE INDEX is able to update both the aorel's reltuples
+-- and the index's reltuples, to equal the actual segment tuple counts.
+
+CREATE TABLE index_build_reltuples_@amname@(a int);
+INSERT INTO index_build_reltuples_@amname@ SELECT generate_series(1, 10);
+
+CREATE INDEX ON index_build_reltuples_@amname@(a);
+
+SELECT gp_segment_id, count(*) FROM index_build_reltuples_@amname@
+	GROUP BY gp_segment_id ORDER BY gp_segment_id;
+SELECT gp_segment_id, reltuples FROM gp_dist_random('pg_class')
+	WHERE relname='index_build_reltuples_@amname@' ORDER BY gp_segment_id;
+SELECT gp_segment_id, reltuples FROM gp_dist_random('pg_class')
+	WHERE relname='index_build_reltuples_@amname@_a_idx' ORDER BY gp_segment_id;
+
+DROP TABLE index_build_reltuples_@amname@;
+
+-- Case 2: Verify that CREATE INDEX is able to update the aorel's reltuples
+-- to equal the actual segment tuple counts, when there are deleted tuples. For
+-- the index, since we don't have a notion of "recently dead" vs surely dead,
+-- we are conservative and form index entries even for deleted tuples. Thus, the
+-- reltuples count for the index would also account for deleted tuples.
+
+CREATE TABLE index_build_reltuples_@amname@(a int);
+INSERT INTO index_build_reltuples_@amname@ SELECT generate_series(1, 20);
+
+SELECT gp_segment_id, count(*) FROM index_build_reltuples_@amname@
+	GROUP BY gp_segment_id ORDER BY gp_segment_id;
+
+DELETE FROM index_build_reltuples_@amname@ WHERE a <= 10;
+
+CREATE INDEX ON index_build_reltuples_@amname@(a);
+
+SELECT gp_segment_id, count(*) FROM index_build_reltuples_@amname@
+	GROUP BY gp_segment_id ORDER BY gp_segment_id;
+SELECT gp_segment_id, reltuples FROM gp_dist_random('pg_class')
+	WHERE relname='index_build_reltuples_@amname@' ORDER BY gp_segment_id;
+SELECT gp_segment_id, reltuples FROM gp_dist_random('pg_class')
+	WHERE relname='index_build_reltuples_@amname@_a_idx' ORDER BY gp_segment_id;
+
+DROP TABLE index_build_reltuples_@amname@;
+
+-- Case 3: Verify that CREATE INDEX is able to update both the aorel's reltuples
+-- and the index's reltuples, to equal the actual segment tuple counts, when
+-- there are aborted tuples.
+
+CREATE TABLE index_build_reltuples_@amname@(a int);
+
+INSERT INTO index_build_reltuples_@amname@ SELECT generate_series(1, 10);
+
+SELECT gp_segment_id, count(*) FROM index_build_reltuples_@amname@
+	GROUP BY gp_segment_id ORDER BY gp_segment_id;
+
+BEGIN;
+INSERT INTO index_build_reltuples_@amname@ SELECT generate_series(11, 20);
+ABORT;
+
+CREATE INDEX ON index_build_reltuples_@amname@(a);
+
+SELECT gp_segment_id, count(*) FROM index_build_reltuples_@amname@
+	GROUP BY gp_segment_id ORDER BY gp_segment_id;
+SELECT gp_segment_id, reltuples FROM gp_dist_random('pg_class')
+	WHERE relname='index_build_reltuples_@amname@' ORDER BY gp_segment_id;
+SELECT gp_segment_id, reltuples FROM gp_dist_random('pg_class')
+	WHERE relname='index_build_reltuples_@amname@_a_idx' ORDER BY gp_segment_id;
+
+DROP TABLE index_build_reltuples_@amname@;
+
+-- Case 4: Verify that CREATE INDEX is able to update both the aorel's reltuples
+-- and the index's reltuples, to equal the latest segment tuple counts, even
+-- when it is executed in a transaction with a snapshot that precedes the INSERT
+-- (highlights the need for using SnapshotAny)
+
+CREATE TABLE index_build_reltuples_@amname@(a int);
+
+1: BEGIN ISOLATION LEVEL REPEATABLE READ;
+1: SELECT gp_segment_id, count(*) FROM index_build_reltuples_@amname@
+    GROUP BY gp_segment_id ORDER BY gp_segment_id;
+
+INSERT INTO index_build_reltuples_@amname@ SELECT generate_series(1, 10);
+
+1: CREATE INDEX ON index_build_reltuples_@amname@(a);
+1: COMMIT;
+
+SELECT gp_segment_id, count(*) FROM index_build_reltuples_@amname@
+    GROUP BY gp_segment_id ORDER BY gp_segment_id;
+SELECT gp_segment_id, reltuples FROM gp_dist_random('pg_class')
+    WHERE relname='index_build_reltuples_@amname@' ORDER BY gp_segment_id;
+SELECT gp_segment_id, reltuples FROM gp_dist_random('pg_class')
+    WHERE relname='index_build_reltuples_@amname@_a_idx' ORDER BY gp_segment_id;
+
+DROP TABLE index_build_reltuples_@amname@;
+
+RESET default_table_access_method;

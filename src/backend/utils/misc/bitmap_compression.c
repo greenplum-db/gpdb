@@ -15,6 +15,7 @@
 #include "utils/bitmap_compression.h"
 #include "utils/bitstream.h"
 #include "utils/guc.h"
+#include "access/appendonly_visimap.h"
 
 typedef enum BitmapCompressionFlag
 {
@@ -80,9 +81,15 @@ BitmapDecompress_HasError(
 }
 
 /*
- * Performs the bitmap decompression.
+ * Perform bitmap decompression into in-memory buffer
  *
- * bitmapDataSize in uint32-words.
+ * bitmap: caller-allocated buffer that can hold state->blockCount
+ * number of 32-bit on-disk bitmap words.
+ *
+ * For both 32-bit and 64-bit in-memory bitmap word sizes, we write
+ * 32-bit words into the in-memory buffer contiguously. This is safe
+ * to do as we interpret two contiguous 32-bit words as one 64-bit
+ * word.
  */
 void
 BitmapDecompress_Decompress(BitmapDecompressState *state,
@@ -105,7 +112,7 @@ BitmapDecompress_Decompress(BitmapDecompressState *state,
 
 	if (state->compressionType == BITMAP_COMPRESSION_TYPE_NO)
 	{
-		memcpy(bitmap, 
+		memcpy(bitmap,
 				Bitstream_GetAlignedData(&state->bitstream, 16), 
 				state->blockCount * sizeof(uint32));
 	}
@@ -355,5 +362,106 @@ Bitmap_Compress(
 			elog(ERROR, "illegal compression type during bitmap compression: "
 				"compression type %d", compressionType);
 			return 0;
+	}
+}
+
+/*
+ * Calculate two counts for decompress:
+ * 1. 'onDiskBlockCount': the block count of (ondisk) bitstream
+ * 2. 'bmsWordCount': the word count of in-memory bitmapset
+ */
+void BitmapDecompress_CalculateBlockCounts(BitmapDecompressState *decompressState,
+										   int *onDiskBlockCount,
+										   int *bmsWordCount)
+{
+	*onDiskBlockCount =
+		BitmapDecompress_GetBlockCount(decompressState);
+
+	/* The on-disk bitmap representation always uses 32-bit block size
+	 * (for backward compatibility). Depending on the environment, we
+	 * may be using either 64-bit words or 32-bit words for the
+	 * in-memory representation.
+	 * So, if (in-memory) bitmapset uses 64 bit words, we can use half
+	 * of the on-disk bitmap block count.
+	 */
+	if (BITS_PER_BITMAPWORD == 64)
+	{
+		/*
+		 * Number of on-disk blocks is always 0, 1 or even.
+		 * See resizing logic in AppendOnlyVisimapEntry_HideTuple()
+		 */
+		if (*onDiskBlockCount == 1)
+			*bmsWordCount = 1;
+		else
+		{
+			Assert(*onDiskBlockCount % 2 == 0);
+			*bmsWordCount = *onDiskBlockCount / 2;
+		}
+	}
+	else
+	{
+		Assert(BITS_PER_BITMAPWORD == 32);
+		*bmsWordCount = *onDiskBlockCount;
+	}
+	Assert(*bmsWordCount <= APPENDONLY_VISIMAP_MAX_BITMAP_WORD_COUNT);
+	Assert(*bmsWordCount >= 0);
+}
+
+/*
+ * Calculate two counts for compress:
+ * 1. 'onDiskBlockCount': the block count of (ondisk) bitstream
+ * 2. 'bmsWordCount': the word count of in-memory bitmapset
+ */
+void BitmapCompress_CalculateBlockCounts(Bitmapset *bitmap,
+										 int *onDiskBlockCount,
+										 int *bmsWordCount)
+{
+	*onDiskBlockCount = 0;
+	*bmsWordCount = 0;
+
+	if (bitmap)
+	{
+		*bmsWordCount = bitmap->nwords;
+
+		/*
+		 * On 64bit env, there is a conflict: in-memory bms is in 64bit word,
+		 * but on-disk block is in 32bit word to keep consistency. We need to
+		 * provide 32bit block count to Bitmap_Compress() after kind of
+		 * conversion.
+		 */
+		if (BITS_PER_BITMAPWORD == 64)
+		{
+			/*
+			 * On 64bit env, if there is only one 64 bit word in memory, and the
+			 * 32 higher order bits of that word are all zero, it implies that
+			 * there is only one 32 bit word. We can always assume that the 32
+			 * higher order bits for a 64 bit bitmap word is zeroed out - this
+			 * is ensured by routines such as bms_add_member() and
+			 * AppendOnlyVisiMapEnty_ReadData().
+			 */
+			if (*bmsWordCount == 1
+				&& (bitmap->words[0] >> 32) == 0)
+			{
+				*onDiskBlockCount = 1;
+			}
+			else
+			{
+				/*
+				 * onDiskBlockCount required by Bitmap_Compress() is always in
+				 * uint32-words. So, if bitmapset uses 64 bit words, double
+				 * the value of bmsWordCount.
+				 */
+				*onDiskBlockCount = bitmap->nwords * 2;
+			}
+		}
+		else
+		{
+			Assert(BITS_PER_BITMAPWORD == 32);
+
+			/*
+			 * On 32bit env, onDiskBlockCount is always equal to bmsWordCount.
+			 */
+			*onDiskBlockCount = bitmap->nwords;
+		}
 	}
 }

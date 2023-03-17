@@ -519,5 +519,70 @@ select 1 from t1_13212 where (NULL, b) not in (select a, b from t2_13212);
 update t2_13212 set b = 2;
 select 1 from t1_13212 where (NULL, b) not in (select a, b from t2_13212);
 
+-- test for params of not-in sublink
+create table t1p(a int, b int, c int);
+create table t2p(b int, a int);
+explain (costs off)
+update
+  t1p
+set
+  a = age.aging
+from
+  (
+    select
+      c,
+      (
+        select
+            diff
+        from
+            generate_series(1, 10) diff
+        where
+            (diff, t1p.b) not in (select a, b from t2p)
+      ) as aging
+    from
+      t1p
+  ) age
+where a = age.c;
+
+update
+  t1p
+set
+  a = age.aging
+from
+  (
+    select
+      c,
+      (
+        select
+            diff
+        from
+            generate_series(1, 10) diff
+        where
+            (diff, t1p.b) not in (select a, b from t2p)
+      ) as aging
+    from
+      t1p
+  ) age
+where a = age.c;
+
+drop table t1p;
+drop table t2p;
+
+-- test for github issue 14858
+create table t1_14858(a varchar(32), b varchar(32), c int, d int);
+create table t2_14858(a varchar(32), b varchar(32), c int, d int);
+create table t3_14858(a varchar(32), b varchar(32), c int, d int);
+
+create view mv_14858 as select * from t1_14858 full join
+(select a, b, count(c) from t2_14858 group by a,b union
+ select a, b, count(c) from t3_14858 group by a, b) x using (a, b);
+
+select * from mv_14858 where a not in (select a from t1_14858);
+
+drop view mv_14858;
+drop table t1_14858;
+drop table t2_14858;
+drop table t3_14858;
+
 reset search_path;
 drop schema notin cascade;

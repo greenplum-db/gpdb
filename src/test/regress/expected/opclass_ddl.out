@@ -10,11 +10,8 @@ DROP ROLE IF EXISTS regtest_alter_user2;
 DROP ROLE IF EXISTS regtest_alter_user3;
 RESET client_min_messages;
 CREATE USER regtest_alter_user3;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE USER regtest_alter_user2;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE USER regtest_alter_user1 IN ROLE regtest_alter_user3;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE SCHEMA alt_nsp1;
 GRANT ALL ON SCHEMA alt_nsp1 TO public;
 SET search_path = alt_nsp1, public;

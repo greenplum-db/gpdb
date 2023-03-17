@@ -189,6 +189,33 @@ Future improvements
   summarization on blocks that have seen lots of tuple deletions.
 
 
+GPDB:
+
+We have introduced a new table AM API relation_get_block_sequences() that helps
+unify code for block-based iteration for BRIN scan and summarization, in a
+table AM agnostic manner.
+
+At its heart is the critical observation that BRIN indexes deal with chunks of
+the tid space, represented in units of heap blocks. The resultant heap block
+boundaries are physical for heap tables, but are logical for AO/CO tables
+(AO/CO tables may have holes in the tid space due to how rownumber allocation
+is done). BRIN conceptually operates on these logical boundaries for tid
+selection, and we fully exploit that.
+
+A contiguous set of these logical heap blocks is what we term as BlockSequences.
+Two BlockSequences may not be contiguous, but are contiguous within themselves.
+The table AM API expects that we return a set of such BlockSequences. Heap
+tables have only 1 block sequence, whereas AO/CO tables have 1 block sequence
+per aoseg/aocsseg. See BlockSequence for more details.
+
+Once we have the list of BlockSequences, we introduce an outer loop for
+iterating over these. Within the outer loop the existing upstream loop is
+leveraged. This applies to both bringetbitmap() and brinsummarize().
+
+Sometimes, an alternative API is also needed: to get the block sequence, given
+a logical heap block number. For that purpose, we have introduced
+relation_get_block_sequence().
+
 BRIN on append only tables
 --------------------------
 

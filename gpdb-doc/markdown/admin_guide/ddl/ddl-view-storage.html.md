@@ -11,7 +11,7 @@ A view is similar to a table, both are relations - that is "something with colum
     The rewrite rule contains the definition of the view and is stored in the `ev_action` column of the [`pg_rewrite`](../../ref_guide/system_catalogs/pg_rewrite.html) catalog table.
 
 
-For more technical information about views, see the PostgreSQL documentation about [Views and the Rule System](https://www.postgresql.org/docs/9.4/rules-views.html).
+For more technical information about views, see the PostgreSQL documentation about [Views and the Rule System](https://www.postgresql.org/docs/12/rules-views.html).
 
 Also, a view definition is *not* stored as a string, but in the form of a query parse tree. Views are parsed when they are created, which has several consequences:
 

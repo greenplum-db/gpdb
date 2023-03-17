@@ -186,7 +186,7 @@ explain update update_pk_test set b = 5;
                                        QUERY PLAN                                       
 ----------------------------------------------------------------------------------------
  Update on update_pk_test  (cost=0.00..431.03 rows=1 width=1)
-   ->  Seq Scan on update_pk_test update_pk_test_1  (cost=0.00..431.00 rows=1 width=14)
+   ->  Seq Scan on update_pk_test  (cost=0.00..431.00 rows=1 width=14)
  Optimizer: Pivotal Optimizer (GPORCA)
 (3 rows)
 
@@ -207,7 +207,7 @@ explain update update_pk_test set a = 5;
                ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=22)
                      Hash Key: update_pk_test_1.a
                      ->  Split  (cost=0.00..431.00 rows=1 width=22)
-                           ->  Seq Scan on update_pk_test update_pk_test_1  (cost=0.00..431.00 rows=1 width=18)
+                           ->  Seq Scan on update_pk_test  (cost=0.00..431.00 rows=1 width=18)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (9 rows)
 
@@ -329,8 +329,8 @@ explain delete from foo using bar where foo.a=bar.a;
                ->  Hash Join  (cost=0.00..862.00 rows=1 width=18)
                      Hash Cond: (foo_1.a = bar.a)
                      ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=18)
-                           Hash Key: foo_1.a
-                           ->  Seq Scan on foo foo_1  (cost=0.00..431.00 rows=1 width=18)
+                           Hash Key: foo.a
+                           ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=18)
                      ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                            ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=4)
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -400,7 +400,7 @@ explain delete from foo where foo.a=1;
                             QUERY PLAN                            
 ------------------------------------------------------------------
  Delete on foo  (cost=0.00..431.03 rows=1 width=1)
-   ->  Seq Scan on foo foo_1  (cost=0.00..431.00 rows=1 width=18)
+   ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=18)
          Filter: (a = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (4 rows)
@@ -421,8 +421,8 @@ explain delete from foo using bar where foo.a=bar.b;
 ---------------------------------------------------------------------------------------------------
  Delete on foo  (cost=0.00..862.03 rows=1 width=1)
    ->  Hash Join  (cost=0.00..862.00 rows=1 width=18)
-         Hash Cond: (foo_1.a = bar.b)
-         ->  Seq Scan on foo foo_1  (cost=0.00..431.00 rows=1 width=18)
+         Hash Cond: (foo.a = bar.b)
+         ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=18)
          ->  Hash  (cost=431.00..431.00 rows=3 width=4)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=4)
                      ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=4)
@@ -446,11 +446,11 @@ explain delete from foo using foo foo_1 where foo_1.a=foo.a;
 ----------------------------------------------------------------------------------------------------
  Delete on foo  (cost=0.00..862.29 rows=4 width=1)
    ->  Hash Join  (cost=0.00..862.00 rows=10 width=18)
-         Hash Cond: (foo_1.a = foo_2.a)
-         ->  Seq Scan on foo foo_1  (cost=0.00..431.00 rows=10 width=18)
+         Hash Cond: (foo.a = foo_1.a)
+         ->  Seq Scan on foo  (cost=0.00..431.00 rows=10 width=18)
          ->  Hash  (cost=431.00..431.00 rows=30 width=4)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=30 width=4)
-                     ->  Seq Scan on foo foo_2  (cost=0.00..431.00 rows=4 width=4)
+                     ->  Seq Scan on foo foo_1  (cost=0.00..431.00 rows=4 width=4)
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
@@ -466,7 +466,7 @@ explain delete from foo;
                             QUERY PLAN                            
 ------------------------------------------------------------------
  Delete on foo  (cost=0.00..431.03 rows=1 width=1)
-   ->  Seq Scan on foo foo_1  (cost=0.00..431.00 rows=1 width=18)
+   ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=18)
  Optimizer: Pivotal Optimizer (GPORCA)
 (3 rows)
 
@@ -488,7 +488,7 @@ explain delete from foo using bar;
  Delete on foo  (cost=0.00..1324032.10 rows=1 width=1)
    ->  Nested Loop  (cost=0.00..1324032.07 rows=1 width=18)
          Join Filter: true
-         ->  Seq Scan on foo foo_1  (cost=0.00..431.00 rows=1 width=18)
+         ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=18)
          ->  Materialize  (cost=0.00..431.00 rows=3 width=1)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=1)
                      ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=1)
@@ -514,8 +514,8 @@ explain delete from foo using bar where foo.b=bar.b;
 ------------------------------------------------------------------------------------------------------
  Delete on foo  (cost=0.00..862.56 rows=4 width=1)
    ->  Hash Join  (cost=0.00..862.27 rows=10 width=18)
-         Hash Cond: (foo_1.b = bar.b)
-         ->  Seq Scan on foo foo_1  (cost=0.00..431.00 rows=10 width=18)
+         Hash Cond: (foo.b = bar.b)
+         ->  Seq Scan on foo  (cost=0.00..431.00 rows=10 width=18)
          ->  Hash  (cost=431.08..431.08 rows=3000 width=4)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.08 rows=3000 width=4)
                      ->  Seq Scan on bar  (cost=0.00..431.01 rows=334 width=4)
@@ -557,8 +557,8 @@ explain update foo set a=4 from bar where foo.a=bar.a;
 ---------------------------------------------------------------------------------------------------
  Update on foo  (cost=0.00..862.03 rows=1 width=1)
    ->  Hash Join  (cost=0.00..862.00 rows=1 width=14)
-         Hash Cond: (foo_1.a = bar.a)
-         ->  Seq Scan on foo foo_1  (cost=0.00..431.00 rows=1 width=18)
+         Hash Cond: (foo.a = bar.a)
+         ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=18)
          ->  Hash  (cost=431.00..431.00 rows=3 width=4)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=4)
                      ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=4)
@@ -622,7 +622,7 @@ explain delete from foo using (select a from foo union all select b from bar) v;
  Delete on foo  (cost=0.00..1765376.09 rows=1 width=1)
    ->  Nested Loop  (cost=0.00..1765376.07 rows=1 width=14)
          Join Filter: true
-         ->  Seq Scan on foo foo_2  (cost=0.00..431.00 rows=1 width=14)
+         ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=14)
          ->  Materialize  (cost=0.00..862.00 rows=3 width=1)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..862.00 rows=3 width=1)
                      ->  Append  (cost=0.00..862.00 rows=1 width=1)

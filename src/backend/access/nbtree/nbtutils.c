@@ -1789,9 +1789,19 @@ _bt_killitems(IndexScanDesc scan)
 
 			if (ItemPointerEquals(&ituple->t_tid, &kitem->heapTid))
 			{
-				/* found the item */
-				ItemIdMarkDead(iid);
-				killedsomething = true;
+				/*
+				 * Found the item.  Mark it as dead, if it isn't already.
+				 * Since this happens while holding a buffer lock possibly in
+				 * shared mode, it's possible that multiple processes attempt
+				 * to do this simultaneously, leading to multiple full-page
+				 * images being sent to WAL (if wal_log_hints or data checksums
+				 * are enabled), which is undesirable.
+				 */
+				if (!ItemIdIsDead(iid))
+				{
+					ItemIdMarkDead(iid);
+					killedsomething = true;
+				}
 				break;			/* out of inner search loop */
 			}
 			offnum = OffsetNumberNext(offnum);
@@ -2143,7 +2153,8 @@ _bt_truncate(Relation rel, IndexTuple lastleft, IndexTuple firstright,
 	{
 		IndexTuple	tidpivot;
 
-		pivot = index_truncate_tuple(itupdesc, firstright, keepnatts);
+		pivot = index_truncate_tuple(itupdesc, firstright,
+									 Min(keepnatts, nkeyatts));
 
 		/*
 		 * If there is a distinguishing key attribute within new pivot tuple,
@@ -2173,6 +2184,10 @@ _bt_truncate(Relation rel, IndexTuple lastleft, IndexTuple firstright,
 		/*
 		 * No truncation was possible, since key attributes are all equal.
 		 * It's necessary to add a heap TID attribute to the new pivot tuple.
+		 *
+		 * This path is only taken when rel is not an INCLUDE index.  It
+		 * avoids a second palloc0() by avoiding the index_truncate_tuple()
+		 * call completely.
 		 */
 		Assert(natts == nkeyatts);
 		newsize = IndexTupleSize(firstright) + MAXALIGN(sizeof(ItemPointerData));

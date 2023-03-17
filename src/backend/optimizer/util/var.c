@@ -26,6 +26,7 @@
 #include "access/sysattr.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/optimizer.h"
+#include "optimizer/placeholder.h"
 #include "optimizer/prep.h"
 #include "optimizer/walkers.h"
 #include "parser/parsetree.h"
@@ -36,6 +37,7 @@
 typedef struct
 {
 	Relids		varnos;
+	PlannerInfo *root;
 	int			sublevels_up;
 } pull_varnos_context;
 
@@ -185,7 +187,28 @@ cdb_walk_vars(Node                         *node,
 Relids
 pull_varnos(Node *node)
 {
-	return pull_varnos_of_level(node, 0);
+	return pull_varnos_new(NULL, node);
+}
+
+Relids
+pull_varnos_new(PlannerInfo *root, Node *node)
+{
+	pull_varnos_context context;
+
+	context.varnos = NULL;
+	context.root = root;
+	context.sublevels_up = 0;
+
+	/*
+	 * Must be prepared to start with a Query or a bare expression tree; if
+	 * it's a Query, we don't want to increment sublevels_up.
+	 */
+	query_or_expression_tree_walker(node,
+									pull_varnos_walker,
+									(void *) &context,
+									0);
+
+	return context.varnos;
 }
 
 /*
@@ -196,9 +219,16 @@ pull_varnos(Node *node)
 Relids
 pull_varnos_of_level(Node *node, int levelsup)
 {
+	return pull_varnos_of_level_new(NULL, node, levelsup);
+}
+
+Relids
+pull_varnos_of_level_new(PlannerInfo *root, Node *node, int levelsup)
+{
 	pull_varnos_context context;
 
 	context.varnos = NULL;
+	context.root = root;
 	context.sublevels_up = levelsup;
 
 	/*
@@ -236,33 +266,91 @@ pull_varnos_walker(Node *node, pull_varnos_context *context)
 	}
 	if (IsA(node, PlaceHolderVar))
 	{
-		/*
-		 * A PlaceHolderVar acts as a variable of its syntactic scope, or
-		 * lower than that if it references only a subset of the rels in its
-		 * syntactic scope.  It might also contain lateral references, but we
-		 * should ignore such references when computing the set of varnos in
-		 * an expression tree.  Also, if the PHV contains no variables within
-		 * its syntactic scope, it will be forced to be evaluated exactly at
-		 * the syntactic scope, so take that as the relid set.
-		 */
 		PlaceHolderVar *phv = (PlaceHolderVar *) node;
-		pull_varnos_context subcontext;
 
-		subcontext.varnos = NULL;
-		subcontext.sublevels_up = context->sublevels_up;
-		(void) pull_varnos_walker((Node *) phv->phexpr, &subcontext);
+		/*
+		 * If a PlaceHolderVar is not of the target query level, ignore it,
+		 * instead recursing into its expression to see if it contains any
+		 * vars that are of the target level.
+		 */
 		if (phv->phlevelsup == context->sublevels_up)
 		{
-			subcontext.varnos = bms_int_members(subcontext.varnos,
-												phv->phrels);
-			if (bms_is_empty(subcontext.varnos))
+			/*
+			 * Ideally, the PHV's contribution to context->varnos is its
+			 * ph_eval_at set.  However, this code can be invoked before
+			 * that's been computed.  If we cannot find a PlaceHolderInfo,
+			 * fall back to the conservative assumption that the PHV will be
+			 * evaluated at its syntactic level (phv->phrels).
+			 *
+			 * There is a second hazard: this code is also used to examine
+			 * qual clauses during deconstruct_jointree, when we may have a
+			 * PlaceHolderInfo but its ph_eval_at value is not yet final, so
+			 * that theoretically we could obtain a relid set that's smaller
+			 * than we'd see later on.  That should never happen though,
+			 * because we deconstruct the jointree working upwards.  Any outer
+			 * join that forces delay of evaluation of a given qual clause
+			 * will be processed before we examine that clause here, so the
+			 * ph_eval_at value should have been updated to include it.
+			 *
+			 * Another problem is that a PlaceHolderVar can appear in quals or
+			 * tlists that have been translated for use in a child appendrel.
+			 * Typically such a PHV is a parameter expression sourced by some
+			 * other relation, so that the translation from parent appendrel
+			 * to child doesn't change its phrels, and we should still take
+			 * ph_eval_at at face value.  But in corner cases, the PHV's
+			 * original phrels can include the parent appendrel itself, in
+			 * which case the translated PHV will have the child appendrel in
+			 * phrels, and we must translate ph_eval_at to match.
+			 */
+			PlaceHolderInfo *phinfo = NULL;
+
+			if (phv->phlevelsup == 0 && context->root)
+			{
+				ListCell   *lc;
+
+				foreach(lc, context->root->placeholder_list)
+				{
+					phinfo = (PlaceHolderInfo *) lfirst(lc);
+					if (phinfo->phid == phv->phid)
+						break;
+					phinfo = NULL;
+				}
+			}
+			if (phinfo == NULL)
+			{
+				/* No PlaceHolderInfo yet, use phrels */
 				context->varnos = bms_add_members(context->varnos,
 												  phv->phrels);
+			}
+			else if (bms_equal(phv->phrels, phinfo->ph_var->phrels))
+			{
+				/* Normal case: use ph_eval_at */
+				context->varnos = bms_add_members(context->varnos,
+												  phinfo->ph_eval_at);
+			}
+			else
+			{
+				/* Translated PlaceHolderVar: translate ph_eval_at to match */
+				Relids		newevalat,
+							delta;
+
+				/* remove what was removed from phv->phrels ... */
+				delta = bms_difference(phinfo->ph_var->phrels, phv->phrels);
+				newevalat = bms_difference(phinfo->ph_eval_at, delta);
+				/* ... then if that was in fact part of ph_eval_at ... */
+				if (!bms_equal(newevalat, phinfo->ph_eval_at))
+				{
+					/* ... add what was added */
+					delta = bms_difference(phv->phrels, phinfo->ph_var->phrels);
+					newevalat = bms_join(newevalat, delta);
+				}
+				context->varnos = bms_join(context->varnos,
+										   newevalat);
+			}
+			return false;		/* don't recurse into expression */
 		}
-		context->varnos = bms_join(context->varnos, subcontext.varnos);
-		return false;
 	}
-	if (IsA(node, Query))
+	else if (IsA(node, Query))
 	{
 		/* Recurse into RTE subquery or not-yet-planned sublink subquery */
 		bool		result;
@@ -654,7 +742,7 @@ contain_vars_of_level_or_above(Node *node, int levelsup)
  *	  Vars within a PHV's expression are included in the result only
  *	  when PVC_RECURSE_PLACEHOLDERS is specified.
  *
- *	  GroupingFuncs are treated mostly like Aggrefs, and so do not need
+ *	  GroupingFuncs are treated exactly like Aggrefs, and so do not need
  *	  their own flag bits.
  *
  *	  CurrentOfExpr nodes are ignored in all cases.
@@ -729,13 +817,7 @@ pull_var_clause_walker(Node *node, pull_var_clause_context *context)
 		}
 		else if (context->flags & PVC_RECURSE_AGGREGATES)
 		{
-			/*
-			 * We do NOT descend into the contained expression, even if the
-			 * caller asked for it, because we never actually evaluate it -
-			 * the result is driven entirely off the associated GROUP BY
-			 * clause, so we never need to extract the actual Vars here.
-			 */
-			return false;
+			/* fall through to recurse into the GroupingFunc's arguments */
 		}
 		else
 			elog(ERROR, "GROUPING found where not expected");

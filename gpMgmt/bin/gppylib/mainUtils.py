@@ -414,7 +414,7 @@ def addCoordinatorDirectoryOptionForSingleClusterProgram(addTo):
     For programs that operate on multiple clusters at once, this function/option
     is not appropriate.
     """
-    addTo.add_option('-d', '--master_data_directory', type='string',
+    addTo.add_option('-d', '--master_data_directory', '--coordinator_data_directory', type='string',
                      dest="coordinatorDataDirectory",
                      metavar="<coordinator data directory>",
                      help="Optional. The coordinator host data directory. If not specified, the value set" \

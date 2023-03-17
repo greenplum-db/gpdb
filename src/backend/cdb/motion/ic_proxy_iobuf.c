@@ -77,7 +77,7 @@ void
 ic_proxy_ibuf_clear(ICProxyIBuf *ibuf)
 {
 	if (ibuf->len > 0)
-		ic_proxy_log(WARNING, "ic-proxy-ibuf: dropped %d bytes", ibuf->len);
+		elog(WARNING, "ic-proxy: dropped %d bytes", ibuf->len);
 
 	ibuf->len = 0;
 }
@@ -151,13 +151,14 @@ ic_proxy_ibuf_push(ICProxyIBuf *ibuf,
 			/* have a complete header now */
 
 			packet_size = ibuf->get_packet_size(ibuf->buf);
-			delta = Min(packet_size - ibuf->len, size);
-
-			memcpy(ibuf->buf + ibuf->len, data, delta);
-			ibuf->len += delta;
-			data += delta;
-			size -= delta;
-
+			if (packet_size > ibuf->len)
+			{
+				delta = Min(packet_size - ibuf->len, size);
+				memcpy(ibuf->buf + ibuf->len, data, delta);
+				ibuf->len += delta;
+				data += delta;
+				size -= delta;
+			}
 			if (ibuf->len < packet_size)
 				/* still not having a complete packet */
 				return;
@@ -175,7 +176,7 @@ ic_proxy_ibuf_push(ICProxyIBuf *ibuf,
 	{
 		packet_size = ibuf->get_packet_size(data);
 
-		if (packet_size <= size)
+		if (packet_size > 0 && packet_size <= size)
 		{
 			/* got a complete pkt */
 			callback(opaque, data, packet_size);
@@ -322,8 +323,8 @@ ic_proxy_obuf_push(ICProxyOBuf *obuf,
 				   void *opaque)
 {
 	if (unlikely(obuf->buf == NULL))
-		ic_proxy_log(ERROR,
-					 "ic-proxy-obuf: the caller must init the header before pushing data");
+		elog(ERROR,
+					 "ic-proxy: the caller must init the header before pushing data");
 
 	/*
 	 * Need a flush when:
@@ -333,8 +334,8 @@ ic_proxy_obuf_push(ICProxyOBuf *obuf,
 	if (unlikely(size == 0 || size + obuf->len > IC_PROXY_MAX_PKT_SIZE))
 	{
 		if (obuf->header_size + size > IC_PROXY_MAX_PKT_SIZE)
-			ic_proxy_log(ERROR,
-						 "ic-proxy-obuf: no enough buffer to store the data:"
+			elog(ERROR,
+						 "ic-proxy: not enough buffer to store the data:"
 						 " the data size is %d bytes,"
 						 " but the buffer size is only %zd bytes,"
 						 " including a %d bytes header",
@@ -342,7 +343,10 @@ ic_proxy_obuf_push(ICProxyOBuf *obuf,
 
 		/* TODO: should we flush if no data in the packet? */
 		if (obuf->len == obuf->header_size)
-			ic_proxy_log(LOG, "ic-proxy-obuf: no data to flush");
+		{
+			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+				   "ic-proxy: no data to flush");
+		}
 		else
 		{
 			obuf->set_packet_size(obuf->buf, obuf->len);

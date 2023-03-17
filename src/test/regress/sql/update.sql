@@ -100,22 +100,61 @@ UPDATE update_test t
 SELECT a, b, char_length(c) FROM update_test;
 
 -- Test ON CONFLICT DO UPDATE
-INSERT INTO upsert_test VALUES(1, 'Boo');
+
+INSERT INTO upsert_test VALUES(1, 'Boo'), (3, 'Zoo');
 -- uncorrelated  sub-select:
 WITH aaa AS (SELECT 1 AS a, 'Foo' AS b) INSERT INTO upsert_test
   VALUES (1, 'Bar') ON CONFLICT(a)
   DO UPDATE SET (b, a) = (SELECT b, a FROM aaa) RETURNING *;
 -- correlated sub-select:
-INSERT INTO upsert_test VALUES (1, 'Baz') ON CONFLICT(a)
+INSERT INTO upsert_test VALUES (1, 'Baz'), (3, 'Zaz') ON CONFLICT(a)
   DO UPDATE SET (b, a) = (SELECT b || ', Correlated', a from upsert_test i WHERE i.a = upsert_test.a)
   RETURNING *;
 -- correlated sub-select (EXCLUDED.* alias):
-INSERT INTO upsert_test VALUES (1, 'Bat') ON CONFLICT(a)
+INSERT INTO upsert_test VALUES (1, 'Bat'), (3, 'Zot') ON CONFLICT(a)
   DO UPDATE SET (b, a) = (SELECT b || ', Excluded', a from upsert_test i WHERE i.a = excluded.a)
   RETURNING *;
 
+-- ON CONFLICT using system attributes in RETURNING, testing both the
+-- inserting and updating paths. See bug report at:
+-- https://www.postgresql.org/message-id/73436355-6432-49B1-92ED-1FE4F7E7E100%40finefun.com.au
+CREATE FUNCTION xid_current() RETURNS xid LANGUAGE SQL AS $$SELECT (txid_current() % ((1::int8<<32)))::text::xid;$$;
+INSERT INTO upsert_test VALUES (2, 'Beeble') ON CONFLICT(a)
+  DO UPDATE SET (b, a) = (SELECT b || ', Excluded', a from upsert_test i WHERE i.a = excluded.a)
+  RETURNING tableoid::regclass, xmin = xid_current() AS xmin_correct, xmax = 0 AS xmax_correct;
+-- currently xmax is set after a conflict - that's probably not good,
+-- but it seems worthwhile to have to be explicit if that changes.
+INSERT INTO upsert_test VALUES (2, 'Brox') ON CONFLICT(a)
+  DO UPDATE SET (b, a) = (SELECT b || ', Excluded', a from upsert_test i WHERE i.a = excluded.a)
+  RETURNING tableoid::regclass, xmin = xid_current() AS xmin_correct, xmax = xid_current() AS xmax_correct;
+
+DROP FUNCTION xid_current();
 DROP TABLE update_test;
 DROP TABLE upsert_test;
+
+-- Test ON CONFLICT DO UPDATE with partitioned table and non-identical children
+
+CREATE TABLE upsert_test (
+    a   INT PRIMARY KEY,
+    b   TEXT
+) PARTITION BY LIST (a);
+
+CREATE TABLE upsert_test_1 PARTITION OF upsert_test FOR VALUES IN (1);
+CREATE TABLE upsert_test_2 (b TEXT, a INT PRIMARY KEY);
+ALTER TABLE upsert_test ATTACH PARTITION upsert_test_2 FOR VALUES IN (2);
+
+INSERT INTO upsert_test VALUES(1, 'Boo'), (2, 'Zoo');
+-- uncorrelated sub-select:
+WITH aaa AS (SELECT 1 AS a, 'Foo' AS b) INSERT INTO upsert_test
+  VALUES (1, 'Bar') ON CONFLICT(a)
+  DO UPDATE SET (b, a) = (SELECT b, a FROM aaa) RETURNING *;
+-- correlated sub-select:
+WITH aaa AS (SELECT 1 AS ctea, ' Foo' AS cteb) INSERT INTO upsert_test
+  VALUES (1, 'Bar'), (2, 'Baz') ON CONFLICT(a)
+  DO UPDATE SET (b, a) = (SELECT upsert_test.b||cteb, upsert_test.a FROM aaa) RETURNING *;
+
+DROP TABLE upsert_test;
+
 
 ---------------------------
 -- UPDATE with row movement
@@ -232,6 +271,35 @@ DROP VIEW upview;
 UPDATE range_parted set c = 95 WHERE a = 'b' and b > 10 and c > 100 returning (range_parted), *;
 :show_data;
 
+-- The following tests computing RETURNING when the source and the destination
+-- partitions of a UPDATE row movement operation have different tuple
+-- descriptors, which has been shown to be problematic in the cases where the
+-- RETURNING targetlist contains non-target relation attributes that are
+-- computed by referring to the source partition plan's output tuple.  Also,
+-- a trigger on the destination relation may change the tuple, which must be
+-- reflected in the RETURNING output, so we test that too.
+-- GPDB disallow the INSERT trigger on a SplitUpdate. Therefore, change the
+-- distribution key to avoid split updates.
+ALTER TABLE range_parted SET DISTRIBUTED BY (c);
+CREATE TABLE part_c_1_c_20 (LIKE range_parted);
+ALTER TABLE part_c_1_c_20 DROP a, DROP b, ADD a text, ADD b bigint;
+ALTER TABLE range_parted ATTACH PARTITION part_c_1_c_20 FOR VALUES FROM ('c', 1) TO ('c', 20);
+CREATE FUNCTION trigfunc () RETURNS TRIGGER LANGUAGE plpgsql as $$ BEGIN NEW.e := 'in trigfunc()'; RETURN NEW; END; $$;
+CREATE TRIGGER trig BEFORE INSERT ON part_c_1_c_20 FOR EACH ROW EXECUTE FUNCTION trigfunc();
+UPDATE range_parted r set a = 'c' FROM (VALUES ('a', 1), ('a', 10), ('b', 12)) s(x, y) WHERE s.x = r.a AND s.y = r.b RETURNING tableoid::regclass, *;
+
+DROP TRIGGER trig ON part_c_1_c_20;
+DROP FUNCTION trigfunc;
+
+:init_range_parted;
+CREATE FUNCTION trigfunc () RETURNS TRIGGER LANGUAGE plpgsql as $$ BEGIN RETURN NULL; END; $$;
+CREATE TRIGGER trig BEFORE INSERT ON part_c_1_c_20 FOR EACH ROW EXECUTE FUNCTION trigfunc();
+UPDATE range_parted r set a = 'c' FROM (VALUES ('a', 1), ('a', 10), ('b', 12)) s(x, y) WHERE s.x = r.a AND s.y = r.b RETURNING tableoid::regclass, *;
+:show_data;
+
+DROP TABLE part_c_1_c_20;
+DROP FUNCTION trigfunc;
+ALTER TABLE range_parted SET DISTRIBUTED BY (a);
 
 -- Transition tables with update row movement
 :init_range_parted;
@@ -497,6 +565,38 @@ UPDATE list_default set a = 'a' WHERE a = 'd';
 UPDATE list_default set a = 'x' WHERE a = 'd';
 
 DROP TABLE list_parted;
+
+-- Test retrieval of system columns with non-consistent partition row types.
+-- This is only partially supported, as seen in the results.
+
+create table utrtest (a int, b text) partition by list (a);
+create table utr1 (a int check (a in (1)), q text, b text);
+create table utr2 (a int check (a in (2)), b text);
+alter table utr1 drop column q;
+alter table utrtest attach partition utr1 for values in (1);
+alter table utrtest attach partition utr2 for values in (2);
+
+insert into utrtest values (1, 'foo')
+  returning *, tableoid::regclass, cmin;
+insert into utrtest values (2, 'bar')
+  returning *, tableoid::regclass, cmin;  -- fails
+insert into utrtest values (2, 'bar')
+  returning *, tableoid::regclass;
+
+update utrtest set b = b || b from (values (1), (2)) s(x) where a = s.x
+  returning *, tableoid::regclass, cmin;
+
+update utrtest set a = 3 - a from (values (1), (2)) s(x) where a = s.x
+  returning *, tableoid::regclass, cmin;  -- fails
+
+update utrtest set a = 3 - a from (values (1), (2)) s(x) where a = s.x
+  returning *, tableoid::regclass;
+
+delete from utrtest
+  returning *, tableoid::regclass, cmin;
+
+drop table utrtest;
+
 
 --------------
 -- Some more update-partition-key test scenarios below. This time use list

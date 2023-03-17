@@ -411,7 +411,7 @@ def impl(context, before, after):
 # This test explicitly compares the actual before and after gparrays with what we
 # expect.  While such a test is not extensible, it is easy to debug and does exactly
 # what we need to right now.  Besides, the calling Scenario requires a specific cluster
-# setup.  Note the before cluster is a standard CCP 5-host cluster(mdw/sdw1-4) and the
+# setup.  Note the before cluster is a standard CCP 5-host cluster(cdw/sdw1-4) and the
 # after cluster is a result of a call to `gprecoverseg -p` after hosts have been shutdown.
 # This causes the shutdown primaries to fail over to the mirrors, at which point there are 4
 # contents in the cluster with no mirrors.  The `gprecoverseg -p` call creates those 4
@@ -425,7 +425,7 @@ def impl(context, before, after):
     expected = {}
 
     # this is the expected configuration coming into the Scenario(e.g. the original CCP cluster)
-    expected["before"] = '''1|-1|p|p|n|u|mdw|mdw|5432|/data/gpdata/master/gpseg-1
+    expected["before"] = '''1|-1|p|p|n|u|cdw|mdw|5432|/data/gpdata/coordinator/gpseg-1
 2|0|p|p|s|u|sdw1|sdw1|20000|/data/gpdata/primary/gpseg0
 3|1|p|p|s|u|sdw1|sdw1|20001|/data/gpdata/primary/gpseg1
 16|6|m|m|s|u|sdw1|sdw1|21000|/data/gpdata/mirror/gpseg6
@@ -446,7 +446,7 @@ def impl(context, before, after):
     expected["after_recreation"] = expected["before"]
 
     # this is the expected configuration after "gprecoverseg -p sdw5" after "sdw1" goes down
-    expected["one_host_down"] = '''1|-1|p|p|n|u|mdw|mdw|5432|/data/gpdata/master/gpseg-1
+    expected["one_host_down"] = '''1|-1|p|p|n|u|mdw|mdw|5432|/data/gpdata/coordinator/gpseg-1
 10|0|p|m|s|u|sdw2|sdw2|21000|/data/gpdata/mirror/gpseg0
 11|1|p|m|s|u|sdw2|sdw2|21001|/data/gpdata/mirror/gpseg1
 4|2|p|p|s|u|sdw2|sdw2|20000|/data/gpdata/primary/gpseg2
@@ -466,7 +466,7 @@ def impl(context, before, after):
 '''
 
     # this is the expected configuration after "gprecoverseg -p sdw5,sdw6" after "sdw1,sdw3" go down
-    expected["two_hosts_down"] ='''1|-1|p|p|n|u|mdw|mdw|5432|/data/gpdata/master/gpseg-1
+    expected["two_hosts_down"] ='''1|-1|p|p|n|u|mdw|mdw|5432|/data/gpdata/coordinator/gpseg-1
 10|0|p|m|s|u|sdw2|sdw2|21000|/data/gpdata/mirror/gpseg0
 11|1|p|m|s|u|sdw2|sdw2|21001|/data/gpdata/mirror/gpseg1
 4|2|p|p|s|u|sdw2|sdw2|20000|/data/gpdata/primary/gpseg2
@@ -570,6 +570,8 @@ def impl(context):
     if len(dirs) > 0:
         raise Exception("One or more backout directories exist: %s" % dirs)
 
+@given('the gprecoverseg lock directory is removed')
+@when('the gprecoverseg lock directory is removed')
 @then('the gprecoverseg lock directory is removed')
 def impl(context):
     lock_dir = "%s/gprecoverseg.lock" % os.environ["COORDINATOR_DATA_DIRECTORY"]

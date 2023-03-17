@@ -121,7 +121,10 @@ CREATE TABLE t1 (a int, b int) DISTRIBUTED BY (a);
 CREATE TABLE t2 (a int, b int) DISTRIBUTED BY (a);
 CREATE TABLE x (a int) DISTRIBUTED BY (a);
 select * from x where a=  (select sum(t1.a)  from t1 inner join (select x.a as outer_ref, * from t2) as foo on (foo.a=t1.a+ outer_ref)  group by foo.a);
-ERROR:  correlated subquery with skip-level correlations is not supported
+ a 
+---
+(0 rows)
+
 SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = off;

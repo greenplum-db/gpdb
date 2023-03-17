@@ -22,6 +22,7 @@
 #include "gpopt/operators/CScalarArrayCmp.h"
 #include "gpopt/operators/CScalarBoolOp.h"
 #include "gpopt/operators/CScalarConst.h"
+#include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/xforms/CXform.h"
 
@@ -243,7 +244,7 @@ public:
 		BOOL is_distinct, EAggfuncStage eaggfuncstage, BOOL fSplit,
 		IMDId *
 			pmdidResolvedReturnType,  // return type to be used if original return type is ambiguous
-		EAggfuncKind aggkind, ULongPtrArray *argtypes);
+		EAggfuncKind aggkind, ULongPtrArray *argtypes, BOOL fRepSafe);
 
 	// generate an aggregate function
 	static CExpression *PexprAggFunc(CMemoryPool *mp, IMDId *pmdidAggFunc,
@@ -436,6 +437,8 @@ public:
 	//-------------------------------------------------------------------
 	// Helpers for comparisons
 	//-------------------------------------------------------------------
+
+	static CExpression *PexprOpComEquality(CMemoryPool *mp, CExpression *pexpr);
 
 	// deduplicate array of expressions
 	static CExpressionArray *PdrgpexprDedup(CMemoryPool *mp,
@@ -706,6 +709,12 @@ public:
 	// returns true if the subquery is a ScalarSubqueryAny
 	static BOOL FAnySubquery(COperator *pop);
 
+	// returns true if the subquery is a ScalarSubqueryExists
+	static BOOL FExistsSubquery(COperator *pop);
+
+	// returns true if the expression is a correlated EXISTS/ANY subquery
+	static BOOL FCorrelatedExistsAnySubquery(CExpression *pexpr);
+
 	static CScalarProjectElement *PNthProjectElement(CExpression *pexpr,
 													 ULONG ul);
 
@@ -946,9 +955,6 @@ public:
 	static CExpression *PexprLimit(CMemoryPool *mp, CExpression *pexpr,
 								   ULONG ulOffSet, ULONG count);
 
-	// generate part oid
-	static BOOL FGeneratePartOid(IMDId *mdid);
-
 	// return true if given expression contains window aggregate function
 	static BOOL FHasAggWindowFunc(CExpression *pexpr);
 
@@ -995,6 +1001,12 @@ public:
 						 CExpressionArrays *input_exprs);
 
 	static BOOL FScalarConstBoolNull(CExpression *pexpr);
+
+	static CScalarIdent *PscalarIdent(CExpression *pexpr);
+
+	static CScalarConst *PscalarConst(CExpression *pexpr);
+
+	static BOOL FScalarConstOrBinaryCoercible(CExpression *pexpr);
 };	// class CUtils
 
 // hash set from expressions
@@ -1309,10 +1321,6 @@ CUtils::FMatchDynamicScan(T *pop1, COperator *pop2)
 	T *popScan2 = T::PopConvert(pop2);
 
 	// match if the table descriptors are identical
-	// Possible improvement:
-	// For partial scans, we use pointer comparison of part constraints to avoid
-	// memory allocation because matching function was used while holding spin locks.
-	// Using a match function would mean improved matches for partial scans.
 	return pop1->ScanId() == popScan2->ScanId() &&
 		   pop1->Ptabdesc()->MDId()->Equals(popScan2->Ptabdesc()->MDId()) &&
 		   pop1->PdrgpcrOutput()->Equals(popScan2->PdrgpcrOutput());

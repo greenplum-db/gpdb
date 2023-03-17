@@ -5,7 +5,7 @@ default: all
 top_builddir = ..
 include $(top_builddir)/src/Makefile.global
 
-.PHONY: all install clean distclean gpcloud pxf mapreduce
+.PHONY: all install clean distclean gpcloud mapreduce
 
 #
 # targets built via top_builddir/GNUmakefile
@@ -37,17 +37,12 @@ ifeq "$(with_quicklz)" "yes"
 endif
 $(call recurse,all install clean distclean, $(recurse_targets))
 
-all: gpcloud pxf mapreduce orafce
+all: gpcloud mapreduce orafce
 
 gpcloud:
 	@if [ "$(enable_gpcloud)" = "yes" ]; then \
 		$(MAKE) -C gpcloud && \
 		$(MAKE) -C gpcloud/bin/gpcheckcloud; \
-	fi
-
-pxf:
-	@if [ "$(enable_pxf)" = "yes" ]; then \
-		$(MAKE) -C pxf_fdw; \
 	fi
 
 mapreduce:
@@ -68,9 +63,6 @@ install:
 	@if [ "$(enable_mapreduce)" = "yes" ]; then \
 		$(MAKE) -C gpmapreduce install; \
 	fi
-	@if [ "$(enable_pxf)" = "yes" ]; then \
-		$(MAKE) -C pxf_fdw install; \
-	fi
 	@if [ "$(enable_orafce)" = "yes" ]; then \
 		$(MAKE) -C orafce NO_PGXS=true install; \
 	fi
@@ -78,14 +70,12 @@ install:
 clean:
 	if [ "$(enable_mapreduce)" = "yes" ]; then $(MAKE) -C gpmapreduce clean; fi
 	if [ "$(enable_gpcloud)" = "yes" ]; then $(MAKE) -C gpcloud cleanall; fi
-	if [ "$(enable_pxf)" = "yes" ]; then $(MAKE) -C pxf_fdw clean; fi
 	if [ "${enable_orafce}" = "yes" ]; then $(MAKE) -C orafce NO_PGXS=true clean; fi
 
 
 distclean:
 	if [ "$(enable_mapreduce)" = "yes" ]; then $(MAKE) -C gpmapreduce distclean; fi
 	if [ "$(enable_gpcloud)" = "yes" ]; then $(MAKE) -C gpcloud distclean; fi
-	if [ "$(enable_pxf)" = "yes" ]; then $(MAKE) -C pxf_fdw distclean; fi
 	if [ "${enable_orafce}" = "yes" ]; then $(MAKE) -C orafce NO_PGXS=true distclean; fi
 
 installcheck:
@@ -94,7 +84,7 @@ installcheck:
 		$(MAKE) -C gpmapreduce installcheck; \
 	fi
 	if [ "$(enable_orafce)" = "yes" ]; then $(MAKE) -C orafce installcheck; fi
-	if [ "$(enable_pxf)" = "yes" ]; then $(MAKE) -C pxf_fdw installcheck; fi
 	if [ "$(with_zstd)" = "yes" ]; then $(MAKE) -C zstd installcheck; fi
 	if [ "$(with_quicklz)" = "yes" ]; then $(MAKE) -C quicklz installcheck; fi
 	$(MAKE) -C gp_sparse_vector installcheck
+	$(MAKE) -C gp_exttable_fdw installcheck

@@ -42,7 +42,7 @@ List of Management Scripts Written in Python (gpmlib - old libraries)
 bin/gpaddmirrors        -  Adds mirrors to an array (needs rewrite)
 bin/gprecoverseg        -  Recovers a failed segment (needs rewrite)
 bin/gpcheckperf         -  Checks the hardware for Greenplum Database
-bin/gpscp               -  Copies files to many hosts
+bin/gpsync              -  Copies files to many hosts
 bin/gpssh               -  Remote shell to many hosts
 bin/gpssh-exkeys        -  Exchange ssh keys between many hosts
 
@@ -144,8 +144,8 @@ db/dbconn.py       - Connections to the database
   +- Should have a wrapper class around a pygresql connection object!
 
 util/gp_utils.py     - Greenplum related utility functions that are not Commands
-util/ssh_session.py  - SSH and SCP related utility functions brought in from gpmlib.py/gplib.py
-                       that are used by gpssh, gpscp and gpssh-exkeys
+util/ssh_session.py  - SSH and RSYNC related utility functions brought in from gpmlib.py/gplib.py
+                       that are used by gpssh, gpsync and gpssh-exkeys
 
 
 ## Testing Management Scripts (unit tests)

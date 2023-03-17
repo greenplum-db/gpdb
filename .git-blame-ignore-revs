@@ -1,7 +1,6 @@
-# git-blame ignore list
-#
-# Since version 2.23 (released in August 2019), git-blame has a feature to
-# ignore or bypass certain commits.
+# As of git 2.23, git-blame supports ignoring specific commits.  This is useful
+# with commits that make bulk formatting changes without truly changing any
+# code.
 #
 # This file contains a list of commits that are unlikely what you are looking
 # for in a typical git-blame, such as mass reformatting or renaming. There are

@@ -56,7 +56,7 @@ You can create a database with a different character set besides what is used as
 => CREATE DATABASE korean WITH ENCODING 'EUC_KR';
 ```
 
-**Important:** Although you can specify any encoding you want for a database, it is unwise to choose an encoding that is not what is expected by the locale you have selected. The `LC_COLLATE` and `LC_CTYPE` settings imply a particular encoding, and locale-dependent operations \(such as sorting\) are likely to misinterpret data that is in an incompatible encoding.
+> **Important** Although you can specify any encoding you want for a database, it is unwise to choose an encoding that is not what is expected by the locale you have selected. The `LC_COLLATE` and `LC_CTYPE` settings imply a particular encoding, and locale-dependent operations \(such as sorting\) are likely to misinterpret data that is in an incompatible encoding.
 
 Since these locale settings are frozen by `gpinitsystem`, the apparent flexibility to use different encodings in different databases is more theoretical than real.
 
@@ -64,7 +64,7 @@ One way to use multiple encodings safely is to set the locale to `C` or `POSIX` 
 
 ## <a id="topic3"></a>Character Set Conversion Between Server and Client 
 
-Greenplum Database supports automatic character set conversion between server and client for certain character set combinations. The conversion information is stored in the master *pg\_conversion* system catalog table. Greenplum Database comes with some predefined conversions or you can create a new conversion using the SQL command `CREATE CONVERSION`.
+Greenplum Database supports automatic character set conversion between server and client for certain character set combinations. The conversion information is stored in the coordinator *pg\_conversion* system catalog table. Greenplum Database comes with some predefined conversions or you can create a new conversion using the SQL command `CREATE CONVERSION`.
 
 |Server Character Set|Available Client Character Sets|
 |--------------------|-------------------------------|
@@ -133,7 +133,7 @@ To enable automatic character set conversion, you have to tell Greenplum Databas
     ```
 
 -   Using the `PGCLIENTENCODING` environment variable. When `PGCLIENTENCODING` is defined in the client's environment, that client encoding is automatically selected when a connection to the server is made. \(This can subsequently be overridden using any of the other methods mentioned above.\)
--   Setting the configuration parameter `client_encoding`. If `client_encoding` is set in the master `postgresql.conf`file, that client encoding is automatically selected when a connection to Greenplum Database is made. \(This can subsequently be overridden using any of the other methods mentioned above.\)
+-   Setting the configuration parameter `client_encoding`. If `client_encoding` is set in the coordinator `postgresql.conf`file, that client encoding is automatically selected when a connection to Greenplum Database is made. \(This can subsequently be overridden using any of the other methods mentioned above.\)
 
 If the conversion of a particular character is not possible (suppose you chose `EUC_JP` for the server and `LATIN1` for the client, then some Japanese characters do not have a representation in `LATIN1`) then an error is reported.
 

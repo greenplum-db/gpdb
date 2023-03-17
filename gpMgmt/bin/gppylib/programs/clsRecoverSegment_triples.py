@@ -1,11 +1,69 @@
 import abc
 from typing import List
 
+from contextlib import closing
+from gppylib.db import dbconn
+from gppylib import gplog
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts
 from gppylib.parseutils import line_reader, check_values, canonicalize_address
 from gppylib.utils import checkNotNone, normalizeAndValidateInputPath
 from gppylib.gparray import GpArray, Segment
+from gppylib.commands.gp import RECOVERY_REWIND_APPNAME
+
+logger = gplog.get_default_logger()
+
+def get_segments_with_running_basebackup():
+    """
+    Returns a list of contentIds of source segments of running pg_basebackup processes
+    At present gp_stat_replication table does not contain any info about datadir and dbid of the target of running pg_basebackup
+    """
+
+    sql = "select gp_segment_id from gp_stat_replication where application_name = 'pg_basebackup'"
+
+    try:
+        with closing(dbconn.connect(dbconn.DbURL())) as conn:
+            res = dbconn.query(conn, sql)
+            rows = res.fetchall()
+    except Exception as e:
+        raise Exception("Failed to query gp_stat_replication: %s" %str(e))
+
+    segments_with_running_basebackup = {row[0] for row in rows}
+
+    if len(segments_with_running_basebackup) == 0:
+        logger.debug("No basebackup running")
+    return segments_with_running_basebackup
+
+
+def is_pg_rewind_running(hostname, port):
+    """
+        Returns true if a pg_rewind process is running for the given segment
+    """
+    logger.debug(
+        "Checking for running instances of pg_rewind with host {} and port {} as source server".format(hostname, port))
+
+    """
+        Reasons to depend on pg_stat_activity table:
+            * pg_rewind is invoked using --source-server connection string as it needs libpq connection
+              with source server, which will be remote to the target server and --source-pgdata can not
+              be used in that case. Thus pg_stat_activity will always contain entry for active pg_rewind.
+            * pg_rewind keeps a connection open throughout it's lifecycle, so pg_stat_activity will contain
+              entries for active pg_rewind process till the end of execution.
+            * gpstate uses the above mentioned approach (pg_stat_activity entry check) to check for
+              incremental recoveries in progress.Thus, using the same approach will make it consistent
+              everywhere.
+    """
+
+    sql = "SELECT count(*) FROM pg_stat_activity WHERE application_name = '{}'".format(RECOVERY_REWIND_APPNAME)
+    try:
+        url = dbconn.DbURL(hostname=hostname, port=port, dbname='template1')
+        with closing(dbconn.connect(url, utility=True)) as conn:
+            res = dbconn.querySingleton(conn, sql)
+            return res > 0
+
+    except Exception as e:
+        raise Exception("Failed to query pg_stat_activity for segment hostname: {}, port: {}, error: {}".format(
+            hostname, str(port), str(e)))
 
 
 class RecoveryTriplet:
@@ -150,10 +208,19 @@ class RecoveryTriplets(abc.ABC):
         unreachable_failover_hosts = self._get_unreachable_failover_hosts(requests)
 
         dbIdToPeerMap = self.gpArray.getDbIdToPeerMap()
+
+        failed_segments_with_running_basebackup = []
+        segments_with_running_basebackup = get_segments_with_running_basebackup()
+
         for req in requests:
+            if req.failed.getSegmentContentId() in segments_with_running_basebackup:
+                failed_segments_with_running_basebackup.append(req.failed.getSegmentContentId())
+                continue
+
             # TODO: These 2 cases have different behavior which might be confusing to the user.
             # "<failed_address>|<failed_port>|<failed_data_dir> <failed_address>|<failed_port>|<failed_data_dir>" does full recovery
             # "<failed_address>|<failed_port>|<failed_data_dir>" does incremental recovery
+            peer = dbIdToPeerMap.get(req.failed.getSegmentDbId())
             failover = None
             if req.failover_host:
                 # these two lines make it so that failover points to the object that is registered in gparray
@@ -169,13 +236,22 @@ class RecoveryTriplets(abc.ABC):
                 failover.unreachable = failover.getSegmentHostName() in unreachable_failover_hosts
             else:
                 # recovery in place, check for host reachable
-                if(req.failed.unreachable):
+                if req.failed.unreachable:
                     # skip the recovery
                     continue
-
-            peer = dbIdToPeerMap.get(req.failed.getSegmentDbId())
+                if is_pg_rewind_running(peer.getSegmentHostName(), peer.getSegmentPort()):
+                    logger.debug("Skipping incremental recovery of segment on host {} and port {} because it has an "
+                                 "active pg_rewind connection with segment on host {} and port {}".format(
+                        req.failed.getSegmentHostName(),
+                        req.failed.getSegmentPort(), peer.getSegmentHostName(), peer.getSegmentPort()))
+                    continue
 
             triplets.append(RecoveryTriplet(req.failed, peer, failover))
+
+        if len(failed_segments_with_running_basebackup) > 0:
+            logger.warning(
+                "Found pg_basebackup running for segments with contentIds %s, skipping recovery of these segments" % (
+                    failed_segments_with_running_basebackup))
 
         return triplets
 

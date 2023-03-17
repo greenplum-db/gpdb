@@ -63,11 +63,11 @@ CParseHandlerMDType::CParseHandlerMDType(
 	  m_mdid_array_type(nullptr)
 {
 	// default: no aggregates for type
-	m_mdid_min_op = GPOS_NEW(mp) CMDIdGPDB(0);
-	m_mdid_max_op = GPOS_NEW(mp) CMDIdGPDB(0);
-	m_mdid_avg_op = GPOS_NEW(mp) CMDIdGPDB(0);
-	m_mdid_sum_op = GPOS_NEW(mp) CMDIdGPDB(0);
-	m_mdid_count_op = GPOS_NEW(mp) CMDIdGPDB(0);
+	m_mdid_min_op = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, 0);
+	m_mdid_max_op = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, 0);
+	m_mdid_avg_op = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, 0);
+	m_mdid_sum_op = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, 0);
+	m_mdid_count_op = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, 0);
 }
 
 
@@ -285,7 +285,7 @@ CParseHandlerMDType::ParseMdid(const XMLCh *element_local_name,
 BOOL
 CParseHandlerMDType::IsBuiltInType(const IMDId *mdid)
 {
-	if (IMDId::EmdidGPDB != mdid->MdidType())
+	if (IMDId::EmdidGeneral != mdid->MdidType())
 	{
 		return false;
 	}

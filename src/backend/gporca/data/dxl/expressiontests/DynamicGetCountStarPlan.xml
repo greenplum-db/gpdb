@@ -60,7 +60,7 @@
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="1000" Width="1"/>
             </dxl:Properties>
             <dxl:ProjList/>
-            <dxl:TableDescriptor Mdid="0.280643.1.1" TableName="pp">
+            <dxl:TableDescriptor Mdid="6.280643.1.1" TableName="pp">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

@@ -22,6 +22,7 @@
 #include "postgres.h"
 
 #include "access/htup_details.h"
+#include "catalog/oid_dispatch.h"
 #include "catalog/pg_aggregate.h"
 #include "catalog/pg_class.h"
 #include "catalog/pg_language.h"
@@ -55,6 +56,9 @@
 #include "utils/syscache.h"
 #include "utils/typcache.h"
 
+
+/* source-code-compatibility hacks for pull_varnos() API change */
+#define pull_varnos(a,b) pull_varnos_new(a,b)
 
 typedef struct
 {
@@ -114,6 +118,7 @@ static bool contain_volatile_functions_not_nextval_walker(Node *node, void *cont
 static bool max_parallel_hazard_walker(Node *node,
 									   max_parallel_hazard_context *context);
 static bool contain_nonstrict_functions_walker(Node *node, void *context);
+static bool contain_exec_param_walker(Node *node, List *param_ids);
 static bool contain_context_dependent_node(Node *clause);
 static bool contain_context_dependent_node_walker(Node *node, int *flags);
 static bool contain_leaked_vars_walker(Node *node, void *context);
@@ -1298,6 +1303,40 @@ contain_nonstrict_functions_walker(Node *node, void *context)
 }
 
 /*****************************************************************************
+ *		Check clauses for Params
+ *****************************************************************************/
+
+/*
+ * contain_exec_param
+ *	  Recursively search for PARAM_EXEC Params within a clause.
+ *
+ * Returns true if the clause contains any PARAM_EXEC Param with a paramid
+ * appearing in the given list of Param IDs.  Does not descend into
+ * subqueries!
+ */
+bool
+contain_exec_param(Node *clause, List *param_ids)
+{
+	return contain_exec_param_walker(clause, param_ids);
+}
+
+static bool
+contain_exec_param_walker(Node *node, List *param_ids)
+{
+	if (node == NULL)
+		return false;
+	if (IsA(node, Param))
+	{
+		Param	   *p = (Param *) node;
+
+		if (p->paramkind == PARAM_EXEC &&
+			list_member_int(param_ids, p->paramid))
+			return true;
+	}
+	return expression_tree_walker(node, contain_exec_param_walker, param_ids);
+}
+
+/*****************************************************************************
  *		Check clauses for context-dependent nodes
  *****************************************************************************/
 
@@ -1453,7 +1492,6 @@ contain_leaked_vars_walker(Node *node, void *context)
 		case T_ScalarArrayOpExpr:
 		case T_CoerceViaIO:
 		case T_ArrayCoerceExpr:
-		case T_SubscriptingRef:
 
 			/*
 			 * If node contains a leaky function call, and there's any Var
@@ -1463,6 +1501,23 @@ contain_leaked_vars_walker(Node *node, void *context)
 										context) &&
 				contain_var_clause(node))
 				return true;
+			break;
+
+		case T_SubscriptingRef:
+			{
+				SubscriptingRef *sbsref = (SubscriptingRef *) node;
+
+				/*
+				 * subscripting assignment is leaky, but subscripted fetches
+				 * are not
+				 */
+				if (sbsref->refassgnexpr != NULL)
+				{
+					/* Node is leaky, so reject if it contains Vars */
+					if (contain_var_clause(node))
+						return true;
+				}
+			}
 			break;
 
 		case T_RowCompareExpr:
@@ -2254,7 +2309,13 @@ is_pseudo_constant_clause_relids(Node *clause, Relids relids)
 int
 NumRelids(Node *clause)
 {
-	Relids		varnos = pull_varnos(clause);
+	return NumRelids_new(NULL, clause);
+}
+
+int
+NumRelids_new(PlannerInfo *root, Node *clause)
+{
+	Relids		varnos = pull_varnos(root, clause);
 	int			result = bms_num_members(varnos);
 
 	bms_free(varnos);
@@ -2478,6 +2539,8 @@ Node *
 eval_const_expressions(PlannerInfo *root, Node *node)
 {
 	eval_const_expressions_context context;
+	Node                          *result;
+	List                          *saved_oid_assignments;
 
 	if (root)
 		context.boundParams = root->glob->boundParams;	/* bound Params */
@@ -2492,7 +2555,11 @@ eval_const_expressions(PlannerInfo *root, Node *node)
 	context.max_size = 0;
 	context.eval_stable_functions = should_eval_stable_functions(root);
 
-	return eval_const_expressions_mutator(node, &context);
+	saved_oid_assignments = SaveOidAssignments();
+	result = eval_const_expressions_mutator(node, &context);
+	RestoreOidAssignments(saved_oid_assignments);
+
+	return result;
 }
 
 /*--------------------
@@ -3011,46 +3078,20 @@ eval_const_expressions_mutator(Node *node,
 			return node;
 		case T_RelabelType:
 			{
-				/*
-				 * If we can simplify the input to a constant, then we don't
-				 * need the RelabelType node anymore: just change the type
-				 * field of the Const node.  Otherwise, must copy the
-				 * RelabelType node.
-				 */
 				RelabelType *relabel = (RelabelType *) node;
 				Node	   *arg;
 
+				/* Simplify the input ... */
 				arg = eval_const_expressions_mutator((Node *) relabel->arg,
 													 context);
-
-				/*
-				 * If we find stacked RelabelTypes (eg, from foo :: int ::
-				 * oid) we can discard all but the top one.
-				 */
-				while (arg && IsA(arg, RelabelType))
-					arg = (Node *) ((RelabelType *) arg)->arg;
-
-				if (arg && IsA(arg, Const))
-				{
-					Const	   *con = (Const *) arg;
-
-					con->consttype = relabel->resulttype;
-					con->consttypmod = relabel->resulttypmod;
-					con->constcollid = relabel->resultcollid;
-					return (Node *) con;
-				}
-				else
-				{
-					RelabelType *newrelabel = makeNode(RelabelType);
-
-					newrelabel->arg = (Expr *) arg;
-					newrelabel->resulttype = relabel->resulttype;
-					newrelabel->resulttypmod = relabel->resulttypmod;
-					newrelabel->resultcollid = relabel->resultcollid;
-					newrelabel->relabelformat = relabel->relabelformat;
-					newrelabel->location = relabel->location;
-					return (Node *) newrelabel;
-				}
+				/* ... and attach a new RelabelType node, if needed */
+				return applyRelabelType(arg,
+										relabel->resulttype,
+										relabel->resulttypmod,
+										relabel->resultcollid,
+										relabel->relabelformat,
+										relabel->location,
+										true);
 			}
 		case T_CoerceViaIO:
 			{
@@ -3184,48 +3225,26 @@ eval_const_expressions_mutator(Node *node,
 		case T_CollateExpr:
 			{
 				/*
-				 * If we can simplify the input to a constant, then we don't
-				 * need the CollateExpr node at all: just change the
-				 * constcollid field of the Const node.  Otherwise, replace
-				 * the CollateExpr with a RelabelType. (We do that so as to
-				 * improve uniformity of expression representation and thus
-				 * simplify comparison of expressions.)
+				 * We replace CollateExpr with RelabelType, so as to improve
+				 * uniformity of expression representation and thus simplify
+				 * comparison of expressions.  Hence this looks very nearly
+				 * the same as the RelabelType case, and we can apply the same
+				 * optimizations to avoid unnecessary RelabelTypes.
 				 */
 				CollateExpr *collate = (CollateExpr *) node;
 				Node	   *arg;
 
+				/* Simplify the input ... */
 				arg = eval_const_expressions_mutator((Node *) collate->arg,
 													 context);
-
-				if (arg && IsA(arg, Const))
-				{
-					Const	   *con = (Const *) arg;
-
-					con->constcollid = collate->collOid;
-					return (Node *) con;
-				}
-				else if (collate->collOid == exprCollation(arg))
-				{
-					/* Don't need a RelabelType either... */
-					return arg;
-				}
-				else
-				{
-					RelabelType *relabel = makeNode(RelabelType);
-
-					relabel->resulttype = exprType(arg);
-					relabel->resulttypmod = exprTypmod(arg);
-					relabel->resultcollid = collate->collOid;
-					relabel->relabelformat = COERCE_IMPLICIT_CAST;
-					relabel->location = collate->location;
-
-					/* Don't create stacked RelabelTypes */
-					while (arg && IsA(arg, RelabelType))
-						arg = (Node *) ((RelabelType *) arg)->arg;
-					relabel->arg = (Expr *) arg;
-
-					return (Node *) relabel;
-				}
+				/* ... and attach a new RelabelType node, if needed */
+				return applyRelabelType(arg,
+										exprType(arg),
+										exprTypmod(arg),
+										collate->collOid,
+										COERCE_IMPLICIT_CAST,
+										collate->location,
+										true);
 			}
 		case T_CaseExpr:
 			{
@@ -3755,32 +3774,13 @@ eval_const_expressions_mutator(Node *node,
 													cdomain->resulttype);
 
 					/* Generate RelabelType to substitute for CoerceToDomain */
-					/* This should match the RelabelType logic above */
-
-					while (arg && IsA(arg, RelabelType))
-						arg = (Node *) ((RelabelType *) arg)->arg;
-
-					if (arg && IsA(arg, Const))
-					{
-						Const	   *con = (Const *) arg;
-
-						con->consttype = cdomain->resulttype;
-						con->consttypmod = cdomain->resulttypmod;
-						con->constcollid = cdomain->resultcollid;
-						return (Node *) con;
-					}
-					else
-					{
-						RelabelType *newrelabel = makeNode(RelabelType);
-
-						newrelabel->arg = (Expr *) arg;
-						newrelabel->resulttype = cdomain->resulttype;
-						newrelabel->resulttypmod = cdomain->resulttypmod;
-						newrelabel->resultcollid = cdomain->resultcollid;
-						newrelabel->relabelformat = cdomain->coercionformat;
-						newrelabel->location = cdomain->location;
-						return (Node *) newrelabel;
-					}
+					return applyRelabelType(arg,
+											cdomain->resulttype,
+											cdomain->resulttypmod,
+											cdomain->resultcollid,
+											cdomain->coercionformat,
+											cdomain->location,
+											true);
 				}
 
 				newcdomain = makeNode(CoerceToDomain);
@@ -3993,12 +3993,7 @@ simplify_or_arguments(List *args,
 			if (!unprocessed_args)
 				unprocessed_args = subargs;
 			else
-			{
-				List	   *oldhdr = unprocessed_args;
-
 				unprocessed_args = list_concat(subargs, unprocessed_args);
-				pfree(oldhdr);
-			}
 			continue;
 		}
 
@@ -4095,12 +4090,7 @@ simplify_and_arguments(List *args,
 			if (!unprocessed_args)
 				unprocessed_args = subargs;
 			else
-			{
-				List	   *oldhdr = unprocessed_args;
-
 				unprocessed_args = list_concat(subargs, unprocessed_args);
-				pfree(oldhdr);
-			}
 			continue;
 		}
 
@@ -4406,9 +4396,9 @@ reorder_function_arguments(List *args, HeapTuple func_tuple)
 	int			i;
 
 	Assert(nargsprovided <= pronargs);
-	if (pronargs > FUNC_MAX_ARGS)
+	if (pronargs < 0 || pronargs > FUNC_MAX_ARGS)
 		elog(ERROR, "too many function arguments");
-	MemSet(argarray, 0, pronargs * sizeof(Node *));
+	memset(argarray, 0, pronargs * sizeof(Node *));
 
 	/* Deconstruct the argument list into an array indexed by argnumber */
 	i = 0;
@@ -4588,6 +4578,35 @@ large_const(Expr *expr, Size max_size)
 }
 
 /*
+ * the list of stable functions which prorettype==ANY
+ */
+static inline bool
+in_stable_retany_funclist(Oid procid)
+{
+	switch (procid)
+	{
+	case 3209: /* jsonb_populate_record */
+	case 3475: /* jsonb_populate_recordset */
+	case 3960: /* json_populate_record */
+	case 3961: /* json_populate_recordset */
+		return true;
+		break;
+	default:
+		/*
+		 * only 4 functions now, let's use Assert() to help to notice
+		 * more functions in future.
+		 */
+		/*
+		 * GPDB_12_12_MERGE_FIXME: this Assert may impact UDFs,
+		 * we need a better solution here.
+		 */
+		Assert(false);
+		break;
+	}
+	return false;
+}
+
+/*
  * evaluate_function: try to pre-evaluate a function call
  *
  * We can do this if the function is strict and has any constant-null inputs
@@ -4630,6 +4649,20 @@ evaluate_function(Oid funcid, Oid result_type, int32 result_typmod,
 	 */
 	if (funcform->prorettype == RECORDOID)
 		return NULL;
+
+	/*
+	 * https://github.com/greenplum-db/gpdb/issues/14499
+	 * Don't pre-evaluate when it's a stable function which prorettype==ANY
+	 * If it's in the FROM clause, pre-evaluting it will cause an ERROR, example:
+	 * ```
+	 * 	demo=# SELECT * FROM  json_populate_record(null::record, '{"x": 776}') AS (x int, y int);
+	 *	psql: ERROR:  could not determine row type for result of json_populate_record
+	 *	HINT:  Provide a non-null record argument, or call the function in the FROM clause using a column definition list.
+	 * ```
+	 */
+	if (funcform->prorettype == ANYELEMENTOID && funcform->provolatile == PROVOLATILE_STABLE)
+		if (in_stable_retany_funclist(funcform->oid))
+			return NULL;
 
 	/*
 	 * Check for constant inputs and especially constant-NULL inputs.
@@ -5590,14 +5623,14 @@ flatten_join_alias_var_optimizer(Query *query, int queryLevel)
 	if (NIL != targetList)
 	{
 		queryNew->targetList = (List *) flatten_join_alias_vars(queryNew, (Node *) targetList);
-		pfree(targetList);
+		list_free(targetList);
 	}
 
 	List * returningList = queryNew->returningList;
 	if (NIL != returningList)
 	{
 		queryNew->returningList = (List *) flatten_join_alias_vars(queryNew, (Node *) returningList);
-		pfree(returningList);
+		list_free(returningList);
 	}
 
 	Node *havingQual = queryNew->havingQual;
@@ -5611,7 +5644,7 @@ flatten_join_alias_var_optimizer(Query *query, int queryLevel)
 	if (NIL != scatterClause)
 	{
 		queryNew->scatterClause = (List *) flatten_join_alias_vars(queryNew, (Node *) scatterClause);
-		pfree(scatterClause);
+		list_free(scatterClause);
 	}
 
 	Node *limitOffset = queryNew->limitOffset;
@@ -5649,49 +5682,6 @@ flatten_join_alias_var_optimizer(Query *query, int queryLevel)
 	}
 
     return queryNew;
-}
-
-/**
- * Returns true if the equality operator with the given opno
- *   values is a true equality operator (unlike some of the
- *   box/rectangle/etc. types which implement 'goofy' operators).
- *
- * This function currently only knows about built-in types, and is
- *   conservative with regard to which it returns true for (only
- *     ones which have been verified to work the right way).
- */
-bool is_builtin_true_equality_between_same_type(int opno)
-{
-	switch (opno)
-	{
-	case BitEqualOperator:
-	case BooleanEqualOperator:
-	case BPCharEqualOperator:
-	case CashEqualOperator:
-	case CharEqualOperator:
-	case CidEqualOperator:
-	case DateEqualOperator:
-	case Float4EqualOperator:
-	case Float8EqualOperator:
-	case Int2EqualOperator:
-	case Int4EqualOperator:
-	case Int8EqualOperator:
-	case IntervalEqualOperator:
-	case NameEqualOperator:
-	case NumericEqualOperator:
-	case OidEqualOperator:
-	case TextEqualOperator:
-	case TIDEqualOperator:
-	case TimeEqualOperator:
-	case TimestampEqualOperator:
-	case TimestampTZEqualOperator:
-	case TimeTZEqualOperator:
-	case XidEqualOperator:
-		return true;
-
-	default:
-		return false;
-	}
 }
 
 /**

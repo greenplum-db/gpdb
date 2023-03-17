@@ -2498,6 +2498,14 @@ ERROR:  column t1.x does not exist
 LINE 1: select t1.x from t1 join t3 on (t1.a = t3.x);
                ^
 HINT:  Perhaps you meant to reference the column "t3.x".
+-- Test matching of locking clause with wrong alias
+select t1.*, t2.*, unnamed_join.* from
+  t1 join t2 on (t1.a = t2.a), t3 as unnamed_join
+  for update of unnamed_join;
+ a | b | a | b | x | y 
+---+---+---+---+---+---
+(0 rows)
+
 --
 -- regression test for 8.1 merge right join bug
 --
@@ -3070,7 +3078,7 @@ order by 1,2;
          Sort Key: t1.q1, t1.q2
          ->  Hash Left Join
                Hash Cond: (t1.q2 = t2.q1)
-               Filter: (1 = (SubPlan 1))
+               Filter: ((SubPlan 1) = 1)
                ->  Redistribute Motion 3:3  (slice3; segments: 3)
                      Hash Key: t1.q2
                      ->  Seq Scan on int8_tbl t1
@@ -3108,6 +3116,35 @@ order by 1,2;
  4567890123456789 | 4567890123456789 | 4567890123456789 | 42
 (8 rows)
 
+--
+-- variant where a PlaceHolderVar is needed at a join, but not above the join
+-- Greenplum does not fully support the lateral join, ignore the below case.
+--
+-- start_ignore
+explain (costs off)
+select * from
+  int4_tbl as i41,
+  lateral
+    (select 1 as x from
+      (select i41.f1 as lat,
+              i42.f1 as loc from
+         int8_tbl as i81, int4_tbl as i42) as ss1
+      right join int4_tbl as i43 on (i43.f1 > 1)
+      where ss1.loc = ss1.lat) as ss2
+where i41.f1 > 0;
+ERROR:  could not devise a query plan for the given query (pathnode.c:275)
+select * from
+  int4_tbl as i41,
+  lateral
+    (select 1 as x from
+      (select i41.f1 as lat,
+              i42.f1 as loc from
+         int8_tbl as i81, int4_tbl as i42) as ss1
+      right join int4_tbl as i43 on (i43.f1 > 1)
+      where ss1.loc = ss1.lat) as ss2
+where i41.f1 > 0;
+ERROR:  could not devise a query plan for the given query (pathnode.c:275)
+-- end_ignore
 --
 -- test the corner cases FULL JOIN ON TRUE and FULL JOIN ON FALSE
 --
@@ -3364,6 +3401,74 @@ where t1.unique2 < 42 and t1.stringu1 > t2.stringu2;
 ---------+----------+---------+----------
       11 | WFAAAA   |       3 | LKIAAA
 (1 row)
+
+-- Here's a variant that we can't fold too aggressively, though,
+-- or we end up with noplace to evaluate the lateral PHV
+explain (verbose, costs off)
+select * from
+  (select 1 as x) ss1 left join (select 2 as y) ss2 on (true),
+  lateral (select ss2.y as z limit 1) ss3;
+             QUERY PLAN              
+-------------------------------------
+ Nested Loop
+   Output: 1, (2), ((2))
+   ->  Result
+         Output: 2
+   ->  Materialize
+         Output: ((2))
+         ->  Limit
+               Output: ((2))
+               ->  Result
+                     Output: (2)
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(12 rows)
+
+select * from
+  (select 1 as x) ss1 left join (select 2 as y) ss2 on (true),
+  lateral (select ss2.y as z limit 1) ss3;
+ x | y | z 
+---+---+---
+ 1 | 2 | 2
+(1 row)
+
+-- Test proper handling of appendrel PHVs during useless-RTE removal
+explain (costs off)
+select * from
+  (select 0 as z) as t1
+  left join
+  (select true as a) as t2
+  on true,
+  lateral (select true as b
+           union all
+           select a as b) as t3
+where b;
+                 QUERY PLAN                  
+---------------------------------------------
+ Nested Loop
+   ->  Result
+   ->  Materialize
+         ->  Append
+               ->  Result
+               ->  Result
+                     One-Time Filter: (true)
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from
+  (select 0 as z) as t1
+  left join
+  (select true as a) as t2
+  on true,
+  lateral (select true as b
+           union all
+           select a as b) as t3
+where b;
+ z | a | b 
+---+---+---
+ 0 | t | t
+ 0 | t | t
+(2 rows)
 
 --
 -- test extraction of restriction OR clauses from join OR clause
@@ -4810,6 +4915,92 @@ where ss.stringu2 !~* ss.case1;
 (1 row)
 
 rollback;
+-- test case to expose miscomputation of required relid set for a PHV
+-- Greenplum does not fully support the lateral join, ignore the below case.
+-- start_ignore
+explain (verbose, costs off)
+select i8.*, ss.v, t.unique2
+  from int8_tbl i8
+    left join int4_tbl i4 on i4.f1 = 1
+    left join lateral (select i4.f1 + 1 as v) as ss on true
+    left join tenk1 t on t.unique2 = ss.v
+where q2 = 456;
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: i8.q1, i8.q2, ((i4.f1 + 1)), t.unique2
+   ->  Hash Right Join
+         Output: i8.q1, i8.q2, ((i4.f1 + 1)), t.unique2
+         Hash Cond: (t.unique2 = ((i4.f1 + 1)))
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Output: t.unique2
+               Hash Key: t.unique2
+               ->  Seq Scan on public.tenk1 t
+                     Output: t.unique2
+         ->  Hash
+               Output: i8.q1, i8.q2, ((i4.f1 + 1))
+               ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                     Output: i8.q1, i8.q2, ((i4.f1 + 1))
+                     Hash Key: ((i4.f1 + 1))
+                     ->  Nested Loop Left Join
+                           Output: i8.q1, i8.q2, (i4.f1 + 1)
+                           ->  Seq Scan on public.int8_tbl i8
+                                 Output: i8.q1, i8.q2
+                                 Filter: (i8.q2 = 456)
+                           ->  Materialize
+                                 Output: i4.f1
+                                 ->  Broadcast Motion 1:3  (slice4; segments: 1)
+                                       Output: i4.f1
+                                       ->  Seq Scan on public.int4_tbl i4
+                                             Output: i4.f1
+                                             Filter: (i4.f1 = 1)
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(29 rows)
+
+select i8.*, ss.v, t.unique2
+  from int8_tbl i8
+    left join int4_tbl i4 on i4.f1 = 1
+    left join lateral (select i4.f1 + 1 as v) as ss on true
+    left join tenk1 t on t.unique2 = ss.v
+where q2 = 456;
+ q1  | q2  | v | unique2 
+-----+-----+---+---------
+ 123 | 456 |   |        
+(1 row)
+
+-- end_ignore
+-- and check a related issue where we miscompute required relids for
+-- a PHV that's been translated to a child rel
+create temp table parttbl (a integer primary key) partition by range (a);
+create temp table parttbl1 partition of parttbl for values from (1) to (100);
+insert into parttbl values (11), (12);
+explain (costs off)
+select * from
+  (select *, 12 as phv from parttbl) as ss
+  right join int4_tbl on true
+where ss.a = ss.phv and f1 = 0;
+                       QUERY PLAN                        
+---------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 1:3  (slice2; segments: 1)
+               ->  Seq Scan on int4_tbl
+                     Filter: (f1 = 0)
+         ->  Seq Scan on parttbl1
+               Filter: (a = 12)
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from
+  (select *, 12 as phv from parttbl) as ss
+  right join int4_tbl on true
+where ss.a = ss.phv and f1 = 0;
+ a  | phv | f1 
+----+-----+----
+ 12 |  12 |  0
+(1 row)
+
 -- bug #8444: we've historically allowed duplicate aliases within aliased JOINs
 select * from
   int8_tbl x join (int4_tbl x cross join int4_tbl y) j on q1 = f1; -- error
@@ -5850,6 +6041,9 @@ select * from
  3 | 3
 (6 rows)
 
+-- check the number of columns specified
+SELECT * FROM (int8_tbl i cross join int4_tbl j) ss(a,b,c,d);
+ERROR:  join expression "ss" has 3 columns available but 4 columns specified
 -- check we don't try to do a unique-ified semijoin with LATERAL
 explain (verbose, costs off)
 select * from

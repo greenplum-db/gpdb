@@ -1,8 +1,8 @@
 # pg_stat_replication 
 
-The `pg_stat_replication` view contains metadata of the `walsender` process that is used for Greenplum Database master mirroring.
+The `pg_stat_replication` view contains metadata of the `walsender` process that is used for Greenplum Database coordinator mirroring.
 
-The [gp\_stat\_replication](gp_stat_replication.html) view contains `walsender` replication information for master and segment mirroring.
+The [gp\_stat\_replication](gp_stat_replication.html) view contains `walsender` replication information for coordinator and segment mirroring.
 
 |column|type|references|description|
 |------|----|----------|-----------|

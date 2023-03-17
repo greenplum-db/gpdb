@@ -54,7 +54,8 @@ static uv_pipe_t	ic_proxy_postmaster_pipe;
 static void
 ic_proxy_server_peer_listener_on_closed(uv_handle_t *handle)
 {
-	ic_proxy_log(LOG, "ic-proxy-server: peer listener: closed");
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+		   "ic-proxy: peer listener: closed");
 
 	/* A new peer listener will be created on the next timer callback */
 	ic_proxy_peer_listening = false;
@@ -78,7 +79,7 @@ ic_proxy_server_on_new_peer(uv_stream_t *server, int status)
 
 	if (status < 0)
 	{
-		ic_proxy_log(WARNING, "ic-proxy-server: new peer error: %s",
+		elog(WARNING, "ic-proxy: new peer error: %s",
 					 uv_strerror(status));
 
 		uv_close((uv_handle_t *) server,
@@ -86,7 +87,8 @@ ic_proxy_server_on_new_peer(uv_stream_t *server, int status)
 		return;
 	}
 
-	ic_proxy_log(LOG, "ic-proxy-server: new peer to the server");
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+		   "ic-proxy: new peer to the server");
 
 	peer = ic_proxy_peer_new(server->loop,
 							 IC_PROXY_INVALID_CONTENT, IC_PROXY_INVALID_DBID);
@@ -94,7 +96,7 @@ ic_proxy_server_on_new_peer(uv_stream_t *server, int status)
 	ret = uv_accept(server, (uv_stream_t *) &peer->tcp);
 	if (ret < 0)
 	{
-		ic_proxy_log(WARNING, "ic-proxy-server: fail to accept new peer: %s",
+		elog(WARNING, "ic-proxy: fail to accept new peer: %s",
 					 uv_strerror(ret));
 		ic_proxy_peer_free(peer);
 		return;
@@ -116,7 +118,8 @@ ic_proxy_server_on_new_peer(uv_stream_t *server, int status)
 
 			uv_ip4_name(peeraddr4, name, sizeof(name));
 
-			ic_proxy_log(LOG, "ic-proxy-server: the new peer is from %s:%d",
+			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+				   "ic-proxy: the new peer is from %s:%d",
 						 name, ntohs(peeraddr4->sin_port));
 		}
 		else if (peeraddr.ss_family == AF_INET6)
@@ -125,7 +128,8 @@ ic_proxy_server_on_new_peer(uv_stream_t *server, int status)
 
 			uv_ip6_name(peeraddr6, name, sizeof(name));
 
-			ic_proxy_log(LOG, "ic-proxy-server: the new peer is from %s:%d",
+			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+				   "ic-proxy: the new peer is from %s:%d",
 						 name, ntohs(peeraddr6->sin6_port));
 		}
 	}
@@ -159,7 +163,7 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 		/* Cannot get my addr, maybe the setting is invalid */
 		return;
 
-#if IC_PROXY_LOG_LEVEL <= LOG
+	if (gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE)
 	{
 		char		name[HOST_NAME_MAX] = "unknown";
 		int			port = 0;
@@ -169,16 +173,15 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 		ret = ic_proxy_extract_sockaddr((struct sockaddr *) &addr->sockaddr,
 									name, sizeof(name), &port, &family);
 		if (ret == 0)
-			ic_proxy_log(LOG,
-						 "ic-proxy-server: setting up peer listener on %s:%s (%s:%d family=%d)",
+			elog(LOG,
+						 "ic-proxy: setting up peer listener on %s:%s (%s:%d family=%d)",
 						 addr->hostname, addr->service, name, port, family);
 		else
-			ic_proxy_log(WARNING,
-						 "ic-proxy-server: setting up peer listener on %s:%s (%s:%d family=%d) (fail to extract the address: %s)",
+			elog(WARNING,
+						 "ic-proxy: setting up peer listener on %s:%s (%s:%d family=%d) (fail to extract the address: %s)",
 						 addr->hostname, addr->service, name, port, family,
 						 uv_strerror(ret));
 	}
-#endif /* IC_PROXY_LOG_LEVEL <= LOG */
 
 	/*
 	 * It is important to set TCP_NODELAY, otherwise we will suffer from
@@ -190,7 +193,7 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 	ret = uv_tcp_bind(listener, (struct sockaddr *) &addr->sockaddr, 0);
 	if (ret < 0)
 	{
-		ic_proxy_log(WARNING, "ic-proxy-server: tcp: fail to bind: %s",
+		elog(WARNING, "ic-proxy: tcp: fail to bind: %s",
 					 uv_strerror(ret));
 		return;
 	}
@@ -199,13 +202,14 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 					IC_PROXY_BACKLOG, ic_proxy_server_on_new_peer);
 	if (ret < 0)
 	{
-		ic_proxy_log(WARNING, "ic-proxy-server: tcp: fail to listen: %s",
+		elog(WARNING, "ic-proxy: tcp: fail to listen: %s",
 					 uv_strerror(ret));
 		return;
 	}
 
 	uv_fileno((uv_handle_t *) listener, &fd);
-	ic_proxy_log(LOG, "ic-proxy-server: tcp: listening on socket %d", fd);
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+		   "ic-proxy: tcp: listening on socket %d", fd);
 
 	ic_proxy_peer_listening = true;
 }
@@ -228,7 +232,7 @@ ic_proxy_server_peer_listener_reinit(uv_loop_t *loop)
 		 * keep the ic_proxy_peer_listening as true during the process to
 		 * prevent double connect.
 		 */
-		ic_proxy_log(LOG, "ic-proxy-server: closing the legacy peer listener");
+		elog(LOG, "ic-proxy: closing the legacy peer listener");
 
 		/* Only recreate a new listener if an address is assigned to us */
 		ic_proxy_peer_relistening = !!myaddr;
@@ -250,7 +254,8 @@ ic_proxy_server_peer_listener_reinit(uv_loop_t *loop)
 static void
 ic_proxy_server_client_listener_on_closed(uv_handle_t *handle)
 {
-	ic_proxy_log(LOG, "ic-proxy-server: client listener: closed");
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+		   "ic-proxy: client listener: closed");
 
 	/* A new client listener will be created on the next timer callback */
 	ic_proxy_client_listening = false;
@@ -267,7 +272,7 @@ ic_proxy_server_on_new_client(uv_stream_t *server, int status)
 
 	if (status < 0)
 	{
-		ic_proxy_log(WARNING, "ic-proxy-server: new client error: %s",
+		elog(WARNING, "ic-proxy: new client error: %s",
 					 uv_strerror(status));
 
 		uv_close((uv_handle_t *) server,
@@ -275,14 +280,15 @@ ic_proxy_server_on_new_client(uv_stream_t *server, int status)
 		return;
 	}
 
-	ic_proxy_log(LOG, "ic-proxy-server: new client to the server");
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+		   "ic-proxy: new client to the server");
 
 	client = ic_proxy_client_new(server->loop, false);
 
 	ret = uv_accept(server, ic_proxy_client_get_stream(client));
 	if (ret < 0)
 	{
-		ic_proxy_log(WARNING, "ic-proxy-server: fail to accept new client: %s",
+		elog(WARNING, "ic-proxy: fail to accept new client: %s",
 					 uv_strerror(ret));
 		return;
 	}
@@ -310,17 +316,19 @@ ic_proxy_server_client_listener_init(uv_loop_t *loop)
 	ic_proxy_build_server_sock_path(path, sizeof(path));
 
 	/* FIXME: do not unlink here */
-	ic_proxy_log(LOG, "unlink(%s) ...", path);
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+		   "ic-proxy: unlink(%s) ...", path);
 	unlink(path);
 
-	ic_proxy_log(LOG, "ic-proxy-server: setting up client listener on address %s",
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+		   "ic-proxy: setting up client listener on address %s",
 				 path);
 
 	ret = uv_pipe_init(loop, listener, false);
 	if (ret < 0)
 	{
-		ic_proxy_log(WARNING,
-					 "ic-proxy-server: fail to init a client listener: %s",
+		elog(WARNING,
+					 "ic-proxy: fail to init a client listener: %s",
 					 uv_strerror(ret));
 		return;
 	}
@@ -328,7 +336,7 @@ ic_proxy_server_client_listener_init(uv_loop_t *loop)
 	ret = uv_pipe_bind(listener, path);
 	if (ret < 0)
 	{
-		ic_proxy_log(WARNING, "ic-proxy-server: pipe: fail to bind(%s): %s",
+		elog(WARNING, "ic-proxy: pipe: fail to bind(%s): %s",
 					 path, uv_strerror(ret));
 		return;
 	}
@@ -337,13 +345,14 @@ ic_proxy_server_client_listener_init(uv_loop_t *loop)
 					IC_PROXY_BACKLOG, ic_proxy_server_on_new_client);
 	if (ret < 0)
 	{
-		ic_proxy_log(WARNING, "ic-proxy-server: pipe: fail to listen on path %s: %s",
+		elog(WARNING, "ic-proxy: pipe: fail to listen on path %s: %s",
 					 path, uv_strerror(ret));
 		return;
 	}
 
 	uv_fileno((uv_handle_t *) listener, &fd);
-	ic_proxy_log(LOG, "ic-proxy-server: pipe: listening on socket %d", fd);
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+		   "ic-proxy: pipe: listening on socket %d", fd);
 
 	/*
 	 * Dump the inode of the domain socket file, this helps us to know that the
@@ -354,7 +363,8 @@ ic_proxy_server_client_listener_init(uv_loop_t *loop)
 		struct stat	st;
 
 		stat(path, &st);
-		ic_proxy_log(LOG, "ic-proxy-server: dev=%lu, inode=%lu, path=%s",
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+			   "ic-proxy: dev=%lu, inode=%lu, path=%s",
 					 st.st_dev, st.st_ino, path);
 	}
 
@@ -471,7 +481,8 @@ ic_proxy_server_on_timer(uv_timer_t *timer)
 static void
 ic_proxy_server_on_signal(uv_signal_t *handle, int signum)
 {
-	ic_proxy_log(WARNING, "ic-proxy-server: received signal %d", signum);
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_TERSE,
+		   LOG, "ic-proxy: received signal %d", signum);
 
 	if (signum == SIGHUP)
 	{
@@ -504,9 +515,9 @@ ic_proxy_server_on_read_postmaster_pipe(uv_stream_t *stream, ssize_t nread, cons
 	if (nread == UV_EOF)
 		proc_exit(1);
 	else if (nread < 0)
-		ic_proxy_log(FATAL, "read on postmaster death monitoring pipe failed: %s", uv_strerror(nread));
+		elog(FATAL, "ic-proxy: read on postmaster death monitoring pipe failed: %s", uv_strerror(nread));
 	else if (nread > 0)
-		ic_proxy_log(FATAL, "unexpected data in postmaster death monitoring pipe with length: %ld", nread);
+		elog(FATAL, "ic-proxy: unexpected data in postmaster death monitoring pipe with length: %ld", nread);
 }
 
 /*
@@ -517,7 +528,8 @@ ic_proxy_server_main(void)
 {
 	char		path[MAXPGPATH];
 
-	ic_proxy_log(LOG, "ic-proxy-server: setting up");
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_TERSE,
+		   LOG, "ic-proxy: server setting up");
 
 	ic_proxy_pkt_cache_init(IC_PROXY_MAX_PKT_SIZE);
 
@@ -557,7 +569,8 @@ ic_proxy_server_main(void)
 	uv_read_start((uv_stream_t *)&ic_proxy_postmaster_pipe, ic_proxy_pkt_cache_alloc_buffer,
 				  ic_proxy_server_on_read_postmaster_pipe);
 
-	ic_proxy_log(LOG, "ic-proxy-server: running");
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_TERSE, LOG,
+		   "ic-proxy: server running");
 
 	/* We're now ready to receive signals */
 	BackgroundWorkerUnblockSignals();
@@ -570,7 +583,7 @@ ic_proxy_server_main(void)
 	uv_run(&ic_proxy_server_loop, UV_RUN_DEFAULT);
 	uv_loop_close(&ic_proxy_server_loop);
 
-	ic_proxy_log(LOG, "ic-proxy-server: closing");
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_TERSE, LOG, "ic-proxy: server closing");
 
 	ic_proxy_client_table_uninit();
 	ic_proxy_peer_table_uninit();
@@ -578,13 +591,14 @@ ic_proxy_server_main(void)
 
 	ic_proxy_build_server_sock_path(path, sizeof(path));
 #if 0
-	ic_proxy_log(LOG, "unlink(%s) ...", path);
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG5, LOG, "unlink(%s) ...", path);
 	unlink(path);
 #endif
 
 	ic_proxy_pkt_cache_uninit();
 
-	ic_proxy_log(LOG, "ic-proxy-server: closed with code %d",
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_TERSE, LOG,
+		   "ic-proxy: server closed with code %d",
 				 ic_proxy_server_exit_code);
 
 	return ic_proxy_server_exit_code;
@@ -593,7 +607,8 @@ ic_proxy_server_main(void)
 void
 ic_proxy_server_quit(uv_loop_t *loop, bool relaunch)
 {
-	ic_proxy_log(LOG, "ic-proxy-server: quiting");
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_TERSE, LOG,
+		   "ic-proxy: server quiting");
 
 	if (relaunch)
 		/* return non-zero value so we are restarted by the postmaster */

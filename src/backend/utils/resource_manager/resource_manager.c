@@ -23,7 +23,7 @@
 #include "utils/faultinjector.h"
 #include "utils/guc.h"
 #include "utils/resource_manager.h"
-#include "utils/resgroup-ops.h"
+#include "utils/cgroup.h"
 #include "utils/session_state.h"
 
 /*
@@ -48,6 +48,7 @@ ResManagerShmemInit(void)
 	else if (IsResGroupEnabled() && !IsUnderPostmaster)
 	{
 		ResGroupControlInit();
+		CGroupOpsAndInfoInit();
 	}
 }
 
@@ -81,7 +82,8 @@ InitResManager(void)
 		gp_resmanager_print_operator_memory_limits = &gp_resgroup_print_operator_memory_limits;
 
 		InitResGroups();
-		ResGroupOps_AdjustGUCs();
+
+		cgroupOpsRoutine->adjustgucs();
 
 		ResGroupActivated = true;
 	}

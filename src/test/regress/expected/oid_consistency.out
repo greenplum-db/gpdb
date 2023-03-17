@@ -557,14 +557,11 @@ SELECT * FROM constraint_t3 ORDER BY year, month, region, id;
  region | text    |           |          |         | extended |              | 
 Partition of: constraint_pt3_1_prt_2_2_prt_3 FOR VALUES IN ('europe')
 Partition constraint: ((year IS NOT NULL) AND (year >= 2001) AND (year < 2002) AND (month IS NOT NULL) AND (month >= 2) AND (month < 3) AND (region IS NOT NULL) AND (region = 'europe'::text))
-Compression Type: None
-Compression Level: 0
-Block Size: 32768
-Checksum: t
 Check constraints:
     "day_check" CHECK (day > 0)
     "month_check" CHECK (month > 0)
 Distributed by: (id)
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=true
 
 CREATE DOMAIN const_domain1 AS TEXT
       CONSTRAINT cons_check1 check (char_length(VALUE) = 5);
@@ -797,3 +794,17 @@ select verify('trigger_oid');
       1
 (1 row)
 
+-- Case for Issue: https://github.com/greenplum-db/gpdb/issues/14465
+create function func_fail_14465(int) returns int
+        immutable language plpgsql as $$
+begin
+        perform unwanted_grant();
+        raise warning 'owned';
+        return 1;
+exception when others then
+        return 2;
+end$$;
+create materialized view mv_14465 as select 1 as c;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create index on mv_14465 (c) where func_fail_14465(1) > 0;

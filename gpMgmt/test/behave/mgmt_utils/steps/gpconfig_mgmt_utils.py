@@ -29,8 +29,8 @@ def impl(context):
         os.mkdir(segment_tmp_directory)
         backup_path = path.join(segment_tmp_directory, 'postgresql.conf')
         original_path = path.join(segment.datadir, 'postgresql.conf')
-        copy_command = ('scp %s:%s %s' % (segment.hostname, original_path, backup_path)).split(' ')
-        restore_command = ('scp %s %s:%s' % (backup_path, segment.hostname, original_path)).split(' ')
+        copy_command = ('rsync %s:%s %s' % (segment.hostname, original_path, backup_path)).split(' ')
+        restore_command = ('rsync %s %s:%s' % (backup_path, segment.hostname, original_path)).split(' ')
         restore_commands.append(restore_command)
 
         subprocess.check_call(copy_command)

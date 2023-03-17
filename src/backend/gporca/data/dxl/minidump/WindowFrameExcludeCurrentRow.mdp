@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
+  <dxl:Comment><![CDATA[
+    Objective: This is a basic test that ORCA can generate a plan for a query
+    containing a window frame ROWS with EXCLUDE CUURENT ROW option.
+
+    EXPLAIN SELECT SUM(a) OVER (ORDER BY a ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING EXCLUDE CURRENT ROW), a
+    FROM (values (1), (2), (3), (4), (5), (6)) v(a);
+                                  QUERY PLAN
+    -----------------------------------------------------------------------
+     WindowAgg  (cost=0.00..0.00 rows=6 width=12)
+       Order By: column1
+       ->  Sort  (cost=0.00..0.00 rows=6 width=4)
+             Sort Key: column1
+             ->  Values Scan on "Values"  (cost=0.00..0.00 rows=6 width=4)
+     Optimizer: Pivotal Optimizer (GPORCA)
+  ]]></dxl:Comment>
+  <dxl:Thread Id="0">
+    <dxl:OptimizerConfig>
+      <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
+      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.000000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
+      <dxl:CTEConfig CTEInliningCutoff="0"/>
+      <dxl:WindowOids RowNumber="3100" Rank="3101"/>
+      <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="3">
+        <dxl:CostParams>
+          <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
+        </dxl:CostParams>
+      </dxl:CostModelConfig>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="20" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10" XformBindThreshold="0"/>
+      <dxl:TraceFlags Value="102001,102002,102003,102043,102074,102120,102144,103001,103003,103014,103022,103026,103027,103029,103033,103038,103040,104002,104003,104004,104005,105000,106000"/>
+    </dxl:OptimizerConfig>
+    <dxl:Metadata SystemIds="0.GPDB">
+      <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="1" PassByValue="true">
+        <dxl:DistrOpfamily Mdid="0.2222.1.0"/>
+        <dxl:LegacyDistrOpfamily Mdid="0.7124.1.0"/>
+        <dxl:EqualityOp Mdid="0.91.1.0"/>
+        <dxl:InequalityOp Mdid="0.85.1.0"/>
+        <dxl:LessThanOp Mdid="0.58.1.0"/>
+        <dxl:LessThanEqualsOp Mdid="0.1694.1.0"/>
+        <dxl:GreaterThanOp Mdid="0.59.1.0"/>
+        <dxl:GreaterThanEqualsOp Mdid="0.1695.1.0"/>
+        <dxl:ComparisonOp Mdid="0.1693.1.0"/>
+        <dxl:ArrayType Mdid="0.1000.1.0"/>
+        <dxl:MinAgg Mdid="0.0.0.0"/>
+        <dxl:MaxAgg Mdid="0.0.0.0"/>
+        <dxl:AvgAgg Mdid="0.0.0.0"/>
+        <dxl:SumAgg Mdid="0.0.0.0"/>
+        <dxl:CountAgg Mdid="0.2147.1.0"/>
+      </dxl:Type>
+      <dxl:Type Mdid="0.20.1.0" Name="Int8" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="8" PassByValue="true">
+        <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
+        <dxl:LegacyDistrOpfamily Mdid="0.7100.1.0"/>
+        <dxl:EqualityOp Mdid="0.410.1.0"/>
+        <dxl:InequalityOp Mdid="0.411.1.0"/>
+        <dxl:LessThanOp Mdid="0.412.1.0"/>
+        <dxl:LessThanEqualsOp Mdid="0.414.1.0"/>
+        <dxl:GreaterThanOp Mdid="0.413.1.0"/>
+        <dxl:GreaterThanEqualsOp Mdid="0.415.1.0"/>
+        <dxl:ComparisonOp Mdid="0.351.1.0"/>
+        <dxl:ArrayType Mdid="0.1016.1.0"/>
+        <dxl:MinAgg Mdid="0.2131.1.0"/>
+        <dxl:MaxAgg Mdid="0.2115.1.0"/>
+        <dxl:AvgAgg Mdid="0.2100.1.0"/>
+        <dxl:SumAgg Mdid="0.2107.1.0"/>
+        <dxl:CountAgg Mdid="0.2147.1.0"/>
+      </dxl:Type>
+      <dxl:Type Mdid="0.23.1.0" Name="int4" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="4" PassByValue="true">
+        <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
+        <dxl:LegacyDistrOpfamily Mdid="0.7100.1.0"/>
+        <dxl:EqualityOp Mdid="0.96.1.0"/>
+        <dxl:InequalityOp Mdid="0.518.1.0"/>
+        <dxl:LessThanOp Mdid="0.97.1.0"/>
+        <dxl:LessThanEqualsOp Mdid="0.523.1.0"/>
+        <dxl:GreaterThanOp Mdid="0.521.1.0"/>
+        <dxl:GreaterThanEqualsOp Mdid="0.525.1.0"/>
+        <dxl:ComparisonOp Mdid="0.351.1.0"/>
+        <dxl:ArrayType Mdid="0.1007.1.0"/>
+        <dxl:MinAgg Mdid="0.2132.1.0"/>
+        <dxl:MaxAgg Mdid="0.2116.1.0"/>
+        <dxl:AvgAgg Mdid="0.2101.1.0"/>
+        <dxl:SumAgg Mdid="0.2108.1.0"/>
+        <dxl:CountAgg Mdid="0.2147.1.0"/>
+      </dxl:Type>
+      <dxl:GPDBAgg Mdid="0.2108.1.0" Name="sum" IsSplittable="true" HashAggCapable="true">
+        <dxl:ResultType Mdid="0.20.1.0"/>
+        <dxl:IntermediateResultType Mdid="0.20.1.0"/>
+      </dxl:GPDBAgg>
+      <dxl:GPDBScalarOp Mdid="0.97.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
+        <dxl:LeftType Mdid="0.23.1.0"/>
+        <dxl:RightType Mdid="0.23.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.66.1.0"/>
+        <dxl:Commutator Mdid="0.521.1.0"/>
+        <dxl:InverseOp Mdid="0.525.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.1976.1.0"/>
+          <dxl:Opfamily Mdid="0.4054.1.0"/>
+          <dxl:Opfamily Mdid="0.10009.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
+    </dxl:Metadata>
+    <dxl:Query>
+      <dxl:OutputColumns>
+        <dxl:Ident ColId="7" ColName="sum" TypeMdid="0.20.1.0"/>
+        <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
+      </dxl:OutputColumns>
+      <dxl:CTEList/>
+      <dxl:LogicalWindow>
+        <dxl:WindowSpecList>
+          <dxl:WindowSpec PartitionColumns="">
+            <dxl:SortingColumnList>
+              <dxl:SortingColumn ColId="1" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+            </dxl:SortingColumnList>
+            <dxl:WindowFrame FrameSpec="Row" ExclusionStrategy="CurrentRow" StartInRange="0" EndInRange="0" InRangeColl="0" InRangeAsc="false" InRangeNullsFirst="false">
+              <dxl:TrailingEdge TrailingBoundary="BoundedFollowing">
+                <dxl:ConstValue TypeMdid="0.20.1.0" Value="1"/>
+              </dxl:TrailingEdge>
+              <dxl:LeadingEdge LeadingBoundary="BoundedPreceding">
+                <dxl:ConstValue TypeMdid="0.20.1.0" Value="1"/>
+              </dxl:LeadingEdge>
+            </dxl:WindowFrame>
+          </dxl:WindowSpec>
+        </dxl:WindowSpecList>
+        <dxl:ProjList>
+          <dxl:ProjElem ColId="7" Alias="sum">
+            <dxl:WindowFunc Mdid="0.2108.1.0" TypeMdid="0.20.1.0" Distinct="false" WindowStarArg="false" WindowSimpleAgg="true" WindowStrategy="Immediate" WinSpecPos="0">
+              <dxl:Ident ColId="1" ColName="column1" TypeMdid="0.23.1.0"/>
+            </dxl:WindowFunc>
+          </dxl:ProjElem>
+          <dxl:ProjElem ColId="1" Alias="a">
+            <dxl:Ident ColId="1" ColName="column1" TypeMdid="0.23.1.0"/>
+          </dxl:ProjElem>
+        </dxl:ProjList>
+        <dxl:LogicalConstTable>
+          <dxl:Columns>
+            <dxl:Column ColId="1" Attno="1" ColName="column1" TypeMdid="0.23.1.0"/>
+          </dxl:Columns>
+          <dxl:ConstTuple>
+            <dxl:Datum TypeMdid="0.23.1.0" Value="1"/>
+          </dxl:ConstTuple>
+          <dxl:ConstTuple>
+            <dxl:Datum TypeMdid="0.23.1.0" Value="2"/>
+          </dxl:ConstTuple>
+          <dxl:ConstTuple>
+            <dxl:Datum TypeMdid="0.23.1.0" Value="3"/>
+          </dxl:ConstTuple>
+          <dxl:ConstTuple>
+            <dxl:Datum TypeMdid="0.23.1.0" Value="4"/>
+          </dxl:ConstTuple>
+          <dxl:ConstTuple>
+            <dxl:Datum TypeMdid="0.23.1.0" Value="5"/>
+          </dxl:ConstTuple>
+          <dxl:ConstTuple>
+            <dxl:Datum TypeMdid="0.23.1.0" Value="6"/>
+          </dxl:ConstTuple>
+        </dxl:LogicalConstTable>
+      </dxl:LogicalWindow>
+    </dxl:Query>
+    <dxl:Plan Id="0" SpaceSize="0">
+      <dxl:Window PartitionColumns="">
+        <dxl:Properties>
+          <dxl:Cost StartupCost="0" TotalCost="0.000400" Rows="6.000000" Width="12"/>
+        </dxl:Properties>
+        <dxl:ProjList>
+          <dxl:ProjElem ColId="1" Alias="sum">
+            <dxl:WindowFunc Mdid="0.2108.1.0" TypeMdid="0.20.1.0" Distinct="false" WindowStarArg="false" WindowSimpleAgg="true" WindowStrategy="Immediate" WinSpecPos="0">
+              <dxl:Ident ColId="0" ColName="column1" TypeMdid="0.23.1.0"/>
+            </dxl:WindowFunc>
+          </dxl:ProjElem>
+          <dxl:ProjElem ColId="0" Alias="a">
+            <dxl:Ident ColId="0" ColName="column1" TypeMdid="0.23.1.0"/>
+          </dxl:ProjElem>
+        </dxl:ProjList>
+        <dxl:Filter/>
+        <dxl:Sort SortDiscardDuplicates="false">
+          <dxl:Properties>
+            <dxl:Cost StartupCost="0" TotalCost="0.000376" Rows="6.000000" Width="4"/>
+          </dxl:Properties>
+          <dxl:ProjList>
+            <dxl:ProjElem ColId="0" Alias="column1">
+              <dxl:Ident ColId="0" ColName="column1" TypeMdid="0.23.1.0"/>
+            </dxl:ProjElem>
+          </dxl:ProjList>
+          <dxl:Filter/>
+          <dxl:SortingColumnList>
+            <dxl:SortingColumn ColId="0" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+          </dxl:SortingColumnList>
+          <dxl:LimitCount/>
+          <dxl:LimitOffset/>
+          <dxl:Values>
+            <dxl:Properties>
+              <dxl:Cost StartupCost="0" TotalCost="0.000024" Rows="6.000000" Width="4"/>
+            </dxl:Properties>
+            <dxl:ProjList>
+              <dxl:ProjElem ColId="0" Alias="column1">
+                <dxl:Ident ColId="0" ColName="column1" TypeMdid="0.23.1.0"/>
+              </dxl:ProjElem>
+            </dxl:ProjList>
+            <dxl:ValuesList>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+            </dxl:ValuesList>
+            <dxl:ValuesList>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
+            </dxl:ValuesList>
+            <dxl:ValuesList>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="3"/>
+            </dxl:ValuesList>
+            <dxl:ValuesList>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="4"/>
+            </dxl:ValuesList>
+            <dxl:ValuesList>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="5"/>
+            </dxl:ValuesList>
+            <dxl:ValuesList>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="6"/>
+            </dxl:ValuesList>
+          </dxl:Values>
+        </dxl:Sort>
+        <dxl:WindowKeyList>
+          <dxl:WindowKey>
+            <dxl:SortingColumnList>
+              <dxl:SortingColumn ColId="0" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+            </dxl:SortingColumnList>
+            <dxl:WindowFrame FrameSpec="Row" ExclusionStrategy="CurrentRow" StartInRange="0" EndInRange="0" InRangeColl="0" InRangeAsc="false" InRangeNullsFirst="false">
+              <dxl:TrailingEdge TrailingBoundary="BoundedFollowing">
+                <dxl:ConstValue TypeMdid="0.20.1.0" Value="1"/>
+              </dxl:TrailingEdge>
+              <dxl:LeadingEdge LeadingBoundary="BoundedPreceding">
+                <dxl:ConstValue TypeMdid="0.20.1.0" Value="1"/>
+              </dxl:LeadingEdge>
+            </dxl:WindowFrame>
+          </dxl:WindowKey>
+        </dxl:WindowKeyList>
+      </dxl:Window>
+    </dxl:Plan>
+  </dxl:Thread>
+</dxl:DXLMessage>

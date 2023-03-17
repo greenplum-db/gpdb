@@ -16,6 +16,8 @@
  */
 #include "postgres.h"
 
+#include "access/aosegfiles.h"
+#include "access/aocssegfiles.h"
 #include "access/table.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/aoblkdir.h"
@@ -49,17 +51,18 @@ AlterTableCreateAoBlkdirTable(Oid relOid)
 		return;
 
 	/*
-	 * GPDB_12_MERGE_FIXME: Block directory creation must block any
-	 * transactions that may create or update indexes such as insert, vacuum
-	 * and create-index.  Concurrent sequential scans (select) transactions
-	 * need not be blocked.  Index scans cannot happen because the fact that
-	 * we are creating block directory implies no index is yet defined on this
-	 * appendoptimized table.  ShareRowExclusiveLock seems appropriate for
-	 * this purpose.  See if using that instead of the sledgehammer of
-	 * AccessExclusiveLock.  New tests will be needed to validate concurrent
-	 * select with index creation.
+	 * Block directory creation must block any transactions that may create
+	 * or update indexes such as insert, vacuum and create-index. Concurrent
+	 * sequential scans (select) transactions need not be blocked. Index scans
+	 * cannot happen because the fact that we are creating block directory
+	 * implies no index is yet defined on this appendoptimized table.
+	 * Using ShareRowExclusiveLock for this purpose as we allow read-only transactions
+	 * being running concurrently. 
+	 * 
+	 * P.S. GPDB has specific behavior on select statement with locking clause,
+	 * refer to comments around checkCanOptSelectLockingClause() for detail. 
 	 */
-	rel = table_open(relOid, AccessExclusiveLock);
+	rel = table_open(relOid, ShareRowExclusiveLock);
 
 	/* Create a tuple descriptor */
 	tupdesc = CreateTemplateTupleDesc(4);
@@ -117,4 +120,3 @@ AlterTableCreateAoBlkdirTable(Oid relOid)
 
 	table_close(rel, NoLock);
 }
-

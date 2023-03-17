@@ -211,6 +211,12 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elements[] = {
 	 GPOS_WSZ_LIT(
 		 "Enable plan alternatives where NLJ's outer child is replicated")},
 
+	{EopttraceDiscardRedistributeHashJoin,
+	 &optimizer_discard_redistribute_hashjoin,
+	 false,	 // m_negate_param
+	 GPOS_WSZ_LIT(
+		 "Discard plan alternatives where hash join has a redistribute motion child")},
+
 	{EopttraceMotionHazardHandling, &optimizer_enable_streaming_material,
 	 false,	 // m_fNegate
 	 GPOS_WSZ_LIT(
@@ -290,6 +296,12 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elements[] = {
 	 false,	 // m_negate_param
 	 GPOS_WSZ_LIT(
 		 "Explore a nested loop join even if a hash join is possible")},
+	{EopttraceDisableInnerHashJoin, &optimizer_enable_hashjoin,
+	 true,	// m_negate_param
+	 GPOS_WSZ_LIT("Explore hash join alternatives")},
+	{EopttraceDisableInnerNLJ, &optimizer_enable_nljoin,
+	 true,	// m_negate_param
+	 GPOS_WSZ_LIT("Enable nested loop join alternatives")},
 
 };
 

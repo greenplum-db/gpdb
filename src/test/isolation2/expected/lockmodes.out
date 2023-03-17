@@ -2216,21 +2216,202 @@ INSERT 10
 ROLLBACK
 1q: ... <quitting>
 
+-- 2.8 Verify behaviors of select with locking clause (i.e. select for update)
+-- when running concurrently with index creation, for Heap tables.
+-- For AO/CO tables, refer to create_index_allows_readonly.source.
+
+1: CREATE TABLE create_index_select_for_update_tbl(a int, b int);
+CREATE
+1: INSERT INTO create_index_select_for_update_tbl SELECT i,i FROM generate_series(1,10)i;
+INSERT 10
+1: set optimizer = off;
+SET
+
+-- 2.8.1 with GDD enabled, expect no blocking
+1: show gp_enable_global_deadlock_detector;
+ gp_enable_global_deadlock_detector 
+------------------------------------
+ on                                 
+(1 row)
+
+1: BEGIN;
+BEGIN
+1: SELECT * FROM create_index_select_for_update_tbl WHERE a = 2 FOR UPDATE;
+ a | b 
+---+---
+ 2 | 2 
+(1 row)
+
+2: set optimizer = off;
+SET
+
+2: BEGIN;
+BEGIN
+-- expect no blocking
+2: CREATE INDEX create_index_select_for_update_idx ON create_index_select_for_update_tbl(a);
+CREATE
+2: COMMIT;
+COMMIT
+
+1: COMMIT;
+COMMIT
+
+2: DROP INDEX create_index_select_for_update_idx;
+DROP
+
+2: BEGIN;
+BEGIN
+2: CREATE INDEX create_index_select_for_update_idx ON create_index_select_for_update_tbl(a);
+CREATE
+
+1: BEGIN;
+BEGIN
+-- expect no blocking
+1: SELECT * FROM create_index_select_for_update_tbl WHERE a = 2 FOR UPDATE;
+ a | b 
+---+---
+ 2 | 2 
+(1 row)
+1: COMMIT;
+COMMIT
+-- close session to avoid renew session failure after restart
+1q: ... <quitting>
+
+2: COMMIT;
+COMMIT
+
+2: DROP INDEX create_index_select_for_update_idx;
+DROP
+
+-- 2.8.2 with GDD disabled, expect blocking
 -- reset gdd
 2: ALTER SYSTEM RESET gp_enable_global_deadlock_detector;
 ALTER
+-- close session to avoid renew session failure after restart
+2q: ... <quitting>
 1U:SELECT pg_ctl(dir, 'restart') from lockmodes_datadir;
  pg_ctl 
 --------
  OK     
 (1 row)
 
+1: set optimizer = off;
+SET
 1: show gp_enable_global_deadlock_detector;
  gp_enable_global_deadlock_detector 
 ------------------------------------
  off                                
 (1 row)
 
+1: BEGIN;
+BEGIN
+1: SELECT * FROM create_index_select_for_update_tbl WHERE a = 2 FOR UPDATE;
+ a | b 
+---+---
+ 2 | 2 
+(1 row)
+
+2: set optimizer = off;
+SET
+
+2: BEGIN;
+BEGIN
+-- expect blocking
+2&: CREATE INDEX create_index_select_for_update_idx ON create_index_select_for_update_tbl(a);  <waiting ...>
+
+1: COMMIT;
+COMMIT
+
+2<:  <... completed>
+CREATE
+2: COMMIT;
+COMMIT
+
+2: DROP INDEX create_index_select_for_update_idx;
+DROP
+
+2: BEGIN;
+BEGIN
+2: CREATE INDEX create_index_select_for_update_idx ON create_index_select_for_update_tbl(a);
+CREATE
+
+1: BEGIN;
+BEGIN
+-- expect blocking
+1&: SELECT * FROM create_index_select_for_update_tbl WHERE a = 2 FOR UPDATE;  <waiting ...>
+
+2: COMMIT;
+COMMIT
+
+1<:  <... completed>
+ a | b 
+---+---
+ 2 | 2 
+(1 row)
+1: COMMIT;
+COMMIT
+
 1: drop table lockmodes_datadir;
 DROP
 1q: ... <quitting>
+2q: ... <quitting>
+
+-- Check that concurrent DROP on leaf partition won't impact analyze on the
+-- parent since analyze will hold a ShareUpdateExclusiveLock and DROP will
+-- require an AccessExclusiveLock.
+-- Case 1. The analyze result is expected when there's concurrent drop on child.
+1:create table analyzedrop(a int) partition by range(a);
+CREATE
+1:create table analyzedrop_1 partition of analyzedrop for values from (0) to (10);
+CREATE
+1:create table analyzedrop_2 partition of analyzedrop for values from (10) to (20);
+CREATE
+1:insert into analyzedrop select * from generate_series(0,19);
+INSERT 20
+1:select gp_inject_fault_infinite('merge_leaf_stats_after_find_children', 'suspend', dbid) from gp_segment_configuration where content = -1 and role = 'p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+1&: analyze analyzedrop;  <waiting ...>
+2&: drop table analyzedrop_1;  <waiting ...>
+3:select gp_inject_fault_infinite('merge_leaf_stats_after_find_children', 'reset', dbid) from gp_segment_configuration where content = -1 and role = 'p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+1<:  <... completed>
+ANALYZE
+2<:  <... completed>
+DROP
+3:select * from pg_stats where tablename like 'analyzedrop%';
+ schemaname | tablename     | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds                                 | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
+------------+---------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+--------------------------------------------------+-------------+-------------------+------------------------+----------------------
+ public     | analyzedrop   | a       | t         | 0         | 4         | -1         |                  |                   | {0,1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19} |             |                   |                        |                      
+ public     | analyzedrop_2 | a       | f         | 0         | 4         | -1         |                  |                   | {10,11,12,13,14,15,16,17,18,19}                  | -0.345455   |                   |                        |                      
+(2 rows)
+-- Case 2. No failure should happen when there's concurrent drop on parent as well.
+1:select gp_inject_fault_infinite('merge_leaf_stats_after_find_children', 'suspend', dbid) from gp_segment_configuration where content = -1 and role = 'p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+1&: analyze analyzedrop;  <waiting ...>
+2&: drop table analyzedrop_2;  <waiting ...>
+3&: drop table analyzedrop;  <waiting ...>
+4:select gp_inject_fault_infinite('merge_leaf_stats_after_find_children', 'reset', dbid) from gp_segment_configuration where content = -1 and role = 'p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+1<:  <... completed>
+ANALYZE
+2<:  <... completed>
+DROP
+3<:  <... completed>
+DROP
+--empty as table is dropped
+4:select * from pg_stats where tablename like 'analyzedrop%';
+ schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
+------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
+(0 rows)

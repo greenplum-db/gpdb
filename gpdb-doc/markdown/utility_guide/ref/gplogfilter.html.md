@@ -136,5 +136,5 @@ con6 /gpdata/*/log/gpdb*.csv' > seglog.out
 
 ## <a id="section10"></a>See Also 
 
-[gpssh](gpssh.html), [gpscp](gpscp.html)
+[gpssh](gpssh.html), [gpsync](gpsync.html)
 

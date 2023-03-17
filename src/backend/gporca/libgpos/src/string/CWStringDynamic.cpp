@@ -116,8 +116,6 @@ CWStringDynamic::AppendBuffer(const WCHAR *w_str)
 
 	clib::WcStrNCpy(m_w_str_buffer + m_length, w_str, length + 1);
 	m_length = new_length;
-
-	GPOS_ASSERT(IsValid());
 }
 
 

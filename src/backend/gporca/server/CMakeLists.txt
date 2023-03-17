@@ -79,13 +79,15 @@ NLJ-DistCol-No-Broadcast NLJ-EqAllCol-No-Broadcast NLJ-EqDistCol-InEqNonDistCol-
 NLJ-InEqDistCol-EqNonDistCol-Redistribute CorrelatedNLJWithTrueCondition InferPredicatesInnerOfLOJ
 InferredPredicatesConstraintSimplification NoPushdownPredicateWithCTEAnchor
 InferPredicatesForPartSQ InferPredicatesForQuantifiedSQ InferPredicatesForProcessedColumn DoubleNDVCardinalityEquals
-NotWellDefinedDisjunctConjunctPredicates;
+NotWellDefinedDisjunctConjunctPredicates InferPredicatesIntFromSubquery InferPredicatesFromExistsSubquery
+InferPredicatesIntFromExistsSubquery InferPredicatesFromMultiSubquery InferPredicatesMultiColumns
+InferPredicatesJoinSubquery;
 
 CLikeIDFTest:
 LIKE-Pattern-green LIKE-Pattern-green-2 LIKE-Pattern-Empty Nested-Or-Predicates Join-IDF
 LikePredStatsNotComparable PredStatsNotComparable ExtractPredicateFromDisj CollapseNot
 IDF-NotNullConstant IDF-NullConstant INDF-NotNullConstant INDF-NullConstant NullConstant-INDF-Col
-Join-INDF Join-INDF-NoBroadcast TimeTypeStatsNotComparable Join-INDF-Nulls-Not-Collocated;
+Join-INDF Join-INDF-NoBroadcast Join-INDF-Nulls-Not-Collocated;
 
 CLeftOuterIndexApplyTest:
 IndexApply-LeftOuter-NLJoin LOJ-IndexApply-MultiIndexes LOJ-IndexApply-Negative-NonEqual-Predicate
@@ -103,13 +105,13 @@ CIndexScanTest:
 BTreeIndex-Against-InList BTreeIndex-Against-InListLarge BTreeIndex-Against-ScalarSubquery
 IndexScan-AOTable IndexScan-DroppedColumns IndexScan-BoolTrue IndexScan-BoolFalse
 IndexScan-Relabel IndexGet-OuterRefs LogicalIndexGetDroppedCols
-IndexScan-ORPredsNonPart IndexScan-ORPredsAOPart IndexScan-AndedIn SubqInIndexPred;
+IndexScan-ORPredsNonPart IndexScan-ORPredsAOPart IndexScan-AndedIn SubqInIndexPred Hash-IndexScan;
 
 CBitmapScanTest:
 IndexedNLJBitmap BitmapIndex-ChooseHashJoin BitmapTableScan-AO-Btree-PickOnlyHighNDV
 BitmapIndex-Against-InList BitmapTableScan-AO-Btree-PickIndexWithNoGap
 BitmapTableScan-ComplexConjDisj BitmapTableScan-ConjDisjWithOuterRefs
-BRINScan-Or BitmapScan-Hetrogeneous-Partitioned;
+BRINScan-Or BitmapScan-Hetrogeneous-Partitioned Hash-BitmapScan;
 
 CIndexApplyTest:
 IndexNLJ-IndexGet-OuterRef IndexApply_NestLoopWithNestParamTrue IndexApply1
@@ -157,6 +159,10 @@ CStatsTest:
 Stat-Derivation-Leaf-Pattern MissingBoolColStats JoinColWithOnlyNDV UnsupportedStatsPredicate
 StatsFilter-AnyWithNewColStats EquiJoinOnExpr-Supported EquiJoinOnExpr-Unsupported;
 
+CCorrelatedStatsTest:
+Correlated-Stat-Function-Dependency Correlated-Stat-Function-Dependency-2 Correlated-Stat-Function-Dependency-3
+Correlated-Stat-NDistinct Correlated-Stat-NDistinct-2 Correlated-Stat-NDistinct-3 Correlated-Stat-NDistinct-4 Correlated-Stat-NDistinct-5;
+
 CICGMiscTest:
 BroadcastSkewedHashjoin OrderByNullsFirst ConvertHashToRandomSelect ConvertHashToRandomInsert HJN-DeeperOuter CTAS CTAS-Random CheckAsUser
 CTAS-random-distributed-from-replicated-distributed-table
@@ -169,7 +175,12 @@ CJoinPredTest:
 MultipleDampedPredJoinCardinality MultipleIndependentPredJoinCardinality MultiDistKeyJoinCardinality
 MultiDistKeyWithOtherPredsJoinCardinality NoDistKeyMultiPredJoinCardinality OneDistKeyMultiPredJoinCardinality
 JoinOnViewWithCastedColumn JoinOnViewWithCastedColumnAndSubqueryInPredicate JoinOnViewWithVolatileColumn
-JoinOnViewWithMixOfPushableAndNonpushablePredicates JoinOnViewWithSetReturningColumn OuterJoinOnViewWithCastedColumn;
+JoinOnViewWithMixOfPushableAndNonpushablePredicates JoinOnViewWithSetReturningColumn OuterJoinOnViewWithCastedColumn JoinWithSubqueryProjectColumn
+AggSubqCollapseFalseFilter NestedJoinWithCastedColumn PushConstantSelectPredicateThruJoin-1 PushConstantSelectPredicateThruJoin-2
+PushConstantSelectPredicateThruJoin-3 PushConstantSelectPredicateThruJoin-4 PushConstantSelectPredicateThruJoin-5 PushConstantSelectPredicateThruJoin-6
+PushConstantSelectPredicateThruJoin-7 PushConstantSelectPredicateThruJoin-8 PushConstantSelectPredicateThruJoin-9 PushConstantSelectPredicateThruJoin-10
+PushConstantSelectPredicateThruJoin-11 PushConstantSelectPredicateThruJoin-12 PushConstantSelectPredicateThruJoin-13
+PushConstantSelectPredicateThruJoin-14 PushConstantSelectPredicateThruJoin-15;
 
 CArrayCmpTest:
 ArrayConcat ArrayRef FoldedArrayCmp ArrayCmpAll
@@ -264,7 +275,8 @@ COuterJoin1Test:
 ExpandNAryJoinGreedyWithLOJOnly NaryWithLojAndNonLojChilds LOJ_bb_mpph LOJ-Condition-False
 LeftJoin-With-Pred-On-Inner LeftJoin-With-Pred-On-Inner2
 LeftJoin-With-Col-Const-Pred LeftJoin-With-Coalesce LOJWithFalsePred LeftJoin-DPv2-With-Select
-DPv2GreedyOnly DPv2MinCardOnly DPv2QueryOnly LOJ-PushDown LeftJoinDPv2JoinOrder;
+DPv2GreedyOnly DPv2MinCardOnly DPv2QueryOnly LOJ-PushDown LeftJoinDPv2JoinOrder
+LeftJoinNullsNotColocated InnerJoinBroadcastTableHashSpec LeftJoinBroadcastTableHashSpec InnerJoinReplicatedTableHashSpec;
 
 COuterJoin2Test:
 LOJ-IsNullPred Select-Proj-OuterJoin OuterJoin-With-OuterRefs Join-Disj-Subqs
@@ -304,7 +316,7 @@ JOIN-NonRedistributableCol DQA-NonRedistributableCol
 MotionHazard-NoMaterializeHashAggUnderResult;
 
 CInvalidCostContextTest:
-SpoolShouldInvalidateUnresolvedDynamicScans;
+SpoolShouldInvalidateUnresolvedDynamicScans DiscardRedistributeHashJoin;
 
 CRandomDataInsertionTest:
 AddRedistributeBeforeInsert-1 AddRedistributeBeforeInsert-2 AddRedistributeBeforeInsert-3
@@ -352,13 +364,13 @@ Subq2PartialDecorrelate Subq2CorrSQInLOJOn Subq2NotInWhereLOJ Subq2OuterRef2InJo
 Index-Join-With-Subquery-In-Pred NestedSubqLimitBindings;
 
 CIndexOnlyScanTest:
-IndexOnlyScan-NoDistKeyInIndex;
+IndexOnlyScan-NoDistKeyInIndex IndexConstraintsMDidCache;
 
 CRightJoinTest:
 RightJoinHashed RightJoinRedistribute RightJoinReplicated RightJoinBothReplicated RightJoinNoDPSNonDistKey RightJoinTVF;
 
 CSqlFunctionTest:
-SqlFuncNullReject SqlFuncPredFactorize SqlFuncDmlScalar SqlFuncDmlTvf;
+SqlFuncNullReject SqlFuncPredFactorize SqlFuncDmlScalar SqlFuncDmlTvf CompositeTypeRelMdId;
 
 CScalarFuncPushDownTest:
 ScalarFuncPushedBelowGather ConstScalarFuncNotPushedBelowGather;
@@ -367,7 +379,10 @@ COrderedAggTest:
 CTAS_OrderedAgg_multiple_cols OrderedAgg_multiple_diffcol OrderedAgg_with_groupby OrderedAgg_computed_col
 OrderedAggUsingGroupColumnInDirectArg OrderedAgg_multiple_samecol OrderedAgg_with_nonOrderedAgg OrderedAgg_single
 OrderedAgg_array_fraction OrderedAgg_multiple_samecol_difforderespec OrderedAgg_with_nonconst_fraction
-OrderedAgg_skewed_data
+OrderedAgg_skewed_data;
+
+CForeignPartTest:
+ForeignPartUniform PartForeignMixed PartForeignDifferentServer PartForeignDifferentExecLocation PartForeignMixedDPE PartForeignMixedSPE PartForeignUniformSPE
 ")
 
 set(mdp_dir "../data/dxl/minidump/")

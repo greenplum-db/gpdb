@@ -11,7 +11,7 @@
 
 #include "naucrates/dxl/parser/CParseHandlerLogicalGet.h"
 
-#include "naucrates/dxl/operators/CDXLLogicalExternalGet.h"
+#include "naucrates/dxl/operators/CDXLLogicalForeignGet.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
@@ -125,9 +125,9 @@ CParseHandlerLogicalGet::EndElement(const XMLCh *const element_local_name,
 	}
 	else
 	{
-		GPOS_ASSERT(EdxltokenLogicalExternalGet == token_type);
+		GPOS_ASSERT(EdxltokenLogicalForeignGet == token_type);
 		m_dxl_node = GPOS_NEW(m_mp) CDXLNode(
-			m_mp, GPOS_NEW(m_mp) CDXLLogicalExternalGet(m_mp, table_descr));
+			m_mp, GPOS_NEW(m_mp) CDXLLogicalForeignGet(m_mp, table_descr));
 	}
 
 #ifdef GPOS_DEBUG

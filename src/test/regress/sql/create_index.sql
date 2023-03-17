@@ -261,6 +261,10 @@ EXPLAIN (COSTS OFF)
 SELECT circle_center(f1), round(radius(f1)) as radius FROM gcircle_tbl ORDER BY f1 <-> '(200,300)'::point LIMIT 10;
 SELECT circle_center(f1), round(radius(f1)) as radius FROM gcircle_tbl ORDER BY f1 <-> '(200,300)'::point LIMIT 10;
 
+EXPLAIN (COSTS OFF)
+SELECT point(x,x), (SELECT f1 FROM gpolygon_tbl ORDER BY f1 <-> point(x,x) LIMIT 1) as c FROM generate_series(0,10,1) x;
+SELECT point(x,x), (SELECT f1 FROM gpolygon_tbl ORDER BY f1 <-> point(x,x) LIMIT 1) as c FROM generate_series(0,10,1) x;
+
 -- Now check the results from bitmap indexscan
 SET enable_seqscan = OFF;
 SET enable_indexscan = OFF;
@@ -407,6 +411,10 @@ INSERT INTO func_index_heap VALUES('ABCD', 'EF');
 -- but this shouldn't:
 INSERT INTO func_index_heap VALUES('QWERTY');
 
+-- while we're here, see that the metadata looks sane
+\d func_index_heap
+\d func_index_index
+
 
 --
 -- Same test, expressional index
@@ -422,6 +430,14 @@ INSERT INTO func_index_heap VALUES('QWE','RTY');
 INSERT INTO func_index_heap VALUES('ABCD', 'EF');
 -- but this shouldn't:
 INSERT INTO func_index_heap VALUES('QWERTY');
+
+-- while we're here, see that the metadata looks sane
+\d func_index_heap
+\d func_index_index
+
+-- this should fail because of unsafe column type (anonymous record)
+create index on func_index_heap ((f1 || f2), (row(f1, f2)));
+
 
 --
 -- Test unique index with included columns
@@ -479,11 +495,22 @@ CREATE INDEX CONCURRENTLY concur_index4 on concur_heap(f2) WHERE f1='a';
 CREATE INDEX CONCURRENTLY concur_index5 on concur_heap(f2) WHERE f1='x';
 -- here we also check that you can default the index name
 CREATE INDEX CONCURRENTLY on concur_heap((f2||f1));
-
 -- You can't do a concurrent index build in a transaction
 BEGIN;
 CREATE INDEX CONCURRENTLY concur_index7 ON concur_heap(f1);
 COMMIT;
+-- test where predicate is able to do a transactional update during
+-- a concurrent build before switching pg_index state flags.
+CREATE FUNCTION predicate_stable() RETURNS bool IMMUTABLE
+LANGUAGE plpgsql AS $$
+BEGIN
+  EXECUTE 'SELECT txid_current()';
+  RETURN true;
+END; $$;
+CREATE INDEX CONCURRENTLY concur_index8 ON concur_heap (f1)
+  WHERE predicate_stable();
+DROP INDEX concur_index8;
+DROP FUNCTION predicate_stable();
 
 -- But you can do a regular index build in a transaction
 BEGIN;
@@ -498,6 +525,31 @@ VACUUM FULL concur_heap;
 \d concur_heap
 REINDEX TABLE concur_heap;
 \d concur_heap
+
+-- Temporary tables with concurrent builds and on-commit actions
+-- CONCURRENTLY used with CREATE INDEX and DROP INDEX is ignored.
+-- PRESERVE ROWS, the default.
+CREATE TEMP TABLE concur_temp (f1 int, f2 text)
+  ON COMMIT PRESERVE ROWS;
+INSERT INTO concur_temp VALUES (1, 'foo'), (2, 'bar');
+CREATE INDEX CONCURRENTLY concur_temp_ind ON concur_temp(f1);
+DROP INDEX CONCURRENTLY concur_temp_ind;
+DROP TABLE concur_temp;
+-- ON COMMIT DROP
+BEGIN;
+CREATE TEMP TABLE concur_temp (f1 int, f2 text)
+  ON COMMIT DROP;
+INSERT INTO concur_temp VALUES (1, 'foo'), (2, 'bar');
+-- Fails when running in a transaction.
+CREATE INDEX CONCURRENTLY concur_temp_ind ON concur_temp(f1);
+COMMIT;
+-- ON COMMIT DELETE ROWS
+CREATE TEMP TABLE concur_temp (f1 int, f2 text)
+  ON COMMIT DELETE ROWS;
+INSERT INTO concur_temp VALUES (1, 'foo'), (2, 'bar');
+CREATE INDEX CONCURRENTLY concur_temp_ind ON concur_temp(f1);
+DROP INDEX CONCURRENTLY concur_temp_ind;
+DROP TABLE concur_temp;
 
 --
 -- Try some concurrent index drops
@@ -809,9 +861,35 @@ REINDEX TABLE CONCURRENTLY concur_reindex_tab3;  -- succeeds with warning
 INSERT INTO concur_reindex_tab3 VALUES  (4, '[2,4]');
 -- Check materialized views
 CREATE MATERIALIZED VIEW concur_reindex_matview AS SELECT * FROM concur_reindex_tab;
+-- Dependency lookup before and after the follow-up REINDEX commands.
+-- These should remain consistent.
+SELECT pg_describe_object(classid, objid, objsubid) as obj,
+       pg_describe_object(refclassid,refobjid,refobjsubid) as objref,
+       deptype
+FROM pg_depend
+WHERE classid = 'pg_class'::regclass AND
+  objid in ('concur_reindex_tab'::regclass,
+            'concur_reindex_ind1'::regclass,
+	    'concur_reindex_ind2'::regclass,
+	    'concur_reindex_ind3'::regclass,
+	    'concur_reindex_ind4'::regclass,
+	    'concur_reindex_matview'::regclass)
+  ORDER BY 1, 2;
 REINDEX INDEX CONCURRENTLY concur_reindex_ind1;
 REINDEX TABLE CONCURRENTLY concur_reindex_tab;
 REINDEX TABLE CONCURRENTLY concur_reindex_matview;
+SELECT pg_describe_object(classid, objid, objsubid) as obj,
+       pg_describe_object(refclassid,refobjid,refobjsubid) as objref,
+       deptype
+FROM pg_depend
+WHERE classid = 'pg_class'::regclass AND
+  objid in ('concur_reindex_tab'::regclass,
+            'concur_reindex_ind1'::regclass,
+	    'concur_reindex_ind2'::regclass,
+	    'concur_reindex_ind3'::regclass,
+	    'concur_reindex_ind4'::regclass,
+	    'concur_reindex_matview'::regclass)
+  ORDER BY 1, 2;
 -- Check that comments are preserved
 CREATE TABLE testcomment (i int);
 CREATE INDEX testcomment_idx1 ON testcomment (i);
@@ -822,6 +900,26 @@ SELECT obj_description('testcomment_idx1'::regclass, 'pg_class');
 REINDEX TABLE CONCURRENTLY testcomment ;
 SELECT obj_description('testcomment_idx1'::regclass, 'pg_class');
 DROP TABLE testcomment;
+-- Check that indisclustered updates are preserved
+CREATE TABLE concur_clustered(i int);
+CREATE INDEX concur_clustered_i_idx ON concur_clustered(i);
+ALTER TABLE concur_clustered CLUSTER ON concur_clustered_i_idx;
+REINDEX TABLE CONCURRENTLY concur_clustered;
+SELECT indexrelid::regclass, indisclustered FROM pg_index
+  WHERE indrelid = 'concur_clustered'::regclass;
+DROP TABLE concur_clustered;
+-- Check that indisreplident updates are preserved.
+CREATE TABLE concur_replident(i int NOT NULL);
+CREATE UNIQUE INDEX concur_replident_i_idx ON concur_replident(i);
+ALTER TABLE concur_replident REPLICA IDENTITY
+  USING INDEX concur_replident_i_idx;
+SELECT indexrelid::regclass, indisreplident FROM pg_index
+  WHERE indrelid = 'concur_replident'::regclass;
+REINDEX TABLE CONCURRENTLY concur_replident;
+SELECT indexrelid::regclass, indisreplident FROM pg_index
+  WHERE indrelid = 'concur_replident'::regclass;
+DROP TABLE concur_replident;
+
 -- Partitions
 -- Create some partitioned tables
 CREATE TABLE concur_reindex_part (c1 int, c2 int) PARTITION BY RANGE (c1);
@@ -850,12 +948,40 @@ SELECT relid, parentrelid, level FROM pg_partition_tree('concur_reindex_part_ind
 SELECT relid, parentrelid, level FROM pg_partition_tree('concur_reindex_part_index')
   ORDER BY relid, level;
 -- REINDEX should preserve dependencies of partition tree.
+SELECT pg_describe_object(classid, objid, objsubid) as obj,
+       pg_describe_object(refclassid,refobjid,refobjsubid) as objref,
+       deptype
+FROM pg_depend
+WHERE classid = 'pg_class'::regclass AND
+  objid in ('concur_reindex_part'::regclass,
+            'concur_reindex_part_0'::regclass,
+            'concur_reindex_part_0_1'::regclass,
+            'concur_reindex_part_0_2'::regclass,
+            'concur_reindex_part_index'::regclass,
+            'concur_reindex_part_index_0'::regclass,
+            'concur_reindex_part_index_0_1'::regclass,
+            'concur_reindex_part_index_0_2'::regclass)
+  ORDER BY 1, 2;
 REINDEX INDEX CONCURRENTLY concur_reindex_part_index_0_1;
 REINDEX INDEX CONCURRENTLY concur_reindex_part_index_0_2;
 SELECT relid, parentrelid, level FROM pg_partition_tree('concur_reindex_part_index')
   ORDER BY relid, level;
 REINDEX TABLE CONCURRENTLY concur_reindex_part_0_1;
 REINDEX TABLE CONCURRENTLY concur_reindex_part_0_2;
+SELECT pg_describe_object(classid, objid, objsubid) as obj,
+       pg_describe_object(refclassid,refobjid,refobjsubid) as objref,
+       deptype
+FROM pg_depend
+WHERE classid = 'pg_class'::regclass AND
+  objid in ('concur_reindex_part'::regclass,
+            'concur_reindex_part_0'::regclass,
+            'concur_reindex_part_0_1'::regclass,
+            'concur_reindex_part_0_2'::regclass,
+            'concur_reindex_part_index'::regclass,
+            'concur_reindex_part_index_0'::regclass,
+            'concur_reindex_part_index_0_1'::regclass,
+            'concur_reindex_part_index_0_2'::regclass)
+  ORDER BY 1, 2;
 SELECT relid, parentrelid, level FROM pg_partition_tree('concur_reindex_part_index')
   ORDER BY relid, level;
 
@@ -981,6 +1107,96 @@ REINDEX INDEX CONCURRENTLY concur_reindex_ind5;
 \d concur_reindex_tab4
 DROP TABLE concur_reindex_tab4;
 
+-- Check handling of indexes with expressions and predicates.  The
+-- definitions of the rebuilt indexes should match the original
+-- definitions.
+CREATE TABLE concur_exprs_tab (c1 int , c2 boolean);
+INSERT INTO concur_exprs_tab (c1, c2) VALUES (1369652450, FALSE),
+  (414515746, TRUE),
+  (897778963, FALSE);
+CREATE UNIQUE INDEX concur_exprs_index_expr
+  ON concur_exprs_tab (c1, (c1::text COLLATE "C"));
+CREATE UNIQUE INDEX concur_exprs_index_pred ON concur_exprs_tab (c1)
+  WHERE (c1::text > 500000000::text COLLATE "C");
+CREATE UNIQUE INDEX concur_exprs_index_pred_2
+  ON concur_exprs_tab (c1, (1 / c1))
+  WHERE ('-H') >= (c2::TEXT) COLLATE "C";
+ALTER INDEX concur_exprs_index_expr ALTER COLUMN 1 SET STATISTICS 100;
+ANALYZE concur_exprs_tab;
+SELECT starelid::regclass, count(*) FROM pg_statistic WHERE starelid IN (
+  'concur_exprs_index_expr'::regclass,
+  'concur_exprs_index_pred'::regclass,
+  'concur_exprs_index_pred_2'::regclass)
+  GROUP BY starelid ORDER BY starelid::regclass::text;
+SELECT pg_get_indexdef('concur_exprs_index_expr'::regclass);
+SELECT pg_get_indexdef('concur_exprs_index_pred'::regclass);
+SELECT pg_get_indexdef('concur_exprs_index_pred_2'::regclass);
+REINDEX TABLE CONCURRENTLY concur_exprs_tab;
+SELECT pg_get_indexdef('concur_exprs_index_expr'::regclass);
+SELECT pg_get_indexdef('concur_exprs_index_pred'::regclass);
+SELECT pg_get_indexdef('concur_exprs_index_pred_2'::regclass);
+-- ALTER TABLE recreates the indexes, which should keep their collations.
+ALTER TABLE concur_exprs_tab ALTER c2 TYPE TEXT;
+SELECT pg_get_indexdef('concur_exprs_index_expr'::regclass);
+SELECT pg_get_indexdef('concur_exprs_index_pred'::regclass);
+SELECT pg_get_indexdef('concur_exprs_index_pred_2'::regclass);
+-- Statistics should remain intact.
+SELECT starelid::regclass, count(*) FROM pg_statistic WHERE starelid IN (
+  'concur_exprs_index_expr'::regclass,
+  'concur_exprs_index_pred'::regclass,
+  'concur_exprs_index_pred_2'::regclass)
+  GROUP BY starelid ORDER BY starelid::regclass::text;
+-- attstattarget should remain intact
+SELECT attrelid::regclass, attnum, attstattarget
+  FROM pg_attribute WHERE attrelid IN (
+    'concur_exprs_index_expr'::regclass,
+    'concur_exprs_index_pred'::regclass,
+    'concur_exprs_index_pred_2'::regclass)
+  ORDER BY attrelid::regclass::text, attnum;
+DROP TABLE concur_exprs_tab;
+
+-- Temporary tables and on-commit actions, where CONCURRENTLY is ignored.
+-- ON COMMIT PRESERVE ROWS, the default.
+CREATE TEMP TABLE concur_temp_tab_1 (c1 int, c2 text)
+  ON COMMIT PRESERVE ROWS;
+INSERT INTO concur_temp_tab_1 VALUES (1, 'foo'), (2, 'bar');
+CREATE INDEX concur_temp_ind_1 ON concur_temp_tab_1(c2);
+REINDEX TABLE CONCURRENTLY concur_temp_tab_1;
+REINDEX INDEX CONCURRENTLY concur_temp_ind_1;
+-- Still fails in transaction blocks
+BEGIN;
+REINDEX INDEX CONCURRENTLY concur_temp_ind_1;
+COMMIT;
+-- ON COMMIT DELETE ROWS
+CREATE TEMP TABLE concur_temp_tab_2 (c1 int, c2 text)
+  ON COMMIT DELETE ROWS;
+CREATE INDEX concur_temp_ind_2 ON concur_temp_tab_2(c2);
+REINDEX TABLE CONCURRENTLY concur_temp_tab_2;
+REINDEX INDEX CONCURRENTLY concur_temp_ind_2;
+-- ON COMMIT DROP
+BEGIN;
+CREATE TEMP TABLE concur_temp_tab_3 (c1 int, c2 text)
+  ON COMMIT PRESERVE ROWS;
+INSERT INTO concur_temp_tab_3 VALUES (1, 'foo'), (2, 'bar');
+CREATE INDEX concur_temp_ind_3 ON concur_temp_tab_3(c2);
+-- Fails when running in a transaction
+REINDEX INDEX CONCURRENTLY concur_temp_ind_3;
+COMMIT;
+-- REINDEX SCHEMA processes all temporary relations
+CREATE TABLE reindex_temp_before AS
+SELECT oid, relname, relfilenode, relkind, reltoastrelid
+  FROM pg_class
+  WHERE relname IN ('concur_temp_ind_1', 'concur_temp_ind_2');
+SELECT pg_my_temp_schema()::regnamespace as temp_schema_name \gset
+REINDEX SCHEMA CONCURRENTLY :temp_schema_name;
+SELECT  b.relname,
+        b.relkind,
+        CASE WHEN a.relfilenode = b.relfilenode THEN 'relfilenode is unchanged'
+        ELSE 'relfilenode has changed' END
+  FROM reindex_temp_before b JOIN pg_class a ON b.oid = a.oid
+  ORDER BY 1;
+DROP TABLE concur_temp_tab_1, concur_temp_tab_2, reindex_temp_before;
+
 --
 -- REINDEX SCHEMA
 --
@@ -1030,8 +1246,15 @@ REINDEX SCHEMA CONCURRENTLY schema_to_reindex;
 CREATE ROLE regress_reindexuser NOLOGIN;
 SET SESSION ROLE regress_reindexuser;
 REINDEX SCHEMA schema_to_reindex;
+-- Permission failures with toast tables and indexes (pg_authid here)
+RESET ROLE;
+GRANT USAGE ON SCHEMA pg_toast TO regress_reindexuser;
+SET SESSION ROLE regress_reindexuser;
+REINDEX TABLE pg_toast.pg_toast_1260;
+REINDEX INDEX pg_toast.pg_toast_1260_index;
 
 -- Clean up
 RESET ROLE;
+REVOKE USAGE ON SCHEMA pg_toast FROM regress_reindexuser;
 DROP ROLE regress_reindexuser;
 DROP SCHEMA schema_to_reindex CASCADE;

@@ -6,6 +6,8 @@ Changes the definition of a text search configuration.
 
 ``` {#sql_command_synopsis}
 ALTER TEXT SEARCH CONFIGURATION <name>
+    ADD MAPPING FOR <token_type> [, ... ] WITH <dictionary_name> [, ... ]
+ALTER TEXT SEARCH CONFIGURATION <name>
     ALTER MAPPING FOR <token_type> [, ... ] WITH <dictionary_name> [, ... ]
 ALTER TEXT SEARCH CONFIGURATION <name>
     ALTER MAPPING REPLACE <old_dictionary> WITH <new_dictionary>
@@ -14,7 +16,7 @@ ALTER TEXT SEARCH CONFIGURATION <name>
 ALTER TEXT SEARCH CONFIGURATION <name>
     DROP MAPPING [ IF EXISTS ] FOR <token_type> [, ... ]
 ALTER TEXT SEARCH CONFIGURATION <name> RENAME TO <new_name>
-ALTER TEXT SEARCH CONFIGURATION <name> OWNER TO <new_owner>
+ALTER TEXT SEARCH CONFIGURATION <name> OWNER TO { <new_owner> | CURRENT_USER | SESSION_USER }
 ALTER TEXT SEARCH CONFIGURATION <name> SET SCHEMA <new_schema>
 ```
 
@@ -26,28 +28,28 @@ You must be the owner of the configuration to use `ALTER TEXT SEARCH CONFIGURATI
 
 ## <a id="section4"></a>Parameters 
 
-`name`
+name
 :   The name \(optionally schema-qualified\) of an existing text search configuration.
 
-`token\_type`
+token\_type
 :   The name of a token type that is emitted by the configuration's parser.
 
-`dictionary\_name`
+dictionary\_name
 :   The name of a text search dictionary to be consulted for the specified token type\(s\). If multiple dictionaries are listed, they are consulted in the specified order.
 
-`old\_dictionary`
+old\_dictionary
 :   The name of a text search dictionary to be replaced in the mapping.
 
-`new\_dictionary`
+new\_dictionary
 :   The name of a text search dictionary to be substituted for old\_dictionary.
 
-`new\_name`
+new\_name
 :   The new name of the text search configuration.
 
 new\_owner
 :   The new owner of the text search configuration.
 
-`new\_schema`
+new\_schema
 :   The new schema for the text search configuration.
 
 The `ADD MAPPING FOR` form installs a list of dictionaries to be consulted for the specified token type\(s\); it is an error if there is already a mapping for any of the token types. The `ALTER MAPPING FOR` form does the same, but first removing any existing mapping for those token types. The `ALTER MAPPING REPLACE` forms substitute new\_dictionary for old\_dictionary anywhere the latter appears. This is done for only the specified token types when `FOR` appears, or for all mappings of the configuration when it doesn't. The `DROP MAPPING` form removes all dictionaries for the specified token type\(s\), causing tokens of those types to be ignored by the text search configuration. It is an error if there is no mapping for the token types, unless `IF EXISTS` appears.

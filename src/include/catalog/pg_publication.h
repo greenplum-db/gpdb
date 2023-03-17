@@ -27,7 +27,7 @@
  *		typedef struct FormData_pg_publication
  * ----------------
  */
-CATALOG(pg_publication,6107,PublicationRelationId)
+CATALOG(pg_publication,9107,PublicationRelationId)
 {
 	Oid			oid;			/* oid */
 

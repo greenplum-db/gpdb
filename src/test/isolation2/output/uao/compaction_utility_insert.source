@@ -14,7 +14,7 @@ INSERT 1
 SELECT *, segno, tupcount, state FROM gp_ao_or_aocs_seg('foo');
  segment_id | segno | tupcount | modcount | formatversion | state | segno | tupcount | state 
 ------------+-------+----------+----------+---------------+-------+-------+----------+-------
- 0          | 0     | 2        | 2        | 4             | 1     | 0     | 2        | 1     
+ 0          | 0     | 2        | 2        | 3             | 1     | 0     | 2        | 1     
 (1 row)
 DELETE FROM foo WHERE a = 2;
 DELETE 1

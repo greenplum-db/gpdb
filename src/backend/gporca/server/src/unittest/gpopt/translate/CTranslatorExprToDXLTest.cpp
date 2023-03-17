@@ -201,9 +201,8 @@ const CTestUtils::STestCase rgtc[] = {
 	 "../data/dxl/expressiontests/VolatileCSQPlan.xml"},
 	{"../data/dxl/expressiontests/VolatileWithPartTableQuery.xml",
 	 "../data/dxl/expressiontests/VolatileWithPartTablePlan.xml"},
-	// GPDB_12_MERGE_FIXME: Re-enable once ORCA supports DML on partitioned tables
-	// {"../data/dxl/expressiontests/InsertPartitionedQuery.xml",
-	//  "../data/dxl/expressiontests/InsertPartitionedPlan.xml"},
+	{"../data/dxl/expressiontests/InsertPartitionedQuery.xml",
+	 "../data/dxl/expressiontests/InsertPartitionedPlan.xml"},
 };
 
 // minidump files

@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 import sys, string, locale
 locale.setlocale(locale.LC_ALL, "")

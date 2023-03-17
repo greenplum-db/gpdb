@@ -71,9 +71,9 @@ class ReplicaCheck(threading.Thread):
         self.lock = threading.Lock()
 
     def __str__(self):
-        return '(%s) Host: %s, Port: %s, Database: %s\n\
-Primary Data Directory Location: %s\n\
-Mirror Data Directory Location: %s' % (self.getName(), self.host, self.port, self.datname,
+        return '\n(%s) ---------\nHost: %s, Port: %s, Database: %s\n\
+Primary Location: %s\n\
+Mirror  Location: %s' % (self.getName(), self.host, self.port, self.datname,
                                           self.ploc, self.mloc)
 
     def run(self):
@@ -86,9 +86,11 @@ Mirror Data Directory Location: %s' % (self.getName(), self.host, self.port, sel
                 self.result = True if res and res[0] and res[0][0] else False
                 with self.lock:
                     print(self)
-                    print (res)
-                    if not self.result:
-                        print("replica check failed")
+                    if self.result:
+                        print("(%s) ** passed **" % (self.getName()))
+                    else:
+                        print("(%s) --> failed <--" % (self.getName()))
+                        print (res)
             except:
                 with self.lock:
                     print(self)

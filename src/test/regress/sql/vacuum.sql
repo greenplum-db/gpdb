@@ -85,7 +85,7 @@ CREATE TABLE no_index_cleanup (i INT PRIMARY KEY, t TEXT);
 CREATE INDEX no_index_cleanup_idx ON no_index_cleanup(t);
 ALTER TABLE no_index_cleanup ALTER COLUMN t SET STORAGE EXTERNAL;
 INSERT INTO no_index_cleanup(i, t) VALUES (generate_series(1,30),
-    repeat('1234567890',300));
+    repeat('1234567890',269));
 ANALYZE no_index_cleanup;
 -- index cleanup option is ignored if VACUUM FULL
 VACUUM (INDEX_CLEANUP TRUE, FULL TRUE) no_index_cleanup;
@@ -100,7 +100,7 @@ ALTER TABLE no_index_cleanup SET (vacuum_index_cleanup = true);
 VACUUM no_index_cleanup;
 -- Parameter is set for both the parent table and its toast relation.
 INSERT INTO no_index_cleanup(i, t) VALUES (generate_series(31,60),
-    repeat('1234567890',300));
+    repeat('1234567890',269));
 DELETE FROM no_index_cleanup WHERE i < 45;
 -- Only toast index is cleaned up.
 ALTER TABLE no_index_cleanup SET (vacuum_index_cleanup = false,
@@ -116,12 +116,12 @@ VACUUM (INDEX_CLEANUP FALSE) vactst; -- index cleanup option is ignored if no in
 VACUUM (INDEX_CLEANUP FALSE, FREEZE TRUE) vaccluster;
 
 -- TRUNCATE option
-CREATE TABLE vac_truncate_test(i INT NOT NULL, j text)
+CREATE TEMP TABLE vac_truncate_test(i INT NOT NULL, j text)
 	WITH (vacuum_truncate=true, autovacuum_enabled=false);
 INSERT INTO vac_truncate_test VALUES (1, NULL), (NULL, NULL);
-VACUUM (TRUNCATE FALSE) vac_truncate_test;
+VACUUM (TRUNCATE FALSE, DISABLE_PAGE_SKIPPING) vac_truncate_test;
 SELECT pg_relation_size('vac_truncate_test') > 0;
-VACUUM vac_truncate_test;
+VACUUM (DISABLE_PAGE_SKIPPING) vac_truncate_test;
 SELECT pg_relation_size('vac_truncate_test') = 0;
 VACUUM (TRUNCATE FALSE, FULL TRUE) vac_truncate_test;
 DROP TABLE vac_truncate_test;
@@ -152,6 +152,10 @@ ANALYZE vactst, vacparted;
 ANALYZE vacparted (b), vactst;
 ANALYZE vactst, does_not_exist, vacparted;
 ANALYZE vactst (i), vacparted (does_not_exist);
+ANALYZE vactst, vactst;
+BEGIN;  -- ANALYZE behaves differently inside a transaction block
+ANALYZE vactst, vactst;
+COMMIT;
 
 -- parenthesized syntax for ANALYZE
 ANALYZE (VERBOSE) does_not_exist;
@@ -159,7 +163,9 @@ ANALYZE (nonexistent-arg) does_not_exist;
 ANALYZE (nonexistentarg) does_not_exit;
 
 -- ensure argument order independence, and that SKIP_LOCKED on non-existing
--- relation still errors out.
+-- relation still errors out.  Suppress WARNING messages caused by concurrent
+-- autovacuums.
+SET client_min_messages TO 'ERROR';
 ANALYZE (SKIP_LOCKED, VERBOSE) does_not_exist;
 ANALYZE (VERBOSE, SKIP_LOCKED) does_not_exist;
 
@@ -167,6 +173,7 @@ ANALYZE (VERBOSE, SKIP_LOCKED) does_not_exist;
 VACUUM (SKIP_LOCKED) vactst;
 VACUUM (SKIP_LOCKED, FULL) vactst;
 ANALYZE (SKIP_LOCKED) vactst;
+RESET client_min_messages;
 
 -- ensure VACUUM and ANALYZE don't have a problem with serializable
 SET default_transaction_isolation = serializable;
@@ -216,7 +223,7 @@ VACUUM (ANALYZE) vacowned_part2;
 RESET ROLE;
 -- Partitioned table and one partition owned by other user.
 ALTER TABLE vacowned_parted OWNER TO regress_vacuum;
-ALTER TABLE vacowned_part1 OWNER TO regress_vacuum;
+ALTER TABLE vacowned_part2 OWNER TO CURRENT_USER;
 SET ROLE regress_vacuum;
 VACUUM vacowned_parted;
 VACUUM vacowned_part1;
@@ -230,6 +237,7 @@ VACUUM (ANALYZE) vacowned_part2;
 RESET ROLE;
 -- Only one partition owned by other user.
 ALTER TABLE vacowned_parted OWNER TO CURRENT_USER;
+ALTER TABLE vacowned_part1 OWNER TO regress_vacuum;
 SET ROLE regress_vacuum;
 VACUUM vacowned_parted;
 VACUUM vacowned_part1;
@@ -244,6 +252,7 @@ RESET ROLE;
 -- Only partitioned table owned by other user.
 ALTER TABLE vacowned_parted OWNER TO regress_vacuum;
 ALTER TABLE vacowned_part1 OWNER TO CURRENT_USER;
+ALTER TABLE vacowned_part2 OWNER TO CURRENT_USER;
 SET ROLE regress_vacuum;
 VACUUM vacowned_parted;
 VACUUM vacowned_part1;

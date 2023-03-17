@@ -5,7 +5,7 @@ Removes a foreign server descriptor.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-DROP SERVER [ IF EXISTS ] <servername> [ CASCADE | RESTRICT ]
+DROP SERVER [ IF EXISTS ] <name> [, ...] [ CASCADE | RESTRICT ]
 ```
 
 ## <a id="section3"></a>Description 
@@ -17,11 +17,11 @@ DROP SERVER [ IF EXISTS ] <servername> [ CASCADE | RESTRICT ]
 IF EXISTS
 :   Do not throw an error if the server does not exist. Greenplum Database issues a notice in this case.
 
-servername
+name
 :   The name of an existing server.
 
 CASCADE
-:   Automatically drop objects that depend on the server \(such as user mappings\).
+:   Automatically drop objects that depend on the server \(such as user mappings\), and in turn all objects that depend on those objects.
 
 RESTRICT
 :   Refuse to drop the server if any object depends on it. This is the default.

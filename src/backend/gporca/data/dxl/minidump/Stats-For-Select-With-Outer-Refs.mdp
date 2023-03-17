@@ -468,7 +468,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.2604.1.1" Name="pg_attrdef" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.2604.1.1" Name="pg_attrdef" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="11,4">
+      <dxl:Relation Mdid="6.2604.1.1" Name="pg_attrdef" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="11,4">
         <dxl:Columns>
           <dxl:Column Name="adrelid" Attno="1" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -508,7 +508,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.2604.1.1.9" Name="cmax" Width="4.000000"/>
@@ -536,7 +535,7 @@
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.1249.1.1.5" Name="attnum" Width="2.000000"/>
       <dxl:RelationStatistics Mdid="2.1249.1.1" Name="pg_attribute" Rows="2585.000000"/>
-      <dxl:Relation Mdid="0.1249.1.1" Name="pg_attribute" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="23,17">
+      <dxl:Relation Mdid="6.1249.1.1" Name="pg_attribute" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="23,17">
         <dxl:Columns>
           <dxl:Column Name="attrelid" Attno="1" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -615,7 +614,6 @@
           <dxl:IndexInfo Mdid="0.2658.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.2659.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.2604.1.1.11" Name="gp_segment_id" Width="4.000000"/>
@@ -674,7 +672,7 @@
                     </dxl:Comparison>
                   </dxl:And>
                   <dxl:LogicalGet>
-                    <dxl:TableDescriptor Mdid="0.2604.1.1" TableName="pg_attrdef">
+                    <dxl:TableDescriptor Mdid="6.2604.1.1" TableName="pg_attrdef">
                       <dxl:Columns>
                         <dxl:Column ColId="26" Attno="1" ColName="adrelid" TypeMdid="0.26.1.0"/>
                         <dxl:Column ColId="27" Attno="2" ColName="adnum" TypeMdid="0.21.1.0"/>
@@ -697,7 +695,7 @@
           </dxl:ProjElem>
         </dxl:ProjList>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.1249.1.1" TableName="pg_attribute">
+          <dxl:TableDescriptor Mdid="6.1249.1.1" TableName="pg_attribute">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="attrelid" TypeMdid="0.26.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="attname" TypeMdid="0.19.1.0"/>
@@ -819,7 +817,7 @@
                         </dxl:FuncExpr>
                       </dxl:Comparison>
                     </dxl:Filter>
-                    <dxl:TableDescriptor Mdid="0.2604.1.1" TableName="pg_attrdef">
+                    <dxl:TableDescriptor Mdid="6.2604.1.1" TableName="pg_attrdef">
                       <dxl:Columns>
                         <dxl:Column ColId="25" Attno="1" ColName="adrelid" TypeMdid="0.26.1.0"/>
                         <dxl:Column ColId="26" Attno="2" ColName="adnum" TypeMdid="0.21.1.0"/>
@@ -876,7 +874,7 @@
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:TableDescriptor Mdid="0.1249.1.1" TableName="pg_attribute">
+          <dxl:TableDescriptor Mdid="6.1249.1.1" TableName="pg_attribute">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="attrelid" TypeMdid="0.26.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="attname" TypeMdid="0.19.1.0"/>

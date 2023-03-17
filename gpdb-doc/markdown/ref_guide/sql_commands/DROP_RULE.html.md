@@ -15,7 +15,7 @@ DROP RULE [IF EXISTS] <name> ON <table_name> [CASCADE | RESTRICT]
 ## <a id="section4"></a>Parameters 
 
 IF EXISTS
-:   Do not throw an error if the rule does not exist. A notice is issued in this case.
+:   Do not throw an error if the rule does not exist. Greenplum Database issues a notice in this case.
 
 name
 :   The name of the rule to remove.
@@ -24,7 +24,7 @@ table\_name
 :   The name \(optionally schema-qualified\) of the table or view that the rule applies to.
 
 CASCADE
-:   Automatically drop objects that depend on the rule.
+:   Automatically drop objects that depend on the rule, and in turn all objects that depend on those objects.
 
 RESTRICT
 :   Refuse to drop the rule if any objects depend on it. This is the default.
@@ -39,7 +39,7 @@ DROP RULE sales_2006 ON sales;
 
 ## <a id="section6"></a>Compatibility 
 
-`DROP RULE` is a Greenplum Database language extension, as is the entire query rewrite system.
+`DROP RULE` is a Greenplum Database extension, as is the entire query rewrite system.
 
 ## <a id="section7"></a>See Also 
 

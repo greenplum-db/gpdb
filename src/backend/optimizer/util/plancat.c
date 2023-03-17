@@ -190,6 +190,16 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 		LOCKMODE	lmode;
 		ListCell   *l;
 
+		/*
+		 * GPDB needs to get AO relation version from pg_appendonly catalog to
+		 * determine whether enabling IndexOnlyScan on AO or not.
+		 * GPDB supports index-only scan on AO starting from AORelationVersion_GP7.
+		 */
+		bool enable_ios_ao = false;
+		if (RelationAMIsAO(relation) &&
+			AORelationVersion_Validate(relation, AORelationVersion_GP7))
+			enable_ios_ao = true;
+
 		indexoidlist = RelationGetIndexList(relation);
 
 		/*
@@ -274,7 +284,12 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 			for (i = 0; i < ncolumns; i++)
 			{
 				info->indexkeys[i] = index->indkey.values[i];
-				info->canreturn[i] = index_can_return(indexRelation, i + 1);
+
+				/* GPDB: This AO table might not have met the requirement for IOScan. */
+				if (RelationAMIsAO(relation) && !enable_ios_ao)
+					info->canreturn[i] = false;
+				else
+					info->canreturn[i] = index_can_return(indexRelation, i + 1);
 			}
 
 			for (i = 0; i < nkeycolumns; i++)
@@ -296,6 +311,8 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 			info->amhasgettuple = (amroutine->amgettuple != NULL);
 			info->amhasgetbitmap = amroutine->amgetbitmap != NULL &&
 				relation->rd_tableam->scan_bitmap_next_block != NULL;
+			info->amcanmarkpos = (amroutine->ammarkpos != NULL &&
+								  amroutine->amrestrpos != NULL);
 			info->amcostestimate = amroutine->amcostestimate;
 			Assert(info->amcostestimate != NULL);
 
@@ -611,7 +628,12 @@ cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
 	 * pages added since the last VACUUM are most likely not marked
 	 * all-visible.  But costsize.c wants it converted to a fraction.
 	 */
-	if (relallvisible == 0 || curpages <= 0)
+	if (RelationAMIsAO(rel))
+	{
+		/* see appendonly_estimate_rel_size()/aoco_estimate_rel_size() */
+		*allvisfrac = 1;
+	}
+	else if (relallvisible == 0 || curpages <= 0)
 		*allvisfrac = 0;
 	else if ((double) relallvisible >= curpages)
 		*allvisfrac = 1;
@@ -1515,6 +1537,79 @@ get_relation_constraints(PlannerInfo *root,
 	table_close(relation, NoLock);
 
 	return result;
+}
+
+/*
+ * GetExtStatisticsName
+ *		Retrieve the name of an extended statistic object
+ */
+char *
+GetExtStatisticsName(Oid statOid)
+{
+	Form_pg_statistic_ext staForm;
+	HeapTuple	htup;
+
+	htup = SearchSysCache1(STATEXTOID, ObjectIdGetDatum(statOid));
+	if (!HeapTupleIsValid(htup))
+		elog(ERROR, "cache lookup failed for statistics object %u", statOid);
+
+	staForm = (Form_pg_statistic_ext) GETSTRUCT(htup);
+	ReleaseSysCache(htup);
+	return NameStr(staForm->stxname);
+}
+
+/*
+ *	GetExtStatisticsKinds
+ *
+ * Retrieve the kinds of an extended statistic object
+ */
+List *
+GetExtStatisticsKinds(Oid statOid)
+{
+	Form_pg_statistic_ext staForm;
+	HeapTuple	htup;
+	Datum		datum;
+	bool		isnull;
+	ArrayType  *arr;
+	char	   *enabled;
+
+	List	  *types = NULL;
+	int			i;
+
+	htup = SearchSysCache1(STATEXTOID, ObjectIdGetDatum(statOid));
+	if (!HeapTupleIsValid(htup))
+		elog(ERROR, "cache lookup failed for statistics object %u", statOid);
+
+	staForm = (Form_pg_statistic_ext) GETSTRUCT(htup);
+
+	datum = SysCacheGetAttr(STATEXTOID, htup,
+							Anum_pg_statistic_ext_stxkind, &isnull);
+	arr = DatumGetArrayTypeP(datum);
+	if (ARR_NDIM(arr) != 1 ||
+		ARR_HASNULL(arr) ||
+		ARR_ELEMTYPE(arr) != CHAROID)
+		elog(ERROR, "stxkind is not a 1-D char array");
+	enabled = (char *) ARR_DATA_PTR(arr);
+	for (i = 0; i < ARR_DIMS(arr)[0]; i++)
+	{
+		types = lappend_int(types, (int) enabled[i]);
+	}
+
+	ReleaseSysCache(htup);
+
+	return types;
+}
+
+/*
+ * GetRelationExtStatistics
+ *		GPDB: Interface to get_relation_statistics.
+ *
+ * Used by ORCA to access function without PLANNER objects (e.g. RelOptInfo).
+ */
+List *
+GetRelationExtStatistics(Relation relation)
+{
+	return get_relation_statistics(NULL, relation);
 }
 
 /*

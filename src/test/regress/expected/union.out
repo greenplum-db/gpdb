@@ -1,3 +1,4 @@
+set optimizer_trace_fallback = on;
 --
 -- UNION (also INTERSECT, EXCEPT)
 --
@@ -1121,3 +1122,4 @@ where (x = 0) or (q1 >= q2 and q1 <= q2);
  4567890123456789 |  4567890123456789 | 1
 (6 rows)
 
+reset optimizer_trace_fallback;

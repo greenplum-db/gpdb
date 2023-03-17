@@ -5,7 +5,8 @@ Changes the ownership of database objects owned by a database role.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-REASSIGN OWNED BY <old_role> [, ...] TO <new_role>
+REASSIGN OWNED BY { <old_role> | CURRENT_USER | SESSION_USER } [, ...]
+               TO { <new_role> | CURRENT_USER | SESSION_USER }
 ```
 
 ## <a id="section3"></a>Description 
@@ -26,7 +27,7 @@ new\_role
 
 `REASSIGN OWNED` requires privileges on both the source role\(s\) and the target role.
 
-The [`DROP OWNED`](DROP_OWNED.html) command is an alternative that simply drops all of the database objects owned by one or more roles. `DROP OWNED` requires privileges only on the source role\(s\).
+The [DROP OWNED](DROP_OWNED.html) command is an alternative that simply drops all of the database objects owned by one or more roles.
 
 The `REASSIGN OWNED` command does not affect any privileges granted to the old\_roles on objects that are not owned by them. Likewise, it does not affect default privileges created with `ALTER DEFAULT PRIVILEGES`. Use `DROP OWNED` to revoke such privileges.
 

@@ -1,6 +1,7 @@
 --
 -- WINDOW FUNCTIONS
 --
+SET optimizer_trace_fallback=on;
 CREATE TEMPORARY TABLE empsalary (
     depname varchar,
     empno bigint,
@@ -1177,6 +1178,8 @@ SELECT * FROM v_window;
 (10 rows)
 
 SELECT pg_get_viewdef('v_window');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
                                     pg_get_viewdef                                     
 ---------------------------------------------------------------------------------------
   SELECT i.i,                                                                         +
@@ -1204,6 +1207,8 @@ SELECT * FROM v_window;
 (10 rows)
 
 SELECT pg_get_viewdef('v_window');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
                                               pg_get_viewdef                                               
 -----------------------------------------------------------------------------------------------------------
   SELECT i.i,                                                                                             +
@@ -1230,6 +1235,8 @@ SELECT * FROM v_window;
 (10 rows)
 
 SELECT pg_get_viewdef('v_window');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
                                            pg_get_viewdef                                            
 -----------------------------------------------------------------------------------------------------
   SELECT i.i,                                                                                       +
@@ -1256,6 +1263,8 @@ SELECT * FROM v_window;
 (10 rows)
 
 SELECT pg_get_viewdef('v_window');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
                                            pg_get_viewdef                                           
 ----------------------------------------------------------------------------------------------------
   SELECT i.i,                                                                                      +
@@ -1282,6 +1291,8 @@ SELECT * FROM v_window;
 (10 rows)
 
 SELECT pg_get_viewdef('v_window');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
                                     pg_get_viewdef                                     
 ---------------------------------------------------------------------------------------
   SELECT i.i,                                                                         +
@@ -1307,6 +1318,8 @@ SELECT * FROM v_window;
 (10 rows)
 
 SELECT pg_get_viewdef('v_window');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
                                      pg_get_viewdef                                      
 -----------------------------------------------------------------------------------------
   SELECT i.i,                                                                           +
@@ -1319,6 +1332,8 @@ CREATE TEMP VIEW v_window AS
 	SELECT i, min(i) over (order by i range between '1 day' preceding and '10 days' following) as min_i
   FROM generate_series(now(), now()+'100 days'::interval, '1 hour') i;
 SELECT pg_get_viewdef('v_window');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
                                                       pg_get_viewdef                                                       
 ---------------------------------------------------------------------------------------------------------------------------
   SELECT i.i,                                                                                                             +
@@ -2843,6 +2858,8 @@ WINDOW w AS (ORDER BY x groups between 1 preceding and 1 following);
 
 -- with UNION
 SELECT count(*) OVER (PARTITION BY four) FROM (SELECT * FROM tenk1 UNION ALL SELECT * FROM tenk2)s LIMIT 0;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
  count 
 -------
 (0 rows)
@@ -2867,10 +2884,10 @@ from t1 where f1 = f2;
          Partition By: f1
          Order By: f2
          ->  Sort
-               Sort Key: f1
+               Sort Key: f1, f2
                ->  Seq Scan on t1
                      Filter: (f1 = f2)
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (9 rows)
 
 select f1, sum(f1) over (partition by f1 order by f2
@@ -2917,10 +2934,10 @@ from t1 where f1 = f2;
          Partition By: f1
          Order By: f2
          ->  Sort
-               Sort Key: f1
+               Sort Key: f1, f2
                ->  Seq Scan on t1
                      Filter: (f1 = f2)
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (9 rows)
 
 select f1, sum(f1) over (partition by f1 order by f2
@@ -3021,6 +3038,8 @@ SELECT sum(salary), row_number() OVER (ORDER BY depname), sum(
 ) FILTER (WHERE depname <> 'sales') OVER (ORDER BY depname DESC) AS "filtered_sum",
     depname
 FROM empsalary GROUP BY depname;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Aggregate functions with FILTER
   sum  | row_number | filtered_sum |  depname  
 -------+------------+--------------+-----------
  25100 |          1 |        22600 | develop
@@ -3039,7 +3058,7 @@ SELECT * FROM
 WHERE depname = 'sales';
                                    QUERY PLAN                                    
 ---------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
+ Gather Motion 1:1  (slice1; segments: 1)
    ->  WindowAgg
          Partition By: (((depname)::text || 'A'::text)), depname
          ->  Sort
@@ -3118,7 +3137,7 @@ SELECT * FROM
 WHERE depname = 'sales';
                                 QUERY PLAN                                 
 ---------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
+ Gather Motion 1:1  (slice1; segments: 1)
    ->  WindowAgg
          Partition By: depname, empno
          Order By: enroll_date
@@ -3275,6 +3294,22 @@ FROM (VALUES
 ) AS t(p, i, v)
 WINDOW wnd AS (PARTITION BY P ORDER BY i ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)
 ORDER BY p, i;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
    row    |                    nstrict                    |                  nstrict_init                   |  strict   |  strict_init   
 ----------+-----------------------------------------------+-------------------------------------------------+-----------+----------------
  1,1:NULL | +NULL                                         | MI+NULL                                         |           | MI
@@ -3309,6 +3344,14 @@ FROM (VALUES
 ) AS t(p, i, f, v)
 WINDOW wnd AS (PARTITION BY p ORDER BY i ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)
 ORDER BY p, i;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Aggregate functions with FILTER
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
    row    | nstrict_filt | nstrict_init_filt | strict_filt | strict_init_filt 
 ----------+--------------+-------------------+-------------+------------------
  1,1:NULL | +NULL        | MI+NULL           |             | MI
@@ -3336,6 +3379,12 @@ FROM (VALUES
 ) AS t(i, v)
 WINDOW wnd AS (ORDER BY i ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)
 ORDER BY i;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
  row |    inverse    | noinverse 
 -----+---------------+-----------
  1:a | a             | a
@@ -3356,6 +3405,14 @@ FROM (VALUES
 ) AS t(i, v)
 WINDOW wnd AS (ORDER BY i ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)
 ORDER BY i;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Aggregate functions with FILTER
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
  row |    inverse    | noinverse 
 -----+---------------+-----------
  1:a | a             | a
@@ -3521,6 +3578,14 @@ JOIN sum_following ON sum_following.i = vs.i
 WINDOW fwd AS (
 	ORDER BY vs.i ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING
 );
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  eq1 | eq2 | eq3 
 -----+-----+-----
  t   | t   | t
@@ -4013,3 +4078,45 @@ SELECT i, b, bool_and(b) OVER w, bool_or(b) OVER w
  5 | t | t        | t
 (5 rows)
 
+-- Tests for problems with failure to walk or mutate expressions
+-- within window frame clauses.
+-- test walker (fails with collation error if expressions are not walked)
+SELECT array_agg(i) OVER w
+  FROM generate_series(1,5) i
+WINDOW w AS (ORDER BY i ROWS BETWEEN (('foo' < 'foobar')::integer) PRECEDING AND CURRENT ROW);
+ array_agg 
+-----------
+ {1}
+ {1,2}
+ {2,3}
+ {3,4}
+ {4,5}
+(5 rows)
+
+-- test mutator (fails when inlined if expressions are not mutated)
+CREATE FUNCTION pg_temp.f(group_size BIGINT) RETURNS SETOF integer[]
+AS $$
+    SELECT array_agg(s) OVER w
+      FROM generate_series(1,5) s
+    WINDOW w AS (ORDER BY s ROWS BETWEEN CURRENT ROW AND GROUP_SIZE FOLLOWING)
+$$ LANGUAGE SQL STABLE;
+EXPLAIN (costs off) SELECT * FROM pg_temp.f(2);
+              QUERY PLAN               
+---------------------------------------
+ Function Scan on f
+ Optimizer: Pivotal Optimizer (GPORCA)
+(2 rows)
+
+SELECT * FROM pg_temp.f(2);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+    f    
+---------
+ {1,2,3}
+ {2,3,4}
+ {3,4,5}
+ {4,5}
+ {5}
+(5 rows)
+
+RESET optimizer_trace_fallback;

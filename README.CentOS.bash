@@ -30,7 +30,6 @@ sudo yum install -y \
     postgresql \
     postgresql-devel
 
-sudo pip3 install conan
 sudo pip3 install -r python-dependencies.txt
 
 sudo tee -a /etc/sysctl.conf << EOF

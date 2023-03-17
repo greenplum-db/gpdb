@@ -21,6 +21,8 @@
 #include "gpopt/engine/CStatisticsConfig.h"
 #include "gpopt/mdcache/CMDKey.h"
 #include "naucrates/md/CSystemId.h"
+#include "naucrates/md/IMDExtStats.h"
+#include "naucrates/md/IMDExtStatsInfo.h"
 #include "naucrates/md/IMDFunction.h"
 #include "naucrates/md/IMDId.h"
 #include "naucrates/md/IMDProvider.h"
@@ -37,10 +39,8 @@ namespace gpmd
 {
 class IMDCacheObject;
 class IMDRelation;
-class IMDRelationExternal;
 class IMDScalarOp;
 class IMDAggregate;
-class IMDTrigger;
 class IMDIndex;
 class IMDCheckConstraint;
 class IMDProvider;
@@ -223,7 +223,8 @@ private:
 	CDouble m_dFetchTime;
 
 	// interface to a MD cache object
-	const IMDCacheObject *GetImdObj(IMDId *mdid);
+	const IMDCacheObject *GetImdObj(IMDId *mdid,
+									IMDCacheObject::Emdtype mdtype);
 
 	// return the type corresponding to the given type info and source system id
 	const IMDType *RetrieveType(CSystemId sysid, IMDType::ETypeInfo type_info);
@@ -294,6 +295,12 @@ public:
 	void RegisterProviders(const CSystemIdArray *pdrgpsysid,
 						   const CMDProviderArray *pdrgpmdp);
 
+	// interface to an extended stats object from the MD cache
+	const IMDExtStats *RetrieveExtStats(IMDId *mdid);
+
+	// interface to an extended stats metadata object from the MD cache
+	const IMDExtStatsInfo *RetrieveExtStatsInfo(IMDId *mdid);
+
 	// interface to a relation object from the MD cache
 	const IMDRelation *RetrieveRel(IMDId *mdid);
 
@@ -331,9 +338,6 @@ public:
 
 	// interface to an aggregate from the MD cache
 	const IMDAggregate *RetrieveAgg(IMDId *mdid);
-
-	// interface to a trigger from the MD cache
-	const IMDTrigger *RetrieveTrigger(IMDId *mdid);
 
 	// interface to an index from the MD cache
 	const IMDIndex *RetrieveIndex(IMDId *mdid);

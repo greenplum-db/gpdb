@@ -54,8 +54,7 @@ CXformSelect2DynamicBitmapBoolOp::CXformSelect2DynamicBitmapBoolOp(
 //
 //---------------------------------------------------------------------------
 CXform::EXformPromise
-CXformSelect2DynamicBitmapBoolOp::Exfp(CExpressionHandle &	// exprhdl
-) const
+CXformSelect2DynamicBitmapBoolOp::Exfp(CExpressionHandle &) const
 {
 	return CXform::ExfpHigh;
 }
@@ -77,6 +76,13 @@ CXformSelect2DynamicBitmapBoolOp::Transform(CXformContext *pxfctxt,
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
+	CLogicalDynamicGet *popGet =
+		CLogicalDynamicGet::PopConvert((*pexpr)[0]->Pop());
+	// Do not run if contains foreign partitions, instead run CXformExpandDynamicGetWithForeignPartitions
+	if (popGet->ContainsForeignParts())
+	{
+		return;
+	}
 	CMemoryPool *mp = pxfctxt->Pmp();
 	CExpression *pexprResult = CXformUtils::PexprSelect2BitmapBoolOp(mp, pexpr);
 

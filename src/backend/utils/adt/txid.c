@@ -30,6 +30,7 @@
 #include "libpq/pqformat.h"
 #include "postmaster/postmaster.h"
 #include "storage/lwlock.h"
+#include "storage/procarray.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
 #include "utils/snapmgr.h"
@@ -106,7 +107,7 @@ load_xid_epoch(TxidEpoch *state)
  * to the low 32 bits of the transaction ID (i.e. the actual XID, without the
  * epoch).
  *
- * The caller must hold CLogTruncationLock since it's dealing with arbitrary
+ * The caller must hold XactTruncationLock since it's dealing with arbitrary
  * XIDs, and must continue to hold it until it's done with any clog lookups
  * relating to those XIDs.
  */
@@ -141,13 +142,13 @@ TransactionIdInRecentPast(uint64 xid_with_epoch, TransactionId *extracted_xid)
 						psprintf(UINT64_FORMAT, xid_with_epoch))));
 
 	/*
-	 * ShmemVariableCache->oldestClogXid is protected by CLogTruncationLock,
+	 * ShmemVariableCache->oldestClogXid is protected by XactTruncationLock,
 	 * but we don't acquire that lock here.  Instead, we require the caller to
 	 * acquire it, because the caller is presumably going to look up the
 	 * returned XID.  If we took and released the lock within this function, a
 	 * CLOG truncation could occur before the caller finished with the XID.
 	 */
-	Assert(LWLockHeldByMe(CLogTruncationLock));
+	Assert(LWLockHeldByMe(XactTruncationLock));
 
 	/*
 	 * If the transaction ID has wrapped around, it's definitely too old to
@@ -754,41 +755,34 @@ txid_status(PG_FUNCTION_ARGS)
 	 * We must protect against concurrent truncation of clog entries to avoid
 	 * an I/O error on SLRU lookup.
 	 */
-	LWLockAcquire(CLogTruncationLock, LW_SHARED);
+	LWLockAcquire(XactTruncationLock, LW_SHARED);
 	if (TransactionIdInRecentPast(xid_with_epoch, &xid))
 	{
 		Assert(TransactionIdIsValid(xid));
 
-		if (TransactionIdIsCurrentTransactionId(xid))
+		/*
+		 * Like when doing visiblity checks on a row, check whether the
+		 * transaction is still in progress before looking into the CLOG.
+		 * Otherwise we would incorrectly return "committed" for a transaction
+		 * that is committing and has already updated the CLOG, but hasn't
+		 * removed its XID from the proc array yet. (See comment on that race
+		 * condition at the top of heapam_visibility.c)
+		 */
+		if (TransactionIdIsInProgress(xid))
 			status = "in progress";
 		else if (TransactionIdDidCommit(xid))
 			status = "committed";
-		else if (TransactionIdDidAbort(xid))
-			status = "aborted";
 		else
 		{
-			/*
-			 * The xact is not marked as either committed or aborted in clog.
-			 *
-			 * It could be a transaction that ended without updating clog or
-			 * writing an abort record due to a crash. We can safely assume
-			 * it's aborted if it isn't committed and is older than our
-			 * snapshot xmin.
-			 *
-			 * Otherwise it must be in-progress (or have been at the time we
-			 * checked commit/abort status).
-			 */
-			if (TransactionIdPrecedes(xid, GetActiveSnapshot()->xmin))
-				status = "aborted";
-			else
-				status = "in progress";
+			/* it must have aborted or crashed */
+			status = "aborted";
 		}
 	}
 	else
 	{
 		status = NULL;
 	}
-	LWLockRelease(CLogTruncationLock);
+	LWLockRelease(XactTruncationLock);
 
 	if (status == NULL)
 		PG_RETURN_NULL();

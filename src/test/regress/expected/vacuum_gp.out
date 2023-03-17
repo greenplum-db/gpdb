@@ -41,10 +41,6 @@ create index aocs_empty_a on aocs_empty(a);
  a      | integer           |           |          | 
  b      | integer           |           |          | 
  c      | character varying |           |          | 
-Compression Type: None
-Compression Level: 0
-Block Size: 32768
-Checksum: t
 Indexes:
     "ao_empty_a" btree (a)
 Distributed by: (a)
@@ -56,7 +52,6 @@ Distributed by: (a)
  a      | integer           |           |          | 
  b      | integer           |           |          | 
  c      | character varying |           |          | 
-Checksum: t
 Indexes:
     "aocs_empty_a" btree (a)
 Distributed by: (a)
@@ -215,10 +210,6 @@ from pg_class where oid in (select reltoastrelid from pg_class
  a      | integer           |           |          | 
  b      | integer           |           |          | 
  c      | character varying |           |          | 
-Compression Type: None
-Compression Level: 0
-Block Size: 32768
-Checksum: t
 Indexes:
     "ao_empty_a" btree (a)
 Distributed by: (a)
@@ -230,7 +221,6 @@ Distributed by: (a)
  a      | integer           |           |          | 
  b      | integer           |           |          | 
  c      | character varying |           |          | 
-Checksum: t
 Indexes:
     "aocs_empty_a" btree (a)
 Distributed by: (a)
@@ -270,7 +260,6 @@ vacuum full ao_t1;
 drop table ao_t1;
 -- superuser must be able to vacuum analyze the table
 CREATE ROLE r_priv_test;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE SCHEMA s_priv_test;
 CREATE TABLE s_priv_test.t_priv_table(a INT);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.

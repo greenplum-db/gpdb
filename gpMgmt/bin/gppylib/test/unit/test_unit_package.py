@@ -183,7 +183,7 @@ class SyncPackagesTestCase(GpTestCase):
             patch('gppylib.operations.package.MakeDir'),
             patch('gppylib.operations.package.CheckRemoteDir'),
             patch('gppylib.operations.package.MakeRemoteDir'),
-            patch('gppylib.operations.package.Scp'),
+            patch('gppylib.operations.package.Rsync'),
             patch('gppylib.operations.package.RemoteOperation'),
             patch('gppylib.operations.package.RemoveRemoteFile'),
             patch('gppylib.operations.package.InstallPackageLocally'),
@@ -199,7 +199,7 @@ class SyncPackagesTestCase(GpTestCase):
         self.mock_listdir = self.get_mock_from_apply_patch('listdir')
         self.mock_command = self.get_mock_from_apply_patch('Command')
         self.mock_logger = self.get_mock_from_apply_patch('logger')
-        self.mock_scp = self.get_mock_from_apply_patch('Scp')
+        self.mock_rsync = self.get_mock_from_apply_patch('Rsync')
         self.mock_install_packages_locally = self.get_mock_from_apply_patch('InstallPackageLocally')
 
 
@@ -228,7 +228,7 @@ class SyncPackagesTestCase(GpTestCase):
         hostname = 'localhost'
         subject = SyncPackages(hostname)
         subject.execute()
-        self.assertEqual(self.mock_scp.call_count, 2)
+        self.assertEqual(self.mock_rsync.call_count, 2)
         self.assertEqual(self.make_dir_mock.call_count, 1)
         self.assertEqual(self.make_remote_dir_mock.call_count, 1)
 

@@ -541,6 +541,10 @@ _readAExpr(void)
 
 			READ_NODE_FIELD(name);
 			break;
+		case AEXPR_NOT_DISTINCT:
+
+			READ_NODE_FIELD(name);
+			break;
 		case AEXPR_NULLIF:
 
 			READ_NODE_FIELD(name);
@@ -972,7 +976,7 @@ _readExternalScanInfo(void)
 
 	READ_NODE_FIELD(uriList);
 	READ_CHAR_FIELD(fmtType);
-	READ_BOOL_FIELD(isMasterOnly);
+	READ_BOOL_FIELD(isCoordinatorOnly);
 	READ_INT_FIELD(rejLimit);
 	READ_BOOL_FIELD(rejLimitInRows);
 	READ_CHAR_FIELD(logErrors);
@@ -1811,6 +1815,9 @@ readNodeBinary(void)
 			case T_ForeignScan:
 				return_value = _readForeignScan();
 				break;
+			case T_DynamicForeignScan:
+				return_value = _readDynamicForeignScan();
+				break;
 			case T_CustomScan:
 				return_value = _readCustomScan();
 				break;
@@ -2212,6 +2219,9 @@ readNodeBinary(void)
 			case T_ReplicaIdentityStmt:
 				return_value = _readReplicaIdentityStmt();
 				break;
+			case T_AlterDatabaseStmt:
+				return_value = _readAlterDatabaseStmt();
+			break;
 			case T_AlterTableStmt:
 				return_value = _readAlterTableStmt();
 				break;

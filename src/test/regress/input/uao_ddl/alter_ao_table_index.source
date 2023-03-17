@@ -51,6 +51,3 @@ select relfrozenxid from pg_class c, pg_namespace n where
 select relfrozenxid from gp_dist_random('pg_class') c, pg_namespace n where
        c.relnamespace = n.oid and relname = 'sto_alt_uao3_idx'
        and n.nspname = 'alter_ao_table_index_@amname@';
-
--- Verify that unique index is not allowed
-CREATE UNIQUE INDEX uni_index ON sto_alt_uao3_idx (text_col);

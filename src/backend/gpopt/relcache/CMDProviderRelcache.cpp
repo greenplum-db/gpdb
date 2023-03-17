@@ -27,52 +27,21 @@ using namespace gpos;
 using namespace gpdxl;
 using namespace gpmd;
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CMDProviderRelcache::CMDProviderRelcache
-//
-//	@doc:
-//		Constructs a file-based metadata provider
-//
-//---------------------------------------------------------------------------
-CMDProviderRelcache::CMDProviderRelcache(CMemoryPool *mp) : m_mp(mp)
-{
-	GPOS_ASSERT(nullptr != m_mp);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CMDProviderRelcache::GetMDObjDXLStr
-//
-//	@doc:
-//		Returns the DXL of the requested object in the provided memory pool
-//
-//---------------------------------------------------------------------------
 CWStringBase *
 CMDProviderRelcache::GetMDObjDXLStr(CMemoryPool *mp, CMDAccessor *md_accessor,
 									IMDId *md_id) const
 {
-	IMDCacheObject *md_obj =
-		CTranslatorRelcacheToDXL::RetrieveObject(mp, md_accessor, md_id);
-
-	GPOS_ASSERT(nullptr != md_obj);
-
-	CWStringDynamic *str = CDXLUtils::SerializeMDObj(
-		m_mp, md_obj, true /*fSerializeHeaders*/, false /*findent*/);
-
-	// cleanup DXL object
-	md_obj->Release();
-
-	return str;
+	// not used
+	return nullptr;
 }
 
 // return the requested metadata object
 IMDCacheObject *
 CMDProviderRelcache::GetMDObj(CMemoryPool *mp, CMDAccessor *md_accessor,
-							  IMDId *mdid) const
+							  IMDId *mdid, IMDCacheObject::Emdtype mdtype) const
 {
 	IMDCacheObject *md_obj =
-		CTranslatorRelcacheToDXL::RetrieveObject(mp, md_accessor, mdid);
+		CTranslatorRelcacheToDXL::RetrieveObject(mp, md_accessor, mdid, mdtype);
 	GPOS_ASSERT(nullptr != md_obj);
 
 	return md_obj;

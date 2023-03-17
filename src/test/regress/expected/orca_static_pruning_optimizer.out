@@ -22,7 +22,7 @@ EXPLAIN (COSTS OFF, VERBOSE)
    Output: a, b, c
    ->  Dynamic Seq Scan on orca_static_pruning.rp
          Output: a, b, c
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 3)
          Filter: (rp.b > 4200)
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: optimizer=on
@@ -47,7 +47,7 @@ EXPLAIN (COSTS OFF, VERBOSE)
    Output: a, b, c
    ->  Dynamic Seq Scan on orca_static_pruning.rp
          Output: a, b, c
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 3)
          Filter: (rp.b = 4201)
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: optimizer=on
@@ -72,7 +72,7 @@ EXPLAIN (COSTS OFF, VERBOSE)
    Output: a, b, c
    ->  Dynamic Seq Scan on orca_static_pruning.rp
          Output: a, b, c
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 3)
          Filter: (rp.b = ANY ('{4201,4200}'::integer[]))
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: optimizer=on
@@ -107,7 +107,7 @@ EXPLAIN (COSTS OFF, VERBOSE)
    Output: a, b
    ->  Dynamic Seq Scan on orca_static_pruning.lp
          Output: a, b
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 3)
          Filter: (lp.b > 42)
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: optimizer=on
@@ -131,7 +131,7 @@ EXPLAIN (COSTS OFF, VERBOSE)
    Output: a, b
    ->  Dynamic Seq Scan on orca_static_pruning.lp
          Output: a, b
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 3)
          Filter: (lp.b = 42)
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: optimizer=on
@@ -205,7 +205,7 @@ EXPLAIN (COSTS OFF, VERBOSE) SELECT * FROM rp_multi_inds WHERE b = 11 AND (c = 1
    Output: a, b, c
    ->  Dynamic Bitmap Heap Scan on orca_static_pruning.rp_multi_inds
          Output: a, b, c
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 3)
          Recheck Cond: (((rp_multi_inds.c = 11) OR (rp_multi_inds.c = 4201)) AND (rp_multi_inds.b = 11))
          Filter: (((rp_multi_inds.c = 11) OR (rp_multi_inds.c = 4201)) AND (rp_multi_inds.b = 11))
          ->  BitmapAnd
@@ -259,7 +259,7 @@ EXPLAIN (COSTS OFF, VERBOSE) SELECT * FROM foo JOIN bar on foo.a = bar.a AND foo
                Output: foo.a, foo.b
                Index Cond: (foo.a = bar.a)
                Filter: ((foo.a = bar.a) AND (foo.b = 11))
-               Number of partitions to scan: 1 
+               Number of partitions to scan: 1 (out of 3)
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: enable_hashjoin=off, enable_mergejoin=off, enable_nestloop=on, optimizer=on
 (14 rows)
@@ -302,7 +302,7 @@ EXPLAIN (COSTS OFF, VERBOSE) INSERT INTO rp_insert SELECT * FROM rp_insert;
  Insert on orca_static_pruning.rp_insert
    ->  Dynamic Seq Scan on orca_static_pruning.rp_insert rp_insert_1
          Output: rp_insert_1.a, rp_insert_1.b
-         Number of partitions to scan: 2 
+         Number of partitions to scan: 2 (out of 2)
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: optimizer=on
 (6 rows)

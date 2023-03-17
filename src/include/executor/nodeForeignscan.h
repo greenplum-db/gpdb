@@ -18,6 +18,8 @@
 #include "nodes/execnodes.h"
 
 extern ForeignScanState *ExecInitForeignScan(ForeignScan *node, EState *estate, int eflags);
+extern ForeignScanState *ExecInitForeignScanForPartition(ForeignScan *node, EState *estate, int eflags,
+													 Relation currentRelation);
 extern void ExecEndForeignScan(ForeignScanState *node);
 extern void ExecReScanForeignScan(ForeignScanState *node);
 

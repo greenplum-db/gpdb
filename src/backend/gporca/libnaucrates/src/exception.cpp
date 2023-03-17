@@ -119,10 +119,10 @@ gpdxl::EresExceptionInit(CMemoryPool *mp)
 			GPOS_WSZ_WSZLEN("DXL-to-PlStmt Translation not supported")),
 
 		CMessage(
-			CException(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtExternalScanError),
-			CException::ExsevError, GPOS_WSZ_WSZLEN("External scan error: %ls"),
+			CException(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtForeignScanError),
+			CException::ExsevError, GPOS_WSZ_WSZLEN("Foreign scan error: %ls"),
 			1,	//
-			GPOS_WSZ_WSZLEN("External scan error")),
+			GPOS_WSZ_WSZLEN("Foreign scan error")),
 
 		CMessage(
 			CException(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLAttributeNotFound),

@@ -106,9 +106,9 @@ InsertInitialSegnoEntry(Relation parentrel, int segno)
 	ValidateAppendonlySegmentDataBeforeStorage(segno);
 
 	/* New segments are always created in the latest format */
-	formatVersion = AORelationVersion_GetLatest();
+	formatVersion = AOSegfileFormatVersion_GetLatest();
 
-	GetAppendOnlyEntryAuxOids(parentrel->rd_id, NULL, &segrelid, NULL, NULL, NULL, NULL);
+	GetAppendOnlyEntryAuxOids(parentrel, &segrelid, NULL, NULL);
 
 	pg_aoseg_rel = heap_open(segrelid, RowExclusiveLock);
 
@@ -185,7 +185,7 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 	FileSegInfo *fsinfo;
 	Oid segrelid;
 
-	GetAppendOnlyEntryAuxOids(parentrel->rd_id, NULL, &segrelid, NULL, NULL, NULL, NULL);
+	GetAppendOnlyEntryAuxOids(parentrel, &segrelid, NULL, NULL);
 
 	/*
 	 * Check the pg_aoseg relation to be certain the ao table segment file is
@@ -298,7 +298,7 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("got invalid formatversion value: NULL")));
-	AORelationVersion_CheckValid(fsinfo->formatversion);
+	AOSegfileFormatVersion_CheckValid(fsinfo->formatversion);
 
 	/* get the state */
 	fsinfo->state = DatumGetInt16(
@@ -351,7 +351,7 @@ GetAllFileSegInfo(Relation parentrel,
 	FileSegInfo **result;
 	Oid segrelid;
 
-	GetAppendOnlyEntryAuxOids(parentrel->rd_id, NULL, &segrelid, NULL, NULL, NULL, NULL);
+	GetAppendOnlyEntryAuxOids(parentrel, &segrelid, NULL, NULL);
 
 	if (segrelid == InvalidOid)
 		elog(ERROR, "could not find pg_aoseg aux table for AO table \"%s\"",
@@ -373,7 +373,6 @@ GetAllFileSegInfo(Relation parentrel,
 
 	return result;
 }
-
 
 /*
  * The comparison routine that sorts an array of FileSegInfos
@@ -490,7 +489,7 @@ GetAllFileSegInfo_pg_aoseg_rel(char *relationName,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("got invalid formatversion value: NULL")));
 
-		AORelationVersion_CheckValid(formatversion);
+		AOSegfileFormatVersion_CheckValid(formatversion);
 		oneseginfo->formatversion = DatumGetInt16(formatversion);
 
 		/* get the state */
@@ -615,7 +614,7 @@ ClearFileSegInfo(Relation parentrel, int segno)
 	bool		isNull;
 	Oid segrelid;
 
-	GetAppendOnlyEntryAuxOids(parentrel->rd_id, NULL, &segrelid, NULL, NULL, NULL, NULL);
+	GetAppendOnlyEntryAuxOids(parentrel, &segrelid, NULL, NULL);
 
 	Assert(RelationIsAoRows(parentrel));
 
@@ -661,7 +660,7 @@ ClearFileSegInfo(Relation parentrel, int segno)
 	new_record_repl[Anum_pg_aoseg_eofuncompressed - 1] = true;
 
 	/* When the segment is later recreated, it will be in new format */
-	new_record[Anum_pg_aoseg_formatversion - 1] = Int16GetDatum(AORelationVersion_GetLatest());
+	new_record[Anum_pg_aoseg_formatversion - 1] = Int16GetDatum(AOSegfileFormatVersion_GetLatest());
 	new_record_repl[Anum_pg_aoseg_formatversion - 1] = true;
 
 	/* We do not reset the modcount here */
@@ -753,7 +752,7 @@ UpdateFileSegInfo_internal(Relation parentrel,
 	bool		isNull;
 	Oid segrelid;
 
-	GetAppendOnlyEntryAuxOids(parentrel->rd_id, NULL, &segrelid, NULL, NULL, NULL, NULL);
+	GetAppendOnlyEntryAuxOids(parentrel, &segrelid, NULL, NULL);
 
 	Assert(RelationIsAoRows(parentrel));
 	Assert(newState >= AOSEG_STATE_USECURRENT && newState <= AOSEG_STATE_AWAITING_DROP);
@@ -960,7 +959,7 @@ GetSegFilesTotals(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot)
 
 	result = (FileSegTotals *) palloc0(sizeof(FileSegTotals));
 
-	GetAppendOnlyEntryAuxOids(parentrel->rd_id, NULL, &segrelid, NULL, NULL, NULL, NULL);
+	GetAppendOnlyEntryAuxOids(parentrel, &segrelid, NULL, NULL);
 
 	if (segrelid == InvalidOid)
 		elog(ERROR, "could not find pg_aoseg aux table for AO table \"%s\"",
@@ -1079,7 +1078,7 @@ gp_aoseg_history(PG_FUNCTION_ARGS)
 					 errmsg("'%s' is not an append-only row relation",
 							RelationGetRelationName(aocsRel))));
 
-		GetAppendOnlyEntryAuxOids(aocsRel->rd_id, NULL, &segrelid, NULL, NULL, NULL, NULL);
+		GetAppendOnlyEntryAuxOids(aocsRel, &segrelid, NULL, NULL);
 
 		pg_aoseg_rel = table_open(segrelid, AccessShareLock);
 
@@ -1231,7 +1230,7 @@ gp_aoseg(PG_FUNCTION_ARGS)
 					 errmsg("'%s' is not an append-only row relation",
 							RelationGetRelationName(aocsRel))));
 
-		GetAppendOnlyEntryAuxOids(aocsRel->rd_id, NULL, &segrelid, NULL, NULL, NULL, NULL);
+		GetAppendOnlyEntryAuxOids(aocsRel, &segrelid, NULL, NULL);
 
 		pg_aoseg_rel = table_open(segrelid, AccessShareLock);
 
@@ -1381,8 +1380,8 @@ get_ao_distribution(PG_FUNCTION_ARGS)
 					 errmsg("'%s' is not an append-only relation",
 							RelationGetRelationName(parentrel))));
 
-		GetAppendOnlyEntryAuxOids(RelationGetRelid(parentrel), NULL,
-								  &segrelid, NULL, NULL, NULL, NULL);
+		GetAppendOnlyEntryAuxOids(parentrel,
+								  &segrelid, NULL, NULL);
 		Assert(OidIsValid(segrelid));
 
 		/*
@@ -1556,9 +1555,9 @@ aorow_compression_ratio_internal(Relation parentrel)
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
-	GetAppendOnlyEntryAuxOids(RelationGetRelid(parentrel), NULL,
+	GetAppendOnlyEntryAuxOids(parentrel,
 							  &segrelid,
-							  NULL, NULL, NULL, NULL);
+							  NULL, NULL);
 	Assert(OidIsValid(segrelid));
 
 	/*
@@ -1610,12 +1609,10 @@ aorow_compression_ratio_internal(Relation parentrel)
 
 			if (NULL == attr1 || NULL == attr2)
 			{
-				SPI_finish();
-				return 1;
+				compress_ratio = 1;
 			}
-
-			if (scanint8(attr1, true, &eof) &&
-				scanint8(attr2, true, &eof_uncomp))
+			else if (scanint8(attr1, true, &eof) &&
+					 scanint8(attr2, true, &eof_uncomp))
 			{
 				/* guard against division by zero */
 				if (eof > 0)
@@ -1626,6 +1623,12 @@ aorow_compression_ratio_internal(Relation parentrel)
 					/* format to 2 digit decimal precision */
 					compress_ratio = round(compress_ratio * 100.0) / 100.0;
 				}
+			}
+			else
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_INTERNAL_ERROR),
+						errmsg("unable to parse aorow compress_ratio string to int8.")));
 			}
 		}
 

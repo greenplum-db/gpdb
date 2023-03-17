@@ -11,7 +11,7 @@ With Greenplum Database, fault tolerance and data availability is achieved with:
 -   [Hardware level RAID storage protection](#raid)
 -   [Data storage checksums](#checksums)
 -   [Greenplum segment mirroring](#segment_mirroring)
--   [Master mirroring](#master_mirroring)
+-   [Coordinator mirroring](#master_mirroring)
 -   [Dual clusters](#dual_clusters)
 -   [Database backup and restore](#backup_restore)
 
@@ -25,7 +25,7 @@ Greenplum Database uses checksums to verify that data loaded from disk to memory
 
 Greenplum Database has two kinds of storage for user data: heap and append-optimized. Both storage models use checksums to verify data read from the file system and, with the default settings, they handle checksum verification errors in a similar way.
 
-Greenplum Database master and segment database processes update data on pages in the memory they manage. When a memory page is updated and flushed to disk, checksums are computed and saved with the page. When a page is later retrieved from disk, the checksums are verified and the page is only permitted to enter managed memory if the verification succeeds. A failed checksum verification is an indication of corruption in the file system and causes Greenplum Database to generate an error, cancelling the transaction.
+Greenplum Database coordinator and segment database processes update data on pages in the memory they manage. When a memory page is updated and flushed to disk, checksums are computed and saved with the page. When a page is later retrieved from disk, the checksums are verified and the page is only permitted to enter managed memory if the verification succeeds. A failed checksum verification is an indication of corruption in the file system and causes Greenplum Database to generate an error, cancelling the transaction.
 
 The default checksum settings provide the best level of protection from undetected disk corruption propagating into the database and to mirror segments.
 
@@ -39,7 +39,7 @@ You can check the read-only server configuration parameter [data\_checksums](../
 $ gpconfig -s data_checksums
 ```
 
-When a Greenplum Database cluster starts up, the `gpstart` utility checks that heap checksums are consistently enabled or deactivated on the master and all segments. If there are any differences, the cluster fails to start. See [gpstart](../../../utility_guide/ref/gpstart.html).
+When a Greenplum Database cluster starts up, the `gpstart` utility checks that heap checksums are consistently enabled or deactivated on the coordinator and all segments. If there are any differences, the cluster fails to start. See [gpstart](../../../utility_guide/ref/gpstart.html).
 
 In cases where it is necessary to ignore heap checksum verification errors so that data can be recovered, setting the [ignore\_checksum\_failure](../../../ref_guide/config_params/guc-list.html) system configuration parameter to on causes Greenplum Database to issue a warning when a heap checksum verification fails, but the page is then permitted to load into managed memory. If the page is updated and saved to disk, the corrupted data could be replicated to the mirror segment. Because this can lead to data loss, setting `ignore_checksum_failure` to on should only be done to enable data recovery.
 
@@ -60,11 +60,11 @@ Greenplum Database stores data in multiple segment instances, each of which is a
 
 The mirror instance for each segment is usually initialized with the `gpinitsystem` utility or the `gpexpand` utility. As a best practice, the mirror runs on a different host than the primary instance to protect from a single machine failure. There are different strategies for assigning mirrors to hosts. When choosing the layout of the primaries and mirrors, it is important to consider the failure scenarios to ensure that processing skew is minimized in the case of a single machine failure.
 
-## <a id="master_mirroring"></a>Master Mirroring 
+## <a id="master_mirroring"></a>Coordinator Mirroring 
 
-There are two master instances in a highly available cluster, a *primary* and a *standby*. As with segments, the master and standby should be deployed on different hosts so that the cluster can tolerate a single host failure. Clients connect to the primary master and queries can be run only on the primary master. The standby master is kept up to date with the primary master using Write-Ahead Logging \(WAL\)-based streaming replication. See [Overview of Master Mirroring](g-overview-of-master-mirroring.html).
+There are two coordinator instances in a highly available cluster, a *primary* and a *standby*. As with segments, the coordinator and standby should be deployed on different hosts so that the cluster can tolerate a single host failure. Clients connect to the primary coordinator and queries can be run only on the primary coordinator. The standby coordinator is kept up to date with the primary coordinator using Write-Ahead Logging \(WAL\)-based streaming replication. See [Overview of Coordinator Mirroring](g-overview-of-master-mirroring.html).
 
-If the master fails, the administrator runs the `gpactivatestandby` utility to have the standby master take over as the new primary master. You can configure a virtual IP address for the master and standby so that client programs do not have to switch to a different network address when the current master changes. If the master host fails, the virtual IP address can be swapped to the actual acting master.
+If the coordinator fails, the administrator runs the `gpactivatestandby` utility to have the standby coordinator take over as the new primary coordinator. You can configure a virtual IP address for the coordinator and standby so that client programs do not have to switch to a different network address when the current coordinator changes. If the coordinator host fails, the virtual IP address can be swapped to the actual acting coordinator.
 
 ## <a id="dual_clusters"></a>Dual Clusters 
 
@@ -88,11 +88,11 @@ Using a Greenplum Database storage plugin with the `gpbackup` and `gprestore` ut
 
 Using the Backup/Restore Storage Plugin API you can create a custom plugin that the `gpbackup` and `gprestore` utilities can use to integrate a custom backup storage system with the Greenplum Database.
 
-For information about using `gpbackup` and `gprestore`, see [VMware Tanzu Greenplum Backup and Restore Documentation](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/index.html).
+For information about using `gpbackup` and `gprestore`, see [VMware Greenplum Backup and Restore Documentation](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/index.html).
 
 -   **[Overview of Segment Mirroring](../../highavail/topics/g-overview-of-segment-mirroring.html)**  
 
--   **[Overview of Master Mirroring](../../highavail/topics/g-overview-of-master-mirroring.html)**  
+-   **[Overview of Coordinator Mirroring](../../highavail/topics/g-overview-of-master-mirroring.html)**  
 
 
 **Parent topic:** [Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)

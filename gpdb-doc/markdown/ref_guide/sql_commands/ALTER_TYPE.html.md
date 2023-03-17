@@ -51,7 +51,7 @@ The `ADD ATTRIBUTE`, `DROP ATTRIBUTE`, and `ALTER ATTRIBUTE` actions can be comb
 
 You can change the name, the owner, and the schema of a type. You can also add or update storage options for a scalar type.
 
-**Note:** Greenplum Database does not support adding storage options for row or composite types.
+> **Note** Greenplum Database does not support adding storage options for row or composite types.
 
 You must own the type to use `ALTER TYPE`. To change the schema of a type, you must also have `CREATE` privilege on the new schema. To alter the owner, you must also be a direct or indirect member of the new owning role, and that role must have `CREATE` privilege on the type's schema. \(These restrictions enforce that altering the owner does not do anything that could be done by dropping and recreating the type. However, a superuser can alter ownership of any type.\) To add an attribute or alter an attribute type, you must also have `USAGE` privilege on the data type.
 
@@ -93,13 +93,13 @@ storage\_directive
 
 :   **COMPRESSTYPE** — Set to `ZLIB` \(the default\), `ZSTD`, `RLE_TYPE`, or `QUICKLZ`1 to specify the type of compression used.
 
-    **Note:** 1QuickLZ compression is available only in the commercial release of Tanzu Greenplum.
+    > **Note** 1QuickLZ compression is available only in the commercial release of VMware Greenplum.
 
 :   **COMPRESSLEVEL** — For Zstd compression, set to an integer value from 1 \(fastest compression\) to 19 \(highest compression ratio\). For zlib compression, the valid range is from 1 to 9. The QuickLZ compression level can only be set to 1. For `RLE_TYPE`, the compression level can be set to an integer value from 1 \(fastest compression\) to 4 \(highest compression ratio\). The default compression level is 1.
 
 :   **BLOCKSIZE** — Set to the size, in bytes, for each block in the column. The `BLOCKSIZE` must be between 8192 and 2097152 bytes, and be a multiple of 8192. The default block size is 32768.
 
-    **Note:** storage\_directives defined at the table- or column-level override the default storage options defined for a type.
+    > **Note** storage\_directives defined at the table- or column-level override the default storage options defined for a type.
 
 ## <a id="section5"></a>Examples 
 

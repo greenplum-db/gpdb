@@ -2617,7 +2617,8 @@ SELECT COUNT(*) FROM dml_heap_pt_s;
 (1 row)
 
 DELETE FROM dml_heap_pt_s WHERE a = (SELECT dml_heap_pt_r.a FROM dml_heap_pt_r,dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.a);
-ERROR:  more than one row returned by a subquery used as an expression
+ERROR:  one or more assertions failed  (seg1 10.138.0.30:7003 pid=706789)
+DETAIL:  Expected no more than one row to be returned by expression
 SELECT COUNT(*) FROM dml_heap_pt_s;
  count 
 -------
@@ -3322,7 +3323,8 @@ SELECT SUM(a) FROM dml_heap_pt_r;
 (1 row)
 
 UPDATE dml_heap_pt_r SET a = ( SELECT DISTINCT(b) FROM dml_heap_pt_s ) FROM dml_heap_pt_s WHERE dml_heap_pt_r.b = dml_heap_pt_s.a;
-ERROR:  more than one row returned by a subquery used as an expression
+ERROR:  one or more assertions failed  (seg0 slice1 10.138.0.30:7002 pid=527664)
+DETAIL:  Expected no more than one row to be returned by expression
 SELECT SUM(a) FROM dml_heap_pt_r;
  sum  
 ------
@@ -3337,7 +3339,8 @@ SELECT SUM(b) FROM dml_heap_pt_r;
 (1 row)
 
 UPDATE dml_heap_pt_r SET b = (SELECT dml_heap_pt_r.b FROM dml_heap_pt_r,dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.a );
-ERROR:  more than one row returned by a subquery used as an expression
+ERROR:  one or more assertions failed  (seg0 10.138.0.30:7002 pid=527290)
+DETAIL:  Expected no more than one row to be returned by expression
 SELECT SUM(b) FROM dml_heap_pt_r;
   sum  
 -------

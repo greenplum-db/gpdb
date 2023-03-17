@@ -125,8 +125,22 @@ ExecForeignScan(PlanState *pstate)
 ForeignScanState *
 ExecInitForeignScan(ForeignScan *node, EState *estate, int eflags)
 {
-	ForeignScanState *scanstate;
 	Relation	currentRelation = NULL;
+
+	/*
+	 * get the relation object id from the relid'th entry in the range table,
+	 * open that relation and acquire appropriate lock on it.
+	 */
+	if (node->scan.scanrelid > 0)
+		currentRelation = ExecOpenScanRelation(estate, node->scan.scanrelid, eflags);
+
+	return ExecInitForeignScanForPartition(node, estate, eflags, currentRelation);
+}
+
+ForeignScanState *
+ExecInitForeignScanForPartition(ForeignScan *node, EState *estate, int eflags, Relation currentRelation)
+{
+	ForeignScanState *scanstate;
 	Index		scanrelid = node->scan.scanrelid;
 	Index		tlistvarno;
 	FdwRoutine *fdwroutine;
@@ -155,7 +169,6 @@ ExecInitForeignScan(ForeignScan *node, EState *estate, int eflags)
 	 */
 	if (scanrelid > 0)
 	{
-		currentRelation = ExecOpenScanRelation(estate, scanrelid, eflags);
 		scanstate->ss.ss_currentRelation = currentRelation;
 		fdwroutine = GetFdwRoutineForRelation(currentRelation, true);
 	}

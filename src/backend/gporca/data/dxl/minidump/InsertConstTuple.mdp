@@ -117,7 +117,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.968511.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
+      <dxl:Relation Mdid="6.968511.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -151,7 +151,6 @@
           <dxl:IndexInfo Mdid="0.968534.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.968553.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>
@@ -159,7 +158,7 @@
       <dxl:OutputColumns/>
       <dxl:CTEList/>
       <dxl:LogicalInsert InsertColumns="2,3">
-        <dxl:TableDescriptor Mdid="0.968511.1.1" TableName="r">
+        <dxl:TableDescriptor Mdid="6.968511.1.1" TableName="r">
           <dxl:Columns>
             <dxl:Column ColId="4" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="5" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -193,7 +192,7 @@
       </dxl:LogicalInsert>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="3">
-      <dxl:DMLInsert Columns="1,2" ActionCol="3" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
+      <dxl:DMLInsert Columns="1,2" ActionCol="3" CtidCol="0" SegmentIdCol="0">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="0.023474" Rows="1.000000" Width="1"/>
         </dxl:Properties>
@@ -210,7 +209,7 @@
             <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="0.968511.1.1" TableName="r">
+        <dxl:TableDescriptor Mdid="6.968511.1.1" TableName="r">
           <dxl:Columns>
             <dxl:Column ColId="4" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="5" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

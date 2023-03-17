@@ -4,7 +4,7 @@
     <dxl:OutputColumns/>
     <dxl:CTEList/>
     <dxl:LogicalInsert InsertColumns="2,3">
-      <dxl:TableDescriptor Mdid="0.25064.1.0" TableName="pp">
+      <dxl:TableDescriptor Mdid="6.25064.1.0" TableName="pp">
         <dxl:Columns>
           <dxl:Column ColId="4" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
           <dxl:Column ColId="5" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

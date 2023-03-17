@@ -140,8 +140,6 @@ CXform::PbsNLJoinXforms(CMemoryPool *mp)
 {
 	CBitSet *pbs = GPOS_NEW(mp) CBitSet(mp, EopttraceSentinel);
 	(void) pbs->ExchangeSet(
-		GPOPT_DISABLE_XFORM_TF(CXform::ExfInnerJoin2NLJoin));
-	(void) pbs->ExchangeSet(
 		GPOPT_DISABLE_XFORM_TF(CXform::ExfLeftOuterJoin2NLJoin));
 	(void) pbs->ExchangeSet(
 		GPOPT_DISABLE_XFORM_TF(CXform::ExfLeftSemiJoin2NLJoin));
@@ -204,8 +202,6 @@ CXform::PbsHashJoinXforms(CMemoryPool *mp)
 {
 	CBitSet *pbs = GPOS_NEW(mp) CBitSet(mp, EopttraceSentinel);
 
-	(void) pbs->ExchangeSet(
-		GPOPT_DISABLE_XFORM_TF(CXform::ExfInnerJoin2HashJoin));
 	(void) pbs->ExchangeSet(
 		GPOPT_DISABLE_XFORM_TF(CXform::ExfLeftOuterJoin2HashJoin));
 	(void) pbs->ExchangeSet(

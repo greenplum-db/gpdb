@@ -27,7 +27,7 @@ Select * from P where P.a IN (1,2);
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.36394823.1.1" Name="p" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.36394823.1.1" Name="p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.36394823.1.1" Name="p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -58,15 +58,14 @@ Select * from P where P.a IN (1,2);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.36394823001.1.1"/>
-          <dxl:Partition Mdid="0.36394823002.1.1"/>
-          <dxl:Partition Mdid="0.36394823003.1.1"/>
+          <dxl:Partition Mdid="6.36394823001.1.1"/>
+          <dxl:Partition Mdid="6.36394823002.1.1"/>
+          <dxl:Partition Mdid="6.36394823003.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.36394823001.1.1" Name="p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.36394823001.1.1" Name="p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -97,7 +96,6 @@ Select * from P where P.a IN (1,2);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -115,7 +113,7 @@ Select * from P where P.a IN (1,2);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.36394823002.1.1" Name="p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.36394823002.1.1" Name="p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -146,7 +144,6 @@ Select * from P where P.a IN (1,2);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -164,7 +161,7 @@ Select * from P where P.a IN (1,2);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.36394823003.1.1" Name="p_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.36394823003.1.1" Name="p_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -195,7 +192,6 @@ Select * from P where P.a IN (1,2);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -591,7 +587,7 @@ Select * from P where P.a IN (1,2);
           </dxl:Array>
         </dxl:ArrayComp>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.36394823.1.1" TableName="p">
+          <dxl:TableDescriptor Mdid="6.36394823.1.1" TableName="p">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -644,9 +640,9 @@ Select * from P where P.a IN (1,2);
             </dxl:ArrayComp>
           </dxl:Filter>
           <dxl:Partitions>
-            <dxl:Partition Mdid="0.2035084633.1.1"/>
+            <dxl:Partition Mdid="6.2035084633.1.1"/>
           </dxl:Partitions>
-          <dxl:TableDescriptor Mdid="0.36394823.1.1" TableName="p">
+          <dxl:TableDescriptor Mdid="6.36394823.1.1" TableName="p">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

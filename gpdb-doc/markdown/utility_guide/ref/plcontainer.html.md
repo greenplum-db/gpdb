@@ -120,7 +120,7 @@ runtime-add options
 
 :   If needed, you can specify other shared directories. The utility returns an error if the specified container-dir is the same as the one that is added by the utility, or if you specify multiple shared volumes with the same container-dir.
 
-    **Warning:** Allowing read-write access to a host directory requires special considerations.
+    > **Caution** Allowing read-write access to a host directory requires special considerations.
 
     -   When specifying read-write access to host directory, ensure that the specified host directory has the correct permissions.
     -   When running PL/Container user-defined functions, multiple concurrent Docker containers that are running on a host could change data in the host directory. Ensure that the functions support multiple concurrent access to the data in the host directory.

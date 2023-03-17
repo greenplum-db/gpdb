@@ -183,7 +183,7 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 	}
 
 	/* pg_resetxlog has been renamed to pg_resetwal in version 10 */
-	if (GET_MAJOR_VERSION(cluster->bin_version) < 1000)
+	if (GET_MAJOR_VERSION(cluster->bin_version) <= 906)
 		resetwal_bin = "pg_resetxlog\" -n";
 	else
 		resetwal_bin = "pg_resetwal\" -n";
@@ -755,27 +755,18 @@ check_control_data(ControlData *oldctrl,
 	 */
 
 	/*
-	 * Check for allowed combinations of data checksums. PostgreSQL only allow
-	 * upgrades where the checksum settings match, in Greenplum we can however
-	 * set or remove checksums during the upgrade.
+	 * We might eventually allow upgrades from checksum to no-checksum
+	 * clusters.
 	 */
 	if (oldctrl->data_checksum_version == 0 &&
-		newctrl->data_checksum_version != 0 &&
-		!is_checksum_mode(CHECKSUM_ADD))
-		pg_fatal("old cluster does not use data checksums but the new one does\n");
+		newctrl->data_checksum_version != 0)
+		pg_fatal("old cluster does not use data checksums but the new one does");
 	else if (oldctrl->data_checksum_version != 0 &&
-			 newctrl->data_checksum_version == 0 &&
-			 !is_checksum_mode(CHECKSUM_REMOVE))
-		pg_fatal("old cluster uses data checksums but the new one does not\n");
-	else if (oldctrl->data_checksum_version == newctrl->data_checksum_version &&
-			 !is_checksum_mode(CHECKSUM_NONE))
-		pg_fatal("old and new cluster data checksum configuration match, cannot %s data checksums\n",
-				 (is_checksum_mode(CHECKSUM_ADD) ? "add" : "remove"));
-	else if (oldctrl->data_checksum_version != 0 && is_checksum_mode(CHECKSUM_ADD))
-		pg_fatal("--add-checksum option not supported for old cluster which uses data checksums\n");
-	else if (oldctrl->data_checksum_version != newctrl->data_checksum_version
-			 && is_checksum_mode(CHECKSUM_NONE))
-		pg_fatal("old and new cluster pg_controldata checksum versions do not match\n");
+			 newctrl->data_checksum_version == 0)
+		pg_fatal("old cluster uses data checksums but the new one does not");
+	else if (oldctrl->data_checksum_version != newctrl->data_checksum_version)
+		pg_fatal("old and new cluster pg_controldata checksum versions do not match");
+
 }
 
 

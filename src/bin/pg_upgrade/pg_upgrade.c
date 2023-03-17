@@ -185,11 +185,6 @@ main(int argc, char **argv)
 
 	if (is_greenplum_dispatcher_mode())
 	{
-		/*
-		 * GPDB_12_MERGE_FIXME: this is where we used to create new databases
-		 * in case we were the dispatcher, now upstream does prepare_new_globals.
-		 * Verify that this replacement is what we want.
-		 */
 		prepare_new_globals();
 
 		create_new_objects();
@@ -602,7 +597,7 @@ create_new_objects(void)
 	 * We don't have minmxids for databases or relations in pre-9.3 clusters,
 	 * so set those after we have restored the schema.
 	 */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) < 903)
+	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 902)
 		set_frozenxids(true);
 
 	/* update new_cluster info now that we have objects in the databases */
@@ -677,16 +672,11 @@ copy_xact_xlog_xid(void)
 	 * Copy old commit logs to new data dir. pg_clog has been renamed to
 	 * pg_xact in post-10 clusters.
 	 */
-	copy_subdir_files(GET_MAJOR_VERSION(old_cluster.major_version) < 1000 ?
+	copy_subdir_files(GET_MAJOR_VERSION(old_cluster.major_version) <= 906 ?
 					  "pg_clog" : "pg_xact",
-					  GET_MAJOR_VERSION(new_cluster.major_version) < 1000 ?
+					  GET_MAJOR_VERSION(new_cluster.major_version) <= 906 ?
 					  "pg_clog" : "pg_xact");
 
-	/*
-	 * GPDB: FIXME: If we want to support upgrades from 5X -> 7X and above, we
-	 * would need to construct the old_cluster.controldata.chkpnt_oldstxid
-	 * ourselves as the 5X control file doesn't carry that field.
-	 */
 	prep_status("Setting oldest XID for new cluster");
 	exec_prog(UTILITY_LOG_FILE, NULL, true, true,
 			  "\"%s/pg_resetwal\" --binary-upgrade -f -u %u \"%s\"",

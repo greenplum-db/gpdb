@@ -204,6 +204,19 @@ CBitSetTest::EresUnittest_SetOps()
 
 	pbs->Release();
 
+	// Test that intersection properly deletes links
+	CBitSet *pbs4 = GPOS_NEW(mp) CBitSet(mp, vector_size);
+	CBitSet *pbs5 = GPOS_NEW(mp) CBitSet(mp, vector_size);
+	pbs4->ExchangeSet(1);
+	pbs5->ExchangeSet(10);
+	pbs5->ExchangeSet(50);
+	pbs4->Intersection(pbs5);
+	pbs5->ExchangeClear(10);
+	pbs5->ExchangeClear(50);
+	GPOS_ASSERT(pbs4->Equals(pbs5));
+
+	pbs4->Release();
+	pbs5->Release();
 	return GPOS_OK;
 }
 

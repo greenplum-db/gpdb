@@ -66,7 +66,7 @@ COORDINATOR_HOSTNAME=hostname_of_machine
 # create this directory on the coordinator host before running 
 # gpinitsystem and chown it to the appropriate user.
 
-COORDINATOR_DIRECTORY=/gpmaster
+COORDINATOR_DIRECTORY=/gpcoordinator
 
 
 # The port number for the coordinator instance. This is the port number 

@@ -400,30 +400,26 @@ select a,b from g1 where (a,b) not in
 --
 explain select x,y from l1 where (x,y) not in
 	(select distinct y, sum(x) from l1 group by y having y < 4 order by y) order by 1,2;
-                                                         QUERY PLAN                                                         
-----------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000002.35..10000000002.40 rows=3 width=8)
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=10000000008.02..10000000008.03 rows=4 width=8)
    Merge Key: l1.x, l1.y
    ->  Sort  (cost=10000000002.35..10000000002.36 rows=1 width=8)
          Sort Key: l1.x, l1.y
-         ->  Nested Loop Left Anti Semi (Not-In) Join  (cost=10000000001.07..10000000002.34 rows=1 width=8)
+         ->  Nested Loop Left Anti Semi (Not-In) Join  (cost=10000000003.25..10000000007.99 rows=2 width=8)
                Join Filter: ((l1.x = "NotIn_SUBQUERY".y) AND (l1.y = "NotIn_SUBQUERY".sum))
-               ->  Seq Scan on l1  (cost=0.00..1.03 rows=3 width=8)
-               ->  Materialize  (cost=1.09..1.16 rows=3 width=12)
-                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=1.09..1.15 rows=3 width=12)
-                           ->  Subquery Scan on "NotIn_SUBQUERY"  (cost=1.09..1.11 rows=1 width=12)
-                                 ->  Unique  (cost=1.09..1.10 rows=1 width=16)
-                                       Group Key: l1_1.y, (sum(l1_1.x))
-                                       ->  Sort  (cost=1.09..1.09 rows=1 width=16)
-                                             Sort Key: l1_1.y, (sum(l1_1.x))
-                                             ->  HashAggregate  (cost=1.07..1.08 rows=1 width=16)
-                                                   Group Key: l1_1.y
-                                                   ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..1.06 rows=1 width=8)
-                                                         Hash Key: l1_1.y
-                                                         ->  Seq Scan on l1 l1_1  (cost=0.00..1.04 rows=1 width=8)
-                                                               Filter: (y < 4)
+               ->  Seq Scan on l1  (cost=0.00..3.10 rows=4 width=8)
+               ->  Materialize  (cost=3.25..3.47 rows=3 width=12)
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=3.25..3.43 rows=3 width=12)
+                           ->  Subquery Scan on "NotIn_SUBQUERY"  (cost=3.25..3.31 rows=1 width=12)
+                                 ->  HashAggregate  (cost=3.25..3.28 rows=1 width=16)
+                                       Group Key: l1_1.y
+                                       ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=3.14..3.20 rows=1 width=12)
+                                             Hash Key: l1_1.y
+                                                   ->  Seq Scan on l1 l1_1  (cost=0.00..3.12 rows=2 width=8)
+                                                         Filter: (y < 4)
  Optimizer: Postgres query optimizer
-(21 rows)
+(17 rows)
 
 select x,y from l1 where (x,y) not in
 	(select distinct y, sum(x) from l1 group by y having y < 4 order by y) order by 1,2;
@@ -1573,6 +1569,100 @@ select 1 from t1_13212 where (NULL, b) not in (select a, b from t2_13212);
         1
 (1 row)
 
+-- test for params of not-in sublink
+create table t1p(a int, b int, c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table t2p(b int, a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'b' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+explain (costs off)
+update
+  t1p
+set
+  a = age.aging
+from
+  (
+    select
+      c,
+      (
+        select
+            diff
+        from
+            generate_series(1, 10) diff
+        where
+            (diff, t1p.b) not in (select a, b from t2p)
+      ) as aging
+    from
+      t1p
+  ) age
+where a = age.c;
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
+ Update on t1p
+   ->  Explicit Redistribute Motion 3:3  (slice1; segments: 3)
+         ->  Split
+               ->  Hash Join
+                     Hash Cond: (t1p_1.c = t1p.a)
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                           Hash Key: t1p_1.c
+                           ->  Seq Scan on t1p t1p_1
+                     ->  Hash
+                           ->  Seq Scan on t1p
+                     SubPlan 1
+                       ->  Nested Loop Left Anti Semi (Not-In) Join
+                             Join Filter: ((diff.diff = t2p.a) AND (t1p_1.b = t2p.b))
+                             ->  Function Scan on generate_series diff
+                             ->  Materialize
+                                   ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                         ->  Seq Scan on t2p
+ Optimizer: Postgres query optimizer
+(18 rows)
+
+update
+  t1p
+set
+  a = age.aging
+from
+  (
+    select
+      c,
+      (
+        select
+            diff
+        from
+            generate_series(1, 10) diff
+        where
+            (diff, t1p.b) not in (select a, b from t2p)
+      ) as aging
+    from
+      t1p
+  ) age
+where a = age.c;
+drop table t1p;
+drop table t2p;
+-- test for github issue 14858
+create table t1_14858(a varchar(32), b varchar(32), c int, d int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table t2_14858(a varchar(32), b varchar(32), c int, d int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table t3_14858(a varchar(32), b varchar(32), c int, d int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create view mv_14858 as select * from t1_14858 full join
+(select a, b, count(c) from t2_14858 group by a,b union
+ select a, b, count(c) from t3_14858 group by a, b) x using (a, b);
+select * from mv_14858 where a not in (select a from t1_14858);
+ a | b | c | d | count 
+---+---+---+---+-------
+(0 rows)
+
+drop view mv_14858;
+drop table t1_14858;
+drop table t2_14858;
+drop table t3_14858;
 reset search_path;
 drop schema notin cascade;
 NOTICE:  drop cascades to 22 other objects

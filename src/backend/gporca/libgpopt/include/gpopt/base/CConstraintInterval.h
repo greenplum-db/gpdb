@@ -176,6 +176,8 @@ public:
 				   CDXLTokens::GetDXLTokenStr(EdxltokenGpSegmentIdColName));
 	}
 
+	CConstraint *GetConstraintOnSegmentId() const override;
+
 	// return a copy of the constraint with remapped columns
 	CConstraint *PcnstrCopyWithRemappedColumns(CMemoryPool *mp,
 											   UlongToColRefMap *colref_mapping,

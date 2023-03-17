@@ -19,7 +19,7 @@ run:
       ../gpdb_src/configure \
         --enable-cassert \
         --enable-orca \
-        --without-python --without-readline --without-zlib --without-zstd --without-libbz2 --disable-gpfdist --disable-gpcloud --disable-pxf --without-libcurl \
+        --without-python --without-readline --without-zlib --without-zstd --without-libbz2 --disable-gpfdist --disable-gpcloud --without-libcurl \
         CC="ccache clang-11" CXX="ccache clang++-11" CFLAGS=-O0 CXXFLAGS=-O0
       bear --append make -s -C src/backend/gpopt
     )
@@ -29,7 +29,7 @@ run:
       ../gpdb_src/configure \
         --disable-cassert \
         --enable-orca \
-        --without-python --without-readline --without-zlib --without-zstd --without-libbz2 --disable-gpfdist --disable-gpcloud --disable-pxf --without-libcurl \
+        --without-python --without-readline --without-zlib --without-zstd --without-libbz2 --disable-gpfdist --disable-gpcloud --without-libcurl \
         CC="ccache clang-11" CXX="ccache clang++-11" CFLAGS=-O0 CXXFLAGS=-O0
       bear --append make -s -C src/backend/gpopt
     )

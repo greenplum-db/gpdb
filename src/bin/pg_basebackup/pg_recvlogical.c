@@ -128,7 +128,7 @@ sendFeedback(PGconn *conn, TimestampTz now, bool force, bool replyRequested)
 	 */
 	if (!force &&
 		last_written_lsn == output_written_lsn &&
-		last_fsync_lsn != output_fsync_lsn)
+		last_fsync_lsn == output_fsync_lsn)
 		return true;
 
 	if (verbose)
@@ -214,8 +214,6 @@ StreamLogicalLog(void)
 	output_written_lsn = InvalidXLogRecPtr;
 	output_fsync_lsn = InvalidXLogRecPtr;
 
-	query = createPQExpBuffer();
-
 	/*
 	 * Connect in replication mode to the server
 	 */
@@ -234,6 +232,7 @@ StreamLogicalLog(void)
 					replication_slot);
 
 	/* Initiate the replication stream at specified location */
+	query = createPQExpBuffer();
 	appendPQExpBuffer(query, "START_REPLICATION SLOT \"%s\" LOGICAL %X/%X",
 					  replication_slot, (uint32) (startpos >> 32), (uint32) startpos);
 
@@ -582,14 +581,40 @@ StreamLogicalLog(void)
 	res = PQgetResult(conn);
 	if (PQresultStatus(res) == PGRES_COPY_OUT)
 	{
+		PQclear(res);
+
 		/*
 		 * We're doing a client-initiated clean exit and have sent CopyDone to
-		 * the server. We've already sent replay confirmation and fsync'd so
-		 * we can just clean up the connection now.
+		 * the server. Drain any messages, so we don't miss a last-minute
+		 * ErrorResponse. The walsender stops generating XLogData records once
+		 * it sees CopyDone, so expect this to finish quickly. After CopyDone,
+		 * it's too late for sendFeedback(), even if this were to take a long
+		 * time. Hence, use synchronous-mode PQgetCopyData().
 		 */
-		goto error;
+		while (1)
+		{
+			int			r;
+
+			if (copybuf != NULL)
+			{
+				PQfreemem(copybuf);
+				copybuf = NULL;
+			}
+			r = PQgetCopyData(conn, &copybuf, 0);
+			if (r == -1)
+				break;
+			if (r == -2)
+			{
+				pg_log_error("could not read COPY data: %s",
+							 PQerrorMessage(conn));
+				time_to_abort = false;	/* unclean exit */
+				goto error;
+			}
+		}
+
+		res = PQgetResult(conn);
 	}
-	else if (PQresultStatus(res) != PGRES_COMMAND_OK)
+	if (PQresultStatus(res) != PGRES_COMMAND_OK)
 	{
 		pg_log_error("unexpected termination of replication stream: %s",
 					 PQresultErrorMessage(res));
@@ -896,21 +921,24 @@ main(int argc, char **argv)
 		exit(1);
 	}
 
-#ifndef WIN32
-	pqsignal(SIGINT, sigint_handler);
-	pqsignal(SIGHUP, sighup_handler);
-#endif
-
 	/*
-	 * Obtain a connection to server. This is not really necessary but it
-	 * helps to get more precise error messages about authentication, required
-	 * GUC parameters and such.
+	 * Obtain a connection to server.  Notably, if we need a password, we want
+	 * to collect it from the user immediately.
 	 */
 	conn = GetConnection();
 	if (!conn)
 		/* Error message already written in GetConnection() */
 		exit(1);
 	atexit(disconnect_atexit);
+
+	/*
+	 * Trap signals.  (Don't do this until after the initial password prompt,
+	 * if one is needed, in GetConnection.)
+	 */
+#ifndef WIN32
+	pqsignal(SIGINT, sigint_handler);
+	pqsignal(SIGHUP, sighup_handler);
+#endif
 
 	/*
 	 * Run IDENTIFY_SYSTEM to make sure we connected using a database specific
@@ -1020,12 +1048,11 @@ prepareToTerminate(PGconn *conn, XLogRecPtr endpos, bool keepalive, XLogRecPtr l
 	if (verbose)
 	{
 		if (keepalive)
-			pg_log_info("endpos %X/%X reached by keepalive",
+			pg_log_info("end position %X/%X reached by keepalive",
 						(uint32) (endpos >> 32), (uint32) endpos);
 		else
-			pg_log_info("endpos %X/%X reached by record at %X/%X",
+			pg_log_info("end position %X/%X reached by WAL record at %X/%X",
 						(uint32) (endpos >> 32), (uint32) (endpos),
 						(uint32) (lsn >> 32), (uint32) lsn);
-
 	}
 }

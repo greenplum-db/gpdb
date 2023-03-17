@@ -20,7 +20,7 @@ SELECT partitiontablename from pg_partitions WHERE tablename='parent_table';
 
 There is a trade-off between the amount of time it takes to generate statistics and the quality, or accuracy, of the statistics.
 
-To allow large tables to be analyzed in a reasonable amount of time, `ANALYZE` takes a random sample of the table contents, rather than examining every row. To increase the number of sample values for all table columns adjust the `default_statistics_target` configuration parameter. The target value ranges from 1 to 1000; the default target value is 100. The `default_statistics_target` variable applies to all columns by default, and specifies the number of values that are stored in the list of common values. A larger target may improve the quality of the query planner’s estimates, especially for columns with irregular data patterns. `default_statistics_target` can be set at the master/session level and requires a reload.
+To allow large tables to be analyzed in a reasonable amount of time, `ANALYZE` takes a random sample of the table contents, rather than examining every row. To increase the number of sample values for all table columns adjust the `default_statistics_target` configuration parameter. The target value ranges from 1 to 1000; the default target value is 100. The `default_statistics_target` variable applies to all columns by default, and specifies the number of values that are stored in the list of common values. A larger target may improve the quality of the query planner’s estimates, especially for columns with irregular data patterns. `default_statistics_target` can be set at the coordinator/session level and requires a reload.
 
 ## <a id="whenrun"></a>When to Run ANALYZE 
 

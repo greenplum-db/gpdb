@@ -678,6 +678,14 @@ Select * from X where X.a < ANY (select a from P);
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
+      <dxl:GPDBScalarOp Mdid="0.521.1.0" Name="&gt;" ComparisonType="GT" ReturnsNullOnNullInput="true">
+        <dxl:LeftType Mdid="0.23.1.0"/>
+        <dxl:RightType Mdid="0.23.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.147.1.0"/>
+        <dxl:Commutator Mdid="0.97.1.0"/>
+        <dxl:InverseOp Mdid="0.523.1.0"/>
+      </dxl:GPDBScalarOp>
       <dxl:GPDBScalarOp Mdid="0.410.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true">
         <dxl:LeftType Mdid="0.20.1.0"/>
         <dxl:RightType Mdid="0.20.1.0"/>
@@ -772,7 +780,7 @@ Select * from X where X.a < ANY (select a from P);
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
       <dxl:RelationStatistics Mdid="2.35837767.1.1" Name="p" Rows="6325.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.35837767.1.1" Name="p" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,4,2" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.35837767.1.1" Name="p" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,4,2" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -791,15 +799,14 @@ Select * from X where X.a < ANY (select a from P);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.35837767001.1.1"/>
-          <dxl:Partition Mdid="0.35837767002.1.1"/>
-          <dxl:Partition Mdid="0.35837767003.1.1"/>
+          <dxl:Partition Mdid="6.35837767001.1.1"/>
+          <dxl:Partition Mdid="6.35837767002.1.1"/>
+          <dxl:Partition Mdid="6.35837767003.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.35837767001.1.1" Name="p_prt_1" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.35837767001.1.1" Name="p_prt_1" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -818,7 +825,6 @@ Select * from X where X.a < ANY (select a from P);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -836,7 +842,7 @@ Select * from X where X.a < ANY (select a from P);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.35837767002.1.1" Name="p_prt_2" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.35837767002.1.1" Name="p_prt_2" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -855,7 +861,6 @@ Select * from X where X.a < ANY (select a from P);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -873,7 +878,7 @@ Select * from X where X.a < ANY (select a from P);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.35837767003.1.1" Name="p_prt_3" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,4,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.35837767003.1.1" Name="p_prt_3" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -892,7 +897,6 @@ Select * from X where X.a < ANY (select a from P);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -929,7 +933,7 @@ Select * from X where X.a < ANY (select a from P);
         <dxl:ResultType Mdid="0.16.1.0"/>
       </dxl:GPDBFunc>
       <dxl:RelationStatistics Mdid="2.24719017.1.1" Name="x" Rows="11000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.24719017.1.1" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
+      <dxl:Relation Mdid="6.24719017.1.1" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -957,7 +961,6 @@ Select * from X where X.a < ANY (select a from P);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.24719017.1.1.1" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -1288,7 +1291,7 @@ Select * from X where X.a < ANY (select a from P);
         <dxl:SubqueryAny OperatorName="&lt;" OperatorMdid="0.97.1.0" ColId="9">
           <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.35837767.1.1" TableName="p">
+            <dxl:TableDescriptor Mdid="6.35837767.1.1" TableName="p">
               <dxl:Columns>
                 <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="10" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -1300,7 +1303,7 @@ Select * from X where X.a < ANY (select a from P);
           </dxl:LogicalGet>
         </dxl:SubqueryAny>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.24719017.1.1" TableName="x">
+          <dxl:TableDescriptor Mdid="6.24719017.1.1" TableName="x">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -1318,7 +1321,7 @@ Select * from X where X.a < ANY (select a from P);
     <dxl:Plan Id="0" SpaceSize="23">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="3660.723138" Rows="11000.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="3660.727871" Rows="11000.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -1329,7 +1332,7 @@ Select * from X where X.a < ANY (select a from P);
         <dxl:SortingColumnList/>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="3660.525578" Rows="11000.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="3660.530311" Rows="11000.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -1347,7 +1350,7 @@ Select * from X where X.a < ANY (select a from P);
               <dxl:ParamList/>
               <dxl:Materialize Eager="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.749321" Rows="12649.974700" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.749323" Rows="12650.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="8" Alias="a">
@@ -1357,7 +1360,7 @@ Select * from X where X.a < ANY (select a from P);
                 <dxl:Filter/>
                 <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.724021" Rows="12649.974700" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.724023" Rows="12650.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="8" Alias="a">
@@ -1366,9 +1369,9 @@ Select * from X where X.a < ANY (select a from P);
                   </dxl:ProjList>
                   <dxl:Filter/>
                   <dxl:SortingColumnList/>
-                  <dxl:DynamicTableScan PartIndexId="1" SelectorIds="">
+                  <dxl:DynamicTableScan SelectorIds="">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.038266" Rows="6324.987350" Width="4"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.038266" Rows="6325.000000" Width="4"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="8" Alias="a">
@@ -1377,11 +1380,11 @@ Select * from X where X.a < ANY (select a from P);
                     </dxl:ProjList>
                     <dxl:Filter/>
                     <dxl:Partitions>
-                      <dxl:Partition Mdid="0.1478028633.1.1"/>
-                      <dxl:Partition Mdid="0.1478028634.1.1"/>
-                      <dxl:Partition Mdid="0.1478028635.1.1"/>
+                      <dxl:Partition Mdid="6.1478028633.1.1"/>
+                      <dxl:Partition Mdid="6.1478028634.1.1"/>
+                      <dxl:Partition Mdid="6.1478028635.1.1"/>
                     </dxl:Partitions>
-                    <dxl:TableDescriptor Mdid="0.35837767.1.1" TableName="p">
+                    <dxl:TableDescriptor Mdid="6.35837767.1.1" TableName="p">
                       <dxl:Columns>
                         <dxl:Column ColId="8" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                         <dxl:Column ColId="10" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -1394,7 +1397,7 @@ Select * from X where X.a < ANY (select a from P);
               </dxl:Materialize>
             </dxl:SubPlan>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.24719017.1.1" TableName="x">
+          <dxl:TableDescriptor Mdid="6.24719017.1.1" TableName="x">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

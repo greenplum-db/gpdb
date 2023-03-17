@@ -14,7 +14,7 @@ The role name `gpadmin` is reserved. `gpadmin` is the default Greenplum Database
 
 In data files, the characters that delimit fields \(columns\) and rows have a special meaning. If they appear within the data you must escape them so that Greenplum Database treats them as data and not as delimiters. The backslash character \(`\`\) is the default escape character. See [Escaping](../admin_guide/load/topics/g-escaping.html#topic99) for details.
 
-See [SQL Syntax](https://www.postgresql.org/docs/9.4/sql-syntax.html) in the PostgreSQL documentation for more information about SQL identifiers, constants, operators, and expressions.
+See [SQL Syntax](https://www.postgresql.org/docs/12/sql-syntax.html) in the PostgreSQL documentation for more information about SQL identifiers, constants, operators, and expressions.
 
 ## <a id="keywords"></a>SQL Key Words 
 

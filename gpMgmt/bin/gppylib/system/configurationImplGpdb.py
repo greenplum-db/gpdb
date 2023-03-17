@@ -84,7 +84,7 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
 
         @param textForConfigTable label to be used when adding to segment configuration history
         @param dbIdToForceMirrorRemoveAdd a map of dbid -> True for mirrors for which we should force updating the mirror
-        @param useUtilityMode True if the operations we're doing are expected to run via utility moed
+        @param useUtilityMode True if the operations we're doing are expected to run via utility mode
         @param allowPrimary True if caller authorizes add/remove primary operations (e.g. gpexpand)
         """
 

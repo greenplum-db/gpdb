@@ -89,6 +89,7 @@ cdbconn_createSegmentDescriptor(struct CdbComponentDatabaseInfo *cdbinfo, int id
 	segdbDesc->whoami = NULL;
 	segdbDesc->identifier = identifier;
 	segdbDesc->isWriter = isWriter;
+	segdbDesc->establishConnTime = 0;
 
 	MemoryContextSwitchTo(oldContext);
 	return segdbDesc;
@@ -525,6 +526,7 @@ struct QENotice
 	char		line[10];
 	char	   *func;
 	char	   *message;
+	char	   *whoami;
 	char	   *detail;
 	char	   *hint;
 	char	   *context;
@@ -557,11 +559,11 @@ MPPnoticeReceiver(void *arg, const PGresult *res)
 	char	   *file = "";
 	char	   *line = NULL;
 	char	   *func = "";
-	char		message[1024];
+	char	   *message= "missing error text";
 	char	   *detail = NULL;
 	char	   *hint = NULL;
 	char	   *context = NULL;
-
+	char		whoami[200] = { 0 };
 	SegmentDatabaseDescriptor *segdbDesc = (SegmentDatabaseDescriptor *) arg;
 
 	/*
@@ -571,7 +573,8 @@ MPPnoticeReceiver(void *arg, const PGresult *res)
 	if (!res || MyProcPort == NULL) 
 		return;
 
-	strcpy(message, "missing error text");
+	if (segdbDesc && segdbDesc->whoami)
+		snprintf(whoami, sizeof(whoami), "  (%s)", segdbDesc->whoami);
 
 	for (pfield = res->errFields; pfield != NULL; pfield = pfield->next)
 	{
@@ -601,14 +604,7 @@ MPPnoticeReceiver(void *arg, const PGresult *res)
 				sqlstate = pfield->contents;
 				break;
 			case PG_DIAG_MESSAGE_PRIMARY:
-				strncpy(message, pfield->contents, 800);
-				message[800] = '\0';
-				if (segdbDesc && segdbDesc->whoami && strlen(segdbDesc->whoami) < 200)
-				{
-					strcat(message, "  (");
-					strcat(message, segdbDesc->whoami);
-					strcat(message, ")");
-				}
+				message = pfield->contents;
 				break;
 			case PG_DIAG_MESSAGE_DETAIL:
 				detail = pfield->contents;
@@ -651,10 +647,11 @@ MPPnoticeReceiver(void *arg, const PGresult *res)
 		char	   *bufptr;
 		int			file_len;
 		int			func_len;
-		int			message_len;
 		int			detail_len;
 		int			hint_len;
 		int			context_len;
+		int			message_len;
+		int			whoami_len;
 
 		/*
 		 * We use malloc(), because we are in a libpq callback, and we CANNOT
@@ -679,10 +676,11 @@ MPPnoticeReceiver(void *arg, const PGresult *res)
 		size = offsetof(QENotice, buf);
 		SIZE_VARLEN_FIELD(file);
 		SIZE_VARLEN_FIELD(func);
-		SIZE_VARLEN_FIELD(message);
 		SIZE_VARLEN_FIELD(detail);
 		SIZE_VARLEN_FIELD(hint);
 		SIZE_VARLEN_FIELD(context);
+		SIZE_VARLEN_FIELD(message);
+		SIZE_VARLEN_FIELD(whoami);
 
 		/*
 		 * Perform the allocation.  Put a limit on the max size, as a sanity
@@ -720,12 +718,15 @@ MPPnoticeReceiver(void *arg, const PGresult *res)
 		COPY_VARLEN_FIELD(file);
 		strlcpy(notice->line, line, sizeof(notice->line));
 		COPY_VARLEN_FIELD(func);
-		COPY_VARLEN_FIELD(message);
 		COPY_VARLEN_FIELD(detail);
 		COPY_VARLEN_FIELD(hint);
 		COPY_VARLEN_FIELD(context);
+		/* Concatenate message and whoami string together */
+		COPY_VARLEN_FIELD(message);
+		bufptr--; /* lets whoami overwrite '\0' byte of message body */
+		COPY_VARLEN_FIELD(whoami);
 
-		Assert(bufptr - (char *) notice == size);
+		Assert(bufptr - (char *) notice == (size - 1));
 
 		/* Link it to the queue */
 		notice->next = NULL;

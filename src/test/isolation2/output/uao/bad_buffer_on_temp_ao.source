@@ -1,0 +1,103 @@
+-- This is intended to test tolerability on failure when flushing a dirty shared_buffer
+-- without backing relfile on a temporary AO AUX table.
+--
+-- The problem is, when the writer aborts the transaction before any of readers in a
+-- multi-slices session, it drops the shared_buffer and unlinks corresponding temporary
+-- relfilenodes. But readers may be yet to receive the cancel signal from QD hence
+-- continue executing their part of the plan. This makes a reader has a chance to read
+-- previous unlinked relfilenode to shared_buffers and re-marked it to dirty in the case
+-- of hintbit is set, which could result to a permanent "could not open file" problem
+-- when other processes (such like bgworker or readers) attempt to flush this buffer to disk.
+-- This failure on a temporary Heap table could also block other session's regular operations
+-- permanently hence leading to an unavailable state of the current DB instance.
+-- This behavior doesn't make sense as a failure on a temporary object should not break the
+-- the whole system's availability.
+
+-- The test doesn't work in debugging mode due to the compiling flag RELCACHE_FORCE_RELEASE
+-- is enabled causing file descriptor md_fd (stored in SMgrRelation cache) being cleared on
+-- relation closing. While it works as expected in release mode. Still leave it here but
+-- commented out in isolation2_schedule for future reference about what its intention to verify.
+-- It should be replaced when we have a work-in-debugging apporach to test it.
+
+-- get relfile path of pg_aoseg_<oid> for the given temp AO table on the specified segment
+create or replace function get_tmp_aoseg_path(tbl text, segid int) returns text as $$ (select g.datadir || '/' || (select 'base/' || db.oid || '/' || 't_' || r.relfilenode from (select dc.relfilenode from gp_dist_random('pg_class') dc where dc.oid = (select da.segrelid from gp_dist_random('pg_appendonly') da, pg_class c where c.oid = da.relid and c.relname = tbl and da.gp_segment_id = segid limit 1) and dc.gp_segment_id = segid) r, pg_database db where db.datname = current_database()) from gp_segment_configuration g where g.content = segid) $$ language sql volatile;
+CREATE
+
+-- delete above relfile
+create or replace function delete_relfile(relfilepath text) returns text as $$ import os import subprocess 
+result = relfilepath  if not relfilepath: plpy.info('relfilepath should not be empty') elif not os.path.isfile(relfilepath): plpy.info('non-existent file %s' % (relfilepath)) else: try: cmd = 'rm -rf %s' % (relfilepath) result += subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode('ascii') except subprocess.CalledProcessError as e: plpy.info(e.output) 
+return result 
+$$ language plpython3u;
+CREATE
+
+-- easy to trigger buffer flushing
+1U: alter system set shared_buffers to 20;
+ALTER
+1: select pg_ctl(datadir, 'restart') from gp_segment_configuration where role = 'p' and content = 0;
+ pg_ctl 
+--------
+ OK     
+(1 row)
+1Uq: ... <quitting>
+1q: ... <quitting>
+
+1: create table heap (a int, b int);
+CREATE
+1: insert into heap select 2, i from generate_series(1, 100000)i;
+INSERT 100000
+
+1: create temp table tmp_@amname@ (a int, b int) using @amname@;
+CREATE
+1: insert into tmp_@amname@ select * from heap;
+INSERT 100000
+1: select count(*) from tmp_@amname@;
+ count  
+--------
+ 100000 
+(1 row)
+
+-- delete corresponding relfile of this temporary table
+-- start_ignore
+1: select delete_relfile((select get_tmp_aoseg_path('tmp_@amname@', 0))::text);
+ delete_relfile                                                                             
+--------------------------------------------------------------------------------------------
+ /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0/base/16444/t_32770 
+(1 row)
+-- end_ignore
+
+-- Ensure corresponding buffer of this temporary table is marked as dirty.
+-- Note the update operation could be successful in the current session as the relfile
+-- is already opened with a valid md_fd before deleting and writing still works in the
+-- same process even after deleting the file.
+1: update tmp_@amname@ set b = b + 1;
+UPDATE 100000
+
+-- trigger to flush that dirty buffer after deleting the backing relfile
+2: update heap set b = b + 1;
+UPDATE 100000
+
+-- expect success, the writing error should be tolerated
+3: update heap set b = b + 1;
+UPDATE 100000
+
+-- expect success, the writing error should be tolerated
+2: update heap set b = b + 1;
+UPDATE 100000
+
+1: drop function get_tmp_aoseg_path(tbl text, segid int);
+DROP
+1: drop function delete_relfile(relfilepath text);
+DROP
+1: drop table heap;
+DROP
+
+1U: alter system reset shared_buffers;
+ALTER
+1: select pg_ctl(datadir, 'restart') from gp_segment_configuration where role = 'p' and content = 0;
+ pg_ctl 
+--------
+ OK     
+(1 row)
+1Uq: ... <quitting>
+1q: ... <quitting>
+2q: ... <quitting>

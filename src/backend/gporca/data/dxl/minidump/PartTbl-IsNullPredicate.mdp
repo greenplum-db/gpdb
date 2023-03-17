@@ -32,6 +32,30 @@ explain select * from dd_part_singlecol where a is null and b is null;
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
+      <dxl:GPDBScalarOp Mdid="0.521.1.0" Name="&gt;" ComparisonType="GT" ReturnsNullOnNullInput="true">
+        <dxl:LeftType Mdid="0.23.1.0"/>
+        <dxl:RightType Mdid="0.23.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.147.1.0"/>
+        <dxl:Commutator Mdid="0.97.1.0"/>
+        <dxl:InverseOp Mdid="0.523.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.1978.1.0"/>
+          <dxl:Opfamily Mdid="0.3027.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
+      <dxl:GPDBScalarOp Mdid="0.523.1.0" Name="&lt;=" ComparisonType="LEq" ReturnsNullOnNullInput="true">
+        <dxl:LeftType Mdid="0.23.1.0"/>
+        <dxl:RightType Mdid="0.23.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.149.1.0"/>
+        <dxl:Commutator Mdid="0.525.1.0"/>
+        <dxl:InverseOp Mdid="0.521.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.1978.1.0"/>
+          <dxl:Opfamily Mdid="0.3027.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
       <dxl:ColumnStatistics Mdid="1.66695.1.1.7" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.66695.1.1.6" Name="xmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -145,7 +169,7 @@ explain select * from dd_part_singlecol where a is null and b is null;
       <dxl:ColumnStatistics Mdid="1.66695.1.1.1" Name="b" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.66695.1.1.0" Name="a" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.66695.1.1" Name="dd_part_singlecol" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.66695.1.1" Name="dd_part_singlecol" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.66695.1.1" Name="dd_part_singlecol" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -179,18 +203,17 @@ explain select * from dd_part_singlecol where a is null and b is null;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.66695001.1.1"/>
-          <dxl:Partition Mdid="0.66695002.1.1"/>
-          <dxl:Partition Mdid="0.66695003.1.1"/>
-          <dxl:Partition Mdid="0.66695004.1.1"/>
-          <dxl:Partition Mdid="0.66695005.1.1"/>
-          <dxl:Partition Mdid="0.66695006.1.1"/>
+          <dxl:Partition Mdid="6.66695001.1.1"/>
+          <dxl:Partition Mdid="6.66695002.1.1"/>
+          <dxl:Partition Mdid="6.66695003.1.1"/>
+          <dxl:Partition Mdid="6.66695004.1.1"/>
+          <dxl:Partition Mdid="6.66695005.1.1"/>
+          <dxl:Partition Mdid="6.66695006.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.66695001.1.1" Name="dd_part_singlecol_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.66695001.1.1" Name="dd_part_singlecol_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -224,7 +247,6 @@ explain select * from dd_part_singlecol where a is null and b is null;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -242,7 +264,7 @@ explain select * from dd_part_singlecol where a is null and b is null;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.66695002.1.1" Name="dd_part_singlecol_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.66695002.1.1" Name="dd_part_singlecol_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -276,7 +298,6 @@ explain select * from dd_part_singlecol where a is null and b is null;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -294,7 +315,7 @@ explain select * from dd_part_singlecol where a is null and b is null;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.66695003.1.1" Name="dd_part_singlecol_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.66695003.1.1" Name="dd_part_singlecol_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -328,7 +349,6 @@ explain select * from dd_part_singlecol where a is null and b is null;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -346,7 +366,7 @@ explain select * from dd_part_singlecol where a is null and b is null;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.66695004.1.1" Name="dd_part_singlecol_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.66695004.1.1" Name="dd_part_singlecol_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -380,7 +400,6 @@ explain select * from dd_part_singlecol where a is null and b is null;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -398,7 +417,7 @@ explain select * from dd_part_singlecol where a is null and b is null;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.66695005.1.1" Name="dd_part_singlecol_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.66695005.1.1" Name="dd_part_singlecol_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -432,7 +451,6 @@ explain select * from dd_part_singlecol where a is null and b is null;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -450,7 +468,7 @@ explain select * from dd_part_singlecol where a is null and b is null;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.66695006.1.1" Name="dd_part_singlecol_prt_extra" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.66695006.1.1" Name="dd_part_singlecol_prt_extra" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -484,7 +502,6 @@ explain select * from dd_part_singlecol where a is null and b is null;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:Not>
@@ -566,7 +583,7 @@ explain select * from dd_part_singlecol where a is null and b is null;
           </dxl:IsNull>
         </dxl:And>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.66695.1.1" TableName="dd_part_singlecol">
+          <dxl:TableDescriptor Mdid="6.66695.1.1" TableName="dd_part_singlecol">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -627,9 +644,9 @@ explain select * from dd_part_singlecol where a is null and b is null;
             </dxl:And>
           </dxl:Filter>
           <dxl:Partitions>
-            <dxl:Partition Mdid="0.66695006.1.1"/>
+            <dxl:Partition Mdid="6.66695006.1.1"/>
           </dxl:Partitions>
-          <dxl:TableDescriptor Mdid="0.66695.1.1" TableName="dd_part_singlecol">
+          <dxl:TableDescriptor Mdid="6.66695.1.1" TableName="dd_part_singlecol">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

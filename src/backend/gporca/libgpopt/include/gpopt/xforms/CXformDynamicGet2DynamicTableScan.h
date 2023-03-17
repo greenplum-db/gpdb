@@ -13,6 +13,7 @@
 
 #include "gpos/base.h"
 
+#include "gpopt/operators/CLogicalDynamicGet.h"
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt
@@ -55,12 +56,7 @@ public:
 	}
 
 	// compute xform promise for a given expression handle
-	EXformPromise
-	Exfp(CExpressionHandle &  // exprhdl
-	) const override
-	{
-		return CXform::ExfpHigh;
-	}
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,

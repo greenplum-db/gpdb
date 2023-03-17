@@ -112,9 +112,10 @@ run_ssl_passphrase_command(const char *prompt, bool is_server_start, char *buf, 
 		goto error;
 	}
 
-	/* strip trailing newline */
+	/* strip trailing newline, including \r in case we're on Windows */
 	len = strlen(buf);
-	if (len > 0 && buf[len - 1] == '\n')
+	while (len > 0 && (buf[len - 1] == '\n' ||
+					   buf[len - 1] == '\r'))
 		buf[--len] = '\0';
 
 error:
@@ -141,6 +142,7 @@ check_ssl_key_file_permissions(const char *ssl_key_file, bool isServerStart)
 		return false;
 	}
 
+	/* Key file must be a regular file */
 	if (!S_ISREG(buf.st_mode))
 	{
 		ereport(loglevel,
@@ -151,9 +153,20 @@ check_ssl_key_file_permissions(const char *ssl_key_file, bool isServerStart)
 	}
 
 	/*
-	 * Refuse to load key files owned by users other than us or root.
+	 * Refuse to load key files owned by users other than us or root, and
+	 * require no public access to the key file.  If the file is owned by us,
+	 * require mode 0600 or less.  If owned by root, require 0640 or less to
+	 * allow read access through either our gid or a supplementary gid that
+	 * allows us to read system-wide certificates.
 	 *
-	 * XXX surely we can check this on Windows somehow, too.
+	 * Note that roughly similar checks are performed in
+	 * src/interfaces/libpq/fe-secure-openssl.c so any changes here may need
+	 * to be made there as well.  The environment is different though; this
+	 * code can assume that we're not running as root.
+	 *
+	 * Ideally we would do similar permissions checks on Windows, but it is
+	 * not clear how that would work since Unix-style permissions may not be
+	 * available.
 	 */
 #if !defined(WIN32) && !defined(__CYGWIN__)
 	if (buf.st_uid != geteuid() && buf.st_uid != 0)
@@ -164,20 +177,7 @@ check_ssl_key_file_permissions(const char *ssl_key_file, bool isServerStart)
 						ssl_key_file)));
 		return false;
 	}
-#endif
 
-	/*
-	 * Require no public access to key file. If the file is owned by us,
-	 * require mode 0600 or less. If owned by root, require 0640 or less to
-	 * allow read access through our gid, or a supplementary gid that allows
-	 * to read system-wide certificates.
-	 *
-	 * XXX temporarily suppress check when on Windows, because there may not
-	 * be proper support for Unix-y file permissions.  Need to think of a
-	 * reasonable check to apply on Windows.  (See also the data directory
-	 * permission check in postmaster.c)
-	 */
-#if !defined(WIN32) && !defined(__CYGWIN__)
 	if ((buf.st_uid == geteuid() && buf.st_mode & (S_IRWXG | S_IRWXO)) ||
 		(buf.st_uid == 0 && buf.st_mode & (S_IWGRP | S_IXGRP | S_IRWXO)))
 	{

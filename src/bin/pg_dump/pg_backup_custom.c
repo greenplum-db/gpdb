@@ -71,14 +71,14 @@ typedef struct
 {
 	CompressorState *cs;
 	int			hasSeek;
-	pgoff_t		filePos;
-	pgoff_t		dataStart;
+	/* lastFilePos is used only when reading, and may be invalid if !hasSeek */
+	pgoff_t		lastFilePos;	/* position after last data block we've read */
 } lclContext;
 
 typedef struct
 {
 	int			dataState;
-	pgoff_t		dataPos;
+	pgoff_t		dataPos;		/* valid only if dataState=K_OFFSET_POS_SET */
 } lclTocEntry;
 
 
@@ -145,8 +145,6 @@ InitArchiveFmt_Custom(ArchiveHandle *AH)
 	AH->lo_buf_size = LOBBUFSIZE;
 	AH->lo_buf = (void *) pg_malloc(LOBBUFSIZE);
 
-	ctx->filePos = 0;
-
 	/*
 	 * Now open the file
 	 */
@@ -186,9 +184,13 @@ InitArchiveFmt_Custom(ArchiveHandle *AH)
 
 		ReadHead(AH);
 		ReadToc(AH);
-		ctx->dataStart = _getFilePos(AH, ctx);
-	}
 
+		/*
+		 * Remember location of first data block (i.e., the point after TOC)
+		 * in case we have to search for desired data blocks.
+		 */
+		ctx->lastFilePos = _getFilePos(AH, ctx);
+	}
 }
 
 /*
@@ -292,7 +294,8 @@ _StartData(ArchiveHandle *AH, TocEntry *te)
 	lclTocEntry *tctx = (lclTocEntry *) te->formatData;
 
 	tctx->dataPos = _getFilePos(AH, ctx);
-	tctx->dataState = K_OFFSET_POS_SET;
+	if (tctx->dataPos >= 0)
+		tctx->dataState = K_OFFSET_POS_SET;
 
 	_WriteByte(AH, BLK_DATA);	/* Block type */
 	WriteInt(AH, te->dumpId);	/* For sanity check */
@@ -355,7 +358,8 @@ _StartBlobs(ArchiveHandle *AH, TocEntry *te)
 	lclTocEntry *tctx = (lclTocEntry *) te->formatData;
 
 	tctx->dataPos = _getFilePos(AH, ctx);
-	tctx->dataState = K_OFFSET_POS_SET;
+	if (tctx->dataPos >= 0)
+		tctx->dataState = K_OFFSET_POS_SET;
 
 	_WriteByte(AH, BLK_BLOBS);	/* Block type */
 	WriteInt(AH, te->dumpId);	/* For sanity check */
@@ -426,13 +430,62 @@ _PrintTocData(ArchiveHandle *AH, TocEntry *te)
 	{
 		/*
 		 * We cannot seek directly to the desired block.  Instead, skip over
-		 * block headers until we find the one we want.  This could fail if we
-		 * are asked to restore items out-of-order.
+		 * block headers until we find the one we want.  Remember the
+		 * positions of skipped-over blocks, so that if we later decide we
+		 * need to read one, we'll be able to seek to it.
+		 *
+		 * When our input file is seekable, we can do the search starting from
+		 * the point after the last data block we scanned in previous
+		 * iterations of this function.
 		 */
-		_readBlockHeader(AH, &blkType, &id);
-
-		while (blkType != EOF && id != te->dumpId)
+		if (ctx->hasSeek)
 		{
+			if (fseeko(AH->FH, ctx->lastFilePos, SEEK_SET) != 0)
+				fatal("error during file seek: %m");
+		}
+
+		for (;;)
+		{
+			pgoff_t		thisBlkPos = _getFilePos(AH, ctx);
+
+			_readBlockHeader(AH, &blkType, &id);
+
+			if (blkType == EOF || id == te->dumpId)
+				break;
+
+			/* Remember the block position, if we got one */
+			if (thisBlkPos >= 0)
+			{
+				TocEntry   *otherte = getTocEntryByDumpId(AH, id);
+
+				if (otherte && otherte->formatData)
+				{
+					lclTocEntry *othertctx = (lclTocEntry *) otherte->formatData;
+
+					/*
+					 * Note: on Windows, multiple threads might access/update
+					 * the same lclTocEntry concurrently, but that should be
+					 * safe as long as we update dataPos before dataState.
+					 * Ideally, we'd use pg_write_barrier() to enforce that,
+					 * but the needed infrastructure doesn't exist in frontend
+					 * code.  But Windows only runs on machines with strong
+					 * store ordering, so it should be okay for now.
+					 */
+					if (othertctx->dataState == K_OFFSET_POS_NOT_SET)
+					{
+						othertctx->dataPos = thisBlkPos;
+						othertctx->dataState = K_OFFSET_POS_SET;
+					}
+					else if (othertctx->dataPos != thisBlkPos ||
+							 othertctx->dataState != K_OFFSET_POS_SET)
+					{
+						/* sanity check */
+						pg_log_warning("data block %d has wrong seek position",
+									   id);
+					}
+				}
+			}
+
 			switch (blkType)
 			{
 				case BLK_DATA:
@@ -448,7 +501,6 @@ _PrintTocData(ArchiveHandle *AH, TocEntry *te)
 						  blkType);
 					break;
 			}
-			_readBlockHeader(AH, &blkType, &id);
 		}
 	}
 	else
@@ -460,20 +512,18 @@ _PrintTocData(ArchiveHandle *AH, TocEntry *te)
 		_readBlockHeader(AH, &blkType, &id);
 	}
 
-	/* Produce suitable failure message if we fell off end of file */
+	/*
+	 * If we reached EOF without finding the block we want, then either it
+	 * doesn't exist, or it does but we lack the ability to seek back to it.
+	 */
 	if (blkType == EOF)
 	{
-		if (tctx->dataState == K_OFFSET_POS_NOT_SET)
-			fatal("could not find block ID %d in archive -- "
-				  "possibly due to out-of-order restore request, "
-				  "which cannot be handled due to lack of data offsets in archive",
-				  te->dumpId);
-		else if (!ctx->hasSeek)
+		if (!ctx->hasSeek)
 			fatal("could not find block ID %d in archive -- "
 				  "possibly due to out-of-order restore request, "
 				  "which cannot be handled due to non-seekable input file",
 				  te->dumpId);
-		else					/* huh, the dataPos led us to EOF? */
+		else
 			fatal("could not find block ID %d in archive -- "
 				  "possibly corrupt archive",
 				  te->dumpId);
@@ -498,6 +548,20 @@ _PrintTocData(ArchiveHandle *AH, TocEntry *te)
 			fatal("unrecognized data block type %d while restoring archive",
 				  blkType);
 			break;
+	}
+
+	/*
+	 * If our input file is seekable but lacks data offsets, update our
+	 * knowledge of where to start future searches from.  (Note that we did
+	 * not update the current TE's dataState/dataPos.  We could have, but
+	 * there is no point since it will not be visited again.)
+	 */
+	if (ctx->hasSeek && tctx->dataState == K_OFFSET_POS_NOT_SET)
+	{
+		pgoff_t		curPos = _getFilePos(AH, ctx);
+
+		if (curPos > ctx->lastFilePos)
+			ctx->lastFilePos = curPos;
 	}
 }
 
@@ -565,22 +629,28 @@ _skipData(ArchiveHandle *AH)
 	blkLen = ReadInt(AH);
 	while (blkLen != 0)
 	{
-		if (blkLen > buflen)
+		if (ctx->hasSeek)
 		{
-			if (buf)
-				free(buf);
-			buf = (char *) pg_malloc(blkLen);
-			buflen = blkLen;
+			if (fseeko(AH->FH, blkLen, SEEK_CUR) != 0)
+				fatal("error during file seek: %m");
 		}
-		if ((cnt = fread(buf, 1, blkLen, AH->FH)) != blkLen)
+		else
 		{
-			if (feof(AH->FH))
-				fatal("could not read from input file: end of file");
-			else
-				fatal("could not read from input file: %m");
+			if (blkLen > buflen)
+			{
+				if (buf)
+					free(buf);
+				buf = (char *) pg_malloc(blkLen);
+				buflen = blkLen;
+			}
+			if ((cnt = fread(buf, 1, blkLen, AH->FH)) != blkLen)
+			{
+				if (feof(AH->FH))
+					fatal("could not read from input file: end of file");
+				else
+					fatal("could not read from input file: %m");
+			}
 		}
-
-		ctx->filePos += blkLen;
 
 		blkLen = ReadInt(AH);
 	}
@@ -599,12 +669,10 @@ _skipData(ArchiveHandle *AH)
 static int
 _WriteByte(ArchiveHandle *AH, const int i)
 {
-	lclContext *ctx = (lclContext *) AH->formatData;
 	int			res;
 
 	if ((res = fputc(i, AH->FH)) == EOF)
 		WRITE_ERROR_EXIT;
-	ctx->filePos += 1;
 
 	return 1;
 }
@@ -620,13 +688,11 @@ _WriteByte(ArchiveHandle *AH, const int i)
 static int
 _ReadByte(ArchiveHandle *AH)
 {
-	lclContext *ctx = (lclContext *) AH->formatData;
 	int			res;
 
 	res = getc(AH->FH);
 	if (res == EOF)
 		READ_ERROR_EXIT(AH->FH);
-	ctx->filePos += 1;
 	return res;
 }
 
@@ -640,13 +706,8 @@ _ReadByte(ArchiveHandle *AH)
 static void
 _WriteBuf(ArchiveHandle *AH, const void *buf, size_t len)
 {
-	lclContext *ctx = (lclContext *) AH->formatData;
-
 	if (fwrite(buf, 1, len, AH->FH) != len)
 		WRITE_ERROR_EXIT;
-	ctx->filePos += len;
-
-	return;
 }
 
 /*
@@ -659,13 +720,8 @@ _WriteBuf(ArchiveHandle *AH, const void *buf, size_t len)
 static void
 _ReadBuf(ArchiveHandle *AH, void *buf, size_t len)
 {
-	lclContext *ctx = (lclContext *) AH->formatData;
-
 	if (fread(buf, 1, len, AH->FH) != len)
 		READ_ERROR_EXIT(AH->FH);
-	ctx->filePos += len;
-
-	return;
 }
 
 /*
@@ -697,7 +753,6 @@ _CloseArchive(ArchiveHandle *AH)
 		if (tpos < 0 && ctx->hasSeek)
 			fatal("could not determine seek position in archive file: %m");
 		WriteToc(AH);
-		ctx->dataStart = _getFilePos(AH, ctx);
 		WriteDataChunks(AH, NULL);
 
 		/*
@@ -830,6 +885,9 @@ _Clone(ArchiveHandle *AH)
 {
 	lclContext *ctx = (lclContext *) AH->formatData;
 
+	/*
+	 * Each thread must have private lclContext working state.
+	 */
 	AH->formatData = (lclContext *) pg_malloc(sizeof(lclContext));
 	memcpy(AH->formatData, ctx, sizeof(lclContext));
 	ctx = (lclContext *) AH->formatData;
@@ -839,10 +897,13 @@ _Clone(ArchiveHandle *AH)
 		fatal("compressor active");
 
 	/*
+	 * We intentionally do not clone TOC-entry-local state: it's useful to
+	 * share knowledge about where the data blocks are across threads.
+	 * _PrintTocData has to be careful about the order of operations on that
+	 * state, though.
+	 *
 	 * Note: we do not make a local lo_buf because we expect at most one BLOBS
-	 * entry per archive, so no parallelism is possible.  Likewise,
-	 * TOC-entry-local state isn't an issue because any one TOC entry is
-	 * touched by just one worker child.
+	 * entry per archive, so no parallelism is possible.
 	 */
 }
 
@@ -871,30 +932,24 @@ _WorkerJobRestoreCustom(ArchiveHandle *AH, TocEntry *te)
 
 /*
  * Get the current position in the archive file.
+ *
+ * With a non-seekable archive file, we may not be able to obtain the
+ * file position.  If so, just return -1.  It's not too important in
+ * that case because we won't be able to rewrite the TOC to fill in
+ * data block offsets anyway.
  */
 static pgoff_t
 _getFilePos(ArchiveHandle *AH, lclContext *ctx)
 {
 	pgoff_t		pos;
 
-	if (ctx->hasSeek)
+	pos = ftello(AH->FH);
+	if (pos < 0)
 	{
-		/*
-		 * Prior to 1.7 (pg7.3) we relied on the internally maintained
-		 * pointer.  Now we rely on ftello() always, unless the file has been
-		 * found to not support it.  For debugging purposes, print a warning
-		 * if the internal pointer disagrees, so that we're more likely to
-		 * notice if something's broken about the internal position tracking.
-		 */
-		pos = ftello(AH->FH);
-		if (pos < 0)
+		/* Not expected if we found we can seek. */
+		if (ctx->hasSeek)
 			fatal("could not determine seek position in archive file: %m");
-
-		if (pos != ctx->filePos)
-			pg_log_warning("ftell mismatch with expected position -- ftell used");
 	}
-	else
-		pos = ctx->filePos;
 	return pos;
 }
 
@@ -906,7 +961,6 @@ _getFilePos(ArchiveHandle *AH, lclContext *ctx)
 static void
 _readBlockHeader(ArchiveHandle *AH, int *type, int *id)
 {
-	lclContext *ctx = (lclContext *) AH->formatData;
 	int			byt;
 
 	/*
@@ -927,7 +981,6 @@ _readBlockHeader(ArchiveHandle *AH, int *type, int *id)
 			*id = 0;			/* don't return an uninitialized value */
 			return;
 		}
-		ctx->filePos += 1;
 	}
 
 	*id = ReadInt(AH);

@@ -1,25 +1,3 @@
--- ALTER TABLE ... RENAME on corrupted relations
-SET allow_system_table_mods = true;
-SET gp_allow_rename_relation_without_lock = ON;
--- missing entry
-CREATE TABLE cor (a int, b float);
-INSERT INTO cor SELECT i, i+1 FROM generate_series(1,100)i;
-DELETE FROM pg_attribute WHERE attname='a' AND attrelid='cor'::regclass;
-ALTER TABLE cor RENAME TO oldcor;
-INSERT INTO pg_attribute SELECT distinct on(attrelid, attnum) * FROM gp_dist_random('pg_attribute') WHERE attname='a' AND attrelid='oldcor'::regclass;
-DROP TABLE oldcor;
-
--- typname is out of sync
-CREATE TABLE cor (a int, b float, c text);
-UPDATE pg_type SET typname='newcor' WHERE typrelid='cor'::regclass;
-ALTER TABLE cor RENAME TO newcor2;
-ALTER TABLE newcor2 RENAME TO cor;
-DROP TABLE cor;
-
-RESET allow_system_table_mods;
-RESET gp_allow_rename_relation_without_lock;
-
-
 -- MPP-20466 Dis-allow duplicate constraint names for same table
 create table dupconstr (
 						i int,
@@ -240,3 +218,31 @@ CREATE TABLE dropped_col_t2(i1 int, i2 int);
 CREATE VIEW dropped_col_v AS SELECT dropped_col_t1.i1 FROM dropped_col_t1 JOIN dropped_col_t2 ON dropped_col_t1.i1=dropped_col_t2.i1;
 ALTER TABLE dropped_col_t1 DROP COLUMN i2;
 SELECT * FROM dropped_col_v;
+
+-- Test that we are able to attach a newly created partition table when it has foreign key reference.
+CREATE TABLE issue_14279_fk_reference (col2 text unique not null);
+INSERT INTO issue_14279_fk_reference VALUES ('stuff');
+CREATE TABLE issue_14279_taptest_table (
+    col1 BIGINT,
+    col2 TEXT NOT NULL DEFAULT 'stuff', FOREIGN KEY (col2) REFERENCES issue_14279_fk_reference(col2))
+  PARTITION BY RANGE (col1);
+CREATE TABLE issue_14279_taptest_table_p3000000000 (
+    LIKE issue_14279_taptest_table
+    INCLUDING DEFAULTS INCLUDING CONSTRAINTS);
+ALTER TABLE issue_14279_taptest_table ATTACH PARTITION issue_14279_taptest_table_p3000000000 FOR VALUES FROM (3000000000) TO (3000000100);
+BEGIN;
+CREATE TABLE issue_14279_taptest_table_p3000000100 (
+    LIKE issue_14279_taptest_table
+    INCLUDING DEFAULTS INCLUDING CONSTRAINTS);
+ALTER TABLE issue_14279_taptest_table ATTACH PARTITION issue_14279_taptest_table_p3000000100 FOR VALUES FROM (3000000100) TO (3000000200);
+END;
+INSERT INTO issue_14279_taptest_table SELECT generate_series(3000000000, 3000000001);
+INSERT INTO issue_14279_taptest_table SELECT generate_series(3000000100, 3000000101);
+-- The parent table shouldn't have anything.
+SELECT * FROM ONLY issue_14279_taptest_table;
+-- The newly attached table should have 2 rows.
+SELECT * FROM issue_14279_taptest_table_p3000000000;
+-- The newly attached table should have 2 rows.
+SELECT * FROM issue_14279_taptest_table_p3000000100;
+DROP TABLE issue_14279_taptest_table;
+DROP TABLE issue_14279_fk_reference;

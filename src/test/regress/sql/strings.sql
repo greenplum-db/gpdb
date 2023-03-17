@@ -148,6 +148,11 @@ SELECT SUBSTRING('1234567890' FROM 3) = '34567890' AS "34567890";
 
 SELECT SUBSTRING('1234567890' FROM 4 FOR 3) = '456' AS "456";
 
+-- test overflow cases
+SELECT SUBSTRING('string' FROM 2 FOR 2147483646) AS "tring";
+SELECT SUBSTRING('string' FROM -10 FOR 2147483646) AS "string";
+SELECT SUBSTRING('string' FROM -10 FOR -2147483646) AS "error";
+
 -- T581 regular expression substring (with SQL's bizarre regexp syntax)
 SELECT SUBSTRING('abcdefg' FROM 'a#"(b_d)#"%' FOR '#') AS "bcd";
 
@@ -520,6 +525,12 @@ SELECT strpos('abcdef', 'cd') AS "pos_3";
 
 SELECT strpos('abcdef', 'xy') AS "pos_0";
 
+SELECT strpos('abcdef', '') AS "pos_1";
+
+SELECT strpos('', 'xy') AS "pos_0";
+
+SELECT strpos('', '') AS "pos_1";
+
 --
 -- test replace
 --
@@ -599,6 +610,29 @@ SELECT sha512('');
 SELECT sha512('The quick brown fox jumps over the lazy dog.');
 
 --
+-- encode/decode
+--
+SELECT encode('\x1234567890abcdef00', 'hex');
+SELECT decode('1234567890abcdef00', 'hex');
+SELECT encode(('\x' || repeat('1234567890abcdef0001', 7))::bytea, 'base64');
+SELECT decode(encode(('\x' || repeat('1234567890abcdef0001', 7))::bytea,
+                     'base64'), 'base64');
+SELECT encode('\x1234567890abcdef00', 'escape');
+SELECT decode(encode('\x1234567890abcdef00', 'escape'), 'escape');
+
+--
+-- get_bit/set_bit etc
+--
+SELECT get_bit('\x1234567890abcdef00'::bytea, 43);
+SELECT get_bit('\x1234567890abcdef00'::bytea, 99);  -- error
+SELECT set_bit('\x1234567890abcdef00'::bytea, 43, 0);
+SELECT set_bit('\x1234567890abcdef00'::bytea, 99, 0);  -- error
+SELECT get_byte('\x1234567890abcdef00'::bytea, 3);
+SELECT get_byte('\x1234567890abcdef00'::bytea, 99);  -- error
+SELECT set_byte('\x1234567890abcdef00'::bytea, 7, 11);
+SELECT set_byte('\x1234567890abcdef00'::bytea, 99, 11);  -- error
+
+--
 -- test behavior of escape_string_warning and standard_conforming_strings options
 --
 set escape_string_warning = off;
@@ -670,6 +704,12 @@ SELECT chr(0);
 
 SELECT repeat('Pg', 4);
 SELECT repeat('Pg', -4);
+
+SELECT SUBSTRING('1234567890'::bytea FROM 3) "34567890";
+SELECT SUBSTRING('1234567890'::bytea FROM 4 FOR 3) AS "456";
+SELECT SUBSTRING('string'::bytea FROM 2 FOR 2147483646) AS "tring";
+SELECT SUBSTRING('string'::bytea FROM -10 FOR 2147483646) AS "string";
+SELECT SUBSTRING('string'::bytea FROM -10 FOR -2147483646) AS "error";
 
 SELECT trim(E'\\000'::bytea from E'\\000Tom\\000'::bytea);
 SELECT btrim(E'\\000trim\\000'::bytea, E'\\000'::bytea);

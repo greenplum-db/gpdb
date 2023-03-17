@@ -119,17 +119,17 @@ class GpSegStatusProgram:
         """
 
         lockFileExists = pidRunningStatus['lockFileExists']
-        netstatPortActive = pidRunningStatus['netstatPortActive']
+        ssPortActive = pidRunningStatus['ssPortActive']
         pidValue = pidRunningStatus['pidValue']
 
         lockFileName = gp.get_lockfile_name(seg.getSegmentPort())
 
         error = None
-        if not lockFileExists and not netstatPortActive:
+        if not lockFileExists and not ssPortActive:
             error = "No socket connection or lock file (%s) found for port %s" % (lockFileName, seg.getSegmentPort())
-        elif not lockFileExists and netstatPortActive:
+        elif not lockFileExists and ssPortActive:
             error = "No lock file %s but process running on port %s" % (lockFileName, seg.getSegmentPort())
-        elif lockFileExists and not netstatPortActive:
+        elif lockFileExists and not ssPortActive:
             error = "Have lock file %s but no process running on port %s" % (lockFileName, seg.getSegmentPort())
         else:
             if pidValue == 0:
@@ -145,14 +145,14 @@ class GpSegStatusProgram:
         """
         Get an object containing various information about the postmaster pid's status
         """
-        (postmasterPidFileExists, tempFileExists, lockFileExists, netstatPortActive, pidValue) = \
+        (postmasterPidFileExists, tempFileExists, lockFileExists, ssPortActive, pidValue) = \
                     gp.chk_local_db_running(seg.getSegmentDataDirectory(), seg.getSegmentPort())
 
         return {
             'postmasterPidFileExists' : postmasterPidFileExists,
             'tempFileExists' : tempFileExists,
             'lockFileExists' : lockFileExists,
-            'netstatPortActive' : netstatPortActive,
+            'ssPortActive' : ssPortActive,
             'pidValue' : pidValue
         }
 

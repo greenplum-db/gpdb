@@ -1,5 +1,5 @@
-**Concourse Pipeline** [![Concourse Build Status](https://prod.ci.gpdb.pivotal.io/api/v1/teams/main/pipelines/gpdb_master/badge)](https://prod.ci.gpdb.pivotal.io/teams/main/pipelines/gpdb_master) |
-**Travis Build** [![Travis Build Status](https://travis-ci.org/greenplum-db/gpdb.svg?branch=master)](https://travis-ci.org/greenplum-db/gpdb) |
+**Concourse Pipeline** [![Concourse Build Status](https://prod.ci.gpdb.pivotal.io/api/v1/teams/main/pipelines/gpdb_main/badge)](https://prod.ci.gpdb.pivotal.io/teams/main/pipelines/gpdb_main) |
+**Travis Build** [![Travis Build Status](https://travis-ci.org/greenplum-db/gpdb.svg?branch=main)](https://travis-ci.org/greenplum-db/gpdb) |
 
 ----------------------------------------------------------------------
 
@@ -132,15 +132,6 @@ make distclean
 ./configure --disable-orca --with-perl --with-python --with-libxml --prefix=/usr/local/gpdb
 ```
 
-### Building GPDB with PXF
-
-PXF is an extension framework for GPDB to enable fast access to external hadoop datasets.
-Refer to [PXF extension](gpcontrib/pxf/README.md) for more information.
-
-Currently, GPDB is built with PXF by default (--enable-pxf is on).
-In order to build GPDB without pxf, simply invoke `./configure` with additional option `--disable-pxf`.
-PXF requires curl, so `--enable-pxf` is not compatible with the `--without-libcurl` option.
-
 ### Building GPDB with Python3 enabled
 
 GPDB supports Python3 with plpython3u UDF
@@ -177,7 +168,7 @@ throughout the codebase, but a few larger additions worth noting:
 * __gpcontrib/__
 
   Much like the PostgreSQL contrib/ directory, this directory contains
-  extensions such as gpfdist, PXF and gpmapreduce which are Greenplum-specific.
+  extensions such as gpfdist and gpmapreduce which are Greenplum-specific.
 
 * __doc/__
 
@@ -263,7 +254,7 @@ verbatim or your contribution being upstreamed as part of the larger changeset).
 If the contribution you're submitting is NOT original work you have to indicate the name
 of the license and also make sure that it is similar in terms to the Apache License 2.0.
 Apache Software Foundation maintains a list of these licenses under [Category A](https://www.apache.org/legal/resolved.html#category-a). In addition to that, you may be required to make proper attribution in the
-[NOTICE file](https://github.com/greenplum-db/gpdb/blob/master/NOTICE) similar to [these examples](https://github.com/greenplum-db/gpdb/blob/master/NOTICE#L278).
+[NOTICE file](https://github.com/greenplum-db/gpdb/blob/main/NOTICE) similar to [these examples](https://github.com/greenplum-db/gpdb/blob/main/NOTICE#L278).
 
 Finally, keep in mind that it is NEVER a good idea to remove licensing headers from
 the work that is not your original one. Even if you are using parts of the file that
@@ -327,9 +318,9 @@ in the development process.  When opening the pull request, select "Draft" in
 the dropdown menu when creating the PR to clearly mark the intent of the pull
 request. Prefixing the title with "WIP:" is also good practice.
 
-All new features should be submitted against the main master branch. Bugfixes
-should too be submitted against master unless they only exist in a supported
-back-branch. If the bug exists in both master and back-branches, explain this
+All new features should be submitted against the main branch. Bugfixes
+should too be submitted against main unless they only exist in a supported
+back-branch. If the bug exists in both main and back-branches, explain this
 in the PR description.
 
 ### Validation checks and CI

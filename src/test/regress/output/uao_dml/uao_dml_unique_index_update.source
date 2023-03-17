@@ -1,0 +1,230 @@
+create schema uao_dml_unique_index_update_@amname@;
+set search_path=uao_dml_unique_index_update_@amname@;
+set default_table_access_method=@amname@;
+-- Case 1: Inserting tx inserting a key affected by an update--------------------
+CREATE TABLE uao_unique_index_update (a INT unique);
+INSERT INTO uao_unique_index_update VALUES (1);
+UPDATE uao_unique_index_update SET a = 2 WHERE a = 1;
+-- Should not raise a conflict as the key has been deleted the update.
+INSERT INTO uao_unique_index_update VALUES (1);
+-- Should raise a conflict as the key has been inserted by the update
+INSERT INTO uao_unique_index_update VALUES (2);
+ERROR:  duplicate key value violates unique constraint "uao_unique_index_update_a_key"  (seg0 192.168.0.148:7002 pid=1927811)
+DETAIL:  Key (a)=(2) already exists.
+SELECT * FROM uao_unique_index_update;
+ a 
+---
+ 2
+ 1
+(2 rows)
+
+DROP TABLE uao_unique_index_update;
+-- Case 2: Inserting tx inserting a key whose update was aborted----------------
+CREATE TABLE uao_unique_index_update (a INT unique);
+INSERT INTO uao_unique_index_update VALUES (1);
+BEGIN;
+UPDATE uao_unique_index_update SET a = 2 WHERE a = 1;
+ABORT;
+-- Should raise a conflict as the update of the key was aborted.
+INSERT INTO uao_unique_index_update VALUES (1);
+ERROR:  duplicate key value violates unique constraint "uao_unique_index_update_a_key"  (seg1 192.168.0.148:7003 pid=1927812)
+DETAIL:  Key (a)=(1) already exists.
+-- Should not raise a conflict as the update of the key was aborted.
+INSERT INTO uao_unique_index_update VALUES (2);
+SELECT * FROM uao_unique_index_update;
+ a 
+---
+ 2
+ 1
+(2 rows)
+
+DROP TABLE uao_unique_index_update;
+-- Case 3: Inserting tx inserting a key updated in the same tx------------------
+CREATE TABLE uao_unique_index_update (a INT unique);
+INSERT INTO uao_unique_index_update VALUES (1);
+BEGIN;
+UPDATE uao_unique_index_update SET a = 2 WHERE a = 1;
+-- should succeed as the conflicting key was deleted by the update.
+INSERT INTO uao_unique_index_update VALUES (1);
+-- should raise a conflict as the key was inserted by the update.
+INSERT INTO uao_unique_index_update VALUES (2);
+ERROR:  duplicate key value violates unique constraint "uao_unique_index_update_a_key"  (seg0 192.168.0.148:7002 pid=1927811)
+DETAIL:  Key (a)=(2) already exists.
+COMMIT;
+SELECT * FROM uao_unique_index_update;
+ a 
+---
+ 1
+(1 row)
+
+DROP TABLE uao_unique_index_update;
+-- Case 4: Updating tx deletes a key already updated in the same tx-------------
+CREATE TABLE uao_unique_index_update (a INT unique);
+INSERT INTO uao_unique_index_update VALUES (1);
+BEGIN;
+UPDATE uao_unique_index_update SET a = 2 WHERE a = 1;
+-- should be a no-op as the key has already been deleted by the update
+UPDATE uao_unique_index_update SET a = 2 WHERE a = 1;
+-- should succeed as the key has been inserted by the 1st update
+UPDATE uao_unique_index_update SET a = 3 WHERE a = 2;
+COMMIT;
+SELECT * FROM uao_unique_index_update;
+ a 
+---
+ 3
+(1 row)
+
+DROP TABLE uao_unique_index_update;
+-- Case 5: Updating tx updates a key inserted in the same tx--------------------
+CREATE TABLE uao_unique_index_update (a INT unique);
+BEGIN;
+INSERT INTO uao_unique_index_update VALUES (1);
+-- should be able to see and update the inserted key.
+UPDATE uao_unique_index_update SET a = 2 WHERE a = 1;
+COMMIT;
+SELECT * FROM uao_unique_index_update;
+ a 
+---
+ 2
+(1 row)
+
+-- Case 6: Updating tx updates a key to a key inserted in the same tx-----------
+CREATE TABLE uao_unique_index_update (a INT unique);
+ERROR:  relation "uao_unique_index_update" already exists
+INSERT INTO uao_unique_index_update VALUES (1);
+BEGIN;
+INSERT INTO uao_unique_index_update VALUES (2);
+ERROR:  duplicate key value violates unique constraint "uao_unique_index_update_a_key"  (seg0 192.168.0.148:7002 pid=1927811)
+DETAIL:  Key (a)=(2) already exists.
+-- should raise a conflict with the key inserted inside the same tx.
+UPDATE uao_unique_index_update SET a = 2 WHERE a = 1;
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
+END;
+SELECT * FROM uao_unique_index_update;
+ a 
+---
+ 2
+ 1
+(2 rows)
+
+DROP TABLE uao_unique_index_update;
+-- Case 7: Updating tx tries to update a key absent from the table--------------
+CREATE TABLE uao_unique_index_update (a INT unique);
+-- should be a no-op.
+UPDATE uao_unique_index_update SET a = 2 WHERE a = 1;
+INSERT INTO uao_unique_index_update VALUES (1);
+-- should be a no-op.
+UPDATE uao_unique_index_update SET a = 3 WHERE a = 2;
+SELECT * FROM uao_unique_index_update;
+ a 
+---
+ 1
+(1 row)
+
+DROP TABLE uao_unique_index_update;
+-- Case 8: Update where pre-update key = post-update key------------------------
+CREATE TABLE uao_unique_index_update (a INT unique);
+INSERT INTO uao_unique_index_update VALUES (1);
+-- should succeed even though the pre-update and post-update values are equal.
+UPDATE uao_unique_index_update SET a = 1 WHERE a = 1;
+SELECT * FROM uao_unique_index_update;
+ a 
+---
+ 1
+(1 row)
+
+DROP TABLE uao_unique_index_update;
+-- Case 9: Updating tx inserts a key that already exists------------------------
+CREATE TABLE uao_unique_index_update (a INT unique);
+INSERT INTO uao_unique_index_update VALUES (1), (2);
+-- should raise a conflict as the target value already exists.
+UPDATE uao_unique_index_update SET a = 2 WHERE a = 1;
+ERROR:  duplicate key value violates unique constraint "uao_unique_index_update_a_key"  (seg0 192.168.0.148:7002 pid=1929685)
+DETAIL:  Key (a)=(2) already exists.
+SELECT * FROM uao_unique_index_update;
+ a 
+---
+ 2
+ 1
+(2 rows)
+
+DROP TABLE uao_unique_index_update;
+-- Case 10: Updating command tries to insert the same key more than once--------
+CREATE TABLE uao_unique_index_update (a INT unique);
+INSERT INTO uao_unique_index_update SELECT generate_series(1,5);
+-- should raise a conflict as the second update will try to insert 6, which was
+-- already inserted by the first update.
+UPDATE uao_unique_index_update SET a=6 WHERE a>2;
+ERROR:  duplicate key value violates unique constraint "uao_unique_index_update_a_key"  (seg2 192.168.0.148:7004 pid=1669359)
+DETAIL:  Key (a)=(6) already exists.
+DROP TABLE uao_unique_index_update;
+-- Case 11: Updating tx updates a key inserted in the same subtx----------------
+CREATE TABLE uao_unique_index_update (a INT unique);
+BEGIN;
+SAVEPOINT a;
+INSERT INTO uao_unique_index_update VALUES(1);
+UPDATE uao_unique_index_update SET a=2 WHERE a=1;
+COMMIT;
+SELECT * FROM uao_unique_index_update;
+ a 
+---
+ 2
+(1 row)
+
+DROP TABLE uao_unique_index_update;
+-- Case 12: Updating tx updates a key updated in the same subtx-----------------
+CREATE TABLE uao_unique_index_update (a INT unique);
+BEGIN;
+SAVEPOINT a;
+INSERT INTO uao_unique_index_update VALUES(1);
+UPDATE uao_unique_index_update SET a=2 WHERE a=1;
+-- should be a no-op
+UPDATE uao_unique_index_update SET a=2 WHERE a=1;
+-- should succeed
+UPDATE uao_unique_index_update SET a=3 WHERE a=2;
+COMMIT;
+SELECT * FROM uao_unique_index_update;
+ a 
+---
+ 3
+(1 row)
+
+DROP TABLE uao_unique_index_update;
+-- Case 13: Updating tx updates a key whose earlier update was rolled back------
+CREATE TABLE uao_unique_index_update (a INT unique);
+INSERT INTO uao_unique_index_update VALUES(1);
+BEGIN;
+SAVEPOINT a;
+UPDATE uao_unique_index_update SET a=2 WHERE a=1;
+ROLLBACK TO SAVEPOINT a;
+-- should be able to run the update again as we have rolled back.
+UPDATE uao_unique_index_update SET a=2 WHERE a=1;
+COMMIT;
+SELECT * FROM uao_unique_index_update;
+ a 
+---
+ 2
+(1 row)
+
+DROP TABLE uao_unique_index_update;
+-- Case 14: Updating tx updates a key to a key inserted in the same subtx-------
+CREATE TABLE uao_unique_index_update (a INT unique);
+INSERT INTO uao_unique_index_update VALUES (1);
+BEGIN;
+SAVEPOINT a;
+INSERT INTO uao_unique_index_update VALUES (2);
+-- should raise a conflict with the key inserted inside the same subtx.
+UPDATE uao_unique_index_update SET a = 2 WHERE a = 1;
+ERROR:  duplicate key value violates unique constraint "uao_unique_index_update_a_key"  (seg0 192.168.0.148:7002 pid=3411438)
+DETAIL:  Key (a)=(2) already exists.
+ROLLBACK TO SAVEPOINT a;
+-- should be able to run the update again as we have rolled back.
+UPDATE uao_unique_index_update SET a = 2 WHERE a = 1;
+COMMIT;
+SELECT * FROM uao_unique_index_update;
+ a 
+---
+ 2
+(1 row)
+
+DROP TABLE uao_unique_index_update;

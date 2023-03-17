@@ -68,10 +68,6 @@ private:
 		return (m_is_duplicate_sensitive || !pds->m_is_duplicate_sensitive);
 	}
 
-	// exact match against given hashed distribution
-	BOOL FMatchHashedDistribution(
-		const CDistributionSpecHashed *pdshashed) const;
-
 	BOOL FDistributionSpecHashedOnlyOnGpSegmentId() const;
 
 public:
@@ -141,6 +137,10 @@ public:
 	// return a copy of the distribution spec after excluding the given columns
 	virtual CDistributionSpecHashed *PdshashedExcludeColumns(CMemoryPool *mp,
 															 CColRefSet *pcrs);
+
+	// exact match against given hashed distribution
+	BOOL FMatchHashedDistribution(
+		const CDistributionSpecHashed *pdshashed) const;
 
 	// does this distribution match the given one
 	BOOL Matches(const CDistributionSpec *pds) const override;
@@ -226,10 +226,13 @@ public:
 	// create a copy of the distribution spec
 	CDistributionSpecHashed *Copy(CMemoryPool *mp);
 
+	// create a copy of the distribution spec with given nulls colocated value
+	CDistributionSpecHashed *Copy(CMemoryPool *mp, BOOL fNullsColocated);
+
 	// get distribution expr array from the current and its equivalent spec
 	CExpressionArrays *GetAllDistributionExprs(CMemoryPool *mp);
 
-	// return a new spec created after merging the current spec with the input spec as equivalents
+	// return a new spec created by merging the current with the input spec
 	CDistributionSpecHashed *Combine(CMemoryPool *mp,
 									 CDistributionSpecHashed *other_spec);
 

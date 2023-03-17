@@ -18,32 +18,7 @@
 #include "nodes/pathnodes.h"
 #include "utils/relcache.h"
 
-/* postgres_fdw is compiled as a backend, it needs the server's
- * header files such as executor/tuptable.h. It also needs libpq
- * to connect to a remote postgres database, so it's statically
- * linked to libpq.a which is compiled as a frontend using
- * -DFRONTEND.
- *
- * But the struct PQconninfoOption's length is different between
- * backend and frontend, there is no "connofs" field in frontend.
- * When postgres_fdw calls the function "PQconndefaults" implemented
- * in libpq.a and uses the returned PQconninfoOption variable, it crashs,
- * because the PQconninfoOption variable returned by libpq.a doesn't contain
- * the "connofs" value, but the postgres_fdw thinks it has, so it crashes.
- *
- * We define FRONTEND here to include frontend libpq header files.
- */
-#ifdef LIBPQ_FE_H
-#error "postgres_fdw.h" must be included before "libpq-fe.h"
-#endif /* LIBPQ_FE_H */
-
-#ifndef FRONTEND
-#define FRONTEND
 #include "libpq-fe.h"
-#undef FRONTEND
-#else
-#include "libpq-fe.h"
-#endif /* FRONTEND */
 
 /*
  * FDW-specific planner information kept in RelOptInfo.fdw_private for a
@@ -180,6 +155,9 @@ extern bool is_foreign_expr(PlannerInfo *root,
 extern bool is_foreign_param(PlannerInfo *root,
 							 RelOptInfo *baserel,
 							 Expr *expr);
+extern bool is_foreign_pathkey(PlannerInfo *root,
+							   RelOptInfo *baserel,
+							   PathKey *pathkey);
 extern void deparseInsertSql(StringInfo buf, RangeTblEntry *rte,
 							 Index rtindex, Relation rel,
 							 List *targetAttrs, bool doNothing,
@@ -214,10 +192,12 @@ extern void deparseAnalyzeSizeSql(StringInfo buf, Relation rel);
 extern void deparseAnalyzeSql(StringInfo buf, Relation rel,
 							  List **retrieved_attrs);
 extern void deparseStringLiteral(StringInfo buf, const char *val);
-extern Expr *find_em_expr_for_rel(EquivalenceClass *ec, RelOptInfo *rel);
-extern Expr *find_em_expr_for_input_target(PlannerInfo *root,
-										   EquivalenceClass *ec,
-										   PathTarget *target);
+extern EquivalenceMember *find_em_for_rel(PlannerInfo *root,
+										  EquivalenceClass *ec,
+										  RelOptInfo *rel);
+extern EquivalenceMember *find_em_for_rel_target(PlannerInfo *root,
+												 EquivalenceClass *ec,
+												 RelOptInfo *rel);
 extern List *build_tlist_to_deparse(RelOptInfo *foreignrel);
 extern void deparseSelectStmtForRel(StringInfo buf, PlannerInfo *root,
 									RelOptInfo *foreignrel, List *tlist,

@@ -30,7 +30,7 @@ To specify the hosts to test, use the `-f` option to specify a file containing a
 
 You must also specify at least one test directory \(with `-d`\). The user who runs `gpcheckperf` must have write access to the specified test directories on all remote hosts. For the disk I/O test, the test directories should correspond to your segment data directories \(primary and/or mirrors\). For the memory bandwidth and network tests, a temporary directory is required for the test program files.
 
-Before using `gpcheckperf`, you must have a trusted host setup between the hosts involved in the performance test. You can use the utility `gpssh-exkeys` to update the known host files and exchange public keys between hosts if you have not done so already. Note that `gpcheckperf` calls to `gpssh` and `gpscp`, so these Greenplum utilities must also be in your `$PATH`.
+Before using `gpcheckperf`, you must have a trusted host setup between the hosts involved in the performance test. You can use the utility `gpssh-exkeys` to update the known host files and exchange public keys between hosts if you have not done so already. Note that `gpcheckperf` calls to `gpssh` and `gpsync`, so these Greenplum utilities must also be in your `$PATH`.
 
 ## <a id="section4"></a>Options 
 
@@ -121,5 +121,5 @@ $ gpcheckperf -f hostfile_gpchecknet_ic2 -r N --netperf -d /tmp
 
 ## <a id="section6"></a>See Also 
 
-[gpssh](gpssh.html), [gpscp](gpscp.html)
+[gpssh](gpssh.html), [gpsync](gpsync.html)
 

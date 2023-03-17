@@ -118,6 +118,12 @@ insert_or_update_fastsequence(Relation gp_fastsequence_rel,
 
 		CatalogTupleInsertFrozen(gp_fastsequence_rel, newTuple);
 
+		elogif(Debug_appendonly_print_insert_tuple, LOG,
+			   "Frozen insert to gp_fastsequence (rel, segno, last_sequence): (%u, %ld, %ld)",
+			   objid,
+			   objmod,
+			   newLastSequence);
+
 		heap_freetuple(newTuple);
 	}
 	else
@@ -151,6 +157,14 @@ insert_or_update_fastsequence(Relation gp_fastsequence_rel,
 		newTuple->t_data->t_ctid = oldTuple->t_data->t_ctid;
 		newTuple->t_self = oldTuple->t_self;
 		heap_inplace_update(gp_fastsequence_rel, newTuple);
+
+		elogif(Debug_appendonly_print_insert_tuple, LOG,
+			   "In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((%u, %u), %u, %ld, %ld)",
+			   ItemPointerGetBlockNumberNoCheck(&newTuple->t_data->t_ctid),
+			   ItemPointerGetOffsetNumberNoCheck(&newTuple->t_data->t_ctid),
+			   objid,
+			   objmod,
+			   newLastSequence);
 
 		heap_freetuple(newTuple);
 	}

@@ -1,0 +1,226 @@
+-- @Description Test to ensure we correctly report progress in
+-- pg_stat_progress_create_vacuum for append-optimized tables.
+
+set default_table_access_method=ao_row;
+SET
+
+-- Setup the append-optimized table to be vacuumed
+DROP TABLE IF EXISTS vacuum_progress_ao_row;
+DROP
+CREATE TABLE vacuum_progress_ao_row(i int, j int);
+CREATE
+
+-- Add two indexes to be vacuumed as well
+CREATE INDEX on vacuum_progress_ao_row(i);
+CREATE
+CREATE INDEX on vacuum_progress_ao_row(j);
+CREATE
+
+-- Insert all tuples to seg1 from two current sessions so that data are stored
+-- in two segment files.
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: INSERT INTO vacuum_progress_ao_row SELECT 0, i FROM generate_series(1, 100000) i;
+INSERT 100000
+2: INSERT INTO vacuum_progress_ao_row SELECT 0, i FROM generate_series(1, 100000) i;
+INSERT 100000
+-- Commit so that the logical EOF of segno 2 is non-zero.
+2: COMMIT;
+COMMIT
+2: BEGIN;
+BEGIN
+2: INSERT INTO vacuum_progress_ao_row SELECT 0, i FROM generate_series(1, 100000) i;
+INSERT 100000
+-- Abort so that segno 2 has dead tuples after its logical EOF
+2: ABORT;
+ABORT
+2q: ... <quitting>
+-- Abort so that segno 1 has logical EOF = 0.
+1: ABORT;
+ABORT
+
+-- Also delete half of the tuples evenly before the EOF of segno 2.
+DELETE FROM vacuum_progress_ao_row where j % 2 = 0;
+DELETE 50000
+
+-- Perform VACUUM and observe the progress
+
+-- Suspend execution at pre-cleanup phase after truncating both segfiles to their logical EOF.
+SELECT gp_inject_fault('appendonly_after_truncate_segment_file', 'suspend', '', '', '', 2, 2, 0, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1: set Debug_appendonly_print_compaction to on;
+SET
+1&: VACUUM vacuum_progress_ao_row;  <waiting ...>
+SELECT gp_wait_until_triggered_fault('appendonly_after_truncate_segment_file', 2, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+-- We are in pre_cleanup phase and some blocks should've been vacuumed by now
+1U: select relid::regclass as relname, phase, heap_blks_total, heap_blks_scanned, heap_blks_vacuumed, index_vacuum_count, max_dead_tuples, num_dead_tuples from pg_stat_progress_vacuum;
+ relname                | phase                        | heap_blks_total | heap_blks_scanned | heap_blks_vacuumed | index_vacuum_count | max_dead_tuples | num_dead_tuples 
+------------------------+------------------------------+-----------------+-------------------+--------------------+--------------------+-----------------+-----------------
+ vacuum_progress_ao_row | append-optimized pre-cleanup | 165             | 0                 | 110                | 0                  | 100000          | 0               
+(1 row)
+
+-- Resume execution and suspend again in the middle of compact phase
+SELECT gp_inject_fault('appendonly_insert', 'suspend', '', '', '', 200, 200, 0, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+SELECT gp_inject_fault('appendonly_after_truncate_segment_file', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+SELECT gp_wait_until_triggered_fault('appendonly_insert', 200, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+-- We are in compact phase. num_dead_tuples should increase as we move and count tuples, one by one.
+1U: select relid::regclass as relname, phase, heap_blks_total, heap_blks_scanned, heap_blks_vacuumed, index_vacuum_count, max_dead_tuples, num_dead_tuples from pg_stat_progress_vacuum;
+ relname                | phase                    | heap_blks_total | heap_blks_scanned | heap_blks_vacuumed | index_vacuum_count | max_dead_tuples | num_dead_tuples 
+------------------------+--------------------------+-----------------+-------------------+--------------------+--------------------+-----------------+-----------------
+ vacuum_progress_ao_row | append-optimized compact | 165             | 0                 | 110                | 0                  | 100000          | 199             
+(1 row)
+
+-- Resume execution and suspend again after compacting all segfiles
+SELECT gp_inject_fault('vacuum_ao_after_compact', 'suspend', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+SELECT gp_inject_fault('appendonly_insert', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+SELECT gp_wait_until_triggered_fault('vacuum_ao_after_compact', 1, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+-- After compacting all segfiles we expect 50000 dead tuples
+1U: select relid::regclass as relname, phase, heap_blks_total, heap_blks_scanned, heap_blks_vacuumed, index_vacuum_count, max_dead_tuples, num_dead_tuples from pg_stat_progress_vacuum;
+ relname                | phase                    | heap_blks_total | heap_blks_scanned | heap_blks_vacuumed | index_vacuum_count | max_dead_tuples | num_dead_tuples 
+------------------------+--------------------------+-----------------+-------------------+--------------------+--------------------+-----------------+-----------------
+ vacuum_progress_ao_row | append-optimized compact | 165             | 55                | 110                | 0                  | 100000          | 50000           
+(1 row)
+
+-- Resume execution and entering post_cleaup phase, suspend at the end of it.
+SELECT gp_inject_fault('vacuum_ao_post_cleanup_end', 'suspend', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+SELECT gp_inject_fault('vacuum_ao_after_compact', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+SELECT gp_wait_until_triggered_fault('vacuum_ao_post_cleanup_end', 1, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+-- We should have skipped recycling the awaiting drop segment because the segment was still visible to the SELECT gp_wait_until_triggered_fault query.
+1U: select relid::regclass as relname, phase, heap_blks_total, heap_blks_scanned, heap_blks_vacuumed, index_vacuum_count, max_dead_tuples, num_dead_tuples from pg_stat_progress_vacuum;
+ relname                | phase                         | heap_blks_total | heap_blks_scanned | heap_blks_vacuumed | index_vacuum_count | max_dead_tuples | num_dead_tuples 
+------------------------+-------------------------------+-----------------+-------------------+--------------------+--------------------+-----------------+-----------------
+ vacuum_progress_ao_row | append-optimized post-cleanup | 165             | 55                | 110                | 0                  | 100000          | 50000           
+(1 row)
+SELECT gp_inject_fault('vacuum_ao_post_cleanup_end', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1<:  <... completed>
+VACUUM
+
+-- Perform VACUUM again to recycle the remaining awaiting drop segment marked by the previous run.
+SELECT gp_inject_fault('vacuum_ao_after_index_delete', 'suspend', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1&: VACUUM vacuum_progress_ao_row;  <waiting ...>
+-- Resume execution and entering pre_cleanup phase, suspend at vacuuming indexes.
+SELECT gp_inject_fault('vacuum_ao_after_compact', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+SELECT gp_wait_until_triggered_fault('vacuum_ao_after_index_delete', 1, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+-- We are in vacuuming indexes phase (part of ao pre_cleanup phase), index_vacuum_count should increase to 1.
+1U: select relid::regclass as relname, phase, heap_blks_total, heap_blks_scanned, heap_blks_vacuumed, index_vacuum_count, max_dead_tuples, num_dead_tuples from pg_stat_progress_vacuum;
+ relname                | phase             | heap_blks_total | heap_blks_scanned | heap_blks_vacuumed | index_vacuum_count | max_dead_tuples | num_dead_tuples 
+------------------------+-------------------+-----------------+-------------------+--------------------+--------------------+-----------------+-----------------
+ vacuum_progress_ao_row | vacuuming indexes | 83              | 0                 | 0                  | 1                  | 50000           | 0               
+(1 row)
+
+-- Resume execution and moving on to truncate segments that were marked as AWAITING_DROP, there should be only 1.
+SELECT gp_inject_fault('appendonly_after_truncate_segment_file', 'suspend', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+SELECT gp_inject_fault('vacuum_ao_after_index_delete', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+SELECT gp_wait_until_triggered_fault('appendonly_after_truncate_segment_file', 1, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+-- We are in post_cleanup phase and should have truncated the old segfile. Both indexes should be vacuumed by now, and heap_blks_vacuumed should also increased
+1U: select relid::regclass as relname, phase, heap_blks_total, heap_blks_scanned, heap_blks_vacuumed, index_vacuum_count, max_dead_tuples, num_dead_tuples from pg_stat_progress_vacuum;
+ relname                | phase                        | heap_blks_total | heap_blks_scanned | heap_blks_vacuumed | index_vacuum_count | max_dead_tuples | num_dead_tuples 
+------------------------+------------------------------+-----------------+-------------------+--------------------+--------------------+-----------------+-----------------
+ vacuum_progress_ao_row | append-optimized pre-cleanup | 83              | 0                 | 55                 | 2                  | 50000           | 0               
+(1 row)
+
+SELECT gp_inject_fault('appendonly_after_truncate_segment_file', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1<:  <... completed>
+VACUUM
+
+-- Vacuum has finished, nothing should show up in the view.
+1U: select relid::regclass as relname, phase, heap_blks_total, heap_blks_scanned, heap_blks_vacuumed, index_vacuum_count, max_dead_tuples, num_dead_tuples from pg_stat_progress_vacuum;
+ relname | phase | heap_blks_total | heap_blks_scanned | heap_blks_vacuumed | index_vacuum_count | max_dead_tuples | num_dead_tuples 
+---------+-------+-----------------+-------------------+--------------------+--------------------+-----------------+-----------------
+(0 rows)
+
+-- Cleanup
+SELECT gp_inject_fault_infinite('all', 'reset', dbid) FROM gp_segment_configuration;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+ Success:                 
+ Success:                 
+ Success:                 
+ Success:                 
+ Success:                 
+ Success:                 
+ Success:                 
+(8 rows)
+reset Debug_appendonly_print_compaction;
+RESET
+reset default_table_access_method;
+RESET

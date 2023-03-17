@@ -244,7 +244,8 @@ public:
 		CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 		m_pmdtypeint4 =
 			md_accessor->PtMDType<IMDTypeInt4>(CTestUtils::m_sysidDefault);
-		CMDIdGPDB *mdid = GPOS_NEW(mp) CMDIdGPDB(oidTableOid, 1, 1);
+		CMDIdGPDB *mdid =
+			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, oidTableOid, 1, 1);
 
 		const BOOL convert_hash_to_random = false;
 		const ULONG ulExecuteAsUser = 0;
@@ -252,7 +253,8 @@ public:
 			mp, mdid, CName(&strTableName), convert_hash_to_random,
 			CMDRelationGPDB::EreldistrMasterOnly,
 			CMDRelationGPDB::ErelstorageHeap, ulExecuteAsUser,
-			-1 /* lockmode */);
+			-1, /* lockmode */
+			0 /* UNASSIGNED_QUERYID */);
 	}
 
 	void
@@ -645,13 +647,13 @@ CTranslatorDXLToExprTest::EresUnittest_SelectQueryWithScalarOp()
 		CExpression *pexprScConst = CUtils::PexprScalarConstInt4(mp, ulVal);
 		CExpression *pexprScOp = CUtils::PexprScalarOp(
 			mp, pcrLeft, pexprScConst, CWStringConst(GPOS_WSZ_LIT("+")),
-			GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_ADD_OP));
+			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_ADD_OP));
 
 		// create a scalar compare for a > b + 2
 		CColRef *pcrRight = (*colref_array)[0];
 		CExpression *pexprScCmp = CUtils::PexprScalarCmp(
 			mp, pcrRight, pexprScOp, CWStringConst(GPOS_WSZ_LIT(">")),
-			GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_GT_OP));
+			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_GT_OP));
 
 		CExpression *pexprExpected =
 			CUtils::PexprLogicalSelect(mp, pexprLgGet, pexprScCmp);

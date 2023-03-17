@@ -897,6 +897,7 @@ tuplesort_begin_cluster(TupleDesc tupDesc,
 {
 	Tuplesortstate *state = tuplesort_begin_common(workMem, coordinate,
 												   randomAccess);
+	AttrNumber	leading;
 	BTScanInsert indexScanKey;
 	MemoryContext oldcontext;
 	int			i;
@@ -929,6 +930,7 @@ tuplesort_begin_cluster(TupleDesc tupDesc,
 	state->abbrevNext = 10;
 
 	state->indexInfo = BuildIndexInfo(indexRel);
+	leading = state->indexInfo->ii_IndexAttrNumbers[0];
 
 	state->tupDesc = tupDesc;	/* assume we need not copy tupDesc */
 
@@ -967,7 +969,7 @@ tuplesort_begin_cluster(TupleDesc tupDesc,
 			(scanKey->sk_flags & SK_BT_NULLS_FIRST) != 0;
 		sortKey->ssup_attno = scanKey->sk_attno;
 		/* Convey if abbreviation optimization is applicable in principle */
-		sortKey->abbreviate = (i == 0);
+		sortKey->abbreviate = (i == 0 && leading != 0);
 
 		AssertState(sortKey->ssup_attno != 0);
 
@@ -4712,8 +4714,12 @@ leader_takeover_tapes(Tuplesortstate *state)
 static void
 free_sort_tuple(Tuplesortstate *state, SortTuple *stup)
 {
-	FREEMEM(state, GetMemoryChunkSpace(stup->tuple));
-	pfree(stup->tuple);
+	if (stup->tuple)
+	{
+		FREEMEM(state, GetMemoryChunkSpace(stup->tuple));
+		pfree(stup->tuple);
+		stup->tuple = NULL;
+	}
 }
 
 /*

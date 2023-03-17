@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Copyright (c) 2004-Present VMware, Inc. or its affiliates.
 
@@ -786,6 +787,10 @@ class SQLIsolationExecutor(object):
                     pass
         elif flag == "M":
             self.get_process(output_file, process_name, con_mode, dbname=dbname).query(sql.strip(), post_run_cmd, global_sh_executor)
+        elif flag == "Mq":
+            if len(sql) > 0:
+                raise Exception("No query should be given on quit Mq")
+            self.quit_process(output_file, process_name, con_mode, dbname=dbname)
         else:
             raise Exception("Invalid isolation flag")
 
@@ -812,7 +817,7 @@ class SQLIsolationExecutor(object):
                 if command_part == "" or command_part == "\n":
                     print(file=output_file)
                     newline = True
-                elif re.match(r".*;\s*$", command_part) or re.match(r"^\d+[q\\<]:\s*$", line) or re.match(r"^\*Rq:$", line) or re.match(r"^-?\d+[SUR][q\\<]:\s*$", line):
+                elif re.match(r".*;\s*$", command_part) or re.match(r"^\d+[q\\<]:\s*$", line) or re.match(r"^\*Rq:$", line) or re.match(r"^-?\d+[SUMR][q\\<]:\s*$", line):
                     command += command_part
                     try:
                         self.process_command(command, output_file, shell_executor)

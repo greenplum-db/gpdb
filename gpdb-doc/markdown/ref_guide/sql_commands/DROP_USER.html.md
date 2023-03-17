@@ -10,15 +10,15 @@ DROP USER [IF EXISTS] <name> [, ...]
 
 ## <a id="section3"></a>Description 
 
-`DROP USER` is an alias for [DROP ROLE](DROP_ROLE.html). See [DROP ROLE](DROP_ROLE.html) for more information.
+`DROP USER` is an alias for [DROP ROLE](DROP_ROLE.html).
 
 ## <a id="section5"></a>Compatibility 
 
-There is no `DROP USER` statement in the SQL standard. The SQL standard leaves the definition of users to the implementation.
+The `DROP USER` statement is a Greenplum Database extension. The SQL standard leaves the definition of users to the implementation.
 
 ## <a id="section6"></a>See Also 
 
-[DROP ROLE](DROP_ROLE.html), [CREATE USER](CREATE_USER.html)
+[DROP ROLE](DROP_ROLE.html)
 
 **Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

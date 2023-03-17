@@ -67,9 +67,6 @@ protected:
 	// partition types
 	CharPtrArray *m_str_part_types_array;
 
-	// number of partitions
-	ULONG m_num_of_partitions;
-
 	// key sets
 	ULongPtr2dArray *m_key_sets_arrays;
 
@@ -84,6 +81,9 @@ protected:
 
 	// is part constraint unbounded
 	BOOL m_part_constraint_unbounded;
+
+	// foreign server (if exists)
+	IMDId *m_foreign_server;
 
 	// helper function to parse main relation attributes: name, id,
 	// distribution policy and keys

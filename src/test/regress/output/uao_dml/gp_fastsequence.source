@@ -1,0 +1,110 @@
+-- White-box test to validate insert and update behavior for gp_fastsequence
+-- in various scenarios involving the insert code path for AO and AOCO tables.
+CREATE SCHEMA test_gp_fastsequence_@amname@;
+SET search_path="$user",test_gp_fastsequence_@amname@,public;
+SET default_table_access_method=@amname@;
+CREATE OR REPLACE FUNCTION fastseq_details(input_query_regex text)
+  RETURNS TABLE (logdatabase text, logsegment text, logseverity text, logdebug text, logmessage text)
+  LANGUAGE plpgsql AS
+$func$
+BEGIN
+  RETURN QUERY
+  SELECT * FROM
+  (SELECT l1.logdatabase, l1.logsegment, l1.logseverity, input_query_regex AS logdebug,
+    regexp_replace(l1.logmessage,
+                   '^Frozen insert to gp_fastsequence \(rel, segno, last_sequence\): \(\d+',
+                   'Frozen insert to gp_fastsequence (rel, segno, last_sequence): (reloid',
+                   'p') AS logmessage
+    FROM gp_toolkit.gp_log_system l1
+    WHERE l1.logsegment = 'seg0'
+      AND l1.logsession = (SELECT 'con' || current_setting('gp_session_id'))
+      AND l1.logmessage LIKE 'Frozen insert to gp_fastsequence%'
+      AND l1.logdebug LIKE input_query_regex
+
+    UNION
+
+    SELECT l2.logdatabase, l2.logsegment, l2.logseverity, input_query_regex AS logdebug,
+    regexp_replace(l2.logmessage,
+                   '^In-place update to gp_fastsequence \(ctid, rel, segno, last_sequence\): \(\(\d+, \d+\), \d+',
+                   'In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num',
+                   'p') AS logmessage
+    FROM gp_toolkit.gp_log_system l2
+    WHERE l2.logsegment = 'seg0'
+      AND l2.logsession = (SELECT 'con' || current_setting('gp_session_id'))
+      AND l2.logmessage LIKE 'In-place update to gp_fastsequence%'
+      AND l2.logdebug LIKE input_query_regex) s
+  ORDER BY logdebug, logmessage;
+END
+$func$;
+SET debug_appendonly_print_insert_tuple TO on;
+-- INSERT case: since we can't tell how many rows there are, we can't
+-- preallocate gp_fastsequence accordingly, and we must do allocations on the
+-- basis of NUM_FAST_SEQUENCES (100). So there will be 1 frozen insert and 9
+-- in-place updates for each table.
+CREATE TABLE test_fastseq_insert_@amname@(i int, j int DEFAULT 2) WITH (appendonly=true) DISTRIBUTED BY (j);
+INSERT INTO test_fastseq_insert_@amname@ SELECT generate_series(1, 900);
+SELECT * from fastseq_details('INSERT INTO test_fastseq_insert%');
+ logdatabase | logsegment | logseverity |             logdebug             |                                                   logmessage                                                    
+-------------+------------+-------------+----------------------------------+-----------------------------------------------------------------------------------------------------------------
+ regression  | seg0       | LOG         | INSERT INTO test_fastseq_insert% | Frozen insert to gp_fastsequence (rel, segno, last_sequence): (reloid, 1, 100)
+ regression  | seg0       | LOG         | INSERT INTO test_fastseq_insert% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 1, 1000)
+ regression  | seg0       | LOG         | INSERT INTO test_fastseq_insert% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 1, 200)
+ regression  | seg0       | LOG         | INSERT INTO test_fastseq_insert% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 1, 300)
+ regression  | seg0       | LOG         | INSERT INTO test_fastseq_insert% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 1, 400)
+ regression  | seg0       | LOG         | INSERT INTO test_fastseq_insert% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 1, 500)
+ regression  | seg0       | LOG         | INSERT INTO test_fastseq_insert% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 1, 600)
+ regression  | seg0       | LOG         | INSERT INTO test_fastseq_insert% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 1, 700)
+ regression  | seg0       | LOG         | INSERT INTO test_fastseq_insert% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 1, 800)
+ regression  | seg0       | LOG         | INSERT INTO test_fastseq_insert% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 1, 900)
+(10 rows)
+
+-- COPY case: since we can tell how many rows there are, we can preallocate
+-- gp_fastsequence accordingly. So there will be 1 frozen insert and 1 in-place
+-- update for each table.
+CREATE TABLE test_fastseq_copy_@amname@(i int, j int DEFAULT 2) WITH (appendonly=true) DISTRIBUTED BY (j);
+COPY test_fastseq_copy_@amname@(i) FROM PROGRAM 'seq 1 900';
+SELECT * from fastseq_details('COPY test_fastseq_copy_%');
+ logdatabase | logsegment | logseverity |         logdebug         |                                                   logmessage                                                    
+-------------+------------+-------------+--------------------------+-----------------------------------------------------------------------------------------------------------------
+ regression  | seg0       | LOG         | COPY test_fastseq_copy_% | Frozen insert to gp_fastsequence (rel, segno, last_sequence): (reloid, 1, 900)
+ regression  | seg0       | LOG         | COPY test_fastseq_copy_% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 1, 1000)
+(2 rows)
+
+-- CLUSTER case: since we can tell how many rows there are, we can preallocate
+-- gp_fastsequence accordingly. So there will be 1 frozen insert and 1 in-place
+-- update for each table.
+CREATE TABLE test_fastseq_cluster_@amname@(i int, j int DEFAULT 2) WITH (appendonly=true) DISTRIBUTED BY (j);
+CREATE INDEX test_fastseq_cluster_@amname@_idx ON test_fastseq_cluster_@amname@(i);
+INSERT INTO test_fastseq_cluster_@amname@ SELECT generate_series(1, 900);
+CLUSTER test_fastseq_cluster_@amname@ USING test_fastseq_cluster_@amname@_idx;
+SELECT * from fastseq_details('CLUSTER test_fastseq_cluster_%');
+ logdatabase | logsegment | logseverity |            logdebug            |                                                   logmessage                                                    
+-------------+------------+-------------+--------------------------------+-----------------------------------------------------------------------------------------------------------------
+ regression  | seg0       | LOG         | CLUSTER test_fastseq_cluster_% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 0, 1000)
+ regression  | seg0       | LOG         | CLUSTER test_fastseq_cluster_% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 0, 900)
+(2 rows)
+
+-- VACUUM FULL case: since we can't tell how many visible rows there are, we can't
+-- preallocate gp_fastsequence accordingly, and we must do allocations on the
+-- basis of NUM_FAST_SEQUENCES (100). So there will be 1 frozen insert and 9
+-- in-place updates for each table.
+CREATE TABLE test_fastseq_vacuum_@amname@(i int, j int DEFAULT 2) WITH (appendonly=true) DISTRIBUTED BY (j);
+INSERT INTO test_fastseq_vacuum_@amname@ SELECT generate_series(1, 901);
+DELETE FROM test_fastseq_vacuum_@amname@ WHERE i = 901;
+VACUUM FULL test_fastseq_vacuum_@amname@;
+SELECT * from fastseq_details('VACUUM FULL test_fastseq_vacuum_%');
+ logdatabase | logsegment | logseverity |             logdebug              |                                                   logmessage                                                    
+-------------+------------+-------------+-----------------------------------+-----------------------------------------------------------------------------------------------------------------
+ regression  | seg0       | LOG         | VACUUM FULL test_fastseq_vacuum_% | Frozen insert to gp_fastsequence (rel, segno, last_sequence): (reloid, 2, 100)
+ regression  | seg0       | LOG         | VACUUM FULL test_fastseq_vacuum_% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 2, 1000)
+ regression  | seg0       | LOG         | VACUUM FULL test_fastseq_vacuum_% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 2, 200)
+ regression  | seg0       | LOG         | VACUUM FULL test_fastseq_vacuum_% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 2, 300)
+ regression  | seg0       | LOG         | VACUUM FULL test_fastseq_vacuum_% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 2, 400)
+ regression  | seg0       | LOG         | VACUUM FULL test_fastseq_vacuum_% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 2, 500)
+ regression  | seg0       | LOG         | VACUUM FULL test_fastseq_vacuum_% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 2, 600)
+ regression  | seg0       | LOG         | VACUUM FULL test_fastseq_vacuum_% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 2, 700)
+ regression  | seg0       | LOG         | VACUUM FULL test_fastseq_vacuum_% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 2, 800)
+ regression  | seg0       | LOG         | VACUUM FULL test_fastseq_vacuum_% | In-place update to gp_fastsequence (ctid, rel, segno, last_sequence): ((block, offset), first_row_num, 2, 900)
+(10 rows)
+
+RESET debug_appendonly_print_insert_tuple;

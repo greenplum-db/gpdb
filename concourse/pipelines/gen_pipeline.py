@@ -18,7 +18,7 @@
 # under the License.
 # ----------------------------------------------------------------------
 
-"""Generate pipeline (default: gpdb_master-generated.yml) from template (default:
+"""Generate pipeline (default: gpdb_main-generated.yml) from template (default:
 templates/gpdb-tpl.yml).
 
 Python module requirements:
@@ -48,36 +48,28 @@ TEMPLATE_ENVIRONMENT = Environment(
     extensions=['jinja2.ext.loopcontrols']
 )
 
-BASE_BRANCH = "master"  # when branching gpdb update to 7X_STABLE, 6X_STABLE, etc.
+BASE_BRANCH = "main"  # when branching gpdb update to 7X_STABLE, 6X_STABLE, etc.
 
 CI_VARS_PATH = os.path.join(os.getcwd(), '..', 'vars')
 
 # Variables that govern pipeline validation
 RELEASE_VALIDATOR_JOB = ['Release_Candidate', 'Build_Release_Candidate_RPMs']
 JOBS_THAT_ARE_GATES = [
-    'gate_icw_start',
     'gate_icw_end',
-    'gate_replication_start',
     'gate_resource_groups_start',
     'gate_cli_start',
-    'gate_ud_start',
-    'gate_advanced_analytics_start',
     'gate_release_candidate_start'
 ]
 
 JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = (
     [
         'combine_cli_coverage',
-        'compile_gpdb_binary_swap_centos7',
         'compile_gpdb_clients_windows',
-        'walrep_2',
-        'madlib_build_gppkg',
-        'MADlib_Test_planner_centos7',
-        'MADlib_Test_orca_centos7',
         'Publish Server Builds',
     ] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
 )
 
+default_os_type = 'rocky8'
 
 def suggested_git_remote():
     """Try to guess the current git remote"""
@@ -99,7 +91,7 @@ def suggested_git_remote():
 def suggested_git_branch():
     """Try to guess the current git branch"""
     branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"]).decode('utf-8').rstrip()
-    if branch == "master" or is_a_base_branch(branch):
+    if branch == "main" or is_a_base_branch(branch):
         return "<branch-name>"
     return branch
 
@@ -115,7 +107,7 @@ def render_template(template_filename, context):
     return TEMPLATE_ENVIRONMENT.get_template(template_filename).render(context)
 
 
-def validate_pipeline_release_jobs(raw_pipeline_yml):
+def validate_pipeline_release_jobs(raw_pipeline_yml, os_type):
     """Make sure all jobs in specified pipeline that don't block release are accounted
     for (they should belong to JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE, defined above)"""
     print("======================================================================")
@@ -129,21 +121,22 @@ def validate_pipeline_release_jobs(raw_pipeline_yml):
     jobs_raw = pipeline['jobs']
     all_job_names = [job['name'] for job in jobs_raw]
 
-    rc_name = 'gate_release_candidate_start'
-    release_candidate_job = [j for j in jobs_raw if j['name'] == rc_name][0]
+    if os_type != "rhel8" and os_type != "oel8":
+        rc_name = 'gate_release_candidate_start'
+        release_candidate_job = [j for j in jobs_raw if j['name'] == rc_name][0]
 
-    release_blocking_jobs = release_candidate_job['plan'][0]['in_parallel']['steps'][0]['passed']
+        release_blocking_jobs = release_candidate_job['plan'][0]['in_parallel']['steps'][0]['passed']
 
-    non_release_blocking_jobs = [j for j in all_job_names if j not in release_blocking_jobs]
+        non_release_blocking_jobs = [j for j in all_job_names if j not in release_blocking_jobs]
 
-    unaccounted_for_jobs = \
-        [j for j in non_release_blocking_jobs if j not in JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE]
+        unaccounted_for_jobs = \
+            [j for j in non_release_blocking_jobs if j not in JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE]
 
-    if unaccounted_for_jobs:
-        print("Please add the following jobs as a Release_Candidate dependency or ignore them")
-        print("by adding them to JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE in " + __file__)
-        print(unaccounted_for_jobs)
-        return False
+        if unaccounted_for_jobs:
+            print("Please add the following jobs as a Release_Candidate dependency or ignore them")
+            print("by adding them to JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE in " + __file__)
+            print(unaccounted_for_jobs)
+            return False
 
     print("Pipeline validated: all jobs accounted for")
     return True
@@ -156,16 +149,28 @@ def create_pipeline(args, git_remote, git_branch):
     else:
         test_trigger = "false"
 
-    if args.pipeline_target == 'prod':
-        variables_type = "prod"
-    else:
-        variables_type = "dev"
+    variables_type = args.pipeline_target
+    os_username = {
+        "rhel8" : "rhel",
+        "rocky8" : "rocky",
+        "oel8" : "oel"
+    }
+    test_os = {
+        "rhel8" : "centos",
+        "rocky8": "centos",
+        "oel8" : "centos"
+    }
+
 
     context = {
         'template_filename': args.template_filename,
         'generator_filename': os.path.basename(__file__),
         'timestamp': datetime.datetime.now(),
-        'os_types': args.os_types,
+        'os_type': args.os_type,
+        'default_os_type': default_os_type,
+        'os_username': os_username[args.os_type],
+        'test_os': test_os[args.os_type],
+        'pipeline_target': args.pipeline_target,
         'test_sections': args.test_sections,
         'pipeline_configuration': args.pipeline_configuration,
         'test_trigger': test_trigger,
@@ -179,7 +184,7 @@ def create_pipeline(args, git_remote, git_branch):
 
     pipeline_yml = render_template(args.template_filename, context)
     if args.pipeline_target == 'prod':
-        validated = validate_pipeline_release_jobs(pipeline_yml)
+        validated = validate_pipeline_release_jobs(pipeline_yml, args.os_type)
         if not validated:
             print("Refusing to update the pipeline file")
             return False
@@ -225,7 +230,7 @@ def header(args):
   Pipeline target: ......... : %s
   Pipeline file ............ : %s
   Template file ............ : %s
-  OS Types ................. : %s
+  OS Type .................. : %s
   Test sections ............ : %s
   test_trigger ............. : %s
   use_ICW_workers .......... : %s
@@ -235,7 +240,7 @@ def header(args):
 ''' % (args.pipeline_target,
        args.output_filepath,
        args.template_filename,
-       args.os_types,
+       args.os_type,
        args.test_sections,
        args.test_trigger_false,
        args.use_ICW_workers,
@@ -255,16 +260,18 @@ def print_fly_commands(args, git_remote, git_branch):
         return
     if args.pipeline_target == 'prod':
         print('NOTE: You can set the production pipelines with the following:\n')
-        pipeline_name = "gpdb_%s" % BASE_BRANCH if BASE_BRANCH == "master" else BASE_BRANCH
+        pipeline_name = "gpdb_%s" % BASE_BRANCH if BASE_BRANCH == "main" else BASE_BRANCH
+        if args.os_type != default_os_type:
+            pipeline_name += "_" + args.os_type
         print(gen_pipeline(args, pipeline_name, ["common_prod.yml"],
                            "https://github.com/greenplum-db/gpdb.git", BASE_BRANCH))
         print(gen_pipeline(args, "%s_without_asserts" % pipeline_name, ["common_prod.yml", "without_asserts_common_prod.yml"],
                            "https://github.com/greenplum-db/gpdb.git", BASE_BRANCH))
         return
 
-    print('NOTE: You can set the developer pipeline with the following:\n')
-    print(gen_pipeline(args, pipeline_name, ["common_prod.yml", "common_dev.yml"], git_remote, git_branch))
-
+    else:
+        print('NOTE: You can set the developer pipeline with the following:\n')
+        print(gen_pipeline(args, pipeline_name, ["common_prod.yml", "common_" + args.pipeline_target + ".yml"], git_remote, git_branch))
 
 def main():
     """main: parse args and create pipeline"""
@@ -294,13 +301,12 @@ def main():
 
     parser.add_argument(
         '-O',
-        '--os_types',
+        '--os_type',
         action='store',
-        dest='os_types',
-        default=['centos7'],
-        choices=['centos7', 'rhel8', 'ubuntu18.04', 'win'],
-        nargs='+',
-        help='List of OS values to support'
+        dest='os_type',
+        default=default_os_type,
+        choices=['rhel8', 'rocky8', 'oel8'],
+        help='OS value to support'
     )
 
     parser.add_argument(
@@ -309,8 +315,9 @@ def main():
         action='store',
         dest='pipeline_target',
         default='dev',
-        help='Concourse target to use either: prod, dev, or <team abbreviation> '
-             'where abbreviation is found from the team\'s ccp secrets file name ending.'
+        help='Concourse target supported: prod, dev, dev2, cm, ud, or dp. '
+             'The Pipeline target value is also used to identify the CI '
+             'project specific common file in the vars directory.'
     )
 
     parser.add_argument(
@@ -331,12 +338,9 @@ def main():
         dest='test_sections',
         choices=[
             'ICW',
-            'Replication',
             'ResourceGroups',
             'Interconnect',
             'CLI',
-            'UD',
-            'AA',
             'Extensions'
         ],
         default=[],
@@ -411,14 +415,11 @@ def main():
         args.use_ICW_workers = True
 
     if args.pipeline_configuration == 'prod' or args.pipeline_configuration == 'full' or args.directed_release:
-        args.os_types = ['centos6', 'centos7', 'rhel8', 'ubuntu18.04', 'win']
         args.test_sections = [
             'ICW',
-            'Replication',
             'ResourceGroups',
             'Interconnect',
             'CLI',
-            'UD',
             'Extensions'
         ]
 
@@ -426,12 +427,12 @@ def main():
     git_branch = suggested_git_branch()
 
     # if generating a dev pipeline but didn't specify an output,
-    # don't overwrite the master pipeline
+    # don't overwrite the main pipeline
     if args.pipeline_target != 'prod' and not output_path_is_set:
         pipeline_file_suffix = suggested_git_branch()
         if args.user != os.getlogin():
             pipeline_file_suffix = args.user
-        default_dev_output_filename = 'gpdb-' + args.pipeline_target + '-' + pipeline_file_suffix + '.yml'
+        default_dev_output_filename = 'gpdb-' + args.pipeline_target + '-' + pipeline_file_suffix + '-' + args.os_type + '.yml'
         args.output_filepath = os.path.join(PIPELINES_DIR, default_dev_output_filename)
 
     if args.directed_release:

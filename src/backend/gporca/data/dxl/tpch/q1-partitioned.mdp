@@ -329,7 +329,7 @@
         <dxl:Commutator Mdid="0.1097.1.0"/>
         <dxl:InverseOp Mdid="0.1098.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:Relation Mdid="0.38557.1.1" Name="lineitem" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,16" PartitionColumns="10">
+      <dxl:Relation Mdid="6.38557.1.1" Name="lineitem" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,16" PartitionColumns="10">
         <dxl:Columns>
           <dxl:Column Name="l_orderkey" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -402,7 +402,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>
@@ -536,7 +535,7 @@
               <dxl:ConstValue TypeMdid="0.1114.1.0" Value="AMDujOzX//8=" DoubleValue="-44064000000000"/>
             </dxl:Comparison>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.38557.1.1" TableName="lineitem">
+              <dxl:TableDescriptor Mdid="6.38557.1.1" TableName="lineitem">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="l_orderkey" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="2" Attno="2" ColName="l_partkey" TypeMdid="0.23.1.0"/>
@@ -941,7 +940,7 @@
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.38557.1.1" TableName="lineitem">
+                    <dxl:TableDescriptor Mdid="6.38557.1.1" TableName="lineitem">
                       <dxl:Columns>
                         <dxl:Column ColId="0" Attno="1" ColName="l_orderkey" TypeMdid="0.23.1.0"/>
                         <dxl:Column ColId="1" Attno="2" ColName="l_partkey" TypeMdid="0.23.1.0"/>

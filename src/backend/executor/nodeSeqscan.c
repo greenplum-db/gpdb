@@ -77,7 +77,9 @@ SeqNext(SeqScanState *node)
 		scandesc = table_beginscan_es(node->ss.ss_currentRelation,
 									  estate->es_snapshot,
 									  node->ss.ps.plan->targetlist,
-									  node->ss.ps.plan->qual);
+									  node->ss.ps.plan->qual,
+									  NULL,
+									  NULL);
 		node->ss.ss_currentScanDesc = scandesc;
 	}
 

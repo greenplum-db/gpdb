@@ -45,15 +45,11 @@ using namespace gpos;
 //---------------------------------------------------------------------------
 class CMDProviderRelcache : public IMDProvider
 {
-private:
-	// memory pool
-	CMemoryPool *m_mp;
-
 public:
 	CMDProviderRelcache(const CMDProviderRelcache &) = delete;
 
 	// ctor/dtor
-	explicit CMDProviderRelcache(CMemoryPool *mp);
+	CMDProviderRelcache() = default;
 
 	~CMDProviderRelcache() override = default;
 
@@ -63,7 +59,8 @@ public:
 
 	// return the requested metadata object
 	IMDCacheObject *GetMDObj(CMemoryPool *mp, CMDAccessor *md_accessor,
-							 IMDId *mdid) const override;
+							 IMDId *mdid,
+							 IMDCacheObject::Emdtype mdtype) const override;
 
 	// return the mdid for the requested type
 	IMDId *

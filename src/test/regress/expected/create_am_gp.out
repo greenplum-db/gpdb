@@ -8,12 +8,9 @@ create table create_am_gp_ao1 (a int, b int) using ao_row distributed by (a);
 --------+---------+-----------+----------+---------+---------+--------------+-------------
  a      | integer |           |          |         | plain   |              | 
  b      | integer |           |          |         | plain   |              | 
-Compression Type: None
-Compression Level: 0
-Block Size: 32768
-Checksum: t
 Distributed by: (a)
 Access method: ao_row
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=true
 
 create table create_am_gp_ao2 (a int, b int) using ao_row with (compresstype=zlib) distributed by (a);
 \d+ create_am_gp_ao2
@@ -22,13 +19,9 @@ create table create_am_gp_ao2 (a int, b int) using ao_row with (compresstype=zli
 --------+---------+-----------+----------+---------+---------+--------------+-------------
  a      | integer |           |          |         | plain   |              | 
  b      | integer |           |          |         | plain   |              | 
-Compression Type: zlib
-Compression Level: 1
-Block Size: 32768
-Checksum: t
 Distributed by: (a)
 Access method: ao_row
-Options: compresstype=zlib
+Options: compresstype=zlib, blocksize=32768, compresslevel=1, checksum=true
 
 -- Should fail
 create table create_am_gp_ao3 (a int, b int) using ao_row with (compresstype=rle_type) distributed by (a);
@@ -42,10 +35,9 @@ create table create_am_gp_ao3 (a int, b int) using ao_column with (compresstype=
 --------+---------+-----------+----------+---------+---------+--------------+------------------+-------------------+------------+-------------
  a      | integer |           |          |         | plain   |              | rle_type         | 1                 | 32768      | 
  b      | integer |           |          |         | plain   |              | rle_type         | 1                 | 32768      | 
-Checksum: t
 Distributed by: (a)
 Access method: ao_column
-Options: compresstype=rle_type
+Options: compresstype=rle_type, blocksize=32768, compresslevel=1, checksum=true
 
 -- Should fail because encoding clause is not supported by the tableam
 create table create_am_gp_ao4(a int, b int encoding (compresstype=zlib)) using ao_row distributed by (a);
@@ -73,13 +65,9 @@ create table create_am_gp_ao6(a int, b int) using ao_row with (compresstype=zlib
 --------+---------+-----------+----------+---------+---------+--------------+-------------
  a      | integer |           |          |         | plain   |              | 
  b      | integer |           |          |         | plain   |              | 
-Compression Type: zlib
-Compression Level: 1
-Block Size: 32768
-Checksum: t
 Distributed by: (a)
 Access method: ao_row
-Options: compresstype=zlib
+Options: compresstype=zlib, blocksize=32768, compresslevel=1, checksum=true
 
 create table create_am_gp_ao7(a int, b int encoding (compresstype=zlib)) using ao_column distributed by (a);
 \d+ create_am_gp_ao7
@@ -88,10 +76,9 @@ create table create_am_gp_ao7(a int, b int encoding (compresstype=zlib)) using a
 --------+---------+-----------+----------+---------+---------+--------------+------------------+-------------------+------------+-------------
  a      | integer |           |          |         | plain   |              | rle_type         | 1                 | 32768      | 
  b      | integer |           |          |         | plain   |              | zlib             | 1                 | 32768      | 
-Checksum: t
 Distributed by: (a)
 Access method: ao_column
-Options: compresstype=rle_type
+Options: blocksize=32768, compresslevel=1, compresstype=rle_type, checksum=true
 
 reset gp_default_storage_options;
 -- create partition hierarchies with AM specified

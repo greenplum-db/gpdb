@@ -742,11 +742,11 @@ from gp_distribution_policy where localoid = 't_9526'::regclass::oid;
  t_9526   | p          |           3 | 1       | 10054
 (1 row)
 
--- storage paramter should be same with before
-select blocksize,compresslevel,checksum,compresstype,columnstore from pg_appendonly where relid='t_9526'::regclass::oid;
- blocksize | compresslevel | checksum | compresstype | columnstore 
------------+---------------+----------+--------------+-------------
-     32768 |             0 | t        | none         | f
+-- storage parameter should be same as before
+select relname, reloptions from pg_class where oid='t_9526'::regclass;
+ relname |                            reloptions                             
+---------+-------------------------------------------------------------------
+ t_9526  | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
 (1 row)
 
 -- set back
@@ -782,11 +782,11 @@ select localoid::regclass::name, policytype, numsegments, distkey, distclass
  t_9527   | p          |           3 | 1       | 10054
 (1 row)
 
--- storage paramter should be same with before
-select blocksize,compresslevel,checksum,compresstype,columnstore from pg_appendonly where relid='t_9527'::regclass::oid;
- blocksize | compresslevel | checksum | compresstype | columnstore 
------------+---------------+----------+--------------+-------------
-     32768 |             0 | t        | none         | f
+-- storage parameter should be same as before
+select relname, reloptions from pg_class where oid='t_9527'::regclass;
+ relname |                            reloptions                             
+---------+-------------------------------------------------------------------
+ t_9527  | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
 (1 row)
 
 -- set back
@@ -821,11 +821,11 @@ select localoid::regclass::name, policytype, numsegments, distkey, distclass
  t_9528   | p          |           2 | 2       | 10072
 (1 row)
 
--- storage paramter should be same with before
-select blocksize,compresslevel,checksum,compresstype,columnstore from pg_appendonly where relid='t_9528'::regclass::oid;
- blocksize | compresslevel | checksum | compresstype | columnstore 
------------+---------------+----------+--------------+-------------
-     32768 |             0 | t        | none         | f
+-- storage parameter should be same as before
+select relname, reloptions from pg_class where oid='t_9528'::regclass;
+ relname |                            reloptions                             
+---------+-------------------------------------------------------------------
+ t_9528  | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
 (1 row)
 
 -- set back

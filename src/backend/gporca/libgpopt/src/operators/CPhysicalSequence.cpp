@@ -259,6 +259,23 @@ CPhysicalSequence::PdsRequired(CMemoryPool *mp,
 			true /* fAllowReplicated */, false /* fAllowEnforced */);
 	}
 
+	// If required distribution is singleton on master (sequence is top operation) or
+	// non-singleton with not allowed replicated (there is another top-sequence under this sequence)
+	// then we should not allow replicated distribution, to avoid potential hang issues,
+	// which may accured when ORCA is translating expression to DXL and sets
+	// one segment for input array if strict or tainted replicated distribution detected,
+	// and Redistribute from all segments to one segments appears.
+
+	if ((CDistributionSpec::EdtSingleton == pdsRequired->Edt() &&
+		 CDistributionSpecSingleton::PdssConvert(pdsRequired)->FOnMaster()) ||
+		(CDistributionSpec::EdtNonSingleton == pdsRequired->Edt() &&
+		 !CDistributionSpecNonSingleton::PdsConvert(pdsRequired)
+			  ->FAllowReplicated()))
+	{
+		return GPOS_NEW(mp) CDistributionSpecNonSingleton(
+			false /* fAllowReplicated */, true /* fAllowEnforced */);
+	}
+
 	// first child is non-singleton, request a non-singleton distribution on second child
 	return GPOS_NEW(mp) CDistributionSpecNonSingleton();
 }

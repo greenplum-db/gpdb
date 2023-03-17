@@ -60,7 +60,7 @@ To be able to create a composite type, you must have `USAGE` privilege on all at
 
 **Enumerated Types**
 
-The second form of `CREATE TYPE` creates an enumerated \(`ENUM`\) type, as described in [Enumerated Types](https://www.postgresql.org/docs/9.4/datatype-enum.html) in the PostgreSQL documentation. `ENUM` types take a list of quoted labels, each of which must be less than `NAMEDATALEN` bytes long \(64 in a standard build\).
+The second form of `CREATE TYPE` creates an enumerated \(`ENUM`\) type, as described in [Enumerated Types](https://www.postgresql.org/docs/12/datatype-enum.html) in the PostgreSQL documentation. `ENUM` types take a list of quoted labels, each of which must be less than `NAMEDATALEN` bytes long \(64 in a standard build\).
 
 It is possible to create an enumerated type with zero labels, but such a type cannot be used to hold values before at least one label is added using [ALTER TYPE](ALTER_TYPE.html).
 
@@ -192,7 +192,7 @@ collatable
 compression\_type
 :   Set to `ZLIB` \(the default\), `ZSTD`, `RLE_TYPE`, or `QUICKLZ`<sup>1</sup> to specify the type of compression used in columns of this type.
 
-    **Note:** <sup>1</sup>QuickLZ compression is available only in the commercial release of Tanzu Greenplum.
+    > **Note** <sup>1</sup>QuickLZ compression is available only in the commercial release of VMware Greenplum.
 
 compression\_level
 :   For Zstd compression, set to an integer value from 1 \(fastest compression\) to 19 \(highest compression ratio\). For zlib compression, the valid range is from 1 to 9. The QuickLZ compression level can only be set to 1. For `RLE_TYPE`, the compression level can be set to an integer value from 1 \(fastest compression\) to 4 \(highest compression ratio\). The default compression level is 1.

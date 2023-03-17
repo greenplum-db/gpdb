@@ -19,7 +19,7 @@ from gppylib.gp_era import read_era
 from gppylib.operations.utils import ParallelOperation, RemoteOperation
 from gppylib.system import configurationInterface as configInterface
 from gppylib.commands.gp import is_pid_postmaster, get_pid_from_remotehost
-from gppylib.commands.unix import check_pid_on_remotehost, Scp
+from gppylib.commands.unix import check_pid_on_remotehost
 from gppylib.programs.clsRecoverSegment_triples import RecoveryTriplet
 
 logger = gplog.get_default_logger()

@@ -9,7 +9,7 @@ CREATE OR REPLACE VIEW rg_concurrency_view AS
   FROM pg_stat_activity
   WHERE rsgname='rg_concurrency_test';
 
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_rate_limit=20, memory_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_hard_quota_limit=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 1:SET ROLE role_concurrency_test;
 1:BEGIN;
@@ -35,7 +35,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_rate_limit=20, memory_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_hard_quota_limit=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 1:SET ROLE role_concurrency_test;
 1:BEGIN;
@@ -61,7 +61,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_rate_limit=20, memory_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_hard_quota_limit=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 1:SET ROLE role_concurrency_test;
 1&:SELECT pg_sleep(10000);
@@ -91,7 +91,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_rate_limit=20, memory_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_hard_quota_limit=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 1:SET ROLE role_concurrency_test;
 1&:SELECT pg_sleep(10000);
@@ -121,7 +121,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_rate_limit=20, memory_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_hard_quota_limit=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 1:SET ROLE role_concurrency_test;
 1:CREATE TEMP TABLE tmp(a INT);

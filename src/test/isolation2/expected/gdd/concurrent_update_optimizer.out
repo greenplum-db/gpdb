@@ -1,0 +1,365 @@
+-- Test concurrent update a table with a varying length type
+CREATE TABLE t_concurrent_update(a int, b int, c char(84));
+CREATE
+INSERT INTO t_concurrent_update VALUES(1,1,'test');
+INSERT 1
+
+1: BEGIN;
+BEGIN
+1: SET optimizer=off;
+SET
+1: UPDATE t_concurrent_update SET b=b+10 WHERE a=1;
+UPDATE 1
+2: SET optimizer=off;
+SET
+2&: UPDATE t_concurrent_update SET b=b+10 WHERE a=1;  <waiting ...>
+1: END;
+END
+2<:  <... completed>
+UPDATE 1
+1: SELECT * FROM t_concurrent_update;
+ a | b  | c                                                                                    
+---+----+--------------------------------------------------------------------------------------
+ 1 | 21 | test                                                                                 
+(1 row)
+1q: ... <quitting>
+2q: ... <quitting>
+
+DROP TABLE t_concurrent_update;
+DROP
+
+-- Test the concurrent update transaction order on the segment is reflected on master
+1: CREATE TABLE t_concurrent_update(a int, b int);
+CREATE
+1: INSERT INTO t_concurrent_update VALUES(1,1);
+INSERT 1
+
+2: BEGIN;
+BEGIN
+2: SET optimizer=off;
+SET
+2: UPDATE t_concurrent_update SET b=b+10 WHERE a=1;
+UPDATE 1
+3: BEGIN;
+BEGIN
+3: SET optimizer=off;
+SET
+-- transaction 3 will wait transaction 2 on the segment
+3&: UPDATE t_concurrent_update SET b=b+10 WHERE a=1;  <waiting ...>
+
+-- transaction 2 suspend before commit, but it will wake up transaction 3 on segment
+2: select gp_inject_fault('before_xact_end_procarray', 'suspend', '', 'isolation2test', '', 1, 1, 0, dbid) FROM gp_segment_configuration WHERE role='p' AND content=-1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2&: END;  <waiting ...>
+1: select gp_wait_until_triggered_fault('before_xact_end_procarray', 1, dbid) FROM gp_segment_configuration WHERE role='p' AND content=-1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+-- transaction 3 should wait transaction 2 commit on master
+3<:  <... completed>
+UPDATE 1
+3&: END;  <waiting ...>
+-- the query should not get the incorrect distributed snapshot: transaction 1 in-progress
+-- and transaction 2 finished
+1: SELECT * FROM t_concurrent_update;
+ a | b 
+---+---
+ 1 | 1 
+(1 row)
+1: select gp_inject_fault('before_xact_end_procarray', 'reset', dbid) FROM gp_segment_configuration WHERE role='p' AND content=-1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2<:  <... completed>
+END
+3<:  <... completed>
+END
+2q: ... <quitting>
+3q: ... <quitting>
+
+1: SELECT * FROM t_concurrent_update;
+ a | b  
+---+----
+ 1 | 21 
+(1 row)
+1q: ... <quitting>
+
+-- Same test as the above, except the first transaction commits before the
+-- second transaction check the wait gxid, it should get the gxid from
+-- pg_distributedlog instead of the procarray.
+4: BEGIN;
+BEGIN
+4: SET optimizer=off;
+SET
+4: UPDATE t_concurrent_update SET b=b+10 WHERE a=1;
+UPDATE 1
+
+5: BEGIN;
+BEGIN
+5: SET optimizer=off;
+SET
+-- suspend before get 'wait gxid'
+5: SELECT gp_inject_fault('before_get_distributed_xid', 'suspend', dbid) FROM gp_segment_configuration WHERE role='p' AND content=1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+5&: UPDATE t_concurrent_update SET b=b+10 WHERE a=1;  <waiting ...>
+
+6: SELECT gp_wait_until_triggered_fault('before_get_distributed_xid', 1, dbid) FROM gp_segment_configuration WHERE role='p' AND content=1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+4: END;
+END
+4: SELECT gp_inject_fault('before_get_distributed_xid', 'reset', dbid) FROM gp_segment_configuration WHERE role='p' AND content=1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+5<:  <... completed>
+UPDATE 1
+5: END;
+END
+6: SELECT * FROM t_concurrent_update;
+ a | b  
+---+----
+ 1 | 41 
+(1 row)
+6: DROP TABLE t_concurrent_update;
+DROP
+4q: ... <quitting>
+5q: ... <quitting>
+6q: ... <quitting>
+
+-- Test update distkey
+-- IF we enable the GDD, then the lock maybe downgrade to
+-- RowExclusiveLock, when we UPDATE the distribution keys,
+-- A SplitUpdate node will add to the Plan, then an UPDATE
+-- operator may split to DELETE and INSERT.
+-- IF we UPDATE the distribution keys concurrently, the
+-- DELETE operator will not execute EvalPlanQual and the
+-- INSERT operator can not be *blocked*, so it will
+-- generate more tuples in the tables.
+-- We raise an error when the GDD is enabled and the
+-- distribution keys is updated.
+
+0: create table tab_update_hashcol (c1 int, c2 int) distributed by(c1);
+CREATE
+0: insert into tab_update_hashcol values(1,1);
+INSERT 1
+0: select * from tab_update_hashcol;
+ c1 | c2 
+----+----
+ 1  | 1  
+(1 row)
+
+1: begin;
+BEGIN
+2: begin;
+BEGIN
+1: update tab_update_hashcol set c1 = c1 + 1 where c1 = 1;
+UPDATE 1
+2&: update tab_update_hashcol set c1 = c1 + 1 where c1 = 1;  <waiting ...>
+1: end;
+END
+2<:  <... completed>
+ERROR:  EvalPlanQual can not handle subPlan with Motion node
+2: end;
+END
+0: select * from tab_update_hashcol;
+ c1 | c2 
+----+----
+ 2  | 1  
+(1 row)
+0: drop table tab_update_hashcol;
+DROP
+
+-- Test EvalplanQual
+-- If we enable the GDD, then the lock maybe downgrade to
+-- RowExclusiveLock, so UPDATE/Delete can be executed
+-- concurrently, it may trigger the EvalPlanQual function
+-- to recheck the qualifications.
+-- If the subPlan have Motion node, then we can not execute
+-- EvalPlanQual correctly, so we raise an error when
+-- GDD is enabled and EvalPlanQual is tiggered.
+
+0: create table tab_update_epq1 (c1 int, c2 int) distributed randomly;
+CREATE
+0: create table tab_update_epq2 (c1 int, c2 int) distributed randomly;
+CREATE
+0: insert into tab_update_epq1 values(1,1);
+INSERT 1
+0: insert into tab_update_epq2 values(1,1);
+INSERT 1
+0: select * from tab_update_epq1;
+ c1 | c2 
+----+----
+ 1  | 1  
+(1 row)
+0: select * from tab_update_epq2;
+ c1 | c2 
+----+----
+ 1  | 1  
+(1 row)
+
+1: set optimizer = off;
+SET
+2: set optimizer = off;
+SET
+
+1: begin;
+BEGIN
+2: begin;
+BEGIN
+1: update tab_update_epq1 set c1 = c1 + 1 where c2 = 1;
+UPDATE 1
+2&: update tab_update_epq1 set c1 = tab_update_epq1.c1 + 1 from tab_update_epq2 where tab_update_epq1.c2 = tab_update_epq2.c2;  <waiting ...>
+1: end;
+END
+2<:  <... completed>
+ERROR:  EvalPlanQual can not handle subPlan with Motion node  (seg1 127.0.1.1:6003 pid=76275)
+2: end;
+END
+
+0: select * from tab_update_epq1;
+ c1 | c2 
+----+----
+ 2  | 1  
+(1 row)
+0: drop table tab_update_epq1;
+DROP
+0: drop table tab_update_epq2;
+DROP
+0q: ... <quitting>
+1q: ... <quitting>
+2q: ... <quitting>
+
+-- check that orca concurrent delete transaction won't delete tuple, updated in other transaction (which doesn't match predicate anymore)
+create table test as select 0 as i distributed randomly;
+CREATE 1
+1: begin;
+BEGIN
+1: update test set i = i + 1;
+UPDATE 1
+-- in session 2, in case of ORCA DML invokes EPQ
+-- the following SQL will hang due to XID lock
+2&: delete from test where i = 0;  <waiting ...>
+1: end;
+END
+2<:  <... completed>
+DELETE 0
+drop table test;
+DROP
+1q: ... <quitting>
+2q: ... <quitting>
+
+-- check that orca concurrent delete transaction will delete tuple, updated in other transaction (which still matches predicate)
+create table test as select 0 as i distributed randomly;
+CREATE 1
+1: begin;
+BEGIN
+1: update test set i = i;
+UPDATE 1
+-- in session 2, in case of ORCA DML invokes EPQ
+-- the following SQL will hang due to XID lock
+2&: delete from test where i = 0;  <waiting ...>
+1: end;
+END
+2<:  <... completed>
+DELETE 1
+drop table test;
+DROP
+1q: ... <quitting>
+2q: ... <quitting>
+
+-- split update is to implement updating on hash keys,
+-- it deletes the tuple and insert a new tuple in a
+-- new segment, so it is not easy for other transaction
+-- to follow the update link to fetch the new tuple. The
+-- other transaction should raise error for such case.
+-- the following case should be tested with GDD enabled.
+-- See github issue: https://github.com/greenplum-db/gpdb/issues/8919
+
+0:create table t_splitupdate_raise_error (a int, b int) distributed by (a);
+CREATE
+0:insert into t_splitupdate_raise_error values (1, 1);
+INSERT 1
+
+-- test delete will throw error
+1: begin;
+BEGIN
+1: update t_splitupdate_raise_error set a = a + 1;
+UPDATE 1
+
+2: begin;
+BEGIN
+2&: delete from t_splitupdate_raise_error;  <waiting ...>
+
+1: end;
+END
+2<:  <... completed>
+ERROR:  tuple to be locked was already moved to another partition or segment due to concurrent update  (seg1 127.0.1.1:6003 pid=76275)
+
+2: abort;
+ABORT
+1q: ... <quitting>
+2q: ... <quitting>
+
+-- test norm update will throw error
+1: begin;
+BEGIN
+1: update t_splitupdate_raise_error set a = a + 1;
+UPDATE 1
+
+2: begin;
+BEGIN
+2&: update t_splitupdate_raise_error set b = 999;  <waiting ...>
+
+1: end;
+END
+2<:  <... completed>
+ERROR:  tuple to be locked was already moved to another partition or segment due to concurrent update  (seg0 127.0.1.1:6002 pid=76337)
+
+2: abort;
+ABORT
+1q: ... <quitting>
+2q: ... <quitting>
+
+-- test select for update will throw error
+-- Currently, select for update will reduce lock-level
+-- under some very simple cases, see checkCanOptSelectLockingClause
+-- for details.
+
+1: begin;
+BEGIN
+1: update t_splitupdate_raise_error set a = a + 1;
+UPDATE 1
+
+2: begin;
+BEGIN
+-- TODO: turn off orca, we should fix this until ORCA
+-- can generate lockrows plannode.
+2: set optimizer = off;
+SET
+2&: select * from t_splitupdate_raise_error for update;  <waiting ...>
+
+1: end;
+END
+2<:  <... completed>
+ERROR:  tuple to be locked was already moved to another partition or segment due to concurrent update  (seg0 slice1 127.0.1.1:7002 pid=43866)
+
+2: abort;
+ABORT
+1q: ... <quitting>
+2q: ... <quitting>
+
+0:drop table t_splitupdate_raise_error;
+DROP

@@ -35,6 +35,7 @@ try:
     from pgdb import DatabaseError
     from gppylib.gpcatalog import COORDINATOR_ONLY_TABLES
     from gppylib.operations.package import SyncPackages
+    from gppylib.programs.clsRecoverSegment_triples import get_segments_with_running_basebackup
     from gppylib.operations.utils import ParallelOperation
     from gppylib.parseutils import line_reader, check_values, canonicalize_address
     from gppylib.heapchecksum import HeapChecksum
@@ -289,16 +290,16 @@ status_table_sql = """CREATE TABLE gpexpand.status
                           updated timestamp ) """
 
 status_detail_table_sql = """CREATE TABLE gpexpand.status_detail
-                        ( dbname text,
+                        ( table_oid oid,
+                          dbname text,
                           fq_name text,
-                          table_oid oid,
                           root_partition_oid oid,
                           rank int,
                           external_writable bool,
                           status text,
                           expansion_started timestamp,
                           expansion_finished timestamp,
-                          source_bytes numeric ) """
+                          source_bytes numeric ) distributed by (table_oid)"""
 # gpexpand views
 progress_view_simple_sql = """CREATE VIEW gpexpand.expansion_progress AS
 SELECT
@@ -456,7 +457,7 @@ class GpExpandStatus():
 
     def _sync_status_file(self):
         """Syncs the gpexpand status file with the coordinator mirror"""
-        cpCmd = Scp('gpexpand copying status file to coordinator mirror',
+        cpCmd = Rsync('gpexpand copying status file to coordinator mirror',
                     srcFile=self._status_filename,
                     dstFile=self._status_standby_filename,
                     dstHost=self._coordinator_mirror.getSegmentHostName())
@@ -526,7 +527,7 @@ class GpExpandStatus():
         """ Sync the segment configuration backup file to standby """
         if self._coordinator_mirror:
             self.logger.debug("Sync segment configuration backup file")
-            cpCmd = Scp('gpexpand copying segment configuration backup file to coordinator mirror',
+            cpCmd = Rsync('gpexpand copying segment configuration backup file to coordinator mirror',
                         srcFile=self._gp_segment_configuration_backup,
                         dstFile=self._segment_configuration_standby_filename,
                         dstHost=self._coordinator_mirror.getSegmentHostName())
@@ -771,7 +772,7 @@ class SegmentTemplate:
         """Distributes template tar file to hosts"""
         for host in self.hosts:
             logger.debug('Copying tar file to %s' % host)
-            cpCmd = Scp(name='gpexpand distribute tar file to new hosts',
+            cpCmd = Rsync(name='gpexpand distribute tar file to new hosts',
                         srcFile=self.schema_tar_file,
                         dstFile=self.segTarDir,
                         dstHost=host)
@@ -860,7 +861,7 @@ class SegmentTemplate:
         localHostname = self.gparray.coordinator.getSegmentHostName()
         cmdName = 'gpexpand copying postgresql.conf to %s:%s/postgresql.conf' \
                   % (self.srcSegHostname, self.srcSegDataDir)
-        cpCmd = Scp(name=cmdName, srcFile=self.srcSegDataDir + '/postgresql.conf',
+        cpCmd = Rsync(name=cmdName, srcFile=self.srcSegDataDir + '/postgresql.conf',
             dstFile=self.tempDir, dstHost=localHostname, ctxt=REMOTE,
             remoteHost=self.srcSegHostname)
         cpCmd.run(validateAfter=True)
@@ -868,7 +869,7 @@ class SegmentTemplate:
         self.logger.info('Copying pg_hba.conf from existing segment into template')
         cmdName = 'gpexpand copy pg_hba.conf to %s:%s/pg_hba.conf' \
                   % (self.srcSegHostname, self.srcSegDataDir)
-        cpCmd = Scp(name=cmdName, srcFile=self.srcSegDataDir + '/pg_hba.conf',
+        cpCmd = Rsync(name=cmdName, srcFile=self.srcSegDataDir + '/pg_hba.conf',
                     dstFile=self.tempDir, dstHost=localHostname,ctxt=REMOTE,
                     remoteHost=self.srcSegHostname)
         cpCmd.run(validateAfter=True)
@@ -1155,6 +1156,13 @@ class gpexpand:
         return dict(cursor.fetchall())
 
     def addNewSegments(self, inputFileEntryList):
+        segments_with_running_basebackup = get_segments_with_running_basebackup()
+        contentIds_with_running_basebackup = [seg.contentId for seg in inputFileEntryList if seg.contentId in segments_with_running_basebackup]
+
+        if len(contentIds_with_running_basebackup)>0:
+            raise Exception(
+            "Found pg_basebackup running for segments with contentIds %s" %contentIds_with_running_basebackup)
+
         for seg in inputFileEntryList:
             self.gparray.addExpansionSeg(content=int(seg.contentId)
                                          , preferred_role=seg.role
@@ -1613,9 +1621,9 @@ class gpexpand:
 
         final_sql = """{cte_sql}
         select
+          s1.table_oid,
           s1.dbname,
           s1.fq_name,
-          s1.table_oid,
           s1.root_partition_oid,
           s1.rank,
           s1.external_writable,
@@ -1631,9 +1639,9 @@ class gpexpand:
 
     def _populate_regular_tables(self, dbname):
         sql = """SELECT
+                   c.oid as table_oid,
                    current_database() as dbname,
                    quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
-                   c.oid as table_oid,
                    NULL as root_partition_oid,
                    2 as rank,
                    pe.writable is not null as external_writable,
@@ -1720,9 +1728,9 @@ class gpexpand:
 
         get_status_detail_cmd = """
              SELECT
+                c.oid as table_oid,
                 current_database() as dbname,
                 quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
-                c.oid as table_oid,
                 d.oid as root_partition_oid,
                 2 as rank,
                 false as external_writable,
@@ -1983,7 +1991,7 @@ class ExpandTable():
     def __init__(self, options, row=None):
         self.options = options
         if row is not None:
-            (self.dbname, self.fq_name, self.table_oid,
+            (self.table_oid, self.dbname, self.fq_name,
              self.root_partition_oid,
              self.rank, self.external_writable, self.status,
              self.expansion_started, self.expansion_finished,

@@ -62,7 +62,7 @@
               </dxl:IsNull>
             </dxl:Not>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.17140.1.1" TableName="r">
+          <dxl:TableDescriptor Mdid="6.17140.1.1" TableName="r">
             <dxl:Columns>
               <dxl:Column ColId="6" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="7" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -79,7 +79,7 @@
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:TableDescriptor Mdid="0.17140.1.1" TableName="r">
+          <dxl:TableDescriptor Mdid="6.17140.1.1" TableName="r">
             <dxl:Columns>
               <dxl:Column ColId="8" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="9" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -97,7 +97,7 @@
           </dxl:ProjElem>
         </dxl:ProjList>
         <dxl:Filter/>
-        <dxl:TableDescriptor Mdid="0.17140.1.1" TableName="r">
+        <dxl:TableDescriptor Mdid="6.17140.1.1" TableName="r">
           <dxl:Columns>
             <dxl:Column ColId="10" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
