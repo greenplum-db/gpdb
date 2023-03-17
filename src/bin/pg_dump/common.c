@@ -247,6 +247,9 @@ getSchemaData(Archive *fout, int *numTablesPtr)
 	pg_log_info("flagging inherited columns in subtables");
 	flagInhAttrs(fout->dopt, tblinfo, numTables);
 
+	pg_log_info("reading partitioning data");
+	getPartitioningInfo(fout);
+
 	pg_log_info("reading indexes");
 	getIndexes(fout, tblinfo, numTables);
 
@@ -306,7 +309,6 @@ static void
 flagInhTables(Archive *fout, TableInfo *tblinfo, int numTables,
 			  InhInfo *inhinfo, int numInherits)
 {
-	DumpOptions *dopt = fout->dopt;
 	int			i,
 				j;
 
@@ -340,8 +342,8 @@ flagInhTables(Archive *fout, TableInfo *tblinfo, int numTables,
 		{
 			mark_parents = false;
 
-			if (!dopt->load_via_partition_root ||
-				!tblinfo[i].ispartition)
+			if (!(tblinfo[i].relkind == RELKIND_PARTITIONED_TABLE &&
+				  tblinfo[i].ispartition))
 				find_parents = false;
 		}
 
