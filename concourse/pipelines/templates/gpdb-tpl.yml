@@ -210,9 +210,7 @@ groups:
   - compile_gpdb_sles12
   - test_gpdb_clients_sles12
   - compile_gpdb_clients_windows
-  {% if pipeline_configuration == "prod" and not directed_release %}
   - test_gpdb_clients_windows
-  {% endif %}
   {% endif %}
 {% if "ICW" in test_sections %}
   ## --------------------------------------------------------------------
@@ -672,7 +670,7 @@ resources:
 {% endif %}
 {% endif %}
 
-{% if os_type == default_os_type and pipeline_configuration == "prod" and not directed_release %}
+{% if os_type == default_os_type %}
 - name: bin_gpdb_centos7_rc
   type: gcs
   source:
@@ -785,7 +783,6 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/bin_gpdb_clients_windows/greenplum-clients-x86_64.tar.gz
 
-{% if pipeline_configuration == "prod" and not directed_release %}
 - name: terraform_windows
   type: terraform
   source:
@@ -805,7 +802,6 @@ resources:
       # and different teams will place there clusters' tfstate files under different paths
       bucket: gpdb5-pipeline-dynamic-terraform
       bucket_path: gp-clients-windows-tests-google/
-{% endif %}
 {% endif %}
 
 {% if not directed_release %}
@@ -1215,7 +1211,6 @@ jobs:
     params:
       file: "gpdb_artifacts/greenplum-clients-x86_64.tar.gz"
 
-{% if pipeline_configuration == "prod" and not directed_release %}
 - name: test_gpdb_clients_windows
   plan:
   - in_parallel:
@@ -1256,7 +1251,6 @@ jobs:
         aws_ebs_volume_type: standard
     get_params:
       action: destroy
-{% endif %}
 
 {% endif %}
 
