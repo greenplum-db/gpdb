@@ -159,7 +159,7 @@ test: uao/cluster_progress_row
 # Refer to the case comment for why it is commented out.
 # test: uao/bad_buffer_on_temp_ao_row
 # check storage-dependent collected statistics views
-test: ao_collected_stats_views
+test: uao/collected_stats_views_row
 
 test: reorganize_after_ao_vacuum_skip_drop truncate_after_ao_vacuum_skip_drop mark_all_aoseg_await_drop
 # below test(s) inject faults so each of them need to be in a separate group
@@ -222,6 +222,8 @@ test: uao/test_pg_appendonly_version_column
 test: uao/cluster_progress_column
 # Refer to the case comment for why it is commented out.
 # test: uao/bad_buffer_on_temp_ao_column
+# check storage-dependent collected statistics views
+test: uao/collected_stats_views_column
 
 # this case contains fault injection, must be put in a separate test group
 test: terminate_in_gang_creation
