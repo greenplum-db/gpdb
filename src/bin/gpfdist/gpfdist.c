@@ -197,10 +197,15 @@ static struct
 	struct transform* trlist; /* transforms from config file */
 	const char* ssl; /* path to certificates in case we use gpfdist with ssl */
 	int			w; /* The time used for session timeout in seconds */
+#ifndef WIN32
 	int			compress; /* The flag to indicate whether comopression transmission is open */
 	int			multi_thread; /* The number of working threads for compression transmission */
-} opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 32768, 0, 256, 0, 0, 0, 0, 0, 0};
-
+#endif
+} opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 32768, 0, 256, 0, 0, 0, 0
+#ifndef WIN32
+, 0, 0
+#endif
+};
 
 typedef union address
 {
@@ -400,10 +405,10 @@ static int decompress_data(request_t *r, zstd_buffer *in, zstd_buffer *out);
 static int decompress_zstd(request_t* r, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout);
 static int decompress_write_loop(request_t *r);
 static int local_send_with_zstd(request_t *r);
+static void* send_compression_data (void *req);
+#endif
 #ifndef WIN32
 static int wait_for_thread_join(request_t *r);
-#endif
-static void* send_compression_data (void *req);
 #endif
 static int request_parse_gp_headers(request_t *r, int opt_g);
 static void free_session_cb(int fd, short event, void* arg);
@@ -679,8 +684,10 @@ static void parse_command_line(int argc, const char* const argv[],
 #endif
 	{ "version", 256, 0, "print version number" },
 	{ NULL, 'w', 1, "wait for session timeout in seconds" },
+#ifndef WIN32
 	{"compress", 258, 0, "turn on compressed transmission"},
 	{"mthread", 259, 1, "turn on multi-thread and compressed transmission"},
+#endif
 	{ 0 } };
 
 	status = apr_getopt_init(&os, pool, argc, argv);
@@ -766,6 +773,7 @@ static void parse_command_line(int argc, const char* const argv[],
 			opt.w = atoi(arg);
 			break;
 #ifdef USE_ZSTD
+#ifndef WIN32
 		case 258:
 			opt.compress = 1;
 			break;
@@ -777,13 +785,16 @@ static void parse_command_line(int argc, const char* const argv[],
 			opt.multi_thread = atoi(arg);
 			opt.compress = 1;
 			break;
+#endif
 #else
+#ifndef WIN32
 		case 258:
 			usage_error("ZSTD is not supported by this build", 0);
 			break;
 		case 259:
 			usage_error("Multi-thread transmission relies on zstd, but zstd is not supported by this build", 0);
 			break;
+#endif
 #endif
 		}
 	}
@@ -850,6 +861,7 @@ static void parse_command_line(int argc, const char* const argv[],
 		opt.d = p;
 	}
 
+#ifndef WIN32
 	if (opt.multi_thread)
 	{
 		int num_thread = opt.multi_thread;
@@ -858,10 +870,10 @@ static void parse_command_line(int argc, const char* const argv[],
 			gwarning(NULL, "%s", "The thread number exceeds the restricted number! Gpfdist will use the restricted number.");
 			num_thread = MAX_THREAD_NUM;
 		}
-#ifndef WIN32
+
 		sem_init(&THREAD_NUM, 0, num_thread);
-#endif
 	}
+#endif
 
 	/* validate opt.l */
 	if (opt.l)
@@ -1300,11 +1312,13 @@ static int local_send(request_t *r, const char* buf, int buflen)
 			/* close stream and release fd & flock on pipe file*/
 			if (r->session && r->is_get)
 			{
+#ifndef WIN32
 				if (r->is_running || opt.multi_thread)
 				{
 					session_mark_end(r);
 				}
 				else
+#endif
 				{
 					session_end(r->session, 0);
 				}
@@ -1341,6 +1355,36 @@ int wait_for_thread_join(request_t *r)
 		return -1;
 	return r->send_size;
 }
+
+static
+int recycle_thread(request_t *r)
+{
+	int last_send = 0;
+	if (r->is_running)
+	{
+		last_send = wait_for_thread_join(r);
+
+		if (r->session_end)
+		{
+			session_end(r->session, 0);
+		}
+
+		if(last_send < 0)
+		{
+			/* zstd error occurs */
+			if (last_send == -2)
+			{
+				request_end(r, 1, r->zstd_error);
+			}
+			else
+			{
+				request_end(r, 1, "gpfdist send data failure");
+			}
+		}
+	}
+	return last_send;
+}
+
 #endif
 
 static int
@@ -1973,35 +2017,6 @@ static int session_active_segs_isempty(session_t* session)
 	return 1; /* empty */
 }
 
-static
-int recycle_thread(request_t *r)
-{
-	int last_send = 0;
-	if (r->is_running)
-	{
-		last_send = wait_for_thread_join(r);
-
-		if (r->session_end)
-		{
-			session_end(r->session, 0);
-		}
-
-		if(last_send < 0)
-		{
-			/* zstd error occurs */
-			if (last_send == -2)
-			{
-				request_end(r, 1, r->zstd_error);
-			}
-			else
-			{
-				request_end(r, 1, "gpfdist send data failure");
-			}
-		}
-	}
-	return last_send;
-}
-
 /*
  * do_write
  *
@@ -2060,6 +2075,7 @@ static void do_write(int fd, short event, void* arg)
 		gfatal(r, "internal error - non matching fd (%d) "
 					  "and socket (%d)", fd, r->sock);
 
+#ifndef WIN32
 	/* It is essential to recycle threads before we read file.
 	 * Since session_get_block will change value of top and content
 	 * in outblock in request, main thread and sub thread will cause
@@ -2075,6 +2091,7 @@ static void do_write(int fd, short event, void* arg)
 			return;
 		}
 	}
+#endif
 
 	/* Loop at most 3 blocks or until we choke on the socket */
 	for (i = 0; i < 3; i++)
@@ -2104,11 +2121,13 @@ static void do_write(int fd, short event, void* arg)
 		 * write out the block data
 		 */
 		n = datablock->top - datablock->bot;
+#ifdef USE_ZSTD
 		if(r->zstd)
 		{
 			n = local_send_with_zstd(r);
 		}
 		else
+#endif
 		{
 			/*
 		 	 * If PROTO-1: first write out the block header (metadata).
@@ -2156,11 +2175,12 @@ static void do_write(int fd, short event, void* arg)
 			gdebug(r, "network full");
 			break;
 		}
-
+#ifndef WIN32
 		if (opt.multi_thread)
 		{ /* It is very essential judge!! Because local_send_with_zstd will start a thread, and loop will cause confliction */
 			break;
 		}
+#endif
 	}
 
 	/* Set up for this routine to be called again */
@@ -3753,8 +3773,10 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 			r->segid = atoi(r->in.req->hvalue[i]);
 		else if (0 == strcasecmp("X-GP-ZSTD", r->in.req->hname[i]))
 		{
+#ifndef WIN32
 			r->zstd = atoi(r->in.req->hvalue[i]);
 			r->zstd = opt.compress ? r->zstd : 0;
+#endif
 		}
 		else if (0 == strcasecmp("X-GP-LINE-DELIM-STR", r->in.req->hname[i]))
 		{
@@ -4798,8 +4820,10 @@ static void request_cleanup(request_t *r)
 	request_shutdown_sock(r);
 	setup_do_close(r);
 #ifdef USE_ZSTD
+#ifndef WIN32
 	if(r->is_running)
 		wait_for_thread_join(r);
+#endif
 	if ( r->zstd && r->is_get )
 	{
 		ZSTD_freeCCtx(r->zstd_cctx);
