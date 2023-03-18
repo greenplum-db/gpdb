@@ -3217,7 +3217,9 @@ If you set the value to 0, database performance issues might occur under heavy l
 
 Specifies the minimum size of past log file segments kept in the `pg_wal` directory, in case a standby coordinator or mirror segment instance needs to fetch them for streaming replication. If a standby coordinator or mirror segment instance connected to the sending server falls behind by more than `wal_keep_size` megabytes, the sending server might remove a WAL segment still needed by the standby coordinator or mirror segment instance, in which case the replication connection will be terminated. 
 
-This sets only the minimum size of segments retained in `pg_wal`; the system might need to retain more segments for WAL archival or to recover from a checkpoint. If `wal_keep_size` is zero (the default), the system doesn't keep any extra segments for standby or mirroring purposes, so the number of old WAL segments available to standby coordinators or mirror segment instance is a function of the location of the previous checkpoint and status of WAL archiving. If this value is specified without units, it is taken as megabytes. 
+This sets only the minimum size of segments retained in `pg_wal`; the system might need to retain more segments for WAL archival or to recover from a checkpoint. If `wal_keep_size` is zero (the default), the number of old WAL segments available to mirror servers is a function of the location of replication slot's `restart_lsn` and `max_slot_wal_keep_size` parameters, as well as the status of WAL archiving. 
+
+If this value is specified without units, it is taken as megabytes.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
