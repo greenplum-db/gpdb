@@ -3144,6 +3144,15 @@ relation_needs_vacanalyze(Oid relid,
 	xidForceLimit = recentXid - freeze_max_age;
 	if (xidForceLimit < FirstNormalTransactionId)
 		xidForceLimit -= FirstNormalTransactionId;
+	/*
+	 * GPDB: Append-optimized tables don't have any transaction IDs and don't
+	 * need to be considered for anti-wraparound vacuums. They are implicitly
+	 * excluded from anti-wraparound vacuums below since their relfrozenxid is
+	 * always InvalidTransactionId.
+	 */
+	AssertImply(IsAccessMethodAO(classForm->relam),
+				!TransactionIdIsValid(classForm->relfrozenxid));
+
 	force_vacuum = (TransactionIdIsNormal(classForm->relfrozenxid) &&
 					TransactionIdPrecedes(classForm->relfrozenxid,
 										  xidForceLimit));
