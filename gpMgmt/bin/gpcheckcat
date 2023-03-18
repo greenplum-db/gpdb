@@ -1437,7 +1437,15 @@ class checkAOSegVpinfoThread(execThread):
             curs = self.db.query(aoseg_query)
 
             for relname, relid, segrelid, segrelname, attr_count in curs.getresult():
-                qry = "SELECT distinct(length(vpinfo)) FROM pg_aoseg.%s where state = 1;" % (segrelname)
+                # We check vpinfo consistency only for segs that are in state
+                # AOSEG_STATE_DEFAULT and which are not RESERVED_SEGNO.
+                # RESERVED_SEGNO can have a different number of attributes than
+                # the other segments. For eg. if we ALTER TABLE ADD COLUMN in a
+                # transaction, and then insert rows in the same transaction, and
+                # then abort, the RESERVED_SEGNO will hold the inserted rows.
+                # The vpinfo for RESERVED_SEGNO will have more columns than
+                # relnatts in that case.
+                qry = "SELECT distinct(length(vpinfo)) FROM pg_aoseg.%s where state = 1 and segno <> 0;" % (segrelname)
                 vpinfo_curs = self.db.query(qry)
                 nrows = vpinfo_curs.ntuples()
                 if nrows == 0:
