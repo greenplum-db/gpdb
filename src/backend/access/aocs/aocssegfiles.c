@@ -1241,7 +1241,8 @@ gp_aocsseg_internal(PG_FUNCTION_ARGS, Oid aocsRelOid)
 		context->aocsRelOid = aocsRelOid;
 
 		aocsRel = heap_open(aocsRelOid, AccessShareLock);
-		if (!RelationIsAoCols(aocsRel))
+		if (!RelationIsAoCols(aocsRel) ||
+				aocsRel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("'%s' is not an append-only columnar relation",
