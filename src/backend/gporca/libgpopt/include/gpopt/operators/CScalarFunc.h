@@ -69,7 +69,7 @@ public:
 	// ctor
 	CScalarFunc(CMemoryPool *mp, IMDId *mdid_func, IMDId *mdid_return_type,
 				INT return_type_modifier, const CWStringConst *pstrFunc,
-				BOOL funcvariadic = false);
+				BOOL funcvariadic);
 
 	// dtor
 	~CScalarFunc() override;

@@ -16,7 +16,7 @@
       <dxl:Filter>
         <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
           <dxl:Ident ColId="1" ColName="A" TypeMdid="0.23.1.0"/>
-          <dxl:FuncExpr FuncId="0.1346.1.0" FuncRetSet="false" TypeMdid="0.701.1.0">
+          <dxl:FuncExpr FuncId="0.1346.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false">
             <dxl:Ident ColId="2" ColName="B" TypeMdid="0.23.1.0"/>
             <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
           </dxl:FuncExpr>

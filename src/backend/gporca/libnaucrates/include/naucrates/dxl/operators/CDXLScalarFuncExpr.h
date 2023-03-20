@@ -54,7 +54,7 @@ public:
 	// ctor
 	CDXLScalarFuncExpr(CMemoryPool *mp, IMDId *mdid_func,
 					   IMDId *mdid_return_type, INT return_type_modifier,
-					   BOOL returns_set, BOOL funcvariadic = false);
+					   BOOL returns_set, BOOL funcvariadic);
 
 	//dtor
 	~CDXLScalarFuncExpr() override;

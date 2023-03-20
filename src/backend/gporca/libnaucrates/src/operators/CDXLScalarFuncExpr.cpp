@@ -169,6 +169,8 @@ CDXLScalarFuncExpr::SerializeToDXL(CXMLSerializer *xml_serializer,
 		CDXLTokens::GetDXLTokenStr(EdxltokenFuncRetSet), m_returns_set);
 	m_return_type_mdid->Serialize(xml_serializer,
 								  CDXLTokens::GetDXLTokenStr(EdxltokenTypeId));
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenFuncVariadic), m_funcvariadic);
 
 	if (default_type_modifier != TypeModifier())
 	{

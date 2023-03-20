@@ -94,7 +94,7 @@
       <dxl:LogicalProject>
         <dxl:ProjList>
           <dxl:ProjElem ColId="2" Alias="format">
-            <dxl:FuncExpr FuncId="0.3539.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+            <dxl:FuncExpr FuncId="0.3539.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="true">
               <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAACSVzICVz" LintValue="2338443864"/>
               <dxl:ConstValue TypeMdid="0.1009.1.0" Value="AAAAMAEAAAAAAAAAGQAAAAIAAAABAAAAAAAACWZpcnN0AAAAAAAACnNlY29u&#10;ZAAA"/>
             </dxl:FuncExpr>
@@ -117,7 +117,7 @@
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="format">
-            <dxl:FuncExpr FuncId="0.3539.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+            <dxl:FuncExpr FuncId="0.3539.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="true">
               <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAACSVzICVz" LintValue="2338443864"/>
               <dxl:ConstValue TypeMdid="0.1009.1.0" Value="AAAAMAEAAAAAAAAAGQAAAAIAAAABAAAAAAAACWZpcnN0AAAAAAAACnNlY29u&#10;ZAAA"/>
             </dxl:FuncExpr>
