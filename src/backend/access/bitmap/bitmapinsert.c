@@ -1793,7 +1793,13 @@ buf_add_tid(Relation rel, BMTidBuildBuf *tids, uint64 tidnum,
 
 		if (tidnum < buf->last_tid)
 		{
-			/* Scan through the bitmap vector, and update the bit in tidnum */
+			/*
+			 * Usually, tidnum is greater than lovItem->bm_last_setbit.
+			 * However, if this is not the case this should be called while
+			 * doing insertion after 'vacuum'. In this, we try to update 
+			 * this bit in the corresponding bitmap.
+			 * Scan through the bitmap vector, and update the bit in tidnum.
+			 */
 			updatesetbit(rel, lovbuf, off, tidnum, state->use_wal);
 		}
 		else
@@ -1829,7 +1835,13 @@ buf_add_tid(Relation rel, BMTidBuildBuf *tids, uint64 tidnum,
 
 		if (tidnum < lovitem->bm_last_setbit)
 		{
-			/* Scan through the bitmap vector, and update the bit in tidnum */
+			/*
+			 * Usually, tidnum is greater than lovItem->bm_last_setbit.
+			 * However, if this is not the case this should be called while
+			 * doing insertion after 'vacuum'. In this, we try to update 
+			 * this bit in the corresponding bitmap.
+			 * Scan through the bitmap vector, and update the bit in tidnum.
+			 */
 			updatesetbit(rel, lovbuf, off, tidnum, state->use_wal);
 		}
 		else
