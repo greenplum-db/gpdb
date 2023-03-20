@@ -33,11 +33,15 @@ private:
 	// output distribution
 	CDistributionSpecReplicated *m_pdsReplicated;
 
+	// ignore optimizer_penalize_broadcast_threshold GUC during costing when true
+	BOOL m_ignore_broadcast_threshold;
+
 public:
 	CPhysicalMotionBroadcast(const CPhysicalMotionBroadcast &) = delete;
 
 	// ctor
-	explicit CPhysicalMotionBroadcast(CMemoryPool *mp);
+	explicit CPhysicalMotionBroadcast(CMemoryPool *mp,
+									  BOOL ignore_broadcast_threshold);
 
 	// dtor
 	~CPhysicalMotionBroadcast() override;
@@ -112,6 +116,11 @@ public:
 	// conversion function
 	static CPhysicalMotionBroadcast *PopConvert(COperator *pop);
 
+	BOOL
+	FIgnoreBroadcastThreshold() const
+	{
+		return m_ignore_broadcast_threshold;
+	}
 };	// class CPhysicalMotionBroadcast
 
 }  // namespace gpopt
