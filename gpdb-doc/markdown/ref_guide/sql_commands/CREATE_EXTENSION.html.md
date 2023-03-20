@@ -16,14 +16,14 @@ CREATE EXTENSION [ IF NOT EXISTS ] <extension_name>
 
 `CREATE EXTENSION` loads a new extension into the current database. There must not be an extension of the same name already loaded.
 
-Loading an extension essentially amounts to running the extension script file. The script typically creates new SQL objects such as functions, data types, operators, and index support methods. `CREATE EXTENSION` additionally records the identities of all the created objects, so that they can be dropped again if `DROP EXTENSION` is issued.
+Loading an extension essentially amounts to running the extension script file. The script typically creates new SQL objects such as functions, data types, operators, and index support methods. `CREATE EXTENSION` additionally records the identities of all of the created objects, so that they can be dropped again if `DROP EXTENSION` is issued.
 
 Loading an extension requires the same privileges that would be required to create its component objects. For most extensions this means superuser or database owner privileges are required. The user who runs `CREATE EXTENSION` becomes the owner of the extension for purposes of later privilege checks, as well as the owner of any objects created by the extension script.
 
 ## <a id="section4"></a>Parameters 
 
 IF NOT EXISTS
-:   Do not throw an error if an extension with the same name already exists. A notice is issued in this case. Note that there is no guarantee that the existing extension is anything like the one that would have been created from the currently-available script file.
+:   Do not throw an error if an extension with the same name already exists. Greenplum Database issues a notice in this case. Note that there is no guarantee that the existing extension is anything like the one that would have been created from the currently-available script file.
 
 extension\_name
 :   The name of the extension to be installed. Greenplum Database will create the extension using details from the file `SHAREDIR/extension/<extension_name>.control`.

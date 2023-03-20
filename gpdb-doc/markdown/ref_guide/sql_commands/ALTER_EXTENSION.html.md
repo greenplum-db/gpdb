@@ -59,7 +59,7 @@ SET SCHEMA
 :   This form moves the extension member objects into another schema. The extension must be *relocatable* for this command to succeed.
 
 ADD member\_object
-:   This form adds an existing object to the extension. This is mainly useful in extension update scripts. The object will subsequently be treated as a member of the extension; notable, it can only be dropped by dropping the extension.
+:   This form adds an existing object to the extension. This is mainly useful in extension update scripts. The object will subsequently be treated as a member of the extension; notably, it can only be dropped by dropping the extension.
 
 DROP member\_object
 :   This form removes a member object from the extension. This is mainly useful in extension update scripts. The object is not dropped, only disassociated from the extension.
