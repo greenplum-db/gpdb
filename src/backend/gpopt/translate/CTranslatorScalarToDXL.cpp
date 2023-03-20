@@ -1331,7 +1331,7 @@ CTranslatorScalarToDXL::TranslateFuncExprToDXL(
 		GPOS_NEW(m_mp) CMDIdGPDB(IMDId::EmdidGeneral, func_expr->funcid);
 	CDXLNode *dxlnode = nullptr;
 
-	// create the DXL node holding the scalar funcexpr
+	// create the DXL node holding the scalar funcexpr.
 	dxlnode = GPOS_NEW(m_mp) CDXLNode(
 		m_mp,
 		GPOS_NEW(m_mp) CDXLScalarFuncExpr(
