@@ -927,6 +927,7 @@ $$
 $$
 LANGUAGE SQL EXECUTE ON ALL SEGMENTS;
 
+-- This view has an additional column than pg_stat_replication so cannot be generated using system_views_gp.in
 CREATE VIEW gp_stat_replication AS
     SELECT *, pg_catalog.gp_replication_error() AS sync_error
     FROM pg_catalog.gp_stat_get_master_replication() AS R
@@ -1859,11 +1860,6 @@ $$
   select sum(n) from brin_summarize_new_values_internal(t) as n;
 $$
 LANGUAGE sql READS SQL DATA EXECUTE ON COORDINATOR;
-
-CREATE OR REPLACE VIEW gp_stat_archiver AS
-    SELECT -1 AS gp_segment_id, * FROM pg_stat_archiver
-    UNION
-    SELECT gp_execution_segment() AS gp_segment_id, * FROM gp_dist_random('pg_stat_archiver');
 
 CREATE FUNCTION gp_get_session_endpoints (OUT gp_segment_id int, OUT auth_token text,
 									  OUT cursorname text, OUT sessionid int, OUT hostname varchar(64),
