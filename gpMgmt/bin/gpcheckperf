@@ -420,7 +420,7 @@ def parseMultiDDResult(out):
         o = line[i + 2:]
 
 
-        if o.find('multidd total bytes ') > 0:
+        if o.find('multidd total bytes ') >= 0:
             h = line[1:i]
             o = o.split()
             m = re.search("(^\d+)", o[-1])
@@ -429,7 +429,7 @@ def parseMultiDDResult(out):
             bytes = int(m.group(1))
             continue
 
-        if o.find('real') > 0:
+        if o.find('real') >= 0:
             h = line[1:i]
             o = o.split()
             m = re.search("(^\d+.\d+)", o[1])
