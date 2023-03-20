@@ -1,0 +1,69 @@
+create table bm_test (i int, t text);
+CREATE
+insert into bm_test select i % 3000, (i % 3000)::text  from generate_series(1, 30000) i;
+INSERT 30000
+
+1: select * from bm_test limit 10 offset 20;
+ i  | t  
+----+----
+ 54 | 54 
+ 55 | 55 
+ 59 | 59 
+ 60 | 60 
+ 65 | 65 
+ 66 | 66 
+ 70 | 70 
+ 75 | 75 
+ 77 | 77 
+ 80 | 80 
+(10 rows)
+2: select * from bm_test limit 10 offset 20;
+ i  | t  
+----+----
+ 54 | 54 
+ 55 | 55 
+ 59 | 59 
+ 60 | 60 
+ 65 | 65 
+ 66 | 66 
+ 70 | 70 
+ 75 | 75 
+ 77 | 77 
+ 80 | 80 
+(10 rows)
+3: select * from bm_test limit 10 offset 20;
+ i  | t  
+----+----
+ 54 | 54 
+ 55 | 55 
+ 59 | 59 
+ 60 | 60 
+ 65 | 65 
+ 66 | 66 
+ 70 | 70 
+ 75 | 75 
+ 77 | 77 
+ 80 | 80 
+(10 rows)
+
+create index bm_idx on bm_test using bitmap(t);
+CREATE
+
+drop index bm_idx;
+DROP
+
+1: delete from bm_test where i = 1024;
+DELETE 10
+2: update bm_test set i = 2048 where i = 256;
+UPDATE 10
+3: vacuum bm_test;
+VACUUM
+4: insert into bm_test select i % 3000, (i % 3000)::text  from generate_series(1, 30000) i;
+INSERT 30000
+
+create index bm_idx on bm_test using bitmap(t);
+CREATE
+
+-- clean up
+drop table bm_test;
+DROP

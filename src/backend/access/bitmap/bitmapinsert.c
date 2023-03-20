@@ -1790,8 +1790,16 @@ buf_add_tid(Relation rel, BMTidBuildBuf *tids, uint64 tidnum,
 		buf = lov_buf->bufs[off - 1];
 
 		Buffer lovbuf = _bitmap_getbuf(rel, lov_block, BM_WRITE);
-		buf_add_tid_with_fill(rel, buf, lovbuf, off,
-							  tidnum, state->use_wal);
+
+		if (tidnum < buf->last_tid)
+		{
+			/* Scan through the bitmap vector, and update the bit in tidnum */
+			updatesetbit(rel, lovbuf, off, tidnum, state->use_wal);
+		}
+		else
+			buf_add_tid_with_fill(rel, buf, lovbuf, off,
+									tidnum, state->use_wal);
+
 		_bitmap_relbuf(lovbuf);
 	}
 	else
@@ -1819,8 +1827,14 @@ buf_add_tid(Relation rel, BMTidBuildBuf *tids, uint64 tidnum,
 
 		buf->curword = 0;
 
-		buf_add_tid_with_fill(rel, buf, lovbuf, off, tidnum,
-							  state->use_wal);
+		if (tidnum < lovitem->bm_last_setbit)
+		{
+			/* Scan through the bitmap vector, and update the bit in tidnum */
+			updatesetbit(rel, lovbuf, off, tidnum, state->use_wal);
+		}
+		else
+			buf_add_tid_with_fill(rel, buf, lovbuf, off, tidnum,
+									state->use_wal);
 
 		_bitmap_relbuf(lovbuf);
 
