@@ -275,7 +275,7 @@ Any table used as the target of a data-modifying statement in a `WITH` clause mu
 When constructing `WITH` queries, keep the following in mind:
 
 - `SELECT FOR UPDATE` cannot be inlined.
-- Greenplum Database inlines multiply-referenced CTEs only when requested.
+- Greenplum Database inlines multiply-referenced CTEs only when requested (by specifying `NOT MATERIALIZED`).
 - Multiply-referenced CTEs cannot be inlined if they contain outer self-references.
 - Greenplum Database does not inline when the CTE includes a volatile function.
 - An `ORDER BY` in the subquery or CTE does not force an ordering for the whole query.
