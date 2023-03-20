@@ -4,8 +4,6 @@
 -- clean up the idle writer gangs after the timeout,
 -- no snapshot collision error should occur.
 
-CREATE OR REPLACE FUNCTION cleanupAllGangs() RETURNS BOOL AS '@abs_builddir@/../regress/regress@DLSUFFIX@', 'cleanupAllGangs' LANGUAGE C;
-CREATE
 set gp_vmem_idle_resource_timeout to '1s';
 SET
 set gp_snapshotadd_timeout to 0;
@@ -18,11 +16,6 @@ INSERT 1
 
 create table idle_gang_cleaner_t (c1 int, c2 int);
 CREATE
-select cleanupAllGangs();
- cleanupallgangs 
------------------
- t               
-(1 row)
 
 0U: select gp_inject_fault('proc_kill', 'suspend', 2, target_session_id) from target_session_id_t;
  gp_inject_fault 
