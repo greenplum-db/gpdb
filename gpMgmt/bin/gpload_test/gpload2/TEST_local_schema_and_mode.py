@@ -963,4 +963,3 @@ def test_547_gpload_insert_without_DK():
     f = open(TestBase.mkpath('query547.sql'), 'a')
     f.write("\\! psql -d reuse_gptest -c '\\d staging_gpload_reusable_*'")
     f.close()
-
