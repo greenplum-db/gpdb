@@ -91,7 +91,9 @@ By default, `gprecoverseg` performs an incremental recovery, placing the mirror 
 
 > **Note** After a failed incremental recovery attempt you must perform a full recovery.
 
-Whenever possible, you should perform an incremental recovery rather than a full recovery, as incremental recovery is substantially faster.
+Whenever possible, you should perform an incremental recovery rather than a full recovery, as incremental recovery is substantially faster. 
+
+If you **do** need to perform a full recovery, you can speed up its progress with `gprecoverseg`'s `--differential` option, which causes `gprecoverseg` to skip recovery of any files and directories that are unchanged since the last time `gprecoverseg` ran.
 
 For a more detailed explanation of the differences between incremental and full recovery, see the article ["VMware Greenplum 6's gprecoverseg explained"](https://community.pivotal.io/s/article/5004y00001YA9fI1617805667833?language=en_US) in the VMware Tanzu Support Hub.
 
