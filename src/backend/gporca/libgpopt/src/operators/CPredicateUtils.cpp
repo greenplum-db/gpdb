@@ -992,25 +992,6 @@ CPredicateUtils::PexprINDFConjunction(CMemoryPool *mp,
 
 // is the given expression a comparison between a scalar ident and a constant
 //
-// Expression may is of the forms:
-//   (IDENT op CONST)
-//   (CONST op' IDENT)
-//
-// If it is (CONST op IDENT) then also check that the comparison operator is the
-// same as the original expression (op==op'). This is to maintain contract of
-// existing callers.
-BOOL
-CPredicateUtils::FCompareIdentToConst(CExpression *pexpr)
-{
-	CExpression *pexprIdent;
-	CExpression *pexprConst;
-	IMDType::ECmpType cmptype;
-	return FCompareIdentToConst(pexpr, pexprIdent, pexprConst, cmptype) &&
-		   cmptype == CScalarCmp::PopConvert(pexpr->Pop())->ParseCmpType();
-}
-
-// is the given expression a comparison between a scalar ident and a constant
-//
 // return true if expression is of the form:
 //   (IDENT op CONST)
 //   (CONST op' IDENT)

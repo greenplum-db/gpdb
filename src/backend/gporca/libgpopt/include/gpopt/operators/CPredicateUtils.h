@@ -185,7 +185,6 @@ public:
 	static BOOL FIdentINDFConstIgnoreCast(CExpression *pexpr);
 
 	// is the given expression a comparison between a scalar ident and a constant
-	static BOOL FCompareIdentToConst(CExpression *pexpr);
 	static BOOL FCompareIdentToConst(CExpression *pexpr,
 									 CExpression *&pexprIdent,
 									 CExpression *&pexprConst,

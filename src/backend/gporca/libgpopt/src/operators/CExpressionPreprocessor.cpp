@@ -718,7 +718,11 @@ CExpressionPreprocessor::FConvert2InIsConvertable(
 	CExpression *pexpr, CScalarBoolOp::EBoolOperator eboolopParent)
 {
 	bool fConvertableExpression = false;
-	if (CPredicateUtils::FCompareIdentToConst(pexpr))
+	CExpression *pexprIdent;
+	CExpression *pexprConst;
+	IMDType::ECmpType cmptype;
+	if (CPredicateUtils::FCompareIdentToConst(pexpr, pexprIdent, pexprConst,
+											  cmptype))
 	{
 		fConvertableExpression |=
 			IMDType::EcmptEq ==
