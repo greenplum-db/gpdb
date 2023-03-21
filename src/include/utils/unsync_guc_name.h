@@ -152,6 +152,7 @@
 		"gp_connection_send_timeout",
 		"gp_contentid",
 		"gp_cost_hashjoin_chainwalk",
+		"gp_count_host_segments_using_address",
 		"gp_create_table_random_default_distribution",
 		"gp_cte_sharing",
 		"gp_dbid",

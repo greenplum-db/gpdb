@@ -204,6 +204,9 @@ extern GpSegConfigEntry *dbid_get_dbinfo(int16 dbid);
 extern int16 contentid_get_dbid(int16 contentid, char role, bool getPreferredRoleNotCurrentRole);
 
 extern int numsegmentsFromQD;
+
+extern bool gp_count_host_segments_using_address;
+
 /*
  * Returns the number of segments
  */

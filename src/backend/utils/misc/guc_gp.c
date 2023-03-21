@@ -3104,6 +3104,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+		{"gp_count_host_segments_using_address", PGC_POSTMASTER, RESOURCES,
+		   gettext_noop("Count the number segments on a host using the address field in gp_segment_configuration"),
+		   gettext_noop("If false, count it using gp_segment_configuration.hostname instead")
+		},
+		&gp_count_host_segments_using_address,
+		false, NULL, NULL
+	},
+
+	{
 		{"stats_queue_level", PGC_SUSET, STATS_COLLECTOR,
 			gettext_noop("Collects resource queue-level statistics on database activity."),
 			NULL
