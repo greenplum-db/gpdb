@@ -34,6 +34,8 @@ Usage: gpcheckperf <options>
 import datetime
 import os
 import sys
+from gppylib.commands import unix
+from gppylib.commands.base import *
 
 sys.path.append(sys.path[0] + '/lib')
 try:
@@ -115,11 +117,51 @@ def gpscp(src, dst):
     c.append(src)
     c.append(dst)
     if GV.opt['-v']:
-        print '[Info]', strcmd(c)
+        print '[Info]---->1', strcmd(c)
     p = subprocess.Popen(c, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     out = p.stdout.read(-1)
     rc = p.wait()
     return not rc, out
+
+
+def gpsync(src, dst):
+
+    hostlist = ssh_utils.HostList()
+    for h in GV.opt['-h']:
+        hostlist.add(h)
+    if GV.opt['-f']:
+        hostlist.parseFile(GV.opt['-f'])
+
+    try:
+        hostlist.checkSSH()
+    except ssh_utils.SSHError, e:
+        sys.exit('[ERROR] ' + str(e))
+
+    GV.opt['-h'] = hostlist.filterMultiHomedHosts()
+    if len(GV.opt['-h']) == 0:
+        usage('Error: missing hosts in -h and/or -f arguments')
+
+    rsync = 'rsync -e "ssh -o BatchMode=yes -o StrictHostKeyChecking=no"'
+    if GV.opt['-r']:  rsync += ' -r'
+
+    for peer in GV.opt['-h']:
+        print('[INFO] dst --<', dst)
+        cmdStr = rsync + ' '
+        cmdStr = cmdStr + src + " "
+        cmdStr = cmdStr + unix.canonicalize(peer) + ":"
+        cmdStr = cmdStr + dst
+        print('[INFO]', cmdStr)
+    cmd = Command(name='rsync', cmdStr=cmdStr, ctxt=REMOTE, remoteHost=peer)
+    try:
+        cmd.run(validateAfter=True)
+    except Exception as e:
+        print 'rsync rs111z---->: %s' % str(e)
+        return
+
+    results = cmd.get_results()
+    print 'rsync rs111z---->: %s' % results
+    return not cmd.get_results().rc,cmd.get_results().stdout
+
 
 
 def getPlatform():
@@ -389,9 +431,13 @@ def copyExecOver(fname):
     if not os.access(path, os.X_OK):
         sys.exit('[Exit] file not executable: ' + path)
 
-    (ok, out) = gpscp(path, '=:%s' % target)
-    if not ok:
-        sys.exit('[Error] command failed: gpscp %s =:%s with output: %s' % (path, target, out))
+
+    if isScpEnabled:
+        (ok, out) = gpsync(path, '%s' % target)
+        if not ok:
+            sys.exit('[Error] command failed: gpsync %s =:%s with output: %s' % (path, target, out))
+
+
 
     # chmod +x file
     (ok, out) = gpssh('chmod a+rx %s' % target)
@@ -927,7 +973,20 @@ try:
     runSetup()
     diskWriteResult = diskReadResult = streamResult = netResult = None
     tornDown = False
+    isScpEnabled = True
+
     try:
+        #print 'Cordiantor host name -->: %s' % os.environ.get('PGHOST')
+        hostList = GV.opt['-h']
+        hostList.append(os.environ.get('PGHOST'))
+        # check if scp executable file is present on the system
+        for host in GV.opt['-h']:
+
+            scp_exce_rc = unix.check_scp_executable(host)
+            print 'peer scp_exce_rc  -->: %s' % type(scp_exce_rc)
+            if scp_exce_rc != 0:
+                isScpEnabled = False
+
         if GV.opt['-r'].find('d') >= 0:
             multidd = copyExecOver('multidd')
             diskWriteResult = runDiskWriteTest(multidd)
