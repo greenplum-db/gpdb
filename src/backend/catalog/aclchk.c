@@ -73,6 +73,8 @@
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbvars.h"
 
+grant_hook_type grant_hook = NULL;
+
 /*
  * Flag used during REVOKE processing, to keep track of whether it did
  * anything.
@@ -703,6 +705,8 @@ ExecGrantStmt_oids(InternalGrant *istmt)
 			elog(ERROR, "unrecognized GrantStmt.objtype: %d",
 				 (int) istmt->objtype);
 	}
+	if (grant_hook)
+		(*grant_hook)(istmt->objtype);
 }
 
 /*

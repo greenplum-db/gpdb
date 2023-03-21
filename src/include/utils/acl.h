@@ -341,4 +341,9 @@ extern bool pg_extension_ownercheck(Oid ext_oid, Oid roleid);
 extern bool has_createrole_privilege(Oid roleid);
 extern bool pg_extprotocol_ownercheck(Oid ptc_oid, Oid roleid);
 
+/* grant hook */
+/* Plugin provides a hook function matching this signature. */
+typedef void (*grant_hook_type) (GrantObjectType objType);
+extern PGDLLIMPORT grant_hook_type grant_hook;
+
 #endif   /* ACL_H */
