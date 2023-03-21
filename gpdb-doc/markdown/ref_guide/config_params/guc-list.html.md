@@ -3223,7 +3223,7 @@ If this value is specified without units, it is taken as megabytes.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|5|master, system, reload, superuser|
+|integer|5 times the default size of the write-ahead log file|master, system, reload, superuser|
 
 ## <a id="wal_receiver_status_interval"></a>wal\_receiver\_status\_interval 
 
