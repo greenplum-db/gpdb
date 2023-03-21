@@ -51,6 +51,9 @@ private:
 	// whether function returns a set of values
 	BOOL m_returns_set;
 
+	// whether variadic flag is set for function
+	BOOL m_is_variadic;
+
 	// function stability
 	CMDFunctionGPDB::EFuncStbl m_func_stability;
 

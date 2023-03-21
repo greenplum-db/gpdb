@@ -86,6 +86,10 @@ CParseHandlerMDGPDBFunc::StartElement(const XMLCh *const,  // element_uri,
 		m_is_strict = CDXLOperatorFactory::ExtractConvertAttrValueToBool(
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
 			EdxltokenGPDBFuncStrict, EdxltokenGPDBFunc);
+		// parse whether func is variadic
+		m_is_variadic = CDXLOperatorFactory::ExtractConvertAttrValueToBool(
+			m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
+			EdxltokenGPDBFuncVariadic, EdxltokenGPDBFunc);
 
 		// parse whether func is NDV-preserving
 		m_is_ndv_preserving =
@@ -169,7 +173,7 @@ CParseHandlerMDGPDBFunc::EndElement(const XMLCh *const,	 // element_uri,
 		m_imd_obj = GPOS_NEW(m_mp) CMDFunctionGPDB(
 			m_mp, m_mdid, m_mdname, m_mdid_type_result, m_mdid_types_array,
 			m_returns_set, m_func_stability, m_func_data_access, m_is_strict,
-			m_is_ndv_preserving, m_is_allowed_for_PS);
+			m_is_ndv_preserving, m_is_allowed_for_PS, m_is_variadic);
 
 		// deactivate handler
 		m_parse_handler_mgr->DeactivateHandler();

@@ -70,6 +70,9 @@ private:
 	// is an increasing function (non-implicit/lossy cast) which can be used for partition selection
 	BOOL m_is_allowed_for_PS;
 
+	// Is the variadic flag set for function
+	BOOL m_funcvariadic;
+
 	// dxl token array for stability
 	Edxltoken m_dxl_func_stability_array[EfsSentinel];
 
@@ -96,7 +99,7 @@ public:
 					IMDId *result_type_mdid, IMdIdArray *mdid_array,
 					BOOL ReturnsSet, EFuncStbl func_stability,
 					EFuncDataAcc func_data_access, BOOL is_strict,
-					BOOL is_ndv_preserving, BOOL is_allowed_for_PS);
+					BOOL is_ndv_preserving, BOOL is_allowed_for_PS, BOOL is_funcvariadic);
 
 	~CMDFunctionGPDB() override;
 
@@ -155,6 +158,9 @@ public:
 
 	// does function return a set of values
 	BOOL ReturnsSet() const override;
+
+	// Is the variadic flag set
+	BOOL IsFuncVariadic() const override;
 
 	// serialize object in DXL format
 	void Serialize(gpdxl::CXMLSerializer *xml_serializer) const override;

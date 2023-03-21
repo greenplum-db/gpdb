@@ -161,7 +161,8 @@ private:
 		BOOL *is_ndv_preserving,			// output: preserves NDVs of inputs
 		BOOL *ReturnsSet,					// output: does function return set?
 		BOOL *
-			is_allowed_for_PS  // output: is this an increasing function (lossy cast) allowed for partition selection
+			is_allowed_for_PS,	// output: is this an increasing function (lossy cast) allowed for partition selection
+		BOOL *is_funcvariadic	//output: Is function variadic flag set or not
 	);
 
 	// check and fall back for unsupported relations

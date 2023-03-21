@@ -1369,7 +1369,8 @@ CTranslatorRelcacheToDXL::LookupFuncProps(
 	BOOL *is_ndv_preserving,			// output: preserves NDVs of inputs
 	BOOL *returns_set,					// output: does function return set?
 	BOOL *
-		is_allowed_for_PS  // output: is this a lossy (non-implicit) cast which is allowed for Partition selection
+		is_allowed_for_PS,	// output: is this a lossy (non-implicit) cast which is allowed for Partition selection
+	BOOL *is_funcvariadic	//output: Is function variadic flag set or not
 )
 {
 	GPOS_ASSERT(nullptr != stability);
@@ -1377,6 +1378,7 @@ CTranslatorRelcacheToDXL::LookupFuncProps(
 	GPOS_ASSERT(nullptr != is_strict);
 	GPOS_ASSERT(nullptr != is_ndv_preserving);
 	GPOS_ASSERT(nullptr != returns_set);
+	GPOS_ASSERT(nullptr != is_funcvariadic);
 
 	*stability = GetFuncStability(gpdb::FuncStability(func_oid));
 	*access = GetEFuncDataAccess(gpdb::FuncDataAccess(func_oid));
@@ -1391,6 +1393,7 @@ CTranslatorRelcacheToDXL::LookupFuncProps(
 	*is_strict = gpdb::FuncStrict(func_oid);
 	*is_ndv_preserving = gpdb::IsFuncNDVPreserving(func_oid);
 	*is_allowed_for_PS = gpdb::IsFuncAllowedForPartitionSelection(func_oid);
+	*is_funcvariadic = gpdb::GetFuncVariadicType(func_oid);
 }
 
 
@@ -1460,13 +1463,16 @@ CTranslatorRelcacheToDXL::RetrieveFunc(CMemoryPool *mp, IMDId *mdid)
 	BOOL returns_set = true;
 	BOOL is_ndv_preserving = true;
 	BOOL is_allowed_for_PS = false;
+	BOOL is_funcvariadic = false;
 	LookupFuncProps(func_oid, &stability, &access, &is_strict,
-					&is_ndv_preserving, &returns_set, &is_allowed_for_PS);
+					&is_ndv_preserving, &returns_set, &is_allowed_for_PS,
+					&is_funcvariadic);
 
 	mdid->AddRef();
-	CMDFunctionGPDB *md_func = GPOS_NEW(mp) CMDFunctionGPDB(
-		mp, mdid, mdname, result_type_mdid, arg_type_mdids, returns_set,
-		stability, access, is_strict, is_ndv_preserving, is_allowed_for_PS);
+	CMDFunctionGPDB *md_func = GPOS_NEW(mp)
+		CMDFunctionGPDB(mp, mdid, mdname, result_type_mdid, arg_type_mdids,
+						returns_set, stability, access, is_strict,
+						is_ndv_preserving, is_allowed_for_PS, is_funcvariadic);
 
 	return md_func;
 }

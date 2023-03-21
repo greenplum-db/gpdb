@@ -283,6 +283,9 @@ bool GetFuncRetset(Oid funcid);
 // return type of the given function
 Oid GetFuncRetType(Oid funcid);
 
+// Variadic type of the given function
+Oid GetFuncVariadicType(Oid funcid);
+
 // commutator operator of the given operator
 Oid GetCommutatorOp(Oid opno);
 

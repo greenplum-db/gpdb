@@ -286,9 +286,8 @@ COrderedAggPreprocessor::SplitPrjList(
 				mp, (cast_func->Mdname().GetMDName())->GetBuffer());
 			mdid_func->AddRef();
 			cast_func->GetResultTypeMdid()->AddRef();
-			CScalarFunc *popCastScalarFunc = GPOS_NEW(mp)
-				CScalarFunc(mp, mdid_func, cast_func->GetResultTypeMdid(), -1,
-							pstrFunc, false);
+			CScalarFunc *popCastScalarFunc = GPOS_NEW(mp) CScalarFunc(
+				mp, mdid_func, cast_func->GetResultTypeMdid(), -1, pstrFunc);
 			CExpression *pexprCastScalarIdent = GPOS_NEW(mp)
 				CExpression(mp, popCastScalarFunc, pexprScalarIdentSum);
 			CExpressionArray *colref_array1 = GPOS_NEW(mp) CExpressionArray(mp);

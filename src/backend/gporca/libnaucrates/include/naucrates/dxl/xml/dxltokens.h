@@ -612,6 +612,7 @@ enum Edxltoken
 	EdxltokenGPDBFuncStrict,
 	EdxltokenGPDBFuncNDVPreserving,
 	EdxltokenGPDBFuncIsAllowedForPS,
+	EdxltokenGPDBFuncVariadic,
 
 	EdxltokenGPDBCast,
 	EdxltokenGPDBCastBinaryCoercible,

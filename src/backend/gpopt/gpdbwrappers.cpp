@@ -1014,6 +1014,19 @@ gpdb::GetFuncRetType(Oid funcid)
 	return 0;
 }
 
+
+Oid
+gpdb::GetFuncVariadicType(Oid funcid)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_proc */
+		return get_func_variadictype(funcid);
+	}
+	GP_WRAP_END;
+	return 0;
+}
+
 Oid
 gpdb::GetInverseOp(Oid opno)
 {

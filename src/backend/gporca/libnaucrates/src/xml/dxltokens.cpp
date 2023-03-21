@@ -673,6 +673,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenGPDBFuncStrict, GPOS_WSZ_LIT("IsStrict")},
 		{EdxltokenGPDBFuncNDVPreserving, GPOS_WSZ_LIT("IsNDVPreserving")},
 		{EdxltokenGPDBFuncIsAllowedForPS, GPOS_WSZ_LIT("IsAllowedForPS")},
+		{EdxltokenGPDBFuncVariadic, GPOS_WSZ_LIT("FuncVariadic")},
 
 		{EdxltokenGPDBAgg, GPOS_WSZ_LIT("GPDBAgg")},
 		{EdxltokenGPDBIsAggOrdered, GPOS_WSZ_LIT("IsOrdered")},
