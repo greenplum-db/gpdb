@@ -1394,3 +1394,58 @@ CLOSE
 2: END;
 END
 
+---------- Test9: Test parallel retrieve cursor auto-check
+1: drop table if exists t1;
+DROP
+1: create table t1(a int, b int);
+CREATE
+1: insert into t1 values (generate_series(1,100000), 1);
+INSERT 100000
+1: insert into t1 values (-1, 1);
+INSERT 1
+1: BEGIN;
+BEGIN
+1: DECLARE c9 PARALLEL RETRIEVE CURSOR FOR select count(*) from t1 group by sqrt(a); select count() from gp_get_endpoints();
+ count 
+-------
+ 3     
+(1 row)
+1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c9';
+ endpoint_id1 | token_id | host_id | port_id | READY
+ endpoint_id1 | token_id | host_id | port_id | READY
+ endpoint_id1 | token_id | host_id | port_id | READY
+(3 rows)
+
+*U: @pre_run 'set_endpoint_variable @ENDPOINT1': SELECT state FROM gp_get_segment_endpoints() WHERE endpointname='@ENDPOINT1';
+ state 
+-------
+(0 rows)
+
+ state 
+-------
+ READY 
+(1 row)
+
+ state 
+-------
+ READY 
+(1 row)
+
+ state 
+-------
+ READY 
+(1 row)
+*R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT1";
+#-1retrieve> FATAL:  retrieve auth token is invalid
+
+
+ERROR:  the endpoint endpoint_id1 does not exist for session id xxx
+
+ERROR:  the endpoint endpoint_id1 does not exist for session id xxx
+
+ERROR:  endpoint is not available because the parallel retrieve cursor was aborted (cdbendpointretrieve.c:259)
+
+1: ROLLBACK;
+ERROR:  cannot take square root of a negative number  (seg2 slice1 11.164.61.163:55305 pid=24746)
+1: drop table if exists t1;
+DROP

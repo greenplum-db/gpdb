@@ -1471,3 +1471,40 @@ ForgetPortalSnapshots(void)
 		elog(ERROR, "portal snapshots (%d) did not account for all active snapshots (%d)",
 			 numPortalSnaps, numActiveSnaps);
 }
+
+/* Find all Parallel Retrieve cursors and return a list of Portals */
+List *
+GetAllParallelRetrieveCursorPortals(void)
+{
+	List		   *portals;
+	PortalHashEnt  *hentry;
+	HASH_SEQ_STATUS status;
+
+	if (PortalHashTable == NULL)
+		return NULL;
+
+	portals = NULL;
+	hash_seq_init(&status, PortalHashTable);
+	while ((hentry = hash_seq_search(&status)) != NULL)
+	{
+		if (PortalIsParallelRetrieveCursor(hentry->portal) &&
+			hentry->portal->queryDesc != NULL)
+			portals = lappend(portals, hentry->portal);
+	}
+
+	return portals;
+}
+
+/* Return the amount of parallel retrieve cursors */
+int
+GetNumOfParallelRetrieveCursors(void)
+{
+	List   *portals;
+	int		sum;
+
+	portals = GetAllParallelRetrieveCursorPortals();
+	sum = list_length(portals);
+
+	list_free(portals);
+	return sum;
+}

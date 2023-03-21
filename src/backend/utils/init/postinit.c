@@ -94,6 +94,7 @@ static void StatementTimeoutHandler(void);
 static void LockTimeoutHandler(void);
 static void IdleInTransactionSessionTimeoutHandler(void);
 static void IdleGangTimeoutHandler(void);
+static void GpParallelRetrieveCursorCheckTimeoutHandler(void);
 static void ClientCheckTimeoutHandler(void);
 static bool ThereIsAtLeastOneRole(void);
 static void process_startup_options(Port *port, bool am_superuser);
@@ -716,6 +717,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		RegisterTimeout(IDLE_IN_TRANSACTION_SESSION_TIMEOUT,
 						IdleInTransactionSessionTimeoutHandler);
 		RegisterTimeout(IDLE_GANG_TIMEOUT, IdleGangTimeoutHandler);
+		RegisterTimeout(GP_PARALLEL_RETRIEVE_CURSOR_CHECK_TIMEOUT, GpParallelRetrieveCursorCheckTimeoutHandler);
 		RegisterTimeout(CLIENT_CONNECTION_CHECK_TIMEOUT, ClientCheckTimeoutHandler);
 	}
 
@@ -1515,6 +1517,14 @@ ClientCheckTimeoutHandler(void)
 	CheckClientConnectionPending = true;
 	InterruptPending = true;
 	SetLatch(&MyProc->procLatch);
+}
+
+static void
+GpParallelRetrieveCursorCheckTimeoutHandler(void)
+{
+	GpParallelRetrieveCursorCheckPending = true;
+	InterruptPending = true;
+	SetLatch(MyLatch);
 }
 
 /*

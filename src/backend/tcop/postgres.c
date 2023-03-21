@@ -4068,6 +4068,29 @@ ProcessInterrupts(const char* filename, int lineno)
 		IdleGangTimeoutPending = false;
 	}
 
+	/* GPDB #15143: handle errors in parallel retrieve cursor */
+	if (GpParallelRetrieveCursorCheckPending)
+	{
+		int num;
+		GpParallelRetrieveCursorCheckPending = false;
+
+		Assert(Gp_role == GP_ROLE_DISPATCH);
+
+		/* Disable the timeout before we check the error */
+		disable_parallel_retrieve_cursor_timeout();
+
+		/* Invoke cdbdisp_checkForCancel and do not raise any error */
+		gp_check_parallel_retrieve_cursor_error();
+
+		/* Reset the alarm to check after some seconds */
+		num = GetNumOfParallelRetrieveCursors();
+		if (num > 0)
+		{
+			elog(DEBUG1, "There are still %d parallel retrieve cursors alive", num);
+			enable_parallel_retrieve_cursor_timeout();
+		}
+	}
+
 	if (ParallelMessagePending)
 		HandleParallelMessages();
 

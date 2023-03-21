@@ -29,6 +29,7 @@
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdisp_async.h"
 #include "cdb/cdbdispatchresult.h"
+#include "cdb/cdbendpoint.h"
 #include "libpq-fe.h"
 #include "libpq-int.h"
 #include "cdb/cdbfts.h"
@@ -363,6 +364,9 @@ cdbdisp_checkAckMessage_async(struct CdbDispatcherState *ds, const char *message
 	prevWaitMode = pParms->waitMode;
 	pParms->waitMode = DISPATCH_WAIT_ACK_ROOT;
 
+	/* Disable parallel retrieve cursor timeout to avoid nested calls */
+	disable_parallel_retrieve_cursor_timeout();
+
 	for (int i = 0; i < pParms->dispatchCount; i++)
 		pParms->dispatchResultPtrArray[i]->receivedAckMsg = false;
 
@@ -380,6 +384,10 @@ cdbdisp_checkAckMessage_async(struct CdbDispatcherState *ds, const char *message
 
 	pParms->waitMode = prevWaitMode;
 	pParms->ackMessage = NULL;
+
+	/* Reset the alarm to check after some seconds */
+	if ((GetNumOfParallelRetrieveCursors()) > 0)
+		enable_parallel_retrieve_cursor_timeout();
 
 	return receivedAll;
 }

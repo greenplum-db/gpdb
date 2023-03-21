@@ -256,3 +256,17 @@ insert into t1 select generate_series(1,100);
 2: CLOSE c8;
 2: END;
 
+---------- Test9: Test parallel retrieve cursor auto-check
+1: drop table if exists t1;
+1: create table t1(a int, b int);
+1: insert into t1 values (generate_series(1,100000), 1);
+1: insert into t1 values (-1, 1);
+1: BEGIN;
+1: DECLARE c9 PARALLEL RETRIEVE CURSOR FOR select count(*) from t1 group by sqrt(a); select count() from gp_get_endpoints();
+1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c9';
+
+*U: @pre_run 'set_endpoint_variable @ENDPOINT1': SELECT state FROM gp_get_segment_endpoints() WHERE endpointname='@ENDPOINT1';
+*R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT1";
+
+1: ROLLBACK;
+1: drop table if exists t1;

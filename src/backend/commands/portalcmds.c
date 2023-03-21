@@ -43,6 +43,7 @@
 #include "cdb/cdbvars.h"
 #include "postmaster/backoff.h"
 #include "utils/resscheduler.h"
+#include "utils/timeout.h"
 
 extern volatile uint32 *parallelCursorCount;
 extern int gp_max_parallel_cursors;
@@ -211,7 +212,12 @@ PerformCursorOpen(DeclareCursorStmt *cstmt, ParamListInfo params,
 	Assert(portal->strategy == PORTAL_ONE_SELECT);
 
 	if (PortalIsParallelRetrieveCursor(portal))
+	{
 		WaitEndpointsReady(portal->queryDesc->estate);
+
+		/* Start the check error timer if the alarm is not active */
+		enable_parallel_retrieve_cursor_timeout();
+	}
 
 	/*
 	 * We're done; the query won't actually be run until PerformPortalFetch is
