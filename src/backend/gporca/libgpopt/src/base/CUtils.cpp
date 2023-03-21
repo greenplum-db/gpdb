@@ -1420,44 +1420,6 @@ CUtils::FScalarConstIntZero(CExpression *pexprOffset)
 	}
 }
 
-// Construct commutative equivalent scalar compare operator
-//
-// In other words, given:
-//    (A op B)
-// then return
-//    (B op' A)
-// if such an operator exists
-CExpression *
-CUtils::PexprOpComEquality(CMemoryPool *mp, CExpression *pexpr)
-{
-	GPOS_ASSERT(CUtils::FScalarCmp(pexpr));
-	GPOS_ASSERT(2 == pexpr->Arity());
-
-	CScalarCmp *popCmp = CScalarCmp::PopConvert(pexpr->Pop());
-	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	const IMDScalarOp *opSc = md_accessor->RetrieveScOp(popCmp->MdIdOp());
-
-	if (nullptr == opSc->GetCommuteOpMdid())
-	{
-		return nullptr;
-	}
-
-	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
-	// Add in reverse order
-	(*pexpr)[1]->AddRef();
-	pdrgpexpr->Append((*pexpr)[1]);
-	(*pexpr)[0]->AddRef();
-	pdrgpexpr->Append((*pexpr)[0]);
-
-	CWStringConst *pstrOp =
-		CScalarCmp::Pstr(mp, md_accessor, opSc->GetCommuteOpMdid());
-	CScalarCmp *popNew = GPOS_NEW(mp)
-		CScalarCmp(mp, opSc->GetCommuteOpMdid(), pstrOp, opSc->ParseCmpType());
-
-	CExpression *pexprNew = GPOS_NEW(mp) CExpression(mp, popNew, pdrgpexpr);
-	return pexprNew;
-}
-
 // deduplicate an array of expressions
 CExpressionArray *
 CUtils::PdrgpexprDedup(CMemoryPool *mp, CExpressionArray *pdrgpexpr)
@@ -1480,22 +1442,20 @@ CUtils::PdrgpexprDedup(CMemoryPool *mp, CExpressionArray *pdrgpexpr)
 			pexpr->Release();
 		}
 
-		// Here we also take into account cast equality and commutative equal
-		// expressions as possible duplicates.
+		// Here we also take into account cast equality expressions. This
+		// allows us to consider the following 2 expressions as duplicates.
+		//
+		//  1)
+		//     +--CScalarCmp (=)
+		//        |--CScalarIdent "d" (1)
+		//        +--CScalarIdent "d" (10)
+		//  2)
+		//     +--CScalarCmp (=)
+		//        |--CScalarCast
+		//        |  +--CScalarIdent "d" (1)
+		//        +--CScalarIdent "d" (10)
 		if (pexpr->Pop()->Eopid() == COperator::EopScalarCmp)
 		{
-			// Cast equality expressions considers the following 2 expressions
-			// as duplicates:
-			//
-			//  1)
-			//     +--CScalarCmp (=)
-			//        |--CScalarIdent "d" (1)
-			//        +--CScalarIdent "d" (10)
-			//  2)
-			//     +--CScalarCmp (=)
-			//        |--CScalarCast
-			//        |  +--CScalarIdent "d" (1)
-			//        +--CScalarIdent "d" (10)
 			CExpressionArray *pdexpr =
 				CCastUtils::PdrgpexprCastEquality(mp, pexpr);
 			for (ULONG ulInner = 0; ulInner < pdexpr->Size(); ulInner++)
@@ -1506,27 +1466,6 @@ CUtils::PdrgpexprDedup(CMemoryPool *mp, CExpressionArray *pdrgpexpr)
 				}
 			}
 			pdexpr->Release();
-
-			// Commutative equal expressions consider the following 2
-			// expressions as duplicates:
-			//
-			//  1)
-			//     +--CScalarCmp (=)
-			//        |--CScalarIdent "a" (1)
-			//        +--CScalarIdent "b" (10)
-			//  2)
-			//     +--CScalarCmp (=)
-			//        |--CScalarIdent "b" (10)
-			//        +--CScalarIdent "a" (1)
-			CExpression *pexprComm = CUtils::PexprOpComEquality(mp, pexpr);
-			if (pexprComm)
-			{
-				if (phsexpr->Insert(pexprComm))
-				{
-					pexprComm->AddRef();
-				}
-			}
-			CRefCount::SafeRelease(pexprComm);
 		}
 	}
 
@@ -2591,21 +2530,6 @@ CUtils::FScalarConstBoolNull(CExpression *pexpr)
 	return false;
 }
 
-CScalarIdent *
-CUtils::PscalarIdent(CExpression *pexpr)
-{
-	CScalarIdent *popScId;
-	if (CUtils::FScalarIdent(pexpr))
-	{
-		popScId = CScalarIdent::PopConvert(pexpr->Pop());
-	}
-	else
-	{
-		GPOS_ASSERT(CCastUtils::FBinaryCoercibleCastedScId(pexpr));
-		popScId = CScalarIdent::PopConvert((*pexpr)[0]->Pop());
-	}
-	return popScId;
-}
 
 BOOL
 CUtils::FScalarConstOrBinaryCoercible(CExpression *pexpr)
@@ -2613,23 +2537,6 @@ CUtils::FScalarConstOrBinaryCoercible(CExpression *pexpr)
 	return CUtils::FScalarConst(pexpr) ||
 		   CCastUtils::FBinaryCoercibleCastedConst(pexpr);
 }
-
-CScalarConst *
-CUtils::PscalarConst(CExpression *pexpr)
-{
-	CScalarConst *popScConst;
-	if (CUtils::FScalarConst(pexpr))
-	{
-		popScConst = CScalarConst::PopConvert(pexpr->Pop());
-	}
-	else
-	{
-		GPOS_ASSERT(CCastUtils::FBinaryCoercibleCastedConst(pexpr));
-		popScConst = CScalarConst::PopConvert((*pexpr)[0]->Pop());
-	}
-	return popScConst;
-}
-
 // checks to see if the expression is a scalar const TRUE
 BOOL
 CUtils::FScalarConstTrue(CExpression *pexpr)

@@ -3314,7 +3314,7 @@ CExpressionPreprocessor::PexprPreprocess(
 	GPOS_CHECK_ABORT;
 	pexprOuterRefsEleminated->Release();
 
-	// (7) substitute constant predicates
+	// (7.a) substitute constant predicates
 	ExprToConstantMap *phmExprToConst = GPOS_NEW(mp) ExprToConstantMap(mp);
 	CExpression *pexprPredWithConstReplaced =
 		PexprReplaceColWithConst(mp, pexprTrimmed2, phmExprToConst, true);
@@ -3322,11 +3322,17 @@ CExpressionPreprocessor::PexprPreprocess(
 	phmExprToConst->Release();
 	pexprTrimmed2->Release();
 
-	// (8) simplify quantified subqueries
-	CExpression *pexprSubqSimplified =
-		PexprSimplifyQuantifiedSubqueries(mp, pexprPredWithConstReplaced);
+	// (7.b) reorder the children of scalar cmp operator to ensure that left child is scalar ident and right child is scalar const
+	CExpression *pexprReorderedScalarCmpChildren =
+		PexprReorderScalarCmpChildren(mp, pexprPredWithConstReplaced);
 	GPOS_CHECK_ABORT;
 	pexprPredWithConstReplaced->Release();
+
+	// (8) simplify quantified subqueries
+	CExpression *pexprSubqSimplified =
+		PexprSimplifyQuantifiedSubqueries(mp, pexprReorderedScalarCmpChildren);
+	GPOS_CHECK_ABORT;
+	pexprReorderedScalarCmpChildren->Release();
 
 	// (9) do preliminary unnesting of scalar subqueries
 	CExpression *pexprSubqUnnested =
