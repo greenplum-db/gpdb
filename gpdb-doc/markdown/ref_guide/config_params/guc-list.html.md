@@ -1164,7 +1164,7 @@ Running a query that generates a large number of slices might affect Greenplum D
 
 ## <a id="max_slot_wal_keep_size"></a>max_slot_wal_keep_size 
 
-Sets the maximum size in megabytes of Write-Ahead Logging (WAL) files on disk per segment instance that can be reserved when Greenplum streams data to the mirror segment instance or standby coordinator to keep it synchronized with the corresponding primary segment instance or coordinator. The default is -1, Greenplum can retain an unlimited amount of WAL files on disk.
+Sets the maximum size in megabytes of Write-Ahead Logging (WAL) files on disk per segment instance that can be reserved when Greenplum streams data to the mirror segment instance or standby coordinator to keep it synchronized with the corresponding primary segment instance or coordinator. The default is -1; when set to the default, Greenplum can retain an unlimited amount of WAL files on disk.
 
 If the file size exceeds the maximum size, the files are released and are available for deletion. A mirror or standby may no longer be able to continue replication due to removal of required WAL files.
 
