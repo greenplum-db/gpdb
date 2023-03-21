@@ -19,6 +19,7 @@
 #include "cdb/cdbbufferedread.h"
 #include "miscadmin.h"
 #include "pgstat.h"
+#include "storage/bufmgr.h"
 #include "utils/guc.h"
 
 static void BufferedReadIo(
@@ -174,11 +175,26 @@ BufferedReadIo(
 	offset = 0;
 	while (largeReadLen > 0)
 	{
-		int			actualLen = FileRead(bufferedRead->file,
-										 (char *) largeReadMemory,
-										 largeReadLen,
-										 bufferedRead->fileOff,
-										 WAIT_EVENT_DATA_FILE_READ);
+		int			actualLen;
+		instr_time	io_start,
+					io_time;
+
+		if (track_io_timing)
+			INSTR_TIME_SET_CURRENT(io_start);
+
+		actualLen = FileRead(bufferedRead->file,
+							 (char *) largeReadMemory,
+							 largeReadLen,
+							 bufferedRead->fileOff,
+							 WAIT_EVENT_DATA_FILE_READ);
+
+		if (track_io_timing)
+		{
+			INSTR_TIME_SET_CURRENT(io_time);
+			INSTR_TIME_SUBTRACT(io_time, io_start);
+			pgstat_count_buffer_read_time(INSTR_TIME_GET_MICROSEC(io_time));
+			INSTR_TIME_ADD(pgBufferUsage.blk_read_time, io_time);
+		}
 
 		if (actualLen == 0)
 			ereport(ERROR, (errcode_for_file_access(),
@@ -202,6 +218,7 @@ BufferedReadIo(
 								   offset,
 								   actualLen,
 								   bufferedRead->largeReadLen)));
+
 		bufferedRead->fileOff += actualLen;
 
 		elogif(Debug_appendonly_print_read_block, LOG,

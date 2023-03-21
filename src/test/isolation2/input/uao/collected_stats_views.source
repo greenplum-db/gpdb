@@ -21,10 +21,13 @@ begin
 end; /* in func */
 $$ language plpgsql;
 
+-- Test collected heap_blks_* I/O stats for append-optimized tables
 -- Setup test table
 CREATE TABLE statio_@amname@(a int, b int) USING @amname@;
-INSERT INTO statio_@amname@ SELECT 0, i FROM generate_series(1, 100000)i;
+-- heap_blks_read should be zero to begin with
+1U: SELECT heap_blks_read, heap_blks_hit FROM pg_statio_all_tables WHERE relname = 'statio_@amname@';
 
+INSERT INTO statio_@amname@ SELECT 0, i FROM generate_series(1, 100000)i;
 -- heap_blks_read should remain zero after INSERT
 1U: SELECT heap_blks_read, heap_blks_hit FROM pg_statio_all_tables WHERE relname = 'statio_@amname@';
 
@@ -36,3 +39,31 @@ SELECT sum(a+b) FROM statio_@amname@;
 -- cleanup
 DROP TABLE statio_@amname@;
 DROP FUNCTION wait_until_heap_blks_read_change_to(table_name text, stat_val_expected bigint);
+-- stats should be gone after table is dropped
+1U: SELECT heap_blks_read, heap_blks_hit FROM pg_statio_all_tables WHERE relname = 'statio_@amname@';
+1Uq:
+
+-- Test collected I/O timing stats for append-optimized tables
+1U: SET track_io_timing = on;
+
+-- Setup test table
+1U: CREATE TEMP TABLE stat_io_timing(a int, b int) USING @amname@;
+1U: INSERT INTO stat_io_timing SELECT 0, i FROM generate_series(1, 10000000)i;
+-- start_matchsubs
+-- m{I/O Timings: read=\d*\.\d+ write=\d+\.\d+.*}
+-- s{I/O Timings: read=\d*\.\d+ write=\d+\.\d+.*}{I/O Timings: read=##.### write=##.###}
+-- m{I/O Timings: read=\d*\.\d+.*}
+-- s{I/O Timings: read=\d*\.\d+.*}{I/O Timings: read=##.###.*}
+-- m/Buffers: shared hit=\d+ read=\d+/
+-- s/Buffers: shared hit=\d+ read=\d+/Buffers: shared hit=### read=###/
+-- end_matchsubs
+-- "I/O Timings" should be available for Append-optimized table, and "Buffers" should also be available due to auxiliary table lookups
+1U: EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, TIMING OFF, SUMMARY OFF) INSERT INTO stat_io_timing SELECT * FROM stat_io_timing;
+
+-- blk_read_time and blk_write_time should be non-zero
+1U: SELECT datname, blk_read_time > 0 AS has_blk_read_time, blk_write_time > 0 AS has_blk_write_time from pg_stat_database WHERE datname = 'isolation2test';
+
+-- cleanup
+1U: DROP TABLE stat_io_timing;
+1U: RESET track_io_timing;
+1Uq:
