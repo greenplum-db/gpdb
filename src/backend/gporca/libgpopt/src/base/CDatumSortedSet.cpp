@@ -40,16 +40,19 @@ CDatumSortedSet::CDatumSortedSet(CMemoryPool *mp, CExpression *pexprArray,
 
 	// de-duplicate
 	const ULONG ulRangeArrayArity = aprngdatum->Size();
-	IDatum *pdatumPrev = (*aprngdatum)[0];
-	pdatumPrev->AddRef();
-	Append(pdatumPrev);
-	for (ULONG ul = 1; ul < ulRangeArrayArity; ul++)
+	if (ulRangeArrayArity > 0)
 	{
-		if (!pcomp->Equals((*aprngdatum)[ul], pdatumPrev))
+		IDatum *pdatumPrev = (*aprngdatum)[0];
+		pdatumPrev->AddRef();
+		Append(pdatumPrev);
+		for (ULONG ul = 1; ul < ulRangeArrayArity; ul++)
 		{
-			pdatumPrev = (*aprngdatum)[ul];
-			pdatumPrev->AddRef();
-			Append(pdatumPrev);
+			if (!pcomp->Equals((*aprngdatum)[ul], pdatumPrev))
+			{
+				pdatumPrev = (*aprngdatum)[ul];
+				pdatumPrev->AddRef();
+				Append(pdatumPrev);
+			}
 		}
 	}
 }
