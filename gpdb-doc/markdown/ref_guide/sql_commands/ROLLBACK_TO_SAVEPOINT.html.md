@@ -10,7 +10,7 @@ ROLLBACK [ WORK | TRANSACTION ] TO [ SAVEPOINT ] <savepoint_name>
 
 ## <a id="section3"></a>Description 
 
-This command roll backs all commands that were run after the savepoint was established. The savepoint remains valid and can be rolled back to again later, if needed.
+This command rolls back all commands that were run after the savepoint was established. The savepoint remains valid and can be rolled back to again later, if needed.
 
 `ROLLBACK TO SAVEPOINT` implicitly destroys all savepoints that were established after the named savepoint.
 
