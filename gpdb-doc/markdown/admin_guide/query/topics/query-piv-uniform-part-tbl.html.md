@@ -9,7 +9,7 @@ GPORCA supports queries on a multi-level partitioned \(MLP\) table if the MLP ta
 
 You can display information about partitioned tables in several ways, including displaying information from these sources:
 
--   The `pg_partitions` system view contains information on the structure of a partitioned table.
+-   The `pg_partition_tree()` function provides information about the structure of a partitioned table.
 -   The `pg_constraint` system catalog table contains information on table constraints.
 -   The psql meta command \\d+ tablename displays the table constraints for child leaf tables of a partitioned table.
 
@@ -94,10 +94,10 @@ The partitioned table remains a uniform partitioned table. The branch created fo
 In the above example, if you drop the subpartition `mlp_1_prt_21_2_prt_asia` and add another subpartition for the region `canada`, the constraints are no longer uniform.
 
 ```
-ALTER TABLE mlp ALTER PARTITION FOR (RANK(2))
+ALTER TABLE mlp ALTER PARTITION FOR (2011)
   DROP PARTITION asia ;
 
-ALTER TABLE mlp ALTER PARTITION FOR (RANK(2))
+ALTER TABLE mlp ALTER PARTITION FOR (2011)
   ADD PARTITION canada VALUES ('canada');
 ```
 

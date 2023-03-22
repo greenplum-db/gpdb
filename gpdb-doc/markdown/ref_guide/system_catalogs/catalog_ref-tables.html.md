@@ -43,7 +43,6 @@
 -   [pg\_opclass](pg_opclass.html)
 -   [pg\_operator](pg_operator.html)
 -   [pg\_opfamily](pg_opfamily.html)
--   [pg\_partition](pg_partition.html)
 -   [pg\_partitioned\_table](pg_partitioned_table.html)
 -   [pg\_pltemplate](pg_pltemplate.html)
 -   [pg\_policy](pg_policy.html)

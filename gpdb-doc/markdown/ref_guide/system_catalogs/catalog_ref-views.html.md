@@ -18,7 +18,6 @@ Greenplum Database provides the following system views.
 -   [pg_cursors](pg_cursors.html)
 -   [pg_matviews](pg_matviews.html)
 -   [pg_max_external_files](pg_max_external_files.html)
--   [pg_partitions](pg_partitions.html)
 -   [pg_policies](pg_policies.html)
 -   [pg_resqueue_attributes](pg_resqueue_attributes.html)
 -   pg_resqueue_status (Deprecated. Use [gp_toolkit.gp_resqueue_status](../gp_toolkit.html).)

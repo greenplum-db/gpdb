@@ -98,8 +98,6 @@ Catalog inconsistencies are inconsistencies that occur between Greenplum Databas
 
     `part_integrity` - Check *pg\_partition* branch integrity, partition with OIDs, partition distribution policy
 
-    `part_constraint` - Check constraints on partitioned tables
-
     `unique_index_violation` - Check tables that have columns with the unique index constraint for duplicate entries
 
     `dependency` - Check for dependency on non-existent objects \(restricted mode only\)

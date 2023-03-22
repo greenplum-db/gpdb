@@ -137,11 +137,7 @@ System catalog table and view definitions in alphabetical order.
 
 -   [pg\_opfamily](../system_catalogs/pg_opfamily.html)  
 
--   [pg\_partition](../system_catalogs/pg_partition.html)  
-
 -   [pg\_partitioned\_table](../system_catalogs/pg_partitioned_table.html)  
-
--   [pg\_partitions](../system_catalogs/pg_partitions.html)  
 
 -   [pg\_pltemplate](../system_catalogs/pg_pltemplate.html)  
 
