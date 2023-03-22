@@ -119,6 +119,15 @@ struct PermList
 		 (comp) < CGROUP_COMPONENT_COUNT; \
 		 (comp)++)
 
+typedef struct IOItem{
+	int major;
+	int minor;
+	uint64 rkbps;
+	uint64 wkbps;
+	uint64 riops;
+	uint64 wiops;
+} IOItem;
+
 /* Read at most datasize bytes from a file. */
 extern size_t readData(const char *path, char *data, size_t datasize);
 /* Write datasize bytes to a file. */
@@ -222,6 +231,9 @@ typedef void (*setcpuset_function) (Oid group, const char *cpuset);
 /* Convert the cpu usage to percentage within the duration. */
 typedef float (*convertcpuusage_function) (int64 usage, int64 duration);
 
+/* Set io controller configuration of a cgroup */
+typedef void (*setio_function) (Oid group, const IOItem *item);
+
 
 typedef struct CGroupOpsRoutine
 {
@@ -253,6 +265,8 @@ typedef struct CGroupOpsRoutine
 	setcpuset_function		setcpuset;
 
 	convertcpuusage_function convertcpuusage;
+
+	setio_function			setio;
 } CGroupOpsRoutine;
 
 /* The global function handler. */

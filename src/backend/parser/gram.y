@@ -822,6 +822,14 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 
 	IGNORE_P INCLUSIVE INITPLAN
 
+	IO_READ_HARD_LIMIT
+
+	IO_RIOPS_HARD_LIMIT
+
+	IO_WIOPS_HARD_LIMIT
+
+	IO_WRITE_HARD_LIMIT
+
 	LIST LOG_P
 
 	MASTER MEDIAN MISSING MODIFIES
@@ -1017,6 +1025,10 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc INSERT
 			%nonassoc INSTEAD
 			%nonassoc INVOKER
+			%nonassoc IO_READ_HARD_LIMIT
+			%nonassoc IO_RIOPS_HARD_LIMIT
+			%nonassoc IO_WIOPS_HARD_LIMIT
+			%nonassoc IO_WRITE_HARD_LIMIT
 			%nonassoc ISOLATION
 			%nonassoc KEY
 			%nonassoc LANGUAGE
@@ -1621,6 +1633,22 @@ OptResourceGroupElem:
 			| MEMORY_LIMIT SignedIconst
 				{
 					$$ = makeDefElem("memory_limit", (Node *) makeInteger($2), @1);
+				}
+			| IO_WRITE_HARD_LIMIT Iconst
+				{
+					$$ = makeDefElem("io_write_hard_limit", (Node *)makeInteger($2), @1);
+				}
+			| IO_READ_HARD_LIMIT Iconst
+				{
+					$$ = makeDefElem("io_read_hard_limit", (Node *)makeInteger($2), @1);
+				}
+			| IO_RIOPS_HARD_LIMIT Iconst
+				{
+					$$ = makeDefElem("io_riops_hard_limit", (Node *)makeInteger($2), @1);
+				}
+			| IO_WIOPS_HARD_LIMIT Iconst
+				{
+					$$ = makeDefElem("io_wiops_hard_limit", (Node *)makeInteger($2), @1);
 				}
 		;
 
@@ -18135,6 +18163,10 @@ unreserved_keyword:
 			| INSERT
 			| INSTEAD
 			| INVOKER
+			| IO_READ_HARD_LIMIT
+			| IO_RIOPS_HARD_LIMIT
+			| IO_WIOPS_HARD_LIMIT
+			| IO_WRITE_HARD_LIMIT
 			| ISOLATION
 			| KEY
 			| LABEL
@@ -18468,6 +18500,10 @@ PartitionIdentKeyword: ABORT_P
 			| INSERT
 			| INSTEAD
 			| INVOKER
+			| IO_READ_HARD_LIMIT
+			| IO_RIOPS_HARD_LIMIT
+			| IO_WIOPS_HARD_LIMIT
+			| IO_WRITE_HARD_LIMIT
 			| ISOLATION
 			| KEY
 			| LANGUAGE

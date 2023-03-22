@@ -184,6 +184,7 @@ resgroup_assign_hook_type resgroup_assign_hook = NULL;
 
 /* static variables */
 
+static ResGroupBlockDevices *pBlockDevices = NULL;
 static ResGroupControl *pResGroupControl = NULL;
 
 static ResGroupProcData __self =
@@ -278,6 +279,8 @@ static bool groupIsNotDropped(const ResGroupData *group);
 static bool groupWaitQueueFind(ResGroupData *group, const PGPROC *proc);
 #endif /* USE_ASSERT_CHECKING */
 
+static void initBlockDevicesPool();
+
 /*
  * Estimate size the resource group structures will need in
  * shared memory.
@@ -298,6 +301,12 @@ ResGroupShmemSize(void)
 
 	/* The slot pool. */
 	size = add_size(size, mul_size(RESGROUP_MAX_SLOTS, sizeof(ResGroupSlotData)));
+
+	/* block device pool */
+	size = add_size(size, mul_size(MAX_BLOCK_DEVICES, sizeof(ResGroupBlockDevice)));
+
+	/* block device pool holder */
+	size = add_size(size, sizeof(ResGroupBlockDevices));
 
 	/* Add a safety margin */
 	size = add_size(size, size / 10);
@@ -357,6 +366,8 @@ ResGroupControlInit(void)
 
 	if (!slotpoolInit())
 		goto error_out;
+
+	initBlockDevicesPool();
 
     return;
 
@@ -482,6 +493,9 @@ InitResGroups(void)
 		Assert(pResGroupControl->segmentsOnMaster > 0);
 	}
 
+	/* find all block devices */
+	initBlockDevicesPool();
+
 	/*
 	 * The resgroup shared mem initialization must be serialized. Only the first session
 	 * should do the init.
@@ -520,6 +534,18 @@ InitResGroups(void)
 		Assert(group != NULL);
 
 		cgroupOpsRoutine->createcgroup(groupId);
+
+		for (int i = 0; i < pBlockDevices->nDevice; ++i) {
+			IOItem item = {
+				.major = pBlockDevices->devices[i].major,
+				.minor = pBlockDevices->devices[i].minor,
+				.rkbps = caps.io_read_hard_limit,
+				.wkbps = caps.io_write_hard_limit,
+				.riops = caps.io_riops_hard_limit,
+				.wiops = caps.io_wiops_hard_limit
+			};
+			cgroupOpsRoutine->setio(groupId, &item);
+		}
 
 		if (CpusetIsEmpty(caps.cpuset))
 		{
@@ -2546,6 +2572,47 @@ groupWaitQueueFind(ResGroupData *group, const PGPROC *proc)
 	return false;
 }
 #endif/* USE_ASSERT_CHECKING */
+
+/*
+ * init BlockDevice Pool
+ * block devices are get from /sys/block
+ */
+static void
+initBlockDevicesPool() {
+	char *dirPath = "/sys/block";
+	struct dirent *dir;
+	bool found;
+	int nDevices = 0;
+	DIR *d = opendir(dirPath);
+	if (d) {
+		pBlockDevices = ShmemInitStruct("block devices holder pool", sizeof(ResGroupBlockDevices), &found);
+
+        while ((dir = readdir(d)) != NULL) {
+            if (strcmp(dir->d_name, ".") && strcmp(dir->d_name, "..")) {
+				nDevices++;
+            }
+        }
+
+		pBlockDevices->nDevice = nDevices;
+		pBlockDevices->devices = ShmemInitStruct("block devices pooo", sizeof(ResGroupBlockDevice) * nDevices, &found);
+
+		nDevices = 0;
+        while ((dir = readdir(d)) != NULL) {
+            if (strcmp(dir->d_name, ".") && strcmp(dir->d_name, "..")) {
+                char filename[200];
+                sprintf(filename, "/sys/block/%s/dev", dir->d_name);
+                FILE *f = fopen(filename, "r");
+                fscanf(f, "%d:%d", &pBlockDevices->devices[nDevices].major, &pBlockDevices->devices[nDevices].minor);
+                fclose(f);
+				nDevices++;
+            }
+        }
+
+	} else {
+	}
+
+	closedir(d);
+}
 
 /*
  * Walk through the raw expression tree, if there is a RangeVar without

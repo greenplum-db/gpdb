@@ -759,6 +759,8 @@ getResgroupOptionType(const char* defname)
 		return RESGROUP_LIMIT_TYPE_CPU_SHARES;
 	else if (strcmp(defname, "memory_limit") == 0)
 		return RESGROUP_LIMIT_TYPE_MEMORY_LIMIT;
+	else if (strcmp(defname, "io_write_hard_limit") == 0)
+		return RESGROUP_LIMIT_TYPE_IO_WRITE_HARD_LIMIT;
 	else
 		return RESGROUP_LIMIT_TYPE_UNKNOWN;
 }
@@ -846,6 +848,38 @@ checkResgroupCapLimit(ResGroupLimitType type, int value)
 			case RESGROUP_LIMIT_TYPE_MEMORY_LIMIT:
 				break;
 
+			case RESGROUP_LIMIT_TYPE_IO_WRITE_HARD_LIMIT:
+				if (value == 0 || value < -1) {
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							errmsg("io_write_hard_limit max large than 0, or equals -1(means unlimited)")));
+				}
+				break;
+
+			case RESGROUP_LIMIT_TYPE_IO_READ_HARD_LIMIT:
+				if (value == 0 || value < -1) {
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							errmsg("io_read_hard_limit max large than 0, or equals -1(means unlimited)")));
+				}
+				break;
+
+			case RESGROUP_LIMIT_TYPE_IO_WIOPS_HARD_LIMIT:
+				if (value == 0 || value < -1) {
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							errmsg("io_wiops_hard_limit max large than 0, or equals -1(means unlimited)")));
+				}
+				break;
+
+			case RESGROUP_LIMIT_TYPE_IO_RIOPS_HARD_LIMIT:
+				if (value == 0 || value < -1) {
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							errmsg("io_riops_hard_limit max large than 0, or equals -1(means unlimited)")));
+				}
+				break;
+
 			default:
 				Assert(!"unexpected options");
 				break;
@@ -911,6 +945,38 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 				case RESGROUP_LIMIT_TYPE_MEMORY_LIMIT:
 					caps->memory_limit = value;
 					break;
+				case RESGROUP_LIMIT_TYPE_IO_WRITE_HARD_LIMIT:
+					caps->io_write_hard_limit = value;
+					if (!IsCgroupV2()) {
+						ereport(WARNING,
+							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							errmsg("io related configurations only works with cgroup v2")));
+					}
+					break;
+				case RESGROUP_LIMIT_TYPE_IO_READ_HARD_LIMIT:
+					caps->io_read_hard_limit = value;
+					if (!IsCgroupV2()) {
+						ereport(WARNING,
+							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							errmsg("io related configurations only works with cgroup v2")));
+					}
+					break;
+				case RESGROUP_LIMIT_TYPE_IO_WIOPS_HARD_LIMIT:
+					caps->io_wiops_hard_limit = value;
+					if (!IsCgroupV2()) {
+						ereport(WARNING,
+							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							errmsg("io related configurations only works with cgroup v2")));
+					}
+					break;
+				case RESGROUP_LIMIT_TYPE_IO_RIOPS_HARD_LIMIT:
+					caps->io_riops_hard_limit = value;
+					if (!IsCgroupV2()) {
+						ereport(WARNING,
+							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							errmsg("io related configurations only works with cgroup v2")));
+					}
+					break;
 				default:
 					break;
 			}
@@ -937,6 +1003,9 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 
 	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_MEMORY_LIMIT)))
 		caps->memory_limit = -1;
+
+	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_IO_WRITE_HARD_LIMIT)))
+		caps->io_write_hard_limit = -1;
 
 	if ((mask & (1 << RESGROUP_LIMIT_TYPE_CPU)) &&
 		!(mask & (1 << RESGROUP_LIMIT_TYPE_CPU_SHARES)))

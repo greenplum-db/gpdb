@@ -38,6 +38,9 @@
 #define IsResGroupActivated() \
 	(ResGroupActivated)
 
+#define IsCgroupV2() \
+	(Gp_resource_manager_policy == RESOURCE_MANAGER_POLICY_GROUP_V2)
+
 typedef enum
 {
 	RESOURCE_MANAGER_POLICY_NONE,			/* Do not use any resource manager*/

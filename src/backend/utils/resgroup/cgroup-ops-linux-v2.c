@@ -100,6 +100,11 @@ static const PermItem perm_items_cpuset[] =
 	{ CGROUP_COMPONENT_PLAIN, "cpuset.mems.effective", R_OK },
 	{ CGROUP_COMPONENT_UNKNOWN, NULL, 0 }
 };
+static const PermItem perm_items_io[] =
+{
+	{ CGROUP_COMPONENT_PLAIN, "io.max", R_OK | W_OK },
+	{ CGROUP_COMPONENT_UNKNOWN, NULL, 0 }
+};
 
 /*
  * just for cpuset check, same as the cpuset Permlist in permlists
@@ -129,6 +134,7 @@ static const PermList permlists[] =
 	{ perm_items_cpuset, CGROUP_CPUSET_IS_OPTIONAL,
 		&gp_resource_group_enable_cgroup_cpuset},
 
+	{ perm_items_io, false, NULL},
 	{ NULL, false, NULL }
 };
 
@@ -148,6 +154,7 @@ static int64 getcpuusage_v2(Oid group);
 static void getcpuset_v2(Oid group, char *cpuset, int len);
 static void setcpuset_v2(Oid group, const char *cpuset);
 static float convertcpuusage_v2(int64 usage, int64 duration);
+static void setio(Oid group, const IOItem *item);
 
 /*
  * Dump component dir to the log.
@@ -175,6 +182,7 @@ init_subtree_control(void)
 	writeStr(CGROUP_ROOT_ID, BASEDIR_GPDB, component, "cgroup.subtree_control", "+cpu");
 	writeStr(CGROUP_ROOT_ID, BASEDIR_GPDB, component, "cgroup.subtree_control", "+memory");
 	writeStr(CGROUP_ROOT_ID, BASEDIR_GPDB, component, "cgroup.subtree_control", "+pids");
+	writeStr(CGROUP_ROOT_ID, BASEDIR_GPDB, component, "cgroup.subtree_control", "+io");
 }
 
 /*
@@ -791,6 +799,43 @@ convertcpuusage_v2(int64 usage, int64 duration)
 	return percent;
 }
 
+static void
+setio(Oid group, const IOItem *item) {
+	char limitation[100];
+	char rbps_str[20];
+	char wbps_str[20];
+	char riops_str[20];
+	char wiops_str[20];
+	CGroupComponentType component = CGROUP_COMPONENT_PLAIN;
+
+	// construct parameters
+	// if parameter is -1, the configuration str should be 'max'
+	if (!item->rkbps)
+		sprintf(rbps_str, "%ld", item->rkbps * 1024);
+	else
+		sprintf(rbps_str, "%s", "max");
+
+	if (!item->wkbps)
+		sprintf(wbps_str, "%ld", item->wkbps * 1024);
+	else
+		sprintf(wbps_str, "%s", "max");
+
+	if (!item->riops)
+		sprintf(riops_str, "%ld", item->riops);
+	else
+		sprintf(riops_str, "%s", "max");
+
+	if (!item->wiops)
+		sprintf(wiops_str, "%ld", item->wiops);
+	else
+		sprintf(wiops_str, "%s", "max");
+
+	sprintf(limitation, "%d:%d rbps=%s wbps=%s riops=%s wiops=%s",
+			item->major, item->minor, rbps_str, wbps_str, riops_str, wiops_str);
+
+	writeStr(group, BASEDIR_GPDB,component, "io.max", limitation);
+}
+
 static CGroupOpsRoutine cGroupOpsRoutineV2 = {
 		.getcgroupname = getcgroupname_v2,
 		.probecgroup = probecgroup_v2,
@@ -813,6 +858,8 @@ static CGroupOpsRoutine cGroupOpsRoutineV2 = {
 		.setcpuset = setcpuset_v2,
 
 		.convertcpuusage = convertcpuusage_v2,
+
+		.setio = setio
 };
 
 CGroupOpsRoutine *get_group_routine_v2(void)

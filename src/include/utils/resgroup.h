@@ -42,6 +42,11 @@
 #define DefaultCPUSoftPriority 100
 
 /*
+ * Define max block devices
+ */
+#define MAX_BLOCK_DEVICES 200
+
+/*
  * Resource group capability.
  */
 typedef int32 ResGroupCap;
@@ -70,8 +75,23 @@ typedef struct ResGroupCaps
 	ResGroupCap		cpuHardQuotaLimit;
 	ResGroupCap		cpuSoftPriority;
 	ResGroupCap		memory_limit;
+	ResGroupCap     io_write_hard_limit;
+	ResGroupCap     io_read_hard_limit;
+	ResGroupCap     io_wiops_hard_limit;
+	ResGroupCap     io_riops_hard_limit;
 	char			cpuset[MaxCpuSetLength];
 } ResGroupCaps;
+
+/* block devices */
+typedef struct ResGroupBlockDevice {
+	int major;
+	int minor;
+} ResGroupBlockDevice;
+
+typedef struct ResGroupBlockDevices {
+	int nDevice;
+	ResGroupBlockDevice *devices;
+} ResGroupBlockDevices;
 
 /* Set 'cpuset' to an empty string, and reset all other fields to zero */
 #define ClearResGroupCaps(caps) do { \
