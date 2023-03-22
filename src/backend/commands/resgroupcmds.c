@@ -1007,6 +1007,15 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_IO_WRITE_HARD_LIMIT)))
 		caps->io_write_hard_limit = -1;
 
+	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_IO_READ_HARD_LIMIT)))
+		caps->io_read_hard_limit = -1;
+
+	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_IO_WIOPS_HARD_LIMIT)))
+		caps->io_wiops_hard_limit = -1;
+
+	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_IO_RIOPS_HARD_LIMIT)))
+		caps->io_riops_hard_limit = -1;
+
 	if ((mask & (1 << RESGROUP_LIMIT_TYPE_CPU)) &&
 		!(mask & (1 << RESGROUP_LIMIT_TYPE_CPU_SHARES)))
 		caps->cpuSoftPriority = RESGROUP_DEFAULT_CPU_SOFT_PRIORITY;
