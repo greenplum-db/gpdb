@@ -41,6 +41,7 @@
 #include "utils/resowner.h"
 #include "utils/syscache.h"
 #include "utils/faultinjector.h"
+#include <string.h>
 
 #define RESGROUP_DEFAULT_CONCURRENCY (20)
 #define RESGROUP_DEFAULT_CPU_SOFT_PRIORITY (100)
@@ -359,6 +360,7 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 	ResGroupCaps		oldCaps;
 	ResGroupCap			value = 0;
 	const char *cpuset = NULL;
+	const char *io_limit = NULL;
 	ResourceGroupCallbackContext	*callbackCtx;
 
 	/* Permission check - only superuser can alter resource groups. */
@@ -383,6 +385,10 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 		EnsureCpusetIsAvailable(ERROR);
 		cpuset = defGetString(defel);
 		checkCpuSetByRole(cpuset);
+	}
+	else if (limitType == RESGROUP_LIMIT_TYPE_IO_LIMIT)
+	{
+		io_limit = defGetString(defel);
 	}
 	else
 	{
@@ -447,6 +453,9 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 		case RESGROUP_LIMIT_TYPE_MIN_COST:
 			caps.min_cost = value;
 			break;
+		case RESGROUP_LIMIT_TYPE_IO_LIMIT:
+			StrNCpy(caps.io_limit, io_limit, sizeof(caps.io_limit));
+			break;
 		default:
 			break;
 	}
@@ -477,6 +486,12 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 		updateResgroupCapabilityEntry(pg_resgroupcapability_rel,
 									  groupid, RESGROUP_LIMIT_TYPE_CPU,
 									  value, "");
+	}
+	else if (limitType == RESGROUP_LIMIT_TYPE_IO_LIMIT)
+	{
+		updateResgroupCapabilityEntry(pg_resgroupcapability_rel,
+									  groupid, RESGROUP_LIMIT_TYPE_IO_LIMIT,
+									  0, caps.io_limit);
 	}
 	else
 	{
@@ -593,6 +608,9 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 			case RESGROUP_LIMIT_TYPE_MIN_COST:
 				resgroupCaps->min_cost = str2Int(value,
 													getResgroupOptionName(type));
+				break;
+			case RESGROUP_LIMIT_TYPE_IO_LIMIT:
+				StrNCpy(resgroupCaps->io_limit, value, sizeof(value));
 				break;
 			default:
 				break;
@@ -770,6 +788,8 @@ getResgroupOptionType(const char* defname)
 		return RESGROUP_LIMIT_TYPE_MEMORY_LIMIT;
 	else if (strcmp(defname, "min_cost") == 0)
 		return RESGROUP_LIMIT_TYPE_MIN_COST;
+	else if (strcmp(defname, "io_limit") == 0)
+		return RESGROUP_LIMIT_TYPE_IO_LIMIT;
 	else
 		return RESGROUP_LIMIT_TYPE_UNKNOWN;
 }
@@ -815,6 +835,8 @@ getResgroupOptionName(ResGroupLimitType type)
 			return "memory_limit";
 		case RESGROUP_LIMIT_TYPE_MIN_COST:
 			return "min_cost";
+		case RESGROUP_LIMIT_TYPE_IO_LIMIT:
+			return "io_limit";
 		default:
 			return "unknown";
 	}
@@ -913,7 +935,13 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 			caps->cpuHardQuotaLimit = CPU_HARD_QUOTA_LIMIT_DISABLED;
 			caps->cpuSoftPriority = RESGROUP_DEFAULT_CPU_SOFT_PRIORITY;
 		}
-		else 
+		else if (type == RESGROUP_LIMIT_TYPE_IO_LIMIT)
+		{
+			char *io_limit = defGetString(defel);
+			StrNCpy(caps->io_limit, io_limit, sizeof(io_limit));
+			checkIOLimit(io_limit);
+		}
+		else
 		{
 			value = getResgroupOptionValue(defel);
 			checkResgroupCapLimit(type, value);
@@ -1062,6 +1090,8 @@ insertResgroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *caps)
 	snprintf(value, sizeof(value), "%d", caps->min_cost);
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_MIN_COST, value);
+	insertResgroupCapabilityEntry(rel, groupId,
+								  RESGROUP_LIMIT_TYPE_IO_LIMIT, caps->io_limit);
 }
 
 /*
@@ -1274,6 +1304,10 @@ validateCapabilities(Relation rel,
 					}
 				}
 			}
+		}
+		else if (reslimittype == RESGROUP_LIMIT_TYPE_IO_LIMIT)
+		{
+			checkIOLimit(caps->io_limit);
 		}
 	}
 

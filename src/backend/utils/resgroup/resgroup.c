@@ -15,7 +15,11 @@
 
 #include "postgres.h"
 
+#include <stdio.h>
+#include <dirent.h>
 #include <math.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
 #include "libpq-fe.h"
 #include "access/genam.h"
@@ -33,7 +37,10 @@
 #include "cdb/cdbdisp_query.h"
 #include "cdb/memquota.h"
 #include "commands/resgroupcmds.h"
+#include "commands/tablespace.h"
+#include "common/relpath.h"
 #include "common/hashfn.h"
+#include "common/string.h"
 #include "funcapi.h"
 #include "miscadmin.h"
 #include "pgstat.h"
@@ -165,6 +172,7 @@ struct ResGroupControl
 	ResGroupSlotData	*freeSlot;	/* head of the free list */
 
 	HTAB			*htbl;
+	HTAB			*bdi_htbl;
 
 	/*
 	 * The hash table for resource groups in shared memory should only be populated
@@ -292,6 +300,9 @@ ResGroupShmemSize(void)
 	/* The hash of groups. */
 	size = hash_estimate_size(MaxResourceGroups, sizeof(ResGroupHashEntry));
 
+	/* The hash of BDI */
+	size = add_size(size, hash_estimate_size(MAX_BDI_ENTRY, sizeof(BDIMappingEntry)));
+
 	/* The control structure. */
 	size = add_size(size, sizeof(ResGroupControl) - sizeof(ResGroupData));
 
@@ -346,6 +357,25 @@ ResGroupControlInit(void)
 
     if (!pResGroupControl->htbl)
         goto error_out;
+
+	/* init bdi hash table */
+	MemSet(&info, 0, sizeof(info));
+	info.keysize = sizeof(BDIMappingKey);
+	info.entrysize = sizeof(BDIMappingEntry);
+	info.hash = tag_hash;
+
+	LOG_RESGROUP_DEBUG(LOG, "creating hash table for bdi mapping");
+
+	pResGroupControl->bdi_htbl = ShmemInitHash("BDI Mapping Hash Table",
+											  0,
+											  MAX_BDI_ENTRY,
+											  &info, hash_flags);
+
+	if (!pResGroupControl->bdi_htbl)
+		goto error_out;
+
+	if (IsCgroupV2())
+		initBDIMapping();
 
     /*
      * No need to acquire LWLock here, since this is expected to be called by
@@ -527,6 +557,10 @@ InitResGroups(void)
 		{
 			cgroupOpsRoutine->setcpulimit(groupId, caps.cpuHardQuotaLimit);
 			cgroupOpsRoutine->setcpupriority(groupId, caps.cpuSoftPriority);
+		}
+		else if (strlen(caps.io_limit) > 0)
+		{
+			cgroupOpsRoutine->setio(groupId, caps.io_limit);
 		}
 		else
 		{
@@ -820,6 +854,10 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 				cgroupOpsRoutine->setcpuset(callbackCtx->groupid,
 									        cpuset);
 			}
+		}
+		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_IO_LIMIT)
+		{
+			cgroupOpsRoutine->setio(callbackCtx->groupid, callbackCtx->caps.io_limit);
 		}
 		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CONCURRENCY)
 		{
@@ -3498,4 +3536,258 @@ ResourceGroupGetQueryMemoryLimit(void)
 	 * If user requests more than statement_mem, grant that.
 	 */
 	return Max(queryMem, stateMem);
+}
+
+/*
+* Init block devices mapping.
+* This function will find disks and corresponding partitions.
+* The mapping is BDI identifer to BDI identifier, such as:
+* '8:17 -> 8:16' (8:17 is a partition of 8:16).
+* For bdi information, reference
+* https://www.kernel.org/doc/Documentation/admin-guide/devices.txt.
+*
+* Note: Ignore loopback device and 0 major device now.
+*/
+void initBDIMapping(void) {
+	const char *sys_block_dir = "/sys/block";
+	int64 major, minor;
+	char filename[200], filename_part[200];
+	bool found;
+
+	BDIMappingKey key;
+	BDIUnit value;
+	struct dirent *d, *sd;
+	DIR *sys_block_d, *part_d;
+	FILE *f;
+
+	sys_block_d = opendir(sys_block_dir);
+	if (!sys_block_d)
+	{
+		ereport(FATAL,
+				(errcode(ERRCODE_IO_ERROR),
+                    errmsg("cannot open directory %s", sys_block_dir)));
+	}
+
+	while ((d = readdir(sys_block_d)))
+	{
+		if (!strcmp(d->d_name, ".") || !strcmp(d->d_name, ".."))
+			continue;
+
+		sprintf(filename, "/sys/block/%s/dev", d->d_name);
+		if (access(filename, F_OK))
+			continue;
+
+		f = fopen(filename, "r");
+		fscanf(f, "%ld:%ld", &major, &minor);
+		fclose(f);
+
+		/* construct entry(bdi) of disk */
+		value = BDI_UNIT(major, minor);
+
+		elog(WARNING, "search partitions of %ld", entry);
+
+		sprintf(filename, "/sys/block/%s", d->d_name);
+		part_d = opendir(filename);
+		if (!part_d)
+			continue;
+
+		while ((sd = readdir(part_d)))
+		{
+			sprintf(filename_part, "%s/%s/start", filename, sd->d_name);
+			if (!access(filename_part, F_OK))
+			{
+				sprintf(filename_part, "%s/%s/dev", filename, sd->d_name);
+				if (access(filename_part, F_OK))
+					ereport(WARNING, errmsg("cannot find bdi of %s, will be ignored", sd->d_name));
+
+				f = fopen(filename_part, "r");
+				fscanf(f, "%ld:%ld", &major, &minor);
+				fclose(f);
+
+				/* construct key(bdi) of partition */
+				key = BDI_UNIT(major, minor);
+				BDIMappingEntry *entry = (BDIMappingEntry *)hash_search(pResGroupControl->bdi_htbl, (void *)&key, HASH_ENTER, &found);
+				entry->key = key;
+				entry->value = value;
+
+				hash_search(pResGroupControl->bdi_htbl, (void *)&key, HASH_FIND, &found);
+				Assert(found);
+			}
+		}
+		closedir(part_d);
+	}
+
+	closedir(sys_block_d);
+}
+
+extern char*
+trim(char *str)
+{
+	while ((*str) == ' ')
+		str++;
+
+	char *end = str + strlen(str) - 1;
+	while((*end) == ' ')
+	{
+		*end = '\0';
+		end--;
+	}
+
+	return str;
+}
+
+/* Parse io limitations.
+ * IO limitation example:
+ * "tablespace1:wbps=1000, wiops=100;tablespace2:rbps=1000, rbps=0"
+ * This function will check following conditions:
+ * 1. wbps, rbps, riops, wiops will in the range [2, INF] or 0 (means max)
+ * 2. the block devices which tablespaces located in must be different
+ */
+extern void
+checkIOLimit(char *value) {
+	value = trim(value);
+	char *saveptr;
+	char *item = strtok_r(value, ";", &saveptr);
+	IOLimitItem io_item = { 0 };
+
+	BDIUnit devs[MAX_BDI_ENTRY];
+	int dev_length = 0;
+
+	while (item != NULL)
+	{
+		parseIOLimitItem(item, &io_item);
+
+		/* check condition 1 */
+		for (int i = 0; i < dev_length; i++)
+		{
+			if (io_item.dev == devs[i])
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_IO_ERROR),
+						errmsg("device %d:%d appears more than once", BDI_MAJOR(io_item.dev), BDI_MINOR(io_item.dev))));
+			}
+		}
+
+		/* check condition 2 */
+		if (io_item.wbps != 0 && io_item.wbps <= 1)
+		{
+				ereport(ERROR,
+						(errcode(ERRCODE_IO_ERROR),
+						errmsg("value of io limitations must be 0 or larger than 2")));
+		}
+		else if (io_item.rbps != 0 && io_item.rbps <= 1)
+		{
+				ereport(ERROR,
+						(errcode(ERRCODE_IO_ERROR),
+						errmsg("value of io limitations must be 0 or larger than 2")));
+		}
+		else if (io_item.wiops != 0 && io_item.wiops <= 1)
+		{
+				ereport(ERROR,
+						(errcode(ERRCODE_IO_ERROR),
+						errmsg("value of io limitations must be 0 or larger than 2")));
+		}
+		else if (io_item.wiops != 0 && io_item.wiops <= 1)
+		{
+				ereport(ERROR,
+						(errcode(ERRCODE_IO_ERROR),
+						errmsg("value of io limitations must be 0 or larger than 2")));
+		}
+
+
+		devs[dev_length++] = io_item.dev;
+		item = strtok_r(NULL, ";", &saveptr);
+	}
+}
+
+/* Find BDI in shared memory */
+static BDIUnit
+getBDIOfPath(const char *path)
+{
+	struct stat st;
+	bool found;
+
+	if (lstat(path, &st))
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_IO_ERROR),
+				errmsg("cannot access directory: %s", path)));
+	}
+
+	BDIMappingKey key = (BDIMappingKey)st.st_dev;
+	BDIMappingEntry *entry = (BDIMappingEntry *)hash_search(pResGroupControl->bdi_htbl, &key, HASH_FIND, &found);
+
+	if (!found)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_IO_ERROR),
+				errmsg("cannot find block device of : %s", path)));
+	}
+
+	return entry->value;
+}
+
+/* Parse io limite item.
+ * Item example:
+ * "tablespace1: wbps=100, riops=200"
+ */
+extern void
+parseIOLimitItem(char *value, IOLimitItem *result)
+{
+	value = trim(value);
+	size_t value_size = strlen(value);
+
+	char *ts = strtok(value, ":"); /* tablespace name */
+	/* not find ":" in value */
+	if (strlen(ts) == value_size)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_IO_ERROR),
+				errmsg("cannot parse io limitations in %s", value)));
+	}
+
+	ts = trim(ts);
+	Oid ts_oid = get_tablespace_oid(ts, false);
+	char *ts_dir = GetDatabasePath(MyDatabaseId, ts_oid);
+	char *data_dir = (char *)palloc(strlen(DataDir) + strlen(ts_dir) + 1);
+	sprintf(data_dir, "%s/%s", DataDir, ts_dir);
+	BDIUnit bdi = getBDIOfPath(data_dir);
+	result->dev = bdi;
+
+	char *items = strtok(NULL, ":");
+
+	char *saveptr_item;
+	char *item = strtok_r(items, ",", &saveptr_item);
+	while (item != NULL)
+	{
+		char *limit_name = strtok(item, "=");
+		char *limit_value = strtok(NULL, "=");
+
+		limit_name = trim(limit_name);
+		limit_value = trim(limit_value);
+
+		if (strcmp(limit_name, "wbps") == 0)
+		{
+			result->wbps = strtoint(limit_value, NULL, 10);
+		}
+		else if (strcmp(limit_name, "rbps") == 0)
+		{
+			result->rbps = strtoint(limit_value, NULL, 10);
+		}
+		else if (strcmp(limit_name, "wiops") == 0)
+		{
+			result->wiops = strtoint(limit_value, NULL, 10);
+		}
+		else if (strcmp(limit_name, "riops") == 0)
+		{
+			result->riops = strtoint(limit_value, NULL, 10);
+		}
+		else{
+			ereport(ERROR,
+					(errcode(ERRCODE_IO_ERROR),
+					errmsg("unknown io limitation item: %s", limit_name)));
+		}
+
+		item = strtok_r(NULL, ",", &saveptr_item);
+	}
 }

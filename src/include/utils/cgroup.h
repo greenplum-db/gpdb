@@ -226,6 +226,9 @@ typedef void (*setcpuset_function) (Oid group, const char *cpuset);
 /* Convert the cpu usage to percentage within the duration. */
 typedef float (*convertcpuusage_function) (int64 usage, int64 duration);
 
+/* Set io controller configuration of a cgroup */
+typedef void (*setio_function) (Oid group, const char *io_limit);
+
 
 typedef struct CGroupOpsRoutine
 {
@@ -258,6 +261,8 @@ typedef struct CGroupOpsRoutine
 	setcpuset_function		setcpuset;
 
 	convertcpuusage_function convertcpuusage;
+
+	setio_function			setio;
 } CGroupOpsRoutine;
 
 /* The global function handler. */

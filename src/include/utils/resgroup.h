@@ -20,6 +20,8 @@
 #include "catalog/pg_resgroup.h"
 #include "utils/session_state.h"
 #include "utils/cgroup.h"
+#include <sys/types.h>
+#include <sys/sysmacros.h>
 
 /*
  * The max number of resource groups.
@@ -30,6 +32,11 @@
  * The max length of cpuset
  */
 #define MaxCpuSetLength 1024
+
+/*
+ * max length of io limit str
+ */
+#define MaxIoLimitLength 1024
 
 /*
  * Default value of cpuset
@@ -71,6 +78,7 @@ typedef struct ResGroupCaps
 	ResGroupCap		cpuSoftPriority;
 	ResGroupCap		memory_limit;
 	volatile ResGroupCap	min_cost;
+	char		io_limit[MaxIoLimitLength];
 	char			cpuset[MaxCpuSetLength];
 } ResGroupCaps;
 
@@ -134,6 +142,38 @@ typedef struct
 	ResGroupCaps		oldCaps;	/* last config value, alter operation need to
  										* check last config for recycling */
 } ResourceGroupCallbackContext;
+
+/*
+ * Linux block device related.
+ * Using glibc dev_t to represent a BDI, similar as int64,
+ */
+typedef dev_t BDIUnit;
+typedef BDIUnit BDIMappingKey;
+typedef struct
+{
+	BDIMappingKey key;
+	BDIUnit value;
+} BDIMappingEntry;
+
+#define BDI_UNIT(major, minor) makedev(major, minor)
+#define BDI_MAJOR(dev) major(dev)
+#define BDI_MINOR(dev) minor(dev)
+#define MAX_BDI_ENTRY 100
+
+typedef struct
+{
+	BDIUnit dev;
+	uint32		wbps;
+	uint32		rbps;
+	uint32		riops;
+	uint32		wiops;
+} IOLimitItem;
+
+extern char* trim(char *value);
+extern void initBDIMapping(void);
+extern void checkIOLimit(char *);
+extern void parseIOLimitItem(char *value, IOLimitItem *result);
+
 
 /* Shared memory and semaphores */
 extern Size ResGroupShmemSize(void);

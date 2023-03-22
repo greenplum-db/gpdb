@@ -1,4 +1,4 @@
-/*-------------------------------------------------------------------------
+/*------------------------------------------------------------------------
  *
  * cgroup-ops-linux-v2.c
  *	  OS dependent resource group operations - cgroup implementation
@@ -15,6 +15,7 @@
 #include "postgres.h"
 
 #include <limits.h>
+#include <string.h>
 
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
@@ -70,6 +71,8 @@ static void init_cpuset_v2(void);
 static void create_default_cpuset_group_v2(void);
 static int64 get_cfs_period_us_v2();
 
+static void init_bdi_mapping(void);
+
 /*
  * currentGroupIdInCGroup & oldCaps are used for reducing redundant
  * file operations
@@ -98,6 +101,11 @@ static const PermItem perm_items_cpuset[] =
 	{ CGROUP_COMPONENT_PLAIN, "cpuset.mems", R_OK | W_OK },
 	{ CGROUP_COMPONENT_PLAIN, "cpuset.cpus.effective", R_OK },
 	{ CGROUP_COMPONENT_PLAIN, "cpuset.mems.effective", R_OK },
+	{ CGROUP_COMPONENT_UNKNOWN, NULL, 0 }
+};
+static const PermItem perm_items_io[] =
+{
+	{ CGROUP_COMPONENT_PLAIN, "io.max", R_OK | W_OK },
 	{ CGROUP_COMPONENT_UNKNOWN, NULL, 0 }
 };
 
@@ -129,6 +137,7 @@ static const PermList permlists[] =
 	{ perm_items_cpuset, CGROUP_CPUSET_IS_OPTIONAL,
 		&gp_resource_group_enable_cgroup_cpuset},
 
+	{ perm_items_io, false, NULL},
 	{ NULL, false, NULL }
 };
 
@@ -148,6 +157,7 @@ static int64 getcpuusage_v2(Oid group);
 static void getcpuset_v2(Oid group, char *cpuset, int len);
 static void setcpuset_v2(Oid group, const char *cpuset);
 static float convertcpuusage_v2(int64 usage, int64 duration);
+static void setio(Oid group, const char *io_limite);
 
 /*
  * Dump component dir to the log.
@@ -175,6 +185,7 @@ init_subtree_control(void)
 	writeStr(CGROUP_ROOT_ID, BASEDIR_GPDB, component, "cgroup.subtree_control", "+cpu");
 	writeStr(CGROUP_ROOT_ID, BASEDIR_GPDB, component, "cgroup.subtree_control", "+memory");
 	writeStr(CGROUP_ROOT_ID, BASEDIR_GPDB, component, "cgroup.subtree_control", "+pids");
+	writeStr(CGROUP_ROOT_ID, BASEDIR_GPDB, component, "cgroup.subtree_control", "+io");
 }
 
 /*
@@ -800,6 +811,59 @@ getmemoryusage_v2(Oid group)
 	return readInt64(group, BASEDIR_GPDB, component, "memory.current");
 }
 
+static void
+setio(Oid group, const char *io_limit) {
+	char limitation[100];
+	char rbps_str[20];
+	char wbps_str[20];
+	char riops_str[20];
+	char wiops_str[20];
+	char latency_str[20];
+	CGroupComponentType component = CGROUP_COMPONENT_PLAIN;
+
+	io_limit = trim(io_limit);
+
+	char *saveptr;
+	char *item = strtok_r(io_limit, ";", &saveptr);
+	IOLimitItem io_item = { 0 };
+
+	while (item != NULL)
+	{
+		parseIOLimitItem(item, &io_item);
+
+		/* construct parameters
+		 * if parameter is 0, the configuration str should be 'max'
+		 */
+		if (io_item.rbps != 0)
+			sprintf(rbps_str, "%d", io_item.rbps * 1024);
+		else
+			sprintf(rbps_str, "%s", "max");
+
+		if (io_item.wbps != 0)
+			sprintf(wbps_str, "%d", io_item.wbps * 1024);
+		else
+			sprintf(wbps_str, "%s", "max");
+
+		if (io_item.riops != 0)
+			sprintf(riops_str, "%d", io_item.riops);
+		else
+			sprintf(riops_str, "%s", "max");
+
+		if (io_item.wiops != 0)
+			sprintf(wiops_str, "%d", io_item.wiops);
+		else
+			sprintf(wiops_str, "%s", "max");
+
+		sprintf(limitation, "%d:%d rbps=%s wbps=%s riops=%s wiops=%s",
+				BDI_MAJOR(io_item.dev), BDI_MINOR(io_item.dev),
+				rbps_str, wbps_str, riops_str, wiops_str);
+
+		writeStr(group, BASEDIR_GPDB, component, "io.max", limitation);
+
+		item = strtok_r(NULL, ",", &saveptr);
+	}
+}
+
 static CGroupOpsRoutine cGroupOpsRoutineV2 = {
 		.getcgroupname = getcgroupname_v2,
 		.probecgroup = probecgroup_v2,
@@ -823,7 +887,8 @@ static CGroupOpsRoutine cGroupOpsRoutineV2 = {
 
 		.convertcpuusage = convertcpuusage_v2,
 
-		.getmemoryusage = getmemoryusage_v2
+		.getmemoryusage = getmemoryusage_v2,
+		.setio = setio
 };
 
 CGroupOpsRoutine *get_group_routine_v2(void)

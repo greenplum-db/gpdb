@@ -822,6 +822,8 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 
 	IGNORE_P INCLUSIVE INITPLAN
 
+	IO_LIMIT
+
 	LIST LOG_P
 
 	MASTER MEDIAN MISSING MODIFIES
@@ -1017,6 +1019,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc INSERT
 			%nonassoc INSTEAD
 			%nonassoc INVOKER
+			%nonassoc IO_LIMIT
 			%nonassoc ISOLATION
 			%nonassoc KEY
 			%nonassoc LANGUAGE
@@ -1626,6 +1629,10 @@ OptResourceGroupElem:
 			| MIN_COST SignedIconst
 				{
 					$$ = makeDefElem("min_cost", (Node *) makeInteger($2), @1);
+				}
+			| IO_LIMIT Sconst
+				{
+					$$ = makeDefElem("io_limit", (Node *)makeString($2), @1);
 				}
 		;
 
@@ -18140,6 +18147,7 @@ unreserved_keyword:
 			| INSERT
 			| INSTEAD
 			| INVOKER
+			| IO_LIMIT
 			| ISOLATION
 			| KEY
 			| LABEL
@@ -18474,6 +18482,7 @@ PartitionIdentKeyword: ABORT_P
 			| INSERT
 			| INSTEAD
 			| INVOKER
+			| IO_LIMIT
 			| ISOLATION
 			| KEY
 			| LANGUAGE
