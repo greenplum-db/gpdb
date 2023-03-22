@@ -3445,36 +3445,30 @@ CExpressionPreprocessor::PexprPreprocess(
 	GPOS_CHECK_ABORT;
 	pexprCollapsedProjects->Release();
 
-	// (26) reorder the children of scalar cmp operator to ensure that left child is scalar ident and right child is scalar const
-	CExpression *pexrReorderedScalarCmpChildren =
-		PexprReorderScalarCmpChildren(mp, pexprSubquery);
+	// (26) rewrite IN subquery to EXIST subquery with a predicate
+	CExpression *pexprExistWithPredFromINSubq =
+		PexprExistWithPredFromINSubq(mp, pexprSubquery);
 	GPOS_CHECK_ABORT;
 	pexprSubquery->Release();
 
-	// (27) rewrite IN subquery to EXIST subquery with a predicate
-	CExpression *pexprExistWithPredFromINSubq =
-		PexprExistWithPredFromINSubq(mp, pexrReorderedScalarCmpChildren);
-	GPOS_CHECK_ABORT;
-	pexrReorderedScalarCmpChildren->Release();
-
-	// (28) prune partitions
+	// (27) prune partitions
 	CExpression *pexprPrunedPartitions =
 		PrunePartitions(mp, pexprExistWithPredFromINSubq);
 	GPOS_CHECK_ABORT;
 	pexprExistWithPredFromINSubq->Release();
 
-	// (29) swap logical select over logical project
+	// (28) swap logical select over logical project
 	CExpression *pexprTransposeSelectAndProject =
 		PexprTransposeSelectAndProject(mp, pexprPrunedPartitions);
 	pexprPrunedPartitions->Release();
 
-	// (30) convert split update to inplace update
+	// (29) convert split update to inplace update
 	CExpression *pexprSplitUpdateToInplace =
 		ConvertSplitUpdateToInPlaceUpdate(mp, pexprTransposeSelectAndProject);
 	GPOS_CHECK_ABORT;
 	pexprTransposeSelectAndProject->Release();
 
-	// (31) normalize expression again
+	// (30) normalize expression again
 	CExpression *pexprNormalized2 =
 		CNormalizer::PexprNormalize(mp, pexprSplitUpdateToInplace);
 	GPOS_CHECK_ABORT;
