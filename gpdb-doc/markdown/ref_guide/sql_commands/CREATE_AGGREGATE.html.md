@@ -211,6 +211,9 @@ PARALLEL = { SAFE | RESTRICTED | UNSAFE }
 
 REPSAFE = boolean
 :   Specifies whether or not the aggregate can be safely executed on replicated slices. An order-agnostic aggregate would be considered safe in this context. The default value is `false`.
+:   Setting `REPSAFE = true` instructs the optimizer to perform additional optimizations that specifically suppress certain broadcast motions.
+
+    > **Caution** Incorrectly setting `REPSAFE = true` for an order-dependent aggregate may produce incorrect results.
 
 HYPOTHETICAL
 :   For ordered-set aggregates only, this flag specifies that the aggregate arguments are to be processed according to the requirements for hypothetical-set aggregates: that is, the last few direct arguments must match the data types of the aggregated \(`WITHIN GROUP`\) arguments. The `HYPOTHETICAL` flag has no effect on run-time behavior, only on parse-time resolution of the data types and collations of the aggregate's arguments.
