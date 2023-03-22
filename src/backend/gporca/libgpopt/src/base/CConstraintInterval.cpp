@@ -318,8 +318,9 @@ CConstraintInterval::PcnstrIntervalFromScalarArrayCmp(CMemoryPool *mp,
 				pprevdatum->AddRef();
 				mdid->AddRef();
 				CRange *prng = GPOS_NEW(mp)
-					CRange(mdid, pcomp, pprevdatum, CRange::EriExcluded, nullptr,
-					   CRange::EriExcluded);
+					CRange(mdid, pcomp, pprevdatum,
+					       CRange::EriExcluded, nullptr,
+					       CRange::EriExcluded);
 				prgrng->Append(prng);
 			}
 			break;
