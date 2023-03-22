@@ -1948,14 +1948,17 @@ void
 vacuum_appendonly_rel(Relation aorel, VacuumStmt *vacstmt)
 {
 	char	   *relname;
+	char       *nspname;
 
 	Assert(RelationIsAppendOptimized(aorel));
 
 	relname = RelationGetRelationName(aorel);
+	nspname = get_namespace_name(RelationGetNamespace(aorel));
 	ereport(elevel,
 			(errmsg("vacuuming \"%s.%s\"",
-					get_namespace_name(RelationGetNamespace(aorel)),
+					nspname,
 					relname)));
+	pfree(nspname);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 		return;
@@ -1971,6 +1974,7 @@ vacuum_appendonly_rel(Relation aorel, VacuumStmt *vacstmt)
 	}
 	else
 		ao_vacuum_rel_compact(aorel, vacstmt);
+
 }
 
 /*

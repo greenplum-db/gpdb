@@ -220,6 +220,7 @@ AppendOnlySegmentFileTruncateToEOF(Relation aorel,
 	char		filenamepath[MAXPGPATH];
 	int			segno;
 	int64		segeof;
+	char 		*nspname;
 
 	Assert(fsinfo);
 	Assert(RelationIsAoRows(aorel));
@@ -231,9 +232,11 @@ AppendOnlySegmentFileTruncateToEOF(Relation aorel,
 	/* Open and truncate the relation segfile to its eof */
 	MakeAOSegmentFileName(aorel, segno, -1, &fileSegNo, filenamepath);
 
+	nspname = get_namespace_name(RelationGetNamespace(aorel));
+
 	elogif(Debug_appendonly_print_compaction, LOG,
 		   "Opening AO relation \"%s.%s\", relation id %u, relfilenode %u (physical segment file #%d, logical EOF " INT64_FORMAT ")",
-		   get_namespace_name(RelationGetNamespace(aorel)),
+		   nspname,
 		   relname,
 		   aorel->rd_id,
 		   aorel->rd_node.relNode,
@@ -248,7 +251,7 @@ AppendOnlySegmentFileTruncateToEOF(Relation aorel,
 
 		elogif(Debug_appendonly_print_compaction, LOG,
 			   "Successfully truncated AO ROW relation \"%s.%s\", relation id %u, relfilenode %u (physical segment file #%d, logical EOF " INT64_FORMAT ")",
-			   get_namespace_name(RelationGetNamespace(aorel)),
+			   nspname,
 			   relname,
 			   aorel->rd_id,
 			   aorel->rd_node.relNode,
@@ -259,13 +262,15 @@ AppendOnlySegmentFileTruncateToEOF(Relation aorel,
 	{
 		elogif(Debug_appendonly_print_compaction, LOG,
 			   "No gp_relation_node entry for AO ROW relation \"%s.%s\", relation id %u, relfilenode %u (physical segment file #%d, logical EOF " INT64_FORMAT ")",
-			   get_namespace_name(RelationGetNamespace(aorel)),
+			   nspname,
 			   relname,
 			   aorel->rd_id,
 			   aorel->rd_node.relNode,
 			   segno,
 			   segeof);
 	}
+
+	pfree(nspname);
 }
 
 static void

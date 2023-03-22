@@ -116,16 +116,19 @@ AOCSSegmentFileTruncateToEOF(Relation aorel,
 		AOCSVPInfoEntry *entry;
 		File		fd;
 		int32		fileSegNo;
+		char		*nspname;
 
 		entry = getAOCSVPEntry(fsinfo, j);
 		segeof = entry->eof;
+
+		nspname = get_namespace_name(RelationGetNamespace(aorel));
 
 		/* Open and truncate the relation segfile to its eof */
 		MakeAOSegmentFileName(aorel, segno, j, &fileSegNo, filenamepath);
 
 		elogif(Debug_appendonly_print_compaction, LOG,
 			   "Opening AO COL relation \"%s.%s\", relation id %u, relfilenode %u column #%d, logical segment #%d (physical segment file #%d, logical EOF " INT64_FORMAT ")",
-			   get_namespace_name(RelationGetNamespace(aorel)),
+			   nspname,
 			   relname,
 			   aorel->rd_id,
 			   aorel->rd_node.relNode,
@@ -142,7 +145,7 @@ AOCSSegmentFileTruncateToEOF(Relation aorel,
 
 			elogif(Debug_appendonly_print_compaction, LOG,
 				   "Successfully truncated AO COL relation \"%s.%s\", relation id %u, relfilenode %u column #%d, logical segment #%d (physical segment file #%d, logical EOF " INT64_FORMAT ")",
-				   get_namespace_name(RelationGetNamespace(aorel)),
+				   nspname,
 				   relname,
 				   aorel->rd_id,
 				   aorel->rd_node.relNode,
@@ -155,7 +158,7 @@ AOCSSegmentFileTruncateToEOF(Relation aorel,
 		{
 			elogif(Debug_appendonly_print_compaction, LOG,
 				   "No gp_relation_node entry for AO COL relation \"%s.%s\", relation id %u, relfilenode %u column #%d, logical segment #%d (physical segment file #%d, logical EOF " INT64_FORMAT ")",
-				   get_namespace_name(RelationGetNamespace(aorel)),
+				   nspname,
 				   relname,
 				   aorel->rd_id,
 				   aorel->rd_node.relNode,
@@ -164,6 +167,7 @@ AOCSSegmentFileTruncateToEOF(Relation aorel,
 				   fileSegNo,
 				   segeof);
 		}
+		pfree(nspname);
 	}
 }
 
