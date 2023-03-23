@@ -130,6 +130,7 @@ These parameters control the usage of GPORCA by Greenplum Database. For informat
 - [optimizer_mdcache_size](guc-list.html#optimizer_mdcache_size)
 - [optimizer_metadata_caching](guc-list.html#optimizer_metadata_caching)
 - [optimizer_parallel_union](guc-list.html#optimizer_parallel_union)
+- [optimizer_penalize_broadcast_threshold](guc-list.html#optimizer_penalize_broadcast_threshold)
 - [optimizer_penalize_skew](guc-list.html#optimizer_penalize_skew)
 - [optimizer_print_missing_stats](guc-list.html#optimizer_print_missing_stats)
 - [optimizer_print_optimization_stats](guc-list.html#optimizer_print_optimization_stats)

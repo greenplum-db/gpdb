@@ -2495,6 +2495,16 @@ The parameter can be set for a database system, an individual database, or a ses
 |-----------|-------|-------------------|
 |boolean|off|master, session, reload|
 
+## <a id="optimizer_penalize_broadcast_threshold"></a>optimizer_penalize_skew_broadcast_threshold
+
+When GPORCA is enabled (the default), during query optimization GPORCA penalizes the cost of plans that attempt to broadcast more than the value specified by `optimizer_penalize_broadcast_threshold`. For example, if this parameter is set to 100K rows (the default), any broadcast of more than 100K rows is heavily penalized. 
+
+When this parameter is set to `0`, GPORCA sets this broadcast threshold to unlimited and never penalizes a broadcast motion.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|integer >= 0|100K rows|master, session, reload|
+
 ## <a id="optimizer_penalize_skew"></a>optimizer\_penalize\_skew 
 
 When GPORCA is enabled \(the default\), this parameter allows GPORCA to penalize the local cost of a HashJoin with a skewed Redistribute Motion as child to favor a Broadcast Motion during query optimization. The default value is `true`.
