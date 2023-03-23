@@ -66,3 +66,21 @@ CREATE
 -----------------
  pg_toast_temp_0 
 (1 row)
+
+--
+-- gp_dist_random('<view>') should not crash in utility mode
+--
+create or replace view misc_v as select 1;
+CREATE
+0U: select 1 from gp_dist_random('misc_v') union select 1 from misc_v;
+ ?column? 
+----------
+ 1        
+(1 row)
+0U: select count(*) from gp_dist_random('misc_v');
+ count 
+-------
+ 1     
+(1 row)
+drop view misc_v;
+DROP

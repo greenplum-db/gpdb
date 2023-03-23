@@ -8,6 +8,9 @@
 
 BEGIN;
 
+-- Allow gp_dist_random() to work properly in this file
+SET gp_allow_dist_random_in_utility = ON;
+
 CREATE SCHEMA gp_toolkit;
 
 GRANT USAGE ON SCHEMA gp_toolkit TO public;
@@ -2513,6 +2516,8 @@ FROM gp_toolkit.__check_missing_files; -- not checking ext on coordinator
 GRANT SELECT ON gp_toolkit.gp_check_missing_files_ext TO public;
 
 --------------------------------------------------------------------------------
+
+RESET gp_allow_dist_random_in_utility;
 
 -- Finalize install
 COMMIT;

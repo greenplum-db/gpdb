@@ -328,6 +328,8 @@ extern bool allow_segment_DML;
 
 extern bool gp_ignore_error_table;
 
+extern bool gp_allow_dist_random_in_utility;
+
 extern bool	Debug_dtm_action_primary;
 
 extern bool gp_log_optimization_time;

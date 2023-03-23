@@ -248,6 +248,9 @@ bool		gp_ignore_error_table = false;
  */
 bool		dml_ignore_target_partition_check = false;
 
+/* allow gp_dist_random (i.e. don't ignore it) in utility mode */
+bool 		gp_allow_dist_random_in_utility = false;
+
 /* Planner gucs */
 bool		gp_enable_hashjoin_size_heuristic = false;
 bool		gp_enable_predicate_propagation = false;
@@ -2927,7 +2930,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false,
 		NULL, NULL, NULL
 	},
-
+	{
+		{"gp_allow_dist_random_in_utility", PGC_USERSET, CUSTOM_OPTIONS,
+			gettext_noop("Allow gp_dist_random and not ignore it in utility mode."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_allow_dist_random_in_utility,
+		false,
+		NULL, NULL, NULL
+	},
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL

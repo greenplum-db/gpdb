@@ -675,8 +675,16 @@ transformRangeFunction(ParseState *pstate, RangeFunction *r)
 
 					rte = addRangeTableEntry(pstate, rel, r->alias, false, true);
 
-					/* Now we set our special attribute in the rte. */
-					rte->forceDistRandom = true;
+					/*
+					 * Now we set our special attribute in the rte.
+					 * In utility mode we ignore gp_dist_random unless 
+					 * gp_allow_dist_random_in_utility is set to ON.
+					 */
+					if (Gp_role == GP_ROLE_UTILITY && !gp_allow_dist_random_in_utility)
+						rte->forceDistRandom = false;
+					else
+						rte->forceDistRandom = true;
+
 
 					return rte;
 				}

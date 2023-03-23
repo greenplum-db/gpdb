@@ -129,6 +129,7 @@
 		"geqo_selection_bias",
 		"geqo_threshold",
 		"gp_adjust_selectivity_for_outerjoins",
+		"gp_allow_dist_random_in_utility",
 		"gp_allow_non_uniform_partitioning_ddl",
 		"gp_auth_time_override",
 		"gp_autostats_allow_nonowner",

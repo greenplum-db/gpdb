@@ -3127,6 +3127,12 @@ _doSetFixedOutputState(ArchiveHandle *AH)
 	 */
 	ahprintf(AH, "SET gp_default_storage_options = '';\n");
 
+	/*
+	 * We need to respect gp_dist_random even in utility mode, for things like
+	 * CREATE VIEW ... AS SELECT ... FROM gp_dist_random('...');
+	 */
+	ahprintf(AH, "SET gp_allow_dist_random_in_utility= 'ON';\n");
+
 	RestoreOptions *ropt = AH->public.ropt;
 
 	/*

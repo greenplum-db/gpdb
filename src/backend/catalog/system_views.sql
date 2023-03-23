@@ -16,6 +16,9 @@
  * string literal (including a function body!) or a multiline comment.
  */
 
+-- Allow gp_dist_random() to work properly in this file
+SET gp_allow_dist_random_in_utility = ON;
+
 CREATE VIEW pg_roles AS
     SELECT
         rolname,
@@ -1892,3 +1895,5 @@ CREATE VIEW gp_suboverflowed_backend(segid, pids) AS
   SELECT -1, gp_get_suboverflowed_backends()
 UNION ALL
   SELECT gp_segment_id, gp_get_suboverflowed_backends() FROM gp_dist_random('gp_id') order by 1;
+
+RESET gp_allow_dist_random_in_utility;

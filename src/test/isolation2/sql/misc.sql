@@ -40,3 +40,11 @@
       JOIN pg_namespace n2
         ON n2.nspname = 'pg_toast_temp_0' || substring(n1.nspname FROM 10)
      WHERE c.relname = 'utilitymode_tmp_tab';
+
+--
+-- gp_dist_random('<view>') should not crash in utility mode
+-- 
+create or replace view misc_v as select 1;
+0U: select 1 from gp_dist_random('misc_v') union select 1 from misc_v;
+0U: select count(*) from gp_dist_random('misc_v');
+drop view misc_v;
