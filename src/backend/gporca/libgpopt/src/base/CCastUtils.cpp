@@ -22,6 +22,7 @@
 #include "gpopt/operators/CScalarIdent.h"
 #include "naucrates/md/CMDArrayCoerceCastGPDB.h"
 #include "naucrates/md/IMDCast.h"
+#include "naucrates/md/IMDIndex.h"
 
 using namespace gpopt;
 using namespace gpmd;
@@ -263,6 +264,23 @@ CCastUtils::PexprAddCast(CMemoryPool *mp, CExpression *pexprPred)
 		return pexprNewPred;
 	}
 
+	// To perform explicit cast on the hash join condition,
+	// operator has to belong to the left column's hash (distribution)
+	// opfamily, and the right column's hash (distribution) opfamily.
+	if (CUtils::FScalarIdent(pexprLeft) && CUtils::FScalarIdent(pexprRight))
+	{
+		if (GPOS_FTRACE(EopttraceConsiderOpfamiliesForDistribution))
+		{
+			if (!CPredicateUtils::FOpInOpfamily(pexprLeft, pexprChild,
+												IMDIndex::EmdindHash) ||
+				!CPredicateUtils::FOpInOpfamily(pexprRight, pexprChild,
+												IMDIndex::EmdindHash))
+			{
+				return pexprNewPred;
+			}
+		}
+	}
+
 	pexprLeft->AddRef();
 	pexprRight->AddRef();
 
@@ -277,7 +295,6 @@ CCastUtils::PexprAddCast(CMemoryPool *mp, CExpression *pexprPred)
 	{
 		GPOS_ASSERT(fCastRtoL);
 		pexprNewRight = PexprCast(mp, md_accessor, pexprRight, mdid_type_left);
-		;
 	}
 
 	GPOS_ASSERT(nullptr != pexprNewLeft && nullptr != pexprNewRight);

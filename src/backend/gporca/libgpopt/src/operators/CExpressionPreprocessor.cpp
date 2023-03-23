@@ -2806,8 +2806,10 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 			CLogicalDynamicGet::PopConvert((*expr)[0]->Pop());
 
 		CColRefSetArray *pdrgpcrsChild = nullptr;
-		CConstraint *pred_cnstr =
-			CConstraint::PcnstrFromScalarExpr(mp, filter_pred, &pdrgpcrsChild);
+		// As of now, partition's default opfamily is btree
+		// ORCA doesn't support hash partition yet
+		CConstraint *pred_cnstr = CConstraint::PcnstrFromScalarExpr(
+			mp, filter_pred, &pdrgpcrsChild, false, IMDIndex::EmdindBtree);
 		CRefCount::SafeRelease(pdrgpcrsChild);
 
 		IMdIdArray *selected_partition_mdids = GPOS_NEW(mp) IMdIdArray(mp);
@@ -2957,9 +2959,12 @@ CExpressionPreprocessor::PcnstrFromChildPartition(
 	GPOS_ASSERT(CUtils::FPredicate(part_constraint_expr));
 
 	CColRefSetArray *pdrgpcrsChild = nullptr;
-	CConstraint *cnstr = CConstraint::PcnstrFromScalarExpr(
-		mp, part_constraint_expr, &pdrgpcrsChild, true /* infer_nulls_as */);
-
+	CConstraint *cnstr;
+	// As of now, partition's default opfamily is btree
+	// ORCA doesn't support hash partition yet
+	cnstr = CConstraint::PcnstrFromScalarExpr(
+		mp, part_constraint_expr, &pdrgpcrsChild, true /* infer_nulls_as */,
+		IMDIndex::EmdindBtree);
 	CRefCount::SafeRelease(part_constraint_expr);
 	CRefCount::SafeRelease(pdrgpcrsChild);
 	GPOS_ASSERT(cnstr);
