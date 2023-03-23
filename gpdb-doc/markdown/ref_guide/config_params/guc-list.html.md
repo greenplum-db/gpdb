@@ -568,6 +568,14 @@ The local content id if a segment.
 |-----------|-------|-------------------|
 |integer| |read only|
 
+## <a id="gp_count_host_segments_using_ip"></a>gp_count_host_segments_using_ip
+
+Beginning in version 6.21.0, the Resource Groups implementation was changed to calculate segment memory using segment hostnames instead of IP addresses, and this implementation results in a lower memory limit value compared to the earlier code that evaluates using segment IP addresses.  In some cases, this change in behavior can lead to Out Of Memory errors when upgrading from an earlier version. Fersion 6.23.4 introduces a configuration parameter, `gp_count_host_segments_using_ip`, that can be set to true to enable the calculation of segment memory using IP addresses if Out Of Memory errors are encountered after an upgrade. This parameter is disabled by default, and will not be provided in Greenplum Version 7.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|boolean|off|master, session, reload|
+
 ## <a id="gp_create_table_random_default_distribution"></a>gp\_create\_table\_random\_default\_distribution 
 
 Controls table creation when a Greenplum Database table is created with a CREATE TABLE or CREATE TABLE AS command that does not contain a DISTRIBUTED BY clause.
