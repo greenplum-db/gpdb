@@ -3322,7 +3322,8 @@ CExpressionPreprocessor::PexprPreprocess(
 	phmExprToConst->Release();
 	pexprTrimmed2->Release();
 
-	// (7.b) reorder the children of scalar cmp operator to ensure that left child is scalar ident and right child is scalar const
+	// (7.b) reorder the children of scalar cmp operator to ensure that left
+	// child is scalar ident and right child is scalar const
 	CExpression *pexprReorderedScalarCmpChildren =
 		PexprReorderScalarCmpChildren(mp, pexprPredWithConstReplaced);
 	GPOS_CHECK_ABORT;
