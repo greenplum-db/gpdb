@@ -435,7 +435,11 @@ select gp_segment_id, * from t1_varchar where (col1_varchar = 'a' or col1_varcha
 explain (costs off) select gp_segment_id, * from t1_varchar where col1_varchar = 97::VARCHAR;
 select gp_segment_id, * from t1_varchar where col1_varchar = 97::VARCHAR;
 
--- explicit cast using "char", generates a scenario of cast function from Dist Colm to datum in CTranslatorExprToDXLUtils::FDirectDispatchable(,,)
+-- varchar hash and bpchar hash belong to different opfamilies
+-- hash distribution of col1_varchar and col1_varchar::bpchar
+-- could assign values to different segments. Therefore, the
+-- gather motion applies to all 3 segments, and no direct
+-- dispatch occurs.
 explain (costs off) select gp_segment_id,  * from t1_varchar where col1_varchar = 'c'::char;
 select gp_segment_id,  * from t1_varchar where col1_varchar = 'c'::char;
 
@@ -464,6 +468,10 @@ VALUES ('abb'),
        ('ABC'),
        ('abd');
 
+-- text hash/btree and citext hash/btree belong to different opfamilies
+-- hash distribution of name and name::text could assign values to
+-- different segments. Therefore, the gather motion applies to all 3
+-- segments, and no direct dispatch occurs.
 explain (costs off) select LOWER(name) as aba FROM srt_dd WHERE name = 'ABA'::text;
 select LOWER(name) as aba FROM srt_dd WHERE name = 'ABA'::text;
 
@@ -598,7 +606,6 @@ set allow_system_table_mods=off;
 -- https://github.com/greenplum-db/gpdb/issues/14887
 -- If opno of clause does not belong to opfamily of distributed key,
 -- do not use direct dispatch to resolve wrong result
--- FIXME: orca still has wrong results
 create table t_14887(a varchar);
 insert into t_14887 values('a   ');
 explain select * from t_14887 where a = 'a'::bpchar;
