@@ -810,22 +810,22 @@ setio(Oid group, const IOItem *item) {
 
 	// construct parameters
 	// if parameter is -1, the configuration str should be 'max'
-	if (!item->rkbps)
+	if (~item->rkbps)
 		sprintf(rbps_str, "%ld", item->rkbps * 1024);
 	else
 		sprintf(rbps_str, "%s", "max");
 
-	if (!item->wkbps)
+	if (~item->wkbps)
 		sprintf(wbps_str, "%ld", item->wkbps * 1024);
 	else
 		sprintf(wbps_str, "%s", "max");
 
-	if (!item->riops)
+	if (~item->riops)
 		sprintf(riops_str, "%ld", item->riops);
 	else
 		sprintf(riops_str, "%s", "max");
 
-	if (!item->wiops)
+	if (~item->wiops)
 		sprintf(wiops_str, "%ld", item->wiops);
 	else
 		sprintf(wiops_str, "%s", "max");
@@ -833,7 +833,7 @@ setio(Oid group, const IOItem *item) {
 	sprintf(limitation, "%d:%d rbps=%s wbps=%s riops=%s wiops=%s",
 			item->major, item->minor, rbps_str, wbps_str, riops_str, wiops_str);
 
-	writeStr(group, BASEDIR_GPDB,component, "io.max", limitation);
+	writeStr(group, BASEDIR_GPDB, component, "io.max", limitation);
 }
 
 static CGroupOpsRoutine cGroupOpsRoutineV2 = {

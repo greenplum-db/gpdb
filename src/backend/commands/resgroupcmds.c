@@ -442,6 +442,18 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 		case RESGROUP_LIMIT_TYPE_MEMORY_LIMIT:
 			caps.memory_limit = value;
 			break;
+		case RESGROUP_LIMIT_TYPE_IO_WRITE_HARD_LIMIT:
+			caps.io_write_hard_limit = value;
+			break;
+		case RESGROUP_LIMIT_TYPE_IO_READ_HARD_LIMIT:
+			caps.io_read_hard_limit = value;
+			break;
+		case RESGROUP_LIMIT_TYPE_IO_WIOPS_HARD_LIMIT:
+			caps.io_wiops_hard_limit = value;
+			break;
+		case RESGROUP_LIMIT_TYPE_IO_RIOPS_HARD_LIMIT:
+			caps.io_riops_hard_limit = value;
+			break;
 		default:
 			break;
 	}
@@ -583,6 +595,22 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 				break;
 			case RESGROUP_LIMIT_TYPE_MEMORY_LIMIT:
 				resgroupCaps->memory_limit = str2Int(value,
+													getResgroupOptionName(type));
+				break;
+			case RESGROUP_LIMIT_TYPE_IO_READ_HARD_LIMIT:
+				resgroupCaps->io_read_hard_limit = str2Int(value,
+													getResgroupOptionName(type));
+				break;
+			case RESGROUP_LIMIT_TYPE_IO_WRITE_HARD_LIMIT:
+				resgroupCaps->io_write_hard_limit = str2Int(value,
+													getResgroupOptionName(type));
+				break;
+			case RESGROUP_LIMIT_TYPE_IO_RIOPS_HARD_LIMIT:
+				resgroupCaps->io_riops_hard_limit = str2Int(value,
+													getResgroupOptionName(type));
+				break;
+			case RESGROUP_LIMIT_TYPE_IO_WIOPS_HARD_LIMIT:
+				resgroupCaps->io_wiops_hard_limit = str2Int(value,
 													getResgroupOptionName(type));
 				break;
 			default:
@@ -761,6 +789,12 @@ getResgroupOptionType(const char* defname)
 		return RESGROUP_LIMIT_TYPE_MEMORY_LIMIT;
 	else if (strcmp(defname, "io_write_hard_limit") == 0)
 		return RESGROUP_LIMIT_TYPE_IO_WRITE_HARD_LIMIT;
+	else if (strcmp(defname, "io_read_hard_limit") == 0)
+		return RESGROUP_LIMIT_TYPE_IO_READ_HARD_LIMIT;
+	else if (strcmp(defname, "io_riops_hard_limit") == 0)
+		return RESGROUP_LIMIT_TYPE_IO_RIOPS_HARD_LIMIT;
+	else if (strcmp(defname, "io_wiops_hard_limit") == 0)
+		return RESGROUP_LIMIT_TYPE_IO_WIOPS_HARD_LIMIT;
 	else
 		return RESGROUP_LIMIT_TYPE_UNKNOWN;
 }
@@ -1108,6 +1142,22 @@ insertResgroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *caps)
 	snprintf(value, sizeof(value), "%d", caps->memory_limit);
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_MEMORY_LIMIT, value);
+
+	snprintf(value, sizeof(value), "%d", caps->io_read_hard_limit);
+	insertResgroupCapabilityEntry(rel, groupId,
+								  RESGROUP_LIMIT_TYPE_IO_READ_HARD_LIMIT, value);
+
+	snprintf(value, sizeof(value), "%d", caps->io_write_hard_limit);
+	insertResgroupCapabilityEntry(rel, groupId,
+								  RESGROUP_LIMIT_TYPE_IO_WRITE_HARD_LIMIT, value);
+
+	snprintf(value, sizeof(value), "%d", caps->io_riops_hard_limit);
+	insertResgroupCapabilityEntry(rel, groupId,
+								  RESGROUP_LIMIT_TYPE_IO_RIOPS_HARD_LIMIT, value);
+
+	snprintf(value, sizeof(value), "%d", caps->io_wiops_hard_limit);
+	insertResgroupCapabilityEntry(rel, groupId,
+								  RESGROUP_LIMIT_TYPE_IO_WIOPS_HARD_LIMIT, value);
 }
 
 /*

@@ -367,6 +367,9 @@ ResGroupControlInit(void)
 	if (!slotpoolInit())
 		goto error_out;
 
+	/* find all block devices */
+	initBlockDevicesPool();
+
     return;
 
 error_out:
@@ -491,9 +494,6 @@ InitResGroups(void)
 		Assert(pResGroupControl->segmentsOnMaster > 0);
 	}
 
-	/* find all block devices */
-	initBlockDevicesPool();
-
 	/*
 	 * The resgroup shared mem initialization must be serialized. Only the first session
 	 * should do the init.
@@ -533,7 +533,8 @@ InitResGroups(void)
 
 		cgroupOpsRoutine->createcgroup(groupId);
 
-		for (int i = 0; i < pBlockDevices->nDevice; ++i) {
+		for (int i = 0; i < pBlockDevices->nDevice; ++i)
+		{
 			IOItem item = {
 				.major = pBlockDevices->devices[i].major,
 				.minor = pBlockDevices->devices[i].minor,
@@ -836,6 +837,24 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 				char *cpuset = getCpuSetByRole(callbackCtx->caps.cpuset);
 				cgroupOpsRoutine->setcpuset(callbackCtx->groupid,
 									        cpuset);
+			}
+		}
+		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_IO_RIOPS_HARD_LIMIT
+				|| callbackCtx->limittype == RESGROUP_LIMIT_TYPE_IO_WIOPS_HARD_LIMIT
+				|| callbackCtx->limittype == RESGROUP_LIMIT_TYPE_IO_READ_HARD_LIMIT
+				|| callbackCtx->limittype == RESGROUP_LIMIT_TYPE_IO_WRITE_HARD_LIMIT)
+		{
+			for (int i = 0; i < pBlockDevices->nDevice; ++i)
+			{
+				IOItem item = {
+					.major = pBlockDevices->devices[i].major,
+					.minor = pBlockDevices->devices[i].minor,
+					.rkbps = callbackCtx->caps.io_read_hard_limit,
+					.wkbps = callbackCtx->caps.io_write_hard_limit,
+					.riops = callbackCtx->caps.io_riops_hard_limit,
+					.wiops = callbackCtx->caps.io_wiops_hard_limit
+				};
+				cgroupOpsRoutine->setio(callbackCtx->groupid, &item);
 			}
 		}
 		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CONCURRENCY)
@@ -2595,6 +2614,7 @@ initBlockDevicesPool() {
 		pBlockDevices->devices = ShmemInitStruct("block devices pooo", sizeof(ResGroupBlockDevice) * nDevices, &found);
 
 		nDevices = 0;
+		rewinddir(d);
         while ((dir = readdir(d)) != NULL) {
             if (strcmp(dir->d_name, ".") && strcmp(dir->d_name, "..")) {
                 char filename[200];

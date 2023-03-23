@@ -1710,13 +1710,21 @@ CREATE VIEW gp_toolkit.gp_resgroup_config AS
          , T1.value    AS concurrency
          , T2.value    AS cpu_hard_quota_limit
          , T3.value    AS cpu_soft_priority
-         , T4.value    AS cpuset
-         , T5.value    AS memory_limit
+         , T4.value    AS memory_limit
+         , T5.value    AS io_write_hard_limit
+         , T6.value    AS io_read_hard_limit
+         , T7.value    AS io_wiops_hard_limit
+         , T8.value    AS io_riops_hard_limit
+         , T9.value    AS cpuset
     FROM pg_resgroup G
          JOIN pg_resgroupcapability T1 ON G.oid = T1.resgroupid AND T1.reslimittype = 1
          JOIN pg_resgroupcapability T2 ON G.oid = T2.resgroupid AND T2.reslimittype = 2
          JOIN pg_resgroupcapability T3 ON G.oid = T3.resgroupid AND T3.reslimittype = 3
          JOIN pg_resgroupcapability T5 ON G.oid = T5.resgroupid AND T5.reslimittype = 5
+         JOIN pg_resgroupcapability T6 ON G.oid = T6.resgroupid AND T6.reslimittype = 6
+         JOIN pg_resgroupcapability T7 ON G.oid = T7.resgroupid AND T7.reslimittype = 7
+         JOIN pg_resgroupcapability T8 ON G.oid = T8.resgroupid AND T8.reslimittype = 8
+         JOIN pg_resgroupcapability T9 ON G.oid = T9.resgroupid AND T9.reslimittype = 9
          LEFT JOIN pg_resgroupcapability T4 ON G.oid = T4.resgroupid AND T4.reslimittype = 4
     ;
 

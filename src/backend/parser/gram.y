@@ -1634,19 +1634,19 @@ OptResourceGroupElem:
 				{
 					$$ = makeDefElem("memory_limit", (Node *) makeInteger($2), @1);
 				}
-			| IO_WRITE_HARD_LIMIT Iconst
+			| IO_WRITE_HARD_LIMIT SignedIconst
 				{
 					$$ = makeDefElem("io_write_hard_limit", (Node *)makeInteger($2), @1);
 				}
-			| IO_READ_HARD_LIMIT Iconst
+			| IO_READ_HARD_LIMIT SignedIconst
 				{
 					$$ = makeDefElem("io_read_hard_limit", (Node *)makeInteger($2), @1);
 				}
-			| IO_RIOPS_HARD_LIMIT Iconst
+			| IO_RIOPS_HARD_LIMIT SignedIconst
 				{
 					$$ = makeDefElem("io_riops_hard_limit", (Node *)makeInteger($2), @1);
 				}
-			| IO_WIOPS_HARD_LIMIT Iconst
+			| IO_WIOPS_HARD_LIMIT SignedIconst
 				{
 					$$ = makeDefElem("io_wiops_hard_limit", (Node *)makeInteger($2), @1);
 				}

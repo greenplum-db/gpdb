@@ -162,6 +162,7 @@ static int64 getcpuusage_v1(Oid group);
 static void getcpuset_v1(Oid group, char *cpuset, int len);
 static void setcpuset_v1(Oid group, const char *cpuset);
 static float convertcpuusage_v1(int64 usage, int64 duration);
+static void setio(Oid group, const IOItem *item);
 
 /*
  * Detect gpdb cgroup component dirs.
@@ -1087,6 +1088,11 @@ convertcpuusage_v1(int64 usage, int64 duration)
 	return percent;
 }
 
+static void
+setio(Oid group, const IOItem *item) {
+	// do nothing
+}
+
 static CGroupOpsRoutine cGroupOpsRoutineV1 = {
 		.getcgroupname = getcgroupname_v1,
 		.probecgroup = probecgroup_v1,
@@ -1109,6 +1115,8 @@ static CGroupOpsRoutine cGroupOpsRoutineV1 = {
 		.setcpuset = setcpuset_v1,
 
 		.convertcpuusage = convertcpuusage_v1,
+
+		.setio = setio
 };
 
 CGroupOpsRoutine *get_group_routine_v1(void)
