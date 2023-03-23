@@ -612,6 +612,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenMDTypeDistrOpfamily, GPOS_WSZ_LIT("DistrOpfamily")},
 		{EdxltokenMDTypeLegacyDistrOpfamily,
 		 GPOS_WSZ_LIT("LegacyDistrOpfamily")},
+		{EdxltokenMDTypePartOpfamily, GPOS_WSZ_LIT("PartOpfamily")},
 		{EdxltokenMDTypeEqOp, GPOS_WSZ_LIT("EqualityOp")},
 		{EdxltokenMDTypeNEqOp, GPOS_WSZ_LIT("InequalityOp")},
 		{EdxltokenMDTypeLTOp, GPOS_WSZ_LIT("LessThanOp")},

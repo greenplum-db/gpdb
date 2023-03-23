@@ -1226,13 +1226,21 @@ CTranslatorRelcacheToDXL::RetrieveType(CMemoryPool *mp, IMDId *mdid)
 			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, legacy_opfamily);
 	}
 
+	OID part_opfamily = gpdb::GetDefaultPartitionOpfamilyForType(oid_type);
+	CMDIdGPDB *mdid_part_opfamily = nullptr;
+	if (part_opfamily != InvalidOid)
+	{
+		mdid_part_opfamily =
+			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, part_opfamily);
+	}
+
 	mdid->AddRef();
 	return GPOS_NEW(mp) CMDTypeGenericGPDB(
 		mp, mdid, mdname, is_redistributable, is_fixed_length, length,
 		is_passed_by_value, mdid_distr_opfamily, mdid_legacy_distr_opfamily,
-		mdid_op_eq, mdid_op_neq, mdid_op_lt, mdid_op_leq, mdid_op_gt,
-		mdid_op_geq, mdid_op_cmp, mdid_min, mdid_max, mdid_avg, mdid_sum,
-		mdid_count, is_hashable, is_merge_joinable, is_composite_type,
+		mdid_part_opfamily, mdid_op_eq, mdid_op_neq, mdid_op_lt, mdid_op_leq,
+		mdid_op_gt, mdid_op_geq, mdid_op_cmp, mdid_min, mdid_max, mdid_avg,
+		mdid_sum, mdid_count, is_hashable, is_merge_joinable, is_composite_type,
 		is_text_related_type, mdid_type_relid, mdid_type_array, ptce->typlen);
 }
 

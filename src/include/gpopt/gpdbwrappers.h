@@ -321,6 +321,7 @@ Oid GetColumnDefOpclassForType(List *opclassName, Oid typid);
 
 // get the default hash opfamily for type
 Oid GetDefaultDistributionOpfamilyForType(Oid typid);
+Oid GetDefaultPartitionOpfamilyForType(Oid typid);
 
 // get the hash function in an opfamily for given datatype
 Oid GetHashProcInOpfamily(Oid opfamily, Oid typid);

@@ -4452,6 +4452,25 @@ get_index_opfamilies(Oid oidIndex)
 }
 
 /*
+ * Return the default operator opfamily to use for the partition key.
+ */
+Oid
+default_partition_opfamily_for_type(Oid typeoid)
+{
+    TypeCacheEntry *tcache;
+
+    tcache = lookup_type_cache(typeoid, TYPECACHE_EQ_OPR | TYPECACHE_LT_OPR | TYPECACHE_GT_OPR |
+                                        TYPECACHE_CMP_PROC |
+                                        TYPECACHE_EQ_OPR_FINFO | TYPECACHE_CMP_PROC_FINFO |
+                                        TYPECACHE_BTREE_OPFAMILY);
+
+    if (!tcache->btree_opf)
+        return InvalidOid;
+
+    return tcache->btree_opf;
+}
+
+/*
  *  relation_policy
  *  Return the distribution policy of a table. 
  */
