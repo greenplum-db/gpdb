@@ -90,10 +90,13 @@ CPhysicalLeftAntiSemiHashJoinNotIn::Ped(
 										   pdrgpdpCtxt, ulOptReq);
 	}
 
-	// If the LASJ requires a replicated distribution (which will generate a broadcast enforcer), we want to ignore the `optimizer_penalize_broadcast_threshold` value.
-	// Otherwise, we may gather both of its children and do all processing on the
-	// coordinator. This will be less performant at best, and cause OOM in the worst
-	// case. Between these 2 options, broadcasting one side will always be better.
+	// If the LASJ requires a replicated distribution (which will generate
+	// a broadcast enforcer), we want to ignore the
+	// `optimizer_penalize_broadcast_threshold` value.  Otherwise, we may
+	// gather both of its children and do all processing on the
+	// coordinator. This will be less performant at best, and cause OOM in
+	// the worst case. Between these 2 options, broadcasting one side will
+	// always be better.
 	if (enfd_dist->PdsRequired()->Edt() == CDistributionSpec::EdtReplicated)
 	{
 		CDistributionSpecReplicated *pds_rep = GPOS_NEW(mp)

@@ -30,12 +30,10 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CPhysicalMotionBroadcast::CPhysicalMotionBroadcast(
 	CMemoryPool *mp, BOOL ignore_broadcast_threshold)
-	: CPhysicalMotion(mp),
-	  m_pdsReplicated(nullptr),
-	  m_ignore_broadcast_threshold(ignore_broadcast_threshold)
+	: CPhysicalMotion(mp), m_pdsReplicated(nullptr)
 {
-	m_pdsReplicated = GPOS_NEW(mp)
-		CDistributionSpecReplicated(CDistributionSpec::EdtStrictReplicated);
+	m_pdsReplicated = GPOS_NEW(mp) CDistributionSpecReplicated(
+		CDistributionSpec::EdtStrictReplicated, ignore_broadcast_threshold);
 }
 
 

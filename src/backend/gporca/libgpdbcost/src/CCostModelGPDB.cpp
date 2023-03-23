@@ -1478,7 +1478,8 @@ CCostModelGPDB::CostMotion(CMemoryPool *mp, CExpressionHandle &exprhdl,
 			optimizer_config->GetHint()->UlBroadcastThreshold();
 
 		if (broadcast_threshold > 0 && num_rows_outer > broadcast_threshold &&
-			!physical_broadcast->FIgnoreBroadcastThreshold())
+			!CDistributionSpecReplicated::PdsConvert(physical_broadcast->Pds())
+				 ->FIgnoreBroadcastThreshold())
 		{
 			DOUBLE ulPenalizationFactor = 100000000000000.0;
 			costLocal = CCost(ulPenalizationFactor);

@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:Comment><![CDATA[
-      Objective: When a broadcast is under a LASJ not-in, we can generate 2 potential plans, gather to the coordinator and do the LASJ, or broadcast the inner side and do the LASJ on each segment. If the optimizer_penalize_broadcast_threshold is set, we should ignore this so we don't bias toward the first bad plan. This plan should have a broadcast, NOT gathers.
+      Objective: When a broadcast is under a LASJ not-in, we can generate 2 potential plans,
+      gather to the coordinator and do the LASJ, or broadcast the inner side and do the LASJ
+      on each segment. If the optimizer_penalize_broadcast_threshold is set, we should ignore
+      this so we don't bias toward the first bad plan. This plan should have a broadcast, NOT gathers.
 
       create table foo(a int);
       create table bar(a int);
