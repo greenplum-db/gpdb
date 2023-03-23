@@ -186,6 +186,15 @@ def create_pipeline(args, git_remote, git_branch):
         "oel8" : "oel8",
         "oel7" : "oel7"
     }
+    compile_platform = {
+        "centos6": "centos6",
+        "centos7": "centos7",
+        "rhel8": "rocky8",
+        "ubuntu18.04": "ubuntu18.04",
+        "rocky8": "rocky8",
+        "oel8": "rocky8",
+        "oel7": "oel7"
+    }
     context = {
         'template_filename': args.template_filename,
         'generator_filename': os.path.basename(__file__),
@@ -196,6 +205,7 @@ def create_pipeline(args, git_remote, git_branch):
         'test_os': test_os[args.os_type],
         'dist': dist[args.os_type],
         'rpm_platform': rpm_platform[args.os_type],
+        'compile_platform': compile_platform[args.os_type],
         'pipeline_target': args.pipeline_target,
         'test_sections': args.test_sections,
         'pipeline_configuration': args.pipeline_configuration,
