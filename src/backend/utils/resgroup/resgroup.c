@@ -367,8 +367,6 @@ ResGroupControlInit(void)
 	if (!slotpoolInit())
 		goto error_out;
 
-	initBlockDevicesPool();
-
     return;
 
 error_out:
