@@ -1727,7 +1727,7 @@ CTranslatorExprToDXL::PdxlnDynamicForeignScan(
 	{
 		const CBitSet *bs = pps_reqd->SelectorIds(popDFS->ScanId());
 		CBitSetIter bsi(*bs);
-		for (ULONG ul = 0; bsi.Advance(); ul++)
+		for (; bsi.Advance();)
 		{
 			selector_ids->Append(GPOS_NEW(m_mp) ULONG(bsi.Bit()));
 		}
