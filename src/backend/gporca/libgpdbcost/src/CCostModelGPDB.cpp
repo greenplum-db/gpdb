@@ -1477,6 +1477,9 @@ CCostModelGPDB::CostMotion(CMemoryPool *mp, CExpressionHandle &exprhdl,
 		ULONG broadcast_threshold =
 			optimizer_config->GetHint()->UlBroadcastThreshold();
 
+		// if the broadcast threshold is 0, don't penalize
+		// also, if the replicated distribution is set to ignore the broadcast
+		// threshold (e.g. it's under a LASJ not-in) don't penalize
 		if (broadcast_threshold > 0 && num_rows_outer > broadcast_threshold &&
 			!CDistributionSpecReplicated::PdsConvert(physical_broadcast->Pds())
 				 ->FIgnoreBroadcastThreshold())
