@@ -395,7 +395,7 @@ The following configuration parameters configure the Greenplum Database resource
 
 The following parameters configure the Greenplum Database resource group workload management feature.
 
-- [gp_count_host_segments_using_ip](guc-list.html#gp_count_host_segments_using_ip)
+- [gp_count_host_segments_using_address](guc-list.html#gp_count_host_segments_using_address)
 - [gp_resgroup_memory_policy](guc-list.html#gp_resgroup_memory_policy)
 - [gp_resource_group_bypass](guc-list.html#gp_resource_group_bypass)
 - [gp_resource_group_cpu_ceiling_enforcement](guc-list.html#gp_resource_group_cpu_ceiling_enforcement)
