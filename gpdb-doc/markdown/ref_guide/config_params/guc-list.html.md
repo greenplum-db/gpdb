@@ -568,13 +568,13 @@ The local content id if a segment.
 |-----------|-------|-------------------|
 |integer| |read only|
 
-## <a id="gp_count_host_segments_using_ip"></a>gp_count_host_segments_using_ip
+## <a id="gp_count_host_segments_using_address"></a>gp_count_host_segments_using_address
 
-Beginning in version 6.21.0, the Resource Groups implementation was changed to calculate segment memory using segment hostnames instead of IP addresses, and this implementation results in a lower memory limit value compared to the earlier code that evaluates using segment IP addresses.  In some cases, this change in behavior can lead to Out Of Memory errors when upgrading from an earlier version. Fersion 6.23.4 introduces a configuration parameter, `gp_count_host_segments_using_ip`, that can be set to true to enable the calculation of segment memory using IP addresses if Out Of Memory errors are encountered after an upgrade. This parameter is disabled by default, and will not be provided in Greenplum Version 7.
+Beginning in version 6.21.0, the Resource Groups implementation was changed to calculate segment memory using `gp_segment_configuration.hostname` instead of `gp_segment_configuration.address`. This implementation can result in a lower memory limit value compared to the earlier code, for deployments where each host uses multiple IP addresses.  In some cases, this change in behavior can lead to Out Of Memory errors when upgrading from an earlier version. Version 6.23.4 introduces a configuration parameter, `gp_count_host_segments_using_address`, that can be enabled to calculate of segment memory using `gp_segment_configuration.address` if Out Of Memory errors are encountered after an upgrade. This parameter is disabled by default. This parameter will not be provided in Greenplum Version 7 because resource group memory calculation will not longer be dependent on the segments per host value.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|boolean|off|master, session, reload|
+|boolean|off|master, system, restart|
 
 ## <a id="gp_create_table_random_default_distribution"></a>gp\_create\_table\_random\_default\_distribution 
 
