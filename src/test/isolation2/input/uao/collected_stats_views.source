@@ -26,7 +26,7 @@ CREATE TABLE statio_@amname@(a int, b int) USING @amname@;
 INSERT INTO statio_@amname@ SELECT 0, i FROM generate_series(1, 100000)i;
 
 -- heap_blks_read should remain zero after INSERT
-1U: SELECT heap_blks_read, heap_blks_hit FROM pg_statio_all_tables WHERE relname = 'statio_@amname@';
+SELECT heap_blks_read, heap_blks_hit FROM gp_statio_all_tables WHERE segment_id = 1 AND relname = 'statio_@amname@';
 
 -- Perform seq scan and wait until the stats collector receives the stats update
 1U&: SELECT wait_until_heap_blks_read_change_to('statio_@amname@', (pg_relation_size('statio_@amname@') + (current_setting('block_size')::int - 1)) / current_setting('block_size')::int);
