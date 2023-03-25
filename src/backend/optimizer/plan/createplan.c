@@ -8111,43 +8111,6 @@ is_projection_capable_plan(Plan *plan)
 	return true;
 }
 
-/*
- * plan_pushdown_tlist
- *
- * If the given Plan node does projection, the same node is returned after
- * replacing its targetlist with the given targetlist.
- *
- * Otherwise, returns a Result node with the given targetlist, inserted atop
- * the given plan.
- */
-Plan *
-plan_pushdown_tlist(PlannerInfo *root, Plan *plan, List *tlist)
-{
-	bool		need_result;
-
-	if (!is_projection_capable_plan(plan) &&
-		!tlist_same_exprs(tlist, plan->targetlist))
-	{
-		need_result = true;
-	}
-	else
-		need_result = false;
-
-	if (!need_result)
-	{
-		/* Install the new targetlist. */
-		plan->targetlist = tlist;
-	}
-	else
-	{
-		Plan	   *subplan = plan;
-
-		/* Insert a Result node to evaluate the targetlist. */
-		plan = (Plan *) inject_projection_plan(subplan, tlist, subplan->parallel_safe);
-	}
-	return plan;
-}	/* plan_pushdown_tlist */
-
 static TargetEntry *
 find_junk_tle(List *targetList, const char *junkAttrName)
 {
