@@ -23,6 +23,7 @@
 #include "naucrates/exception.h"
 #include "naucrates/md/CMDIdGPDB.h"
 #include "naucrates/md/IMDAggregate.h"
+#include "naucrates/md/IMDCast.h"
 #include "naucrates/md/IMDFunction.h"
 #include "naucrates/md/IMDScCmp.h"
 #include "naucrates/md/IMDScalarOp.h"
@@ -358,6 +359,32 @@ CMDAccessorUtils::FCastExists(CMDAccessor *md_accessor, IMDId *mdid_src,
 		GPOS_RETHROW(ex);
 	}
 	GPOS_CATCH_END;
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CMDAccessorUtils::FBinaryCoercible
+//
+//	@doc:
+//		Check if srctype is binary-coercible to targettype.
+//      A cast object existing between srctype and
+//      targettype is a necessary condition
+//
+//---------------------------------------------------------------------------
+BOOL
+CMDAccessorUtils::FBinaryCoercible(CMDAccessor *md_accessor, IMDId *mdid_src,
+								   IMDId *mdid_dest)
+{
+	if (FCastExists(md_accessor, mdid_src, mdid_dest))
+	{
+		const IMDCast *pmdcast = md_accessor->Pmdcast(mdid_src, mdid_dest);
+		if (pmdcast->IsBinaryCoercible())
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 

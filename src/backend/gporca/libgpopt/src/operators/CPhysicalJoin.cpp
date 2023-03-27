@@ -17,6 +17,7 @@
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/exception.h"
+#include "gpopt/mdcache/CMDAccessorUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPhysicalInnerIndexNLJoin.h"
 #include "gpopt/operators/CPhysicalLeftOuterIndexNLJoin.h"
@@ -346,10 +347,39 @@ CPhysicalJoin::PedInnerHashedFromOuterHashed(
 						CUtils::FScalarIdent(pexprMatching));
 			if (fSuccess)
 			{
+				BOOL isBinaryCoercible = true;
+
 				IMDId *pmdidTypeInner =
 					CScalar::PopConvert(pexprMatching->Pop())->MdidType();
+
+				IMDId *pmdidTypeOuter =
+					CScalar::PopConvert(pexpr->Pop())->MdidType();
+
 				CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-				if (md_accessor->RetrieveType(pmdidTypeInner)->IsHashable())
+
+				IMDId *mdid_opfamily_inner =
+					md_accessor->RetrieveType(pmdidTypeInner)
+						->GetDistrOpfamilyMdid();
+
+				IMDId *mdid_opfamily_outer =
+					md_accessor->RetrieveType(pmdidTypeOuter)
+						->GetDistrOpfamilyMdid();
+
+				// If the inner relation column datatype is binary coercible to outer
+				// relation column datatype,then hashing of the inner column datatype
+				// is possible by a hash function present in the opfamily of the outer
+				// relation column.This approach is mentioned in "cdb_hashproc_in_opfamily" method.
+				// If its binary coercible then inner relation will be redistributed else
+				// broadcast of the inner relation will happen.
+				if (!mdid_opfamily_outer->Equals(mdid_opfamily_inner) &&
+					!CMDAccessorUtils::FBinaryCoercible(
+						md_accessor, pmdidTypeInner, pmdidTypeOuter))
+				{
+					isBinaryCoercible = false;
+				}
+
+				if (isBinaryCoercible &&
+					md_accessor->RetrieveType(pmdidTypeInner)->IsHashable())
 				{
 					pexprMatching->AddRef();
 					pdrgpexprMatching->Append(pexprMatching);
@@ -365,11 +395,16 @@ CPhysicalJoin::PedInnerHashedFromOuterHashed(
 		if (fSuccess)
 		{
 			GPOS_ASSERT(pdrgpexprMatching->Size() == pdrgpexprHashed->Size());
-
+			IMdIdArray *opfamilies = pdshashed->Opfamilies();
+			if (nullptr != opfamilies)
+			{
+				opfamilies->AddRef();
+			}
 			// create a matching hashed distribution request
 			BOOL fNullsColocated = pdshashed->FNullsColocated();
-			CDistributionSpecHashed *pdshashedEquiv = GPOS_NEW(mp)
-				CDistributionSpecHashed(pdrgpexprMatching, fNullsColocated);
+			CDistributionSpecHashed *pdshashedEquiv =
+				GPOS_NEW(mp) CDistributionSpecHashed(
+					pdrgpexprMatching, fNullsColocated, opfamilies);
 			pdshashedEquiv->ComputeEquivHashExprs(mp, exprhdl);
 			return GPOS_NEW(mp) CEnfdDistribution(pdshashedEquiv, dmatch);
 		}
