@@ -3324,6 +3324,10 @@ CExpressionPreprocessor::PexprPreprocess(
 
 	// (7.b) reorder the children of scalar cmp operator to ensure that left
 	// child is scalar ident and right child is scalar const
+	//
+	// Must happen after 7.a which can insert scalar cmp children with inversed
+	// format (CONST op IDENT) *and* before any step that relies on reorder
+	// format (e.g. "infer predicate form constraints")
 	CExpression *pexprReorderedScalarCmpChildren =
 		PexprReorderScalarCmpChildren(mp, pexprPredWithConstReplaced);
 	GPOS_CHECK_ABORT;
