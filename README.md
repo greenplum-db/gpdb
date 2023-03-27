@@ -1,5 +1,5 @@
 **Concourse Pipeline** [![Concourse Build Status](https://prod.ci.gpdb.pivotal.io/api/v1/teams/main/pipelines/gpdb_main/badge)](https://prod.ci.gpdb.pivotal.io/teams/main/pipelines/gpdb_main) |
-**Travis Build** [![Travis Build Status](https://travis-ci.org/greenplum-db/gpdb.svg?branch=main)](https://travis-ci.org/greenplum-db/gpdb) |
+**Travis Build** [![Travis Build Status](https://travis-ci.org/greenplum-db/gpdb.svg?branch=main)](https://travis-ci.org/greenplum-db/gpdb)
 
 ----------------------------------------------------------------------
 
