@@ -286,4 +286,5 @@ When constructing `WITH` queries, keep the following in mind:
     - A query that should touch a small amount of data may instead read a whole table, and possibly spill to a temporary file.
     - `UPDATE` or `DELETE FROM` statements are not permitted in a CTE term, as it acts more like a read-only temporary table than a dynamic view. 
 - While inlining is generally a huge win, there are certain boundary cases where it is not; for example, when a non-trivial expression will be inlined in multiple places.
+- The GPORCA Query Optimizer does not support `[NOT] MATERIALIZED`, and ignores the clause.
 
