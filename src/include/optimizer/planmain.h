@@ -50,9 +50,6 @@ extern Plan *make_distinctaggs_for_rollup(PlannerInfo *root, bool is_agg,
 										  List **p_current_pathkeys,
 										  Plan *lefttree);
 
-extern Plan *add_repeat_node(Plan *result_plan, int repeat_count, uint64 grouping);
-extern bool contain_group_id(Node *node);
-
 /*
  * prototypes for plan/createplan.c
  */
@@ -68,9 +65,6 @@ extern Plan *change_plan_targetlist(Plan *subplan, List *tlist,
 extern Plan *materialize_finished_plan(PlannerInfo *root, Plan *subplan);
 extern bool is_projection_capable_path(Path *path);
 extern bool is_projection_capable_plan(Plan *plan);
-
-extern List *reconstruct_group_clause(List *orig_groupClause, List *tlist,
-						 AttrNumber *grpColIdx, int numcols);
 
 extern Motion *make_motion(PlannerInfo *root, Plan *lefttree,
 			int numSortCols, AttrNumber *sortColIdx,

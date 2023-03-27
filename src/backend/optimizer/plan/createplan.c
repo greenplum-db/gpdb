@@ -6838,32 +6838,6 @@ make_sort(Plan *lefttree, int numCols,
 }
 
 /*
- * add_sort_cost --- basic routine to accumulate Sort cost into a
- * plan node representing the input cost.
- *
- * Unused arguments (e.g., sortColIdx and sortOperators arrays) are
- * included to allow for future improvements to sort costing.  Note
- * that root may be NULL (e.g. when called outside make_sort).
- */
-Plan *
-add_sort_cost(PlannerInfo *root, Plan *input, double limit_tuples)
-{
-	Path		sort_path;		/* dummy for result of cost_sort */
-
-	cost_sort(&sort_path, root, NIL,
-			  input->total_cost,
-			  input->plan_rows,
-			  input->plan_width,
-			  0.0,
-			  work_mem,
-			  limit_tuples);
-	input->startup_cost = sort_path.startup_cost;
-	input->total_cost = sort_path.total_cost;
-
-	return input;
-}
-
-/*
  * prepare_sort_from_pathkeys
  *	  Prepare to sort according to given pathkeys
  *
