@@ -28,11 +28,12 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CPhysicalMotionBroadcast::CPhysicalMotionBroadcast(CMemoryPool *mp)
+CPhysicalMotionBroadcast::CPhysicalMotionBroadcast(
+	CMemoryPool *mp, BOOL ignore_broadcast_threshold)
 	: CPhysicalMotion(mp), m_pdsReplicated(NULL)
 {
-	m_pdsReplicated = GPOS_NEW(mp)
-		CDistributionSpecReplicated(CDistributionSpec::EdtStrictReplicated);
+	m_pdsReplicated = GPOS_NEW(mp) CDistributionSpecReplicated(
+		CDistributionSpec::EdtStrictReplicated, ignore_broadcast_threshold);
 }
 
 

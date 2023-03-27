@@ -67,6 +67,7 @@ CPhysicalLeftAntiSemiHashJoinNotIn::Ped(
 	GPOS_ASSERT(2 > child_index);
 	GPOS_ASSERT(ulOptReq < UlDistrRequests());
 
+	CEnfdDistribution *enfd_dist = NULL;
 	if (0 == ulOptReq && 1 == child_index &&
 		(FNullableHashKeys(exprhdl.DeriveNotNullColumns(0), false /*fInner*/) ||
 		 FNullableHashKeys(exprhdl.DeriveNotNullColumns(1), true /*fInner*/)))
@@ -76,14 +77,36 @@ CPhysicalLeftAntiSemiHashJoinNotIn::Ped(
 		//	  whether the inner is empty, and this needs to be detected everywhere
 		// b. if the inner hash keys are nullable, because every segment needs to
 		//	  detect nulls coming from the inner child
-		return GPOS_NEW(mp) CEnfdDistribution(
+
+		enfd_dist = GPOS_NEW(mp) CEnfdDistribution(
 			GPOS_NEW(mp)
 				CDistributionSpecReplicated(CDistributionSpec::EdtReplicated),
 			CEnfdDistribution::EdmSatisfy);
 	}
+	else
+	{
+		enfd_dist = CPhysicalHashJoin::Ped(mp, exprhdl, prppInput, child_index,
+										   pdrgpdpCtxt, ulOptReq);
+	}
 
-	return CPhysicalHashJoin::Ped(mp, exprhdl, prppInput, child_index,
-								  pdrgpdpCtxt, ulOptReq);
+	// If the LASJ requires a replicated distribution (which will generate
+	// a broadcast enforcer), we want to ignore the
+	// `optimizer_penalize_broadcast_threshold` value.  Otherwise, we may
+	// gather both of its children and do all processing on the
+	// coordinator. This will be less performant at best, and cause OOM in
+	// the worst case. Between these 2 options, broadcasting one side will
+	// always be better.
+	if (enfd_dist->PdsRequired()->Edt() == CDistributionSpec::EdtReplicated)
+	{
+		CDistributionSpecReplicated *pds_rep = GPOS_NEW(mp)
+			CDistributionSpecReplicated(CDistributionSpec::EdtReplicated,
+										true /* ignore_broadcast_threshold */);
+		CEnfdDistribution::EDistributionMatching matches = enfd_dist->Edm();
+		enfd_dist->Release();
+		return GPOS_NEW(mp) CEnfdDistribution(pds_rep, matches);
+	}
+
+	return enfd_dist;
 }
 
 // EOF
