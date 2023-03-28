@@ -668,7 +668,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 			if (qeError)
 			{
 				FlushErrorState();
-				ReThrowError(qeError);
+				ThrowErrorData(qeError);
 			}
 		}
 
