@@ -347,39 +347,41 @@ CPhysicalJoin::PedInnerHashedFromOuterHashed(
 						CUtils::FScalarIdent(pexprMatching));
 			if (fSuccess)
 			{
-				BOOL isBinaryCoercible = true;
+				BOOL inner_hash_func_present_outer_opfamily = true;
 
-				IMDId *pmdidTypeInner =
+				IMDId *pmdid_type_inner =
 					CScalar::PopConvert(pexprMatching->Pop())->MdidType();
 
-				IMDId *pmdidTypeOuter =
+				IMDId *pmdid_type_outer =
 					CScalar::PopConvert(pexpr->Pop())->MdidType();
 
 				CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 
 				IMDId *mdid_opfamily_inner =
-					md_accessor->RetrieveType(pmdidTypeInner)
+					md_accessor->RetrieveType(pmdid_type_inner)
 						->GetDistrOpfamilyMdid();
 
 				IMDId *mdid_opfamily_outer =
-					md_accessor->RetrieveType(pmdidTypeOuter)
+					md_accessor->RetrieveType(pmdid_type_outer)
 						->GetDistrOpfamilyMdid();
 
-				// If the inner relation column datatype is binary coercible to outer
-				// relation column datatype,then hashing of the inner column datatype
-				// is possible by a hash function present in the opfamily of the outer
-				// relation column.This approach is mentioned in "cdb_hashproc_in_opfamily" method.
-				// If its binary coercible then inner relation will be redistributed else
-				// broadcast of the inner relation will happen.
+				// If the outer relation column opfamily is different from the inner relation
+				// column opfamily and if the inner relation column datatype is binary coercible
+				// to outer relation column datatype,then hashing of the inner column datatype is
+				// possible by a hash function present in the opfamily of the outer relation
+				// column.This approach is mentioned in "cdb_hashproc_in_opfamily" method.If
+				// inner_hash_func_present_outer_opfamily is true for all the columns then a
+				// matching hashed distribution request will be returned to caller else returning
+				// nullptr
 				if (!mdid_opfamily_outer->Equals(mdid_opfamily_inner) &&
 					!CMDAccessorUtils::FBinaryCoercible(
-						md_accessor, pmdidTypeInner, pmdidTypeOuter))
+						md_accessor, pmdid_type_inner, pmdid_type_outer))
 				{
-					isBinaryCoercible = false;
+					inner_hash_func_present_outer_opfamily = false;
 				}
 
-				if (isBinaryCoercible &&
-					md_accessor->RetrieveType(pmdidTypeInner)->IsHashable())
+				if (inner_hash_func_present_outer_opfamily &&
+					md_accessor->RetrieveType(pmdid_type_inner)->IsHashable())
 				{
 					pexprMatching->AddRef();
 					pdrgpexprMatching->Append(pexprMatching);

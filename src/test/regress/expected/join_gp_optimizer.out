@@ -2476,8 +2476,9 @@ insert into bar_nestloop values ('1 ','1 '),('2  ','2  '),('3   ','3   ');
 set optimizer_enable_hashjoin to off;
 set enable_hashjoin to off;
 set enable_nestloop to on;
--- When the inner relation column datatype is not binary coercible to outer relation
--- column data type, the inner relation is broadcasted
+-- When the opfamily of outer relation column and the inner relation column
+-- are different and the inner relation column datatype is not binary coercible
+-- to outer relation column data type, the inner relation is broadcasted
 explain select foo_nestloop.* from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.p;
                                             QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
@@ -2541,8 +2542,9 @@ select foo_nestloop.* from foo_nestloop left join bar_nestloop on foo_nestloop.a
  3    | 3   
 (3 rows)
 
--- When the inner relation column datatype is binary coercible to outer relation
--- column data type, the inner relation is redistributed
+-- When the opfamily of outer relation column and the inner relation column
+-- are different and inner relation column datatype is binary coercible to
+-- outer relation column data type, the inner relation is redistributed
 explain select bar_nestloop.* from bar_nestloop left join foo_nestloop on bar_nestloop.p=foo_nestloop.a;
                                               QUERY PLAN                                              
 ------------------------------------------------------------------------------------------------------
@@ -2607,6 +2609,201 @@ select bar_nestloop.* from bar_nestloop left join foo_nestloop on bar_nestloop.p
  1     | 1    
  2     | 2    
  3     | 3    
+(3 rows)
+
+-- check motion is added while performing a NL Inner Join
+-- between relations which are distributed on columns of different data types
+explain select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.p;
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.42 rows=1 width=13)
+   ->  Nested Loop  (cost=0.00..1324032.42 rows=1 width=13)
+         Join Filter: ((foo_nestloop.a)::bpchar = bar_nestloop.p)
+         ->  Seq Scan on bar_nestloop  (cost=0.00..431.00 rows=1 width=8)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=13)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=13)
+                     Hash Key: foo_nestloop.a
+                     ->  Seq Scan on foo_nestloop  (cost=0.00..431.00 rows=1 width=13)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.p order by foo_nestloop.a;
+  a   |  b   
+------+------
+ 1    | 1 
+ 2    | 2  
+ 3    | 3   
+(3 rows)
+
+explain select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.q;
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.49 rows=1 width=13)
+   ->  Nested Loop  (cost=0.00..1324032.49 rows=1 width=13)
+         Join Filter: ((foo_nestloop.a)::bpchar = bar_nestloop.q)
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+               ->  Seq Scan on bar_nestloop  (cost=0.00..431.00 rows=1 width=8)
+         ->  Seq Scan on foo_nestloop  (cost=0.00..431.00 rows=1 width=13)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.q order by foo_nestloop.a;
+  a   |  b   
+------+------
+ 1    | 1 
+ 2    | 2  
+ 3    | 3   
+(3 rows)
+
+explain select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.b=bar_nestloop.p;
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.39 rows=1 width=16)
+   ->  Nested Loop  (cost=0.00..1324032.39 rows=1 width=16)
+         Join Filter: ((foo_nestloop.b)::bpchar = bar_nestloop.p)
+         ->  Seq Scan on bar_nestloop  (cost=0.00..431.00 rows=1 width=8)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=16)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+                     Hash Key: foo_nestloop.b
+                     ->  Seq Scan on foo_nestloop  (cost=0.00..431.00 rows=1 width=16)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.b=bar_nestloop.p order by foo_nestloop.a;
+  a   |  b   
+------+------
+ 1    | 1 
+ 2    | 2  
+ 3    | 3   
+(3 rows)
+
+explain select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.b=bar_nestloop.q;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.30 rows=1 width=16)
+   ->  Nested Loop  (cost=0.00..1324032.30 rows=1 width=16)
+         Join Filter: ((foo_nestloop.b)::bpchar = bar_nestloop.q)
+         ->  Seq Scan on foo_nestloop  (cost=0.00..431.00 rows=1 width=16)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                     ->  Seq Scan on bar_nestloop  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.b=bar_nestloop.q order by foo_nestloop.a;
+  a   |  b   
+------+------
+ 1    | 1 
+ 2    | 2  
+ 3    | 3   
+(3 rows)
+
+explain select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.p=foo_nestloop.a;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.40 rows=1 width=13)
+   ->  Nested Loop  (cost=0.00..1324032.40 rows=1 width=13)
+         Join Filter: (bar_nestloop.p = (foo_nestloop.a)::bpchar)
+         ->  Seq Scan on bar_nestloop  (cost=0.00..431.00 rows=1 width=13)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                     Hash Key: foo_nestloop.a
+                     ->  Seq Scan on foo_nestloop  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.p=foo_nestloop.a order by bar_nestloop.p;
+   p   |   q   
+-------+-------
+ 1     | 1    
+ 2     | 2    
+ 3     | 3    
+(3 rows)
+
+explain select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.p=foo_nestloop.b;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.36 rows=1 width=13)
+   ->  Nested Loop  (cost=0.00..1324032.36 rows=1 width=13)
+         Join Filter: (bar_nestloop.p = (foo_nestloop.b)::bpchar)
+         ->  Seq Scan on bar_nestloop  (cost=0.00..431.00 rows=1 width=13)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                     Hash Key: foo_nestloop.b
+                     ->  Seq Scan on foo_nestloop  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.p=foo_nestloop.b order by bar_nestloop.p;
+   p   |   q   
+-------+-------
+ 1     | 1    
+ 2     | 2    
+ 3     | 3    
+(3 rows)
+
+explain select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.q=foo_nestloop.a;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.61 rows=1 width=16)
+   ->  Nested Loop  (cost=0.00..1324032.61 rows=1 width=16)
+         Join Filter: (bar_nestloop.q = (foo_nestloop.a)::bpchar)
+         ->  Seq Scan on bar_nestloop  (cost=0.00..431.00 rows=1 width=16)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                     ->  Seq Scan on foo_nestloop  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.q=foo_nestloop.a order by bar_nestloop.p;
+   p   |   q   
+-------+-------
+ 1     | 1    
+ 2     | 2    
+ 3     | 3    
+(3 rows)
+
+explain select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.q=foo_nestloop.b;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.30 rows=1 width=16)
+   ->  Nested Loop  (cost=0.00..1324032.30 rows=1 width=16)
+         Join Filter: (bar_nestloop.q = (foo_nestloop.b)::bpchar)
+         ->  Seq Scan on bar_nestloop  (cost=0.00..431.00 rows=1 width=16)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                     ->  Seq Scan on foo_nestloop  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.q=foo_nestloop.b order by bar_nestloop.p;
+   p   |   q   
+-------+-------
+ 1     | 1    
+ 2     | 2    
+ 3     | 3    
+(3 rows)
+
+explain select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.p and foo_nestloop.b=bar_nestloop.q;
+                                                     QUERY PLAN                                                     
+--------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.71 rows=1 width=16)
+   ->  Nested Loop  (cost=0.00..1324032.71 rows=1 width=16)
+         Join Filter: (((foo_nestloop.a)::bpchar = bar_nestloop.p) AND ((foo_nestloop.b)::bpchar = bar_nestloop.q))
+         ->  Seq Scan on bar_nestloop  (cost=0.00..431.00 rows=1 width=16)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=16)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+                     Hash Key: foo_nestloop.a
+                     ->  Seq Scan on foo_nestloop  (cost=0.00..431.00 rows=1 width=16)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.p and foo_nestloop.b=bar_nestloop.q order by foo_nestloop.a;
+  a   |  b   
+------+------
+ 1    | 1 
+ 2    | 2  
+ 3    | 3   
 (3 rows)
 
 drop table foo_nestloop;
