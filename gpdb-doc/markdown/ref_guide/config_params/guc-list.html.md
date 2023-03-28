@@ -2283,6 +2283,14 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 |-----------|-------|-------------------|
 |Boolean|true|master, session, reload|
 
+## <a id="optimizer_enable_foreign_table"></a>optimizer\_enable\_foreign\_table
+
+When GPORCA is enabled \(the default\) and this configuration parameter is `true` \(the default\), GPORCA generates plans for queries that involve foreign tables. When `false`, queries that include foreign tables fall back to the Postgres Planner.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|true|master, session, reload|
+
 ## <a id="optimizer_enable_indexonlyscan"></a>optimizer\_enable\_indexonlyscan 
 
 When GPORCA is enabled \(the default\) and this parameter is `true` \(the default\), GPORCA can generate index-only scan plan types for B-tree indexes. GPORCA accesses the index values only, not the data blocks of the relation. This provides a query execution performance improvement, particularly when the table has been vacuumed, has wide columns, and GPORCA does not need to fetch any data blocks \(for example, they are visible\).
