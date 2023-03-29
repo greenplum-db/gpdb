@@ -18,7 +18,7 @@
 
 -- greenplum
 create schema partition_prune_opfamily;
-set search_path=bfv_partition_plans;
+set search_path=partition_prune_opfamily;
 SET optimizer_trace_fallback=on;
 
 -- start_ignore
@@ -305,11 +305,12 @@ alter operator family abs_int_ops using btree add
   operator 5 |>| (int8, int4),
   function 1 abscmp84(int8, int4);
 
---gpdb
---start_ignore
+-- gpdb
 
+-- start_ignore
 DROP TABLE t1;
 DROP TABLE t2;
+-- end_ignore
 
 create table t1 (a int, b int4)
 partition by list (b)
@@ -327,7 +328,6 @@ partition by list (b)
 
 insert into t1 values (1,1), (1,-1), (-1,1), (-1,-1);
 insert into t2 values (1,1), (1,-1), (-1,1), (-1,-1);
---end_ignore
 
 explain select * from t1 where t1.b |=| 1;
 select * from t1 where t1.b |=| 1;
@@ -342,6 +342,7 @@ explain select * from t1, t2 where t1.a = t2.a and t1.b |=| t2.b and t2.b = 1;
 select * from t1, t2 where t1.a = t2.a and t1.b |=| t2.b and t2.b = 1;
 
 -- CLEANUP
+
 -- start_ignore
 drop schema if exists partition_prune_opfamily cascade;
 -- end_ignore

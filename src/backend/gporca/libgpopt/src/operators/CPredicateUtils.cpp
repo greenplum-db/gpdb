@@ -1682,6 +1682,7 @@ CPredicateUtils::FOpInOpfamily(IMDId *col_mdid, CExpression *pexpr,
 		}
 		else
 		{
+			GPOS_ASSERT(IMDIndex::EmdindSentinel == access_method);
 			// In case of IMDIndex::EmdindSentinel
 			// We extract both hash and btree opfamilies,
 			// cause we cannot be sure if the predicate will be
@@ -1695,7 +1696,7 @@ CPredicateUtils::FOpInOpfamily(IMDId *col_mdid, CExpression *pexpr,
 		ULONG opfamily_count = op->OpfamiliesCount();
 
 		// If an operator doesn't belong to any opfamily,
-		// it means it's compatible with to any opfamily.
+		// it means it's compatible with any opfamily.
 		// So we return true. Eg. operators  <> or !=,
 		// with op oid 19493, is compatible with any opfamily.
 		if (0 == opfamily_count)

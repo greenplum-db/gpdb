@@ -2809,7 +2809,8 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 		// As of now, partition's default opfamily is btree
 		// ORCA doesn't support hash partition yet
 		CConstraint *pred_cnstr = CConstraint::PcnstrFromScalarExpr(
-			mp, filter_pred, &pdrgpcrsChild, false, IMDIndex::EmdindBtree);
+			mp, filter_pred, &pdrgpcrsChild, false /* infer_nulls_as*/,
+			IMDIndex::EmdindBtree);
 		CRefCount::SafeRelease(pdrgpcrsChild);
 
 		IMdIdArray *selected_partition_mdids = GPOS_NEW(mp) IMdIdArray(mp);
