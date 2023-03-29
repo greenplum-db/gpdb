@@ -82,60 +82,303 @@ The following table summarizes the `timestamp9` module's supported type conversi
 (1 row) 
 ```
 
-
-
-
 #### <a id="conversion_2"></a>Convert `DATE` to `TIMESTAMP9_LTZ`
+
+```=# SHOW TIMEZONE; 
+
+   TimeZone 
+-------------- 
+Asia/Shanghai 
+(1 row) 
+
+ =# SELECT '2023-01-01'::DATE::TIMESTAMP9_LTZ; 
+
+           timestamp9_ltz 
+------------------------------------- 
+2023-01-01 00:00:00.000000000 +0800 
+(1 row) 
+
+=# SELECT '2023-01-01'::DATE::TIMESTAMPTZ; 
+
+      timestamptz 
+------------------------ 
+2023-01-01 00:00:00+08 
+(1 row) 
+```
 
 #### <a id="conversion_3"></a>Convert `TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP` to `TIMESTAMP9_LTZ`
 
+```
+=# SHOW TIMEZONE; 
+
+   TimeZone 
+--------------- 
+Asia/Shanghai 
+(1 row) 
+
+Time: 0.411 ms 
+=# SELECT '2023-01-01 00:00:00'::TIMESTAMP::TIMESTAMP9_LTZ; 
+
+           timestamp9_ltz 
+------------------------------------- 
+2023-01-01 00:00:00.000000000 +0800 
+(1 row) 
+
+Time: 0.691 ms 
+=# SELECT '2023-01-01 00:00:00'::TIMESTAMP::TIMESTAMPTZ; 
+
+      timestamptz 
+------------------------ 
+2023-01-01 00:00:00+08 
+(1 row) 
+```
+
 #### <a id="conversion_4"></a>Convert `TIMESTAMP WITH TIME ZONE/TIMESTAMP` to `TIMESTAMP9_LTZ`
 
+```
+=# SELECT '2023-01-01 00:00:00.123456'::TIMESTAMPTZ::TIMESTAMP9_LTZ; 
+
+           timestamp9_ltz 
+------------------------------------- 
+2023-01-01 00:00:00.123456000 +0800 
+(1 row) 
+```
 
 #### <a id="conversion_5"></a>Convert `TIMESTAMP9_LTZ` to `BIGINT`
 
+```
+=# SELECT '2023-01-01 00:00:00.123456 Asia/Shanghai'::TIMESTAMP9_LTZ::BIGINT; 
+
+        int8 
+--------------------- 
+1672502400123456000 
+(1 row) 
+
+=# SELECT '1969-01-01 00:00:00.123456 Asia/Shanghai'::TIMESTAMP9_LTZ::BIGINT; 
+
+        int8 
+-------------------- 
+-31564799876544000 
+(1 row) 
+```
 
 #### <a id="conversion_6"></a>Convert `TIMESTAMP9_LTZ` to `DATE`
 
+```
+=# SET TIMEZONE TO 'Asia/Shanghai'; 
+SET 
+=# SELECT '2023-01-02 02:59:59 Asia/Shanghai'::TIMESTAMPTZ::DATE; 
+    date 
+------------ 
+2023-01-02 
+(1 row) 
 
+=# SET TIMEZONE TO 'UTC+0'; 
+SET 
+=# SELECT '2023-01-02 02:59:59 Asia/Shanghai'::TIMESTAMPTZ::DATE; 
+    date 
+------------ 
+2023-01-01 
+(1 row) 
+```
 
 #### <a id="conversion_7"></a>Convert `TIMESTAMP9_LTZ` to `TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP`
 
+**Example 1**
+
+```
+=# SET TIMEZONE TO 'Asia/Shanghai'; 
+SET 
+=# SELECT '2023-01-02 02:59:59 Asia/Shanghai'::TIMESTAMP9_LTZ::TIMESTAMP; 
+
+      timestamp 
+--------------------- 
+2023-01-02 02:59:59 
+(1 row) 
+
+=# SET TIMEZONE TO 'UTC+0'; 
+
+SET 
+=# SELECT '2023-01-02 02:59:59 Asia/Shanghai'::TIMESTAMP9_LTZ::TIMESTAMP; 
+
+      timestamp 
+--------------------- 
+2023-01-01 18:59:59 
+(1 row) 
+```
+ 
+**Example 2 -- Truncation of the fractional part** 
+
+```
+=# SET TIMEZONE TO 'Asia/Shanghai'; 
+SET 
+=# SELECT '2023-01-02 02:59:59.123456789 Asia/Shanghai'::TIMESTAMP9_LTZ::TIMESTAMP; 
+
+         timestamp 
+---------------------------- 
+2023-01-02 02:59:59.123456 
+(1 row) 
+```
 
 #### <a id="conversion_8"></a>Convert `TIMESTAMP9_LTZ` to `TIMESTAMP WITH TIME ZONE/TIMESTAMP`
 
+```
+=# SET TIMEZONE TO 'Asia/Shanghai'; 
+=# SELECT '2023-01-02 02:59:59.123456789 Asia/Shanghai'::TIMESTAMP9_LTZ::TIMESTAMPTZ; 
+          timestamptz 
+------------------------------- 
+2023-01-02 02:59:59.123456+08 
+(1 row) 
+```
 
 #### <a id="conversion_9"></a>Convert `BIGINT` to `TIMESTAMP9_NTZ`
 
+```
+=# SELECT 0::BIGINT::TIMESTAMP9_NTZ; 
+        timestamp9_ntz 
+------------------------------- 
+
+1970-01-01 00:00:00.000000000 
+(1 row) 
+```
 
 #### <a id="conversion_10"></a>Convert `DATE` to `TIMESTAMP9_NTZ`
 
+```
+=# SELECT '2023-01-01'::DATE::TIMESTAMP9_NTZ; 
+        timestamp9_ntz 
+------------------------------- 
+2023-01-01 00:00:00.000000000 
+(1 row) 
+```
 
 #### <a id="conversion_11"></a>Convert `TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP` to `TIMESTAMP9_NTZ` 
 
+```
+=# SELECT '2023-01-01 00:00:00.123456'::TIMESTAMP::TIMESTAMP9_NTZ; 
+        timestamp9_ntz 
+
+------------------------------ 
+2023-01-01 00:00:00.123456000 
+(1 row) 
+```
 
 #### <a id="conversion_12"></a>Convert `TIMESTAMP WITH TIME ZONE/TIMESTAMP` to `TIMESTAMP9_NTZ` 
 
+```
+=# SET TIMEZONE TO 'Asia/Shanghai'; 
+SET 
+=# SELECT '2023-01-01 00:00:00.123456 Asia/Shanghai'::TIMESTAMPTZ::TIMESTAMP9_NTZ; 
+        timestamp9_ntz 
+------------------------------- 
+2023-01-01 00:00:00.123456000 
+(1 row) 
+
+=# SET TIMEZONE TO 'UTC+0'; 
+SET 
+=# SELECT '2023-01-01 00:00:00.123456 Asia/Shanghai'::TIMESTAMPTZ::TIMESTAMP9_NTZ; 
+        timestamp9_ntz 
+------------------------------- 
+2022-12-31 16:00:00.123456000 
+(1 row) 
+```
 
 #### <a id="conversion_13"></a>Convert `TIMESTAMP9_NTZ` to `BIGINT`
 
+```
+=# SELECT '2023-01-01 00:00:00.123456'::TIMESTAMP9_NTZ::BIGINT; 
+        int8 
+--------------------- 
+1672531200123456000 
+(1 row) 
+
+=# SELECT '1969-01-01 00:00:00.123456'::TIMESTAMP9_NTZ::BIGINT; 
+        int8 
+-------------------- 
+-31535999876544000 
+(1 row) 
+```
 
 #### <a id="conversion_14"></a>Convert `TIMESTAMP9_NTZ` to `DATE`
 
+```
+=# SELECT '2023-01-01 00:00:00.123456'::TIMESTAMP9_NTZ::DATE; 
+    date 
+------------ 
+2023-01-01 
+(1 row) 
+```
 
 #### <a id="conversion_15"></a>Convert `TIMESTAMP9_NTZ` to `TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP` 
 
+```
+=# SELECT '2023-01-01 00:00:00.123456789'::TIMESTAMP9_NTZ::TIMESTAMP; 
+         timestamp 
+---------------------------- 
+2023-01-01 00:00:00.123456 
+(1 row) 
+```
 
 #### <a id="conversion_16"></a>Convert `TIMESTAMP9_NTZ` to `TIMESTAMP WITH TIME ZONE/TIMESTAMP` 
 
+```
+=# SET TIMEZONE TO 'Asia/Shanghai'; 
+SET 
+=# SELECT '2023-01-01 23:00:00.123456789'::TIMESTAMP9_NTZ::TIMESTAMPTZ; 
+          timestamptz 
+------------------------------- 
+2023-01-01 23:00:00.123456+08 
+(1 row) 
+
+Time: 0.793 ms 
+=# SET TIMEZONE TO 'UTC+0'; 
+SET 
+=# SELECT '2023-01-01 23:00:00.123456789'::TIMESTAMP9_NTZ::TIMESTAMPTZ; 
+          timestamptz 
+------------------------------- 
+2023-01-01 23:00:00.123456+00 
+(1 row) 
+```
 
 #### <a id="conversion_17"></a>Convert `TIMESTAMP9_LTZ` to `TIMESTAMP9_NTZ`
 
+```
+=# SET TIMEZONE TO 'Asia/Shanghai'; 
+SET 
+=# SELECT '2023-01-01 23:00:00.123456789 Asia/Shanghai'::TIMESTAMP9_LTZ::TIMESTAMP9_NTZ; 
+        timestamp9_ntz 
+------------------------------- 
+2023-01-01 23:00:00.123456789 
+(1 row) 
+
+=# SET TIMEZONE TO 'UTC+0'; 
+SET 
+=# SELECT '2023-01-01 23:00:00.123456789 Asia/Shanghai'::TIMESTAMP9_LTZ::TIMESTAMP9_NTZ; 
+        timestamp9_ntz 
+------------------------------- 
+2023-01-01 15:00:00.123456789 
+(1 row) 
+```
 
 #### <a id="conversion_18"></a>Convert `TIMESTAMP9_NTZ` to `TIMESTAMP9_LTZ`
 
+```
+=# SET TIMEZONE TO 'Asia/Shanghai'; 
+SET 
+=# SELECT '2023-01-01 23:00:00.123456789'::TIMESTAMP9_NTZ::TIMESTAMP9_LTZ; 
+           timestamp9_ltz 
+------------------------------------- 
+2023-01-01 23:00:00.123456789 +0800 
+(1 row) 
 
-
+=# SET TIMEZONE TO 'UTC+0'; 
+SET 
+=# SELECT '2023-01-01 23:00:00.123456789'::TIMESTAMP9_NTZ::TIMESTAMP9_LTZ; 
+           timestamp9_ltz 
+------------------------------------- 
+2023-01-01 23:00:00.123456789 +0000 
+(1 row) 
+```
 
 ## <a id="topic_gp"></a>The TimeZone Configuration Parameter and `timestamp9`
 
