@@ -48,81 +48,91 @@ See [TIMESTAMP9_NTZ Examples](#timestamp9_ntz-examples) for examples using this 
 
 The following table summarizes the `timestamp9` module's supported type conversions.
 
-|From|To|Description|Link to Example|
-|--------|-------|----|-----------|
-|`BIGINT`|`TIMESTAMP9_LTZ`|Greenplum Database treats the `BIGINT` value as the number of nanoseconds started from ‘1970-01-01 00:00:00 +0000’.|[Example](#example-convert-bigint-to-timestamp9_ltz)|
-|`DATE`|`TIMESTAMP9_LTZ`|Greenplum Database treats the `DATE` value as in the current session time zone. This behavior is identical to converting from from `DATE` to `TIMESTAMPTZ`.|[Example](#example-convert-date-to-timestamp9_ltz)|
-|`TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP`|`TIMESTAMP9_LTZ`|Greenplum Database treats the `TIMESTAMP` value as in the current session time zone.  This behavior is identical to converting from `TIMESTAMP` to `TIMESTAMPTZ`|[Example](#example-convert-timestamp-with-time-zonetimestamp-to-timestamp9_ltz)|
-|`TIMESTAMP WITH TIME ZONE/TIMESTAMPTZ` |`TIMESTAMP9_LTZ`|For this conversion, Greenplum Database only extends the fractional part to nanosecond precision.|[Example](#example-convert-timestamp-with-time-zonetimestamp-to-timestamp9_ltz)|
-|`TIMESTAMP9_LTZ`|`BIGINT`|The result of this conversion is the nanoseconds since ‘1970-01-01 00:00:00.000000000 +0000’ to the given TIMESTAMP9_LTZ value.  If the given TIMESTAMP9_LTZ value is before ‘1970-01-01 00:00:00.000000000 +0000’, the result is negative.|[Example](#example-convert-timestamp9_ltz-to-bigint)|
-|`TIMESTAMP9_LTZ`|`DATE`|The result of this conversion depends on the date of the given TIMESTAMP9_LTZ value in the time zone of the current session. The behavior is like doing conversion from TIMESTAMPTZ to DATE.|[Example](#example-convert-timestamp9_ltz-to-date)|
-|`TIMESTAMP9_LTZ`|`TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP`|The result of this conversion is a timestamp without time zone.  The resulting timestamp’s value is determined by the value of `TIMESTAMP9_LTZ` in the current session time zone.  Note that the fractional part of `TIMESTAMP` type has 6 digits, while `TIMESTAMP9_LTZ` has 9 digits in its fractional part. When converting `TIMESTAMP9_LTZ to TIMESTAMP`, the fractional part is truncated instead of being rounded off.|[Example](#example-convert-timestamp9_ltz-to-timestamp-without-time-zonetimestamp)|
-|`TIMESTAMP9_LTZ`|`TIMESTAMP WITH TIME ZONE/TIMESTAMP`|When performing this conversion, Greenplum Database truncates the fractional part to only 6 digits.|[Example](#example-convert-timestamp9_ltz-to-timestamp-with-time-zonetimestamp)|
-|`BIGINT`|`TIMESTAMP9_NTZ`|When performing this conversion, Greenplum Database treats the BIGINT value as the number of nanoseconds started from ‘1970-01-01 00:00:00’.|[Example](#example-convert-bigint-to-timestamp9_ntz)|
-|`DATE`|`TIMESTAMP9_NTZ`|When performing this conversion, the resulting timestamp is ‘00:00:00.000000000’ on the given date.|[Example](#example-convert-date-to-timestamp9_ntz)|
-|`TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP`|`TIMESTAMP9_NTZ`|When peforming this conversion, Greenplum Database only extends the fractional part to nanosecond precision.|[Example](#example-convert-timestamp-without-time-zonetimestamp-to-timestamp9_ntz)|
-|`TIMESTAMP WITH TIME ZONE/TIMESTAMP`|`TIMESTAMP9_NTZ`|The resulting timestamp’s value is determined by the value of `TIMESTAMPTZ` in the current session time zone. .|[Example](#example-convert-timestamp-with-time-zonetimestamp-to-timestamp9_ntz)|
-|`TIMESTAMP9_NTZ`|`BIGINT`|The result of this conversion is the nanoseconds since ‘1970-01-01 00:00:00.000000000’ to the given `TIMESTAMP9_NTZ` value.  If the given `TIMESTAMP9_NTZ` value is before ‘1970-01-01 00:00:00.000000000’, the result is negative.|[Example](#example-convert-timestamp9_ntz-to-bigint)|
-|`TIMESTAMP9_NTZ`|`DATE`|When performing this conversion, Greenplum Database truncatest the time portion and preserves the date portion.|[Example](#example-convert-timestamp9_ntz-to-date)|
-|`TIMESTAMP9_NTZ`|`TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP`|When performing this conversion, Greenplum Database truncates only the fractional part to 6 digits.|[Example](#example-convert-timestamp9_ntz-to-timestamp-without-time-zonetimestamp)|
-|`TIMESTAMP9_NTZ`|`TIMESTAMP WITH TIME ZONE/TIMESTAMP`|When performing this conversion, Greenplum Database truncates only the fractional part to 6 digits and adds the timezone of the current session.|[Example](#example-convert-timestamp9_ntz-to-timestamp-with-time-zonetimestamp)|
-|`TIMESTAMP9_LTZ`|`TIMESTAMP9_NTZ`|The resulting `TIMESTAMP9_NTZ` value is determined by the value of `TIMESTAMP9_LTZ` in the current session's time zone.|[Example](#example-convert-timestamp9_ltz-to-timestamp9_ntz)|
-|`TIMESTAMP9_NTZ`|`TIMESTAMP9_LTZ`|When performing this conversion, Greenplum Database adds the timezone of the current sesion.|[Example](#example-convert-timestamp9_ntz-to-timestamp9_ltz)|
+|From|To|Description|
+|--------|-------|----|
+|`BIGINT`|`TIMESTAMP9_LTZ`|Greenplum Database treats the `BIGINT` value as the number of nanoseconds started from ‘1970-01-01 00:00:00 +0000’.|
+|`DATE`|`TIMESTAMP9_LTZ`|Greenplum Database treats the `DATE` value as in the current session time zone. This behavior is identical to converting from from `DATE` to `TIMESTAMPTZ`.|
+|`TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP`|`TIMESTAMP9_LTZ`|Greenplum Database treats the `TIMESTAMP` value as in the current session time zone.  This behavior is identical to converting from `TIMESTAMP` to `TIMESTAMPTZ`|
+|`TIMESTAMP WITH TIME ZONE/TIMESTAMPTZ` |`TIMESTAMP9_LTZ`|For this conversion, Greenplum Database only extends the fractional part to nanosecond precision.|
+|`TIMESTAMP9_LTZ`|`BIGINT`|The result of this conversion is the nanoseconds since ‘1970-01-01 00:00:00.000000000 +0000’ to the given TIMESTAMP9_LTZ value.  If the given TIMESTAMP9_LTZ value is before ‘1970-01-01 00:00:00.000000000 +0000’, the result is negative.|
+|`TIMESTAMP9_LTZ`|`DATE`|The result of this conversion depends on the date of the given TIMESTAMP9_LTZ value in the time zone of the current session. The behavior is like doing conversion from TIMESTAMPTZ to DATE.|
+|`TIMESTAMP9_LTZ`|`TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP`|The result of this conversion is a timestamp without time zone.  The resulting timestamp’s value is determined by the value of `TIMESTAMP9_LTZ` in the current session time zone.  Note that the fractional part of `TIMESTAMP` type has 6 digits, while `TIMESTAMP9_LTZ` has 9 digits in its fractional part. When converting `TIMESTAMP9_LTZ to TIMESTAMP`, the fractional part is truncated instead of being rounded off.|
+|`TIMESTAMP9_LTZ`|`TIMESTAMP WITH TIME ZONE/TIMESTAMP`|When performing this conversion, Greenplum Database truncates the fractional part to only 6 digits.|
+|`BIGINT`|`TIMESTAMP9_NTZ`|When performing this conversion, Greenplum Database treats the BIGINT value as the number of nanoseconds started from ‘1970-01-01 00:00:00’.|
+|`DATE`|`TIMESTAMP9_NTZ`|When performing this conversion, the resulting timestamp is ‘00:00:00.000000000’ on the given date.|
+|`TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP`|`TIMESTAMP9_NTZ`|When peforming this conversion, Greenplum Database only extends the fractional part to nanosecond precision.|
+|`TIMESTAMP WITH TIME ZONE/TIMESTAMP`|`TIMESTAMP9_NTZ`|The resulting timestamp’s value is determined by the value of `TIMESTAMPTZ` in the current session time zone. .|
+|`TIMESTAMP9_NTZ`|`BIGINT`|The result of this conversion is the nanoseconds since ‘1970-01-01 00:00:00.000000000’ to the given `TIMESTAMP9_NTZ` value.  If the given `TIMESTAMP9_NTZ` value is before ‘1970-01-01 00:00:00.000000000’, the result is negative.|
+|`TIMESTAMP9_NTZ`|`DATE`|When performing this conversion, Greenplum Database truncatest the time portion and preserves the date portion.|
+|`TIMESTAMP9_NTZ`|`TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP`|When performing this conversion, Greenplum Database truncates only the fractional part to 6 digits.|
+|`TIMESTAMP9_NTZ`|`TIMESTAMP WITH TIME ZONE/TIMESTAMP`|
+|`TIMESTAMP9_LTZ`|`TIMESTAMP9_NTZ`|The resulting `TIMESTAMP9_NTZ` value is determined by the value of `TIMESTAMP9_LTZ` in the current session's time zone.|
+|`TIMESTAMP9_NTZ`|`TIMESTAMP9_LTZ`|When performing this conversion, Greenplum Database adds the timezone of the current sesion.|
 
-### <a id="conversion_1"></a>Example: Convert `BIGINT` to `TIMESTAMP9_LTZ`
+### Type Conversion Examples
 
+#### <a id="conversion_1"></a>Convert `BIGINT` to `TIMESTAMP9_LTZ`
 
+```
+=# SELECT 0::BIGINT::TIMESTAMP9_LTZ; 
 
-
-
-### <a id="conversion_2"></a>Example: Convert `DATE` to `TIMESTAMP9_LTZ`
-
-### <a id="conversion_3"></a>Example: Convert `TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP` to `TIMESTAMP9_LTZ`
-
-### <a id="conversion_4"></a>Example: Convert `TIMESTAMP WITH TIME ZONE/TIMESTAMP` to `TIMESTAMP9_LTZ`
-
-
-### <a id="conversion_5"></a>Example: Convert `TIMESTAMP9_LTZ` to `BIGINT`
-
-
-### <a id="conversion_6"></a>Example: Convert `TIMESTAMP9_LTZ` to `DATE`
+           timestamp9_ltz 
+------------------------------------ 
+1970-01-01 08:00:00.000000000 +0800 
+(1 row) 
+```
 
 
 
-### <a id="conversion_7"></a>Example: Convert `TIMESTAMP9_LTZ` to `TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP`
+
+#### <a id="conversion_2"></a>Convert `DATE` to `TIMESTAMP9_LTZ`
+
+#### <a id="conversion_3"></a>Convert `TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP` to `TIMESTAMP9_LTZ`
+
+#### <a id="conversion_4"></a>Convert `TIMESTAMP WITH TIME ZONE/TIMESTAMP` to `TIMESTAMP9_LTZ`
 
 
-### <a id="conversion_8"></a>Example: Convert `TIMESTAMP9_LTZ` to `TIMESTAMP WITH TIME ZONE/TIMESTAMP`
+#### <a id="conversion_5"></a>Convert `TIMESTAMP9_LTZ` to `BIGINT`
 
 
-### <a id="conversion_9"></a>Example: Convert `BIGINT` to `TIMESTAMP9_NTZ`
+#### <a id="conversion_6"></a>Convert `TIMESTAMP9_LTZ` to `DATE`
 
 
-### <a id="conversion_10"></a>Example: Convert `DATE` to `TIMESTAMP9_NTZ`
+
+#### <a id="conversion_7"></a>Convert `TIMESTAMP9_LTZ` to `TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP`
 
 
-### <a id="conversion_11"></a>Example: Convert `TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP` to `TIMESTAMP9_NTZ` 
+#### <a id="conversion_8"></a>Convert `TIMESTAMP9_LTZ` to `TIMESTAMP WITH TIME ZONE/TIMESTAMP`
 
 
-### <a id="conversion_12"></a>Example: Convert `TIMESTAMP WITH TIME ZONE/TIMESTAMP` to `TIMESTAMP9_NTZ` 
+#### <a id="conversion_9"></a>Convert `BIGINT` to `TIMESTAMP9_NTZ`
 
 
-### <a id="conversion_13"></a>Example: Convert `TIMESTAMP9_NTZ` to `BIGINT`
+#### <a id="conversion_10"></a>Convert `DATE` to `TIMESTAMP9_NTZ`
 
 
-### <a id="conversion_14"></a>Example: Convert `TIMESTAMP9_NTZ` to `DATE`
+#### <a id="conversion_11"></a>Convert `TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP` to `TIMESTAMP9_NTZ` 
 
 
-### <a id="conversion_15"></a>Example: Convert `TIMESTAMP9_NTZ` to `TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP` 
+#### <a id="conversion_12"></a>Convert `TIMESTAMP WITH TIME ZONE/TIMESTAMP` to `TIMESTAMP9_NTZ` 
 
 
-### <a id="conversion_16"></a>Example: Convert `TIMESTAMP9_NTZ` to `TIMESTAMP WITH TIME ZONE/TIMESTAMP` 
+#### <a id="conversion_13"></a>Convert `TIMESTAMP9_NTZ` to `BIGINT`
 
 
-### <a id="conversion_17"></a>Example: Convert `TIMESTAMP9_LTZ` to `TIMESTAMP9_NTZ`
+#### <a id="conversion_14"></a>Convert `TIMESTAMP9_NTZ` to `DATE`
 
 
-### <a id="conversion_18"></a>Example: Convert `TIMESTAMP9_NTZ` to `TIMESTAMP9_LTZ`
+#### <a id="conversion_15"></a>Convert `TIMESTAMP9_NTZ` to `TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP` 
+
+
+#### <a id="conversion_16"></a>Convert `TIMESTAMP9_NTZ` to `TIMESTAMP WITH TIME ZONE/TIMESTAMP` 
+
+
+#### <a id="conversion_17"></a>Convert `TIMESTAMP9_LTZ` to `TIMESTAMP9_NTZ`
+
+
+#### <a id="conversion_18"></a>Convert `TIMESTAMP9_NTZ` to `TIMESTAMP9_LTZ`
 
 
 
