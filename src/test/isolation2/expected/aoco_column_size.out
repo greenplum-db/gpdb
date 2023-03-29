@@ -1,0 +1,154 @@
+-- Tests to validate AOCO column size and compression reporting functions and views
+
+-- start_matchignore
+-- m/.*compression_ratio .*[02-9]+[.]?(\d+)?/
+-- end_matchignore
+
+CREATE SCHEMA aoco_size;
+CREATE
+
+-- Test gp_toolkit.get_column_size(oid)
+CREATE TABLE aoco_size.heap(i int, j int) distributed by (i);
+CREATE
+CREATE TABLE aoco_size.aorow(i int, j int) using ao_row distributed by (i);
+CREATE
+CREATE TABLE aoco_size.aocol ( i int, j int ENCODING (compresstype=zstd, compresslevel=5), k bigint ENCODING (compresstype=rle_type, compresslevel=1), dropped int -- doesn't report dropped columns ) USING ao_column DISTRIBUTED BY (i) PARTITION BY RANGE (j);
+CREATE
+
+ALTER TABLE aoco_size.aocol DROP COLUMN dropped;
+ALTER
+
+-- Attach 2 partitions with different column encodings
+CREATE TABLE aoco_size.aocol_part_t1 ( i int, j int ENCODING (compresstype=zlib, compresslevel=1), k bigint ENCODING (compresstype=zlib, compresslevel=1) ) USING ao_column DISTRIBUTED BY (i);
+CREATE
+
+CREATE TABLE aoco_size.aocol_part_t2 ( i int, j int ENCODING (compresstype=zstd, compresslevel=3), k bigint ENCODING (compresstype=zstd, compresslevel=1) ) USING ao_column DISTRIBUTED BY (i);
+CREATE
+
+ALTER TABLE aoco_size.aocol ATTACH PARTITION aoco_size.aocol_part_t1 FOR VALUES FROM (1) TO (500);
+ALTER
+ALTER TABLE aoco_size.aocol ATTACH PARTITION aoco_size.aocol_part_t2 FOR VALUES FROM (500) TO (1001);
+ALTER
+
+-- Non-existent name/OID.
+SELECT * FROM gp_toolkit.get_column_size('aoco_size.foo'::regclass);
+ERROR:  relation "aoco_size.foo" does not exist
+LINE 1: SELECT * FROM gp_toolkit.get_column_size('aoco_size.foo'::re...
+                                                 ^
+-- Non AOCO relations
+SELECT * FROM  gp_toolkit.get_column_size('aoco_size.heap'::regclass);
+ERROR:  'heap' is not an append-only columnar relation  (seg1 slice2 127.0.1.1:7003 pid=495783)
+CONTEXT:  PL/pgSQL function gp_toolkit.get_column_size(oid) line 5 at FOR over SELECT rows
+SELECT * FROM  gp_toolkit.get_column_size('aoco_size.aorow'::regclass);
+ERROR:  'aorow' is not an append-only columnar relation  (seg0 slice2 127.0.1.1:7002 pid=495803)
+CONTEXT:  PL/pgSQL function gp_toolkit.get_column_size(oid) line 5 at FOR over SELECT rows
+-- Partition parent
+SELECT * FROM  gp_toolkit.get_column_size('aoco_size.aocol'::regclass) ORDER BY 1,2;
+ERROR:  'aocol' is not an append-only columnar relation  (seg2 slice2 127.0.1.1:7004 pid=495823)
+CONTEXT:  PL/pgSQL function gp_toolkit.get_column_size(oid) line 5 at FOR over SELECT rows
+
+INSERT INTO aoco_size.aocol SELECT i, i, i FROM generate_series(1, 1000) i;
+INSERT 1000
+
+SELECT * FROM  gp_toolkit.get_column_size('aoco_size.aocol_part_t1'::regclass) ORDER BY 1,2;
+ segment | attnum | size | size_uncompressed | compression_ratio 
+---------+--------+------+-------------------+-------------------
+ 0       | 1      | 744  | 744               | 1.00              
+ 0       | 2      | 352  | 744               | 2.11              
+ 0       | 3      | 376  | 1448              | 3.85              
+ 1       | 1      | 688  | 688               | 1.00              
+ 1       | 2      | 328  | 688               | 2.10              
+ 1       | 3      | 352  | 1328              | 3.77              
+ 2       | 1      | 688  | 688               | 1.00              
+ 2       | 2      | 336  | 688               | 2.05              
+ 2       | 3      | 352  | 1336              | 3.80              
+(9 rows)
+-1U: SELECT * FROM  gp_toolkit.get_column_size('aoco_size.aocol_part_t1'::regclass) ORDER BY 1,2;
+ segment | attnum | size | size_uncompressed | compression_ratio 
+---------+--------+------+-------------------+-------------------
+(0 rows)
+0U: SELECT * FROM  gp_toolkit.get_column_size('aoco_size.aocol_part_t1'::regclass) ORDER BY 1,2;
+ segment | attnum | size | size_uncompressed | compression_ratio 
+---------+--------+------+-------------------+-------------------
+ 0       | 1      | 744  | 744               | 1.00              
+ 0       | 2      | 352  | 744               | 2.11              
+ 0       | 3      | 376  | 1448              | 3.85              
+(3 rows)
+
+SELECT * FROM  gp_toolkit.get_column_size('aoco_size.aocol_part_t2'::regclass) ORDER BY 1,2;
+ segment | attnum | size | size_uncompressed | compression_ratio 
+---------+--------+------+-------------------+-------------------
+ 0       | 1      | 688  | 688               | 1.00              
+ 0       | 2      | 400  | 688               | 1.72              
+ 0       | 3      | 248  | 1336              | 5.39              
+ 1       | 1      | 688  | 688               | 1.00              
+ 1       | 2      | 400  | 688               | 1.72              
+ 1       | 3      | 248  | 1328              | 5.35              
+ 2       | 1      | 752  | 752               | 1.00              
+ 2       | 2      | 440  | 752               | 1.71              
+ 2       | 3      | 264  | 1464              | 5.55              
+(9 rows)
+-1U: SELECT * FROM  gp_toolkit.get_column_size('aoco_size.aocol_part_t2'::regclass) ORDER BY 1,2;
+ segment | attnum | size | size_uncompressed | compression_ratio 
+---------+--------+------+-------------------+-------------------
+(0 rows)
+0U: SELECT * FROM  gp_toolkit.get_column_size('aoco_size.aocol_part_t2'::regclass) ORDER BY 1,2;
+ segment | attnum | size | size_uncompressed | compression_ratio 
+---------+--------+------+-------------------+-------------------
+ 0       | 1      | 688  | 688               | 1.00              
+ 0       | 2      | 400  | 688               | 1.72              
+ 0       | 3      | 248  | 1336              | 5.39              
+(3 rows)
+
+-- Test gp_toolkit.gp_column_size view
+SELECT relname, gp_segment_id, attnum, attname, size, size_uncompressed, compression_ratio FROM gp_toolkit.gp_column_size where schema='aoco_size';
+ relname       | gp_segment_id | attnum | attname | size | size_uncompressed | compression_ratio 
+---------------+---------------+--------+---------+------+-------------------+-------------------
+ aocol_part_t1 | 0             | 1      | i       | 744  | 744               | 1.00              
+ aocol_part_t1 | 0             | 2      | j       | 352  | 744               | 2.11              
+ aocol_part_t1 | 0             | 3      | k       | 376  | 1448              | 3.85              
+ aocol_part_t2 | 0             | 1      | i       | 688  | 688               | 1.00              
+ aocol_part_t2 | 0             | 2      | j       | 400  | 688               | 1.72              
+ aocol_part_t2 | 0             | 3      | k       | 248  | 1336              | 5.39              
+ aocol_part_t1 | 1             | 1      | i       | 688  | 688               | 1.00              
+ aocol_part_t1 | 1             | 2      | j       | 328  | 688               | 2.10              
+ aocol_part_t1 | 1             | 3      | k       | 352  | 1328              | 3.77              
+ aocol_part_t2 | 1             | 1      | i       | 688  | 688               | 1.00              
+ aocol_part_t2 | 1             | 2      | j       | 400  | 688               | 1.72              
+ aocol_part_t2 | 1             | 3      | k       | 248  | 1328              | 5.35              
+ aocol_part_t1 | 2             | 1      | i       | 688  | 688               | 1.00              
+ aocol_part_t1 | 2             | 2      | j       | 336  | 688               | 2.05              
+ aocol_part_t1 | 2             | 3      | k       | 352  | 1336              | 3.80              
+ aocol_part_t2 | 2             | 1      | i       | 752  | 752               | 1.00              
+ aocol_part_t2 | 2             | 2      | j       | 440  | 752               | 1.71              
+ aocol_part_t2 | 2             | 3      | k       | 264  | 1464              | 5.55              
+(18 rows)
+-1U: SELECT relname, gp_segment_id, attnum, attname, size, size_uncompressed, compression_ratio FROM gp_toolkit.gp_column_size where schema='aoco_size';
+ relname | gp_segment_id | attnum | attname | size | size_uncompressed | compression_ratio 
+---------+---------------+--------+---------+------+-------------------+-------------------
+(0 rows)
+0U:  SELECT relname, gp_segment_id, attnum, attname, size, size_uncompressed, compression_ratio FROM gp_toolkit.gp_column_size where schema='aoco_size';
+ relname       | gp_segment_id | attnum | attname | size | size_uncompressed | compression_ratio 
+---------------+---------------+--------+---------+------+-------------------+-------------------
+ aocol_part_t1 | 0             | 1      | i       | 744  | 744               | 1.00              
+ aocol_part_t1 | 0             | 2      | j       | 352  | 744               | 2.11              
+ aocol_part_t1 | 0             | 3      | k       | 376  | 1448              | 3.85              
+ aocol_part_t2 | 0             | 1      | i       | 688  | 688               | 1.00              
+ aocol_part_t2 | 0             | 2      | j       | 400  | 688               | 1.72              
+ aocol_part_t2 | 0             | 3      | k       | 248  | 1336              | 5.39              
+(6 rows)
+
+-- Test gp_toolkit.gp_column_size_summary view
+SELECT relname, attnum, size, size_uncompressed, compression_ratio FROM gp_toolkit.gp_column_size_summary WHERE schema='aoco_size';
+ relname       | attnum | size | size_uncompressed | compression_ratio 
+---------------+--------+------+-------------------+-------------------
+ aocol_part_t1 | 1      | 2120 | 2120              | 1.00              
+ aocol_part_t1 | 2      | 1016 | 2120              | 2.09              
+ aocol_part_t1 | 3      | 1080 | 4112              | 3.81              
+ aocol_part_t2 | 1      | 2128 | 2128              | 1.00              
+ aocol_part_t2 | 2      | 1240 | 2128              | 1.72              
+ aocol_part_t2 | 3      | 760  | 4128              | 5.43              
+(6 rows)
+
+DROP SCHEMA aoco_size CASCADE;
+DROP

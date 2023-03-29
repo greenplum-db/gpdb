@@ -1558,7 +1558,6 @@ ERROR:  protocol attribute "validatorproc" not recognized
     -- Create a non-privileged user demoprot_nopriv
     drop role if exists demoprot_nopriv;
     create role demoprot_nopriv with login ;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 -- Test 92: Rename existing protocol
     DROP FUNCTION IF EXISTS url_validator();
     CREATE OR REPLACE FUNCTION url_validator() RETURNS void AS

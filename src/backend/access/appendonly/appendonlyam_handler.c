@@ -528,6 +528,13 @@ appendonly_index_fetch_end(IndexFetchTableData *scan)
 		aoscan->aofetch = NULL;
 	}
 
+	if (aoscan->indexonlydesc)
+	{
+		appendonly_index_only_finish(aoscan->indexonlydesc);
+		pfree(aoscan->indexonlydesc);
+		aoscan->indexonlydesc = NULL;
+	}
+
 	pfree(aoscan);
 }
 
@@ -606,7 +613,7 @@ appendonly_index_fetch_tuple(struct IndexFetchTableData *scan,
  * true and have the xwait machinery kick in.
  */
 static bool
-appendonly_index_fetch_tuple_exists(Relation rel,
+appendonly_index_unique_check(Relation rel,
 									ItemPointer tid,
 									Snapshot snapshot,
 									bool *all_dead)
@@ -690,6 +697,32 @@ appendonly_index_fetch_tuple_exists(Relation rel,
 	return visible;
 }
 
+static bool
+appendonly_index_fetch_tuple_visible(struct IndexFetchTableData *scan,
+									 ItemPointer tid,
+									 Snapshot snapshot)
+{
+	IndexFetchAppendOnlyData *aoscan = (IndexFetchAppendOnlyData *) scan;
+
+	if (!aoscan->indexonlydesc)
+	{
+		Snapshot	appendOnlyMetaDataSnapshot = snapshot;
+
+		if (appendOnlyMetaDataSnapshot == SnapshotAny)
+		{
+			/*
+			 * the append-only meta data should never be fetched with
+			 * SnapshotAny as bogus results are returned.
+			 */
+			appendOnlyMetaDataSnapshot = GetTransactionSnapshot();
+		}
+
+		aoscan->indexonlydesc = appendonly_index_only_init(aoscan->xs_base.rel,
+														   appendOnlyMetaDataSnapshot);
+	}
+
+	return appendonly_index_only_check(aoscan->indexonlydesc, (AOTupleId *) tid, snapshot);
+}
 
 /* ------------------------------------------------------------------------
  * Callbacks for non-modifying operations on individual tuples for
@@ -1147,6 +1180,7 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	MemTuple				mtuple = NULL;
 	TupleTableSlot		   *slot;
 	TableScanDesc			aoscandesc;
+	double					n_tuples_written = 0;
 
 	pg_rusage_init(&ru0);
 
@@ -1236,6 +1270,25 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	slot = table_slot_create(OldHeap, NULL);
 	aoscandesc = appendonly_beginscan(OldHeap, GetActiveSnapshot(), 0, NULL,
 										NULL, 0);
+	/* Report cluster progress */
+	{
+		FileSegTotals *fstotal;
+		const int	prog_index[] = {
+			PROGRESS_CLUSTER_PHASE,
+			PROGRESS_CLUSTER_TOTAL_HEAP_BLKS,
+		};
+		int64		prog_val[2];
+
+		fstotal = GetSegFilesTotals(OldHeap, GetActiveSnapshot());
+
+		/* Set phase and total heap-size blocks to columns */
+		prog_val[0] = PROGRESS_CLUSTER_PHASE_SEQ_SCAN_AO;
+		prog_val[1] = RelationGuessNumberOfBlocksFromSize(fstotal->totalbytes);
+		pgstat_progress_update_multi_param(2, prog_index, prog_val);
+	}
+
+	SIMPLE_FAULT_INJECTOR("cluster_ao_seq_scan_begin");
+
 	mt_bind = create_memtuple_binding(oldTupDesc);
 
 	while (appendonly_getnextslot(aoscandesc, ForwardScanDirection, slot))
@@ -1243,6 +1296,8 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 		Datum	   *slot_values;
 		bool	   *slot_isnull;
 		HeapTuple   tuple;
+		BlockNumber	curr_heap_blks = 0;
+		BlockNumber	prev_heap_blks = 0;
 
 		CHECK_FOR_INTERRUPTS();
 
@@ -1253,6 +1308,17 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 		tuple = heap_form_tuple(oldTupDesc, slot_values, slot_isnull);
 
 		*num_tuples += 1;
+		pgstat_progress_update_param(PROGRESS_CLUSTER_HEAP_TUPLES_SCANNED,
+									 *num_tuples);
+		curr_heap_blks = RelationGuessNumberOfBlocksFromSize(((AppendOnlyScanDesc) aoscandesc)->totalBytesRead);
+		if (curr_heap_blks != prev_heap_blks)
+		{
+			pgstat_progress_update_param(PROGRESS_CLUSTER_HEAP_BLKS_SCANNED,
+										 curr_heap_blks);
+			prev_heap_blks = curr_heap_blks;
+		}
+		SIMPLE_FAULT_INJECTOR("cluster_ao_scanning_tuples");
+
 		tuplesort_putheaptuple(tuplesort, tuple);
 		heap_freetuple(tuple);
 	}
@@ -1261,13 +1327,19 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 
 	appendonly_endscan(aoscandesc);
 
-	/*
-	 * Сomplete the sort, then read out all tuples
-	 * from the tuplestore and write them to the new relation.
-	 */
-
+	/* Report that we are now sorting tuples */
+	pgstat_progress_update_param(PROGRESS_CLUSTER_PHASE,
+								 PROGRESS_CLUSTER_PHASE_SORT_TUPLES);
+	SIMPLE_FAULT_INJECTOR("cluster_ao_sorting_tuples");
 	tuplesort_performsort(tuplesort);
-	
+
+	/*
+	 * Report that we are now reading out all tuples from the tuplestore
+	 * and write them to the new relation.
+	 */
+	pgstat_progress_update_param(PROGRESS_CLUSTER_PHASE,
+								 PROGRESS_CLUSTER_PHASE_WRITE_NEW_AO);
+	SIMPLE_FAULT_INJECTOR("cluster_ao_write_begin");
 	write_seg_no = ChooseSegnoForWrite(NewHeap);
 
 	aoInsertDesc = appendonly_insert_init(NewHeap, write_seg_no, (int64) *num_tuples);
@@ -1299,6 +1371,10 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 		mtuple = memtuple_form_to(mt_bind, values, isnull, len, null_save_len, has_nulls, mtuple);
 
 		appendonly_insert(aoInsertDesc, mtuple, &aoTupleId);
+		/* Report n_tuples */
+		pgstat_progress_update_param(PROGRESS_CLUSTER_HEAP_TUPLES_WRITTEN,
+									 ++n_tuples_written);
+		SIMPLE_FAULT_INJECTOR("cluster_ao_writing_tuples");
 	}
 
 	tuplesort_end(tuplesort);
@@ -1801,15 +1877,22 @@ appendonly_relation_needs_toast_table(Relation rel)
  */
 static void
 appendonly_estimate_rel_size(Relation rel, int32 *attr_widths,
-						 BlockNumber *pages, double *tuples,
-						 double *allvisfrac)
+							 BlockNumber *pages, double *tuples,
+							 double *allvisfrac)
 {
 	FileSegTotals  *fileSegTotals;
 	Snapshot		snapshot;
 
 	*pages = 1;
 	*tuples = 1;
-	*allvisfrac = 0;
+
+	/*
+	 * Indirectly, allvisfrac is the fraction of pages for which we don't need
+	 * to scan the full table during an index only scan.
+	 * For AO/CO tables, we never have to scan the underlying table. This is
+	 * why we set this to 1.
+	 */
+	*allvisfrac = 1;
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 		return;
@@ -1995,7 +2078,8 @@ static const TableAmRoutine ao_row_methods = {
 	.index_fetch_reset = appendonly_index_fetch_reset,
 	.index_fetch_end = appendonly_index_fetch_end,
 	.index_fetch_tuple = appendonly_index_fetch_tuple,
-	.index_fetch_tuple_exists = appendonly_index_fetch_tuple_exists,
+	.index_fetch_tuple_visible = appendonly_index_fetch_tuple_visible,
+	.index_unique_check = appendonly_index_unique_check,
 
 	.dml_init = appendonly_dml_init,
 	.dml_finish = appendonly_dml_finish,

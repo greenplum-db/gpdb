@@ -4070,6 +4070,9 @@ ProcessInterrupts(const char* filename, int lineno)
 
 	if (ParallelMessagePending)
 		HandleParallelMessages();
+
+	if (LogMemoryContextPending)
+		ProcessLogMemoryContextInterrupt();
 }
 
 /*

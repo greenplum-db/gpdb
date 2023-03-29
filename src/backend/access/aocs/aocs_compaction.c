@@ -27,6 +27,7 @@
 #include "catalog/gp_fastsequence.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_appendonly.h"
+#include "catalog/pg_attribute_encoding.h"
 #include "cdb/cdbaocsam.h"
 #include "cdb/cdbvars.h"
 #include "commands/vacuum.h"
@@ -64,9 +65,11 @@ AOCSCompaction_DropSegmentFile(Relation aorel, int segno, AOVacuumRelStats *vacr
 		char		filenamepath[MAXPGPATH];
 		int			pseudoSegNo;
 		File		fd;
+		/* Filenum for the col */
+		FileNumber  filenum = GetFilenumForAttribute(RelationGetRelid(aorel), col + 1);
 
 		/* Open and truncate the relation segfile */
-		MakeAOSegmentFileName(aorel, segno, col, &pseudoSegNo, filenamepath);
+		MakeAOSegmentFileName(aorel, segno, filenum, &pseudoSegNo, filenamepath);
 
 		elogif(Debug_appendonly_print_compaction, LOG,
 			   "Drop segment file: "
@@ -116,12 +119,14 @@ AOCSSegmentFileTruncateToEOF(Relation aorel, int segno, AOCSVPInfo *vpinfo, AOVa
 		AOCSVPInfoEntry *entry;
 		File		fd;
 		int32		fileSegNo;
+		/* Filenum for the column */
+		FileNumber  filenum = GetFilenumForAttribute(RelationGetRelid(aorel), j + 1);
 
 		entry = &vpinfo->entry[j];
 		segeof = entry->eof;
 
 		/* Open and truncate the relation segfile to its eof */
-		MakeAOSegmentFileName(aorel, segno, j, &fileSegNo, filenamepath);
+		MakeAOSegmentFileName(aorel, segno, filenum, &fileSegNo, filenamepath);
 
 		elogif(Debug_appendonly_print_compaction, LOG,
 			   "Opening AO COL relation \"%s.%s\", relation id %u, relfilenode %u column #%d, logical segment #%d (physical segment file #%d, logical EOF " INT64_FORMAT ")",

@@ -2496,4 +2496,21 @@ CTranslatorUtils::IsCompositeConst(CMemoryPool *mp, CMDAccessor *md_accessor,
 	return type->IsComposite();
 }
 
+BOOL
+CTranslatorUtils::RelContainsForeignPartitions(const IMDRelation *rel,
+											   CMDAccessor *md_accessor)
+{
+	IMdIdArray *partition_mdids = rel->ChildPartitionMdids();
+	for (ULONG ul = 0; partition_mdids && ul < partition_mdids->Size(); ++ul)
+	{
+		IMDId *part_mdid = (*partition_mdids)[ul];
+		const IMDRelation *partrel = md_accessor->RetrieveRel(part_mdid);
+		if (partrel->RetrieveRelStorageType() ==
+			IMDRelation::ErelstorageForeign)
+		{
+			return true;
+		}
+	}
+	return false;
+}
 // EOF

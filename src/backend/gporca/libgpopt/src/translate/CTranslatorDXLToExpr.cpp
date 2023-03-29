@@ -593,9 +593,11 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 	const IMDRelation *pmdrel = m_pmda->RetrieveRel(table_descr->MDId());
 	if (pmdrel->IsPartitioned())
 	{
-		GPOS_ASSERT(EdxlopLogicalGet == edxlopid);
+		GPOS_ASSERT(EdxlopLogicalGet == edxlopid ||
+					EdxlopLogicalForeignGet == edxlopid);
 
 		IMdIdArray *partition_mdids = pmdrel->ChildPartitionMdids();
+		IMdIdArray *foreign_server_mdids = GPOS_NEW(m_mp) IMdIdArray(m_mp);
 		for (ULONG ul = 0; ul < partition_mdids->Size(); ++ul)
 		{
 			IMDId *part_mdid = (*partition_mdids)[ul];
@@ -607,13 +609,30 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 				GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
 						   GPOS_WSZ_LIT("Multi-level partitioned tables"));
 			}
+
+			// store array of foreign partitions
+			IMDId *foreign_server_mdid = nullptr;
+			if (IMDRelation::ErelstorageForeign ==
+				partrel->RetrieveRelStorageType())
+			{
+				foreign_server_mdid = partrel->ForeignServer();
+				foreign_server_mdid->AddRef();
+			}
+			else
+			{
+				// not foreign, store as invalid mdid
+				foreign_server_mdid =
+					GPOS_NEW(m_mp) CMDIdGPDB(CMDIdGPDB::m_mdid_invalid_key);
+			}
+			foreign_server_mdids->Append(foreign_server_mdid);
 		}
 
 		// generate a part index id
 		ULONG part_idx_id = COptCtxt::PoctxtFromTLS()->UlPartIndexNextVal();
 		partition_mdids->AddRef();
-		popGet = GPOS_NEW(m_mp) CLogicalDynamicGet(
-			m_mp, pname, ptabdesc, part_idx_id, partition_mdids);
+		popGet = GPOS_NEW(m_mp)
+			CLogicalDynamicGet(m_mp, pname, ptabdesc, part_idx_id,
+							   partition_mdids, foreign_server_mdids);
 		CLogicalDynamicGet *popDynamicGet =
 			CLogicalDynamicGet::PopConvert(popGet);
 

@@ -95,6 +95,7 @@ extern PGDLLIMPORT volatile sig_atomic_t ProcDiePending;
 extern PGDLLIMPORT volatile sig_atomic_t IdleInTransactionSessionTimeoutPending;
 extern PGDLLIMPORT volatile sig_atomic_t IdleGangTimeoutPending;
 extern PGDLLIMPORT volatile sig_atomic_t ConfigReloadPending;
+extern PGDLLIMPORT volatile sig_atomic_t LogMemoryContextPending;
 
 extern PGDLLIMPORT volatile sig_atomic_t ClientConnectionLost;
 extern PGDLLIMPORT volatile sig_atomic_t CheckClientConnectionPending;

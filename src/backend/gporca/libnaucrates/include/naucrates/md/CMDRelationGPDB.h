@@ -103,6 +103,9 @@ private:
 	// number of system columns
 	ULONG m_system_columns;
 
+	// oid of foreign server if this is a foreign relation
+	IMDId *m_foreign_server;
+
 	// mapping of column position to positions excluding dropped columns
 	UlongToUlongMap *m_colpos_nondrop_colpos_map;
 
@@ -120,15 +123,18 @@ public:
 	CMDRelationGPDB(const CMDRelationGPDB &) = delete;
 
 	// ctor
-	CMDRelationGPDB(
-		CMemoryPool *mp, IMDId *mdid, CMDName *mdname, BOOL is_temp_table,
-		Erelstoragetype rel_storage_type, Ereldistrpolicy rel_distr_policy,
-		CMDColumnArray *mdcol_array, ULongPtrArray *distr_col_array,
-		IMdIdArray *distr_opfamilies, ULongPtrArray *partition_cols_array,
-		CharPtrArray *str_part_types_array, IMdIdArray *partition_oids,
-		BOOL convert_hash_to_random, ULongPtr2dArray *keyset_array,
-		CMDIndexInfoArray *md_index_info_array,
-		IMdIdArray *mdid_check_constraint_array, CDXLNode *mdpart_constraint);
+	CMDRelationGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
+					BOOL is_temp_table, Erelstoragetype rel_storage_type,
+					Ereldistrpolicy rel_distr_policy,
+					CMDColumnArray *mdcol_array, ULongPtrArray *distr_col_array,
+					IMdIdArray *distr_opfamilies,
+					ULongPtrArray *partition_cols_array,
+					CharPtrArray *str_part_types_array,
+					IMdIdArray *partition_oids, BOOL convert_hash_to_random,
+					ULongPtr2dArray *keyset_array,
+					CMDIndexInfoArray *md_index_info_array,
+					IMdIdArray *mdid_check_constraint_array,
+					CDXLNode *mdpart_constraint, IMDId *foreign_server);
 
 	// dtor
 	~CMDRelationGPDB() override;
@@ -234,6 +240,8 @@ public:
 
 	// child partition oids
 	IMdIdArray *ChildPartitionMdids() const override;
+
+	IMDId *ForeignServer() const override;
 
 #ifdef GPOS_DEBUG
 	// debug print of the metadata relation

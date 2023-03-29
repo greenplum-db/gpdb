@@ -422,10 +422,13 @@ ftsCheckTimeout(fts_segment_info *ftsInfo, pg_time_t now)
 	{
 		elog(LOG,
 			 "FTS timeout detected for (content=%d, dbid=%d) "
-			 "state=%d, retry_count=%d,",
+			 "state=%d, retry_count=%d, timeout_count=%d ",
 			 ftsInfo->primary_cdbinfo->config->segindex,
 			 ftsInfo->primary_cdbinfo->config->dbid, ftsInfo->state,
-			 ftsInfo->retry_count);
+			 ftsInfo->retry_count, ftsInfo->timeout_count);
+
+		/* Reset timeout_count before moving to next failed state */
+		ftsInfo->timeout_count = 0;
 		ftsInfo->state = nextFailedState(ftsInfo->state);
 	}
 }
@@ -522,6 +525,17 @@ ftsPoll(fts_context *context)
 					 ftsInfo->primary_cdbinfo->config->dbid, ftsInfo->state,
 					 ftsInfo->retry_count, ftsInfo->conn->status,
 					 ftsInfo->conn->asyncStatus);
+			}
+			/*
+			 * Count time out errors reported by poll(), so we can refer it
+			 * when gp_fts_probe_timeout is exceeded in ftsCheckTimeout().
+			 * Segments for which a response is received already are not to be
+			 * counted.
+			 */
+			if (!IsFtsMessageStateSuccess(ftsInfo->state) &&
+				nready == 0)
+			{
+				ftsInfo->timeout_count++;
 			}
 			/* If poll timed-out above, check timeout */
 			ftsCheckTimeout(ftsInfo, now);
@@ -1194,6 +1208,7 @@ processResponse(fts_context *context)
 		ftsInfo->conn = NULL;
 		ftsInfo->poll_events = ftsInfo->poll_revents = 0;
 		ftsInfo->retry_count = 0;
+		ftsInfo->timeout_count = 0;
 	}
 
 	return is_updated;

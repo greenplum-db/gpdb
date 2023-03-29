@@ -1,4 +1,7 @@
 -- SQL coverage of RESOURCE QUEUE
+-- start_ignore
+create extension if not exists gp_inject_fault;
+-- end_ignore
 CREATE RESOURCE QUEUE regressq ACTIVE THRESHOLD 1;
 SELECT rsqname, rsqcountlimit, rsqcostlimit, rsqovercommit, rsqignorecostlimit FROM pg_resqueue WHERE rsqname='regressq';
  rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 

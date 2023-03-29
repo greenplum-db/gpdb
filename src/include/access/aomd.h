@@ -25,14 +25,14 @@ extern int AOSegmentFilePathNameLen(Relation rel);
 extern void FormatAOSegmentFileName(
 						char *basepath,
 						int segno,
-						int col,
+						int filenum,
 						int32 *fileSegNo,
 						char *filepathname);
 
 extern void MakeAOSegmentFileName(
 					  Relation rel,
 					  int segno,
-					  int col,
+					  int filenum,
 					  int32 *fileSegNo,
 					  char *filepathname);
 

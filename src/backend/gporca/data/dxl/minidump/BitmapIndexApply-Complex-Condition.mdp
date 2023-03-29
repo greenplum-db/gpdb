@@ -27,7 +27,7 @@ EXPLAIN SELECT * FROM s i1, t t2 where t2.c2 = i1.c2  and t2.c3 > i1.c3 or t2.c1
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:TraceFlags Value="102001,102002,102003,102027,102029,102144,103001,103014,103015,103027,103033"/>
+      <dxl:TraceFlags Value="102001,102002,102003,103046,103045,102144,103001,103014,103015,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:ColumnStatistics Mdid="1.31264029.1.1.13" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -188,14 +188,6 @@ EXPLAIN SELECT * FROM s i1, t t2 where t2.c2 = i1.c2  and t2.c3 > i1.c3 or t2.c1
         <dxl:SumAgg Mdid="0.2111.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBScalarOp Mdid="0.1095.1.0" Name="&lt;" ComparisonType="LT">
-        <dxl:LeftType Mdid="0.1082.1.0"/>
-        <dxl:RightType Mdid="0.1082.1.0"/>
-        <dxl:ResultType Mdid="0.16.1.0"/>
-        <dxl:OpFunc Mdid="0.1087.1.0"/>
-        <dxl:Commutator Mdid="0.1097.1.0"/>
-        <dxl:InverseOp Mdid="0.1098.1.0"/>
-      </dxl:GPDBScalarOp>
       <dxl:GPDBScalarOp Mdid="0.1097.1.0" Name="&gt;" ComparisonType="GT" ReturnsNullOnNullInput="true">
         <dxl:LeftType Mdid="0.1082.1.0"/>
         <dxl:RightType Mdid="0.1082.1.0"/>

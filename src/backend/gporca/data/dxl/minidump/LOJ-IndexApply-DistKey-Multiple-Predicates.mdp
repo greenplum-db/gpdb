@@ -44,7 +44,7 @@ explain select * from foo left join bar on bar.a=foo.a and bar.a<foo.b left oute
         </dxl:CostParams>
       </dxl:CostModelConfig>
       <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10" XformBindThreshold="0"/>
-      <dxl:TraceFlags Value="102001,102002,102003,102029,102043,102046,102048,102053,102054,102074,102120,102144,102157,102158,103001,103014,103022,103026,103027,103029,103033,103038,104002,104003,104004,104005,105000,106000"/>
+      <dxl:TraceFlags Value="102001,102002,102003,103045,102043,102046,102048,102053,102054,102074,102120,102144,102157,102158,103001,103014,103022,103026,103027,103029,103033,103038,104002,104003,104004,104005,105000,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.49159.1.0" Name="bar" Rows="0.000000" RelPages="0" RelAllVisible="0" EmptyRelation="true"/>

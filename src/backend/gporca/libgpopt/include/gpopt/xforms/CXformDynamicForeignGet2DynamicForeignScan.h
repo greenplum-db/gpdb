@@ -1,15 +1,15 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2011 EMC Corp.
+//	Copyright (C) 2023 VMware Inc.
 //
 //	@filename:
-//		CXformInnerJoin2HashJoin.h
+//		CXformDynamicForeignGet2DynamicForeignScan.h
 //
 //	@doc:
-//		Transform inner join to inner Hash Join
+//		Transform DynamicForeignGet to DynamicForeignScan
 //---------------------------------------------------------------------------
-#ifndef GPOPT_CXformInnerJoin2HashJoin_H
-#define GPOPT_CXformInnerJoin2HashJoin_H
+#ifndef GPOPT_CXformDynamicForeignGet2DynamicForeignScan_H
+#define GPOPT_CXformDynamicForeignGet2DynamicForeignScan_H
 
 #include "gpos/base.h"
 
@@ -21,37 +21,37 @@ using namespace gpos;
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CXformInnerJoin2HashJoin
+//		CXformDynamicForeignGet2DynamicForeignScan
 //
 //	@doc:
-//		Transform inner join to inner Hash Join
-//		Deprecated in favor of CXformImplementInnerJoin.
+//		Transform DynamicForeignGet to DynamicForeignScan
 //
 //---------------------------------------------------------------------------
-class CXformInnerJoin2HashJoin : public CXformImplementation
+class CXformDynamicForeignGet2DynamicForeignScan : public CXformImplementation
 {
 private:
 public:
-	CXformInnerJoin2HashJoin(const CXformInnerJoin2HashJoin &) = delete;
+	CXformDynamicForeignGet2DynamicForeignScan(
+		const CXformDynamicForeignGet2DynamicForeignScan &) = delete;
 
 	// ctor
-	explicit CXformInnerJoin2HashJoin(CMemoryPool *mp);
+	explicit CXformDynamicForeignGet2DynamicForeignScan(CMemoryPool *);
 
 	// dtor
-	~CXformInnerJoin2HashJoin() override = default;
+	~CXformDynamicForeignGet2DynamicForeignScan() override = default;
 
 	// ident accessors
 	EXformId
 	Exfid() const override
 	{
-		return ExfInnerJoin2HashJoin;
+		return ExfDynamicForeignGet2DynamicForeignScan;
 	}
 
 	// return a string for xform name
 	const CHAR *
 	SzId() const override
 	{
-		return "CXformInnerJoin2HashJoin";
+		return "CXformDynamicForeignGet2DynamicForeignScan";
 	}
 
 	// compute xform promise for a given expression handle
@@ -61,11 +61,10 @@ public:
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 				   CExpression *pexpr) const override;
 
-};	// class CXformInnerJoin2HashJoin
+};	// class CXformDynamicForeignGet2DynamicForeignScan
 
 }  // namespace gpopt
 
-
-#endif	// !GPOPT_CXformInnerJoin2HashJoin_H
+#endif	// !GPOPT_CXformDynamicForeignGet2DynamicForeignScan_H
 
 // EOF

@@ -5241,6 +5241,13 @@
   proname => 'pg_stat_get_backend_dbid', provolatile => 's', proparallel => 'r',
   prorettype => 'oid', proargtypes => 'int4',
   prosrc => 'pg_stat_get_backend_dbid' },
+{ oid => '6107', descr => 'statistics: get subtransaction status of backend',
+  proname => 'pg_stat_get_backend_subxact', provolatile => 's', proparallel => 'r',
+  prorettype => 'record', proargtypes => 'int4',
+  proallargtypes => '{int4,int4,bool}',
+  proargmodes => '{i,o,o}',
+  proargnames => '{bid,subxact_count,subxact_overflowed}',
+  prosrc => 'pg_stat_get_backend_subxact' },
 { oid => '1939', descr => 'statistics: user ID of backend',
   proname => 'pg_stat_get_backend_userid', provolatile => 's',
   proparallel => 'r', prorettype => 'oid', proargtypes => 'int4',
@@ -7727,6 +7734,31 @@
   proname => 'pg_notification_queue_usage', provolatile => 'v',
   prorettype => 'float8', proargtypes => '',
   prosrc => 'pg_notification_queue_usage' },
+
+# memory context of local backend
+{ oid => '2282', descr => 'information about all memory contexts of local backend',
+  proname => 'pg_get_backend_memory_contexts', prorows => '100', proretset => 't',
+  provolatile => 'v', proparallel => 'r', prorettype => 'record', proargtypes => '',
+  proallargtypes => '{text,text,text,int4,int8,int8,int8,int8,int8}',
+  proargmodes => '{o,o,o,o,o,o,o,o,o}',
+  proargnames => '{name, ident, parent, level, total_bytes, total_nblocks, free_bytes, free_chunks, used_bytes}',
+  prosrc => 'pg_get_backend_memory_contexts' },
+
+# logging memory contexts of the specified backend
+{ oid => '4543', descr => 'log memory contexts of the specified backend',
+  proname => 'pg_log_backend_memory_contexts',
+  provolatile => 'v', prorettype => 'bool',
+  proargtypes => 'int4', prosrc => 'pg_log_backend_memory_contexts' },
+
+# mpp-dispatched logging memory contexts of all/indicated backends.  polymorphic.
+{ oid => '7143', descr => 'log memory contexts of the backend for the specified session ID and content ID',
+  proname => 'gp_log_backend_memory_contexts',
+  provolatile => 'v', prorettype => 'int8',
+  proargtypes => 'int8 int8', prosrc => 'gp_log_backend_memory_contexts' },
+{ oid => '7144', descr => 'log memory contexts of the backend for the specified session ID',
+  proname => 'gp_log_backend_memory_contexts',
+  provolatile => 'v', prorettype => 'int8',
+  proargtypes => 'int8', prosrc => 'gp_log_backend_memory_contexts' },
 
 # non-persistent series generator
 { oid => '1066', descr => 'non-persistent series generator',
@@ -10878,7 +10910,7 @@
    prosrc => 'pg_resgroup_move_query' },
 
 { oid => 6065, descr => 'statistics: information about resource groups in key-value style',
-   proexeclocation => 'c',
+   proexeclocation => 'i',
    proname => 'pg_resgroup_get_status_kv', prorows => '1000', proisstrict => 'f', proretset => 't', provolatile => 'v', proparallel => 'r', prorettype => 'record', proargtypes => 'text', proallargtypes => 'text,oid,text,text', proargmodes => '{i,o,o,o}', proargnames => '{prop_in,rsgid,prop,value}', prosrc => 'pg_resgroup_get_status_kv' },
 
 { oid => 6066, descr => 'statistics: information about resource groups',
@@ -11094,6 +11126,9 @@
 # AOCS functions.
 { oid => 9900, descr => 'decode internal AOCSVPInfo struct',
    proname => 'aocsvpinfo_decode', prorettype => 'int8', proargtypes => 'bytea int4 int4', prosrc => 'aocsvpinfo_decode' },
+
+{ oid => 9996, descr => 'get the GPDB-version directory name for user tablespaces',
+   proname => 'get_tablespace_version_directory_name', proisstrict => 'f', prorettype => 'text', proargtypes => '', prosrc => 'get_tablespace_version_directory_name' },
 
 # raises deprecation error
 { oid => 9997, descr => 'raises function deprecation error',

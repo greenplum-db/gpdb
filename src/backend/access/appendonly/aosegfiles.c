@@ -374,7 +374,6 @@ GetAllFileSegInfo(Relation parentrel,
 	return result;
 }
 
-
 /*
  * The comparison routine that sorts an array of FileSegInfos
  * in the ascending order of the segment number.

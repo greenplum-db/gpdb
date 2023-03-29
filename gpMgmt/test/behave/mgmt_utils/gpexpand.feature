@@ -513,3 +513,25 @@ Feature: expand the cluster by adding more segments
         When the user runs gpexpand with a static inputfile for a single-node cluster with mirrors without ret code check
         Then gpexpand should return a return code of 0
         And gpexpand should print "One or more segments are either down or not in preferred role." to stdout
+
+    @gpexpand_no_mirrors
+    @gpexpand_segment
+    Scenario: expand a cluster and verify necessary catalog tables are copied to new segments
+        Given the database is not running
+        And a working directory of the test as '/data/gpdata/gpexpand'
+        And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
+        And a cluster is created with no mirrors on "cdw" and "sdw1"
+        And database "gptest" exists
+        And the user runs psql with "-c 'CREATE ROLE abc; ALTER ROLE abc DENY DAY 0 DENY DAY 2 DENY BETWEEN DAY 4 AND DAY 5;'" against database "gptest"
+        And there are no gpexpand_inputfiles
+        And the cluster is setup for an expansion on hosts "cdw,sdw1"
+        When the user runs gpexpand interview to add 2 new segment and 0 new host "ignored.host"
+        Then the number of segments have been saved
+        When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
+        Then verify that the cluster has 2 new segments
+        And verify that "pg_description" catalog table is present on new segments
+        And verify that "pg_shdescription" catalog table is present on new segments
+        And verify that "pg_auth_time_constraint" catalog table is present on new segments
+        When the user runs "gpcheckcat gptest"
+        Then gpcheckcat should return a return code of 0
+        And the user runs psql with "-c 'DROP ROLE abc'" against database "gptest"

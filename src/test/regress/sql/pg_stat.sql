@@ -5,17 +5,17 @@ create table pg_stat_test(a int);
 select
     schemaname, relname, seq_scan, seq_tup_read, idx_scan, idx_tup_fetch, n_tup_ins, n_tup_upd,
     n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup
-from pg_stat_all_tables where relname = 'pg_stat_test';
+from gp_stat_all_tables_summary where relname = 'pg_stat_test';
 select
     schemaname, relname, seq_scan, seq_tup_read, idx_scan, idx_tup_fetch, n_tup_ins, n_tup_upd,
     n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup
-from pg_stat_user_tables where relname = 'pg_stat_test';
+from gp_stat_user_tables_summary where relname = 'pg_stat_test';
 select
     schemaname, relname, indexrelname, idx_scan, idx_tup_read, idx_tup_fetch
-from pg_stat_all_indexes where relname = 'pg_stat_test';
+from gp_stat_all_indexes_summary where relname = 'pg_stat_test';
 select
     schemaname, relname, indexrelname, idx_scan, idx_tup_read, idx_tup_fetch
-from pg_stat_user_indexes where relname = 'pg_stat_test';
+from gp_stat_user_indexes_summary where relname = 'pg_stat_test';
 
 begin; -- make analyze same transcation with insert to avoid double the pgstat causes by unorder message read.
 insert into pg_stat_test select * from generate_series(1, 100);
@@ -41,16 +41,16 @@ reset enable_seqscan;
 select
     schemaname, relname, seq_scan, seq_tup_read, idx_scan, idx_tup_fetch, n_tup_ins, n_tup_upd,
     n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze
-from pg_stat_all_tables where relname = 'pg_stat_test';
+from gp_stat_all_tables_summary where relname = 'pg_stat_test';
 select
     schemaname, relname, seq_scan, seq_tup_read, idx_scan, idx_tup_fetch, n_tup_ins, n_tup_upd,
     n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze
-from pg_stat_user_tables where relname = 'pg_stat_test';
+from gp_stat_user_tables_summary where relname = 'pg_stat_test';
 select
     schemaname, relname, indexrelname, idx_scan, idx_tup_read, idx_tup_fetch
-from pg_stat_all_indexes where relname = 'pg_stat_test';
+from gp_stat_all_indexes_summary where relname = 'pg_stat_test';
 select
     schemaname, relname, indexrelname, idx_scan, idx_tup_read, idx_tup_fetch
-from pg_stat_user_indexes where relname = 'pg_stat_test';
+from gp_stat_user_indexes_summary where relname = 'pg_stat_test';
 
 reset optimizer;

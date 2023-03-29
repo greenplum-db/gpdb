@@ -351,6 +351,14 @@ private:
 			ctxt_translation_prev_siblings	// translation contexts of previous siblings
 	);
 
+	// translate a dynamic foreign scan operator
+	Plan *TranslateDXLDynForeignScan(
+		const CDXLNode *dyn_foreign_scan_dxlnode,
+		CDXLTranslateContext *output_context,
+		CDXLTranslationContextArray *
+			ctxt_translation_prev_siblings	// translation contexts of previous siblings
+	);
+
 	// translate a DML operator
 	Plan *TranslateDXLDml(
 		const CDXLNode *dml_dxlnode, CDXLTranslateContext *output_context,

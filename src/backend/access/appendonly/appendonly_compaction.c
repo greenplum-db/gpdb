@@ -38,6 +38,7 @@
 #include "catalog/indexing.h"
 #include "catalog/pg_am.h"
 #include "catalog/pg_appendonly.h"
+#include "catalog/pg_attribute_encoding.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbvars.h"
 #include "commands/progress.h"
@@ -79,7 +80,7 @@ AppendOnlyCompaction_DropSegmentFile(Relation aorel, int segno, AOVacuumRelStats
 		elog(LOG, "Drop segment file: segno %d", segno);
 
 	/* Open and truncate the relation segfile */
-	MakeAOSegmentFileName(aorel, segno, -1, &fileSegNo, filenamepath);
+	MakeAOSegmentFileName(aorel, segno, InvalidFileNumber, &fileSegNo, filenamepath);
 
 	fd = OpenAOSegmentFile(filenamepath, 0);
 	if (fd >= 0)
@@ -233,7 +234,7 @@ AppendOnlySegmentFileTruncateToEOF(Relation aorel, int segno, int64 segeof, AOVa
 	relname = RelationGetRelationName(aorel);
 
 	/* Open and truncate the relation segfile to its eof */
-	MakeAOSegmentFileName(aorel, segno, -1, &fileSegNo, filenamepath);
+	MakeAOSegmentFileName(aorel, segno, InvalidFileNumber, &fileSegNo, filenamepath);
 
 	elogif(Debug_appendonly_print_compaction, LOG,
 		   "Opening AO relation \"%s.%s\", relation id %u, relfilenode %u (physical segment file #%d, logical EOF " INT64_FORMAT ")",

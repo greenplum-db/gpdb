@@ -31,8 +31,12 @@ These features are unsupported when GPORCA is enabled \(the default\):
 -   SortMergeJoin \(SMJ\).
 -   Ordered aggregations.
 -   Multi-argument `DISTINCT` qualified aggregates, for example `SELECT corr(DISTINCT a, b) FROM tbl1;`
--   These analytics extensions:
-    -   Multiple grouping sets
+-   Multiple grouping sets specified using a duplicate alias in a null-producing grouping set spec. Such queries fall back to the Postgres Planner unless you directly coerce the alias to a separate variable as shown in the example below:
+
+    ``` sql
+    CREATE TEMP TABLE tempt AS SELECT i AS ai1, i AS ai2 FROM generate_series(1, 3)i;
+    SELECT ai1, ai2 FROM tempt GROUP BY ai2, ROLLUP(ai1) ORDER BY ai1, ai2;
+    ```
 -   These scalar operators:
     -   ROW
     -   ROWCOMPARE

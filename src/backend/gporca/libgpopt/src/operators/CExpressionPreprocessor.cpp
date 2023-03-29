@@ -2814,6 +2814,7 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 		CConstraintArray *selected_partition_cnstrs =
 			GPOS_NEW(mp) CConstraintArray(mp);
 
+		IMdIdArray *foreign_server_mdids = GPOS_NEW(mp) IMdIdArray(mp);
 		IMdIdArray *all_partition_mdids = dyn_get->GetPartitionMdids();
 		for (ULONG ul = 0; ul < all_partition_mdids->Size(); ++ul)
 		{
@@ -2843,6 +2844,10 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 			// undefined (e.g only has default partition)
 			if (nullptr == pcnstr || !pcnstr->FContradiction())
 			{
+				IMDId *foreign_server_mdid =
+					(*dyn_get->ForeignServerMdIds())[ul];
+				foreign_server_mdid->AddRef();
+				foreign_server_mdids->Append(foreign_server_mdid);
 				part_mdid->AddRef();
 				selected_partition_mdids->Append(part_mdid);
 				rel_cnstr = PcnstrFromChildPartition(
@@ -2862,6 +2867,7 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 			// Return const false if there are no partitions left to scan
 			selected_partition_mdids->Release();
 			selected_partition_cnstrs->Release();
+			foreign_server_mdids->Release();
 			CColRefArray *colref_array =
 				expr->DeriveOutputColumns()->Pdrgpcr(mp);
 
@@ -2882,7 +2888,8 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 		CLogicalDynamicGet *new_dyn_get = GPOS_NEW(mp) CLogicalDynamicGet(
 			mp, new_alias, dyn_get->Ptabdesc(), dyn_get->ScanId(),
 			dyn_get->PdrgpcrOutput(), dyn_get->PdrgpdrgpcrPart(),
-			selected_partition_mdids, selected_part_cnstr_disj, true);
+			selected_partition_mdids, selected_part_cnstr_disj, true,
+			foreign_server_mdids);
 
 		CExpressionArray *select_children = GPOS_NEW(mp) CExpressionArray(mp);
 		select_children->Append(GPOS_NEW(mp) CExpression(mp, new_dyn_get));
@@ -3307,7 +3314,7 @@ CExpressionPreprocessor::PexprPreprocess(
 	GPOS_CHECK_ABORT;
 	pexprOuterRefsEleminated->Release();
 
-	// (7) substitute constant predicates
+	// (7.a) substitute constant predicates
 	ExprToConstantMap *phmExprToConst = GPOS_NEW(mp) ExprToConstantMap(mp);
 	CExpression *pexprPredWithConstReplaced =
 		PexprReplaceColWithConst(mp, pexprTrimmed2, phmExprToConst, true);
@@ -3315,11 +3322,22 @@ CExpressionPreprocessor::PexprPreprocess(
 	phmExprToConst->Release();
 	pexprTrimmed2->Release();
 
-	// (8) simplify quantified subqueries
-	CExpression *pexprSubqSimplified =
-		PexprSimplifyQuantifiedSubqueries(mp, pexprPredWithConstReplaced);
+	// (7.b) reorder the children of scalar cmp operator to ensure that left
+	// child is scalar ident and right child is scalar const
+	//
+	// Must happen after 7.a which can insert scalar cmp children with inversed
+	// format (CONST op IDENT) *and* before any step that relies on reorder
+	// format (e.g. "infer predicate form constraints")
+	CExpression *pexprReorderedScalarCmpChildren =
+		PexprReorderScalarCmpChildren(mp, pexprPredWithConstReplaced);
 	GPOS_CHECK_ABORT;
 	pexprPredWithConstReplaced->Release();
+
+	// (8) simplify quantified subqueries
+	CExpression *pexprSubqSimplified =
+		PexprSimplifyQuantifiedSubqueries(mp, pexprReorderedScalarCmpChildren);
+	GPOS_CHECK_ABORT;
+	pexprReorderedScalarCmpChildren->Release();
 
 	// (9) do preliminary unnesting of scalar subqueries
 	CExpression *pexprSubqUnnested =
@@ -3432,36 +3450,30 @@ CExpressionPreprocessor::PexprPreprocess(
 	GPOS_CHECK_ABORT;
 	pexprCollapsedProjects->Release();
 
-	// (26) reorder the children of scalar cmp operator to ensure that left child is scalar ident and right child is scalar const
-	CExpression *pexrReorderedScalarCmpChildren =
-		PexprReorderScalarCmpChildren(mp, pexprSubquery);
+	// (26) rewrite IN subquery to EXIST subquery with a predicate
+	CExpression *pexprExistWithPredFromINSubq =
+		PexprExistWithPredFromINSubq(mp, pexprSubquery);
 	GPOS_CHECK_ABORT;
 	pexprSubquery->Release();
 
-	// (27) rewrite IN subquery to EXIST subquery with a predicate
-	CExpression *pexprExistWithPredFromINSubq =
-		PexprExistWithPredFromINSubq(mp, pexrReorderedScalarCmpChildren);
-	GPOS_CHECK_ABORT;
-	pexrReorderedScalarCmpChildren->Release();
-
-	// (28) prune partitions
+	// (27) prune partitions
 	CExpression *pexprPrunedPartitions =
 		PrunePartitions(mp, pexprExistWithPredFromINSubq);
 	GPOS_CHECK_ABORT;
 	pexprExistWithPredFromINSubq->Release();
 
-	// (29) swap logical select over logical project
+	// (28) swap logical select over logical project
 	CExpression *pexprTransposeSelectAndProject =
 		PexprTransposeSelectAndProject(mp, pexprPrunedPartitions);
 	pexprPrunedPartitions->Release();
 
-	// (30) convert split update to inplace update
+	// (29) convert split update to inplace update
 	CExpression *pexprSplitUpdateToInplace =
 		ConvertSplitUpdateToInPlaceUpdate(mp, pexprTransposeSelectAndProject);
 	GPOS_CHECK_ABORT;
 	pexprTransposeSelectAndProject->Release();
 
-	// (31) normalize expression again
+	// (30) normalize expression again
 	CExpression *pexprNormalized2 =
 		CNormalizer::PexprNormalize(mp, pexprSplitUpdateToInplace);
 	GPOS_CHECK_ABORT;

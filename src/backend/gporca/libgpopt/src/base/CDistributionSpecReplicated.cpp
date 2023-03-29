@@ -136,8 +136,10 @@ CDistributionSpecReplicated::AppendEnforcers(CMemoryPool *mp,
 	}
 
 	pexpr->AddRef();
-	CExpression *pexprMotion = GPOS_NEW(mp)
-		CExpression(mp, GPOS_NEW(mp) CPhysicalMotionBroadcast(mp), pexpr);
+	CExpression *pexprMotion = GPOS_NEW(mp) CExpression(
+		mp,
+		GPOS_NEW(mp) CPhysicalMotionBroadcast(mp, m_ignore_broadcast_threshold),
+		pexpr);
 	pdrgpexpr->Append(pexprMotion);
 }
 // EOF

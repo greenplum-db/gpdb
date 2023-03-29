@@ -252,7 +252,7 @@ SetNextFileSegForRead(AppendOnlyScanDesc scan)
 		return false;
 	}
 
-	MakeAOSegmentFileName(reln, segno, -1, &fileSegNo, scan->aos_filenamepath);
+	MakeAOSegmentFileName(reln, segno, InvalidFileNumber, &fileSegNo, scan->aos_filenamepath);
 	Assert(strlen(scan->aos_filenamepath) + 1 <= scan->aos_filenamepath_maxlen);
 
 	Assert(scan->initedStorageRoutines);
@@ -326,7 +326,7 @@ SetCurrentFileSegForWrite(AppendOnlyInsertDesc aoInsertDesc)
 
 	/* Make the 'segment' file name */
 	MakeAOSegmentFileName(aoInsertDesc->aoi_rel,
-						  aoInsertDesc->cur_segno, -1,
+						  aoInsertDesc->cur_segno, InvalidFileNumber,
 						  &fileSegNo,
 						  aoInsertDesc->appendFilePathName);
 	Assert(strlen(aoInsertDesc->appendFilePathName) + 1 <= aoInsertDesc->appendFilePathNameMaxLen);
@@ -1071,6 +1071,8 @@ getNextBlock(AppendOnlyScanDesc scan)
 											&scan->executorReadBlock);
 
 	AppendOnlyScanDesc_UpdateTotalBytesRead(scan);
+	pgstat_count_buffer_read_ao(scan->aos_rd,
+								RelationGuessNumberOfBlocksFromSize(scan->totalBytesRead));
 
 	return true;
 }
@@ -1648,7 +1650,7 @@ openFetchSegmentFile(AppendOnlyFetchDesc aoFetchDesc,
 
 	MakeAOSegmentFileName(
 						  aoFetchDesc->relation,
-						  openSegmentFileNum, -1,
+						  openSegmentFileNum, InvalidFileNumber,
 						  &fileSegNo,
 						  aoFetchDesc->segmentFileName);
 	Assert(strlen(aoFetchDesc->segmentFileName) + 1 <=
@@ -2309,6 +2311,53 @@ appendonly_fetch_finish(AppendOnlyFetchDesc aoFetchDesc)
 	aoFetchDesc->segmentFileName = NULL;
 
 	pfree(aoFetchDesc->title);
+}
+
+AppendOnlyIndexOnlyDesc
+appendonly_index_only_init(Relation relation, Snapshot snapshot)
+{
+	AppendOnlyIndexOnlyDesc indexonlydesc = (AppendOnlyIndexOnlyDesc) palloc0(sizeof(AppendOnlyIndexOnlyDescData));
+
+	/* initialize the block directory */
+	indexonlydesc->blockDirectory = palloc0(sizeof(AppendOnlyBlockDirectory));
+	AppendOnlyBlockDirectory_Init_forIndexOnlyScan(indexonlydesc->blockDirectory,
+												   relation,
+												   1,
+												   snapshot);
+
+	/* initialize the visimap */
+	indexonlydesc->visimap = palloc0(sizeof(AppendOnlyVisimap));
+	AppendOnlyVisimap_Init_forIndexOnlyScan(indexonlydesc->visimap,
+											relation,
+											snapshot);
+	return indexonlydesc;
+}
+
+bool
+appendonly_index_only_check(AppendOnlyIndexOnlyDesc indexonlydesc, AOTupleId *aotid, Snapshot snapshot)
+{
+	if (!AppendOnlyBlockDirectory_CoversTuple(indexonlydesc->blockDirectory, aotid))
+		return false;
+
+	/* check SnapshotAny for the case when gp_select_invisible is on */
+	if (snapshot != SnapshotAny && !AppendOnlyVisimap_IsVisible(indexonlydesc->visimap, aotid))
+		return false;
+	
+	return true;
+}
+
+void
+appendonly_index_only_finish(AppendOnlyIndexOnlyDesc indexonlydesc)
+{
+	/* clean up the block directory */
+	AppendOnlyBlockDirectory_End_forIndexOnlyScan(indexonlydesc->blockDirectory);
+	pfree(indexonlydesc->blockDirectory);
+	indexonlydesc->blockDirectory = NULL;
+
+	/* clean up the visimap */
+	AppendOnlyVisimap_Finish_forIndexOnlyScan(indexonlydesc->visimap);
+	pfree(indexonlydesc->visimap);
+	indexonlydesc->visimap = NULL;
 }
 
 /*

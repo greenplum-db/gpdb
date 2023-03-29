@@ -62,6 +62,7 @@ extern "C" {
 #include "naucrates/dxl/operators/CDXLPhysicalCTEConsumer.h"
 #include "naucrates/dxl/operators/CDXLPhysicalCTEProducer.h"
 #include "naucrates/dxl/operators/CDXLPhysicalDynamicBitmapTableScan.h"
+#include "naucrates/dxl/operators/CDXLPhysicalDynamicForeignScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalDynamicIndexScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalDynamicTableScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalGatherMotion.h"
@@ -455,6 +456,12 @@ CTranslatorDXLToPlStmt::TranslateDXLOperatorToPlan(
 		{
 			plan = TranslateDXLDynIdxScan(dxlnode, output_context,
 										  ctxt_translation_prev_siblings);
+			break;
+		}
+		case EdxlopPhysicalDynamicForeignScan:
+		{
+			plan = TranslateDXLDynForeignScan(dxlnode, output_context,
+											  ctxt_translation_prev_siblings);
 			break;
 		}
 		case EdxlopPhysicalTVF:
@@ -4217,6 +4224,179 @@ CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan(
 
 	return (Plan *) dyn_idx_scan;
 }
+
+// remaps varnos qual and targetlist from one tuple descriptor to another.
+// eg: remap varnos from a root partition to a child partition, or vice-versa
+static TupleDesc
+RemapAttrsFromTupDesc(TupleDesc fromDesc, TupleDesc toDesc, Index index,
+					  List *qual, List *targetlist)
+{
+	AttrNumber *attMap;
+	attMap = convert_tuples_by_name_map_if_req(toDesc, fromDesc, "unused msg");
+
+	/* If attribute remapping is not necessary, then do not change the varattno */
+	if (attMap)
+	{
+		change_varattnos_of_a_varno((Node *) qual, attMap, index);
+		change_varattnos_of_a_varno((Node *) targetlist, attMap, index);
+		fromDesc = toDesc;
+		pfree(attMap);
+	}
+	return fromDesc;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorDXLToPlStmt::TranslateDXLDynForeignScan
+//
+//	@doc:
+//		Translates a DXL dynamic foreign scan node into a DynamicForeignScan node
+//		This is similar to TranslateDXLDynTblScan, but has additional logic to
+//		populate the fdw_private_array. Note that because we need to call
+//		CreateForeignScan to populate this array, we need to map the qual
+//		and targetlist from the child partitions from the root partition
+//		While we do some of this in the executor, since we populate the
+//		fdw_private for each child here, we also need mapping logic here
+//
+//---------------------------------------------------------------------------
+Plan *
+CTranslatorDXLToPlStmt::TranslateDXLDynForeignScan(
+	const CDXLNode *dyn_foreign_scan_dxlnode,
+	CDXLTranslateContext *output_context,
+	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
+{
+	// translate table descriptor into a range table entry
+	CDXLPhysicalDynamicForeignScan *dyn_foreign_scan_dxlop =
+		CDXLPhysicalDynamicForeignScan::Cast(
+			dyn_foreign_scan_dxlnode->GetOperator());
+
+	// translation context for column mappings in the base relation
+	CDXLTranslateContextBaseTable base_table_context(m_mp);
+
+	Index index = ProcessDXLTblDescr(dyn_foreign_scan_dxlop->GetDXLTableDescr(),
+									 &base_table_context, ACL_SELECT);
+	// rte of root dynamic scan
+	RangeTblEntry *rte = m_dxl_to_plstmt_context->GetRTEByIndex(index);
+	Oid oid_root = rte->relid;
+	// create dynamic scan node
+	DynamicForeignScan *dyn_foreign_scan = MakeNode(DynamicForeignScan);
+
+	IMdIdArray *parts = dyn_foreign_scan_dxlop->GetParts();
+
+	List *oids_list = NIL;
+	for (ULONG ul = 0; ul < parts->Size(); ul++)
+	{
+		Oid part = CMDIdGPDB::CastMdid((*parts)[ul])->Oid();
+		oids_list = gpdb::LAppendOid(oids_list, part);
+	}
+
+	dyn_foreign_scan->partOids = oids_list;
+	dyn_foreign_scan->join_prune_paramids = NIL;
+
+	OID oid_type =
+		CMDIdGPDB::CastMdid(m_md_accessor->PtMDType<IMDTypeInt4>()->MDId())
+			->Oid();
+
+	const ULongPtrArray *selector_ids =
+		dyn_foreign_scan_dxlop->GetSelectorIds();
+	// populate selector ids for dynamic partition elimination
+	for (ULONG ul = 0; ul < selector_ids->Size(); ++ul)
+	{
+		ULONG selector_id = *(*selector_ids)[ul];
+		ULONG param_id = m_dxl_to_plstmt_context->GetParamIdForSelector(
+			oid_type, selector_id);
+		dyn_foreign_scan->join_prune_paramids =
+			gpdb::LAppendInt(dyn_foreign_scan->join_prune_paramids, param_id);
+	}
+
+	GPOS_ASSERT(2 == dyn_foreign_scan_dxlnode->Arity());
+
+	// translate proj list and filter for root
+	CDXLNode *project_list_dxlnode =
+		(*dyn_foreign_scan_dxlnode)[EdxltsIndexProjList];
+	CDXLNode *filter_dxlnode = (*dyn_foreign_scan_dxlnode)[EdxltsIndexFilter];
+
+	List *targetlist = NIL;
+	List *qual = NIL;
+	TranslateProjListAndFilter(
+		project_list_dxlnode, filter_dxlnode,
+		&base_table_context,  // translate context for the base table
+		nullptr,			  // translate_ctxt_left and pdxltrctxRight,
+		&targetlist, &qual, output_context);
+
+	// set the rte relid to the child, since we need to call the fdw api
+	// which assumes we're working with a foreign table. The root partition is
+	// not foreign!
+	Oid oid_first_child = CMDIdGPDB::CastMdid((*parts)[0])->Oid();
+	rte->relid = oid_first_child;
+	// need to lock foreign rel when calling out to CreateForeignScan
+	gpdb::GPDBLockRelationOid(
+		oid_first_child,
+		dyn_foreign_scan_dxlop->GetDXLTableDescr()->LockMode());
+
+	gpdb::RelationWrapper rootRel = gpdb::GetRelation(oid_root);
+	gpdb::RelationWrapper childRel = gpdb::GetRelation(oid_first_child);
+
+	TupleDesc fromDesc = RemapAttrsFromTupDesc(RelationGetDescr(rootRel),
+											   RelationGetDescr(childRel),
+											   index, qual, targetlist);
+
+	ForeignScan *foreign_scan_first_part =
+		gpdb::CreateForeignScan(oid_first_child, index, qual, targetlist,
+								m_dxl_to_plstmt_context->m_orig_query, rte);
+
+	// Set the plan fields to the first partition. We still want the plan type to be
+	// a dynamic foreign scan
+	dyn_foreign_scan->foreignscan = *foreign_scan_first_part;
+	dyn_foreign_scan->foreignscan.scan.plan.type = T_DynamicForeignScan;
+	dyn_foreign_scan->foreignscan.scan.scanrelid = index;
+
+	Plan *plan = &(dyn_foreign_scan->foreignscan.scan.plan);
+	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
+	plan->targetlist = targetlist;
+	plan->qual = qual;
+
+	// populate fdw_private_list. Each fdw_private can and typically will be different for each partition
+	// we have no way of knowing exactly what will be different, or which specific api calls will populate the
+	// different part of fdw_private. So we have to be conservative and call everything for each partition
+	// We call CreateForeignScan for each partition, and append the fdw_private to the list
+	dyn_foreign_scan->fdw_private_list = NIL;
+	for (ULONG ul = 0; ul < parts->Size(); ul++)
+	{
+		rte->relid = CMDIdGPDB::CastMdid((*parts)[ul])->Oid();
+		gpdb::RelationWrapper childRel = gpdb::GetRelation(rte->relid);
+
+		fromDesc = RemapAttrsFromTupDesc(fromDesc, RelationGetDescr(childRel),
+										 index, qual, targetlist);
+
+		// need to lock foreign rel when calling out to CreateForeignScan
+		gpdb::GPDBLockRelationOid(
+			rte->relid, dyn_foreign_scan_dxlop->GetDXLTableDescr()->LockMode());
+
+		ForeignScan *foreign_scan =
+			gpdb::CreateForeignScan(rte->relid, index, qual, targetlist,
+									m_dxl_to_plstmt_context->m_orig_query, rte);
+
+		dyn_foreign_scan->fdw_private_list = gpdb::LAppend(
+			dyn_foreign_scan->fdw_private_list, foreign_scan->fdw_private);
+	}
+	// convert qual and targetlist back to root relation. This is used by the
+	// executor node to remap to the children
+	gpdb::RelationWrapper prevRel = gpdb::GetRelation(rte->relid);
+	fromDesc = RemapAttrsFromTupDesc(RelationGetDescr(prevRel),
+									 RelationGetDescr(rootRel), index, qual,
+									 targetlist);
+
+	// set the rte relid back to the root
+	rte->relid = oid_root;
+	// translate operator costs
+	TranslatePlanCosts(dyn_foreign_scan_dxlnode, plan);
+
+	SetParamIds(plan);
+
+	return plan;
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorDXLToPlStmt::TranslateDXLDml

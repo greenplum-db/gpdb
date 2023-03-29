@@ -315,7 +315,6 @@ BEGIN;
 DROP ROLE IF EXISTS guc_gp_test_role1;
 NOTICE:  role "guc_gp_test_role1" does not exist, skipping
 CREATE ROLE guc_gp_test_role1;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 SET ROLE guc_gp_test_role1;
 RESET ROLE;
 END;
@@ -330,7 +329,6 @@ BEGIN ISOLATION LEVEL REPEATABLE READ;
 DROP ROLE IF EXISTS guc_gp_test_role2;
 NOTICE:  role "guc_gp_test_role2" does not exist, skipping
 CREATE ROLE guc_gp_test_role2;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 SET ROLE guc_gp_test_role2;
 RESET ROLE;
 END;
@@ -348,7 +346,6 @@ FETCH c1;
 
 DROP ROLE IF EXISTS guc_gp_test_role1;
 CREATE ROLE guc_gp_test_role1;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 SET ROLE guc_gp_test_role1;
 RESET ROLE;
 FETCH c2;

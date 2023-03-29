@@ -24,7 +24,6 @@ LOG:  statement: drop user if exists autostats_nonowner;
 NOTICE:  role "autostats_nonowner" does not exist, skipping
 create user autostats_nonowner;
 LOG:  statement: create user autostats_nonowner;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 -- Make sure rel_tuples starts at zero
 select relname, reltuples from pg_class where relname='autostats_test';
 LOG:  statement: select relname, reltuples from pg_class where relname='autostats_test';

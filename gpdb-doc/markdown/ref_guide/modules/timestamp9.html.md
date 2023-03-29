@@ -2,7 +2,7 @@
 
 The `timestamp9` module provides an efficient, nanosecond-precision timestamp data type and related functions and operators.
 
-The Greenplum Database `timestamp9` module is based on version 1.1.0 of the `timestamp9` module used with PostgreSQL.
+The Greenplum Database `timestamp9` module is based on version 1.2.0 of the `timestamp9` module used with PostgreSQL.
 
 ## <a id="topic_reg"></a>Installing and Registering the Module 
 
@@ -14,11 +14,19 @@ CREATE EXTENSION timestamp9;
 
 Refer to [Installing Additional Supplied Modules](../../install_guide/install_modules.html) for more information.
 
-## <a id="topic_info"></a>Module Documentation 
+## Supported Data Types
 
-Refer to the [timestamp9 github documentation](https://github.com/fvannee/timestamp9) for detailed information about using the module.
+The Greenplum Database `timestamp9` extension supports three kinds of datatatypes: `TIMESTAMP9`, `TIMESTAMP9_LTZ` and `TIMESTAMP9_NTZ`. (The `TIMESTAMP9_LTZ` data type is an alias for `TIMESTAMP9` data type.) 
 
-## <a id="topic_gp"></a>Additional Documentation
+The following table summarizes key information about the `timestamp9` data types:
+
+|Data Type|Storage Size|Description|Max Value|Min Value|Resolution|
+|--------|-------|----|-----------|---------|---------|----------|
+|`TIMESTAMP9`|8 bytes|Like TIMESTAMP9_LTZ. Timestamp with local time zone. |2261-12-31 23:59:59.999999999 +0000 |1700-01-01 00:00:00.000000000 +0000 | 1 nanosecond |
+|`TIMESTAMP9_LTZ`|8 bytes|Timestamp with local time zone. |2261-12-31 23:59:59.999999999 +0000 |1700-01-01 00:00:00.000000000 +0000 | 1 nanosecond |
+|`TIMESTAMP9_NTZ`|8 bytes|Timestamp without time zone. |2261-12-31 23:59:59.999999999 +0000 |1700-01-01 00:00:00.000000000 +0000 | 1 nanosecond|
+
+## <a id="topic_gp"></a>The TimeZone Configuration Parameter and `timestamp9`
 
 You can set the [TimeZone](../config_params/guc-list.html#TimeZone) server configuration parameter to specify the time zone that Greenplum Database uses when it prints a `timestamp9` timestamp. When you set this parameter, Greenplum Database displays the timestamp value in that time zone. For example:
 
@@ -37,6 +45,11 @@ testdb=# SELECT now()::timestamp9;
  2022-08-24 08:08:12.995542000 -0200
 (1 row)
 ```
+
+## <a id="topic_info"></a>Module Documentation 
+
+Refer to the [timestamp9 github documentation](https://github.com/fvannee/timestamp9) for detailed information about using the module.
+
 
 ## <a id="topic_limit"></a>Limitations
 

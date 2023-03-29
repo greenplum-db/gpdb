@@ -124,7 +124,7 @@ typedef struct CdbExplain_NodeSummary
 	CdbExplain_Agg workmemused;
 	CdbExplain_Agg workmemwanted;
 	CdbExplain_Agg totalWorkfileCreated;
-	/* Used for DynamicSeqScan, DynamicIndexScan and DynamicBitmapHeapScan */
+	/* Used for DynamicSeqScan, DynamicIndexScan, DynamicBitmapHeapScan, and DynamicForeignScan */
 	CdbExplain_Agg totalPartTableScanned;
 	/* Summary of space used by sort */
 	CdbExplain_Agg sortSpaceUsed[NUM_SORT_SPACE_TYPE][NUM_SORT_METHOD];
@@ -1584,7 +1584,8 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 	 */
 	if (0 <= ns->totalPartTableScanned.vcnt && (T_DynamicSeqScanState == planstate->type
 												|| T_DynamicIndexScanState == planstate->type
-												|| T_DynamicBitmapHeapScanState == planstate->type))
+												|| T_DynamicBitmapHeapScanState == planstate->type
+												|| T_DynamicForeignScanState == planstate->type))
 	{
 		/*
 		 * FIXME: Only displayed in TEXT format

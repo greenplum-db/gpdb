@@ -559,6 +559,10 @@ _outAExpr(StringInfo str, A_Expr *node)
 
 			WRITE_NODE_FIELD(name);
 			break;
+		case AEXPR_NOT_DISTINCT:
+
+			WRITE_NODE_FIELD(name);
+			break;
 		case AEXPR_NULLIF:
 
 			WRITE_NODE_FIELD(name);
@@ -1002,6 +1006,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_ForeignScan:
 				_outForeignScan(str, obj);
+				break;
+			case T_DynamicForeignScan:
+				_outDynamicForeignScan(str, obj);
 				break;
 			case T_CustomScan:
 				_outCustomScan(str, obj);

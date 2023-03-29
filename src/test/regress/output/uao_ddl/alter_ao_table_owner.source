@@ -7,7 +7,6 @@ Drop role if exists uao_user2 ;
 --- stop_ignore
 --Alter table to a new owner
 Create role uao_user2;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 create table sto_alt_uao4 (i int, j char(10)) DISTRIBUTED BY (i);
 insert into sto_alt_uao4 select i , 'cc'||i from generate_series(1,5) as i;
 Alter Table sto_alt_uao4  Owner to uao_user2;

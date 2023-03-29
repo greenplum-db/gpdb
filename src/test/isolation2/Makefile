@@ -62,7 +62,7 @@ clean distclean:
 
 install: all gpdiff.pl gpstringsubs.pl
 
-installcheck: install installcheck-parallel-retrieve-cursor installcheck-ic-tcp installcheck-ic-proxy
+installcheck: install installcheck-resource-queue installcheck-parallel-retrieve-cursor installcheck-ic-tcp installcheck-ic-proxy
 	$(pg_isolation2_regress_installcheck) --init-file=$(top_builddir)/src/test/regress/init_file --init-file=./init_file_isolation2 --schedule=$(srcdir)/isolation2_schedule
 
 installcheck-resgroup: install
@@ -86,3 +86,6 @@ installcheck-ic-proxy: install
 ifeq ($(findstring gp_interconnect_type=proxy,$(PGOPTIONS)),gp_interconnect_type=proxy)
 	$(pg_isolation2_regress_installcheck) $(EXTRA_REGRESS_OPTS) --init-file=$(top_builddir)/src/test/regress/init_file --init-file=./init_file_isolation2 --bindir='$(bindir)' --inputdir=$(srcdir) --schedule=$(srcdir)/isolation2_ic_proxy_schedule
 endif
+
+installcheck-resource-queue: install
+	$(pg_isolation2_regress_installcheck) $(EXTRA_REGRESS_OPTS) --init-file=$(top_builddir)/src/test/regress/init_file --init-file=./init_file_isolation2  --bindir='$(bindir)' --inputdir=$(srcdir) --dbname=isolation2resourcequeue --schedule=$(srcdir)/isolation2_resqueue_schedule

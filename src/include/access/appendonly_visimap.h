@@ -144,6 +144,14 @@ extern void AppendOnlyVisimap_Init_forUniqueCheck(
 extern void AppendOnlyVisimap_Finish_forUniquenessChecks(
 												   AppendOnlyVisimap *visiMap);
 
+extern void AppendOnlyVisimap_Init_forIndexOnlyScan(
+									   AppendOnlyVisimap *visiMap,
+									   Relation aoRel,
+									   Snapshot snapshot);
+
+extern void AppendOnlyVisimap_Finish_forIndexOnlyScan(
+												   AppendOnlyVisimap *visiMap);
+
 bool AppendOnlyVisimapScan_GetNextInvisible(
 									   AppendOnlyVisimapScan *visiMapScan,
 									   AOTupleId *tupleId);

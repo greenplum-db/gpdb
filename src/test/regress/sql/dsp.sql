@@ -97,7 +97,7 @@ create table t2 (
 SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 't2';
 insert into t2 select i, 71/i, 2*i, 'abc'||2*i from generate_series(1,5)i;
 select * from t2 order by 1;
-select attrelid::regclass, attnum, attoptions
+select attrelid::regclass, attnum, filenum, attoptions
 	from pg_attribute_encoding order by 1,2;
 -- SET operation in a session has higher precedence.  Also test if
 -- compresstype is correctly inferred based on compress level.
@@ -173,7 +173,7 @@ create table co7(
 	b varchar encoding(compresstype=zlib,compresslevel=6),
 	c char encoding(compresstype=rle_type))
 	with (checksum=false) distributed by (a);
-select attrelid::regclass,attnum,attoptions
+select attrelid::regclass,attnum,filenum,attoptions
 	from pg_attribute_encoding order by 1,2;
 drop database if exists dsp3;
 create database dsp3;
@@ -209,7 +209,7 @@ create table co5 (a int encoding (blocksize=8192), b float)
 	with (appendonly=true,orientation=column, checksum=false) distributed by (a);
 select c.relname, am.amname, c.relkind, c.reloptions from pg_class c left join pg_am am on (c.relam=am.oid)
 where relname in ('co1', 'co2', 'co3', 'co5') order by 1;
-select attrelid::regclass,attnum,attoptions
+select attrelid::regclass,attnum,filenum,attoptions
 	from pg_attribute_encoding order by 1,2;
 
 -- misc tests
@@ -314,7 +314,7 @@ set default_table_access_method = ao_row;
 set gp_default_storage_options = "compresstype=NONE";
 create table co10 (a int, b int, c int) with (appendonly=true,orientation=column)
     distributed by (a);
-select attnum,attoptions from pg_attribute_encoding
+select attnum,filenum,attoptions from pg_attribute_encoding
     where attrelid = 'co10'::regclass order by attnum;
 
 -- compression disabled by default, enable in WITH clause

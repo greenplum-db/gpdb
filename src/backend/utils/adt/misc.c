@@ -396,6 +396,15 @@ pg_tablespace_location(PG_FUNCTION_ARGS)
 }
 
 /*
+ * GPDB: get the GPDB-specific directory name for user tablespace
+ */
+Datum
+get_tablespace_version_directory_name(PG_FUNCTION_ARGS)
+{
+	PG_RETURN_TEXT_P(CStringGetTextDatum(GP_TABLESPACE_VERSION_DIRECTORY));
+}
+
+/*
  * pg_sleep - delay for N seconds
  */
 Datum

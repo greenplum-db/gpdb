@@ -255,6 +255,9 @@ public:
 		EopLogicalDynamicBitmapTableGet,
 		EopPhysicalDynamicBitmapTableScan,
 
+		EopLogicalDynamicForeignGet,
+		EopPhysicalDynamicForeignScan,
+
 		EopSentinel
 	};
 

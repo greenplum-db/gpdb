@@ -28,11 +28,27 @@ Maximum time to complete client authentication. This prevents hung clients from 
 
 ## <a id="autovacuum"></a>autovacuum 
 
-When enabled, Greenplum Database starts up the autovacuum daemon, which operates at the database level. After the daemon is running, all databases have their catalog tables automatically vacuumed and their catalog and user tables automatically analyzed.
+When enabled, Greenplum Database starts up the autovacuum daemon, which operates at the database level. When the daemon is running, Greenplum Database:
+
+- Automatically vacuums catalog tables and possibly auxiliary tables (determined by the [gp_autovacuum_scope](#gp_autovacuum_scope) configuration parameter setting).
+- Automatically analyzes the vacuumed tables.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |Boolean|on|master, system, restart|
+
+## <a id="autovacuum_naptime"></a>autovacuum\_naptime
+
+When `autovacuum=on` (the default), specifies the minimum delay between autovacuum runs. In each round, the daemon issues `VACUUM` and `ANALYZE` commands as needed for catalog (and possibly auxiliary) tables.
+
+A value without units is taken to be seconds. The default is one minute.
+
+This parameter may be set only in the `postgresql.conf` file or on the server command line.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|1 - INT_MAX/1000 | 60 |master, system, restart|
+
 
 ## <a id="backslash_quote"></a>backslash\_quote 
 
@@ -526,6 +542,19 @@ Specifies the threshold for automatic statistics collection when `gp_autostats_m
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |integer|2147483647|master, session, reload|
+
+## <a id="gp_autovacuum_scope"></a>gp\_autovacuum\_scope
+
+When `autovacuum=on` (the default), specifies the types of tables that are eligible for automatic vacuuming of dead tuples. Greenplum Database supports two `gp_autovacuum_scope` values:
+
+- `catalog` - Greenplum Database autovacuums catalog tables only (`pg_catalog` relations).
+- `catalog_ao_aux` - Greenplum Database autovacuums catalog tables and append-optimized auxiliary tables (`pg_catalog`, `pg_toast`, and `pg_aoseg` relations).
+
+Only superusers can change this setting.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|catalog, catalog_ao_aux | catalog |master, system, reload|
 
 ## <a id="gp_cached_segworkers_threshold"></a>gp\_cached\_segworkers\_threshold 
 
@@ -1161,6 +1190,20 @@ Running a query that generates a large number of slices might affect Greenplum D
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |0 - INT\_MAX|0|master, session, reload|
+
+## <a id="max_slot_wal_keep_size"></a>max_slot_wal_keep_size 
+
+Sets the maximum size in megabytes of Write-Ahead Logging (WAL) files on disk per segment instance that can be reserved when Greenplum streams data to the mirror segment instance or standby coordinator to keep it synchronized with the corresponding primary segment instance or coordinator. The default is -1; when set to the default, Greenplum can retain an unlimited amount of WAL files on disk.
+
+If the file size exceeds the maximum size, the files are released and are available for deletion. A mirror or standby may no longer be able to continue replication due to removal of required WAL files.
+
+In Greenplum Database, replication slots exist internally by default for primary/mirror pairs. Consequently, even if you do not configure this parameter, that functionality is available by default. 
+
+>> **CAUTION** If `max_slot_wal_keep_size` is set to a non-default value for acting primaries, full and incremental recovery of their mirrors may not be possible. Depending on the workload on the primary running concurrently with a full recovery, the recovery may fail with a missing WAL error. Therefore, you must ensure that `max_slot_wal_keep_size` is set to the default of `-1` or a high enough value before running full recovery. Similarly, depending on how behind the downed mirror is, an incremental recovery of it may fail with a missing WAL error. In this case, full recovery would be the only recourse.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Integer|-1|local, system, reload|
 
 ## <a id="gp_motion_cost_per_row"></a>gp\_motion\_cost\_per\_row 
 
@@ -2452,6 +2495,16 @@ The parameter can be set for a database system, an individual database, or a ses
 |-----------|-------|-------------------|
 |boolean|off|master, session, reload|
 
+## <a id="optimizer_penalize_broadcast_threshold"></a>optimizer_penalize_skew_broadcast_threshold
+
+When GPORCA is enabled (the default), during query optimization GPORCA penalizes the cost of plans that attempt to broadcast more than the value specified by `optimizer_penalize_broadcast_threshold`. For example, if this parameter is set to 100K rows (the default), any broadcast of more than 100K rows is heavily penalized. 
+
+When this parameter is set to `0`, GPORCA sets this broadcast threshold to unlimited and never penalizes a broadcast motion.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|integer >= 0|100K rows|master, session, reload|
+
 ## <a id="optimizer_penalize_skew"></a>optimizer\_penalize\_skew 
 
 When GPORCA is enabled \(the default\), this parameter allows GPORCA to penalize the local cost of a HashJoin with a skewed Redistribute Motion as child to favor a Broadcast Motion during query optimization. The default value is `true`.
@@ -3003,6 +3056,14 @@ Collects information about executing commands. Enables the collection of informa
 |-----------|-------|-------------------|
 |Boolean|true|master, session, reload, superuser|
 
+## <a id="track_wal_io_timing"></a>track_wal_io_timing
+
+Enables timing of WAL I/O calls. This parameter is disabled by default, as it repeatedly queries the operating system for the current time, which may cause significant overhead on some platforms. The view [pg_stat_wal](../system_catalogs/pg_stat_wal.html) displays WAL I/O timing information. Only superusers and users with the appropriate `SET` privilege can change this setting.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|false|coordinator, session, reload|
+
 ## <a id="transaction_isolation"></a>transaction\_isolation 
 
 Sets the current transaction's isolation level.
@@ -3176,15 +3237,17 @@ If you set the value to 0, database performance issues might occur under heavy l
 |-----------|-------|-------------------|
 |0 - MAX-INT / 1024|1024|master, system, reload|
 
-## <a id="wal_keep_segments"></a>wal\_keep\_segments 
+## <a id="wal_keep_size"></a>wal_keep_size 
 
-For Greenplum Database coordinator mirroring, sets the maximum number of processed WAL segment files that are saved by the by the active Greenplum Database coordinator if a checkpoint operation occurs.
+Specifies the minimum size of past log file segments kept in the `pg_wal` directory, in case a standby coordinator or mirror segment instance needs to fetch them for streaming replication. If a standby coordinator or mirror segment instance connected to the sending server falls behind by more than `wal_keep_size` megabytes, the sending server might remove a WAL segment still needed by the standby coordinator or mirror segment instance, in which case the replication connection will be terminated. 
 
-The segment files are used to synchronize the active coordinator on the standby coordinator.
+This sets only the minimum size of segments retained in `pg_wal`; the system might need to retain more segments for WAL archival or to recover from a checkpoint. If `wal_keep_size` is zero (the default), the number of old WAL segments available to mirror servers is a function of the location of replication slot's `restart_lsn` and `max_slot_wal_keep_size` parameters, as well as the status of WAL archiving. 
+
+If this value is specified without units, it is taken as megabytes.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|5|master, system, reload, superuser|
+|integer|5 times the default size of the write-ahead log file|master, system, reload, superuser|
 
 ## <a id="wal_receiver_status_interval"></a>wal\_receiver\_status\_interval 
 

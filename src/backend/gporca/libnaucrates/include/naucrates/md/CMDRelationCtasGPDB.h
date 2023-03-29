@@ -255,6 +255,12 @@ public:
 		return m_vartypemod_array;
 	}
 
+	IMDId *
+	ForeignServer() const override
+	{
+		return nullptr;
+	}
+
 #ifdef GPOS_DEBUG
 	// debug print of the metadata relation
 	void DebugPrint(IOstream &os) const override;

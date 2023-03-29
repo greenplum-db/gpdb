@@ -145,7 +145,8 @@ GetAppendOnlyEntryAttributes(Oid relid,
 
 /*
  * Get the OIDs of the auxiliary relations and their indexes for an appendonly
- * relation.
+ * relation. This should only be called on tables with pg_appendonly entries,
+ * which currently are just non-partitioned AO/CO tables.
  *
  * The OIDs will be retrieved only when the corresponding output variable is
  * not NULL.
@@ -157,6 +158,9 @@ GetAppendOnlyEntryAuxOids(Relation rel,
 						  Oid *visimaprelid)
 {
 	Form_pg_appendonly	aoForm;
+
+	/* the relation has to be a non-partitioned AO/CO table */
+	Assert(RelationIsAppendOptimized(rel));
 
 	aoForm = rel->rd_appendonly;
 
@@ -170,12 +174,23 @@ GetAppendOnlyEntryAuxOids(Relation rel,
 		*visimaprelid = aoForm->visimaprelid;
 }
 
+/*
+ * Get the pg_appendonly entry for the relation. This should only be called on 
+ * tables with pg_appendonly entries, which currently are just non-partitioned
+ * AO/CO tables. The pg_appendonly data is copied into the Form_pg_appendonly
+ * pointer which should be valid.
+ */
 void
 GetAppendOnlyEntry(Relation rel, Form_pg_appendonly aoEntry)
 {
 	Form_pg_appendonly	aoForm;
 
+	/* the relation has to be a non-partitioned AO/CO table and the aoEntry is valid */
+	Assert(RelationIsAppendOptimized(rel));
+	Assert(aoEntry);
+
 	aoForm = rel->rd_appendonly;
+
 	memcpy(aoEntry, aoForm, APPENDONLY_TUPLE_SIZE);
 }
 

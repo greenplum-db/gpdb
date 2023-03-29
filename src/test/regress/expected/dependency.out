@@ -5,7 +5,6 @@ CREATE USER regress_dep_user;
 CREATE USER regress_dep_user2;
 CREATE USER regress_dep_user3;
 CREATE GROUP regress_dep_group;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE TABLE deptest (f1 serial primary key, f2 text) DISTRIBUTED BY (f1);
 GRANT SELECT ON TABLE deptest TO GROUP regress_dep_group;
 GRANT ALL ON TABLE deptest TO regress_dep_user, regress_dep_user2;

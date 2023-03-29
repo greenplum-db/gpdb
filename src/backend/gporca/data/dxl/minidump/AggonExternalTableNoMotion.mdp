@@ -141,7 +141,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.196638.1.0" Name="ext_expenses" Rows="1000000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.196638.1.0" Name="ext_expenses" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="11,5">
+      <dxl:Relation Mdid="6.196638.1.0" Name="ext_expenses" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="11,5" ForeignServer="0.91908.1.0">
         <dxl:Columns>
           <dxl:Column Name="name" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>

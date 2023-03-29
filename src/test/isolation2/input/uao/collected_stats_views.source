@@ -1,0 +1,38 @@
+-- @Description Tests collected statistics reporting for append-optimized tables
+
+-- Helper function that ensures stats collector receives stat from the latest operation.
+create or replace function wait_until_heap_blks_read_change_to(table_name text, stat_val_expected bigint)
+    returns text as $$
+declare
+    stat_val int; /* in func */
+    i int; /* in func */
+begin
+    i := 0; /* in func */
+    while i < 1200 loop
+        select heap_blks_read into stat_val from pg_statio_all_tables where relname = table_name; /* in func */
+        if stat_val = stat_val_expected then /* in func */
+            return 'OK'; /* in func */
+        end if; /* in func */
+        perform pg_sleep(0.1); /* in func */
+        perform pg_stat_clear_snapshot(); /* in func */
+        i := i + 1; /* in func */
+    end loop; /* in func */
+    return 'Fail'; /* in func */
+end; /* in func */
+$$ language plpgsql;
+
+-- Setup test table
+CREATE TABLE statio_@amname@(a int, b int) USING @amname@;
+INSERT INTO statio_@amname@ SELECT 0, i FROM generate_series(1, 100000)i;
+
+-- heap_blks_read should remain zero after INSERT
+SELECT heap_blks_read, heap_blks_hit FROM gp_statio_all_tables WHERE segment_id = 1 AND relname = 'statio_@amname@';
+
+-- Perform seq scan and wait until the stats collector receives the stats update
+1U&: SELECT wait_until_heap_blks_read_change_to('statio_@amname@', (pg_relation_size('statio_@amname@') + (current_setting('block_size')::int - 1)) / current_setting('block_size')::int);
+SELECT sum(a+b) FROM statio_@amname@;
+1U<:
+
+-- cleanup
+DROP TABLE statio_@amname@;
+DROP FUNCTION wait_until_heap_blks_read_change_to(table_name text, stat_val_expected bigint);

@@ -121,7 +121,7 @@
       <dxl:ColumnStatistics Mdid="1.18347.1.1.7" Name="gp_segment_id" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.18347.1.1.6" Name="tableoid" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.18347.1.1" Name="ext_2" Rows="1000000.000000"/>
-      <dxl:Relation Mdid="6.18347.1.1" Name="ext_2" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="7,1">
+      <dxl:Relation Mdid="6.18347.1.1" Name="ext_2" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="7,1" ForeignServer="0.91908.1.0">
         <dxl:Columns>
           <dxl:Column Name="x" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>

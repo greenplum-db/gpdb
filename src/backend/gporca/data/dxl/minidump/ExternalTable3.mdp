@@ -119,7 +119,7 @@
       <dxl:ColumnStatistics Mdid="1.18370.1.1.1" Name="ctid" Width="6.000000"/>
       <dxl:ColumnStatistics Mdid="1.18370.1.1.0" Name="x" Width="8.000000"/>
       <dxl:RelationStatistics Mdid="2.18370.1.1" Name="ext_3" Rows="1000000.000000"/>
-      <dxl:Relation Mdid="6.18370.1.1" Name="ext_3" IsTemporary="false" StorageType="Foreign" DistributionPolicy="MasterOnly" Keys="7,1">
+      <dxl:Relation Mdid="6.18370.1.1" Name="ext_3" IsTemporary="false" StorageType="Foreign" DistributionPolicy="MasterOnly" Keys="7,1" ForeignServer="0.91908.1.0">
         <dxl:Columns>
           <dxl:Column Name="x" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>

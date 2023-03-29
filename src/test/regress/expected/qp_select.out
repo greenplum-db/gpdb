@@ -1,0 +1,433 @@
+SET optimizer_trace_fallback TO ON;
+-- test that interval constraints are derived correctly
+-- start_ignore
+-- end_ignore
+-- basic
+SELECT * FROM qp_select WHERE 1 + 15 >= a AND 1 - 15 <= a;
+ a  
+----
+  2
+  4
+  8
+ 16
+  1
+(5 rows)
+
+SELECT * FROM qp_select WHERE a + 15 >= a AND a - 15 <= a;
+  a  
+-----
+   2
+   4
+   8
+  16
+ 256
+   1
+  64
+  32
+ 128
+(9 rows)
+
+SELECT * FROM qp_select WHERE a + 15 <= a AND a - 15 >= a;
+ a 
+---
+(0 rows)
+
+SELECT * FROM qp_select WHERE a + 0 <= a AND a - 0 >= a;
+  a  
+-----
+   2
+   4
+   8
+  16
+ 256
+   1
+  64
+  32
+ 128
+(9 rows)
+
+-- basic and arguments reversed
+SELECT * FROM qp_select WHERE 1 - 15 <= a AND 1 + 15 >= a;
+ a  
+----
+  2
+  4
+  8
+ 16
+  1
+(5 rows)
+
+SELECT * FROM qp_select WHERE a - 15 <= a AND a + 15 >= a;
+  a  
+-----
+   2
+   4
+   8
+  16
+ 256
+   1
+  64
+  32
+ 128
+(9 rows)
+
+SELECT * FROM qp_select WHERE a - 15 >= a AND a + 15 <= a;
+ a 
+---
+(0 rows)
+
+SELECT * FROM qp_select WHERE a - 0 >= a AND a + 0 <= a;
+  a  
+-----
+   2
+   4
+   8
+  16
+ 256
+   1
+  64
+  32
+ 128
+(9 rows)
+
+-- basic non-eq
+SELECT * FROM qp_select WHERE 1 + 15 > a AND 1 - 15 < a;
+ a 
+---
+ 2
+ 4
+ 8
+ 1
+(4 rows)
+
+SELECT * FROM qp_select WHERE a + 15 > a AND a - 15 < a;
+  a  
+-----
+   2
+   4
+   8
+  16
+ 256
+   1
+  64
+  32
+ 128
+(9 rows)
+
+SELECT * FROM qp_select WHERE a + 15 < a AND a - 15 > a;
+ a 
+---
+(0 rows)
+
+SELECT * FROM qp_select WHERE a + 0 < a AND a - 0 > a;
+ a 
+---
+(0 rows)
+
+-- basic + or
+SELECT * FROM qp_select WHERE 1 + 15 >= a AND 1 - 15 <= a OR a > 5;
+  a  
+-----
+   2
+   4
+   8
+  16
+ 256
+   1
+  64
+  32
+ 128
+(9 rows)
+
+SELECT * FROM qp_select WHERE a + 15 >= a AND a - 15 <= a OR a > 5;
+  a  
+-----
+   2
+   4
+   8
+  16
+ 256
+   1
+  64
+  32
+ 128
+(9 rows)
+
+SELECT * FROM qp_select WHERE a + 15 <= a AND a - 15 >= a OR a > 5;
+  a  
+-----
+   8
+  16
+ 256
+  32
+ 128
+  64
+(6 rows)
+
+SELECT * FROM qp_select WHERE a + 0 < a AND a - 0 > a OR a > 5;
+  a  
+-----
+   8
+  16
+ 256
+  64
+  32
+ 128
+(6 rows)
+
+-- or + basic
+SELECT * FROM qp_select WHERE a > 5 OR 1 + 15 >= a AND 1 - 15 <= a;
+  a  
+-----
+   2
+   4
+   8
+  16
+ 256
+  32
+ 128
+   1
+  64
+(9 rows)
+
+SELECT * FROM qp_select WHERE a > 5 OR a + 15 >= a AND a - 15 <= a;
+  a  
+-----
+   2
+   4
+   8
+  16
+ 256
+  32
+ 128
+   1
+  64
+(9 rows)
+
+SELECT * FROM qp_select WHERE a > 5 OR a + 15 <= a AND a - 15 >= a;
+  a  
+-----
+   8
+  16
+ 256
+  64
+  32
+ 128
+(6 rows)
+
+SELECT * FROM qp_select WHERE a > 5 OR a + 0 < a AND a - 0 > a;
+  a  
+-----
+   8
+  16
+ 256
+  64
+  32
+ 128
+(6 rows)
+
+--or
+SELECT * FROM qp_select WHERE 1 + 15 >= a OR 1 - 15 <= a;
+  a  
+-----
+   2
+   4
+   8
+  16
+ 256
+   1
+  64
+  32
+ 128
+(9 rows)
+
+SELECT * FROM qp_select WHERE a + 15 >= a OR a - 15 <= a;
+  a  
+-----
+   2
+   4
+   8
+  16
+ 256
+  32
+ 128
+   1
+  64
+(9 rows)
+
+SELECT * FROM qp_select WHERE a + 15 <= a OR a - 15 >= a;
+ a 
+---
+(0 rows)
+
+SELECT * FROM qp_select WHERE a + 0 <= a OR a - 0 >= a;
+  a  
+-----
+   2
+   4
+   8
+  16
+ 256
+   1
+  64
+  32
+ 128
+(9 rows)
+
+--or eq
+SELECT * FROM qp_select WHERE 1 + 15 = a OR 1 - 15 = a;
+ a  
+----
+ 16
+(1 row)
+
+SELECT * FROM qp_select WHERE a + 15 = a OR a - 15 = a;
+ a 
+---
+(0 rows)
+
+SELECT * FROM qp_select WHERE a + 15 = a OR a - 15 = a;
+ a 
+---
+(0 rows)
+
+SELECT * FROM qp_select WHERE a + 0 = a OR a - 0 = a;
+  a  
+-----
+   2
+   4
+   8
+  16
+ 256
+  32
+ 128
+   1
+  64
+(9 rows)
+
+-- basic commutative operator
+SELECT * FROM qp_select WHERE 1 + 15 <= a AND 1 - 15 >= a;
+ a 
+---
+(0 rows)
+
+SELECT * FROM qp_select WHERE a + 15 <= a AND a - 15 >= a;
+ a 
+---
+(0 rows)
+
+SELECT * FROM qp_select WHERE a + 15 >= a AND a - 15 <= a;
+  a  
+-----
+   2
+   4
+   8
+  16
+ 256
+   1
+  64
+  32
+ 128
+(9 rows)
+
+SELECT * FROM qp_select WHERE a + 0 >= a AND a - 0 <= a;
+  a  
+-----
+   2
+   4
+   8
+  16
+ 256
+   1
+  64
+  32
+ 128
+(9 rows)
+
+-- basic swap position (left vs right) of compare arguments
+SELECT * FROM qp_select WHERE a >= 1 + 15 AND a <= 1 - 15;
+ a 
+---
+(0 rows)
+
+SELECT * FROM qp_select WHERE a >= a + 15 AND a <= a - 15;
+ a 
+---
+(0 rows)
+
+SELECT * FROM qp_select WHERE a <= a + 15 AND a >= a - 15;
+  a  
+-----
+   2
+   4
+   8
+  16
+ 256
+   1
+  64
+  32
+ 128
+(9 rows)
+
+SELECT * FROM qp_select WHERE a <= a + 0 AND a >= a - 0;
+  a  
+-----
+   2
+   4
+   8
+  16
+ 256
+   1
+  64
+  32
+ 128
+(9 rows)
+
+-- <> operator
+SELECT * FROM qp_select WHERE 1 + 15 <> a AND 1 - 15 <> a;
+  a  
+-----
+   2
+   4
+   8
+ 256
+   1
+  64
+  32
+ 128
+(8 rows)
+
+SELECT * FROM qp_select WHERE a + 15 <> a AND a - 15 <> a;
+  a  
+-----
+   2
+   4
+   8
+  16
+ 256
+   1
+  64
+  32
+ 128
+(9 rows)
+
+SELECT * FROM qp_select WHERE a + 15 <> a AND a - 15 <> a;
+  a  
+-----
+   2
+   4
+   8
+  16
+ 256
+   1
+  64
+  32
+ 128
+(9 rows)
+
+SELECT * FROM qp_select WHERE a + 0 <> a AND a - 0 <> a;
+ a 
+---
+(0 rows)
+
+RESET optimizer_trace_fallback;

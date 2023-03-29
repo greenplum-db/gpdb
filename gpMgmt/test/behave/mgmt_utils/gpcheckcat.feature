@@ -579,11 +579,20 @@ Feature: gpcheckcat tests
           And there is a "co" table "public.co_vpinfo" in "vpinfo_inconsistent_db" with data
          When the user runs "gpcheckcat vpinfo_inconsistent_db"
          Then gpcheckcat should return a return code of 0
-         When an attribute of table "co_vpinfo" in database "vpinfo_inconsistent_db" is deleted on segment with content id "0"
+         When a table "co_vpinfo" in database "vpinfo_inconsistent_db" has its relnatts inflated on segment with content id "0"
          Then psql should return a return code of 0
          When the user runs "gpcheckcat -R aoseg_table vpinfo_inconsistent_db"
          Then gpcheckcat should print "Failed test\(s\) that are not reported here: aoseg_table" to stdout
           And the user runs "dropdb vpinfo_inconsistent_db"
+
+    Scenario: gpcheckcat should not print error when vpinfo for RESERVED_SEGNO is of different length than relnatts
+        Given database "vpinfo_reserved_segno" is dropped and recreated
+        And the user runs "psql vpinfo_reserved_segno -c "CREATE TABLE co_table(a int, b int) using ao_column; INSERT INTO co_table values (1,1);""
+        And the user runs "psql vpinfo_reserved_segno -c "BEGIN; ALTER TABLE co_table ADD COLUMN newcol int; INSERT INTO co_table VALUES (1,1,1); ABORT;""
+        Then psql should return a return code of 0
+        When the user runs "gpcheckcat vpinfo_reserved_segno"
+        And gpcheckcat should return a return code of 0
+        Then gpcheckcat should not print "[FAIL] inconsistent vpinfo" to stdout
 
     Scenario: skip one check in gpcheckcat
         Given database "all_good" is dropped and recreated

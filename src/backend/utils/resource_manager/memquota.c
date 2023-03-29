@@ -28,7 +28,11 @@
 #include "parser/parsetree.h"
 #include "tcop/pquery.h"
 
-ResManagerMemoryPolicy		gp_resmanager_memory_policy_default = RESMANAGER_MEMORY_POLICY_NONE;
+/**
+ * When resource manager is none, we use statement_mem as the memory of a query,
+ * use RESMANAGER_MEMORY_POLICY_EAGER_FREE as default memory policy
+ */
+ResManagerMemoryPolicy		gp_resmanager_memory_policy_default = RESMANAGER_MEMORY_POLICY_EAGER_FREE;
 bool						gp_log_resmanager_memory_default = false;
 int							gp_resmanager_memory_policy_auto_fixed_mem_default = 100;
 bool						gp_resmanager_print_operator_memory_limits_default = false;
@@ -907,6 +911,10 @@ ResourceManagerGetQueryMemoryLimit(PlannedStmt* stmt)
 	else if (IsResGroupEnabled())
 		return ResourceGroupGetQueryMemoryLimit();
 
-	/* RG FIXME: should we return statement_mem every time? */
+	/*
+	 * we also use statment_mem to control memory if do not use any resource manager,
+	 * otherwise plan->operatorMemKB will be set to 0 and use work_mem to control memory in
+	 * agg operation, hash operation and so on.
+	 */
 	return (uint64) statement_mem * 1024L;
 }

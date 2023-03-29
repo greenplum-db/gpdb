@@ -1026,6 +1026,44 @@ pg_stat_get_backend_userid(PG_FUNCTION_ARGS)
 	PG_RETURN_OID(beentry->st_userid);
 }
 
+Datum
+pg_stat_get_backend_subxact(PG_FUNCTION_ARGS)
+{
+#define PG_STAT_GET_SUBXACT_COLS	2
+	TupleDesc	tupdesc;
+	Datum		values[PG_STAT_GET_SUBXACT_COLS];
+	bool		nulls[PG_STAT_GET_SUBXACT_COLS];
+	int32		beid = PG_GETARG_INT32(0);
+	LocalPgBackendStatus *local_beentry;
+
+	/* Initialise values and NULL flags arrays */
+	MemSet(values, 0, sizeof(values));
+	MemSet(nulls, 0, sizeof(nulls));
+
+	/* Initialise attributes information in the tuple descriptor */
+	tupdesc = CreateTemplateTupleDesc(PG_STAT_GET_SUBXACT_COLS);
+	TupleDescInitEntry(tupdesc, (AttrNumber) 1, "subxact_count",
+					   INT4OID, -1, 0);
+	TupleDescInitEntry(tupdesc, (AttrNumber) 2, "subxact_overflow",
+					   BOOLOID, -1, 0);
+
+	BlessTupleDesc(tupdesc);
+
+	if ((local_beentry = pgstat_fetch_stat_local_beentry(beid)) != NULL)
+	{
+		/* Fill values and NULLs */
+		values[0] = Int32GetDatum(local_beentry->backend_subxact_count);
+		values[1] = BoolGetDatum(local_beentry->backend_subxact_overflowed);
+	}
+	else
+	{
+		nulls[0] = true;
+		nulls[1] = true;
+	}
+
+	/* Returns the record as Datum */
+	PG_RETURN_DATUM(HeapTupleGetDatum(heap_form_tuple(tupdesc, values, nulls)));
+}
 
 Datum
 pg_stat_get_backend_activity(PG_FUNCTION_ARGS)
@@ -2278,4 +2316,45 @@ pg_stat_get_archiver(PG_FUNCTION_ARGS)
 	/* Returns the record as Datum */
 	PG_RETURN_DATUM(HeapTupleGetDatum(
 									  heap_form_tuple(tupdesc, values, nulls)));
+}
+
+/*
+ * Find the backends where subtransaction overflowed.
+ */
+Datum
+gp_get_suboverflowed_backends(PG_FUNCTION_ARGS)
+{
+	int 			i;
+	ArrayBuildState *astate = NULL;
+
+	LWLockAcquire(ProcArrayLock, LW_SHARED);
+	for (i = 0; i < ProcGlobal->allProcCount; i++)
+	{
+		bool overflowed = false;
+		int beid = ProcGlobal->allProcs[i].pid;
+
+		if (ProcGlobal->allPgXact[i].overflowed)
+		PG_TRY();
+		{
+			overflowed = DatumGetBool(DirectFunctionCall1(pg_stat_get_backend_subxact, Int32GetDatum(beid)));
+		}
+		PG_CATCH();
+		{
+			LWLockRelease(ProcArrayLock);
+			PG_RE_THROW();
+		}
+		PG_END_TRY();
+
+		if (overflowed)
+			astate = accumArrayResult(astate,
+									  Int32GetDatum(ProcGlobal->allProcs[i].pid),
+									  false, INT4OID, CurrentMemoryContext);
+	}
+	LWLockRelease(ProcArrayLock);
+
+	if (astate)
+		PG_RETURN_DATUM(makeArrayResult(astate,
+											CurrentMemoryContext));
+	else
+		PG_RETURN_NULL();
 }

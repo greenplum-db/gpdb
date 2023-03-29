@@ -311,7 +311,7 @@ INSERT INTO co_crtb_with_strg_dir_and_col_ref_1_uncompr select * from co_crtb_wi
 \d+ co_crtb_with_strg_dir_and_col_ref_1
 
 --Select from pg_attribute_encoding to see the table entry 
-select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'co_crtb_with_strg_dir_and_col_ref_1' and c.oid=e.attrelid  order by relname, attnum limit 3; 
+select attrelid::regclass as relname, attnum, filenum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'co_crtb_with_strg_dir_and_col_ref_1' and c.oid=e.attrelid  order by relname, attnum limit 3;
 --
 -- Compare data with uncompressed table
 --

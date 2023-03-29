@@ -53,6 +53,9 @@ select count(*) > 0 as has_different_distribution from
 (1 row)
 
 -- ALTER TABLE ... SET for partition tables
+PREPARE attribute_encoding_check AS
+SELECT c.relname, a.attname, e.filenum, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
+WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE $1;
 CREATE TABLE part_relopt(a int, b int) WITH (fillfactor=90) PARTITION BY RANGE(a);
 CREATE TABLE part_relopt_1 partition OF part_relopt FOR VALUES FROM (1) to (100);
 CREATE TABLE part_relopt_2 partition OF part_relopt FOR VALUES FROM (100) to (200) PARTITION BY RANGE(a);
@@ -198,22 +201,21 @@ SELECT c.relname, am.amname, c.reloptions FROM pg_class c JOIN pg_am am on am.oi
  part_relopt_3   | ao_column | {compresstype=rle_type,compresslevel=1,blocksize=32768,checksum=true}
 (6 rows)
 
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt%';
-     relname     | attname |                       attoptions                        
------------------+---------+---------------------------------------------------------
- part_relopt     | a       | {compresstype=rle_type,compresslevel=2,blocksize=32768}
- part_relopt     | b       | {compresstype=zlib,compresslevel=3,blocksize=32768}
- part_relopt_1   | a       | {compresstype=rle_type,compresslevel=2,blocksize=32768}
- part_relopt_1   | b       | {compresstype=zlib,compresslevel=3,blocksize=32768}
- part_relopt_2   | a       | {compresstype=rle_type,compresslevel=2,blocksize=32768}
- part_relopt_2   | b       | {compresstype=zlib,compresslevel=3,blocksize=32768}
- part_relopt_2_1 | a       | {compresstype=rle_type,compresslevel=2,blocksize=32768}
- part_relopt_2_1 | b       | {compresstype=zlib,compresslevel=3,blocksize=32768}
- part_relopt_2_2 | a       | {compresstype=rle_type,compresslevel=2,blocksize=32768}
- part_relopt_2_2 | b       | {compresstype=zlib,compresslevel=3,blocksize=32768}
- part_relopt_3   | a       | {compresstype=rle_type,compresslevel=2,blocksize=32768}
- part_relopt_3   | b       | {compresstype=zlib,compresslevel=3,blocksize=32768}
+execute attribute_encoding_check('part_relopt%');
+     relname     | attname | filenum |                       attoptions                        
+-----------------+---------+---------+---------------------------------------------------------
+ part_relopt     | a       |       1 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
+ part_relopt     | b       |       2 | {compresstype=zlib,compresslevel=3,blocksize=32768}
+ part_relopt_1   | a       |       1 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
+ part_relopt_1   | b       |       2 | {compresstype=zlib,compresslevel=3,blocksize=32768}
+ part_relopt_2   | a       |       1 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
+ part_relopt_2   | b       |       2 | {compresstype=zlib,compresslevel=3,blocksize=32768}
+ part_relopt_2_1 | a       |       1 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
+ part_relopt_2_1 | b       |       2 | {compresstype=zlib,compresslevel=3,blocksize=32768}
+ part_relopt_2_2 | a       |       1 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
+ part_relopt_2_2 | b       |       2 | {compresstype=zlib,compresslevel=3,blocksize=32768}
+ part_relopt_3   | a       |       1 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
+ part_relopt_3   | b       |       2 | {compresstype=zlib,compresslevel=3,blocksize=32768}
 (12 rows)
 
 ALTER TABLE part_relopt SET (compresslevel=3);
@@ -228,121 +230,115 @@ SELECT c.relname, am.amname, c.reloptions FROM pg_class c JOIN pg_am am on am.oi
  part_relopt_3   | ao_column | {compresstype=rle_type,blocksize=32768,checksum=true,compresslevel=3}
 (6 rows)
 
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt%';
-     relname     | attname |                       attoptions                        
------------------+---------+---------------------------------------------------------
- part_relopt     | a       | {compresstype=rle_type,compresslevel=2,blocksize=32768}
- part_relopt     | b       | {compresstype=zlib,compresslevel=3,blocksize=32768}
- part_relopt_1   | a       | {compresstype=rle_type,compresslevel=2,blocksize=32768}
- part_relopt_1   | b       | {compresstype=zlib,compresslevel=3,blocksize=32768}
- part_relopt_2   | a       | {compresstype=rle_type,compresslevel=2,blocksize=32768}
- part_relopt_2   | b       | {compresstype=zlib,compresslevel=3,blocksize=32768}
- part_relopt_2_1 | a       | {compresstype=rle_type,compresslevel=2,blocksize=32768}
- part_relopt_2_1 | b       | {compresstype=zlib,compresslevel=3,blocksize=32768}
- part_relopt_2_2 | a       | {compresstype=rle_type,compresslevel=2,blocksize=32768}
- part_relopt_2_2 | b       | {compresstype=zlib,compresslevel=3,blocksize=32768}
- part_relopt_3   | a       | {compresstype=rle_type,compresslevel=2,blocksize=32768}
- part_relopt_3   | b       | {compresstype=zlib,compresslevel=3,blocksize=32768}
+execute attribute_encoding_check('part_relopt%');
+     relname     | attname | filenum |                       attoptions                        
+-----------------+---------+---------+---------------------------------------------------------
+ part_relopt     | a       |       1 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
+ part_relopt     | b       |       2 | {compresstype=zlib,compresslevel=3,blocksize=32768}
+ part_relopt_1   | a       |       1 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
+ part_relopt_1   | b       |       2 | {compresstype=zlib,compresslevel=3,blocksize=32768}
+ part_relopt_2   | a       |       1 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
+ part_relopt_2   | b       |       2 | {compresstype=zlib,compresslevel=3,blocksize=32768}
+ part_relopt_2_1 | a       |       1 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
+ part_relopt_2_1 | b       |       2 | {compresstype=zlib,compresslevel=3,blocksize=32768}
+ part_relopt_2_2 | a       |       1 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
+ part_relopt_2_2 | b       |       2 | {compresstype=zlib,compresslevel=3,blocksize=32768}
+ part_relopt_3   | a       |       1 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
+ part_relopt_3   | b       |       2 | {compresstype=zlib,compresslevel=3,blocksize=32768}
 (12 rows)
 
 ALTER TABLE part_relopt ALTER COLUMN a SET ENCODING (compresstype=rle_type, compresslevel=4), ALTER COLUMN b SET ENCODING (compresstype=zlib, compresslevel=5);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt%';
-     relname     | attname |                       attoptions                        
------------------+---------+---------------------------------------------------------
- part_relopt     | a       | {compresstype=rle_type,compresslevel=4,blocksize=32768}
- part_relopt     | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_1   | a       | {compresstype=rle_type,compresslevel=4,blocksize=32768}
- part_relopt_1   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2   | a       | {compresstype=rle_type,compresslevel=4,blocksize=32768}
- part_relopt_2   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_1 | a       | {compresstype=rle_type,compresslevel=4,blocksize=32768}
- part_relopt_2_1 | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_2 | a       | {compresstype=rle_type,compresslevel=4,blocksize=32768}
- part_relopt_2_2 | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_3   | a       | {compresstype=rle_type,compresslevel=4,blocksize=32768}
- part_relopt_3   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
+execute attribute_encoding_check('part_relopt%');
+     relname     | attname | filenum |                       attoptions                        
+-----------------+---------+---------+---------------------------------------------------------
+ part_relopt     | a       |       1 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
+ part_relopt     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_1   | a       |       1 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
+ part_relopt_1   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2   | a       |       1 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
+ part_relopt_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_1 | a       |       1 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
+ part_relopt_2_1 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_2 | a       |       1 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
+ part_relopt_2_2 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_3   | a       |       1 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
+ part_relopt_3   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
 (12 rows)
 
 -- Check double edit on same column
 ALTER TABLE part_relopt ALTER COLUMN a SET ENCODING (compresstype=rle_type, compresslevel=4), ALTER COLUMN a SET ENCODING (compresstype=zlib, compresslevel=5);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt%';
-     relname     | attname |                     attoptions                      
------------------+---------+-----------------------------------------------------
- part_relopt     | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt     | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_1   | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_1   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2   | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_1 | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_1 | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_2 | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_2 | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_3   | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_3   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
+execute attribute_encoding_check('part_relopt%');
+     relname     | attname | filenum |                     attoptions                      
+-----------------+---------+---------+-----------------------------------------------------
+ part_relopt     | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_1   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_1   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_1 | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_1 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_2 | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_2 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_3   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_3   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
 (12 rows)
 
 -- Check double edit of same option
 ALTER TABLE part_relopt ALTER COLUMN a SET ENCODING (compresslevel=3, compresslevel=4);
 ERROR:  parameter "compresslevel" specified more than once
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt%';
-     relname     | attname |                     attoptions                      
------------------+---------+-----------------------------------------------------
- part_relopt     | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt     | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_1   | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_1   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2   | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_1 | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_1 | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_2 | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_2 | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_3   | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_3   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
+execute attribute_encoding_check('part_relopt%');
+     relname     | attname | filenum |                     attoptions                      
+-----------------+---------+---------+-----------------------------------------------------
+ part_relopt     | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_1   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_1   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_1 | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_1 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_2 | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_2 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_3   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_3   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
 (12 rows)
 
 -- Check double edit of same column different options
 ALTER TABLE part_relopt ALTER COLUMN a SET ENCODING (compresstype=zlib), ALTER COLUMN a SET ENCODING (compresslevel=7);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt%';
-     relname     | attname |                     attoptions                      
------------------+---------+-----------------------------------------------------
- part_relopt     | a       | {compresstype=zlib,compresslevel=7,blocksize=32768}
- part_relopt     | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_1   | a       | {compresstype=zlib,compresslevel=7,blocksize=32768}
- part_relopt_1   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2   | a       | {compresstype=zlib,compresslevel=7,blocksize=32768}
- part_relopt_2   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_1 | a       | {compresstype=zlib,compresslevel=7,blocksize=32768}
- part_relopt_2_1 | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_2 | a       | {compresstype=zlib,compresslevel=7,blocksize=32768}
- part_relopt_2_2 | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_3   | a       | {compresstype=zlib,compresslevel=7,blocksize=32768}
- part_relopt_3   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
+execute attribute_encoding_check('part_relopt%');
+     relname     | attname | filenum |                     attoptions                      
+-----------------+---------+---------+-----------------------------------------------------
+ part_relopt     | a       |       1 | {compresstype=zlib,compresslevel=7,blocksize=32768}
+ part_relopt     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_1   | a       |       1 | {compresstype=zlib,compresslevel=7,blocksize=32768}
+ part_relopt_1   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2   | a       |       1 | {compresstype=zlib,compresslevel=7,blocksize=32768}
+ part_relopt_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_1 | a       |       1 | {compresstype=zlib,compresslevel=7,blocksize=32768}
+ part_relopt_2_1 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_2 | a       |       1 | {compresstype=zlib,compresslevel=7,blocksize=32768}
+ part_relopt_2_2 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_3   | a       |       1 | {compresstype=zlib,compresslevel=7,blocksize=32768}
+ part_relopt_3   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
 (12 rows)
 
 ALTER TABLE part_relopt ALTER COLUMN a SET ENCODING (compresstype=zlib, compresslevel=5);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt%';
-     relname     | attname |                     attoptions                      
------------------+---------+-----------------------------------------------------
- part_relopt     | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt     | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_1   | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_1   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2   | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_1 | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_1 | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_2 | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_2 | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_3   | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_3   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
+execute attribute_encoding_check('part_relopt%');
+     relname     | attname | filenum |                     attoptions                      
+-----------------+---------+---------+-----------------------------------------------------
+ part_relopt     | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_1   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_1   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_1 | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_1 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_2 | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_2 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_3   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_3   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
 (12 rows)
 
 -- Data is intact
@@ -372,12 +368,11 @@ CREATE TABLE aoco_relopt(a int, b int) WITH (appendoptimized = true, orientation
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ALTER TABLE aoco_relopt ALTER COLUMN a SET ENCODING (compresstype=rle_type, compresslevel=4), ALTER COLUMN b SET ENCODING (compresstype=zlib, compresslevel=5);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'aoco_relopt%';
-   relname   | attname |                       attoptions                        
--------------+---------+---------------------------------------------------------
- aoco_relopt | a       | {compresstype=rle_type,blocksize=32768,compresslevel=4}
- aoco_relopt | b       | {compresstype=zlib,blocksize=32768,compresslevel=5}
+execute attribute_encoding_check('aoco_relopt%');
+   relname   | attname | filenum |                       attoptions                        
+-------------+---------+---------+---------------------------------------------------------
+ aoco_relopt | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
+ aoco_relopt | b       |       2 | {compresstype=zlib,blocksize=32768,compresslevel=5}
 (2 rows)
 
 DROP TABLE aoco_relopt;
@@ -440,18 +435,17 @@ NOTICE:  table has parent, setting distribution columns to match parent table
 CREATE TABLE part_relopt3_2_1 partition OF part_relopt3_2 FOR VALUES FROM (200) to (250);
 NOTICE:  table has parent, setting distribution columns to match parent table
 INSERT INTO part_relopt3 SELECT i,i FROM generate_series(101,249) i;
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
-     relname      | attname |                     attoptions                      
-------------------+---------+-----------------------------------------------------
- part_relopt3     | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3     | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_1   | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_1   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2   | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2_1 | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2_1 | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
+execute attribute_encoding_check('part_relopt3%');
+     relname      | attname | filenum |                     attoptions                      
+------------------+---------+---------+-----------------------------------------------------
+ part_relopt3     | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_1   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_1   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_2   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_2_1 | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_2_1 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
 (8 rows)
 
 -- error out because of the first child
@@ -465,74 +459,69 @@ ALTER TABLE part_relopt3_2_1 SET ACCESS METHOD heap;
 ALTER TABLE part_relopt3 ALTER COLUMN a SET ENCODING (compresslevel=3, compresstype=zlib);
 ERROR:  ALTER COLUMN SET ENCODING operation is only applicable to AOCO tables
 DETAIL:  "part_relopt3_2_1" is not an AOCO table
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
-    relname     | attname |                     attoptions                      
-----------------+---------+-----------------------------------------------------
- part_relopt3   | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_1 | a       | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_1 | b       | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_2 | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2 | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
+execute attribute_encoding_check('part_relopt3%');
+    relname     | attname | filenum |                     attoptions                      
+----------------+---------+---------+-----------------------------------------------------
+ part_relopt3   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_1 | a       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ part_relopt3_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ part_relopt3_2 | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_2 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
 (6 rows)
 
 ALTER TABLE part_relopt3_1 ALTER COLUMN a SET ENCODING (compresslevel=3, compresstype=zlib);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
-    relname     | attname |                     attoptions                      
-----------------+---------+-----------------------------------------------------
- part_relopt3   | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_1 | a       | {compresstype=zlib,blocksize=32768,compresslevel=3}
- part_relopt3_1 | b       | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_2 | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2 | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
+execute attribute_encoding_check('part_relopt3%');
+    relname     | attname | filenum |                     attoptions                      
+----------------+---------+---------+-----------------------------------------------------
+ part_relopt3   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_1 | a       |       1 | {compresstype=zlib,blocksize=32768,compresslevel=3}
+ part_relopt3_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ part_relopt3_2 | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_2 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
 (6 rows)
 
 ALTER TABLE part_relopt3_2_1 SET ACCESS METHOD ao_column, ALTER COLUMN a SET ENCODING (compresslevel=4, compresstype=zlib);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
-     relname      | attname |                     attoptions                      
-------------------+---------+-----------------------------------------------------
- part_relopt3     | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3     | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_1   | a       | {compresstype=zlib,blocksize=32768,compresslevel=3}
- part_relopt3_1   | b       | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_2   | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2_1 | a       | {compresstype=zlib,blocksize=32768,compresslevel=4}
- part_relopt3_2_1 | b       | {compresstype=none,blocksize=32768,compresslevel=0}
+execute attribute_encoding_check('part_relopt3%');
+     relname      | attname | filenum |                     attoptions                      
+------------------+---------+---------+-----------------------------------------------------
+ part_relopt3     | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_1   | a       |       1 | {compresstype=zlib,blocksize=32768,compresslevel=3}
+ part_relopt3_1   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ part_relopt3_2   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_2_1 | a       |       1 | {compresstype=zlib,blocksize=32768,compresslevel=4}
+ part_relopt3_2_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (8 rows)
 
 ALTER TABLE part_relopt3_2 ALTER COLUMN a SET ENCODING (compresslevel=1, compresstype=rle_type);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
-     relname      | attname |                       attoptions                        
-------------------+---------+---------------------------------------------------------
- part_relopt3     | a       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3     | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_1   | a       | {compresstype=zlib,blocksize=32768,compresslevel=3}
- part_relopt3_1   | b       | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_2   | a       | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- part_relopt3_2   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2_1 | a       | {compresstype=rle_type,blocksize=32768,compresslevel=1}
- part_relopt3_2_1 | b       | {compresstype=none,blocksize=32768,compresslevel=0}
+execute attribute_encoding_check('part_relopt3%');
+     relname      | attname | filenum |                       attoptions                        
+------------------+---------+---------+---------------------------------------------------------
+ part_relopt3     | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_1   | a       |       1 | {compresstype=zlib,blocksize=32768,compresslevel=3}
+ part_relopt3_1   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ part_relopt3_2   | a       |       1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ part_relopt3_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_2_1 | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=1}
+ part_relopt3_2_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (8 rows)
 
 ALTER TABLE part_relopt3 ALTER COLUMN a SET ENCODING (compresslevel=4, compresstype=rle_type);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
-     relname      | attname |                       attoptions                        
-------------------+---------+---------------------------------------------------------
- part_relopt3     | a       | {compresstype=rle_type,compresslevel=4,blocksize=32768}
- part_relopt3     | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_1   | a       | {compresstype=rle_type,blocksize=32768,compresslevel=4}
- part_relopt3_1   | b       | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_2   | a       | {compresstype=rle_type,compresslevel=4,blocksize=32768}
- part_relopt3_2   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2_1 | a       | {compresstype=rle_type,blocksize=32768,compresslevel=4}
- part_relopt3_2_1 | b       | {compresstype=none,blocksize=32768,compresslevel=0}
+execute attribute_encoding_check('part_relopt3%');
+     relname      | attname | filenum |                       attoptions                        
+------------------+---------+---------+---------------------------------------------------------
+ part_relopt3     | a       |       1 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
+ part_relopt3     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_1   | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
+ part_relopt3_1   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ part_relopt3_2   | a       |       1 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
+ part_relopt3_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_2_1 | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
+ part_relopt3_2_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (8 rows)
 
 -- Check if table is rewritten if encoding doesn't change
@@ -543,18 +532,17 @@ WHERE relname LIKE 'part_relopt3%' ORDER BY segid;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'segid' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ALTER TABLE part_relopt3 ALTER COLUMN a SET ENCODING (compresslevel=4, compresstype=rle_type);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
-     relname      | attname |                       attoptions                        
-------------------+---------+---------------------------------------------------------
- part_relopt3     | a       | {compresstype=rle_type,compresslevel=4,blocksize=32768}
- part_relopt3     | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_1   | a       | {compresstype=rle_type,blocksize=32768,compresslevel=4}
- part_relopt3_1   | b       | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_2   | a       | {compresstype=rle_type,compresslevel=4,blocksize=32768}
- part_relopt3_2   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2_1 | a       | {compresstype=rle_type,blocksize=32768,compresslevel=4}
- part_relopt3_2_1 | b       | {compresstype=none,blocksize=32768,compresslevel=0}
+execute attribute_encoding_check('part_relopt3%');
+     relname      | attname | filenum |                       attoptions                        
+------------------+---------+---------+---------------------------------------------------------
+ part_relopt3     | a       |       1 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
+ part_relopt3     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_1   | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
+ part_relopt3_1   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ part_relopt3_2   | a       |       1 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
+ part_relopt3_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_2_1 | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
+ part_relopt3_2_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (8 rows)
 
 CREATE TEMP TABLE relfileafterredo AS
@@ -571,105 +559,99 @@ SELECT * FROM relfilebeforeredo EXCEPT SELECT * FROM relfileafterredo;
 
 -- Check alter column set encoding for root partition ONLY
 ALTER TABLE ONLY part_relopt3 ALTER COLUMN a SET ENCODING (compresslevel=2, compresstype=zlib);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
-     relname      | attname |                       attoptions                        
-------------------+---------+---------------------------------------------------------
- part_relopt3     | a       | {compresstype=zlib,compresslevel=2,blocksize=32768}
- part_relopt3     | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_1   | a       | {compresstype=rle_type,blocksize=32768,compresslevel=4}
- part_relopt3_1   | b       | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_2   | a       | {compresstype=rle_type,compresslevel=4,blocksize=32768}
- part_relopt3_2   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2_1 | a       | {compresstype=rle_type,blocksize=32768,compresslevel=4}
- part_relopt3_2_1 | b       | {compresstype=none,blocksize=32768,compresslevel=0}
+execute attribute_encoding_check('part_relopt3%');
+     relname      | attname | filenum |                       attoptions                        
+------------------+---------+---------+---------------------------------------------------------
+ part_relopt3     | a       |       1 | {compresstype=zlib,compresslevel=2,blocksize=32768}
+ part_relopt3     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_1   | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
+ part_relopt3_1   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ part_relopt3_2   | a       |       1 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
+ part_relopt3_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_2_1 | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
+ part_relopt3_2_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (8 rows)
 
 -- Check alter column set encoding for mid level root partition ONLY
 ALTER TABLE ONLY part_relopt3_2 ALTER COLUMN a SET ENCODING (compresslevel=3, compresstype=zlib);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
-     relname      | attname |                       attoptions                        
-------------------+---------+---------------------------------------------------------
- part_relopt3     | a       | {compresstype=zlib,compresslevel=2,blocksize=32768}
- part_relopt3     | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_1   | a       | {compresstype=rle_type,blocksize=32768,compresslevel=4}
- part_relopt3_1   | b       | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_2   | a       | {compresstype=zlib,compresslevel=3,blocksize=32768}
- part_relopt3_2   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2_1 | a       | {compresstype=rle_type,blocksize=32768,compresslevel=4}
- part_relopt3_2_1 | b       | {compresstype=none,blocksize=32768,compresslevel=0}
+execute attribute_encoding_check('part_relopt3%');
+     relname      | attname | filenum |                       attoptions                        
+------------------+---------+---------+---------------------------------------------------------
+ part_relopt3     | a       |       1 | {compresstype=zlib,compresslevel=2,blocksize=32768}
+ part_relopt3     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_1   | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
+ part_relopt3_1   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ part_relopt3_2   | a       |       1 | {compresstype=zlib,compresslevel=3,blocksize=32768}
+ part_relopt3_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_2_1 | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
+ part_relopt3_2_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (8 rows)
 
 -- altering when changing am to heap should error out for root partition
 ALTER TABLE part_relopt3 SET ACCESS METHOD heap, ALTER COLUMN a SET ENCODING (compresslevel=4, compresstype=rle_type);
 ERROR:  ALTER COLUMN SET ENCODING operation is only applicable to AOCO tables
 DETAIL:  New access method for "part_relopt3" is not AOCO
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
-     relname      | attname |                       attoptions                        
-------------------+---------+---------------------------------------------------------
- part_relopt3     | a       | {compresstype=zlib,compresslevel=2,blocksize=32768}
- part_relopt3     | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_1   | a       | {compresstype=rle_type,blocksize=32768,compresslevel=4}
- part_relopt3_1   | b       | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_2   | a       | {compresstype=zlib,compresslevel=3,blocksize=32768}
- part_relopt3_2   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2_1 | a       | {compresstype=rle_type,blocksize=32768,compresslevel=4}
- part_relopt3_2_1 | b       | {compresstype=none,blocksize=32768,compresslevel=0}
+execute attribute_encoding_check('part_relopt3%');
+     relname      | attname | filenum |                       attoptions                        
+------------------+---------+---------+---------------------------------------------------------
+ part_relopt3     | a       |       1 | {compresstype=zlib,compresslevel=2,blocksize=32768}
+ part_relopt3     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_1   | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
+ part_relopt3_1   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ part_relopt3_2   | a       |       1 | {compresstype=zlib,compresslevel=3,blocksize=32768}
+ part_relopt3_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_2_1 | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
+ part_relopt3_2_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (8 rows)
 
 -- altering when changing am to heap should error out for child partition
 ALTER TABLE part_relopt3_2_1 SET ACCESS METHOD heap, ALTER COLUMN a SET ENCODING (compresslevel=4, compresstype=rle_type);
 ERROR:  ALTER COLUMN SET ENCODING operation is only applicable to AOCO tables
 DETAIL:  New access method for "part_relopt3_2_1" is not AOCO
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
-     relname      | attname |                       attoptions                        
-------------------+---------+---------------------------------------------------------
- part_relopt3     | a       | {compresstype=zlib,compresslevel=2,blocksize=32768}
- part_relopt3     | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_1   | a       | {compresstype=rle_type,blocksize=32768,compresslevel=4}
- part_relopt3_1   | b       | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_2   | a       | {compresstype=zlib,compresslevel=3,blocksize=32768}
- part_relopt3_2   | b       | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2_1 | a       | {compresstype=rle_type,blocksize=32768,compresslevel=4}
- part_relopt3_2_1 | b       | {compresstype=none,blocksize=32768,compresslevel=0}
+execute attribute_encoding_check('part_relopt3%');
+     relname      | attname | filenum |                       attoptions                        
+------------------+---------+---------+---------------------------------------------------------
+ part_relopt3     | a       |       1 | {compresstype=zlib,compresslevel=2,blocksize=32768}
+ part_relopt3     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_1   | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
+ part_relopt3_1   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ part_relopt3_2   | a       |       1 | {compresstype=zlib,compresslevel=3,blocksize=32768}
+ part_relopt3_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt3_2_1 | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
+ part_relopt3_2_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (8 rows)
 
 -- set access method and then alter column set encoding should generate same encoding values as
 -- set access method + alter column set encoding
 ALTER TABLE part_relopt3 SET ACCESS METHOD heap;
 ALTER TABLE part_relopt3 SET ACCESS METHOD ao_column, ALTER COLUMN a SET ENCODING (compresslevel=4);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
-     relname      | attname |                     attoptions                      
-------------------+---------+-----------------------------------------------------
- part_relopt3     | a       | {compresstype=none,blocksize=32768,compresslevel=4}
- part_relopt3     | b       | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_1   | a       | {compresstype=none,blocksize=32768,compresslevel=4}
- part_relopt3_1   | b       | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_2   | a       | {compresstype=none,blocksize=32768,compresslevel=4}
- part_relopt3_2   | b       | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_2_1 | a       | {compresstype=none,blocksize=32768,compresslevel=4}
- part_relopt3_2_1 | b       | {compresstype=none,blocksize=32768,compresslevel=0}
+execute attribute_encoding_check('part_relopt3%');
+     relname      | attname | filenum |                     attoptions                      
+------------------+---------+---------+-----------------------------------------------------
+ part_relopt3     | a       |       1 | {compresstype=none,blocksize=32768,compresslevel=4}
+ part_relopt3     | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ part_relopt3_1   | a       |       1 | {compresstype=none,blocksize=32768,compresslevel=4}
+ part_relopt3_1   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ part_relopt3_2   | a       |       1 | {compresstype=none,blocksize=32768,compresslevel=4}
+ part_relopt3_2   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ part_relopt3_2_1 | a       |       1 | {compresstype=none,blocksize=32768,compresslevel=4}
+ part_relopt3_2_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (8 rows)
 
 ALTER TABLE part_relopt3 SET ACCESS METHOD heap;
 ALTER TABLE part_relopt3 SET ACCESS METHOD ao_column;
 ALTER TABLE part_relopt3 ALTER COLUMN a SET ENCODING (compresslevel=4);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
-     relname      | attname |                     attoptions                      
-------------------+---------+-----------------------------------------------------
- part_relopt3     | a       | {compresstype=none,blocksize=32768,compresslevel=4}
- part_relopt3     | b       | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_1   | a       | {compresstype=none,blocksize=32768,compresslevel=4}
- part_relopt3_1   | b       | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_2   | a       | {compresstype=none,blocksize=32768,compresslevel=4}
- part_relopt3_2   | b       | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_2_1 | a       | {compresstype=none,blocksize=32768,compresslevel=4}
- part_relopt3_2_1 | b       | {compresstype=none,blocksize=32768,compresslevel=0}
+execute attribute_encoding_check('part_relopt3%');
+     relname      | attname | filenum |                     attoptions                      
+------------------+---------+---------+-----------------------------------------------------
+ part_relopt3     | a       |       1 | {compresstype=none,blocksize=32768,compresslevel=4}
+ part_relopt3     | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ part_relopt3_1   | a       |       1 | {compresstype=none,blocksize=32768,compresslevel=4}
+ part_relopt3_1   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ part_relopt3_2   | a       |       1 | {compresstype=none,blocksize=32768,compresslevel=4}
+ part_relopt3_2   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ part_relopt3_2_1 | a       |       1 | {compresstype=none,blocksize=32768,compresslevel=4}
+ part_relopt3_2_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (8 rows)
 
 DROP TABLE part_relopt3;

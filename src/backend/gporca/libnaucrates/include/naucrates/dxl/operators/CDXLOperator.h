@@ -144,6 +144,7 @@ enum Edxlopid
 	EdxlopPhysicalSort,
 	EdxlopPhysicalAppend,
 	EdxlopPhysicalMaterialize,
+	EdxlopPhysicalDynamicForeignScan,
 	EdxlopPhysicalSequence,
 	EdxlopPhysicalDynamicTableScan,
 	EdxlopPhysicalDynamicIndexScan,

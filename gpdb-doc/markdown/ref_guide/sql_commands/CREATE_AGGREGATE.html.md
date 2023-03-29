@@ -26,6 +26,7 @@ CREATE [ OR REPLACE ] AGGREGATE <name> ( [ <argmode> ] [ <argname> ] <arg_data_t
     [ , MINITCOND = <minitial_condition> ]
     [ , SORTOP = <sort_operator> ]
     [ , PARALLEL = { SAFE | RESTRICTED | UNSAFE } ]
+    [ , REPSAFE = <boolean> ]
   )
   
   CREATE [ OR REPLACE ] AGGREGATE <name> ( [ [ <argmode> ] [ <argname> ] <arg_data_type> [ , ... ] ]
@@ -39,6 +40,7 @@ CREATE [ OR REPLACE ] AGGREGATE <name> ( [ <argmode> ] [ <argname> ] <arg_data_t
     [ , COMBINEFUNC = <combinefunc> ]
     [ , INITCOND = <initial_condition> ]
     [ , PARALLEL = { SAFE | RESTRICTED | UNSAFE } ]
+    [ , REPSAFE = <boolean> ]
     [ , HYPOTHETICAL ]
   )
   
@@ -65,6 +67,7 @@ CREATE [ OR REPLACE ] AGGREGATE <name> ( [ <argmode> ] [ <argname> ] <arg_data_t
     [ , MFINALFUNC_MODIFY = { READ_ONLY | SHAREABLE | READ_WRITE } ]
     [ , MINITCOND = <minitial_condition> ]
     [ , SORTOP = <sort_operator> ]
+    [ , REPSAFE = <boolean> ]
   )
 ```
 
@@ -205,6 +208,12 @@ sort\_operator
 
 PARALLEL = { SAFE | RESTRICTED | UNSAFE }
 :   The meanings of `PARALLEL SAFE`, `PARALLEL RESTRICTED`, and `PARALLEL UNSAFE` are the same as in [CREATE FUNCTION](CREATE_FUNCTION.html). An aggregate will not be considered for parallelization if it is marked `PARALLEL UNSAFE` (which is the default!) or `PARALLEL RESTRICTED`. Note that the parallel-safety markings of the aggregate's support functions are not consulted by the planner, only the marking of the aggregate itself.
+
+REPSAFE = boolean
+:   Specifies whether or not the aggregate can be safely executed on replicated slices. An order-agnostic aggregate would be considered safe in this context. The default value is `false`.
+:   Setting `REPSAFE = true` instructs the optimizer to perform additional optimizations that specifically suppress certain broadcast motions.
+
+    > **Caution** Incorrectly setting `REPSAFE = true` for an order-dependent aggregate may produce incorrect results.
 
 HYPOTHETICAL
 :   For ordered-set aggregates only, this flag specifies that the aggregate arguments are to be processed according to the requirements for hypothetical-set aggregates: that is, the last few direct arguments must match the data types of the aggregated \(`WITHIN GROUP`\) arguments. The `HYPOTHETICAL` flag has no effect on run-time behavior, only on parse-time resolution of the data types and collations of the aggregate's arguments.

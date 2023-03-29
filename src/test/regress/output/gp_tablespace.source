@@ -33,10 +33,6 @@ BEGIN
 	return has_init_file_for_oid(relation_id);
 END;
 $$ language plpgsql;
-CREATE OR REPLACE FUNCTION get_tablespace_version_directory_name()
-	RETURNS TEXT
-	AS '@abs_builddir@/regress.so', 'get_tablespace_version_directory_name'
-    LANGUAGE C;
 -- create tablespaces we can use
 CREATE TABLESPACE testspace LOCATION '@testtablespace@';
 CREATE TABLESPACE ul_testspace LOCATION '@testtablespace@_unlogged';
@@ -452,7 +448,6 @@ SELECT spcoptions FROM pg_tablespace WHERE spcname = 'testspace_otherloc';
 (1 row)
 
 CREATE ROLE t_owner;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 ALTER TABLESPACE testspace_otherloc OWNER TO t_owner;
 SELECT rolname from pg_roles WHERE oid in (SELECT spcowner FROM pg_tablespace WHERE spcname = 'testspace_otherloc');
  rolname 

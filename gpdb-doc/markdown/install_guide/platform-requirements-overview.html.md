@@ -40,6 +40,7 @@ Greenplum Database 7 requires the following software packages on RHEL systems. T
 -   openssl
 -   openssl-libs
 -   perl
+-   python39
 -   readline
 -   rsync
 -   R
@@ -53,8 +54,6 @@ VMware Greenplum Database 7 client software requires these operating system pack
 -   apr-util
 -   libyaml
 -   libevent
-
-Greenplum Database 7 uses Python 2.7.12, which is included with the product installation \(and not installed as a package dependency\).
 
 > **Important** SSL is supported only on the Greenplum Database coordinator host system. It cannot be used on the segment host systems.
 

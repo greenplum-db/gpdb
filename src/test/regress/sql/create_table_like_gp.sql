@@ -19,6 +19,7 @@ select relname, reloptions from pg_class where relname LIKE 't_ao%' order by rel
 SELECT
 	c.relname,
 	a.attnum,
+	a.filenum,
 	a.attoptions
 FROM
 	pg_catalog.pg_class c

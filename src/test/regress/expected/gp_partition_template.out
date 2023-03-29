@@ -523,7 +523,7 @@ SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('notemplate') 
 -- Subpartition templates with encoding clauses
 prepare encoding_check as
 select attrelid::regclass as relname,
-        attnum, attoptions from pg_class c, pg_attribute_encoding e
+        attnum, filenum,attoptions from pg_class c, pg_attribute_encoding e
 where c.relname like 'subpart_templ_encoding%' and c.oid=e.attrelid
 order by relname, attnum;
 -- Range partition with enclause
@@ -564,83 +564,83 @@ SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_templ
 (7 rows)
 
 EXECUTE encoding_check;
-                   relname                   | attnum |                       attoptions                        
----------------------------------------------+--------+---------------------------------------------------------
- subpart_templ_encoding                      |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding                      |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding                      |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding                      |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p1             |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p1             |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p1             |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p1             |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p2             |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p2             |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p2             |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p2             |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+                   relname                   | attnum | filenum |                       attoptions                        
+---------------------------------------------+--------+---------+---------------------------------------------------------
+ subpart_templ_encoding                      |      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                      |      2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                      |      3 |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                      |      4 |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1             |      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1             |      2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1             |      3 |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1             |      4 |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2             |      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2             |      2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2             |      3 |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2             |      4 |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      2 |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      3 |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      4 |       4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      2 |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      3 |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      4 |       4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      2 |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      3 |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      4 |       4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      2 |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      3 |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      4 |       4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (28 rows)
 
 -- FIXME: the new partitions should have the encodings specified in the template
 ALTER TABLE subpart_templ_encoding ADD PARTITION p3 START (30) END (40);
 EXECUTE encoding_check;
-                   relname                   | attnum |                       attoptions                        
----------------------------------------------+--------+---------------------------------------------------------
- subpart_templ_encoding                      |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding                      |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding                      |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding                      |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p1             |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p1             |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p1             |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p1             |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p2             |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p2             |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p2             |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p2             |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p3             |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p3             |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p3             |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p3             |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p3_2_prt_sp1_1 |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p3_2_prt_sp1_1 |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p3_2_prt_sp1_1 |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p3_2_prt_sp1_1 |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p3_2_prt_sp1_2 |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p3_2_prt_sp1_2 |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p3_2_prt_sp1_2 |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p3_2_prt_sp1_2 |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
+                   relname                   | attnum | filenum |                       attoptions                        
+---------------------------------------------+--------+---------+---------------------------------------------------------
+ subpart_templ_encoding                      |      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                      |      2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                      |      3 |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                      |      4 |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1             |      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1             |      2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1             |      3 |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1             |      4 |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2             |      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2             |      2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2             |      3 |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2             |      4 |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      2 |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      3 |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      4 |       4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      2 |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      3 |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      4 |       4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      2 |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      3 |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      4 |       4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      2 |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      3 |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      4 |       4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p3             |      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3             |      2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3             |      3 |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3             |      4 |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1_1 |      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1_1 |      2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1_1 |      3 |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1_1 |      4 |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1_2 |      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1_2 |      2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1_2 |      3 |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1_2 |      4 |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
 (40 rows)
 
 -- List partition with enclause
@@ -678,63 +678,63 @@ SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_templ
 (5 rows)
 
 EXECUTE encoding_check;
-                  relname                  | attnum |                       attoptions                        
--------------------------------------------+--------+---------------------------------------------------------
- subpart_templ_encoding                    |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding                    |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding                    |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding                    |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p1           |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p1           |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p1           |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p1           |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p2           |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p2           |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p2           |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p2           |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+                  relname                  | attnum | filenum |                       attoptions                        
+-------------------------------------------+--------+---------+---------------------------------------------------------
+ subpart_templ_encoding                    |      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                    |      2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                    |      3 |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                    |      4 |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1           |      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1           |      2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1           |      3 |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1           |      4 |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2           |      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2           |      2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2           |      3 |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2           |      4 |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      2 |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      3 |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      4 |       4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      2 |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      3 |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      4 |       4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (20 rows)
 
 -- FIXME: the new partitions should have the encodings specified in the template
 ALTER TABLE subpart_templ_encoding ADD PARTITION p3 START (30) END (40);
 EXECUTE encoding_check;
-                  relname                  | attnum |                       attoptions                        
--------------------------------------------+--------+---------------------------------------------------------
- subpart_templ_encoding                    |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding                    |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding                    |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding                    |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p1           |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p1           |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p1           |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p1           |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p2           |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p2           |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p2           |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p2           |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- subpart_templ_encoding_1_prt_p3           |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p3           |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p3           |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p3           |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p3_2_prt_sp1 |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p3_2_prt_sp1 |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p3_2_prt_sp1 |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
- subpart_templ_encoding_1_prt_p3_2_prt_sp1 |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
+                  relname                  | attnum | filenum |                       attoptions                        
+-------------------------------------------+--------+---------+---------------------------------------------------------
+ subpart_templ_encoding                    |      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                    |      2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                    |      3 |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding                    |      4 |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1           |      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1           |      2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1           |      3 |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1           |      4 |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2           |      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2           |      2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2           |      3 |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p2           |      4 |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      2 |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      3 |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      4 |       4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      2 |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      3 |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      4 |       4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p3           |      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3           |      2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3           |      3 |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3           |      4 |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1 |      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1 |      2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1 |      3 |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1 |      4 |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
 (28 rows)
 
 -- Partition specific ENCODING clause is not supported in SUBPARTITION TEMPLATE

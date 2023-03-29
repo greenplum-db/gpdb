@@ -37,6 +37,8 @@
 /guc_env_var.out
 /hooktest.out
 /oid_wraparound.out
+/part_external_table.out
+/part_external_table_optimizer.out
 /partition_ddl.out
 /pgstat_qd_tabstat.out
 /qp_gist_indexes2_optimizer.out

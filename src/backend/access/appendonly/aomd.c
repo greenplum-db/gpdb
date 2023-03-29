@@ -35,6 +35,7 @@
 #include "access/table.h"
 #include "catalog/catalog.h"
 #include "catalog/pg_appendonly.h"
+#include "catalog/pg_attribute_encoding.h"
 #include "cdb/cdbappendonlystorage.h"
 #include "cdb/cdbappendonlyxlog.h"
 #include "commands/progress.h"
@@ -51,7 +52,7 @@ static void mdunlink_ao_base_relfile(void *ctx);
 static bool mdunlink_ao_perFile(const int segno, void *ctx);
 static bool copy_append_only_data_perFile(const int segno, void *ctx);
 static bool truncate_ao_perFile(const int segno, void *ctx);
-static uint64 ao_segfile_get_physical_size(Relation aorel, int segno, int col);
+static uint64 ao_segfile_get_physical_size(Relation aorel, int segno, FileNumber filenum);
 
 int
 AOSegmentFilePathNameLen(Relation rel)
@@ -81,7 +82,7 @@ AOSegmentFilePathNameLen(Relation rel)
 void
 FormatAOSegmentFileName(char *basepath,
 						int segno,
-						int col,
+						int filenum,
 						int32 *fileSegNo,
 						char *filepathname)
 {
@@ -90,7 +91,7 @@ FormatAOSegmentFileName(char *basepath,
 	Assert(segno >= 0);
 	Assert(segno <= AOTupleId_MaxSegmentFileNum);
 
-	if (col < 0)
+	if (filenum == InvalidFileNumber)
 	{
 		/*
 		 * Row oriented Append-Only.
@@ -102,7 +103,7 @@ FormatAOSegmentFileName(char *basepath,
 		/*
 		 * Column oriented Append-only.
 		 */
-		pseudoSegNo = (col*AOTupleId_MultiplierSegmentFileNum) + segno;
+		pseudoSegNo = ((filenum - 1) * AOTupleId_MultiplierSegmentFileNum) + segno;
 	}
 	
 	*fileSegNo = pseudoSegNo;
@@ -123,17 +124,17 @@ FormatAOSegmentFileName(char *basepath,
 void
 MakeAOSegmentFileName(Relation rel,
 					  int segno,
-					  int col,
+					  int filenum,
 					  int32 *fileSegNo,
 					  char *filepathname)
 {
 	char	*basepath;
 	int32   fileSegNoLocal;
-	
+
 	/* Get base path for this relation file */
 	basepath = relpathbackend(rel->rd_node, rel->rd_backend, MAIN_FORKNUM);
 
-	FormatAOSegmentFileName(basepath, segno, col, &fileSegNoLocal, filepathname);
+	FormatAOSegmentFileName(basepath, segno, filenum, &fileSegNoLocal, filepathname);
 	
 	*fileSegNo = fileSegNoLocal;
 	
@@ -640,7 +641,7 @@ ao_rel_get_physical_size(Relation aorel)
 			segno = DatumGetInt32(fastgetattr(tuple,
 											  Anum_pg_aoseg_segno,
 											  pg_aoseg_dsc, &isNull));
-			total_physical_size += ao_segfile_get_physical_size(aorel, segno, -1);
+			total_physical_size += ao_segfile_get_physical_size(aorel, segno, InvalidFileNumber);
 		}
 		else
 		{
@@ -659,7 +660,10 @@ ao_rel_get_physical_size(Relation aorel)
 			vpinfo = (AOCSVPInfo *) PG_DETOAST_DATUM(d);
 
 			for (col = 0; col < vpinfo->nEntry; ++col)
-				total_physical_size += ao_segfile_get_physical_size(aorel, segno, col);
+			{
+				FileNumber filenum = GetFilenumForAttribute(RelationGetRelid(aorel), col + 1);
+				total_physical_size += ao_segfile_get_physical_size(aorel, segno, filenum);
+			}
 
 			if (DatumGetPointer(d) != (Pointer) vpinfo)
 				pfree(vpinfo);
@@ -673,7 +677,7 @@ ao_rel_get_physical_size(Relation aorel)
 }
 
 static uint64
-ao_segfile_get_physical_size(Relation aorel, int segno, int col)
+ao_segfile_get_physical_size(Relation aorel, int segno, FileNumber filenum)
 {
 	const char *relname;
 	File		fd;
@@ -683,13 +687,13 @@ ao_segfile_get_physical_size(Relation aorel, int segno, int col)
 
 	relname = RelationGetRelationName(aorel);
 
-	MakeAOSegmentFileName(aorel, segno, col, &fileSegNo, filenamepath);
+	MakeAOSegmentFileName(aorel, segno, filenum, &fileSegNo, filenamepath);
 	elogif(Debug_appendonly_print_compaction, LOG,
-		   "Opening append-optimized relation \"%s\", relation id %u, relfilenode %u column #%d, logical segment #%d (physical segment file #%d)",
+		   "Opening append-optimized relation \"%s\", relation id %u, relfilenode %u filenum #%d, logical segment #%d (physical segment file #%d)",
 		   RelationGetRelationName(aorel),
 		   aorel->rd_id,
 		   aorel->rd_node.relNode,
-		   col,
+		   filenum,
 		   segno,
 		   fileSegNo);
 	fd = PathNameOpenFile(filenamepath, O_RDONLY | PG_BINARY);
@@ -697,11 +701,11 @@ ao_segfile_get_physical_size(Relation aorel, int segno, int col)
 		physical_size = FileDiskSize(fd);
 	else
 		elogif(Debug_appendonly_print_compaction, LOG,
-			   "No gp_relation_node entry for append-optimized relation \"%s\", relation id %u, relfilenode %u column #%d, logical segment #%d (physical segment file #%d)",
+			   "No gp_relation_node entry for append-optimized relation \"%s\", relation id %u, relfilenode %u filenum #%d, logical segment #%d (physical segment file #%d)",
 			   relname,
 			   aorel->rd_id,
 			   aorel->rd_node.relNode,
-			   col,
+			   filenum,
 			   segno,
 			   fileSegNo);
 	return physical_size;

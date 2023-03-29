@@ -1380,6 +1380,7 @@ ExplainPreScanNode(PlanState *planstate, Bitmapset **rels_used)
 										((Scan *) plan)->scanrelid);
 			break;
 		case T_ForeignScan:
+		case T_DynamicForeignScan:
 			*rels_used = bms_add_members(*rels_used,
 										 ((ForeignScan *) plan)->fs_relids);
 			break;
@@ -1614,6 +1615,31 @@ ExplainNode(PlanState *planstate, List *ancestors,
 					break;
 				case CMD_DELETE:
 					pname = "Foreign Delete";
+					operation = "Delete";
+					break;
+				default:
+					pname = "???";
+					break;
+			}
+			break;
+		case T_DynamicForeignScan:
+			sname = "Dynamic Foreign Scan";
+			switch (((ForeignScan *)((DynamicForeignScan *) plan))->operation)
+			{
+				case CMD_SELECT:
+					pname = "Dynamic Foreign Scan";
+					operation = "Select";
+					break;
+				case CMD_INSERT:
+					pname = "Dynamic Foreign Insert";
+					operation = "Insert";
+					break;
+				case CMD_UPDATE:
+					pname = "Dynamic Foreign Update";
+					operation = "Update";
+					break;
+				case CMD_DELETE:
+					pname = "Dynamic Foreign Delete";
 					operation = "Delete";
 					break;
 				default:
@@ -1860,6 +1886,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			ExplainScanTarget((Scan *) plan, es);
 			break;
 		case T_ForeignScan:
+		case T_DynamicForeignScan:
 		case T_CustomScan:
 			if (((Scan *) plan)->scanrelid > 0)
 				ExplainScanTarget((Scan *) plan, es);
@@ -2390,12 +2417,29 @@ ExplainNode(PlanState *planstate, List *ancestors,
 											   planstate, es);
 			}
 			break;
+		case T_DynamicForeignScan:
 		case T_ForeignScan:
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
-			show_foreignscan_info((ForeignScanState *) planstate, es);
+			if (IsA(plan, DynamicForeignScan))
+			{
+				char *buf;
+				Oid relid;
+				relid = rt_fetch(((DynamicForeignScan *)plan)
+							->foreignscan.scan.scanrelid,
+							es->rtable)->relid;
+				buf = psprintf("(out of %d)",  countLeafPartTables(relid));
+				ExplainPropertyInteger(
+					"Number of partitions to scan", buf,
+					list_length(((DynamicForeignScan *)plan)->partOids),es);
+				// TODO: Maybe add show_foreignscan_info here? We'd need to populate the planstate
+			}
+			else
+			{
+				show_foreignscan_info((ForeignScanState *) planstate, es);
+			}
 			break;
 		case T_CustomScan:
 			{
@@ -3949,6 +3993,7 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
 		case T_DynamicBitmapHeapScan:
 		case T_TidScan:
 		case T_ForeignScan:
+		case T_DynamicForeignScan:
 		case T_CustomScan:
 		case T_ModifyTable:
 			/* Assert it's on a real relation */
