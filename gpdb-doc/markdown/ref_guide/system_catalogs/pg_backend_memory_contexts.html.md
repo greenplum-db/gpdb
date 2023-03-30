@@ -11,7 +11,7 @@ The `pg_backend_memory_contexts` system view displays all of the memory contexts
 |`parent`|text| The name of the parent of this memory context.|
 |`level`|int4| The distance from `TopMemoryContext` in context tree.|
 |`total_bytes`|int8| The total number of bytes allocated for this memory context.|
-|`total_nblocks`|int8| The total number of blocks allocated for this memory context1.|
+|`total_nblocks`|int8| The total number of blocks allocated for this memory context.|
 |`free_bytes`|int8| Free space in bytes.|
 |`free_chunks`|int8| The total number of free chunks.|
 |`used_bytes`|int8| Used space in bytes.|
