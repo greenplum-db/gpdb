@@ -12,29 +12,31 @@ This documentation describes the most useful views in `gp_toolkit`. You may noti
 
 These are the categories for views in the `gp_toolkit` schema.
 
--   **[Checking for Tables that Need Routine Maintenance](gp_toolkit.html)**  
+-   **[Checking for Tables that Need Routine Maintenance](gp_toolkit.html#topic2)**  
 
--   **[Checking for Locks](gp_toolkit.html)**  
+-   **[Checking for Locks](gp_toolkit.html#topic5)**  
 
--   **[Checking Append-Optimized Tables](gp_toolkit.html)**  
+-   **[Checking Append-Optimized Tables](gp_toolkit.html#topic8)**  
 
--   **[Viewing Greenplum Database Server Log Files](gp_toolkit.html)**  
+-   **[Viewing Greenplum Database Server Log Files](gp_toolkit.html#topic16)**  
 
--   **[Checking Server Configuration Files](gp_toolkit.html)**  
+-   **[Checking Server Configuration Files](gp_toolkit.html#topic21)**  
 
--   **[Checking for Failed Segments](gp_toolkit.html)**  
+-   **[Checking for Failed Segments](gp_toolkit.html#topic24)**  
 
--   **[Checking Resource Group Activity and Status](gp_toolkit.html)**  
+-   **[Checking Resource Group Activity and Status](gp_toolkit.html#topic26x)**  
 
--   **[Checking Resource Queue Activity and Status](gp_toolkit.html)**  
+-   **[Checking Resource Queue Activity and Status](gp_toolkit.html#topic26)**  
 
--   **[Checking Query Disk Spill Space Usage](gp_toolkit.html)**  
+-   **[Checking Query Disk Spill Space Usage](gp_toolkit.html#topic32)**  
 
--   **[Viewing Users and Groups \(Roles\)](gp_toolkit.html)**  
+-   **[Viewing Users and Groups \(Roles\)](gp_toolkit.html#topic36)**  
 
--   **[Checking Database Object Sizes and Disk Space](gp_toolkit.html)**  
+-   **[Checking Database Object Sizes and Disk Space](gp_toolkit.html#topic38)**  
 
--   **[Checking for Uneven Data Distribution](gp_toolkit.html)**  
+-   **[Checking for Missing and Orphaned Data Files](gp_toolkit.html#missingfiles)**  
+
+-   **[Checking for Uneven Data Distribution](gp_toolkit.html#topic49)**  
 
 
 **Parent topic:** [Greenplum Database Reference Guide](ref_guide.html)
@@ -889,6 +891,58 @@ This external table runs the `df` \(disk free\) command on the active segment ho
 |dfhostname|The hostname of the segment host|
 |dfdevice|The device name|
 |dfspace|Free disk space in the segment file system in kilobytes|
+
+## <a id="missingfiles"></a>Checking for Missing and Orphaned Data Files
+
+Greenplum Database considers a relation data file that is present in the catalog, but not on disk, to be missing. Conversely, when Greenplum encounters an unexpected data file on disk that is not referenced in any relation, it considers that file to be orphaned.
+
+Greenplum Database provides the following views to help identify if missing or orphaned files exist in your cluster:
+
+- [gp_check_orphaned_files](#mf_orphaned)
+- [gp_check_missing_files](#mf_missing)
+- [gp_check_missing_files_ext](#mf_missing_ext)
+
+Consider it a best practice to check for these conditions prior to expanding the cluster or before offline maintenance.
+
+By default, the views identified in this section are available to `PUBLIC`.
+
+### <a id="mf_orphaned"></a>gp_check_orphaned_files
+
+The `gp_check_orphaned_files` view scans the default and user-defined tablespaces for orphaned data files. Greenplum Database considers both normal data files and extended numbered files (files that contain a `.<N>` in the name) in this check.
+
+|Column|Description|
+|------|-----------|
+| gp_segment_id | The Greenplum Database segment identifier. |
+| tablespace | The identifier of the tablespace in which the orphaned file resides. |
+| filename | The file name of the orphaned data file. |
+
+`gp_check_orphaned_files` gathers results from the Greenplum Database coordinator and all segments.
+
+### <a id="mf_missing"></a>gp_check_missing_files
+
+The `gp_check_missing_files` view scans heap and append-optimized, column-oriented tables for missing data files. Greenplum considers only normal data files (files that do not contain a `.` in the name) in this check.
+
+|Column|Description|
+|------|-----------|
+| gp_segment_id | The Greenplum Database segment identifier. |
+| tablespace | The identifier of the tablespace in which the table resides. |
+| relname | The name of the table that has a missing data file(s). |
+| filename | The file name of the missing data file. |
+
+`gp_check_missing_files` gathers results from the Greenplum Database coordinator and all segments.
+
+### <a id="mf_missing_ext"></a>gp_check_missing_files_ext
+
+The `gp_check_missing_files_ext` view scans only append-optimized, column-oriented tables for missing extended data files. Greenplum Database considers both normal data files and extended numbered files (files that contain a `.<N>` in the name) in this check.
+
+|Column|Description|
+|------|-----------|
+| gp_segment_id | The Greenplum Database segment identifier. |
+| tablespace | The identifier of the tablespace in which the table resides. |
+| relname | The name of the table that has a missing extended data file(s). |
+| filename | The file name of the missing extended data file. |
+
+`gp_check_missing_files_ext` gathers results from the Greenplum Database segments only.
 
 ## <a id="topic49"></a>Checking for Uneven Data Distribution 
 
