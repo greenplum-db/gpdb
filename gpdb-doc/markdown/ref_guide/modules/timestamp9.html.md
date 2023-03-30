@@ -454,22 +454,19 @@ SELECT '123456789'::TIMESTAMP9_LTZ;
 
 As with `TIMESTAMP9_LTZ`, valid input for the `TIMESTAMP9_NTZ` data type consists of the concatenation of a date and a time, followed by an optional time zone. Users can specify the fractional part of second up to 9 digits (in nanosecond precision). The difference is that, if the user specifies time zone in the input string, `TIMESTAMP9_NTZ` will ignore it and store the remaining timestamp as UTC time without applying any time zone offset. 
 
-``` 
-The current system’s TIMEZONE parameter is ‘Asia/Shanghai’ 
+The current system’s TIMEZONE parameter is ‘Asia/Shanghai’
 
-SELECT '2023-02-20 00:00:00.123456789 +0200'::TIMESTAMP9_NTZ; 
-
-        timestamp9_ntz 
-------------------------------- 
-2023-02-20 00:00:00.123456789 
-(1 row) 
-
-SELECT '2023-02-20 00:00:00.123456789'::TIMESTAMP9_NTZ; 
-
-        timestamp9_ntz 
-------------------------------- 
-2023-02-20 00:00:00.123456789 
-(1 row) 
+```
+=# SELECT '2023-02-20 00:00:00.123456789 +0200'::TIMESTAMP9_NTZ;
+        timestamp9_ntz
+-------------------------------
+2023-02-20 00:00:00.123456789
+(1 row)
+=# SELECT '2023-02-20 00:00:00.123456789'::TIMESTAMP9_NTZ;
+        timestamp9_ntz
+-------------------------------
+2023-02-20 00:00:00.123456789
+(1 row)
 ```
 
 ## <a id="topic_limit"></a>Limitations
