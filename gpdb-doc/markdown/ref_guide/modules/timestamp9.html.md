@@ -2,7 +2,7 @@
 
 The `timestamp9` module provides an efficient, nanosecond-precision timestamp data type and related functions and operators.
 
-The Greenplum Database `timestamp9` module is based on version 1.2.0 of the `timestamp9` module used with PostgreSQL.
+The Greenplum Database `timestamp9` module is based on version 1.2.0 of the [`timestamp9` module]((https://github.com/fvannee/timestamp9) ) used with PostgreSQL.
 
 ## <a id="topic_reg"></a>Installing and Registering the Module 
 
@@ -28,7 +28,7 @@ The following table summarizes key information about the `timestamp9` data types
 
 ### More about `TIMESTAMP9`
 
-The `TIMESTAMP9` data type is similar to the `TIMESTAMP9_LTZ` data type. Please see the next section for details.
+The `TIMESTAMP9` data type is identical to the `TIMESTAMP9_LTZ` data type. Please see the next section for details.
 
 ### More about `TIMESTAMP9_LTZ`
 
@@ -40,7 +40,7 @@ See [TIMESTAMP9_LTZ Examples](#timestamp9_ltz-examples) for examples using this 
 
 ### More about `TIIMESTAMP9_NTZ`
 
-"NTZ" is an abbreviation of ‘No Time Zone’. Greenplum Database stores UTC time internally without considering any time zone information. If a time zone is embedded in the timestamp string, Greenplum Database will simply ignore it. 
+`NTZ` is an abbreviation of ‘No Time Zone.’ Greenplum Database stores UTC time internally without considering any time zone information. If a time zone is embedded in the timestamp string, Greenplum Database will simply ignore it. 
 
 See [TIMESTAMP9_NTZ Examples](#timestamp9_ntz-examples) for examples using this data type.
 
@@ -54,18 +54,18 @@ The following table summarizes the `timestamp9` module's supported type conversi
 |`DATE`|`TIMESTAMP9_LTZ`|Greenplum Database treats the `DATE` value as in the current session time zone. This behavior is identical to converting from from `DATE` to `TIMESTAMPTZ`.|
 |`TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP`|`TIMESTAMP9_LTZ`|Greenplum Database treats the `TIMESTAMP` value as in the current session time zone.  This behavior is identical to converting from `TIMESTAMP` to `TIMESTAMPTZ`|
 |`TIMESTAMP WITH TIME ZONE/TIMESTAMPTZ` |`TIMESTAMP9_LTZ`|For this conversion, Greenplum Database only extends the fractional part to nanosecond precision.|
-|`TIMESTAMP9_LTZ`|`BIGINT`|The result of this conversion is the nanoseconds since ‘1970-01-01 00:00:00.000000000 +0000’ to the given TIMESTAMP9_LTZ value.  If the given TIMESTAMP9_LTZ value is before ‘1970-01-01 00:00:00.000000000 +0000’, the result is negative.|
-|`TIMESTAMP9_LTZ`|`DATE`|The result of this conversion depends on the date of the given TIMESTAMP9_LTZ value in the time zone of the current session. The behavior is like doing conversion from TIMESTAMPTZ to DATE.|
+|`TIMESTAMP9_LTZ`|`BIGINT`|The result of this conversion is the nanoseconds since ‘1970-01-01 00:00:00.000000000 +0000’ to the given `TIMESTAMP9_LTZ` value.  If the given `TIMESTAMP9_LTZ` value is before ‘1970-01-01 00:00:00.000000000 +0000’, the result is negative.|
+|`TIMESTAMP9_LTZ`|`DATE`|The result of this conversion depends on the date of the given `TIMESTAMP9_LTZ` value in the time zone of the current session. The behavior is like doing conversion from `TIMESTAMPTZ` to `DATE`.|
 |`TIMESTAMP9_LTZ`|`TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP`|The result of this conversion is a timestamp without time zone.  The resulting timestamp’s value is determined by the value of `TIMESTAMP9_LTZ` in the current session time zone.  Note that the fractional part of `TIMESTAMP` type has 6 digits, while `TIMESTAMP9_LTZ` has 9 digits in its fractional part. When converting `TIMESTAMP9_LTZ to TIMESTAMP`, the fractional part is truncated instead of being rounded off.|
 |`TIMESTAMP9_LTZ`|`TIMESTAMP WITH TIME ZONE/TIMESTAMP`|When performing this conversion, Greenplum Database truncates the fractional part to only 6 digits.|
 |`BIGINT`|`TIMESTAMP9_NTZ`|When performing this conversion, Greenplum Database treats the BIGINT value as the number of nanoseconds started from ‘1970-01-01 00:00:00’.|
 |`DATE`|`TIMESTAMP9_NTZ`|When performing this conversion, the resulting timestamp is ‘00:00:00.000000000’ on the given date.|
 |`TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP`|`TIMESTAMP9_NTZ`|When peforming this conversion, Greenplum Database only extends the fractional part to nanosecond precision.|
-|`TIMESTAMP WITH TIME ZONE/TIMESTAMP`|`TIMESTAMP9_NTZ`|The resulting timestamp’s value is determined by the value of `TIMESTAMPTZ` in the current session time zone. .|
+|`TIMESTAMP WITH TIME ZONE/TIMESTAMP`|`TIMESTAMP9_NTZ`|The resulting timestamp’s value is determined by the value of `TIMESTAMPTZ` in the current session time zone.|
 |`TIMESTAMP9_NTZ`|`BIGINT`|The result of this conversion is the nanoseconds since ‘1970-01-01 00:00:00.000000000’ to the given `TIMESTAMP9_NTZ` value.  If the given `TIMESTAMP9_NTZ` value is before ‘1970-01-01 00:00:00.000000000’, the result is negative.|
 |`TIMESTAMP9_NTZ`|`DATE`|When performing this conversion, Greenplum Database truncatest the time portion and preserves the date portion.|
 |`TIMESTAMP9_NTZ`|`TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP`|When performing this conversion, Greenplum Database truncates only the fractional part to 6 digits.|
-|`TIMESTAMP9_NTZ`|`TIMESTAMP WITH TIME ZONE/TIMESTAMP`|
+|`TIMESTAMP9_NTZ`|`TIMESTAMP WITH TIME ZONE/TIMESTAMP`|When performing this conversion, Greenplum Database only truncates the fractional part to 6 digits and add the time zone of the current session. 
 |`TIMESTAMP9_LTZ`|`TIMESTAMP9_NTZ`|The resulting `TIMESTAMP9_NTZ` value is determined by the value of `TIMESTAMP9_LTZ` in the current session's time zone.|
 |`TIMESTAMP9_NTZ`|`TIMESTAMP9_LTZ`|When performing this conversion, Greenplum Database adds the timezone of the current sesion.|
 
@@ -74,6 +74,13 @@ The following table summarizes the `timestamp9` module's supported type conversi
 #### <a id="conversion_1"></a>Convert `BIGINT` to `TIMESTAMP9_LTZ`
 
 ```
+=# SHOW TIMEZONE; 
+
+   TimeZone 
+-------------- 
+Asia/Shanghai 
+(1 row) 
+	
 =# SELECT 0::BIGINT::TIMESTAMP9_LTZ; 
 
            timestamp9_ltz 
@@ -84,7 +91,8 @@ The following table summarizes the `timestamp9` module's supported type conversi
 
 #### <a id="conversion_2"></a>Convert `DATE` to `TIMESTAMP9_LTZ`
 
-```=# SHOW TIMEZONE; 
+```
+=# SHOW TIMEZONE; 
 
    TimeZone 
 -------------- 
@@ -400,10 +408,6 @@ testdb=# SELECT now()::timestamp9;
 (1 row)
 ```
 
-## <a id="topic_info"></a>Module Documentation 
-
-Refer to the [timestamp9 github documentation](https://github.com/fvannee/timestamp9) for detailed information about using the module.
-
 ## <a id="examples"></a>Examples
 
 ### `TIMESTAMP9_LTZ` Examples
@@ -442,72 +446,7 @@ SELECT '123456789'::TIMESTAMP9_LTZ;
 ------------------------------------- 
 1970-01-01 08:00:00.123456789 +0800 
 (1 row) 
-``` 
-
-#### Distribute a table by `TIMESTAMP9_LTZ`
-
-This example distributes a table by a column of type `TIMESTAMP9_LTZ`:
-
-``` 
-The system’s TIMEZONE parameter is ‘Asia/Shanghai’ 
-
-CREATE TABLE t_dist_by_ts9ltz(ts9ltz TIMESTAMP9_LTZ) DISTRIBUTED BY (ts9ltz); 
-
-INSERT INTO t_dist_by_ts9ltz VALUES 
-
-            ('2023-02-14 01:01:01.123456789'), 
-
-            ('2023-02-14 01:01:01.123456789 +0100'), 
-
-            ('2023-02-14 01:01:01.123456789 +0200'); 
-
-SELECT gp_segment_id, * FROM t_dist_by_ts9ltz; 
-
- gp_segment_id |               ts9ltz 
-
----------------+------------------------------------- 
-
-             0 | 2023-02-14 08:01:01.123456789 +0800 
-
-             1 | 2023-02-14 07:01:01.123456789 +0800 
-
-             2 | 2023-02-14 01:01:01.123456789 +0800 
-(3 rows)
-``` 
-
-#### Partition a table by `TIMESTAMP9_LTZ`
-
-This example partitions a table by a column of type `TIMESTAMP9_LTZ`:
-
-``` 
-The system’s TIMEZONE parameter is ‘Asia/Shanghai’ 
-
-CREATE TABLE t_part_by_ts9ltz(ts9ltz TIMESTAMP9_LTZ) 
-
-  PARTITION BY RANGE (ts9ltz) 
-
-    (PARTITION p1 START ('2023-01-01') END ('2023-02-01'), 
-
-     PARTITION p2 START ('2023-02-01') END ('2023-03-01')); 
-
-INSERT INTO t_part_by_ts9ltz VALUES 
-
-            ('2023-01-14 01:01:01.123456789'), 
-
-            ('2023-02-14 01:01:01.123456789 +0100'), 
-
-            ('2023-02-14 01:01:01.123456789 +0200'); 
-
-SELECT * FROM t_part_by_ts9ltz 
-
-    WHERE ts9ltz BETWEEN '2023-02-01' AND '2023-02-15'; 
-
-               ts9ltz 
-------------------------------------- 
-2023-02-14 08:01:01.123456789 +0800 
-2023-02-14 07:01:01.123456789 +0800 
-(2 rows) 
-``` 
+```
 
 ### `TIMESTAMP9_NTZ` Examples
 
@@ -532,73 +471,6 @@ SELECT '2023-02-20 00:00:00.123456789'::TIMESTAMP9_NTZ;
 2023-02-20 00:00:00.123456789 
 (1 row) 
 ```
-
-#### Distribute a table by `TIMESTAMP9_NTZ`
-
-This example distributes a table by a column of type `TIMESTAMP9_NTZ`:
-
-``` 
-The system’s TIMEZONE parameter is ‘Asia/Shanghai’ 
-
-CREATE TABLE t_dist_by_ts9ntz(ts9ntz TIMESTAMP9_NTZ) DISTRIBUTED BY (ts9ntz); 
-
-INSERT INTO t_dist_by_ts9ntz VALUES 
-
-            ('2023-02-14 01:01:01.123456789'), 
-
-            ('2023-02-14 01:01:01.123456789 +0100'), 
-
-            ('2023-02-14 01:01:01.123456789 +0200'); 
-
-Since the inserted tuples are identical, they are located on the same segment. 
-
-SELECT gp_segment_id, * FROM t_dist_by_ts9ntz; 
-
- gp_segment_id |            ts9ntz 
----------------+------------------------------- 
-
-             1 | 2023-02-14 01:01:01.123456789 
-
-             1 | 2023-02-14 01:01:01.123456789 
-
-             1 | 2023-02-14 01:01:01.123456789 
-(3 rows) 
-``` 
-
-#### Partition a table by `TIMESTAMP9_NTZ`
-
-This example partitions a table by a column of type `TIMESTAMP9_NTZ`:
-
-``` 
-The system’s TIMEZONE parameter is ‘Asia/Shanghai’ 
-
-CREATE TABLE t_part_by_ts9ntz(ts9ntz TIMESTAMP9_NTZ) 
-
-  PARTITION BY RANGE (ts9ntz) 
-
-    (PARTITION p1 START ('2023-01-01') END ('2023-02-01'), 
-
-     PARTITION p2 START ('2023-02-01') END ('2023-03-01')); 
-
-INSERT INTO t_part_by_ts9ntz VALUES 
-
-            ('2023-01-14 01:01:01.123456789'), 
-
-            ('2023-02-14 01:01:01.123456789 +0100'), 
-
-            ('2023-02-14 01:01:01.123456789 +0200'); 
-
-SELECT * FROM t_part_by_ts9ntz 
-
-    WHERE ts9ntz BETWEEN '2023-02-01' AND '2023-02-15'; 
-
-            ts9ntz 
--------------------------------
-2023-02-14 01:01:01.123456789 
-
-2023-02-14 01:01:01.123456789 
-(2 rows) 
-``` 
 
 ## <a id="topic_limit"></a>Limitations
 
