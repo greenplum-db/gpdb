@@ -3367,6 +3367,7 @@ ResourceGroupGetQueryMemoryLimit(void)
 	ResGroupCaps		*caps;
 	int64	resgLimit = -1;
 	uint64	queryMem = -1;
+	uint64  stateMem = (uint64) statement_mem * 1024L;
 
 	Assert(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY);
 
@@ -3374,7 +3375,12 @@ ResourceGroupGetQueryMemoryLimit(void)
 		return 0;
 
 	if (gp_resgroup_memory_query_fixed_mem)
-		return (uint64) gp_resgroup_memory_query_fixed_mem * 1024L;
+	{
+		/*
+		 * If user requests more than statement_mem, grant that.
+		 */
+		return Max((uint64) gp_resgroup_memory_query_fixed_mem * 1024L, stateMem);
+	}
 
 	Assert(selfIsAssigned());
 
@@ -3387,11 +3393,14 @@ ResourceGroupGetQueryMemoryLimit(void)
 	if (resgLimit == -1)
 	{
 		LWLockRelease(ResGroupLock);
-		return (uint64) statement_mem * 1024L;
+		return stateMem;
 	}
 
 	queryMem = (uint64)(resgLimit *1024L *1024L / caps->concurrency);
 	LWLockRelease(ResGroupLock);
 
-	return queryMem;
+	/*
+	 * If user requests more than statement_mem, grant that.
+	 */
+	return Max(queryMem, stateMem);
 }
