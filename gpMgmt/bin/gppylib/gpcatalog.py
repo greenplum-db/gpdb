@@ -34,6 +34,7 @@ COORDINATOR_ONLY_TABLES = [
     'pg_statistic_ext',
     'pg_statistic_ext_data',
     'gp_partition_template',
+	'pg_event_trigger'
     ]
 
 # Hard coded tables that have different values on every segment
