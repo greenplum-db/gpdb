@@ -1795,11 +1795,12 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 			 * error. However, the error is not the real cause of the abortion. So we add a judge here,
 			 * to check if gpdb get enough data to decompress. The missing data means the network problem.
 			 */
-			if (file->lastsize > (file->in.top - file->in.bot) && file->block.datalen)
+			left_bytes = (file->in.top - file->in.bot);
+			if (file->lastsize > left_bytes && file->block.datalen)
 			{
 				ereport(ERROR,
 					(errcode(ERRCODE_CONNECTION_FAILURE),
-					 errmsg("connection to gpfdist error: stream ends suddenly")));
+					 errmsg("connection to gpfdist error: stream ends unexpectedly")));
 			}
 #endif
 		}

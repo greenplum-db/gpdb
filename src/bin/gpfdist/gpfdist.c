@@ -197,15 +197,9 @@ static struct
 	struct transform* trlist; /* transforms from config file */
 	const char* ssl; /* path to certificates in case we use gpfdist with ssl */
 	int			w; /* The time used for session timeout in seconds */
-#ifndef WIN32
 	int			compress; /* The flag to indicate whether comopression transmission is open */
 	int			multi_thread; /* The number of working threads for compression transmission */
-#endif
-} opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 32768, 0, 256, 0, 0, 0, 0
-#ifndef WIN32
-, 0, 0
-#endif
-};
+} opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 32768, 0, 256, 0, 0, 0, 0, 0, 0};
 
 typedef union address
 {
@@ -413,11 +407,11 @@ static int wait_for_thread_join(request_t *r);
 static int request_parse_gp_headers(request_t *r, int opt_g);
 static void free_session_cb(int fd, short event, void* arg);
 #ifdef GPFXDIST
-static int send_proto_head(request_t *r);
 static int request_set_transform(request_t *r);
 #endif
 static void handle_post_request(request_t *r, int header_end);
 static void handle_get_request(request_t *r);
+static int send_proto_head(request_t *r);
 
 static int gpfdist_socket_send(const request_t *r, const void *buf, const size_t buflen);
 static int (*gpfdist_send)(const request_t *r, const void *buf, const size_t buflen); /* function pointer */
@@ -445,10 +439,10 @@ int gpfdist_init(int argc, const char* const argv[]);
 int gpfdist_run(void);
 
 static void delay_watchdog_timer(void);
+static void session_mark_end(request_t* req);
 #ifndef WIN32
 static apr_time_t shutdown_time;
 static void* watchdog_thread(void*);
-static void session_mark_end(request_t* req);
 #endif
 
 static const char *EMPTY_HTTP_RES = "HTTP/1.0 200 ok\r\n"
@@ -684,7 +678,7 @@ static void parse_command_line(int argc, const char* const argv[],
 #endif
 	{ "version", 256, 0, "print version number" },
 	{ NULL, 'w', 1, "wait for session timeout in seconds" },
-#ifndef WIN32
+#ifdef USE_ZSTD
 	{"compress", 258, 0, "turn on compressed transmission"},
 	{"mthread", 259, 1, "turn on multi-thread and compressed transmission"},
 #endif
@@ -773,7 +767,6 @@ static void parse_command_line(int argc, const char* const argv[],
 			opt.w = atoi(arg);
 			break;
 #ifdef USE_ZSTD
-#ifndef WIN32
 		case 258:
 			opt.compress = 1;
 			break;
@@ -785,16 +778,13 @@ static void parse_command_line(int argc, const char* const argv[],
 			opt.multi_thread = atoi(arg);
 			opt.compress = 1;
 			break;
-#endif
 #else
-#ifndef WIN32
 		case 258:
 			usage_error("ZSTD is not supported by this build", 0);
 			break;
 		case 259:
 			usage_error("Multi-thread transmission relies on zstd, but zstd is not supported by this build", 0);
 			break;
-#endif
 #endif
 		}
 	}
@@ -1313,7 +1303,7 @@ static int local_send(request_t *r, const char* buf, int buflen)
 			if (r->session && r->is_get)
 			{
 #ifndef WIN32
-				if (r->is_running || opt.multi_thread)
+				if (opt.multi_thread)
 				{
 					session_mark_end(r);
 				}
@@ -1344,7 +1334,6 @@ static int local_send(request_t *r, const char* buf, int buflen)
 }
 
 #ifdef USE_ZSTD
-#ifndef WIN32
 static
 int wait_for_thread_join(request_t *r)
 {
@@ -1356,6 +1345,11 @@ int wait_for_thread_join(request_t *r)
 	return r->send_size;
 }
 
+/* The function used in multi-thread mode. The responsibility of the function is 
+ * to wait for the end of the thread that serves the current request and check the
+ * result of the data transmission. If there is unexpected returned value, it will
+ * handle the error case.
+ */
 static
 int recycle_thread(request_t *r)
 {
@@ -1385,8 +1379,6 @@ int recycle_thread(request_t *r)
 	return last_send;
 }
 
-#endif
-
 static int
 local_send_with_zstd(request_t *r)
 {
@@ -1394,7 +1386,16 @@ local_send_with_zstd(request_t *r)
 #ifndef WIN32
 	if(opt.multi_thread){
 		sem_wait(&THREAD_NUM);
-		pthread_create(&r->thread_id, 0, send_compression_data, r);
+		int err = pthread_create(&r->thread_id, 0, send_compression_data, r);
+		/* It is very confusing error. To avoid repeated calling of creating thread,
+		 * stopping current request and informing gpdb to abort the data scan is
+		 * necessary. 
+		 */
+		if (err) {
+			gwarning(r, "pthread_create failed with error code %d.\n", err);
+			sem_post(&THREAD_NUM);
+			return -1;
+		}
 		r->is_running = 1;
 		send_size = r->outblock.top - r->outblock.bot;
 		r->outblock.lastsize = r->outblock.top - r->outblock.bot;
@@ -1419,7 +1420,12 @@ void* send_compression_data (void *req)
 		r->send_size = -1;
 		goto return_block;
 	}
-
+	/* osize indicates the size to be compressed. But we don't use 
+	 * 'r->outblock.top - r->outblock.bot' to get osize since r->outblock.bot
+	 * is not a thread-safe variable. And osize is only used in the case where
+	 * r->outblock.bot equals 0. Thus, Either osize is unnecessary, or 
+	 * r->outblock.top is sufficient to express the size of the original data.
+	 */
 	int osize = r->outblock.top, res = 0;
 
 	r->send_size = r->outblock.top;
@@ -1453,9 +1459,6 @@ void* send_compression_data (void *req)
 	}
 	else
 		outblock->cbot += send;
-
-	goto return_block;
-
 
 return_block:
 #ifndef WIN32
@@ -1636,6 +1639,18 @@ static void session_end(session_t* session, int error)
 		gprintln(NULL, "close fstream");
 		fstream_close(session->fstream);
 		session->fstream = 0;
+	}
+}
+
+/* finish the session - close the file */
+static void session_mark_end(request_t* req)
+{
+	gprintln(NULL, "session mark end. id = %ld", req->session->id);
+
+	if (req->session->fstream)
+	{
+		gprintln(NULL, "mark fstream to be closed");
+		req->session_end = 1;
 	}
 }
 
@@ -2122,7 +2137,7 @@ static void do_write(int fd, short event, void* arg)
 		 */
 		n = datablock->top - datablock->bot;
 #ifdef USE_ZSTD
-		if(r->zstd)
+		if (r->zstd)
 		{
 			n = local_send_with_zstd(r);
 		}
@@ -3448,7 +3463,7 @@ static void handle_post_request(request_t *r, int header_end)
 	r->in.dbuftop = 0;
 	r->in.wbuftop = 0;
 	r->in.dbuf = palloc_safe(r, r->pool, r->in.dbufmax, "out of memory when allocating r->in.dbuf: %d bytes", r->in.dbufmax);
-	if(r->zstd)
+	if (r->zstd)
 		r->in.wbuf = palloc_safe(r, r->pool, MAX_FRAME_SIZE, "out of memory when allocating r->in.wbuf: %d bytes", MAX_FRAME_SIZE);
 
 	/* if some data come along with the request, copy it first */
@@ -3473,7 +3488,7 @@ static void handle_post_request(request_t *r, int header_end)
 		if(r->in.davailable == 0)
 		{
 #ifdef USE_ZSTD
-			if(r->zstd)
+			if (r->zstd)
 			{
 				wrote = decompress_write_loop(r);
 				if (wrote == -1)
@@ -3558,7 +3573,7 @@ static void handle_post_request(request_t *r, int header_end)
 			{
 #ifdef USE_ZSTD
 				/* only write up to end of last row */
-				if(r->zstd)
+				if (r->zstd)
 				{
 					success = decompress_write_loop(r);
 				}
@@ -3813,9 +3828,7 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 	if (r->zstd)
 	{
 		OUT_BUFFER_SIZE = ZSTD_CStreamOutSize();
-		r->zstd_err_len = 1024;
 		r->outblock.cdata = palloc_safe(r, r->pool, opt.m, "out of memory when allocating buffer for compressed data: %d bytes", opt.m);
-		r->zstd_error = palloc_safe(r, r->pool, r->zstd_err_len, "out of memory when allocating error buffer for compressed data: %d bytes", r->zstd_err_len);
 		r->is_running = 0;
 		r->thread_id = 0;
 		if (r->is_get)
@@ -3831,7 +3844,8 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 			opt.multi_thread = 0;
 		}
 	}
-
+	r->zstd_err_len = 1024;
+	r->zstd_error = palloc_safe(r, r->pool, r->zstd_err_len, "out of memory when allocating error buffer for compressed data: %d bytes", r->zstd_err_len);
 #endif
 
 	if (r->line_delim_length > 0)
@@ -4820,10 +4834,9 @@ static void request_cleanup(request_t *r)
 	request_shutdown_sock(r);
 	setup_do_close(r);
 #ifdef USE_ZSTD
-#ifndef WIN32
 	if(r->is_running)
 		wait_for_thread_join(r);
-#endif
+
 	if ( r->zstd && r->is_get )
 	{
 		ZSTD_freeCCtx(r->zstd_cctx);
@@ -4944,23 +4957,8 @@ static void delay_watchdog_timer()
 	}
 }
 
-/* finish the session - close the file */
-static void session_mark_end(request_t* req)
-{
-	gprintln(NULL, "session mark end. id = %ld", req->session->id);
-
-	if (req->session->fstream)
-	{
-		gprintln(NULL, "mark fstream to be closed");
-		req->session_end = 1;
-	}
-}
-
 #else
 static void delay_watchdog_timer()
-{
-}
-static void session_mark_end(session_t* session)
 {
 }
 #endif
