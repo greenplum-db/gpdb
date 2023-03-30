@@ -157,6 +157,23 @@ drop table test;
 1q:
 2q:
 
+-- test ORCA partition table
+create table test(a int, b int, c int) partition by range(b) (start (1) end (7) every (3));
+insert into test values (1, 1, 1);
+1: begin;
+1: delete from test where b = 1;
+-- in session 2, in case of ORCA DML invokes EPQ
+-- the following SQL will hang due to XID lock
+2&: update test set b = 1;
+1: end;
+2<:
+
+0: select * from test;
+0: drop table test;
+0q:
+1q:
+2q:
+
 -- split update is to implement updating on hash keys,
 -- it deletes the tuple and insert a new tuple in a
 -- new segment, so it is not easy for other transaction
