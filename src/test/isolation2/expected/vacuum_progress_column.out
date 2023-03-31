@@ -51,7 +51,7 @@ SELECT relpages, reltuples, relallvisible FROM pg_class where relname = 'vacuum_
 ----------+-----------+---------------
  0        | 0         | 0             
 (1 row)
-SELECT n_live_tup, n_dead_tup, last_vacuum, vacuum_count FROM pg_stat_all_tables WHERE relname = 'vacuum_progress_ao_column';
+SELECT n_live_tup, n_dead_tup, last_vacuum, vacuum_count FROM gp_stat_all_tables WHERE relname = 'vacuum_progress_ao_column' and segment_id = 1;
  n_live_tup | n_dead_tup | last_vacuum | vacuum_count 
 ------------+------------+-------------+--------------
  100000     | 200000     |             | 0            
@@ -168,7 +168,7 @@ SELECT relpages, reltuples, relallvisible FROM pg_class where relname = 'vacuum_
 ----------+-----------+---------------
  37       | 50000     | 0             
 (1 row)
-SELECT n_live_tup, n_dead_tup, last_vacuum is not null as has_last_vacuum, vacuum_count FROM pg_stat_all_tables WHERE relname = 'vacuum_progress_ao_column';
+SELECT n_live_tup, n_dead_tup, last_vacuum is not null as has_last_vacuum, vacuum_count FROM gp_stat_all_tables WHERE relname = 'vacuum_progress_ao_column' and segment_id = 1;
  n_live_tup | n_dead_tup | has_last_vacuum | vacuum_count 
 ------------+------------+-----------------+--------------
  50000      | 0          | t               | 1            
@@ -248,7 +248,7 @@ SELECT relpages, reltuples, relallvisible FROM pg_class where relname = 'vacuum_
 ----------+-----------+---------------
  13       | 50000     | 0             
 (1 row)
-SELECT n_live_tup, n_dead_tup, last_vacuum is not null as has_last_vacuum, vacuum_count FROM pg_stat_all_tables WHERE relname = 'vacuum_progress_ao_column';
+SELECT n_live_tup, n_dead_tup, last_vacuum is not null as has_last_vacuum, vacuum_count FROM gp_stat_all_tables WHERE relname = 'vacuum_progress_ao_column' and segment_id = 1;
  n_live_tup | n_dead_tup | has_last_vacuum | vacuum_count 
 ------------+------------+-----------------+--------------
  50000      | 0          | t               | 2            
