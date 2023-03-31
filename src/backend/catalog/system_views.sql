@@ -696,17 +696,17 @@ CREATE VIEW pg_stat_xact_sys_tables AS
 
 CREATE VIEW pg_stat_user_tables AS
     SELECT * FROM pg_stat_all_tables
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW gp_stat_user_tables_summary AS
     SELECT * FROM gp_stat_all_tables_summary
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_stat_xact_user_tables AS
     SELECT * FROM pg_stat_xact_all_tables
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_statio_all_tables AS
@@ -741,7 +741,7 @@ CREATE VIEW pg_statio_sys_tables AS
 
 CREATE VIEW pg_statio_user_tables AS
     SELECT * FROM pg_statio_all_tables
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_stat_all_indexes AS
@@ -805,12 +805,12 @@ CREATE VIEW pg_stat_sys_indexes AS
 
 CREATE VIEW pg_stat_user_indexes AS
     SELECT * FROM pg_stat_all_indexes
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW gp_stat_user_indexes_summary AS
     SELECT * FROM gp_stat_all_indexes_summary
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_statio_all_indexes AS
@@ -836,7 +836,7 @@ CREATE VIEW pg_statio_sys_indexes AS
 
 CREATE VIEW pg_statio_user_indexes AS
     SELECT * FROM pg_statio_all_indexes
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_statio_all_sequences AS
@@ -853,12 +853,12 @@ CREATE VIEW pg_statio_all_sequences AS
 
 CREATE VIEW pg_statio_sys_sequences AS
     SELECT * FROM pg_statio_all_sequences
-    WHERE schemaname IN ('pg_catalog', 'information_schema') OR
+    WHERE schemaname IN ('pg_catalog', 'information_schema', 'pg_aoseg') OR
           schemaname ~ '^pg_toast';
 
 CREATE VIEW pg_statio_user_sequences AS
     SELECT * FROM pg_statio_all_sequences
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_stat_activity AS
