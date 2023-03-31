@@ -155,10 +155,13 @@ The recovery process marks the segment as up again in the Greenplum Database sys
 :   Show `pg_basebackup` or `pg_rewind` progress sequentially instead of in-place. Useful when writing to a file, or if a tty does not support escape sequences. The default is to show progress in-place.
 
 --no-progress
-:   Suppresses progress reports from the `pg_basebackup` or `pg_rewind` utility. The default is to display progress.
+:   Suppresses progress reports from the `pg_basebackup`, `pg_rewind`, or `rsync` utility. The default is to display progress.
 
 --differential
-:   During a full recovery, skip recovery of files and directories that have not changed since the last time `gprecoverseg` ran.
+:   During a full recovery, skip recovery of files and directories that have not changed since the last time `gprecoverseg` ran. 
+
+    >**Note**
+    >The `--differential` option cannot be combined with any of the following `gprecoverseg` options: `-i`, `-o`, `-F`, or `-p`.
 
 -v \| --verbose
 :   Sets logging output to verbose.
