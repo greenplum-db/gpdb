@@ -51,10 +51,10 @@ SELECT relpages, reltuples, relallvisible FROM pg_class where relname = 'vacuum_
 ----------+-----------+---------------
  0        | 0         | 0             
 (1 row)
-SELECT n_live_tup, n_dead_tup, vacuum_count FROM pg_stat_all_tables WHERE relname = 'vacuum_progress_ao_row';
- n_live_tup | n_dead_tup | vacuum_count 
-------------+------------+--------------
- 100000     | 200000     | 0            
+SELECT n_live_tup, n_dead_tup, last_vacuum, vacuum_count FROM pg_stat_all_tables WHERE relname = 'vacuum_progress_ao_row';
+ n_live_tup | n_dead_tup | last_vacuum | vacuum_count 
+------------+------------+-------------+--------------
+ 100000     | 200000     |             | 0            
 (1 row)
 
 -- Perform VACUUM and observe the progress
@@ -168,10 +168,10 @@ SELECT relpages, reltuples, relallvisible FROM pg_class where relname = 'vacuum_
 ----------+-----------+---------------
  83       | 50000     | 0             
 (1 row)
-SELECT n_live_tup, n_dead_tup, vacuum_count FROM pg_stat_all_tables WHERE relname = 'vacuum_progress_ao_row';
- n_live_tup | n_dead_tup | vacuum_count 
-------------+------------+--------------
- 50000      | 0          | 1            
+SELECT n_live_tup, n_dead_tup, last_vacuum is not null as has_last_vacuum, vacuum_count FROM pg_stat_all_tables WHERE relname = 'vacuum_progress_ao_row';
+ n_live_tup | n_dead_tup | has_last_vacuum | vacuum_count 
+------------+------------+-----------------+--------------
+ 50000      | 0          | t               | 1            
 (1 row)
 
 -- Perform VACUUM again to recycle the remaining awaiting drop segment marked by the previous run.
@@ -247,10 +247,10 @@ SELECT relpages, reltuples, relallvisible FROM pg_class where relname = 'vacuum_
 ----------+-----------+---------------
  28       | 50000     | 0             
 (1 row)
-SELECT n_live_tup, n_dead_tup, vacuum_count FROM pg_stat_all_tables WHERE relname = 'vacuum_progress_ao_row';
- n_live_tup | n_dead_tup | vacuum_count 
-------------+------------+--------------
- 50000      | 0          | 2            
+SELECT n_live_tup, n_dead_tup, last_vacuum is not null as has_last_vacuum, vacuum_count FROM pg_stat_all_tables WHERE relname = 'vacuum_progress_ao_row';
+ n_live_tup | n_dead_tup | has_last_vacuum | vacuum_count 
+------------+------------+-----------------+--------------
+ 50000      | 0          | t               | 2            
 (1 row)
 
 -- Cleanup

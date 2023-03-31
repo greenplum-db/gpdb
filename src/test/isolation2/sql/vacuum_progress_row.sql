@@ -32,7 +32,7 @@ DELETE FROM vacuum_progress_ao_row where j % 2 = 0;
 
 -- Lookup pg_class and collected stats view before VACUUM
 SELECT relpages, reltuples, relallvisible FROM pg_class where relname = 'vacuum_progress_ao_row';
-SELECT n_live_tup, n_dead_tup, vacuum_count FROM pg_stat_all_tables WHERE relname = 'vacuum_progress_ao_row';
+SELECT n_live_tup, n_dead_tup, last_vacuum, vacuum_count FROM pg_stat_all_tables WHERE relname = 'vacuum_progress_ao_row';
 
 -- Perform VACUUM and observe the progress
 
@@ -71,7 +71,7 @@ SELECT gp_inject_fault('vacuum_ao_post_cleanup_end', 'reset', dbid) FROM gp_segm
 -- pg_class and collected stats view should be updated after the 1st VACUUM
 1U: SELECT wait_until_dead_tup_change_to('vacuum_progress_ao_row'::regclass::oid, 0);
 SELECT relpages, reltuples, relallvisible FROM pg_class where relname = 'vacuum_progress_ao_row';
-SELECT n_live_tup, n_dead_tup, vacuum_count FROM pg_stat_all_tables WHERE relname = 'vacuum_progress_ao_row';
+SELECT n_live_tup, n_dead_tup, last_vacuum is not null as has_last_vacuum, vacuum_count FROM pg_stat_all_tables WHERE relname = 'vacuum_progress_ao_row';
 
 -- Perform VACUUM again to recycle the remaining awaiting drop segment marked by the previous run.
 SELECT gp_inject_fault('vacuum_ao_after_index_delete', 'suspend', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -98,7 +98,7 @@ SELECT gp_inject_fault('appendonly_after_truncate_segment_file', 'reset', dbid) 
 -- pg_class and collected stats view should be updated after the 2nd VACUUM
 1U: SELECT wait_until_dead_tup_change_to('vacuum_progress_ao_row'::regclass::oid, 0);
 SELECT relpages, reltuples, relallvisible FROM pg_class where relname = 'vacuum_progress_ao_row';
-SELECT n_live_tup, n_dead_tup, vacuum_count FROM pg_stat_all_tables WHERE relname = 'vacuum_progress_ao_row';
+SELECT n_live_tup, n_dead_tup, last_vacuum is not null as has_last_vacuum, vacuum_count FROM pg_stat_all_tables WHERE relname = 'vacuum_progress_ao_row';
 
 -- Cleanup
 SELECT gp_inject_fault_infinite('all', 'reset', dbid) FROM gp_segment_configuration;
