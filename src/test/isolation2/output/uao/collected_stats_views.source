@@ -56,8 +56,23 @@ SET
 -- Setup test table
 1U: CREATE TEMP TABLE stat_io_timing(a int, b int) USING @amname@;
 CREATE
-1U: INSERT INTO stat_io_timing SELECT 0, i FROM generate_series(1, 10000000)i;
-INSERT 10000000
+1U: INSERT INTO stat_io_timing SELECT 0, i FROM generate_series(1, 100000)i;
+INSERT 100000
+
+-- Sleep for 1s just for once to ensure blk_read_time and blk_write_time in
+-- pg_stat_database get updated. The number is selected to be larger than the
+-- 1-ms granularity of these two fields.
+SELECT gp_inject_fault('ao_storage_read_after_fileread', 'sleep', '', '', '', 1, 1, 1, dbid) FROM gp_segment_configuration where role = 'p' AND content = 1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+SELECT gp_inject_fault('ao_storage_write_after_filewrite', 'sleep', '', '', '', 1, 1, 1, dbid) FROM gp_segment_configuration where role = 'p' AND content = 1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
 -- start_matchsubs
 -- m{I/O Timings: read=\d*\.\d+ write=\d+\.\d+.*}
 -- s{I/O Timings: read=\d*\.\d+ write=\d+\.\d+.*}{I/O Timings: read=##.### write=##.###}
@@ -68,15 +83,15 @@ INSERT 10000000
 -- end_matchsubs
 -- "I/O Timings" should be available for Append-optimized table, and "Buffers" should also be available due to auxiliary table lookups
 1U: EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, TIMING OFF, SUMMARY OFF) INSERT INTO stat_io_timing SELECT * FROM stat_io_timing;
- QUERY PLAN                                                                       
-----------------------------------------------------------------------------------
- Insert on stat_io_timing (actual rows=0 loops=1)                                 
-   Buffers: shared hit=1400686 read=1                                             
-   I/O Timings: read=19.615 write=77.410                                          
-   ->  Seq Scan on stat_io_timing stat_io_timing_1 (actual rows=10000000 loops=1) 
-         Buffers: shared hit=647 read=1                                           
-         I/O Timings: read=19.615                                                 
- Optimizer: Postgres query optimizer                                              
+ QUERY PLAN                                                                     
+--------------------------------------------------------------------------------
+ Insert on stat_io_timing (actual rows=0 loops=1)                               
+   Buffers: shared hit=14160 read=1                                             
+   I/O Timings: read=1001.399 write=1001.310                                    
+   ->  Seq Scan on stat_io_timing stat_io_timing_1 (actual rows=100000 loops=1) 
+         Buffers: shared hit=82 read=1                                          
+         I/O Timings: read=1001.399                                             
+ Optimizer: Postgres query optimizer                                            
 (7 rows)
 
 -- blk_read_time and blk_write_time should be non-zero
@@ -87,6 +102,11 @@ INSERT 10000000
 (1 row)
 
 -- cleanup
+SELECT gp_inject_fault('all', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
 1U: DROP TABLE stat_io_timing;
 DROP
 1U: RESET track_io_timing;

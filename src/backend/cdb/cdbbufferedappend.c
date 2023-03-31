@@ -23,6 +23,7 @@
 #include "cdb/cdbbufferedappend.h"
 #include "pgstat.h"
 #include "storage/bufmgr.h"
+#include "utils/faultinjector.h"
 #include "utils/guc.h"
 
 static void BufferedAppendWrite(
@@ -167,6 +168,8 @@ BufferedAppendWrite(BufferedAppend *bufferedAppend, bool needsWAL)
 								 bytesleft,
 								 bufferedAppend->largeWritePosition + bytestotal,
 								 WAIT_EVENT_DATA_FILE_WRITE);
+
+		SIMPLE_FAULT_INJECTOR("ao_storage_write_after_filewrite");
 
 		if (track_io_timing)
 		{

@@ -48,7 +48,16 @@ DROP FUNCTION wait_until_heap_blks_read_change_to(table_name text, stat_val_expe
 
 -- Setup test table
 1U: CREATE TEMP TABLE stat_io_timing(a int, b int) USING @amname@;
-1U: INSERT INTO stat_io_timing SELECT 0, i FROM generate_series(1, 10000000)i;
+1U: INSERT INTO stat_io_timing SELECT 0, i FROM generate_series(1, 100000)i;
+
+-- Sleep for 1s just for once to ensure blk_read_time and blk_write_time in
+-- pg_stat_database get updated. The number is selected to be larger than the
+-- 1-ms granularity of these two fields.
+SELECT gp_inject_fault('ao_storage_read_after_fileread', 'sleep', '', '', '', 1, 1, 1, dbid)
+FROM gp_segment_configuration where role = 'p' AND content = 1;
+SELECT gp_inject_fault('ao_storage_write_after_filewrite', 'sleep', '', '', '', 1, 1, 1, dbid)
+FROM gp_segment_configuration where role = 'p' AND content = 1;
+
 -- start_matchsubs
 -- m{I/O Timings: read=\d*\.\d+ write=\d+\.\d+.*}
 -- s{I/O Timings: read=\d*\.\d+ write=\d+\.\d+.*}{I/O Timings: read=##.### write=##.###}
@@ -64,6 +73,7 @@ DROP FUNCTION wait_until_heap_blks_read_change_to(table_name text, stat_val_expe
 1U: SELECT datname, blk_read_time > 0 AS has_blk_read_time, blk_write_time > 0 AS has_blk_write_time from pg_stat_database WHERE datname = 'isolation2test';
 
 -- cleanup
+SELECT gp_inject_fault('all', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
 1U: DROP TABLE stat_io_timing;
 1U: RESET track_io_timing;
 1Uq:

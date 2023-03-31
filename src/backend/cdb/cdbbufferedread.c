@@ -20,6 +20,7 @@
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "storage/bufmgr.h"
+#include "utils/faultinjector.h"
 #include "utils/guc.h"
 
 static void BufferedReadIo(
@@ -187,6 +188,8 @@ BufferedReadIo(
 							 largeReadLen,
 							 bufferedRead->fileOff,
 							 WAIT_EVENT_DATA_FILE_READ);
+
+		SIMPLE_FAULT_INJECTOR("ao_storage_read_after_fileread");
 
 		if (track_io_timing)
 		{
