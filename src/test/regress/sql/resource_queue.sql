@@ -2,6 +2,10 @@
 -- start_ignore
 create extension if not exists gp_inject_fault;
 -- end_ignore
+
+-- check we have correct initial state of the default resource queue
+SELECT rqc.* FROM pg_resqueuecapability rqc JOIN pg_resqueue rq ON rqc.resqueueid = rq.oid WHERE rq.rsqname = 'pg_default';
+
 CREATE RESOURCE QUEUE regressq ACTIVE THRESHOLD 1;
 SELECT rsqname, rsqcountlimit, rsqcostlimit, rsqovercommit, rsqignorecostlimit FROM pg_resqueue WHERE rsqname='regressq';
 ALTER RESOURCE QUEUE regressq ACTIVE THRESHOLD 2 COST THRESHOLD 2000.00;
