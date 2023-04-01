@@ -2438,8 +2438,8 @@ class checkAOSegVpinfoThread(execThread):
 
     def run(self):
         aoseg_query = """
-           SELECT a.relname, a.relid, a.segrelid, cl.relname
-           FROM (SELECT p.relid, p.segrelid, c.relname FROM pg_appendonly p LEFT JOIN pg_class c ON p.relid = c.oid WHERE p.columnstore = true) a
+           SELECT a.relname, a.relid, a.segrelid, cl.relname, a.relnatts
+           FROM (SELECT p.relid, p.segrelid, c.relname, c.relnatts FROM pg_appendonly p LEFT JOIN pg_class c ON p.relid = c.oid WHERE p.columnstore = true) a
            LEFT JOIN pg_class cl ON a.segrelid = cl.oid;
         """
 
@@ -2447,11 +2447,8 @@ class checkAOSegVpinfoThread(execThread):
             # Read the list of aoseg tables from the database
             curs = self.db.query(aoseg_query)
 
-            for relname, relid, segrelid, segrelname in curs.getresult():
-                qry = "SELECT count(*) FROM pg_attribute WHERE attrelid=%d AND attnum > 0;" % (relid)
-                attr_count = self.db.query(qry).getresult()[0][0]
-
-                qry = "SELECT distinct(length(vpinfo)) FROM pg_aoseg.%s WHERE state = 1;" % (segrelname)
+            for relname, relid, segrelid, segrelname, attr_count in curs.getresult():
+                qry = "SELECT distinct(length(vpinfo)) FROM pg_aoseg.%s where state = 1;" % (segrelname)
                 vpinfo_curs = self.db.query(qry)
                 nrows = vpinfo_curs.ntuples()
                 if nrows == 0:
@@ -2484,7 +2481,7 @@ class checkAOSegVpinfoThread(execThread):
                     GV.checkStatus = False
                     setError(ERROR_NOREPAIR)
                     logger.info('[FAIL] inconsistent vpinfo')
-                    logger.error("vpinfo in 'pg_aoseg.{segrelname}' of table '{relname}' contains {vpinfo_attr_count} attributes, while pg_attribute has {attr_count} attributes on segment {content}"
+                    logger.error("vpinfo in 'pg_aoseg.{segrelname}' of table '{relname}' contains {vpinfo_attr_count} attributes, while pg_class has {attr_count} attributes on segment {content}"
                                  .format(segrelname = segrelname,
                                          relname = relname,
                                          vpinfo_attr_count = vpinfo_attr_count,
