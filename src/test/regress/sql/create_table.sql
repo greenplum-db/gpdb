@@ -955,3 +955,18 @@ create table part_column_drop_1_10 partition of
 \d part_column_drop
 \d part_column_drop_1_10
 drop table part_column_drop;
+
+-- Test SELECT INTO without any columns
+begin;
+set local optimizer = off;
+create table t1(x int, y int);
+insert into t1 select i, i from generate_series(1, 10) i;
+explain(costs off) select into t2 from t1;
+select into t2 from t1;
+select gp_segment_id from t1 order by gp_segment_id;
+select gp_segment_id from t2 order by gp_segment_id;
+-- don't disturb distributed randomly, a motion should be added.
+explain(costs off) create table t3 as select * from t1 distributed randomly;
+drop table t1;
+drop table t2;
+abort;

@@ -388,6 +388,7 @@ cdbllize_adjust_top_path(PlannerInfo *root, Path *best_path,
 {
 	Query	   *query = root->parse;
 	GpPolicy   *targetPolicy = NULL;
+	bool 		isEmptyColumn = false; /* is SELECT INTO, no columns */
 
 	/*
 	 * NOTE: This code makes the assumption that if we are working on a
@@ -475,6 +476,8 @@ cdbllize_adjust_top_path(PlannerInfo *root, Path *best_path,
 			{
 				StringInfoData columnsbuf;
 				int			i;
+				if (targetPolicy->nattrs == 0)
+					isEmptyColumn = true;
 
 				initStringInfo(&columnsbuf);
 				for (i = 0; i < targetPolicy->nattrs; i++)
@@ -525,8 +528,11 @@ cdbllize_adjust_top_path(PlannerInfo *root, Path *best_path,
 			 * a SELECT INTO (basically same as an INSERT) command,
 			 * the target list will correspond to the attributes of
 			 * the target relation in order.
+			 * Avoid motion if SELECT INTO with empty columns,
+			 * we could let the insertions happen where they are.
 			 */
-			best_path = create_motion_path_for_ctas(root, targetPolicy,
+			if(!isEmptyColumn)
+				best_path = create_motion_path_for_ctas(root, targetPolicy,
 													best_path);
 		}
 

@@ -1251,3 +1251,64 @@ Indexes:
     "part_column_drop_1_10_expr_idx1" btree ((d = 2))
 
 drop table part_column_drop;
+-- Test SELECT INTO without any columns
+begin;
+set local optimizer = off;
+create table t1(x int, y int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into t1 select i, i from generate_series(1, 10) i;
+explain(costs off) select into t2 from t1;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named '' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+             QUERY PLAN              
+-------------------------------------
+ Seq Scan on t1
+ Optimizer: Postgres query optimizer
+(2 rows)
+
+select into t2 from t1;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named '' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select gp_segment_id from t1 order by gp_segment_id;
+ gp_segment_id 
+---------------
+             0
+             0
+             0
+             0
+             0
+             1
+             2
+             2
+             2
+             2
+(10 rows)
+
+select gp_segment_id from t2 order by gp_segment_id;
+ gp_segment_id 
+---------------
+             0
+             0
+             0
+             0
+             0
+             1
+             2
+             2
+             2
+             2
+(10 rows)
+
+-- don't disturb distributed randomly, a motion should be added.
+explain(costs off) create table t3 as select * from t1 distributed randomly;
+                   QUERY PLAN                   
+------------------------------------------------
+ Redistribute Motion 3:3  (slice1; segments: 3)
+   ->  Seq Scan on t1
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+drop table t1;
+drop table t2;
+abort;
