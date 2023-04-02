@@ -188,4 +188,6 @@ dropDatabaseDirectory(DbDirNode *deldb, bool isRedo)
 		ereport(WARNING,
 				(errmsg("some useless files may be left behind in old database directory \"%s\"",
 						dbpath)));
+
+	pfree(dbpath);
 }
