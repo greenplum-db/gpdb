@@ -42,12 +42,13 @@ This section documents the steps for the 3 distinct segment recovery scenarios. 
 -   [Recover In-Place to Current Host](#same_host)
     -   [Incremental Recovery](#incremental)
     -   [Full Recovery](#full)
+    -   [Differential Recovery](#differential-recovery)
 -   [Recover to A Different Host within the Cluster](#different_host)
 -   [Recover to A New Host, Outside of the Cluster](#new_host)
 
 ### <a id="same_host"></a>Recover In-Place to Current Host 
 
-When recovering in-place to the current host, you may choose between incremental recovery \(the default\) and full recovery.
+When recovering in-place to the current host, you may choose between incremental recovery (the default), full recovery, and differential recovery.
 
 #### <a id="incremental"></a>Incremental Recovery 
 
@@ -114,6 +115,13 @@ Follow these steps for incremental recovery:
         ```
 
 3.  Perform the post-recovery tasks summarized in the section [Post-Recovery Tasks](#post_recovery).
+
+#### <a id="differential"></a>Differential Recovery 
+
+Follow these steps for differential recovery: 
+
+1. Run `gprecoverseg -F --differential`
+
 
 ### <a id="different_host"></a>Recover to A Different Host within the Cluster 
 

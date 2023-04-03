@@ -82,27 +82,32 @@ The `gprecoverseg -r` command rebalances the system by returning the segment rol
 |Primary|`p`\(primary\)|`p`\(primary\)|`s`\(Synchronized\)|`u`\(up\)|
 |Mirror|`m`\(mirror\)|`m`\(mirror\)|`s`\(Synchronized\)|`u`\(up\)|
 
-
 ## <a id="types_of_recovery"></a>The Three Types of Segment Recovery 
 
-Greenplum Database can perform three types of segment recovery: full, differential, and incremental (the default):
+Greenplum Database can perform three types of segment recovery: full, differential, and incremental (the default).
 
 Full recovery
-:   
+:  Full recovery recovers all segments. Specifically, it erases all data files and directories on the current mirror segment and copies to the mirror segment the exact contents of the current primary segment. Full recovery uses the `pg_basebackup` utility to copy files. 
+
+   With full recovery, you may recover:
+
+   - to the current host -- known as "in-place recovery"
+   - to a different host within the current cluster
+   - to a new host outside of the current cluster
 
 Differential recovery
-:   
+:   Differential recovery performs a filesystem-level diff between the primary and mirror segments, and copies from the primary to the mirror only those files that have changed on the primary. With differential recovery, you may only do in-place recovery. Differential recovery uses the `rsync` command to copy files.
 
-Incremental recovery
-:   
+    >**Note**
+    >Differential recovery is not supported when using input configuration files (`gprecoverseg -i`).
 
+Incremental recovery (default)
+:   Incremental recovery brings the mirror segment contents into sync with the primary segment contents with the aid of write-ahead log files (WAL files). With incremental recovery, you may only do in-place recovery. Incremental recovery uses the `pg_rewind` utility to copy files. 
 
-By default, `gprecoverseg` performs an incremental recovery, placing the mirror into *Synchronizing* mode, which starts to replay the recorded changes from the primary onto the mirror. If the incremental recovery cannot be completed, the recovery fails and you should run `gprecoverseg` again with the `-F` option, to perform full recovery. This causes the primary to copy all of its data to the mirror.
+    By default, `gprecoverseg` performs an incremental recovery, placing the mirror into *Synchronizing* mode, which starts to replay the recorded changes from the primary onto the mirror. If the incremental recovery cannot be completed, the recovery fails and you should run `gprecoverseg` again with the `-F` option, to perform full recovery. This causes the primary to copy all of its data to the mirror.
 
->**Note** 
->After a failed incremental recovery attempt you must perform a full recovery.
+    >**Note** 
+    >After a failed incremental recovery attempt you must perform a full recovery.
 
-Whenever possible, you should perform an incremental recovery rather than a full recovery, as incremental recovery is substantially faster. If you **do** need to perform an in-place full recovery, you can speed up in-place full recovery with `gprecoverseg`'s `--differential` option, which causes `gprecoverseg` to skip recovery of any files and directories that are unchanged. 
+    Whenever possible, you should perform an incremental recovery rather than a full recovery, as incremental recovery is substantially faster. If you **do** need to perform an in-place full recovery, you can speed up in-place full recovery with `gprecoverseg`'s `--differential` option, which causes `gprecoverseg` to skip recovery of any files and directories that are unchanged. 
 
->**Note**
->Differential recovery is not supported when using input configuration files (`gprecoverseg -i`).
