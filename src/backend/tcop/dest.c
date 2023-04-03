@@ -262,11 +262,11 @@ ReadyForQuery(CommandDest dest)
 
 				if (Gp_role == GP_ROLE_EXECUTE)
 				{
-					pq_beginmessage(&buf, 'k');
+					pq_beginmessage(&buf, 'k'); /* mop_high_watermark */
 					pq_sendint64(&buf, VmemTracker_GetMaxReservedVmemBytes());
 					pq_endmessage(&buf);
 
-					pq_beginmessage(&buf, 'x');
+					pq_beginmessage(&buf, 'x'); /* wrote_xlog */
 					pq_sendbyte(&buf, TransactionDidWriteXLog());
 					pq_endmessage(&buf);
 				}
