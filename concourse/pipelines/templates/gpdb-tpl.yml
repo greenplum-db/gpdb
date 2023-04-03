@@ -1852,8 +1852,6 @@ jobs:
   - in_parallel:
       steps:
       - get: bin_gpdb
-        params:
-          skip_download: 'true'
         passed:
         - icw_gporca_[[ os_type ]]
         - icw_gporca_icproxy_[[ os_type ]]
