@@ -546,15 +546,6 @@ The [gp\_resgroup\_status\_per\_host](../ref_guide/gp_toolkit.html) `gp_toolkit`
 
 ```
 
-#### <a id="topic23b"></a>Viewing Resource Group CPU/Memory Usage Per Segment 
-
-The [gp\_resgroup\_status\_per\_segment](../ref_guide/gp_toolkit.html) `gp_toolkit` system view enables you to view the real-time CPU and memory usage of a resource group on a per-segment, per-host basis. To view this information:
-
-```
-=# SELECT * FROM gp_toolkit.gp_resgroup_status_per_segment;
-
-```
-
 ### <a id="topic25"></a>Viewing the Resource Group Assigned to a Role 
 
 To view the resource group-to-role assignments, perform the following query on the [pg\_roles](../ref_guide/system_catalogs/pg_roles.html) and [pg\_resgroup](../ref_guide/system_catalogs/pg_resgroup.html) system catalog tables:

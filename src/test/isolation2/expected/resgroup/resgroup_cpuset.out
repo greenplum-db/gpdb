@@ -12,6 +12,9 @@ CREATE
 CREATE TABLE bigtable AS SELECT i AS c1, 'abc' AS c2 FROM generate_series(1,50000) i;
 CREATE 50000
 
+CREATE OR REPLACE FUNCTION get_cpu_cores() RETURNS INTEGER AS $$ import os return os.cpu_count() $$ LANGUAGE plpython3u;
+CREATE
+
 CREATE VIEW busy AS SELECT count(*) FROM bigtable t1, bigtable t2, bigtable t3, bigtable t4, bigtable t5 WHERE 0 = (t1.c1 % 2 + 10000)! AND 0 = (t2.c1 % 2 + 10000)! AND 0 = (t3.c1 % 2 + 10000)! AND 0 = (t4.c1 % 2 + 10000)! AND 0 = (t5.c1 % 2 + 10000)! ;
 CREATE
 
@@ -146,7 +149,7 @@ select pg_sleep(2);
 
 11: BEGIN;
 BEGIN
-11: select (cpu_usage::json->>'0')::float > 50 from gp_toolkit.gp_resgroup_status where rsgname='rg1_cpuset_test';
+11: select cpu_usage::float >= 65 from gp_toolkit.gp_resgroup_status_per_host where rsgname='rg1_cpuset_test';
  ?column? 
 ----------
  t        

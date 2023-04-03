@@ -27,13 +27,13 @@
 /* cgroup component names. */
 const char *component_names[CGROUP_COMPONENT_COUNT] =
 {
-	"cpu", "cpuacct", "cpuset"
+	"cpu", "cpuacct", "cpuset", "memory"
 };
 
 /* cgroup component dirs. */
 char component_dirs[CGROUP_COMPONENT_COUNT][MAX_CGROUP_PATHLEN] =
 {
-	FALLBACK_COMP_DIR, FALLBACK_COMP_DIR, FALLBACK_COMP_DIR
+	FALLBACK_COMP_DIR, FALLBACK_COMP_DIR, FALLBACK_COMP_DIR, FALLBACK_COMP_DIR
 };
 
 

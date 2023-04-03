@@ -78,6 +78,10 @@ class CgroupValidationVersionOne(CgroupValidation):
         self.validate_permission("cpuset", "gpdb/cpuset.cpus", "rw")
         self.validate_permission("cpuset", "gpdb/cpuset.mems", "rw")
 
+        self.validate_permission("memory", "gpdb/", "rwx")
+        self.validate_permission("memory", "gpdb/cgroup.procs", "rw")
+        self.validate_permission("memory", "gpdb/memory.usage_in_bytes", "r")
+
         self.validate_comp_hierarchy()
 
     def die(self, msg):
