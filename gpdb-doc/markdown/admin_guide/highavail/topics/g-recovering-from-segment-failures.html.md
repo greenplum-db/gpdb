@@ -42,7 +42,7 @@ This section documents the steps for the 3 distinct segment recovery scenarios. 
 -   [Recover In-Place to Current Host](#same_host)
     -   [Incremental Recovery](#incremental)
     -   [Full Recovery](#full)
-    -   [Differential Recovery](#differential-recovery)
+    -   [Differential Recovery](#differential)
 -   [Recover to A Different Host within the Cluster](#different_host)
 -   [Recover to A New Host, Outside of the Cluster](#new_host)
 
@@ -170,7 +170,7 @@ The new host must:
 -   be able to connect password-less with all other existing segments and Greenplum coordinator.
 
 
-#### <a id="topic_yyj_4gb_yqb"></a>Steps to Recover to a New Host 
+#### <a id="recover_to_new_host"></a>Steps to Recover to a New Host 
 
 1.  Bring up the new host
 2.  Run the following command to recover all segments to the new host:
