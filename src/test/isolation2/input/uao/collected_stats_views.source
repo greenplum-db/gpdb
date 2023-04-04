@@ -63,8 +63,8 @@ FROM gp_segment_configuration where role = 'p' AND content = 1;
 -- s{I/O Timings: read=\d*\.\d+ write=\d+\.\d+.*}{I/O Timings: read=##.### write=##.###}
 -- m{I/O Timings: read=\d*\.\d+.*}
 -- s{I/O Timings: read=\d*\.\d+.*}{I/O Timings: read=##.###.*}
--- m/Buffers: shared hit=\d+ read=\d+/
--- s/Buffers: shared hit=\d+ read=\d+/Buffers: shared hit=### read=###/
+-- m/Buffers: shared hit=\d+ read=\d+\s+/
+-- s/Buffers: shared hit=\d+ read=\d+\s+/Buffers: shared hit=### read=###/
 -- end_matchsubs
 -- "I/O Timings" should be available for Append-optimized table, and "Buffers" should also be available due to auxiliary table lookups
 1U: EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, TIMING OFF, SUMMARY OFF) INSERT INTO stat_io_timing SELECT * FROM stat_io_timing;
