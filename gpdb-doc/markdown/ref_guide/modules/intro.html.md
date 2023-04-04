@@ -33,5 +33,6 @@ The following Greenplum Database and PostgreSQL `contrib` modules are installed;
 -   [postgres\_fdw](postgres_fdw.html) - Provides a foreign data wrapper \(FDW\) for accessing data stored in an external PostgreSQL or Greenplum database.
 -   [postgresql-hll](postgresql-hll.html) - Provides HyperLogLog data types for PostgreSQL and Greenplum Database.
 -   [sslinfo](sslinfo.html) - Provides information about the SSL certificate that the current client provided when connecting to Greenplum.
+-   [tablefunc](tablefunc.html) - Provides various functions that return tables (multiple rows).
 -   [timestamp9](timestamp9.html) - Provides an efficient nanosecond-precision timestamp data type for Greenplum Database.
 -   [uuid-ossp](uuid-ossp.html) - Provides functions to generate universally unique identifiers (UUIDs).

@@ -47,6 +47,7 @@ You can register the following modules in this manner:
 <li class="li"><a class="xref" href="../ref_guide/modules/postgres_fdw.html">postgres_fdw</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/postgresql-hll.html">postgresql-hll</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/sslinfo.html">sslinfo</a></li>
+<li class="li"><a class="xref" href="../ref_guide/modules/tablefunc.html">tablefunc</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/timestamp9.html">timestamp9</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/uuid-ossp.html">uuid-ossp</a></li>
 </ul>
