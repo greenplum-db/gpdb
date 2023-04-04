@@ -18,7 +18,7 @@ CREATE
 INSERT INTO statio_@amname@ SELECT 0, i FROM generate_series(1, 100000)i;
 INSERT 100000
 -- heap_blks_read should remain zero after INSERT
-SELECT heap_blks_read, heap_blks_hit FROM gp_statio_all_tables WHERE segment_id = 1 AND relname = 'statio_@amname@';
+SELECT heap_blks_read, heap_blks_hit FROM gp_statio_all_tables WHERE gp_segment_id = 1 AND relname = 'statio_@amname@';
  heap_blks_read | heap_blks_hit 
 ----------------+---------------
  0              | 0             

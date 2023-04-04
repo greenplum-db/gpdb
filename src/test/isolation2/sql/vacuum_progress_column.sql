@@ -32,7 +32,7 @@ DELETE FROM vacuum_progress_ao_column where j % 2 = 0;
 
 -- Lookup pg_class and collected stats view before VACUUM
 SELECT relpages, reltuples, relallvisible FROM pg_class where relname = 'vacuum_progress_ao_column';
-SELECT n_live_tup, n_dead_tup, last_vacuum, vacuum_count FROM gp_stat_all_tables WHERE relname = 'vacuum_progress_ao_column' and segment_id = 1;
+SELECT n_live_tup, n_dead_tup, last_vacuum, vacuum_count FROM gp_stat_all_tables WHERE relname = 'vacuum_progress_ao_column' and gp_segment_id = 1;
 
 -- Perform VACUUM and observe the progress
 
@@ -71,7 +71,7 @@ SELECT gp_inject_fault('vacuum_ao_post_cleanup_end', 'reset', dbid) FROM gp_segm
 -- pg_class and collected stats view should be updated after the 1st VACUUM
 1U: SELECT wait_until_dead_tup_change_to('vacuum_progress_ao_column'::regclass::oid, 0);
 SELECT relpages, reltuples, relallvisible FROM pg_class where relname = 'vacuum_progress_ao_column';
-SELECT n_live_tup, n_dead_tup, last_vacuum is not null as has_last_vacuum, vacuum_count FROM gp_stat_all_tables WHERE relname = 'vacuum_progress_ao_column' and segment_id = 1;
+SELECT n_live_tup, n_dead_tup, last_vacuum is not null as has_last_vacuum, vacuum_count FROM gp_stat_all_tables WHERE relname = 'vacuum_progress_ao_column' and gp_segment_id = 1;
 
 
 -- Perform VACUUM again to recycle the remaining awaiting drop segment marked by the previous run.
@@ -99,7 +99,7 @@ SELECT gp_inject_fault('appendonly_after_truncate_segment_file', 'reset', dbid) 
 -- pg_class and collected stats view should be updated after the 2nd VACUUM
 1U: SELECT wait_until_dead_tup_change_to('vacuum_progress_ao_column'::regclass::oid, 0);
 SELECT relpages, reltuples, relallvisible FROM pg_class where relname = 'vacuum_progress_ao_column';
-SELECT n_live_tup, n_dead_tup, last_vacuum is not null as has_last_vacuum, vacuum_count FROM gp_stat_all_tables WHERE relname = 'vacuum_progress_ao_column' and segment_id = 1;
+SELECT n_live_tup, n_dead_tup, last_vacuum is not null as has_last_vacuum, vacuum_count FROM gp_stat_all_tables WHERE relname = 'vacuum_progress_ao_column' and gp_segment_id = 1;
 
 -- Cleanup
 SELECT gp_inject_fault_infinite('all', 'reset', dbid) FROM gp_segment_configuration;
