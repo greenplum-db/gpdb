@@ -250,7 +250,7 @@ FROM
          pg_stat_all_indexes
      WHERE
              relid < 16384) m, pg_stat_all_indexes s
-WHERE m.relid = s.relid;
+WHERE m.indexrelid = s.indexrelid;
 
 CREATE VIEW gp_stat_sys_indexes_summary AS
     SELECT * FROM gp_stat_all_indexes_summary
