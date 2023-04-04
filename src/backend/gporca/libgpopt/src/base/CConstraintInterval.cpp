@@ -23,9 +23,12 @@
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarArray.h"
+#include "gpopt/operators/CScalarBooleanTest.h"
 #include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/operators/CScalarIsDistinctFrom.h"
+#include "naucrates/base/IDatumBool.h"
 #include "naucrates/md/IMDScalarOp.h"
+#include "naucrates/md/IMDTypeBool.h"
 
 using namespace gpopt;
 
@@ -173,6 +176,9 @@ CConstraintInterval::PciIntervalFromScalarExpr(
 	{
 		case COperator::EopScalarNullTest:
 			pci = PciIntervalFromScalarNullTest(mp, pexpr, colref);
+			break;
+		case COperator::EopScalarBooleanTest:
+			pci = PciIntervalFromScalarBooleanTest(mp, pexpr, colref);
 			break;
 		case COperator::EopScalarBoolOp:
 			pci = PciIntervalFromScalarBoolOp(mp, pexpr, colref, infer_nulls_as,
@@ -401,6 +407,76 @@ CConstraintInterval::PciIntervalFromScalarNullTest(CMemoryPool *mp,
 		return GPOS_NEW(mp) CConstraintInterval(
 			mp, colref, GPOS_NEW(mp) CRangeArray(mp), true /*fIncludesNull*/);
 	}
+
+	return nullptr;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CConstraintInterval::PciIntervalFromScalarBooleanTest
+//
+//	@doc:
+//		Create interval from scalar null test
+//
+//---------------------------------------------------------------------------
+CConstraintInterval *
+CConstraintInterval::PciIntervalFromScalarBooleanTest(CMemoryPool *mp,
+													  CExpression *pexpr,
+													  CColRef *colref)
+{
+	GPOS_ASSERT(nullptr != pexpr);
+	GPOS_ASSERT(CUtils::FScalarBooleanTest(pexpr));
+
+	CScalarBooleanTest *pop = CScalarBooleanTest::PopConvert(pexpr->Pop());
+	GPOS_ASSERT(nullptr != pop);
+
+	CRangeArray *pdrngprng = GPOS_NEW(mp) CRangeArray(mp);
+	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+	const IMDTypeBool *pmdtypebool = md_accessor->PtMDType<IMDTypeBool>();
+	const IComparator *pcomp = COptCtxt::PoctxtFromTLS()->Pcomp();
+	bool fIncludesNull = false;
+	switch (pop->Ebt())
+	{
+		case CScalarBooleanTest::EbtIsTrue:
+		case CScalarBooleanTest::EbtIsNotFalse:
+		{
+			IDatumBool *datum =
+				pmdtypebool->CreateBoolDatum(mp, true, false /*is_null*/);
+			CRange *prange =
+				GPOS_NEW(mp) CRange(pcomp, IMDType::EcmptEq, datum);
+			pdrngprng->Append(prange);
+			break;
+		}
+		case CScalarBooleanTest::EbtIsNotTrue:
+		case CScalarBooleanTest::EbtIsFalse:
+		{
+			IDatumBool *datum =
+				pmdtypebool->CreateBoolDatum(mp, false, false /*is_null*/);
+			CRange *prange =
+				GPOS_NEW(mp) CRange(pcomp, IMDType::EcmptEq, datum);
+			pdrngprng->Append(prange);
+			break;
+		}
+		case CScalarBooleanTest::EbtIsUnknown:
+		case CScalarBooleanTest::EbtIsNotUnknown:
+		{
+			IDatumBool *datum =
+				pmdtypebool->CreateBoolDatum(mp, false, false /*is_null*/);
+			CRange *prange =
+				GPOS_NEW(mp) CRange(pcomp, IMDType::EcmptOther, datum);
+			pdrngprng->Append(prange);
+			fIncludesNull = true;
+			break;
+		}
+		default:
+		{
+			GPOS_ASSERT(false && "Unknown boolean test type");
+			break;
+		}
+	}
+
+	return GPOS_NEW(mp)
+		CConstraintInterval(mp, colref, pdrngprng, fIncludesNull);
 
 	return nullptr;
 }

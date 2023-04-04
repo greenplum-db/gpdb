@@ -3027,6 +3027,13 @@ CUtils::FScalarBoolOp(CExpression *pexpr, CScalarBoolOp::EBoolOperator eboolop)
 		   eboolop == CScalarBoolOp::PopConvert(pop)->Eboolop();
 }
 
+// check if given expression is a boolean test
+BOOL
+CUtils::FScalarBooleanTest(CExpression *pexpr)
+{
+	return (COperator::EopScalarBooleanTest == pexpr->Pop()->Eopid());
+}
+
 // check if given expression is a scalar null test
 BOOL
 CUtils::FScalarNullTest(CExpression *pexpr)
@@ -3168,6 +3175,7 @@ CUtils::FConstrainableType(IMDId *mdid_type)
 	{
 		// also allow date/time/timestamp/float4/float8
 		return (CMDIdGPDB::m_mdid_date.Equals(mdid_type) ||
+				CMDIdGPDB::m_mdid_bool.Equals(mdid_type) ||
 				CMDIdGPDB::m_mdid_time.Equals(mdid_type) ||
 				CMDIdGPDB::m_mdid_timestamp.Equals(mdid_type) ||
 				CMDIdGPDB::m_mdid_timeTz.Equals(mdid_type) ||

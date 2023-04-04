@@ -655,6 +655,9 @@ public:
 	static BOOL FScalarBoolOp(CExpression *pexpr,
 							  CScalarBoolOp::EBoolOperator eboolop);
 
+	// check if expression is scalar bool test op
+	static BOOL FScalarBooleanTest(CExpression *pexpr);
+
 	// check if expression is scalar null test
 	static BOOL FScalarNullTest(CExpression *pexpr);
 
