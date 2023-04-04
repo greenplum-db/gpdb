@@ -222,8 +222,8 @@ CQueryContext::PqcGenerate(CMemoryPool *mp, CExpression *pexpr,
 	}
 	else
 	{
-		pds = GPOS_NEW(mp)
-			CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
+		pds = GPOS_NEW(mp) CDistributionSpecSingleton(
+			CDistributionSpecSingleton::EstCoordinator);
 	}
 
 	// By default, no rewindability requirement needs to be satisfied at the top level

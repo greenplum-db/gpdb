@@ -35,8 +35,8 @@ CPhysicalForeignScan::CPhysicalForeignScan(CMemoryPool *mp,
 										   CColRefArray *pdrgpcrOutput)
 	: CPhysicalTableScan(mp, pnameAlias, ptabdesc, pdrgpcrOutput)
 {
-	// if this table is master only, then keep the original distribution spec.
-	if (IMDRelation::EreldistrMasterOnly == ptabdesc->GetRelDistribution())
+	// if this table is coordinator only, then keep the original distribution spec.
+	if (IMDRelation::EreldistrCoordinatorOnly == ptabdesc->GetRelDistribution())
 	{
 		return;
 	}

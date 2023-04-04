@@ -31,7 +31,7 @@ using namespace gpopt;
 //	| NonSingleton            | FAllowReplicated | FAllowReplicated  |
 //	| Replicated              | T                | T                 |
 //	| StrictReplicated        | T                | F                 |
-//	| singleton & master      | F                | F                 |
+//	| singleton & coordinator | F                | F                 |
 //	| singleton & segment     | T                | T                 |
 //	| ANY                     | T                | T                 |
 //	| others not Singleton    | T                |(default) F        |
@@ -64,7 +64,7 @@ CDistributionSpecReplicated::FSatisfies(const CDistributionSpec *pdss) const
 					->FAllowReplicated();
 			case CDistributionSpec::EdtSingleton:
 				// a tainted replicated distribution satisfies singleton
-				// distributions that are not master-only
+				// distributions that are not coordinator-only
 				return CDistributionSpecSingleton::PdssConvert(pdss)->Est() ==
 					   CDistributionSpecSingleton::EstSegment;
 		}
@@ -99,10 +99,10 @@ CDistributionSpecReplicated::FSatisfies(const CDistributionSpec *pdss) const
 		}
 
 		// a replicated distribution satisfies any non-singleton one,
-		// as well as singleton distributions that are not master-only
+		// as well as singleton distributions that are not coordinator-only
 		return !(EdtSingleton == pdss->Edt() &&
 				 (dynamic_cast<const CDistributionSpecSingleton *>(pdss))
-					 ->FOnMaster());
+					 ->FOnCoordinator());
 	}
 
 	return false;

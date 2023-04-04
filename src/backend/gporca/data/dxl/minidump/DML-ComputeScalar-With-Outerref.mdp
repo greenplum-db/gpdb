@@ -3,7 +3,7 @@
   <dxl:Comment><![CDATA[
 	Objective: For a DML query that produces ComputeScalar with an
 	outer-ref; ensure that ComputeScalar request for Singleton Segment
-	distribution spec instead of Singleton Master. 
+	distribution spec instead of Singleton coordinator.
 
 	create table x(a int);
 	create table y(b int);

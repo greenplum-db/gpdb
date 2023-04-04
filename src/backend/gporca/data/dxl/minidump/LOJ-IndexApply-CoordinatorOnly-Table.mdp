@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-Left outer index apply on master only table, distributed outer child should gather on master.
-Non-equal join condition is also fine for master only tables.
+Left outer index apply on coordinator only table, distributed outer child should gather on coordinator.
+Non-equal join condition is also fine for coordinator only tables.
 
 create table foo(a varchar, b varchar);
 create table bar(a varchar, b varchar);
 set optimizer_enable_hashjoin=off;
 set optimizer_enable_motion_broadcast = off;
-set optimizer_enable_master_only_queries = on;
+set optimizer_enable_coordinator_only_queries = on;
 
 explain
 (select foo.*, relam from foo left join pg_class on foo.a::oid = pg_class.oid)
@@ -291,7 +291,7 @@ union all
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1247.1.0" Name="pg_type" Rows="399.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.1247.1.0" Name="pg_type" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="35,28">
+      <dxl:Relation Mdid="6.1247.1.0" Name="pg_type" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="35,28">
         <dxl:Columns>
           <dxl:Column Name="typname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -457,7 +457,7 @@ union all
         </dxl:Opfamilies>
       </dxl:Index>
       <dxl:RelationStatistics Mdid="2.1259.1.0" Name="pg_class" Rows="405.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.1259.1.0" Name="pg_class" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="33,26">
+      <dxl:Relation Mdid="6.1259.1.0" Name="pg_class" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="33,26">
         <dxl:Columns>
           <dxl:Column Name="relname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>

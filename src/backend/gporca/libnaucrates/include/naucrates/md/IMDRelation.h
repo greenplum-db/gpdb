@@ -62,7 +62,7 @@ public:
 	//-------------------------------------------------------------------
 	enum Ereldistrpolicy
 	{
-		EreldistrMasterOnly,
+		EreldistrCoordinatorOnly,
 		EreldistrHash,
 		EreldistrRandom,
 		EreldistrReplicated,

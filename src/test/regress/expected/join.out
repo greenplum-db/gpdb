@@ -6200,7 +6200,7 @@ insert into join_pt1 values (1, 1, 'x'), (101, 101, 'y');
 create table join_ut1 (a int, b int, c varchar);
 insert into join_ut1 values (101, 101, 'y'), (2, 2, 'z');
 -- GPDB_12_MERGE_FIXME: The query fails. This test query is new with v12,
--- but a corresponding query fails on GPDB master, too. I think this is
+-- but a corresponding query fails on GPDB main, too. I think this is
 -- similar to the case marked with GPDB_94_STABLE_MERGE_FIXME above.
 -- upstream commit acfcd4. Need to come back to fix it when understanding more
 -- about that commit.

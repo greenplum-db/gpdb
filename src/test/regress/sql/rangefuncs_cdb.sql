@@ -49,7 +49,7 @@ select (foost(1)).*;
 -- function in from clause
 select * from foost(1);
 
--- function over function (executed on master)
+-- function over function (executed on coordinator)
 select foost(fooid), * from foost(3);
 
 -- function over table (executed on segments)
@@ -77,7 +77,7 @@ select * from foo2
 where f2 in (select f2 from foost(foo2.fooid) z where z.fooid = 1) 
 ORDER BY 1,2;
 
--- function in subselect, with correlation - master only
+-- function in subselect, with correlation - coordinator only
 select * from foost(4) x 
 where f2 in (select f2 from foost(x.fooid) z where x.fooid = z.fooid) 
 ORDER BY 1,2;
@@ -118,7 +118,7 @@ select * from foor(1);
 -- function in from clause, explicit typing
 select * from foor(1) as (fooid int, f2 int);
 
--- function over function (executed on master) 
+-- function over function (executed on coordinator)
 --    Fails: plpgsql does not support SFRM_Materialize
 select foor(fooid), * from foor(3) as (fooid int, f2 int);
 
@@ -148,7 +148,7 @@ where f2 in (select f2 from foor(foo2.fooid) z(fooid int, f2 int)
              where z.fooid = 1) 
 ORDER BY 1,2;
 
--- function in subselect, with correlation - master only
+-- function in subselect, with correlation - coordinator only
 select * from foor(4) x(fooid int, f2 int)
 where f2 in (select f2 from foor(x.fooid) z(fooid int, f2 int)
              where x.fooid = z.fooid) 
@@ -184,7 +184,7 @@ select (fooro(1)).*;
 -- function in from clause
 select * from fooro(1);
 
--- function over function (executed on master)
+-- function over function (executed on coordinator)
 select fooro(fooid), * from fooro(3);
 
 -- Joining with a table
@@ -209,7 +209,7 @@ select * from foo2
 where f2 in (select f2 from fooro(foo2.fooid) z where z.fooid = 1) 
 ORDER BY 1,2;
 
--- function in subselect, with correlation - master only
+-- function in subselect, with correlation - coordinator only
 select * from fooro(4) x 
 where f2 in (select f2 from fooro(x.fooid) z where x.fooid = z.fooid) 
 ORDER BY 1,2;
@@ -242,7 +242,7 @@ select (foot(1)).*;
 -- function in from clause
 select * from foot(1);
 
--- function over function (executed on master)
+-- function over function (executed on coordinator)
 select foot(fooid), * from foot(3);
 
 -- Joining with a table
@@ -267,7 +267,7 @@ select * from foo2
 where f2 in (select f2 from foot(foo2.fooid) z where z.fooid = 1) 
 ORDER BY 1,2;
 
--- function in subselect, with correlation - master only
+-- function in subselect, with correlation - coordinator only
 select * from foot(4) x 
 where f2 in (select f2 from foot(x.fooid) z where x.fooid = z.fooid) 
 ORDER BY 1,2;

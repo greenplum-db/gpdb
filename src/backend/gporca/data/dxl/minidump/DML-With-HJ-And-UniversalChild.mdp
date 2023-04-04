@@ -3,7 +3,7 @@
  <dxl:Comment><![CDATA[
 	Objective: For a DML query that produces HashJoin with an universal
 	child; ensure that HashJoin requests for Singleton Segment distribution
-	spec instead of Singleton Master on the outer child.
+	spec instead of Singleton coordinator on the outer child.
 
 	create table x(a int);
 	create table foo(a int,b int);

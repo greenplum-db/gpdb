@@ -2,7 +2,7 @@
 create schema subselect_gp;
 set search_path to subselect_gp, public;
 -- end_ignore
-set optimizer_enable_master_only_queries = on;
+set optimizer_enable_coordinator_only_queries = on;
 set optimizer_segments = 3;
 set optimizer_nestloop_factor = 1.0;
 
@@ -144,7 +144,7 @@ explain select array(select x from csq_d1); -- initplan
 select array(select x from csq_d1); -- {1}
 
 --
--- CSQs involving master-only and distributed tables
+-- CSQs involving coordinator-only and distributed tables
 --
 
 drop table if exists t3cozlib;
@@ -180,7 +180,7 @@ ORDER BY a.attnum
 ; -- expect to see 2 rows
 
 --
--- More CSQs involving master-only and distributed relations
+-- More CSQs involving coordinator-only and distributed relations
 --
 
 drop table if exists csq_m1;
@@ -202,14 +202,14 @@ select * from csq_m1;
 select * from csq_d1;
 
 --
--- outer plan node is master-only and CSQ has distributed relation
+-- outer plan node is coordinator-only and CSQ has distributed relation
 --
 
 explain select * from csq_m1 where x not in (select x from csq_d1) or x < -100; -- gather motion
 select * from csq_m1 where x not in (select x from csq_d1) or x < -100; -- (3)
 
 --
--- outer plan node is master-only and CSQ has distributed relation
+-- outer plan node is coordinator-only and CSQ has distributed relation
 --
 
 explain select * from csq_d1 where x not in (select x from csq_m1) or x < -100; -- broadcast motion

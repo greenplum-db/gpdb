@@ -48,7 +48,7 @@ COptCtxt::COptCtxt(CMemoryPool *mp, CColumnFactory *col_factory,
 	  m_pdrgpcrSystemCols(nullptr),
 	  m_optimizer_config(optimizer_config),
 	  m_fDMLQuery(false),
-	  m_has_master_only_tables(false),
+	  m_has_coordinator_only_tables(false),
 	  m_has_replicated_tables(false),
 	  m_scanid_to_part_map(nullptr),
 	  m_selector_id_counter(0)

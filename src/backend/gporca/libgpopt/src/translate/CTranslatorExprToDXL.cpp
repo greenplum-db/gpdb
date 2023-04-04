@@ -186,7 +186,7 @@ using namespace gpdxl;
 using namespace gpopt;
 using namespace gpnaucrates;
 
-#define GPOPT_MASTER_SEGMENT_ID (-1)
+#define GPOPT_COORDINATOR_SEGMENT_ID (-1)
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -205,7 +205,7 @@ CTranslatorExprToDXL::CTranslatorExprToDXL(CMemoryPool *mp,
 	  m_pdpplan(nullptr),
 	  m_pcf(nullptr),
 	  m_pdrgpiSegments(pdrgpiSegments),
-	  m_iMasterId(GPOPT_MASTER_SEGMENT_ID)
+	  m_iCoordinatorId(GPOPT_COORDINATOR_SEGMENT_ID)
 {
 	GPOS_ASSERT(nullptr != mp);
 	GPOS_ASSERT(nullptr != md_accessor);
@@ -7392,7 +7392,7 @@ CTranslatorExprToDXL::GetOutputSegIdsArray(CExpression *pexprMotion)
 				CPhysicalMotionGather::PopConvert(pop);
 
 			pdrgpi = GPOS_NEW(m_mp) IntPtrArray(m_mp);
-			INT iSegmentId = m_iMasterId;
+			INT iSegmentId = m_iCoordinatorId;
 
 			if (CDistributionSpecSingleton::EstSegment == popGather->Est())
 			{
@@ -7443,12 +7443,12 @@ CTranslatorExprToDXL::GetInputSegIdsArray(CExpression *pexprMotion)
 		CDistributionSpec::EdtStrictSingleton == pds->Edt())
 	{
 		IntPtrArray *pdrgpi = GPOS_NEW(m_mp) IntPtrArray(m_mp);
-		INT iSegmentId = m_iMasterId;
+		INT iSegmentId = m_iCoordinatorId;
 		CDistributionSpecSingleton *pdss =
 			CDistributionSpecSingleton::PdssConvert(pds);
-		if (!pdss->FOnMaster())
+		if (!pdss->FOnCoordinator())
 		{
-			// non-master singleton is currently fixed to the first segment
+			// non-coordinator singleton is currently fixed to the first segment
 			iSegmentId = *((*m_pdrgpiSegments)[0]);
 		}
 		pdrgpi->Append(GPOS_NEW(m_mp) INT(iSegmentId));

@@ -214,7 +214,7 @@ DROP RESOURCE QUEUE reg_activeq;
 DROP RESOURCE QUEUE reg_costq;
 
 -- catalog tests
-set optimizer_enable_master_only_queries = on;
+set optimizer_enable_coordinator_only_queries = on;
 select count(*)/1000 from
 (select
 (select ressetting from pg_resqueue_attributes b
@@ -243,7 +243,7 @@ where x.oid=y.rolresqueue and a.rsqname=x.rsqname) as "RQAssignedUsers"
 from ( select distinct rsqname from pg_resqueue_attributes ) a)
 as foo;
 
-reset optimizer_enable_master_only_queries;
+reset optimizer_enable_coordinator_only_queries;
 
 -- Followup additional tests.
 -- MPP-7474

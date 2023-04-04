@@ -18,7 +18,7 @@
 
   explain select t1n.a, t2n.a from t1n join t2n on t1n.a=t2n.a and t1n.b=t2n.b where t2n.c < 74;
 
-  +--CPhysicalMotionGather(master)   rows:1479264   width:2092  rebinds:1   cost:2157.192890   origin: [Grp:13, GrpExpr:7]
+  +--CPhysicalMotionGather(coordinator)   rows:1479264   width:2092  rebinds:1   cost:2157.192890   origin: [Grp:13, GrpExpr:7]
     +--CPhysicalInnerHashJoin   rows:1479264   width:2092  rebinds:1   cost:2113.091078   origin: [Grp:13, GrpExpr:5]
         |--CPhysicalDynamicTableScan "t1n" ("t1n") ...
         |--CPhysicalPartitionSelector, Scan Id: 1, Part Table: (90284,1.0)   rows:1479264   width:1046  rebinds:1   cost:851.523132   origin: [Grp:5, GrpExpr:3]

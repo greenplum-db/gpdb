@@ -259,7 +259,7 @@ CPhysicalSequence::PdsRequired(CMemoryPool *mp,
 			true /* fAllowReplicated */, false /* fAllowEnforced */);
 	}
 
-	// If required distribution is singleton on master (sequence is top operation) or
+	// If required distribution is singleton on coordinator (sequence is top operation) or
 	// non-singleton with not allowed replicated (there is another top-sequence under this sequence)
 	// then we should not allow replicated distribution, to avoid potential hang issues,
 	// which may accured when ORCA is translating expression to DXL and sets
@@ -267,7 +267,8 @@ CPhysicalSequence::PdsRequired(CMemoryPool *mp,
 	// and Redistribute from all segments to one segments appears.
 
 	if ((CDistributionSpec::EdtSingleton == pdsRequired->Edt() &&
-		 CDistributionSpecSingleton::PdssConvert(pdsRequired)->FOnMaster()) ||
+		 CDistributionSpecSingleton::PdssConvert(pdsRequired)
+			 ->FOnCoordinator()) ||
 		(CDistributionSpec::EdtNonSingleton == pdsRequired->Edt() &&
 		 !CDistributionSpecNonSingleton::PdsConvert(pdsRequired)
 			  ->FAllowReplicated()))

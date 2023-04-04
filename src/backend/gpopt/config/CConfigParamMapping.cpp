@@ -222,11 +222,11 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elements[] = {
 	 GPOS_WSZ_LIT(
 		 "Enable motion hazard handling during NLJ optimization and generate streaming material when appropriate")},
 
-	{EopttraceDisableNonMasterGatherForDML,
+	{EopttraceDisableNonCoordinatorGatherForDML,
 	 &optimizer_enable_gather_on_segment_for_dml,
 	 true,	// m_fNegate
 	 GPOS_WSZ_LIT(
-		 "Enable DML optimization by enforcing a non-master gather when appropriate")},
+		 "Enable DML optimization by enforcing a non-coordinator gather when appropriate")},
 
 	{EopttraceEnforceCorrelatedExecution, &optimizer_enforce_subplans,
 	 false,	 // m_negate_param

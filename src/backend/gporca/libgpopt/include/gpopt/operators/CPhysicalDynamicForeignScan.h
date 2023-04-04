@@ -24,7 +24,7 @@ class CPhysicalDynamicForeignScan : public CPhysicalDynamicScan
 private:
 	OID m_foreign_server_oid;
 
-	BOOL m_is_master_only;
+	BOOL m_is_coordinator_only;
 
 public:
 	CPhysicalDynamicForeignScan(const CPhysicalDynamicForeignScan &) = delete;
@@ -35,7 +35,7 @@ public:
 		ULONG ulOriginOpId, ULONG scan_id, CColRefArray *pdrgpcrOutput,
 		CColRef2dArray *pdrgpdrgpcrParts, IMdIdArray *partition_mdids,
 		ColRefToUlongMapArray *root_col_mapping_per_part,
-		OID foreign_server_oid, BOOL is_master_only);
+		OID foreign_server_oid, BOOL is_coordinator_only);
 
 
 	EOperatorId
@@ -68,9 +68,9 @@ public:
 	}
 
 	BOOL
-	IsMasterOnly() const
+	IsCoordinatorOnly() const
 	{
-		return m_is_master_only;
+		return m_is_coordinator_only;
 	}
 	//-------------------------------------------------------------------------------------
 	// Derived Plan Properties

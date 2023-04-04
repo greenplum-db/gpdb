@@ -84,7 +84,7 @@ select * from foost(1);
      1 | 33
 (2 rows)
 
--- function over function (executed on master)
+-- function over function (executed on coordinator)
 select foost(fooid), * from foost(3);
  foost  | fooid | f2 
 --------+-------+----
@@ -148,7 +148,7 @@ ORDER BY 1,2;
      1 | 11
 (1 row)
 
--- function in subselect, with correlation - master only
+-- function in subselect, with correlation - coordinator only
 select * from foost(4) x 
 where f2 in (select f2 from foost(x.fooid) z where x.fooid = z.fooid) 
 ORDER BY 1,2;
@@ -205,7 +205,7 @@ select * from foor(1) as (fooid int, f2 int);
      1 | 33
 (2 rows)
 
--- function over function (executed on master) 
+-- function over function (executed on coordinator)
 --    Fails: plpgsql does not support SFRM_Materialize
 select foor(fooid), * from foor(3) as (fooid int, f2 int);
 ERROR:  set-valued function called in context that cannot accept a set
@@ -256,7 +256,7 @@ ORDER BY 1,2;
      1 | 11
 (1 row)
 
--- function in subselect, with correlation - master only
+-- function in subselect, with correlation - coordinator only
 select * from foor(4) x(fooid int, f2 int)
 where f2 in (select f2 from foor(x.fooid) z(fooid int, f2 int)
              where x.fooid = z.fooid) 
@@ -315,7 +315,7 @@ select * from fooro(1);
      1 | 33
 (2 rows)
 
--- function over function (executed on master)
+-- function over function (executed on coordinator)
 select fooro(fooid), * from fooro(3);
  fooro  | fooid | f2 
 --------+-------+----
@@ -367,7 +367,7 @@ ORDER BY 1,2;
      1 | 11
 (1 row)
 
--- function in subselect, with correlation - master only
+-- function in subselect, with correlation - coordinator only
 select * from fooro(4) x 
 where f2 in (select f2 from fooro(x.fooid) z where x.fooid = z.fooid) 
 ORDER BY 1,2;
@@ -423,7 +423,7 @@ select * from foot(1);
      1 | 33
 (2 rows)
 
--- function over function (executed on master)
+-- function over function (executed on coordinator)
 select foot(fooid), * from foot(3);
   foot  | fooid | f2 
 --------+-------+----
@@ -475,7 +475,7 @@ ORDER BY 1,2;
      1 | 11
 (1 row)
 
--- function in subselect, with correlation - master only
+-- function in subselect, with correlation - coordinator only
 select * from foot(4) x 
 where f2 in (select f2 from foot(x.fooid) z where x.fooid = z.fooid) 
 ORDER BY 1,2;

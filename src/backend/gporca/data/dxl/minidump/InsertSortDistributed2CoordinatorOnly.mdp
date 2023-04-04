@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-explain insert into masteronly select * from distributedtable order by 1;
+explain insert into CoordinatorOnly select * from distributedtable order by 1;
 
 -->
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
@@ -180,7 +180,7 @@ explain insert into masteronly select * from distributedtable order by 1;
       </dxl:Type>
       <dxl:ColumnStatistics Mdid="1.29236811.1.1.5" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.29236811.1.1.4" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
-      <dxl:Relation Mdid="6.29236755.1.1" Name="masteronly" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="9,3">
+      <dxl:Relation Mdid="6.29236755.1.1" Name="CoordinatorOnly" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -243,7 +243,7 @@ explain insert into masteronly select * from distributedtable order by 1;
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalInsert InsertColumns="1,2,3">
-        <dxl:TableDescriptor Mdid="6.29236755.1.1" TableName="masteronly">
+        <dxl:TableDescriptor Mdid="6.29236755.1.1" TableName="CoordinatorOnly">
           <dxl:Columns>
             <dxl:Column ColId="11" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="12" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -299,7 +299,7 @@ explain insert into masteronly select * from distributedtable order by 1;
             <dxl:Ident ColId="2" ColName="c" TypeMdid="0.25.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="6.29236755.1.1" TableName="masteronly">
+        <dxl:TableDescriptor Mdid="6.29236755.1.1" TableName="CoordinatorOnly">
           <dxl:Columns>
             <dxl:Column ColId="11" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="12" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

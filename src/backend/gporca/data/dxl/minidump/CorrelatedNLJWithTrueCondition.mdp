@@ -12,7 +12,7 @@
       FROM (select distinct 1, max(a) as a from foo group by 1) c;
 
     Physical plan:
-+--CPhysicalMotionGather(master)   rows:1   width:1  rebinds:1   cost:1324032.830501   origin: [Grp:16, GrpExpr:5]
++--CPhysicalMotionGather(coordinator)   rows:1   width:1  rebinds:1   cost:1324032.830501   origin: [Grp:16, GrpExpr:5]
    +--CPhysicalComputeScalar   rows:1   width:1  rebinds:1   cost:1324032.830486   origin: [Grp:16, GrpExpr:4]
       |--CPhysicalLeftOuterNLJoin   rows:2   width:20  rebinds:1   cost:1324032.830484   origin: [Grp:28, GrpExpr:2]
       |  |--CPhysicalFilter   rows:1   width:8  rebinds:1   cost:431.000065   origin: [Grp:11, GrpExpr:3]
@@ -40,8 +40,8 @@
       |  |--CPhysicalAssert (Error code: P0003)   rows:1   width:12  rebinds:1   cost:431.000731   origin: [Grp:27, GrpExpr:2]
       |  |  |--CPhysicalSpool (Streaming)   rows:1   width:12  rebinds:1   cost:431.000727   origin: [Grp:36, GrpExpr:3]
       |  |  |  +--CPhysicalMotionBroadcast    rows:1   width:12  rebinds:1   cost:431.000715   origin: [Grp:36, GrpExpr:2]
-      |  |  |     +--CPhysicalSequenceProject (SINGLETON (master), [<empty>], [EMPTY FRAME])   rows:1   width:12  rebinds:1   cost:431.000071   origin: [Grp:36, GrpExpr:1]
-      |  |  |        |--CPhysicalMotionGather(master)   rows:1   width:34  rebinds:1   cost:431.000071   origin: [Grp:12, GrpExpr:2]
+      |  |  |     +--CPhysicalSequenceProject (SINGLETON (coordinator), [<empty>], [EMPTY FRAME])   rows:1   width:12  rebinds:1   cost:431.000071   origin: [Grp:36, GrpExpr:1]
+      |  |  |        |--CPhysicalMotionGather(coordinator)   rows:1   width:34  rebinds:1   cost:431.000071   origin: [Grp:12, GrpExpr:2]
       |  |  |        |  +--CPhysicalTableScan "bar" ("bar")   rows:1   width:34  rebinds:1   cost:431.000019   origin: [Grp:12, GrpExpr:1]
       |  |  |        +--CScalarProjectList   origin: [Grp:35, GrpExpr:0]
       |  |  |           +--CScalarProjectElement "row_number" (20)   origin: [Grp:34, GrpExpr:0]

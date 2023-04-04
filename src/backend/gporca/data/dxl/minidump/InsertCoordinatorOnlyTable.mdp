@@ -105,7 +105,7 @@
       <dxl:ColumnStatistics Mdid="1.257340.1.1.4" Name="cmin" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.257340.1.1.3" Name="xmin" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.257340.1.1.2" Name="ctid" Width="6.000000"/>
-      <dxl:Relation Mdid="6.258433.1.1" Name="m" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="8,2">
+      <dxl:Relation Mdid="6.258433.1.1" Name="m" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

@@ -22,7 +22,7 @@ using namespace gpopt;
 
 // initialization of static variables
 const CHAR *CDistributionSpecSingleton::m_szSegmentType[EstSentinel] = {
-	"master", "segment"};
+	"coordinator", "segment"};
 
 
 //---------------------------------------------------------------------------
@@ -41,7 +41,7 @@ CDistributionSpecSingleton::CDistributionSpecSingleton(ESegmentType est)
 
 CDistributionSpecSingleton::CDistributionSpecSingleton()
 {
-	m_est = EstMaster;
+	m_est = EstCoordinator;
 
 	if (COptCtxt::PoctxtFromTLS()->OptimizeDMLQueryWithSingletonSegment())
 	{

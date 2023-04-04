@@ -276,7 +276,7 @@ CPhysicalHashJoin::PdsMatch(CMemoryPool *mp, CDistributionSpec *pds,
 			{
 				GPOS_ASSERT(1 == ulSourceChildIndex);
 
-				// inner child is replicated, for ROJ outer must be executed on a single (non-master) segment to avoid duplicates
+				// inner child is replicated, for ROJ outer must be executed on a single (non-coordinator) segment to avoid duplicates
 				if (this->Eopid() == EopPhysicalRightOuterHashJoin)
 				{
 					return GPOS_NEW(mp) CDistributionSpecSingleton(
@@ -447,7 +447,7 @@ CPhysicalHashJoin::PdsRequiredSingleton(CMemoryPool *mp,
 	if (COptCtxt::PoctxtFromTLS()->OptimizeDMLQueryWithSingletonSegment() &&
 		CDistributionSpec::EdtStrictReplicated == pdsFirst->Edt())
 	{
-		// For a DML query that can be optimized by enforcing a non-master gather motion,
+		// For a DML query that can be optimized by enforcing a non-coordinator gather motion,
 		// we request singleton-segment distribution on the outer child. If the outer child
 		// is replicated, no enforcer gets added; in which case pdsFirst is EdtStrictReplicated.
 		// Hence handle this scenario here and require a singleton-segment on the
