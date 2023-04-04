@@ -34,7 +34,7 @@ The `TIMESTAMP9` data type is identical to the `TIMESTAMP9_LTZ` data type. Pleas
 
 `LTZ` is an abbreviation for "Local Time Zone." Greenplum Database stores `TIMESTAMP9_LTZ` internally in UTC (Universal Coordinated Time, traditionally known as Greenwich Mean Time or GMT) time. An input value that has an explicit time zone specified is converted to UTC using the appropriate offset for that time zone. 
 
-If no time zone is specified in the input string, then it is presumed to be in the time zone indicated by the system's [`TIMEZONE` server configuration parameter](https://docs.vmware.com/en/VMware-Tanzu-Greenplum/6/greenplum-database/GUID-ref_guide-config_params-guc-list.html#timezone) and is converted to UTC using the offset for the time zone.
+If no time zone is specified in the input string, then it is presumed to be in the time zone indicated by the system's [`TIMEZONE` server configuration parameter](https://docs.vmware.com/en/VMware-Greenplum/6/greenplum-database/ref_guide-config_params-guc-list.html#timezone) and is converted to UTC using the offset for the time zone.
 
 See [TIMESTAMP9_LTZ Examples](#timestamp9_ltz-examples) for examples using this data type.
 
@@ -52,7 +52,7 @@ The following table summarizes the `timestamp9` module's supported type conversi
 |--------|-------|----|
 |`BIGINT`|`TIMESTAMP9_LTZ`|Greenplum Database treats the `BIGINT` value as the number of nanoseconds started from ‘1970-01-01 00:00:00 +0000’.|
 |`DATE`|`TIMESTAMP9_LTZ`|Greenplum Database treats the `DATE` value as in the current session time zone. This behavior is identical to converting from from `DATE` to `TIMESTAMPTZ`.|
-|`TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP`|`TIMESTAMP9_LTZ`|Greenplum Database treats the `TIMESTAMP` value as in the current session time zone.  This behavior is identical to converting from `TIMESTAMP` to `TIMESTAMPTZ`|
+|`TIMESTAMP WITHOUT TIME ZONE/TIMESTAMP`|`TIMESTAMP9_LTZ`|Greenplum Database treats the `TIMESTAMP` value as in the current session time zone.  This behavior is identical to converting from `TIMESTAMP` to `TIMESTAMPTZ`.|
 |`TIMESTAMP WITH TIME ZONE/TIMESTAMPTZ` |`TIMESTAMP9_LTZ`|For this conversion, Greenplum Database only extends the fractional part to nanosecond precision.|
 |`TIMESTAMP9_LTZ`|`BIGINT`|The result of this conversion is the nanoseconds since ‘1970-01-01 00:00:00.000000000 +0000’ to the given `TIMESTAMP9_LTZ` value.  If the given `TIMESTAMP9_LTZ` value is before ‘1970-01-01 00:00:00.000000000 +0000’, the result is negative.|
 |`TIMESTAMP9_LTZ`|`DATE`|The result of this conversion depends on the date of the given `TIMESTAMP9_LTZ` value in the time zone of the current session. The behavior is like doing conversion from `TIMESTAMPTZ` to `DATE`.|
