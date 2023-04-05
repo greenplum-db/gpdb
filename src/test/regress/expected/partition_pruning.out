@@ -3949,4 +3949,484 @@ explain analyze select * from bar where j is distinct from NULL;
  Execution Time: 1.958 ms
 (25 rows)
 
+-- Table partitioned by boolean column
+CREATE TABLE pt_bool_tab
+(
+  col1 int,
+  col2 bool
+)
+distributed by (col1)
+partition by list(col2)
+(
+  partition part1 values(true),
+  partition part2 values(false)
+);
+INSERT INTO pt_bool_tab SELECT i, true FROM generate_series(1,3)i;
+INSERT INTO pt_bool_tab SELECT i, false FROM generate_series(1,2)i;
+EXPLAIN SELECT * FROM pt_bool_tab WHERE col2 IS true;
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000969.00 rows=46750 width=5)
+   ->  Seq Scan on pt_bool_tab_1_prt_part1  (cost=10000000000.00..10000000345.67 rows=15583 width=5)
+         Filter: (col2 IS TRUE)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+SELECT * FROM pt_bool_tab WHERE col2 IS true;
+ col1 | col2 
+------+------
+    1 | t
+    2 | t
+    3 | t
+(3 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab WHERE col2 IS false;
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000969.00 rows=46750 width=5)
+   ->  Seq Scan on pt_bool_tab_1_prt_part2  (cost=10000000000.00..10000000345.67 rows=15583 width=5)
+         Filter: (col2 IS FALSE)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+SELECT * FROM pt_bool_tab WHERE col2 IS false;
+ col1 | col2 
+------+------
+    2 | f
+    1 | f
+(2 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab WHERE col2 IS NULL;
+                QUERY PLAN                
+------------------------------------------
+ Result  (cost=0.00..0.00 rows=0 width=0)
+   One-Time Filter: false
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+SELECT * FROM pt_bool_tab WHERE col2 IS NULL;
+ col1 | col2 
+------+------
+(0 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab WHERE col2 IS unknown;
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..20000000694.14 rows=187 width=5)
+   ->  Append  (cost=10000000000.00..20000000691.65 rows=62 width=5)
+         ->  Seq Scan on pt_bool_tab_1_prt_part2  (cost=10000000000.00..10000000345.67 rows=31 width=5)
+               Filter: (col2 IS UNKNOWN)
+         ->  Seq Scan on pt_bool_tab_1_prt_part1  (cost=10000000000.00..10000000345.67 rows=31 width=5)
+               Filter: (col2 IS UNKNOWN)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+SELECT * FROM pt_bool_tab WHERE col2 IS unknown;
+ col1 | col2 
+------+------
+(0 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab WHERE col2 IS NOT true;
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000969.00 rows=46750 width=5)
+   ->  Seq Scan on pt_bool_tab_1_prt_part2  (cost=10000000000.00..10000000345.67 rows=15583 width=5)
+         Filter: (col2 IS NOT TRUE)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+SELECT * FROM pt_bool_tab WHERE col2 IS NOT true;
+ col1 | col2 
+------+------
+    2 | f
+    1 | f
+(2 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab WHERE col2 IS NOT false;
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000969.00 rows=46750 width=5)
+   ->  Seq Scan on pt_bool_tab_1_prt_part1  (cost=10000000000.00..10000000345.67 rows=15583 width=5)
+         Filter: (col2 IS NOT FALSE)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+SELECT * FROM pt_bool_tab WHERE col2 IS NOT false;
+ col1 | col2 
+------+------
+    2 | t
+    3 | t
+    1 | t
+(3 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab WHERE col2 IS NOT unknown;
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..20000003493.53 rows=186813 width=5)
+   ->  Append  (cost=10000000000.00..20000001002.69 rows=62271 width=5)
+         ->  Seq Scan on pt_bool_tab_1_prt_part2  (cost=10000000000.00..10000000345.67 rows=31136 width=5)
+               Filter: (col2 IS NOT UNKNOWN)
+         ->  Seq Scan on pt_bool_tab_1_prt_part1  (cost=10000000000.00..10000000345.67 rows=31136 width=5)
+               Filter: (col2 IS NOT UNKNOWN)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+SELECT * FROM pt_bool_tab WHERE col2 IS NOT unknown;
+ col1 | col2 
+------+------
+    1 | f
+    1 | t
+    2 | f
+    2 | t
+    3 | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab WHERE col2 IS NOT NULL;
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..20000003493.53 rows=186813 width=5)
+   ->  Append  (cost=10000000000.00..20000001002.69 rows=62271 width=5)
+         ->  Seq Scan on pt_bool_tab_1_prt_part2  (cost=10000000000.00..10000000345.67 rows=31136 width=5)
+               Filter: (col2 IS NOT NULL)
+         ->  Seq Scan on pt_bool_tab_1_prt_part1  (cost=10000000000.00..10000000345.67 rows=31136 width=5)
+               Filter: (col2 IS NOT NULL)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+SELECT * FROM pt_bool_tab WHERE col2 IS NOT NULL;
+ col1 | col2 
+------+------
+    1 | f
+    1 | t
+    2 | f
+    2 | t
+    3 | t
+(5 rows)
+
+CREATE TABLE pt_bool_tab_df
+(
+  col1 int,
+  col2 bool
+)
+distributed by (col1)
+partition by list(col2)
+(
+  partition part1 values(true),
+  partition part2 values(false),
+  default partition def
+);
+INSERT INTO pt_bool_tab_df SELECT i, true FROM generate_series(1,3)i;
+INSERT INTO pt_bool_tab_df SELECT i, false FROM generate_series(1,2)i;
+INSERT INTO pt_bool_tab_df SELECT i, NULL FROM generate_series(1,1)i;
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE col2 IS true;
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000969.00 rows=46750 width=5)
+   ->  Seq Scan on pt_bool_tab_df_1_prt_part1  (cost=10000000000.00..10000000345.67 rows=15583 width=5)
+         Filter: (col2 IS TRUE)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+SELECT * FROM pt_bool_tab_df WHERE col2 IS true;
+ col1 | col2 
+------+------
+    1 | t
+    2 | t
+    3 | t
+(3 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE col2 IS false;
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000969.00 rows=46750 width=5)
+   ->  Seq Scan on pt_bool_tab_df_1_prt_part2  (cost=10000000000.00..10000000345.67 rows=15583 width=5)
+         Filter: (col2 IS FALSE)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+SELECT * FROM pt_bool_tab_df WHERE col2 IS false;
+ col1 | col2 
+------+------
+    2 | f
+    1 | f
+(2 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE col2 IS NULL;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000346.91 rows=94 width=5)
+   ->  Seq Scan on pt_bool_tab_df_1_prt_def  (cost=10000000000.00..10000000345.67 rows=31 width=5)
+         Filter: (col2 IS NULL)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+SELECT * FROM pt_bool_tab_df WHERE col2 IS NULL;
+ col1 | col2 
+------+------
+    1 | 
+(1 row)
+
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE col2 IS unknown;
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..30000001041.21 rows=280 width=5)
+   ->  Append  (cost=10000000000.00..30000001037.47 rows=94 width=5)
+         ->  Seq Scan on pt_bool_tab_df_1_prt_part2  (cost=10000000000.00..10000000345.67 rows=31 width=5)
+               Filter: (col2 IS UNKNOWN)
+         ->  Seq Scan on pt_bool_tab_df_1_prt_part1  (cost=10000000000.00..10000000345.67 rows=31 width=5)
+               Filter: (col2 IS UNKNOWN)
+         ->  Seq Scan on pt_bool_tab_df_1_prt_def  (cost=10000000000.00..10000000345.67 rows=31 width=5)
+               Filter: (col2 IS UNKNOWN)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+SELECT * FROM pt_bool_tab_df WHERE col2 IS unknown;
+ col1 | col2 
+------+------
+    1 | 
+(1 row)
+
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE col2 IS NOT true;
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000969.00 rows=46750 width=5)
+   ->  Seq Scan on pt_bool_tab_df_1_prt_part2  (cost=10000000000.00..10000000345.67 rows=15583 width=5)
+         Filter: (col2 IS NOT TRUE)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+SELECT * FROM pt_bool_tab_df WHERE col2 IS NOT true;
+ col1 | col2 
+------+------
+    2 | f
+    1 | f
+(2 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE col2 IS NOT false;
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000969.00 rows=46750 width=5)
+   ->  Seq Scan on pt_bool_tab_df_1_prt_part1  (cost=10000000000.00..10000000345.67 rows=15583 width=5)
+         Filter: (col2 IS NOT FALSE)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+SELECT * FROM pt_bool_tab_df WHERE col2 IS NOT false;
+ col1 | col2 
+------+------
+    2 | t
+    3 | t
+    1 | t
+(3 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE col2 IS NOT unknown;
+                                                  QUERY PLAN                                                  
+--------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..30000005240.29 rows=280220 width=5)
+   ->  Append  (cost=10000000000.00..30000001504.03 rows=93406 width=5)
+         ->  Seq Scan on pt_bool_tab_df_1_prt_part2  (cost=10000000000.00..10000000345.67 rows=31136 width=5)
+               Filter: (col2 IS NOT UNKNOWN)
+         ->  Seq Scan on pt_bool_tab_df_1_prt_part1  (cost=10000000000.00..10000000345.67 rows=31136 width=5)
+               Filter: (col2 IS NOT UNKNOWN)
+         ->  Seq Scan on pt_bool_tab_df_1_prt_def  (cost=10000000000.00..10000000345.67 rows=31136 width=5)
+               Filter: (col2 IS NOT UNKNOWN)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+SELECT * FROM pt_bool_tab_df WHERE col2 IS NOT unknown;
+ col1 | col2 
+------+------
+    2 | f
+    2 | t
+    3 | t
+    1 | f
+    1 | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE col2 IS NOT NULL;
+                                                  QUERY PLAN                                                  
+--------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..30000005240.29 rows=280220 width=5)
+   ->  Append  (cost=10000000000.00..30000001504.03 rows=93406 width=5)
+         ->  Seq Scan on pt_bool_tab_df_1_prt_part2  (cost=10000000000.00..10000000345.67 rows=31136 width=5)
+               Filter: (col2 IS NOT NULL)
+         ->  Seq Scan on pt_bool_tab_df_1_prt_part1  (cost=10000000000.00..10000000345.67 rows=31136 width=5)
+               Filter: (col2 IS NOT NULL)
+         ->  Seq Scan on pt_bool_tab_df_1_prt_def  (cost=10000000000.00..10000000345.67 rows=31136 width=5)
+               Filter: (col2 IS NOT NULL)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+SELECT * FROM pt_bool_tab_df WHERE col2 IS NOT NULL;
+ col1 | col2 
+------+------
+    2 | f
+    2 | t
+    3 | t
+    1 | f
+    1 | t
+(5 rows)
+
+CREATE TABLE pt_bool_tab_null
+(
+  col1 int,
+  col2 bool
+)
+distributed by (col1)
+partition by list(col2)
+(
+  partition part1 values(true),
+  partition part2 values(false),
+  partition part3 values(null)
+);
+INSERT INTO pt_bool_tab_null SELECT i, true FROM generate_series(1,3)i;
+INSERT INTO pt_bool_tab_null SELECT i, false FROM generate_series(1,2)i;
+INSERT INTO pt_bool_tab_null SELECT i, NULL FROM generate_series(1,1)i;
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE col2 IS true;
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000969.00 rows=46750 width=5)
+   ->  Seq Scan on pt_bool_tab_null_1_prt_part1  (cost=10000000000.00..10000000345.67 rows=15583 width=5)
+         Filter: (col2 IS TRUE)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+SELECT * FROM pt_bool_tab_null WHERE col2 IS true;
+ col1 | col2 
+------+------
+    1 | t
+    2 | t
+    3 | t
+(3 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE col2 IS false;
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000969.00 rows=46750 width=5)
+   ->  Seq Scan on pt_bool_tab_null_1_prt_part2  (cost=10000000000.00..10000000345.67 rows=15583 width=5)
+         Filter: (col2 IS FALSE)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+SELECT * FROM pt_bool_tab_null WHERE col2 IS false;
+ col1 | col2 
+------+------
+    1 | f
+    2 | f
+(2 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE col2 IS NULL;
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000346.91 rows=94 width=5)
+   ->  Seq Scan on pt_bool_tab_null_1_prt_part3  (cost=10000000000.00..10000000345.67 rows=31 width=5)
+         Filter: (col2 IS NULL)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+SELECT * FROM pt_bool_tab_null WHERE col2 IS NULL;
+ col1 | col2 
+------+------
+    1 | 
+(1 row)
+
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE col2 IS unknown;
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..30000001041.21 rows=280 width=5)
+   ->  Append  (cost=10000000000.00..30000001037.47 rows=94 width=5)
+         ->  Seq Scan on pt_bool_tab_null_1_prt_part2  (cost=10000000000.00..10000000345.67 rows=31 width=5)
+               Filter: (col2 IS UNKNOWN)
+         ->  Seq Scan on pt_bool_tab_null_1_prt_part1  (cost=10000000000.00..10000000345.67 rows=31 width=5)
+               Filter: (col2 IS UNKNOWN)
+         ->  Seq Scan on pt_bool_tab_null_1_prt_part3  (cost=10000000000.00..10000000345.67 rows=31 width=5)
+               Filter: (col2 IS UNKNOWN)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+SELECT * FROM pt_bool_tab_null WHERE col2 IS unknown;
+ col1 | col2 
+------+------
+    1 | 
+(1 row)
+
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE col2 IS NOT true;
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000969.00 rows=46750 width=5)
+   ->  Seq Scan on pt_bool_tab_null_1_prt_part2  (cost=10000000000.00..10000000345.67 rows=15583 width=5)
+         Filter: (col2 IS NOT TRUE)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+SELECT * FROM pt_bool_tab_null WHERE col2 IS NOT true;
+ col1 | col2 
+------+------
+    1 | f
+    2 | f
+(2 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE col2 IS NOT false;
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000969.00 rows=46750 width=5)
+   ->  Seq Scan on pt_bool_tab_null_1_prt_part1  (cost=10000000000.00..10000000345.67 rows=15583 width=5)
+         Filter: (col2 IS NOT FALSE)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+SELECT * FROM pt_bool_tab_null WHERE col2 IS NOT false;
+ col1 | col2 
+------+------
+    2 | t
+    3 | t
+    1 | t
+(3 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE col2 IS NOT unknown;
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..30000005240.29 rows=280220 width=5)
+   ->  Append  (cost=10000000000.00..30000001504.03 rows=93406 width=5)
+         ->  Seq Scan on pt_bool_tab_null_1_prt_part2  (cost=10000000000.00..10000000345.67 rows=31136 width=5)
+               Filter: (col2 IS NOT UNKNOWN)
+         ->  Seq Scan on pt_bool_tab_null_1_prt_part1  (cost=10000000000.00..10000000345.67 rows=31136 width=5)
+               Filter: (col2 IS NOT UNKNOWN)
+         ->  Seq Scan on pt_bool_tab_null_1_prt_part3  (cost=10000000000.00..10000000345.67 rows=31136 width=5)
+               Filter: (col2 IS NOT UNKNOWN)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+SELECT * FROM pt_bool_tab_null WHERE col2 IS NOT unknown;
+ col1 | col2 
+------+------
+    2 | f
+    2 | t
+    3 | t
+    1 | f
+    1 | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE col2 IS NOT NULL;
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..20000003493.53 rows=186813 width=5)
+   ->  Append  (cost=10000000000.00..20000001002.69 rows=62271 width=5)
+         ->  Seq Scan on pt_bool_tab_null_1_prt_part2  (cost=10000000000.00..10000000345.67 rows=31136 width=5)
+               Filter: (col2 IS NOT NULL)
+         ->  Seq Scan on pt_bool_tab_null_1_prt_part1  (cost=10000000000.00..10000000345.67 rows=31136 width=5)
+               Filter: (col2 IS NOT NULL)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+SELECT * FROM pt_bool_tab_null WHERE col2 IS NOT NULL;
+ col1 | col2 
+------+------
+    2 | f
+    2 | t
+    3 | t
+    1 | f
+    1 | t
+(5 rows)
+
 RESET ALL;
