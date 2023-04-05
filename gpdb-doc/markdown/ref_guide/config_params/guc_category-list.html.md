@@ -394,12 +394,14 @@ The following configuration parameters configure the Greenplum Database resource
 - [stats_queue_level](guc-list.html#stats_queue_level)
 - [vmem_process_interrupt](guc-list.html#vmem_process_interrupt)
 
-## <a id="topic444"></a>Resource Management Parameters \(Resource Groups\) 
+## <a id="topic444"></a>Resource Management Parameters (Resource Groups) 
 
 The following parameters configure the Greenplum Database resource group workload management feature.
 
 - [gp_resgroup_memory_policy](guc-list.html#gp_resgroup_memory_policy)
-- [gp_resource_group_bypass](guc-list.html) [gp_resource_group_cpu_ceiling_enforcement](guc-list.html#gp_resource_group_bypass](guc-list.html) [gp_resource_group_cpu_ceiling_enforcement)
+- [gp_resource_group_bypass](guc-list.html#gp_resource_group_bypass)
+- [gp_resource_group_bypass_catalog_query](guc-list.html#gp_resource_group_bypass_catalog_query)
+- [gp_resource_group_cpu_ceiling_enforcement](guc-list.html#gp_resource_group_cpu_ceiling_enforcement)
 - [gp_resource_group_cpu_limit](guc-list.html#gp_resource_group_cpu_limit)
 - [gp_resource_group_cpu_priority](guc-list.html#gp_resource_group_cpu_priority)
 - [gp_resource_group_enable_recalculate_query_mem](guc-list.html#gp_resource_group_enable_recalculate_query_mem)
