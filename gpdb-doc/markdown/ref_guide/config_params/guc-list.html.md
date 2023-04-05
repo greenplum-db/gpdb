@@ -1291,11 +1291,13 @@ This parameter can be set for a session. The parameter cannot be set within a tr
 
 > **Note** The `gp_resource_group_bypass_catalog_query` server configuration parameter is enforced only when resource group-based resource management is active.
 
-DESCRIPTION
+When set to `true` -- the default -- Greenplum Database bypasses all queries associated with the resource group that query `pg_catalog`. This conserves CPU resources.   
+
+
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|false|local, session, reload|
+|Boolean|true|local, session, reload|
 
 ## <a id="gp_resource_group_cpu_ceiling_enforcement"></a>gp\_resource\_group\_cpu\_ceiling\_enforcement 
 
