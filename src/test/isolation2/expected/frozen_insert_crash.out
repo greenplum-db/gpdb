@@ -6,7 +6,8 @@
 --
 -- And the above behavior should remain consistent using seqscan or indexscan.
 --
--- We test gp_fastsequence here since it does frozen insert and has an index.
+-- We test gp_fastsequence and bitmap here since they do frozen insert and
+-- normal index insert, so that the inconsistency could exist.
 
 -- Case 1. crash after the regular MVCC insert has made to disk, but not
 -- the WAL record responsible for updating it to frozen.
@@ -199,6 +200,206 @@ RESET
 
 1: drop table tab_fi;
 DROP
+
+
+-- Same set of tests for bitmap LOV insert.
+create extension if not exists pageinspect;
+CREATE
+
+-- Function to check the bitmap lov content regarding the column 'b'
+-- which is the table column that we will have bitmap created on.
+-- Basically, we want to see if "SELECT b FROM pg_bitmapindex.pg_bm_xxx"
+-- returns the same result in seqscan and indexscan.
+CREATE OR REPLACE FUNCTION insert_bm_lov_res() RETURNS void AS $$ DECLARE lov_table text; /* in func */ sql text; /* in func */ BEGIN /* in func */ drop table if exists bm_lov_res; /* in func */ create temp table bm_lov_res(b int); /* in func */ SELECT c.relname INTO lov_table /* in func */ FROM bm_metap('tab_fi_idx') b /* in func */ JOIN pg_class c ON b.auxrelid = c.oid; /* in func */ sql := format('INSERT INTO bm_lov_res SELECT b FROM pg_bitmapindex.%I', lov_table); /* in func */ EXECUTE sql; /* in func */ END; /* in func */ $$ LANGUAGE plpgsql;
+CREATE
+
+1: create table tab_fi(a int, b int) with (appendoptimized=true) distributed replicated;
+CREATE
+1: create index tab_fi_idx on tab_fi using bitmap(b);
+CREATE
+1: insert into tab_fi values(1, 1);
+INSERT 1
+-- switch WAL on seg0 to reduce flakiness
+1: select gp_segment_id, pg_switch_wal() is not null from gp_dist_random('gp_id') where gp_segment_id = 0;
+ gp_segment_id | ?column? 
+---------------+----------
+ 0             | t        
+(1 row)
+
+-- case 1: suspend and flush WAL before freezing the tuple
+
+-- suspend right after the insert into the bitmap lov table and its index
+-- during a table insert, but before freezing the tuple
+1: select gp_inject_fault('insert_bmlov_before_freeze', 'suspend', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2>: insert into tab_fi values(2, 2);  <waiting ...>
+1: select gp_wait_until_triggered_fault('insert_bmlov_before_freeze', 1, dbid) from gp_segment_configuration where role = 'p' and content = 0;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+-- switch WAL on seg0, so the new row gets flushed (including its index)
+1: select gp_segment_id, pg_switch_wal() is not null from gp_dist_random('gp_id') where gp_segment_id = 0;
+ gp_segment_id | ?column? 
+---------------+----------
+ 0             | t        
+(1 row)
+-- inject a panic, and resume the insert. The WAL for the freeze operation is not
+-- going to be made to disk (we just flushed WALs), so we won't replay it during restart later.
+-- skip FTS probe to prevent unexpected mirror promotion
+1: select gp_inject_fault_infinite('fts_probe', 'skip', dbid) from gp_segment_configuration where role='p' and content=-1;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+1: select gp_inject_fault('qe_exec_finished', 'panic', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: select gp_inject_fault('insert_bmlov_before_freeze', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: select gp_inject_fault('fts_probe', 'reset', dbid) from gp_segment_configuration where role='p' and content=-1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2<:  <... completed>
+ERROR:  fault triggered, fault name:'qe_exec_finished' fault type:'panic'
+1q: ... <quitting>
+-- check the lov table content w/ table vs index scan, neither should see the
+-- new inserted row (b=2)
+0U: set enable_indexscan = on;
+SET
+0U: set enable_seqscan = off;
+SET
+0U: select insert_bm_lov_res();
+ insert_bm_lov_res 
+-------------------
+                   
+(1 row)
+0U: select * from bm_lov_res;
+ b 
+---
+ 1 
+(1 row)
+0U: set enable_indexscan = off;
+SET
+0U: set enable_seqscan = on;
+SET
+0U: select insert_bm_lov_res();
+ insert_bm_lov_res 
+-------------------
+                   
+(1 row)
+0U: select * from bm_lov_res;
+ b 
+---
+ 1 
+(1 row)
+0Uq: ... <quitting>
+1: drop table tab_fi;
+DROP
+
+-- case 2: suspend and flush WAL after freezing the tuple
+
+1: create table tab_fi(a int, b int) with (appendoptimized=true) distributed replicated;
+CREATE
+1: create index tab_fi_idx on tab_fi using bitmap(b);
+CREATE
+1: insert into tab_fi values(1, 1);
+INSERT 1
+-- switch WAL on seg0 to reduce flakiness
+1: select gp_segment_id, pg_switch_wal() is not null from gp_dist_random('gp_id') where gp_segment_id = 0;
+ gp_segment_id | ?column? 
+---------------+----------
+ 0             | t        
+(1 row)
+-- suspend right after freezing the tuple
+1: select gp_inject_fault('insert_bmlov_after_freeze', 'suspend', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2>: insert into tab_fi values(2, 2);  <waiting ...>
+1: select gp_wait_until_triggered_fault('insert_bmlov_after_freeze', 1, dbid) from gp_segment_configuration where role = 'p' and content = 0;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+-- switch WAL on seg0, so the freeze record gets flushed
+1: select gp_segment_id, pg_switch_wal() is not null from gp_dist_random('gp_id') where gp_segment_id = 0;
+ gp_segment_id | ?column? 
+---------------+----------
+ 0             | t        
+(1 row)
+-- While we are on it, check the wal record for the freeze operation.
+! seg0_datadir=$(psql -At -c "select datadir from gp_segment_configuration where content = 0 and role = 'p'" postgres) && seg0_last_wal_file=$(psql -At -c "SELECT pg_walfile_name(pg_current_wal_lsn()) from gp_dist_random('gp_id') where gp_segment_id = 0" postgres) && pg_waldump ${seg0_last_wal_file} -p ${seg0_datadir}/pg_wal | grep FREEZE_PAGE;
+rmgr: Heap2       len (rec/tot):     64/    64, tx: ##, lsn: #/########, prev #/########, desc: FREEZE_PAGE cutoff xid 0 ntuples 1, blkref #0: rel ####/######/###### blk 0
+
+-- inject a panic and resume in same way as Case 1. But this time we will be able to replay the frozen insert.
+-- skip FTS probe to prevent unexpected mirror promotion
+1: select gp_inject_fault_infinite('fts_probe', 'skip', dbid) from gp_segment_configuration where role='p' and content=-1;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+1: select gp_inject_fault('qe_exec_finished', 'panic', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: select gp_inject_fault('insert_bmlov_after_freeze', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: select gp_inject_fault('fts_probe', 'reset', dbid) from gp_segment_configuration where role='p' and content=-1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2<:  <... completed>
+ERROR:  fault triggered, fault name:'qe_exec_finished' fault type:'panic'
+1q: ... <quitting>
+-- check the lov table content w/ table vs index scan, both should see the
+-- new inserted row (b=2)
+0U: set enable_indexscan = on;
+SET
+0U: set enable_seqscan = off;
+SET
+0U: select insert_bm_lov_res();
+ insert_bm_lov_res 
+-------------------
+                   
+(1 row)
+0U: select * from bm_lov_res;
+ b 
+---
+ 1 
+ 2 
+(2 rows)
+0U: set enable_indexscan = off;
+SET
+0U: set enable_seqscan = on;
+SET
+0U: select insert_bm_lov_res();
+ insert_bm_lov_res 
+-------------------
+                   
+(1 row)
+0U: select * from bm_lov_res;
+ b 
+---
+ 1 
+ 2 
+(2 rows)
 
 -- validate that we've actually tested desired scan method
 -- for some reason this disrupts the output of subsequent queries so

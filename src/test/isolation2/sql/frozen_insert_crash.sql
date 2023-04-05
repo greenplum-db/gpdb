@@ -6,7 +6,8 @@
 -- 
 -- And the above behavior should remain consistent using seqscan or indexscan.
 --
--- We test gp_fastsequence here since it does frozen insert and has an index.
+-- We test gp_fastsequence and bitmap here since they do frozen insert and
+-- normal index insert, so that the inconsistency could exist.
 
 -- Case 1. crash after the regular MVCC insert has made to disk, but not
 -- the WAL record responsible for updating it to frozen.
@@ -97,6 +98,100 @@
 1: reset enable_seqscan;
 
 1: drop table tab_fi;
+
+
+-- Same set of tests for bitmap LOV insert.
+create extension if not exists pageinspect;
+
+-- Function to check the bitmap lov content regarding the column 'b'
+-- which is the table column that we will have bitmap created on.
+-- Basically, we want to see if "SELECT b FROM pg_bitmapindex.pg_bm_xxx"
+-- returns the same result in seqscan and indexscan.
+CREATE OR REPLACE FUNCTION insert_bm_lov_res() RETURNS void AS $$
+DECLARE
+  lov_table text; /* in func */
+  sql text; /* in func */
+BEGIN /* in func */
+  drop table if exists bm_lov_res; /* in func */
+  create temp table bm_lov_res(b int); /* in func */
+  SELECT c.relname INTO lov_table /* in func */
+  FROM bm_metap('tab_fi_idx') b /* in func */
+  JOIN pg_class c ON b.auxrelid = c.oid; /* in func */
+  sql := format('INSERT INTO bm_lov_res SELECT b FROM pg_bitmapindex.%I', lov_table); /* in func */
+  EXECUTE sql; /* in func */
+END; /* in func */
+$$ LANGUAGE plpgsql;
+
+1: create table tab_fi(a int, b int) with (appendoptimized=true) distributed replicated;
+1: create index tab_fi_idx on tab_fi using bitmap(b);
+1: insert into tab_fi values(1, 1);
+-- switch WAL on seg0 to reduce flakiness
+1: select gp_segment_id, pg_switch_wal() is not null from gp_dist_random('gp_id') where gp_segment_id = 0;
+
+-- case 1: suspend and flush WAL before freezing the tuple
+
+-- suspend right after the insert into the bitmap lov table and its index 
+-- during a table insert, but before freezing the tuple
+1: select gp_inject_fault('insert_bmlov_before_freeze', 'suspend', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+2>: insert into tab_fi values(2, 2);
+1: select gp_wait_until_triggered_fault('insert_bmlov_before_freeze', 1, dbid) from gp_segment_configuration where role = 'p' and content = 0;
+-- switch WAL on seg0, so the new row gets flushed (including its index)
+1: select gp_segment_id, pg_switch_wal() is not null from gp_dist_random('gp_id') where gp_segment_id = 0;
+-- inject a panic, and resume the insert. The WAL for the freeze operation is not
+-- going to be made to disk (we just flushed WALs), so we won't replay it during restart later.
+-- skip FTS probe to prevent unexpected mirror promotion
+1: select gp_inject_fault_infinite('fts_probe', 'skip', dbid) from gp_segment_configuration where role='p' and content=-1;
+1: select gp_inject_fault('qe_exec_finished', 'panic', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+1: select gp_inject_fault('insert_bmlov_before_freeze', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+1: select gp_inject_fault('fts_probe', 'reset', dbid) from gp_segment_configuration where role='p' and content=-1;
+2<:
+1q:
+-- check the lov table content w/ table vs index scan, neither should see the 
+-- new inserted row (b=2)
+0U: set enable_indexscan = on;
+0U: set enable_seqscan = off;
+0U: select insert_bm_lov_res();
+0U: select * from bm_lov_res;
+0U: set enable_indexscan = off;
+0U: set enable_seqscan = on;
+0U: select insert_bm_lov_res();
+0U: select * from bm_lov_res;
+0Uq:
+1: drop table tab_fi;
+
+-- case 2: suspend and flush WAL after freezing the tuple
+
+1: create table tab_fi(a int, b int) with (appendoptimized=true) distributed replicated;
+1: create index tab_fi_idx on tab_fi using bitmap(b);
+1: insert into tab_fi values(1, 1);
+-- switch WAL on seg0 to reduce flakiness
+1: select gp_segment_id, pg_switch_wal() is not null from gp_dist_random('gp_id') where gp_segment_id = 0;
+-- suspend right after freezing the tuple
+1: select gp_inject_fault('insert_bmlov_after_freeze', 'suspend', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+2>: insert into tab_fi values(2, 2);
+1: select gp_wait_until_triggered_fault('insert_bmlov_after_freeze', 1, dbid) from gp_segment_configuration where role = 'p' and content = 0;
+-- switch WAL on seg0, so the freeze record gets flushed
+1: select gp_segment_id, pg_switch_wal() is not null from gp_dist_random('gp_id') where gp_segment_id = 0;
+-- While we are on it, check the wal record for the freeze operation.
+! seg0_datadir=$(psql -At -c "select datadir from gp_segment_configuration where content = 0 and role = 'p'" postgres) && seg0_last_wal_file=$(psql -At -c "SELECT pg_walfile_name(pg_current_wal_lsn()) from gp_dist_random('gp_id') where gp_segment_id = 0" postgres) && pg_waldump ${seg0_last_wal_file} -p ${seg0_datadir}/pg_wal | grep FREEZE_PAGE;
+-- inject a panic and resume in same way as Case 1. But this time we will be able to replay the frozen insert.
+-- skip FTS probe to prevent unexpected mirror promotion
+1: select gp_inject_fault_infinite('fts_probe', 'skip', dbid) from gp_segment_configuration where role='p' and content=-1;
+1: select gp_inject_fault('qe_exec_finished', 'panic', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+1: select gp_inject_fault('insert_bmlov_after_freeze', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+1: select gp_inject_fault('fts_probe', 'reset', dbid) from gp_segment_configuration where role='p' and content=-1;
+2<:
+1q:
+-- check the lov table content w/ table vs index scan, both should see the 
+-- new inserted row (b=2)
+0U: set enable_indexscan = on;
+0U: set enable_seqscan = off;
+0U: select insert_bm_lov_res();
+0U: select * from bm_lov_res;
+0U: set enable_indexscan = off;
+0U: set enable_seqscan = on;
+0U: select insert_bm_lov_res();
+0U: select * from bm_lov_res;
 
 -- validate that we've actually tested desired scan method
 -- for some reason this disrupts the output of subsequent queries so
