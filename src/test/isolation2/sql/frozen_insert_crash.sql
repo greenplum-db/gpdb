@@ -193,6 +193,25 @@ $$ LANGUAGE plpgsql;
 0U: select insert_bm_lov_res();
 0U: select * from bm_lov_res;
 
+1: drop extension pageinspect;
+
+-- Test for aoseg: suspend the insert into aoseg table before we mark the row frozen.
+-- Another session should still be able to choose a different segno.
+1: create table tab_aoseg(a int) using ao_row;
+1: select gp_inject_fault('insert_aoseg_before_freeze', 'suspend', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+1: begin;
+1>: insert into tab_aoseg select * from generate_series(1,10);
+-- wait until the aoseg record is inserted but not yet frozen
+2: select gp_wait_until_triggered_fault('insert_aoseg_before_freeze', 1, dbid) from gp_segment_configuration where role = 'p' and content = 0;
+2: begin;
+2>: insert into tab_aoseg select * from generate_series(1,10);
+3: select gp_inject_fault('insert_aoseg_before_freeze', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+1<:
+2<:
+1: end;
+2: end;
+3: select segment_id, segno, eof from gp_toolkit.__gp_aoseg('tab_aoseg') where segment_id = 0;
+
 -- validate that we've actually tested desired scan method
 -- for some reason this disrupts the output of subsequent queries so
 -- validating at the end here

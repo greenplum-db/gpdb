@@ -142,6 +142,7 @@ CREATE
 -- has changed, and if we should initialize any new field in heap_freeze_tuple_no_cutoff().
 ! seg0_datadir=$(psql -At -c "select datadir from gp_segment_configuration where content = 0 and role = 'p'" postgres) && seg0_last_wal_file=$(psql -At -c "SELECT pg_walfile_name(pg_current_wal_lsn()) from gp_dist_random('gp_id') where gp_segment_id = 0" postgres) && pg_waldump ${seg0_last_wal_file} -p ${seg0_datadir}/pg_wal | grep FREEZE_PAGE;
 rmgr: Heap2       len (rec/tot):     64/    64, tx: ##, lsn: #/########, prev #/########, desc: FREEZE_PAGE cutoff xid 0 ntuples 1, blkref #0: rel ####/######/###### blk 0
+rmgr: Heap2       len (rec/tot):     64/    64, tx: ##, lsn: #/########, prev #/########, desc: FREEZE_PAGE cutoff xid 0 ntuples 1, blkref #0: rel ####/######/###### blk 0
 
 
 -- inject a panic and resume in same way as Case 1. But this time we will be able to replay the frozen insert.
@@ -399,6 +400,50 @@ SET
 ---
  1 
  2 
+(2 rows)
+
+1: drop extension pageinspect;
+DROP
+
+-- Test for aoseg: suspend the insert into aoseg table before we mark the row frozen.
+-- Another session should still be able to choose a different segno.
+1: create table tab_aoseg(a int) using ao_row;
+CREATE
+1: select gp_inject_fault('insert_aoseg_before_freeze', 'suspend', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: begin;
+BEGIN
+1>: insert into tab_aoseg select * from generate_series(1,10);  <waiting ...>
+-- wait until the aoseg record is inserted but not yet frozen
+2: select gp_wait_until_triggered_fault('insert_aoseg_before_freeze', 1, dbid) from gp_segment_configuration where role = 'p' and content = 0;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+2: begin;
+BEGIN
+2>: insert into tab_aoseg select * from generate_series(1,10);  <waiting ...>
+3: select gp_inject_fault('insert_aoseg_before_freeze', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1<:  <... completed>
+INSERT 10
+2<:  <... completed>
+INSERT 10
+1: end;
+END
+2: end;
+END
+3: select segment_id, segno, eof from gp_toolkit.__gp_aoseg('tab_aoseg') where segment_id = 0;
+ segment_id | segno | eof 
+------------+-------+-----
+ 0          | 1     | 88  
+ 0          | 2     | 88  
 (2 rows)
 
 -- validate that we've actually tested desired scan method
