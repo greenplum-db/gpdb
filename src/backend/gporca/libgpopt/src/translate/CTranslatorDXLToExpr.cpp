@@ -800,9 +800,7 @@ CTranslatorDXLToExpr::PexprCastPrjElem(IMDId *pmdidSource, IMDId *mdid_dest,
 		pexprCast = GPOS_NEW(m_mp) CExpression(
 			m_mp,
 			GPOS_NEW(m_mp) CScalarArrayCoerceExpr(
-				m_mp, parrayCoerceCast->GetCastFuncMdId(), mdid_dest,
-				parrayCoerceCast->TypeModifier(),
-				parrayCoerceCast->IsExplicit(),
+				m_mp, mdid_dest, parrayCoerceCast->TypeModifier(),
 				(COperator::ECoercionForm) parrayCoerceCast->GetCoercionForm(),
 				parrayCoerceCast->Location()),
 			GPOS_NEW(m_mp) CExpression(
@@ -2974,9 +2972,7 @@ CTranslatorDXLToExpr::PexprScalarFunc(const CDXLNode *pdxlnFunc)
 			CMDArrayCoerceCastGPDB *parrayCoerceCast =
 				(CMDArrayCoerceCastGPDB *) pmdcast;
 			pop = GPOS_NEW(m_mp) CScalarArrayCoerceExpr(
-				m_mp, parrayCoerceCast->GetCastFuncMdId(), mdid_return_type,
-				parrayCoerceCast->TypeModifier(),
-				parrayCoerceCast->IsExplicit(),
+				m_mp, mdid_return_type, parrayCoerceCast->TypeModifier(),
 				(COperator::ECoercionForm) parrayCoerceCast->GetCoercionForm(),
 				parrayCoerceCast->Location());
 		}
@@ -3680,9 +3676,7 @@ CTranslatorDXLToExpr::PexprScalarCast(const CDXLNode *pdxlnCast)
 		pexpr = GPOS_NEW(m_mp) CExpression(
 			m_mp,
 			GPOS_NEW(m_mp) CScalarArrayCoerceExpr(
-				m_mp, parrayCoerceCast->GetCastFuncMdId(), mdid_type,
-				parrayCoerceCast->TypeModifier(),
-				parrayCoerceCast->IsExplicit(),
+				m_mp, mdid_type, parrayCoerceCast->TypeModifier(),
 				(COperator::ECoercionForm) parrayCoerceCast->GetCoercionForm(),
 				parrayCoerceCast->Location()),
 			pexprChild);
@@ -3789,12 +3783,11 @@ CTranslatorDXLToExpr::PexprScalarArrayCoerceExpr(
 	CDXLScalarArrayCoerceExpr *dxl_op =
 		CDXLScalarArrayCoerceExpr::Cast(pdxlnArrayCoerceExpr->GetOperator());
 
-	GPOS_ASSERT(1 == pdxlnArrayCoerceExpr->Arity());
+	GPOS_ASSERT(2 == pdxlnArrayCoerceExpr->Arity());
 	CDXLNode *child_dxlnode = (*pdxlnArrayCoerceExpr)[0];
+	CDXLNode *elemexpr_dxlnode = (*pdxlnArrayCoerceExpr)[1];
 	CExpression *pexprChild = Pexpr(child_dxlnode);
-
-	IMDId *element_func = dxl_op->GetCoerceFuncMDid();
-	element_func->AddRef();
+	CExpression *pexprElem = Pexpr(elemexpr_dxlnode);
 
 	IMDId *result_type_mdid = dxl_op->GetResultTypeMdId();
 	result_type_mdid->AddRef();
@@ -3804,12 +3797,11 @@ CTranslatorDXLToExpr::PexprScalarArrayCoerceExpr(
 	return GPOS_NEW(m_mp) CExpression(
 		m_mp,
 		GPOS_NEW(m_mp) CScalarArrayCoerceExpr(
-			m_mp, element_func, result_type_mdid, dxl_op->TypeModifier(),
-			dxl_op->IsExplicit(),
+			m_mp, result_type_mdid, dxl_op->TypeModifier(),
 			(COperator::ECoercionForm)
 				dxl_coerce_format,	// map Coercion Form directly based on position in enum
 			dxl_op->GetLocation()),
-		pexprChild);
+		pexprChild, pexprElem);
 }
 
 //---------------------------------------------------------------------------

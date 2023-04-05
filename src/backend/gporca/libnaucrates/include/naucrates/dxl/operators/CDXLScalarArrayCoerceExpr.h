@@ -38,43 +38,20 @@ using namespace gpmd;
 class CDXLScalarArrayCoerceExpr : public CDXLScalarCoerceBase
 {
 private:
-	// catalog MDId of element coerce function
-	IMDId *m_coerce_func_mdid;
-
-	// conversion semantics flag to pass to func
-	BOOL m_explicit;
-
 public:
 	CDXLScalarArrayCoerceExpr(const CDXLScalarArrayCoerceExpr &) = delete;
 
-	CDXLScalarArrayCoerceExpr(CMemoryPool *mp, IMDId *coerce_func_mdid,
-							  IMDId *result_type_mdid, INT type_modifier,
-							  BOOL is_explicit, EdxlCoercionForm coerce_format,
+	CDXLScalarArrayCoerceExpr(CMemoryPool *mp, IMDId *result_type_mdid,
+							  INT type_modifier, EdxlCoercionForm coerce_format,
 							  INT location);
 
-	~CDXLScalarArrayCoerceExpr() override
-	{
-		m_coerce_func_mdid->Release();
-	}
+	~CDXLScalarArrayCoerceExpr() override = default;
 
 	// ident accessor
 	Edxlopid
 	GetDXLOperator() const override
 	{
 		return EdxlopScalarArrayCoerceExpr;
-	}
-
-	// return metadata id of element coerce function
-	IMDId *
-	GetCoerceFuncMDid() const
-	{
-		return m_coerce_func_mdid;
-	}
-
-	BOOL
-	IsExplicit() const
-	{
-		return m_explicit;
 	}
 
 	// name of the DXL operator name
