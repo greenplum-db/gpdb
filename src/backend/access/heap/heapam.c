@@ -81,7 +81,7 @@ static TM_Result heap_update_internal(Relation relation, ItemPointer otid, HeapT
 									  TM_FailureData *tmfd, LockTupleMode *lockmode, bool simple);
 
 static HeapTuple heap_prepare_insert(Relation relation, HeapTuple tup,
-									 TransactionId xid, CommandId cid, int options, bool isFrozen);
+									 TransactionId xid, CommandId cid, int options);
 static XLogRecPtr log_heap_update(Relation reln, Buffer oldbuf,
 								  Buffer newbuf, HeapTuple oldtup,
 								  HeapTuple newtup, HeapTuple old_key_tup,
@@ -1964,7 +1964,6 @@ void
 heap_insert(Relation relation, HeapTuple tup, CommandId cid,
 			int options, BulkInsertState bistate, TransactionId xid)
 {
-	bool		isFrozen = (xid == FrozenTransactionId);
 	HeapTuple	heaptup;
 	Buffer		buffer;
 	Buffer		vmbuffer = InvalidBuffer;
@@ -1989,7 +1988,7 @@ heap_insert(Relation relation, HeapTuple tup, CommandId cid,
 	 * Note: below this point, heaptup is the data we actually intend to store
 	 * into the relation; tup is the caller's original untoasted data.
 	 */
-	heaptup = heap_prepare_insert(relation, tup, xid, cid, options, isFrozen);
+	heaptup = heap_prepare_insert(relation, tup, xid, cid, options);
 
 	/*
 	 * Find buffer to insert this tuple into.  If the page is all visible,
@@ -2115,10 +2114,7 @@ heap_insert(Relation relation, HeapTuple tup, CommandId cid,
 		/* filtering by origin on a row level is much more efficient */
 		XLogSetRecordFlags(XLOG_INCLUDE_ORIGIN);
 
-		if (!isFrozen)
-			recptr = XLogInsert(RM_HEAP_ID, info);
-		else
-			recptr = XLogInsert_OverrideXid(RM_HEAP_ID, info, FrozenTransactionId);
+		recptr = XLogInsert(RM_HEAP_ID, info);
 
 		PageSetLSN(page, recptr);
 	}
@@ -2163,7 +2159,7 @@ heap_insert(Relation relation, HeapTuple tup, CommandId cid,
  */
 static HeapTuple
 heap_prepare_insert(Relation relation, HeapTuple tup, TransactionId xid,
-					CommandId cid, int options, bool isFrozen)
+					CommandId cid, int options)
 {
 	/*
 	 * Parallel operations are required to be strictly read-only in a parallel
@@ -2179,8 +2175,6 @@ heap_prepare_insert(Relation relation, HeapTuple tup, TransactionId xid,
 				 errmsg("cannot insert tuples in a parallel worker")));
 
 	tup->t_data->t_infomask &= ~(HEAP_XACT_MASK);
-	if (isFrozen)
-		tup->t_data->t_infomask |= HEAP_XMIN_COMMITTED;
 	tup->t_data->t_infomask2 &= ~(HEAP2_XACT_MASK);
 	tup->t_data->t_infomask |= HEAP_XMAX_INVALID;
 	HeapTupleHeaderSetXmin(tup->t_data, xid);
@@ -2204,7 +2198,7 @@ heap_prepare_insert(Relation relation, HeapTuple tup, TransactionId xid,
 	}
 	else if (HeapTupleHasExternal(tup) || tup->t_len > TOAST_TUPLE_THRESHOLD)
 		return toast_insert_or_update(relation, tup, NULL,
-									  TOAST_TUPLE_TARGET, isFrozen,
+									  TOAST_TUPLE_TARGET,
 									  options);
 	else
 		return tup;
@@ -2226,7 +2220,6 @@ heap_multi_insert(Relation relation, TupleTableSlot **slots, int ntuples,
 				  CommandId cid, int options, BulkInsertState bistate)
 {
 	TransactionId xid = GetCurrentTransactionId();
-	bool        isFrozen = false;
 	HeapTuple  *heaptuples;
 	int			i;
 	int			ndone;
@@ -2254,7 +2247,7 @@ heap_multi_insert(Relation relation, TupleTableSlot **slots, int ntuples,
 		slots[i]->tts_tableOid = RelationGetRelid(relation);
 		tuple->t_tableOid = slots[i]->tts_tableOid;
 		heaptuples[i] = heap_prepare_insert(relation, tuple, xid, cid,
-											options, isFrozen);
+											options);
 	}
 
 	/*
@@ -3664,7 +3657,7 @@ l2:
 		{
 			/* Note we always use WAL and FSM during updates */
 			heaptup = toast_insert_or_update(relation, newtup, &oldtup,
-											 TOAST_TUPLE_TARGET, false, 0);
+											 TOAST_TUPLE_TARGET, 0);
 			newtupsize = MAXALIGN(heaptup->t_len);
 		}
 		else
