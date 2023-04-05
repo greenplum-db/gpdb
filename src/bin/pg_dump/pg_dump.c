@@ -9912,8 +9912,8 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	proexeclocation = PQgetvalue(res, 0, PQfnumber(res, "proexeclocation"));
 
 	/*
-	 * See backend/commands/define.c for details of how the 'AS' clause is
-	 * used. In GPDB Paris and up, an unused probin is NULL (here ""); previous8bc709b37411ba7ad0fd0f1f79c354714424af3d
+	 * See backend/commands/functioncmds.c for details of how the 'AS' clause
+	 * is used.  In 8.4 and up, an unused probin is NULL (here ""); previous
 	 * versions would set it to "-".  There are no known cases in which prosrc
 	 * is unused, so the tests below for "-" are probably useless.
 	 */
