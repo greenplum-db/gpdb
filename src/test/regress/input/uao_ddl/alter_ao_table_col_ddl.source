@@ -57,10 +57,16 @@ Alter Table sto_alt_uao1 RENAME COLUMN numeric_col TO int4_col;
 SELECT count(i.indexrelid) = 1 AS VisimapPresent  FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND
  a.relid='sto_alt_uao1'::regclass;
 insert into sto_alt_uao1 values ('5_zero', 5, '0_zero', 5, 5, 5, '{3}', 0, 0, 0);
+-- start_ignore
+set gp_select_invisible = true;
+select count(int4_col) as tupcount from sto_alt_uao1;\gset
+set gp_select_invisible = false;
+-- end_ignore
 update sto_alt_uao1 set int4_col = int4_col+100;
 select count(int4_col) = 5 as passed from sto_alt_uao1;
 set gp_select_invisible = true;
-select count(int4_col) from sto_alt_uao1;
+-- check tuple count difference before and after UPDATE
+select count(int4_col) = :tupcount + 5 from sto_alt_uao1;
 set gp_select_invisible = false;
 
 -- relfrozenxid should remain invalid after table rewrite

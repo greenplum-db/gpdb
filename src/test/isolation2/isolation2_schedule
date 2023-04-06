@@ -167,6 +167,7 @@ test: reorganize_after_ao_vacuum_skip_drop truncate_after_ao_vacuum_skip_drop ma
 test: segwalrep/coordinator_wal_switch
 
 # Tests on Append-Optimized tables (column-oriented).
+test: aoco_column_rewrite
 test: uao/alter_while_vacuum_column uao/alter_while_vacuum2_column
 test: uao/brin_column
 test: uao/compaction_full_stats_column

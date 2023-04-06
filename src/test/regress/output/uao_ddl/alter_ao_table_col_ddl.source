@@ -119,10 +119,11 @@ select count(int4_col) = 5 as passed from sto_alt_uao1;
 (1 row)
 
 set gp_select_invisible = true;
-select count(int4_col) from sto_alt_uao1;
- count 
--------
-    10
+-- check tuple count difference before and after UPDATE
+select count(int4_col) = :tupcount + 5 from sto_alt_uao1;
+ ?column? 
+----------
+ t
 (1 row)
 
 set gp_select_invisible = false;
