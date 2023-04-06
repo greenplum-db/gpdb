@@ -3520,6 +3520,7 @@ CopyFrom(CopyState cstate)
 	TupleTableSlot *baseSlot;
 	ExprContext *econtext;		/* used for ExecEvalExpr for default atts */
 	MemoryContext oldcontext = CurrentMemoryContext;
+	MemoryContext batchcontext;
 
 	ErrorContextCallback errcallback;
 	CommandId	mycid = GetCurrentCommandId(true);
@@ -3879,6 +3880,13 @@ CopyFrom(CopyState cstate)
 
 	CopyInitDataParser(cstate);
 
+	/*
+	 * Set up memory context for batches. For cases without batching we could
+	 * use the per-tuple context, but it's simpler to just use it every time.
+	 */
+	batchcontext = AllocSetContextCreate(CurrentMemoryContext,
+										 "batch context",
+										 ALLOCSET_DEFAULT_SIZES);
 	for (;;)
 	{
 		TupleTableSlot *slot;
@@ -3888,15 +3896,11 @@ CopyFrom(CopyState cstate)
 
 		CHECK_FOR_INTERRUPTS();
 
-		if (nTotalBufferedTuples == 0)
-		{
-			/*
-			 * Reset the per-tuple exprcontext. We can only do this if the
-			 * tuple buffer is empty. (Calling the context the per-tuple
-			 * memory context is a bit of a misnomer now.)
-			 */
-			ResetPerTupleExprContext(estate);
-		}
+		/*
+		 * Reset the per-tuple exprcontext. (Calling the context the per-tuple
+		 * memory context is a bit of a misnomer now.)
+		 */
+		ResetPerTupleExprContext(estate);
 
 		/* Switch into its memory context */
 		MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
@@ -4159,7 +4163,8 @@ CopyFrom(CopyState cstate)
 					resultRelInfo->bufferedTuplesSize = 0;
 				}
 
-				MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
+				/* Switch into per-batch memory context before store the tuple. */
+				MemoryContextSwitchTo(batchcontext);
 				/* Add this tuple to the tuple buffer */
 				tuple = ExecCopySlotHeapTuple(slot);
 				resultRelInfo->bufferedTuples[resultRelInfo->nBufferedTuples++] = tuple;
@@ -4185,6 +4190,8 @@ CopyFrom(CopyState cstate)
 										  slot, firstBufferedLineNo);
 					nTotalBufferedTuples = 0;
 					totalBufferedTuplesSize = 0;
+					/* clean per-batch context after flushed */
+					MemoryContextReset(batchcontext);
 				}
 			}
 			else
@@ -4275,14 +4282,18 @@ CopyFrom(CopyState cstate)
 	elog(DEBUG1, "Segment %u, Copied %lu rows.", GpIdentity.segindex, processed);
 	/* Flush any remaining buffered tuples */
 	if (useHeapMultiInsert)
+	{
 		cdbFlushInsertBatches(resultRelInfoList, cstate, estate, mycid, hi_options,
 							  baseSlot, firstBufferedLineNo);
+		/* clean per-batch context after flushed */
+		MemoryContextReset(batchcontext);
+	}
 
 	/* Done, clean up */
 	error_context_stack = errcallback.previous;
 
 	MemoryContextSwitchTo(estate->es_query_cxt);
-
+	MemoryContextDelete(batchcontext);
 	/*
 	 * Done reading input data and sending it off to the segment
 	 * databases Now we would like to end the copy command on
