@@ -1787,8 +1787,24 @@ buf_add_tid(Relation rel, BMTidBuildBuf *tids, uint64 tidnum,
 		buf = lov_buf->bufs[off - 1];
 
 		Buffer lovbuf = _bitmap_getbuf(rel, lov_block, BM_WRITE);
-		buf_add_tid_with_fill(rel, buf, lovbuf, off,
-							  tidnum, state->use_wal);
+
+		if (tidnum < buf->last_tid)
+		{
+			/*
+			 * Usually, tidnum is greater than lovItem->bm_last_setbit.
+			 * However, if we build bitmap index on a heap table, there could
+			 * have HOT-chain, and it'll return the root tuple's tid, which could
+			 * lead to the TIDs we scanned are not in order, so we need to scan
+			 * through the bitmap vector, and update the bit in tidnum directly.
+			 */
+			_bitmap_write_new_bitmapwords(rel, lovbuf, off, buf, state->use_wal);
+			_bitmap_free_tidbuf(buf);
+
+			updatesetbit(rel, lovbuf, off, tidnum, state->use_wal);
+		}
+		else
+			buf_add_tid_with_fill(rel, buf, lovbuf, off, tidnum, state->use_wal);
+
 		_bitmap_relbuf(lovbuf);
 	}
 	else
