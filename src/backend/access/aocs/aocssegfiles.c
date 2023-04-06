@@ -29,11 +29,13 @@
 #include "access/xact.h"
 #include "catalog/catalog.h"
 #include "catalog/pg_appendonly.h"
+#include "catalog/pg_attribute_encoding.h"
 #include "catalog/namespace.h"
 #include "catalog/indexing.h"
 #include "catalog/gp_fastsequence.h"
 #include "cdb/cdbvars.h"
 #include "executor/spi.h"
+#include "nodes/altertablenodes.h"
 #include "nodes/makefuncs.h"
 #include "utils/acl.h"
 #include "utils/lsyscache.h"
@@ -909,8 +911,10 @@ UpdateAOCSFileSegInfo(AOCSInsertDesc idesc)
  * eof=0.
  */
 void
-AOCSFileSegInfoAddVpe(Relation prel, int32 segno,
-					  AOCSAddColumnDesc desc, int num_newcols, bool empty)
+AOCSFileSegInfoWriteVpe(Relation prel,
+						int32 segno,
+						AOCSWriteColumnDesc desc,
+						bool empty)
 {
 	LockAcquireResult acquireResult;
 
@@ -930,13 +934,12 @@ AOCSFileSegInfoAddVpe(Relation prel, int32 segno,
 	TupleDesc	tupdesc;
 	int			nvp = RelationGetNumberOfAttributes(prel);
 
-	/* nvp is new columns + existing columns */
+	/* nvp is existing columns */
 	int			i;
-	int			j;
 
 	if (Gp_role == GP_ROLE_UTILITY)
 	{
-		elog(ERROR, "cannot add column in utility mode, relation %s, segno %d",
+		elog(ERROR, "cannot write column in utility mode, relation %s, segno %d",
 			 RelationGetRelationName(prel), segno);
 	}
 	if (empty && Gp_role != GP_ROLE_DISPATCH)
@@ -949,17 +952,21 @@ AOCSFileSegInfoAddVpe(Relation prel, int32 segno,
 	if (acquireResult != LOCKACQUIRE_ALREADY_HELD && acquireResult != LOCKACQUIRE_ALREADY_CLEAR)
 	{
 		elog(ERROR, "should already have (transaction-scope) AccessExclusive"
-			 " lock on relation %s, oid %d",
+					" lock on relation %s, oid %d",
 			 RelationGetRelationName(prel), RelationGetRelid(prel));
 	}
 
-    Oid         segrelid;
-    GetAppendOnlyEntryAuxOids(prel,
-                              &segrelid,
-                              NULL, NULL);
+	Oid         segrelid;
+	GetAppendOnlyEntryAuxOids(prel,
+							  &segrelid,
+							  NULL, NULL);
 	segrel = heap_open(segrelid, RowExclusiveLock);
 	tupdesc = RelationGetDescr(segrel);
 
+	/*
+	 * Since we have the segment-file entry under lock (with
+	 * LockRelationAppendOnlySegmentFile) we can use SnapshotNow.
+	 */
 	scan = systable_beginscan(segrel, InvalidOid, false, NULL, 0, NULL);
 	while (segno != tuple_segno && (oldtup = systable_getnext(scan)) != NULL)
 	{
@@ -967,16 +974,16 @@ AOCSFileSegInfoAddVpe(Relation prel, int32 segno,
 		if (isNull)
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("got invalid segno value NULL for tid %s",
-							ItemPointerToString(&oldtup->t_self))));
+						errmsg("got invalid segno value NULL for tid %s",
+							   ItemPointerToString(&oldtup->t_self))));
 	}
 
 	if (!HeapTupleIsValid(oldtup))
 	{
 		ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT),
-						errmsg("AOCS rel \"%s\" segment \"%d\" does not exist",
-							   RelationGetRelationName(prel), segno)
-						));
+			errmsg("AOCS rel \"%s\" segment \"%d\" does not exist",
+				   RelationGetRelationName(prel), segno)
+		));
 	}
 
 	d[Anum_pg_aocs_segno - 1] = fastgetattr(oldtup, Anum_pg_aocs_segno,
@@ -1004,13 +1011,14 @@ AOCSFileSegInfoAddVpe(Relation prel, int32 segno,
 			fastgetattr(oldtup, Anum_pg_aocs_vpinfo, tupdesc,
 						&null[Anum_pg_aocs_vpinfo - 1]);
 		Assert(!null[Anum_pg_aocs_vpinfo - 1]);
-		struct varlena *v = (struct varlena *) DatumGetPointer(
-															   d[Anum_pg_aocs_vpinfo - 1]);
+		struct varlena *v = (struct varlena *) DatumGetPointer(d[Anum_pg_aocs_vpinfo - 1]);
 		struct varlena *dv = pg_detoast_datum(v);
-
-		Assert(VARSIZE(dv) == aocs_vpinfo_size(nvp - num_newcols));
+		if (desc->op == AOCSADDCOLUMN)
+			Assert(VARSIZE(dv) == aocs_vpinfo_size(nvp - list_length(desc->newcolvals)));
 		oldvpinfo = (AOCSVPInfo *) dv;
-		Assert(oldvpinfo->nEntry + num_newcols == nvp);
+		if (desc->op == AOCSADDCOLUMN)
+			Assert(oldvpinfo->nEntry + list_length(desc->newcolvals) == nvp);
+
 		/* copy existing columns' eofs to new vpinfo */
 		for (i = 0; i < oldvpinfo->nEntry; ++i)
 		{
@@ -1019,11 +1027,16 @@ AOCSFileSegInfoAddVpe(Relation prel, int32 segno,
 				oldvpinfo->entry[i].eof_uncompressed;
 		}
 		/* eof for new segfiles come next */
-		for (i = oldvpinfo->nEntry, j = 0; i < nvp; ++i, ++j)
+		ListCell *lc;
+		i = 0;
+		foreach(lc, desc->newcolvals)
 		{
-			newvpinfo->entry[i].eof = desc->dsw[j]->eof;
-			newvpinfo->entry[i].eof_uncompressed =
-				desc->dsw[j]->eofUncompress;
+			NewColumnValue *newval = lfirst(lc);
+			AttrNumber attnum = newval->attnum;
+			newvpinfo->entry[attnum - 1].eof = desc->dsw[i]->eof;
+			newvpinfo->entry[attnum - 1].eof_uncompressed =
+				desc->dsw[i]->eofUncompress;
+			i++;
 		}
 		if (dv != v)
 		{

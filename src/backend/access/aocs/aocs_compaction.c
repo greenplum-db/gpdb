@@ -255,7 +255,7 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 
 	scanDesc = aocs_beginrangescan(aorel,
 								   snapshot, snapshot,
-								   &compact_segno, 1);
+								   &compact_segno, 1, NULL);
 
 	tupDesc = RelationGetDescr(aorel);
 	slot = MakeSingleTupleTableSlot(tupDesc, &TTSOpsVirtual);
@@ -334,13 +334,9 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 										compact_segno);
 
 	/* Delete all mini pages of the segment files if block directory exists */
-	if (OidIsValid(insertDesc->blkdirrelid))
-	{
-		AppendOnlyBlockDirectory_DeleteSegmentFile(aorel,
-												   snapshot,
-												   compact_segno,
-												   0);
-	}
+	AppendOnlyBlockDirectory_DeleteSegmentFiles(insertDesc->blkdirrelid,
+												snapshot,
+												compact_segno);
 
 	elogif(Debug_appendonly_print_compaction, LOG,
 		   "Finished compaction: "

@@ -28,6 +28,7 @@
 #include "utils/guc.h"
 #include "utils/fmgroids.h"
 #include "cdb/cdbappendonlyam.h"
+#include "nodes/altertablenodes.h"
 
 int			gp_blockdirectory_entry_min_range = 0;
 int			gp_blockdirectory_minipage_size = NUM_MINIPAGE_ENTRIES;
@@ -52,12 +53,12 @@ static void extract_minipage(
 static void write_minipage(AppendOnlyBlockDirectory *blockDirectory,
 			   int columnGroupNo,
 			   MinipagePerColumnGroup *minipageInfo);
-static bool insert_new_entry(AppendOnlyBlockDirectory *blockDirectory,
+static bool
+insert_new_entry(AppendOnlyBlockDirectory *blockDirectory,
 				 int columnGroupNo,
 				 int64 firstRowNum,
 				 int64 fileOffset,
-				 int64 rowCount,
-				 bool addColAction);
+				 int64 rowCount);
 static void clear_minipage(MinipagePerColumnGroup *minipagePerColumnGroup);
 static bool blkdir_entry_exists(AppendOnlyBlockDirectory *blockDirectory,
 								AOTupleId *aoTupleId,
@@ -423,10 +424,11 @@ AppendOnlyBlockDirectory_Init_forInsert(
 
 /*
  * Open block directory relation, initialize scan keys and minipages
- * for ALTER TABLE ADD COLUMN operation.
+ * for COLUMN WRITE operation used in
+ * ALTER TABLE ADD COLUMN or ALTER COLUMN TYPE optimizations.
  */
 void
-AppendOnlyBlockDirectory_Init_addCol(
+AppendOnlyBlockDirectory_Init_writeCols(
 									 AppendOnlyBlockDirectory *blockDirectory,
 									 Snapshot appendOnlyMetaDataSnapshot,
 									 FileSegInfo *segmentFileInfo,
@@ -985,16 +987,58 @@ blkdir_entry_exists(AppendOnlyBlockDirectory *blockDirectory,
  * If rowCount is 0, simple return false.
  */
 bool
-AppendOnlyBlockDirectory_InsertEntry(
-									 AppendOnlyBlockDirectory *blockDirectory,
+AppendOnlyBlockDirectory_InsertEntry(AppendOnlyBlockDirectory *blockDirectory,
 									 int columnGroupNo,
 									 int64 firstRowNum,
 									 int64 fileOffset,
-									 int64 rowCount,
-									 bool addColAction)
+									 int64 rowCount)
 {
 	return insert_new_entry(blockDirectory, columnGroupNo, firstRowNum,
-							fileOffset, rowCount, addColAction);
+							fileOffset, rowCount);
+}
+
+/*
+ * AppendOnlyBlockDirectory_DeleteSegmentFile
+ *
+ * Delete an entry from the block directory for given segment file and columnGroupNo
+ * of an append-only relation.
+ * If the block directory for the appendonly relation does not exist,
+ * this function simply returns.
+ */
+void
+AppendOnlyBlockDirectory_DeleteSegmentFile(AppendOnlyBlockDirectory *blockDirectory,
+										   int columnGroupNo,
+										   int segno,
+										   Snapshot snapshot)
+{
+	ScanKeyData scanKey[2];
+	SysScanDesc indexScan;
+	HeapTuple	tuple;
+	if (blockDirectory->blkdirRel == NULL)
+		return;
+
+	ScanKeyInit(&scanKey[0],
+				Anum_pg_aoblkdir_segno,				/* segno */
+				BTEqualStrategyNumber,
+				F_INT4EQ,
+				Int32GetDatum(segno));
+	ScanKeyInit(&scanKey[1],
+				Anum_pg_aoblkdir_columngroupno,/* columnGroupNo */
+				BTEqualStrategyNumber,
+				F_INT4EQ,
+				Int32GetDatum(columnGroupNo));
+
+	indexScan = systable_beginscan_ordered(blockDirectory->blkdirRel,
+										   blockDirectory->blkdirIdx,
+										   snapshot,
+										   2 /* nkeys */,
+										   scanKey);
+
+	while ((tuple = systable_getnext_ordered(indexScan, ForwardScanDirection)) != NULL)
+	{
+		CatalogTupleDelete(blockDirectory->blkdirRel, &tuple->t_self);
+	}
+	systable_endscan_ordered(indexScan);
 }
 
 /*
@@ -1011,17 +1055,14 @@ AppendOnlyBlockDirectory_InsertEntry(
  *
  */
 static bool
-insert_new_entry(
-				 AppendOnlyBlockDirectory *blockDirectory,
+insert_new_entry(AppendOnlyBlockDirectory *blockDirectory,
 				 int columnGroupNo,
 				 int64 firstRowNum,
 				 int64 fileOffset,
-				 int64 rowCount,
-				 bool addColAction)
+				 int64 rowCount)
 {
 	MinipageEntry *entry = NULL;
 	MinipagePerColumnGroup *minipageInfo;
-	int			minipageIndex;
 
 	if (rowCount == 0)
 		return false;
@@ -1030,25 +1071,7 @@ insert_new_entry(
 		blockDirectory->blkdirIdx == NULL)
 		return false;
 
-	if (addColAction)
-	{
-		/*
-		 * columnGroupNo is attribute number of the new column for
-		 * addColAction. We need to map it to the right index in the minipage
-		 * array.
-		 */
-		int			numExistingCols = blockDirectory->aoRel->rd_att->natts -
-		blockDirectory->numColumnGroups;
-
-		Assert((numExistingCols >= 0) && (numExistingCols - 1 < columnGroupNo));
-		minipageIndex = columnGroupNo - numExistingCols;
-	}
-	else
-	{
-		minipageIndex = columnGroupNo;
-	}
-
-	minipageInfo = &blockDirectory->minipages[minipageIndex];
+	minipageInfo = &blockDirectory->minipages[columnGroupNo];
 	Assert(minipageInfo->numMinipageEntries <= (uint32) NUM_MINIPAGE_ENTRIES);
 
 	/*
@@ -1085,23 +1108,20 @@ insert_new_entry(
 }
 
 /*
- * AppendOnlyBlockDirectory_DeleteSegmentFile
+ * AppendOnlyBlockDirectory_DeleteSegmentFiles
  *
  * Deletes all block directory entries for given segment file of an
  * append-only relation.
  */
 void
-AppendOnlyBlockDirectory_DeleteSegmentFile(Relation aoRel,
-										   Snapshot snapshot,
-										   int segno,
-										   int columnGroupNo)
+AppendOnlyBlockDirectory_DeleteSegmentFiles(Oid blkdirrelid,
+											Snapshot snapshot,
+											int segno)
 {
-	Oid blkdirrelid;
 	Oid blkdiridxid;
 
-	GetAppendOnlyEntryAuxOids(aoRel, NULL, &blkdirrelid, NULL);
-
-	Assert(OidIsValid(blkdirrelid));
+	if (!OidIsValid(blkdirrelid))
+		return;
 
 	Relation	blkdirRel = table_open(blkdirrelid, RowExclusiveLock);
 
@@ -1114,7 +1134,7 @@ AppendOnlyBlockDirectory_DeleteSegmentFile(Relation aoRel,
 	HeapTuple	tuple;
 
 	ScanKeyInit(&scanKey,
-				1,				/* segno */
+				Anum_pg_aoblkdir_segno,				/* segno */
 				BTEqualStrategyNumber,
 				F_INT4EQ,
 				Int32GetDatum(segno));
@@ -1513,7 +1533,7 @@ AppendOnlyBlockDirectory_InsertPlaceholder(AppendOnlyBlockDirectory *blockDirect
 
 	/* insert placeholder entry with a max row count */
 	insert_new_entry(blockDirectory, columnGroupNo, firstRowNum, fileOffset,
-					 AOTupleId_MaxRowNum, false);
+					 AOTupleId_MaxRowNum);
 	/* insert placeholder row containing placeholder entry */
 	write_minipage(blockDirectory, columnGroupNo, minipagePerColumnGroup);
 	/*
@@ -1594,30 +1614,29 @@ AppendOnlyBlockDirectory_End_forSearch(
 }
 
 void
-AppendOnlyBlockDirectory_End_addCol(
-									AppendOnlyBlockDirectory *blockDirectory)
+AppendOnlyBlockDirectory_End_writeCols(
+	AppendOnlyBlockDirectory *blockDirectory, List *newvals)
 {
-	int			groupNo;
-
-	/* newly added columns have attribute number beginning with this */
-	AttrNumber	colno = blockDirectory->aoRel->rd_att->natts -
-	blockDirectory->numColumnGroups;
+	ListCell *lc;
 
 	if (blockDirectory->blkdirRel == NULL ||
 		blockDirectory->blkdirIdx == NULL)
 		return;
-	for (groupNo = 0; groupNo < blockDirectory->numColumnGroups; groupNo++)
+
+	foreach(lc, newvals)
 	{
+		NewColumnValue *newval = lfirst(lc);
+		int colno = newval->attnum - 1;
 		MinipagePerColumnGroup *minipageInfo =
-		&blockDirectory->minipages[groupNo];
+								   &blockDirectory->minipages[colno];
 
 		if (minipageInfo->numMinipageEntries > 0)
 		{
-			write_minipage(blockDirectory, groupNo + colno, minipageInfo);
+			write_minipage(blockDirectory, colno, minipageInfo);
 			ereportif(Debug_appendonly_print_blockdirectory, LOG,
 					  (errmsg("Append-only block directory end of insert write"
 							  " minipage: (columnGroupNo, nEntries) = (%d, %u)",
-							  groupNo, minipageInfo->numMinipageEntries)));
+							  colno, minipageInfo->numMinipageEntries)));
 		}
 	}
 

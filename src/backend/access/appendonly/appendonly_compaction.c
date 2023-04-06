@@ -505,13 +505,9 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	AppendOnlyVisimap_DeleteSegmentFile(&visiMap, compact_segno);
 
 	/* Delete all mini pages of the segment files if block directory exists */
-	if (OidIsValid(blkdirrelid))
-	{
-		AppendOnlyBlockDirectory_DeleteSegmentFile(aorel,
-												   appendOnlyMetaDataSnapshot,
-												   compact_segno,
-												   0);
-	}
+	AppendOnlyBlockDirectory_DeleteSegmentFiles(blkdirrelid,
+												appendOnlyMetaDataSnapshot,
+												compact_segno);
 
 	if (Debug_appendonly_print_compaction)
 		elog(LOG, "Finished compaction: AO segfile %d, relation %s, moved tuple count " INT64_FORMAT,

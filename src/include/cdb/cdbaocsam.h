@@ -316,7 +316,14 @@ typedef struct AOCSHeaderScanDescData
 
 typedef AOCSHeaderScanDescData *AOCSHeaderScanDesc;
 
-typedef struct AOCSAddColumnDescData
+/* Indicate what operation this is for. */
+typedef enum AOCSWriteColumnOperation
+{
+	AOCSADDCOLUMN,  /* ADD COLUMN */
+	AOCSREWRITECOLUMN /* ALTER COLUMN TYPE */
+} AOCSWriteColumnOperation;
+
+typedef struct AOCSWriteColumnDescData
 {
 	Relation rel;
 
@@ -325,12 +332,15 @@ typedef struct AOCSAddColumnDescData
 	DatumStreamWrite **dsw;
 	/* array of datum stream write objects, one per new column */
 
-	int num_newcols;
+	int num_cols_to_write;
 
 	int32 cur_segno;
 
-} AOCSAddColumnDescData;
-typedef AOCSAddColumnDescData *AOCSAddColumnDesc;
+	List *newcolvals;
+
+	AOCSWriteColumnOperation op;
+} AOCSWriteColumnDescData;
+typedef AOCSWriteColumnDescData *AOCSWriteColumnDesc;
 
 /* ----------------
  *		function prototypes for appendoptimized columnar access method
@@ -339,9 +349,13 @@ typedef AOCSAddColumnDescData *AOCSAddColumnDesc;
 
 extern AOCSScanDesc aocs_beginscan(Relation relation, Snapshot snapshot,
 								   bool *proj, uint32 flags);
-extern AOCSScanDesc aocs_beginrangescan(Relation relation, Snapshot snapshot,
-										Snapshot appendOnlyMetaDataSnapshot,
-										int *segfile_no_arr, int segfile_count);
+extern AOCSScanDesc
+aocs_beginrangescan(Relation relation,
+					Snapshot snapshot,
+					Snapshot appendOnlyMetaDataSnapshot,
+					int *segfile_no_arr,
+					int segfile_count,
+					bool *proj);
 
 extern void aocs_rescan(AOCSScanDesc scan);
 extern void aocs_endscan(AOCSScanDesc scan);
@@ -380,21 +394,22 @@ extern void aocs_headerscan_opensegfile(
 		AOCSHeaderScanDesc hdesc, AOCSFileSegInfo *seginfo, char *basepath);
 extern bool aocs_get_nextheader(AOCSHeaderScanDesc hdesc);
 extern void aocs_end_headerscan(AOCSHeaderScanDesc hdesc);
-extern AOCSAddColumnDesc aocs_addcol_init(
-		Relation rel, int num_newcols);
-extern void aocs_addcol_newsegfile(
-		AOCSAddColumnDesc desc, AOCSFileSegInfo *seginfo, char *basepath,
-		RelFileNodeBackend relfilenode);
-extern void aocs_addcol_closefiles(AOCSAddColumnDesc desc);
-extern void aocs_addcol_endblock(AOCSAddColumnDesc desc, int64 firstRowNum);
-extern void aocs_addcol_insert_datum(AOCSAddColumnDesc desc,
-									   Datum *d, bool *isnull);
-extern void aocs_addcol_finish(AOCSAddColumnDesc desc);
+extern AOCSWriteColumnDesc
+aocs_writecol_init(Relation rel, List *newvals, AOCSWriteColumnOperation op);
+extern void
+aocs_writecol_newsegfiles(AOCSWriteColumnDesc desc, AOCSFileSegInfo *seginfo);
+extern void
+aocs_writecol_closefiles(AOCSWriteColumnDesc desc);
+extern void aocs_writecol_endblock(AOCSWriteColumnDesc desc, int64 firstRowNum);
+extern void
+aocs_writecol_insert_datum(AOCSWriteColumnDesc desc, Datum *d, bool *isnull);
+extern void
+aocs_writecol_finish(AOCSWriteColumnDesc desc);
 extern void aocs_addcol_emptyvpe(
 		Relation rel, AOCSFileSegInfo **segInfos,
 		int32 nseg, int num_newcols);
-extern void aocs_addcol_setfirstrownum(AOCSAddColumnDesc desc,
-		int64 firstRowNum);
+extern void aocs_writecol_setfirstrownum(AOCSWriteColumnDesc desc,
+										 int64 firstRowNum);
 
 extern void aoco_dml_init(Relation relation);
 extern void aoco_dml_finish(Relation relation);
