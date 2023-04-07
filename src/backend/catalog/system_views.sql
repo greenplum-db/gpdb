@@ -590,79 +590,6 @@ CREATE VIEW pg_stat_all_tables AS
     WHERE C.relkind IN ('r', 't', 'm', 'o', 'b', 'M')
     GROUP BY C.oid, N.nspname, C.relname;
 
--- Gather data from segments on user tables, and use data on coordinator on system tables.
-
-CREATE VIEW gp_stat_all_tables_summary AS
-SELECT
-    s.relid,
-    s.schemaname,
-    s.relname,
-    m.seq_scan,
-    m.seq_tup_read,
-    m.idx_scan,
-    m.idx_tup_fetch,
-    m.n_tup_ins,
-    m.n_tup_upd,
-    m.n_tup_del,
-    m.n_tup_hot_upd,
-    m.n_live_tup,
-    m.n_dead_tup,
-    m.n_mod_since_analyze,
-    s.last_vacuum,
-    s.last_autovacuum,
-    s.last_analyze,
-    s.last_autoanalyze,
-    s.vacuum_count,
-    s.autovacuum_count,
-    s.analyze_count,
-    s.autoanalyze_count
-FROM
-    (SELECT
-         allt.relid,
-         allt.schemaname,
-         allt.relname,
-         case when d.policytype = 'r' then (sum(seq_scan)/d.numsegments)::bigint else sum(seq_scan) end seq_scan,
-         case when d.policytype = 'r' then (sum(seq_tup_read)/d.numsegments)::bigint else sum(seq_tup_read) end seq_tup_read,
-         case when d.policytype = 'r' then (sum(idx_scan)/d.numsegments)::bigint else sum(idx_scan) end idx_scan,
-         case when d.policytype = 'r' then (sum(idx_tup_fetch)/d.numsegments)::bigint else sum(idx_tup_fetch) end idx_tup_fetch,
-         case when d.policytype = 'r' then (sum(n_tup_ins)/d.numsegments)::bigint else sum(n_tup_ins) end n_tup_ins,
-         case when d.policytype = 'r' then (sum(n_tup_upd)/d.numsegments)::bigint else sum(n_tup_upd) end n_tup_upd,
-         case when d.policytype = 'r' then (sum(n_tup_del)/d.numsegments)::bigint else sum(n_tup_del) end n_tup_del,
-         case when d.policytype = 'r' then (sum(n_tup_hot_upd)/d.numsegments)::bigint else sum(n_tup_hot_upd) end n_tup_hot_upd,
-         case when d.policytype = 'r' then (sum(n_live_tup)/d.numsegments)::bigint else sum(n_live_tup) end n_live_tup,
-         case when d.policytype = 'r' then (sum(n_dead_tup)/d.numsegments)::bigint else sum(n_dead_tup) end n_dead_tup,
-         case when d.policytype = 'r' then (sum(n_mod_since_analyze)/d.numsegments)::bigint else sum(n_mod_since_analyze) end n_mod_since_analyze,
-         max(last_vacuum) as last_vacuum,
-         max(last_autovacuum) as last_autovacuum,
-         max(last_analyze) as last_analyze,
-         max(last_autoanalyze) as last_autoanalyze,
-         max(vacuum_count) as vacuum_count,
-         max(autovacuum_count) as autovacuum_count,
-         max(analyze_count) as analyze_count,
-         max(autoanalyze_count) as autoanalyze_count
-     FROM
-         gp_dist_random('pg_stat_all_tables') allt
-         inner join pg_class c
-               on allt.relid = c.oid
-         left outer join gp_distribution_policy d
-              on allt.relid = d.localoid
-     WHERE
-        relid >= 16384
-        and (
-            d.localoid is not null
-            or c.relkind in ('o', 'b', 'M')
-            )
-     GROUP BY allt.relid, allt.schemaname, allt.relname, d.policytype, d.numsegments
-
-     UNION ALL
-
-     SELECT
-         *
-     FROM
-         pg_stat_all_tables
-     WHERE
-             relid < 16384) m, pg_stat_all_tables s
-WHERE m.relid = s.relid;
 
 CREATE VIEW pg_stat_xact_all_tables AS
     SELECT
@@ -696,11 +623,6 @@ CREATE VIEW pg_stat_xact_sys_tables AS
 
 CREATE VIEW pg_stat_user_tables AS
     SELECT * FROM pg_stat_all_tables
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
-          schemaname !~ '^pg_toast';
-
-CREATE VIEW gp_stat_user_tables_summary AS
-    SELECT * FROM gp_stat_all_tables_summary
     WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
@@ -760,44 +682,6 @@ CREATE VIEW pg_stat_all_indexes AS
             LEFT JOIN pg_namespace N ON (N.oid = C.relnamespace)
     WHERE C.relkind IN ('r', 't', 'm', 'o', 'b', 'M');
 
--- Gather data from segments on user tables, and use data on coordinator on system tables.
-
-CREATE VIEW gp_stat_all_indexes_summary AS
-SELECT
-    s.relid,
-    s.indexrelid,
-    s.schemaname,
-    s.relname,
-    s.indexrelname,
-    m.idx_scan,
-    m.idx_tup_read,
-    m.idx_tup_fetch
-FROM
-    (SELECT
-         relid,
-         indexrelid,
-         schemaname,
-         relname,
-         indexrelname,
-         sum(idx_scan) as idx_scan,
-         sum(idx_tup_read) as idx_tup_read,
-         sum(idx_tup_fetch) as idx_tup_fetch
-     FROM
-         gp_dist_random('pg_stat_all_indexes')
-     WHERE
-             relid >= 16384
-     GROUP BY relid, indexrelid, schemaname, relname, indexrelname
-
-     UNION ALL
-
-     SELECT
-         *
-     FROM
-         pg_stat_all_indexes
-     WHERE
-             relid < 16384) m, pg_stat_all_indexes s
-WHERE m.relid = s.relid;
-
 CREATE VIEW pg_stat_sys_indexes AS
     SELECT * FROM pg_stat_all_indexes
     WHERE schemaname IN ('pg_catalog', 'information_schema', 'pg_aoseg') OR
@@ -805,11 +689,6 @@ CREATE VIEW pg_stat_sys_indexes AS
 
 CREATE VIEW pg_stat_user_indexes AS
     SELECT * FROM pg_stat_all_indexes
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
-          schemaname !~ '^pg_toast';
-
-CREATE VIEW gp_stat_user_indexes_summary AS
-    SELECT * FROM gp_stat_all_indexes_summary
     WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
