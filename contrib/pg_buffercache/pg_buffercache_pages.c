@@ -18,6 +18,7 @@
 #define NUM_BUFFERCACHE_PAGES_MIN_ELEM	8
 #define NUM_BUFFERCACHE_PAGES_ELEM	9
 #define NUM_BUFFERCACHE_SUMMARY_ELEM 5
+#define NUM_BUFFERCACHE_USAGE_COUNTS_ELEM 4
 
 PG_MODULE_MAGIC;
 
@@ -61,6 +62,7 @@ typedef struct
  */
 PG_FUNCTION_INFO_V1(pg_buffercache_pages);
 PG_FUNCTION_INFO_V1(pg_buffercache_summary);
+PG_FUNCTION_INFO_V1(pg_buffercache_usage_counts);
 
 Datum
 pg_buffercache_pages(PG_FUNCTION_ARGS)
@@ -303,4 +305,71 @@ pg_buffercache_summary(PG_FUNCTION_ARGS)
 	result = HeapTupleGetDatum(tuple);
 
 	PG_RETURN_DATUM(result);
+}
+
+Datum
+pg_buffercache_usage_counts(PG_FUNCTION_ARGS)
+{
+	ReturnSetInfo *rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
+	TupleDesc	tupdesc;
+	MemoryContext oldcontext;
+	Tuplestorestate *tupstore;
+	int			usage_counts[BM_MAX_USAGE_COUNT + 1] = {0};
+	int			dirty[BM_MAX_USAGE_COUNT + 1] = {0};
+	int			pinned[BM_MAX_USAGE_COUNT + 1] = {0};
+	Datum		values[NUM_BUFFERCACHE_USAGE_COUNTS_ELEM];
+	bool		nulls[NUM_BUFFERCACHE_USAGE_COUNTS_ELEM] = {0};
+
+	/* check to see if caller supports us returning a tuplestore */
+	if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("set-valued function called in context that cannot accept a set")));
+	if (!(rsinfo->allowedModes & SFRM_Materialize) ||
+		rsinfo->expectedDesc == NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("materialize mode required, but it is not allowed in this context")));
+
+	/* Build a tuple descriptor for our result type */
+	if (get_call_result_type(fcinfo, NULL, &tupdesc) != TYPEFUNC_COMPOSITE)
+		elog(ERROR, "return type must be a row type");
+	
+	/* Build tuplestore to hold the result rows */
+	oldcontext = MemoryContextSwitchTo(rsinfo->econtext->ecxt_per_query_memory);
+
+	tupstore = tuplestore_begin_heap(true, false, work_mem);
+	rsinfo->returnMode = SFRM_Materialize;
+	rsinfo->setResult = tupstore;
+	rsinfo->setDesc = tupdesc;
+
+	MemoryContextSwitchTo(oldcontext);
+
+	for (int i = 0; i < NBuffers; i++)
+	{
+		BufferDesc *bufHdr = GetBufferDescriptor(i);
+		uint32		buf_state = pg_atomic_read_u32(&bufHdr->state);
+		int			usage_count;
+
+		usage_count = BUF_STATE_GET_USAGECOUNT(buf_state);
+		usage_counts[usage_count]++;
+
+		if (buf_state & BM_DIRTY)
+			dirty[usage_count]++;
+
+		if (BUF_STATE_GET_REFCOUNT(buf_state) > 0)
+			pinned[usage_count]++;
+	}
+
+	for (int i = 0; i < BM_MAX_USAGE_COUNT + 1; i++)
+	{
+		values[0] = Int32GetDatum(i);
+		values[1] = Int32GetDatum(usage_counts[i]);
+		values[2] = Int32GetDatum(dirty[i]);
+		values[3] = Int32GetDatum(pinned[i]);
+
+		tuplestore_putvalues(rsinfo->setResult, rsinfo->setDesc, values, nulls);
+	}
+
+	return (Datum) 0;
 }
