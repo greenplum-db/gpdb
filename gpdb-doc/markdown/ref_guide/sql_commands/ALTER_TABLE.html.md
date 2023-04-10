@@ -43,9 +43,9 @@ where <action> is one of:
   ALTER [COLUMN] <column_name> SET DEFAULT <expression>
   ALTER [COLUMN] <column_name> DROP DEFAULT
   ALTER [COLUMN] <column_name> { SET | DROP } NOT NULL
-  ALTER [ COLUMN ] <column_name> ADD GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY [ ( <sequence_options> ) ]
-  ALTER [ COLUMN ] <column_name> { SET GENERATED { ALWAYS | BY DEFAULT } | SET <sequence_option> | RESTART [ [ WITH ] <restart> ] } [...]
-  ALTER [ COLUMN ] <column_name> DROP IDENTITY [ IF EXISTS ]
+  ALTER [COLUMN] <column_name> ADD GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY [ ( <sequence_options> ) ]
+  ALTER [COLUMN] <column_name> { SET GENERATED { ALWAYS | BY DEFAULT } | SET <sequence_option> | RESTART [ [ WITH ] <restart> ] } [...]
+  ALTER [COLUMN] <column_name> DROP IDENTITY [ IF EXISTS ]
   ALTER [COLUMN] <column_name> SET STATISTICS <integer>
   ALTER [COLUMN] column SET ( <attribute_option> = <value> [, ... ] )
   ALTER [COLUMN] column RESET ( <attribute_option> [, ... ] )

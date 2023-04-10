@@ -337,7 +337,7 @@ CHECK \(expression\) \[ NO INHERIT \]
 
 
 GENERATED ALWAYS AS ( generation_expr ) STORED
-:   The `GENERATED ALWAYS AS` clause creates the column as a *generated column*. The column cannot be written to, and when read it will be computed from the specified expression.
+:   The `GENERATED ALWAYS AS` clause creates the column as a *generated column*. The column cannot be written to, and when read the result of the specified expression will be returned.
 :   The keyword `STORED` is required to signify that the column will be computed on write and will be stored on disk.
 :   The generation expression can refer to other columns in the table, but not other generated columns. Any functions and operators used must be immutable. References to other tables are not allowed.
 
