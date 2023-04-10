@@ -16,13 +16,11 @@ The code block is treated as though it were the body of a function with no param
 
 The optional `LANGUAGE` clause can appear either before or after the code block.
 
-XXX
 Anonymous blocks are procedural language structures that provide the capability to create and run procedural code on the fly without persistently storing the code as database objects in the system catalogs. The concept of anonymous blocks is similar to UNIX shell scripts, which enable several manually entered commands to be grouped and run as one step. As the name implies, anonymous blocks do not have a name, and for this reason they cannot be referenced from other objects. Although built dynamically, anonymous blocks can be easily stored as scripts in the operating system files for repetitive execution.
 
 Anonymous blocks are standard procedural language blocks. They carry the syntax and obey the rules that apply to the procedural language, including declaration and scope of variables, execution, exception handling, and language usage.
 
 The compilation and execution of anonymous blocks are combined in one step, while a user-defined function needs to be re-defined before use each time its definition changes.
-XXX
 
 ## <a id="section4"></a>Parameters 
 
@@ -40,7 +38,7 @@ The user must have `USAGE` privilege for the procedural language, or must be a s
 
 If `DO` is run in a transaction block, then the procedure code cannot execute transaction control statements. Transaction control statements are allowed only if `DO` is run in its own transaction.
 
-XXX Anonymous blocks do not support function volatility or `EXECUTE ON` attributes.
+Anonymous blocks do not support function volatility or `EXECUTE ON` attributes.
 
 ## <a id="Examples"></a>Examples 
 
