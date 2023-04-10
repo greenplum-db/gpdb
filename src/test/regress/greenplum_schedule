@@ -340,4 +340,7 @@ test: resource_manager_restore_to_none
 # test dispatch and result handling of gp_log_memory_backend_contexts
 test: gp_log_mem_dispatch
 
+# please refer to https://github.com/greenplum-db/gpdb/issues/11673
+test: bfv_squelch
+
 # end of tests

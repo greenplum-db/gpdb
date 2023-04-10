@@ -712,7 +712,11 @@ ExecHashJoin(PlanState *pstate)
 	 */
 	result = ExecHashJoinImpl(pstate, false);
 
-	if (TupIsNull(result) && !((HashJoinState *) pstate)->reuse_hashtable)
+	HashJoinState *node = castNode(HashJoinState, pstate);
+	/*
+	 * prefetch_inner is set as Flase (see createplan.c) if there is no any motions.
+	 */
+	if (node->prefetch_inner && TupIsNull(result) && !((HashJoinState *) pstate)->reuse_hashtable)
 	{
 		/*
 		 * CDB: We'll read no more from inner subtree. To keep our
