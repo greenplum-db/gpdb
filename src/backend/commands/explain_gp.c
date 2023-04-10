@@ -2268,6 +2268,7 @@ cdbexplain_printJITSummary(ExplainState *es, QueryDesc *queryDesc)
 	CdbExplain_SliceWorker *ssw;
 	JitInstrumentation 		*ji;
 	instr_time		 total_time;
+	StringInfo		   allstats = makeStringInfo();
 
 	/* don't print information if no JITing happened */
 	int jit_flags = queryDesc->estate->es_jit_flags;
@@ -2327,17 +2328,16 @@ cdbexplain_printJITSummary(ExplainState *es, QueryDesc *queryDesc)
 			INSTR_TIME_ADD(total_time, ji->optimization_counter);
 			INSTR_TIME_ADD(total_time, ji->emission_counter);
 
-			elog(DEBUG5, "JIT Instrumentation(slice%d seg%d): functions %zu, generation_counter %.3f ms,"
-						 "inlining_counter %.3f ms, optimization_counter %.3f ms, emission_counter %.3f ms,"
-						 "total_time %.3f ms.",
-						 slice_index,
-						 ss->segindex0 + j,
-						 ji->created_functions,
-						 1000.0 * INSTR_TIME_GET_DOUBLE(ji->generation_counter),
-						 1000.0 * INSTR_TIME_GET_DOUBLE(ji->inlining_counter),
-						 1000.0 * INSTR_TIME_GET_DOUBLE(ji->optimization_counter),
-						 1000.0 * INSTR_TIME_GET_DOUBLE(ji->emission_counter),
-						 1000.0 * INSTR_TIME_GET_DOUBLE(total_time));
+			appendStringInfoSpaces(allstats, es->indent * 2 + 1);
+			appendStringInfo(allstats,
+							 "%s%d: %s %zu, %s %.3f ms, %s %.3f ms, %s %.3f ms, %s %.3f ms, %s %.3f ms.\n",
+							 "seg", ss->segindex0 +j,
+							 "Functions", ji->created_functions,
+							 "Generation", 1000.0 * INSTR_TIME_GET_DOUBLE(ji->generation_counter),
+							 "Inlining", 1000.0 * INSTR_TIME_GET_DOUBLE(ji->inlining_counter),
+							 "Optimization", 1000.0 * INSTR_TIME_GET_DOUBLE(ji->optimization_counter),
+							 "Emission", 1000.0 * INSTR_TIME_GET_DOUBLE(ji->emission_counter),
+							 "Total", 1000.0 * INSTR_TIME_GET_DOUBLE(total_time));
 
 			avg_time += INSTR_TIME_GET_DOUBLE(total_time);
 			if (INSTR_TIME_GET_DOUBLE(total_time) > max_time)
@@ -2347,7 +2347,6 @@ cdbexplain_printJITSummary(ExplainState *es, QueryDesc *queryDesc)
 			}
 			nworker++;
 		}
-
 		// print nothing if jit is not performed on all workers in current slice
 		if (nworker == 0)
 			continue;
@@ -2373,6 +2372,10 @@ cdbexplain_printJITSummary(ExplainState *es, QueryDesc *queryDesc)
 				else
 					appendStringInfo(es->str, "%.3f ms avg x %d workers, %.3f ms max (seg%d).\n",
 									 1000.0 * avg_time, nworker, 1000.0 * max_time, ss->segindex0 + idx2);
+			}
+			if (es->verbose)
+			{
+				appendStringInfo(es->str, "%s", allstats->data);
 			}
 		}
 		else
@@ -2404,11 +2407,17 @@ cdbexplain_printJITSummary(ExplainState *es, QueryDesc *queryDesc)
 					ExplainPropertyInteger("segid", NULL, ss->segindex0 + idx2, es);
 					ExplainCloseGroup("Timing", "Timing", true, es);
 				}
+				if (es->verbose)
+					ExplainPropertyStringInfo("AllStats", es, "%s", allstats->data);
 			}
 			ExplainCloseGroup("slice", "slice", true, es);
 		}
+		resetStringInfo(allstats);
 	}
 
 	es->indent -= 1;
 	ExplainCloseGroup("JIT", "JIT", true, es);
+
+	pfree(allstats->data);
+	pfree(allstats);
 }
