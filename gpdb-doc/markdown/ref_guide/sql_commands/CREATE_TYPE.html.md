@@ -79,7 +79,7 @@ The optional subtype\_diff\_function must take two values of the subtype type as
 
 The fourth form of `CREATE TYPE` creates a new base type \(scalar type\). You must be a superuser to create a new base type. \(This restriction is in place because an erroneous type definition could confuse or even crash the server.\)
 
-The parameters may appear in any order, not only that shown in the syntax, and most are optional. You must register two or more functions \(using `CREATE FUNCTION`\) before defining the type. The support functions input\_function and output\_function are required, while the functions receive\_function, send\_function, type\_modifier\_input\_function, type\_modifier\_output\_function, and analyze\_function are optional. Generally these functions have to be coded in C or another low-level language. XXX In Greenplum Database, any function used to implement a data type must be defined as `IMMUTABLE`. XXX
+The parameters may appear in any order, not only that shown in the syntax, and most are optional. You must register two or more functions \(using `CREATE FUNCTION`\) before defining the type. The support functions input\_function and output\_function are required, while the functions receive\_function, send\_function, type\_modifier\_input\_function, type\_modifier\_output\_function, and analyze\_function are optional. Generally these functions have to be coded in C or another low-level language. In Greenplum Database, any function used to implement a data type must be defined as `IMMUTABLE`.
 
 The input\_function converts the type's external textual representation to the internal representation used by the operators and functions defined for the type. output\_function performs the reverse transformation. The input function may be declared as taking one argument of type `cstring`, or as taking three arguments of types `cstring`, `oid`, `integer`. The first argument is the input text as a C string, the second argument is the type's own OID \(except for array types, which instead receive their element type's OID\), and the third is the `typmod` of the destination column, if known \(`-1` will be passed if not\). The input function must return a value of the data type itself. Usually, an input function should be declared `STRICT`; if it is not, it will be called with a `NULL` first parameter when reading a `NULL` input value. The function must still return `NULL` in this case, unless it raises an error. \(This case is mainly meant to support domain input functions, which may need to reject `NULL` inputs.\) The output function must be declared as taking one argument of the new data type. The output function must return type `cstring`. Output functions are not invoked for `NULL` values.
 
@@ -212,13 +212,11 @@ blocksize
 
 ## <a id="section8"></a>Notes 
 
-XXX
 User-defined type names cannot begin with the underscore character \(\_\) and can only be 62 characters long \(or in general `NAMEDATALEN - 2`, rather than the `NAMEDATALEN - 1` characters allowed for other names\). Type names beginning with underscore are reserved for internally-created array type names.
 
 Greenplum Database does not support adding storage options for row or composite types.
 
 Storage options defined at the table- and column- level override the default storage options defined for a scalar type.
-XXX
 
 Because there are no restrictions on use of a data type once it's been created, creating a base type or range type is tantamount to granting public execute permission on the functions mentioned in the type definition. \(The creator of the type is therefore required to own these functions.\) This is usually not an issue for the sorts of functions that are useful in a type definition. But you might want to think twice before designing a type in a way that would require 'secret' information to be used while converting it to or from external form.
 
