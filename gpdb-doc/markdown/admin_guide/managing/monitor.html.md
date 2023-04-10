@@ -318,7 +318,7 @@ The command:
 SELECT pg_log_backend_memory_contexts( pg_backend_pid() );
 ```
 
-triggered the dumping of the following (subset of) memory context messages to the server log file:
+triggered the dumping of the following (subset of) memory context messages to the local server log file:
 
 ``` pre
 2023-03-23 16:45:57.228512 UTC,"gpadmin","testdb",p16389,th-557447104,"[local]",,2023-03-23 15:57:32 UTC,0,,cmd10,seg-1,,,,sx1,"LOG","00000","logging memory contexts of PID 16389",,,,,,"SELECT pg_log_backend_memory_contexts(pg_backend_pid());",0,,"mcxt.c",1278,
