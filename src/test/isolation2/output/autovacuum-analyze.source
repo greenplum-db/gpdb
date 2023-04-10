@@ -417,7 +417,7 @@ select relpages, reltuples from pg_class where oid = 'autostatstbl'::regclass;
 (1 row)
 -- expect analyze_count = 1, autoanalyze_count = 0, and n_mod_since_analyze = 1000 since ANALYZE executed
 -- in same transaction for the insert statement.
-select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables_internal where relname = 'autostatstbl';
+select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables where relname = 'autostatstbl';
  analyze_count | autoanalyze_count | n_mod_since_analyze 
 ---------------+-------------------+---------------------
  1             | 0                 | 1000                
@@ -460,7 +460,7 @@ select relpages, reltuples from pg_class where oid = 'autostatstbl'::regclass;
  3        | 1000      
 (1 row)
 -- expect analyze_count = 1, autoanalyze_count = 1, and n_mod_since_analyze = 0
-select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables_internal where relname = 'autostatstbl';
+select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables where relname = 'autostatstbl';
  analyze_count | autoanalyze_count | n_mod_since_analyze 
 ---------------+-------------------+---------------------
  1             | 1                 | 0                   
@@ -497,7 +497,7 @@ select relpages, reltuples from pg_class where oid = 'autostatstbl'::regclass;
 (1 row)
 -- expect analyze_count = 2, autoanalyze_count = 1, and n_mod_since_analyze = 1000 since ANALYZE executed
 -- in same transaction for the insert statement.
-select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables_internal where relname = 'autostatstbl';
+select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables where relname = 'autostatstbl';
  analyze_count | autoanalyze_count | n_mod_since_analyze 
 ---------------+-------------------+---------------------
  2             | 1                 | 1000                
@@ -540,7 +540,7 @@ select relpages, reltuples from pg_class where oid = 'autostatstbl'::regclass;
  3        | 2000      
 (1 row)
 -- expect analyze_count = 2, autoanalyze_count = 2, and n_mod_since_analyze = 0
-select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables_internal where relname = 'autostatstbl';
+select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables where relname = 'autostatstbl';
  analyze_count | autoanalyze_count | n_mod_since_analyze 
 ---------------+-------------------+---------------------
  2             | 2                 | 0                   
@@ -576,7 +576,7 @@ select relpages, reltuples from pg_class where oid = 'autostatstbl'::regclass;
 (1 row)
 -- expect analyze_count = 2, autoanalyze_count = 2, and n_mod_since_analyze = 1000 since ANALYZE executed
 -- in same transaction for the insert statement.
-select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables_internal where relname = 'autostatstbl';
+select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables where relname = 'autostatstbl';
  analyze_count | autoanalyze_count | n_mod_since_analyze 
 ---------------+-------------------+---------------------
  2             | 2                 | 1000                
@@ -619,7 +619,7 @@ select relpages, reltuples from pg_class where oid = 'autostatstbl'::regclass;
  6        | 3000      
 (1 row)
 -- expect analyze_count = 2, autoanalyze_count = 3, and n_mod_since_analyze = 0 since ANALYZE executed
-select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables_internal where relname = 'autostatstbl';
+select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables where relname = 'autostatstbl';
  analyze_count | autoanalyze_count | n_mod_since_analyze 
 ---------------+-------------------+---------------------
  2             | 3                 | 0                   

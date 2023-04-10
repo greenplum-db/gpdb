@@ -21,7 +21,7 @@
       </dxl:ProjList>
       <dxl:Filter/>
       <dxl:SortingColumnList/>
-      <dxl:ExternalScan>
+      <dxl:ForeignScan>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="15625.000000" Rows="1000000.000000" Width="32"/>
         </dxl:Properties>
@@ -55,7 +55,7 @@
             <dxl:Column ColId="10" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
           </dxl:Columns>
         </dxl:TableDescriptor>
-      </dxl:ExternalScan>
+      </dxl:ForeignScan>
     </dxl:GatherMotion>
   </dxl:Plan>
 </dxl:DXLMessage>

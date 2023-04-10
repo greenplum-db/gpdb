@@ -126,7 +126,8 @@ extern void MemoryContextDeleteImpl(MemoryContext context, const char* sfile, co
 
 extern int64 MemoryContextMemAllocated(MemoryContext context, bool recurse);
 extern void MemoryContextStats(MemoryContext context);
-extern void MemoryContextStatsDetail(MemoryContext context, int max_children);
+extern void MemoryContextStatsDetail(MemoryContext context, int max_children,
+									 bool print_to_stderr);
 extern void MemoryContextAllowInCriticalSection(MemoryContext context,
 												bool allow);
 
@@ -193,6 +194,8 @@ extern void MemoryContextCreate(MemoryContext node,
 								MemoryContext parent,
 								const char *name);
 
+extern void HandleLogMemoryContextInterrupt(void);
+extern void ProcessLogMemoryContextInterrupt(void);
 
 /*
  * Memory-context-type-specific functions

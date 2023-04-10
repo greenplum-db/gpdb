@@ -1,8 +1,8 @@
 ---
-title: Installing Optional Extensions (Tanzu Greenplum) 
+title: Installing Optional Extensions (VMware Greenplum) 
 ---
 
-Information about installing optional Tanzu Greenplum Database extensions and packages, such as the Procedural Language extensions and the Python and R Data Science Packages.
+Information about installing optional VMware Greenplum Database extensions and packages, such as the Procedural Language extensions and the Python and R Data Science Packages.
 
 -   **[Procedural Language, Machine Learning, and Geospatial Extensions](install_extensions.html)**  
 
@@ -10,7 +10,7 @@ Information about installing optional Tanzu Greenplum Database extensions and pa
 
 -   **[R Data Science Library Package](install_r_dslib.html)**  
 
--   **[Greenplum Platform Extension Framework \(PXF\)](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-install_pxf.html)**  
+-   **[Greenplum Platform Extension Framework \(PXF\)](install_pxf.html)**  
 
 
 **Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)

@@ -85,6 +85,7 @@
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_statistic_ext.h"
 #include "commands/dbcommands.h"
+#include "commands/progress.h"
 #include "commands/tablecmds.h"
 #include "commands/vacuum.h"
 #include "executor/executor.h"
@@ -393,6 +394,8 @@ analyze_rel_internal(Oid relid, RangeVar *relation,
 	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
 	MyPgXact->vacuumFlags |= PROC_IN_ANALYZE;
 	LWLockRelease(ProcArrayLock);
+	pgstat_progress_start_command(PROGRESS_COMMAND_ANALYZE,
+								  RelationGetRelid(onerel));
 
 	/*
 	 * Do the normal non-recursive ANALYZE.  We can skip this for partitioned
@@ -438,6 +441,8 @@ analyze_rel_internal(Oid relid, RangeVar *relation,
 	 * expose us to concurrent-update failures in update_attstats.)
 	 */
 	relation_close(onerel, NoLock);
+
+	pgstat_progress_end_command();
 
 	/*
 	 * Reset my PGXACT flag.  Note: we need this here, and not in vacuum_rel,
@@ -690,6 +695,10 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 			MemoryContextSwitchTo(caller_context);
 		rows = (HeapTuple *) palloc(targrows * sizeof(HeapTuple));
 
+		pgstat_progress_update_param(PROGRESS_ANALYZE_PHASE,
+								 inh ? PROGRESS_ANALYZE_PHASE_ACQUIRE_SAMPLE_ROWS_INH :
+								 PROGRESS_ANALYZE_PHASE_ACQUIRE_SAMPLE_ROWS);
+
 		/*
 		 * Acquire the sample rows
 		 *
@@ -754,6 +763,9 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 		MemoryContext col_context,
 					old_context;
 		bool		build_ext_stats;
+
+		pgstat_progress_update_param(PROGRESS_ANALYZE_PHASE,
+									 PROGRESS_ANALYZE_PHASE_COMPUTE_STATS);
 
 		col_context = AllocSetContextCreate(anl_context,
 											"Analyze Column",
@@ -947,6 +959,9 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 			BuildRelationExtStatistics(onerel, totalrows, numrows, rows,
 									   attr_cnt, vacattrstats);
 	}
+
+	pgstat_progress_update_param(PROGRESS_ANALYZE_PHASE,
+								 PROGRESS_ANALYZE_PHASE_FINALIZE_ANALYZE);
 
 	/*
 	 * Update pages/tuples stats in pg_class ... but not if we're doing
@@ -1438,6 +1453,8 @@ acquire_sample_rows(Relation onerel, int elevel,
 	ReservoirStateData rstate;
 	TupleTableSlot *slot;
 	TableScanDesc scan;
+	BlockNumber nblocks;
+	BlockNumber blksdone = 0;
 
 	Assert(targrows > 0);
 
@@ -1481,7 +1498,12 @@ acquire_sample_rows(Relation onerel, int elevel,
 	OldestXmin = GetOldestXmin(onerel, PROCARRAY_FLAGS_VACUUM);
 
 	/* Prepare for sampling block numbers */
-	BlockSampler_Init(&bs, totalblocks, targrows, random());
+	nblocks = BlockSampler_Init(&bs, totalblocks, targrows, random());
+
+	/* Report sampling block numbers */
+	pgstat_progress_update_param(PROGRESS_ANALYZE_BLOCKS_TOTAL,
+								 nblocks);
+
 	/* Prepare for sampling rows */
 	reservoir_init_selection_state(&rstate, targrows);
 
@@ -1542,6 +1564,9 @@ acquire_sample_rows(Relation onerel, int elevel,
 
 			samplerows += 1;
 		}
+
+		pgstat_progress_update_param(PROGRESS_ANALYZE_BLOCKS_DONE,
+									 ++blksdone);
 	}
 
 	ExecDropSingleTupleTableSlot(slot);
@@ -1658,18 +1683,6 @@ acquire_inherited_sample_rows(Relation onerel, int elevel,
 	bool		has_child;
 
 	/*
-	 * Like in acquire_sample_rows(), if we're in the QD, fetch the sample
-	 * from segments.
-	 */
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		return acquire_sample_rows_dispatcher(onerel,
-											  true, /* inherited stats */
-											  elevel, rows, targrows,
-											  totalrows, totaldeadrows);
-	}
-
-	/*
 	 * Find all members of inheritance set.  We only need AccessShareLock on
 	 * the children.
 	 */
@@ -1682,6 +1695,7 @@ acquire_inherited_sample_rows(Relation onerel, int elevel,
 	 * child but no longer does.  In that case, we can clear the
 	 * relhassubclass field so as not to make the same mistake again later.
 	 * (This is safe because we hold ShareUpdateExclusiveLock.)
+	 * Please refer to https://github.com/greenplum-db/gpdb/issues/14644
 	 */
 	if (list_length(tableOIDs) < 2)
 	{
@@ -1694,7 +1708,20 @@ acquire_inherited_sample_rows(Relation onerel, int elevel,
 				(errmsg("skipping analyze of \"%s.%s\" inheritance tree --- this inheritance tree contains no child tables",
 						get_namespace_name(RelationGetNamespace(onerel)),
 						RelationGetRelationName(onerel))));
-		return 0;
+		if (Gp_role == GP_ROLE_EXECUTE)
+			return 0;
+	}
+
+	/*
+	 * Like in acquire_sample_rows(), if we're in the QD, fetch the sample
+	 * from segments.
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		return acquire_sample_rows_dispatcher(onerel,
+											  true, /* inherited stats */
+											  elevel, rows, targrows,
+											  totalrows, totaldeadrows);
 	}
 
 	/*
@@ -1801,6 +1828,8 @@ acquire_inherited_sample_rows(Relation onerel, int elevel,
 	 * rels have radically different free-space percentages, but it's not
 	 * clear that it's worth working harder.)
 	 */
+	pgstat_progress_update_param(PROGRESS_ANALYZE_CHILD_TABLES_TOTAL,
+								 nrels);
 	numrows = 0;
 	*totalrows = 0;
 	*totaldeadrows = 0;
@@ -1809,6 +1838,9 @@ acquire_inherited_sample_rows(Relation onerel, int elevel,
 		Relation	childrel = rels[i];
 		AcquireSampleRowsFunc acquirefunc = acquirefuncs[i];
 		double		childblocks = relblocks[i];
+
+		pgstat_progress_update_param(PROGRESS_ANALYZE_CURRENT_CHILD_TABLE_RELID,
+									 RelationGetRelid(childrel));
 
 		if (childblocks > 0)
 		{
@@ -1867,6 +1899,8 @@ acquire_inherited_sample_rows(Relation onerel, int elevel,
 		 * pointers to their TOAST tables in the sampled rows.
 		 */
 		table_close(childrel, NoLock);
+		pgstat_progress_update_param(PROGRESS_ANALYZE_CHILD_TABLES_DONE,
+									 i + 1);
 	}
 
 	return numrows;

@@ -158,7 +158,7 @@ select i from (select unnest(string_to_array(c, '|')) i, abs(d) j from foo) t;
       <dxl:ColumnStatistics Mdid="1.49493.1.1.1" Name="c" Width="11.000000" NullFreq="0.000000" NdvRemain="1.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
       <dxl:ColumnStatistics Mdid="1.49493.1.1.0" Name="d" Width="4.000000" NullFreq="0.000000" NdvRemain="1.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
       <dxl:RelationStatistics Mdid="2.49493.1.1" Name="foo" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.49493.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.49493.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="d" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

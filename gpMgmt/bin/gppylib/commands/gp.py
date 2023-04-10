@@ -81,6 +81,32 @@ def getPostmasterPID(hostname, datadir):
     except:
         return -1
 
+
+"""
+Given the segment data directory and the hostname,
+return all the postgres processes associated
+with that segment as a list.
+Returns an empty list if there is any error.
+"""
+def get_postgres_segment_processes(datadir, host):
+    postmaster_pid = getPostmasterPID(host, datadir)
+    if postmaster_pid == -1:
+        return []
+
+    postgres_pids = [postmaster_pid]
+    cmd = Command("get children pids", ("pgrep -P {0}".format(postmaster_pid)), ctxt=REMOTE, remoteHost=host)
+    cmd.run()
+
+    if cmd.get_results().rc == 0:
+        pids = cmd.get_results().stdout.split()
+        for pid in pids:
+            try:
+                postgres_pids.append(int(pid))
+            except ValueError:
+                pass # Ignore any error while converting to int from str
+
+    return postgres_pids
+
 #-----------------------------------------------
 
 class CmdArgs(list):

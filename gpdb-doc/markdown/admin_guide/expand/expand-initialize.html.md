@@ -6,6 +6,8 @@ Use the `gpexpand` utility to create and initialize the new segment instances an
 
 The first time you run [gpexpand](../../utility_guide/ref/gpexpand.html) with a valid input file it creates and initializes segment instances and creates the expansion schema. After these steps are completed, running `gpexpand` detects if the expansion schema has been created and, if so, performs table redistribution.
 
+> **Note** To prevent catalog inconsistency across existing and new segments, be sure that no DDL operations are running during the initialization phase.
+
 -   [Creating an Input File for System Expansion](#topic23)
 -   [Running gpexpand to Initialize New Segments](#topic26)
 -   [Rolling Back a Failed Expansion Setup](#topic27)
@@ -31,7 +33,7 @@ The utility automatically generates an input file based on this information, `db
 
 #### <a id="no163887"></a>To create an input file in interactive mode 
 
-1.  Log in on the master host as the user who will run your Greenplum Database system; for example, `gpadmin`.
+1.  Log in on the coordinator host as the user who will run your Greenplum Database system; for example, `gpadmin`.
 2.  Run `gpexpand`. The utility displays messages about how to prepare for an expansion operation, and it prompts you to quit or continue.
 
     Optionally, specify a hosts file using `-f`. For example:
@@ -141,7 +143,7 @@ After you have created an input file, run `gpexpand` to initialize new segment i
 
 ### <a id="no160378"></a>To run gpexpand with an input file 
 
-1.  Log in on the master host as the user who will run your Greenplum Database system; for example, `gpadmin`.
+1.  Log in on the coordinator host as the user who will run your Greenplum Database system; for example, `gpadmin`.
 2.  Run the `gpexpand` utility, specifying the input file with `-i`. For example:
 
     ```
@@ -173,7 +175,7 @@ You can also query the expansion schema to see expansion status. See [Monitoring
 
 You can roll back an expansion setup operation \(adding segment instances and segment hosts\) only if the operation fails.
 
-If the expansion fails during the initialization step, while the database is down, you must first restart the database in master-only mode by running the `gpstart -m` command.
+If the expansion fails during the initialization step, while the database is down, you must first restart the database in coordinator-only mode by running the `gpstart -m` command.
 
 Roll back the failed expansion with the following command:
 

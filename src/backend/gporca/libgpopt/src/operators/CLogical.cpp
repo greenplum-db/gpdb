@@ -158,10 +158,11 @@ CLogical::PosFromIndex(CMemoryPool *mp, const IMDIndex *pmdindex,
 
 	COrderSpec *pos = GPOS_NEW(mp) COrderSpec(mp);
 
-	// GiST, GIN and BRIN indexes have no order, so return an empty order spec
+	// GiST, GIN, BRIN and Hash indexes have no order, so return an empty order spec
 	if (pmdindex->IndexType() == IMDIndex::EmdindGist ||
 		pmdindex->IndexType() == IMDIndex::EmdindGin ||
-		pmdindex->IndexType() == IMDIndex::EmdindBrin)
+		pmdindex->IndexType() == IMDIndex::EmdindBrin ||
+		pmdindex->IndexType() == IMDIndex::EmdindHash)
 	{
 		return pos;
 	}
@@ -1213,28 +1214,6 @@ CLogical::PstatsDeriveDummy(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 	return stats;
 }
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CLogical::PexprPartPred
-//
-//	@doc:
-//		Compute partition predicate to pass down to n-th child
-//
-//---------------------------------------------------------------------------
-CExpression *
-CLogical::PexprPartPred(CMemoryPool *,		  //mp,
-						CExpressionHandle &,  //exprhdl,
-						CExpression *,		  //pexprInput,
-						ULONG				  //child_index
-) const
-{
-	GPOS_CHECK_ABORT;
-
-	// the default behavior is to never pass down any partition predicates
-	return nullptr;
-}
-
 
 //---------------------------------------------------------------------------
 //	@function:

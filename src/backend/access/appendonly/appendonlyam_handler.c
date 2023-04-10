@@ -23,8 +23,8 @@
 #include "access/tableam.h"
 #include "access/tuptoaster.h"
 #include "access/xact.h"
+#include "catalog/aoseg.h"
 #include "catalog/catalog.h"
-#include "catalog/gp_fastsequence.h"
 #include "catalog/heap.h"
 #include "catalog/index.h"
 #include "catalog/pg_am.h"
@@ -33,6 +33,7 @@
 #include "catalog/storage_xlog.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbvars.h"
+#include "commands/progress.h"
 #include "commands/vacuum.h"
 #include "executor/executor.h"
 #include "pgstat.h"
@@ -527,6 +528,13 @@ appendonly_index_fetch_end(IndexFetchTableData *scan)
 		aoscan->aofetch = NULL;
 	}
 
+	if (aoscan->indexonlydesc)
+	{
+		appendonly_index_only_finish(aoscan->indexonlydesc);
+		pfree(aoscan->indexonlydesc);
+		aoscan->indexonlydesc = NULL;
+	}
+
 	pfree(aoscan);
 }
 
@@ -605,7 +613,7 @@ appendonly_index_fetch_tuple(struct IndexFetchTableData *scan,
  * true and have the xwait machinery kick in.
  */
 static bool
-appendonly_index_fetch_tuple_exists(Relation rel,
+appendonly_index_unique_check(Relation rel,
 									ItemPointer tid,
 									Snapshot snapshot,
 									bool *all_dead)
@@ -689,6 +697,32 @@ appendonly_index_fetch_tuple_exists(Relation rel,
 	return visible;
 }
 
+static bool
+appendonly_index_fetch_tuple_visible(struct IndexFetchTableData *scan,
+									 ItemPointer tid,
+									 Snapshot snapshot)
+{
+	IndexFetchAppendOnlyData *aoscan = (IndexFetchAppendOnlyData *) scan;
+
+	if (!aoscan->indexonlydesc)
+	{
+		Snapshot	appendOnlyMetaDataSnapshot = snapshot;
+
+		if (appendOnlyMetaDataSnapshot == SnapshotAny)
+		{
+			/*
+			 * the append-only meta data should never be fetched with
+			 * SnapshotAny as bogus results are returned.
+			 */
+			appendOnlyMetaDataSnapshot = GetTransactionSnapshot();
+		}
+
+		aoscan->indexonlydesc = appendonly_index_only_init(aoscan->xs_base.rel,
+														   appendOnlyMetaDataSnapshot);
+	}
+
+	return appendonly_index_only_check(aoscan->indexonlydesc, (AOTupleId *) tid, snapshot);
+}
 
 /* ------------------------------------------------------------------------
  * Callbacks for non-modifying operations on individual tuples for
@@ -767,8 +801,17 @@ appendonly_compute_xid_horizon_for_tuples(Relation rel,
 										  ItemPointerData *tids,
 										  int nitems)
 {
-	// GPDB_12_MERGE_FIXME: vacuum related call back.
-	elog(ERROR, "not implemented yet");
+	/*
+	 * This API is only useful for hot standby snapshot conflict resolution
+	 * (for eg. see btree_xlog_delete()), in the context of index page-level
+	 * vacuums (aka page-level cleanups). This operation is only done when
+	 * IndexScanDesc->kill_prior_tuple is true, which is never for AO/CO tables
+	 * (we always return all_dead = false in the index_fetch_tuple() callback
+	 * as we don't support HOT)
+	 */
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("feature not supported on appendoptimized relations")));
 }
 
 /* ----------------------------------------------------------------------------
@@ -803,20 +846,29 @@ appendonly_tuple_insert(Relation relation, TupleTableSlot *slot, CommandId cid,
 	appendonly_free_memtuple(mtuple);
 }
 
+/*
+ * We don't support speculative inserts on appendoptimized tables, i.e. we don't
+ * support INSERT ON CONFLICT DO NOTHING or INSERT ON CONFLICT DO UPDATE. Thus,
+ * the following functions are left unimplemented.
+ */
+
 static void
 appendonly_tuple_insert_speculative(Relation relation, TupleTableSlot *slot,
 								CommandId cid, int options,
 								BulkInsertState bistate, uint32 specToken)
 {
- 	/* GPDB_12_MERGE_FIXME: not supported. Can this function be left out completely? Or ereport()? */
-	elog(ERROR, "speculative insertion not supported on AO tables");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("speculative insert is not supported on appendoptimized relations")));
 }
 
 static void
 appendonly_tuple_complete_speculative(Relation relation, TupleTableSlot *slot,
 								  uint32 specToken, bool succeeded)
 {
-	elog(ERROR, "speculative insertion not supported on AO tables");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("speculative insert is not supported on appendoptimized relations")));
 }
 
 /*
@@ -917,20 +969,44 @@ appendonly_tuple_update(Relation relation, ItemPointer otid, TupleTableSlot *slo
 	return result;
 }
 
+/*
+ * This API is called for a variety of purposes, which are either not supported
+ * for AO/CO tables or not supported for GPDB in general:
+ *
+ * (1) UPSERT: ExecOnConflictUpdate() calls this, but clearly upsert is not
+ * supported for AO/CO tables.
+ *
+ * (2) DELETE and UPDATE triggers: GetTupleForTrigger() calls this, but clearly
+ * these trigger types are not supported for AO/CO tables.
+ *
+ * (3) Logical replication: RelationFindReplTupleByIndex() and
+ * RelationFindReplTupleSeq() calls this, but clearly we don't support logical
+ * replication yet for GPDB.
+ *
+ * (4) For DELETEs/UPDATEs, when a state of TM_Updated is returned from
+ * table_tuple_delete() and table_tuple_update() respectively, this API is invoked.
+ * However, that is impossible for AO/CO tables as an AO/CO tuple cannot be
+ * deleted/updated while another transaction is updating it (see CdbTryOpenTable()).
+ *
+ * (5) Row-level locking (SELECT FOR ..): ExecLockRows() calls this but a plan
+ * containing the LockRows plan node is never generated for AO/CO tables. In fact,
+ * we lock at the table level instead.
+ */
 static TM_Result
 appendonly_tuple_lock(Relation relation, ItemPointer tid, Snapshot snapshot,
 				  TupleTableSlot *slot, CommandId cid, LockTupleMode mode,
 				  LockWaitPolicy wait_policy, uint8 flags,
 				  TM_FailureData *tmfd)
 {
- 	/* GPDB_12_MERGE_FIXME: not supported. Can this function be left out completely? Or ereport()? */
-	elog(ERROR, "speculative insertion not supported on AO tables");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("tuple locking is not supported on appendoptimized tables")));
 }
 
 static void
 appendonly_finish_bulk_insert(Relation relation, int options)
 {
-	appendonly_dml_finish(relation);
+	/* nothing for ao tables */
 }
 
 
@@ -999,8 +1075,6 @@ appendonly_relation_set_new_filenode(Relation rel,
 static void
 appendonly_relation_nontransactional_truncate(Relation rel)
 {
-	Oid ao_base_relid = RelationGetRelid(rel);
-
 	Oid			aoseg_relid = InvalidOid;
 	Oid			aoblkdir_relid = InvalidOid;
 	Oid			aovisimap_relid = InvalidOid;
@@ -1008,10 +1082,10 @@ appendonly_relation_nontransactional_truncate(Relation rel)
 	ao_truncate_one_rel(rel);
 
 	/* Also truncate the aux tables */
-	GetAppendOnlyEntryAuxOids(ao_base_relid, NULL,
+	GetAppendOnlyEntryAuxOids(rel,
 							  &aoseg_relid,
-							  &aoblkdir_relid, NULL,
-							  &aovisimap_relid, NULL);
+							  &aoblkdir_relid,
+							  &aovisimap_relid);
 
 	heap_truncate_one_relid(aoseg_relid);
 	heap_truncate_one_relid(aoblkdir_relid);
@@ -1069,8 +1143,10 @@ appendonly_vacuum_rel(Relation onerel, VacuumParams *params,
 					  BufferAccessStrategy bstrategy)
 {
 	/*
-	 * Implemented but not invoked, we do the AO_ROW different phases vacuuming by
-	 * calling ao_vacuum_rel() in vacuum_rel() directly for now.
+	 * We VACUUM an AO_ROW table through multiple phases. vacuum_rel()
+	 * orchestrates the phases and calls itself again for each phase, so we
+	 * get here for every phase. ao_vacuum_rel() is a wrapper of dedicated
+	 * ao_vacuum_rel_*() functions for the specific phases.
 	 */
 	ao_vacuum_rel(onerel, params, bstrategy);
 	
@@ -1104,6 +1180,7 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	MemTuple				mtuple = NULL;
 	TupleTableSlot		   *slot;
 	TableScanDesc			aoscandesc;
+	double					n_tuples_written = 0;
 
 	pg_rusage_init(&ru0);
 
@@ -1193,6 +1270,25 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	slot = table_slot_create(OldHeap, NULL);
 	aoscandesc = appendonly_beginscan(OldHeap, GetActiveSnapshot(), 0, NULL,
 										NULL, 0);
+	/* Report cluster progress */
+	{
+		FileSegTotals *fstotal;
+		const int	prog_index[] = {
+			PROGRESS_CLUSTER_PHASE,
+			PROGRESS_CLUSTER_TOTAL_HEAP_BLKS,
+		};
+		int64		prog_val[2];
+
+		fstotal = GetSegFilesTotals(OldHeap, GetActiveSnapshot());
+
+		/* Set phase and total heap-size blocks to columns */
+		prog_val[0] = PROGRESS_CLUSTER_PHASE_SEQ_SCAN_AO;
+		prog_val[1] = RelationGuessNumberOfBlocksFromSize(fstotal->totalbytes);
+		pgstat_progress_update_multi_param(2, prog_index, prog_val);
+	}
+
+	SIMPLE_FAULT_INJECTOR("cluster_ao_seq_scan_begin");
+
 	mt_bind = create_memtuple_binding(oldTupDesc);
 
 	while (appendonly_getnextslot(aoscandesc, ForwardScanDirection, slot))
@@ -1200,6 +1296,8 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 		Datum	   *slot_values;
 		bool	   *slot_isnull;
 		HeapTuple   tuple;
+		BlockNumber	curr_heap_blks = 0;
+		BlockNumber	prev_heap_blks = 0;
 
 		CHECK_FOR_INTERRUPTS();
 
@@ -1210,6 +1308,17 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 		tuple = heap_form_tuple(oldTupDesc, slot_values, slot_isnull);
 
 		*num_tuples += 1;
+		pgstat_progress_update_param(PROGRESS_CLUSTER_HEAP_TUPLES_SCANNED,
+									 *num_tuples);
+		curr_heap_blks = RelationGuessNumberOfBlocksFromSize(((AppendOnlyScanDesc) aoscandesc)->totalBytesRead);
+		if (curr_heap_blks != prev_heap_blks)
+		{
+			pgstat_progress_update_param(PROGRESS_CLUSTER_HEAP_BLKS_SCANNED,
+										 curr_heap_blks);
+			prev_heap_blks = curr_heap_blks;
+		}
+		SIMPLE_FAULT_INJECTOR("cluster_ao_scanning_tuples");
+
 		tuplesort_putheaptuple(tuplesort, tuple);
 		heap_freetuple(tuple);
 	}
@@ -1218,13 +1327,19 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 
 	appendonly_endscan(aoscandesc);
 
-	/*
-	 * Сomplete the sort, then read out all tuples
-	 * from the tuplestore and write them to the new relation.
-	 */
-
+	/* Report that we are now sorting tuples */
+	pgstat_progress_update_param(PROGRESS_CLUSTER_PHASE,
+								 PROGRESS_CLUSTER_PHASE_SORT_TUPLES);
+	SIMPLE_FAULT_INJECTOR("cluster_ao_sorting_tuples");
 	tuplesort_performsort(tuplesort);
-	
+
+	/*
+	 * Report that we are now reading out all tuples from the tuplestore
+	 * and write them to the new relation.
+	 */
+	pgstat_progress_update_param(PROGRESS_CLUSTER_PHASE,
+								 PROGRESS_CLUSTER_PHASE_WRITE_NEW_AO);
+	SIMPLE_FAULT_INJECTOR("cluster_ao_write_begin");
 	write_seg_no = ChooseSegnoForWrite(NewHeap);
 
 	aoInsertDesc = appendonly_insert_init(NewHeap, write_seg_no, (int64) *num_tuples);
@@ -1233,7 +1348,6 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	for (;;)
 	{
 		HeapTuple	tuple;
-		uint32		prev_memtuple_len = 0;
 		uint32		len;
 		uint32		null_save_len;
 		bool		has_nulls;
@@ -1247,19 +1361,20 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 		heap_deform_tuple(tuple, oldTupDesc, values, isnull);
 
 		len = compute_memtuple_size(mt_bind, values, isnull, &null_save_len, &has_nulls);
-		if (len > prev_memtuple_len)
+		if (len > 0)
 		{
-			/* Here we are trying to avoid reallocation of temp mtuple */
 			if (mtuple != NULL)
 				pfree(mtuple);
-			mtuple = palloc(len);
-			prev_memtuple_len = len;
+			mtuple = NULL;
 		}
 
-		memtuple_form_to(mt_bind, values, isnull, len, null_save_len, has_nulls,
-					mtuple);
+		mtuple = memtuple_form_to(mt_bind, values, isnull, len, null_save_len, has_nulls, mtuple);
 
 		appendonly_insert(aoInsertDesc, mtuple, &aoTupleId);
+		/* Report n_tuples */
+		pgstat_progress_update_param(PROGRESS_CLUSTER_HEAP_TUPLES_WRITTEN,
+									 ++n_tuples_written);
+		SIMPLE_FAULT_INJECTOR("cluster_ao_writing_tuples");
 	}
 
 	tuplesort_end(tuplesort);
@@ -1333,6 +1448,7 @@ appendonly_index_build_range_scan(Relation heapRelation,
 	EState	   *estate;
 	ExprContext *econtext;
 	Snapshot	snapshot;
+	int64 previous_blkno = -1;
 
 	/*
 	 * sanity checks
@@ -1408,10 +1524,9 @@ appendonly_index_build_range_scan(Relation heapRelation,
 	 * If block directory is empty, it must also be built along with the index.
 	 */
 	Oid blkdirrelid;
-	Oid blkidxrelid;
 
-	GetAppendOnlyEntryAuxOids(RelationGetRelid(aoscan->aos_rd), NULL, NULL,
-							  &blkdirrelid, &blkidxrelid, NULL, NULL);
+	GetAppendOnlyEntryAuxOids(aoscan->aos_rd, NULL,
+							  &blkdirrelid, NULL);
 	/*
 	 * Note that block directory is created during creation of the first
 	 * index.  If it is found empty, it means the block directory was created
@@ -1435,27 +1550,24 @@ appendonly_index_build_range_scan(Relation heapRelation,
 	relation_close(blkdir, NoLock);
 
 
-	/* GPDB_12_MERGE_FIXME */
-#if 0
 	/* Publish number of blocks to scan */
 	if (progress)
 	{
-		BlockNumber nblocks;
+		FileSegTotals	*fileSegTotals;
+		BlockNumber		totalBlocks;
 
-		if (aoscan->rs_base.rs_parallel != NULL)
-		{
-			ParallelBlockTableScanDesc pbscan;
+		/* XXX: How can we report for builds with parallel scans? */
+		Assert(!aoscan->rs_base.rs_parallel);
 
-			pbscan = (ParallelBlockTableScanDesc) aoscan->rs_base.rs_parallel;
-			nblocks = pbscan->phs_nblocks;
-		}
-		else
-			nblocks = aoscan->rs_nblocks;
+		fileSegTotals = GetSegFilesTotals(heapRelation, aoscan->appendOnlyMetaDataSnapshot);
 
+		Assert(fileSegTotals->totalbytes >= 0);
+
+		totalBlocks =
+			RelationGuessNumberOfBlocksFromSize((uint64) fileSegTotals->totalbytes);
 		pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_TOTAL,
-									 nblocks);
+									 totalBlocks);
 	}
-#endif
 
 	/* set our scan endpoints */
 	if (!allow_sync)
@@ -1489,21 +1601,23 @@ appendonly_index_build_range_scan(Relation heapRelation,
 			(numblocks != InvalidBlockNumber && ItemPointerGetBlockNumber(&slot->tts_tid) >= numblocks))
 			continue;
 
-	/* GPDB_12_MERGE_FIXME */
-#if 0
 		/* Report scan progress, if asked to. */
 		if (progress)
 		{
-			BlockNumber blocks_done = appendonly_scan_get_blocks_done(aoscan);
+			int64 current_blkno =
+				RelationGuessNumberOfBlocksFromSize(aoscan->totalBytesRead);
 
-			if (blocks_done != previous_blkno)
+			/* XXX: How can we report for builds with parallel scans? */
+			Assert(!aoscan->rs_base.rs_parallel);
+
+			/* As soon as a new block starts, report it as scanned */
+			if (current_blkno != previous_blkno)
 			{
 				pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_DONE,
-											 blocks_done);
-				previous_blkno = blocks_done;
+											 current_blkno);
+				previous_blkno = current_blkno;
 			}
 		}
-#endif
 
 		aoTupleId = (AOTupleId *) &slot->tts_tid;
 		/*
@@ -1560,28 +1674,6 @@ appendonly_index_build_range_scan(Relation heapRelation,
 
 	}
 
-	/* GPDB_12_MERGE_FIXME */
-#if 0
-	/* Report scan progress one last time. */
-	if (progress)
-	{
-		BlockNumber blks_done;
-
-		if (aoscan->rs_base.rs_parallel != NULL)
-		{
-			ParallelBlockTableScanDesc pbscan;
-
-			pbscan = (ParallelBlockTableScanDesc) aoscan->rs_base.rs_parallel;
-			blks_done = pbscan->phs_nblocks;
-		}
-		else
-			blks_done = aoscan->rs_nblocks;
-
-		pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_DONE,
-									 blks_done);
-	}
-#endif
-
 	table_endscan(scan);
 
 	ExecDropSingleTupleTableSlot(slot);
@@ -1602,225 +1694,16 @@ appendonly_index_validate_scan(Relation heapRelation,
 						   Snapshot snapshot,
 						   ValidateIndexState *state)
 {
-	TableScanDesc scan;
-	AppendOnlyScanDesc aoscan;
-	HeapTuple	heapTuple;
-	Datum		values[INDEX_MAX_KEYS];
-	bool		isnull[INDEX_MAX_KEYS];
-	ExprState  *predicate;
-	TupleTableSlot *slot;
-	EState	   *estate;
-	ExprContext *econtext;
-	BlockNumber root_blkno = InvalidBlockNumber;
-#if 0
-	OffsetNumber root_offsets[MaxHeapTuplesPerPage];
-#endif
-	bool		in_index[MaxHeapTuplesPerPage];
-
-	/* state variables for the merge */
-	ItemPointer indexcursor = NULL;
-	ItemPointerData decoded;
-	bool		tuplesort_empty = false;
-
 	/*
-	 * sanity checks
+	 * This interface is used during CONCURRENT INDEX builds. Currently,
+	 * CONCURRENT INDEX builds are not supported in GPDB. This function should
+	 * not have been called in the first place, but if it is called, better to
+	 * error out.
 	 */
-	Assert(OidIsValid(indexRelation->rd_rel->relam));
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			 errmsg("index validate scan - feature not supported on appendoptimized relations")));
 
-	/*
-	 * Need an EState for evaluation of index expressions and partial-index
-	 * predicates.  Also a slot to hold the current tuple.
-	 */
-	estate = CreateExecutorState();
-	econtext = GetPerTupleExprContext(estate);
-	slot = table_slot_create(heapRelation, NULL);
-
-	/* Arrange for econtext's scan tuple to be the tuple under test */
-	econtext->ecxt_scantuple = slot;
-
-	/* Set up execution state for predicate, if any. */
-	predicate = ExecPrepareQual(indexInfo->ii_Predicate, estate);
-
-	/*
-	 * Prepare for scan of the base relation.  We need just those tuples
-	 * satisfying the passed-in reference snapshot.  We must disable syncscan
-	 * here, because it's critical that we read from block zero forward to
-	 * match the sorted TIDs.
-	 */
-	scan = table_beginscan_strat(heapRelation,	/* relation */
-								 snapshot,	/* snapshot */
-								 0, /* number of keys */
-								 NULL,	/* scan key */
-								 true,	/* buffer access strategy OK */
-								 false);	/* syncscan not OK */
-	aoscan = (AppendOnlyScanDesc) scan;
-
-	/* GPDB_12_MERGE_FIXME */
-#if 0
-	pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_TOTAL,
-								 aoscan->rs_nblocks);
-#endif
-
-	/*
-	 * Scan all tuples matching the snapshot.
-	 */
-	while ((heapTuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
-	{
-		ItemPointer heapcursor = &heapTuple->t_self;
-		ItemPointerData rootTuple;
-		OffsetNumber root_offnum;
-
-		CHECK_FOR_INTERRUPTS();
-
-		state->htups += 1;
-
-	/* GPDB_12_MERGE_FIXME */
-#if 0
-		if ((previous_blkno == InvalidBlockNumber) ||
-			(aoscan->rs_cblock != previous_blkno))
-		{
-			pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_DONE,
-										 aoscan->rs_cblock);
-			previous_blkno = aoscan->rs_cblock;
-		}
-#endif
-
-		/* Convert actual tuple TID to root TID */
-		rootTuple = *heapcursor;
-		root_offnum = ItemPointerGetOffsetNumber(heapcursor);
-
-		if (HeapTupleIsHeapOnly(heapTuple))
-		{
-			/* GPDB_12_MERGE_FIXME: root_offsets unitialized */
-#if 0
-			root_offnum = root_offsets[root_offnum - 1];
-			if (!OffsetNumberIsValid(root_offnum))
-				ereport(ERROR,
-						(errcode(ERRCODE_DATA_CORRUPTED),
-						 errmsg_internal("failed to find parent tuple for heap-only tuple at (%u,%u) in table \"%s\"",
-										 ItemPointerGetBlockNumber(heapcursor),
-										 ItemPointerGetOffsetNumber(heapcursor),
-										 RelationGetRelationName(heapRelation))));
-			ItemPointerSetOffsetNumber(&rootTuple, root_offnum);
-#else
-			elog(ERROR, "GPDB_12_MERGE_FIXME");
-#endif
-		}
-
-		/*
-		 * "merge" by skipping through the index tuples until we find or pass
-		 * the current root tuple.
-		 */
-		while (!tuplesort_empty &&
-			   (!indexcursor ||
-				ItemPointerCompare(indexcursor, &rootTuple) < 0))
-		{
-			Datum		ts_val;
-			bool		ts_isnull;
-
-			if (indexcursor)
-			{
-				/*
-				 * Remember index items seen earlier on the current heap page
-				 */
-				if (ItemPointerGetBlockNumber(indexcursor) == root_blkno)
-					in_index[ItemPointerGetOffsetNumber(indexcursor) - 1] = true;
-			}
-
-			tuplesort_empty = !tuplesort_getdatum(state->tuplesort, true,
-												  &ts_val, &ts_isnull, NULL);
-			Assert(tuplesort_empty || !ts_isnull);
-			if (!tuplesort_empty)
-			{
-				itemptr_decode(&decoded, DatumGetInt64(ts_val));
-				indexcursor = &decoded;
-
-				/* If int8 is pass-by-ref, free (encoded) TID Datum memory */
-#ifndef USE_FLOAT8_BYVAL
-				pfree(DatumGetPointer(ts_val));
-#endif
-			}
-			else
-			{
-				/* Be tidy */
-				indexcursor = NULL;
-			}
-		}
-
-		/*
-		 * If the tuplesort has overshot *and* we didn't see a match earlier,
-		 * then this tuple is missing from the index, so insert it.
-		 */
-		if ((tuplesort_empty ||
-			 ItemPointerCompare(indexcursor, &rootTuple) > 0) &&
-			!in_index[root_offnum - 1])
-		{
-			MemoryContextReset(econtext->ecxt_per_tuple_memory);
-
-			/* Set up for predicate or expression evaluation */
-			ExecStoreHeapTuple(heapTuple, slot, false);
-
-			/*
-			 * In a partial index, discard tuples that don't satisfy the
-			 * predicate.
-			 */
-			if (predicate != NULL)
-			{
-				if (!ExecQual(predicate, econtext))
-					continue;
-			}
-
-			/*
-			 * For the current heap tuple, extract all the attributes we use
-			 * in this index, and note which are null.  This also performs
-			 * evaluation of any expressions needed.
-			 */
-			FormIndexDatum(indexInfo,
-						   slot,
-						   estate,
-						   values,
-						   isnull);
-
-			/*
-			 * You'd think we should go ahead and build the index tuple here,
-			 * but some index AMs want to do further processing on the data
-			 * first. So pass the values[] and isnull[] arrays, instead.
-			 */
-
-			/*
-			 * If the tuple is already committed dead, you might think we
-			 * could suppress uniqueness checking, but this is no longer true
-			 * in the presence of HOT, because the insert is actually a proxy
-			 * for a uniqueness check on the whole HOT-chain.  That is, the
-			 * tuple we have here could be dead because it was already
-			 * HOT-updated, and if so the updating transaction will not have
-			 * thought it should insert index entries.  The index AM will
-			 * check the whole HOT-chain and correctly detect a conflict if
-			 * there is one.
-			 */
-
-			index_insert(indexRelation,
-						 values,
-						 isnull,
-						 &rootTuple,
-						 heapRelation,
-						 indexInfo->ii_Unique ?
-						 UNIQUE_CHECK_YES : UNIQUE_CHECK_NO,
-						 indexInfo);
-
-			state->tups_inserted += 1;
-		}
-	}
-
-	table_endscan(scan);
-
-	ExecDropSingleTupleTableSlot(slot);
-
-	FreeExecutorState(estate);
-
-	/* These may have been pointing to the now-gone estate */
-	indexInfo->ii_ExpressionsState = NIL;
-	indexInfo->ii_PredicateState = NULL;
 }
 
 /* ------------------------------------------------------------------------
@@ -1848,8 +1731,8 @@ appendonly_relation_size(Relation rel, ForkNumber forkNumber)
 
 	result = 0;
 
-	GetAppendOnlyEntryAuxOids(rel->rd_id, NULL, &segrelid, NULL,
-			NULL, NULL, NULL);
+	GetAppendOnlyEntryAuxOids(rel, &segrelid, NULL,
+							NULL);
 
 	if (segrelid == InvalidOid)
 		elog(ERROR, "could not find pg_aoseg aux table for AO table \"%s\"",
@@ -1874,6 +1757,67 @@ appendonly_relation_size(Relation rel, ForkNumber forkNumber)
 	table_close(pg_aoseg_rel, AccessShareLock);
 
 	return result;
+}
+
+/*
+ * For each AO segment, get the starting heap block number and the number of
+ * heap blocks (together termed as a BlockSequence). The starting heap block
+ * number is always deterministic given a segment number. See AOtupleId.
+ *
+ * The number of heap blocks can be determined from the last row number present
+ * in the segment. See appendonlytid.h for details.
+ */
+static BlockSequence *
+appendonly_relation_get_block_sequences(Relation rel,
+										int *numSequences)
+{
+	Snapshot		snapshot;
+	Oid				segrelid;
+	int				nsegs;
+	BlockSequence	*sequences;
+	FileSegInfo 	**seginfos;
+
+	Assert(RelationIsValid(rel));
+	Assert(numSequences);
+
+	snapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
+
+	seginfos = GetAllFileSegInfo(rel, snapshot, &nsegs, &segrelid);
+	sequences = (BlockSequence *) palloc(sizeof(BlockSequence) * nsegs);
+	*numSequences = nsegs;
+
+	/*
+	 * For each aoseg, the sequence starts at a fixed heap block number and
+	 * contains up to the highest numbered heap block corresponding to the
+	 * lastSequence value of that segment.
+	 */
+	for (int i = 0; i < nsegs; i++)
+		AOSegment_PopulateBlockSequence(&sequences[i], segrelid, seginfos[i]->segno);
+
+	UnregisterSnapshot(snapshot);
+
+	if (seginfos != NULL)
+	{
+		FreeAllSegFileInfo(seginfos, nsegs);
+		pfree(seginfos);
+	}
+
+	return sequences;
+}
+
+/*
+ * Return the BlockSequence corresponding to the AO segment in which the logical
+ * heap block 'blkNum' falls.
+ */
+static void
+appendonly_relation_get_block_sequence(Relation rel,
+									   BlockNumber blkNum,
+									   BlockSequence *sequence)
+{
+	Oid segrelid;
+
+	GetAppendOnlyEntryAuxOids(rel, &segrelid, NULL, NULL);
+	AOSegment_PopulateBlockSequence(sequence, segrelid, AOSegmentGet_segno(blkNum));
 }
 
 /*
@@ -1933,15 +1877,22 @@ appendonly_relation_needs_toast_table(Relation rel)
  */
 static void
 appendonly_estimate_rel_size(Relation rel, int32 *attr_widths,
-						 BlockNumber *pages, double *tuples,
-						 double *allvisfrac)
+							 BlockNumber *pages, double *tuples,
+							 double *allvisfrac)
 {
 	FileSegTotals  *fileSegTotals;
 	Snapshot		snapshot;
 
 	*pages = 1;
 	*tuples = 1;
-	*allvisfrac = 0;
+
+	/*
+	 * Indirectly, allvisfrac is the fraction of pages for which we don't need
+	 * to scan the full table during an index only scan.
+	 * For AO/CO tables, we never have to scan the underlying table. This is
+	 * why we set this to 1.
+	 */
+	*allvisfrac = 1;
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 		return;
@@ -2127,7 +2078,8 @@ static const TableAmRoutine ao_row_methods = {
 	.index_fetch_reset = appendonly_index_fetch_reset,
 	.index_fetch_end = appendonly_index_fetch_end,
 	.index_fetch_tuple = appendonly_index_fetch_tuple,
-	.index_fetch_tuple_exists = appendonly_index_fetch_tuple_exists,
+	.index_fetch_tuple_visible = appendonly_index_fetch_tuple_visible,
+	.index_unique_check = appendonly_index_unique_check,
 
 	.dml_init = appendonly_dml_init,
 	.dml_finish = appendonly_dml_finish,
@@ -2158,6 +2110,8 @@ static const TableAmRoutine ao_row_methods = {
 	.index_validate_scan = appendonly_index_validate_scan,
 
 	.relation_size = appendonly_relation_size,
+	.relation_get_block_sequences = appendonly_relation_get_block_sequences,
+	.relation_get_block_sequence = appendonly_relation_get_block_sequence,
 	.relation_needs_toast_table = appendonly_relation_needs_toast_table,
 
 	.relation_estimate_size = appendonly_estimate_rel_size,

@@ -38,6 +38,13 @@ typedef struct BufferUsage
 	instr_time	blk_write_time; /* time spent writing */
 } BufferUsage;
 
+typedef struct WalUsage
+{
+	long		wal_records;	/* # of WAL records produced */
+	long		wal_num_fpw;	/* # of WAL full page image writes produced */
+	uint64		wal_bytes;		/* size of WAL records produced */
+} WalUsage;
+
 /* Flag bits included in InstrAlloc's instrument_options bitmask */
 typedef enum InstrumentOption
 {
@@ -45,6 +52,7 @@ typedef enum InstrumentOption
 	INSTRUMENT_TIMER = 1 << 0,	/* needs timer (and row counts) */
 	INSTRUMENT_BUFFERS = 1 << 1,	/* needs buffer usage (not implemented yet) */
 	INSTRUMENT_ROWS = 1 << 2,	/* needs row count */
+	INSTRUMENT_WAL = 1 << 3,	/* needs WAL usage */
 	INSTRUMENT_MEMORY_DETAIL = 0x20000000,	/* needs detailed memory accounting */
 	INSTRUMENT_CDB = 0x40000000,	/* needs cdb statistics */
 	INSTRUMENT_ALL = PG_INT32_MAX
@@ -56,6 +64,7 @@ typedef struct Instrumentation
 	bool		need_timer;		/* true if we need timer data */
 	bool		need_cdb;		/* true if we need cdb statistics */
 	bool		need_bufusage;	/* true if we need buffer usage data */
+	bool		need_walusage;	/* true if we need WAL usage data */
 	/* Info about current plan cycle: */
 	bool		running;		/* true if we've completed first tuple */
 	instr_time	starttime;		/* Start time of current iteration of node */
@@ -63,6 +72,7 @@ typedef struct Instrumentation
 	double		firsttuple;		/* Time for first tuple of this cycle */
 	uint64		tuplecount;		/* Tuples emitted so far this cycle */
 	BufferUsage	bufusage_start;	/* Buffer usage at start */
+	WalUsage	walusage_start; /* WAL usage at start */
 	/* Accumulated statistics across all completed cycles: */
 	double		startup;		/* Total startup time (in seconds) */
 	double		total;			/* Total total time (in seconds) */
@@ -72,6 +82,7 @@ typedef struct Instrumentation
 	double		nfiltered1;		/* # tuples removed by scanqual or joinqual */
 	double		nfiltered2;		/* # tuples removed by "other" quals */
 	BufferUsage	bufusage;		/* Total buffer usage */
+	WalUsage	walusage;		/* total WAL usage */
 
 	double		execmemused;	/* CDB: executor memory used (bytes) */
 	double		workmemused;	/* CDB: work_mem actually used (bytes) */
@@ -93,6 +104,7 @@ typedef struct WorkerInstrumentation
 } WorkerInstrumentation;
 
 extern PGDLLIMPORT BufferUsage pgBufferUsage;
+extern PGDLLIMPORT WalUsage pgWalUsage;
 
 extern Instrumentation *InstrAlloc(int n, int instrument_options);
 extern void InstrInit(Instrumentation *instr, int instrument_options);
@@ -101,8 +113,10 @@ extern void InstrStopNode(Instrumentation *instr, uint64 nTuples);
 extern void InstrEndLoop(Instrumentation *instr);
 extern void InstrAggNode(Instrumentation *dst, Instrumentation *add);
 extern void InstrStartParallelQuery(void);
-extern void InstrEndParallelQuery(BufferUsage *result);
-extern void InstrAccumParallelQuery(BufferUsage *result);
+extern void InstrEndParallelQuery(BufferUsage *bufusage, WalUsage *walusage);
+extern void InstrAccumParallelQuery(BufferUsage *bufusage, WalUsage *walusage);
+extern void WalUsageAccumDiff(WalUsage *dst, const WalUsage *add,
+							  const WalUsage *sub);
 
 #define GP_INSTRUMENT_OPTS (gp_enable_query_metrics ? INSTRUMENT_ROWS : INSTRUMENT_NONE)
 

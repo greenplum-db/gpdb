@@ -24,7 +24,7 @@ $$ LANGUAGE plpgsql;
 -- Verify empty visimap for uaocs table
 create table uaocs_table_check_empty_visimap (i int, j varchar(20), k int ) with (appendonly=true, orientation=column) DISTRIBUTED BY (i);
 insert into uaocs_table_check_empty_visimap values(1,'test',2);
-select 1 from pg_appendonly where visimapidxid is not null and visimapidxid is not NULL and relid='uaocs_table_check_empty_visimap'::regclass;
+SELECT count(i.indexrelid) FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND a.relid='uaocs_table_check_empty_visimap'::regclass;
 
 -- Verify the hidden tup_count using UDF gp_aovisimap_hidden_info(oid) for uaocs relation after delete and vacuum
 create table uaocs_table_check_hidden_tup_count_after_delete(i int, j varchar(20), k int ) with (appendonly=true, orientation=column) DISTRIBUTED BY (i);

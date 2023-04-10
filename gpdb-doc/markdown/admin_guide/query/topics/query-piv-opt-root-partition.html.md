@@ -33,14 +33,14 @@ GPORCA itself also uses leaf partition statistics for any queries that access le
 
 If you do not intend to run queries on partitioned tables with GPORCA \(setting the server configuration parameter [optimizer](../../../ref_guide/config_params/guc-list.html) to `off`\), then you can deactivate the automatic collection of statistics on the root partition of the partitioned table. The server configuration parameter [optimizer\_analyze\_root\_partition](../../../ref_guide/config_params/guc-list.html) controls whether the `ROOTPARTITION` keyword is required to collect root statistics for the root partition of a partitioned table. The default setting for the parameter is `on`, the `ANALYZE` command can collect root partition statistics without the `ROOTPARTITION` keyword. You can deactivate automatic collection of root partition statistics by setting the parameter to `off`. When the value is `off`, you must run `ANALZYE ROOTPARTITION` to collect root partition statistics.
 
-1.  Log into the Greenplum Database master host as `gpadmin`, the Greenplum Database administrator.
+1.  Log into the Greenplum Database coordinator host as `gpadmin`, the Greenplum Database administrator.
 2.  Set the values of the server configuration parameters. These Greenplum Database `gpconfig` utility commands sets the value of the parameters to `off`:
 
     ```
     $ gpconfig -c optimizer_analyze_root_partition -v off --masteronly
     ```
 
-3.  Restart Greenplum Database. This Greenplum Database `gpstop` utility command reloads the `postgresql.conf` files of the master and segments without shutting down Greenplum Database.
+3.  Restart Greenplum Database. This Greenplum Database `gpstop` utility command reloads the `postgresql.conf` files of the coordinator and segments without shutting down Greenplum Database.
 
     ```
     gpstop -u

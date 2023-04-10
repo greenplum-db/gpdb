@@ -7,7 +7,7 @@
       <dxl:CTEConfig CTEInliningCutoff="0"/> 
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
       <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="2"/>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="2147483647"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="2147483647"/>
       <dxl:TraceFlags Value="103027,101013,103001,103016,103022,104002"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -165,7 +165,7 @@
         <dxl:InverseOp Mdid="0.525.1.0"/>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.17004.1.1" Name="customer" Rows="10.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.17004.1.1" Name="customer" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17004.1.1" Name="customer" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
         <dxl:Columns>
           <dxl:Column Name="cn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>

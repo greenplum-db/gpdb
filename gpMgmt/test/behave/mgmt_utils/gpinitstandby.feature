@@ -145,9 +145,9 @@ Feature: Tests for gpinitstandby feature
     Scenario: gpinitstandby should create pg_hba entry to segment primary
         Given the database is not running
         And a working directory of the test as '/tmp/gpinitstandby'
-        And a cluster is created with mirrors on "mdw" and "sdw1"
+        And a cluster is created with mirrors on "cdw" and "sdw1"
         And the standby is not initialized
-        When running gpinitstandby on host "mdw" to create a standby on host "sdw1"
+        When running gpinitstandby on host "cdw" to create a standby on host "sdw1"
         Then gpinitstandby should return a return code of 0
         And verify the standby coordinator entries in catalog
         And verify that pg_hba.conf file has "standby" entries in each segment data directories

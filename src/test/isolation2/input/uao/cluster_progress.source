@@ -1,0 +1,71 @@
+-- @Description Test to ensure we correctly report progress in
+-- pg_stat_progress_cluster for append-optimized tables.
+
+set default_table_access_method=@amname@;
+
+-- Setup the append-optimized table to be clustered
+CREATE TABLE cluster_progress_ao(i int, j int);
+-- Insert all tuples to seg1
+INSERT INTO cluster_progress_ao SELECT 0, i FROM generate_series(1, 100000) i;
+-- Create two btree indexes
+CREATE INDEX idx_cluster_progress_ao_i on cluster_progress_ao(i);
+CREATE INDEX idx_cluster_progress_ao_j on cluster_progress_ao(j);
+-- Delete some tuples
+DELETE FROM cluster_progress_ao where j % 5 = 0;
+
+-- Create a helper table that records storage-dependent static numbers.
+CREATE TABLE helper_table AS
+SELECT 0::int AS seg1,
+       (pg_relation_size('cluster_progress_ao') + (current_setting('block_size')::int - 1)) / current_setting('block_size')::int AS heap_blks_total_before,
+       CASE current_setting('default_table_access_method') WHEN 'ao_row' THEN 1 ELSE 2 END AS n_segfiles_per_tuple;
+
+-- Perform cluster and observe the progress
+
+SELECT gp_inject_fault('cluster_ao_seq_scan_begin', 'suspend', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+1&: CLUSTER cluster_progress_ao USING idx_cluster_progress_ao_j;
+SELECT gp_wait_until_triggered_fault('cluster_ao_seq_scan_begin', 1, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+-- We are in "seq scanning ao" phase and "heap_blks_total" should be available
+1U: select datname, relid::regclass, command, phase, cluster_index_relid::regclass, heap_tuples_scanned, heap_tuples_written, heap_blks_total = (SELECT heap_blks_total_before FROM helper_table) AS heap_blks_total_all, heap_blks_scanned, index_rebuild_count from pg_stat_progress_cluster;
+
+-- Resume execution and suspend again in the middle of scanning old table
+SELECT gp_inject_fault('cluster_ao_scanning_tuples', 'suspend', '', '', '', 200, 200, 0, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('cluster_ao_seq_scan_begin', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_wait_until_triggered_fault('cluster_ao_scanning_tuples', 200, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+-- We are in "seq scanning ao" phase. "heap_tuples_scanned" should be updated
+-- every time we scan an old live tuple. "heap_blks_scanned" should be updated
+-- every time we finish scanning a heap-block size worth of old tuples.
+1U: select datname, relid::regclass, command, phase, cluster_index_relid::regclass, heap_tuples_scanned, heap_tuples_written, heap_blks_total = (SELECT heap_blks_total_before FROM helper_table) AS heap_blks_total_all, heap_blks_scanned / (SELECT n_segfiles_per_tuple FROM helper_table) AS heap_blks_scanned_per_col, index_rebuild_count from pg_stat_progress_cluster;
+
+-- Resume execution and suspend again before we start sorting tuples
+SELECT gp_inject_fault('cluster_ao_sorting_tuples', 'suspend', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('cluster_ao_scanning_tuples', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_wait_until_triggered_fault('cluster_ao_sorting_tuples', 1, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+-- We are in "sorting tuples" phase.
+1U: select datname, relid::regclass, command, phase, cluster_index_relid::regclass, heap_tuples_scanned, heap_tuples_written, heap_blks_total = (SELECT heap_blks_total_before FROM helper_table) AS heap_blks_total_all, heap_blks_scanned = (SELECT heap_blks_total_before FROM helper_table) AS heap_blks_scanned_all, index_rebuild_count from pg_stat_progress_cluster;
+
+-- Resume execution and suspend again before we start writing tuples
+SELECT gp_inject_fault('cluster_ao_write_begin', 'suspend', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('cluster_ao_sorting_tuples', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_wait_until_triggered_fault('cluster_ao_write_begin', 1, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+-- We are in "writing new ao" phase.
+1U: select datname, relid::regclass, command, phase, cluster_index_relid::regclass, heap_tuples_scanned, heap_tuples_written, heap_blks_total = (SELECT heap_blks_total_before FROM helper_table) AS heap_blks_total_all, heap_blks_scanned = (SELECT heap_blks_total_before FROM helper_table) AS heap_blks_scanned_all, index_rebuild_count from pg_stat_progress_cluster;
+
+-- Resume execution and suspend again in the middle of writing new table
+SELECT gp_inject_fault('cluster_ao_writing_tuples', 'suspend', '', '', '', 200, 200, 0, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('cluster_ao_write_begin', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_wait_until_triggered_fault('cluster_ao_writing_tuples', 200, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+-- We are in "writing new ao" phase. "heap_tuples_written" should be updated
+1U: select datname, relid::regclass, command, phase, cluster_index_relid::regclass, heap_tuples_scanned, heap_tuples_written, heap_blks_total = (SELECT heap_blks_total_before FROM helper_table) AS heap_blks_total_all, heap_blks_scanned = (SELECT heap_blks_total_before FROM helper_table) AS heap_blks_scanned_all, index_rebuild_count from pg_stat_progress_cluster;
+
+SELECT gp_inject_fault('cluster_ao_writing_tuples', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+1<:
+
+-- cluster has finished, nothing should show up in the view.
+1U: select datname, relid::regclass, command, phase, cluster_index_relid::regclass, heap_tuples_scanned, heap_tuples_written, heap_blks_total, heap_blks_scanned, index_rebuild_count from pg_stat_progress_cluster;
+
+-- Cleanup
+SELECT gp_inject_fault_infinite('all', 'reset', dbid) FROM gp_segment_configuration;
+reset default_table_access_method;
+DROP TABLE cluster_progress_ao;
+DROP TABLE helper_table;

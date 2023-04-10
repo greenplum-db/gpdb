@@ -3760,7 +3760,7 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
         </dxl:LogicalJoin>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="15376896">
+    <dxl:Plan Id="0" SpaceSize="13533696">
       <dxl:Result>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="57937329.740768" Rows="2959212724800.000000" Width="4"/>

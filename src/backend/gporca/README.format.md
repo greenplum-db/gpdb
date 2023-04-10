@@ -97,17 +97,17 @@ The following steps are used to convert in-flight branches to the new format.
    Normally, you'd do it like (but don't do this yet):
 
    ```sh
-   git rebase 'origin/master^{/Format ORCA and GPOPT}~'
+   git rebase 'origin/main^{/Format ORCA and GPOPT}~'
    ```
 
-   Here `'origin/master^{/Format ORCA and GPOPT}'` is a Git notation that denotes
-   the most recent commit from branch `origin/master' that contains the phrase
+   Here `'origin/main^{/Format ORCA and GPOPT}'` is a Git notation that denotes
+   the most recent commit from branch `origin/main' that contains the phrase
    "Format ORCA and GPOPT". The trailing tilde character is Git shorthand for "first parent".
 
 1. But! We want to insert a precursor commit that will eventually disappear:
 
    ```sh
-   git rebase --interactive 'origin/master^{/Format ORCA and GPOPT}~2'
+   git rebase --interactive 'origin/main^{/Format ORCA and GPOPT}~2'
    ```
 
    When we edit the "rebase todo" in an editor, make sure to insert the
@@ -117,8 +117,8 @@ The following steps are used to convert in-flight branches to the new format.
    --- /tmp/todo	2020-11-12 16:48:07.251333950 -0800
    +++ /tmp/todo2	2020-11-12 16:48:07.291333698 -0800
    @@ -1,7 +1,8 @@
-    pick 87fd0149caf8f052 Penultimate commit on master
-   +exec git checkout origin/master -- src/tools/fmt src/include/gpopt/.clang-format src/backend/gpopt/.clang-format src/backend/gporca/.clang-format; git commit -m 'this commit will disappear'
+    pick 87fd0149caf8f052 Penultimate commit on main
+   +exec git checkout origin/main -- src/tools/fmt src/include/gpopt/.clang-format src/backend/gpopt/.clang-format src/backend/gporca/.clang-format; git commit -m 'this commit will disappear'
     pick 93235faf306f4ecb 1st commit from PR
     pick 2b7ad8b9fd1f222c 2nd commit from PR
     pick 5bc7ac02c1c78b8b Last commit from PR
@@ -135,16 +135,16 @@ The following steps are used to convert in-flight branches to the new format.
 1. Use `git filter-branch` to rewrite the branch history
 
    ```sh
-   git filter-branch --force --tree-filter 'CLANG_FORMAT=clang-format-10 src/tools/fmt fmt; CLANG_FORMAT=clang-format-10 src/tools/fmt fmt' origin/master..
+   git filter-branch --force --tree-filter 'CLANG_FORMAT=clang-format-10 src/tools/fmt fmt; CLANG_FORMAT=clang-format-10 src/tools/fmt fmt' origin/main..
    ```
 
-   Now we have reformatted every commit in this branch that's not in master (modulo the big bang commit).
-   As a bonus, our placeholder commit should now be identical to the tip of master (the big bang formatting commit).
+   Now we have reformatted every commit in this branch that's not in main (modulo the big bang commit).
+   As a bonus, our placeholder commit should now be identical to the tip of main (the big bang formatting commit).
 
-1. Now that we have reformatted the history, rebase on top of master
+1. Now that we have reformatted the history, rebase on top of main
 
    ```sh
-   git rebase origin/master
+   git rebase origin/main
    ```
 
    Git should be smart enough to drop our placeholder commit, and now the history is all properly formatted.

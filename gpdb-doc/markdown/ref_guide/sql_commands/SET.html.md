@@ -52,7 +52,7 @@ TIME ZONE
 
 LOCAL
 DEFAULT
-:   Set the time zone to your local time zone \(that is, server's default value of timezone\). See the [Time zone section of the PostgreSQL documentation](https://www.postgresql.org/docs/9.4/datatype-datetime.html#DATATYPE-TIMEZONES) for more information about time zones in Greenplum Database.
+:   Set the time zone to your local time zone \(that is, server's default value of timezone\). See the [Time zone section of the PostgreSQL documentation](https://www.postgresql.org/docs/12/datatype-datetime.html#DATATYPE-TIMEZONES) for more information about time zones in Greenplum Database.
 
 ## <a id="section5"></a>Examples 
 

@@ -57,6 +57,8 @@ CMDTypeInt8GPDB::CMDTypeInt8GPDB(CMemoryPool *mp) : m_mp(mp)
 		m_distr_opfamily = nullptr;
 		m_legacy_distr_opfamily = nullptr;
 	}
+	m_part_opfamily =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT8_PART_OPFAMILY);
 	m_mdid_op_eq = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT8_EQ_OP);
 	m_mdid_op_neq =
 		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT8_NEQ_OP);
@@ -100,6 +102,7 @@ CMDTypeInt8GPDB::~CMDTypeInt8GPDB()
 	m_mdid->Release();
 	CRefCount::SafeRelease(m_distr_opfamily);
 	CRefCount::SafeRelease(m_legacy_distr_opfamily);
+	CRefCount::SafeRelease(m_part_opfamily);
 	m_mdid_op_eq->Release();
 	m_mdid_op_neq->Release();
 	m_mdid_op_lt->Release();
@@ -159,6 +162,12 @@ CMDTypeInt8GPDB::GetDistrOpfamilyMdid() const
 	{
 		return m_distr_opfamily;
 	}
+}
+
+IMDId *
+CMDTypeInt8GPDB::GetPartOpfamilyMdid() const
+{
+	return m_part_opfamily;
 }
 
 //---------------------------------------------------------------------------

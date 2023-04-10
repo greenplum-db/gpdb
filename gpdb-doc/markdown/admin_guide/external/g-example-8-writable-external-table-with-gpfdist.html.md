@@ -9,7 +9,6 @@ Creates a writable external table, *sales\_out,* that uses gpfdist to write outp
    LOCATION ('gpfdist://etl1:8081/sales.out')
    FORMAT 'TEXT' ( DELIMITER '|' NULL ' ')
    DISTRIBUTED BY (txn_id);
-
 ```
 
 **Parent topic:** [Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)

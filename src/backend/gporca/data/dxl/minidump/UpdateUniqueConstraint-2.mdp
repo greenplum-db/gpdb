@@ -761,10 +761,10 @@
         </dxl:LogicalProject>
       </dxl:LogicalUpdate>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="102">
-      <dxl:DMLUpdate Columns="0,18" ActionCol="23" OidCol="24" CtidCol="2" SegmentIdCol="8" InputSorted="false" IsSplitUpdate="false">
+    <dxl:Plan Id="0" SpaceSize="41">
+      <dxl:DMLUpdate Columns="0,18" ActionCol="23" CtidCol="2" SegmentIdCol="8" IsSplitUpdate="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="866.422652" Rows="100.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="865.641202" Rows="100.000000" Width="1"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -777,20 +777,20 @@
         </dxl:ProjList>
         <dxl:TableDescriptor Mdid="6.284632.1.1" TableName="r">
           <dxl:Columns>
-            <dxl:Column ColId="25" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
-            <dxl:Column ColId="26" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
-            <dxl:Column ColId="27" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-            <dxl:Column ColId="28" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-            <dxl:Column ColId="29" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-            <dxl:Column ColId="30" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-            <dxl:Column ColId="31" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-            <dxl:Column ColId="32" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-            <dxl:Column ColId="33" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+            <dxl:Column ColId="24" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
+            <dxl:Column ColId="25" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
+            <dxl:Column ColId="26" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+            <dxl:Column ColId="27" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+            <dxl:Column ColId="28" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+            <dxl:Column ColId="29" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+            <dxl:Column ColId="30" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+            <dxl:Column ColId="31" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+            <dxl:Column ColId="32" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
           </dxl:Columns>
         </dxl:TableDescriptor>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.125777" Rows="100.000000" Width="22"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.125577" Rows="100.000000" Width="18"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -807,9 +807,6 @@
             </dxl:ProjElem>
             <dxl:ProjElem ColId="8" Alias="gp_segment_id">
               <dxl:Ident ColId="8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-            </dxl:ProjElem>
-            <dxl:ProjElem ColId="24" Alias="ColRef_0024">
-              <dxl:ConstValue TypeMdid="0.26.1.0" Value="284632"/>
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>

@@ -44,7 +44,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
       <dxl:TraceFlags Value="102001,102002,102003,102074,102120,102144,103001,103014,103015,103022,103033,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -2345,7 +2345,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.36716.1.0" Name="oip" Rows="4106050.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.36716.1.0" Name="oip" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="15,9" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.36716.1.0" Name="oip" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="15,9">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
             <dxl:DefaultValue/>
@@ -3993,7 +3993,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.36722.1.0" Name="ria" Rows="248710000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.36722.1.0" Name="ria" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="19,20,14" PartitionColumns="11" PartitionTypes="r" NumberLeafPartitions="579">
+      <dxl:Relation Mdid="6.36722.1.0" Name="ria" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="19,20,14" PartitionColumns="11" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
             <dxl:DefaultValue/>

@@ -1,26 +1,12 @@
 # ignores only for this directory
-/ao_upgrade.out
-/ao_upgrade_optimizer.out
 /external_table.out
 /fts_manual_probe.out
 /gp_collation.out
 /pg_basebackup.out
 /pg_basebackup_with_tablespaces.out
 /pt_io_in_progress_deadlock.out
+/distributed_snapshot.out
 
 # ignores including sub-directories
 autovacuum-analyze.out
-disable_resgroup.out
-enable_resgroup.out
-enable_resgroup_validate.out
-resgroup_alter_memory.out
-resgroup_bypass.out
-resgroup_bypass_optimizer.out
-resgroup_bypass_optimizer_1.out
-resgroup_cpu_rate_limit.out
-resgroup_cpuset.out
-resgroup_memory_limit.out
-resgroup_memory_statistic.out
-resgroup_memory_runaway.out
-resgroup_move_query.out
 workfile_mgr_test.out

@@ -151,7 +151,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           <dxl:Partition Mdid="6.8685596006.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.8685596001.1.0" Name="pt_lt_tab_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596001.1.0" Name="pt_lt_tab_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -214,7 +214,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.8685596002.1.0" Name="pt_lt_tab_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596002.1.0" Name="pt_lt_tab_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -277,7 +277,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.8685596003.1.0" Name="pt_lt_tab_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596003.1.0" Name="pt_lt_tab_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -340,7 +340,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.8685596004.1.0" Name="pt_lt_tab_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596004.1.0" Name="pt_lt_tab_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -403,7 +403,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.8685596005.1.0" Name="pt_lt_tab_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596005.1.0" Name="pt_lt_tab_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -466,7 +466,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.8685596006.1.0" Name="pt_lt_tab_prt_def" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596006.1.0" Name="pt_lt_tab_prt_def" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -634,7 +634,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           <dxl:Partition Mdid="6.8685596006.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.8685596001.1.1" Name="pt_lt_tab_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596001.1.1" Name="pt_lt_tab_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -697,7 +697,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.8685596002.1.1" Name="pt_lt_tab_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596002.1.1" Name="pt_lt_tab_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -760,7 +760,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.8685596003.1.1" Name="pt_lt_tab_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596003.1.1" Name="pt_lt_tab_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -823,7 +823,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.8685596004.1.1" Name="pt_lt_tab_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596004.1.1" Name="pt_lt_tab_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -886,7 +886,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.8685596005.1.1" Name="pt_lt_tab_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596005.1.1" Name="pt_lt_tab_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -949,7 +949,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.8685596006.1.1" Name="pt_lt_tab_prt_def" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596006.1.1" Name="pt_lt_tab_prt_def" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

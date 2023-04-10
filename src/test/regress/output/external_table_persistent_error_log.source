@@ -24,6 +24,7 @@
 -- s/Found.+//
 --
 -- end_matchsubs
+SET optimizer_trace_fallback=on;
 COPY (VALUES('1,2'),('1,2,3'),('1,'),('1')) TO '@abs_srcdir@/data/tableerr.csv';
 create external table ext_error_persistent(a int, b int)
 location ('file://@hostname@@abs_srcdir@/data/tableerr.csv')

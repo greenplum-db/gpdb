@@ -211,16 +211,22 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elements[] = {
 	 GPOS_WSZ_LIT(
 		 "Enable plan alternatives where NLJ's outer child is replicated")},
 
+	{EopttraceDiscardRedistributeHashJoin,
+	 &optimizer_discard_redistribute_hashjoin,
+	 false,	 // m_negate_param
+	 GPOS_WSZ_LIT(
+		 "Discard plan alternatives where hash join has a redistribute motion child")},
+
 	{EopttraceMotionHazardHandling, &optimizer_enable_streaming_material,
 	 false,	 // m_fNegate
 	 GPOS_WSZ_LIT(
 		 "Enable motion hazard handling during NLJ optimization and generate streaming material when appropriate")},
 
-	{EopttraceDisableNonMasterGatherForDML,
+	{EopttraceDisableNonCoordinatorGatherForDML,
 	 &optimizer_enable_gather_on_segment_for_dml,
 	 true,	// m_fNegate
 	 GPOS_WSZ_LIT(
-		 "Enable DML optimization by enforcing a non-master gather when appropriate")},
+		 "Enable DML optimization by enforcing a non-coordinator gather when appropriate")},
 
 	{EopttraceEnforceCorrelatedExecution, &optimizer_enforce_subplans,
 	 false,	 // m_negate_param
@@ -290,6 +296,12 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elements[] = {
 	 false,	 // m_negate_param
 	 GPOS_WSZ_LIT(
 		 "Explore a nested loop join even if a hash join is possible")},
+	{EopttraceDisableInnerHashJoin, &optimizer_enable_hashjoin,
+	 true,	// m_negate_param
+	 GPOS_WSZ_LIT("Explore hash join alternatives")},
+	{EopttraceDisableInnerNLJ, &optimizer_enable_nljoin,
+	 true,	// m_negate_param
+	 GPOS_WSZ_LIT("Enable nested loop join alternatives")},
 
 };
 

@@ -1285,7 +1285,8 @@ CheckPointLogicalRewriteHeap(void)
 		}
 		else
 		{
-			int			fd = OpenTransientFile(path, O_RDONLY | PG_BINARY);
+			/* on some operating systems fsyncing a file requires O_RDWR */
+			int			fd = OpenTransientFile(path, O_RDWR | PG_BINARY);
 
 			/*
 			 * The file cannot vanish due to concurrency since this function
@@ -1316,4 +1317,7 @@ CheckPointLogicalRewriteHeap(void)
 		}
 	}
 	FreeDir(mappings_dir);
+
+	/* persist directory entries to disk */
+	fsync_fname("pg_logical/mappings", true);
 }

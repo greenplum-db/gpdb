@@ -642,6 +642,8 @@ SELECT rec FROM jsonb_populate_record(
 -- anonymous record type
 SELECT jsonb_populate_record(null::record, '{"x": 0, "y": 1}');
 SELECT jsonb_populate_record(row(1,2), '{"f1": 0, "f2": 1}');
+SELECT * FROM
+  jsonb_populate_record(null::record, '{"x": 776}') AS (x int, y int);
 
 -- composite domain
 SELECT jsonb_populate_record(null::jb_ordered_pair, '{"x": 0, "y": 1}');
@@ -665,11 +667,15 @@ SELECT jsonb_populate_recordset(null::record, '[{"x": 0, "y": 1}]');
 SELECT jsonb_populate_recordset(row(1,2), '[{"f1": 0, "f2": 1}]');
 SELECT i, jsonb_populate_recordset(row(i,50), '[{"f1":"42"},{"f2":"43"}]')
 FROM (VALUES (1),(2)) v(i);
+SELECT * FROM
+  jsonb_populate_recordset(null::record, '[{"x": 776}]') AS (x int, y int);
 
 -- empty array is a corner case
 SELECT jsonb_populate_recordset(null::record, '[]');
 SELECT jsonb_populate_recordset(row(1,2), '[]');
 SELECT * FROM jsonb_populate_recordset(NULL::jbpop,'[]') q;
+SELECT * FROM
+  jsonb_populate_recordset(null::record, '[]') AS (x int, y int);
 
 -- composite domain
 SELECT jsonb_populate_recordset(null::jb_ordered_pair, '[{"x": 0, "y": 1}]');
@@ -1047,6 +1053,11 @@ select '{"a":"b"}'::jsonb || '[]'::jsonb;
 
 select '"a"'::jsonb || '{"a":1}';
 select '{"a":1}' || '"a"'::jsonb;
+
+select '[3]'::jsonb || '{}'::jsonb;
+select '3'::jsonb || '[]'::jsonb;
+select '3'::jsonb || '4'::jsonb;
+select '3'::jsonb || '{}'::jsonb;
 
 select '["a", "b"]'::jsonb || '{"c":1}';
 select '{"c": 1}'::jsonb || '["a", "b"]';

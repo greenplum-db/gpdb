@@ -88,6 +88,12 @@ private:
 	// lockmode from the parser
 	INT m_lockmode;
 
+	// identifier of query to which current table belongs.
+	// This field is used for assigning current table entry with
+	// target one within DML operation. If descriptor doesn't point
+	// to the target (result) relation it has value UNASSIGNED_QUERYID
+	ULONG m_assigned_query_id_for_target_rel;
+
 public:
 	CTableDescriptor(const CTableDescriptor &) = delete;
 
@@ -96,7 +102,8 @@ public:
 					 BOOL convert_hash_to_random,
 					 IMDRelation::Ereldistrpolicy rel_distr_policy,
 					 IMDRelation::Erelstoragetype erelstoragetype,
-					 ULONG ulExecuteAsUser, INT lockmode);
+					 ULONG ulExecuteAsUser, INT lockmode,
+					 ULONG assigned_query_id_for_target_rel);
 
 	// dtor
 	~CTableDescriptor() override;
@@ -182,8 +189,6 @@ public:
 		return m_pdrgpbsKeys;
 	}
 
-	// return the number of leaf partitions
-	ULONG PartitionCount() const;
 
 	// distribution policy
 	IMDRelation::Ereldistrpolicy
@@ -229,6 +234,12 @@ public:
 	{
 		return m_erelstoragetype == IMDRelation::ErelstorageAppendOnlyCols ||
 			   m_erelstoragetype == IMDRelation::ErelstorageAppendOnlyRows;
+	}
+
+	ULONG
+	GetAssignedQueryIdForTargetRel() const
+	{
+		return m_assigned_query_id_for_target_rel;
 	}
 
 };	// class CTableDescriptor

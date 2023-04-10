@@ -5,3 +5,7 @@ google-zone: us-central1-a
 gcs-bucket: pivotal-gpdb-concourse-resources-dev
 gcs-bucket-intermediates: pivotal-gpdb-concourse-resources-intermediates-dev
 gcs-bucket-coverage: pivotal-gpdb-cli-coverage-dev
+########## Compile gpdb clients on windows #############
+remote_win_host_build: 10.0.34.9
+remote_win_user_build: buildbot
+remote_win_port_build: 22

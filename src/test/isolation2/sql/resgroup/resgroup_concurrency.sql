@@ -4,12 +4,15 @@ DROP ROLE IF EXISTS role_concurrency_test;
 -- start_ignore
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_rate_limit=20, memory_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_hard_quota_limit=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 
 -- no query has been assigned to the this group
 
-SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed
+FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r
+WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+
 2:SET ROLE role_concurrency_test;
 2:BEGIN;
 3:SET ROLE role_concurrency_test;
@@ -18,8 +21,12 @@ SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_to
 4&:BEGIN;
 
 -- new transaction will be blocked when the concurrency limit of the resource group is reached.
-SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
-SELECT wait_event from pg_stat_activity where query = 'BEGIN;' and state = 'active' and rsgname = 'rg_concurrency_test' and wait_event_type='ResourceGroup';
+SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed
+FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r
+WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+
+SELECT wait_event from pg_stat_activity
+where query = 'BEGIN;' and state = 'active' and rsgname = 'rg_concurrency_test' and wait_event_type='ResourceGroup';
 2:END;
 3:END;
 4<:
@@ -27,18 +34,20 @@ SELECT wait_event from pg_stat_activity where query = 'BEGIN;' and state = 'acti
 2q:
 3q:
 4q:
-SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed
+FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
 DROP ROLE role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
 
 -- test2: test alter concurrency
 -- Create a resource group with concurrency=2. Prepare 2 running transactions and 1 queueing transactions.
--- Alter concurrency 2->3, the queueing transaction will be woken up, the 'value' of pg_resgroupcapability will be set to 3.
+-- Alter concurrency 2->3, the queueing transaction will be woken up, the 'value' of pg_resgroupcapability
+-- will be set to 3.
 DROP ROLE IF EXISTS role_concurrency_test;
 -- start_ignore
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_rate_limit=20, memory_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_hard_quota_limit=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 12:SET ROLE role_concurrency_test;
 12:BEGIN;
@@ -46,10 +55,13 @@ CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 13:BEGIN;
 14:SET ROLE role_concurrency_test;
 14&:BEGIN;
-SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed
+FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+
 SELECT concurrency FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_concurrency_test';
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 3;
-SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed
+FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
 SELECT concurrency FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_concurrency_test';
 12:END;
 13:END;
@@ -67,7 +79,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 -- start_ignore
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=3, cpu_rate_limit=20, memory_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=3, cpu_hard_quota_limit=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 22:SET ROLE role_concurrency_test;
 22:BEGIN;
@@ -77,26 +89,31 @@ CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 24:BEGIN;
 25:SET ROLE role_concurrency_test;
 25&:BEGIN;
-SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed
+FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
 SELECT concurrency FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_concurrency_test';
 -- Alter concurrency 3->2, the 'value' of pg_resgroupcapability will be set to 2.
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
 SELECT concurrency FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_concurrency_test';
 -- When one transaction is finished, queueing transaction won't be woken up. There're 2 running transactions and 1 queueing transaction.
 24:END;
-SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed
+FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
 -- New transaction will be queued, there're 2 running and 2 queueing transactions.
 24&:BEGIN;
-SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed
+FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
 -- Finish another transaction, one queueing transaction will be woken up, there're 2 running transactions and 1 queueing transaction.
 22:END;
-SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed
+FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
 -- Alter concurrency 2->2, the 'value' of pg_resgroupcapability will be set to 2.
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
 SELECT concurrency FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_concurrency_test';
 -- Finish another transaction, one queueing transaction will be woken up, there're 2 running transactions and 0 queueing transaction.
 23:END;
-SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed
+FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
 24<:
 25<:
 25:END;
@@ -114,7 +131,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 -- start_ignore
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_rate_limit=20, memory_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_hard_quota_limit=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 
 -- DROP should fail if there're running transactions
@@ -133,7 +150,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_rate_limit=20, memory_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_hard_quota_limit=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 51:SET ROLE role_concurrency_test;
 51:BEGIN;
@@ -155,7 +172,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_rate_limit=20, memory_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_hard_quota_limit=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 51:SET ROLE role_concurrency_test;
 51:BEGIN;
@@ -174,7 +191,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_rate_limit=20, memory_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_hard_quota_limit=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 61:SET ROLE role_concurrency_test;
 61:BEGIN;
@@ -193,7 +210,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_rate_limit=20, memory_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_hard_quota_limit=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 61:SET ROLE role_concurrency_test;
 61&:BEGIN;
@@ -207,7 +224,7 @@ DROP RESOURCE GROUP rg_concurrency_test;
 -- Test cursors, pl/* functions only take one slot.
 --
 -- set concurrency to 1
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_rate_limit=20, memory_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_hard_quota_limit=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 
 -- declare cursors and verify that it only takes one resource group slot

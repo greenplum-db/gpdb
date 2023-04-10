@@ -26,7 +26,7 @@ TEMPORARY/TEMP
 ALL
 :   Releases all temporary resources associated with the current session and resets the session to its initial state.
 
-    **Note:** Greenplum Database does not support `DISCARD ALL` and returns a notice message if you attempt to run the command.
+    > **Note** Greenplum Database does not support `DISCARD ALL` and returns a notice message if you attempt to run the command.
 
 :   As an alternative, you can the run following commands to release temporary session resources:
 

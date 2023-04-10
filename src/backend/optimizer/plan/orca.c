@@ -43,8 +43,6 @@
 /* GPORCA entry point */
 extern PlannedStmt * GPOPTOptimizedPlan(Query *parse, bool *had_unexpected_failure);
 
-static Node *transformGroupedWindows(Node *node, void *context);
-
 static Plan *remove_redundant_results(PlannerInfo *root, Plan *plan);
 static Node *remove_redundant_results_mutator(Node *node, void *);
 static bool can_replace_tlist(Plan *plan);
@@ -105,8 +103,7 @@ optimize_query(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	ListCell	   *lp;
 
 	/*
-	 * GPDB_12_MERGE_FIXME: we can forward-port this change to master now
-	 * and pull out optimizer_trace_fallback processing in here
+	 * Fall back for updatable cursor
 	 */
 	if ((cursorOptions & CURSOR_OPT_UPDATABLE) != 0)
 		return NULL;
@@ -127,7 +124,6 @@ optimize_query(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	glob->share.qdShares = NULL;
 	/* these will be filled in below, in the pre- and post-processing steps */
 	glob->finalrtable = NIL;
-	glob->subplans = NIL;
 	glob->relationOids = NIL;
 	glob->invalItems = NIL;
 
@@ -491,7 +487,7 @@ static Alias *make_replacement_alias(Query *qry, const char *aname);
 static char *generate_positional_name(AttrNumber attrno);
 static List *generate_alternate_vars(Var *var, grouped_window_ctx * ctx);
 
-static Node *
+Node *
 transformGroupedWindows(Node *node, void *context)
 {
 	if (node == NULL)

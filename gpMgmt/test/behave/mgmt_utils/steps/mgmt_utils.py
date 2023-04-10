@@ -22,7 +22,7 @@ from contextlib import closing
 
 from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR
 from gppylib.commands.gp import SegmentStart, GpStandbyStart, CoordinatorStop
-from gppylib.commands import gp
+from gppylib.commands import gp, unix
 from gppylib.commands.pg import PgBaseBackup
 from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
 from gppylib.operations.buildMirrorSegments import get_recovery_progress_pattern
@@ -438,12 +438,30 @@ def impl(context, content):
     dburl = dbconn.DbURL(hostname=host, port=port, dbname='template1')
     wait_for_desired_query_result(dburl, query, desired_result, utility=True)
 
+
+@given('the user just waits until recovery_progress.file is created in {logdir}')
+@when('the user just waits until recovery_progress.file is created in {logdir}')
+@then('the user just waits until recovery_progress.file is created in {logdir}')
+def impl(context, logdir):
+    attempt = 0
+    num_retries = 6000
+    log_dir = _get_gpAdminLogs_directory() if logdir == 'gpAdminLogs' else logdir
+    recovery_progress_file = '{}/recovery_progress.file'.format(log_dir)
+    while attempt < num_retries:
+        attempt += 1
+        if os.path.exists(recovery_progress_file):
+            return
+        time.sleep(0.1)
+        if attempt == num_retries:
+            raise Exception('Timed out after {} retries'.format(num_retries))
+
+
 @given('the user waits until recovery_progress.file is created in {logdir} and verifies its format')
 @when('the user waits until recovery_progress.file is created in {logdir} and verifies its format')
 @then('the user waits until recovery_progress.file is created in {logdir} and verifies its format')
 def impl(context, logdir):
     attempt = 0
-    num_retries = 60000
+    num_retries = 6000
     log_dir = _get_gpAdminLogs_directory() if logdir == 'gpAdminLogs' else logdir
     recovery_progress_file = '{}/recovery_progress.file'.format(log_dir)
     while attempt < num_retries:
@@ -459,7 +477,7 @@ def impl(context, logdir):
                     return
                 else:
                     raise Exception('File present but incorrect format line "{}"'.format(line))
-        time.sleep(0.01)
+        time.sleep(0.1)
         if attempt == num_retries:
             raise Exception('Timed out after {} retries'.format(num_retries))
 
@@ -863,6 +881,28 @@ def impl(context, msg):
             finally:
                 pass
     conn.close()
+
+
+@then('gprecoverseg should print existing pg_rewind warning for segment with content {contentids}')
+def impl(context, contentids):
+
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    segments_pairs = gparray.segmentPairs
+    content_ids = [int(i) for i in contentids.split(',')]
+
+    for segpair in segments_pairs:
+        primary = segpair.primaryDB
+        mirror = segpair.mirrorDB
+        if primary.content in content_ids:
+            msg = "Skipping incremental recovery of segment on host {} and port {} because it has an active pg_rewind " \
+                  "connection with segment on host {} and port {}".format(mirror.getSegmentHostName(), mirror.getSegmentPort(),
+                                                                          primary.getSegmentHostName(), primary.getSegmentPort())
+
+        try:
+            context.execute_steps(''' Then gprecoverseg should print "{}" to stdout'''.format(msg))
+        except:
+            raise Exception("Could not find expected warning message for content {} in stdout".format(primary.content))
+
 
 def lines_matching_both(in_str, str_1, str_2):
     lines = [x.strip() for x in in_str.split('\n')]
@@ -2260,6 +2300,22 @@ ssh %s "source %s; export PGUSER=%s; export PGPORT=%s; export PGOPTIONS=\\\"-c g
 """ % (host, source_file, user, port, dbname, table)
     run_command(context, remote_cmd.strip())
 
+@when('a table "{table}" in database "{dbname}" has its relnatts inflated on segment with content id "{segid}"')
+def impl(context, table, dbname, segid):
+    local_cmd = 'psql %s -t -c "SELECT port,hostname FROM gp_segment_configuration WHERE content=%s and role=\'p\';"' % (
+        dbname, segid)
+    run_command(context, local_cmd)
+    port, host = context.stdout_message.split("|")
+    port = port.strip()
+    host = host.strip()
+    user = os.environ.get('USER')
+    source_file = os.path.join(os.environ.get('GPHOME'), 'greenplum_path.sh')
+    # Yes, the below line is ugly.  It looks much uglier when done with separate strings, given the multiple levels of escaping required.
+    remote_cmd = """
+ssh %s "source %s; export PGUSER=%s; export PGPORT=%s; export PGOPTIONS=\\\"-c gp_role=utility\\\"; psql -d %s -c \\\"SET allow_system_table_mods=true; UPDATE pg_class SET relnatts=relnatts + 2 WHERE relname=\'%s\';\\\""
+""" % (host, source_file, user, port, dbname, table)
+    run_command(context, remote_cmd.strip())
+
 
 @then('The user runs sql "{query}" in "{dbname}" on first primary segment')
 @when('The user runs sql "{query}" in "{dbname}" on first primary segment')
@@ -2315,7 +2371,7 @@ def impl(context, query, dbname, host, port):
 @then('The user runs psql "{psql_cmd}" against database "{dbname}" when utility mode is set to {utility_mode}')
 @given('The user runs psql "{psql_cmd}" against database "{dbname}" when utility mode is set to {utility_mode}')
 def impl(context, psql_cmd, dbname, utility_mode):
-    if utility_mode == "True":
+    if eval(utility_mode) == 'True':
         cmd = "PGOPTIONS=\'-c gp_role=utility\' psql -d \'{}\' {};".format(dbname, psql_cmd)
     else:
         cmd = "psql -d \'{}\' {};".format(dbname, psql_cmd)
@@ -3154,6 +3210,21 @@ def impl(context, num_of_segments):
             "%s\ndump of gp_segment_configuration: %s" %
             (context.start_data_segments, end_data_segments, rows))
 
+@when('verify that {table_name} catalog table is present on new segments')
+@then('verify that {table_name} catalog table is present on new segments')
+def impl(context, table_name):
+    dbname = 'gptest'
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
+        query = """SELECT count(*) from gp_segment_configuration where -1 < content and role='p'"""
+        no_of_segments = dbconn.querySingleton(conn, query)
+
+        query = """select count(distinct(gp_segment_id)) from gp_dist_random('%s')""" % table_name
+        no_segments_table_present = dbconn.querySingleton(conn, query)
+
+    if no_of_segments != no_segments_table_present:
+        raise Exception("Table %s is not present on newly expanded segments" % table_name)
+
+
 @given('the cluster is setup for an expansion on hosts "{hostnames}"')
 def impl(context, hostnames):
     hosts = hostnames.split(",")
@@ -3834,10 +3905,15 @@ def impl(context, contentid):
     if str(contentid) not in segments_with_running_basebackup:
         raise Exception("pg_basebackup entry was not found for content %s in gp_stat_replication" % contentid)
 
+@given('create a gpcheckperf input host file')
+def impl(context):
+    cmd = Command(name='create input host file', cmdStr='echo sdw1 > /tmp/hostfile1;echo cdw >> /tmp/hostfile1;')
+    cmd.run(validateAfter=True)
+
 @given('backup /etc/hosts file and update hostname entry for localhost')
 def impl(context):
      # Backup current /etc/hosts file
-     cmd = Command(name='backup the hosts file', cmdStr='sudo cp /etc/hosts /etc/hosts_orig')
+     cmd = Command(name='backup the hosts file', cmdStr='sudo cp /etc/hosts /tmp/hosts_orig')
      cmd.run(validateAfter=True)
      # Get the host-name
      cmd = Command(name='get hostname', cmdStr='hostname')
@@ -3847,6 +3923,11 @@ def impl(context):
      cmd = Command(name='update hostlist with new hostname', cmdStr="sudo sed 's/%s/%s__1 %s/g' </etc/hosts >> /tmp/hosts; sudo cp -f /tmp/hosts /etc/hosts;rm /tmp/hosts"
                                                         %(hostname, hostname, hostname))
      cmd.run(validateAfter=True)
+
+@then('restore /etc/hosts file and cleanup hostlist file')
+def impl(context):
+    cmd = "sudo mv -f /tmp/hosts_orig /etc/hosts; rm -f /tmp/clusterConfigFile-1; rm -f /tmp/hostfile--1"
+    context.execute_steps(u'''Then the user runs command "%s"''' % cmd)
 
 @given('update hostlist file with updated host-address')
 def impl(context):
@@ -3869,7 +3950,7 @@ def impl(context):
      cmd.run(validateAfter=True)
 
      # Update hostfile location
-     cmd = Command(name='update master hostname in config file',
+     cmd = Command(name='update coordinator hostname in config file',
                    cmdStr= "sed 's/MACHINE_LIST_FILE=.*/MACHINE_LIST_FILE=\/tmp\/hostfile--1/g' -i /tmp/clusterConfigFile-1")
      cmd.run(validateAfter=True)
 
@@ -3920,3 +4001,59 @@ def impl(context, slot):
                 result = dbconn.querySingleton(conn, query)
                 if result == 0:
                     raise Exception("Slot does not exist for host:{}, port:{}".format(host, port))
+
+
+@given('user waits until gp_stat_replication table has no pg_basebackup entries for content {contentids}')
+@when('user waits until gp_stat_replication table has no pg_basebackup entries for content {contentids}')
+@then('user waits until gp_stat_replication table has no pg_basebackup entries for content {contentids}')
+def impl(context, contentids):
+     retries = 600
+     content_ids = contentids.split(',')
+     content_ids = ', '.join(c for c in content_ids)
+     sql = "select count(*) from gp_stat_replication where application_name = 'pg_basebackup' and gp_segment_id in (%s)" %(content_ids)
+     no_basebackup = False
+
+     for i in range(retries):
+         try:
+             with closing(dbconn.connect(dbconn.DbURL())) as conn:
+                 res = dbconn.querySingleton(conn, sql)
+         except Exception as e:
+             raise Exception("Failed to query gp_stat_replication: %s" % str(e))
+         if res == 0:
+             no_basebackup = True
+             break
+         time.sleep(1)
+
+     if not no_basebackup:
+         raise Exception("pg_basebackup entry was found for contents %s in gp_stat_replication after %d retries" % (contentids, retries))
+
+
+@given('running postgres processes are saved in context')
+@when('running postgres processes are saved in context')
+@then('running postgres processes are saved in context')
+def impl(context):
+
+    # Store the pids in a dictionary where key will be the hostname and the
+    # value will be the pids of all the postgres processes running on that host
+    host_to_pid_map = dict()
+    segs = GpArray.initFromCatalog(dbconn.DbURL()).getDbList()
+    for seg in segs:
+        pids = gp.get_postgres_segment_processes(seg.datadir, seg.hostname)
+        if seg.hostname not in host_to_pid_map:
+            host_to_pid_map[seg.hostname] = pids
+        else:
+            host_to_pid_map[seg.hostname].extend(pids)
+
+    context.host_to_pid_map = host_to_pid_map
+
+
+@given('verify no postgres process is running on all hosts')
+@when('verify no postgres process is running on all hosts')
+@then('verify no postgres process is running on all hosts')
+def impl(context):
+    host_to_pid_map = context.host_to_pid_map
+
+    for host in host_to_pid_map:
+        for pid in host_to_pid_map[host]:
+            if unix.check_pid_on_remotehost(pid, host):
+                raise Exception("Postgres process {0} not killed on {1}.".format(pid, host))

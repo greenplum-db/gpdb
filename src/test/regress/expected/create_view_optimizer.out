@@ -1482,17 +1482,27 @@ select * from tt14v;
 begin;
 -- this perhaps should be rejected, but it isn't:
 alter table tt14t drop column f3;
--- f3 is still in the view ...
+-- column f3 is still in the view, sort of ...
 select pg_get_viewdef('tt14v', true);
-         pg_get_viewdef         
---------------------------------
-  SELECT t.f1,                 +
-     t.f3,                     +
-     t.f4                      +
-    FROM tt14f() t(f1, f3, f4);
+         pg_get_viewdef          
+---------------------------------
+  SELECT t.f1,                  +
+     t."?dropped?column?" AS f3,+
+     t.f4                       +
+    FROM tt14f() t(f1, f4);
 (1 row)
 
--- but will fail at execution
+-- ... and you can even EXPLAIN it ...
+explain (verbose, costs off) select * from tt14v;
+               QUERY PLAN               
+----------------------------------------
+ Function Scan on testviewschm2.tt14f t
+   Output: t.f1, t.f3, t.f4
+   Function Call: tt14f()
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+-- but it will fail at execution
 select f1, f4 from tt14v;
  f1  | f4 
 -----+----
@@ -1616,6 +1626,24 @@ select * from int8_tbl i where i.* in (values(i.*::int8_tbl));
  4567890123456789 |  4567890123456789
  4567890123456789 | -4567890123456789
 (5 rows)
+
+create table tt15v_log(o tt15v, n tt15v, incr bool);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'incr' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create rule updlog as on update to tt15v do also
+  insert into tt15v_log values(old, new, row(old,old) < row(new,new));
+\d+ tt15v
+                             View "testviewschm2.tt15v"
+ Column |      Type       | Collation | Nullable | Default | Storage  | Description 
+--------+-----------------+-----------+----------+---------+----------+-------------
+ row    | nestedcomposite |           |          |         | extended | 
+View definition:
+ SELECT ROW(i.*::int8_tbl)::nestedcomposite AS "row"
+   FROM int8_tbl i;
+Rules:
+ updlog AS
+    ON UPDATE TO tt15v DO  INSERT INTO tt15v_log (o, n, incr)
+  VALUES (old.*::tt15v, new.*::tt15v, (ROW(old.*::tt15v, old.*::tt15v) < ROW(new.*::tt15v, new.*::tt15v)))
 
 -- check unique-ification of overlength names
 create view tt18v as
@@ -1789,7 +1817,7 @@ drop cascades to view aliased_view_2
 drop cascades to view aliased_view_3
 drop cascades to view aliased_view_4
 DROP SCHEMA testviewschm2 CASCADE;
-NOTICE:  drop cascades to 63 other objects
+NOTICE:  drop cascades to 64 other objects
 DETAIL:  drop cascades to table t1
 drop cascades to view temporal1
 drop cascades to view temporal2
@@ -1847,6 +1875,7 @@ drop cascades to type nestedcomposite
 drop cascades to view tt15v
 drop cascades to view tt16v
 drop cascades to view tt17v
+drop cascades to table tt15v_log
 drop cascades to view tt18v
 drop cascades to view tt19v
 drop cascades to view tt20v

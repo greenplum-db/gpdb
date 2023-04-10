@@ -311,6 +311,10 @@ RemoveSchemaById(Oid schemaOid)
 	 * Remove all persistent error logs belonging to the the schema.
 	 */
 	PersistentErrorLogDelete(MyDatabaseId, schemaOid, NULL);
+
+	/* MPP-6929: metadata tracking */
+	if (Gp_role == GP_ROLE_DISPATCH)
+		MetaTrackDropObject(NamespaceRelationId, schemaOid);
 }
 
 

@@ -4,7 +4,7 @@ MODULE_big = auto_explain
 OBJS = auto_explain.o $(WIN32RES)
 PGFILEDESC = "auto_explain - logging facility for execution plans"
 
-REGRESS = auto_explain bfv_preload_auto_explain
+REGRESS = auto_explain bfv_preload_auto_explain memory_leaks
 REGRESS_OPTS = --init-file=init_file
 
 ifdef USE_PGXS

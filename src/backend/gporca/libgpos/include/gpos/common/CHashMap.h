@@ -293,6 +293,11 @@ public:
 		return m_size;
 	}
 
+	Keys *
+	GetKeys() const
+	{
+		return m_keys;
+	}
 };	// class CHashMap
 
 using UlongToUlongMap =

@@ -165,7 +165,8 @@ SPI_connect_ext(int options)
 	 * XXX It could be better to use PortalContext as the parent context in
 	 * all cases, but we may not be inside a portal (consider deferred-trigger
 	 * execution).  Perhaps CurTransactionContext could be an option?  For now
-	 * it doesn't matter because we clean up explicitly in AtEOSubXact_SPI().
+	 * it doesn't matter because we clean up explicitly in AtEOSubXact_SPI();
+	 * but see also AtEOXact_SPI().
 	 */
 	_SPI_current->procCxt = AllocSetContextCreate(_SPI_current->atomic ? TopTransactionContext : PortalContext,
 												  "SPI Proc",
@@ -229,13 +230,13 @@ SPI_finish(void)
 	return SPI_OK_FINISH;
 }
 
+/*
+ * SPI_start_transaction is a no-op, kept for backwards compatibility.
+ * SPI callers are *always* inside a transaction.
+ */
 void
 SPI_start_transaction(void)
 {
-	MemoryContext oldcontext = CurrentMemoryContext;
-
-	StartTransactionCommand();
-	MemoryContextSwitchTo(oldcontext);
 }
 
 static void
@@ -243,6 +244,12 @@ _SPI_commit(bool chain)
 {
 	MemoryContext oldcontext = CurrentMemoryContext;
 
+	/*
+	 * Complain if we are in a context that doesn't permit transaction
+	 * termination.  (Note: here and _SPI_rollback should be the only places
+	 * that throw ERRCODE_INVALID_TRANSACTION_TERMINATION, so that callers can
+	 * test for that with security that they know what happened.)
+	 */
 	if (_SPI_current->atomic)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TRANSACTION_TERMINATION),
@@ -255,44 +262,74 @@ _SPI_commit(bool chain)
 	 * top-level transaction in such a block violates that idea.  A future PL
 	 * implementation might have different ideas about this, in which case
 	 * this restriction would have to be refined or the check possibly be
-	 * moved out of SPI into the PLs.
+	 * moved out of SPI into the PLs.  Note however that the code below relies
+	 * on not being within a subtransaction.
 	 */
 	if (IsSubTransaction())
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TRANSACTION_TERMINATION),
 				 errmsg("cannot commit while a subtransaction is active")));
 
-	/*
-	 * Hold any pinned portals that any PLs might be using.  We have to do
-	 * this before changing transaction state, since this will run
-	 * user-defined code that might throw an error.
-	 */
-	HoldPinnedPortals();
-
-	/* Start the actual commit */
-	_SPI_current->internal_xact = true;
-
-	/*
-	 * Before committing, pop all active snapshots to avoid error about
-	 * "snapshot %p still active".
-	 */
-	while (ActiveSnapshotSet())
-		PopActiveSnapshot();
-
+	/* XXX this ain't re-entrant enough for my taste */
 	if (chain)
 		SaveTransactionCharacteristics();
 
-	CommitTransactionCommand();
-
-	if (chain)
+	/* Catch any error occurring during the COMMIT */
+	PG_TRY();
 	{
+		/* Protect current SPI stack entry against deletion */
+		_SPI_current->internal_xact = true;
+
+		/*
+		 * Hold any pinned portals that any PLs might be using.  We have to do
+		 * this before changing transaction state, since this will run
+		 * user-defined code that might throw an error.
+		 */
+		HoldPinnedPortals();
+
+		/* Release snapshots associated with portals */
+		ForgetPortalSnapshots();
+
+		/* Do the deed */
+		CommitTransactionCommand();
+
+		/* Immediately start a new transaction */
 		StartTransactionCommand();
-		RestoreTransactionCharacteristics();
+		if (chain)
+			RestoreTransactionCharacteristics();
+
+		MemoryContextSwitchTo(oldcontext);
+
+		_SPI_current->internal_xact = false;
 	}
+	PG_CATCH();
+	{
+		ErrorData  *edata;
 
-	MemoryContextSwitchTo(oldcontext);
+		/* Save error info in caller's context */
+		MemoryContextSwitchTo(oldcontext);
+		edata = CopyErrorData();
+		FlushErrorState();
 
-	_SPI_current->internal_xact = false;
+		/*
+		 * Abort the failed transaction.  If this fails too, we'll just
+		 * propagate the error out ... there's not that much we can do.
+		 */
+		AbortCurrentTransaction();
+
+		/* ... and start a new one */
+		StartTransactionCommand();
+		if (chain)
+			RestoreTransactionCharacteristics();
+
+		MemoryContextSwitchTo(oldcontext);
+
+		_SPI_current->internal_xact = false;
+
+		/* Now that we've cleaned up the transaction, re-throw the error */
+		ReThrowError(edata);
+	}
+	PG_END_TRY();
 }
 
 void
@@ -312,6 +349,7 @@ _SPI_rollback(bool chain)
 {
 	MemoryContext oldcontext = CurrentMemoryContext;
 
+	/* see under SPI_commit() */
 	if (_SPI_current->atomic)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TRANSACTION_TERMINATION),
@@ -323,31 +361,68 @@ _SPI_rollback(bool chain)
 				(errcode(ERRCODE_INVALID_TRANSACTION_TERMINATION),
 				 errmsg("cannot roll back while a subtransaction is active")));
 
-	/*
-	 * Hold any pinned portals that any PLs might be using.  We have to do
-	 * this before changing transaction state, since this will run
-	 * user-defined code that might throw an error, and in any case couldn't
-	 * be run in an already-aborted transaction.
-	 */
-	HoldPinnedPortals();
-
-	/* Start the actual rollback */
-	_SPI_current->internal_xact = true;
-
+	/* XXX this ain't re-entrant enough for my taste */
 	if (chain)
 		SaveTransactionCharacteristics();
 
-	AbortCurrentTransaction();
-
-	if (chain)
+	/* Catch any error occurring during the ROLLBACK */
+	PG_TRY();
 	{
+		/* Protect current SPI stack entry against deletion */
+		_SPI_current->internal_xact = true;
+
+		/*
+		 * Hold any pinned portals that any PLs might be using.  We have to do
+		 * this before changing transaction state, since this will run
+		 * user-defined code that might throw an error, and in any case
+		 * couldn't be run in an already-aborted transaction.
+		 */
+		HoldPinnedPortals();
+
+		/* Release snapshots associated with portals */
+		ForgetPortalSnapshots();
+
+		/* Do the deed */
+		AbortCurrentTransaction();
+
+		/* Immediately start a new transaction */
 		StartTransactionCommand();
-		RestoreTransactionCharacteristics();
+		if (chain)
+			RestoreTransactionCharacteristics();
+
+		MemoryContextSwitchTo(oldcontext);
+
+		_SPI_current->internal_xact = false;
 	}
+	PG_CATCH();
+	{
+		ErrorData  *edata;
 
-	MemoryContextSwitchTo(oldcontext);
+		/* Save error info in caller's context */
+		MemoryContextSwitchTo(oldcontext);
+		edata = CopyErrorData();
+		FlushErrorState();
 
-	_SPI_current->internal_xact = false;
+		/*
+		 * Try again to abort the failed transaction.  If this fails too,
+		 * we'll just propagate the error out ... there's not that much we can
+		 * do.
+		 */
+		AbortCurrentTransaction();
+
+		/* ... and start a new one */
+		StartTransactionCommand();
+		if (chain)
+			RestoreTransactionCharacteristics();
+
+		MemoryContextSwitchTo(oldcontext);
+
+		_SPI_current->internal_xact = false;
+
+		/* Now that we've cleaned up the transaction, re-throw the error */
+		ReThrowError(edata);
+	}
+	PG_END_TRY();
 }
 
 void
@@ -363,18 +438,13 @@ SPI_rollback_and_chain(void)
 }
 
 /*
- * Clean up SPI state.  Called on transaction end (of non-SPI-internal
- * transactions) and when returning to the main loop on error.
+ * SPICleanup is a no-op, kept for backwards compatibility. We rely on
+ * AtEOXact_SPI to cleanup. Extensions should not (need to) fiddle with the
+ * internal SPI state directly.
  */
 void
 SPICleanup(void)
 {
-	_SPI_current = NULL;
-	_SPI_connected = -1;
-	/* Reset API global variables, too */
-	SPI_processed = 0;
-	SPI_tuptable = NULL;
-	SPI_result = 0;
 }
 
 /*
@@ -383,17 +453,49 @@ SPICleanup(void)
 void
 AtEOXact_SPI(bool isCommit)
 {
-	/* Do nothing if the transaction end was initiated by SPI. */
-	if (_SPI_current && _SPI_current->internal_xact)
-		return;
+	bool		found = false;
 
-	if (isCommit && _SPI_connected != -1)
+	/*
+	 * Pop stack entries, stopping if we find one marked internal_xact (that
+	 * one belongs to the caller of SPI_commit or SPI_abort).
+	 */
+	while (_SPI_connected >= 0)
+	{
+		_SPI_connection *connection = &(_SPI_stack[_SPI_connected]);
+
+		if (connection->internal_xact)
+			break;
+
+		found = true;
+
+		/*
+		 * We need not release the procedure's memory contexts explicitly, as
+		 * they'll go away automatically when their parent context does; see
+		 * notes in SPI_connect_ext.
+		 */
+
+		/*
+		 * Restore outer global variables and pop the stack entry.  Unlike
+		 * SPI_finish(), we don't risk switching to memory contexts that might
+		 * be already gone.
+		 */
+		SPI_processed = connection->outer_processed;
+		SPI_tuptable = connection->outer_tuptable;
+		SPI_result = connection->outer_result;
+
+		_SPI_connected--;
+		if (_SPI_connected < 0)
+			_SPI_current = NULL;
+		else
+			_SPI_current = &(_SPI_stack[_SPI_connected]);
+	}
+
+	/* We should only find entries to pop during an ABORT. */
+	if (found && isCommit)
 		ereport(WARNING,
 				(errcode(ERRCODE_WARNING),
 				 errmsg("transaction left non-empty SPI stack"),
 				 errhint("Check for missing \"SPI_finish\" calls.")));
-
-	SPICleanup();
 }
 
 /*
@@ -2086,7 +2188,7 @@ _SPI_prepare_plan(const char *src, SPIPlanPtr plan)
 		CompleteCachedPlan(plansource,
 						   stmt_list,
 						   NULL,
-						   nodeTag(parsetree),
+						   nodeTag(parsetree->stmt),
 						   plan->argtypes,
 						   plan->nargs,
 						   plan->parserSetup,
@@ -2192,6 +2294,7 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 	uint64		my_processed = 0;
 	SPITupleTable *my_tuptable = NULL;
 	int			res = 0;
+	bool		allow_nonatomic = plan->no_snapshots;	/* legacy API name */
 	bool		pushed_active_snap = false;
 	ErrorContextCallback spierrcontext;
 	CachedPlan *cplan = NULL;
@@ -2224,11 +2327,12 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 	 * In the first two cases, we can just push the snap onto the stack once
 	 * for the whole plan list.
 	 *
-	 * But if the plan has no_snapshots set to true, then don't manage
-	 * snapshots at all.  The caller should then take care of that.
+	 * Note that snapshot != InvalidSnapshot implies an atomic execution
+	 * context.
 	 */
-	if (snapshot != InvalidSnapshot && !plan->no_snapshots)
+	if (snapshot != InvalidSnapshot)
 	{
+		Assert(!allow_nonatomic);
 		if (read_only)
 		{
 			PushActiveSnapshot(snapshot);
@@ -2300,7 +2404,7 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 			CompleteCachedPlan(plansource,
 							   stmt_list,
 							   NULL,
-							   nodeTag(parsetree),
+							   nodeTag(parsetree->stmt),
 							   plan->argtypes,
 							   plan->nargs,
 							   plan->parserSetup,
@@ -2317,15 +2421,39 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 		stmt_list = cplan->stmt_list;
 
 		/*
-		 * In the default non-read-only case, get a new snapshot, replacing
-		 * any that we pushed in a previous cycle.
+		 * If we weren't given a specific snapshot to use, and the statement
+		 * list requires a snapshot, set that up.
 		 */
-		if (snapshot == InvalidSnapshot && !read_only && !plan->no_snapshots)
+		if (snapshot == InvalidSnapshot &&
+			(list_length(stmt_list) > 1 ||
+			 (list_length(stmt_list) == 1 &&
+			  PlannedStmtRequiresSnapshot(linitial_node(PlannedStmt,
+														stmt_list)))))
 		{
-			if (pushed_active_snap)
-				PopActiveSnapshot();
-			PushActiveSnapshot(GetTransactionSnapshot());
-			pushed_active_snap = true;
+			/*
+			 * First, ensure there's a Portal-level snapshot.  This back-fills
+			 * the snapshot stack in case the previous operation was a COMMIT
+			 * or ROLLBACK inside a procedure or DO block.  (We can't put back
+			 * the Portal snapshot any sooner, or we'd break cases like doing
+			 * SET or LOCK just after COMMIT.)  It's enough to check once per
+			 * statement list, since COMMIT/ROLLBACK/CALL/DO can't appear
+			 * within a multi-statement list.
+			 */
+			EnsurePortalSnapshotExists();
+
+			/*
+			 * In the default non-read-only case, get a new per-statement-list
+			 * snapshot, replacing any that we pushed in a previous cycle.
+			 * Skip it when doing non-atomic execution, though (we rely
+			 * entirely on the Portal snapshot in that case).
+			 */
+			if (!read_only && !allow_nonatomic)
+			{
+				if (pushed_active_snap)
+					PopActiveSnapshot();
+				PushActiveSnapshot(GetTransactionSnapshot());
+				pushed_active_snap = true;
+			}
 		}
 
 		foreach(lc2, stmt_list)
@@ -2340,6 +2468,7 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 			/* GPDB: Mark all queries as SPI inner query for extension usage */
 			stmt->metricsQueryType = SPI_INNER_QUERY;
 
+			/* Check for unsupported cases. */
 			if (stmt->utilityStmt)
 			{
 				if (IsA(stmt->utilityStmt, CopyStmt))
@@ -2371,9 +2500,10 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 
 			/*
 			 * If not read-only mode, advance the command counter before each
-			 * command and update the snapshot.
+			 * command and update the snapshot.  (But skip it if the snapshot
+			 * isn't under our control.)
 			 */
-			if (!read_only && !plan->no_snapshots)
+			if (!read_only && pushed_active_snap)
 			{
 				CommandCounterIncrement();
 				UpdateActiveSnapshotCommandId();
@@ -2412,13 +2542,11 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 				ProcessUtilityContext context;
 
 				/*
-				 * If the SPI context is atomic, or we are asked to manage
-				 * snapshots, then we are in an atomic execution context.
-				 * Conversely, to propagate a nonatomic execution context, the
-				 * caller must be in a nonatomic SPI context and manage
-				 * snapshots itself.
+				 * If the SPI context is atomic, or we were not told to allow
+				 * nonatomic operations, tell ProcessUtility this is an atomic
+				 * execution context.
 				 */
-				if (_SPI_current->atomic || !plan->no_snapshots)
+				if (_SPI_current->atomic || !allow_nonatomic)
 					context = PROCESS_UTILITY_QUERY;
 				else
 					context = PROCESS_UTILITY_QUERY_NONATOMIC;

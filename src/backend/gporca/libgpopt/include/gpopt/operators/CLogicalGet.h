@@ -45,7 +45,7 @@ private:
 	// partition keys
 	CColRef2dArray *m_pdrgpdrgpcrPart;
 
-	// distribution columns (empty for master only tables)
+	// distribution columns (empty for coordinator only tables)
 	CColRefSet *m_pcrsDist;
 
 	void CreatePartCols(CMemoryPool *mp, const ULongPtrArray *pdrgpulPart);
@@ -225,7 +225,7 @@ public:
 	{
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalGet == pop->Eopid() ||
-					EopLogicalExternalGet == pop->Eopid());
+					EopLogicalForeignGet == pop->Eopid());
 
 		return dynamic_cast<CLogicalGet *>(pop);
 	}

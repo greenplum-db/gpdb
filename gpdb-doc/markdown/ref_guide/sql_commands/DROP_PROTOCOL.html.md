@@ -14,7 +14,7 @@ DROP PROTOCOL [IF EXISTS] <name>
 
 You must be a superuser or the protocol owner to drop a protocol.
 
-**Warning:** If you drop a data access prococol, external tables that have been defined with the protocol will no longer be able to access the external data source.
+> **Caution** If you drop a data access prococol, external tables that have been defined with the protocol will no longer be able to access the external data source.
 
 ## <a id="section4"></a>Parameters 
 

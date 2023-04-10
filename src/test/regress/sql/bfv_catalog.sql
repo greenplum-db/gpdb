@@ -517,7 +517,7 @@ create table mpp_bfv_1(col1 int, col2 text, col3 numeric) distributed by (col1);
 
 -- this cannot go to the _setup file, because it is not propagated here
 set optimizer_enable_indexscan = off;
-set optimizer_enable_master_only_queries = on;
+set optimizer_enable_coordinator_only_queries = on;
 
 -- query that mentions no tables should have no motions
 select count_operator('select substr(''abc'', 2)', 'Motion');

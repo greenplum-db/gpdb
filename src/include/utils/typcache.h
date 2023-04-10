@@ -201,4 +201,7 @@ extern void SharedRecordTypmodRegistryAttach(SharedRecordTypmodRegistry *);
 
 extern List *build_tuple_node_list(int start);
 
+/* GPDB: retrieve conn calls this function to clear record cache */
+extern void reset_record_cache(void);
+
 #endif							/* TYPCACHE_H */

@@ -428,7 +428,7 @@
       <dxl:ColumnStatistics Mdid="1.17438125.1.1.0" Name="riskrunid" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.17438125.1.1.9" Name="contractid" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.17364111.1.1" Name="mr_star1_deltas_col_part" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.17364111.1.1" Name="mr_star1_deltas_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.17364111.1.1" Name="mr_star1_deltas_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -534,7 +534,7 @@
           <dxl:Partition Mdid="6.17364111002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17364111001.1.1" Name="mr_star1_deltas_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17364111001.1.1" Name="mr_star1_deltas_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -651,7 +651,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17364111002.1.1" Name="mr_star1_deltas_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17364111002.1.1" Name="mr_star1_deltas_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -785,7 +785,7 @@
       <dxl:ColumnStatistics Mdid="1.17347476.1.1.14" Name="uomname" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.17347476.1.1.7" Name="tradetype" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.17347476.1.1.6" Name="entity" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:Relation Mdid="6.17355788.1.1" Name="mr_star1_decorrelation_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.17355788.1.1" Name="mr_star1_decorrelation_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -891,7 +891,7 @@
           <dxl:Partition Mdid="6.17355788002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17355788001.1.1" Name="mr_star1_decorrelation_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17355788001.1.1" Name="mr_star1_decorrelation_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -1008,7 +1008,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17355788002.1.1" Name="mr_star1_decorrelation_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17355788002.1.1" Name="mr_star1_decorrelation_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -1150,7 +1150,7 @@
       <dxl:ColumnStatistics Mdid="1.17384494.1.1.18" Name="axis1" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.17384494.1.1.2" Name="businessdate" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.17347476.1.1" Name="mr_star1_cashflows_col_part" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.17347476.1.1" Name="mr_star1_cashflows_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.17347476.1.1" Name="mr_star1_cashflows_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -1256,7 +1256,7 @@
           <dxl:Partition Mdid="6.17347476002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17347476001.1.1" Name="mr_star1_cashflows_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17347476001.1.1" Name="mr_star1_cashflows_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -1373,7 +1373,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17347476002.1.1" Name="mr_star1_cashflows_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17347476002.1.1" Name="mr_star1_cashflows_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -1531,7 +1531,7 @@
       <dxl:ColumnStatistics Mdid="1.17413178.1.1.18" Name="axis1" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.17413178.1.1.2" Name="businessdate" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.17471384.1.1" Name="mr_star1_volofvol_col_part" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.17471384.1.1" Name="mr_star1_volofvol_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.17471384.1.1" Name="mr_star1_volofvol_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -1637,7 +1637,7 @@
           <dxl:Partition Mdid="6.17471384002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17471384001.1.1" Name="mr_star1_volofvol_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17471384001.1.1" Name="mr_star1_volofvol_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -1754,7 +1754,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17471384002.1.1" Name="mr_star1_volofvol_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17471384002.1.1" Name="mr_star1_volofvol_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -1872,7 +1872,7 @@
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.17463072.1.1" Name="mr_star1_voldrip_col_part" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.17463072.1.1" Name="mr_star1_voldrip_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.17463072.1.1" Name="mr_star1_voldrip_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -1978,7 +1978,7 @@
           <dxl:Partition Mdid="6.17463072002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17463072001.1.1" Name="mr_star1_voldrip_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17463072001.1.1" Name="mr_star1_voldrip_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -2095,7 +2095,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17463072002.1.1" Name="mr_star1_voldrip_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17463072002.1.1" Name="mr_star1_voldrip_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -2214,7 +2214,7 @@
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.17446437.1.1" Name="mr_star1_skew_col_part" Rows="0.000000" EmptyRelation="true"/>
       <dxl:RelationStatistics Mdid="2.17392806.1.1" Name="mr_star1_gammas_col_part" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.17446437.1.1" Name="mr_star1_skew_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.17446437.1.1" Name="mr_star1_skew_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -2320,7 +2320,7 @@
           <dxl:Partition Mdid="6.17446437002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17446437001.1.1" Name="mr_star1_skew_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17446437001.1.1" Name="mr_star1_skew_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -2437,7 +2437,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17446437002.1.1" Name="mr_star1_skew_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17446437002.1.1" Name="mr_star1_skew_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -2554,7 +2554,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17392806.1.1" Name="mr_star1_gammas_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.17392806.1.1" Name="mr_star1_gammas_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -2660,7 +2660,7 @@
           <dxl:Partition Mdid="6.17392806002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17392806001.1.1" Name="mr_star1_gammas_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17392806001.1.1" Name="mr_star1_gammas_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -2777,7 +2777,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17392806002.1.1" Name="mr_star1_gammas_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17392806002.1.1" Name="mr_star1_gammas_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -2935,7 +2935,7 @@
       <dxl:ColumnStatistics Mdid="1.17347476.1.1.28" Name="bookname" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.17347476.1.1.13" Name="value" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.17347476.1.1.12" Name="measurename" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:Relation Mdid="6.17454760.1.1" Name="mr_star1_theta_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.17454760.1.1" Name="mr_star1_theta_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -3041,7 +3041,7 @@
           <dxl:Partition Mdid="6.17454760002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17454760001.1.1" Name="mr_star1_theta_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17454760001.1.1" Name="mr_star1_theta_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -3158,7 +3158,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17454760002.1.1" Name="mr_star1_theta_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17454760002.1.1" Name="mr_star1_theta_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -3301,7 +3301,7 @@
       <dxl:ColumnStatistics Mdid="1.17384494.1.1.9" Name="contractid" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.17438125.1.1" Name="mr_star1_seasonality_col_part" Rows="0.000000" EmptyRelation="true"/>
       <dxl:RelationStatistics Mdid="2.17384494.1.1" Name="mr_star1_fxdeltas_col_part" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.17438125.1.1" Name="mr_star1_seasonality_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.17438125.1.1" Name="mr_star1_seasonality_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -3407,7 +3407,7 @@
           <dxl:Partition Mdid="6.17438125002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17438125001.1.1" Name="mr_star1_seasonality_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17438125001.1.1" Name="mr_star1_seasonality_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -3524,7 +3524,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17438125002.1.1" Name="mr_star1_seasonality_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17438125002.1.1" Name="mr_star1_seasonality_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -3641,7 +3641,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17384494.1.1" Name="mr_star1_fxdeltas_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.17384494.1.1" Name="mr_star1_fxdeltas_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -3747,7 +3747,7 @@
           <dxl:Partition Mdid="6.17384494002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17384494001.1.1" Name="mr_star1_fxdeltas_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17384494001.1.1" Name="mr_star1_fxdeltas_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -3864,7 +3864,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17384494002.1.1" Name="mr_star1_fxdeltas_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17384494002.1.1" Name="mr_star1_fxdeltas_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -3982,7 +3982,7 @@
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.17429813.1.1" Name="mr_star1_position_col_part" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.17429813.1.1" Name="mr_star1_position_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.17429813.1.1" Name="mr_star1_position_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -4088,7 +4088,7 @@
           <dxl:Partition Mdid="6.17429813002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17429813001.1.1" Name="mr_star1_position_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17429813001.1.1" Name="mr_star1_position_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -4205,7 +4205,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17429813002.1.1" Name="mr_star1_position_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17429813002.1.1" Name="mr_star1_position_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -4323,7 +4323,7 @@
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.17421490.1.1" Name="mr_star1_netexposure_col_part" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.17421490.1.1" Name="mr_star1_netexposure_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.17421490.1.1" Name="mr_star1_netexposure_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -4429,7 +4429,7 @@
           <dxl:Partition Mdid="6.17421490002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17421490001.1.1" Name="mr_star1_netexposure_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17421490001.1.1" Name="mr_star1_netexposure_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -4546,7 +4546,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17421490002.1.1" Name="mr_star1_netexposure_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17421490002.1.1" Name="mr_star1_netexposure_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -4704,7 +4704,7 @@
       <dxl:ColumnStatistics Mdid="1.17413178.1.1.0" Name="riskrunid" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.17413178.1.1.9" Name="contractid" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.17413178.1.1" Name="mr_star1_kappa_col_part" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.17413178.1.1" Name="mr_star1_kappa_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.17413178.1.1" Name="mr_star1_kappa_col_part" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -4810,7 +4810,7 @@
           <dxl:Partition Mdid="6.17413178002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17413178001.1.1" Name="mr_star1_kappa_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17413178001.1.1" Name="mr_star1_kappa_col_part_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -4927,7 +4927,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17413178002.1.1" Name="mr_star1_kappa_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17413178002.1.1" Name="mr_star1_kappa_col_part_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>

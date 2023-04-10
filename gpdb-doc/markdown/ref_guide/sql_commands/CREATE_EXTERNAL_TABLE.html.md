@@ -186,21 +186,21 @@ LOCATION \('protocol://\[host\[:port\]\]/path/file' \[, ...\]\)
     With the option `#transform=trans\_name`, you can specify a transform to apply when loading or extracting data. The trans\_name is the name of the transform in the YAML configuration file you specify with the you run the `gpfdist` utility. For information about specifying a transform, see [`gpfdist`](../../utility_guide/ref/gpfdist.html) in the *Greenplum Utility Guide*.
 
 ON MASTER
-:   Restricts all table-related operations to the Greenplum master segment. Permitted only on readable and writable external tables created with the `s3` or custom protocols. The `gpfdist`, `gpfdists`, `pxf`, and `file` protocols do not support `ON MASTER`.
+:   Restricts all table-related operations to the Greenplum coordinator segment. Permitted only on readable and writable external tables created with the `s3` or custom protocols. The `gpfdist`, `gpfdists`, `pxf`, and `file` protocols do not support `ON MASTER`.
 
-:   **Note:** Be aware of potential resource impacts when reading from or writing to external tables you create with the `ON MASTER` clause. You may encounter performance issues when you restrict table operations solely to the Greenplum master segment.
+:   > **Note** Be aware of potential resource impacts when reading from or writing to external tables you create with the `ON MASTER` clause. You may encounter performance issues when you restrict table operations solely to the Greenplum coordinator segment.
 
 EXECUTE 'command' \[ON ...\]
 :   Allowed for readable external web tables or writable external tables only. For readable external web tables, specifies the OS command to be run by the segment instances. The command can be a single OS command or a script. The `ON` clause is used to specify which segment instances will run the given command.
 
     -   ON ALL is the default. The command will be run by every active \(primary\) segment instance on all segment hosts in the Greenplum Database system. If the command runs a script, that script must reside in the same location on all of the segment hosts and be executable by the Greenplum superuser \(`gpadmin`\).
-    -   ON MASTER runs the command on the master host only.
-        **Note:** Logging is not supported for external web tables when the `ON MASTER` clause is specified.
+    -   ON MASTER runs the command on the coordinator host only.
+        > **Note** Logging is not supported for external web tables when the `ON MASTER` clause is specified.
 
     -   ON number means the command will be run by the specified number of segments. The particular segments are chosen randomly at runtime by the Greenplum Database system. If the command runs a script, that script must reside in the same location on all of the segment hosts and be executable by the Greenplum superuser \(`gpadmin`\).
     -   HOST means the command will be run by one segment on each segment host \(once per segment host\), regardless of the number of active segment instances per host.
     -   HOST segment\_hostname means the command will be run by all active \(primary\) segment instances on the specified segment host.
-    -   SEGMENT segment\_id means the command will be run only once by the specified segment. You can determine a segment instance's ID by looking at the content number in the system catalog table [gp\_segment\_configuration](../system_catalogs/gp_segment_configuration.html). The content ID of the Greenplum Database master is always `-1`.
+    -   SEGMENT segment\_id means the command will be run only once by the specified segment. You can determine a segment instance's ID by looking at the content number in the system catalog table [gp\_segment\_configuration](../system_catalogs/gp_segment_configuration.html). The content ID of the Greenplum Database coordinator is always `-1`.
 
     For writable external tables, the command specified in the `EXECUTE` clause must be prepared to have data piped into it. Since all segments that have data to send will write their output to the specified command or program, the only available option for the `ON` clause is `ON ALL`.
 
@@ -275,7 +275,7 @@ LOG ERRORS \[PERSISTENTLY\]
 SEGMENT REJECT LIMIT count \[ROWS \| PERCENT\]
 :   Runs a `COPY FROM` operation in single row error isolation mode. If the input rows have format errors they will be discarded provided that the reject limit count is not reached on any Greenplum segment instance during the load operation. The reject limit count can be specified as number of rows \(the default\) or percentage of total rows \(1-100\). If `PERCENT` is used, each segment starts calculating the bad row percentage only after the number of rows specified by the parameter `gp_reject_percent_threshold` has been processed. The default for `gp_reject_percent_threshold` is 300 rows. Constraint errors such as violation of a `NOT NULL`, `CHECK`, or `UNIQUE` constraint will still be handled in "all-or-nothing" input mode. If the limit is not reached, all good rows will be loaded and any error rows discarded.
 
-:   **Note:** When reading an external table, Greenplum Database limits the initial number of rows that can contain formatting errors if the `SEGMENT REJECT LIMIT` is not triggered first or is not specified. If the first 1000 rows are rejected, the `COPY` operation is stopped and rolled back.
+:   > **Note** When reading an external table, Greenplum Database limits the initial number of rows that can contain formatting errors if the `SEGMENT REJECT LIMIT` is not triggered first or is not specified. If the first 1000 rows are rejected, the `COPY` operation is stopped and rolled back.
 
 The limit for the number of initial rejected rows can be changed with the Greenplum Database server configuration parameter `gp_initial_bad_row_limit`. See [Server Configuration Parameters](../config_params/guc_config.html) for information about the parameter.
 

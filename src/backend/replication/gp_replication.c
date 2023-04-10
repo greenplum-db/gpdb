@@ -19,6 +19,7 @@
 #include "replication/walsender.h"
 #include "storage/lwlock.h"
 #include "utils/builtins.h"
+#include "utils/faultinjector.h"
 
 /* Set at database system is ready to accept connections */
 extern pg_time_t PMAcceptingConnectionsStartTime;
@@ -42,6 +43,7 @@ static void FTSReplicationStatusClearAttempts(FTSReplicationStatus *replication_
 static uint32 FTSReplicationStatusRetrieveAttempts(FTSReplicationStatus *replication_status);
 static pg_time_t FTSReplicationStatusRetrieveDisconnectTime(FTSReplicationStatus *replication_status);
 static void FTSReplicationStatusMarkDisconnect(FTSReplicationStatus *replication_status);
+static bool is_mirror_up(WalSnd *walsender);
 
 /* Report shared-memory space needed by FTSReplicationStatusShmemInit */
 Size
@@ -251,8 +253,14 @@ FTSReplicationStatusUpdateForWalState(const char *app_name, WalSndState state)
 	/* replication_status must exist */
 	Assert(replication_status);
 
-	if (state == WALSNDSTATE_CATCHUP || state == WALSNDSTATE_STREAMING)
+	bool is_up;
+	SpinLockAcquire(&MyWalSnd->mutex);
+	is_up = is_mirror_up(MyWalSnd);
+	SpinLockRelease(&MyWalSnd->mutex);
+
+	if (is_up)
 	{
+		SIMPLE_FAULT_INJECTOR("is_mirror_up");
 		/*
 		 * We can clear the disconnect time once the connection established.
 		 * We only clean the failure count when the wal start streaming, since
@@ -425,7 +433,7 @@ FTSReplicationStatusRetrieveDisconnectTime(FTSReplicationStatus *replication_sta
  *
  * Detect the primary-mirror replication attempt count.
  * If the replication keeps crash, we should consider mark
- * mirror down directly. Since the walsender keeps resarting,
+ * mirror down directly. Since the walsender keeps restarting,
  * walsender->replica_disconnected_at keeps updated.
  * So ignore it.
  *
@@ -472,13 +480,15 @@ is_mirror_up(WalSnd *walsender)
 	bool walsender_has_pid = walsender->pid != 0;
 
 	/*
-	 * WalSndSetState() resets replica_disconnected_at for
-	 * below states. If modifying below states then be sure
-	 * to update corresponding logic in WalSndSetState() as
-	 * well.
+	 * A mirror is up only if it has received at least one chunk of WAL.  The
+	 * CATCHUP state is entered as soon as a connection request from mirror is
+	 * received.  The connection may fail soon after if the requested
+	 * startpoint is not found in the WAL files available on primary.
 	 */
-	bool is_communicating_with_mirror = walsender->state == WALSNDSTATE_CATCHUP ||
-		walsender->state == WALSNDSTATE_STREAMING;
+	bool is_communicating_with_mirror =
+		(walsender->state == WALSNDSTATE_CATCHUP &&
+		 !XLogRecPtrIsInvalid(walsender->write)) ||
+		 walsender->state == WALSNDSTATE_STREAMING;
 
 	return walsender_has_pid && is_communicating_with_mirror;
 }

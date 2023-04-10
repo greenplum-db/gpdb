@@ -57,6 +57,15 @@
  * allowing die interrupts: HOLD_CANCEL_INTERRUPTS() and
  * RESUME_CANCEL_INTERRUPTS().
  *
+ * Note that ProcessInterrupts() has also acquired a number of tasks that
+ * do not necessarily cause a query-cancel-or-die response.  Hence, it's
+ * possible that it will just clear InterruptPending and return.
+ *
+ * INTERRUPTS_PENDING_CONDITION() can be checked to see whether an
+ * interrupt needs to be serviced, without trying to do so immediately.
+ * Some callers are also interested in INTERRUPTS_CAN_BE_PROCESSED(),
+ * which tells whether ProcessInterrupts is sure to clear the interrupt.
+ *
  * Special mechanisms are used to let an interrupt be accepted when we are
  * waiting for a lock or when we are waiting for command input (but, of
  * course, only if the interrupt holdoff counter is zero).  See the
@@ -86,6 +95,7 @@ extern PGDLLIMPORT volatile sig_atomic_t ProcDiePending;
 extern PGDLLIMPORT volatile sig_atomic_t IdleInTransactionSessionTimeoutPending;
 extern PGDLLIMPORT volatile sig_atomic_t IdleGangTimeoutPending;
 extern PGDLLIMPORT volatile sig_atomic_t ConfigReloadPending;
+extern PGDLLIMPORT volatile sig_atomic_t LogMemoryContextPending;
 
 extern PGDLLIMPORT volatile sig_atomic_t ClientConnectionLost;
 extern PGDLLIMPORT volatile sig_atomic_t CheckClientConnectionPending;
@@ -138,28 +148,30 @@ CancelRequested()
 	return InterruptPending && (ProcDiePending || QueryCancelPending);
 }
 
+/* Test whether an interrupt is pending */
 #ifndef WIN32
+#define INTERRUPTS_PENDING_CONDITION() \
+	(unlikely(InterruptPending))
+#else
+#define INTERRUPTS_PENDING_CONDITION() \
+	(unlikely(UNBLOCKED_SIGNAL_QUEUE()) ? pgwin32_dispatch_queued_signals() : 0, \
+	 unlikely(InterruptPending))
+#endif
 
+/* Service interrupt, if one is pending and it's safe to service it now */
 #define CHECK_FOR_INTERRUPTS() \
 do { \
-	if (InterruptPending) \
+	if (INTERRUPTS_PENDING_CONDITION()) \
 		ProcessInterrupts(__FILE__, __LINE__); \
 	BackoffBackendTick(); \
 	ReportOOMConsumption(); \
 	RedZoneHandler_DetectRunawaySession();\
 } while(0)
 
-#else							/* WIN32 */
-
-#define CHECK_FOR_INTERRUPTS() \
-do { \
-	if (UNBLOCKED_SIGNAL_QUEUE()) \
-		pgwin32_dispatch_queued_signals(); \
-	if (InterruptPending) \
-		ProcessInterrupts(__FILE__, __LINE__); \
-} while(0)
-#endif							/* WIN32 */
-
+/* Is ProcessInterrupts() guaranteed to clear InterruptPending? */
+#define INTERRUPTS_CAN_BE_PROCESSED() \
+	(InterruptHoldoffCount == 0 && CritSectionCount == 0 && \
+	 QueryCancelHoldoffCount == 0)
 
 #define HOLD_INTERRUPTS() \
 do { \
@@ -554,5 +566,7 @@ extern bool has_rolreplication(Oid roleid);
 /* in access/transam/xlog.c */
 extern bool BackupInProgress(void);
 extern void CancelBackup(void);
+
+extern bool should_reject_connection;
 
 #endif							/* MISCADMIN_H */

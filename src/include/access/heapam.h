@@ -123,6 +123,9 @@ extern bool heap_getnextslot(TableScanDesc sscan,
 
 extern bool heap_fetch(Relation relation, Snapshot snapshot,
 					   HeapTuple tuple, Buffer *userbuf);
+extern bool heap_fetch_extended(Relation relation, Snapshot snapshot,
+								HeapTuple tuple, Buffer *userbuf,
+								bool keep_buf);
 extern bool heap_hot_search_buffer(ItemPointer tid, Relation relation,
 								   Buffer buffer, Snapshot snapshot, HeapTuple heapTuple,
 								   bool *all_dead, bool first_call);
@@ -157,6 +160,7 @@ extern void heap_inplace_update(Relation relation, HeapTuple tuple);
 extern bool heap_freeze_tuple(HeapTupleHeader tuple,
 							  TransactionId relfrozenxid, TransactionId relminmxid,
 							  TransactionId cutoff_xid, TransactionId cutoff_multi);
+extern void heap_freeze_tuple_wal_logged(Relation rel, HeapTuple tuple);
 extern bool heap_tuple_needs_freeze(HeapTupleHeader tuple, TransactionId cutoff_xid,
 									MultiXactId cutoff_multi, Buffer buf);
 extern bool heap_tuple_needs_eventual_freeze(HeapTupleHeader tuple);

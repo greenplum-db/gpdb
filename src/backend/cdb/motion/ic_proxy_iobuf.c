@@ -151,13 +151,14 @@ ic_proxy_ibuf_push(ICProxyIBuf *ibuf,
 			/* have a complete header now */
 
 			packet_size = ibuf->get_packet_size(ibuf->buf);
-			delta = Min(packet_size - ibuf->len, size);
-
-			memcpy(ibuf->buf + ibuf->len, data, delta);
-			ibuf->len += delta;
-			data += delta;
-			size -= delta;
-
+			if (packet_size > ibuf->len)
+			{
+				delta = Min(packet_size - ibuf->len, size);
+				memcpy(ibuf->buf + ibuf->len, data, delta);
+				ibuf->len += delta;
+				data += delta;
+				size -= delta;
+			}
 			if (ibuf->len < packet_size)
 				/* still not having a complete packet */
 				return;
@@ -175,7 +176,7 @@ ic_proxy_ibuf_push(ICProxyIBuf *ibuf,
 	{
 		packet_size = ibuf->get_packet_size(data);
 
-		if (packet_size <= size)
+		if (packet_size > 0 && packet_size <= size)
 		{
 			/* got a complete pkt */
 			callback(opaque, data, packet_size);

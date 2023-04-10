@@ -2,22 +2,28 @@ Parsed test spec with 3 sessions
 
 starting permutation: s2insert s3insert s1commit
 pg_advisory_xact_lock
+---------------------
+                     
+(1 row)
 
-               
 step s2insert: 
-  select pg_advisory_xact_lock_shared(1); 
+  select pg_advisory_xact_lock_shared(1);
   INSERT INTO ctoast (key, val) VALUES (1, ctoast_large_val()) ON CONFLICT DO NOTHING;
  <waiting ...>
 step s3insert: 
-  select pg_advisory_xact_lock_shared(1); 
+  select pg_advisory_xact_lock_shared(1);
   INSERT INTO ctoast (key, val) VALUES (1, ctoast_large_val()) ON CONFLICT DO NOTHING;
  <waiting ...>
 step s1commit: COMMIT;
 step s2insert: <... completed>
 pg_advisory_xact_lock_shared
+----------------------------
+                            
+(1 row)
 
-               
 step s3insert: <... completed>
 pg_advisory_xact_lock_shared
+----------------------------
+                            
+(1 row)
 
-               

@@ -519,6 +519,14 @@ TABLE int8_tbl;
  4567890123456789 | -4567890123456789
 (9 rows)
 
+-- corner case: VALUES with no columns
+CREATE TEMP TABLE nocols();
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+INSERT INTO nocols DEFAULT VALUES;
+SELECT * FROM nocols n, LATERAL (VALUES(n.*)) v;
+--
+(1 row)
+
 --
 -- Test ORDER BY options
 --

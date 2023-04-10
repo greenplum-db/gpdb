@@ -179,27 +179,16 @@ RunawayCleaner_StartCleanup()
 		Assert(beginCleanupRunawayVersion < *latestRunawayVersion);
 		Assert(endCleanupRunawayVersion < *latestRunawayVersion);
 
-		/* We don't want to cleanup multiple times for same runaway event */
+		/* We don't want to clean up multiple times for same runaway event */
 		beginCleanupRunawayVersion = *latestRunawayVersion;
 
 		if (RunawayCleaner_ShouldCancelQuery())
 		{
 			SIMPLE_FAULT_INJECTOR("runaway_cleanup");
 
-			if (IsResGroupEnabled())
-			{
-				StringInfoData    str;
-				initStringInfo(&str);
-			
-				LWLockAcquire(ResGroupLock, LW_SHARED);
-				ResGroupGetMemoryRunawayInfo(&str);
-				LWLockRelease(ResGroupLock);
-				ereport(ERROR, (errmsg("Canceling query because of high VMEM usage. %s", str.data)));
-			}
-			else
-				ereport(ERROR, (errmsg("Canceling query because of high VMEM usage. Used: %dMB, available %dMB, red zone: %dMB",
-					VmemTracker_ConvertVmemChunksToMB(MySessionState->sessionVmem), VmemTracker_GetAvailableVmemMB(),
-					RedZoneHandler_GetRedZoneLimitMB()), errprintstack(true)));
+			ereport(ERROR, (errmsg("Canceling query because of high VMEM usage. Used: %dMB, available %dMB, red zone: %dMB",
+				VmemTracker_ConvertVmemChunksToMB(MySessionState->sessionVmem), VmemTracker_GetAvailableVmemMB(),
+				RedZoneHandler_GetRedZoneLimitMB()), errprintstack(true)));
 		}
 
 		/*

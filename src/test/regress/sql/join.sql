@@ -523,6 +523,12 @@ select * from t1 left join t2 on (t1.a = t2.a);
 
 select t1.x from t1 join t3 on (t1.a = t3.x);
 
+-- Test matching of locking clause with wrong alias
+
+select t1.*, t2.*, unnamed_join.* from
+  t1 join t2 on (t1.a = t2.a), t3 as unnamed_join
+  for update of unnamed_join;
+
 --
 -- regression test for 8.1 merge right join bug
 --
@@ -926,6 +932,36 @@ where
 order by 1,2;
 
 --
+-- variant where a PlaceHolderVar is needed at a join, but not above the join
+-- Greenplum does not fully support the lateral join, ignore the below case.
+--
+
+-- start_ignore
+explain (costs off)
+select * from
+  int4_tbl as i41,
+  lateral
+    (select 1 as x from
+      (select i41.f1 as lat,
+              i42.f1 as loc from
+         int8_tbl as i81, int4_tbl as i42) as ss1
+      right join int4_tbl as i43 on (i43.f1 > 1)
+      where ss1.loc = ss1.lat) as ss2
+where i41.f1 > 0;
+
+select * from
+  int4_tbl as i41,
+  lateral
+    (select 1 as x from
+      (select i41.f1 as lat,
+              i42.f1 as loc from
+         int8_tbl as i81, int4_tbl as i42) as ss1
+      right join int4_tbl as i43 on (i43.f1 > 1)
+      where ss1.loc = ss1.lat) as ss2
+where i41.f1 > 0;
+-- end_ignore
+
+--
 -- test the corner cases FULL JOIN ON TRUE and FULL JOIN ON FALSE
 --
 select * from int4_tbl a full join int4_tbl b on true;
@@ -1040,6 +1076,38 @@ select t1.unique2, t1.stringu1, t2.unique1, t2.stringu2 from
   left join tenk1 t2
   on (subq1.y1 = t2.unique1)
 where t1.unique2 < 42 and t1.stringu1 > t2.stringu2;
+
+-- Here's a variant that we can't fold too aggressively, though,
+-- or we end up with noplace to evaluate the lateral PHV
+explain (verbose, costs off)
+select * from
+  (select 1 as x) ss1 left join (select 2 as y) ss2 on (true),
+  lateral (select ss2.y as z limit 1) ss3;
+select * from
+  (select 1 as x) ss1 left join (select 2 as y) ss2 on (true),
+  lateral (select ss2.y as z limit 1) ss3;
+
+-- Test proper handling of appendrel PHVs during useless-RTE removal
+explain (costs off)
+select * from
+  (select 0 as z) as t1
+  left join
+  (select true as a) as t2
+  on true,
+  lateral (select true as b
+           union all
+           select a as b) as t3
+where b;
+
+select * from
+  (select 0 as z) as t1
+  left join
+  (select true as a) as t2
+  on true,
+  lateral (select true as b
+           union all
+           select a as b) as t3
+where b;
 
 --
 -- test extraction of restriction OR clauses from join OR clause
@@ -1603,6 +1671,41 @@ where ss.stringu2 !~* ss.case1;
 
 rollback;
 
+-- test case to expose miscomputation of required relid set for a PHV
+-- Greenplum does not fully support the lateral join, ignore the below case.
+-- start_ignore
+explain (verbose, costs off)
+select i8.*, ss.v, t.unique2
+  from int8_tbl i8
+    left join int4_tbl i4 on i4.f1 = 1
+    left join lateral (select i4.f1 + 1 as v) as ss on true
+    left join tenk1 t on t.unique2 = ss.v
+where q2 = 456;
+
+select i8.*, ss.v, t.unique2
+  from int8_tbl i8
+    left join int4_tbl i4 on i4.f1 = 1
+    left join lateral (select i4.f1 + 1 as v) as ss on true
+    left join tenk1 t on t.unique2 = ss.v
+where q2 = 456;
+-- end_ignore
+
+-- and check a related issue where we miscompute required relids for
+-- a PHV that's been translated to a child rel
+create temp table parttbl (a integer primary key) partition by range (a);
+create temp table parttbl1 partition of parttbl for values from (1) to (100);
+insert into parttbl values (11), (12);
+explain (costs off)
+select * from
+  (select *, 12 as phv from parttbl) as ss
+  right join int4_tbl on true
+where ss.a = ss.phv and f1 = 0;
+
+select * from
+  (select *, 12 as phv from parttbl) as ss
+  right join int4_tbl on true
+where ss.a = ss.phv and f1 = 0;
+
 -- bug #8444: we've historically allowed duplicate aliases within aliased JOINs
 
 select * from
@@ -1855,6 +1958,9 @@ select * from
    (select q1.v)
   ) as q2;
 
+-- check the number of columns specified
+SELECT * FROM (int8_tbl i cross join int4_tbl j) ss(a,b,c,d);
+
 -- check we don't try to do a unique-ified semijoin with LATERAL
 explain (verbose, costs off)
 select * from
@@ -1932,7 +2038,7 @@ insert into join_pt1 values (1, 1, 'x'), (101, 101, 'y');
 create table join_ut1 (a int, b int, c varchar);
 insert into join_ut1 values (101, 101, 'y'), (2, 2, 'z');
 -- GPDB_12_MERGE_FIXME: The query fails. This test query is new with v12,
--- but a corresponding query fails on GPDB master, too. I think this is
+-- but a corresponding query fails on GPDB main, too. I think this is
 -- similar to the case marked with GPDB_94_STABLE_MERGE_FIXME above.
 -- upstream commit acfcd4. Need to come back to fix it when understanding more
 -- about that commit.

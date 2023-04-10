@@ -73,7 +73,7 @@ BEGIN
 END $$ LANGUAGE plpgsql ;
 ```
 
-**Note:** The example PL/pgSQL uses `SELECT` with the `INTO` clause. It is different from the SQL command `SELECT INTO`.
+> **Note** The example PL/pgSQL uses `SELECT` with the `INTO` clause. It is different from the SQL command `SELECT INTO`.
 
 ## <a id="section6"></a>Compatibility 
 

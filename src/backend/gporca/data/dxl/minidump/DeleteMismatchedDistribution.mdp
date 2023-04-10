@@ -45,7 +45,7 @@
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="20" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10" XformBindThreshold="0"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="20" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10" XformBindThreshold="0"/>
       <dxl:TraceFlags Value="101013,102001,102002,102003,102043,102074,102120,102144,103001,103014,103022,103026,103027,103029,103033,103038,103040,104002,104003,104004,104005,105000,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -215,7 +215,7 @@
         <dxl:ResultType Mdid="0.20.1.0"/>
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
-      <dxl:Relation Mdid="6.16451.1.0" Name="pt2_1_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16451.1.0" Name="pt2_1_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -270,7 +270,7 @@
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.16448.1.0" Name="pt2" Rows="0.000000" RelPages="0" RelAllVisible="0" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.16448.1.0" Name="pt2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="5">
+      <dxl:Relation Mdid="6.16448.1.0" Name="pt2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -316,7 +316,7 @@
           <dxl:Partition Mdid="6.16463.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.16454.1.0" Name="pt2_1_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16454.1.0" Name="pt2_1_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -370,7 +370,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.16457.1.0" Name="pt2_1_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16457.1.0" Name="pt2_1_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -424,7 +424,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.16463.1.0" Name="pt2_1_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16463.1.0" Name="pt2_1_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -478,7 +478,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.16460.1.0" Name="pt2_1_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16460.1.0" Name="pt2_1_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -533,7 +533,7 @@
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.16466.1.0" Name="r" Rows="0.000000" RelPages="0" RelAllVisible="0" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.16466.1.0" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16466.1.0" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -666,9 +666,9 @@
       </dxl:LogicalDelete>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="35">
-      <dxl:DMLDelete Columns="0,1,2" ActionCol="24" OidCol="0" CtidCol="3" SegmentIdCol="9" InputSorted="false">
+      <dxl:DMLDelete Columns="0,1,2" ActionCol="24" CtidCol="3" SegmentIdCol="9">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.034361" Rows="1.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.034376" Rows="1.000000" Width="1"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -698,7 +698,7 @@
         </dxl:TableDescriptor>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.000507" Rows="1.000000" Width="26"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.000521" Rows="1.000000" Width="26"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="i">
@@ -724,7 +724,7 @@
           <dxl:OneTimeFilter/>
           <dxl:HashJoin JoinType="In">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.000498" Rows="1.000000" Width="22"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.000513" Rows="1.000000" Width="26"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="i">
@@ -753,7 +753,7 @@
             </dxl:HashCondList>
             <dxl:DynamicTableScan SelectorIds="">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000023" Rows="1.000000" Width="22"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000023" Rows="1.000000" Width="26"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="i">

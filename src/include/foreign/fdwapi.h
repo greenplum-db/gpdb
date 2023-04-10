@@ -277,5 +277,7 @@ extern FdwRoutine *GetFdwRoutineForRelation(Relation relation, bool makecopy);
 extern bool IsImportableForeignTable(const char *tablename,
 									 ImportForeignSchemaStmt *stmt);
 extern Path *GetExistingLocalJoinPath(RelOptInfo *joinrel);
+extern ForeignScan *BuildForeignScan(Oid relid, Index scanrelid,
+									 List *qual, List *targetlist, Query *query, RangeTblEntry *rte);
 
 #endif							/* FDWAPI_H */

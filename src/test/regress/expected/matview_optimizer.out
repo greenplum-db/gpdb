@@ -19,7 +19,7 @@ SELECT * FROM mvtest_tv ORDER BY type;
 
 -- create a materialized view with no data, and confirm correct behavior
 EXPLAIN (costs off)
-  CREATE MATERIALIZED VIEW mvtest_tm AS SELECT type, sum(amt) AS totamt FROM mvtest_t GROUP BY type WITH NO DATA distributed by(type);
+  CREATE MATERIALIZED VIEW IF NOT EXISTS mvtest_tm AS SELECT type, sum(amt) AS totamt FROM mvtest_t GROUP BY type WITH NO DATA distributed by(type);
                          QUERY PLAN                         
 ------------------------------------------------------------
  GroupAggregate
@@ -32,7 +32,7 @@ EXPLAIN (costs off)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (8 rows)
 
-CREATE MATERIALIZED VIEW mvtest_tm AS SELECT type, sum(amt) AS totamt FROM mvtest_t GROUP BY type WITH NO DATA distributed by(type);
+CREATE MATERIALIZED VIEW IF NOT EXISTS mvtest_tm AS SELECT type, sum(amt) AS totamt FROM mvtest_t GROUP BY type WITH NO DATA distributed by(type);
 SELECT relispopulated FROM pg_class WHERE oid = 'mvtest_tm'::regclass;
  relispopulated 
 ----------------
@@ -391,7 +391,7 @@ CREATE VIEW mvtest_vt2 AS SELECT moo, 2*moo FROM mvtest_vt1 UNION ALL SELECT moo
  ?column? | integer |           |          |         | plain   | 
 View definition:
  SELECT mvtest_vt1.moo,
-    2 * mvtest_vt1.moo
+    2 * mvtest_vt1.moo AS "?column?"
    FROM mvtest_vt1
 UNION ALL
  SELECT mvtest_vt1.moo,
@@ -407,7 +407,7 @@ CREATE MATERIALIZED VIEW mv_test2 AS SELECT moo, 2*moo FROM mvtest_vt2 UNION ALL
  ?column? | integer |           |          |         | plain   |              | 
 View definition:
  SELECT mvtest_vt2.moo,
-    2 * mvtest_vt2.moo
+    2 * mvtest_vt2.moo AS "?column?"
    FROM mvtest_vt2
 UNION ALL
  SELECT mvtest_vt2.moo,

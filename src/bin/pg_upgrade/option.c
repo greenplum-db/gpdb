@@ -313,14 +313,14 @@ usage(void)
 	printf(_("  -c, --check                   check clusters only, don't change any data\n"));
 	printf(_("  -d, --old-datadir=DATADIR     old cluster data directory\n"));
 	printf(_("  -D, --new-datadir=DATADIR     new cluster data directory\n"));
-	printf(_("  -j, --jobs                    number of simultaneous processes or threads to use\n"));
+	printf(_("  -j, --jobs=NUM                number of simultaneous processes or threads to use\n"));
 	printf(_("  -k, --link                    link instead of copying files to new cluster\n"));
 	printf(_("  -o, --old-options=OPTIONS     old cluster options to pass to the server\n"));
 	printf(_("  -O, --new-options=OPTIONS     new cluster options to pass to the server\n"));
 	printf(_("  -p, --old-port=PORT           old cluster port number (default %d)\n"), old_cluster.port);
 	printf(_("  -P, --new-port=PORT           new cluster port number (default %d)\n"), new_cluster.port);
 	printf(_("  -r, --retain                  retain SQL and log files after success\n"));
-	printf(_("  -s, --socketdir=DIR           socket directory to use (default CWD)\n"));
+	printf(_("  -s, --socketdir=DIR           socket directory to use (default current dir.)\n"));
 	printf(_("  -U, --username=NAME           cluster superuser (default \"%s\")\n"), os_info.user);
 	printf(_("  -v, --verbose                 enable verbose internal logging\n"));
 	printf(_("  -V, --version                 display version information, then exit\n"));

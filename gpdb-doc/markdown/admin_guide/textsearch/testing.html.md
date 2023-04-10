@@ -41,7 +41,7 @@ ts_debug([<config> regconfig, ] <document> text,
 Here is a simple example:
 
 ```
-SELECT * FROM ts_debug('english','a fat  cat sat on a mat - it ate a fat rats');
+SELECT * FROM ts_debug('english', 'a fat  cat sat on a mat - it ate a fat rats');
    alias   |   description   | token |  dictionaries  |  dictionary  | lexemes 
 -----------+-----------------+-------+----------------+--------------+---------
  asciiword | Word, all ASCII | a     | {english_stem} | english_stem | {}
@@ -87,7 +87,7 @@ ALTER TEXT SEARCH CONFIGURATION public.english
 ```
 
 ```
-SELECT * FROM ts_debug('public.english','The Brightest supernovaes');
+SELECT * FROM ts_debug('public.english', 'The Brightest supernovaes');
    alias   |   description   |    token    |         dictionaries          |   dictionary   |   lexemes   
 -----------+-----------------+-------------+-------------------------------+----------------+-------------
  asciiword | Word, all ASCII | The         | {english_ispell,english_stem} | english_ispell | {}
@@ -104,7 +104,7 @@ The word `The` was recognized by the `english_ispell` dictionary as a stop word 
 You can reduce the width of the output by explicitly specifying which columns you want to see:
 
 ```
-SELECT alias, token, dictionary, lexemes FROM ts_debug('public.english','The Brightest supernovaes'); 
+SELECT alias, token, dictionary, lexemes FROM ts_debug('public.english', 'The Brightest supernovaes'); 
   alias    |    token    |   dictionary   |    lexemes 
 -----------+-------------+----------------+------------- 
  asciiword | The         | english_ispell | {} 
@@ -201,7 +201,7 @@ SELECT ts_lexize('english_stem', 'a');
  {}
 ```
 
-**Note:** The `ts_lexize` function expects a single token, not text. Here is a case where this can be confusing:
+> **Note** The `ts_lexize` function expects a single token, not text. Here is a case where this can be confusing:
 
 ```
 SELECT ts_lexize('thesaurus_astro','supernovae stars') is null;

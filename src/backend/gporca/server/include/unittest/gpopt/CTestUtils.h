@@ -212,8 +212,8 @@ public:
 	// generate a random get expression
 	static CExpression *PexprLogicalGet(CMemoryPool *mp);
 
-	// generate a random external get expression
-	static CExpression *PexprLogicalExternalGet(CMemoryPool *mp);
+	// generate a random foreign get expression
+	static CExpression *PexprLogicalForeignGet(CMemoryPool *mp);
 
 	// generate a random assert expression
 	static CExpression *PexprLogicalAssert(CMemoryPool *mp);

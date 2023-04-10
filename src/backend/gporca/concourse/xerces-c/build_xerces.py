@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import optparse
 import os
@@ -6,7 +6,7 @@ import os.path
 import subprocess
 import sys
 import tarfile
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 import hashlib
 
 XERCES_SOURCE_URL = "http://archive.apache.org/dist/xerces/c/3/sources/xerces-c-3.1.2.tar.gz"
@@ -29,8 +29,8 @@ def num_cpus():
     return 2
 
 def get_xerces_source():
-    remote_src = urllib2.urlopen(XERCES_SOURCE_URL)
-    local_src = open("xerces_src.tar.gz", "w")
+    remote_src = urllib.request.urlopen(XERCES_SOURCE_URL)
+    local_src = open("xerces_src.tar.gz", "wb")
     local_src.write(remote_src.read())
     local_src.close()
     file_hash = hashlib.sha256(open('xerces_src.tar.gz','rb').read()).hexdigest()
@@ -73,7 +73,7 @@ def main():
     parser.add_option("--output_dir", dest="output_dir", default="install")
     (options, args) = parser.parse_args()
     if len(args) > 0:
-        print "Unknown arguments"
+        print("Unknown arguments")
         return 1
     status = get_xerces_source()
     if status:

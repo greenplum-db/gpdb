@@ -19,27 +19,27 @@ gpfdist --version
 
 `gpfdist` is Greenplum Database parallel file distribution program. It is used by readable external tables and `gpload` to serve external table files to all Greenplum Database segments in parallel. It is used by writable external tables to accept output streams from Greenplum Database segments in parallel and write them out to a file.
 
-**Note:** `gpfdist` and `gpload` are compatible only with the Greenplum Database major version in which they are shipped. For example, a `gpfdist` utility that is installed with Greenplum Database 4.x cannot be used with Greenplum Database 5.x or 6.x.
+> **Note** `gpfdist` and `gpload` are compatible only with the Greenplum Database major version in which they are shipped. For example, a `gpfdist` utility that is installed with Greenplum Database 4.x cannot be used with Greenplum Database 5.x or 6.x.
 
 In order for `gpfdist` to be used by an external table, the `LOCATION` clause of the external table definition must specify the external table data using the `gpfdist://` protocol \(see the Greenplum Database command `CREATE EXTERNAL TABLE`\).
 
-**Note:** If the `--ssl` option is specified to enable SSL security, create the external table with the `gpfdists://` protocol.
+> **Note** If the `--ssl` option is specified to enable SSL security, create the external table with the `gpfdists://` protocol.
 
 The benefit of using `gpfdist` is that you are guaranteed maximum parallelism while reading from or writing to external tables, thereby offering the best performance as well as easier administration of external tables.
 
 For readable external tables, `gpfdist` parses and serves data files evenly to all the segment instances in the Greenplum Database system when users `SELECT` from the external table. For writable external tables, `gpfdist` accepts parallel output streams from the segments when users `INSERT` into the external table, and writes to an output file.
 
-**Note:** When `gpfdist` reads data and encounters a data formatting error, the error message includes a row number indicating the location of the formatting error. `gpfdist` attempts to capture the row that contains the error. However, `gpfdist` might not capture the exact row for some formatting errors.
+> **Note** When `gpfdist` reads data and encounters a data formatting error, the error message includes a row number indicating the location of the formatting error. `gpfdist` attempts to capture the row that contains the error. However, `gpfdist` might not capture the exact row for some formatting errors.
 
 For readable external tables, if load files are compressed using `gzip` or `bzip2` \(have a `.gz` or `.bz2` file extension\), `gpfdist` uncompresses the data while loading the data \(on the fly\). For writable external tables, `gpfdist` compresses the data using `gzip` if the target file has a `.gz` extension.
 
-**Note:** Compression is not supported for readable and writeable external tables when the `gpfdist` utility runs on Windows platforms.
+> **Note** Compression is not supported for readable and writeable external tables when the `gpfdist` utility runs on Windows platforms.
 
 When reading or writing data with the `gpfdist` or `gpfdists` protocol, Greenplum Database includes `X-GP-PROTO` in the HTTP request header to indicate that the request is from Greenplum Database. The utility rejects HTTP requests that do not include `X-GP-PROTO` in the request header.
 
 Most likely, you will want to run `gpfdist` on your ETL machines rather than the hosts where Greenplum Database is installed. To install `gpfdist` on another host, simply copy the utility over to that host and add `gpfdist` to your `$PATH`.
 
-**Note:** When using IPv6, always enclose the numeric IP address in brackets.
+> **Note** When using IPv6, always enclose the numeric IP address in brackets.
 
 ## <a id="section4"></a>Options 
 
@@ -61,7 +61,7 @@ Most likely, you will want to run `gpfdist` on your ETL machines rather than the
 -m max\_length
 :   Sets the maximum allowed data row length in bytes. Default is 32768. Should be used when user data includes very wide rows \(or when `line too long` error message occurs\). Should not be used otherwise as it increases resource allocation. Valid range is 32K to 256MB. \(The upper limit is 1MB on Windows systems.\)
 
-:   **Note:** Memory issues might occur if you specify a large maximum row length and run a large number of `gpfdist` concurrent connections. For example, setting this value to the maximum of 256MB with 96 concurrent `gpfdist` processes requires approximately 24GB of memory \(`(96 + 1) x 246MB`\).
+:   > **Note** Memory issues might occur if you specify a large maximum row length and run a large number of `gpfdist` concurrent connections. For example, setting this value to the maximum of 256MB with 96 concurrent `gpfdist` processes requires approximately 24GB of memory \(`(96 + 1) x 246MB`\).
 
 -s
 :   Enables simplified logging. When this option is specified, only messages with `WARN` level and higher are written to the `gpfdist` log file. `INFO` level messages are not written to the log file. If this option is not specified, all `gpfdist` messages are written to the log file.
@@ -118,7 +118,7 @@ The server configuration parameter [verify\_gpfdists\_cert](../../ref_guide/conf
 -   The self-signed SSL certificate that is used by `gpfdist` is not trusted by Greenplum Database.
 -   The host name contained in the SSL certificate does not match the host name that is running `gpfdist`.
 
-**Warning:** Deactivating SSL certificate authentication exposes a security risk by not validating the `gpfdists` SSL certificate.
+> **Caution** Deactivating SSL certificate authentication exposes a security risk by not validating the `gpfdists` SSL certificate.
 
 You can set the server configuration parameter [gpfdist\_retry\_timeout](../../ref_guide/config_params/guc-list.html) to control the time that Greenplum Database waits before returning an error when a `gpfdist` server does not respond while Greenplum Database is attempting to write data to `gpfdist`. The default is 300 seconds \(5 minutes\).
 

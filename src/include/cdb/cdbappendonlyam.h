@@ -109,6 +109,7 @@ typedef struct AppendOnlyInsertDescData
 
 	/* The block directory for the appendonly relation. */
 	AppendOnlyBlockDirectory blockDirectory;
+	Oid segrelid;
 } AppendOnlyInsertDescData;
 
 typedef AppendOnlyInsertDescData *AppendOnlyInsertDesc;
@@ -121,7 +122,7 @@ typedef struct AppendOnlyExecutorReadBlock
 
 	MemTupleBinding *mt_bind;
 	/*
-	 * When reading a segfile that's using version < AORelationVersion_PG83,
+	 * When reading a segfile that's using version < AOSegfileFormatVersion_GP5,
 	 * that is, was created before GPDB 5.0 and upgraded with pg_upgrade, we need
 	 * to convert numeric attributes on the fly to new format. numericAtts
 	 * is an array of attribute numbers (0-based), of all numeric columns (including
@@ -236,6 +237,12 @@ typedef struct AppendOnlyScanDescData
 	/* For Bitmap scan */
 	int			rs_cindex;		/* current tuple's index in tbmres->offsets */
 	struct AppendOnlyFetchDescData *aofetch;
+
+	/*
+	 * The total number of bytes read, compressed, across all segment files, so
+	 * far. This is used for scan progress reporting.
+	 */
+	int64		totalBytesRead;
 
 }	AppendOnlyScanDescData;
 
@@ -384,14 +391,23 @@ typedef struct AppendOnlyUniqueCheckDescData
 } AppendOnlyUniqueCheckDescData;
 
 typedef struct AppendOnlyUniqueCheckDescData *AppendOnlyUniqueCheckDesc;
+
+typedef struct AppendOnlyIndexOnlyDescData
+{
+	AppendOnlyBlockDirectory *blockDirectory;
+	AppendOnlyVisimap 		 *visimap;
+} AppendOnlyIndexOnlyDescData, *AppendOnlyIndexOnlyDesc;
+
 /*
  * Descriptor for fetches from table via an index.
  */
 typedef struct IndexFetchAppendOnlyData
 {
-	IndexFetchTableData xs_base;	/* AM independent part of the descriptor */
+	IndexFetchTableData xs_base;			/* AM independent part of the descriptor */
 
-	AppendOnlyFetchDesc aofetch;
+	AppendOnlyFetchDesc aofetch;			/* used only for index scans */
+
+	AppendOnlyIndexOnlyDesc indexonlydesc;	/* used only for index only scans */
 } IndexFetchAppendOnlyData;
 
 /* ----------------
@@ -426,6 +442,12 @@ extern bool appendonly_fetch(
 	AOTupleId *aoTid,
 	TupleTableSlot *slot);
 extern void appendonly_fetch_finish(AppendOnlyFetchDesc aoFetchDesc);
+extern AppendOnlyIndexOnlyDesc appendonly_index_only_init(Relation relation,
+														  Snapshot snapshot);
+extern bool appendonly_index_only_check(AppendOnlyIndexOnlyDesc indexonlydesc,
+										AOTupleId *aotid,
+										Snapshot snapshot);
+extern void appendonly_index_only_finish(AppendOnlyIndexOnlyDesc indexonlydesc);
 extern void appendonly_dml_init(Relation relation);
 extern AppendOnlyInsertDesc appendonly_insert_init(Relation rel,
 												   int segno,
@@ -442,5 +464,21 @@ extern TM_Result appendonly_delete(
 		AppendOnlyDeleteDesc aoDeleteDesc,
 		AOTupleId* aoTupleId);
 extern void appendonly_delete_finish(AppendOnlyDeleteDesc aoDeleteDesc);
+
+/*
+ * Update total bytes read for the entire scan. If the block was compressed,
+ * update it with the compressed length. If the block was not compressed, update
+ * it with the uncompressed length.
+ */
+static inline void
+AppendOnlyScanDesc_UpdateTotalBytesRead(AppendOnlyScanDesc scan)
+{
+	Assert(scan->storageRead.isActive);
+
+	if (scan->storageRead.current.isCompressed)
+		scan->totalBytesRead += scan->storageRead.current.compressedLen;
+	else
+		scan->totalBytesRead += scan->storageRead.current.uncompressedLen;
+}
 
 #endif   /* CDBAPPENDONLYAM_H */

@@ -9,8 +9,8 @@ CREATE TABLE sto_alt_uao2_constraint(
   numeric_col numeric
   ) DISTRIBUTED RANDOMLY;
 insert into sto_alt_uao2_constraint values ('1_zero', 1, '1_zero', 1);
-SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL
- AND visimapidxid is not NULL AND relid='sto_alt_uao2_constraint'::regclass;
+SELECT count(i.indexrelid) = 1 AS VisimapPresent  FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND
+ a.relid='sto_alt_uao2_constraint'::regclass;
 
 select * from sto_alt_uao2_constraint order by bigint_col;
 update sto_alt_uao2_constraint set numeric_col = 100 where text_col = '1_zero';

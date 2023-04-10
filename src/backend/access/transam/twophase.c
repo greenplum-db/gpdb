@@ -479,14 +479,25 @@ MarkAsPreparingGuts(GlobalTransaction gxact, TransactionId xid, const char *gid,
 	proc->pgprocno = gxact->pgprocno;
 	SHMQueueElemInit(&(proc->links));
 	proc->waitStatus = STATUS_OK;
-	/* We set up the gxact's VXID as InvalidBackendId/XID */
-	proc->lxid = (LocalTransactionId) xid;
+	if (LocalTransactionIdIsValid(MyProc->lxid))
+	{
+		/* clone VXID, for TwoPhaseGetXidByVirtualXID() to find */
+		proc->lxid = MyProc->lxid;
+		proc->backendId = MyBackendId;
+	}
+	else
+	{
+		Assert(AmStartupProcess() || !IsPostmasterEnvironment);
+		/* GetLockConflicts() uses this to specify a wait on the XID */
+		proc->lxid = xid;
+		proc->backendId = InvalidBackendId;
+	}
 	pgxact->xid = xid;
 	pgxact->xmin = InvalidTransactionId;
 	pgxact->delayChkpt = false;
 	pgxact->vacuumFlags = 0;
+	proc->delayChkptEnd = false;
 	proc->pid = 0;
-	proc->backendId = InvalidBackendId;
 	proc->databaseId = databaseid;
 	proc->roleId = owner;
 	proc->tempNamespaceId = InvalidOid;
@@ -886,6 +897,53 @@ TwoPhaseGetGXact(TransactionId xid, bool lock_held)
 }
 
 /*
+ * TwoPhaseGetXidByVirtualXID
+ *		Lookup VXID among xacts prepared since last startup.
+ *
+ * (This won't find recovered xacts.)  If more than one matches, return any
+ * and set "have_more" to true.  To witness multiple matches, a single
+ * BackendId must consume 2^32 LXIDs, with no intervening database restart.
+ */
+TransactionId
+TwoPhaseGetXidByVirtualXID(VirtualTransactionId vxid,
+						   bool *have_more)
+{
+	int			i;
+	TransactionId result = InvalidTransactionId;
+
+	Assert(VirtualTransactionIdIsValid(vxid));
+	LWLockAcquire(TwoPhaseStateLock, LW_SHARED);
+
+	for (i = 0; i < TwoPhaseState->numPrepXacts; i++)
+	{
+		GlobalTransaction gxact = TwoPhaseState->prepXacts[i];
+		PGPROC	   *proc;
+		VirtualTransactionId proc_vxid;
+
+		if (!gxact->valid)
+			continue;
+		proc = &ProcGlobal->allProcs[gxact->pgprocno];
+		GET_VXID_FROM_PGPROC(proc_vxid, *proc);
+		if (VirtualTransactionIdEquals(vxid, proc_vxid))
+		{
+			/* Startup process sets proc->backendId to InvalidBackendId. */
+			Assert(!gxact->inredo);
+
+			if (result != InvalidTransactionId)
+			{
+				*have_more = true;
+				break;
+			}
+			result = gxact->xid;
+		}
+	}
+
+	LWLockRelease(TwoPhaseStateLock);
+
+	return result;
+}
+
+/*
  * TwoPhaseGetDummyBackendId
  *		Get the dummy backend ID for prepared transaction specified by XID
  *
@@ -1128,7 +1186,6 @@ EndPrepare(GlobalTransaction gxact)
 
 	if (replorigin)
 	{
-		Assert(replorigin_session_origin_lsn != InvalidXLogRecPtr);
 		hdr->origin_lsn = replorigin_session_origin_lsn;
 		hdr->origin_timestamp = replorigin_session_origin_timestamp;
 	}
@@ -1167,6 +1224,7 @@ EndPrepare(GlobalTransaction gxact)
 
 	START_CRIT_SECTION();
 
+	Assert(!MyPgXact->delayChkpt);
 	MyPgXact->delayChkpt = true;
 
 	XLogBeginInsert();
@@ -1448,11 +1506,21 @@ XlogReadTwoPhaseData(XLogRecPtr lsn, char **buf, int *len)
 	ThisTimeLineID = save_currtli;
 
 	if (record == NULL)
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not read two-phase state from WAL at %X/%X",
-						(uint32) (lsn >> 32),
-						(uint32) lsn)));
+	{
+		if (errormsg)
+			ereport(ERROR,
+					(errcode_for_file_access(),
+					 errmsg("could not read two-phase state from WAL at %X/%X: %s",
+							(uint32) (lsn >> 32),
+							(uint32) lsn,
+							errormsg)));
+		else
+			ereport(ERROR,
+					(errcode_for_file_access(),
+					 errmsg("could not read two-phase state from WAL at %X/%X",
+							(uint32) (lsn >> 32),
+							(uint32) lsn)));
+	}
 
 	if (XLogRecGetRmid(xlogreader) != RM_XACT_ID ||
 		(XLogRecGetInfo(xlogreader) & XLOG_XACT_OPMASK) != XLOG_XACT_PREPARE)
@@ -2406,6 +2474,7 @@ RecordTransactionCommitPrepared(TransactionId xid,
 	START_CRIT_SECTION();
 
 	/* See notes in RecordTransactionCommit */
+	Assert(!MyPgXact->delayChkpt);
 	MyPgXact->delayChkpt = true;
 
 	/*

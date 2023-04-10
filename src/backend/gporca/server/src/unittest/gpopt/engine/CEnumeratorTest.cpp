@@ -90,8 +90,8 @@ const CHAR *rgszUnsatisfiedRequiredPropertiesPlans[] = {
 	"../data/dxl/minidump/InvalidUpdatePlan.mdp",
 	"../data/dxl/minidump/InvalidDeleteGather.mdp",
 	"../data/dxl/minidump/InvalidPlan_CTE-2-all-plans.mdp",
-	"../data/dxl/minidump/InvalidPlan_MotionGatherFromMasterToMaster.mdp",
-	"../data/dxl/minidump/InvalidPlan_MotionGatherFromMasterToMaster-ScalarDQA.mdp",
+	"../data/dxl/minidump/InvalidPlan_MotionGatherFromCoordinatorToCoordinator.mdp",
+	"../data/dxl/minidump/InvalidPlan_MotionGatherFromCoordinatorToCoordinator-ScalarDQA.mdp",
 	"../data/dxl/minidump/InvalidPlan_IncompatibleDistributionOnJoinBranches.mdp",
 };
 

@@ -18,9 +18,9 @@ DROP RESOURCE GROUP rg_dump_test2;
 DROP RESOURCE GROUP rg_dump_test3;
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_dump_test1 WITH (concurrency=2, cpu_rate_limit=5, memory_limit=5);
-CREATE RESOURCE GROUP rg_dump_test2 WITH (concurrency=2, cpu_rate_limit=5, memory_limit=5);
-CREATE RESOURCE GROUP rg_dump_test3 WITH (concurrency=2, cpu_rate_limit=5, memory_limit=5);
+CREATE RESOURCE GROUP rg_dump_test1 WITH (concurrency=2, cpu_hard_quota_limit=5);
+CREATE RESOURCE GROUP rg_dump_test2 WITH (concurrency=2, cpu_hard_quota_limit=5);
+CREATE RESOURCE GROUP rg_dump_test3 WITH (concurrency=2, cpu_hard_quota_limit=5);
 
 CREATE ROLE role_dump_test1 RESOURCE GROUP rg_dump_test1;
 CREATE ROLE role_dump_test2 RESOURCE GROUP rg_dump_test2;

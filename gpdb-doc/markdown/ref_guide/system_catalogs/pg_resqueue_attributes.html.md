@@ -1,6 +1,6 @@
 # pg_resqueue_attributes 
 
-**Note:** The `pg_resqueue_attributes` view is valid only when resource queue-based resource management is active.
+> **Note** The `pg_resqueue_attributes` view is valid only when resource queue-based resource management is active.
 
 The `pg_resqueue_attributes` view allows administrators to see the attributes set for a resource queue, such as its active statement limit, query cost limits, and priority.
 

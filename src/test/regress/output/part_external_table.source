@@ -1,0 +1,405 @@
+--
+-- external tables - short and simple functional tests.
+--
+-- start_matchsubs
+--
+-- # replace return code in error message (platform specific)
+--
+-- m/ERROR\:\s+external table .* command ended with .* not found/
+-- s/nosuchcommand\:\s*(command)? not found/nosuchcommand\: NOT FOUND/
+--
+-- m/ERROR\:\s+external table .* command ended with .*No such file.*/
+-- s/nosuchfile\.txt\:\s*No such file (or directory)?/nosuchfile\.txt\: NO SUCH FILE/
+-- m/ERROR\:\s+external table .* command ended with .*No such file.*/i
+-- s/cat\: (cannot open)? nosuchfile\.txt/cat\: nosuchfile\.txt/
+--
+-- # remove line number - redhat
+-- m/ERROR\:\s+external table .* command ended with .*NOT FOUND.*/i
+-- s/\s+line \d+\://
+-- # remove line number - Debian
+-- m/ERROR\:\s+external table .* command ended with .*sh: 1: .*NOT FOUND.*/i
+-- s/ sh: 1: / sh: /
+--
+-- m/DETAIL:  Found \d+ URLs and \d+ primary segments./
+-- s/Found.+//
+--
+-- end_matchsubs
+set optimizer_trace_fallback=on;
+create schema part_external_table;
+set search_path=part_external_table;
+create table part (a int, b int) partition by range (b);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create external table p1_e (a int, b int) location ('file://@hostname@@abs_srcdir@/data/part1.csv') format 'csv';
+create external table p2_e (a int, b int) location ('file://@hostname@@abs_srcdir@/data/part2.csv') format 'csv';
+alter table part attach partition p1_e for values from (0) to (10);
+alter table part attach partition p2_e for values from (10) to (19);
+analyze part;
+WARNING:  skipping "p2_e" --- cannot analyze this foreign table
+WARNING:  skipping "p1_e" --- cannot analyze this foreign table
+explain select * from part;
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..112000.00 rows=6000000 width=8)
+   ->  Append  (cost=0.00..32000.00 rows=2000000 width=8)
+         ->  Foreign Scan on p1_e  (cost=0.00..11000.00 rows=1000000 width=8)
+         ->  Foreign Scan on p2_e  (cost=0.00..11000.00 rows=1000000 width=8)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+select * from part;
+ a  | b  
+----+----
+  1 |  2
+  3 |  4
+  5 |  5
+  7 |  8
+ 11 | 12
+ 13 | 14
+ 15 | 15
+ 17 | 18
+(8 rows)
+
+-- test SPE
+explain select * from part where b>10 and a>0;
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..23698.00 rows=577350 width=8)
+   ->  Foreign Scan on p2_e  (cost=0.00..16000.00 rows=192450 width=8)
+         Filter: ((b > 10) AND (a > 0))
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+select * from part where b>10 and a>0;
+ a  | b  
+----+----
+ 11 | 12
+ 13 | 14
+ 15 | 15
+ 17 | 18
+(4 rows)
+
+create table non_part (a int, b int) distributed by (a);
+insert into non_part values (15,15);
+-- mixed partitions with DPE with multiple dynamic scans, select one partition
+explain analyze select * from part, non_part where part.b=non_part.b;
+                                                                       QUERY PLAN                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=2545.25..24434545.25 rows=172200000 width=16) (actual time=7.605..7.668 rows=1 loops=1)
+   ->  Hash Join  (cost=2545.25..22138545.25 rows=57400000 width=16) (actual time=5.665..7.006 rows=1 loops=1)
+         Hash Cond: (p1_e.b = non_part.b)
+         Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 1 of 524288 buckets.
+         ->  Append  (cost=0.00..32000.00 rows=2000000 width=8) (actual time=1.458..1.485 rows=4 loops=1)
+               Partition Selectors: $0
+               ->  Foreign Scan on p1_e  (cost=0.00..11000.00 rows=1000000 width=8) (never executed)
+               ->  Foreign Scan on p2_e  (cost=0.00..11000.00 rows=1000000 width=8) (actual time=1.457..1.482 rows=4 loops=1)
+         ->  Hash  (cost=1469.00..1469.00 rows=86100 width=8) (actual time=0.051..0.051 rows=1 loops=1)
+               Buckets: 524288  Batches: 1  Memory Usage: 4097kB
+               ->  Partition Selector (selector id: $0)  (cost=0.00..1469.00 rows=86100 width=8) (actual time=0.038..0.045 rows=1 loops=1)
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=8) (actual time=0.027..0.034 rows=1 loops=1)
+                           ->  Seq Scan on non_part  (cost=0.00..321.00 rows=28700 width=8) (actual time=1.924..1.926 rows=1 loops=1)
+ Optimizer: Postgres query optimizer
+ Planning Time: 1.016 ms
+   (slice0)    Executor memory: 196K bytes.
+   (slice1)    Executor memory: 4328K bytes avg x 3 workers, 4372K bytes max (seg0).  Work_mem: 4097K bytes max.
+   (slice2)    Executor memory: 37K bytes avg x 3 workers, 37K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 26.098 ms
+(19 rows)
+
+select * from part, non_part where part.b=non_part.b;
+ a  | b  | a  | b  
+----+----+----+----
+ 15 | 15 | 15 | 15
+(1 row)
+
+insert into non_part values (5,5);
+-- mixed partitions with DPE with multiple dynamic scans, select both partition
+explain analyze select * from part, non_part where part.b=non_part.b;
+                                                                       QUERY PLAN                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=2545.25..24434545.25 rows=172200000 width=16) (actual time=6.239..6.240 rows=2 loops=1)
+   ->  Hash Join  (cost=2545.25..22138545.25 rows=57400000 width=16) (actual time=2.728..4.876 rows=2 loops=1)
+         Hash Cond: (p1_e.b = non_part.b)
+         Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 2 of 524288 buckets.
+         ->  Append  (cost=0.00..32000.00 rows=2000000 width=8) (actual time=1.050..1.937 rows=8 loops=1)
+               Partition Selectors: $0
+               ->  Foreign Scan on p1_e  (cost=0.00..11000.00 rows=1000000 width=8) (actual time=1.048..1.072 rows=4 loops=1)
+               ->  Foreign Scan on p2_e  (cost=0.00..11000.00 rows=1000000 width=8) (actual time=0.836..0.861 rows=4 loops=1)
+         ->  Hash  (cost=1469.00..1469.00 rows=86100 width=8) (actual time=0.046..0.046 rows=2 loops=1)
+               Buckets: 524288  Batches: 1  Memory Usage: 4097kB
+               ->  Partition Selector (selector id: $0)  (cost=0.00..1469.00 rows=86100 width=8) (actual time=0.032..0.043 rows=2 loops=1)
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=8) (actual time=0.026..0.034 rows=2 loops=1)
+                           ->  Seq Scan on non_part  (cost=0.00..321.00 rows=28700 width=8) (actual time=0.189..0.190 rows=1 loops=1)
+ Optimizer: Postgres query optimizer
+ Planning Time: 0.732 ms
+   (slice0)    Executor memory: 196K bytes.
+   (slice1)    Executor memory: 4340K bytes avg x 3 workers, 4410K bytes max (seg0).  Work_mem: 4097K bytes max.
+   (slice2)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 7.404 ms
+(20 rows)
+
+select * from part, non_part where part.b=non_part.b;
+ a  | b  | a  | b  
+----+----+----+----
+  5 |  5 |  5 |  5
+ 15 | 15 | 15 | 15
+(2 rows)
+
+create table p3 (a int, b int) distributed by (a);
+create table p4 (a int, b int) distributed by (a);
+alter table part attach partition p3 for values from (20) to (30);
+alter table part attach partition p4 for values from (30) to (40);
+insert into part select i,i from generate_series(25,35)i;
+analyze part;
+WARNING:  skipping "p2_e" --- cannot analyze this foreign table
+WARNING:  skipping "p1_e" --- cannot analyze this foreign table
+insert into non_part values (32,32);
+-- mixed partitions
+explain select * from part;
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..112002.20 rows=6000011 width=8)
+   ->  Append  (cost=0.00..32002.06 rows=2000004 width=8)
+         ->  Foreign Scan on p1_e  (cost=0.00..11000.00 rows=1000000 width=8)
+         ->  Foreign Scan on p2_e  (cost=0.00..11000.00 rows=1000000 width=8)
+         ->  Seq Scan on p3  (cost=0.00..1.02 rows=2 width=8)
+         ->  Seq Scan on p4  (cost=0.00..1.02 rows=2 width=8)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select * from part;
+ a  | b  
+----+----
+ 25 | 25
+ 28 | 28
+ 32 | 32
+ 33 | 33
+ 26 | 26
+ 30 | 30
+ 31 | 31
+ 35 | 35
+  1 |  2
+  3 |  4
+  5 |  5
+  7 |  8
+ 11 | 12
+ 13 | 14
+ 15 | 15
+ 17 | 18
+ 27 | 27
+ 29 | 29
+ 34 | 34
+(19 rows)
+
+--mixed partitions with SPE
+explain select * from part where b>10 and b<25;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..16451.07 rows=30003 width=8)
+   ->  Append  (cost=0.00..16051.03 rows=10001 width=8)
+         ->  Foreign Scan on p2_e  (cost=0.00..16000.00 rows=10000 width=8)
+               Filter: ((b > 10) AND (b < 25))
+         ->  Seq Scan on p3  (cost=0.00..1.02 rows=1 width=8)
+               Filter: ((b > 10) AND (b < 25))
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select * from part where b>10 and b<25 and a > 2;
+ a  | b  
+----+----
+ 11 | 12
+ 13 | 14
+ 15 | 15
+ 17 | 18
+(4 rows)
+
+--mixed partitions with SPE, only do seq scans
+explain select * from part where b>25;
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.20 rows=10 width=8)
+   ->  Append  (cost=0.00..2.06 rows=3 width=8)
+         ->  Seq Scan on p3  (cost=0.00..1.02 rows=1 width=8)
+               Filter: (b > 25)
+         ->  Seq Scan on p4  (cost=0.00..1.02 rows=2 width=8)
+               Filter: (b > 25)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select * from part where b>25;
+ a  | b  
+----+----
+ 26 | 26
+ 30 | 30
+ 31 | 31
+ 35 | 35
+ 28 | 28
+ 32 | 32
+ 33 | 33
+ 27 | 27
+ 29 | 29
+ 34 | 34
+(10 rows)
+
+--mixed partitions with SPE, only do foreign scans
+explain select a from part where b<18;
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..57000.00 rows=2000000 width=4)
+   ->  Append  (cost=0.00..30333.33 rows=666667 width=4)
+         ->  Foreign Scan on p1_e  (cost=0.00..13500.00 rows=333333 width=4)
+               Filter: (b < 18)
+         ->  Foreign Scan on p2_e  (cost=0.00..13500.00 rows=333333 width=4)
+               Filter: (b < 18)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select a from part where b<18;
+ a  
+----
+  1
+  3
+  5
+  7
+ 11
+ 13
+ 15
+(7 rows)
+
+truncate non_part;
+-- mixed partitions with DPE with multiple dynamic scans, select no partitions
+explain analyze select * from part, non_part where part.b=non_part.b;
+                                                                 QUERY PLAN                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=57002.10..60531.91 rows=86100 width=16) (actual time=7.051..7.051 rows=0 loops=1)
+   ->  Hash Join  (cost=57002.10..59383.91 rows=28700 width=16) (actual time=0.000..5.576 rows=0 loops=1)
+         Hash Cond: (non_part.b = p1_e.b)
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=8) (actual time=0.000..0.029 rows=0 loops=1)
+               ->  Seq Scan on non_part  (cost=0.00..321.00 rows=28700 width=8) (actual time=0.000..0.269 rows=0 loops=1)
+         ->  Hash  (cost=32002.06..32002.06 rows=2000004 width=8) (actual time=2.491..2.491 rows=11 loops=1)
+               Buckets: 524288  Batches: 1  Memory Usage: 4097kB
+               ->  Append  (cost=0.00..32002.06 rows=2000004 width=8) (actual time=1.029..2.478 rows=11 loops=1)
+                     ->  Foreign Scan on p1_e  (cost=0.00..11000.00 rows=1000000 width=8) (actual time=1.028..1.070 rows=4 loops=1)
+                     ->  Foreign Scan on p2_e  (cost=0.00..11000.00 rows=1000000 width=8) (actual time=1.011..1.038 rows=4 loops=1)
+                     ->  Seq Scan on p3  (cost=0.00..1.02 rows=2 width=8) (actual time=0.185..0.186 rows=2 loops=1)
+                     ->  Seq Scan on p4  (cost=0.00..1.02 rows=2 width=8) (actual time=0.222..0.223 rows=3 loops=1)
+ Optimizer: Postgres query optimizer
+ Planning Time: 0.907 ms
+   (slice0)    Executor memory: 192K bytes.
+   (slice1)    Executor memory: 4338K bytes avg x 3 workers, 4402K bytes max (seg0).  Work_mem: 4097K bytes max.
+   (slice2)    Executor memory: 44K bytes avg x 3 workers, 44K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 18.045 ms
+(19 rows)
+
+select * from part, non_part where part.b=non_part.b;
+ a | b | a | b 
+---+---+---+---
+(0 rows)
+
+insert into non_part values (15,15), (32,32);
+-- mixed partitions with DPE with multiple dynamic scans, select one partition from each dynamic scan
+explain analyze select * from part, non_part where part.b=non_part.b;
+                                                                 QUERY PLAN                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=57002.10..60531.91 rows=86100 width=16) (actual time=5.702..7.798 rows=2 loops=1)
+   ->  Hash Join  (cost=57002.10..59383.91 rows=28700 width=16) (actual time=4.516..5.969 rows=1 loops=1)
+         Hash Cond: (non_part.b = p1_e.b)
+         Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 11 of 524288 buckets.
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=8) (actual time=0.021..0.028 rows=2 loops=1)
+               ->  Seq Scan on non_part  (cost=0.00..321.00 rows=28700 width=8) (actual time=0.476..0.477 rows=1 loops=1)
+         ->  Hash  (cost=32002.06..32002.06 rows=2000004 width=8) (actual time=2.649..2.649 rows=11 loops=1)
+               Buckets: 524288  Batches: 1  Memory Usage: 4097kB
+               ->  Append  (cost=0.00..32002.06 rows=2000004 width=8) (actual time=1.319..2.639 rows=11 loops=1)
+                     ->  Foreign Scan on p1_e  (cost=0.00..11000.00 rows=1000000 width=8) (actual time=1.319..1.342 rows=4 loops=1)
+                     ->  Foreign Scan on p2_e  (cost=0.00..11000.00 rows=1000000 width=8) (actual time=0.962..0.987 rows=4 loops=1)
+                     ->  Seq Scan on p3  (cost=0.00..1.02 rows=2 width=8) (actual time=0.144..0.145 rows=2 loops=1)
+                     ->  Seq Scan on p4  (cost=0.00..1.02 rows=2 width=8) (actual time=0.278..0.279 rows=3 loops=1)
+ Optimizer: Postgres query optimizer
+ Planning Time: 0.833 ms
+   (slice0)    Executor memory: 192K bytes.
+   (slice1)    Executor memory: 4338K bytes avg x 3 workers, 4402K bytes max (seg0).  Work_mem: 4097K bytes max.
+   (slice2)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 9.190 ms
+(20 rows)
+
+select * from part, non_part where part.b=non_part.b;
+ a  | b  | a  | b  
+----+----+----+----
+ 32 | 32 | 32 | 32
+ 15 | 15 | 15 | 15
+(2 rows)
+
+-- test different servers, should create different scans
+-- note: do not select here, just test plan
+CREATE EXTENSION file_fdw;
+CREATE SERVER file_server1 FOREIGN DATA WRAPPER file_fdw;
+CREATE SERVER file_server2 FOREIGN DATA WRAPPER file_fdw;
+CREATE FOREIGN TABLE ft1 (
+	a int,
+	b int
+) SERVER file_server1
+OPTIONS ( filename '/does/not/exist.csv', format 'csv');
+CREATE FOREIGN TABLE ft2 (
+	a int,
+	b int
+) SERVER file_server2
+OPTIONS ( filename '/does/not/exist.csv', format 'csv');
+alter table part attach partition ft1 for values from (40) to (50);
+alter table part attach partition ft2 for values from (50) to (60);
+analyze part;
+ERROR:  could not stat file "/does/not/exist.csv": No such file or directory
+-- should have multiple dynamic scans
+explain select * from part;
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Append  (cost=0.00..134172.64 rows=6020491 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..51000.00 rows=3000000 width=8)
+         ->  Foreign Scan on p1_e  (cost=0.00..11000.00 rows=1000000 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..51000.00 rows=3000000 width=8)
+         ->  Foreign Scan on p2_e  (cost=0.00..11000.00 rows=1000000 width=8)
+   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1469.00 rows=86100 width=8)
+         ->  Seq Scan on p3  (cost=0.00..321.00 rows=28700 width=8)
+   ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..1469.00 rows=86100 width=8)
+         ->  Seq Scan on p4  (cost=0.00..321.00 rows=28700 width=8)
+   ->  Foreign Scan on ft1  (cost=0.00..1034.00 rows=10240 width=8)
+         Foreign File: /does/not/exist.csv
+   ->  Foreign Scan on ft2  (cost=0.00..1034.00 rows=10240 width=8)
+         Foreign File: /does/not/exist.csv
+ Optimizer: Postgres query optimizer
+(14 rows)
+
+-- eliminate unnecessary dynamic scans and foreign sans
+explain select * from part where b = 53;
+                        QUERY PLAN                         
+-----------------------------------------------------------
+ Foreign Scan on ft2  (cost=0.00..1059.60 rows=10 width=8)
+   Filter: (b = 53)
+   Foreign File: /does/not/exist.csv
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+-- only select foreign scans
+explain select * from part where b > 22;
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Append  (cost=0.00..3991.17 rows=64227 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..775.42 rows=28700 width=8)
+         ->  Seq Scan on p3  (cost=0.00..392.75 rows=9567 width=8)
+               Filter: (b > 22)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..775.42 rows=28700 width=8)
+         ->  Seq Scan on p4  (cost=0.00..392.75 rows=9567 width=8)
+               Filter: (b > 22)
+   ->  Foreign Scan on ft1  (cost=0.00..1059.60 rows=3413 width=8)
+         Filter: (b > 22)
+         Foreign File: /does/not/exist.csv
+   ->  Foreign Scan on ft2  (cost=0.00..1059.60 rows=3413 width=8)
+         Filter: (b > 22)
+         Foreign File: /does/not/exist.csv
+ Optimizer: Postgres query optimizer
+(14 rows)
+

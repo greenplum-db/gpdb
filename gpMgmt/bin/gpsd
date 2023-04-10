@@ -107,6 +107,30 @@ def dumpStats(cur, inclHLL):
         print(pstring.format(vals[0], vals[2], ',\n'.join(rowVals)))
 
 
+#Collect extended statistics
+def dumpExtStats(cur):
+    query = 'select pge.stxname, pgc.relname, nsp.nspname, pgd.stxdndistinct, pgd.stxddependencies, pgd.stxdmcv' \
+            ' from pg_class pgc, pg_statistic_ext pge, pg_statistic_ext_data pgd, pg_namespace nsp ' \
+            'where pgd.stxoid = pge.oid and pge.stxrelid=pgc.oid and pgc.relnamespace=nsp.oid '
+
+    # pg_statistic_ext_data has stxoid which gets populated when creating the statistics object,
+    # So we can not use stxoid of pg_statistic_ext_data while dumping the statistics. Hence we are populating
+    # the content of pg_statistic_ext_data based on stxname in pg_statistic_ext.
+
+    setStmt = '-- Table: pg_statistic_ext_data, stxname: {0}, schema: {1}\n' \
+              'UPDATE pg_statistic_ext_data\nSET\n' \
+              '{2}\n' \
+              'WHERE stxoid = (select pge.oid from pg_statistic_ext pge, pg_namespace pgn, pg_class pgc ' \
+              'WHERE pge.stxrelid=pgc.oid and pgc.relnamespace=pgn.oid and pge.stxname =\'{3}\' and pgn.nspname=\'{1}\') ;\n\n'
+
+    cur.execute(query)
+    columns = [x[0] for x in    cur.description]
+    types = ['pg_ndistinct', 'pg_dependencies', 'pg_mcv_list']
+
+    for vals in ResultIter(cur):
+        print(setStmt.format(vals[0], vals[2], ',\n'.join(['\t%s = %s::%s' %
+                                         t for t in zip(columns[3:], ['NULL' if x is None else "'" + x + "'" for x in vals[3:]], types)]),  vals[0]))
+
 def parseCmdLine():
     p = OptionParser(usage='Usage: %prog [options] <database>', version=gpsd_version, conflict_handler="resolve", epilog="WARNING: This tool collects statistics about your data, including most common values, which requires some data elements to be included in the output file. Please review output file to ensure it is within corporate policy to transport the output file.")
     p.add_option('-?', '--help', action='help', help='Show this help message and exit')
@@ -192,6 +216,7 @@ def main():
             with closing(connection.cursor()) as cursor:
                 dumpTupleCount(cursor)
                 dumpStats(cursor, inclHLL)
+                dumpExtStats(cursor)
         # Upon success, leave a warning message about data collected
         sys.stderr.writelines(['WARNING: This tool collects statistics about your data, including most common values, '
                                'which requires some data elements to be included in the output file.\n',

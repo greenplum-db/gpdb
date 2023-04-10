@@ -152,7 +152,7 @@ llvm_compile_expr(ExprState *state)
 
 		param_types[0] = l_ptr(StructExprState);	/* state */
 		param_types[1] = l_ptr(StructExprContext);	/* econtext */
-		param_types[2] = l_ptr(TypeParamBool);	/* isnull */
+		param_types[2] = l_ptr(TypeStorageBool);	/* isnull */
 
 		eval_sig = LLVMFunctionType(TypeSizeT,
 									param_types, lengthof(param_types),
@@ -262,8 +262,6 @@ llvm_compile_expr(ExprState *state)
 
 					v_tmpvalue = LLVMBuildLoad(b, v_tmpvaluep, "");
 					v_tmpisnull = LLVMBuildLoad(b, v_tmpisnullp, "");
-					v_tmpisnull =
-						LLVMBuildTrunc(b, v_tmpisnull, TypeParamBool, "");
 
 					LLVMBuildStore(b, v_tmpisnull, v_isnullp);
 
@@ -1941,7 +1939,7 @@ llvm_compile_expr(ExprState *state)
 
 					/* Copy aggstate->group_id to the result */
 					v_group_id_p = l_ptr_const(&aggstate->group_id,
-											  l_ptr(LLVMInt32Type()));
+											  l_ptr(TypeSizeT));
 					v_group_id = LLVMBuildLoad(b, v_group_id_p, "v_group_id");
 
 					/* and store result */
@@ -1960,7 +1958,7 @@ llvm_compile_expr(ExprState *state)
 
 					/* Copy aggstate->gset_id to the result */
 					v_gset_id_p = l_ptr_const(&aggstate->gset_id,
-											  l_ptr(LLVMInt32Type()));
+											  l_ptr(TypeSizeT));
 					v_gset_id = LLVMBuildLoad(b, v_gset_id_p, "v_gset_id");
 
 					/* and store result */
@@ -1979,7 +1977,7 @@ llvm_compile_expr(ExprState *state)
 
 					/* Copy tsstate->currentExprId to the result */
 					v_currentExprId_p = l_ptr_const(&tsstate->currentExprId,
-											  l_ptr(LLVMInt32Type()));
+											  l_ptr(TypeSizeT));
 					v_currentExprId = LLVMBuildLoad(b, v_currentExprId_p, "v_currentExprId");
 
 					/* and store result */

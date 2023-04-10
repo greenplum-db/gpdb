@@ -4014,7 +4014,7 @@
           <dxl:Partition Mdid="6.740207005.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.740207001.1.1" Name="i_plineitem_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="23,17" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.740207001.1.1" Name="i_plineitem_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="23,17">
         <dxl:Columns>
           <dxl:Column Name="l_id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -4107,7 +4107,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.740207002.1.1" Name="i_plineitem_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="23,17" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.740207002.1.1" Name="i_plineitem_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="23,17">
         <dxl:Columns>
           <dxl:Column Name="l_id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -4200,7 +4200,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.740207003.1.1" Name="i_plineitem_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="23,17" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.740207003.1.1" Name="i_plineitem_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="23,17">
         <dxl:Columns>
           <dxl:Column Name="l_id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -4293,7 +4293,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.740207004.1.1" Name="i_plineitem_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="23,17" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.740207004.1.1" Name="i_plineitem_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="23,17">
         <dxl:Columns>
           <dxl:Column Name="l_id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -4386,7 +4386,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.740207005.1.1" Name="i_plineitem_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="23,17" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.740207005.1.1" Name="i_plineitem_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="23,17">
         <dxl:Columns>
           <dxl:Column Name="l_id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -5451,7 +5451,7 @@
         </dxl:Or>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="8868">
+    <dxl:Plan Id="0" SpaceSize="8208">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="25984.123228" Rows="60175000.000000" Width="14"/>

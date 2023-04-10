@@ -54,6 +54,9 @@ private:
 	// default legacy distribution (hash) opfamily
 	IMDId *m_legacy_distr_opfamily;
 
+	// default partition (btree) opfamily
+	IMDId *m_part_opfamily;
+
 	// type name
 	CMDName *m_mdname;
 

@@ -388,9 +388,6 @@ _outPlannedStmt(StringInfo str, const PlannedStmt *node)
 
 	WRITE_UINT64_FIELD(query_mem);
 
-	WRITE_INT_FIELD(total_memory_coordinator);
-	WRITE_INT_FIELD(nsegments_coordinator);
-
 	WRITE_NODE_FIELD(intoClause);
 	WRITE_NODE_FIELD(copyIntoClause);
 	WRITE_NODE_FIELD(refreshClause);
@@ -741,7 +738,7 @@ _outExternalScanInfo(StringInfo str, const ExternalScanInfo *node)
 
 	WRITE_NODE_FIELD(uriList);
 	WRITE_CHAR_FIELD(fmtType);
-	WRITE_BOOL_FIELD(isMasterOnly);
+	WRITE_BOOL_FIELD(isCoordinatorOnly);
 	WRITE_INT_FIELD(rejLimit);
 	WRITE_BOOL_FIELD(rejLimitInRows);
 	WRITE_CHAR_FIELD(logErrors);
@@ -781,6 +778,7 @@ _outIndexOnlyScan(StringInfo str, const IndexOnlyScan *node)
 
 	WRITE_OID_FIELD(indexid);
 	WRITE_NODE_FIELD(indexqual);
+	WRITE_NODE_FIELD(recheckqual);
 	WRITE_NODE_FIELD(indexorderby);
 	WRITE_NODE_FIELD(indextlist);
 	WRITE_ENUM_FIELD(indexorderdir, ScanDirection);
@@ -937,10 +935,8 @@ _outWorkTableScan(StringInfo str, const WorkTableScan *node)
 }
 
 static void
-_outForeignScan(StringInfo str, const ForeignScan *node)
+outForeignScanFields(StringInfo str, const ForeignScan *node)
 {
-	WRITE_NODE_TYPE("FOREIGNSCAN");
-
 	_outScanInfo(str, (const Scan *) node);
 
 	WRITE_ENUM_FIELD(operation, CmdType);
@@ -951,6 +947,25 @@ _outForeignScan(StringInfo str, const ForeignScan *node)
 	WRITE_NODE_FIELD(fdw_recheck_quals);
 	WRITE_BITMAPSET_FIELD(fs_relids);
 	WRITE_BOOL_FIELD(fsSystemCol);
+}
+static void
+_outForeignScan(StringInfo str, const ForeignScan *node)
+{
+	WRITE_NODE_TYPE("FOREIGNSCAN");
+
+	outForeignScanFields(str, node);
+}
+
+static void
+_outDynamicForeignScan(StringInfo str, const DynamicForeignScan *node)
+{
+	WRITE_NODE_TYPE("DYNAMICFOREIGNSCAN");
+
+	outForeignScanFields(str, &node->foreignscan);
+	WRITE_NODE_FIELD(partOids);
+	WRITE_NODE_FIELD(part_prune_info);
+	WRITE_NODE_FIELD(join_prune_paramids);
+	WRITE_NODE_FIELD(fdw_private_list);
 }
 
 #ifndef COMPILING_BINARY_FUNCS
@@ -1024,6 +1039,9 @@ _outHashJoin(StringInfo str, const HashJoin *node)
 
 	WRITE_NODE_FIELD(hashclauses);
 	WRITE_NODE_FIELD(hashqualclauses);
+	WRITE_NODE_FIELD(hashoperators);
+	WRITE_NODE_FIELD(hashcollations);
+	WRITE_NODE_FIELD(hashkeys);
 }
 
 static void
@@ -1168,6 +1186,8 @@ _outHash(StringInfo str, const Hash *node)
 
 	_outPlanInfo(str, (const Plan *) node);
 	WRITE_BOOL_FIELD(rescannable);          /*CDB*/
+
+	WRITE_NODE_FIELD(hashkeys);
 	WRITE_OID_FIELD(skewTable);
 	WRITE_INT_FIELD(skewColumn);
 	WRITE_BOOL_FIELD(skewInherit);
@@ -3487,6 +3507,9 @@ _outAlteredTableInfo(StringInfo str, const AlteredTableInfo *node)
 	wrapStringList(node->changedIndexDefs);
 	WRITE_NODE_FIELD(changedIndexDefs);
 	unwrapStringList(node->changedIndexDefs);
+
+	WRITE_STRING_FIELD(replicaIdentityIndex);
+	WRITE_STRING_FIELD(clusterOnIndex);
 }
 
 static void
@@ -4103,6 +4126,7 @@ _outTableLikeClause(StringInfo str, const TableLikeClause *node)
 
 	WRITE_NODE_FIELD(relation);
 	WRITE_UINT_FIELD(options);
+	WRITE_OID_FIELD(relationOid);
 }
 
 static void
@@ -5586,6 +5610,9 @@ outNode(StringInfo str, const void *obj)
 				break;
 			case T_ForeignScan:
 				_outForeignScan(str, obj);
+				break;
+			case T_DynamicForeignScan:
+				_outDynamicForeignScan(str, obj);
 				break;
 			case T_CustomScan:
 				_outCustomScan(str, obj);

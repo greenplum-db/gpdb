@@ -410,11 +410,12 @@ where x.a > random();
    ->  Nested Loop
          Join Filter: true
          ->  Seq Scan on t_hashdist
-         ->  Result
-               Filter: ((generate_series.generate_series)::double precision > random())
-               ->  Function Scan on generate_series
+         ->  Materialize
+               ->  Result
+                     Filter: ((generate_series.generate_series)::double precision > random())
+                     ->  Function Scan on generate_series
  Optimizer: Pivotal Optimizer (GPORCA)
-(8 rows)
+(9 rows)
 
 ---- join qual
 explain (costs off) select * from
@@ -548,13 +549,14 @@ explain (costs off) select * from t_hashdist cross join (select a, count(1) as s
    ->  Nested Loop
          Join Filter: true
          ->  Seq Scan on t_hashdist
-         ->  Result
-               Filter: (((count(1)))::double precision > random())
-               ->  HashAggregate
-                     Group Key: generate_series.generate_series
-                     ->  Function Scan on generate_series
+         ->  Materialize
+               ->  Result
+                     Filter: (((count(1)))::double precision > random())
+                     ->  HashAggregate
+                           Group Key: generate_series.generate_series
+                           ->  Function Scan on generate_series
  Optimizer: Pivotal Optimizer (GPORCA)
-(10 rows)
+(11 rows)
 
 -- limit
 explain (costs off) select * from t_hashdist cross join (select * from generate_series(1, 10) limit random()) x;

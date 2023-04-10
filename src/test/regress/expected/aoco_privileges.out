@@ -1,12 +1,8 @@
 -- Create roles. --
 CREATE ROLE new_aoco_table_owner;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE ROLE user_with_privileges_from_first_owner;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE ROLE user_with_privileges_from_second_owner;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE ROLE user_with_no_privileges;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 -- Create the table. --
 CREATE TABLE aoco_privileges_table (a int) WITH (appendonly=true, orientation=column) DISTRIBUTED randomly;
 -- Grant privileges to only one user

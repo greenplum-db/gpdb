@@ -21,14 +21,14 @@ name
 :   The name \(optionally schema-qualified\) of the foreign table to drop.
 
 CASCADE
-:   Automatically drop objects that depend on the foreign table \(such as views\).
+:   Automatically drop objects that depend on the foreign table \(such as views\), and in turn all objects that depend on those objects.
 
 RESTRICT
 :   Refuse to drop the foreign table if any objects depend on it. This is the default.
 
 ## <a id="section6"></a>Examples 
 
-Drop the foreign tables named `films` and `distributors`:
+To destroy two foreign tables, `films` and `distributors`:
 
 ```
 DROP FOREIGN TABLE films, distributors;

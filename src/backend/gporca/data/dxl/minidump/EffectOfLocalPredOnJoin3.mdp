@@ -260,7 +260,7 @@
           <dxl:Partition Mdid="6.1976539005.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.1976539001.1.1" Name="web_sales_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1976539001.1.1" Name="web_sales_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34">
         <dxl:Columns>
           <dxl:Column Name="ws_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -404,7 +404,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.1976539002.1.1" Name="web_sales_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1976539002.1.1" Name="web_sales_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34">
         <dxl:Columns>
           <dxl:Column Name="ws_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -548,7 +548,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.1976539003.1.1" Name="web_sales_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1976539003.1.1" Name="web_sales_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34">
         <dxl:Columns>
           <dxl:Column Name="ws_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -692,7 +692,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.1976539004.1.1" Name="web_sales_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1976539004.1.1" Name="web_sales_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34">
         <dxl:Columns>
           <dxl:Column Name="ws_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -836,7 +836,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.1976539005.1.1" Name="web_sales_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1976539005.1.1" Name="web_sales_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34">
         <dxl:Columns>
           <dxl:Column Name="ws_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>

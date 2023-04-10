@@ -361,7 +361,7 @@ CREATE TABLE partitioned (
 
 CREATE TABLE partitioned (
 	a int
-) PARTITION BY RANGE (('a'));
+) PARTITION BY RANGE ((42));
 
 CREATE FUNCTION const_func () RETURNS int AS $$ SELECT 1; $$ LANGUAGE SQL IMMUTABLE;
 CREATE TABLE partitioned (
@@ -383,6 +383,16 @@ CREATE TABLE partitioned (
 CREATE TABLE partitioned (
 	a int
 ) PARTITION BY RANGE (xmin);
+
+-- cannot use pseudotypes
+CREATE TABLE partitioned (
+	a int,
+	b int
+) PARTITION BY RANGE (((a, b)));
+CREATE TABLE partitioned (
+	a int,
+	b int
+) PARTITION BY RANGE (a, ('unknown'));
 
 -- functions in key must be immutable
 CREATE FUNCTION immut_func (a int) RETURNS int AS $$ SELECT a + random()::int; $$ LANGUAGE SQL;
@@ -449,6 +459,39 @@ CREATE TABLE part2_1 PARTITION OF partitioned2 FOR VALUES FROM (-1, 'aaaaa') TO 
 
 DROP TABLE partitioned, partitioned2;
 
+-- check that dependencies of partition columns are handled correctly
+create domain intdom1 as int;
+
+create table partitioned (
+	a intdom1,
+	b text
+) partition by range (a);
+
+alter table partitioned drop column a;  -- fail
+
+drop domain intdom1;  -- fail, requires cascade
+
+drop domain intdom1 cascade;
+
+table partitioned;  -- gone
+
+-- likewise for columns used in partition expressions
+create domain intdom1 as int;
+
+create table partitioned (
+	a intdom1,
+	b text
+) partition by range (plusone(a));
+
+alter table partitioned drop column a;  -- fail
+
+drop domain intdom1;  -- fail, requires cascade
+
+drop domain intdom1 cascade;
+
+table partitioned;  -- gone
+
+
 --
 -- Partitions
 --
@@ -473,6 +516,8 @@ CREATE TABLE part_bogus_expr_fail PARTITION OF list_parted FOR VALUES IN (sum(so
 CREATE TABLE part_bogus_expr_fail PARTITION OF list_parted FOR VALUES IN (sum(1));
 CREATE TABLE part_bogus_expr_fail PARTITION OF list_parted FOR VALUES IN ((select 1));
 CREATE TABLE part_bogus_expr_fail PARTITION OF list_parted FOR VALUES IN (generate_series(4, 6));
+CREATE TABLE part_bogus_expr_fail PARTITION OF list_parted FOR VALUES IN ('1' collate "POSIX");
+CREATE TABLE part_bogus_expr_fail PARTITION OF list_parted FOR VALUES IN ((1+1) collate "POSIX");
 
 -- syntax does not allow empty list of values for list partitions
 CREATE TABLE fail_part PARTITION OF list_parted FOR VALUES IN ();
@@ -724,6 +769,14 @@ insert into parted_notnull_inh_test (b) values (null);
 \d parted_notnull_inh_test1
 drop table parted_notnull_inh_test;
 
+-- check that collations are assigned in partition bound expressions
+create table parted_boolean_col (a bool, b text) partition by list(a);
+create table parted_boolean_less partition of parted_boolean_col
+  for values in ('foo' < 'bar');
+create table parted_boolean_greater partition of parted_boolean_col
+  for values in ('foo' > 'bar');
+drop table parted_boolean_col;
+
 -- check for a conflicting COLLATE clause
 create table parted_collate_must_match (a text collate "C", b text collate "C")
   partition by range (a);
@@ -879,3 +932,26 @@ drop table defcheck;
 -- Leave the table on purpose for pg_dump and gp_replica_check tests.
 CREATE UNLOGGED TABLE unlogged_toast (a text);
 TRUNCATE unlogged_toast;
+
+-- tests of column drop with partition tables and indexes using
+-- predicates and expressions.
+create table part_column_drop (
+  useless_1 int,
+  id int,
+  useless_2 int,
+  d int,
+  b int,
+  useless_3 int
+) partition by range (id);
+alter table part_column_drop drop column useless_1;
+alter table part_column_drop drop column useless_2;
+alter table part_column_drop drop column useless_3;
+create index part_column_drop_b_pred on part_column_drop(b) where b = 1;
+create index part_column_drop_b_expr on part_column_drop((b = 1));
+create index part_column_drop_d_pred on part_column_drop(d) where d = 2;
+create index part_column_drop_d_expr on part_column_drop((d = 2));
+create table part_column_drop_1_10 partition of
+  part_column_drop for values from (1) to (10);
+\d part_column_drop
+\d part_column_drop_1_10
+drop table part_column_drop;

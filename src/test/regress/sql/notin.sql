@@ -568,5 +568,21 @@ where a = age.c;
 drop table t1p;
 drop table t2p;
 
+-- test for github issue 14858
+create table t1_14858(a varchar(32), b varchar(32), c int, d int);
+create table t2_14858(a varchar(32), b varchar(32), c int, d int);
+create table t3_14858(a varchar(32), b varchar(32), c int, d int);
+
+create view mv_14858 as select * from t1_14858 full join
+(select a, b, count(c) from t2_14858 group by a,b union
+ select a, b, count(c) from t3_14858 group by a, b) x using (a, b);
+
+select * from mv_14858 where a not in (select a from t1_14858);
+
+drop view mv_14858;
+drop table t1_14858;
+drop table t2_14858;
+drop table t3_14858;
+
 reset search_path;
 drop schema notin cascade;

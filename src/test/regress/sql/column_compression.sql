@@ -10,7 +10,7 @@ create database column_compression;
 
 prepare ccddlcheck as
 select e.attrelid::regclass as relname,
-a.attname, e.attoptions from pg_class c, pg_attribute_encoding e, pg_attribute a
+a.attname, e.filenum, e.attoptions from pg_class c, pg_attribute_encoding e, pg_attribute a
 where c.relname like 'ccddl%' and c.oid=e.attrelid and e.attrelid=a.attrelid and e.attnum = a.attnum
 order by relname, e.attnum;
 

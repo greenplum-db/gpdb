@@ -949,7 +949,7 @@ select  count(*) from pg_class where relname like 'stat_part_heap_t7';
 
 -- Alter table alter type of a column
 Alter table stat_part_heap_t7 alter column j type numeric;
-ERROR:  cannot alter type of column named in partition key
+ERROR:  cannot alter column "j" because it is part of the partition key of relation "stat_part_heap_t7_1_prt_others"
 select  count(*) from pg_class where relname like 'stat_part_heap_t7';
  count 
 -------
@@ -1038,7 +1038,7 @@ select  count(*) from pg_class where relname like 'stat_part_co_t7';
 
 -- Alter table alter type
 Alter table stat_part_co_t7 alter column i type numeric;
-ERROR:  cannot alter type of column named in partition key
+ERROR:  cannot alter column "i" because it is part of the partition key of relation "stat_part_co_t7"
 select  count(*) from pg_class where relname like 'stat_part_co_t7';
  count 
 -------

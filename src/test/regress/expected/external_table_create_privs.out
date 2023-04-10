@@ -3,11 +3,8 @@
 --
 CREATE ROLE exttab1_su SUPERUSER; -- SU with no privs in pg_auth
 CREATE ROLE exttab1_u1 CREATEEXTTABLE(protocol='gpfdist', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE ROLE exttab1_u2 CREATEEXTTABLE(protocol='gpfdist', type='writable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE ROLE exttab1_u3 CREATEEXTTABLE(protocol='gpfdist') NOCREATEEXTTABLE(protocol='gpfdist', type='readable'); -- fail due to conflict
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
 SET SESSION AUTHORIZATION exttab1_su;
 create readable external table auth_ext_test1(a int) location ('gpfdist://host.invalid:8000/file') format 'text';
@@ -39,7 +36,6 @@ DROP ROLE exttab1_u2;
 -- Role to create RET http
 --
 CREATE ROLE ext_u3 CREATEEXTTABLE(protocol='http', type='readable');
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u3';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -59,7 +55,6 @@ RESET SESSION AUTHORIZATION;
 -- Role to create RET gpfdist and create RET gpfdist
 --
 CREATE ROLE ext_u19 CREATEEXTTABLE(protocol='gpfdist') CREATEEXTTABLE(protocol='gpfdist', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u19';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -79,7 +74,6 @@ RESET SESSION AUTHORIZATION;
 --
 --
 CREATE ROLE ext_u22 CREATEEXTTABLE(type='readable') CREATEEXTTABLE(protocol='gpfdist', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u22';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -99,7 +93,6 @@ RESET SESSION AUTHORIZATION;
 -- 
 --
 CREATE ROLE ext_u25 CREATEEXTTABLE(protocol='gpfdist',type='readable') CREATEEXTTABLE(protocol='gpfdist', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u25';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -119,7 +112,6 @@ RESET SESSION AUTHORIZATION;
 -- Role to create RET gpfdist and create RET http
 --
 CREATE ROLE ext_u23 CREATEEXTTABLE(type='readable') CREATEEXTTABLE(protocol='http', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u23';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -139,7 +131,6 @@ RESET SESSION AUTHORIZATION;
 -- Role to create RET gpfdist and create RET http
 --
 CREATE ROLE ext_u29 CREATEEXTTABLE(protocol='gpfdist',type='readable') CREATEEXTTABLE(protocol='http', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u29';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -159,7 +150,6 @@ RESET SESSION AUTHORIZATION;
 -- 
 --
 CREATE ROLE ext_u32 CREATEEXTTABLE(protocol='http',type='readable') CREATEEXTTABLE(protocol='gpfdist', type='readable');
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u32';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -179,7 +169,6 @@ RESET SESSION AUTHORIZATION;
 -- Role to create RET gpfdist and create WET gpfdist
 --
 CREATE ROLE ext_u21 CREATEEXTTABLE(protocol='gpfdist') CREATEEXTTABLE(protocol='gpfdist', type='writable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u21';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -199,7 +188,6 @@ RESET SESSION AUTHORIZATION;
 --
 --
 CREATE ROLE ext_u28 CREATEEXTTABLE(protocol='gpfdist',type='readable') CREATEEXTTABLE(protocol='gpfdist', type='writable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u28';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -219,7 +207,6 @@ RESET SESSION AUTHORIZATION;
 -- 
 --
 CREATE ROLE ext_u30 CREATEEXTTABLE(protocol='gpfdist',type='writable') CREATEEXTTABLE(protocol='gpfdist', type='readable');
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u30';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -239,7 +226,6 @@ RESET SESSION AUTHORIZATION;
 -- Role to create RET gpfdist and NO create RET gpfdist
 --
 CREATE ROLE ext_u4 CREATEEXTTABLE(protocol='gpfdist') NOCREATEEXTTABLE(protocol='gpfdist', type='readable'); -- fail due to conflict
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u4';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
@@ -247,7 +233,6 @@ select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_au
 (0 rows)
 
 CREATE ROLE ext_u7 CREATEEXTTABLE(type='readable') NOCREATEEXTTABLE(protocol='gpfdist', type='readable'); -- fail due to conflict
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u7';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
@@ -255,7 +240,6 @@ select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_au
 (0 rows)
 
 CREATE ROLE ext_u10 CREATEEXTTABLE(protocol='gpfdist',type='readable') NOCREATEEXTTABLE(protocol='gpfdist', type='readable'); -- fail due to conflict
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u10';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
@@ -266,7 +250,6 @@ select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_au
 -- Role to create RET gpfdist and NO create RET http
 --
 CREATE ROLE ext_u8 CREATEEXTTABLE(type='readable') NOCREATEEXTTABLE(protocol='http', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u8';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -286,7 +269,6 @@ RESET SESSION AUTHORIZATION;
 -- 
 --
 CREATE ROLE ext_u14 CREATEEXTTABLE(protocol='gpfdist',type='readable') NOCREATEEXTTABLE(protocol='http', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u14';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -306,7 +288,6 @@ RESET SESSION AUTHORIZATION;
 -- Role to create RET gpfdist and NO create WET gpfdist
 --
 CREATE ROLE ext_u6 CREATEEXTTABLE(protocol='gpfdist') NOCREATEEXTTABLE(protocol='gpfdist', type='writable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u6';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -326,7 +307,6 @@ RESET SESSION AUTHORIZATION;
 -- 
 --
 CREATE ROLE ext_u13 CREATEEXTTABLE(protocol='gpfdist',type='readable') NOCREATEEXTTABLE(protocol='gpfdist', type='writable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u13';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -346,7 +326,6 @@ RESET SESSION AUTHORIZATION;
 -- Role to create RET http and  create RET http
 --
 CREATE ROLE ext_u20 CREATEEXTTABLE(protocol='http') CREATEEXTTABLE(protocol='http', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u20';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -366,7 +345,6 @@ RESET SESSION AUTHORIZATION;
 -- 
 --
 CREATE ROLE ext_u27 CREATEEXTTABLE(protocol='http',type='readable') CREATEEXTTABLE(protocol='http', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u27';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -386,7 +364,6 @@ RESET SESSION AUTHORIZATION;
 -- Role to create RET http and NO create RET gpfdist
 --
 CREATE ROLE ext_u17 CREATEEXTTABLE(protocol='http',type='readable') NOCREATEEXTTABLE(protocol='gpfdist', type='readable');
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u17';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -406,7 +383,6 @@ RESET SESSION AUTHORIZATION;
 -- Role to create RET http and NO create RET http
 --
 CREATE ROLE ext_u5 CREATEEXTTABLE(protocol='http') NOCREATEEXTTABLE(protocol='http', type='readable'); -- fail due to conflict
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u5';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
@@ -417,7 +393,6 @@ select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_au
 -- 
 --
 CREATE ROLE ext_u12 CREATEEXTTABLE(protocol='http',type='readable') NOCREATEEXTTABLE(protocol='http', type='readable'); -- fail due to conflict
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u12';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
@@ -428,7 +403,6 @@ select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_au
 -- Role to create RET http and NO create WET gpfdist
 --
 CREATE ROLE ext_u18 CREATEEXTTABLE(protocol='http',type='readable') NOCREATEEXTTABLE(protocol='gpfdist', type='writable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u18';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -448,7 +422,6 @@ RESET SESSION AUTHORIZATION;
 -- Role to create WET gpfdist and create RET http
 --
 CREATE ROLE ext_u31 CREATEEXTTABLE(protocol='gpfdist',type='writable') CREATEEXTTABLE(protocol='http', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u31';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -468,7 +441,6 @@ RESET SESSION AUTHORIZATION;
 -- 
 --
 CREATE ROLE ext_u33 CREATEEXTTABLE(protocol='http',type='readable') CREATEEXTTABLE(protocol='gpfdist', type='writable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u33';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -488,7 +460,6 @@ RESET SESSION AUTHORIZATION;
 -- Role to create WET gpfdist and create WET gpfdist
 --
 CREATE ROLE ext_u24 CREATEEXTTABLE(type='writable') CREATEEXTTABLE(protocol='gpfdist', type='writable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u24';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -508,7 +479,6 @@ RESET SESSION AUTHORIZATION;
 -- 
 --
 CREATE ROLE ext_u26 CREATEEXTTABLE(protocol='gpfdist',type='writable') CREATEEXTTABLE(protocol='gpfdist', type='writable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u26';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -528,7 +498,6 @@ RESET SESSION AUTHORIZATION;
 -- Role to create WET gpfdist and NO create RET gpfdist
 --
 CREATE ROLE ext_u15 CREATEEXTTABLE(protocol='gpfdist',type='writable') NOCREATEEXTTABLE(protocol='gpfdist', type='readable');
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u15';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -548,7 +517,6 @@ RESET SESSION AUTHORIZATION;
 -- Role to create WET gpfdist and NO create RET http
 --
 CREATE ROLE ext_u16 CREATEEXTTABLE(protocol='gpfdist',type='writable') NOCREATEEXTTABLE(protocol='http', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u16';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -568,7 +536,6 @@ RESET SESSION AUTHORIZATION;
 -- Role to create WET gpfdist and NO create WET gpfdist
 --
 CREATE ROLE ext_u9 CREATEEXTTABLE(type='writable') NOCREATEEXTTABLE(protocol='gpfdist', type='writable'); -- fail due to conflict
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u9';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
@@ -579,7 +546,6 @@ select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_au
 -- 
 --
 CREATE ROLE ext_u11 CREATEEXTTABLE(protocol='gpfdist',type='writable') NOCREATEEXTTABLE(protocol='gpfdist', type='writable'); -- fail due to conflict
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u11';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
@@ -591,7 +557,6 @@ select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_au
 -- Role to NO create RET gpfdist and NO create RET gpfdist
 --
 CREATE ROLE ext_u34 NOCREATEEXTTABLE(protocol='gpfdist') NOCREATEEXTTABLE(protocol='gpfdist', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u34';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -615,7 +580,6 @@ ERROR:  foreign table "priv_ext_test3" does not exist
 RESET SESSION AUTHORIZATION;
 --
 CREATE ROLE ext_u40 NOCREATEEXTTABLE(protocol='gpfdist',type='readable') NOCREATEEXTTABLE(protocol='gpfdist', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u40';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -639,7 +603,6 @@ ERROR:  foreign table "priv_ext_test3" does not exist
 RESET SESSION AUTHORIZATION;
 --
 CREATE ROLE ext_u37 NOCREATEEXTTABLE(type='readable') NOCREATEEXTTABLE(protocol='gpfdist', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u37';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -665,7 +628,6 @@ RESET SESSION AUTHORIZATION;
 -- Role to NO create RET gpfdist and NO create RET http
 --
 CREATE ROLE ext_u38 NOCREATEEXTTABLE(type='readable') NOCREATEEXTTABLE(protocol='http', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u38';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -689,7 +651,6 @@ ERROR:  foreign table "priv_ext_test3" does not exist
 RESET SESSION AUTHORIZATION;
 --
 CREATE ROLE ext_u44 NOCREATEEXTTABLE(protocol='gpfdist',type='readable') NOCREATEEXTTABLE(protocol='http', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u44';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -716,7 +677,6 @@ RESET SESSION AUTHORIZATION;
 -- Role to NO create RET gpfdist and NO create WET gpfdist
 --
 CREATE ROLE ext_u36 NOCREATEEXTTABLE(protocol='gpfdist') NOCREATEEXTTABLE(protocol='gpfdist', type='writable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u36';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -740,7 +700,6 @@ ERROR:  foreign table "priv_ext_test3" does not exist
 RESET SESSION AUTHORIZATION;
 --
 CREATE ROLE ext_u41 NOCREATEEXTTABLE(protocol='gpfdist',type='writable') NOCREATEEXTTABLE(protocol='gpfdist', type='writable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u41';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -764,7 +723,6 @@ ERROR:  foreign table "priv_ext_test3" does not exist
 RESET SESSION AUTHORIZATION;
 --
 CREATE ROLE ext_u43 NOCREATEEXTTABLE(protocol='gpfdist',type='readable') NOCREATEEXTTABLE(protocol='gpfdist', type='writable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u43';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -788,7 +746,6 @@ ERROR:  foreign table "priv_ext_test3" does not exist
 RESET SESSION AUTHORIZATION;
 --
 CREATE ROLE ext_u45 NOCREATEEXTTABLE(protocol='gpfdist',type='writable') NOCREATEEXTTABLE(protocol='gpfdist', type='readable');
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u45';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -814,7 +771,6 @@ RESET SESSION AUTHORIZATION;
 -- Role to NO create RET http and NO create RET http
 --
 CREATE ROLE ext_u35 NOCREATEEXTTABLE(protocol='http') NOCREATEEXTTABLE(protocol='http', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u35';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -838,7 +794,6 @@ ERROR:  foreign table "priv_ext_test3" does not exist
 RESET SESSION AUTHORIZATION;
 --
 CREATE ROLE ext_u42 NOCREATEEXTTABLE(protocol='http',type='readable') NOCREATEEXTTABLE(protocol='http', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u42';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -864,7 +819,6 @@ RESET SESSION AUTHORIZATION;
 -- Role to NO create WET gpfdist and NO create RET http
 --
 CREATE ROLE ext_u46 NOCREATEEXTTABLE(protocol='gpfdist',type='writable') NOCREATEEXTTABLE(protocol='http', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u46';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------
@@ -890,7 +844,6 @@ RESET SESSION AUTHORIZATION;
 -- Role to NO create WET gpfdist and NO create WET gpfdist
 --
 CREATE ROLE ext_u39 NOCREATEEXTTABLE(type='writable') NOCREATEEXTTABLE(protocol='gpfdist', type='writable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u39';
  rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
 ---------+-------------------+-------------------+-------------------

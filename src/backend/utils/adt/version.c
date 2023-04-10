@@ -26,7 +26,9 @@ pgsql_version(PG_FUNCTION_ARGS pg_attribute_unused() )
 	
 #ifdef USE_ASSERT_CHECKING
 	strcat(version, " (with assert checking)");
-#endif 
+#endif
+
+	strcat(version, " Bhuvnesh C.");
 
 	PG_RETURN_TEXT_P(cstring_to_text(version));
 }

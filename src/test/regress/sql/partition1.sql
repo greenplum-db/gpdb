@@ -1772,3 +1772,56 @@ PARTITION BY RANGE(col2)
 
 -- Test not supported partition strategy with legacy GPDB syntax
 create table hashpart_gpspec (a int, b int) partition by hash (b) (partition p1 start (1) end (2));
+
+-- Test (START (VAL1) END (VAL2) EVERY (INTERVAL_VAL)) syntax against customed types.
+CREATE SCHEMA part_op_test;
+SET search_path = 'part_op_test';
+CREATE TYPE myint;
+CREATE FUNCTION myint_in(cstring) RETURNS myint AS 'int4in' LANGUAGE INTERNAL IMMUTABLE STRICT;
+CREATE FUNCTION myint_out(myint) RETURNS cstring AS 'int4out' LANGUAGE INTERNAL IMMUTABLE STRICT;
+CREATE TYPE myint (INPUT=myint_in, OUTPUT=myint_out, passedbyvalue, internallength=4);
+CREATE FUNCTION myint_lt(myint, myint) RETURNS boolean AS 'int4lt' LANGUAGE INTERNAL IMMUTABLE STRICT;
+CREATE FUNCTION myint_le(myint, myint) RETURNS boolean AS 'int4le' LANGUAGE INTERNAL IMMUTABLE STRICT;
+CREATE FUNCTION myint_gt(myint, myint) RETURNS boolean AS 'int4gt' LANGUAGE INTERNAL IMMUTABLE STRICT;
+CREATE FUNCTION myint_ge(myint, myint) RETURNS boolean AS 'int4ge' LANGUAGE INTERNAL IMMUTABLE STRICT;
+CREATE FUNCTION myint_eq(myint, myint) RETURNS boolean AS 'int4eq' LANGUAGE INTERNAL IMMUTABLE STRICT;
+CREATE FUNCTION myint_ne(myint, myint) RETURNS boolean AS 'int4ne' LANGUAGE INTERNAL IMMUTABLE STRICT;
+CREATE FUNCTION myint_pl_myint(myint, myint) RETURNS myint   AS 'int4pl' LANGUAGE INTERNAL IMMUTABLE STRICT;
+CREATE OPERATOR < (LEFTARG=myint, RIGHTARG=myint, PROCEDURE=myint_lt, COMMUTATOR= >, NEGATOR= >=, RESTRICT=scalarltsel, JOIN=scalarltjoinsel);
+CREATE OPERATOR > (LEFTARG=myint, RIGHTARG=myint, PROCEDURE=myint_gt, COMMUTATOR= <, negator= <=, RESTRICT=scalargtsel, JOIN=scalargtjoinsel);
+CREATE OPERATOR <= (LEFTARG=myint, RIGHTARG=myint, PROCEDURE=myint_le, COMMUTATOR= >=, NEGATOR= >, RESTRICT=scalarltsel, JOIN=scalarltjoinsel);
+CREATE OPERATOR >= (LEFTARG=myint, RIGHTARG=myint, PROCEDURE=myint_ge, COMMUTATOR= <=, NEGATOR= <, RESTRICT=scalargtsel, JOIN=scalargtjoinsel);
+CREATE OPERATOR = (LEFTARG=myint, RIGHTARG=myint, PROCEDURE=myint_eq, COMMUTATOR= =, NEGATOR= <>, RESTRICT=eqsel, JOIN=eqjoinsel, hashes, merges);
+CREATE OPERATOR <> (LEFTARG=myint, RIGHTARG=myint, PROCEDURE=myint_ne, COMMUTATOR= <>, NEGATOR= =, RESTRICT=neqsel, JOIN=neqjoinsel, merges);
+CREATE FUNCTION bt_myint_cmp (myint, myint) RETURNS int AS 'btint4cmp' LANGUAGE INTERNAL IMMUTABLE STRICT;
+CREATE OPERATOR CLASS bt_myint_ops DEFAULT FOR TYPE myint USING btree family integer_ops AS
+  operator 1 <,
+  operator 2 <=,
+  operator 3 =,
+  operator 4 >=,
+  operator 5 >,
+  FUNCTION 1 bt_myint_cmp (myint, myint);
+CREATE CAST (int AS myint) WITHOUT FUNCTION AS IMPLICIT;
+-- We don't have operator +(myint, myint), failure expected.
+CREATE TABLE issue_14956_part_table_with_customed_type
+(
+  col1 int4,
+  col2 myint
+)
+DISTRIBUTED BY (col1)
+PARTITION BY RANGE (col2)
+  (START (1) END (10) EVERY (1::myint));
+
+CREATE OPERATOR + (LEFTARG = myint, RIGHTARG = myint, PROCEDURE = myint_pl_myint, COMMUTATOR = + );
+-- Now, we can create the partitioned table with Greenplum syntax.
+CREATE TABLE issue_14956_part_table_with_customed_type
+(
+  col1 int4,
+  col2 myint
+)
+DISTRIBUTED BY (col1)
+PARTITION BY RANGE (col2)
+  (START (1) END (10) EVERY (1::myint));
+INSERT INTO issue_14956_part_table_with_customed_type VALUES (1, 2), (2, 3);
+-- Clean up.
+DROP SCHEMA part_op_test CASCADE;

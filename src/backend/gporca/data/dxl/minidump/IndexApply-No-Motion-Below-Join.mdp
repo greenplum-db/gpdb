@@ -397,7 +397,7 @@ Table X (int i, int j) is distributed by i, column j has index
         </dxl:LogicalGet>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="21">
+    <dxl:Plan Id="0" SpaceSize="18">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="6.008187" Rows="33.333333" Width="12"/>

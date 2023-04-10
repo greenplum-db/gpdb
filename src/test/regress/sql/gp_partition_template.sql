@@ -187,7 +187,7 @@ SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('notemplate') 
 
 prepare encoding_check as
 select attrelid::regclass as relname,
-        attnum, attoptions from pg_class c, pg_attribute_encoding e
+        attnum, filenum,attoptions from pg_class c, pg_attribute_encoding e
 where c.relname like 'subpart_templ_encoding%' and c.oid=e.attrelid
 order by relname, attnum;
 

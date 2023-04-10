@@ -6,6 +6,7 @@ Description of user-defined and built-in functions and operators in Greenplum Da
 
 -   [Using Functions in Greenplum Database](#topic27)
 -   [User-Defined Functions](#topic28)
+-   [User-Defined Procedures](#topic28a)
 -   [Built-in Functions and Operators](#topic29)
 -   [Window Functions](#topic30)
 -   [Advanced Aggregate Functions](#topic31)
@@ -16,7 +17,7 @@ Description of user-defined and built-in functions and operators in Greenplum Da
 
 When you invoke a function in Greenplum Database, function attributes control the execution of the function. The volatility attributes \(`IMMUTABLE`, `STABLE`, `VOLATILE`\) and the `EXECUTE ON` attributes control two different aspects of function execution. In general, volatility indicates when the function is run, and `EXECUTE ON` indicates where it is run. The volatility attributes are PostgreSQL based attributes, the `EXECUTE ON` attributes are Greenplum Database attributes.
 
-For example, a function defined with the `IMMUTABLE` attribute can be run at query planning time, while a function with the `VOLATILE` attribute must be run for every row in the query. A function with the `EXECUTE ON MASTER` attribute runs only on the master instance, and a function with the `EXECUTE ON ALL SEGMENTS` attribute runs on all primary segment instances \(not the master\).
+For example, a function defined with the `IMMUTABLE` attribute can be run at query planning time, while a function with the `VOLATILE` attribute must be run for every row in the query. A function with the `EXECUTE ON MASTER` attribute runs only on the coordinator instance, and a function with the `EXECUTE ON ALL SEGMENTS` attribute runs on all primary segment instances \(not the coordinator\).
 
 These tables summarize what Greenplum Database assumes about function execution based on the attribute.
 
@@ -28,24 +29,24 @@ These tables summarize what Greenplum Database assumes about function execution 
 
 |Function Attribute|Description|Comments|
 |------------------|-----------|--------|
-|EXECUTE ON ANY|Indicates that the function can be run on the master, or any segment instance, and it returns the same result regardless of where it runs. This is the default attribute.|Greenplum Database determines where the function runs.|
-|EXECUTE ON MASTER|Indicates that the function must be run on the master instance.|Specify this attribute if the user-defined function runs queries to access tables.|
-|EXECUTE ON ALL SEGMENTS|Indicates that for each invocation, the function must be run on all primary segment instances, but not the master.| |
-|EXECUTE ON INITPLAN|Indicates that the function contains an SQL command that dispatches queries to the segment instances and requires special processing on the master instance by Greenplum Database when possible.| |
+|EXECUTE ON ANY|Indicates that the function can be run on the coordinator, or any segment instance, and it returns the same result regardless of where it runs. This is the default attribute.|Greenplum Database determines where the function runs.|
+|EXECUTE ON MASTER|Indicates that the function must be run on the coordinator instance.|Specify this attribute if the user-defined function runs queries to access tables.|
+|EXECUTE ON ALL SEGMENTS|Indicates that for each invocation, the function must be run on all primary segment instances, but not the coordinator.| |
+|EXECUTE ON INITPLAN|Indicates that the function contains an SQL command that dispatches queries to the segment instances and requires special processing on the coordinator instance by Greenplum Database when possible.| |
 
 You can display the function volatility and `EXECUTE ON` attribute information with the psql `\df+ function` command.
 
-Refer to the PostgreSQL [Function Volatility Categories](https://www.postgresql.org/docs/9.4/xfunc-volatility.html) documentation for additional information about the Greenplum Database function volatility classifications.
+Refer to the PostgreSQL [Function Volatility Categories](https://www.postgresql.org/docs/12/xfunc-volatility.html) documentation for additional information about the Greenplum Database function volatility classifications.
 
 For more information about `EXECUTE ON` attributes, see [CREATE FUNCTION](../../../ref_guide/sql_commands/CREATE_FUNCTION.html).
 
 In Greenplum Database, data is divided up across segments — each segment is a distinct PostgreSQL database. To prevent inconsistent or unexpected results, do not run functions classified as `VOLATILE` at the segment level if they contain SQL commands or modify the database in any way. For example, functions such as `setval()` are not allowed to run on distributed data in Greenplum Database because they can cause inconsistent data between segment instances.
 
-A function can run read-only queries on replicated tables \(`DISTRIBUTED REPLICATED`\) on the segments, but any SQL command that modifies data must run on the master instance.
+A function can run read-only queries on replicated tables \(`DISTRIBUTED REPLICATED`\) on the segments, but any SQL command that modifies data must run on the coordinator instance.
 
-**Note:** The hidden system columns \(`ctid`, `cmin`, `cmax`, `xmin`, `xmax`, and `gp_segment_id`\) cannot be referenced in user queries on replicated tables because they have no single, unambiguous value. Greenplum Database returns a `column does not exist` error for the query.
+> **Note** The hidden system columns \(`ctid`, `cmin`, `cmax`, `xmin`, `xmax`, and `gp_segment_id`\) cannot be referenced in user queries on replicated tables because they have no single, unambiguous value. Greenplum Database returns a `column does not exist` error for the query.
 
-To ensure data consistency, you can safely use `VOLATILE` and `STABLE` functions in statements that are evaluated on and run from the master. For example, the following statements run on the master \(statements without a `FROM` clause\):
+To ensure data consistency, you can safely use `VOLATILE` and `STABLE` functions in statements that are evaluated on and run from the coordinator. For example, the following statements run on the coordinator \(statements without a `FROM` clause\):
 
 ```
 SELECT setval('myseq', 201);
@@ -66,21 +67,33 @@ There is relatively little difference between the `STABLE` and `IMMUTABLE` funct
 
 ## <a id="topic28"></a>User-Defined Functions 
 
-Greenplum Database supports user-defined functions. See [Extending SQL](https://www.postgresql.org/docs/9.4/extend.html) in the PostgreSQL documentation for more information.
+Greenplum Database supports user-defined functions. See [Extending SQL](https://www.postgresql.org/docs/12/extend.html) in the PostgreSQL documentation for more information.
 
 Use the `CREATE FUNCTION` statement to register user-defined functions that are used as described in [Using Functions in Greenplum Database](#topic27). By default, user-defined functions are declared as `VOLATILE`, so if your user-defined function is `IMMUTABLE` or `STABLE`, you must specify the correct volatility level when you register your function.
 
-By default, user-defined functions are declared as `EXECUTE ON ANY`. A function that runs queries to access tables is supported only when the function runs on the master instance, except that a function can run `SELECT` commands that access only replicated tables on the segment instances. A function that accesses hash-distributed or randomly distributed tables must be defined with the `EXECUTE ON MASTER` attribute. Otherwise, the function might return incorrect results when the function is used in a complicated query. Without the attribute, planner optimization might determine it would be beneficial to push the function invocation to segment instances.
+By default, user-defined functions are declared as `EXECUTE ON ANY`. A function that runs queries to access tables is supported only when the function runs on the coordinator instance, except that a function can run `SELECT` commands that access only replicated tables on the segment instances. A function that accesses hash-distributed or randomly distributed tables must be defined with the `EXECUTE ON MASTER` attribute. Otherwise, the function might return incorrect results when the function is used in a complicated query. Without the attribute, planner optimization might determine it would be beneficial to push the function invocation to segment instances.
 
 When you create user-defined functions, avoid using fatal errors or destructive calls. Greenplum Database may respond to such errors with a sudden shutdown or restart.
 
-In Greenplum Database, the shared library files for user-created functions must reside in the same library path location on every host in the Greenplum Database array \(masters, segments, and mirrors\).
+In Greenplum Database, the shared library files for user-created functions must reside in the same library path location on every host in the Greenplum Database array \(coordinators, segments, and mirrors\).
 
 You can also create and run anonymous code blocks that are written in a Greenplum Database procedural language such as PL/pgSQL. The anonymous blocks run as transient anonymous functions. For information about creating and running anonymous blocks, see the [`DO`](../../../ref_guide/sql_commands/DO.html) command.
 
+## <a id="topic28a"></a>User-Defined Procedures
+
+A procedure is a database object similar to a function. The key differences are:
+
+- You define a procedure with the [CREATE PROCEDURE](../../../ref_guide/sql_commands/CREATE_PROCEDURE.html) command, not `CREATE FUNCTION`.
+- Procedures do not return a function value; hence `CREATE PROCEDURE` lacks a `RETURNS` clause. However, procedures can instead return data to their callers via output parameters.
+- While a function is called as part of a query or DML command, you call a procedure in isolation using the [CALL](../../../ref_guide/sql_commands/CALL.html) command.
+- A procedure can commit or roll back transactions during its execution \(then automatically beginning a new transaction\), so long as the invoking `CALL` command is not part of an explicit transaction block. A function cannot do that.
+- Certain function attributes, such as strictness, don't apply to procedures. Those attributes control how the function is used in a query, which isn't relevant to procedures.
+
+Collectively, functions and procedures are also known as routines. There are commands such as [ALTER ROUTINE](../../../ref_guide/sql_commands/ALTER_ROUTINE.html) and [DROP ROUTINE](../../../ref_guide/sql_commands/DROP_ROUTINE.html) that can operate on functions and procedures without having to know which kind it is. Note, however, that there is no `CREATE ROUTINE` command.
+
 ## <a id="topic29"></a>Built-in Functions and Operators 
 
-The following table lists the categories of built-in functions and operators supported by PostgreSQL. All functions and operators are supported in Greenplum Database as in PostgreSQL with the exception of `STABLE` and `VOLATILE` functions, which are subject to the restrictions noted in [Using Functions in Greenplum Database](#topic27). See the [Functions and Operators](https://www.postgresql.org/docs/9.4/functions.html) section of the PostgreSQL documentation for more information about these built-in functions and operators.
+The following table lists the categories of built-in functions and operators supported by PostgreSQL. All functions and operators are supported in Greenplum Database as in PostgreSQL with the exception of `STABLE` and `VOLATILE` functions, which are subject to the restrictions noted in [Using Functions in Greenplum Database](#topic27). See the [Functions and Operators](https://www.postgresql.org/docs/12/functions.html) section of the PostgreSQL documentation for more information about these built-in functions and operators.
 
 Greenplum Database includes JSON processing functions that manipulate values the `json` data type. For information about JSON data, see [Working with JSON Data](json-data.html).
 
@@ -94,7 +107,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                     </thead><tbody class="tbody">
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-logical.html" target="_blank" rel="external noopener">Logical Operators</a>
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-logical.html" target="_blank" rel="external noopener">Logical Operators</a>
                             </td>
                             <td class="entry" headers="topic29__in204913__entry__2"></td>
                             <td class="entry" headers="topic29__in204913__entry__3"></td>
@@ -102,7 +115,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-comparison.html" target="_blank" rel="external noopener">Comparison Operators</a>
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-comparison.html" target="_blank" rel="external noopener">Comparison Operators</a>
                             </td>
                             <td class="entry" headers="topic29__in204913__entry__2"></td>
                             <td class="entry" headers="topic29__in204913__entry__3"></td>
@@ -110,7 +123,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-math.html" target="_blank" rel="external noopener">
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-math.html" target="_blank" rel="external noopener">
                                     <span class="ph">Mathematical Functions and Operators</span>
                                 </a>
                             </td>
@@ -120,7 +133,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-string.html" target="_blank" rel="external noopener">
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-string.html" target="_blank" rel="external noopener">
                                     <span class="ph">String Functions and Operators</span>
                                 </a>
                             </td>
@@ -132,7 +145,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-binarystring.html" target="_blank" rel="external noopener">
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-binarystring.html" target="_blank" rel="external noopener">
                                     <span class="ph">Binary String Functions and Operators</span>
                                 </a>
                             </td>
@@ -142,7 +155,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-bitstring.html" target="_blank" rel="external noopener">
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-bitstring.html" target="_blank" rel="external noopener">
                                     <span class="ph">Bit String Functions and Operators</span>
                                 </a>
                             </td>
@@ -152,7 +165,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-matching.html" target="_blank" rel="external noopener">
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-matching.html" target="_blank" rel="external noopener">
                                     <span class="ph">Pattern Matching</span>
                                 </a>
                             </td>
@@ -162,7 +175,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-formatting.html" target="_blank" rel="external noopener">
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-formatting.html" target="_blank" rel="external noopener">
                                     <span class="ph">Data Type Formatting Functions</span>
                                 </a>
                             </td>
@@ -172,7 +185,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-datetime.html" target="_blank" rel="external noopener"> Date/Time Functions and Operators</a>
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-datetime.html" target="_blank" rel="external noopener"> Date/Time Functions and Operators</a>
                             </td>
                             <td class="entry" headers="topic29__in204913__entry__2">timeofday</td>
                             <td class="entry" headers="topic29__in204913__entry__3">age<p class="p">current_date</p><p class="p">current_time</p><p class="p">current_timestamp</p><p class="p">localtime</p><p class="p">localtimestamp</p><p class="p">now</p></td>
@@ -180,7 +193,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-enum.html" target="_blank" rel="external noopener"> Enum Support Functions </a>
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-enum.html" target="_blank" rel="external noopener"> Enum Support Functions </a>
                             </td>
                             <td class="entry" headers="topic29__in204913__entry__2"></td>
                             <td class="entry" headers="topic29__in204913__entry__3"></td>
@@ -188,7 +201,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-geometry.html" target="_blank" rel="external noopener">
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-geometry.html" target="_blank" rel="external noopener">
                                     <span class="ph">Geometric Functions and Operators</span>
                                 </a>
                             </td>
@@ -198,7 +211,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-net.html" target="_blank" rel="external noopener">
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-net.html" target="_blank" rel="external noopener">
                                     <span class="ph">Network Address Functions and Operators</span>
                                 </a>
                             </td>
@@ -208,7 +221,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-sequence.html" target="_blank" rel="external noopener">
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-sequence.html" target="_blank" rel="external noopener">
                                     <span class="ph">Sequence Manipulation Functions</span>
                                 </a>
                             </td>
@@ -218,7 +231,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-conditional.html" target="_blank" rel="external noopener">
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-conditional.html" target="_blank" rel="external noopener">
                                     <span class="ph">Conditional Expressions</span>
                                 </a>
                             </td>
@@ -228,7 +241,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-array.html" target="_blank" rel="external noopener">
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-array.html" target="_blank" rel="external noopener">
                                     <span class="ph">Array Functions and Operators</span>
                                 </a>
                             </td>
@@ -240,7 +253,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-aggregate.html" target="_blank" rel="external noopener">
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-aggregate.html" target="_blank" rel="external noopener">
                                     <span class="ph">Aggregate Functions</span>
                                 </a>
                             </td>
@@ -250,7 +263,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-subquery.html" target="_blank" rel="external noopener">
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-subquery.html" target="_blank" rel="external noopener">
                                     <span class="ph">Subquery Expressions</span>
                                 </a>
                             </td>
@@ -260,7 +273,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-comparisons.html" target="_blank" rel="external noopener">
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-comparisons.html" target="_blank" rel="external noopener">
                                     <span class="ph">Row and Array Comparisons</span>
                                 </a>
                             </td>
@@ -270,7 +283,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-srf.html" target="_blank" rel="external noopener">
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-srf.html" target="_blank" rel="external noopener">
                                     <span class="ph">Set Returning Functions</span>
                                 </a>
                             </td>
@@ -280,7 +293,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-info.html" target="_blank" rel="external noopener">
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-info.html" target="_blank" rel="external noopener">
                                     <span class="ph">System Information Functions</span>
                                 </a>
                             </td>
@@ -302,7 +315,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-admin.html" target="_blank" rel="external noopener">
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-admin.html" target="_blank" rel="external noopener">
                                     <span class="ph">System Administration Functions</span>
                                 </a>
                             </td>
@@ -315,7 +328,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic29__in204913__entry__1">
-                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-xml.html" target="_blank" rel="external noopener">XML Functions</a> and function-like
+                                <a class="xref" href="https://www.postgresql.org/docs/12/functions-xml.html" target="_blank" rel="external noopener">XML Functions</a> and function-like
                                 expressions </td>
                             <td class="entry" headers="topic29__in204913__entry__2"></td>
                             <td class="entry" headers="topic29__in204913__entry__3">
@@ -561,7 +574,7 @@ The following built-in window functions are Greenplum extensions to the PostgreS
 
 The following built-in advanced aggregate functions are Greenplum extensions of the PostgreSQL database. These functions are *immutable*.
 
-**Note:** The Greenplum MADlib Extension for Analytics provides additional advanced functions to perform statistical analysis and machine learning with Greenplum Database data. See [Greenplum MADlib Extension for Analytics](../../../analytics/madlib.html) in the *Greenplum Database Reference Guide*.
+> **Note** The Greenplum MADlib Extension for Analytics provides additional advanced functions to perform statistical analysis and machine learning with Greenplum Database data. See [Greenplum MADlib Extension for Analytics](../../../analytics/madlib.html) in the *Greenplum Database Reference Guide*.
 
 <table class="table" id="topic31__in2073121"><caption><span class="table--title-label">Table 5. </span><span class="title">Advanced Aggregate Functions</span></caption><colgroup><col style="width:23.00684070063499%"><col style="width:18.098714684499523%"><col style="width:31.2862357741035%"><col style="width:27.60820884076199%"></colgroup><thead class="thead">
                         <tr class="row">
@@ -607,7 +620,7 @@ INSERT INTO mymatrix
    VALUES (array[[0,1],[1,0]]);
 SELECT sum(myvalue) FROM mymatrix;
  sum 
----------------
+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
  {{1,3},{4,4}}</code></pre>
                             </td>
                             <td class="entry" headers="topic31__in2073121__entry__4">Performs matrix summation. Can take as input a
@@ -635,7 +648,7 @@ SELECT sum(myvalue) FROM mymatrix;
                                 <code class="ph codeph">unnest( array['one', 'row', 'per', 'item'])</code>
                             </td>
                             <td class="entry" headers="topic31__in2073121__entry__4">Transforms a one dimensional array into rows.
-                                Returns a set of <code class="ph codeph">anyelement</code>, a polymorphic <a class="xref" href="https://www.postgresql.org/docs/9.4/datatype-pseudo.html" target="_blank" rel="external noopener"><span class="ph">pseudo-type</span></a> in
+                                Returns a set of <code class="ph codeph">anyelement</code>, a polymorphic <a class="xref" href="https://www.postgresql.org/docs/12/datatype-pseudo.html" target="_blank" rel="external noopener"><span class="ph">pseudo-type</span></a> in
                                 PostgreSQL.</td>
                         </tr>
                     </tbody></table>

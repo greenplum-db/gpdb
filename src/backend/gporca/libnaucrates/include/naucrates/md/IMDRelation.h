@@ -50,7 +50,7 @@ public:
 		ErelstorageHeap,
 		ErelstorageAppendOnlyCols,
 		ErelstorageAppendOnlyRows,
-		ErelstorageExternal,
+		ErelstorageForeign,
 		ErelstorageMixedPartitioned,
 		ErelstorageCompositeType,
 		ErelstorageSentinel
@@ -62,7 +62,7 @@ public:
 	//-------------------------------------------------------------------
 	enum Ereldistrpolicy
 	{
-		EreldistrMasterOnly,
+		EreldistrCoordinatorOnly,
 		EreldistrHash,
 		EreldistrRandom,
 		EreldistrReplicated,
@@ -148,9 +148,6 @@ public:
 	// number of partition columns
 	virtual ULONG PartColumnCount() const = 0;
 
-	// number of partitions
-	virtual ULONG PartitionCount() const = 0;
-
 	// retrieve the partition column at the given position
 	virtual const IMDColumn *PartColAt(ULONG pos) const = 0;
 
@@ -197,6 +194,9 @@ public:
 		return st == ErelstorageAppendOnlyCols ||
 			   st == ErelstorageAppendOnlyRows;
 	}
+
+	// get oid of foreign server for foreign table
+	virtual IMDId *ForeignServer() const = 0;
 };
 
 // common structure over relation and external relation metadata for index info

@@ -245,6 +245,9 @@
 
 /*
  * GPDB_12_MERGE_FIXME: we lost the "streaming bottom" feature in the merge.
+ * When we add "streaming bottom" feature back, also remember to add fault
+ * injector 'force_hashagg_stream_hashtable' used in spilling_hashagg
+ * isolation2 test.
  *
  * And the detailed cdb executor instruments to print by explain.
  *
@@ -1219,6 +1222,7 @@ finalize_partialaggregate(AggState *aggstate,
 										   pergroupstate->transValueIsNull,
 										   pertrans->transtypeLen);
 			fcinfo->args[0].isnull = pergroupstate->transValueIsNull;
+			fcinfo->isnull = false;
 
 			*resultVal = FunctionCallInvoke(fcinfo);
 			*resultIsNull = fcinfo->isnull;
@@ -4191,7 +4195,7 @@ build_pertrans_for_aggref(AggStatePerTrans pertrans,
 	 * transfn and transfn_oid fields of pertrans refer to the combine
 	 * function rather than the transition function.
 	 */
-	if (DO_AGGSPLIT_COMBINE(aggstate->aggsplit))
+	if (DO_AGGSPLIT_COMBINE(pertrans->aggref->aggsplit))
 	{
 		Expr	   *combinefnexpr;
 		size_t		numTransArgs;

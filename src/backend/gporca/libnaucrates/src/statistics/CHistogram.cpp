@@ -1750,7 +1750,7 @@ CHistogram::CombineBuckets(CMemoryPool *mp, CBucketArray *buckets,
 				CDouble(0.0) + CStatistics::Epsilon);
 #endif
 
-	// GPDB_12_MERGE_FIXME: the desired_num_buckets handling is broken for singleton buckets
+	// FIXME: the desired_num_buckets handling is broken for singleton buckets
 	// While it limits the number of buckets for non-singleton buckets, singleton buckets
 	// are not merged, and thus we can get cases where the number of result buckets is
 	// larger than the desired number of buckets
@@ -2074,6 +2074,24 @@ CHistogram::GetRandomBucketIndex(ULONG *seed) const
 	return size - 1;
 }
 
+// Populate the sample ratio within bucket boundaries
+void
+CHistogram::GetSampleRate(DOUBLE left, DOUBLE right, DOUBLE *sample_rate,
+						  ULONG index)
+{
+	GPOS_CHECK_STACK_SIZE;
+
+	if (index >= GPOPT_SKEW_SAMPLE_SIZE)
+	{
+		return;
+	}
+
+	sample_rate[index + 1] = (left + right) / 2;
+
+	GetSampleRate(left, (left + right) / 2, sample_rate, index * 2);
+	GetSampleRate((left + right) / 2, right, sample_rate, index * 2 + 1);
+}
+
 // estimate data skew by sampling histogram buckets,
 // the estimate value is >= 1.0, where 1.0 indicates no skew
 //
@@ -2089,26 +2107,50 @@ CHistogram::ComputeSkew()
 {
 	m_skew_was_measured = true;
 
-	if (!IsNormalized() || 0 == m_histogram_buckets->Size() ||
+	if (0 == m_histogram_buckets->Size() ||
 		!(*m_histogram_buckets)[0]->CanSample())
 	{
 		return;
 	}
 
-	// generate randomization seed from system time
-	TIMEVAL tv;
-	syslib::GetTimeOfDay(&tv, nullptr /*timezone*/);
-	ULONG seed = CombineHashes((ULONG) tv.tv_sec, (ULONG) tv.tv_usec);
+	if (!IsNormalized())
+	{
+		this->NormalizeHistogram();
+	}
 
 	// generate a sample from histogram data, and compute sample mean
 	DOUBLE sample_mean = 0;
 	DOUBLE samples[GPOPT_SKEW_SAMPLE_SIZE];
+	DOUBLE sample_rate[GPOPT_SKEW_SAMPLE_SIZE];
+	sample_rate[0] = 0;
+	sample_rate[1] = 1;
+	ULONG index = 1;
+	GetSampleRate(sample_rate[0], sample_rate[1], sample_rate, index);
+
+	// start with the lowest frequency bucket
+	ULONG bucket_index = m_histogram_buckets->Size() - 1;
+	// start with bucket lower boundary
+	ULONG sample_index = 0;
+	CDouble accumulated_freq = 0;
 	for (ULONG ul = 0; ul < GPOPT_SKEW_SAMPLE_SIZE; ul++)
 	{
-		ULONG bucket_index = GetRandomBucketIndex(&seed);
 		CBucket *bucket = (*m_histogram_buckets)[bucket_index];
-		samples[ul] = bucket->GetSample(&seed).Get();
+		samples[ul] = bucket->GetSample(sample_rate[sample_index]).Get();
 		sample_mean = sample_mean + samples[ul];
+		// iterate sample rate series
+		sample_index++;
+		DOUBLE filling_rate = (DOUBLE) ul / GPOPT_SKEW_SAMPLE_SIZE;
+
+		// compare the sample filling rate to the current bucket's frequency
+		// if enough samples are collected from this bucket
+		// reset the sample index to the lower boundary for the next bucket
+		if (filling_rate >= accumulated_freq + bucket->GetFrequency() &&
+			bucket_index > 0)
+		{
+			accumulated_freq = accumulated_freq + bucket->GetFrequency();
+			bucket_index--;
+			sample_index = 0;
+		}
 	}
 	sample_mean = (DOUBLE) sample_mean / GPOPT_SKEW_SAMPLE_SIZE;
 
@@ -2120,11 +2162,19 @@ CHistogram::ComputeSkew()
 		num2 = num2 + pow((samples[ul] - sample_mean), 2.0);
 		num3 = num3 + pow((samples[ul] - sample_mean), 3.0);
 	}
+	// second moment: variance
 	DOUBLE moment2 = (DOUBLE)(num2 / GPOPT_SKEW_SAMPLE_SIZE);
+	// third moment: a/symmetry
 	DOUBLE moment3 = (DOUBLE)(num3 / GPOPT_SKEW_SAMPLE_SIZE);
 
-	// set skew measure
-	m_skew = CDouble(1.0 + fabs(moment3 / pow(moment2, 1.5)));
+	if (moment2 == 0)
+	{
+		m_skew = pow(GPOPT_SKEW_SAMPLE_SIZE, 0.5);
+	}
+	else
+	{
+		m_skew = CDouble(1.0 + fabs(moment3 / pow(moment2, 1.5)));
+	}
 }
 
 // create the default histogram for a given column reference

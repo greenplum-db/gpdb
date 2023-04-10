@@ -12,7 +12,7 @@ Greenplum Database supports several storage models and a mix of storage models. 
 -   [Altering a Table](#topic55)
 -   [Dropping a Table](#topic62)
 
-**Note:** To simplify the creation of database tables, you can specify the default values for some table storage options with the Greenplum Database server configuration parameter `gp_default_storage_options`.
+> **Note** To simplify the creation of database tables, you can specify the default values for some table storage options with the Greenplum Database server configuration parameter `gp_default_storage_options`.
 
 For information about the parameter, see "Server Configuration Parameters" in the *Greenplum Database Reference Guide*.
 
@@ -42,9 +42,9 @@ Use the `WITH` clause of the `CREATE TABLE` command to declare the table storage
     DISTRIBUTED BY (a);
 ```
 
-**Note:** You use the `appendoptimized=value` syntax to specify the append-optimized table storage type. `appendoptimized` is a thin alias for the `appendonly` legacy storage option. Greenplum Database stores `appendonly` in the catalog, and displays the same when listing storage options for append-optimized tables.
+> **Note** You use the `appendoptimized=value` syntax to specify the append-optimized table storage type. `appendoptimized` is a thin alias for the `appendonly` legacy storage option. Greenplum Database stores `appendonly` in the catalog, and displays the same when listing storage options for append-optimized tables.
 
-`UPDATE` and `DELETE` are not allowed on append-optimized tables in a repeatable read or serizalizable transaction and will cause the transaction to end prematurely. `DECLARE...FOR UPDATE` and triggers are not supported with append-optimized tables. `CLUSTER` on append-optimized tables is only supported over B-tree indexes.
+`UPDATE` and `DELETE` are not allowed on append-optimized tables in a repeatable read or serizalizable transaction and will cause the transaction to end prematurely. `DECLARE...FOR UPDATE` and triggers are not supported with append-optimized tables.  `CLUSTER` on append-optimized tables is only supported over B-tree indexes.
 
 ## <a id="topic39"></a>Choosing Row or Column-Oriented Storage 
 
@@ -104,7 +104,7 @@ The following table summarizes the available compression algorithms.
 |Row|Table|`ZLIB`, `ZSTD`, and `QUICKLZ`\*|
 |Column|Column and Table|`RLE_TYPE`, `ZLIB`, `ZSTD`, and `QUICKLZ`\*|
 
-**Note:** \*QuickLZ compression is not available in the open source version of Greenplum Database.
+> **Note** \*QuickLZ compression is not available in the open source version of Greenplum Database.
 
 When choosing a compression type and level for append-optimized tables, consider these factors:
 
@@ -116,12 +116,12 @@ When choosing a compression type and level for append-optimized tables, consider
 
 -   Speed of decompression/scan rate. Performance with compressed append-optimized tables depends on hardware, query tuning settings, and other factors. Perform comparison testing to determine the actual performance in your environment.
 
-    **Note:** Do not create compressed append-optimized tables on file systems that use compression. If the file system on which your segment data directory resides is a compressed file system, your append-optimized table must not use compression.
+    > **Note** Do not create compressed append-optimized tables on file systems that use compression. If the file system on which your segment data directory resides is a compressed file system, your append-optimized table must not use compression.
 
 
 Performance with compressed append-optimized tables depends on hardware, query tuning settings, and other factors. You should perform comparison testing to determine the actual performance in your environment.
 
-**Note:** Zstd compression level can be set to values between 1 and 19. QuickLZ compression level can only be set to level 1; no other values are available. Compression level with zlib can be set to values from 1 - 9. Compression level with RLE can be set to values from 1 - 4.
+> **Note** Zstd compression level can be set to values between 1 and 19. QuickLZ compression level can only be set to level 1; no other values are available. Compression level with zlib can be set to values from 1 - 9. Compression level with RLE can be set to values from 1 - 4.
 
 An `ENCODING` clause specifies compression type and level for individual columns. When an `ENCODING` clause conflicts with a `WITH` clause, the `ENCODING` clause has higher precedence than the `WITH` clause.
 
@@ -327,7 +327,7 @@ Column compression settings are inherited from the type level to the table level
 -   Column compression settings specified for subpartitions override any compression settings at the partition, column or table levels.
 -   When an `ENCODING` clause conflicts with a `WITH` clause, the `ENCODING` clause has higher precedence than the `WITH` clause.
 
-**Note:** The `INHERITS` clause is not allowed in a table that contains a storage parameter or a column reference storage parameter.
+> **Note** The `INHERITS` clause is not allowed in a table that contains a storage parameter or a column reference storage parameter.
 
 Tables created using the `LIKE` clause ignore storage parameter and column reference storage parameters.
 

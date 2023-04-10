@@ -142,6 +142,16 @@ InternalIpcMemoryCreate(IpcMemoryKey memKey, Size size)
 
 		if (pg_shmem_addr)
 			requestedAddress = (void *) strtoul(pg_shmem_addr, NULL, 0);
+		else
+		{
+#if defined(__darwin__) && SIZEOF_VOID_P == 8
+			/*
+			 * Provide a default value that is believed to avoid problems with
+			 * ASLR on the current macOS release.
+			 */
+			requestedAddress = (void *) 0x80000000000;
+#endif
+		}
 	}
 #endif
 
@@ -638,6 +648,12 @@ PGSharedMemoryCreate(Size size, int port,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("huge pages not supported on this platform")));
 #endif
+
+	/* For now, we don't support huge pages in SysV memory */
+	if (huge_pages == HUGE_PAGES_ON && shared_memory_type != SHMEM_TYPE_MMAP)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("huge pages not supported with the current shared_memory_type setting")));
 
 	/* Room for a header? */
 	Assert(size > MAXALIGN(sizeof(PGShmemHeader)));

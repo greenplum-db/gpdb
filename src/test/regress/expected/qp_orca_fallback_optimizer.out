@@ -56,7 +56,7 @@ explain update constr_tab set b = 10;
                                    QUERY PLAN                                   
 --------------------------------------------------------------------------------
  Update on constr_tab  (cost=0.00..431.04 rows=1 width=1)
-   ->  Seq Scan on constr_tab constr_tab_1  (cost=0.00..431.00 rows=1 width=22)
+   ->  Seq Scan on constr_tab  (cost=0.00..431.00 rows=1 width=22)
  Optimizer: Pivotal Optimizer (GPORCA)
 (3 rows)
 
@@ -109,9 +109,9 @@ explain update constr_tab set a = 10;
  Update on constr_tab  (cost=0.00..431.09 rows=1 width=1)
    ->  Result  (cost=0.00..431.00 rows=1 width=34)
          ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=30)
-               Hash Key: constr_tab_1.a
+               Hash Key: a
                ->  Split  (cost=0.00..431.00 rows=1 width=30)
-                     ->  Seq Scan on constr_tab constr_tab_1  (cost=0.00..431.00 rows=1 width=26)
+                     ->  Seq Scan on constr_tab  (cost=0.00..431.00 rows=1 width=26)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (7 rows)
 
@@ -285,6 +285,16 @@ DETAIL:  No plan has been computed for required properties
  Optimizer: Postgres query optimizer
 (5 rows)
 
+-- Orca should fallback for RTE_TABLEFUNC RTE type
+explain SELECT * FROM xmltable('/root' passing '' COLUMNS element text);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: RangeTableEntry of type Table Function
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Table Function Scan on "xmltable"  (cost=0.00..1.00 rows=100 width=32)
+ Optimizer: Postgres query optimizer
+(2 rows)
+
 create table ext_part(a int) partition by list(a);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -294,15 +304,29 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 create external web table p2_ext (like p1) EXECUTE 'cat something.txt' FORMAT 'TEXT';
 alter table ext_part attach partition p1 for values in (1);
 alter table ext_part attach partition p2_ext for values in (2);
-explain select * from ext_part;
+explain insert into ext_part values (1);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Partitioned table with external/foreign partition
-                                      QUERY PLAN                                      
---------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..57799.50 rows=3096300 width=4)
-   ->  Append  (cost=0.00..16515.50 rows=1032100 width=4)
-         ->  Seq Scan on p1  (cost=0.00..355.00 rows=32100 width=4)
-         ->  Foreign Scan on p2_ext  (cost=0.00..11000.00 rows=1000000 width=4)
+DETAIL:  Feature not supported: Insert with External/foreign partition storage types
+                      QUERY PLAN                      
+------------------------------------------------------
+ Insert on ext_part  (cost=0.00..0.03 rows=1 width=4)
+   ->  Result  (cost=0.00..0.01 rows=1 width=4)
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+explain delete from ext_part where a=1;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Delete with External/foreign partition storage types
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Delete on ext_part  (cost=0.00..435.25 rows=32 width=10)
+   Delete on p1
+   ->  Seq Scan on p1  (cost=0.00..435.25 rows=32 width=10)
+         Filter: (a = 1)
  Optimizer: Postgres query optimizer
 (5 rows)
 
+explain update ext_part set a=1;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Update with External/foreign partition storage types
+ERROR:  cannot update foreign table "p2_ext"

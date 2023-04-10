@@ -98,6 +98,9 @@ CATALOG(pg_aggregate,2600,AggregateRelationId)
 
 	/* initial value for moving-agg state (can be NULL) */
 	text		aggminitval BKI_DEFAULT(_null_);
+
+	/* is agg func safe to execute on replicated slices (GPDB specific) */
+	bool		aggrepsafeexec BKI_DEFAULT(f);
 #endif
 } FormData_pg_aggregate;
 
@@ -185,6 +188,7 @@ extern ObjectAddress AggregateCreate(const char *aggName,
 									 int32 aggmTransSpace,
 									 const char *agginitval,
 									 const char *aggminitval,
+									 bool aggrepsafeexec,
 									 char proparallel);
 
 #endif							/* PG_AGGREGATE_H */

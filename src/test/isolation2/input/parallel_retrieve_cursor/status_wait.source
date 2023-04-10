@@ -288,3 +288,25 @@ insert into t1 select generate_series(1,100);
 -- check no endpoint info
 2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c10';
 *U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c10';
+0Rq:
+1Rq:
+
+--------- Test11: Test t1 has large amount of tuples, only retreive small number of tuples, we can still close cursor.
+1:DROP TABLE IF EXISTS t2;
+1:CREATE TABLE t2 (id integer, data text) DISTRIBUTED by (id);
+1:INSERT INTO t2 select id, 'test ' || id from generate_series(1,100000) id;
+
+1: BEGIN;
+1: DECLARE c11 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t2;
+1: @post_run 'parse_endpoint_info 11 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c11';
+0R: @pre_run 'set_endpoint_variable @ENDPOINT11': RETRIEVE 5 FROM ENDPOINT "@ENDPOINT11";
+1R: @pre_run 'set_endpoint_variable @ENDPOINT11': RETRIEVE 5 FROM ENDPOINT "@ENDPOINT11";
+2R: @pre_run 'set_endpoint_variable @ENDPOINT11': RETRIEVE 5 FROM ENDPOINT "@ENDPOINT11";
+
+1: CLOSE c11;
+1: ROLLBACK;
+
+-- check no endpoint info
+1: SELECT auth_token,state FROM gp_get_endpoints() WHERE cursorname='c11';
+-- check no token info on QE after close PARALLEL RETRIEVE CURSOR
+*U: SELECT * FROM gp_get_segment_endpoints() WHERE cursorname='c11';

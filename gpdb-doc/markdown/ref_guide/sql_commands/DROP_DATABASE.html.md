@@ -12,7 +12,7 @@ DROP DATABASE [IF EXISTS] <name>
 
 `DROP DATABASE` drops a database. It removes the catalog entries for the database and deletes the directory containing the data. It can only be run by the database owner. Also, it cannot be run while you or anyone else are connected to the target database. \(Connect to `postgres` or any other database to issue this command.\)
 
-**Warning:** `DROP DATABASE` cannot be undone. Use it with care!
+> **Caution** `DROP DATABASE` cannot be undone. Use it with care!
 
 ## <a id="section4"></a>Parameters 
 

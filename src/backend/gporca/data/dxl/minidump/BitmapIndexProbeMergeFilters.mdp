@@ -26,7 +26,7 @@ EXPLAIN SELECT * FROM table_with_two_indices_ao WHERE b = 15 AND c BETWEEN 10000
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="7" ArrayExpansionThreshold="25" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="true"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="7" ArrayExpansionThreshold="25" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="true"/>
       <dxl:TraceFlags Value="102001,102002,102003,102120,102144,103001,103014,103015,103022,103023,103027,103033,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -115,7 +115,7 @@ EXPLAIN SELECT * FROM table_with_two_indices_ao WHERE b = 15 AND c BETWEEN 10000
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.44841.1.0" Name="table_with_two_indices_ao" Rows="40004.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.44841.1.0" Name="table_with_two_indices_ao" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,5,3" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.44841.1.0" Name="table_with_two_indices_ao" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,5,3" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -146,7 +146,7 @@ EXPLAIN SELECT * FROM table_with_two_indices_ao WHERE b = 15 AND c BETWEEN 10000
           <dxl:Partition Mdid="6.44841002.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.44841001.1.0" Name="table_with_two_indices_ao_prt_1" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,5,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.44841001.1.0" Name="table_with_two_indices_ao_prt_1" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,5,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -188,7 +188,7 @@ EXPLAIN SELECT * FROM table_with_two_indices_ao WHERE b = 15 AND c BETWEEN 10000
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.44841002.1.0" Name="table_with_two_indices_ao_prt_2" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,5,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.44841002.1.0" Name="table_with_two_indices_ao_prt_2" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,5,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

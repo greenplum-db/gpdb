@@ -440,7 +440,7 @@ select * from (select * from p1 union all select * from p2) as p, tt where p.b=t
           <dxl:Partition Mdid="6.174229005.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.174229001.1.1" Name="p1_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.174229001.1.1" Name="p1_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -488,7 +488,7 @@ select * from (select * from p1 union all select * from p2) as p, tt where p.b=t
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.174229002.1.1" Name="p1_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.174229002.1.1" Name="p1_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -536,7 +536,7 @@ select * from (select * from p1 union all select * from p2) as p, tt where p.b=t
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.174229003.1.1" Name="p1_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.174229003.1.1" Name="p1_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -584,7 +584,7 @@ select * from (select * from p1 union all select * from p2) as p, tt where p.b=t
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.174229004.1.1" Name="p1_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.174229004.1.1" Name="p1_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -632,7 +632,7 @@ select * from (select * from p1 union all select * from p2) as p, tt where p.b=t
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.174229005.1.1" Name="p1_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.174229005.1.1" Name="p1_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1261,7 +1261,7 @@ select * from (select * from p1 union all select * from p2) as p, tt where p.b=t
           <dxl:Partition Mdid="6.174451005.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.174451001.1.1" Name="p2_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.174451001.1.1" Name="p2_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1309,7 +1309,7 @@ select * from (select * from p1 union all select * from p2) as p, tt where p.b=t
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.174451002.1.1" Name="p2_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.174451002.1.1" Name="p2_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1357,7 +1357,7 @@ select * from (select * from p1 union all select * from p2) as p, tt where p.b=t
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.174451003.1.1" Name="p2_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.174451003.1.1" Name="p2_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1405,7 +1405,7 @@ select * from (select * from p1 union all select * from p2) as p, tt where p.b=t
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.174451004.1.1" Name="p2_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.174451004.1.1" Name="p2_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1453,7 +1453,7 @@ select * from (select * from p1 union all select * from p2) as p, tt where p.b=t
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.174451005.1.1" Name="p2_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.174451005.1.1" Name="p2_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

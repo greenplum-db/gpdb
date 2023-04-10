@@ -31,7 +31,6 @@ order by gp_segment_id;
 alter database limitdb with connection limit 0;
 -- create a regular user as superusers are exempt from limits
 create user connlimit_test_user;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 -- add superuser to pg_hba.conf
 \! echo "local    all         connlimit_test_user         trust" >> $COORDINATOR_DATA_DIRECTORY/pg_hba.conf
 select pg_reload_conf();

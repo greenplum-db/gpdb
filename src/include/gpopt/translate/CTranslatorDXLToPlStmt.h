@@ -30,7 +30,6 @@ extern "C" {
 #include "naucrates/dxl/CIdGenerator.h"
 #include "naucrates/dxl/operators/CDXLCtasStorageOptions.h"
 #include "naucrates/dxl/operators/CDXLPhysicalIndexScan.h"
-#include "naucrates/md/IMDRelationExternal.h"
 
 #include "access/attnum.h"
 #include "nodes/nodes.h"
@@ -139,6 +138,9 @@ private:
 	// walker to set index var attno's
 	static BOOL SetIndexVarAttnoWalker(
 		Node *node, SContextIndexVarAttno *ctxt_index_var_attno_walker);
+
+	// walker to set inner var to outer
+	static BOOL SetHashKeysVarnoWalker(Node *node, void *context);
 
 public:
 	// ctor
@@ -349,6 +351,14 @@ private:
 			ctxt_translation_prev_siblings	// translation contexts of previous siblings
 	);
 
+	// translate a dynamic foreign scan operator
+	Plan *TranslateDXLDynForeignScan(
+		const CDXLNode *dyn_foreign_scan_dxlnode,
+		CDXLTranslateContext *output_context,
+		CDXLTranslationContextArray *
+			ctxt_translation_prev_siblings	// translation contexts of previous siblings
+	);
+
 	// translate a DML operator
 	Plan *TranslateDXLDml(
 		const CDXLNode *dml_dxlnode, CDXLTranslateContext *output_context,
@@ -427,9 +437,9 @@ private:
 		CDXLTranslateContextBaseTable *base_table_context);
 
 	// create range table entry from a table descriptor
-	RangeTblEntry *TranslateDXLTblDescrToRangeTblEntry(
-		const CDXLTableDescr *table_descr, Index index,
-		CDXLTranslateContextBaseTable *base_table_context);
+	Index ProcessDXLTblDescr(const CDXLTableDescr *table_descr,
+							 CDXLTranslateContextBaseTable *base_table_context,
+							 AclMode acl_mode);
 
 	// translate DXL projection list into a target list
 	List *TranslateDXLProjList(
@@ -570,10 +580,12 @@ private:
 
 	// compute directed dispatch segment ids
 	List *TranslateDXLDirectDispatchInfo(
-		CDXLDirectDispatchInfo *dxl_direct_dispatch_info);
+		CDXLDirectDispatchInfo *dxl_direct_dispatch_info,
+		RangeTblEntry *pRTEHashFuncCal);
 
 	// hash a DXL datum with GPDB's hash function
-	ULONG GetDXLDatumGPDBHash(CDXLDatumArray *dxl_datum_array);
+	ULONG GetDXLDatumGPDBHash(CDXLDatumArray *dxl_datum_array,
+							  RangeTblEntry *pRTEHashFuncCal);
 
 	// translate nest loop colrefs to GPDB nestparams
 	static List *TranslateNestLoopParamList(

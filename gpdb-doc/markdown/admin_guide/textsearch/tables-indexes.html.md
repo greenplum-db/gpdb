@@ -52,7 +52,7 @@ Although these queries will work without an index, most applications will find t
 We can create a GIN index \([GiST and GIN Indexes for Text Search](gist-gin.html)\) to speed up text searches:
 
 ```
-CREATE INDEX pgweb_idx ON pgweb USING gin(to_tsvector('english', body));
+CREATE INDEX pgweb_idx ON pgweb USING GIN (to_tsvector('english', body));
 ```
 
 Notice that the two-argument version of `to_tsvector` is used. Only text search functions that specify a configuration name can be used in expression indexes. This is because the index contents must be unaffected by [default\_text\_search\_config](../../ref_guide/config_params/guc-list.html). If they were affected, the index contents might be inconsistent because different entries could contain `tsvector`s that were created with different text search configurations, and there would be no way to guess which was which. It would be impossible to dump and restore such an index correctly.
@@ -62,7 +62,7 @@ Because the two-argument version of `to_tsvector` was used in the index above, o
 It is possible to set up more complex expression indexes wherein the configuration name is specified by another column, e.g.:
 
 ```
-CREATE INDEX pgweb_idx ON pgweb USING gin(to_tsvector(config_name, body));
+CREATE INDEX pgweb_idx ON pgweb USING GIN (to_tsvector(config_name, body));
 ```
 
 where `config_name` is a column in the `pgweb` table. This allows mixed configurations in the same index while recording which configuration was used for each index entry. This would be useful, for example, if the document collection contained documents in different languages. Again, queries that are meant to use the index must be phrased to match, e.g., `WHERE to_tsvector(config_name, body) @@ 'a & b'`.
@@ -70,21 +70,21 @@ where `config_name` is a column in the `pgweb` table. This allows mixed configur
 Indexes can even concatenate columns:
 
 ```
-CREATE INDEX pgweb_idx ON pgweb USING gin(to_tsvector('english', title || ' ' || body));
+CREATE INDEX pgweb_idx ON pgweb USING GIN (to_tsvector('english', title || ' ' || body));
 ```
 
 Another approach is to create a separate `tsvector` column to hold the output of `to_tsvector`. This example is a concatenation of title and body, using `coalesce` to ensure that one field will still be indexed when the other is NULL:
 
 ```
-ALTER TABLE pgweb ADD COLUMN textsearchable_index_col tsvector;
-UPDATE pgweb SET textsearchable_index_col =
-     to_tsvector('english', coalesce(title,'') || ' ' || coalesce(body,''));
+ALTER TABLE pgweb 
+    ADD COLUMN textsearchable_index_col tsvector
+        GENERATED ALWAYS AS (to_tsvector('english', coalesce(title, '') || ' ' || coalesce(body, ''))) STORED;
 ```
 
 Then we create a GIN index to speed up the search:
 
 ```
-CREATE INDEX textsearch_idx ON pgweb USING gin(textsearchable_index_col);
+CREATE INDEX textsearch_idx ON pgweb USING GIN (textsearchable_index_col);
 ```
 
 Now we are ready to perform a fast full text search:

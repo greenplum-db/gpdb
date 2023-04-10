@@ -23,6 +23,7 @@
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/exception.h"
 #include "naucrates/md/CDXLColStats.h"
+#include "naucrates/md/CDXLExtStatsInfo.h"
 #include "naucrates/md/CDXLRelStats.h"
 #include "naucrates/md/CMDTypeBoolGPDB.h"
 #include "naucrates/md/CMDTypeInt4GPDB.h"
@@ -188,6 +189,17 @@ CMDProviderMemory::GetMDObjDXLStr(CMemoryPool *mp,
 				a_pmdname.Reset();
 				a_pstrResult = CDXLUtils::SerializeMDObj(
 					mp, a_pdxlcolstats.Value(), true /*fSerializeHeaders*/,
+					false /*findent*/);
+				break;
+			}
+			case IMDId::EmdidExtStatsInfo:
+			{
+				mdid->AddRef();
+				CAutoRef<CDXLExtStatsInfo> a_pdxlrelstats;
+				a_pdxlrelstats =
+					CDXLExtStatsInfo::CreateDXLDummyExtStatsInfo(mp, mdid);
+				a_pstrResult = CDXLUtils::SerializeMDObj(
+					mp, a_pdxlrelstats.Value(), true /*fSerializeHeaders*/,
 					false /*findent*/);
 				break;
 			}

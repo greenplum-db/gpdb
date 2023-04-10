@@ -24,7 +24,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE c > 12 OR d > 13;
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
       <dxl:TraceFlags Value="103027,102074,102146,102120,103001,103014,103015,103022,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -50,7 +50,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE c > 12 OR d > 13;
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="20"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Relation Mdid="6.16648.1.0" Name="foo" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="5,6,4" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.16648.1.0" Name="foo" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="5,6,4" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -84,7 +84,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE c > 12 OR d > 13;
           <dxl:Partition Mdid="6.16648002.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.16648001.1.0" Name="foo_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="5,6,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16648001.1.0" Name="foo_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="5,6,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -129,7 +129,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE c > 12 OR d > 13;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.16648002.1.0" Name="foo_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="5,6,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16648002.1.0" Name="foo_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="5,6,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -265,7 +265,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE c > 12 OR d > 13;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.16678.1.0" Name="foo_1_prt_p2" Rows="10000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.16678.1.0" Name="foo_1_prt_p2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16678.1.0" Name="foo_1_prt_p2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

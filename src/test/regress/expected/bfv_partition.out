@@ -698,7 +698,7 @@ create table mpp3058 (a char(1), b date, d char(3))
   (           
     partition aa start ('2008-01-01') end ('2009-01-01') every( '1 day')  
      );
-ERROR:  operator is not unique: date pg_catalog.+ unknown
+ERROR:  operator is not unique: date + unknown
 LINE 5: ...aa start ('2008-01-01') end ('2009-01-01') every( '1 day')  
                                                              ^
 HINT:  Could not choose a best candidate operator. You might need to add explicit type casts.
@@ -1246,7 +1246,7 @@ alter table mpp3816 add column AAA int;
 alter table mpp3816 add column BBB int;
 alter table mpp3816 drop column BBB;
 alter table mpp3816 drop column startDate;
-ERROR:  cannot drop column named in partition key
+ERROR:  cannot drop column "startdate" because it is part of the partition key of relation "mpp3816"
 drop table mpp3816;
 CREATE TABLE mpp3762_cities (
         city     varchar(80) primary key,
@@ -1315,7 +1315,6 @@ drop table mpp4582;
 -- commands don't vary depending on current user.
 DROP USER IF EXISTS mpp3641_user;
 CREATE USER mpp3641_user;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 GRANT ALL ON SCHEMA bfv_partition TO mpp3641_user;
 SET ROLE mpp3641_user;
 CREATE TABLE mpp3641a (

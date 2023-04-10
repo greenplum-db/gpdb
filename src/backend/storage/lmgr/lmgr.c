@@ -499,6 +499,31 @@ UnlockRelationForExtension(Relation relation, LOCKMODE lockmode)
 }
 
 /*
+ *		LockDatabaseFrozenIds
+ *
+ * This allows one backend per database to execute vac_update_datfrozenxid().
+ */
+void
+LockDatabaseFrozenIds(LOCKMODE lockmode)
+{
+	LOCKTAG		tag;
+
+	SET_LOCKTAG_DATABASE_FROZEN_IDS(tag, MyDatabaseId);
+
+	(void) LockAcquire(&tag, lockmode, false, false);
+}
+
+void
+UnLockDatabaseFrozenIds(LOCKMODE lockmode)
+{
+	LOCKTAG		tag;
+
+	SET_LOCKTAG_DATABASE_FROZEN_IDS(tag, MyDatabaseId);
+
+	LockRelease(&tag, lockmode, false);
+}
+
+/*
  *		LockPage
  *
  * Obtain a page-level lock.  This is currently used by some index access
@@ -956,9 +981,10 @@ XactLockTableWaitErrorCb(void *arg)
  * To do this, obtain the current list of lockers, and wait on their VXIDs
  * until they are finished.
  *
- * Note we don't try to acquire the locks on the given locktags, only the VXIDs
- * of its lock holders; if somebody grabs a conflicting lock on the objects
- * after we obtained our initial list of lockers, we will not wait for them.
+ * Note we don't try to acquire the locks on the given locktags, only the
+ * VXIDs and XIDs of their lock holders; if somebody grabs a conflicting lock
+ * on the objects after we obtained our initial list of lockers, we will not
+ * wait for them.
  */
 void
 WaitForLockersMultiple(List *locktags, LOCKMODE lockmode, bool progress)
@@ -990,8 +1016,7 @@ WaitForLockersMultiple(List *locktags, LOCKMODE lockmode, bool progress)
 
 	/*
 	 * Note: GetLockConflicts() never reports our own xid, hence we need not
-	 * check for that.  Also, prepared xacts are not reported, which is fine
-	 * since they certainly aren't going to do anything anymore.
+	 * check for that.  Also, prepared xacts are reported and awaited.
 	 */
 
 	/* Finally wait for each such transaction to complete */
@@ -1001,16 +1026,14 @@ WaitForLockersMultiple(List *locktags, LOCKMODE lockmode, bool progress)
 
 		while (VirtualTransactionIdIsValid(*lockholders))
 		{
-			/*
-			 * If requested, publish who we're going to wait for.  This is not
-			 * 100% accurate if they're already gone, but we don't care.
-			 */
+			/* If requested, publish who we're going to wait for. */
 			if (progress)
 			{
 				PGPROC	   *holder = BackendIdGetProc(lockholders->backendId);
 
-				pgstat_progress_update_param(PROGRESS_WAITFOR_CURRENT_PID,
-											 holder->pid);
+				if (holder)
+					pgstat_progress_update_param(PROGRESS_WAITFOR_CURRENT_PID,
+												 holder->pid);
 			}
 			VirtualXactLock(*lockholders, true);
 			lockholders++;
@@ -1199,6 +1222,11 @@ DescribeLockTag(StringInfo buf, const LOCKTAG *tag)
 			appendStringInfo(buf,
 							 _("extension of relation %u of database %u"),
 							 tag->locktag_field2,
+							 tag->locktag_field1);
+			break;
+		case LOCKTAG_DATABASE_FROZEN_IDS:
+			appendStringInfo(buf,
+							 _("pg_database.datfrozenxid of database %u"),
 							 tag->locktag_field1);
 			break;
 		case LOCKTAG_PAGE:

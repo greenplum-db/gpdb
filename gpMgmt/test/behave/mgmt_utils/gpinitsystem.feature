@@ -330,5 +330,6 @@ Feature: gpinitsystem tests
          Then gpinitsystem should return a return code of 0
          #Verify entries in the gp_segment_configuration as expected
          And verify that cluster config has host-name populated correctly
-         #restore hosts file
-         And the user runs command "sudo mv -f /etc/hosts_orig /etc/hosts; rm -f /tmp/clusterConfigFile-1; rm -f /tmp/hostfile--1"
+         #restore hosts file, cleanup of hostlist, config file
+         And restore /etc/hosts file and cleanup hostlist file
+

@@ -150,6 +150,7 @@ extern void LWLockRelease(LWLock *lock);
 extern void LWLockReleaseClearVar(LWLock *lock, uint64 *valptr, uint64 val);
 extern void LWLockReleaseAll(void);
 extern bool LWLockHeldByMe(LWLock *lock);
+extern bool LWLockAnyHeldByMe(LWLock *lock, int nlocks, size_t stride);
 extern bool LWLockHeldByMeInMode(LWLock *lock, LWLockMode mode);
 
 extern bool LWLockWaitForVar(LWLock *lock, uint64 *valptr, uint64 oldval, uint64 *newval);
@@ -195,13 +196,13 @@ extern void LWLockInitialize(LWLock *lock, int tranche_id);
  */
 typedef enum BuiltinTrancheIds
 {
-	LWTRANCHE_CLOG_BUFFERS = NUM_INDIVIDUAL_LWLOCKS,
-	LWTRANCHE_COMMITTS_BUFFERS,
-	LWTRANCHE_SUBTRANS_BUFFERS,
-	LWTRANCHE_MXACTOFFSET_BUFFERS,
-	LWTRANCHE_MXACTMEMBER_BUFFERS,
-	LWTRANCHE_ASYNC_BUFFERS,
-	LWTRANCHE_OLDSERXID_BUFFERS,
+	LWTRANCHE_XACT_BUFFER = NUM_INDIVIDUAL_LWLOCKS,
+	LWTRANCHE_COMMITTS_BUFFER,
+	LWTRANCHE_SUBTRANS_BUFFER,
+	LWTRANCHE_MULTIXACTOFFSET_BUFFER,
+	LWTRANCHE_MULTIXACTMEMBER_BUFFER,
+	LWTRANCHE_NOTIFY_BUFFER,
+	LWTRANCHE_SERIAL_BUFFER,
 	LWTRANCHE_WAL_INSERT,
 	LWTRANCHE_BUFFER_CONTENT,
 	LWTRANCHE_BUFFER_IO_IN_PROGRESS,

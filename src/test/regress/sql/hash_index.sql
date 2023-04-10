@@ -1,3 +1,4 @@
+set optimizer_trace_fallback=on;
 --
 -- HASH_INDEX
 -- grep 843938989 hash.data
@@ -202,3 +203,5 @@ CREATE INDEX hash_f8_index2 ON hash_f8_heap USING hash (random float8_ops)
 	WITH (fillfactor=9);
 CREATE INDEX hash_f8_index2 ON hash_f8_heap USING hash (random float8_ops)
 	WITH (fillfactor=101);
+
+reset optimizer_trace_fallback;

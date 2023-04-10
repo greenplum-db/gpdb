@@ -144,14 +144,16 @@ select count(*) as all_tuples from sto_altap2;
 set gp_select_invisible=false;
 
 -- Check that visimaps were created properly
-select distinct a.visimaprelid is not NULL, a.visimapidxid is not NULL
- from pg_appendonly a inner join pg_class c on a.relid = c.oid and
+select distinct a.visimaprelid is not NULL, i.indexrelid is not NULL
+ from pg_appendonly a inner join pg_class c on a.relid = c.oid 
+ inner join pg_index i on a.visimaprelid = i.indrelid and
  c.relname like 'sto_alt%';
 
 -- Drop partition table, check pg_appendonly
 drop table sto_altap2;
-select distinct a.visimaprelid is NULL, a.visimapidxid is NULL
- from pg_appendonly a inner join pg_class c on a.relid = c.oid and
+select distinct a.visimaprelid is not NULL, i.indexrelid is not NULL
+ from pg_appendonly a inner join pg_class c on a.relid = c.oid 
+ inner join pg_index i on a.visimaprelid = i.indrelid and
  c.relname like 'sto_altap2%';
 
 -- Validate that the state needed by appendoptimized AM is correctly

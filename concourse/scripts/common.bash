@@ -33,6 +33,102 @@ function install_gpdb() {
     tar -xzf bin_gpdb/bin_gpdb.tar.gz -C /usr/local/greenplum-db-devel
 }
 
+# In a pipeline for tests with asserts, standard LLVM is replaced to custom one
+# built with asserts on, so JIT-ed code can benefit from the assertion checks
+# just like other parts.
+#
+# Note: the assertion mode of LLVM should keep synced between build and runtime.
+# A mismatch would fail the execution of program with libLLVM dependency
+# (due to different ABI and LLVM_ABI_BREAKING_CHECKS)
+#
+# Note2: clang also has libLLVM as its runtime dependencies, the standard libLLVM
+# must be preserved and applied to clang in build stage.
+#
+function setup_llvm() {
+
+    # only setup custom llvm in pipeline with asserts on
+    if [[ "${CONFIGURE_FLAGS}" =~ enable-cassert ]];then
+
+        # only when custom llvm is provided (the build stage and tests with JIT on) 
+        [ -d llvm-with-asserts-packages ] || return 0
+
+        echo "installing llvm with asserts"
+        pushd llvm-with-asserts-packages
+
+        # backup original llvm libs
+        local backup_libdir=$PWD/lib.orig
+        local assertion_mode=$(llvm-config --assertion-mode)
+        if [ "$assertion_mode" = "OFF" ];then
+            mkdir -p "$backup_libdir"
+            local libfiles=$(llvm-config --libfiles)
+            cp -t $backup_libdir $libfiles
+        fi
+
+        # fix dependency of standard llvm for clang
+        local clang_path=$(which clang)
+        if [ ! -e ${clang_path}.orig ];then
+            mv ${clang_path} ${clang_path}.orig
+        fi
+        cat >$clang_path <<EOF
+#!/bin/bash
+export LD_LIBRARY_PATH=$PWD/lib.orig/\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}
+exec clang.orig \$@
+EOF
+        chmod +x $clang_path
+
+        # version check: replace llvm with mismatched version is not expected
+        local installed_version=$(rpm -q --queryformat='%{version}' llvm)
+        local installed_release=$(rpm -q --queryformat='%{release}' llvm |grep -Po '^\d+')
+        if [ -z "$installed_version" -o -z "$installed_release" ];then
+            echo "failed to get installed llvm version info"
+            exit 1
+        fi
+
+        echo "extracting llvm packages:"
+        tar -xzvf llvm-with-asserts-*.tar.gz
+
+        local custom_llvm_pkg=$(find ./ -name 'llvm-[0-9]*.rpm')
+        local custom_version=$(rpm -q --queryformat='%{version}' $custom_llvm_pkg)
+        local custom_release=$(rpm -q --queryformat='%{release}' $custom_llvm_pkg |grep -Po '^\d+')
+        if [ "$custom_version" != "$installed_version" -o "$custom_release" != "$installed_release" ];then
+            echo "llvm version not synced: installed $installed_version-$installed_release, custom $custom_version-$custom_release"
+            exit 1
+        fi
+
+        # replace llvm:
+
+        local llvm_package_list
+        local pkg pkg_custom
+        local eflag
+        for pkg in $(rpm -qa --queryformat='%{name}-%{version}\n' |grep llvm);do
+            [[ "$pkg" =~ ^llvm- ]] || continue
+            pkg_custom=$(echo ./$pkg-*.rpm)
+            if [ -z "$pkg_custom" -o ! -f "$pkg_custom" ];then
+                echo "$pkg not found in custom llvm packages"
+                eflag=1
+            else
+                llvm_package_list="$llvm_package_list $pkg_custom"
+            fi
+        done
+        if [ -n "$eflag" ];then
+            echo "failed to find all llvm packages wanted"
+            exit 1
+        fi
+
+        yum install -y $llvm_package_list
+
+        # check if llvm assertion is ON now
+        assertion_mode=$(llvm-config --assertion-mode)
+        if [ "$assertion_mode" = "OFF" ];then
+            echo "llvm assertion is still not enabled"
+            exit 1
+        fi
+
+        popd
+    fi
+}
+
+
 function setup_configure_vars() {
     # We need to add GPHOME paths for configure to check for packaged
     # libraries (e.g. ZStandard).
@@ -46,13 +142,14 @@ function configure() {
     # The full set of configure options which were used for building the
     # tree must be used here as well since the toplevel Makefile depends
     # on these options for deciding what to test. Since we don't ship
-    ./configure --prefix=/usr/local/greenplum-db-devel --disable-orca --enable-gpcloud --enable-mapreduce --enable-orafce --enable-tap-tests --with-gssapi --with-libxml --with-openssl --with-perl --with-python --with-uuid=e2fs PYTHON=python3 PKG_CONFIG_PATH="${GPHOME}/lib/pkgconfig" ${CONFIGURE_FLAGS}
+    ./configure --prefix=/usr/local/greenplum-db-devel --disable-orca --enable-gpcloud --enable-mapreduce --enable-orafce --enable-tap-tests --with-gssapi --with-libxml --with-openssl --with-perl --with-python --with-uuid=e2fs --with-llvm --with-zstd PYTHON=python3 PKG_CONFIG_PATH="${GPHOME}/lib/pkgconfig" ${CONFIGURE_FLAGS}
 
     popd
 }
 
 function install_and_configure_gpdb() {
     install_gpdb
+    setup_llvm
     setup_configure_vars
     configure
 }

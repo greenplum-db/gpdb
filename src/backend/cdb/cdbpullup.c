@@ -95,7 +95,7 @@ pullUpExpr_mutator(Node *node, void *context)
 		/* Is targetlist a List of TargetEntry?  (Plan nodes use this format) */
 		if (IsA(linitial(ctx->targetlist), TargetEntry))
 		{
-			tle = tlist_member((Expr *) var, ctx->targetlist);
+			tle = tlist_member_ignore_relabel((Expr *) var, ctx->targetlist);
 
 			/* Fail if P's result does not include this column. */
 			if (!tle)

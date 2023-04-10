@@ -18,6 +18,9 @@ OBJS = resgroup.o resgroup_helper.o
 ifeq ($(PORTNAME),linux)
 OBJS += cgroup.o
 OBJS += cgroup-ops-linux-v1.o
+OBJS += cgroup-ops-linux-v2.o
+else
+OBJS += cgroup-ops-dummy.o
 endif
 
 include $(top_srcdir)/src/backend/common.mk

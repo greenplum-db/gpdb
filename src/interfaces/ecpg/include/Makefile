@@ -2,9 +2,8 @@ subdir = src/interfaces/ecpg/include
 top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
 
-override CPPFLAGS := -DFRONTEND \
-	-I../include -I$(top_srcdir)/src/interfaces/ecpg/include \
-	-I$(libpq_srcdir) -I$(top_builddir)/src/port $(CPPFLAGS)
+override CPPFLAGS := -I../include -I$(top_srcdir)/src/interfaces/ecpg/include \
+	-I$(libpq_srcdir) -I$(top_builddir)/src/port -DFRONTEND $(CPPFLAGS)
 
 informix_esql_dir = $(pkgincludedir)/informix/esql
 ecpg_config_h = $(top_builddir)/src/interfaces/ecpg/include/ecpg_config.h

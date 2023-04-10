@@ -1517,6 +1517,9 @@ SetDefaultACL(InternalDefaultACL *iacls)
 		ReleaseSysCache(tuple);
 
 	table_close(rel, RowExclusiveLock);
+
+	/* prevent error when processing duplicate objects */
+	CommandCounterIncrement();
 }
 
 

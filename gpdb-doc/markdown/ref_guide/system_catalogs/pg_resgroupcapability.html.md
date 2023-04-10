@@ -1,6 +1,6 @@
 # pg_resgroupcapability 
 
-**Note:** The `pg_resgroupcapability` system catalog table is valid only when resource group-based resource management is active.
+> **Note** The `pg_resgroupcapability` system catalog table is valid only when resource group-based resource management is active.
 
 The `pg_resgroupcapability` system catalog table contains information about the capabilities and limits of defined Greenplum Database resource groups. You can join this table to the [pg\_resgroup](pg_resgroup.html) table by resource group object ID.
 

@@ -6,7 +6,7 @@ Describes how to prepare your operating system environment for Greenplum Databas
 
 Perform the following tasks in order:
 
-1.  Make sure your host systems meet the requirements described in [Platform Requirements](platform-requirements.html).
+1.  Make sure your host systems meet the requirements described in [On-Premise Hardware Requirements](./platform-requirements-overview.html#on-prem).
 2.  [Deactivate or configure SELinux.](#topic_sqj_lt1_nfb)
 3.  [Deactivate or configure firewall software.](#topic_et2_y22_4nb)
 4.  [Set the required operating system parameters.](#topic3)
@@ -15,25 +15,25 @@ Perform the following tasks in order:
 
 Unless noted, these tasks should be performed for *all* hosts in your Greenplum Database array \(coordinator, standby coordinator, and segment hosts\).
 
-The Greenplum Database host naming convention for the coordinator host is `mdw` and for the standby coordinator host is `smdw`.
+The Greenplum Database host naming convention for the coordinator host is `cdw` and for the standby coordinator host is `scdw`.
 
 The segment host naming convention is sdwN where sdw is a prefix and N is an integer. For example, segment host names would be `sdw1`, `sdw2` and so on. NIC bonding is recommended for hosts with multiple interfaces, but when the interfaces are not bonded, the convention is to append a dash \(`-`\) and number to the host name. For example, `sdw1-1` and `sdw1-2` are the two interface names for host `sdw1`.
 
-For information about running Tanzu Greenplum Database in the cloud see *Cloud Services* in the [Tanzu Greenplum Partner Marketplace](https://pivotal.io/pivotal-greenplum/greenplum-partner-marketplace).
+For information about running VMware Greenplum Database in the cloud see *Cloud Services* in the [VMware Greenplum Partner Marketplace](https://pivotal.io/pivotal-greenplum/greenplum-partner-marketplace).
 
-**Important:** When data loss is not acceptable for a Greenplum Database cluster, Greenplum coordinator and segment mirroring is recommended. If mirroring is not enabled then Greenplum stores only one copy of the data, so the underlying storage media provides the only guarantee for data availability and correctness in the event of a hardware failure.
+> **Important** When data loss is not acceptable for a Greenplum Database cluster, Greenplum coordinator and segment mirroring is recommended. If mirroring is not enabled then Greenplum stores only one copy of the data, so the underlying storage media provides the only guarantee for data availability and correctness in the event of a hardware failure.
 
-The VMware Tanzu Greenplum on vSphere virtualized environment ensures the enforcement of anti-affinity rules required for Greenplum mirroring solutions and fully supports mirrorless deployments. Other virtualized or containerized deployment environments are generally not supported for production use unless both Greenplum master and segment mirroring are enabled.
+The VMware Greenplum on vSphere virtualized environment ensures the enforcement of anti-affinity rules required for Greenplum mirroring solutions and fully supports mirrorless deployments. Other virtualized or containerized deployment environments are generally not supported for production use unless both Greenplum coordinator and segment mirroring are enabled.
 
-**Note:** For information about upgrading Tanzu Greenplum from a previous version, see the *Tanzu Greenplum Database Release Notes* for the release that you are installing.
+> **Note** For information about upgrading VMware Greenplum from a previous version, see the *VMware Greenplum Database Release Notes* for the release that you are installing.
 
-**Note:** Automating the configuration steps described in this topic and [Installing the Greenplum Database Software](install_gpdb.html) with a system provisioning tool, such as Ansible, Chef, or Puppet, can save time and ensure a reliable and repeatable Greenplum Database installation.
+> **Note** Automating the configuration steps described in this topic and [Installing the Greenplum Database Software](install_gpdb.html) with a system provisioning tool, such as Ansible, Chef, or Puppet, can save time and ensure a reliable and repeatable Greenplum Database installation.
 
 **Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
 
 ## <a id="topic_sqj_lt1_nfb"></a>Deactivate or Configure SELinux 
 
-For all Greenplum Database host systems running RHEL or CentOS, SELinux must either be `Disabled` or configured to allow unconfined access to Greenplum processes, directories, and the gpadmin user.
+For all Greenplum Database host systems running RHEL/Oracle/Rocky Linux, SELinux must either be `Disabled` or configured to allow unconfined access to Greenplum processes, directories, and the gpadmin user.
 
 If you choose to deactivate SELinux:
 
@@ -62,31 +62,9 @@ If you choose to enable SELinux in `Enforcing` mode, then Greenplum processes an
 
 ## <a id="topic_et2_y22_4nb"></a>Deactivate or Configure Firewall Software 
 
-You should also deactivate firewall software such as `iptables` \(on systems such as RHEL 6.x and CentOS 6.x \), `firewalld` \(on systems such as RHEL 7.x and CentOS 7.x\), or `ufw` \(on Ubuntu systems, deactivated by default\). If firewall software is not deactivated, you must instead configure your software to allow required communication between Greenplum hosts.
+You should also deactivate firewall software such as `firewalld` \(on systems such as RHEL). If firewall software is not deactivated, you must instead configure your software to allow required communication between Greenplum hosts.
 
-To deactivate `iptables`:
-
-1.  As the root user, check the status of `iptables`:
-
-    ```
-    # /sbin/chkconfig --list iptables
-    ```
-
-    If `iptables` is deactivated, the command output is:
-
-    ```
-    iptables 0:off 1:off 2:off 3:off 4:off 5:off 6:off
-    ```
-
-2.  If necessary, run this command as root to deactivate `iptables`:
-
-    ```
-    /sbin/chkconfig iptables off
-    ```
-
-    You will need to reboot your system after applying the change.
-
-3.  For systems with `firewalld`, check the status of `firewalld` with the command:
+1. Check the status of `firewalld` with the command:
 
     ```
     # systemctl status firewalld
@@ -100,21 +78,18 @@ To deactivate `iptables`:
        Active: inactive (dead)
     ```
 
-4.  If necessary, run these commands as root to deactivate `firewalld`:
+2.  If necessary, run these commands as root to deactivate `firewalld`:
 
     ```
     # systemctl stop firewalld.service
     # systemctl deactivate firewalld.service
     ```
 
-
-If you decide to enable `iptables` with Greenplum Database for security purposes, see [Enabling iptables \(Optional\)](enable_iptables.html) for important considerations and example configurations.
-
 See the documentation for the firewall or your operating system for additional information.
 
 ## <a id="topic3"></a>Recommended OS Parameters Settings 
 
-Greenplum requires that certain Linux operating system \(OS\) parameters be set on all hosts in your Greenplum Database system \(masters and segments\).
+Greenplum requires that certain Linux operating system \(OS\) parameters be set on all hosts in your Greenplum Database system \(coordinators and segments\).
 
 In general, the following categories of system parameters need to be altered:
 
@@ -238,7 +213,7 @@ For Azure deployments with Greenplum Database avoid using port 65330; add the fo
 net.ipv4.ip_local_reserved_ports=65330 
 ```
 
-For additional requirements and recommendations for cloud deployments, see *[Greenplum Database Cloud Technical Recommendations](../cloud/gpdb-cloud-tech-rec.html)*.
+For additional requirements and recommendations for cloud deployments, see [Public Cloud Requirements](./platform-requirements-overview.html#public-cloud).
 
 **IP Fragmentation Settings**
 
@@ -300,7 +275,7 @@ Set the following parameters in the `/etc/security/limits.conf` file:
 * hard nproc 131072
 ```
 
-For Red Hat Enterprise Linux \(RHEL\) and CentOS systems, parameter values in the `/etc/security/limits.d/90-nproc.conf` file \(RHEL/CentOS 6\) or `/etc/security/limits.d/20-nproc.conf` file \(RHEL/CentOS 7\) override the values in the `limits.conf` file. Ensure that any parameters in the override file are set to the required value. The Linux module `pam_limits` sets user limits by reading the values from the `limits.conf` file and then from the override file. For information about PAM and user limits, see the documentation on PAM and `pam_limits`.
+For Red Hat Enterprise Linux \(RHEL\) systems, parameter values in the `/etc/security/limits.d/20-nproc.conf` file override the values in the `limits.conf` file. Ensure that any parameters in the override file are set to the required value. The Linux module `pam_limits` sets user limits by reading the values from the `limits.conf` file and then from the override file. For information about PAM and user limits, see the documentation on PAM and `pam_limits`.
 
 Run the `ulimit -u` command on each segment host to display the maximum number of processes that are available to each user. Validate that the return value is 131072.
 
@@ -327,13 +302,7 @@ To apply the changes to the live kernel, run the following command:
 
 ### <a id="xfs_mount"></a>XFS Mount Options 
 
-XFS is the preferred data storage file system on Linux platforms. Use the `mount` command with the following recommended XFS mount options for RHEL 7 and CentOS systems:
-
-```
-rw,nodev,noatime,nobarrier,inode64
-```
-
-The `nobarrier` option is not supported on RHEL 8 or Ubuntu systems. Use only the options:
+XFS is the preferred data storage file system on Linux platforms. Use the `mount` command with the following recommended XFS mount options for RHEL systems:
 
 ```
 rw,nodev,noatime,inode64
@@ -347,7 +316,7 @@ The XFS options can also be set in the `/etc/fstab` file. This example entry fro
 /dev/data /data xfs nodev,noatime,inode64 0 0
 ```
 
-**Note:** You must have root permission to edit the `/etc/fstab` file.
+> **Note** You must have root permission to edit the `/etc/fstab` file.
 
 ### <a id="disk_io_settings"></a>Disk I/O Settings 
 
@@ -379,7 +348,7 @@ The XFS options can also be set in the `/etc/fstab` file. This example entry fro
 
     See the manual page \(man\) for the `blockdev` command for more information about using that command \(`man blockdev` opens the man page\).
 
-    **Note:** The `blockdev --setra` command is not persistent. You must ensure the read-ahead value is set whenever the system restarts. How to set the value will vary based on your system.
+    > **Note** The `blockdev --setra` command is not persistent. You must ensure the read-ahead value is set whenever the system restarts. How to set the value will vary based on your system.
 
     One method to set the `blockdev` value at system startup is by adding the `/sbin/blockdev --setra` command in the `rc.local` file. For example, add this line to the `rc.local` file to set the read-ahead value for the disk `sdb`.
 
@@ -387,7 +356,7 @@ The XFS options can also be set in the `/etc/fstab` file. This example entry fro
     /sbin/blockdev --setra 16384 /dev/sdb
     ```
 
-    On systems that use systemd, you must also set the execute permissions on the `rc.local` file to enable it to run at startup. For example, on a RHEL/CentOS 7 system, this command sets execute permissions on the file.
+    On systems that use systemd, you must also set the execute permissions on the `rc.local` file to enable it to run at startup. For example, on a RHEL system, this command sets execute permissions on the file.
 
     ```
     # chmod +x /etc/rc.d/rc.local
@@ -448,9 +417,9 @@ The XFS options can also be set in the `/etc/fstab` file. This example entry fro
     # echo deadline > /sys/block/sbd/queue/scheduler
     ```
 
-    **Note:** Using the `echo` command to set the disk I/O scheduler policy is not persistent; you must ensure that you run the command whenever the system reboots. How to run the command will vary based on your system.
+    > **Note** Using the `echo` command to set the disk I/O scheduler policy is not persistent; you must ensure that you run the command whenever the system reboots. How to run the command will vary based on your system.
 
-    To specify the I/O scheduler at boot time on systems that use `grub2` such as RHEL 7.x or CentOS 7.x, use the system utility `grubby`. This command adds the parameter when run as `root`:
+    To specify the I/O scheduler at boot time on systems that use `grub2`, use the system utility `grubby`. This command adds the parameter when run as `root`:
 
     ```
     # grubby --update-kernel=ALL --args="elevator=deadline"
@@ -464,9 +433,9 @@ The XFS options can also be set in the `/etc/fstab` file. This example entry fro
     # grubby --info=ALL
     ```
 
-    Refer to your operating system documentation for more information about the `grubby` utility. If you used the `grubby` command to configure the disk scheduler on a RHEL or CentOS 7.x system and it does not update the kernels, see the [Note](#grubby_note) at the end of the section.
+    Refer to your operating system documentation for more information about the `grubby` utility. If you used the `grubby` command to configure the disk scheduler on a RHEL system and it does not update the kernels, see the [Note](#grubby_note) at the end of the section.
 
-    For additional information about configuring the disk scheduler, refer to the RedHat Enterprise Linux documentation for [RHEL 7](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/performance_tuning_guide/sect-red_hat_enterprise_linux-performance_tuning_guide-storage_and_file_systems-configuration_tools#sect-Red_Hat_Enterprise_Linux-Performance_Tuning_Guide-Configuration_tools-Setting_the_default_IO_scheduler) or [RHEL 8](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/monitoring_and_managing_system_status_and_performance/setting-the-disk-scheduler_monitoring-and-managing-system-status-and-performance). The Ubuntu wiki [IOSchedulers](https://wiki.ubuntu.com/Kernel/Reference/IOSchedulers) topic describes the I/O schedulers available on Ubuntu systems.
+    For additional information about configuring the disk scheduler, refer to the RedHat Enterprise Linux documentation for [RHEL 8](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/monitoring_and_managing_system_status_and_performance/setting-the-disk-scheduler_monitoring-and-managing-system-status-and-performance).
 
 
 ### <a id="networking"></a>Networking
@@ -495,7 +464,7 @@ kernel /vmlinuz-2.6.18-274.3.1.el5 ro root=LABEL=/
            initrd /initrd-2.6.18-274.3.1.el5.img
 ```
 
-On systems that use `grub2` such as RHEL 7.x or CentOS 7.x, use the system utility `grubby`. This command adds the parameter when run as root.
+On systems that use `grub2`, use the system utility `grubby`. This command adds the parameter when run as root.
 
 ```
 # grubby --update-kernel=ALL --args="transparent_hugepage=never"
@@ -520,7 +489,7 @@ For more information about Transparent Huge Pages or the `grubby` utility, see y
 
 ### <a id="ipc_object_removal"></a>IPC Object Removal 
 
-Deactivate IPC object removal for RHEL 7.2 or CentOS 7.2, or Ubuntu. The default `systemd` setting `RemoveIPC=yes` removes IPC connections when non-system user accounts log out. This causes the Greenplum Database utility `gpinitsystem` to fail with semaphore errors. Perform one of the following to avoid this issue.
+Deactivate IPC object removal. The default `systemd` setting `RemoveIPC=yes` removes IPC connections when non-system user accounts log out. This causes the Greenplum Database utility `gpinitsystem` to fail with semaphore errors. Perform one of the following to avoid this issue.
 
 -   When you add the `gpadmin` operating system user account to the coordinator node in [Creating the Greenplum Administrative User](#topic23), create the user as a system account.
 -   Deactivate `RemoveIPC`. Set this parameter in `/etc/systemd/logind.conf` on the Greenplum Database host systems.
@@ -542,7 +511,7 @@ Certain Greenplum Database management utilities including `gpexpand`, `gpinitsys
 
 To increase this connection threshold for your Greenplum Database system, update the SSH `MaxStartups` and `MaxSessions` configuration parameters in one of the `/etc/ssh/sshd_config` or `/etc/sshd_config` SSH daemon configuration files.
 
-**Note:** You must have root permission to edit these two files.
+> **Note** You must have root permission to edit these two files.
 
 If you specify `MaxStartups` and `MaxSessions` using a single integer value, you identify the maximum number of concurrent unauthenticated connections \(`MaxStartups`\) and maximum number of open shell, login, or subsystem sessions permitted per network connection \(`MaxSessions`\). For example:
 
@@ -568,7 +537,7 @@ For detailed information about SSH configuration options, refer to the SSH docum
 
 <a id="grubby_note"></a>
 
-**Note:** If the `grubby` command does not update the kernels of a RHEL 7.x or CentOS 7.x system, you can manually update all kernels on the system. For example, to add the parameter `transparent_hugepage=never` to all kernels on a system.
+> **Note** If the `grubby` command does not update the kernels of a RHEL 7.x or CentOS 7.x system, you can manually update all kernels on the system. For example, to add the parameter `transparent_hugepage=never` to all kernels on a system.
 
 1.  Add the parameter to the `GRUB_CMDLINE_LINUX` line in the file parameter in `/etc/default/grub`.
 
@@ -582,7 +551,7 @@ For detailed information about SSH configuration options, refer to the SSH docum
                   GRUB_DISABLE_RECOVERY="true"
     ```
 
-    **Note:** You must have root permission to edit the `/etc/default/grub` file.
+    > **Note** You must have root permission to edit the `/etc/default/grub` file.
 
 2.  As root, run the `grub2-mkconfig` command to update the kernels.
 
@@ -609,14 +578,14 @@ NTP on the segment hosts should be configured to use the coordinator host as the
 2.  On each segment host, log in as root and edit the `/etc/ntp.conf` file. Set the first `server` parameter to point to the coordinator host, and the second server parameter to point to the standby coordinator host. For example:
 
     ```
-    server mdw prefer
-    server smdw
+    server cdw prefer
+    server scdw
     ```
 
 3.  On the standby coordinator host, log in as root and edit the `/etc/ntp.conf` file. Set the first `server` parameter to point to the primary coordinator host, and the second server parameter to point to your data center's NTP time server. For example:
 
     ```
-    server mdw prefer
+    server cdw prefer
     server 10.6.220.20
     ```
 
@@ -631,7 +600,7 @@ NTP on the segment hosts should be configured to use the coordinator host as the
 
 Create a dedicated operating system user account on each node to run and administer Greenplum Database. This user account is named `gpadmin` by convention.
 
-**Important:** You cannot run the Greenplum Database server as `root`.
+> **Important** You cannot run the Greenplum Database server as `root`.
 
 The `gpadmin` user must have permission to access the services and directories required to install and run Greenplum Database.
 
@@ -641,11 +610,11 @@ You can optionally give the `gpadmin` user sudo privilege, so that you can easil
 
 The following steps show how to set up the `gpadmin` user on a host, set a password, create an SSH key pair, and \(optionally\) enable sudo capability. These steps must be performed as root on every Greenplum Database cluster host. \(For a large Greenplum Database cluster you will want to automate these steps using your system provisioning tools.\)
 
-**Note:** See [Example Ansible Playbook](ansible-example.html) for an example that shows how to automate the tasks of creating the `gpadmin` user and installing the Greenplum Database software on all hosts in the cluster.
+> **Note** See [Example Ansible Playbook](ansible-example.html) for an example that shows how to automate the tasks of creating the `gpadmin` user and installing the Greenplum Database software on all hosts in the cluster.
 
 1.  Create the `gpadmin` group and user.
 
-    **Note:** If you are installing Greenplum Database on RHEL 7.2 or CentOS 7.2 and want to deactivate IPC object removal by creating the `gpadmin` user as a system account, provide both the `-r` option \(create the user as a system account\) and the `-m` option \(create a home directory\) to the `useradd` command. On Ubuntu systems, you must use the `-m` option with the `useradd` command to create a home directory for a user.
+    > **Note** If you are installing Greenplum Database on RHEL 7.2 or CentOS 7.2 and want to deactivate IPC object removal by creating the `gpadmin` user as a system account, provide both the `-r` option \(create the user as a system account\) and the `-m` option \(create a home directory\) to the `useradd` command. On Ubuntu systems, you must use the `-m` option with the `useradd` command to create a home directory for a user.
 
     This example creates the `gpadmin` group, creates the `gpadmin` user as a system account with a home directory and as a member of the `gpadmin` group, and creates a password for the user.
 
@@ -657,9 +626,9 @@ The following steps show how to set up the `gpadmin` user on a host, set a passw
     Retype new password: <changeme>
     ```
 
-    **Note:** You must have root permission to create the `gpadmin` group and user.
+    > **Note** You must have root permission to create the `gpadmin` group and user.
 
-    **Note:** Make sure the `gpadmin` user has the same user id \(uid\) and group id \(gid\) numbers on each host to prevent problems with scripts or services that use them for identity or permissions. For example, backing up Greenplum databases to some networked filesy stems or storage appliances could fail if the `gpadmin` user has different uid or gid numbers on different segment hosts. When you create the `gpadmin` group and user, you can use the `groupadd -g` option to specify a gid number and the `useradd -u` option to specify the uid number. Use the command `id gpadmin` to see the uid and gid for the `gpadmin` user on the current host.
+    > **Note** Make sure the `gpadmin` user has the same user id \(uid\) and group id \(gid\) numbers on each host to prevent problems with scripts or services that use them for identity or permissions. For example, backing up Greenplum databases to some networked filesy stems or storage appliances could fail if the `gpadmin` user has different uid or gid numbers on different segment hosts. When you create the `gpadmin` group and user, you can use the `groupadd -g` option to specify a gid number and the `useradd -u` option to specify the uid number. Use the command `id gpadmin` to see the uid and gid for the `gpadmin` user on the current host.
 
 2.  Switch to the `gpadmin` user and generate an SSH key pair for the `gpadmin` user.
 
