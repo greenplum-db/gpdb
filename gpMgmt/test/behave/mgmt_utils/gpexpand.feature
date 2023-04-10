@@ -513,3 +513,22 @@ Feature: expand the cluster by adding more segments
         When the user runs gpexpand with a static inputfile for a single-node cluster with mirrors without ret code check
         Then gpexpand should return a return code of 0
         And gpexpand should print "One or more segments are either down or not in preferred role." to stdout
+
+    @gpexpand_no_mirrors
+	@gpexpand_segment
+    Scenario: Gpexpand should succeed when there has event trigger
+        Given the database is not running
+        And a working directory of the test as '/data/gpdata/gpexpand'
+        And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
+        And the cluster is generated with "1" primaries only
+        And database "gptest" exists
+        And the user runs psql with "-c 'create table t(a int)'" against database "gptest"
+        And the user runs psql with "-c 'create or replace function notcie_ddl() returns event_trigger as $$ begin raise notice 'command % is executed.', tg_tag; end $$ language plpgsql'" against database "gptest"
+		And the user runs psql with "-c 'create event trigger log_alter on ddl_command_end execute function notcie_ddl()'" against database "gptest"
+        And there are no gpexpand_inputfiles
+        And the cluster is setup for an expansion on hosts "localhost"
+        When the user runs gpexpand interview to add 1 new segment and 0 new host "ignored.host"
+        Then the number of segments have been saved
+        When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
+        Then verify that the cluster has 1 new segments
+		And the user runs psql with "-c 'alter table t add column b int'" against database "gptest"
