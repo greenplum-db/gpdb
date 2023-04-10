@@ -707,7 +707,7 @@ group by b;
                 <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
               </dxl:HashExpr>
             </dxl:HashExprList>
-            <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
+            <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="715.260000" Rows="2000000.000000" Width="8"/>
               </dxl:Properties>

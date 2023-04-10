@@ -263,8 +263,6 @@ _PG_fini(void)
 static void
 explain_ExecutorStart(QueryDesc *queryDesc, int eflags)
 {
-	instr_time		starttime;
-
 	/*
 	 * At the beginning of each top-level statement, decide whether we'll
 	 * sample this statement.  If nested-statement explaining is enabled,
@@ -298,9 +296,13 @@ explain_ExecutorStart(QueryDesc *queryDesc, int eflags)
 
 			queryDesc->instrument_options |= INSTRUMENT_CDB;
 
-			INSTR_TIME_SET_CURRENT(starttime);
-			queryDesc->showstatctx = cdbexplain_showExecStatsBegin(queryDesc,
-																   starttime);
+			if (queryDesc->showstatctx == NULL)
+			{
+				instr_time		starttime;
+				INSTR_TIME_SET_CURRENT(starttime);
+				queryDesc->showstatctx = cdbexplain_showExecStatsBegin(
+											queryDesc, starttime);
+			}
 		}
 	}
 

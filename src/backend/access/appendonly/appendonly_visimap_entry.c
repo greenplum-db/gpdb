@@ -129,7 +129,10 @@ AppendOnlyVisimap_GetAttrNotNull(HeapTuple t, TupleDesc td, int attr)
 void
 AppendOnlyVisiMapEnty_ReadData(AppendOnlyVisimapEntry *visiMapEntry, size_t dataSize)
 {
-	int			newWordCount;
+	/* the block count of (ondisk) bitstream */
+	int			onDiskBlockCount;
+	/* the word count of in-memory bitmapset */
+	int			bmsWordCount;
 
 	Assert(visiMapEntry);
 	Assert(CurrentMemoryContext == visiMapEntry->memoryContext);
@@ -156,21 +159,23 @@ AppendOnlyVisiMapEnty_ReadData(AppendOnlyVisimapEntry *visiMapEntry, size_t data
 	 * but I think it is reasonable to set it to NULLL to avoid similar issues.
 	 */
 	visiMapEntry->bitmap = NULL;
-	newWordCount =
-		BitmapDecompress_GetBlockCount(&decompressState);
-	if (newWordCount > 0)
+	BitmapDecompress_CalculateBlockCounts(&decompressState,
+										  &onDiskBlockCount,
+										  &bmsWordCount);
+
+	if (onDiskBlockCount > 0)
 	{
 		visiMapEntry->bitmap = palloc0(offsetof(Bitmapset, words) +
-									   (newWordCount * sizeof(bitmapword)));
-		visiMapEntry->bitmap->nwords = newWordCount;
+									   (bmsWordCount * sizeof(bitmapword)));
+		visiMapEntry->bitmap->nwords = bmsWordCount;
 		BitmapDecompress_Decompress(&decompressState,
-									visiMapEntry->bitmap->words,
-									newWordCount);
+									(uint32 *)visiMapEntry->bitmap->words,
+									onDiskBlockCount);
 	}
-	else if (newWordCount != 0)
+	else if (onDiskBlockCount != 0)
 	{
 		elog(ERROR,
-			 "illegal visimap block count: visimap block count %d", newWordCount);
+			 "illegal visimap block count: visimap block count %d", onDiskBlockCount);
 	}
 
 }
@@ -264,23 +269,32 @@ AppendOnlyVisimapEntry_GetHiddenTupleCount(
 void
 AppendOnlyVisimapEntry_WriteData(AppendOnlyVisimapEntry *visiMapEntry)
 {
-	int			bitmapSize,
-				compressedBitmapSize;
+	/* bitmap size, in bytes */
+	int	bitmapSize;
+	int	compressedBitmapSize;
+	/* word count in 64bit or 32bit words for in-memory bms */
+	int	bmsWordCount;
+	/* block count always in 32bit (after conversion if necessary) */
+	int	blockCount;
 
 	Assert(visiMapEntry);
 	Assert(CurrentMemoryContext == visiMapEntry->memoryContext);
 	Assert(AppendOnlyVisimapEntry_IsValid(visiMapEntry));
 
-	bitmapSize = (visiMapEntry->bitmap ? (visiMapEntry->bitmap->nwords * sizeof(bitmapword)) : 0);
+	BitmapCompress_CalculateBlockCounts(visiMapEntry->bitmap,
+										&blockCount,
+										&bmsWordCount);
+	bitmapSize = sizeof(uint32) * blockCount;
 	bitmapSize += BITMAP_COMPRESSION_HEADER_SIZE;
+	Assert(bmsWordCount <= APPENDONLY_VISIMAP_MAX_BITMAP_WORD_COUNT);
 
 	Assert(visiMapEntry->data);
 	Assert(APPENDONLY_VISIMAP_DATA_BUFFER_SIZE >= bitmapSize);
 	visiMapEntry->data->version = 1;
 
 	compressedBitmapSize = Bitmap_Compress(BITMAP_COMPRESSION_TYPE_DEFAULT,
-										   (visiMapEntry->bitmap ? visiMapEntry->bitmap->words : NULL),
-										   (visiMapEntry->bitmap ? visiMapEntry->bitmap->nwords : 0),
+										   (visiMapEntry->bitmap ? (uint32*)visiMapEntry->bitmap->words : NULL),
+										   blockCount,
 										   visiMapEntry->data->data,
 										   bitmapSize);
 	Assert(compressedBitmapSize >= BITMAP_COMPRESSION_HEADER_SIZE);
@@ -499,6 +513,9 @@ AppendOnlyVisimapEntry_GetMinimalSizeToCover(int64 offset)
 	minSize |= minSize >> 8;
 	minSize |= minSize >> 16;
 	minSize++;
+
+	Assert(minSize <= APPENDONLY_VISIMAP_MAX_BITMAP_WORD_COUNT);
+
 	return minSize;
 }
 

@@ -94,11 +94,11 @@ ERROR:  resource group "rg_test_group" does not exist
 --end_ignore
 
 SELECT * FROM gp_toolkit.gp_resgroup_config;
- groupid | groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority | cpuset 
----------+---------------+-------------+----------------------+-------------------+--------
- 6437    | default_group | 20          | 20                   | 100               | -1     
- 6441    | system_group  | 0           | 10                   | 100               | -1     
- 6438    | admin_group   | 2           | 10                   | 100               | -1     
+ groupid | groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority | cpuset | memory_limit 
+---------+---------------+-------------+----------------------+-------------------+--------+--------------
+ 6437    | default_group | 20          | 20                   | 100               | -1     | -1           
+ 6438    | admin_group   | 10          | 10                   | 100               | -1     | -1           
+ 6441    | system_group  | 0           | 10                   | 100               | -1     | -1           
 (3 rows)
 
 -- negative
@@ -133,7 +133,7 @@ ERROR:  can't specify both cpu_hard_quota_limit and cpuset
 
 -- cpu_soft_priority can't be negative value
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=5, cpu_soft_priority=-100);
-ERROR:  cpu_soft_priority range is [1, +∞]
+ERROR:  cpu_soft_priority range is [1, 500]
 
 -- can't specify invalid cpuset
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='');
@@ -218,6 +218,8 @@ DROP RESOURCE GROUP default_group;
 ERROR:  cannot drop default resource group "default_group"
 DROP RESOURCE GROUP admin_group;
 ERROR:  cannot drop default resource group "admin_group"
+DROP RESOURCE GROUP system_group;
+ERROR:  cannot drop default resource group "system_group"
 DROP RESOURCE GROUP none;
 ERROR:  resource group "none" does not exist
 
@@ -240,30 +242,30 @@ SELECT groupname,concurrency,cpu_hard_quota_limit, cpu_soft_priority FROM gp_too
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
 DROP
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=1000);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=500);
 CREATE
 SELECT groupname,concurrency,cpu_hard_quota_limit, cpu_soft_priority FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
  groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority 
 ---------------+-------------+----------------------+-------------------
- rg_test_group | 20          | 10                   | 1000              
+ rg_test_group | 20          | 10                   | 500               
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
 DROP
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=-1, cpu_soft_priority=1000);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=-1, cpu_soft_priority=500);
 CREATE
 SELECT groupname,concurrency,cpu_hard_quota_limit, cpu_soft_priority FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
  groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority 
 ---------------+-------------+----------------------+-------------------
- rg_test_group | 20          | -1                   | 1000              
+ rg_test_group | 20          | -1                   | 500               
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
 DROP
-CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0', cpu_soft_priority=1000);
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0', cpu_soft_priority=500);
 CREATE
 SELECT groupname,concurrency,cpu_hard_quota_limit, cpu_soft_priority FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
  groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority 
 ---------------+-------------+----------------------+-------------------
- rg_test_group | 20          | -1                   | 1000              
+ rg_test_group | 20          | -1                   | 500               
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
 DROP
@@ -309,13 +311,15 @@ ERROR:  cpu cores 0 are used by resource group rg_test_group1
 DROP RESOURCE GROUP rg_test_group1;
 DROP
 
--- negative: cpu_soft_priority should be in [1, +∞]
+-- negative: cpu_soft_priority should be in [1, 500]
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=0);
-ERROR:  cpu_soft_priority range is [1, +∞]
+ERROR:  cpu_soft_priority range is [1, 500]
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=-1);
-ERROR:  cpu_soft_priority range is [1, +∞]
+ERROR:  cpu_soft_priority range is [1, 500]
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=-1024);
-ERROR:  cpu_soft_priority range is [1, +∞]
+ERROR:  cpu_soft_priority range is [1, 500]
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=501);
+ERROR:  cpu_soft_priority range is [1, 500]
 
 -- positive: cpu_hard_quota_limit should be in [1, 100]
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=60);
@@ -331,12 +335,12 @@ CREATE
 DROP RESOURCE GROUP rg_test_group;
 DROP
 
--- positive: cpu_soft_priority should be in [1, +∞]
+-- positive: cpu_soft_priority should be in [1, 500]
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=100);
 CREATE
 DROP RESOURCE GROUP rg_test_group;
 DROP
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=10000);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=500);
 CREATE
 DROP RESOURCE GROUP rg_test_group;
 DROP

@@ -832,18 +832,3 @@ heapBlockGetCurrentAosegStart(BlockNumber heapBlk)
 {
 	return heapBlk & 0xFE000000;
 }
-
-/*
- * Get the start block number of the current aoseg by seg number.
- *
- * append-optimized table logically has 128 segment files. The highest 7 bits
- * of the logical Tid represent the segment file number. So, segment file number
- * with zero after is the start block number in a segment file.
- */
-BlockNumber
-segnoGetCurrentAosegStart(int segno)
-{
-	BlockNumber blk;
-	blk = segno;
-	return blk << 25;
-}

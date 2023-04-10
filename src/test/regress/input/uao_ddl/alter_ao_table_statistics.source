@@ -11,8 +11,8 @@ insert into sto_alt_uao2_stats values ('1_zero', 1, '1_zero', 1);
 select * from sto_alt_uao2_stats order by bigint_col;
 -- Alter column  set statistics
 Alter table sto_alt_uao2_stats  alter column bigint_col set statistics 3;
-SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND
- visimapidxid is not NULL AND relid='sto_alt_uao2_stats'::regclass;
+SELECT count(i.indexrelid) = 1 AS VisimapPresent  FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND
+ a.relid='sto_alt_uao2_stats'::regclass;
 select * from sto_alt_uao2_stats order by bigint_col;
 update sto_alt_uao2_stats set numeric_col = 1 where text_col = '1_zero';
 insert into sto_alt_uao2_stats select i||' abc', i, 'pqr '||i, i from generate_series(1,100)i;

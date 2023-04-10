@@ -162,3 +162,4 @@ test: heap-repeatable-read-vacuum
 test: ao-repeatable-read-vacuum
 
 test: ao-insert-eof create_index_hot udf-insert-deadlock heap-repeatable-read ao-repeatable-read
+test: vacuum-ao-concurrent-drop

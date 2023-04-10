@@ -357,9 +357,6 @@ CPhysicalSpool::FValidContext(CMemoryPool *, COptimizationContext *poc,
 	GPOS_ASSERT(nullptr != pccBest);
 	CDrvdPropPlan *pdpplanChild = pccBest->Pdpplan();
 
-	// GPDB_12_MERGE_FIXME: Check part propagation spec
-#if 0
-
 	// partition selections that happen outside of a physical spool does not do
 	// any good on rescan: a physical spool blocks the rescan from the entire
 	// subtree (in particular, any dynamic scan) underneath it. That means when
@@ -371,7 +368,7 @@ CPhysicalSpool::FValidContext(CMemoryPool *, COptimizationContext *poc,
 	// won't be able to influence inner side of the nested loop join as intended
 	// ("blocked" by the spool):
 
-	// +--CPhysicalMotionGather(master)
+	// +--CPhysicalMotionGather(coordinator)
 	//    +--CPhysicalInnerNLJoin
 	//       |--CPhysicalPartitionSelector
 	//       |  +--CPhysicalMotionBroadcast
@@ -387,11 +384,11 @@ CPhysicalSpool::FValidContext(CMemoryPool *, COptimizationContext *poc,
 	//       +--CScalarCmp (<)
 	//          |--CScalarIdent "a" (0)
 	//          +--CScalarIdent "partkey" (10)
-	if (pdpplanChild->Ppim()->FContainsUnresolved())
+	CPartitionPropagationSpec *pps_req = poc->Prpp()->Pepp()->PppsRequired();
+	if (pdpplanChild->Ppps()->IsUnsupportedPartSelector(pps_req))
 	{
 		return false;
 	}
-#endif
 
 	// Discard any context that is requesting for rewindability with motion hazard handling and
 	// the physical spool is streaming with a motion underneath it.

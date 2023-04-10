@@ -5,7 +5,7 @@ Garbage-collects and optionally analyzes a database.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-VACUUM [({ FULL | FREEZE | VERBOSE | ANALYZE } [, ...])] [<table> [(<column> [, ...] )]]
+VACUUM [({ FULL | FREEZE | VERBOSE | ANALYZE | DISABLE_PAGE_SKIPPING | SKIP_LOCKED | INDEX_CLEANUP } [, ...])] [<table> [(<column> [, ...] )]]
         
 VACUUM [FULL] [FREEZE] [VERBOSE] [<table>]
 
@@ -48,6 +48,15 @@ VERBOSE
 
 ANALYZE
 :   Updates statistics used by the planner to determine the most efficient way to run a query.
+
+DISABLE_PAGE_SKIPPING
+:   Normally, `VACUUM` skips pages based on the visibility map. It always skips pages where all tuples are known to be frozen, and skips those where all tuples are known to be visible to all transactions except when performing an aggressive vacuum. Furthermore, except when performing an aggressive vacuum, it skips some pages in order to avoid waiting for other sessions to finish using them. This option disables all page-skipping behavior, you may use this option only when the contents of the visibility map are suspect, which should happen only if there is a hardware or software issue causing database corruption.
+
+SKIP_LOCKED
+:   Specifies that `VACUUM` should not wait for any conflicting locks to be released when beginning work on a relation: if it cannot lock a relation immediately without waiting, it skips the relation. Note that even with this option, `VACUUM` may still block when opening the relation's indexes. Additionally, `VACUUM ANALYZE` may still block when acquiring sample rows from partitions, table inheritance children, and some types of foreign tables. Also, while `VACUUM` ordinarily processes all partitions of specified partitioned tables, this option will cause `VACUUM` to skip all partitions if there is a conflicting lock on the partitioned table.
+
+INDEX_CLEANUP
+:   Specifies that `VACUUM` should attempt to remove index entries pointing to dead tuples. This is normally the desired behavior and is the default unless you override it by setting `vacuum_index_cleanup` to `false` for the table you run `VACUUM` against. Setting this option to `false` may be useful when you need to make vacuum run as quickly as possible, for example, to avoid imminent transaction ID wraparound. However, if you do not perform index cleanup regularly, performance may suffer, because as the table is modified, indexes accumulate dead tuples and the table itself accumulates dead line pointers that cannot be removed until index cleanup completes. This option has no effect for tables that do not have an index. If you use the `FULL` option, it will ignore the `INDEX_CLEANUP` option.
 
 table
 :   The name \(optionally schema-qualified\) of a specific table to vacuum. Defaults to all tables in the current database.

@@ -6,7 +6,7 @@
 	 CREATE TABLE y(a INT);
 
 -- Objective: If a DML query contains a volatile function, we do not optimize
--- it by enfocring a non-master gather whenever a singleton execution -- it's
+-- it by enfocring a non-coordinator gather whenever a singleton execution -- it's
 -- not clear why though.
 
 	 INSERT INTO y SELECT test_func_pg_stats() FROM x LIMIT 2;	 

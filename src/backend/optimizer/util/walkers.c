@@ -242,6 +242,7 @@ plan_tree_walker(Node *node,
 			break;
 
 		case T_ForeignScan:
+		case T_DynamicForeignScan:
 			if (walk_scan_node_fields((Scan *) node, walker, context))
 				return true;
 			if (walker(((ForeignScan *) node)->fdw_exprs, context))

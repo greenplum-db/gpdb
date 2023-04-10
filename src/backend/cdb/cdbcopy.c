@@ -107,6 +107,7 @@ makeCdbCopy(CopyState cstate, bool is_copy_in)
 	/* fresh start */
 	c->total_segs = 0;
 	c->copy_in = is_copy_in;
+	c->is_replicated = GpPolicyIsReplicated(policy);
 	c->seglist = NIL;
 	c->dispatcherState = NULL;
 	initStringInfo(&(c->copy_out_buf));
@@ -433,6 +434,10 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 											 * QEs */
 	int64		total_rows_rejected = 0;	/* total num rows rejected by all
 											 * QEs */
+	int64		first_segment_rows_completed = -1;	/* total num rows completed by first QE,
+											 		 * mainly for replicated table */
+	int64		first_segment_rows_rejected = -1;	/* total num rows rejected by first QE,
+													 * mainly for replicated table */
 	ErrorData *first_error = NULL;
 	int			seg;
 	struct pollfd	*pollRead;
@@ -640,14 +645,48 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 
 			/* in SREH mode, check if this seg rejected (how many) rows */
 			if (res->numRejected > 0)
+			{
 				segment_rows_rejected = res->numRejected;
+				/* 
+				 * Doing COPY in replicate table, gpdb needs to ensure that  
+				 * the number of tuples rejected by each segment is consistent.
+				 */
+				if (c->is_replicated)
+				{
+					if (first_segment_rows_rejected == -1) 
+						first_segment_rows_rejected = res->numRejected;
+					else
+					{
+						if (first_segment_rows_rejected != res->numRejected)
+							elog(ERROR, "the number of rejected tuples in different segments mismatch \
+										when doing COPY FROM in a replicated table");
+					}
+				}
+			}
 
 			/*
 			 * When COPY FROM, need to calculate the number of this
 			 * segment's completed rows
 			 */
 			if (res->numCompleted > 0)
+			{
 				segment_rows_completed = res->numCompleted;
+				/* 
+				 * Doing COPY in replicate table, gpdb needs to ensure that  
+				 * the number of tuples inserted into each segment is consistent.
+				 */
+				if (c->is_replicated)
+				{
+					if (first_segment_rows_completed == -1) 
+						first_segment_rows_completed = res->numCompleted;
+					else
+					{
+						if (first_segment_rows_completed != res->numCompleted)
+							elog(ERROR, "the number of completed tuples in different segments mismatch \
+										when doing COPY FROM in a replicated table");
+					}
+				}
+			}
 
 			/* free the PGresult object */
 			PQclear(res);
@@ -722,6 +761,13 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 					(errcode(ERRCODE_IO_ERROR),
 					 errmsg("could not complete COPY on some segments"),
 					 errdetail("%s", io_err_msg.data)));
+	}
+
+	/* Please refer to https://github.com/greenplum-db/gpdb/issues/14126 */
+	if (c->is_replicated && c->copy_in)
+	{
+		total_rows_completed = first_segment_rows_completed;
+		total_rows_rejected = first_segment_rows_rejected;
 	}
 
 	if (total_rows_completed_p != NULL)

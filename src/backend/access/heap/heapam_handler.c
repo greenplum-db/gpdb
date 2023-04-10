@@ -809,7 +809,18 @@ heapam_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 		pgstat_progress_update_param(PROGRESS_CLUSTER_PHASE,
 									 PROGRESS_CLUSTER_PHASE_SEQ_SCAN_HEAP);
 
-		tableScan = table_beginscan(OldHeap, SnapshotAny, 0, (ScanKey) NULL);
+		/*
+		 * For Catalog tables avoid syncscan, so that scan always starts from
+		 * block 0 during rewrite and helps retain bootstrap tuples in initial
+		 * pages only. If using syncscan, then bootstrap tuples may move to
+		 * higher blocks, which will lead to degraded performance for relcache
+		 * initialization during connection starts.
+		*/
+		if (IsCatalogRelation(OldHeap))
+			tableScan = table_beginscan_strat(OldHeap,
+											  SnapshotAny, 0, (ScanKey) NULL, true, false);
+		else
+			tableScan = table_beginscan(OldHeap, SnapshotAny, 0, (ScanKey) NULL);
 		heapScan = (HeapScanDesc) tableScan;
 		indexScan = NULL;
 
@@ -2095,6 +2106,35 @@ heapam_relation_size(Relation rel, ForkNumber forkNumber)
 }
 
 /*
+ * GPDB: Heap tables only have 1 block sequence as they don't have segments like
+ * append-optimized tables. This sequence extends from block 0 to the number of
+ * blocks in the table.
+ */
+static void
+heap_relation_get_block_sequence(Relation rel,
+								 BlockNumber heapBlk,
+								 BlockSequence *sequence)
+{
+	sequence->startblknum = 0;
+	sequence->nblocks = RelationGetNumberOfBlocks(rel);
+}
+
+static BlockSequence *
+heap_relation_get_block_sequences(Relation rel,
+								  int *numSequences)
+{
+	BlockSequence *blockSequence;
+
+	Assert(numSequences);
+	*numSequences = 1;
+
+	blockSequence = palloc(sizeof(BlockSequence) * 1);
+
+	heap_relation_get_block_sequence(rel, InvalidBlockNumber, blockSequence);
+	return blockSequence;
+}
+
+/*
  * Check to see whether the table needs a TOAST table.  It does only if
  * (1) there are any toastable attributes, and (2) the maximum length
  * of a tuple could exceed TOAST_TUPLE_THRESHOLD.  (We don't want to
@@ -2731,6 +2771,8 @@ static const TableAmRoutine heapam_methods = {
 	.index_validate_scan = heapam_index_validate_scan,
 
 	.relation_size = heapam_relation_size,
+	.relation_get_block_sequences = heap_relation_get_block_sequences,
+	.relation_get_block_sequence = heap_relation_get_block_sequence,
 	.relation_needs_toast_table = heapam_relation_needs_toast_table,
 
 	.relation_estimate_size = heapam_estimate_rel_size,

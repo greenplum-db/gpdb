@@ -15,8 +15,8 @@ insert into uao_tab_compress_none values
  (1, 'abc', 1), (2, 'pqr', 2), (3, 'lmn', 3);
 delete from uao_tab_compress_none;
 select count(*) = 0 as passed from uao_tab_compress_none;
-SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimaprelid is
-not NULL AND visimapidxid is not NULL AND relid='uao_tab_compress_none'::regclass;
+SELECT count(i.indexrelid) = 1 AS VisimapPresent  FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND
+ a.relid='uao_tab_compress_none'::regclass;
 
 -- create uao table with compress=zlib COMPRESSLEVEL=1
 CREATE TABLE uao_tab_compress_zlib1 (
@@ -38,8 +38,8 @@ select count(*) from uao_tab_compress_zlib1;
 -- Decompress tuples
 select sum(length(col_text)) from uao_tab_compress_zlib1
  where col_int < 1100;
-SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimaprelid is
-not NULL AND visimapidxid is not NULL AND relid='uao_tab_compress_zlib1'::regclass;
+SELECT count(i.indexrelid) = 1 AS VisimapPresent  FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND
+ a.relid='uao_tab_compress_zlib1'::regclass;
 
 SELECT c.relname, c.reloptions from pg_class c
 join pg_namespace n on n.oid=c.relnamespace
@@ -70,8 +70,8 @@ set gp_select_invisible = true;
 select count(*) from uao_tab_compress_zlib9;
 set gp_select_invisible = false;
 
-SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimapidxid is
-not NULL AND visimapidxid is not NULL AND relid='uao_tab_compress_zlib9'::regclass;
+SELECT count(i.indexrelid) = 1 AS VisimapPresent  FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND
+ a.relid='uao_tab_compress_zlib9'::regclass;
 
 SELECT c.relname, c.reloptions from pg_class c
 join pg_namespace n on n.oid=c.relnamespace

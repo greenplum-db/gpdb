@@ -228,7 +228,7 @@ CPhysicalMotionGather::PosDerive(CMemoryPool *,		  // mp
 IOstream &
 CPhysicalMotionGather::OsPrint(IOstream &os) const
 {
-	const CHAR *szLocation = FOnMaster() ? "(master)" : "(segment)";
+	const CHAR *szLocation = FOnCoordinator() ? "(coordinator)" : "(segment)";
 	os << SzId() << szLocation;
 
 	if (FOrderPreserving())

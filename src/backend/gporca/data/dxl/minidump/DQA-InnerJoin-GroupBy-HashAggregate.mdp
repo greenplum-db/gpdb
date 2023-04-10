@@ -556,7 +556,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
+            <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="862.003697" Rows="10.000001" Width="16"/>
               </dxl:Properties>

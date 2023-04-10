@@ -48,7 +48,7 @@ WHERE tt.event_ts >= tq.ets AND
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:TraceFlags Value="103027,101013,102024,102029,102115,102116,102130,102131,103014,103015"/>
+      <dxl:TraceFlags Value="103027,101013,102024,103045,102115,102116,102130,102131,103014,103015"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:GPDBScalarOp Mdid="0.521.1.0" Name="&gt;" ComparisonType="GT" ReturnsNullOnNullInput="true">

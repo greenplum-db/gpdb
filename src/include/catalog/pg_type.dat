@@ -546,7 +546,7 @@
   typtype => 'p', typcategory => 'P', typinput => 'internal_in',
   typoutput => 'internal_out', typreceive => '-', typsend => '-',
   typalign => 'ALIGNOF_POINTER' },
-{ oid => '2282', descr => 'obsolete, deprecated pseudo-type',
+{ oid => '7200', descr => 'obsolete, deprecated pseudo-type',
   typname => 'opaque', typlen => '4', typbyval => 't', typtype => 'p',
   typcategory => 'P', typinput => 'opaque_in', typoutput => 'opaque_out',
   typreceive => '-', typsend => '-', typalign => 'i' },

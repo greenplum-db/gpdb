@@ -26,6 +26,5 @@
 #define Anum_pg_aoblkdir_minipage      4
 
 extern void AlterTableCreateAoBlkdirTable(Oid relOid);
-extern void ValidateRelationVersionForUniqueIndex(Relation rel);
 
 #endif

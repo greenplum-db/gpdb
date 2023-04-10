@@ -488,7 +488,7 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
     <dxl:Plan Id="0" SpaceSize="9648">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1324469.354209" Rows="1.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="1324469.354235" Rows="1.000000" Width="20"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -508,7 +508,7 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="In">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1324469.354150" Rows="1.000000" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="1324469.354160" Rows="1.000000" Width="20"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -534,7 +534,7 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
           </dxl:HashCondList>
           <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="437.000444" Rows="1.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="437.000449" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -581,7 +581,7 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
                 </dxl:Columns>
               </dxl:TableDescriptor>
             </dxl:TableScan>
-            <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="0" PrintablePartIndexId="1" SelectorIds="">
+            <dxl:DynamicIndexScan IndexScanDirection="Forward" SelectorIds="">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="6.000304" Rows="1.000000" Width="8"/>
               </dxl:Properties>

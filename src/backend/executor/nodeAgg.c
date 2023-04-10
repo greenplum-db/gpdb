@@ -245,6 +245,9 @@
 
 /*
  * GPDB_12_MERGE_FIXME: we lost the "streaming bottom" feature in the merge.
+ * When we add "streaming bottom" feature back, also remember to add fault
+ * injector 'force_hashagg_stream_hashtable' used in spilling_hashagg
+ * isolation2 test.
  *
  * And the detailed cdb executor instruments to print by explain.
  *

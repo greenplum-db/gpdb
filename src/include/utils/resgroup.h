@@ -69,6 +69,7 @@ typedef struct ResGroupCaps
 	ResGroupCap		concurrency;
 	ResGroupCap		cpuHardQuotaLimit;
 	ResGroupCap		cpuSoftPriority;
+	ResGroupCap		memory_limit;
 	char			cpuset[MaxCpuSetLength];
 } ResGroupCaps;
 
@@ -81,12 +82,18 @@ typedef struct ResGroupCaps
 /*
  * GUC variables.
  */
+extern int						gp_resgroup_memory_policy;
+extern bool						gp_log_resgroup_memory;
+extern int						gp_resgroup_memory_query_fixed_mem;
+extern int						gp_resgroup_memory_policy_auto_fixed_mem;
+extern bool						gp_resgroup_print_operator_memory_limits;
 extern bool						gp_resgroup_debug_wait_queue;
 
 extern int gp_resource_group_cpu_priority;
 extern double gp_resource_group_cpu_limit;
 extern bool gp_resource_group_bypass;
 extern int gp_resource_group_queuing_timeout;
+extern bool gp_resource_group_bypass_catalog_query;
 
 /*
  * Non-GUC global variables.
@@ -160,6 +167,7 @@ extern void ResGroupDropFinish(const ResourceGroupCallbackContext *callbackCtx,
 extern void ResGroupCreateOnAbort(const ResourceGroupCallbackContext *callbackCtx);
 extern void ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx);
 extern void ResGroupCheckForDrop(Oid groupId, char *name);
+extern uint64 ResourceGroupGetQueryMemoryLimit(void);
 
 /*
  * Get resource group id of my proc.

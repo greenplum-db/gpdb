@@ -3395,22 +3395,22 @@ insert into o3 values (NULL, 20);
 select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3;
  a1 | b1 | a2 | b2 | a3 | b3 
 ----+----+----+----+----+----
-  2 |  2 |    |    |    |   
-  3 |  3 |    |    |    |   
-  4 |  4 |    |    |    |   
-  7 |  7 |    |    |    |   
-  8 |  8 |    |    |    |   
+  2 |  2 |    |    |    | 20
+  3 |  3 |    |    |    | 20
+  4 |  4 |    |    |    | 20
+  7 |  7 |    |    |    | 20
+  8 |  8 |    |    |    | 20
  16 | 16 | 16 |    |    |   
  18 | 18 | 18 |    |    |   
  19 | 19 | 19 |    |    |   
-  1 |  1 |    |    |    |   
+  1 |  1 |    |    |    | 20
  12 | 12 | 12 |    |    |   
  15 | 15 | 15 |    |    |   
  20 | 20 | 20 |    |    |   
-  5 |  5 |    |    |    |   
-  6 |  6 |    |    |    |   
-  9 |  9 |    |    |    |   
- 10 | 10 |    |    |    |   
+  5 |  5 |    |    |    | 20
+  6 |  6 |    |    |    | 20
+  9 |  9 |    |    |    | 20
+ 10 | 10 |    |    |    | 20
  11 | 11 | 11 |    |    |   
  13 | 13 | 13 |    |    |   
  14 | 14 | 14 |    |    |   
@@ -3420,22 +3420,22 @@ select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from
 select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3 and b2 is distinct from b3;
  a1 | b1 | a2 | b2 | a3 | b3 
 ----+----+----+----+----+----
-  2 |  2 |    |    |    |   
-  3 |  3 |    |    |    |   
-  4 |  4 |    |    |    |   
-  7 |  7 |    |    |    |   
-  8 |  8 |    |    |    |   
+  2 |  2 |    |    |    | 20
+  3 |  3 |    |    |    | 20
+  4 |  4 |    |    |    | 20
+  7 |  7 |    |    |    | 20
+  8 |  8 |    |    |    | 20
  16 | 16 | 16 |    |    |   
  18 | 18 | 18 |    |    |   
  19 | 19 | 19 |    |    |   
-  1 |  1 |    |    |    |   
+  1 |  1 |    |    |    | 20
  12 | 12 | 12 |    |    |   
  15 | 15 | 15 |    |    |   
  20 | 20 | 20 |    |    |   
-  5 |  5 |    |    |    |   
-  6 |  6 |    |    |    |   
-  9 |  9 |    |    |    |   
- 10 | 10 |    |    |    |   
+  5 |  5 |    |    |    | 20
+  6 |  6 |    |    |    | 20
+  9 |  9 |    |    |    | 20
+ 10 | 10 |    |    |    | 20
  11 | 11 | 11 |    |    |   
  13 | 13 | 13 |    |    |   
  14 | 14 | 14 |    |    |   
@@ -3551,6 +3551,95 @@ where
 (0 rows)
 
 drop table t_13722;
+-- This test is introduced to verify incorrect result
+-- from hash join of char columns is fixed
+-- Notice when varchar/text is cast to bpchar and used for
+-- comparison, the trailing spaces are ignored
+-- When char is cast to varchar/text, it's considered
+-- comparison, and the trailing spaces are also ignored
+-- Prior to the fix, opclasses belonging to different
+-- opfamilies could be grouped as equivalent, and thence
+-- deriving incorrect equality hash join conditions
+create table foo (varchar_3 varchar(3)) distributed by (varchar_3);
+create table bar (char_3 char(3)) distributed by (char_3);
+create table baz (text_any text) distributed by (text_any);
+insert into foo values ('cd'); -- 0 trailing spaces
+insert into bar values ('cd '); -- 1 trailing space
+insert into baz values ('cd  '); -- 2 trailing spaces
+-- varchar cast to bpchar
+-- 'cd' matches 'cd', returns 1 row
+explain select varchar_3, char_3 from foo join bar on varchar_3=char_3;
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=16)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=16)
+         Hash Cond: ((foo.varchar_3)::bpchar = bar.char_3)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+               Hash Key: foo.varchar_3
+               ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=8)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=8)
+               ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+select varchar_3, char_3 from foo join bar on varchar_3=char_3;
+ varchar_3 | char_3 
+-----------+--------
+ cd        | cd 
+(1 row)
+
+-- char cast to text
+-- 'cd' doesn't match 'cd  ', returns 0 rows
+explain select char_3, text_any from bar join baz on char_3=text_any;
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=16)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=16)
+         Hash Cond: ((bar.char_3)::text = baz.text_any)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+               Hash Key: (bar.char_3)::text
+               ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=8)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=8)
+               ->  Seq Scan on baz  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+select char_3, text_any from bar join baz on char_3=text_any;
+ char_3 | text_any 
+--------+----------
+(0 rows)
+
+-- foo - bar join: varchar cast to bpchar
+-- 'cd' matches 'cd'
+-- foo - baz join: no cast
+-- 'cd' doesn't match 'cd  '
+-- returns 0 rows
+-- Notice ORCA changes join order to minimize motion
+explain select varchar_3, char_3, text_any from foo join bar on varchar_3=char_3
+join baz on varchar_3=text_any;
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1293.00 rows=1 width=24)
+   ->  Hash Join  (cost=0.00..1293.00 rows=1 width=24)
+         Hash Cond: ((foo.varchar_3)::bpchar = bar.char_3)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=16)
+               Hash Key: foo.varchar_3
+               ->  Hash Join  (cost=0.00..862.00 rows=1 width=16)
+                     Hash Cond: ((foo.varchar_3)::text = baz.text_any)
+                     ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=8)
+                     ->  Hash  (cost=431.00..431.00 rows=1 width=8)
+                           ->  Seq Scan on baz  (cost=0.00..431.00 rows=1 width=8)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=8)
+               ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(13 rows)
+
+select varchar_3, char_3, text_any from foo join bar on varchar_3=char_3
+join baz on varchar_3=text_any;
+ varchar_3 | char_3 | text_any 
+-----------+--------+----------
+(0 rows)
+
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;
 set client_min_messages='warning';

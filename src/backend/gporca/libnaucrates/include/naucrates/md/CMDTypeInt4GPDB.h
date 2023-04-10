@@ -22,6 +22,7 @@
 #define GPDB_INT4_OID OID(23)
 #define GPDB_INT4_OPFAMILY OID(1977)
 #define GPDB_INT4_LEGACY_OPFAMILY OID(7100)
+#define GPDB_INT4_PART_OPFAMILY OID(1976)
 #define GPDB_INT4_LENGTH 4
 #define GPDB_INT4_EQ_OP OID(96)
 #define GPDB_INT4_NEQ_OP OID(518)
@@ -75,6 +76,7 @@ private:
 	IMDId *m_mdid;
 	IMDId *m_distr_opfamily;
 	IMDId *m_legacy_distr_opfamily;
+	IMDId *m_part_opfamily;
 
 	// mdids of different operators
 	IMDId *m_mdid_op_eq;
@@ -134,6 +136,8 @@ public:
 	IMDId *MDId() const override;
 
 	IMDId *GetDistrOpfamilyMdid() const override;
+
+	IMDId *GetPartOpfamilyMdid() const override;
 
 	CMDName Mdname() const override;
 

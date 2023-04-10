@@ -1,0 +1,6 @@
+test: resource_manager_switch_to_queue
+test: resource_queue
+test: resource_queue_cancel
+test: resource_queue_deadlock
+test: resource_queue_multi_portal
+test: resource_manager_restore_to_none

@@ -44,6 +44,7 @@
 #include "catalog/pg_appendonly.h"
 #include "executor/executor.h"
 #include "storage/procarray.h"
+#include "utils/faultinjector.h"
 #include "utils/snapshot.h"
 
 /*
@@ -360,72 +361,6 @@ brinbeginscan(Relation r, int nkeys, int norderbys)
 	return scan;
 }
 
-static BlockNumber
-brin_ao_tid_ranges(Relation rel, BlockNumber *aoblks)
-{
-	Snapshot	snapshot;
-	BlockNumber seg_start_blk;
-	BlockNumber nblocks = 0;
-    Oid			segrelid;
-	int64		lastSequence;
-	int			segnos[AOTupleId_MaxSegmentFileNum] = {0};
-    int			nsegs;
-
-	Assert(RelationIsValid(rel));
-
-	snapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
-
-	if (RelationIsAoRows(rel))
-	{
-		FileSegInfo **seginfos = GetAllFileSegInfo(rel, snapshot, &nsegs, &segrelid);
-
-		Assert(nsegs <= AOTupleId_MaxSegmentFileNum);
-
-		for (int i = 0; i < nsegs; i++)
-			segnos[i] = seginfos[i]->segno;
-
-		if (seginfos != NULL)
-		{
-			FreeAllSegFileInfo(seginfos, nsegs);
-			pfree(seginfos);
-		}
-	}	
-	else
-	{
-		AOCSFileSegInfo **seginfos = GetAllAOCSFileSegInfo(rel, snapshot, &nsegs, &segrelid);
-
-		Assert(nsegs <= AOTupleId_MaxSegmentFileNum);
-
-		for (int i = 0; i < nsegs; i++)
-			segnos[i] = seginfos[i]->segno;
-
-		if (seginfos != NULL)
-		{
-			FreeAllAOCSSegFileInfo(seginfos, nsegs);
-			pfree(seginfos);
-		}
-	}
-
-	/* call ReadLastSequence() only for segnos corresponding to the target relation */
-    for (int i = -1, segno; i < nsegs; i++)
-    {
-        /* always initailize segment 0 */
-        segno = (i < 0 ? 0 : segnos[i]);
-        lastSequence = ReadLastSequence(segrelid, segno);
-
-        seg_start_blk = segnoGetCurrentAosegStart(segno);
-        aoblks[segno] = lastSequence / 32768;
-        if (lastSequence % 32768 > 0)
-            aoblks[segno] += 1;
-        if (lastSequence > 0)
-            nblocks = seg_start_blk + aoblks[segno];
-    }
-
-    UnregisterSnapshot(snapshot);
-
-	return nblocks;
-}
-
 /*
  * Execute the index scan.
  *
@@ -448,8 +383,6 @@ bringetbitmap(IndexScanDesc scan, Node **bmNodeP)
 	Oid			heapOid;
 	Relation	heapRel;
 	BrinOpaque *opaque;
-	BlockNumber nblocks = 0;
-	BlockNumber aoBlocks[AOTupleId_MaxSegmentFileNum];
 	BlockNumber heapBlk;
 	int			totalpages = 0;
 	FmgrInfo   *consistentFn;
@@ -458,8 +391,10 @@ bringetbitmap(IndexScanDesc scan, Node **bmNodeP)
 	BrinMemTuple *dtup;
 	BrinTuple  *btup = NULL;
 	Size		btupsz = 0;
-	int			segno;
-	BlockNumber seg_start_blk;
+
+	/* GPDB: Used for iterating over the revmap */
+	int         	numSequences;
+	BlockSequence 	*sequences;
 
 	opaque = (BrinOpaque *) scan->opaque;
 	bdesc = opaque->bo_bdesc;
@@ -482,22 +417,10 @@ bringetbitmap(IndexScanDesc scan, Node **bmNodeP)
 	else
 		tbm = (TIDBitmap *)*bmNodeP;
 
-	/*
-	 * We need to know the size of the table so that we know how long to
-	 * iterate on the revmap.
-	 */
 	heapOid = IndexGetRelation(RelationGetRelid(idxRel), false);
 	heapRel = table_open(heapOid, AccessShareLock);
-
-	/*
-	 * If the data table is append only table, we need to calculate the range
-	 * of tid in each aoseg.
-	 */
-	if (RelationIsAppendOptimized(heapRel))
-		nblocks = brin_ao_tid_ranges(heapRel, aoBlocks);
-	else
-		nblocks = RelationGetNumberOfBlocks(heapRel);
-
+	sequences = table_relation_get_block_sequences(heapRel,
+												   &numSequences);
 	table_close(heapRel, AccessShareLock);
 
 	/*
@@ -520,12 +443,25 @@ bringetbitmap(IndexScanDesc scan, Node **bmNodeP)
 	oldcxt = MemoryContextSwitchTo(perRangeCxt);
 
 	/*
-	 * Now scan the revmap.  We start by querying for heap page 0,
-	 * incrementing by the number of pages per range; this gives us a full
-	 * view of the table.
+	 * GPDB: We have the notion of BlockSequences to keep the following code
+	 * section unified for AO/CO vs heap tables. Heap tables have only 1
+	 * block sequence, whereas AO/CO tables may have up to AOTupleId_MaxSegmentFileNum
+	 * number of such sequences. The outer loop is thus a GPDB addition, whereas
+	 * the inner one mostly stays the same (barring offset recalculation)
 	 */
-	segno = 0;
-	for (heapBlk = 0; heapBlk < nblocks; heapBlk += opaque->bo_pagesPerRange)
+	for (int i = 0; i < numSequences; i++)
+	{
+	/* code in the loop left unindented to prevent merge conflicts */
+
+	/*
+	 * Now scan the revmap. We start by querying for the 1st heap page in
+	 * the ith block sequence, incrementing by the number of pages per range;
+	 * this gives us a full view of each block sequence and ultimately, the
+	 * full table.
+	 */
+	BlockNumber startblknum = sequences[i].startblknum;
+	BlockNumber endblknum = sequences[i].startblknum + sequences[i].nblocks;
+	for (heapBlk = startblknum; heapBlk < endblknum; heapBlk += opaque->bo_pagesPerRange)
 	{
 		bool		addrange;
 		bool		gottuple = false;
@@ -534,23 +470,6 @@ bringetbitmap(IndexScanDesc scan, Node **bmNodeP)
 		Size		size;
 
 		CHECK_FOR_INTERRUPTS();
-
-		/*
-		 * If the largest row number of the current aoseg is scanned, switch to
-		 * the next aoseg.
-		 */
-		if (RelationIsAppendOptimized(heapRel))
-		{
-			seg_start_blk = segnoGetCurrentAosegStart(segno);
-
-			if (heapBlk >= seg_start_blk + aoBlocks[segno])
-			{
-				segno++;
-				continue;
-			}
-			if (heapBlk < seg_start_blk)
-				heapBlk = seg_start_blk;
-		}
 
 		MemoryContextResetAndDeleteChildren(perRangeCxt);
 
@@ -652,7 +571,7 @@ bringetbitmap(IndexScanDesc scan, Node **bmNodeP)
 			BlockNumber pageno;
 
 			for (pageno = heapBlk;
-				 pageno <= Min(nblocks, heapBlk + opaque->bo_pagesPerRange) - 1;
+				 pageno <= Min(endblknum, heapBlk + opaque->bo_pagesPerRange) - 1;
 				 pageno++)
 			{
 				MemoryContextSwitchTo(oldcxt);
@@ -663,8 +582,12 @@ bringetbitmap(IndexScanDesc scan, Node **bmNodeP)
 		}
 	}
 
+	/* outer loop end */
+	}
+
 	MemoryContextSwitchTo(oldcxt);
 	MemoryContextDelete(perRangeCxt);
+	pfree(sequences);
 
 	if (buf != InvalidBuffer)
 		ReleaseBuffer(buf);
@@ -1024,12 +947,6 @@ brin_summarize_range_internal(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
 				 errmsg("block number out of range: %s", blk)));
 	}
-	if (heapBlk64 != BRIN_ALL_BLOCKRANGES)
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("Greenplum could not summarize indicated page range")));
-	}
 	heapBlk = (BlockNumber) heapBlk64;
 
 	/*
@@ -1055,6 +972,12 @@ brin_summarize_range_internal(PG_FUNCTION_ARGS)
 		SetUserIdAndSecContext(heapRel->rd_rel->relowner,
 							   save_sec_context | SECURITY_RESTRICTED_OPERATION);
 		save_nestlevel = NewGUCNestLevel();
+		if (RelationIsAppendOptimized(heapRel) && heapBlk64 != BRIN_ALL_BLOCKRANGES)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						errmsg("cannot summarize specific page range for append-optimized tables")));
+		}
 	}
 	else
 	{
@@ -1350,6 +1273,11 @@ terminate_brin_buildstate(BrinBuildState *state)
  * table size; if we notice that the requested range lies beyond that size,
  * we re-compute the table size after inserting the placeholder tuple, to
  * avoid missing pages that were appended recently.
+ *
+ * GPDB: Since we have to support the notion of BlockSequences, heapNumBlks
+ * actually behaves as the ending block for the block sequence within which the
+ * supplied range lies, instead of the number of blocks in the relation. We
+ * don't rename the variable to avoid merge conflicts.
  */
 static void
 summarize_range(IndexInfo *indexInfo, BrinBuildState *state, Relation heapRel,
@@ -1373,10 +1301,21 @@ summarize_range(IndexInfo *indexInfo, BrinBuildState *state, Relation heapRel,
 	/*
 	 * Compute range end.  We hold ShareUpdateExclusive lock on table, so it
 	 * cannot shrink concurrently (but it can grow).
+	 *
+	 * GPDB: The following assert only applies to heap tables, as for AO/CO
+	 * tables, heapBlk need not be a multiple of bs_pagesPerRange.
 	 */
-	Assert(heapBlk % state->bs_pagesPerRange == 0);
+	AssertImply(RelationIsHeap(heapRel), heapBlk % state->bs_pagesPerRange == 0);
 	if (heapBlk + state->bs_pagesPerRange > heapNumBlks)
 	{
+		BlockSequence 	blockSequence;
+		BlockNumber 	endblknum;
+
+		table_relation_get_block_sequence(heapRel, heapBlk, &blockSequence);
+		endblknum = blockSequence.startblknum + blockSequence.nblocks;
+
+		SIMPLE_FAULT_INJECTOR("summarize_last_partial_range");
+
 		/*
 		 * If we're asked to scan what we believe to be the final range on the
 		 * table (i.e. a range that might be partial) we need to recompute our
@@ -1388,7 +1327,22 @@ summarize_range(IndexInfo *indexInfo, BrinBuildState *state, Relation heapRel,
 		 *
 		 * Fortunately, this should occur infrequently.
 		 */
-		scanNumBlks = Min(RelationGetNumberOfBlocks(heapRel) - heapBlk,
+
+		if (endblknum != heapNumBlks && RelationIsAppendOptimized(heapRel))
+		{
+			/*
+			 * GPDB: We bail and don't summarize the final partial range if we
+			 * find that the final range was extended (by another inserting
+			 * transaction) while we are summarizing here. Currently, we don't
+			 * have the support to handle the "any visible" mode described below
+			 * in the appendonly AMs. This is why we need to bail.
+			 */
+			brin_free_tuple(phtup);
+			UnlockReleaseBuffer(phbuf);
+			return;
+		}
+
+		scanNumBlks = Min(endblknum - heapBlk,
 						  state->bs_pagesPerRange);
 	}
 	else
@@ -1484,48 +1438,76 @@ brinsummarize(Relation index, Relation heapRel, BlockNumber pageRange,
 {
 	BrinRevmap *revmap;
 	BrinBuildState *state = NULL;
-	IndexInfo  *indexInfo = NULL;
-	BlockNumber heapNumBlocks = 0;
+	IndexInfo   *indexInfo = NULL;
 	BlockNumber pagesPerRange;
-	BlockNumber startBlk;
-	BlockNumber aoBlocks[AOTupleId_MaxSegmentFileNum] = {0};
 	Buffer		buf;
-	int			segno;
-	BlockNumber seg_start_blk;
+
+	/* GPDB: Used for iterating over the revmap */
+	int         	numSequences;
+	BlockSequence 	*sequences;
+	BlockNumber		startBlk = InvalidBlockNumber;
+	BlockNumber		endBlk = InvalidBlockNumber;
 
 	revmap = brinRevmapInitialize(index, &pagesPerRange, NULL);
 
-	/* determine range of pages to process */
+	/* determine sequence(s) of pages to process */
+	sequences = table_relation_get_block_sequences(heapRel,
+												   &numSequences);
+
+	buf = InvalidBuffer;
 
 	/*
-	 * If the data table is append only table, we need to calculate the range
-	 * of tid in each aoseg.
+	 * GPDB: We have the notion of BlockSequences to keep the following code
+	 * section unified for AO/CO vs heap tables. Heap tables have only 1
+	 * block sequence, whereas AO/CO tables may have up to AOTupleId_MaxSegmentFileNum
+	 * number of such sequences. The outer loop is thus a GPDB addition, whereas
+	 * the inner one mostly stays the same (barring offset recalculation for
+	 * both the all ranges case and specific range case)
 	 */
-	if (RelationIsAppendOptimized(heapRel))
-		heapNumBlocks = brin_ao_tid_ranges(heapRel, aoBlocks);
-	else
-		heapNumBlocks = RelationGetNumberOfBlocks(heapRel);
+
+	for (int i = 0; i < numSequences; i++)
+	{
+	/* code in the loop left unindented to prevent merge conflicts */
 
 	if (pageRange == BRIN_ALL_BLOCKRANGES)
-		startBlk = 0;
+	{
+		/* set up the start and end blocks for the next block sequence */
+		startBlk = sequences[i].startblknum;
+		endBlk = sequences[i].startblknum + sequences[i].nblocks;
+	}
 	else
 	{
+		/* we have to scan the supplied heap block in its specified range */
+
+		/*
+		 * XXX: This branch contains code that only works for heap tables, and
+		 * assumes that there is only 1 range. To support AO/CO tables, we will
+		 * need to use the table AM API: relation_get_block_sequence(), with
+		 * which we can find the endBlk of the specific range we have been
+		 * asked to scan.
+		 */
+
+		Assert(RelationIsHeap(heapRel));
+
+		/* should have to loop only once as there is only 1 sequence for heap */
+		Assert(numSequences == 1);
+
 		startBlk = (pageRange / pagesPerRange) * pagesPerRange;
-		heapNumBlocks = Min(heapNumBlocks, startBlk + pagesPerRange);
-	}
-	if (startBlk > heapNumBlocks)
-	{
-		/* Nothing to do if start point is beyond end of table */
-		brinRevmapTerminate(revmap);
-		return;
+		endBlk = Min(sequences[i].nblocks, startBlk + pagesPerRange);
+		if (startBlk > endBlk)
+		{
+			/* Nothing to do if start point is beyond end of table */
+			brinRevmapTerminate(revmap);
+			pfree(sequences);
+			return;
+		}
 	}
 
 	/*
-	 * Scan the revmap to find unsummarized items.
+	 * Scan the revmap to find unsummarized items for each block sequence
+	 * involved.
 	 */
-	buf = InvalidBuffer;
-	segno = 0;
-	for (; startBlk < heapNumBlocks; startBlk += pagesPerRange)
+	for (; startBlk < endBlk; startBlk += pagesPerRange)
 	{
 		BrinTuple  *tup;
 		OffsetNumber off;
@@ -1538,27 +1520,11 @@ brinsummarize(Relation index, Relation heapRel, BlockNumber pageRange,
 		 * result of arbitrarily-scheduled maintenance command (vacuuming).
 		 */
 		if (!include_partial &&
-			(startBlk + pagesPerRange > heapNumBlocks))
+			(startBlk + pagesPerRange > endBlk))
 			break;
 
 		CHECK_FOR_INTERRUPTS();
 
-		/*
-		 * If the data table is append only table, we need to calculate the range
-		 * of tid in each aoseg.
-		 */
-		if (RelationIsAppendOptimized(heapRel))
-		{
-			seg_start_blk = segnoGetCurrentAosegStart(segno);
-
-			if (startBlk >= seg_start_blk + aoBlocks[segno])
-			{
-				segno++;
-				continue;
-			}
-			if (startBlk < seg_start_blk)
-				startBlk = seg_start_blk;
-		}
 		tup = brinGetTupleForHeapBlock(revmap, startBlk, &buf, &off, NULL,
 									   BUFFER_LOCK_SHARE, NULL);
 		if (tup == NULL)
@@ -1572,7 +1538,7 @@ brinsummarize(Relation index, Relation heapRel, BlockNumber pageRange,
 												   pagesPerRange);
 				indexInfo = BuildIndexInfo(index);
 			}
-			summarize_range(indexInfo, state, heapRel, startBlk, heapNumBlocks);
+			summarize_range(indexInfo, state, heapRel, startBlk, endBlk);
 
 			/* and re-initialize state for the next range */
 			brin_memtuple_initialize(state->bs_dtuple, state->bs_bdesc);
@@ -1588,6 +1554,9 @@ brinsummarize(Relation index, Relation heapRel, BlockNumber pageRange,
 		}
 	}
 
+	/* outer loop end */
+	}
+
 	if (BufferIsValid(buf))
 		ReleaseBuffer(buf);
 
@@ -1598,6 +1567,7 @@ brinsummarize(Relation index, Relation heapRel, BlockNumber pageRange,
 		terminate_brin_buildstate(state);
 		pfree(indexInfo);
 	}
+	pfree(sequences);
 }
 
 /*

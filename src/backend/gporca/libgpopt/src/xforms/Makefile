@@ -28,6 +28,7 @@ OBJS        = CDecorrelator.o \
               CXformDynamicGet2DynamicTableScan.o \
               CXformDynamicIndexGet2DynamicIndexScan.o \
               CXformEagerAgg.o \
+              CXformExpandDynamicGetWithForeignPartitions.o \
               CXformExpandFullOuterJoin.o \
               CXformExpandNAryJoin.o \
               CXformExpandNAryJoinDP.o \
@@ -69,8 +70,6 @@ OBJS        = CDecorrelator.o \
               CXformInnerApply2InnerJoin.o \
               CXformInnerApply2InnerJoinNoCorrelations.o \
               CXformInnerApplyWithOuterKey2InnerJoin.o \
-              CXformInnerJoin2HashJoin.o \
-              CXformInnerJoin2NLJoin.o \
               CXformImplementInnerJoin.o \
               CXformInsert2DML.o \
               CXformIntersect2Join.o \
@@ -103,6 +102,7 @@ OBJS        = CDecorrelator.o \
               CXformLeftSemiJoin2InnerJoinUnderGb.o \
               CXformLeftSemiJoin2NLJoin.o \
               CXformMaxOneRow2Assert.o \
+              CXformDynamicForeignGet2DynamicForeignScan.o \
               CXformProject2Apply.o \
               CXformProject2ComputeScalar.o \
               CXformPushDownLeftOuterJoin.o \

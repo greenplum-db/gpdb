@@ -108,7 +108,7 @@ Perform the following procedure to configure PL/Container to use Greenplum Datab
 When PL/Container logging is enabled, you can set the log level with the Greenplum Database server configuration parameter [log\_min\_messages](../ref_guide/config_params/guc-list.html). The default log level is `warning`. The parameter controls the PL/Container log level and also controls the Greenplum Database log level.
 
 -   PL/Container logging is enabled or deactivated for each runtime ID with the `setting` attribute `use_container_logging`. The default is no logging.
--   The PL/Container log information is the information from the UDF that is run in the Docker container. By default, the PL/Container log information is sent to a system service. On Red Hat 7 or CentOS 7 systems, the log information is sent to the `journald` service.
+-   The PL/Container log information is the information from the UDF that is run in the Docker container. By default, the PL/Container log information is sent to a system service. On Red Hat 8 systems, the log information is sent to the `journald` service.
 -   The Greenplum Database log information is sent to log file on the Greenplum Database coordinator.
 -   When testing or troubleshooting a PL/Container UDF, you can change the Greenplum Database log level with the `SET` command. You can set the parameter in the session before you run your PL/Container UDF. This example sets the log level to `debug1`.
 
@@ -129,7 +129,6 @@ Review the following limitations when creating and using PL/Container PL/Python 
 -   The `plpy.execute()` methods `nrows()` and `status()` are not supported.
 -   The PL/Python function `plpy.SPIError()` is not supported.
 -   Running the `SAVEPOINT` command with `plpy.execute()` is not supported.
--   The `DO` command \(anonymous code block\) is supported only with PL/Container 3 \(currently a Beta feature\).
 -   Container flow control is not supported.
 -   Triggers are not supported.
 -   `OUT` parameters are not supported.
@@ -319,11 +318,11 @@ Record the name of the GPU device ID (0 in the above example) or the device UUID
 
 #### Install and Customize the PL/Container Image
 
-1. Download the `plcontainer-python3-image-2.2.0-gp6.tar.gz` file from the **Greenplum Procedural Languages** section on [Tanzu Network](https://network.pivotal.io/products/vmware-tanzu-greenplum).
+1. Download the `plcontainer-python3-image-2.2.0-gp7.tar.gz` file from the **Greenplum Procedural Languages** section on [Tanzu Network](https://network.pivotal.io/products/vmware-tanzu-greenplum).
 
 2. Load the downloaded PL/Container image into Docker:
     ```
-    $ docker image load < plcontainer-python3-image-2.2.0-gp6.tar.gz
+    $ docker image load < plcontainer-python3-image-2.2.0-gp7.tar.gz
     ```
 
 3. Customize the PL/Container image to add the required CUDA runtime and `pycuda` library. The following example Dockerfile contents show how to add CUDA 11.7 and `pycuda` 2021.1 to the PL/Container image. Use a text editor to create the Dockerfile:

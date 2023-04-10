@@ -611,7 +611,7 @@ _copyExternalScanInfo(const ExternalScanInfo *from)
 
 	COPY_NODE_FIELD(uriList);
 	COPY_SCALAR_FIELD(fmtType);
-	COPY_SCALAR_FIELD(isMasterOnly);
+	COPY_SCALAR_FIELD(isCoordinatorOnly);
 	COPY_SCALAR_FIELD(rejLimit);
 	COPY_SCALAR_FIELD(rejLimitInRows);
 	COPY_SCALAR_FIELD(logErrors);
@@ -983,14 +983,9 @@ _copyWorkTableScan(const WorkTableScan *from)
 	return newnode;
 }
 
-/*
- * _copyForeignScan
- */
-static ForeignScan *
-_copyForeignScan(const ForeignScan *from)
+static void
+CopyForeignScanFields(const ForeignScan *from, ForeignScan *newnode)
 {
-	ForeignScan *newnode = makeNode(ForeignScan);
-
 	/*
 	 * copy node superclass fields
 	 */
@@ -1007,6 +1002,36 @@ _copyForeignScan(const ForeignScan *from)
 	COPY_NODE_FIELD(fdw_recheck_quals);
 	COPY_BITMAPSET_FIELD(fs_relids);
 	COPY_SCALAR_FIELD(fsSystemCol);
+
+}
+
+/*
+ * _copyForeignScan
+ */
+static ForeignScan *
+_copyForeignScan(const ForeignScan *from)
+{
+	ForeignScan *newnode = makeNode(ForeignScan);
+
+	CopyForeignScanFields(from, newnode);
+
+	return newnode;
+}
+
+/*
+ * _copyDynamicForeignScan
+ */
+static DynamicForeignScan *
+_copyDynamicForeignScan(const DynamicForeignScan *from)
+{
+	DynamicForeignScan  *newnode = makeNode(DynamicForeignScan);
+
+	/* DynamicForeignScan has some content from ForeignScan */
+	CopyForeignScanFields(&from->foreignscan, &newnode->foreignscan);
+	COPY_NODE_FIELD(partOids);
+	COPY_NODE_FIELD(part_prune_info);
+	COPY_NODE_FIELD(join_prune_paramids);
+	COPY_NODE_FIELD(fdw_private_list);
 
 	return newnode;
 }
@@ -5903,6 +5928,9 @@ copyObjectImpl(const void *from)
 			break;
 		case T_ForeignScan:
 			retval = _copyForeignScan(from);
+			break;
+		case T_DynamicForeignScan:
+			retval = _copyDynamicForeignScan(from);
 			break;
 		case T_CustomScan:
 			retval = _copyCustomScan(from);

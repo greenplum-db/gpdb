@@ -102,10 +102,10 @@
         </dxl:LogicalTVF>
       </dxl:LogicalLimit>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="20">
+    <dxl:Plan Id="0" SpaceSize="32">
       <dxl:Sort SortDiscardDuplicates="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.256156" Rows="1000.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.256160" Rows="1000.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -132,7 +132,7 @@
             <dxl:ParamList/>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000056" Rows="1.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000060" Rows="1.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="9" Alias="ColRef_0004">
@@ -143,7 +143,7 @@
               <dxl:OneTimeFilter/>
               <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000052" Rows="2.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000056" Rows="2.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="12" Alias="?column?">
@@ -166,30 +166,41 @@
                   <dxl:Filter/>
                   <dxl:OneTimeFilter/>
                 </dxl:Result>
-                <dxl:Result>
+                <dxl:Materialize Eager="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="0.000005" Rows="1.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="0.000009" Rows="1.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="12" Alias="?column?">
-                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="5"/>
+                      <dxl:Ident ColId="12" ColName="?column?" TypeMdid="0.23.1.0"/>
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:OneTimeFilter/>
                   <dxl:Result>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="0.000001" Rows="1.000000" Width="1"/>
+                      <dxl:Cost StartupCost="0" TotalCost="0.000005" Rows="1.000000" Width="4"/>
                     </dxl:Properties>
                     <dxl:ProjList>
-                      <dxl:ProjElem ColId="11" Alias="">
-                        <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                      <dxl:ProjElem ColId="12" Alias="?column?">
+                        <dxl:ConstValue TypeMdid="0.23.1.0" Value="5"/>
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
                     <dxl:OneTimeFilter/>
+                    <dxl:Result>
+                      <dxl:Properties>
+                        <dxl:Cost StartupCost="0" TotalCost="0.000001" Rows="1.000000" Width="1"/>
+                      </dxl:Properties>
+                      <dxl:ProjList>
+                        <dxl:ProjElem ColId="11" Alias="">
+                          <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                        </dxl:ProjElem>
+                      </dxl:ProjList>
+                      <dxl:Filter/>
+                      <dxl:OneTimeFilter/>
+                    </dxl:Result>
                   </dxl:Result>
-                </dxl:Result>
+                </dxl:Materialize>
               </dxl:NestedLoopJoin>
             </dxl:Result>
           </dxl:SubPlan>

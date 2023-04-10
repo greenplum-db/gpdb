@@ -37,6 +37,12 @@
 #define APPENDONLY_VISIMAP_MAX_BITMAP_SIZE 4096
 
 /*
+ * The max value of visiMapEntry->bitmap->nwords
+ */
+#define APPENDONLY_VISIMAP_MAX_BITMAP_WORD_COUNT \
+	(APPENDONLY_VISIMAP_MAX_BITMAP_SIZE / sizeof(bitmapword))
+
+/*
  * Data structure for the ao visibility map processing.
  *
  */
@@ -102,7 +108,6 @@ typedef struct AppendOnlyVisimapDelete
 void AppendOnlyVisimap_Init(
 					   AppendOnlyVisimap *visiMap,
 					   Oid visimapRelid,
-					   Oid visimalIdxid,
 					   LOCKMODE lockmode,
 					   Snapshot appendonlyMetaDataSnapshot);
 
@@ -128,7 +133,6 @@ int64 AppendOnlyVisimap_GetRelationHiddenTupleCount(
 void AppendOnlyVisimapScan_Init(
 						   AppendOnlyVisimapScan *visiMapScan,
 						   Oid visimapRelid,
-						   Oid visimapIdxid,
 						   LOCKMODE lockmode,
 						   Snapshot appendonlyMetadataSnapshot);
 
@@ -138,6 +142,14 @@ extern void AppendOnlyVisimap_Init_forUniqueCheck(
 									   Snapshot snapshot);
 
 extern void AppendOnlyVisimap_Finish_forUniquenessChecks(
+												   AppendOnlyVisimap *visiMap);
+
+extern void AppendOnlyVisimap_Init_forIndexOnlyScan(
+									   AppendOnlyVisimap *visiMap,
+									   Relation aoRel,
+									   Snapshot snapshot);
+
+extern void AppendOnlyVisimap_Finish_forIndexOnlyScan(
 												   AppendOnlyVisimap *visiMap);
 
 bool AppendOnlyVisimapScan_GetNextInvisible(

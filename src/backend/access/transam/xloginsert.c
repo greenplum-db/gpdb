@@ -25,6 +25,7 @@
 #include "access/xloginsert.h"
 #include "catalog/pg_control.h"
 #include "common/pg_lzcompress.h"
+#include "executor/instrument.h"
 #include "miscadmin.h"
 #include "replication/origin.h"
 #include "storage/bufmgr.h"
@@ -112,7 +113,7 @@ static MemoryContext xloginsert_cxt;
 
 static XLogRecData *XLogRecordAssemble(RmgrId rmid, uint8 info,
 									   XLogRecPtr RedoRecPtr, bool doPageWrites,
-									   XLogRecPtr *fpw_lsn, TransactionId overrideXid);
+									   XLogRecPtr *fpw_lsn, int *num_fpw, TransactionId overrideXid);
 static bool XLogCompressBackupBlock(char *page, uint16 hole_offset,
 									uint16 hole_length, char *dest, uint16 *dlen);
 static XLogRecPtr XLogInsert_Internal(RmgrId rmid, uint8 info, TransactionId
@@ -466,6 +467,7 @@ XLogInsert_Internal(RmgrId rmid, uint8 info, TransactionId headerXid)
 		bool		doPageWrites;
 		XLogRecPtr	fpw_lsn;
 		XLogRecData *rdt;
+		int			num_fpw = 0;
 
 		/*
 		 * Get values needed to decide whether to do full-page writes. Since
@@ -475,9 +477,9 @@ XLogInsert_Internal(RmgrId rmid, uint8 info, TransactionId headerXid)
 		GetFullPageWriteInfo(&RedoRecPtr, &doPageWrites);
 
 		rdt = XLogRecordAssemble(rmid, info, RedoRecPtr, doPageWrites,
-								 &fpw_lsn, headerXid);
+								 &fpw_lsn, &num_fpw, headerXid);
 
-		EndPos = XLogInsertRecord(rdt, fpw_lsn, curinsert_flags);
+		EndPos = XLogInsertRecord(rdt, fpw_lsn, curinsert_flags, num_fpw);
 	} while (EndPos == InvalidXLogRecPtr);
 
 	XLogResetInsertion();
@@ -500,7 +502,7 @@ XLogInsert_Internal(RmgrId rmid, uint8 info, TransactionId headerXid)
 static XLogRecData *
 XLogRecordAssemble(RmgrId rmid, uint8 info,
 				   XLogRecPtr RedoRecPtr, bool doPageWrites,
-				   XLogRecPtr *fpw_lsn, TransactionId headerXid)
+				   XLogRecPtr *fpw_lsn, int *num_fpw, TransactionId headerXid)
 {
 	XLogRecData *rdt;
 	uint32		total_len = 0;
@@ -652,6 +654,9 @@ XLogRecordAssemble(RmgrId rmid, uint8 info,
 			 * struct
 			 */
 			bkpb.fork_flags |= BKPBLOCK_HAS_IMAGE;
+
+			/* Report a full page image constructed for the WAL record */
+			*num_fpw += 1;
 
 			/*
 			 * Construct XLogRecData entries for the page content.

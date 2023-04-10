@@ -149,11 +149,13 @@ static bool SyncRepQueueIsOrderedByLSN(int mode);
  * to be flushed if synchronous_commit is set to the higher level of
  * remote_apply, because only commit records provide apply feedback.
  *
- * GPDB_12_MERGE_FIXME: we now have quite few hacks for IS_QUERY_DISPATCHER to
- * internally treat it as SYNC rep and not using the GUC to make it
- * happen. All the places in syncrep.c and walsender.c having conditionals for
+ * TODO: Longer term goal is to remove hacks under IS_QUERY_DISPATCHER in
+ * syncrep.c and walsender.c be replaced by synchronous_standby_names GUC. All
+ * the places in syncrep.c and walsender.c having conditionals for
  * IS_QUERY_DISPATCHER should be removed and we should try to use proper GUC
- * mechanism to force sync nature for master-standby as well.
+ * mechanism to force sync nature for master-standby as well. Though that goal
+ * is hard to accomplish without implementing coordinator-standby
+ * autofailover.
  */
 void
 SyncRepWaitForLSN(XLogRecPtr lsn, bool commit)
@@ -162,12 +164,23 @@ SyncRepWaitForLSN(XLogRecPtr lsn, bool commit)
 	const char *old_status;
 	int			mode;
 
+#ifdef FAULT_INJECTOR
+	/*
+	 * If walsender is programmed to skip sending WAL, don't bother waiting.
+	 * Otherwise, tests may block indefinitely.  Tests are typically mindful
+	 * of not performing COMMIT/ABORT operation when walsnd_skip_send fault is
+	 * injected.  This logic is necessary when SyncRepWaitForLSN is called
+	 * from DML (insert/update/delete) code path.
+	 */
+	if (SIMPLE_FAULT_INJECTOR("walsnd_skip_send") == FaultInjectorTypeSkip)
+		return;
+#endif
+
 	/* Cap the level for anything other than commit to remote flush only. */
 	if (commit)
 		mode = SyncRepWaitMode;
 	else
 		mode = Min(SyncRepWaitMode, SYNC_REP_WAIT_FLUSH);
-
 	Assert(!am_walsender);
 	elogif(debug_walrepl_syncrep, LOG,
 			"syncrep wait -- This backend's commit LSN for syncrep is %X/%X.",
@@ -959,8 +972,6 @@ SyncRepGetSyncStandbys(bool *am_sync)
 	if (am_sync != NULL)
 		*am_sync = false;
 
-	/* GPDB_12_MERGE_FIXME: Should this be in SyncRepGetSyncStandbysQuorum()
-	 * instead? */
 	if (IS_QUERY_DISPATCHER())
 	{
 		for (i = 0; i < max_wal_senders; i++)

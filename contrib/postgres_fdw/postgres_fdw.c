@@ -655,8 +655,7 @@ postgresGetForeignRelSize(PlannerInfo *root,
 													 fpinfo->local_conds,
 													 baserel->relid,
 													 JOIN_INNER,
-													 NULL,
-													 false);
+													 NULL);
 
 	cost_qual_eval(&fpinfo->local_conds_cost, fpinfo->local_conds, root);
 
@@ -2713,8 +2712,7 @@ estimate_path_cost_size(PlannerInfo *root,
 										   local_param_join_conds,
 										   foreignrel->relid,
 										   JOIN_INNER,
-										   NULL,
-										   false);
+										   NULL);
 		local_sel *= fpinfo->local_conds_sel;
 
 		rows = clamp_row_est(rows * local_sel);
@@ -2931,8 +2929,7 @@ estimate_path_cost_size(PlannerInfo *root,
 														 fpinfo->remote_conds,
 														 0,
 														 JOIN_INNER,
-														 NULL,
-														 false));
+														 NULL));
 				/* Factor in the selectivity of the locally-checked quals */
 				rows = clamp_row_est(retrieved_rows * fpinfo->local_conds_sel);
 			}
@@ -3386,7 +3383,7 @@ fetch_more_data(ForeignScanState *node)
 
 		for (i = 0; i < numrows; i++)
 		{
-			Assert(IsA(node->ss.ps.plan, ForeignScan));
+			Assert(IsA(node->ss.ps.plan, ForeignScan) || IsA(node->ss.ps.plan, DynamicForeignScan));
 
 			fsstate->tuples[i] =
 				make_tuple_from_result_row(res, i,
@@ -4439,19 +4436,7 @@ postgresAnalyzeForeignTable(Relation relation,
 
 		if (PQntuples(res) != 1 || PQnfields(res) != 1)
 			elog(ERROR, "unexpected result from deparseAnalyzeSizeSql query");
-
-        /* In GPDB, BLCKSZ is 32k by default. And in postgres, BLCKSZ is 8k by default. 
-         * When computing the totalpages of foreign table, postgres_fdw uses relSize / local BLCKSZ. 
-         * So when GPDB connects to remote postgres using postgres_fdw, 
-         * if the relSize of foreign table is smaller than GPDB BLCKSZ, the case that totalpages = 0 && totaltuples > 0 will arise. 
-         * And totalpages = 0 && titaltuples > 0 will violate GPDB's Assert and might cause GPDB crashing.
-         *
-         * So here we handle totalpages = 0 && relSize > 0 specifically to fix the issue above. 
-         */
-		unsigned long int relSize = strtoul(PQgetvalue(res, 0, 0), NULL, 10);
-		*totalpages = relSize / BLCKSZ;
-		if(*totalpages == 0 && relSize > 0)
-			*totalpages = 1;
+		*totalpages = strtoul(PQgetvalue(res, 0, 0), NULL, 10);
 
 		PQclear(res);
 		res = NULL;
@@ -5532,8 +5517,7 @@ postgresGetForeignJoinPaths(PlannerInfo *root,
 													 fpinfo->local_conds,
 													 0,
 													 JOIN_INNER,
-													 NULL,
-													 false);
+													 NULL);
 	cost_qual_eval(&fpinfo->local_conds_cost, fpinfo->local_conds, root);
 
 	/*
@@ -5543,8 +5527,7 @@ postgresGetForeignJoinPaths(PlannerInfo *root,
 	if (!fpinfo->use_remote_estimate)
 		fpinfo->joinclause_sel = clauselist_selectivity(root, fpinfo->joinclauses,
 														0, fpinfo->jointype,
-														extra->sjinfo,
-														false);
+														extra->sjinfo);
 
 	/* Estimate costs for bare join relation */
 	estimate_path_cost_size(root, joinrel, NIL, NIL, NULL,
@@ -5931,8 +5914,7 @@ add_foreign_grouping_paths(PlannerInfo *root, RelOptInfo *input_rel,
 													 fpinfo->local_conds,
 													 0,
 													 JOIN_INNER,
-													 NULL,
-													 false);
+													 NULL);
 
 	cost_qual_eval(&fpinfo->local_conds_cost, fpinfo->local_conds, root);
 

@@ -4044,7 +4044,7 @@
     <dxl:Plan Id="0" SpaceSize="80990">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="3422679.529071" Rows="19136.250000" Width="31"/>
+          <dxl:Cost StartupCost="0" TotalCost="3422679.547303" Rows="19136.250000" Width="31"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="27" Alias="year">
@@ -4064,7 +4064,7 @@
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="3422676.865496" Rows="19136.250000" Width="31"/>
+            <dxl:Cost StartupCost="0" TotalCost="3422676.883729" Rows="19136.250000" Width="31"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="27" Alias="year">
@@ -4084,7 +4084,7 @@
           <dxl:OneTimeFilter/>
           <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="3422676.865496" Rows="19136.250000" Width="31"/>
+              <dxl:Cost StartupCost="0" TotalCost="3422676.883729" Rows="19136.250000" Width="31"/>
             </dxl:Properties>
             <dxl:GroupingColumns>
               <dxl:GroupingColumn ColId="27"/>
@@ -4119,7 +4119,7 @@
             <dxl:Filter/>
             <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="3422671.973515" Rows="19136.250000" Width="34"/>
+                <dxl:Cost StartupCost="0" TotalCost="3422671.991747" Rows="19136.250000" Width="34"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="27" Alias="year">
@@ -4156,7 +4156,7 @@
               </dxl:HashExprList>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="3422670.955275" Rows="19136.250000" Width="34"/>
+                  <dxl:Cost StartupCost="0" TotalCost="3422670.973507" Rows="19136.250000" Width="34"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="27" Alias="year">
@@ -4179,7 +4179,7 @@
                 <dxl:OneTimeFilter/>
                 <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="3422670.955275" Rows="19136.250000" Width="34"/>
+                    <dxl:Cost StartupCost="0" TotalCost="3422670.973507" Rows="19136.250000" Width="34"/>
                   </dxl:Properties>
                   <dxl:GroupingColumns>
                     <dxl:GroupingColumn ColId="27"/>
@@ -4214,7 +4214,7 @@
                   <dxl:Filter/>
                   <dxl:HashJoin JoinType="Inner">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="2087869.893271" Rows="5288759693.059181" Width="30"/>
+                      <dxl:Cost StartupCost="0" TotalCost="2087869.911503" Rows="5288759693.059181" Width="30"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="6" Alias="sales">
@@ -4276,7 +4276,7 @@
                           </dxl:Cast>
                         </dxl:Comparison>
                       </dxl:HashCondList>
-                      <dxl:DynamicTableScan PartIndexId="1" SelectorIds="10">
+                      <dxl:DynamicTableScan SelectorIds="10">
                         <dxl:Properties>
                           <dxl:Cost StartupCost="0" TotalCost="96421.988429" Rows="5288759693.059181" Width="26"/>
                         </dxl:Properties>
@@ -4352,7 +4352,7 @@
                     </dxl:HashJoin>
                     <dxl:PartitionSelector RelationMdid="6.328475.1.1" SelectorId="10" ScanId="1" Partitions="0,1,2,3">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="1552.578227" Rows="607744.000000" Width="30"/>
+                        <dxl:Cost StartupCost="0" TotalCost="1552.596459" Rows="607744.000000" Width="30"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="26" Alias="ymd">
@@ -4379,7 +4379,7 @@
                       </dxl:PartFilterExpr>
                       <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="1552.578227" Rows="607744.000000" Width="30"/>
+                          <dxl:Cost StartupCost="0" TotalCost="1552.596459" Rows="607744.000000" Width="30"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="26" Alias="ymd">
@@ -4402,7 +4402,7 @@
                         <dxl:SortingColumnList/>
                         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="1313.962739" Rows="303872.000000" Width="30"/>
+                            <dxl:Cost StartupCost="0" TotalCost="1313.980971" Rows="303872.000000" Width="30"/>
                           </dxl:Properties>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="26" Alias="ymd">
@@ -4467,9 +4467,9 @@
                               </dxl:TableDescriptor>
                             </dxl:TableScan>
                           </dxl:BroadcastMotion>
-                          <dxl:TableScan>
+                          <dxl:Materialize Eager="false">
                             <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="431.551944" Rows="3038.720000" Width="12"/>
+                              <dxl:Cost StartupCost="0" TotalCost="431.570177" Rows="3038.720000" Width="12"/>
                             </dxl:Properties>
                             <dxl:ProjList>
                               <dxl:ProjElem ColId="26" Alias="ymd">
@@ -4482,34 +4482,51 @@
                                 <dxl:Ident ColId="29" ColName="month" TypeMdid="0.1042.1.0"/>
                               </dxl:ProjElem>
                             </dxl:ProjList>
-                            <dxl:Filter>
-                              <dxl:And>
-                                <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.1061.1.0">
-                                  <dxl:Ident ColId="28" ColName="ym" TypeMdid="0.1042.1.0"/>
-                                  <dxl:ConstValue TypeMdid="0.1042.1.0" Value="AAAACjE5ODYwMQ==" LintValue="266216246"/>
-                                </dxl:Comparison>
-                                <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.1059.1.0">
+                            <dxl:Filter/>
+                            <dxl:TableScan>
+                              <dxl:Properties>
+                                <dxl:Cost StartupCost="0" TotalCost="431.551944" Rows="3038.720000" Width="12"/>
+                              </dxl:Properties>
+                              <dxl:ProjList>
+                                <dxl:ProjElem ColId="26" Alias="ymd">
+                                  <dxl:Ident ColId="26" ColName="ymd" TypeMdid="0.1082.1.0"/>
+                                </dxl:ProjElem>
+                                <dxl:ProjElem ColId="27" Alias="year">
                                   <dxl:Ident ColId="27" ColName="year" TypeMdid="0.1042.1.0"/>
-                                  <dxl:ConstValue TypeMdid="0.1042.1.0" Value="AAAACDE5OTc=" LintValue="123134828"/>
-                                </dxl:Comparison>
-                              </dxl:And>
-                            </dxl:Filter>
-                            <dxl:TableDescriptor Mdid="6.328293.1.1" TableName="calendar">
-                              <dxl:Columns>
-                                <dxl:Column ColId="26" Attno="1" ColName="ymd" TypeMdid="0.1082.1.0"/>
-                                <dxl:Column ColId="27" Attno="2" ColName="year" TypeMdid="0.1042.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="28" Attno="3" ColName="ym" TypeMdid="0.1042.1.0" ColWidth="7"/>
-                                <dxl:Column ColId="29" Attno="4" ColName="month" TypeMdid="0.1042.1.0" ColWidth="2"/>
-                                <dxl:Column ColId="31" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                                <dxl:Column ColId="32" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                                <dxl:Column ColId="33" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                                <dxl:Column ColId="34" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                                <dxl:Column ColId="35" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                                <dxl:Column ColId="36" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                                <dxl:Column ColId="37" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                              </dxl:Columns>
-                            </dxl:TableDescriptor>
-                          </dxl:TableScan>
+                                </dxl:ProjElem>
+                                <dxl:ProjElem ColId="29" Alias="month">
+                                  <dxl:Ident ColId="29" ColName="month" TypeMdid="0.1042.1.0"/>
+                                </dxl:ProjElem>
+                              </dxl:ProjList>
+                              <dxl:Filter>
+                                <dxl:And>
+                                  <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.1061.1.0">
+                                    <dxl:Ident ColId="28" ColName="ym" TypeMdid="0.1042.1.0"/>
+                                    <dxl:ConstValue TypeMdid="0.1042.1.0" Value="AAAACjE5ODYwMQ==" LintValue="266216246"/>
+                                  </dxl:Comparison>
+                                  <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.1059.1.0">
+                                    <dxl:Ident ColId="27" ColName="year" TypeMdid="0.1042.1.0"/>
+                                    <dxl:ConstValue TypeMdid="0.1042.1.0" Value="AAAACDE5OTc=" LintValue="123134828"/>
+                                  </dxl:Comparison>
+                                </dxl:And>
+                              </dxl:Filter>
+                              <dxl:TableDescriptor Mdid="6.328293.1.1" TableName="calendar">
+                                <dxl:Columns>
+                                  <dxl:Column ColId="26" Attno="1" ColName="ymd" TypeMdid="0.1082.1.0"/>
+                                  <dxl:Column ColId="27" Attno="2" ColName="year" TypeMdid="0.1042.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="28" Attno="3" ColName="ym" TypeMdid="0.1042.1.0" ColWidth="7"/>
+                                  <dxl:Column ColId="29" Attno="4" ColName="month" TypeMdid="0.1042.1.0" ColWidth="2"/>
+                                  <dxl:Column ColId="31" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                                  <dxl:Column ColId="32" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                                  <dxl:Column ColId="33" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                                  <dxl:Column ColId="34" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                                  <dxl:Column ColId="35" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                                  <dxl:Column ColId="36" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                                  <dxl:Column ColId="37" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                                </dxl:Columns>
+                              </dxl:TableDescriptor>
+                            </dxl:TableScan>
+                          </dxl:Materialize>
                         </dxl:NestedLoopJoin>
                       </dxl:BroadcastMotion>
                     </dxl:PartitionSelector>

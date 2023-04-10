@@ -206,7 +206,7 @@ reset enable_sort;
 -- Also check LIKE optimization with binary-compatible cases
 create temp table btree_bpchar (f1 text collate "C");
 create index on btree_bpchar(f1 bpchar_ops);
-insert into btree_bpchar values ('foo'), ('fool'), ('bar'), ('quux');
+insert into btree_bpchar values ('foo'), ('foo  '), ('fool'), ('bar'), ('quux');
 -- doesn't match index:
 explain (costs off)
 select * from btree_bpchar where f1 like 'foo';
@@ -235,18 +235,19 @@ select * from btree_bpchar where f1 like 'foo%';
 (4 rows)
 
 select * from btree_bpchar where f1 like 'foo%';
-  f1  
-------
+  f1   
+-------
+ foo  
  foo
  fool
-(2 rows)
+(3 rows)
 
 -- these do match the index:
 explain (costs off)
 select * from btree_bpchar where f1::bpchar like 'foo';
                         QUERY PLAN                        
 ----------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)
+ Gather Motion 3:1  (slice1; segments: 3)
    ->  Bitmap Heap Scan on btree_bpchar
          Filter: ((f1)::bpchar ~~ 'foo'::text)
          ->  Bitmap Index Scan on btree_bpchar_f1_idx
@@ -273,10 +274,30 @@ select * from btree_bpchar where f1::bpchar like 'foo%';
 (6 rows)
 
 select * from btree_bpchar where f1::bpchar like 'foo%';
-  f1  
-------
+  f1   
+-------
  foo
  fool
+ foo  
+(3 rows)
+
+explain (costs off)
+select * from btree_bpchar where f1::bpchar ='foo';
+                        QUERY PLAN                        
+----------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Bitmap Heap Scan on btree_bpchar
+         Recheck Cond: ((f1)::bpchar = 'foo'::bpchar)
+         ->  Bitmap Index Scan on btree_bpchar_f1_idx
+               Index Cond: ((f1)::bpchar = 'foo'::bpchar)
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select * from btree_bpchar where f1::bpchar ='foo';
+  f1   
+-------
+ foo  
+ foo
 (2 rows)
 
 --

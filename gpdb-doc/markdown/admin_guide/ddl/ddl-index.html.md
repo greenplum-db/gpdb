@@ -43,7 +43,7 @@ VACUUM ANALYZE old_table;
 
 ## <a id="topic92"></a>Index Types 
 
-Greenplum Database supports the Postgres index types B-tree, GiST, SP-GiST, GIN, and BRIN. Hash indexes are not supported. Each index type uses a different algorithm that is best suited to different types of queries. B-tree indexes fit the most common situations and are the default index type. See [Index Types](https://www.postgresql.org/docs/12/indexes-types.html) in the PostgreSQL documentation for a description of these types.
+Greenplum Database supports the Postgres index types B-tree, hash, GiST, SP-GiST, GIN, and BRIN. Each index type uses a different algorithm that is best suited to different types of queries. B-tree indexes fit the most common situations and are the default index type. See [Index Types](https://www.postgresql.org/docs/12/indexes-types.html) in the PostgreSQL documentation for a description of these types.
 
 > **Note** Greenplum Database allows unique indexes only if the columns of the index key are the same as \(or a superset of\) the Greenplum distribution key. Unique indexes are not supported on append-optimized tables. On partitioned tables, a unique index cannot be enforced across all child table partitions of a partitioned table. A unique index is supported only within a partition.
 

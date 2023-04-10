@@ -1337,17 +1337,15 @@ SET maintenance_work_mem = '1MB';
 CREATE INDEX hash_tuplesort_idx ON tenk1 USING hash (stringu1 name_ops) WITH (fillfactor = 10);
 EXPLAIN (COSTS OFF)
 SELECT count(*) FROM tenk1 WHERE stringu1 = 'TVAAAA';
-                       QUERY PLAN                        
----------------------------------------------------------
+                           QUERY PLAN                           
+----------------------------------------------------------------
  Finalize Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Partial Aggregate
-               ->  Bitmap Heap Scan on tenk1
-                     Recheck Cond: (stringu1 = 'TVAAAA'::name)
-                     ->  Bitmap Index Scan on hash_tuplesort_idx
-                           Index Cond: (stringu1 = 'TVAAAA'::name)
- Optimizer: Postgres query optimizer
-(8 rows)
+               ->  Index Scan using hash_tuplesort_idx on tenk1
+                     Index Cond: (stringu1 = 'TVAAAA'::name)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
 
 SELECT count(*) FROM tenk1 WHERE stringu1 = 'TVAAAA';
  count 

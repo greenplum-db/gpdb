@@ -485,8 +485,11 @@ ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid)
 		 */
 		if (LWLockConditionalAcquire(ProcArrayLock, LW_EXCLUSIVE))
 		{
-			if (TransactionIdIsValid(latestXid))
-				ProcArrayEndTransactionInternal(proc, pgxact, latestXid);
+			/*
+			 * Greenplum needs to clear things of pgxact too in the case that
+			 * the distributed XID is valid but XID is not.
+			 */
+			ProcArrayEndTransactionInternal(proc, pgxact, latestXid);
 
 			if (TransactionIdIsValid(tmGxact->gxid))
 				ProcArrayEndGxact(tmGxact);
@@ -496,17 +499,12 @@ ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid)
 		else
 			ProcArrayGroupClearXid(proc, latestXid);
 	}
-
-	/* Greenplum always clears the PGPROC entry, see the function comment */
+	else
 	{
 		/*
 		 * If we have no XID, we don't need to lock, since we won't affect
 		 * anyone else's calculation of a snapshot.  We might change their
 		 * estimate of global xmin, but that's OK.
-		 *
-		 * NB: this may reset the pgxact and tmGxact twice (not including the xid
-		 * and gxid), it should be no harm to the correctness, just an easy way to
-		 * handle the cases like: there's a valid distributed XID but no local XID.
 		 */
 		Assert(!TransactionIdIsValid(allPgXact[proc->pgprocno].xid));
 		Assert(!TransactionIdIsValid(allTmGxact[proc->pgprocno].gxid));
@@ -524,9 +522,16 @@ ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid)
 
 		Assert(pgxact->nxids == 0);
 		Assert(pgxact->overflowed == false);
-
-		resetTmGxact();
 	}
+
+	/*
+	 * reset global transaction context
+	 *
+	 * proc is currently always MyProc, and we reset MyTmGxact without question,
+	 * assert it.
+	 */
+	Assert(proc == MyProc);
+	resetTmGxact();
 }
 
 /*
@@ -538,6 +543,8 @@ static inline void
 ProcArrayEndTransactionInternal(PGPROC *proc, PGXACT *pgxact,
 								TransactionId latestXid)
 {
+	bool onlyClear = !TransactionIdIsValid(pgxact->xid);
+
 	pgxact->xid = InvalidTransactionId;
 	proc->lxid = InvalidLocalTransactionId;
 	pgxact->xmin = InvalidTransactionId;
@@ -553,6 +560,9 @@ ProcArrayEndTransactionInternal(PGPROC *proc, PGXACT *pgxact,
 	/* Clear the subtransaction-XID cache too while holding the lock */
 	pgxact->nxids = 0;
 	pgxact->overflowed = false;
+
+	if (onlyClear)
+		return;
 
 	/* Also advance global latestCompletedXid while holding the lock */
 	if (TransactionIdPrecedes(ShmemVariableCache->latestCompletedXid,
@@ -648,8 +658,11 @@ ProcArrayGroupClearXid(PGPROC *proc, TransactionId latestXid)
 		PGXACT	   *pgxact = &allPgXact[nextidx];
 		TMGXACT	   *tmGxact = &allTmGxact[nextidx];
 
-		if (TransactionIdIsValid(nextproc->procArrayGroupMemberXid))
-			ProcArrayEndTransactionInternal(nextproc, pgxact, nextproc->procArrayGroupMemberXid);
+		/*
+		 * Greenplum needs to clear things of pgxact too in the case that the
+		 * distributed XID is valid but XID is not.
+		 */
+		ProcArrayEndTransactionInternal(nextproc, pgxact, nextproc->procArrayGroupMemberXid);
 
 		if (TransactionIdIsValid(tmGxact->gxid))
 			ProcArrayEndGxact(tmGxact);
@@ -3943,6 +3956,9 @@ ProcArraySetReplicationSlotXmin(TransactionId xmin, TransactionId catalog_xmin,
 
 	if (!already_locked)
 		LWLockRelease(ProcArrayLock);
+
+	elog(DEBUG1, "xmin required by slots: data %u, catalog %u",
+		 xmin, catalog_xmin);
 }
 
 /*

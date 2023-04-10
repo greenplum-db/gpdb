@@ -93,6 +93,19 @@ typedef struct
 	int retry_count;
 	XLogRecPtr xlogrecptr;
 	PMRestartState restart_state;
+	/*
+	 * How many times of time error (reported by poll()) we have got
+	 * when gp_fts_probe_timeout is exceeded
+	 *
+	 * Say by default the timeout parameter passed to poll() is 50 ms
+	 * (see ftsPoll()), and gp_fts_probe_timeout is 20 sec. If we hit
+	 * gp_fts_probe_timeout:
+	 * 1. If the congestion is on network or segs, timeout_count should
+	 *    be near to 20000 / 50 = 400.
+	 * 2. If timeout_count is much less than 400, it means that FTS did
+	 *    not get enough CPU chance and the congestion must be on master.
+	 */
+	int timeout_count;
 } fts_segment_info;
 
 typedef struct

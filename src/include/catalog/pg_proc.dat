@@ -5241,6 +5241,13 @@
   proname => 'pg_stat_get_backend_dbid', provolatile => 's', proparallel => 'r',
   prorettype => 'oid', proargtypes => 'int4',
   prosrc => 'pg_stat_get_backend_dbid' },
+{ oid => '6107', descr => 'statistics: get subtransaction status of backend',
+  proname => 'pg_stat_get_backend_subxact', provolatile => 's', proparallel => 'r',
+  prorettype => 'record', proargtypes => 'int4',
+  proallargtypes => '{int4,int4,bool}',
+  proargmodes => '{i,o,o}',
+  proargnames => '{bid,subxact_count,subxact_overflowed}',
+  prosrc => 'pg_stat_get_backend_subxact' },
 { oid => '1939', descr => 'statistics: user ID of backend',
   proname => 'pg_stat_get_backend_userid', provolatile => 's',
   proparallel => 'r', prorettype => 'oid', proargtypes => 'int4',
@@ -5447,6 +5454,24 @@
   proname => 'pg_stat_get_buf_alloc', provolatile => 's', proparallel => 'r',
   prorettype => 'int8', proargtypes => '', prosrc => 'pg_stat_get_buf_alloc' },
 
+{ oid => '1136', descr => 'statistics: information about WAL activity',
+  proname => 'pg_stat_get_wal', proisstrict => 'f', provolatile => 's',
+  proparallel => 'r', prorettype => 'record', proargtypes => '',
+  proallargtypes => '{int8,int8,numeric,int8,int8,int8,float8,float8,timestamptz}',
+  proargmodes => '{o,o,o,o,o,o,o,o,o}',
+  proargnames => '{wal_records,wal_fpw,wal_bytes,wal_buffers_full,wal_write,wal_sync,wal_write_time,wal_sync_time,stats_reset}',
+  prosrc => 'pg_stat_get_wal' },
+
+{ oid => '2306',
+  descr => 'statistics: information about SLRU caches',
+  proname => 'pg_stat_get_slru', prorows => '100', proisstrict => 'f',
+  proretset => 't', provolatile => 's', proparallel => 'r',
+  prorettype => 'record', proargtypes => '',
+  proallargtypes => '{text,int8,int8,int8,int8,int8,int8,int8,timestamptz}',
+  proargmodes => '{o,o,o,o,o,o,o,o,o}',
+  proargnames => '{name,blks_zeroed,blks_hit,blks_read,blks_written,blks_exists,flushes,truncates,stats_reset}',
+  prosrc => 'pg_stat_get_slru' },
+
 { oid => '2978', descr => 'statistics: number of function calls',
   proname => 'pg_stat_get_function_calls', provolatile => 's',
   proparallel => 'r', prorettype => 'int8', proargtypes => 'oid',
@@ -5551,6 +5576,11 @@
   proname => 'pg_stat_reset_single_function_counters', provolatile => 'v',
   prorettype => 'void', proargtypes => 'oid',
   prosrc => 'pg_stat_reset_single_function_counters' },
+{ oid => '2307',
+  descr => 'statistics: reset collected statistics for a single SLRU',
+  proname => 'pg_stat_reset_slru', provolatile => 'v', proisstrict => 'f',
+  prorettype => 'void', proargtypes => 'text',
+  prosrc => 'pg_stat_reset_slru' },
 
 { oid => '3163', descr => 'current trigger depth',
   proname => 'pg_trigger_depth', provolatile => 's', proparallel => 'r',
@@ -7073,10 +7103,10 @@
 { oid => '2305', descr => 'I/O',
   proname => 'internal_out', prorettype => 'cstring', proargtypes => 'internal',
   prosrc => 'internal_out' },
-{ oid => '2306', descr => 'I/O',
+{ oid => '7900', descr => 'I/O',
   proname => 'opaque_in', proisstrict => 'f', prorettype => 'opaque',
   proargtypes => 'cstring', prosrc => 'opaque_in' },
-{ oid => '2307', descr => 'I/O',
+{ oid => '7901', descr => 'I/O',
   proname => 'opaque_out', prorettype => 'cstring', proargtypes => 'opaque',
   prosrc => 'opaque_out' },
 { oid => '2312', descr => 'I/O',
@@ -7704,6 +7734,31 @@
   proname => 'pg_notification_queue_usage', provolatile => 'v',
   prorettype => 'float8', proargtypes => '',
   prosrc => 'pg_notification_queue_usage' },
+
+# memory context of local backend
+{ oid => '2282', descr => 'information about all memory contexts of local backend',
+  proname => 'pg_get_backend_memory_contexts', prorows => '100', proretset => 't',
+  provolatile => 'v', proparallel => 'r', prorettype => 'record', proargtypes => '',
+  proallargtypes => '{text,text,text,int4,int8,int8,int8,int8,int8}',
+  proargmodes => '{o,o,o,o,o,o,o,o,o}',
+  proargnames => '{name, ident, parent, level, total_bytes, total_nblocks, free_bytes, free_chunks, used_bytes}',
+  prosrc => 'pg_get_backend_memory_contexts' },
+
+# logging memory contexts of the specified backend
+{ oid => '4543', descr => 'log memory contexts of the specified backend',
+  proname => 'pg_log_backend_memory_contexts',
+  provolatile => 'v', prorettype => 'bool',
+  proargtypes => 'int4', prosrc => 'pg_log_backend_memory_contexts' },
+
+# mpp-dispatched logging memory contexts of all/indicated backends.  polymorphic.
+{ oid => '7143', descr => 'log memory contexts of the backend for the specified session ID and content ID',
+  proname => 'gp_log_backend_memory_contexts',
+  provolatile => 'v', prorettype => 'int8',
+  proargtypes => 'int8 int8', prosrc => 'gp_log_backend_memory_contexts' },
+{ oid => '7144', descr => 'log memory contexts of the backend for the specified session ID',
+  proname => 'gp_log_backend_memory_contexts',
+  provolatile => 'v', prorettype => 'int8',
+  proargtypes => 'int8', prosrc => 'gp_log_backend_memory_contexts' },
 
 # non-persistent series generator
 { oid => '1066', descr => 'non-persistent series generator',
@@ -9896,9 +9951,9 @@
   proname => 'pg_get_replication_slots', prorows => '10', proisstrict => 'f',
   proretset => 't', provolatile => 's', prorettype => 'record',
   proargtypes => '',
-  proallargtypes => '{name,name,text,oid,bool,bool,int4,xid,xid,pg_lsn,pg_lsn}',
-  proargmodes => '{o,o,o,o,o,o,o,o,o,o,o}',
-  proargnames => '{slot_name,plugin,slot_type,datoid,temporary,active,active_pid,xmin,catalog_xmin,restart_lsn,confirmed_flush_lsn}',
+  proallargtypes => '{name,name,text,oid,bool,bool,int4,xid,xid,pg_lsn,pg_lsn,text,int8}',
+  proargmodes => '{o,o,o,o,o,o,o,o,o,o,o,o,o}',
+  proargnames => '{slot_name,plugin,slot_type,datoid,temporary,active,active_pid,xmin,catalog_xmin,restart_lsn,confirmed_flush_lsn,wal_status,safe_wal_size}',
   prosrc => 'pg_get_replication_slots' },
 { oid => '3786', descr => 'set up a logical replication slot',
   proname => 'pg_create_logical_replication_slot', provolatile => 'v',
@@ -10855,11 +10910,11 @@
    prosrc => 'pg_resgroup_move_query' },
 
 { oid => 6065, descr => 'statistics: information about resource groups in key-value style',
-   proexeclocation => 'c',
+   proexeclocation => 'i',
    proname => 'pg_resgroup_get_status_kv', prorows => '1000', proisstrict => 'f', proretset => 't', provolatile => 'v', proparallel => 'r', prorettype => 'record', proargtypes => 'text', proallargtypes => 'text,oid,text,text', proargmodes => '{i,o,o,o}', proargnames => '{prop_in,rsgid,prop,value}', prosrc => 'pg_resgroup_get_status_kv' },
 
 { oid => 6066, descr => 'statistics: information about resource groups',
-   proexeclocation => 'c',
+   proexeclocation => 'i',
    proname => 'pg_resgroup_get_status', prorows => '1000', proisstrict => 'f', proretset => 't', provolatile => 'v', proparallel => 'r', prorettype => 'record', proargtypes => 'oid', proallargtypes => 'oid,oid,int4,int4,int8,int8,interval,json', proargmodes => '{i,o,o,o,o,o,o,o}', proargnames => '{groupid,groupid,num_running,num_queueing,num_queued,num_executed,total_queue_duration,cpu_usage}', prosrc => 'pg_resgroup_get_status' },
 
 { oid => 6036, descr => 'waiting relation information',
@@ -11071,6 +11126,9 @@
 # AOCS functions.
 { oid => 9900, descr => 'decode internal AOCSVPInfo struct',
    proname => 'aocsvpinfo_decode', prorettype => 'int8', proargtypes => 'bytea int4 int4', prosrc => 'aocsvpinfo_decode' },
+
+{ oid => 9996, descr => 'get the GPDB-version directory name for user tablespaces',
+   proname => 'get_tablespace_version_directory_name', proisstrict => 'f', prorettype => 'text', proargtypes => '', prosrc => 'get_tablespace_version_directory_name' },
 
 # raises deprecation error
 { oid => 9997, descr => 'raises function deprecation error',

@@ -440,13 +440,6 @@ IsAbortInProgress(void)
 	return (s->state == TRANS_ABORT);
 }
 
-bool
-IsTransactionPreparing(void)
-{
-	TransactionState s = CurrentTransactionState;
-
-	return (s->state == TRANS_PREPARE);
-}
 /*
  *	IsAbortedTransactionBlockState
  *
@@ -2890,11 +2883,6 @@ CommitTransaction(void)
 	 * signals (which may attempt to abort our now partially-completed
 	 * transaction) until we've notified the QEs.
 	 *
-	 * Very important that PGPROC still thinks the transaction is still in progress so
-	 * SnapshotNow reader don't jump to the conclusion this distributed transaction is
-	 * finished.  So, notifyCommittedDtxTransaction will take responsbility to clear
-	 * PGPROC under the ProcArrayLock after the broadcast.  MPP-16087.
-	 *
 	 * And, that we have not master released locks, yet, too.
 	 *
 	 * Note:  do this BEFORE clearing the resource owner, as the dispatch
@@ -3936,6 +3924,9 @@ CommitTransactionCommand(void)
 			s->blockState = TBLOCK_DEFAULT;
 			if (s->chain)
 			{
+				if (Gp_role == GP_ROLE_DISPATCH)
+					setupRegularDtxContext();
+
 				StartTransaction();
 				s->blockState = TBLOCK_INPROGRESS;
 				s->chain = false;
@@ -3962,6 +3953,9 @@ CommitTransactionCommand(void)
 			s->blockState = TBLOCK_DEFAULT;
 			if (s->chain)
 			{
+				if (Gp_role == GP_ROLE_DISPATCH)
+					setupRegularDtxContext();
+
 				StartTransaction();
 				s->blockState = TBLOCK_INPROGRESS;
 				s->chain = false;
@@ -3980,6 +3974,9 @@ CommitTransactionCommand(void)
 			s->blockState = TBLOCK_DEFAULT;
 			if (s->chain)
 			{
+				if (Gp_role == GP_ROLE_DISPATCH)
+					setupRegularDtxContext();
+
 				StartTransaction();
 				s->blockState = TBLOCK_INPROGRESS;
 				s->chain = false;
@@ -4047,6 +4044,9 @@ CommitTransactionCommand(void)
 				s->blockState = TBLOCK_DEFAULT;
 				if (s->chain)
 				{
+					if (Gp_role == GP_ROLE_DISPATCH)
+						setupRegularDtxContext();
+
 					StartTransaction();
 					s->blockState = TBLOCK_INPROGRESS;
 					s->chain = false;

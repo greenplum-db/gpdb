@@ -783,6 +783,16 @@ CTranslatorQueryToDXL::TranslateInsertQueryToDXL()
 				   GPOS_WSZ_LIT("INSERT with constraints"));
 	}
 
+	BOOL contains_foreign_parts =
+		CTranslatorUtils::RelContainsForeignPartitions(md_rel, m_md_accessor);
+	if (contains_foreign_parts)
+	{
+		// Partitioned tables with external/foreign partitions
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				   GPOS_WSZ_LIT(
+					   "Insert with External/foreign partition storage types"));
+	}
+
 	// make note of the operator classes used in the distribution key
 	NoteDistributionPolicyOpclasses(rte);
 
@@ -987,7 +997,7 @@ CTranslatorQueryToDXL::TranslateCTASToDXL()
 			nullptr);
 	}
 
-	GPOS_ASSERT(IMDRelation::EreldistrMasterOnly != rel_distr_policy);
+	GPOS_ASSERT(IMDRelation::EreldistrCoordinatorOnly != rel_distr_policy);
 	m_context->m_has_distributed_tables = true;
 
 	// TODO: Mar 5, 2014; reserve an OID
@@ -1208,6 +1218,15 @@ CTranslatorQueryToDXL::TranslateDeleteQueryToDXL()
 
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
 
+	BOOL contains_foreign_parts =
+		CTranslatorUtils::RelContainsForeignPartitions(md_rel, m_md_accessor);
+	if (contains_foreign_parts)
+	{
+		// Partitioned tables with external/foreign partitions
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				   GPOS_WSZ_LIT(
+					   "Delete with External/foreign partition storage types"));
+	}
 	// make note of the operator classes used in the distribution key
 	NoteDistributionPolicyOpclasses(rte);
 
@@ -1281,6 +1300,15 @@ CTranslatorQueryToDXL::TranslateUpdateQueryToDXL()
 				   GPOS_WSZ_LIT("UPDATE with constraints"));
 	}
 
+	BOOL contains_foreign_parts =
+		CTranslatorUtils::RelContainsForeignPartitions(md_rel, m_md_accessor);
+	if (contains_foreign_parts)
+	{
+		// Partitioned tables with external/foreign partitions
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				   GPOS_WSZ_LIT(
+					   "Update with External/foreign partition storage types"));
+	}
 	// make note of the operator classes used in the distribution key
 	NoteDistributionPolicyOpclasses(rte);
 
@@ -3314,6 +3342,7 @@ CTranslatorQueryToDXL::UnsupportedRTEKind(RTEKind rtekind)
 					   GPOS_WSZ_LIT("RangeTableEntry of type Void"));
 		}
 		case RTE_TABLEFUNCTION:
+		case RTE_TABLEFUNC:
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 					   GPOS_WSZ_LIT("RangeTableEntry of type Table Function"));
@@ -3380,22 +3409,6 @@ CTranslatorQueryToDXL::TranslateRTEToDXLLogicalGet(const RangeTblEntry *rte,
 	// make note of the operator classes used in the distribution key
 	NoteDistributionPolicyOpclasses(rte);
 
-	IMdIdArray *partition_mdids = md_rel->ChildPartitionMdids();
-	for (ULONG ul = 0; partition_mdids && ul < partition_mdids->Size(); ++ul)
-	{
-		IMDId *part_mdid = (*partition_mdids)[ul];
-		const IMDRelation *partrel = m_md_accessor->RetrieveRel(part_mdid);
-
-		if (partrel->RetrieveRelStorageType() ==
-			IMDRelation::ErelstorageForeign)
-		{
-			// Partitioned tables with external/foreign partitions
-			GPOS_RAISE(
-				gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-				GPOS_WSZ_LIT("External/foreign partition storage types"));
-		}
-	}
-
 	return dxl_node;
 }
 
@@ -3439,7 +3452,7 @@ CTranslatorQueryToDXL::NoteDistributionPolicyOpclasses(const RangeTblEntry *rte)
 		gpdb::RelationWrapper rel = gpdb::GetRelation(rte->relid);
 		GpPolicy *policy = rel->rd_cdbpolicy;
 
-		// master-only tables
+		// coordinator-only tables
 		if (nullptr == policy)
 		{
 			return;
@@ -4197,17 +4210,19 @@ CTranslatorQueryToDXL::TranslateTargetListToDXLProject(
 					GPOS_WSZ_LIT("Grouping function with outer references"));
 			}
 		}
-		else if (!is_groupby || (is_groupby && is_grouping_col))
+		else if (!is_groupby || is_grouping_col)
 		{
 			// Insist projection for any outer refs to ensure any decorelation of a
 			// subquery results in a correct plan using the projected reference,
 			// instead of the outer ref directly.
 			// TODO: Remove is_grouping_col from this check once const projections in
 			// subqueries no longer prevent decorrelation
+			BOOL is_orderby_col = CTranslatorUtils::IsSortingColumn(
+				target_entry, m_query->sortClause);
 			BOOL insist_proj =
-				(IsA(target_entry->expr, Var) &&
-				 ((Var *) (target_entry->expr))->varlevelsup > 0 &&
-				 !is_grouping_col);
+				IsA(target_entry->expr, Var) &&
+				((Var *) (target_entry->expr))->varlevelsup > 0 &&
+				!is_orderby_col && !is_grouping_col;
 			CDXLNode *project_elem_dxlnode = TranslateExprToDXLProject(
 				target_entry->expr, target_entry->resname,
 				insist_proj /* insist_new_colids */);

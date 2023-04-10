@@ -91,8 +91,8 @@ private:
 	// value for the first valid part id
 	static ULONG m_ulFirstValidPartId;
 
-	// if there are master only tables in the query
-	BOOL m_has_master_only_tables;
+	// if there are coordinator only tables in the query
+	BOOL m_has_coordinator_only_tables;
 
 	// does the query contain any volatile functions or
 	// functions that read/modify SQL data
@@ -163,9 +163,9 @@ public:
 	}
 
 	void
-	SetHasMasterOnlyTables()
+	SetHasCoordinatorOnlyTables()
 	{
-		m_has_master_only_tables = true;
+		m_has_coordinator_only_tables = true;
 	}
 
 	void
@@ -188,9 +188,9 @@ public:
 	}
 
 	BOOL
-	HasMasterOnlyTables() const
+	HasCoordinatorOnlyTables() const
 	{
-		return m_has_master_only_tables;
+		return m_has_coordinator_only_tables;
 	}
 
 	BOOL
@@ -214,13 +214,13 @@ public:
 	BOOL
 	OptimizeDMLQueryWithSingletonSegment() const
 	{
-		// A DML statement can be optimized by enforcing a gather motion on segment instead of master,
+		// A DML statement can be optimized by enforcing a gather motion on segment instead of coordinator,
 		// whenever a singleton execution is needed.
 		// This optmization can not be applied if the query contains any of the following:
-		// (1). master-only tables
+		// (1). coordinator-only tables
 		// (2). a volatile function
-		return !GPOS_FTRACE(EopttraceDisableNonMasterGatherForDML) &&
-			   FDMLQuery() && !HasMasterOnlyTables() && !HasVolatileFunc();
+		return !GPOS_FTRACE(EopttraceDisableNonCoordinatorGatherForDML) &&
+			   FDMLQuery() && !HasCoordinatorOnlyTables() && !HasVolatileFunc();
 	}
 
 	// column factory accessor

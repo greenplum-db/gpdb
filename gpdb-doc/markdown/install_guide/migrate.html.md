@@ -6,7 +6,7 @@ You can migrate data from Greenplum Database 4.3 or 5 to Greenplum 6 using the s
 
 > **Note** Open source Greenplum Database is available only for Greenplum Database 5 and later.
 
-> **Note** You can upgrade a Greenplum Database 5.28 system directly to Greenplum 6.9 or later using [gpupgrade](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Upgrade/index.html). You cannot upgrade a Greenplum Database 4.3 system directly to Greenplum 6.
+> **Note** You can upgrade a Greenplum Database 5.28.10 system directly to Greenplum 6.24.0 or later using [gpupgrade](https://docs.vmware.com/en/VMware-Greenplum-Upgrade/index.html). You cannot upgrade a Greenplum Database 4.3 system directly to Greenplum 6.
 
 This topic identifies known issues you may encounter when moving data from Greenplum 4.3 to Greenplum 6. You can work around these problems by making needed changes to your Greenplum 4.3 databases so that you can create backups that can be restored successfully to Greenplum 6.
 
@@ -121,7 +121,7 @@ Following are some issues that are known to cause errors when restoring a Greenp
 
 ## <a id="backup-and-restore"></a>Backing Up and Restoring a Database 
 
-First use `gpbackup` to create a `--metadata-only` backup from the source Greenplum database and restore it to the Greenplum 6 system. This helps find any additional problems that are not identified in [Preparing Greenplum 4.3 and 5 Databases for Backup](#prep-gpdb4). Refer to the [Greenplum Backup and Restore documentation](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/index.html) for syntax and examples for the `gpbackup` and `gprestore` utilities.
+First use `gpbackup` to create a `--metadata-only` backup from the source Greenplum database and restore it to the Greenplum 6 system. This helps find any additional problems that are not identified in [Preparing Greenplum 4.3 and 5 Databases for Backup](#prep-gpdb4). Refer to the [Greenplum Backup and Restore documentation](https://docs.vmware.com/en/VMware-Greenplum-Backup-and-Restore/index.html) for syntax and examples for the `gpbackup` and `gprestore` utilities.
 
 Review the `gprestore` log file for error messages and correct any remaining problems in the source Greenplum database.
 

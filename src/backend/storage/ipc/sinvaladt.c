@@ -396,17 +396,20 @@ BackendIdGetProc(int backendID)
 
 /*
  * BackendIdGetTransactionIds
- *		Get the xid and xmin of the backend. The result may be out of date
- *		arbitrarily quickly, so the caller must be careful about how this
- *		information is used.
+ *		Get the xid, xmin, nsubxid and overflow status of the backend. The
+ *		result may be out of date arbitrarily quickly, so the caller must be
+ *		careful about how this information is used.
  */
 void
-BackendIdGetTransactionIds(int backendID, TransactionId *xid, TransactionId *xmin)
+BackendIdGetTransactionIds(int backendID, TransactionId *xid,
+						   TransactionId *xmin, int *nsubxid, bool *overflowed)
 {
 	SISeg	   *segP = shmInvalBuffer;
 
 	*xid = InvalidTransactionId;
 	*xmin = InvalidTransactionId;
+	*nsubxid = 0;
+	*overflowed = false;
 
 	/* Need to lock out additions/removals of backends */
 	LWLockAcquire(SInvalWriteLock, LW_SHARED);
@@ -422,6 +425,8 @@ BackendIdGetTransactionIds(int backendID, TransactionId *xid, TransactionId *xmi
 
 			*xid = xact->xid;
 			*xmin = xact->xmin;
+			*nsubxid = xact->nxids;
+			*overflowed = xact->overflowed;
 		}
 	}
 

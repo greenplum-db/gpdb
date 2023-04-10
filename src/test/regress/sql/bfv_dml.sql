@@ -53,7 +53,7 @@ drop table yyy;
 -- Now repeat all the above tests, but using a hacked master-only 'm' table
 drop table m;
 
-set optimizer_enable_master_only_queries=on;
+set optimizer_enable_coordinator_only_queries=on;
 
 
 -- create master-only table

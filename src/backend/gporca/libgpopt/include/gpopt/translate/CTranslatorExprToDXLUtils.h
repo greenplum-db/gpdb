@@ -53,15 +53,6 @@ using namespace gpnaucrates;
 class CTranslatorExprToDXLUtils
 {
 private:
-	// construct a scalar comparison of the given type between the
-	// column with the given col id and the scalar expression
-	static CDXLNode *PdxlnCmp(CMemoryPool *mp, CMDAccessor *md_accessor,
-							  ULONG ulPartLevel, BOOL fLowerBound,
-							  CDXLNode *pdxlnScalar, IMDType::ECmpType cmp_type,
-							  IMDId *pmdidTypePartKey, IMDId *pmdidTypeExpr,
-							  IMDId *pmdidTypeCastExpr, IMDId *mdid_cast_func);
-
-
 	// create a column reference
 	static CColRef *PcrCreate(CMemoryPool *mp, CMDAccessor *md_accessor,
 							  CColumnFactory *col_factory, IMDId *mdid,
@@ -85,6 +76,12 @@ private:
 		CMemoryPool *mp, CMDAccessor *md_accessor,
 		CExpressionArray *pdrgpexprHashed, CConstraint *pcnstr);
 
+	// compute the direct dispatch info  from the constraints
+	// for a randomly distributed table
+	static CDXLDirectDispatchInfo *GetDXLDirectDispatchInfoRandDist(
+		CMemoryPool *mp, CMDAccessor *md_accessor, const CColRef *pcrDistrCol,
+		CConstraint *pcnstrDistrCol);
+
 	// compute the direct dispatch info for a single distribution key from the constraints
 	// on the distribution key
 	static CDXLDirectDispatchInfo *PdxlddinfoSingleDistrKey(
@@ -100,54 +97,6 @@ private:
 public:
 	// construct a default properties container
 	static CDXLPhysicalProperties *GetProperties(CMemoryPool *mp);
-
-	// create a scalar const value expression for the given bool value
-	static CDXLNode *PdxlnBoolConst(CMemoryPool *mp, CMDAccessor *md_accessor,
-									BOOL value);
-
-	// create a scalar const value expression for the given int4 value
-	static CDXLNode *PdxlnInt4Const(CMemoryPool *mp, CMDAccessor *md_accessor,
-									INT val);
-
-	// construct a filter node for a list partition predicate
-	static CDXLNode *PdxlnListFilterScCmp(
-		CMemoryPool *mp, CMDAccessor *md_accessor, CDXLNode *pdxlnPartKey,
-		CDXLNode *pdxlnScalar, IMDId *pmdidTypePartKey, IMDId *pmdidTypeOther,
-		IMDType::ECmpType cmp_type, ULONG ulPartLevel, BOOL fHasDefaultPart);
-
-	// construct a DXL node for the part key portion of the list partition filter
-	static CDXLNode *PdxlnListFilterPartKey(CMemoryPool *mp,
-											CMDAccessor *md_accessor,
-											CExpression *pexprPartKey,
-											IMDId *pmdidTypePartKey,
-											ULONG ulPartLevel);
-
-	// construct a filter node for a range predicate
-	static CDXLNode *PdxlnRangeFilterScCmp(
-		CMemoryPool *mp, CMDAccessor *md_accessor, CDXLNode *pdxlnScalar,
-		IMDId *pmdidTypePartKey, IMDId *pmdidTypeOther,
-		IMDId *pmdidTypeCastExpr, IMDId *mdid_cast_func,
-		IMDType::ECmpType cmp_type, ULONG ulPartLevel);
-
-	// construct a range filter for an equality comparison
-	static CDXLNode *PdxlnRangeFilterEqCmp(
-		CMemoryPool *mp, CMDAccessor *md_accessor, CDXLNode *pdxlnScalar,
-		IMDId *pmdidTypePartKey, IMDId *pmdidTypeOther,
-		IMDId *pmdidTypeCastExpr, IMDId *mdid_cast_func, ULONG ulPartLevel);
-
-	// construct a predicate for the lower or upper bound of a partition
-	static CDXLNode *PdxlnRangeFilterPartBound(
-		CMemoryPool *mp, CMDAccessor *md_accessor, CDXLNode *pdxlnScalar,
-		IMDId *pmdidTypePartKey, IMDId *pmdidTypeOther,
-		IMDId *pmdidTypeCastExpr, IMDId *mdid_cast_func, ULONG ulPartLevel,
-		ULONG fLowerBound, IMDType::ECmpType cmp_type);
-
-	// construct predicates to cover the cases of default partition and
-	// open-ended partitions if necessary
-	static CDXLNode *PdxlnRangeFilterDefaultAndOpenEnded(
-		CMemoryPool *mp, ULONG ulPartLevel, BOOL fLTComparison,
-		BOOL fGTComparison, BOOL fEQComparison, BOOL fDefaultPart);
-
 
 	// check if the DXL Node is a scalar const TRUE
 	static BOOL FScalarConstTrue(CMDAccessor *md_accessor, CDXLNode *dxlnode);

@@ -352,7 +352,7 @@ EXPLAIN ANALYZE SELECT percentile_cont(0.25) WITHIN GROUP (ORDER BY a ASC nulls 
         </dxl:LogicalGet>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="190">
+    <dxl:Plan Id="0" SpaceSize="130">
       <dxl:Sequence>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1325244.228342" Rows="1.000000" Width="8"/>

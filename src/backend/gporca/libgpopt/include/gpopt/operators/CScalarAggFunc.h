@@ -86,6 +86,9 @@ private:
 	// is result of splitting aggregates
 	BOOL m_fSplit;
 
+	// is aggregate replicate slice execution safe
+	BOOL m_fRepSafe;
+
 public:
 	CScalarAggFunc(const CScalarAggFunc &) = delete;
 
@@ -93,7 +96,8 @@ public:
 	CScalarAggFunc(CMemoryPool *mp, IMDId *pmdidAggFunc,
 				   IMDId *resolved_rettype, const CWStringConst *pstrAggFunc,
 				   BOOL is_distinct, EAggfuncStage eaggfuncstage, BOOL fSplit,
-				   EAggfuncKind aggkind, ULongPtrArray *argtypes);
+				   EAggfuncKind aggkind, ULongPtrArray *argtypes,
+				   BOOL fRepSafe);
 
 	// dtor
 	~CScalarAggFunc() override
@@ -205,6 +209,13 @@ public:
 	FSplit() const
 	{
 		return m_fSplit;
+	}
+
+	// is aggregate replicate slice execution safe
+	BOOL
+	FRepSafe() const
+	{
+		return m_fRepSafe;
 	}
 
 	// type of expression's result

@@ -265,7 +265,7 @@ AppendOnlyStorageRead_FinishOpenFile(AppendOnlyStorageRead *storageRead,
 {
 	MemoryContext oldMemoryContext;
 
-	AORelationVersion_CheckValid(version);
+	AOSegfileFormatVersion_CheckValid(version);
 
 	storageRead->file = file;
 	storageRead->formatVersion = version;
@@ -914,7 +914,9 @@ AppendOnlyStorageRead_ReadNextBlock(AppendOnlyStorageRead *storageRead)
 		/* UNDONE: Finish the read for the information only header. */
 	}
 
-	SIMPLE_FAULT_INJECTOR("AppendOnlyStorageRead_ReadNextBlock_success");
+#ifdef FAULT_INJECTOR
+	FaultInjector_InjectFaultIfSet("AppendOnlyStorageRead_ReadNextBlock_success", DDLNotSpecified, "", storageRead->relationName);
+#endif
 
 	return true;
 }

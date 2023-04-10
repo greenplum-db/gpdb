@@ -140,13 +140,13 @@ When expanding a Greenplum system, `gpexpand` populates [gp\_segment\_configurat
 
 If host systems are configured with multiple NICs, you can expand a Greenplum Database system to use each NIC as a Greenplum host system. You must ensure that the host systems are configured with sufficient resources to support all the segment instances being added to the host. Also, if you enable segment mirroring, you must ensure that the expanded Greenplum system configuration supports failover if a host system fails. For information about Greenplum Database mirroring schemes, see [../../best\_practices/ha.html\#topic\_ngz\_qf4\_tt](../../best_practices/ha.html#topic_ngz_qf4_tt).
 
-For example, this is a `gpexpand` configuration file for a simple Greenplum system. The segment host `gp6s1` and `gp6s2` are configured with two NICs, `-s1` and `-s2`, where the Greenplum Database system uses each NIC as a host system.
+For example, this is a `gpexpand` configuration file for a simple Greenplum system. The segment host `gp7s1` and `gp7s2` are configured with two NICs, `-s1` and `-s2`, where the Greenplum Database system uses each NIC as a host system.
 
 ```
-gp6s1-s2|gp6s1-s2|40001|/data/data1/gpseg2|6|2|p
-gp6s2-s1|gp6s2-s1|50000|/data/mirror1/gpseg2|9|2|m
-gp6s2-s1|gp6s2-s1|40000|/data/data1/gpseg3|7|3|p
-gp6s1-s2|gp6s1-s2|50001|/data/mirror1/gpseg3|8|3|m
+gp7s1-s2|gp7s1-s2|40001|/data/data1/gpseg2|6|2|p
+gp7s2-s1|gp7s2-s1|50000|/data/mirror1/gpseg2|9|2|m
+gp7s2-s1|gp7s2-s1|40000|/data/data1/gpseg3|7|3|p
+gp7s1-s2|gp7s1-s2|50001|/data/mirror1/gpseg3|8|3|m
 ```
 
 ## <a id="section6"></a>Examples 

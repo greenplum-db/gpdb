@@ -24,7 +24,7 @@ After upgrading the Greenplum PostGIS package, you can remove the PostGIS 2.1.5 
 2.  Install the PostGIS 2.5.4 package into the Greenplum Database system with the `gppkg` utility.
 
     ```
-    gppkg -i postgis-2.5.4+pivotal.3.build.1-gp6-rhel7-x86_64.gppkg
+    gppkg -i postgis-2.5.4+pivotal.3.build.1-gp7-rhel8-x86_64.gppkg
     ```
 
     Run the `gppkg -q --all` command to verify the updated package version is installed in the Greenplum Database system.
@@ -65,7 +65,7 @@ The `pivotal.3` minor release supports using the `CREATE EXTENSION` command and 
 2.  Upgrade the PostGIS package in the Greenplum Database system using the `gppkg` option `-u`. The command updates the package to the `postgis-2.5.4+pivotal.3.build.1` package.
 
     ```
-    gppkg -u postgis-2.5.4+pivotal.3.build.1-gp6-rhel7-x86_64.gppkg
+    gppkg -u postgis-2.5.4+pivotal.3.build.1-gp7-rhel8-x86_64.gppkg
     ```
 
 3.  Run the `gppkg -q --all` command to verify the updated package version is installed in the Greenplum Database system.

@@ -15,6 +15,8 @@ CREATE FOREIGN DATA WRAPPER <name>
 
 `CREATE FOREIGN DATA WRAPPER` creates a new foreign-data wrapper in the current database. The user who defines the foreign-data wrapper becomes its owner.
 
+The foreign-data wrapper name must be unique within the database.
+
 Only superusers can create foreign-data wrappers.
 
 ## <a id="section4"></a>Parameters 
@@ -24,21 +26,18 @@ name
 
 HANDLER handler\_function
 :   The name of a previously registered function that Greenplum Database calls to retrieve the execution functions for foreign tables. hander\_function must take no arguments, and its return type must be `fdw_handler`.
-
-    It is possible to create a foreign-data wrapper with no handler function, but you can only declare, not access, foreign tables using such a wrapper.
+:   It is possible to create a foreign-data wrapper with no handler function, but you can only declare, not access, foreign tables using such a wrapper.
 
 VALIDATOR validator\_function
-:   The name of a previously registered function that Greenplum Database calls to check the options provided to the foreign-data wrapper. This function also checks the options for foreign servers, user mappings, and foreign tables that use the foreign-data wrapper. If no validator function or `NO VALIDATOR` is specified, Greenplum Database does not check options at creation time. \(Depending upon the implementation, foreign-data wrappers may ignore or reject invalid options at runtime.\)
-
-    validator\_function must take two arguments: one of type `text[]`, which contains the array of options as stored in the system catalogs, and one of type `oid`, which identifies the OID of the system catalog containing the options.
-
-    The return type is ignored; validator\_function should report invalid options using the `ereport(ERROR)` function.
+:   The name of a previously registered function that Greenplum Database calls to check the generic options provided to the foreign-data wrapper. This function also checks the options for foreign servers, user mappings, and foreign tables that use the foreign-data wrapper. If no validator function or `NO VALIDATOR` is specified, Greenplum Database does not check options at creation time. \(Depending upon the implementation, foreign-data wrappers may ignore or reject invalid options at runtime.\)
+:    validator\_function must take two arguments: one of type `text[]`, which contains the array of options as stored in the system catalogs, and one of type `oid`, which identifies the OID of the system catalog containing the options.
+:   The return type is ignored; validator\_function should report invalid options using the `ereport(ERROR)` function.
 
 OPTIONS \( option 'value' \[, ... \] \)
 :   The options for the new foreign-data wrapper. Option names must be unique. The option names and values are foreign-data wrapper-specific and are validated using the foreign-data wrappers' validator\_function.
 
 mpp\_execute \{ 'master' \| 'any' \| 'all segments' \}
-:   An option that identifies the host from which the foreign-data wrapper reads or writes data:
+:   A Greenplum Database-specific option that identifies the host from which the foreign-data wrapper reads or writes data:
 
     -   `master` \(the default\)—Read or write data from the coordinator host.
     -   `any`—Read data from either the coordinator host or any one segment, depending on which path costs less.
@@ -82,7 +81,7 @@ Note, however, that the SQL/MED functionality as a whole is not yet conforming.
 
 ## <a id="section8"></a>See Also 
 
-[ALTER FOREIGN DATA WRAPPER](ALTER_FOREIGN_DATA_WRAPPER.html), [DROP FOREIGN DATA WRAPPER](DROP_FOREIGN_DATA_WRAPPER.html), [CREATE SERVER](CREATE_SERVER.html), [CREATE USER MAPPING](CREATE_USER_MAPPING.html)
+[ALTER FOREIGN DATA WRAPPER](ALTER_FOREIGN_DATA_WRAPPER.html), [DROP FOREIGN DATA WRAPPER](DROP_FOREIGN_DATA_WRAPPER.html), [CREATE FOREIGN TABLE](CREATE_FOREIGN_TABLE.html), [CREATE SERVER](CREATE_SERVER.html), [CREATE USER MAPPING](CREATE_USER_MAPPING.html)
 
 **Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

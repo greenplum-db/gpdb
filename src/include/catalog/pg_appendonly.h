@@ -29,9 +29,8 @@ CATALOG(pg_appendonly,6105,AppendOnlyRelationId)
 	Oid				relid;				/* relation id */
     Oid             segrelid;           /* OID of aoseg table; 0 if none */
     Oid             blkdirrelid;        /* OID of aoblkdir table; 0 if none */
-    Oid             blkdiridxid;        /* if aoblkdir table, OID of aoblkdir index */
 	Oid             visimaprelid;		/* OID of the aovisimap table */
-	Oid             visimapidxid;		/* OID of aovisimap index */
+	int16			version;			/* AO relation version */
 } FormData_pg_appendonly;
 
 /* GPDB added foreign key definitions for gpcheckcat. */
@@ -42,7 +41,7 @@ FOREIGN_KEY(relid REFERENCES pg_class(oid));
  * (there are no var-length fields currentl.)
 */
 #define APPENDONLY_TUPLE_SIZE \
-	 (offsetof(FormData_pg_appendonly,visimapidxid) + sizeof(Oid))
+	 (offsetof(FormData_pg_appendonly,version) + sizeof(Oid))
 
 /* ----------------
 *		Form_pg_appendonly corresponds to a pointer to a tuple with
@@ -53,30 +52,48 @@ typedef FormData_pg_appendonly *Form_pg_appendonly;
 
 /*
  * AORelationVersion defines valid values for the version of AppendOnlyEntry.
- * NOTE: When this is updated, AoRelationVersion_GetLatest() must be updated accordingly.
+ * NOTE: When this is updated, AORelationVersion_GetLatest() must be updated accordingly.
  */
 typedef enum AORelationVersion
 {
-	AORelationVersion_None =  0,
-	AORelationVersion_Original =  1,		/* first valid version */
-	AORelationVersion_Aligned64bit = 2,		/* version where the fixes for AOBlock and MemTuple
-											 * were introduced, see MPP-7251 and MPP-7372. */
-	AORelationVersion_PG83 = 3,				/* Same as Aligned64bit, but numerics are stored
-											 * in the PostgreSQL 8.3 format. */
-	AORelationVersion_PG12 = 4,             /* version that removed block directory hole filling. */
-	MaxAORelationVersion                    /* must always be last */
+	AORelationVersion_None = 0,
+	AORelationVersion_GP6 = 1,
+	AORelationVersion_GP7 = 2,
+	MaxAORelationVersion
 } AORelationVersion;
 
-#define AORelationVersion_GetLatest() AORelationVersion_PG12
-
+#define AORelationVersion_GetLatest() AORelationVersion_GP7
+#define AORelationVersion_Get(relation) (relation)->rd_appendonly->version
+#define AORelationVersion_Validate(relation, version) \
+	(AORelationVersion_Get((relation)) >= (version))
 #define AORelationVersion_IsValid(version) \
-	(version > AORelationVersion_None && version < MaxAORelationVersion)
+	((version) > AORelationVersion_None && (version) < MaxAORelationVersion)
+
+/*
+ * AOSegfileFormatVersion defines valid values for the version of AppendOnlyEntry.
+ * NOTE: When this is updated, AOSegfileFormatVersion_GetLatest() must be updated accordingly.
+ */
+typedef enum AOSegfileFormatVersion
+{
+	AOSegfileFormatVersion_None =  0,
+	AOSegfileFormatVersion_Original =  1,		/* first valid version */
+	AOSegfileFormatVersion_Aligned64bit = 2,	/* version where the fixes for AOBlock and MemTuple
+											 	 * were introduced, see MPP-7251 and MPP-7372. */
+	AOSegfileFormatVersion_GP5 = 3,				/* Same as Aligned64bit, but numerics are stored
+											 	 * in the PostgreSQL 8.3 format. */
+	MaxAOSegfileFormatVersion                   /* must always be last */
+} AOSegfileFormatVersion;
+
+#define AOSegfileFormatVersion_GetLatest() AOSegfileFormatVersion_GP5
+
+#define AOSegfileFormatVersion_IsValid(version) \
+	(version > AOSegfileFormatVersion_None && version < MaxAOSegfileFormatVersion)
 
 extern bool Debug_appendonly_print_verify_write_block;
 
-static inline void AORelationVersion_CheckValid(int version)
+static inline void AOSegfileFormatVersion_CheckValid(int version)
 {
-	if (!AORelationVersion_IsValid(version))
+	if (!AOSegfileFormatVersion_IsValid(version))
 	{
 		ereport(Debug_appendonly_print_verify_write_block?PANIC:ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
@@ -86,22 +103,21 @@ static inline void AORelationVersion_CheckValid(int version)
 }
 
 /*
- * Versions higher than AORelationVersion_Original include the fixes for AOBlock and
+ * Versions higher than AOSegfileFormatVersion_Original include the fixes for AOBlock and
  * MemTuple alignment.
  */
 #define IsAOBlockAndMemtupleAlignmentFixed(version) \
 ( \
-	AORelationVersion_CheckValid(version), \
-	(version > AORelationVersion_Original) \
+	AOSegfileFormatVersion_CheckValid(version), \
+	(version > AOSegfileFormatVersion_Original) \
 )
 
 extern void
 InsertAppendOnlyEntry(Oid relid,
 					  Oid segrelid,
 					  Oid blkdirrelid,
-					  Oid blkdiridxid,
 					  Oid visimaprelid,
-					  Oid visimapidxid);
+					  int16 version);
 
 void
 GetAppendOnlyEntryAttributes(Oid relid,
@@ -118,17 +134,14 @@ GetAppendOnlyEntryAttributes(Oid relid,
  * not NULL.
  */
 void
-GetAppendOnlyEntryAuxOids(Oid relid,
-						  Snapshot appendOnlyMetaDataSnapshot,
+GetAppendOnlyEntryAuxOids(Relation rel,
 						  Oid *segrelid,
 						  Oid *blkdirrelid,
-						  Oid *blkdiridxid,
-						  Oid *visimaprelid,
-						  Oid *visimapidxid);
-
+						  Oid *visimaprelid);
 
 void
-GetAppendOnlyEntry(Oid relid, Form_pg_appendonly aoEntry);
+GetAppendOnlyEntry(Relation rel, Form_pg_appendonly aoEntry);
+
 /*
  * Update the segrelid and/or blkdirrelid if the input new values
  * are valid OIDs.
@@ -137,9 +150,7 @@ extern void
 UpdateAppendOnlyEntryAuxOids(Oid relid,
 							 Oid newSegrelid,
 							 Oid newBlkdirrelid,
-							 Oid newBlkdiridxid,
-							 Oid newVisimaprelid,
-							 Oid newVisimapidxid);
+							 Oid newVisimaprelid);
 
 extern void
 RemoveAppendonlyEntry(Oid relid);

@@ -2340,9 +2340,9 @@ UNION ALL
                      ->  Hash
                            ->  Shared Scan (share slice:id 1:0)
                ->  Result
-                     One-Time Filter: (gp_execution_segment() = 0)
+                     Filter: (NOT (pg_sleep('1'::double precision) IS NULL))
                      ->  Result
-                           Filter: (NOT (pg_sleep('1'::double precision) IS NULL))
+                           One-Time Filter: (gp_execution_segment() = 0)
                            ->  Result
                ->  Result
                      ->  Shared Scan (share slice:id 1:0)

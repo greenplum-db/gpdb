@@ -2559,7 +2559,6 @@ insert into permtest_parent
   select 1, 'a', left(md5(i::text), 5) from generate_series(0, 100) i;
 analyze permtest_parent;
 create role regress_no_child_access;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 revoke all on permtest_grandchild from regress_no_child_access;
 NOTICE:  no privileges could be revoked
 grant select on permtest_parent to regress_no_child_access;

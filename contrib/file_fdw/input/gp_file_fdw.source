@@ -19,7 +19,7 @@ CREATE SERVER file_server FOREIGN DATA WRAPPER file_fdw OPTIONS (mpp_execute 'an
 
 -- create user mappings and grant privilege to test users
 SET ROLE file_fdw_superuser;
-CREATE USER MAPPING FOR file_fdw_superuser SERVER file_server OPTIONS (mpp_execute 'master'); -- error
+CREATE USER MAPPING FOR file_fdw_superuser SERVER file_server OPTIONS (mpp_execute 'coordinator'); -- error
 CREATE USER MAPPING FOR file_fdw_superuser SERVER file_server;
 
 -- MPP tests
@@ -38,8 +38,28 @@ CREATE FOREIGN TABLE text_csv_any_from_server (
 ) SERVER file_server
 OPTIONS (format 'csv', filename '@abs_srcdir@/data/text.csv');
 SELECT * FROM text_csv_any_from_server;
+CREATE FOREIGN TABLE text_csv_coordinator (
+    word1 text, word2 text, a int, b int
+) SERVER file_server
+OPTIONS (format 'csv', filename '@abs_srcdir@/data/text.csv', mpp_execute 'coordinator');
+
+-- Test append works both ways and generates valid plans. Should be able to execute
+-- coordinator fdw on coordinator under redistribute
+explain select word1 from text_csv_coordinator union all select word1 from text_csv_all;
+select word1 from text_csv_coordinator union all select word1 from text_csv_all;
+
+explain select word1 from text_csv_all union all select word1 from text_csv_coordinator;
+select word1 from text_csv_all union all select word1 from text_csv_coordinator;
+
+-- Test join with foreign scan under redistribute on coordinator works and doesn't hang
+create table bar (a text);
+insert into bar values ('AAA'),('XYZ'),('hji');
+analyze bar;
+explain  select word1 from text_csv_coordinator ft1, bar where ft1.word1 = bar.a;
+select word1 from text_csv_coordinator ft1, bar where ft1.word1 = bar.a;
 
 -- cleanup
+DROP TABLE bar;
 RESET ROLE;
 DROP EXTENSION file_fdw CASCADE;
 DROP ROLE file_fdw_superuser;

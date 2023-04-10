@@ -16,13 +16,20 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/CColumnFactory.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CScalarBoolOp.h"
+#include "gpopt/operators/CScalarConst.h"
+#include "gpopt/operators/CScalarIdent.h"
 
 namespace gpopt
 {
 using namespace gpos;
+
+using ExprToConstantMap =
+	CHashMap<CExpression, CExpression, CExpression::HashValue, CUtils::Equals,
+			 CleanupRelease<CExpression>, CleanupRelease<CExpression>>;
 
 //---------------------------------------------------------------------------
 //	@class:
@@ -152,6 +159,10 @@ private:
 	// eliminate CTE Anchors for CTEs that have zero consumers
 	static CExpression *PexprRemoveUnusedCTEs(CMemoryPool *mp,
 											  CExpression *pexpr);
+
+	static CExpression *PexprReplaceColWithConst(
+		CMemoryPool *mp, CExpression *pexpr, ExprToConstantMap *phmExprToConst,
+		BOOL checkFilterForConstants);
 
 	// collect CTE predicates from consumers
 	static void CollectCTEPredicates(CMemoryPool *mp, CExpression *pexpr,

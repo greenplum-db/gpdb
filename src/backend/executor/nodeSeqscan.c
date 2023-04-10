@@ -78,6 +78,7 @@ SeqNext(SeqScanState *node)
 									  estate->es_snapshot,
 									  node->ss.ps.plan->targetlist,
 									  node->ss.ps.plan->qual,
+									  NULL,
 									  NULL);
 		node->ss.ss_currentScanDesc = scandesc;
 	}

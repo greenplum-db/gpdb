@@ -16,8 +16,8 @@ SELECT GENERATE_SERIES::numeric sno
 CREATE index val3_bmp_idxblocksize_upd_8k on uao_blocksize_8k
  using bitmap (val3);
 SELECT count(*) from uao_blocksize_8k;
-SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimaprelid is
-not NULL AND visimapidxid is not NULL AND relid='uao_blocksize_8k'::regclass;
+SELECT count(i.indexrelid) = 1 AS VisimapPresent  FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND
+ a.relid='uao_blocksize_8k'::regclass;
 
 select 1 as block8k_present from pg_class, unnest(reloptions) as reloption
 where oid='uao_blocksize_8k'::regclass and reloption='blocksize=8192';
@@ -50,9 +50,8 @@ SELECT GENERATE_SERIES::numeric sno
 
 SELECT count(*) from uao_blocksize_2048k;
 
-SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE
-visimaprelid is not NULL AND visimapidxid is not NULL AND
-relid='uao_blocksize_2048k'::regclass;
+SELECT count(i.indexrelid) = 1 AS VisimapPresent  FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND
+ a.relid='uao_blocksize_2048k'::regclass;
 
 select 1 as block2048k_present from pg_class, unnest(reloptions) as reloption WHERE
 oid='uao_blocksize_2048k'::regclass and reloption='blocksize=2097152';

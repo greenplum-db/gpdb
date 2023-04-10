@@ -106,6 +106,7 @@ enum Edxltoken
 	EdxltokenPhysicalAggregate,
 	EdxltokenPhysicalAppend,
 	EdxltokenPhysicalMaterialize,
+	EdxltokenPhysicalDynamicForeignScan,
 	EdxltokenPhysicalSequence,
 	EdxltokenPhysicalDynamicTableScan,
 	EdxltokenPhysicalDynamicIndexScan,
@@ -215,12 +216,6 @@ enum Edxltoken
 	EdxltokenPartLevelFilterList,
 	EdxltokenPartLevel,
 	EdxltokenScalarPartDefault,
-	EdxltokenScalarPartBound,
-	EdxltokenScalarPartBoundLower,
-	EdxltokenScalarPartBoundInclusion,
-	EdxltokenScalarPartBoundOpen,
-	EdxltokenScalarPartListValues,
-	EdxltokenScalarPartListNullTest,
 	EdxltokenScalarResidualFilter,
 	EdxltokenScalarPartFilterExpr,
 	EdxltokenScalarBitmapIndexProbe,
@@ -398,6 +393,7 @@ enum Edxltoken
 
 	EdxltokenFuncId,
 	EdxltokenFuncRetSet,
+	EdxltokenFuncVariadic,
 
 
 	EdxltokenSortOpId,
@@ -491,7 +487,7 @@ enum Edxltoken
 	EdxltokenPartTypes,
 
 	EdxltokenRelDistrPolicy,
-	EdxltokenRelDistrMasterOnly,
+	EdxltokenRelDistrCoordinatorOnly,
 	EdxltokenRelDistrHash,
 	EdxltokenRelDistrRandom,
 	EdxltokenRelDistrReplicated,
@@ -503,9 +499,7 @@ enum Edxltoken
 	EdxltokenRelDistrOpclasses,
 	EdxltokenRelDistrOpclass,
 
-	EdxltokenExtRelRejLimit,
-	EdxltokenExtRelRejLimitInRows,
-	EdxltokenExtRelFmtErrRel,
+	EdxltokenRelForeignServer,
 
 	EdxltokenMetadataColumns,
 	EdxltokenMetadataColumn,
@@ -521,6 +515,7 @@ enum Edxltoken
 	EdxltokenIndexPartial,
 	EdxltokenIndexType,
 	EdxltokenIndexTypeBtree,
+	EdxltokenIndexTypeHash,
 	EdxltokenIndexTypeBitmap,
 	EdxltokenIndexTypeGist,
 	EdxltokenIndexTypeGin,
@@ -560,6 +555,7 @@ enum Edxltoken
 	EdxltokenMDTypeByValue,
 	EdxltokenMDTypeDistrOpfamily,
 	EdxltokenMDTypeLegacyDistrOpfamily,
+	EdxltokenMDTypePartOpfamily,
 	EdxltokenMDTypeEqOp,
 	EdxltokenMDTypeNEqOp,
 	EdxltokenMDTypeLTOp,
@@ -630,6 +626,7 @@ enum Edxltoken
 
 	EdxltokenGPDBAgg,
 	EdxltokenGPDBIsAggOrdered,
+	EdxltokenGPDBIsAggRepSafe,
 	EdxltokenGPDBAggResultTypeId,
 	EdxltokenGPDBAggIntermediateResultTypeId,
 	EdxltokenGPDBAggSplittable,
@@ -739,6 +736,8 @@ enum Edxltoken
 	EdxltokenVarTypeModList,
 
 	EdxltokenIndexTypeBrin,
+
+	EdxltokenForeignServerOid,
 
 	EdxltokenSentinel
 };

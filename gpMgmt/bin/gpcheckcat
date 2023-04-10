@@ -1069,9 +1069,10 @@ def checkOwners():
                     a.rolname, m.rolname as coordinator_rolname
     from gp_dist_random('pg_class') r
       join pg_class c on (c.oid = r.oid)
+      left join pg_index i on (c.oid = i.indexrelid)
       left join pg_appendonly ao on (c.oid = ao.segrelid or
                                      c.oid = ao.blkdirrelid or
-                                     c.oid = ao.blkdiridxid)
+                                     i.indrelid = ao.blkdirrelid)
       left join pg_class o on (o.oid = ao.relid or
                                o.reltoastrelid = c.oid)
       join pg_authid a on (a.oid = r.relowner)
@@ -1425,8 +1426,8 @@ class checkAOSegVpinfoThread(execThread):
 
     def run(self):
         aoseg_query = """
-           SELECT a.relname, a.relid, a.segrelid, cl.relname 
-           FROM (SELECT p.relid, p.segrelid, c.relname FROM pg_appendonly p LEFT JOIN pg_class c ON p.relid = c.oid LEFT JOIN pg_am a ON (a.oid = c.relam) 
+           SELECT a.relname, a.relid, a.segrelid, cl.relname, a.relnatts
+           FROM (SELECT p.relid, p.segrelid, c.relname, c.relnatts FROM pg_appendonly p LEFT JOIN pg_class c ON p.relid = c.oid LEFT JOIN pg_am a ON (a.oid = c.relam) 
            WHERE a.amname = 'ao_column') a 
            LEFT JOIN pg_class cl ON a.segrelid = cl.oid;
         """
@@ -1435,11 +1436,16 @@ class checkAOSegVpinfoThread(execThread):
             # Read the list of aoseg tables from the database
             curs = self.db.query(aoseg_query)
 
-            for relname, relid, segrelid, segrelname in curs.getresult():
-                qry = "SELECT count(*) FROM pg_attribute WHERE attrelid=%d AND attnum > 0;" % (relid)
-                attr_count = self.db.query(qry).getresult()[0][0]
-
-                qry = "SELECT distinct(length(vpinfo)) FROM pg_aoseg.%s where state = 1;" % (segrelname)
+            for relname, relid, segrelid, segrelname, attr_count in curs.getresult():
+                # We check vpinfo consistency only for segs that are in state
+                # AOSEG_STATE_DEFAULT and which are not RESERVED_SEGNO.
+                # RESERVED_SEGNO can have a different number of attributes than
+                # the other segments. For eg. if we ALTER TABLE ADD COLUMN in a
+                # transaction, and then insert rows in the same transaction, and
+                # then abort, the RESERVED_SEGNO will hold the inserted rows.
+                # The vpinfo for RESERVED_SEGNO will have more columns than
+                # relnatts in that case.
+                qry = "SELECT distinct(length(vpinfo)) FROM pg_aoseg.%s where state = 1 and segno <> 0;" % (segrelname)
                 vpinfo_curs = self.db.query(qry)
                 nrows = vpinfo_curs.ntuples()
                 if nrows == 0:
@@ -1472,7 +1478,7 @@ class checkAOSegVpinfoThread(execThread):
                     GV.checkStatus = False
                     setError(ERROR_NOREPAIR)
                     logger.info('[FAIL] inconsistent vpinfo')
-                    logger.error("vpinfo in 'pg_aoseg.{segrelname}' of table '{relname}' contains {vpinfo_attr_count} attributes, while pg_attribute has {attr_count} attributes on segment {content}"
+                    logger.error("vpinfo in 'pg_aoseg.{segrelname}' of table '{relname}' contains {vpinfo_attr_count} attributes, while pg_class has {attr_count} attributes on segment {content}"
                                  .format(segrelname = segrelname,
                                          relname = relname,
                                          vpinfo_attr_count = vpinfo_attr_count,

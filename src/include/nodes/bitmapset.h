@@ -25,30 +25,30 @@
  */
 struct List;
 
+#define BITMAPSET_SIZE(nwords)  \
+	(offsetof(Bitmapset, words) + (nwords) * sizeof(bitmapword))
+
 /*
  * Data representation
  *
  * Larger bitmap word sizes generally give better performance, so long as
  * they're not wider than the processor can handle efficiently.  We use
  * 64-bit words if pointers are that large, else 32-bit words.
+ *
+ * Disable 64-bit words for big-endian machine because we are lacking
+ * big-endian machine.
+ * We do have an implemention unverified and a lot of discussions.
+ * See: https://github.com/greenplum-db/gpdb/pull/14529
+ *
+ * TODO: enable 64-bit words for big-endian machine if possible
  */
-/*
- * GPDB_12_MERGE_FIXME Disable 64-bit word size for bitmap sets.
- * Appenoptimized tables use bitmapset interface to encode tuple visibility.
- * These bitmap sets make their way to disk, inside aovisimap tuples.
- * Increasing word size will affect the ability to interpret existing
- * appendoptimized visibility data written with 32-bit word size.  Therefore,
- * we must continue to use 32-bit bitmap words or rewrite all existing
- * appendoptimized tables during upgrade (not viable).  The goal of this fixme
- * is to explore if the performance benefit of larger bitmapwords can still be
- * availed by distinguishing on-disk bitmap usage from strictly in-memory
- * bitmap usage.  E.g. define a new type bitmapword32 and use it in
- * appendoptimized code.  On a related note, tbm_bitmapword is Greenplum
- * specific 64-bit wide type used for TID bitmaps.  Can we start using
+
+/* FIXME: tbm_bitmapword is Greenplum specific 64-bit wide type used for
+ * TID bitmaps. Since we have enabled 64-bit bms, can we start using
  * bitmapword for TID bitmaps, just like upastream, and eliminate
  * tbm_bitmapword?
  */
-#if false && SIZEOF_VOID_P >= 8
+#if ((SIZEOF_VOID_P >= 8) && (!defined WORDS_BIGENDIAN))
 
 #define BITS_PER_BITMAPWORD 64
 typedef uint64 bitmapword;		/* must be an unsigned type */

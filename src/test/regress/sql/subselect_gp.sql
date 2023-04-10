@@ -2,7 +2,7 @@
 create schema subselect_gp;
 set search_path to subselect_gp, public;
 -- end_ignore
-set optimizer_enable_master_only_queries = on;
+set optimizer_enable_coordinator_only_queries = on;
 set optimizer_segments = 3;
 set optimizer_nestloop_factor = 1.0;
 
@@ -144,7 +144,7 @@ explain select array(select x from csq_d1); -- initplan
 select array(select x from csq_d1); -- {1}
 
 --
--- CSQs involving master-only and distributed tables
+-- CSQs involving coordinator-only and distributed tables
 --
 
 drop table if exists t3cozlib;
@@ -180,7 +180,7 @@ ORDER BY a.attnum
 ; -- expect to see 2 rows
 
 --
--- More CSQs involving master-only and distributed relations
+-- More CSQs involving coordinator-only and distributed relations
 --
 
 drop table if exists csq_m1;
@@ -202,14 +202,14 @@ select * from csq_m1;
 select * from csq_d1;
 
 --
--- outer plan node is master-only and CSQ has distributed relation
+-- outer plan node is coordinator-only and CSQ has distributed relation
 --
 
 explain select * from csq_m1 where x not in (select x from csq_d1) or x < -100; -- gather motion
 select * from csq_m1 where x not in (select x from csq_d1) or x < -100; -- (3)
 
 --
--- outer plan node is master-only and CSQ has distributed relation
+-- outer plan node is coordinator-only and CSQ has distributed relation
 --
 
 explain select * from csq_d1 where x not in (select x from csq_m1) or x < -100; -- broadcast motion
@@ -1322,3 +1322,21 @@ drop table sublink_outer_table;
 drop table sublink_inner_table;
 reset optimizer;
 reset enable_hashagg;
+
+-- Ensure sub-queries with order by outer reference can be decorrelated and executed correctly.
+create table r(a int, b int, c int) distributed by (a);
+create table s(a int, b int, c int) distributed by (a);
+insert into r values (1,2,3);
+insert into s values (1,2,10);
+explain (costs off) select * from r where b in (select b from s where c=10 order by r.c);
+select * from r where b in (select b from s where c=10 order by r.c);
+explain (costs off) select * from r where b in (select b from s where c=10 order by r.c limit 2);
+select * from r where b in (select b from s where c=10 order by r.c limit 2);
+explain (costs off) select * from r where b in (select b from s where c=10 order by r.c, b);
+select * from r where b in (select b from s where c=10 order by r.c, b);
+explain (costs off) select * from r where b in (select b from s where c=10 order by r.c, b limit 2);
+select * from r where b in (select b from s where c=10 order by r.c, b limit 2);
+explain (costs off) select * from r where b in (select b from s where c=10 order by c);
+select * from r where b in (select b from s where c=10 order by c);
+explain (costs off) select * from r where b in (select b from s where c=10 order by c limit 2);
+select * from r where b in (select b from s where c=10 order by c limit 2);

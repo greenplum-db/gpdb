@@ -1,4 +1,4 @@
-set optimizer_enable_master_only_queries = on;
+set optimizer_enable_coordinator_only_queries = on;
 set optimizer_segments = 3;
 set optimizer_nestloop_factor = 1.0;
 --
@@ -310,7 +310,7 @@ select array(select x from csq_d1); -- {1}
 (1 row)
 
 --
--- CSQs involving master-only and distributed tables
+-- CSQs involving coordinator-only and distributed tables
 --
 drop table if exists t3cozlib;
 NOTICE:  table "t3cozlib" does not exist, skipping
@@ -345,7 +345,7 @@ ORDER BY a.attnum
 (2 rows)
 
 --
--- More CSQs involving master-only and distributed relations
+-- More CSQs involving coordinator-only and distributed relations
 --
 drop table if exists csq_m1;
 create table csq_m1();
@@ -378,7 +378,7 @@ select * from csq_d1;
 (3 rows)
 
 --
--- outer plan node is master-only and CSQ has distributed relation
+-- outer plan node is coordinator-only and CSQ has distributed relation
 --
 explain select * from csq_m1 where x not in (select x from csq_d1) or x < -100; -- gather motion
                                      QUERY PLAN                                     
@@ -398,7 +398,7 @@ select * from csq_m1 where x not in (select x from csq_d1) or x < -100; -- (3)
 (1 row)
 
 --
--- outer plan node is master-only and CSQ has distributed relation
+-- outer plan node is coordinator-only and CSQ has distributed relation
 --
 explain select * from csq_d1 where x not in (select x from csq_m1) or x < -100; -- broadcast motion
                                    QUERY PLAN                                   
@@ -3325,3 +3325,138 @@ drop table sublink_outer_table;
 drop table sublink_inner_table;
 reset optimizer;
 reset enable_hashagg;
+-- Ensure sub-queries with order by outer reference can be decorrelated and executed correctly.
+create table r(a int, b int, c int) distributed by (a);
+create table s(a int, b int, c int) distributed by (a);
+insert into r values (1,2,3);
+insert into s values (1,2,10);
+explain (costs off) select * from r where b in (select b from s where c=10 order by r.c);
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Semi Join
+         Hash Cond: (r.b = s.b)
+         ->  Seq Scan on r
+         ->  Hash
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                     ->  Seq Scan on s
+                           Filter: (c = 10)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select * from r where b in (select b from s where c=10 order by r.c);
+ a | b | c 
+---+---+---
+ 1 | 2 | 3
+(1 row)
+
+explain (costs off) select * from r where b in (select b from s where c=10 order by r.c limit 2);
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on r
+         Filter: (SubPlan 1)
+         SubPlan 1
+           ->  Limit
+                 ->  Result
+                       ->  Materialize
+                             ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                   ->  Seq Scan on s
+                                         Filter: (c = 10)
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+select * from r where b in (select b from s where c=10 order by r.c limit 2);
+ a | b | c 
+---+---+---
+ 1 | 2 | 3
+(1 row)
+
+explain (costs off) select * from r where b in (select b from s where c=10 order by r.c, b);
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Semi Join
+         Hash Cond: (r.b = s.b)
+         ->  Seq Scan on r
+         ->  Hash
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                     ->  Seq Scan on s
+                           Filter: (c = 10)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select * from r where b in (select b from s where c=10 order by r.c, b);
+ a | b | c 
+---+---+---
+ 1 | 2 | 3
+(1 row)
+
+explain (costs off) select * from r where b in (select b from s where c=10 order by r.c, b limit 2);
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on r
+         Filter: (SubPlan 1)
+         SubPlan 1
+           ->  Limit
+                 ->  Sort
+                       Sort Key: s.b
+                       ->  Result
+                             ->  Materialize
+                                   ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                         ->  Seq Scan on s
+                                               Filter: (c = 10)
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select * from r where b in (select b from s where c=10 order by r.c, b limit 2);
+ a | b | c 
+---+---+---
+ 1 | 2 | 3
+(1 row)
+
+explain (costs off) select * from r where b in (select b from s where c=10 order by c);
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Semi Join
+         Hash Cond: (r.b = s.b)
+         ->  Seq Scan on r
+         ->  Hash
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                     ->  Seq Scan on s
+                           Filter: (c = 10)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select * from r where b in (select b from s where c=10 order by c);
+ a | b | c 
+---+---+---
+ 1 | 2 | 3
+(1 row)
+
+explain (costs off) select * from r where b in (select b from s where c=10 order by c limit 2);
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Semi Join
+         Hash Cond: (r.b = "ANY_subquery".b)
+         ->  Seq Scan on r
+         ->  Hash
+               ->  Broadcast Motion 1:3  (slice2; segments: 1)
+                     ->  Subquery Scan on "ANY_subquery"
+                           ->  Limit
+                                 ->  Gather Motion 3:1  (slice3; segments: 3)
+                                       ->  Limit
+                                             ->  Seq Scan on s
+                                                   Filter: (c = 10)
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select * from r where b in (select b from s where c=10 order by c limit 2);
+ a | b | c 
+---+---+---
+ 1 | 2 | 3
+(1 row)
+

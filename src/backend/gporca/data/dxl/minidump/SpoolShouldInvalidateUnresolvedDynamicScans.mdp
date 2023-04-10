@@ -13,7 +13,7 @@ ANALYZE;
 EXPLAIN SELECT * FROM foo INNER JOIN (pt LEFT OUTER JOIN bar ON d = dk) ON a < partkey;
 
 We want to avoid plans like the following:
-+--CPhysicalMotionGather(master)
++--CPhysicalMotionGather(coordinator)
    +--CPhysicalInnerNLJoin
       |--CPhysicalPartitionSelector
       |  +--CPhysicalMotionBroadcast
@@ -32,7 +32,7 @@ We want to avoid plans like the following:
 
 And instead have a plan like
 
-+--CPhysicalMotionGather(master)
++--CPhysicalMotionGather(coordinator)
    +--CPhysicalInnerNLJoin
       |--CPhysicalMotionBroadcast
       |  +--CPhysicalTableScan "foo" ("foo")

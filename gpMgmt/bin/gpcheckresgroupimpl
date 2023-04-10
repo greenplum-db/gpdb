@@ -1,47 +1,65 @@
 #!/usr/bin/env python3
-#
 # Copyright (c) 2017, VMware, Inc. or its affiliates.
-#
 
 import os
 import sys
-from gppylib.commands import gp
-from gppylib import gpversion
 from functools import reduce
 
-gpverstr = gp.GpVersion.local("", os.getenv("GPHOME"))
-gpver = gpversion.GpVersion(gpverstr)
 
-class dummy(object):
+class ValidationException(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+        self.message = message
 
-    def validate_all(self):
+
+class Dummy(object):
+    @staticmethod
+    def validate_all():
         exit("resource group is not supported on this platform")
 
 
-class cgroup(object):
+class CgroupValidation(object):
+    @staticmethod
+    def detect_cgroup_mount_point():
+        # Get the cgroup mount place
+        proc_mounts_path = "/proc/self/mounts"
+        if os.path.exists(proc_mounts_path):
+            with open(proc_mounts_path) as f:
+                for line in f:
+                    mount_specs = line.split()
+                    mount_type = mount_specs[2]
 
+                    if mount_type == "cgroup":
+                        return os.path.dirname(mount_specs[1])
+
+                    if mount_type == "cgroup2" and mount_specs[1].split("/")[-1] != "unified":
+                        return mount_specs[1]
+        return ""
+
+
+class CgroupValidationVersionOne(CgroupValidation):
     def __init__(self):
         self.mount_point = self.detect_cgroup_mount_point()
-        self.tab = { 'r': os.R_OK, 'w': os.W_OK, 'x': os.X_OK, 'f': os.F_OK }
+        self.tab = {"r": os.R_OK, "w": os.W_OK, "x": os.X_OK, "f": os.F_OK}
         self.impl = "cgroup"
         self.error_prefix = " is not properly configured: "
 
-        self.compdirs = self.detect_comp_dirs()
+        self.component_dirs = self.detect_comp_dirs()
         if not self.validate_comp_dirs():
-            self.compdirs = self.fallback_comp_dirs()
+            self.component_dirs = self.fallback_comp_dirs()
 
     def validate_all(self):
         """
         Check the permissions of the toplevel gpdb cgroup dirs.
 
         The checks should keep in sync with
-        src/backend/utils/resgroup/resgroup-ops-cgroup.c
+        src/backend/utils/resgroup/cgroup-ops-v1.c
         """
 
         if not self.mount_point:
             self.die("failed to detect cgroup mount point.")
 
-        if not self.compdirs:
+        if not self.component_dirs:
             self.die("failed to detect cgroup component dirs.")
 
         self.validate_permission("cpu", "gpdb/", "rwx")
@@ -55,56 +73,53 @@ class cgroup(object):
         self.validate_permission("cpuacct", "gpdb/cpuacct.usage", "r")
         self.validate_permission("cpuacct", "gpdb/cpuacct.stat", "r")
 
-        if gpver.version >= [6, 0, 0]:
-            self.validate_permission("cpuset", "gpdb/", "rwx")
-            self.validate_permission("cpuset", "gpdb/cgroup.procs", "rw")
-            self.validate_permission("cpuset", "gpdb/cpuset.cpus", "rw")
-            self.validate_permission("cpuset", "gpdb/cpuset.mems", "rw")
+        self.validate_permission("cpuset", "gpdb/", "rwx")
+        self.validate_permission("cpuset", "gpdb/cgroup.procs", "rw")
+        self.validate_permission("cpuset", "gpdb/cpuset.cpus", "rw")
+        self.validate_permission("cpuset", "gpdb/cpuset.mems", "rw")
 
-            self.validate_comp_hierarchy();
+        self.validate_comp_hierarchy()
 
     def die(self, msg):
-        exit(self.impl + self.error_prefix + msg)
+        raise ValidationException("cgroup is not properly configured: {}".format(msg))
 
     def validate_permission(self, comp, path, mode):
         """
         Validate permission on path.
-        If path is a dir it must ends with '/'.
+        If path is a dir it must end with '/'.
         """
+        if comp not in self.component_dirs:
+            self.die("can't find dir of cgroup component {}".format(comp))
+
+        component_dir = self.component_dirs[comp]
+        fullpath = os.path.join(self.mount_point, comp, component_dir, path)
+        pathtype = path[-1] == "/" and "directory" or "file"
+        mode_bits = reduce(lambda x, y: x | y, [self.tab[x] for x in mode], 0)
+
         try:
-            if comp not in self.compdirs:
-                self.die("can't find dir of cgroup component '%s'" % (comp))
-
-            compdir = self.compdirs[comp]
-            fullpath = os.path.join(self.mount_point, comp, compdir, path)
-            pathtype = path[-1] == "/" and "directory" or "file"
-            modebits = reduce(lambda x, y: x | y,
-                              [self.tab[x] for x in mode], 0)
-
             if not os.path.exists(fullpath):
-                self.die("%s '%s' does not exist" % (pathtype, fullpath))
+                self.die("{} '{}' does not exist".format(pathtype, fullpath))
 
-            if not os.access(fullpath, modebits):
-                self.die("%s '%s' permission denied: require permission '%s'" \
-                         % (pathtype, fullpath, mode))
+            if not os.access(fullpath, mode_bits):
+                self.die("{} '{}' permission denied: require permission '{}'".
+                         format(pathtype, fullpath, mode))
         except IOError as e:
-            self.die("can't check permission on %s '%s': %s" \
-                     % (pathtype, fullpath, str(e)))
+            self.die("can't check permission on {} '{}': {}".format(pathtype, fullpath, str(e)))
 
     def validate_comp_dirs(self):
         """
-        Validate existance of cgroup component dirs.
+        Validate existence of cgroup component dirs.
 
-        Return True if all the components dir exist and have good permission,
+        Return True if all the components' dir exist and have good permission,
         otherwise return False.
         """
 
         for comp in self.required_comps():
-            if comp not in self.compdirs:
+            if comp not in self.component_dirs:
                 return False
 
-            compdir = self.compdirs[comp]
-            fullpath = os.path.join(self.mount_point, comp, compdir, 'gpdb')
+            component_dir = self.component_dirs[comp]
+            fullpath = os.path.join(self.mount_point, comp, component_dir, 'gpdb')
 
             if not os.access(fullpath, os.R_OK | os.W_OK | os.X_OK):
                 return False
@@ -132,48 +147,42 @@ class cgroup(object):
             if "cpu" in complist and "cpuset" in complist:
                 self.die("can't mount 'cpu' and 'cpuset' on the same hierarchy")
 
-    def detect_cgroup_mount_point(self):
-        proc_mounts_path = "/proc/self/mounts"
-        if os.path.exists(proc_mounts_path):
-            with open(proc_mounts_path) as f:
-                for line in f:
-                    mntent = line.split()
-                    if mntent[2] != "cgroup": continue
-                    mount_point = os.path.dirname(mntent[1])
-                    return mount_point
-        return ""
+    @staticmethod
+    def detect_comp_dirs():
+        component_dirs = {}
+        proc_path = "/proc/1/cgroup"
 
-    def detect_comp_dirs(self):
-        compdirs = {}
-        path = "/proc/1/cgroup"
+        if not os.path.exists(proc_path):
+            return component_dirs
 
-        if not os.path.exists(path):
-            return compdirs
+        with open(proc_path) as f:
+            for line in f:
+                line = line.strip()
+                compid, compnames, comppath = line.split(":")
+                if not compnames or '=' in compnames:
+                    continue
+                for compname in compnames.split(','):
+                    component_dirs[compname] = comppath.strip(os.path.sep)
 
-        for line in open(path):
-            line = line.strip()
-            compid, compnames, comppath = line.split(":")
-            if not compnames or '=' in compnames:
-                continue
-            for compname in compnames.split(','):
-                compdirs[compname] = comppath.strip(os.path.sep)
+        return component_dirs
 
-        return compdirs
-
-    def required_comps(self):
-        comps = ['cpu', 'cpuacct']
-        if gpver.version >= [6, 0, 0]:
-            comps.extend(['cpuset'])
+    @staticmethod
+    def required_comps():
+        comps = ["cpu", "cpuacct", "cpuset"]
         return comps
 
     def fallback_comp_dirs(self):
-        compdirs = {}
+        component_dirs = {}
         for comp in self.required_comps():
-            compdirs[comp] = ''
-        return compdirs
+            component_dirs[comp] = ""
+        return component_dirs
+
 
 if __name__ == '__main__':
     if sys.platform.startswith('linux'):
-        cgroup().validate_all()
+        try:
+            CgroupValidationVersionOne().validate_all()
+        except ValidationException as e:
+            exit(e.message)
     else:
-        dummy().validate_all()
+        Dummy().validate_all()

@@ -39,6 +39,10 @@ select count(*) > 0 as has_different_distribution from
 	select gp_segment_id, * from ats_expected_by_d) t;
 
 -- ALTER TABLE ... SET for partition tables
+PREPARE attribute_encoding_check AS
+SELECT c.relname, a.attname, e.filenum, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
+WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE $1;
+
 CREATE TABLE part_relopt(a int, b int) WITH (fillfactor=90) PARTITION BY RANGE(a);
 CREATE TABLE part_relopt_1 partition OF part_relopt FOR VALUES FROM (1) to (100);
 CREATE TABLE part_relopt_2 partition OF part_relopt FOR VALUES FROM (100) to (200) PARTITION BY RANGE(a);
@@ -86,31 +90,24 @@ SELECT c.relname, am.amname, c.reloptions FROM pg_class c JOIN pg_am am on am.oi
 --AOCO table: Also check setting column encoding
 ALTER TABLE part_relopt SET ACCESS METHOD ao_column WITH (compresstype=rle_type, compresslevel=1), ALTER COLUMN a SET ENCODING (compresstype=rle_type, compresslevel=2), ALTER COLUMN b SET ENCODING (compresstype=zlib, compresslevel=3);
 SELECT c.relname, am.amname, c.reloptions FROM pg_class c JOIN pg_am am on am.oid=c.relam WHERE c.relname LIKE 'part_relopt%';
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt%';
+execute attribute_encoding_check('part_relopt%');
 ALTER TABLE part_relopt SET (compresslevel=3);
 SELECT c.relname, am.amname, c.reloptions FROM pg_class c JOIN pg_am am on am.oid=c.relam WHERE c.relname LIKE 'part_relopt%';
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt%';
+execute attribute_encoding_check('part_relopt%');
 ALTER TABLE part_relopt ALTER COLUMN a SET ENCODING (compresstype=rle_type, compresslevel=4), ALTER COLUMN b SET ENCODING (compresstype=zlib, compresslevel=5);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt%';
+execute attribute_encoding_check('part_relopt%');
 -- Check double edit on same column
 ALTER TABLE part_relopt ALTER COLUMN a SET ENCODING (compresstype=rle_type, compresslevel=4), ALTER COLUMN a SET ENCODING (compresstype=zlib, compresslevel=5);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt%';
+execute attribute_encoding_check('part_relopt%');
 -- Check double edit of same option
 ALTER TABLE part_relopt ALTER COLUMN a SET ENCODING (compresslevel=3, compresslevel=4);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt%';
+execute attribute_encoding_check('part_relopt%');
 -- Check double edit of same column different options
 ALTER TABLE part_relopt ALTER COLUMN a SET ENCODING (compresstype=zlib), ALTER COLUMN a SET ENCODING (compresslevel=7);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt%';
+execute attribute_encoding_check('part_relopt%');
 
 ALTER TABLE part_relopt ALTER COLUMN a SET ENCODING (compresstype=zlib, compresslevel=5);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt%';
+execute attribute_encoding_check('part_relopt%');
 
 
 -- Data is intact
@@ -121,8 +118,7 @@ SELECT count(*) FROM part_relopt;
 -- with empty segfiles
 CREATE TABLE aoco_relopt(a int, b int) WITH (appendoptimized = true, orientation = column);
 ALTER TABLE aoco_relopt ALTER COLUMN a SET ENCODING (compresstype=rle_type, compresslevel=4), ALTER COLUMN b SET ENCODING (compresstype=zlib, compresslevel=5);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'aoco_relopt%';
+execute attribute_encoding_check('aoco_relopt%');
 
 DROP TABLE aoco_relopt;
 
@@ -155,8 +151,7 @@ CREATE TABLE part_relopt3_1 partition OF part_relopt3 FOR VALUES FROM (100) to (
 CREATE TABLE part_relopt3_2 partition OF part_relopt3 FOR VALUES FROM (200) to (300) PARTITION BY RANGE (a);
 CREATE TABLE part_relopt3_2_1 partition OF part_relopt3_2 FOR VALUES FROM (200) to (250);
 INSERT INTO part_relopt3 SELECT i,i FROM generate_series(101,249) i;
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
+execute attribute_encoding_check('part_relopt3%');
 -- error out because of the first child
 ALTER TABLE part_relopt3_1 SET ACCESS METHOD heap;
 ALTER TABLE part_relopt3 ALTER COLUMN a SET ENCODING (compresslevel=3, compresstype=zlib);
@@ -165,22 +160,17 @@ ALTER TABLE part_relopt3_1 SET ACCESS METHOD ao_column;
 ALTER TABLE part_relopt3_2_1 SET ACCESS METHOD heap;
 
 ALTER TABLE part_relopt3 ALTER COLUMN a SET ENCODING (compresslevel=3, compresstype=zlib);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
+execute attribute_encoding_check('part_relopt3%');
 
 ALTER TABLE part_relopt3_1 ALTER COLUMN a SET ENCODING (compresslevel=3, compresstype=zlib);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
+execute attribute_encoding_check('part_relopt3%');
 
 ALTER TABLE part_relopt3_2_1 SET ACCESS METHOD ao_column, ALTER COLUMN a SET ENCODING (compresslevel=4, compresstype=zlib);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
+execute attribute_encoding_check('part_relopt3%');
 ALTER TABLE part_relopt3_2 ALTER COLUMN a SET ENCODING (compresslevel=1, compresstype=rle_type);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
+execute attribute_encoding_check('part_relopt3%');
 ALTER TABLE part_relopt3 ALTER COLUMN a SET ENCODING (compresslevel=4, compresstype=rle_type);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
+execute attribute_encoding_check('part_relopt3%');
 
 -- Check if table is rewritten if encoding doesn't change
 CREATE TEMP TABLE relfilebeforeredo AS
@@ -189,8 +179,7 @@ UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_c
 WHERE relname LIKE 'part_relopt3%' ORDER BY segid;
 
 ALTER TABLE part_relopt3 ALTER COLUMN a SET ENCODING (compresslevel=4, compresstype=rle_type);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
+execute attribute_encoding_check('part_relopt3%');
 
 CREATE TEMP TABLE relfileafterredo AS
 SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'part_relopt3%'
@@ -202,35 +191,29 @@ SELECT * FROM relfilebeforeredo EXCEPT SELECT * FROM relfileafterredo;
 
 -- Check alter column set encoding for root partition ONLY
 ALTER TABLE ONLY part_relopt3 ALTER COLUMN a SET ENCODING (compresslevel=2, compresstype=zlib);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
+execute attribute_encoding_check('part_relopt3%');
 
 -- Check alter column set encoding for mid level root partition ONLY
 ALTER TABLE ONLY part_relopt3_2 ALTER COLUMN a SET ENCODING (compresslevel=3, compresstype=zlib);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
+execute attribute_encoding_check('part_relopt3%');
 
 -- altering when changing am to heap should error out for root partition
 ALTER TABLE part_relopt3 SET ACCESS METHOD heap, ALTER COLUMN a SET ENCODING (compresslevel=4, compresstype=rle_type);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
+execute attribute_encoding_check('part_relopt3%');
 
 -- altering when changing am to heap should error out for child partition
 ALTER TABLE part_relopt3_2_1 SET ACCESS METHOD heap, ALTER COLUMN a SET ENCODING (compresslevel=4, compresstype=rle_type);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
+execute attribute_encoding_check('part_relopt3%');
 
 -- set access method and then alter column set encoding should generate same encoding values as
 -- set access method + alter column set encoding
 ALTER TABLE part_relopt3 SET ACCESS METHOD heap;
 ALTER TABLE part_relopt3 SET ACCESS METHOD ao_column, ALTER COLUMN a SET ENCODING (compresslevel=4);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
+execute attribute_encoding_check('part_relopt3%');
 
 ALTER TABLE part_relopt3 SET ACCESS METHOD heap;
 ALTER TABLE part_relopt3 SET ACCESS METHOD ao_column;
 ALTER TABLE part_relopt3 ALTER COLUMN a SET ENCODING (compresslevel=4);
-SELECT c.relname, a.attname, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a
-WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE 'part_relopt3%';
+execute attribute_encoding_check('part_relopt3%');
 
 DROP TABLE part_relopt3;

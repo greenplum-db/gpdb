@@ -608,7 +608,7 @@
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1293.000675" Rows="1.000000" Width="28"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.000705" Rows="1.000000" Width="32"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="numcol">
@@ -628,7 +628,7 @@
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1293.000549" Rows="1.000000" Width="28"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.000561" Rows="1.000000" Width="32"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="numcol">
@@ -709,7 +709,7 @@
                           </dxl:ProjList>
                           <dxl:Filter/>
                           <dxl:SortingColumnList/>
-                          <dxl:DynamicTableScan PartIndexId="2" SelectorIds="">
+                          <dxl:DynamicTableScan SelectorIds="">
                             <dxl:Properties>
                               <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="8"/>
                             </dxl:Properties>
@@ -756,9 +756,9 @@
             </dxl:Comparison>
           </dxl:Filter>
           <dxl:OneTimeFilter/>
-          <dxl:DynamicTableScan PartIndexId="1" SelectorIds="">
+          <dxl:DynamicTableScan SelectorIds="">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="28"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="32"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="numcol">

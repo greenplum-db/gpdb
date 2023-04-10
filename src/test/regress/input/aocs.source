@@ -245,7 +245,7 @@ CREATE TABLE aocs_inh_child3 (COLUMN parent_t ENCODING (compresstype=zlib))
 INHERITS (aocs_inh_parent)
 WITH (appendonly=true, orientation=column);
 
-SELECT c.relname, ae.attnum, ae.attoptions FROM pg_class c, pg_attribute_encoding ae WHERE c.relname LIKE 'aocs_inh%' AND c.oid=ae.attrelid ORDER BY 1,2;
+SELECT c.relname, ae.attnum, ae.filenum, ae.attoptions FROM pg_class c, pg_attribute_encoding ae WHERE c.relname LIKE 'aocs_inh%' AND c.oid=ae.attrelid ORDER BY 1,2;
 
 -- Multiple inheritance
 -- The ENCODING of parent_t_8k column doesn't match that of the other parent table.
@@ -258,7 +258,7 @@ CREATE TABLE aocs_inh_multichild ()
 INHERITS (aocs_inh_parent, aocs_inh_parent2)
 WITH (appendonly=true, orientation=column);
 
-SELECT c.relname, ae.attnum, ae.attoptions FROM pg_class c, pg_attribute_encoding ae WHERE c.relname LIKE 'aocs_inh_multi%' AND c.oid=ae.attrelid ORDER BY 1,2;
+SELECT c.relname, ae.attnum, ae.filenum, ae.attoptions FROM pg_class c, pg_attribute_encoding ae WHERE c.relname LIKE 'aocs_inh_multi%' AND c.oid=ae.attrelid ORDER BY 1,2;
 
 -- AOCO table inherits a heap table.
 CREATE TABLE aocs_inh2_parent_heap (parent_t text, parent_t2 text);
@@ -267,7 +267,7 @@ WITH (appendonly=true, orientation=column);
 CREATE TABLE aocs_inh2_child2 (COLUMN parent_t ENCODING (compresstype=zlib)) INHERITS (aocs_inh2_parent_heap)
 WITH (appendonly=true, orientation=column);
 
-SELECT c.relname, ae.attnum, ae.attoptions FROM pg_class c, pg_attribute_encoding ae WHERE c.relname LIKE 'aocs_inh2_%' AND c.oid=ae.attrelid ORDER BY 1,2;
+SELECT c.relname, ae.attnum, ae.filenum, ae.attoptions FROM pg_class c, pg_attribute_encoding ae WHERE c.relname LIKE 'aocs_inh2_%' AND c.oid=ae.attrelid ORDER BY 1,2;
 
 -- don't drop the tables, to also test pg_dump & restore of them.
 

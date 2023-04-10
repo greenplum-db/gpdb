@@ -738,7 +738,7 @@ _outExternalScanInfo(StringInfo str, const ExternalScanInfo *node)
 
 	WRITE_NODE_FIELD(uriList);
 	WRITE_CHAR_FIELD(fmtType);
-	WRITE_BOOL_FIELD(isMasterOnly);
+	WRITE_BOOL_FIELD(isCoordinatorOnly);
 	WRITE_INT_FIELD(rejLimit);
 	WRITE_BOOL_FIELD(rejLimitInRows);
 	WRITE_CHAR_FIELD(logErrors);
@@ -935,10 +935,8 @@ _outWorkTableScan(StringInfo str, const WorkTableScan *node)
 }
 
 static void
-_outForeignScan(StringInfo str, const ForeignScan *node)
+outForeignScanFields(StringInfo str, const ForeignScan *node)
 {
-	WRITE_NODE_TYPE("FOREIGNSCAN");
-
 	_outScanInfo(str, (const Scan *) node);
 
 	WRITE_ENUM_FIELD(operation, CmdType);
@@ -949,6 +947,25 @@ _outForeignScan(StringInfo str, const ForeignScan *node)
 	WRITE_NODE_FIELD(fdw_recheck_quals);
 	WRITE_BITMAPSET_FIELD(fs_relids);
 	WRITE_BOOL_FIELD(fsSystemCol);
+}
+static void
+_outForeignScan(StringInfo str, const ForeignScan *node)
+{
+	WRITE_NODE_TYPE("FOREIGNSCAN");
+
+	outForeignScanFields(str, node);
+}
+
+static void
+_outDynamicForeignScan(StringInfo str, const DynamicForeignScan *node)
+{
+	WRITE_NODE_TYPE("DYNAMICFOREIGNSCAN");
+
+	outForeignScanFields(str, &node->foreignscan);
+	WRITE_NODE_FIELD(partOids);
+	WRITE_NODE_FIELD(part_prune_info);
+	WRITE_NODE_FIELD(join_prune_paramids);
+	WRITE_NODE_FIELD(fdw_private_list);
 }
 
 #ifndef COMPILING_BINARY_FUNCS
@@ -5593,6 +5610,9 @@ outNode(StringInfo str, const void *obj)
 				break;
 			case T_ForeignScan:
 				_outForeignScan(str, obj);
+				break;
+			case T_DynamicForeignScan:
+				_outDynamicForeignScan(str, obj);
 				break;
 			case T_CustomScan:
 				_outCustomScan(str, obj);

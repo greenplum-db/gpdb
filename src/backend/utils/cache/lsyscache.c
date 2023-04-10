@@ -1857,6 +1857,31 @@ is_agg_ordered(Oid aggid)
 }
 
 /*
+ * is_repsafe_agg
+ *		Given aggregate id, check if it is an safe replicate slice aggregate
+ */
+bool
+is_agg_repsafe(Oid aggid)
+{
+	HeapTuple	aggTuple;
+	bool		aggrepsafe;
+	bool		isnull = false;
+
+	aggTuple = SearchSysCache1(AGGFNOID,
+							   ObjectIdGetDatum(aggid));
+	if (!HeapTupleIsValid(aggTuple))
+		elog(ERROR, "cache lookup failed for aggregate %u", aggid);
+
+	aggrepsafe = DatumGetBool(SysCacheGetAttr(AGGFNOID, aggTuple,
+										   Anum_pg_aggregate_aggrepsafeexec, &isnull));
+	Assert(!isnull);
+
+	ReleaseSysCache(aggTuple);
+
+	return aggrepsafe;
+}
+
+/*
  * is_agg_partial_capable
  *		Given aggregate id, check if it can be used in 2-phase aggregation.
  *
@@ -3924,46 +3949,6 @@ get_index_isclustered(Oid index_oid)
 /*				---------- Greenplum specific ----------				 */
 
 /*
- * relation_exists
- *	  Is there a relation with the given oid
- */
-bool
-relation_exists(Oid oid)
-{
-	return SearchSysCacheExists(RELOID, oid, 0, 0, 0);
-}
-
-/*
- * index_exists
- *	  Is there an index with the given oid
- */
-bool
-index_exists(Oid oid)
-{
-	return SearchSysCacheExists(INDEXRELID, oid, 0, 0, 0);
-}
-
-/*
- * type_exists
- *	  Is there a type with the given oid
- */
-bool
-type_exists(Oid oid)
-{
-	return SearchSysCacheExists(TYPEOID, oid, 0, 0, 0);
-}
-
-/*
- * operator_exists
- *	  Is there an operator with the given oid
- */
-bool
-operator_exists(Oid oid)
-{
-	return SearchSysCacheExists(OPEROID, oid, 0, 0, 0);
-}
-
-/*
  * function_exists
  *	  Is there a function with the given oid
  */
@@ -4018,35 +4003,6 @@ get_aggregate(const char *aggname, Oid oidType)
 	ReleaseSysCacheList(catlist);
 
 	return oidResult;
-}
-
-/*
- * trigger_exists
- *	  Is there a trigger with the given oid
- */
-bool
-trigger_exists(Oid oid)
-{
-	ScanKeyData	scankey;
-	Relation	rel;
-	SysScanDesc sscan;
-	bool		result;
-
-	ScanKeyInit(&scankey, Anum_pg_trigger_oid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(oid));
-
-	rel = table_open(TriggerRelationId, AccessShareLock);
-	sscan = systable_beginscan(rel, TriggerOidIndexId, true,
-							   NULL, 1, &scankey);
-
-	result = (systable_getnext(sscan) != NULL);
-
-	systable_endscan(sscan);
-
-	table_close(rel, AccessShareLock);
-
-	return result;
 }
 
 /*
@@ -4496,6 +4452,34 @@ get_index_opfamilies(Oid oidIndex)
 }
 
 /*
+ * Return the default operator opfamily to use for the partition key.
+ */
+Oid
+default_partition_opfamily_for_type(Oid typeoid)
+{
+    TypeCacheEntry *tcache;
+
+    // flags required for or applicable to btree opfamily
+    // required: TYPECACHE_CMP_PROC, TYPECACHE_CMP_PROC_FINFO, TYPECACHE_BTREE_OPFAMILY
+    // applicable: TYPECACHE_EQ_OPR, TYPECACHE_LT_OPR, TYPECACHE_GT_OPR, TYPECACHE_EQ_OPR_FINFO
+    // Note we don't need all the flags to obtain the btree opfamily
+    // But applying all the flags allows us to abstract away the lookup_type_cache call
+    tcache = lookup_type_cache(typeoid, TYPECACHE_EQ_OPR | TYPECACHE_LT_OPR | TYPECACHE_GT_OPR |
+                                        TYPECACHE_CMP_PROC |
+                                        TYPECACHE_EQ_OPR_FINFO | TYPECACHE_CMP_PROC_FINFO |
+                                        TYPECACHE_BTREE_OPFAMILY);
+
+    if (!tcache->btree_opf)
+        return InvalidOid;
+    if (!tcache->cmp_proc)
+        return InvalidOid;
+    if (!tcache->eq_opr && !tcache->lt_opr && !tcache->gt_opr)
+        return InvalidOid;
+
+    return tcache->btree_opf;
+}
+
+/*
  *  relation_policy
  *  Return the distribution policy of a table. 
  */
@@ -4625,51 +4609,4 @@ child_triggers(Oid relationId, int32 triggerType)
 	/* no child triggers matching the given type */
 	return found;
 #endif
-}
-
-/* GPDB_12_MERGE_FIXME: only used by ORCA. Fix the callers to check
- * Relation->relkind == RELKIND_PARTITIONED_TABLE instead. They should
- * have the relcache entry at hand anyway.
- */
-bool
-relation_is_partitioned(Oid relid)
-{
-	HeapTuple   tuple;
-	tuple = SearchSysCache1(PARTRELID, ObjectIdGetDatum(relid));
-
-	if (HeapTupleIsValid(tuple))
-	{
-		ReleaseSysCache(tuple);
-		return true;
-	}
-	else
-		return false;
-}
-
-bool
-index_is_partitioned(Oid relid)
-{
-	HeapTuple   tuple;
-	tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
-	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "cache lookup failed for relation %u", relid);
-	Form_pg_class pg_class_tuple = (Form_pg_class) GETSTRUCT(tuple);
-	ReleaseSysCache(tuple);
-	return pg_class_tuple->relkind == RELKIND_PARTITIONED_INDEX;
-}
-
-List *
-relation_get_leaf_partitions(Oid oid)
-{
-	List *descendants = find_all_inheritors(oid, AccessShareLock, NULL);
-	List *leaves = NIL;
-	ListCell *lc;
-	foreach(lc, descendants)
-	{
-		const Oid descendant = lfirst_oid(lc);
-		if (get_rel_relkind(descendant) != RELKIND_PARTITIONED_TABLE &&
-			get_rel_relkind(descendant) != RELKIND_PARTITIONED_INDEX)
-			leaves = lappend_oid(leaves, descendant);
-	}
-	return leaves;
 }

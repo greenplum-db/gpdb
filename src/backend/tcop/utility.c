@@ -85,7 +85,18 @@
 /* Hook for plugins to get control in ProcessUtility() */
 ProcessUtility_hook_type ProcessUtility_hook = NULL;
 
-/* local function declarations */
+/*
+ * Greenplumn specific code:
+ *   for detailed comments, please refer to the comments at the
+ *   definition of executor_run_nesting_level in execMain.c.
+ *   Greenplum now support create procedure, so auto_stats also
+ *   need to take inside a procedure as inside function call.
+ *   process_utility_nesting_level >= 2 implies in function call
+ *   when calling from procedure.
+ */
+static int process_utility_nesting_level = 0;
+
+/* Local function declarations */
 static void ProcessUtilitySlow(ParseState *pstate,
 							   PlannedStmt *pstmt,
 							   const char *queryString,
@@ -371,18 +382,33 @@ ProcessUtility(PlannedStmt *pstmt,
 	Assert(queryString != NULL);	/* required as of 8.4 */
 
 	/*
-	 * We provide a function hook variable that lets loadable plugins get
-	 * control when ProcessUtility is called.  Such a plugin would normally
-	 * call standard_ProcessUtility().
+	 * Greenplum specific code:
+	 *   Please refer to the comments at the definition of process_utility_nesting_level.
 	 */
-	if (ProcessUtility_hook)
-		(*ProcessUtility_hook) (pstmt, queryString,
-								context, params, queryEnv,
-								dest, completionTag);
-	else
-		standard_ProcessUtility(pstmt, queryString,
-								context, params, queryEnv,
-								dest, completionTag);
+	process_utility_nesting_level++;
+	PG_TRY();
+	{
+		/*
+		 * We provide a function hook variable that lets loadable plugins get
+		 * control when ProcessUtility is called.  Such a plugin would normally
+		 * call standard_ProcessUtility().
+		 */
+		if (ProcessUtility_hook)
+			(*ProcessUtility_hook) (pstmt, queryString,
+									context, params, queryEnv,
+									dest, completionTag);
+		else
+			standard_ProcessUtility(pstmt, queryString,
+									context, params, queryEnv,
+									dest, completionTag);
+		process_utility_nesting_level--;
+	}
+	PG_CATCH();
+	{
+		process_utility_nesting_level--;
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
 }
 
 /*
@@ -4025,4 +4051,10 @@ GetCommandLogLevel(Node *parsetree)
 	}
 
 	return lev;
+}
+
+bool
+utility_nested(void)
+{
+	return process_utility_nesting_level >= 2;
 }

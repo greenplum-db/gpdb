@@ -1177,7 +1177,7 @@
         </dxl:LogicalGet>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="324625">
+    <dxl:Plan Id="0" SpaceSize="70119">
       <dxl:Result>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="9309.074116" Rows="3000000.000000" Width="32"/>

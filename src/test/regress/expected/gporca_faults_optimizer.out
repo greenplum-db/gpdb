@@ -22,13 +22,13 @@ select gp_inject_fault('opt_relcache_translator_catalog_access', 'interrupt', 1)
 
 select count(*) from foo;
 ERROR:  canceling statement due to user request
--- Ensure that ORCA is not called on any process other than the master QD
+-- Ensure that ORCA is not called on any process other than the coordinator QD
 CREATE FUNCTION func1_nosql_vol(x int) RETURNS int AS $$
 BEGIN
   RETURN $1 +1;
 END
 $$ LANGUAGE plpgsql VOLATILE;
--- Query that runs the function on an additional non-QD master slice
+-- Query that runs the function on an additional non-QD coordinator slice
 -- Include the EXPLAIN to ensure that this happens in the plan.
 EXPLAIN SELECT * FROM func1_nosql_vol(5), foo;
                                            QUERY PLAN                                            

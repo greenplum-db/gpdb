@@ -19,6 +19,7 @@ analyzedb -d <dbname>
    [ --skip_orca_root_stats ]
    [ -v | --verbose ]
    [ -a ]
+   [ --skip-locked ]
 
 analyzedb { --clean_last | --clean_all }
 analyzedb --version
@@ -130,6 +131,9 @@ Running the `ANALYZE` command on a table, not using the `analyzedb` utility, doe
 
 -a
 :   Quiet mode. Do not prompt for user confirmation.
+
+--skip-locked
+:   Skip relations that cannot be immediately locked.
 
 -h \| -? \| --help
 :   Displays the online help.

@@ -7,8 +7,8 @@
     Objective: For a DML query with an Aggregate without a Group-By, ensure
     that the split agg produces a plan where Global Aaggregation is
     performed on a single segment, Gather(segment), insetad of
-    Gather(master) such that we can optimized such DML queries by not
-    involving master node at all.  The test ensures that the optimization
+    Gather(coordinator) such that we can optimized such DML queries by not
+    involving coordinator node at all.  The test ensures that the optimization
     framework enforces a Sigleton Segment distrbution for global agg.
 
   explain CREATE TABLE t AS SELECT AVG(a) FROM test1 JOIN (SELECT i  FROM UNNEST(ARRAY[1,2,3,54]) i) t ON (test1.a = t.i);

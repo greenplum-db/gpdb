@@ -56,8 +56,33 @@ typedef struct AOTupleId
 	uint16		bytes_4_5;
 } AOTupleId;
 
-#define AO_MAX_OFFSET	32768
+/*
+ * This represents the maximum number of row numbers (or tuples) per logical
+ * heap block that an AO table can hold. The lower bytes: bytes_4_5 of AOTupleId
+ * gives us this value.
+ */
+#define AO_MAX_TUPLES_PER_HEAP_BLOCK	(1 << 15)
+
+/*
+ * This represents the maximum number of logical heap blocks that an AO segment
+ * file can contain. The 25 bits in the middle, describe in AOTupleId gives us
+ * this value.
+ */
+#define AO_MAX_HEAP_BLOCKS_PER_SEGMENT	(1 << 25)
+
+#define AOSegmentGet_segno(heapBlk) ((heapBlk) / AO_MAX_HEAP_BLOCKS_PER_SEGMENT)
+
 #define AOTupleIdGet_segmentFileNum(h)        ((((h)->bytes_0_1&0xFE00)>>9)) // 7 bits
+
+/*
+ * Get the start block number of the specified aoseg.
+ *
+ * The higher order 32 bits of an AOTupleId (bytes_0_1 and bytes_2_3), form the
+ * heap block number when it is interpreted as an ItemPointer. Within that the
+ * top 7 bits form the segno. The starting heap block number is thus those
+ * combos of those 7 bits with the remaining 25 bits all being 0.
+ */
+#define AOSegmentGet_startHeapBlock(segno) ((segno) << 25)
 
 static inline uint64
 AOTupleIdGet_rowNum(AOTupleId *h)

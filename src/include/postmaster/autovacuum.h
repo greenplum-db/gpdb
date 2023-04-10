@@ -40,10 +40,18 @@ extern int	autovacuum_multixact_freeze_max_age;
 extern double autovacuum_vac_cost_delay;
 extern int	autovacuum_vac_cost_limit;
 
+/*Allowed values for gp_autovacuum_scope*/
+typedef enum AutovacuumScope
+{
+	AV_SCOPE_CATALOG,
+	AV_SCOPE_CATALOG_AO_AUX,
+} AutovacuumScope;
+
 /* autovacuum launcher PID, only valid when worker is shutting down */
 extern int	AutovacuumLauncherPid;
 
-extern int	Log_autovacuum_min_duration;
+extern int  Log_autovacuum_min_duration;
+extern int	gp_autovacuum_scope;
 
 /* Status inquiry functions */
 extern bool AutoVacuumingActive(void);

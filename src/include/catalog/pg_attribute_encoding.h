@@ -22,6 +22,16 @@
 #include "catalog/pg_attribute_encoding_d.h"
 #include "utils/rel.h"
 
+/*
+ * Shorthand for range of segfiles for a specific attnum.
+ * For eg: filenum = 1 denotes a range of segfiles relfilenode.1 - relfilenode.128.
+ * FileNumbers start at 1
+ */
+typedef int16 FileNumber;
+
+#define InvalidFileNumber		0
+#define MaxFileNumber			2 * MaxHeapAttributeNumber
+
 /* ----------------
  *		pg_attribute_encoding definition.  cpp turns this into
  *		typedef struct FormData_pg_attribute_encoding
@@ -29,8 +39,9 @@
  */
 CATALOG(pg_attribute_encoding,6231,AttributeEncodingRelationId)
 {
-	Oid		attrelid;		
-	int16	attnum;			
+	Oid		attrelid;
+	int16	attnum;
+	int16   filenum;
 #ifdef CATALOG_VARLEN			/* variable-length fields start here */
 	text	attoptions[1];	
 #endif
@@ -55,6 +66,8 @@ extern void AddRelationAttributeEncodings(Oid relid, List *attr_encodings);
 extern void RemoveAttributeEncodingsByRelid(Oid relid);
 extern void CloneAttributeEncodings(Oid oldrelid, Oid newrelid, AttrNumber max_attno);
 extern void UpdateAttributeEncodings(Oid relid, List *new_attr_encodings);
+extern FileNumber GetFilenumForAttribute(Oid relid, AttrNumber attnum);
+extern List *GetNextNAvailableFilenums(Oid relid, int n);
 extern Datum *get_rel_attoptions(Oid relid, AttrNumber max_attno);
 extern List * rel_get_column_encodings(Relation rel);
 

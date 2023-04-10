@@ -726,7 +726,7 @@ def match_notice_obj(notice):
 
 
 def notice_processor_Notice(notice):
-    # process the notice in master branch
+    # process the notice in main branch
     # notice is a class which is different in 6X, we need a new function to process
     global NUM_WARN_ROWS
     if windowsPlatform == True:
@@ -2565,7 +2565,7 @@ class gpload:
         except Exception as e:
             self.log(self.ERROR, 'could not run SQL "%s": %s ' % (sql, str(e)))
 
-        if dk_text[0][0] == 'DISTRIBUTED RANDOMLY':
+        if not dk_text[0][0].startswith("DISTRIBUTED BY"):
             # target table doesn't have dk, we use match column
             dk = self.getconfig('gpload:output:match_columns', list)
             dk_text = " DISTRIBUTED BY (%s)" % ', '.join(dk)
@@ -2636,7 +2636,23 @@ class gpload:
         sql = 'CREATE %sTABLE %s ' % (is_temp_table, self.staging_table_name)
         cols = ['"%s" %s' % (a[0], a[1]) for a in target_columns]
         sql += "(%s)" % ','.join(cols)
-        sql += distcols
+
+        # When the field selected as the DISTRIBUTION KEY does not exist when the table is created, 
+        # we need to ensure that the table is created successfully, so the CREATE TABLE statement 
+        # should not explicitly specify the DISTRIBUTED BY clause.
+        # Only the DISTRIBUTED BY clause can take effect if all selected fields 
+        # exist in the CREATE TABLE statement.
+        dist_column_list = re.match(".*\((.*)\).*", distcols).group(1).split(",")
+        target_column_set = set(element[0] for element in target_columns)
+        if set(dist_column_list) <= target_column_set:
+            quoted_dist_column = convertListToDelimited(dist_column_list)
+            sql += " DISTRIBUTED BY (" + ','.join(quoted_dist_column) + ")"
+        else:
+            match_columns = self.getconfig('gpload:output:match_columns', list)
+            if set(match_columns) <= target_column_set:
+                quoted_match_columns = convertListToDelimited(match_columns)
+                sql += " DISTRIBUTED BY (" + ','.join(quoted_match_columns) + ")"
+        
         self.log(self.LOG, sql)
 
         if not self.options.D:

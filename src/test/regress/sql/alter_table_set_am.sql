@@ -407,7 +407,7 @@ SELECT count(*) FROM gp_toolkit.__gp_aocsseg('ao2co3');
 SELECT * FROM gp_toolkit.__gp_aoblkdir('ao2co3');
 
 -- pg_attribute_encoding should have columns for the AOCO table
-SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'ao2co%';
+SELECT c.relname, a.attnum, a.filenum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'ao2co%';
 
 -- AM and reloptions changed accordingly
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ao2co%';
@@ -437,7 +437,7 @@ SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2heap%';
 -- Check once that the AO tables have relfrozenxid = 0
 SELECT relname, relfrozenxid FROM pg_class WHERE relname LIKE 'co2heap%';
 -- Check once that the pg_attribute_encoding has entries for the AOCO tables.
-SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2heap%';
+SELECT c.relname, a.attnum, a.filenum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2heap%';
 
 CREATE TEMP TABLE relfilebeforeco2heap AS
     SELECT -1 segid, relfilenode FROM pg_class WHERE relname LIKE 'co2heap%'
@@ -491,7 +491,7 @@ SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2heap%';
 SELECT relname, relfrozenxid <> '0' FROM pg_class WHERE relname LIKE 'co2heap%';
 
 -- The pg_attribute_encoding entries for the altered tables should have all gone.
-SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2heap%';
+SELECT c.relname, a.attnum, a.filenum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2heap%';
 
 DROP TABLE co2heap;
 DROP TABLE co2heap2;
@@ -515,7 +515,7 @@ INSERT INTO co2ao4 SELECT i,i FROM generate_series(1,5) i;
 -- Check once that the AOCO tables have the custom reloptions
 SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2ao%';
 -- Check once that the pg_attribute_encoding has entries for the AOCO tables.
-SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2ao%';
+SELECT c.relname, a.attnum, a.filenum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2ao%';
 -- Check once on the aoblkdirs
 SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('co2ao')).* FROM gp_dist_random('gp_id');
 SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('co2ao3')).* FROM gp_dist_random('gp_id');
@@ -569,7 +569,7 @@ SELECT c.relname, a.amname FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE
 SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2ao%';
 
 -- The pg_attribute_encoding entries for the altered tables should have all gone.
-SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2ao%';
+SELECT c.relname, a.attnum, a.filenum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2ao%';
 
 DROP TABLE co2ao;
 DROP TABLE co2ao2;
@@ -635,7 +635,7 @@ SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('heap2co3')).* FROM gp_dist_rand
 SELECT count(*) FROM gp_toolkit.__gp_aocsseg('heap2co3');
 
 -- pg_attribute_encoding should have columns for the AOCO table
-SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'heap2co%';
+SELECT c.relname, a.attnum, a.filenum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'heap2co%';
 
 -- AM and reloptions changed accordingly
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'heap2co%';
@@ -709,41 +709,147 @@ DROP TABLE atsetam_part;
 -- 2. AO->AOCO->AO->AOCO
 -- 3. Heap->AOCO->Heap->AOCO
 
+-- create helper function
+CREATE FUNCTION check_atsetam(p_tablename text, p_am text, p_reloptions text, p_expect_empty_reloptions bool, p_expect_relfile_change bool)
+RETURNS boolean
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_result boolean;
+    v_ddl text;
+BEGIN
+    IF p_reloptions = '' THEN
+      v_ddl := 'ALTER TABLE ' || p_tablename || ' SET ACCESS METHOD ' || p_am;
+    ELSE
+      v_ddl := 'ALTER TABLE ' || p_tablename || ' SET ACCESS METHOD ' || p_am || ' WITH (' || p_reloptions || ')';
+    END IF;
+    CREATE TEMP TABLE before_ddl(segid int, relfilenode oid);
+    CREATE TEMP TABLE after_ddl(segid int, relfilenode oid);
+
+    INSERT INTO before_ddl SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname = p_tablename ORDER BY segid;
+
+    EXECUTE v_ddl;
+
+    INSERT INTO after_ddl SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname = p_tablename ORDER BY segid;
+
+    -- check table rewrite
+    IF p_expect_relfile_change THEN
+      v_result := (SELECT count(a.*)=0 FROM before_ddl b INNER JOIN after_ddl a ON b.segid = a.segid AND b.relfilenode = a.relfilenode);
+    ELSE
+      v_result := (SELECT count(a.*)=0 FROM before_ddl b, after_ddl a WHERE b.segid = a.segid AND b.relfilenode != a.relfilenode);
+    END IF;
+
+    -- check AM
+    v_result := v_result AND (SELECT count(c.*)=1 FROM pg_class c, pg_am a WHERE c.relname = p_tablename AND c.relam = a.oid AND a.amname = p_am);
+
+    -- check reloptions. If not expecting NULL, then just check if what we just set is there.
+    IF p_expect_empty_reloptions THEN
+      v_result := v_result AND (SELECT reloptions IS NULL FROM pg_class WHERE relname = p_tablename);
+    ELSIF p_reloptions != '' THEN
+      v_result := v_result AND (SELECT count(*)=1 FROM pg_class WHERE relname = p_tablename AND p_reloptions = ANY(reloptions));
+    END IF;
+
+    DROP TABLE before_ddl;
+    DROP TABLE after_ddl;
+
+    RETURN v_result;
+END;
+$$;
+
 -- 1. Heap->AO->Heap->AO
 CREATE TABLE heapao(a int, b int);
 CREATE INDEX heapaoindex ON heapao(b);
-INSERT INTO heapao SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO heapao SELECT i,i FROM generate_series(1,100) i;
+-- check partitioned table and one child too
+CREATE TABLE heapao_part(a int, b int) PARTITION BY RANGE (b);
+CREATE TABLE heapao_part_p1 PARTITION OF heapao_part FOR VALUES FROM (0) TO (200);
+INSERT INTO heapao_part SELECT i,i FROM generate_series(1,100) i;
 
-ALTER TABLE heapao SET ACCESS METHOD ao_row;
-ALTER TABLE heapao SET ACCESS METHOD heap;
-ALTER TABLE heapao SET ACCESS METHOD ao_row;
+SELECT check_atsetam('heapao', 'ao_row', 'compresslevel=3', false, true);
+SELECT check_atsetam('heapao', 'heap', '', true, true);
+SELECT check_atsetam('heapao', 'ao_row', '', false, true);
+SELECT check_atsetam('heapao_part', 'ao_row', 'compresslevel=3', false, false);
+SELECT check_atsetam('heapao_part', 'heap', '', true, false);
+SELECT check_atsetam('heapao_part_p1', 'ao_row', 'compresslevel=3', false, true);
+SELECT check_atsetam('heapao_part_p1', 'heap', 'fillfactor=70', false, true);
+SELECT check_atsetam('heapao_part_p1', 'ao_row', '', false, true);
 
--- Just checking data is intact. 
-SELECT count(*) FROM heapao;
+-- Just checking data is intact
+SELECT sum(a)+sum(b) FROM heapao;
+SELECT sum(a)+sum(b) FROM heapao_part;
 DROP TABLE heapao;
+DROP TABLE heapao_part;
 
 -- 2. AO->AOCO->AO->AOCO
 CREATE TABLE aoco(a int, b int) with (appendoptimized=true);
 CREATE INDEX aocoindex ON aoco(b);
-INSERT INTO aoco SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO aoco SELECT i,i FROM generate_series(1,100) i;
+-- check partitioned table and one child too
+CREATE TABLE aoco_part(a int, b int) PARTITION BY RANGE (b) with (appendoptimized=true);
+CREATE TABLE aoco_part_p1 PARTITION OF aoco_part FOR VALUES FROM (0) TO (200);
+INSERT INTO aoco_part SELECT i,i FROM generate_series(1,100) i;
 
-ALTER TABLE aoco SET ACCESS METHOD ao_column;
-ALTER TABLE aoco SET ACCESS METHOD ao_row;
-ALTER TABLE aoco SET ACCESS METHOD ao_column;
+SELECT check_atsetam('aoco', 'ao_column', 'compresslevel=5', false, true);
+SELECT check_atsetam('aoco', 'ao_row', 'compresslevel=7', false, true);
+SELECT check_atsetam('aoco', 'ao_column', '', false, true);
+SELECT check_atsetam('aoco_part', 'ao_column', 'compresslevel=5', false, false);
+SELECT check_atsetam('aoco_part', 'ao_row', '', false, false);
+SELECT check_atsetam('aoco_part_p1', 'ao_column', 'compresslevel=3', false, true);
+SELECT check_atsetam('aoco_part_p1', 'ao_row', 'compresslevel=7', false, true);
+SELECT check_atsetam('aoco_part_p1', 'ao_column', '', false, true);
 
--- Just checking data is intact.
-SELECT count(*) FROM aoco;
+-- Just checking data is intact
+SELECT sum(a)+sum(b) FROM aoco;
+SELECT sum(a)+sum(b) FROM aoco_part;
 DROP TABLE aoco;
+DROP TABLE aoco_part;
 
 -- 3. Heap->AOCO->Heap->AOCO
 CREATE TABLE heapco(a int, b int);
 CREATE INDEX heapcoindex ON heapco(b);
-INSERT INTO heapco SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO heapco SELECT i,i FROM generate_series(1,100) i;
+-- check partitioned table and one child too
+CREATE TABLE heapco_part(a int, b int) PARTITION BY RANGE (b);
+CREATE TABLE heapco_part_p1 PARTITION OF heapco_part FOR VALUES FROM (0) TO (200);
+INSERT INTO heapco_part SELECT i,i FROM generate_series(1,100) i;
 
-ALTER TABLE heapco SET ACCESS METHOD ao_column;
-ALTER TABLE heapco SET ACCESS METHOD heap;
-ALTER TABLE heapco SET ACCESS METHOD ao_column;
+SELECT check_atsetam('heapco', 'ao_column', 'compresslevel=3', false, true);
+SELECT check_atsetam('heapco', 'heap', '', true, true);
+SELECT check_atsetam('heapco', 'ao_row', '', false, true);
+SELECT check_atsetam('heapco_part', 'ao_row', 'compresslevel=3', false, false);
+SELECT check_atsetam('heapco_part', 'heap', '', true, false);
+SELECT check_atsetam('heapco_part_p1', 'ao_row', 'compresslevel=3', false, true);
+SELECT check_atsetam('heapco_part_p1', 'heap', 'fillfactor=70', false, true);
+SELECT check_atsetam('heapco_part_p1', 'ao_row', '', false, true);
 
--- Just checking data is intact.
-SELECT count(*) FROM heapco;
+-- Just checking data is intact
+SELECT sum(a)+sum(b) FROM heapco;
+SELECT sum(a)+sum(b) FROM heapco_part;
 DROP TABLE heapco;
+DROP TABLE heapco_part;
+
+-- Misc cases
+-- 
+-- ATSETAM with dropped column:
+-- The dropped column should still have an entry in pg_attribute_encoding if it is 
+-- an AOCO table, just like pg_attribute.
+CREATE TABLE atsetam_dropcol(a int, b int, c int, d int);
+INSERT INTO atsetam_dropcol VALUES(1,1,1,1);
+SELECT count(*) FROM pg_attribute WHERE attrelid = 'atsetam_dropcol'::regclass AND attnum > 0;
+SELECT count(*) FROM pg_attribute_encoding WHERE attrelid = 'atsetam_dropcol'::regclass;
+ALTER TABLE atsetam_dropcol DROP COLUMN b;
+ALTER TABLE atsetam_dropcol SET ACCESS METHOD ao_row;
+SELECT count(*) FROM pg_attribute WHERE attrelid = 'atsetam_dropcol'::regclass AND attnum > 0;
+SELECT count(*) FROM pg_attribute_encoding WHERE attrelid = 'atsetam_dropcol'::regclass;
+SELECT * FROM atsetam_dropcol;
+ALTER TABLE atsetam_dropcol DROP COLUMN c;
+ALTER TABLE atsetam_dropcol SET ACCESS METHOD ao_column;
+SELECT count(*) FROM pg_attribute WHERE attrelid = 'atsetam_dropcol'::regclass AND attnum > 0;
+SELECT count(*) FROM pg_attribute_encoding WHERE attrelid = 'atsetam_dropcol'::regclass;
+SELECT * FROM atsetam_dropcol;
+ALTER TABLE atsetam_dropcol DROP COLUMN d;
+ALTER TABLE atsetam_dropcol SET ACCESS METHOD heap;
+SELECT count(*) FROM pg_attribute WHERE attrelid = 'atsetam_dropcol'::regclass AND attnum > 0;
+SELECT count(*) FROM pg_attribute_encoding WHERE attrelid = 'atsetam_dropcol'::regclass;
+SELECT * FROM atsetam_dropcol;

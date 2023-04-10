@@ -431,3 +431,7 @@ ALTER RESOURCE QUEUE pg_default ACTIVE THRESHOLD -10;
 -- Reset
 RESET log_statement;
 
+-- Try to set statement_mem > max_statement_mem
+SET statement_mem = '4000MB';
+RESET statement_mem;
+

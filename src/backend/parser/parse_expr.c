@@ -2738,7 +2738,10 @@ transformXmlSerialize(ParseState *pstate, XmlSerialize *xs)
 static Node *
 transformBooleanTest(ParseState *pstate, BooleanTest *b)
 {
+	BooleanTest *newb;
 	const char *clausename;
+
+	newb = makeNode(BooleanTest);
 
 	if (operator_precedence_warning)
 		emit_precedence_warnings(pstate, PREC_GROUP_POSTFIX_IS, "IS",
@@ -2771,13 +2774,20 @@ transformBooleanTest(ParseState *pstate, BooleanTest *b)
 			clausename = NULL;	/* keep compiler quiet */
 	}
 
-	b->arg = (Expr *) transformExprRecurse(pstate, (Node *) b->arg);
+	/*
+	 * Define a new variable so that b->arg is not modified and this variable allows
+	 * QD to not modify the original expr.
+	 */
 
-	b->arg = (Expr *) coerce_to_boolean(pstate,
-										(Node *) b->arg,
+	newb->arg = (Expr *) transformExprRecurse(pstate, (Node *) b->arg);
+
+	newb->arg = (Expr *) coerce_to_boolean(pstate,
+										(Node *) newb->arg,
 										clausename);
+	newb->booltesttype = b->booltesttype;
+	newb->location = b->location;
 
-	return (Node *) b;
+	return (Node *) newb;
 }
 
 static Node *

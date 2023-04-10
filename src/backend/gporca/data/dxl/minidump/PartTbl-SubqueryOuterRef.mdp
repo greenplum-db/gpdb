@@ -818,7 +818,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
         </dxl:LogicalGet>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="86">
+    <dxl:Plan Id="0" SpaceSize="82">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1293.004074" Rows="1.000000" Width="8"/>

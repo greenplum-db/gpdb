@@ -30,6 +30,7 @@
 #include "utils/memutils.h"
 #include "utils/snapmgr.h"
 
+#include "cdb/cdbexplain.h"
 #include "cdb/ml_ipc.h"
 #include "cdb/cdbtm.h"
 #include "commands/createas.h"
@@ -116,6 +117,7 @@ CreateQueryDesc(PlannedStmt *plannedstmt,
 
 	qd->extended_query = false; /* default value */
 	qd->portal_name = NULL;
+	qd->showstatctx = NULL;
 
 	qd->ddesc = NULL;
 
@@ -140,6 +142,9 @@ FreeQueryDesc(QueryDesc *qdesc)
 	/* forget our snapshots */
 	UnregisterSnapshot(qdesc->snapshot);
 	UnregisterSnapshot(qdesc->crosscheck_snapshot);
+
+	if (qdesc->showstatctx)
+		cdbexplain_showStatCtxFree(qdesc->showstatctx);
 
 	/* Only the QueryDesc itself need be freed */
 	pfree(qdesc);

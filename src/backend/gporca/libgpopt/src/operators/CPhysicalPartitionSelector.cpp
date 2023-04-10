@@ -345,17 +345,13 @@ CPhysicalPartitionSelector::EpetDistribution(CExpressionHandle &exprhdl,
 		return CEnfdProp::EpetUnnecessary;
 	}
 
-	// GPDB_12_MERGE_FIXME: Check part propagation spec
-#if 0
-	CPartIndexMap *ppimDrvd = pdpplan->Ppim();
-	if (!ppimDrvd->Contains(m_scan_id))
+	CPartitionPropagationSpec *ppps = pdpplan->Ppps();
+
+	if (!ppps->Contains(m_scan_id))
 	{
-		// part consumer is defined above: prohibit adding a motion on top of the
-		// part resolver as this will create two slices
+		// ensure we don't create a plan with a motion on top of a partition selector
 		return CEnfdProp::EpetProhibited;
 	}
-#endif
-
 	// part consumer found below: enforce distribution on top of part resolver
 	return CEnfdProp::EpetRequired;
 }

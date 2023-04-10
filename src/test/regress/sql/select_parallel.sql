@@ -239,7 +239,7 @@ begin
           (select ten from tenk1 where ten < 100 order by ten) ss
           right join (values (1),(2),(3)) v(x) on true
     loop
-        ln := regexp_replace(ln, 'Memory: \S*',  'Memory: xxx');
+        ln := regexp_replace(ln, 'Memory: \S*', 'Memory: xxx', 'g');
         return next ln;
     end loop;
 end;

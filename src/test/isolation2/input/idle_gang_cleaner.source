@@ -4,9 +4,6 @@
 -- clean up the idle writer gangs after the timeout, 
 -- no snapshot collision error should occur.
 
-CREATE OR REPLACE FUNCTION cleanupAllGangs() RETURNS BOOL
-AS '@abs_builddir@/../regress/regress.so', 'cleanupAllGangs' LANGUAGE C;
-
 create or replace language plpython3u;
 create extension if not exists gp_inject_fault;
 
@@ -30,7 +27,6 @@ create table target_session_id_t(target_session_id int) DISTRIBUTED REPLICATED;
 insert into target_session_id_t values(current_setting('gp_session_id')::int);
 
 create table idle_gang_cleaner_t (c1 int, c2 int);
-select cleanupAllGangs();
 
 0U: select gp_inject_fault('proc_kill', 'suspend', 2, target_session_id) from target_session_id_t;
 
@@ -47,7 +43,6 @@ select count(*) from idle_gang_cleaner_t a
 0U: select gp_inject_fault('proc_kill', 'reset', 2, target_session_id) from target_session_id_t;
 
 -- Release idle Reader gangs in transaction or transaction block
-select cleanupAllGangs();
 0U: select gp_inject_fault('proc_kill', 'suspend', 2, target_session_id) from target_session_id_t;
 
 begin;

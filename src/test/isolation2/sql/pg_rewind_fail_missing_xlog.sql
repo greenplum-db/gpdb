@@ -7,7 +7,7 @@ CREATE TABLE tst_missing_tbl (a int);
 INSERT INTO tst_missing_tbl values(2),(1),(5);
 
 -- Make the test faster by not preserving any extra wal segment files
-!\retcode gpconfig -c wal_keep_segments -v 0;
+!\retcode gpconfig -c wal_keep_size -v 0;
 !\retcode gpstop -ari;
 
 -- Test 1: Ensure that pg_rewind doesn't fail due to checkpoints inadvertently
@@ -296,6 +296,6 @@ INSERT INTO tst_missing_tbl values(2),(1),(5);
 1Uq:
 
 5: DROP TABLE tst_missing_tbl;
-!\retcode gpconfig -r wal_keep_segments;
+!\retcode gpconfig -r wal_keep_size;
 !\retcode gpconfig -r wal_recycle;
 !\retcode gpstop -ari;

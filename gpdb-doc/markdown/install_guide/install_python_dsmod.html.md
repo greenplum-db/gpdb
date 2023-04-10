@@ -2,7 +2,7 @@
 title: Data Science Package for Python 
 ---
 
-Greenplum Database provides a collection of data science-related Python modules that can be used with the Greenplum Database PL/Python language. You can download these modules in `.gppkg` format from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). Separate modules are provided for Python 2.7 and Python 3.9 development on RHEL7, RHEL8, and Ubuntu platforms.
+Greenplum Database provides a collection of data science-related Python modules that can be used with the Greenplum Database PL/Python language. You can download these modules in `.gppkg` format from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). Separate modules are provided for Python 2.7 and Python 3.9 development.
 
 This section contains the following information:
 
@@ -56,7 +56,7 @@ Packages required for Deep Learning features of MADlib are now included. Note th
 |JMESPath|JSON Matching Expressions|
 |Joblib|Python functions as pipeline jobs|
 |jsonschema|JSON Schema validation|
-|Keras \(RHEL/CentOS 7 only\)|Deep learning|
+|Keras |Deep learning|
 |Keras Applications|Reference implementations of popular deep learning models|
 |Keras Preprocessing|Easy data preprocessing and data augmentation for deep learning models|
 |Kiwi|A fast implementation of the Cassowary constraint solver|
@@ -101,7 +101,7 @@ Packages required for Deep Learning features of MADlib are now included. Note th
 |srsly|Modern high-performance serialization utilities for Python|
 |StatsModels|Statistical modeling|
 |subprocess32|Backport of the subprocess module from Python 3|
-|Tensorflow \(RHEL/CentOS 7 only\)|Numerical computation using data flow graphs|
+|Tensorflow |Numerical computation using data flow graphs|
 |Theano|Optimizing compiler for evaluating mathematical expressions on CPUs and GPUs|
 |thinc|Practical Machine Learning for NLP|
 |tqdm|Fast, extensible progress meter|
@@ -285,14 +285,14 @@ $ sudo yum install tk
 
 1.  Locate the Data Science Package for Python that you built or downloaded.
 
-    The file name format of the package is `DataSciencePython<pythonversion>-gp6-rhel<n>-x86_64.gppkg`.  For example, the Data Science Package for Python 2.7 for Redhat 8 file is `DataSciencePython2.7-2.0.4-gp6-rhel8_x86_64.gppkg`, and the Python 3.9 package is `DataSciencePython3.9-3.0.0-gp6-rhel8_x86_64.gppkg`.
+    The file name format of the package is `DataSciencePython<pythonversion>-gp7-rhel<n>-x86_64.gppkg`.  For example, the Data Science Package for Python 2.7 for Redhat 8 file is `DataSciencePython2.7-2.0.4-gp7-rhel8_x86_64.gppkg`, and the Python 3.9 package is `DataSciencePython3.9-3.0.0-gp7-rhel8_x86_64.gppkg`.
 
 2.  Copy the package to the Greenplum Database coordinator host.
 3.  Follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the *Greenplum Procedural Languages Python Data Science Package* software.
 4.  Use the `gppkg` command to install the package. For example:
 
     ```
-    $ gppkg -i DataSciencePython<pythonversion>-gp6-rhel<n>-x86_64.gppkg
+    $ gppkg -i DataSciencePython<pythonversion>-gp7-rhel<n>-x86_64.gppkg
     ```
 
     `gppkg` installs the Data Science Package for Python modules on all nodes in your Greenplum Database cluster. The command also updates the `PYTHONPATH`, `PATH`, and `LD_LIBRARY_PATH` environment variables in your `greenplum_path.sh` file.

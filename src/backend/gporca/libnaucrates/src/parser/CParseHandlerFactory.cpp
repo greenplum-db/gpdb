@@ -115,6 +115,7 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 		{EdxltokenPhysicalMaterialize, &CreateMaterializeParseHandler},
 		{EdxltokenPhysicalDynamicTableScan, &CreateDTSParseHandler},
 		{EdxltokenPhysicalDynamicIndexScan, &CreateDynamicIdxScanParseHandler},
+		{EdxltokenPhysicalDynamicForeignScan, &CreateDFSParseHandler},
 		{EdxltokenPhysicalPartitionSelector,
 		 &CreatePartitionSelectorParseHandler},
 		{EdxltokenPhysicalSequence, &CreateSequenceParseHandler},
@@ -188,13 +189,6 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 		 &CreateScSubPlanParamListParseHandler},
 		{EdxltokenScalarSubPlanParam, &CreateScSubPlanParamParseHandler},
 		{EdxltokenScalarOpList, &CreateScOpListParseHandler},
-		{EdxltokenScalarPartDefault, &CreateScPartDefaultParseHandler},
-		{EdxltokenScalarPartBound, &CreateScPartBoundParseHandler},
-		{EdxltokenScalarPartBoundInclusion, &CreateScPartBoundInclParseHandler},
-		{EdxltokenScalarPartBoundOpen, &CreateScPartBoundOpenParseHandler},
-		{EdxltokenScalarPartListValues, &CreateScPartListValuesParseHandler},
-		{EdxltokenScalarPartListNullTest,
-		 &CreateScPartListNullTestParseHandler},
 
 		{EdxltokenScalarSubquery, &CreateScSubqueryParseHandler},
 		{EdxltokenScalarBitmapAnd, &CreateScBitmapBoolOpParseHandler},
@@ -864,6 +858,16 @@ CParseHandlerFactory::CreateDynamicIdxScanParseHandler(
 													  parse_handler_root);
 }
 
+// creates a parse handler for parsing a dynamic table scan operator
+CParseHandlerBase *
+CParseHandlerFactory::CreateDFSParseHandler(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+{
+	return GPOS_NEW(mp) CParseHandlerDynamicForeignScan(mp, parse_handler_mgr,
+														parse_handler_root);
+}
+
 // creates a parse handler for parsing a partition selector operator
 CParseHandlerBase *
 CParseHandlerFactory::CreatePartitionSelectorParseHandler(
@@ -982,66 +986,6 @@ CParseHandlerFactory::CreateScOpListParseHandler(
 {
 	return GPOS_NEW(mp)
 		CParseHandlerScalarOpList(mp, parse_handler_mgr, parse_handler_root);
-}
-
-// creates a parse handler for parsing a scalar part default
-CParseHandlerBase *
-CParseHandlerFactory::CreateScPartDefaultParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp) CParseHandlerScalarPartDefault(mp, parse_handler_mgr,
-													   parse_handler_root);
-}
-
-// creates a parse handler for parsing a scalar part boundary
-CParseHandlerBase *
-CParseHandlerFactory::CreateScPartBoundParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp)
-		CParseHandlerScalarPartBound(mp, parse_handler_mgr, parse_handler_root);
-}
-
-// creates a parse handler for parsing a scalar part bound inclusion
-CParseHandlerBase *
-CParseHandlerFactory::CreateScPartBoundInclParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp) CParseHandlerScalarPartBoundInclusion(
-		mp, parse_handler_mgr, parse_handler_root);
-}
-
-// creates a parse handler for parsing a scalar part bound openness
-CParseHandlerBase *
-CParseHandlerFactory::CreateScPartBoundOpenParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp) CParseHandlerScalarPartBoundOpen(mp, parse_handler_mgr,
-														 parse_handler_root);
-}
-
-// creates a parse handler for parsing a scalar part list values
-CParseHandlerBase *
-CParseHandlerFactory::CreateScPartListValuesParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp) CParseHandlerScalarPartListValues(mp, parse_handler_mgr,
-														  parse_handler_root);
-}
-
-// creates a parse handler for parsing a scalar part list null test
-CParseHandlerBase *
-CParseHandlerFactory::CreateScPartListNullTestParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp) CParseHandlerScalarPartListNullTest(
-		mp, parse_handler_mgr, parse_handler_root);
 }
 
 // creates a parse handler for parsing direct dispatch info

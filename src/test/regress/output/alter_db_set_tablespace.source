@@ -11,10 +11,6 @@
 -- end_ignore
 CREATE SCHEMA adst;
 SET search_path TO adst,public;
-CREATE OR REPLACE FUNCTION get_tablespace_version_directory_name()
-    RETURNS TEXT
-AS '@abs_builddir@/regress.so', 'get_tablespace_version_directory_name'
-    LANGUAGE C;
 -- start_ignore
 CREATE LANGUAGE plpython3u;
 -- end_ignore
@@ -1269,9 +1265,8 @@ SELECT force_mirrors_to_catch_up();
 
 -- Final cleanup
 DROP SCHEMA adst CASCADE;
-NOTICE:  drop cascades to 5 other objects
-DETAIL:  drop cascades to function get_tablespace_version_directory_name()
-drop cascades to function setup_tablespace_location_dir_for_test(text)
+DETAIL:  drop cascades to function setup_tablespace_location_dir_for_test(text)
+NOTICE:  drop cascades to 4 other objects
 drop cascades to function setup()
 drop cascades to function list_db_tablespace(text,text)
 drop cascades to function stat_db_objects(text,text)

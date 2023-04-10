@@ -31,7 +31,7 @@
         </dxl:CostParams>
       </dxl:CostModelConfig>
       <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="25" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
-      <dxl:TraceFlags Value="101013,102001,102002,102003,102029,102046,102048,102053,102054,102120,102144,103001,103014,103015,103022,103027,103033,104003,104004,104005,105000"/>
+      <dxl:TraceFlags Value="101013,102001,102002,102003,103045,102046,102048,102053,102054,102120,102144,103001,103014,103015,103022,103027,103033,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.24579.1.0" Name="foo" Rows="0.000000" EmptyRelation="true"/>

@@ -311,7 +311,7 @@ INSERT INTO co_crtb_with_strg_dir_and_col_ref_1_uncompr select * from co_crtb_wi
 \d+ co_crtb_with_strg_dir_and_col_ref_1
 
 --Select from pg_attribute_encoding to see the table entry 
-select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'co_crtb_with_strg_dir_and_col_ref_1' and c.oid=e.attrelid  order by relname, attnum limit 3; 
+select attrelid::regclass as relname, attnum, filenum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'co_crtb_with_strg_dir_and_col_ref_1' and c.oid=e.attrelid  order by relname, attnum limit 3;
 --
 -- Compare data with uncompressed table
 --
@@ -1779,3 +1779,14 @@ create table a_aoco_table_with_rle_type_and_invalid_compression_level(col int) W
 
 -- Check that callbacks are registered
 SELECT * FROM pg_compression WHERE compname='rle_type';
+
+-- Check ALTER TYPE SET DEFAULT ENCODING propagates to the dependent array type
+DROP type if exists mood_encoded cascade;
+
+CREATE TYPE mood_encoded AS ENUM ('sad', 'ok', 'happy');
+ALTER TYPE public.mood_encoded SET DEFAULT ENCODING (compresstype=zlib, blocksize=65536, compresslevel=4);
+
+SELECT t.typname, te.typoptions
+FROM pg_type t
+LEFT JOIN pg_type_encoding te ON (t.oid=te.typid)
+WHERE t.typname in ('mood_encoded', '_mood_encoded');

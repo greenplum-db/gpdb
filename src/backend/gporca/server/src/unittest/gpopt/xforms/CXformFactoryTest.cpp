@@ -54,8 +54,8 @@ CXformFactoryTest::EresUnittest_Basic()
 	CXform *pxf = CXformFactory::Pxff()->Pxf(CXform::ExfGet2TableScan);
 	GPOS_ASSERT(CXform::ExfGet2TableScan == pxf->Exfid());
 
-	pxf = CXformFactory::Pxff()->Pxf(CXform::ExfInnerJoin2NLJoin);
-	GPOS_ASSERT(CXform::ExfInnerJoin2NLJoin == pxf->Exfid());
+	pxf = CXformFactory::Pxff()->Pxf(CXform::ExfImplementInnerJoin);
+	GPOS_ASSERT(CXform::ExfImplementInnerJoin == pxf->Exfid());
 
 	pxf = CXformFactory::Pxff()->Pxf(CXform::ExfGbAgg2HashAgg);
 	GPOS_ASSERT(CXform::ExfGbAgg2HashAgg == pxf->Exfid());

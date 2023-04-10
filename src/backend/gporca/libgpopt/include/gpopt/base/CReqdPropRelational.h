@@ -39,9 +39,6 @@ private:
 	// required stat columns
 	CColRefSet *m_pcrsStat{nullptr};
 
-	// predicate on partition key
-	CExpression *m_pexprPartPred{nullptr};
-
 public:
 	CReqdPropRelational(const CReqdPropRelational &) = delete;
 
@@ -50,9 +47,6 @@ public:
 
 	// ctor
 	explicit CReqdPropRelational(CColRefSet *pcrs);
-
-	// ctor
-	CReqdPropRelational(CColRefSet *pcrs, CExpression *pexprPartPred);
 
 	// dtor
 	~CReqdPropRelational() override;
@@ -70,13 +64,6 @@ public:
 	PcrsStat() const
 	{
 		return m_pcrsStat;
-	}
-
-	// partition predicate accessor
-	CExpression *
-	PexprPartPred() const
-	{
-		return m_pexprPartPred;
 	}
 
 	// required properties computation function

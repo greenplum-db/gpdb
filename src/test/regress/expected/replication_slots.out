@@ -11,9 +11,9 @@ HINT:  Creating replication slots on a single segment is not advised.  Replicati
 
 -- And I should see that my replication slot exists
 select pg_get_replication_slots();
-          pg_get_replication_slots           
----------------------------------------------
- (some_replication_slot,,physical,,f,f,,,,,)
+           pg_get_replication_slots            
+-----------------------------------------------
+ (some_replication_slot,,physical,,f,f,,,,,,,)
 (1 row)
 
 -- Cleanup:

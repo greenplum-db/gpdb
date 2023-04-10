@@ -36,11 +36,6 @@
 #include "naucrates/dxl/operators/CDXLScalarArrayComp.h"
 #include "naucrates/dxl/operators/CDXLScalarCast.h"
 #include "naucrates/dxl/operators/CDXLScalarIdent.h"
-#include "naucrates/dxl/operators/CDXLScalarPartBound.h"
-#include "naucrates/dxl/operators/CDXLScalarPartBoundInclusion.h"
-#include "naucrates/dxl/operators/CDXLScalarPartBoundOpen.h"
-#include "naucrates/dxl/operators/CDXLScalarPartDefault.h"
-#include "naucrates/dxl/operators/CDXLScalarPartListValues.h"
 #include "naucrates/dxl/operators/CDXLScalarProjElem.h"
 #include "naucrates/dxl/operators/CDXLScalarProjList.h"
 #include "naucrates/dxl/operators/CDXLScalarValuesList.h"
@@ -57,417 +52,6 @@ using namespace gpmd;
 using namespace gpdxl;
 using namespace gpopt;
 using namespace gpnaucrates;
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorExprToDXLUtils::PdxlnInt4Const
-//
-//	@doc:
-// 		Construct a scalar const value expression for the given INT value
-//
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorExprToDXLUtils::PdxlnInt4Const(CMemoryPool *mp,
-										  CMDAccessor *md_accessor, INT val)
-{
-	GPOS_ASSERT(nullptr != mp);
-
-	const IMDTypeInt4 *pmdtypeint4 = md_accessor->PtMDType<IMDTypeInt4>();
-	pmdtypeint4->MDId()->AddRef();
-
-	CDXLDatumInt4 *dxl_datum = GPOS_NEW(mp)
-		CDXLDatumInt4(mp, pmdtypeint4->MDId(), false /*is_null*/, val);
-	CDXLScalarConstValue *pdxlConst =
-		GPOS_NEW(mp) CDXLScalarConstValue(mp, dxl_datum);
-
-	return GPOS_NEW(mp) CDXLNode(mp, pdxlConst);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorExprToDXLUtils::PdxlnBoolConst
-//
-//	@doc:
-// 		Construct a scalar const value expression for the given BOOL value
-//
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorExprToDXLUtils::PdxlnBoolConst(CMemoryPool *mp,
-										  CMDAccessor *md_accessor, BOOL value)
-{
-	GPOS_ASSERT(nullptr != mp);
-
-	const IMDTypeBool *pmdtype = md_accessor->PtMDType<IMDTypeBool>();
-	pmdtype->MDId()->AddRef();
-
-	CDXLDatumBool *dxl_datum = GPOS_NEW(mp)
-		CDXLDatumBool(mp, pmdtype->MDId(), false /*is_null*/, value);
-	CDXLScalarConstValue *pdxlConst =
-		GPOS_NEW(mp) CDXLScalarConstValue(mp, dxl_datum);
-
-	return GPOS_NEW(mp) CDXLNode(mp, pdxlConst);
-}
-
-
-
-// construct a DXL node for the part key portion of the list partition filter
-CDXLNode *
-CTranslatorExprToDXLUtils::PdxlnListFilterPartKey(CMemoryPool *mp,
-												  CMDAccessor *md_accessor,
-												  CExpression *pexprPartKey,
-												  IMDId *pmdidTypePartKey,
-												  ULONG ulPartLevel)
-{
-	GPOS_ASSERT(nullptr != pexprPartKey);
-	GPOS_ASSERT(nullptr != pmdidTypePartKey);
-	GPOS_ASSERT(CScalar::PopConvert(pexprPartKey->Pop())
-					->MdidType()
-					->Equals(pmdidTypePartKey));
-
-	CDXLNode *pdxlnPartKey = nullptr;
-
-	if (CUtils::FScalarIdent(pexprPartKey))
-	{
-		// Simple Scalar Ident - create a ScalarPartListValues from the partition key
-		IMDId *pmdidResultArray =
-			md_accessor->RetrieveType(pmdidTypePartKey)->GetArrayTypeMdid();
-		pmdidResultArray->AddRef();
-		pmdidTypePartKey->AddRef();
-
-		pdxlnPartKey = GPOS_NEW(mp) CDXLNode(
-			mp, GPOS_NEW(mp) CDXLScalarPartListValues(
-					mp, ulPartLevel, pmdidResultArray, pmdidTypePartKey));
-	}
-	else if (CScalarIdent::FCastedScId(pexprPartKey) ||
-			 CScalarIdent::FAllowedFuncScId(pexprPartKey))
-	{
-		IMDId *pmdidDestElem = nullptr;
-		IMDId *pmdidArrayCastFunc = nullptr;
-		ExtractCastFuncMdids(pexprPartKey->Pop(), &pmdidDestElem,
-							 &pmdidArrayCastFunc);
-		IMDId *pmdidDestArray =
-			md_accessor->RetrieveType(pmdidDestElem)->GetArrayTypeMdid();
-
-		CScalarIdent *pexprScalarIdent =
-			CScalarIdent::PopConvert((*pexprPartKey)[0]->Pop());
-		IMDId *pmdidSrcElem = pexprScalarIdent->MdidType();
-		IMDId *pmdidSrcArray =
-			md_accessor->RetrieveType(pmdidSrcElem)->GetArrayTypeMdid();
-		pmdidSrcArray->AddRef();
-		pmdidSrcElem->AddRef();
-		CDXLNode *pdxlnPartKeyIdent = GPOS_NEW(mp)
-			CDXLNode(mp, GPOS_NEW(mp) CDXLScalarPartListValues(
-							 mp, ulPartLevel, pmdidSrcArray, pmdidSrcElem));
-
-		pmdidDestArray->AddRef();
-		pmdidArrayCastFunc->AddRef();
-		pdxlnPartKey = GPOS_NEW(mp)
-			CDXLNode(mp,
-					 GPOS_NEW(mp) CDXLScalarArrayCoerceExpr(
-						 mp, pmdidArrayCastFunc, pmdidDestArray,
-						 default_type_modifier, true, /* is_explicit */
-						 EdxlcfDontCare, -1			  /* location */
-						 ),
-					 pdxlnPartKeyIdent);
-	}
-	else
-	{
-		// Not supported - should be unreachable.
-		CWStringDynamic *str = GPOS_NEW(mp) CWStringDynamic(mp);
-		str->AppendFormat(
-			GPOS_WSZ_LIT(
-				"Unsupported part filter operator for list partitions : %ls"),
-			pexprPartKey->Pop()->SzId());
-		GPOS_THROW_EXCEPTION(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
-							 str->GetBuffer());
-	}
-
-	GPOS_ASSERT(nullptr != pdxlnPartKey);
-
-	return pdxlnPartKey;
-}
-
-
-// Construct a predicate node for a list partition filter
-CDXLNode *
-CTranslatorExprToDXLUtils::PdxlnListFilterScCmp(
-	CMemoryPool *mp, CMDAccessor *md_accessor, CDXLNode *pdxlnPartKey,
-	CDXLNode *pdxlnOther, IMDId *pmdidTypePartKey, IMDId *pmdidTypeOther,
-	IMDType::ECmpType cmp_type, ULONG ulPartLevel, BOOL fHasDefaultPart)
-{
-	IMDId *pmdidScCmp = nullptr;
-
-	pmdidScCmp = CMDAccessorUtils::GetScCmpMdIdConsiderCasts(
-		md_accessor, pmdidTypeOther, pmdidTypePartKey, cmp_type);
-
-	const IMDScalarOp *md_scalar_op = md_accessor->RetrieveScOp(pmdidScCmp);
-	const CWStringConst *pstrScCmp = md_scalar_op->Mdname().GetMDName();
-
-	pmdidScCmp->AddRef();
-	CDXLNode *pdxlnScCmp = GPOS_NEW(mp)
-		CDXLNode(mp,
-				 GPOS_NEW(mp) CDXLScalarArrayComp(
-					 mp, pmdidScCmp,
-					 GPOS_NEW(mp) CWStringConst(mp, pstrScCmp->GetBuffer()),
-					 Edxlarraycomptypeany),
-				 pdxlnOther, pdxlnPartKey);
-
-	if (fHasDefaultPart)
-	{
-		CDXLNode *pdxlnDefault = GPOS_NEW(mp)
-			CDXLNode(mp, GPOS_NEW(mp) CDXLScalarPartDefault(mp, ulPartLevel));
-		return GPOS_NEW(mp)
-			CDXLNode(mp, GPOS_NEW(mp) CDXLScalarBoolExpr(mp, Edxlor),
-					 pdxlnScCmp, pdxlnDefault);
-	}
-	else
-	{
-		return pdxlnScCmp;
-	}
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorExprToDXLUtils::PdxlnRangeFilterScCmp
-//
-//	@doc:
-// 		Construct a Result node for a filter min <= Scalar or max >= Scalar
-//
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorExprToDXLUtils::PdxlnRangeFilterScCmp(
-	CMemoryPool *mp, CMDAccessor *md_accessor, CDXLNode *pdxlnScalar,
-	IMDId *pmdidTypePartKey, IMDId *pmdidTypeOther, IMDId *pmdidTypeCastExpr,
-	IMDId *mdid_cast_func, IMDType::ECmpType cmp_type, ULONG ulPartLevel)
-{
-	if (IMDType::EcmptEq == cmp_type)
-	{
-		return PdxlnRangeFilterEqCmp(
-			mp, md_accessor, pdxlnScalar, pmdidTypePartKey, pmdidTypeOther,
-			pmdidTypeCastExpr, mdid_cast_func, ulPartLevel);
-	}
-
-	BOOL fLowerBound = false;
-	IMDType::ECmpType ecmptScCmp = IMDType::EcmptOther;
-
-	if (IMDType::EcmptLEq == cmp_type || IMDType::EcmptL == cmp_type)
-	{
-		// partkey </<= other: construct condition min < other
-		fLowerBound = true;
-		ecmptScCmp = IMDType::EcmptL;
-	}
-	else if (IMDType::EcmptGEq == cmp_type || IMDType::EcmptG == cmp_type)
-	{
-		// partkey >/>= other: construct condition max > other
-		ecmptScCmp = IMDType::EcmptG;
-	}
-	else
-	{
-		GPOS_ASSERT(IMDType::EcmptNEq == cmp_type);
-		ecmptScCmp = IMDType::EcmptNEq;
-	}
-
-	if (IMDType::EcmptLEq != cmp_type && IMDType::EcmptGEq != cmp_type)
-	{
-		// scalar comparison does not include equality: no need to consider part constraint boundaries
-		CDXLNode *pdxlnPredicateExclusive =
-			PdxlnCmp(mp, md_accessor, ulPartLevel, fLowerBound, pdxlnScalar,
-					 ecmptScCmp, pmdidTypePartKey, pmdidTypeOther,
-					 pmdidTypeCastExpr, mdid_cast_func);
-		return pdxlnPredicateExclusive;
-		// This is also correct for lossy casts. when we have predicate such as
-		// float::int < 2, we dont want to select values such as 1.7 which cast to 2.
-		// So, in this case, we should check lower bound::int < 2
-	}
-
-	CDXLNode *pdxlnInclusiveCmp = PdxlnCmp(
-		mp, md_accessor, ulPartLevel, fLowerBound, pdxlnScalar, cmp_type,
-		pmdidTypePartKey, pmdidTypeOther, pmdidTypeCastExpr, mdid_cast_func);
-
-	if (nullptr != mdid_cast_func && mdid_cast_func->IsValid() &&
-		md_accessor->RetrieveFunc(mdid_cast_func)
-			->IsAllowedForPS())	 // is a lossy cast
-	{
-		// In case of lossy casts, we don't want to eliminate partitions with
-		// exclusive ends when the predicate is on that end
-		// A partition such as [1,2) should be selected for float::int = 2,
-		// but shouldn't be selected for float = 2.0
-		return pdxlnInclusiveCmp;
-	}
-
-	pdxlnScalar->AddRef();
-	CDXLNode *pdxlnPredicateExclusive = PdxlnCmp(
-		mp, md_accessor, ulPartLevel, fLowerBound, pdxlnScalar, ecmptScCmp,
-		pmdidTypePartKey, pmdidTypeOther, pmdidTypeCastExpr, mdid_cast_func);
-
-	CDXLNode *pdxlnInclusiveBoolPredicate =
-		GPOS_NEW(mp) CDXLNode(mp, GPOS_NEW(mp) CDXLScalarPartBoundInclusion(
-									  mp, ulPartLevel, fLowerBound));
-
-	CDXLNode *pdxlnPredicateInclusive =
-		GPOS_NEW(mp) CDXLNode(mp, GPOS_NEW(mp) CDXLScalarBoolExpr(mp, Edxland),
-							  pdxlnInclusiveCmp, pdxlnInclusiveBoolPredicate);
-
-	// return the final predicate in the form "(point <= col and colIncluded) or point < col" / "(point >= col and colIncluded) or point > col"
-	return GPOS_NEW(mp)
-		CDXLNode(mp, GPOS_NEW(mp) CDXLScalarBoolExpr(mp, Edxlor),
-				 pdxlnPredicateInclusive, pdxlnPredicateExclusive);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorExprToDXLUtils::PdxlnRangeFilterEqCmp
-//
-//	@doc:
-// 		Construct a predicate node for a filter min <= Scalar and max >= Scalar
-//
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorExprToDXLUtils::PdxlnRangeFilterEqCmp(
-	CMemoryPool *mp, CMDAccessor *md_accessor, CDXLNode *pdxlnScalar,
-	IMDId *pmdidTypePartKey, IMDId *pmdidTypeOther, IMDId *pmdidTypeCastExpr,
-	IMDId *mdid_cast_func, ULONG ulPartLevel)
-{
-	CDXLNode *pdxlnPredicateMin = PdxlnRangeFilterPartBound(
-		mp, md_accessor, pdxlnScalar, pmdidTypePartKey, pmdidTypeOther,
-		pmdidTypeCastExpr, mdid_cast_func, ulPartLevel, true /*fLowerBound*/,
-		IMDType::EcmptL);
-	pdxlnScalar->AddRef();
-	CDXLNode *pdxlnPredicateMax = PdxlnRangeFilterPartBound(
-		mp, md_accessor, pdxlnScalar, pmdidTypePartKey, pmdidTypeOther,
-		pmdidTypeCastExpr, mdid_cast_func, ulPartLevel, false /*fLowerBound*/,
-		IMDType::EcmptG);
-
-	// return the conjunction of the predicate for the lower and upper bounds
-	return GPOS_NEW(mp)
-		CDXLNode(mp, GPOS_NEW(mp) CDXLScalarBoolExpr(mp, Edxland),
-				 pdxlnPredicateMin, pdxlnPredicateMax);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorExprToDXLUtils::PdxlnRangeFilterPartBound
-//
-//	@doc:
-// 		Construct a predicate for a partition bound of one of the two forms
-//		(min <= Scalar and minincl) or min < Scalar
-//		(max >= Scalar and maxinc) or Max > Scalar
-//
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorExprToDXLUtils::PdxlnRangeFilterPartBound(
-	CMemoryPool *mp, CMDAccessor *md_accessor, CDXLNode *pdxlnScalar,
-	IMDId *pmdidTypePartKey, IMDId *pmdidTypeOther, IMDId *pmdidTypeCastExpr,
-	IMDId *mdid_cast_func, ULONG ulPartLevel, ULONG fLowerBound,
-	IMDType::ECmpType cmp_type)
-{
-	GPOS_ASSERT(IMDType::EcmptL == cmp_type || IMDType::EcmptG == cmp_type);
-
-	IMDType::ECmpType ecmptInc = IMDType::EcmptLEq;
-	if (IMDType::EcmptG == cmp_type)
-	{
-		ecmptInc = IMDType::EcmptGEq;
-	}
-
-	CDXLNode *pdxlnInclusiveCmp = PdxlnCmp(
-		mp, md_accessor, ulPartLevel, fLowerBound, pdxlnScalar, ecmptInc,
-		pmdidTypePartKey, pmdidTypeOther, pmdidTypeCastExpr, mdid_cast_func);
-
-	if (nullptr != mdid_cast_func && mdid_cast_func->IsValid() &&
-		md_accessor->RetrieveFunc(mdid_cast_func)
-			->IsAllowedForPS())	 // is a lossy cast
-	{
-		// In case of lossy casts, we don't want to eliminate partitions with
-		// exclusive ends when the predicate is on that end
-		// A partition such as [1,2) should be selected for float::int = 2
-		// but shouldn't be selected for float = 2.0
-		return pdxlnInclusiveCmp;
-	}
-
-	pdxlnScalar->AddRef();
-
-	CDXLNode *pdxlnPredicateExclusive = PdxlnCmp(
-		mp, md_accessor, ulPartLevel, fLowerBound, pdxlnScalar, cmp_type,
-		pmdidTypePartKey, pmdidTypeOther, pmdidTypeCastExpr, mdid_cast_func);
-
-	CDXLNode *pdxlnInclusiveBoolPredicate =
-		GPOS_NEW(mp) CDXLNode(mp, GPOS_NEW(mp) CDXLScalarPartBoundInclusion(
-									  mp, ulPartLevel, fLowerBound));
-
-	CDXLNode *pdxlnPredicateInclusive =
-		GPOS_NEW(mp) CDXLNode(mp, GPOS_NEW(mp) CDXLScalarBoolExpr(mp, Edxland),
-							  pdxlnInclusiveCmp, pdxlnInclusiveBoolPredicate);
-
-	// return the final predicate in the form "(point <= col and colIncluded) or point < col" / "(point >= col and colIncluded) or point > col"
-	return GPOS_NEW(mp)
-		CDXLNode(mp, GPOS_NEW(mp) CDXLScalarBoolExpr(mp, Edxlor),
-				 pdxlnPredicateInclusive, pdxlnPredicateExclusive);
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorExprToDXLUtils::PdxlnRangeFilterDefaultAndOpenEnded
-//
-//	@doc:
-//		Construct predicates to cover the cases of default partition and
-//		open-ended partitions if necessary
-//
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorExprToDXLUtils::PdxlnRangeFilterDefaultAndOpenEnded(
-	CMemoryPool *mp, ULONG ulPartLevel, BOOL fLTComparison, BOOL fGTComparison,
-	BOOL fEQComparison, BOOL fDefaultPart)
-{
-	CDXLNode *pdxlnResult = nullptr;
-	if (fLTComparison || fEQComparison)
-	{
-		// add a condition to cover the cases of open-ended interval (-inf, x)
-		pdxlnResult = GPOS_NEW(mp)
-			CDXLNode(mp, GPOS_NEW(mp) CDXLScalarPartBoundOpen(
-							 mp, ulPartLevel, true /*is_lower_bound*/));
-	}
-
-	if (fGTComparison || fEQComparison)
-	{
-		// add a condition to cover the cases of open-ended interval (x, inf)
-		CDXLNode *pdxlnOpenMax = GPOS_NEW(mp)
-			CDXLNode(mp, GPOS_NEW(mp) CDXLScalarPartBoundOpen(
-							 mp, ulPartLevel, false /*is_lower_bound*/));
-
-		// construct a boolean OR expression over the two expressions
-		if (nullptr != pdxlnResult)
-		{
-			pdxlnResult = GPOS_NEW(mp)
-				CDXLNode(mp, GPOS_NEW(mp) CDXLScalarBoolExpr(mp, Edxlor),
-						 pdxlnResult, pdxlnOpenMax);
-		}
-		else
-		{
-			pdxlnResult = pdxlnOpenMax;
-		}
-	}
-
-	if (fDefaultPart)
-	{
-		// add a condition to cover the cases of default partition
-		CDXLNode *pdxlnDefault = GPOS_NEW(mp)
-			CDXLNode(mp, GPOS_NEW(mp) CDXLScalarPartDefault(mp, ulPartLevel));
-
-		if (nullptr != pdxlnResult)
-		{
-			pdxlnResult = GPOS_NEW(mp)
-				CDXLNode(mp, GPOS_NEW(mp) CDXLScalarBoolExpr(mp, Edxlor),
-						 pdxlnDefault, pdxlnResult);
-		}
-		else
-		{
-			pdxlnResult = pdxlnDefault;
-		}
-	}
-
-	return pdxlnResult;
-}
 
 
 //---------------------------------------------------------------------------
@@ -502,66 +86,6 @@ CTranslatorExprToDXLUtils::PdxlpropCopy(CMemoryPool *mp, CDXLNode *dxlnode)
 		pstrStartupcost, pstrCost, rows_out_str, width_str));
 }
 
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorExprToDXLUtils::PdxlnCmp
-//
-//	@doc:
-//		Construct a scalar comparison of the given type between the column with
-//		the given col id and the scalar expression
-//
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorExprToDXLUtils::PdxlnCmp(
-	CMemoryPool *mp, CMDAccessor *md_accessor, ULONG ulPartLevel,
-	BOOL fLowerBound, CDXLNode *pdxlnScalar, IMDType::ECmpType cmp_type,
-	IMDId *pmdidTypePartKey, IMDId *pmdidTypeExpr, IMDId *pmdidTypeCastExpr,
-	IMDId *mdid_cast_func)
-{
-	IMDId *pmdidScCmp = nullptr;
-
-	if (IMDId::IsValid(pmdidTypeCastExpr))
-	{
-		pmdidScCmp = CMDAccessorUtils::GetScCmpMdIdConsiderCasts(
-			md_accessor, pmdidTypeCastExpr, pmdidTypeExpr, cmp_type);
-	}
-	else
-	{
-		pmdidScCmp = CMDAccessorUtils::GetScCmpMdIdConsiderCasts(
-			md_accessor, pmdidTypePartKey, pmdidTypeExpr, cmp_type);
-	}
-
-	const IMDScalarOp *md_scalar_op = md_accessor->RetrieveScOp(pmdidScCmp);
-	const CWStringConst *pstrScCmp = md_scalar_op->Mdname().GetMDName();
-
-	pmdidScCmp->AddRef();
-
-	CDXLScalarComp *pdxlopCmp = GPOS_NEW(mp) CDXLScalarComp(
-		mp, pmdidScCmp, GPOS_NEW(mp) CWStringConst(mp, pstrScCmp->GetBuffer()));
-	CDXLNode *pdxlnScCmp = GPOS_NEW(mp) CDXLNode(mp, pdxlopCmp);
-
-	pmdidTypePartKey->AddRef();
-	CDXLNode *pdxlnPartBound = GPOS_NEW(mp)
-		CDXLNode(mp, GPOS_NEW(mp) CDXLScalarPartBound(
-						 mp, ulPartLevel, pmdidTypePartKey, fLowerBound));
-
-	if (IMDId::IsValid(pmdidTypeCastExpr))
-	{
-		GPOS_ASSERT(nullptr != mdid_cast_func);
-		pmdidTypeCastExpr->AddRef();
-		mdid_cast_func->AddRef();
-
-		pdxlnPartBound = GPOS_NEW(mp) CDXLNode(
-			mp,
-			GPOS_NEW(mp) CDXLScalarCast(mp, pmdidTypeCastExpr, mdid_cast_func),
-			pdxlnPartBound);
-	}
-	pdxlnScCmp->AddChild(pdxlnPartBound);
-	pdxlnScCmp->AddChild(pdxlnScalar);
-
-	return pdxlnScCmp;
-}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -1234,25 +758,64 @@ CTranslatorExprToDXLUtils::SetDirectDispatchInfo(
 	//			  |--CScalarIdent "non_dist_key"
 	//			  +--CScalarConst (5)
 
-	if (CDistributionSpec::EdtHashed == pds->Edt())
+	if (CDistributionSpec::EdtHashed == pds->Edt() ||
+		CDistributionSpec::EdtRandom == pds->Edt())
 	{
-		// direct dispatch only supported for scans over hash distributed tables
+		// direct dispatch supported for scans over
+		// hash & random distributed tables
 		for (ULONG i = 0; i < size; i++)
 		{
 			CExpression *pexprFilter = (*pexprFilterArray)[i];
 			CPropConstraint *ppc = pexprFilter->DerivePropertyConstraint();
+			CDXLDirectDispatchInfo *dxl_direct_dispatch_info = nullptr;
 
 			if (nullptr != ppc->Pcnstr())
 			{
 				GPOS_ASSERT(nullptr != ppc->Pcnstr());
 
-				CDistributionSpecHashed *pdsHashed =
-					CDistributionSpecHashed::PdsConvert(pds);
-				CExpressionArray *pdrgpexprHashed = pdsHashed->Pdrgpexpr();
+				if (CDistributionSpec::EdtHashed == pds->Edt())
+				{
+					CDistributionSpecHashed *pdsHashed =
+						CDistributionSpecHashed::PdsConvert(pds);
+					CExpressionArray *pdrgpexprHashed = pdsHashed->Pdrgpexpr();
 
-				CDXLDirectDispatchInfo *dxl_direct_dispatch_info =
-					GetDXLDirectDispatchInfo(mp, md_accessor, pdrgpexprHashed,
-											 ppc->Pcnstr());
+					dxl_direct_dispatch_info = GetDXLDirectDispatchInfo(
+						mp, md_accessor, pdrgpexprHashed, ppc->Pcnstr());
+				}
+				else if (CDistributionSpec::EdtRandom == pds->Edt())
+				{
+					CConstraint *pcnstr = ppc->Pcnstr();
+
+					CDistributionSpecRandom *pdsRandom =
+						CDistributionSpecRandom::PdsConvert(pds);
+
+					// Extracting GpSegmentID for RandDist Table
+					const CColRef *pcrDistrCol = pdsRandom->GetGpSegmentId();
+
+					if (pcrDistrCol == nullptr)
+					{
+						// Direct Dispatch not feasible for this scenario as
+						// pcrDistrCol might not exist if gp_segment_id is not defined
+						continue;
+					}
+
+					CConstraint *pcnstrDistrCol =
+						pcnstr->Pcnstr(mp, pcrDistrCol);
+
+					if (pcnstrDistrCol == nullptr)
+					{
+						// Direct Dispatch not feasible for this scenario
+						// as no constraint found on the gp_segment_id
+						// Eg: In a query on a random distribute table, if we don't
+						// have a condition on gp_segment_id, but we have a condition
+						// on another column, in that case this condition
+						// shall arise.(select * from bar_randDistr where colm1=5;)
+						continue;
+					}
+
+					dxl_direct_dispatch_info = GetDXLDirectDispatchInfoRandDist(
+						mp, md_accessor, pcrDistrCol, pcnstrDistrCol);
+				}
 
 				if (nullptr != dxl_direct_dispatch_info)
 				{
@@ -1263,7 +826,60 @@ CTranslatorExprToDXLUtils::SetDirectDispatchInfo(
 		}
 	}
 }
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorExprToDXLUtils::GetDXLDirectDispatchInfoRandDist
+//
+//	@doc:
+//		Compute the direct dispatch info spec if the table is randomly
+//		distributed. Returns NULL if this is not possible
+//
+//---------------------------------------------------------------------------
+CDXLDirectDispatchInfo *
+CTranslatorExprToDXLUtils::GetDXLDirectDispatchInfoRandDist(
+	CMemoryPool *mp, CMDAccessor *md_accessor, const CColRef *pcrDistrCol,
+	CConstraint *pcnstrDistrCol)
+{
+	// For a random distributed table, we get direct gp_segment_id
+	// value in the expression, so we use it as is.
+	const BOOL useRawValues = true;
 
+	CDXLDatum2dArray *pdrgpdrgpdxldatum = nullptr;
+
+	if (CPredicateUtils::FConstColumn(pcnstrDistrCol, pcrDistrCol))
+	{
+		CDXLDatum *dxl_datum = PdxldatumFromPointConstraint(
+			mp, md_accessor, pcrDistrCol, pcnstrDistrCol);
+		GPOS_ASSERT(nullptr != dxl_datum);
+
+		if (FDirectDispatchable(md_accessor, pcrDistrCol, dxl_datum))
+		{
+			CDXLDatumArray *pdrgpdxldatum = GPOS_NEW(mp) CDXLDatumArray(mp);
+
+			dxl_datum->AddRef();
+			pdrgpdxldatum->Append(dxl_datum);
+
+			pdrgpdrgpdxldatum = GPOS_NEW(mp) CDXLDatum2dArray(mp);
+			pdrgpdrgpdxldatum->Append(pdrgpdxldatum);
+		}
+
+		dxl_datum->Release();
+	}
+	else if (CPredicateUtils::FColumnDisjunctionOfConst(pcnstrDistrCol,
+														pcrDistrCol))
+	{
+		pdrgpdrgpdxldatum = PdrgpdrgpdxldatumFromDisjPointConstraint(
+			mp, md_accessor, pcrDistrCol, pcnstrDistrCol);
+	}
+
+	CRefCount::SafeRelease(pcnstrDistrCol);
+
+	if (nullptr == pdrgpdrgpdxldatum)
+	{
+		return nullptr;
+	}
+	return GPOS_NEW(mp) CDXLDirectDispatchInfo(pdrgpdrgpdxldatum, useRawValues);
+}
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorExprToDXLUtils::GetDXLDirectDispatchInfo
@@ -1284,6 +900,7 @@ CTranslatorExprToDXLUtils::GetDXLDirectDispatchInfo(
 	const ULONG ulHashExpr = pdrgpexprHashed->Size();
 	GPOS_ASSERT(0 < ulHashExpr);
 
+	// If we have single distribution key for table
 	if (1 == ulHashExpr)
 	{
 		CExpression *pexprHashed = (*pdrgpexprHashed)[0];
@@ -1293,6 +910,7 @@ CTranslatorExprToDXLUtils::GetDXLDirectDispatchInfo(
 	BOOL fSuccess = true;
 	CDXLDatumArray *pdrgpdxldatum = GPOS_NEW(mp) CDXLDatumArray(mp);
 
+	// If we have multiple distribution keys for the table
 	for (ULONG ul = 0; ul < ulHashExpr && fSuccess; ul++)
 	{
 		CExpression *pexpr = (*pdrgpexprHashed)[ul];

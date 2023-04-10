@@ -346,12 +346,12 @@ Access method: ao_column
 Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=true
 
 --Select from pg_attribute_encoding to see the table entry 
-select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'co_crtb_with_strg_dir_and_col_ref_1' and c.oid=e.attrelid  order by relname, attnum limit 3; 
-               relname               | attnum |                      attoptions                       
--------------------------------------+--------+-------------------------------------------------------
- co_crtb_with_strg_dir_and_col_ref_1 |      1 | {compresstype=zlib,blocksize=8192,compresslevel=1}
- co_crtb_with_strg_dir_and_col_ref_1 |      2 | {compresstype=zlib,compresslevel=1,blocksize=1048576}
- co_crtb_with_strg_dir_and_col_ref_1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+select attrelid::regclass as relname, attnum, filenum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'co_crtb_with_strg_dir_and_col_ref_1' and c.oid=e.attrelid  order by relname, attnum limit 3;
+               relname               | attnum | filenum |                      attoptions                       
+-------------------------------------+--------+---------+-------------------------------------------------------
+ co_crtb_with_strg_dir_and_col_ref_1 |      1 |       1 | {compresstype=zlib,blocksize=8192,compresslevel=1}
+ co_crtb_with_strg_dir_and_col_ref_1 |      2 |       2 | {compresstype=zlib,compresslevel=1,blocksize=1048576}
+ co_crtb_with_strg_dir_and_col_ref_1 |      3 |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (3 rows)
 
 --
@@ -3621,4 +3621,18 @@ SELECT * FROM pg_compression WHERE compname='rle_type';
 ----------+-------------------------+------------------------+----------------------+------------------------+-----------------------+-----------
  rle_type | gp_rle_type_constructor | gp_rle_type_destructor | gp_rle_type_compress | gp_rle_type_decompress | gp_rle_type_validator |        10
 (1 row)
+
+-- Check ALTER TYPE SET DEFAULT ENCODING propagates to the dependent array type
+DROP type if exists mood_encoded cascade;
+CREATE TYPE mood_encoded AS ENUM ('sad', 'ok', 'happy');
+ALTER TYPE public.mood_encoded SET DEFAULT ENCODING (compresstype=zlib, blocksize=65536, compresslevel=4);
+SELECT t.typname, te.typoptions
+FROM pg_type t
+LEFT JOIN pg_type_encoding te ON (t.oid=te.typid)
+WHERE t.typname in ('mood_encoded', '_mood_encoded');
+    typname    |                     typoptions                      
+---------------+-----------------------------------------------------
+ _mood_encoded | {compresstype=zlib,blocksize=65536,compresslevel=4}
+ mood_encoded  | {compresstype=zlib,blocksize=65536,compresslevel=4}
+(2 rows)
 

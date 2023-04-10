@@ -1393,5 +1393,9 @@ drop table agg_hash_1;
 drop table agg_hash_3;
 drop table agg_hash_4;
 
--- fix github issue #12061 numsegments of general locus is not -1 on create_minmaxagg_path
-explain analyze select count(*) from pg_class,  (select count(*) >0 from  (select count(*) from pg_class where relname like 't%')x)y;
+-- GitHub issue https://github.com/greenplum-db/gpdb/issues/12061
+-- numsegments of the general locus should be -1 on create_minmaxagg_path
+-- This test can be nondeterministic depending on the number of entries in pg_class
+set enable_indexonlyscan=off;
+explain analyze select count(*) from pg_class, (select count(*) > 0 from (select count(*) from pg_class where relnatts > 8) x) y;
+reset enable_indexonlyscan;

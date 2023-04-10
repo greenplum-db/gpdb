@@ -17,8 +17,10 @@ gpdb-git-branch: main
 gpdb-git-remote: https://github.com/greenplum-db/gpdb.git
 rc-build-type: debug
 rc-build-type-gcs: ".debug"
-reduced-frequency-trigger-start: 1:00 AM
-reduced-frequency-trigger-stop: 2:00 AM
+reduced-frequency-trigger-start-rhel8: 1:00 AM
+reduced-frequency-trigger-stop-rhel8: 2:00 AM
+reduced-frequency-trigger-start-oel8: 3:00 AM
+reduced-frequency-trigger-stop-oel8: 4:00 AM
 configure_flags: "--enable-cassert --enable-tap-tests"
 configure_flags_with_extensions: "--enable-cassert --enable-tap-tests --enable-debug-extensions"
 use_ccache: true

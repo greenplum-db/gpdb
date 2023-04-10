@@ -263,7 +263,8 @@ CXformSplitDQA::PexprSplitIntoLocalDQAGlobalAgg(
 					CWStringConst(mp, popScAggFunc->PstrAggFunc()->GetBuffer()),
 				true /* is_distinct */, EaggfuncstageLocal /*eaggfuncstage*/,
 				true /* fSplit */, nullptr /* pmdidResolvedReturnType */,
-				EaggfunckindNormal, popScAggFunc->GetArgTypes());
+				EaggfunckindNormal, popScAggFunc->GetArgTypes(),
+				popScAggFunc->FRepSafe());
 
 			// CScalarValuesList
 			CExpression *pexprArg = (*(*pexprAggFunc)[0])[0];
@@ -308,7 +309,8 @@ CXformSplitDQA::PexprSplitIntoLocalDQAGlobalAgg(
 					CWStringConst(mp, popScAggFunc->PstrAggFunc()->GetBuffer()),
 				false /* is_distinct */, EaggfuncstageGlobal /*eaggfuncstage*/,
 				true /* fSplit */, nullptr /* pmdidResolvedReturnType */,
-				EaggfunckindNormal, popScAggFunc->GetArgTypes());
+				EaggfunckindNormal, popScAggFunc->GetArgTypes(),
+				popScAggFunc->FRepSafe());
 
 			CExpressionArray *pdrgpexprArgsGlobal =
 				GPOS_NEW(mp) CExpressionArray(mp);
@@ -422,7 +424,8 @@ CXformSplitDQA::PexprSplitHelper(CMemoryPool *mp, CColumnFactory *col_factory,
 					CWStringConst(mp, popScAggFunc->PstrAggFunc()->GetBuffer()),
 				false /* is_distinct */, EaggfuncstageGlobal /*eaggfuncstage*/,
 				false /* fSplit */, nullptr /* pmdidResolvedReturnType */,
-				EaggfunckindNormal, popScAggFunc->GetArgTypes());
+				EaggfunckindNormal, popScAggFunc->GetArgTypes(),
+				popScAggFunc->FRepSafe());
 
 			CExpressionArray *pdrgpexprChildren =
 				GPOS_NEW(mp) CExpressionArray(mp);
@@ -561,7 +564,8 @@ CXformSplitDQA::PexprPrElAgg(CMemoryPool *mp, CExpression *pexprAggFunc,
 			CWStringConst(mp, popScAggFunc->PstrAggFunc()->GetBuffer()),
 		false, /*fdistinct */
 		eaggfuncstage, true /* fSplit */, nullptr /* pmdidResolvedReturnType */,
-		EaggfunckindNormal, popScAggFunc->GetArgTypes());
+		EaggfunckindNormal, popScAggFunc->GetArgTypes(),
+		popScAggFunc->FRepSafe());
 
 	return CUtils::PexprScalarProjectElement(
 		mp, pcrCurrStage,
@@ -734,13 +738,11 @@ CXformSplitDQA::PexprMultiLevelAggregation(
 	CExpressionArray *pdrgpexprLastStage = pdrgpexprPrElSecondStage;
 	if (fSplit2LevelsOnly)
 	{
-		// for scalar DQA the local aggregate is responsible for removing duplicates
-		BOOL fLocalAggGeneratesDuplicates = (0 < pdrgpcrLastStage->Size());
-
+		// the local aggregate is responsible for removing duplicates
 		pdrgpcrArgDQA->AddRef();
 		popFirstStage = GPOS_NEW(mp) CLogicalGbAgg(
 			mp, pdrgpcrLocal, COperator::EgbaggtypeLocal,
-			fLocalAggGeneratesDuplicates, pdrgpcrArgDQA, aggStage);
+			false /* fGeneratesDuplicates */, pdrgpcrArgDQA, aggStage);
 		pdrgpcrLastStage->AddRef();
 		popSecondStage = GPOS_NEW(mp) CLogicalGbAgg(
 			mp, pdrgpcrLastStage, COperator::EgbaggtypeGlobal, /* egbaggtype */

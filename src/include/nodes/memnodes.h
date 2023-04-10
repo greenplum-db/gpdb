@@ -54,7 +54,8 @@ typedef struct MemoryContextCounters
  */
 
 typedef void (*MemoryStatsPrintFunc) (MemoryContext context, void *passthru,
-									  const char *stats_string);
+									  const char *stats_string,
+									  bool print_to_stderr);
 
 typedef struct MemoryContextMethods
 {
@@ -68,7 +69,8 @@ typedef struct MemoryContextMethods
 	bool		(*is_empty) (MemoryContext context);
 	void		(*stats) (MemoryContext context,
 						  MemoryStatsPrintFunc printfunc, void *passthru,
-						  MemoryContextCounters *totals);
+						  MemoryContextCounters *totals,
+						  bool print_to_stderr);
 	void		(*declare_accounting_root) (MemoryContext context);
 	Size		(*get_current_usage) (MemoryContext context);
 	Size		(*get_peak_usage) (MemoryContext context);

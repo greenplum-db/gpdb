@@ -57,6 +57,7 @@
 #include "cdb/cdbmutate.h"		/* cdbmutate_warn_ctid_without_segid */
 #include "cdb/cdbpath.h"		/* cdbpath_rows() */
 #include "cdb/cdbutil.h"
+#include "cdb/cdbvars.h"
 
 // TODO: these planner gucs need to be refactored into PlannerConfig.
 bool		gp_enable_sort_limit = false;
@@ -2463,7 +2464,11 @@ set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 	 */
 	required_outer = rel->lateral_relids;
 
-	forceDistRand = rte->forceDistRandom;
+	/* In utility mode, don't force the gp_dist_random. Otherwise check the RTE. */
+	if (Gp_role == GP_ROLE_UTILITY)
+		forceDistRand = false;
+	else
+		forceDistRand = rte->forceDistRandom;
 
 	/* CDB: Could be a preplanned subquery from window_planner. */
 	if (rte->subquery_root == NULL)

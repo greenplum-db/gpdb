@@ -123,6 +123,7 @@ typedef struct
  * string_hash, tag_hash, uint32_hash, or oid_hash.  Just set HASH_BLOBS or
  * not.  Use HASH_FUNCTION only when you want something other than those.
  */
+extern uint32 tag_hash(const void *key, Size keysize);
 extern HTAB *hash_create(const char *tabname, long nelem,
 						 HASHCTL *info, int flags);
 extern void hash_destroy(HTAB *hashp);

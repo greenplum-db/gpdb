@@ -23,8 +23,9 @@ ALTER TABLE [IF EXISTS] <name>
 ALTER TABLE ALL IN TABLESPACE <name> [ OWNED BY <role_name> [, ... ] ]
     SET TABLESPACE <new_tablespace> [ NOWAIT ]
 
-ALTER TABLE [IF EXISTS] [ONLY] <name>
-   | DISTRIBUTED BY ({<column_name> [<opclass>]} [, ... ] )
+ALTER TABLE [IF EXISTS] [ONLY] <name> SET
+   [ WITH (reorganize=true|false) ]
+     DISTRIBUTED BY ({<column_name> [<opclass>]} [, ... ] )
    | DISTRIBUTED RANDOMLY
    | DISTRIBUTED REPLICATED 
 
@@ -59,7 +60,7 @@ where <action> is one of:
   CLUSTER ON <index_name>
   SET WITHOUT CLUSTER
   SET WITHOUT OIDS
-  SET ACCESS METHOD <access_method>
+  SET ACCESS METHOD <access_method>  WITH ( <storage_parameter> = <value> )
   SET (<storage_parameter> = <value>)
   RESET (<storage_parameter> [, ... ])
   SET  WITH (<storage_parameter> = <value>)
@@ -119,7 +120,7 @@ where partition\_element is:
   | START ([<datatype>] '<start_value>') [INCLUSIVE | EXCLUSIVE]
      [ END ([<datatype>] '<end_value>') [INCLUSIVE | EXCLUSIVE] ]
   | END ([<datatype>] '<end_value>') [INCLUSIVE | EXCLUSIVE]
-[ WITH ( <partition_storage_parameter>=<value> [, ... ] ) ]
+[ WITH ( <storage_parameter> = value> [ , ... ] ) ]
 [ TABLESPACE <tablespace> ]
 ```
 
@@ -141,7 +142,7 @@ and subpartition\_element is:
   | [SUBPARTITION <subpartition_name>] 
      END ([<datatype>] '<end_value>') [INCLUSIVE | EXCLUSIVE]
      [ EVERY ( [<number | datatype>] '<interval_value>') ]
-[ WITH ( <partition_storage_parameter>=<value> [, ... ] ) ]
+[ WITH ( <storage_parameter>=<value> [, ... ] ) ]
 [ TABLESPACE <tablespace> ]
 ```
 
@@ -175,6 +176,7 @@ where storage\_parameter when used with the `SET WITH` command is:
    fillfactor={10-100}
    checksum={true | false }
    reorganize={true | false }
+   vacuum_index_cleanup { true | false } 
 ```
 
   <p class="note">
@@ -231,16 +233,14 @@ Although you can specify the table's access method using the <code>appendoptimiz
 
     > **Note** triggers are not supported in Greenplum Database. Triggers in general have very limited functionality due to the parallelism of Greenplum Database.
 
--   **CLUSTER ON/SET WITHOUT CLUSTER** — Selects or removes the default index for future `CLUSTER` operations. It does not actually re-cluster the table. Note that `CLUSTER` is not the recommended way to physically reorder a table in Greenplum Database because it takes so long. It is better to recreate the table with [CREATE TABLE AS](CREATE_TABLE_AS.html) and order it by the index column\(s\).
-
-    > **Note** `CLUSTER ON` is not supported on append-optimized tables.
+-   **CLUSTER ON/SET WITHOUT CLUSTER** — Selects or removes the default index for future `CLUSTER` operations. It does not actually re-cluster the table.
 
 -   **SET WITHOUT OIDS** — Removes the OID system column from the table.
 
     > **Caution** VMware does not support using `SET WITH OIDS` or `oids=TRUE` to assign an OID system column.On large tables, such as those in a typical Greenplum Database system, using OIDs for table rows can cause wrap-around of the 32-bit OID counter. Once the counter wraps around, OIDs can no longer be assumed to be unique, which not only makes them useless to user applications, but can also cause problems in the Greenplum Database system catalog tables. In addition, excluding OIDs from a table reduces the space required to store the table on disk by 4 bytes per row, slightly improving performance. You cannot create OIDS on a partitioned or column-oriented table \(an error is displayed\). This syntax is deprecated and will be removed in a future Greenplum release.
 
 -   **SET \( FILLFACTOR = value\) / RESET \(FILLFACTOR\)** — Changes the fillfactor for the table. The fillfactor for a table is a percentage between 10 and 100. 100 \(complete packing\) is the default. When a smaller fillfactor is specified, `INSERT` operations pack table pages only to the indicated percentage; the remaining space on each page is reserved for updating rows on that page. This gives `UPDATE` a chance to place the updated copy of a row on the same page as the original, which is more efficient than placing it on a different page. For a table whose entries are never updated, complete packing is the best choice, but in heavily updated tables smaller fillfactors are appropriate. Note that the table contents will not be modified immediately by this command. You will need to rewrite the table to get the desired effects. That can be done with [VACUUM](VACUUM.html) or one of the forms of `ALTER TABLE` that forces a table rewrite. For information about the forms of `ALTER TABLE` that perform a table rewrite, see [Notes](#section5).
--   **SET DISTRIBUTED** — Changes the distribution policy of a table. Changing a hash distribution policy, or changing to or from a replicated policy, will cause the table data to be physically redistributed on disk, which can be resource intensive.
+-   **SET DISTRIBUTED** — Changes the distribution policy of a table. Changing a hash distribution policy, or changing to or from a replicated policy, will cause the table data to be physically redistributed on disk, which can be resource intensive. *While Greenplum Database permits changing the distribution policy of a writable external table, the operation never results in physical redistribution of the external data.*
 -   **INHERIT parent\_table / NO INHERIT parent\_table** — Adds or removes the target table as a child of the specified parent table. Queries against the parent will include records of its child table. To be added as a child, the target table must already contain all the same columns as the parent \(it could have additional columns, too\). The columns must have matching data types, and if they have `NOT NULL` constraints in the parent then they must also have `NOT NULL` constraints in the child. There must also be matching child-table constraints for all `CHECK` constraints of the parent, except those marked non-inheritable \(that is, created with `ALTER TABLE ... ADD CONSTRAINT ... NO INHERIT`\) in the parent, which are ignored; all child-table constraints matched must not be marked non-inheritable. Currently `UNIQUE`, `PRIMARY KEY`, and `FOREIGN KEY` constraints are not considered, but this may change in the future.
 -   OF type\_name — This form links the table to a composite type as though `CREATE TABLE OF` had formed it. The table's list of column names and types must precisely match that of the composite type; the presence of an `oid` system column is permitted to differ. The table must not inherit from any other table. These restrictions ensure that `CREATE TABLE OF` would permit an equivalent table definition.
 -   **NOT OF** — This form dissociates a typed table from its type.
@@ -312,7 +312,7 @@ USER
 :   Deactivate or activate all triggers belonging to the table except for internally generated constraint triggers such as those that are used to implement foreign key constraints or deferrable uniqueness and exclusion constraints.
 
 index\_name
-:   The index name on which the table should be marked for clustering. Note that `CLUSTER` is not the recommended way to physically reorder a table in Greenplum Database because it takes so long. It is better to recreate the table with [CREATE TABLE AS](CREATE_TABLE_AS.html) and order it by the index column\(s\).
+:   The index name on which the table should be marked for clustering.
 
 FILLFACTOR
 :   Set the fillfactor percentage for a table.
@@ -322,14 +322,15 @@ value
 
 DISTRIBUTED BY \(\{column\_name \[opclass\]\}\) \| DISTRIBUTED RANDOMLY \| DISTRIBUTED REPLICATED
 :   Specifies the distribution policy for a table. Changing a hash distribution policy causes the table data to be physically redistributed, which can be resource intensive. If you declare the same hash distribution policy or change from hash to random distribution, data will not be redistributed unless you declare `SET WITH (reorganize=true)`.
-
-:   Changing to or from a replicated distribution policy causes the table data to be redistributed.
+:   Changing to or from a replicated distribution policy always causes the table data to be redistributed.
 
 analyze_hll_non_part_table=true|false
 :   Use `analyze_hll_non_part_table=true` to force collection of HLL statistics even if the table is not part of a partitioned table. The default is `false`.
 
 reorganize=true\|false
 :   Use `reorganize=true` when the hash distribution policy has not changed or when you have changed from a hash to a random distribution, and you want to redistribute the data anyway.
+:   If you are setting the distribution policy, you must specify the `WITH (reorganize=<value>)` clause before the `DISTRIBUTED ...` clause.   
+:   Any attempt to reorganize an external table fails with an error.
 
 parent\_table
 :   A parent table to associate or de-associate with this table.
@@ -545,6 +546,46 @@ Move a table to a different schema:
 
 ```
 ALTER TABLE myschema.distributors SET SCHEMA yourschema;
+```
+
+Change a table's access method to `ao_row`:
+
+```
+ALTER TABLE distributors SET ACCESS METHOD ao_row;
+```
+
+Change a table's blocksize to 32768:
+
+```
+ALTER TABLE distributors SET (blocksize = 32768);
+```
+
+Change a table's access method to ao_row, compression type to zstd and compression level to 4:
+
+```
+ALTER TABLE sales SET ACCESS METHOD ao_row with (compresstype=zstd,compresslevel=4);
+```
+
+Change access method for all existing partitions of a table:
+
+```
+ALTER TABLE sales SET ACCESS METHOD ao_row;
+```
+
+Change all future partitions of a table to have an access method of `heap`, leaving the access method of current partitions as is:
+
+ALTER TABLE ONLY sales SET ACCESS METHOD heap;
+
+Add a column and change the table's access method:
+
+```
+ALTER TABLE distributors SET ACCESS METHOD ao_row, ADD column j int;
+```
+
+Add a column and change table storage parameters:
+
+```
+ALTER TABLE distributors SET (compresslevel=7), ADD COLUMN k int;
 ```
 
 Change the distribution policy of a table to replicated:

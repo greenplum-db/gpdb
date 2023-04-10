@@ -48,8 +48,10 @@
 
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"
+#include "optimizer/clauses.h"
 #include "optimizer/tlist.h"
 #include "optimizer/optimizer.h"
+#include "optimizer/orca.h"
 
 #ifdef USE_ORCA
 extern char *SerializeDXLPlan(Query *parse);
@@ -384,6 +386,9 @@ ExplainDXL(Query *query, ExplainState *es, const char *queryString,
 	MemoryContext oldcxt = CurrentMemoryContext;
 	bool		save_enumerate;
 	char	   *dxl = NULL;
+	PlannerInfo		*root;
+	PlannerGlobal	*glob;
+	Query			*pqueryCopy;
 
 	save_enumerate = optimizer_enumerate_plans;
 
@@ -392,8 +397,53 @@ ExplainDXL(Query *query, ExplainState *es, const char *queryString,
 	/* enable plan enumeration before calling optimizer */
 	optimizer_enumerate_plans = true;
 
+	/*
+	 * Initialize a dummy PlannerGlobal struct. ORCA doesn't use it, but the
+	 * pre- and post-processing steps do.
+	 */
+	glob = makeNode(PlannerGlobal);
+	glob->subplans = NIL;
+	glob->subroots = NIL;
+	glob->rewindPlanIDs = NULL;
+	glob->transientPlan = false;
+	glob->oneoffPlan = false;
+	glob->share.shared_inputs = NULL;
+	glob->share.shared_input_count = 0;
+	glob->share.motStack = NIL;
+	glob->share.qdShares = NULL;
+	/* these will be filled in below, in the pre- and post-processing steps */
+	glob->finalrtable = NIL;
+	glob->relationOids = NIL;
+	glob->invalItems = NIL;
+
+	root = makeNode(PlannerInfo);
+	root->parse = query;
+	root->glob = glob;
+	root->query_level = 1;
+	root->planner_cxt = CurrentMemoryContext;
+	root->wt_param_id = -1;
+
+	/* create a local copy to hand to the optimizer */
+	pqueryCopy = (Query *) copyObject(query);
+
+	/*
+	 * Pre-process the Query tree before calling optimizer.
+	 *
+	 * Constant folding will add dependencies to functions or relations in
+	 * glob->invalItems, for any functions that are inlined or eliminated
+	 * away. (We will find dependencies to other objects later, after planning).
+	 */
+	pqueryCopy = fold_constants(root, pqueryCopy, params, GPOPT_MAX_FOLDED_CONSTANT_SIZE);
+
+	/*
+	 * If any Query in the tree mixes window functions and aggregates, we need to
+	 * transform it such that the grouped query appears as a subquery
+	 */
+	pqueryCopy = (Query *) transformGroupedWindows((Node *) pqueryCopy, NULL);
+
+
 	/* optimize query using optimizer and get generated plan in DXL format */
-	dxl = SerializeDXLPlan(query);
+	dxl = SerializeDXLPlan(pqueryCopy);
 
 	/* restore old value of enumerate plans GUC */
 	optimizer_enumerate_plans = save_enumerate;
@@ -625,8 +675,6 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
         queryDesc->showstatctx = cdbexplain_showExecStatsBegin(queryDesc,
 															   starttime);
     }
-	else
-		queryDesc->showstatctx = NULL;
 
 	/* Select execution options */
 	if (es->analyze)
@@ -1382,6 +1430,7 @@ ExplainPreScanNode(PlanState *planstate, Bitmapset **rels_used)
 										((Scan *) plan)->scanrelid);
 			break;
 		case T_ForeignScan:
+		case T_DynamicForeignScan:
 			*rels_used = bms_add_members(*rels_used,
 										 ((ForeignScan *) plan)->fs_relids);
 			break;
@@ -1616,6 +1665,31 @@ ExplainNode(PlanState *planstate, List *ancestors,
 					break;
 				case CMD_DELETE:
 					pname = "Foreign Delete";
+					operation = "Delete";
+					break;
+				default:
+					pname = "???";
+					break;
+			}
+			break;
+		case T_DynamicForeignScan:
+			sname = "Dynamic Foreign Scan";
+			switch (((ForeignScan *)((DynamicForeignScan *) plan))->operation)
+			{
+				case CMD_SELECT:
+					pname = "Dynamic Foreign Scan";
+					operation = "Select";
+					break;
+				case CMD_INSERT:
+					pname = "Dynamic Foreign Insert";
+					operation = "Insert";
+					break;
+				case CMD_UPDATE:
+					pname = "Dynamic Foreign Update";
+					operation = "Update";
+					break;
+				case CMD_DELETE:
+					pname = "Dynamic Foreign Delete";
 					operation = "Delete";
 					break;
 				default:
@@ -1862,6 +1936,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			ExplainScanTarget((Scan *) plan, es);
 			break;
 		case T_ForeignScan:
+		case T_DynamicForeignScan:
 		case T_CustomScan:
 			if (((Scan *) plan)->scanrelid > 0)
 				ExplainScanTarget((Scan *) plan, es);
@@ -2392,12 +2467,29 @@ ExplainNode(PlanState *planstate, List *ancestors,
 											   planstate, es);
 			}
 			break;
+		case T_DynamicForeignScan:
 		case T_ForeignScan:
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
-			show_foreignscan_info((ForeignScanState *) planstate, es);
+			if (IsA(plan, DynamicForeignScan))
+			{
+				char *buf;
+				Oid relid;
+				relid = rt_fetch(((DynamicForeignScan *)plan)
+							->foreignscan.scan.scanrelid,
+							es->rtable)->relid;
+				buf = psprintf("(out of %d)",  countLeafPartTables(relid));
+				ExplainPropertyInteger(
+					"Number of partitions to scan", buf,
+					list_length(((DynamicForeignScan *)plan)->partOids),es);
+				// TODO: Maybe add show_foreignscan_info here? We'd need to populate the planstate
+			}
+			else
+			{
+				show_foreignscan_info((ForeignScanState *) planstate, es);
+			}
 			break;
 		case T_CustomScan:
 			{
@@ -3354,6 +3446,31 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 	if (!ns)
 		return;
 
+	/*
+	 * Gather QEs' sort statistics
+	 *
+	 * shared_info stores workers' info, but Greenplum stores QEs
+	 */
+	int64 peakSpaceUsed = 0;
+	int64 totalSpaceUsed = 0;
+	int64 avgSpaceUsed = 0;
+	if (sortstate->shared_info != NULL)
+	{
+		int n;
+		TuplesortInstrumentation *sinstrument;
+		for (n = 0; n < sortstate->shared_info->num_workers; n++)
+		{
+			sinstrument = &sortstate->shared_info->sinstrument[n];
+			if (sinstrument->sortMethod == SORT_TYPE_STILL_IN_PROGRESS)
+				continue;		/* ignore any unfilled slots */
+			peakSpaceUsed = Max(peakSpaceUsed, sinstrument->spaceUsed);
+			totalSpaceUsed += sinstrument->spaceUsed;
+		}
+
+		avgSpaceUsed = sortstate->shared_info->num_workers > 0 ?
+			totalSpaceUsed / sortstate->shared_info->num_workers : 0;
+	}
+
 	for (i = 0; i < NUM_SORT_METHOD; i++)
 	{
 		CdbExplain_Agg	*agg;
@@ -3389,10 +3506,17 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 				sortMethod, spaceType, (long) agg->vsum);
 			if (es->verbose)
 			{
-				appendStringInfo(es->str, "  Max Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
-								 (long) agg->vmax,
-								 (long) (agg->vsum / agg->vcnt),
-								 agg->vcnt);
+				if (peakSpaceUsed)
+					appendStringInfo(es->str, "  Max Memory: %ldkB  Peak Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
+									 totalSpaceUsed ? totalSpaceUsed : (long) agg->vmax,
+									 peakSpaceUsed,
+									 avgSpaceUsed ? avgSpaceUsed : (long) (agg->vsum / agg->vcnt),
+									 agg->vcnt);
+				else
+					appendStringInfo(es->str, "  Max Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
+									 totalSpaceUsed ? totalSpaceUsed : (long) agg->vmax,
+									 avgSpaceUsed ? avgSpaceUsed : (long) (agg->vsum / agg->vcnt),
+									 agg->vcnt);
 			}
 			appendStringInfo(es->str, "\n");
 		}
@@ -3403,56 +3527,13 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 			ExplainPropertyText("Sort Space Type", spaceType, es);
 			if (es->verbose)
 			{
-				ExplainPropertyInteger("Sort Max Segment Memory", "kB", agg->vmax, es);
-				ExplainPropertyInteger("Sort Avg Segment Memory", "kB", (agg->vsum / agg->vcnt), es);
+				ExplainPropertyInteger("Sort Max Segment Memory", "kB", totalSpaceUsed ? totalSpaceUsed : agg->vmax, es);
+				ExplainPropertyInteger("Sort Avg Segment Memory", "kB", avgSpaceUsed ? avgSpaceUsed : (agg->vsum / agg->vcnt), es);
+				if (peakSpaceUsed)
+					ExplainPropertyInteger("Sort Peak Segment Memory", "kB", peakSpaceUsed, es);
 				ExplainPropertyInteger("Sort Segments", NULL, agg->vcnt, es);
 			}
 		}
-	}
-
-	if (sortstate->shared_info != NULL)
-	{
-		int			n;
-		bool		opened_group = false;
-
-		for (n = 0; n < sortstate->shared_info->num_workers; n++)
-		{
-			TuplesortInstrumentation *sinstrument;
-			const char *sortMethod;
-			const char *spaceType;
-			long		spaceUsed;
-
-			sinstrument = &sortstate->shared_info->sinstrument[n];
-			if (sinstrument->sortMethod == SORT_TYPE_STILL_IN_PROGRESS)
-				continue;		/* ignore any unfilled slots */
-			sortMethod = tuplesort_method_name(sinstrument->sortMethod);
-			spaceType = tuplesort_space_type_name(sinstrument->spaceType);
-			spaceUsed = sinstrument->spaceUsed;
-
-			if (es->format == EXPLAIN_FORMAT_TEXT)
-			{
-				appendStringInfoSpaces(es->str, es->indent * 2);
-				appendStringInfo(es->str,
-								 "Worker %d:  Sort Method: %s  %s: %ldkB\n",
-								 n, sortMethod, spaceType, spaceUsed);
-			}
-			else
-			{
-				if (!opened_group)
-				{
-					ExplainOpenGroup("Workers", "Workers", false, es);
-					opened_group = true;
-				}
-				ExplainOpenGroup("Worker", NULL, true, es);
-				ExplainPropertyInteger("Worker Number", NULL, n, es);
-				ExplainPropertyText("Sort Method", sortMethod, es);
-				ExplainPropertyInteger("Sort Space Used", "kB", spaceUsed, es);
-				ExplainPropertyText("Sort Space Type", spaceType, es);
-				ExplainCloseGroup("Worker", NULL, true, es);
-			}
-		}
-		if (opened_group)
-			ExplainCloseGroup("Workers", "Workers", false, es);
 	}
 }
 
@@ -3962,6 +4043,7 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
 		case T_DynamicBitmapHeapScan:
 		case T_TidScan:
 		case T_ForeignScan:
+		case T_DynamicForeignScan:
 		case T_CustomScan:
 		case T_ModifyTable:
 			/* Assert it's on a real relation */

@@ -51,8 +51,6 @@ CContextDXLToPlStmt::CContextDXLToPlStmt(
 	  m_param_types_list(NIL),
 	  m_distribution_hashops(distribution_hashops),
 	  m_rtable_entries_list(nullptr),
-	  m_partitioned_tables_list(nullptr),
-	  m_num_partition_selectors_array(nullptr),
 	  m_subplan_entries_list(nullptr),
 	  m_subplan_sliceids_list(nullptr),
 	  m_slices_list(nullptr),
@@ -62,7 +60,6 @@ CContextDXLToPlStmt::CContextDXLToPlStmt(
 	  m_part_selector_to_param_map(nullptr)
 {
 	m_cte_consumer_info = GPOS_NEW(m_mp) HMUlCTEConsumerInfo(m_mp);
-	m_num_partition_selectors_array = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
 	m_part_selector_to_param_map = GPOS_NEW(m_mp) UlongToUlongMap(m_mp);
 	m_used_rte_indexes = GPOS_NEW(m_mp) HMUlIndex(m_mp);
 }
@@ -78,7 +75,6 @@ CContextDXLToPlStmt::CContextDXLToPlStmt(
 CContextDXLToPlStmt::~CContextDXLToPlStmt()
 {
 	m_cte_consumer_info->Release();
-	m_num_partition_selectors_array->Release();
 	m_part_selector_to_param_map->Release();
 	m_used_rte_indexes->Release();
 }
@@ -227,70 +223,6 @@ CContextDXLToPlStmt::AddRTE(RangeTblEntry *rte, BOOL is_result_relation)
 		rte->inFromCl = false;
 		m_result_relation_index = gpdb::ListLength(m_rtable_entries_list);
 	}
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CContextDXLToPlStmt::AddPartitionedTable
-//
-//	@doc:
-//		Add a partitioned table oid
-//
-//---------------------------------------------------------------------------
-void
-CContextDXLToPlStmt::AddPartitionedTable(OID oid)
-{
-	if (!gpdb::ListMemberOid(m_partitioned_tables_list, oid))
-	{
-		m_partitioned_tables_list =
-			gpdb::LAppendOid(m_partitioned_tables_list, oid);
-	}
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CContextDXLToPlStmt::IncrementPartitionSelectors
-//
-//	@doc:
-//		Increment the number of partition selectors for the given scan id
-//
-//---------------------------------------------------------------------------
-void
-CContextDXLToPlStmt::IncrementPartitionSelectors(ULONG scan_id)
-{
-	// add extra elements to the array if necessary
-	const ULONG len = m_num_partition_selectors_array->Size();
-	for (ULONG ul = len; ul <= scan_id; ul++)
-	{
-		ULONG *pul = GPOS_NEW(m_mp) ULONG(0);
-		m_num_partition_selectors_array->Append(pul);
-	}
-
-	ULONG *ul = (*m_num_partition_selectors_array)[scan_id];
-	(*ul)++;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CContextDXLToPlStmt::GetNumPartitionSelectorsList
-//
-//	@doc:
-//		Return list containing number of partition selectors for every scan id
-//
-//---------------------------------------------------------------------------
-List *
-CContextDXLToPlStmt::GetNumPartitionSelectorsList() const
-{
-	List *partition_selectors_list = NIL;
-	const ULONG len = m_num_partition_selectors_array->Size();
-	for (ULONG ul = 0; ul < len; ul++)
-	{
-		ULONG *num_partition_selectors = (*m_num_partition_selectors_array)[ul];
-		partition_selectors_list = gpdb::LAppendInt(partition_selectors_list,
-													*num_partition_selectors);
-	}
-
-	return partition_selectors_list;
 }
 
 //---------------------------------------------------------------------------

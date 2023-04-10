@@ -14,7 +14,7 @@ pg_dump -V | --version
 
 ## <a id="section3"></a>Description 
 
-`pg_dump` is a standard PostgreSQL utility for backing up a database, and is also supported in Greenplum Database. It creates a single \(non-parallel\) dump file. For routine backups of Greenplum Database, it is better to use the Greenplum Database backup utility, [gpbackup](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/index.html), for the best performance.
+`pg_dump` is a standard PostgreSQL utility for backing up a database, and is also supported in Greenplum Database. It creates a single \(non-parallel\) dump file. For routine backups of Greenplum Database, it is better to use the Greenplum Database backup utility, [gpbackup](https://docs.vmware.com/en/VMware-Greenplum-Backup-and-Restore/index.html), for the best performance.
 
 Use `pg_dump` if you are migrating your data to another database vendor's system, or to another Greenplum Database system with a different segment configuration \(for example, if the system you are migrating to has greater or fewer segment instances\). To restore, you must use the corresponding [pg\_restore](pg_restore.html) utility \(if the dump file is in archive format\), or you can use a client program such as [psql](psql.html) \(if the dump file is in plain text format\).
 

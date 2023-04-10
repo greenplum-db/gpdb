@@ -20,11 +20,11 @@ insert into sto_alt_uao1_default values (1, '1_zero', 1, 1, 1, '{1}', 1, 1, '1-1
 insert into sto_alt_uao1_default values (2, '2_zero', 2, 2, 2, '{2}', 2, 2, '1-1-2002',2);
 -- Alter column Drop default
 Alter table sto_alt_uao1_default  alter column text_col drop default;
-SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimaprelid is not NULL AND
- visimapidxid is not NULL AND relid='sto_alt_uao1_default'::regclass;
+SELECT count(i.indexrelid) = 1 AS VisimapPresent  FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND
+ a.relid='sto_alt_uao1_default'::regclass;
  visimappresent 
 ----------------
-              1
+ t
 (1 row)
 
 insert into sto_alt_uao1_default values (3, '3_zero', 3, 3, 3, '{3}', 3, 3, '1-1-2002', 3);
@@ -76,11 +76,11 @@ select * from sto_alt_uao1_default order by bigint_col;
 -- Alter column drop NOT NULL
 Alter Table sto_alt_uao1_default ALTER COLUMN int_col DROP NOT NULL,
  ALTER COLUMN text_col DROP NOT NULL;
-SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimaprelid is not NULL AND
- visimapidxid is not NULL AND relid='sto_alt_uao1_default'::regclass;
+SELECT count(i.indexrelid) = 1 AS VisimapPresent  FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND
+ a.relid='sto_alt_uao1_default'::regclass;
  visimappresent 
 ----------------
-              1
+ t
 (1 row)
 
 insert into sto_alt_uao1_default values (6, '6_zero', 6, 6, 6, '{6}', 6, 6, '1-1-2002', 6);

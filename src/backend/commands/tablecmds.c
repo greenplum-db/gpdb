@@ -810,7 +810,8 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 
 		/*
 		 * For partitioned children, when no reloptions is specified, we
-		 * default to the parent table's reloptions.
+		 * default to the parent table's reloptions. If partitioned
+		 * children has different access method with parent. Do not do it.
 		 */
 		Assert(list_length(inheritOids) == 1);
 		parentrelid = linitial_oid(inheritOids);
@@ -851,11 +852,8 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 																		true,
 																		RELOPT_KIND_APPENDOPTIMIZED);
 
-		/* Validate the StdRdOptions parsed or error out */
-		validateAppendOnlyRelOptions(stdRdOptions->blocksize,
-									 stdRdOptions->compresslevel,
-									 stdRdOptions->compresstype,
-									 stdRdOptions->checksum,
+		/* check orientation-specific rules */
+		validateOrientationRelOptions(stdRdOptions->compresstype,
 									 (accessMethodId == AO_COLUMN_TABLE_AM_OID));
 
 		reloptions = transformAOStdRdOptions(stdRdOptions, reloptions, RELKIND_HAS_STORAGE(relkind));
@@ -1806,15 +1804,12 @@ ao_aux_tables_safe_truncate(Relation rel)
 	if (!RelationIsAppendOptimized(rel))
 		return;
 
-	Oid relid = RelationGetRelid(rel);
-
 	Oid aoseg_relid = InvalidOid;
 	Oid aoblkdir_relid = InvalidOid;
 	Oid aovisimap_relid = InvalidOid;
 
-	GetAppendOnlyEntryAuxOids(relid, NULL, &aoseg_relid,
-							  &aoblkdir_relid, NULL, &aovisimap_relid,
-							  NULL);
+	GetAppendOnlyEntryAuxOids(rel, &aoseg_relid,
+							  &aoblkdir_relid, &aovisimap_relid);
 
 	relid_set_new_relfilenode(aoseg_relid);
 	relid_set_new_relfilenode(aoblkdir_relid);
@@ -4312,12 +4307,40 @@ AlterTable(Oid relid, LOCKMODE lockmode, AlterTableStmt *stmt)
  * executed and dispatched those subcommands, so remove them from command
  * we'll dispatch now.
  *
- * GPDB_12_MERGE_FIXME: This is a bit bogus, because if you have multiple
- * ALTER TABLE subcommands in one command, the commands might be executed
- * in different order in the QEs than in the QD. I think it would be better
- * to expand the commands in the ATPrepCmd() phase, and included them in
- * the working queues for dispatching, instead of dispatching them
- * separately in the ATExecCmd() phase.
+ * This is not ideal, because the partition subcommands and other ALTER 
+ * TABLE subcommands could be executed in different order on QD and QE. 
+ * For example, for the following statement:
+ *     ALTER TABLE ... ADD PARTITION ..., ALTER COLUMN ...;
+ * On QD, the ALTER COLUMN would be executed first, while on QE, ADD 
+ * PARTITION would be executed first.
+ *
+ * However, we cannot simply expand those commands in the ATPrepCmd() 
+ * phase and include them in the working queues for dispatching,
+ * mainly because the partition commands generate many non-ALTER TABLE 
+ * commands like CREATE TABLE. 
+ *
+ * The upstream deals with this issue by simply disallowing doing
+ * the partition subcommands and other ALTER TABLE subcommands in the
+ * same statement. Unfortunately GPDB couldn't do that because we
+ * need to be backward compatible as we have been supporting such
+ * usage all along.
+ *
+ * A possible easier workaround is to completely split the partition 
+ * subcommands off the list of ALTER TABLE subcommands, and execute them 
+ * separately. But after all, it is unclear whether it is really 
+ * needed. Consider the example above, the new partition created by 
+ * ADD PARTITION will always carry the changes made by ALTER COLUMN, 
+ * both on QD and QE:
+ *   1. On QD, ALTER COLUMN is executed first, so new partition will 
+ *     inherit the change it made;
+ *   2. On QE, ALTER COLUMN is executed later, so it recurses into 
+ *     the new partition that is already created by ADD PARTITION.
+ *
+ * Similar things apply to other ALTER TABLE subcommands. Also consider 
+ * the fact that GPDB has been doing this for a long time, the 
+ * out-of-order execution doesn't seem to cause an issue.
+ * So remain things as is for now. But if it turns out to be a problem 
+ * in future, we should try one of the workarounds mentioned above.
  */
 static void
 prepare_AlterTableStmt_for_dispatch(AlterTableStmt *stmt)
@@ -4382,6 +4405,14 @@ static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOpti
 								att->atttypid, 
 								att->atttypmod,
 								0);
+
+		/* If the column is dropped, pass on a NULL typeName */
+		if (att->attisdropped)
+		{
+			pfree(cd->typeName);
+			cd->typeName = NULL;
+		}
+
 		colDefs = lappend(colDefs, cd);
 	}
 
@@ -5542,8 +5573,10 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			{
 				bool aoopt_changed = false;
 				Datum newOptions;
+				/* discard existing reloptions if we are going to change AM */
+				AlterTableType op = OidIsValid(tab->newAccessMethod) ? AT_ReplaceRelOptions : AT_SetRelOptions; 
 
-				newOptions = ATExecSetRelOptions(rel, (List *) cmd->def, cmd->subtype, &aoopt_changed, tab->newAccessMethod, lockmode);
+				newOptions = ATExecSetRelOptions(rel, (List *) cmd->def, op, &aoopt_changed, tab->newAccessMethod, lockmode);
 				CommandCounterIncrement(); /* make reloptions change visiable */
 
 				/* 
@@ -6666,7 +6699,23 @@ ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap, LOCKMODE lockmode)
 		 * checking all the constraints.
 		 */
 		snapshot = RegisterSnapshot(GetLatestSnapshot());
-		scan = table_beginscan(oldrel, snapshot, 0, NULL);
+
+		/*
+		* GPDB: If a partition constraint exists, and we are not rewriting the table,
+		* we are going to scan the default partition/table being attached for partition
+		* constraint validation. Use the partition constraint to pass down column
+		* projection info that CO tables can use for a speed-up.
+		*
+		* Note: We don't need to pass tab->constraints here as it will either be NULL
+		* or contain foreign key constraints which are not going to be validated along
+		* with this scan. The reason this list will be NULL is that ALTER TABLE VALIDATE
+		* CONSTRAINT and ALTER TABLE ADD CONSTRAINT CHECK cannot be
+		* combined with ATTACH PARTITION.
+		*/
+		if (tab->partition_constraint && tab->rewrite == 0)
+			scan = table_beginscan_es(oldrel, snapshot, NULL, NULL, NULL, lappend(NIL, tab->partition_constraint));
+		else
+			scan = table_beginscan(oldrel, snapshot, 0, NULL);
 
 		if (newrel && newrel->rd_tableam)
 			table_dml_init(newrel);
@@ -7739,7 +7788,7 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		}
 
 		/*
-		 * Handling of default NULL for AO/CO tables.
+		 * Handling of default NULL for ao_row tables.
 		 *
 		 * Currently memtuples cannot deal with the scenario where the number of
 		 * attributes in the tuple data don't match the attnum. We will generate an
@@ -7752,19 +7801,18 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		 * workaround; see GitHub issue
 		 *     https://github.com/greenplum-db/gpdb/issues/3756
 		 *
-		 * GPDB_12_MERGE_FIXME: we used to do this only if no default was given,
-		 * but starting with PostgreSQL v11, a table doesn't need to be rewritten
-		 * even if a non-NULL default is used. That caused an assertion failure in
-		 * the 'uao_ddl/alter_ao_table_constraint_column' test. To make that go
-		 * away, always force full rewrite on AO_ROW and AO_COLUMN tables. We
-		 * should be smarter..
+		 * For ao_column tables, we won't rewrite the entire table but only the 
+		 * new column. However, we still need to generate a explicit NULL value so
+		 * we have something to write.
+		 * XXX: it would be even better if we could use pg_attribute.attmissingval 
+		 * and do not write the column at all. 
 		 */
 
-		if (RelationIsAppendOptimized(rel))
+		if (!defval && RelationIsAppendOptimized(rel))
 		{
-			if (!defval)
-				defval = (Expr *) makeNullConst(typeOid, -1, collOid);
-			tab->rewrite |= AT_REWRITE_DEFAULT_VAL;
+			defval = (Expr *) makeNullConst(typeOid, -1, collOid);
+			if (RelationIsAoRows(rel))
+				tab->rewrite |= AT_REWRITE_DEFAULT_VAL;
 		}
 
 		if (defval)
@@ -7790,6 +7838,13 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			{
 				Assert(tab->newvals != NULL);
 			}
+
+			/* 
+			 * We need to write the new column for AOCO tables. But don't do that
+			 * if we are going to rewrite the whole table anyway.
+			 */
+			if (RelationIsAoCols(rel) && tab->rewrite == 0)
+				tab->rewrite |= AT_REWRITE_NEW_COLUMNS_ONLY_AOCS;
 		}
 
 		if (DomainHasConstraints(typeOid))
@@ -12103,6 +12158,7 @@ validateForeignKeyConstraint(char *conname,
 		ereport(WARNING,
 				(errcode(ERRCODE_GP_FEATURE_NOT_YET),
 				 errmsg("referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced")));
+	return;
 
 	/*
 	 * Build a trigger call structure; we'll need it either way.
@@ -14547,10 +14603,10 @@ ATExecChangeOwner(Oid relationOid, Oid newOwnerId, bool recursing, LOCKMODE lock
 		{
 			Oid segrelid, blkdirrelid;
 			Oid visimap_relid;
-			GetAppendOnlyEntryAuxOids(relationOid, NULL,
+			GetAppendOnlyEntryAuxOids(target_rel,
 									  &segrelid,
-									  &blkdirrelid, NULL,
-									  &visimap_relid, NULL);
+									  &blkdirrelid,
+									  &visimap_relid);
 
 			/* If it has an AO segment table, recurse to change its
 			 * ownership */
@@ -14966,10 +15022,7 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 				StdRdOptions *stdRdOptions = (StdRdOptions *) default_reloptions(newOptions,
 																				 true,
 																				 RELOPT_KIND_APPENDOPTIMIZED);
-				validateAppendOnlyRelOptions(stdRdOptions->blocksize,
-											 stdRdOptions->compresslevel,
-											 stdRdOptions->compresstype,
-											 stdRdOptions->checksum,
+				validateOrientationRelOptions(stdRdOptions->compresstype,
 											 tableam == AO_COLUMN_TABLE_AM_OID);
 
 				newOptions = transformAOStdRdOptions(stdRdOptions, newOptions, RELKIND_HAS_STORAGE(rel->rd_rel->relkind));
@@ -15228,10 +15281,10 @@ ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, LOCKMODE lockmode)
 
 	/* Get the ao sub objects */
 	if (RelationIsAppendOptimized(rel))
-		GetAppendOnlyEntryAuxOids(tableOid, NULL,
+		GetAppendOnlyEntryAuxOids(rel,
 								  &relaosegrelid,
-								  &relaoblkdirrelid, &relaoblkdiridxid,
-								  &relaovisimaprelid, &relaovisimapidxid);
+								  &relaoblkdirrelid,
+								  &relaovisimaprelid);
 
 	/* Get the bitmap sub objects */
 	if (RelationIsBitmapIndex(rel))
@@ -15312,13 +15365,29 @@ ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, LOCKMODE lockmode)
 	if (OidIsValid(relaosegrelid))
 		ATExecSetTableSpace(relaosegrelid, newTableSpace, lockmode);
 	if (OidIsValid(relaoblkdirrelid))
+	{
+		Relation	aoblkdir_rel = relation_open(relaoblkdirrelid, lockmode);
+
+		relaoblkdiridxid = AppendonlyGetAuxIndex(aoblkdir_rel);
+		Assert(OidIsValid(relaoblkdiridxid));
+
 		ATExecSetTableSpace(relaoblkdirrelid, newTableSpace, lockmode);
-	if (OidIsValid(relaoblkdiridxid))
 		ATExecSetTableSpace(relaoblkdiridxid, newTableSpace, lockmode);
+
+		relation_close(aoblkdir_rel, lockmode);
+	}
 	if (OidIsValid(relaovisimaprelid))
+	{
+		Relation	aovisimap_rel = relation_open(relaovisimaprelid, lockmode);
+
+		relaovisimapidxid = AppendonlyGetAuxIndex(aovisimap_rel);
+		Assert(OidIsValid(relaovisimapidxid));
+
 		ATExecSetTableSpace(relaovisimaprelid, newTableSpace, lockmode);
-	if (OidIsValid(relaovisimapidxid))
 		ATExecSetTableSpace(relaovisimapidxid, newTableSpace, lockmode);
+
+		relation_close(aovisimap_rel, lockmode);
+	}
 
 	/* 
 	 * MPP-7996 - bitmap index subobjects w/Alter Table Set tablespace
@@ -17432,7 +17501,9 @@ ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
 		ExecutorFinish(queryDesc);
 		ExecutorEnd(queryDesc);
 
-		auto_stats(cmdType, relationOid, queryDesc->es_processed, false);
+		
+		auto_stats(cmdType, relationOid, queryDesc->es_processed,
+				   already_under_executor_run() || utility_nested());
 
 		FreeQueryDesc(queryDesc);
 
@@ -17966,8 +18037,10 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			ExecutorEnd(queryDesc);
 
 			if (Gp_role == GP_ROLE_DISPATCH)
-				auto_stats(cmdType, relationOid, queryDesc->es_processed,
-								false);
+			{
+				bool inFunction = already_under_executor_run() || utility_nested();
+				auto_stats(cmdType, relationOid, queryDesc->es_processed, inFunction);
+			}
 
 			FreeQueryDesc(queryDesc);
 
@@ -20395,8 +20468,14 @@ ATExecAttachPartition(List **wqueue, Relation rel, PartitionCmd *cmd)
 	 * constraint as well.
 	 */
 	partBoundConstraint = get_qual_from_partbound(attachrel, rel, cmd->bound);
-	partConstraint = list_concat(partBoundConstraint,
-								 RelationGetPartitionQual(rel));
+
+	/*
+	 * GPDB: We pass partBoundConstraint as the 2nd arg here because passing it
+	 * as the 1st arg modifies it (adds more list elements unintentionally). This would
+	 * lead to extra columns getting passed down in the column projection list, resulting
+	 * in extra columns being extraneously scanned (for CO tables).
+	 */
+	partConstraint = list_concat(RelationGetPartitionQual(rel), partBoundConstraint);
 
 	/* Skip validation if there are no constraints to validate. */
 	if (partConstraint)

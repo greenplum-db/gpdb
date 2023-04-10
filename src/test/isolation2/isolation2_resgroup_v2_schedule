@@ -1,0 +1,46 @@
+# This file should be consistent with isolation2_resgroup_v1_schedule,
+# if you add/delete test file, as well do it at isolation2_resgroup_v1_schedule.
+
+# enable resource group v2
+test: resgroup/resgroup_auxiliary_tools_v2
+
+# bypass catalog
+test: resgroup/resgroup_bypass_catalog
+
+# basic syntax
+test: resgroup/resgroup_views
+test: resgroup/resgroup_syntax
+test: resgroup/resgroup_transaction
+test: resgroup/resgroup_name_convention
+
+# fault injection tests
+test: resgroup/resgroup_assign_slot_fail
+test: resgroup/resgroup_unassign_entrydb
+test: resgroup/resgroup_seg_down_2pc
+
+# functions
+test: resgroup/resgroup_concurrency
+test: resgroup/resgroup_bypass
+test: resgroup/resgroup_alter_concurrency
+test: resgroup/resgroup_cpu_hard_quota
+test: resgroup/resgroup_cpuset
+test: resgroup/resgroup_cpuset_empty_default
+test: resgroup/resgroup_cancel_terminate_concurrency
+test: resgroup/resgroup_memory_limit
+test: resgroup/resgroup_move_query
+
+# regression tests
+test: resgroup/resgroup_recreate
+test: resgroup/resgroup_functions
+
+# parallel tests
+#test: resgroup/restore_default_resgroup
+#test: resgroup/resgroup_parallel_queries
+
+# dump info
+test: resgroup/resgroup_dumpinfo
+
+# test larget group id
+test: resgroup/resgroup_large_group_id
+
+test: resgroup/resgroup_disable_resgroup

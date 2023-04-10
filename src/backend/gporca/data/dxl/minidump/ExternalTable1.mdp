@@ -137,7 +137,7 @@
       <dxl:ColumnStatistics Mdid="1.18324.1.1.1" Name="n_name" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.18324.1.1.0" Name="n_nationkey" Width="8.000000"/>
       <dxl:RelationStatistics Mdid="2.18324.1.1" Name="ext_1" Rows="1000000.000000"/>
-      <dxl:Relation Mdid="6.18324.1.1" Name="ext_1" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="10,4">
+      <dxl:Relation Mdid="6.18324.1.1" Name="ext_1" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="10,4" ForeignServer="0.91908.1.0">
         <dxl:Columns>
           <dxl:Column Name="n_nationkey" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

@@ -1496,7 +1496,7 @@
                   <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
                 </dxl:HashExpr>
               </dxl:HashExprList>
-              <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
+              <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
                 <dxl:Properties>
                   <dxl:Cost StartupCost="0" TotalCost="441.310000" Rows="100000.000000" Width="8"/>
                 </dxl:Properties>

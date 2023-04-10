@@ -62,14 +62,14 @@
 					# defaults to '*', '*' = all
 					# (change requires restart)
 
-#port = 5432				# sets the database listener port for 
-      					# a Greenplum instance. The master and 
-					# each segment has its own port number. 
+#port = 5432				# sets the database listener port for
+      					# a Greenplum instance. The master and
+					# each segment has its own port number.
 # note: Port numbers for the Greenplum system must also be changed in the
-# gp_configuration catalog. See the Greenplum Database Administrator Guide 
+# gp_configuration catalog. See the Greenplum Database Administrator Guide
 # for instructions!
 #
-# WARNING: YOU MUST SHUT DOWN YOUR GREENPLUM SYSTEM BEFORE CHANGING 
+# WARNING: YOU MUST SHUT DOWN YOUR GREENPLUM SYSTEM BEFORE CHANGING
 # THE PORT NUMBER IN THIS FILE.
 
 #max_connections = 200			# (change requires restart)
@@ -289,7 +289,8 @@ max_prepared_transactions = 250		# can be 0 or more
 
 #max_wal_senders = 10		# max number of walsender processes
 				# (change requires restart)
-#wal_keep_segments = 0		# in logfile segments; 0 disables
+#wal_keep_size = 0		# in megabytes; 0 disables
+#max_slot_wal_keep_size = -1	# measured in bytes; -1 disables
 #wal_sender_timeout = 60s	# in milliseconds; 0 disables
 
 #max_replication_slots = 10	# max number of replication slots
@@ -560,6 +561,7 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #track_activities = on
 #track_counts = off
 #track_io_timing = off
+#track_wal_io_timing = off
 #track_functions = none			# none, pl, all
 #track_activity_query_size = 1024	# (change requires restart)
 #stats_temp_directory = 'pg_stat_tmp'
@@ -604,6 +606,8 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #autovacuum_vacuum_cost_limit = -1	# default vacuum cost limit for
 					# autovacuum, -1 means use
 					# vacuum_cost_limit
+#gp_autovacuum_scope = 'catalog' # default to autovacuuming only catalog tables
+                    # 'catalog_ao_aux' # autovacuum catalog and append-optimized auxiliary tables
 
 #------------------------------------------------------------------------------
 # CLIENT CONNECTION DEFAULTS
@@ -711,7 +715,7 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #resource_select_only = on		# resource lock SELECT queries only.
 #resource_cleanup_gangs_on_wait = on	# Cleanup idle reader gangs before
 										# resource lockwait.
-gp_resqueue_memory_policy = 'eager_free'	# memory request based queueing. 
+gp_resqueue_memory_policy = 'eager_free'	# memory request based queueing.
 									# eager_free, auto or none
 
 #---------------------------------------------------------------------------

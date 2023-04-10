@@ -346,6 +346,11 @@ private:
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 		CParseHandlerBase *parse_handler_root);
 
+	// construct a dynamic foreign scan parse handler
+	static CParseHandlerBase *CreateDFSParseHandler(
+		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+		CParseHandlerBase *parse_handler_root);
+
 	// construct a dynamic index scan parse handler
 	static CParseHandlerBase *CreateDynamicIdxScanParseHandler(
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,

@@ -19,19 +19,20 @@
 #include "storage/fd.h"
 #include "utils/rel.h"
 
+struct AOVacuumRelStats;
 extern int AOSegmentFilePathNameLen(Relation rel);
 
 extern void FormatAOSegmentFileName(
 						char *basepath,
 						int segno,
-						int col,
+						int filenum,
 						int32 *fileSegNo,
 						char *filepathname);
 
 extern void MakeAOSegmentFileName(
 					  Relation rel,
 					  int segno,
-					  int col,
+					  int filenum,
 					  int32 *fileSegNo,
 					  char *filepathname);
 
@@ -43,7 +44,8 @@ extern void
 TruncateAOSegmentFile(File fd,
 					  Relation rel,
 					  int32 segmentFileNum,
-					  int64 offset);
+					  int64 offset,
+					  struct AOVacuumRelStats *vacrelstats);
 
 extern void ao_truncate_one_rel(Relation rel);
 
@@ -65,4 +67,5 @@ extern void ao_foreach_extent_file(ao_extent_callback callback, void *ctx);
 
 extern void register_dirty_segment_ao(RelFileNode rnode, int segno, File vfd);
 
+extern uint64 ao_rel_get_physical_size(Relation aorel);
 #endif							/* AOMD_H */

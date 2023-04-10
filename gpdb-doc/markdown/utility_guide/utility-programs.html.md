@@ -6,8 +6,8 @@ Greenplum Database uses the standard PostgreSQL client and server programs and p
 
 Several utilities are installed when you install the Greenplum Database server. These utilities reside in `$GPHOME/bin`. Other utilities must be downloaded from VMware Tanzu Network and installed separately. These include:
 
--   The [VMware Greenplum Backup and Restore](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/index.html) utilities.
--   The [VMware Greenplum Copy Utility](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Data-Copy-Utility/index.html).
+-   The [VMware Greenplum Backup and Restore](https://docs.vmware.com/en/VMware-Greenplum-Backup-and-Restore/index.html) utilities.
+-   The [VMware Greenplum Copy Utility](https://docs.vmware.com/en/VMware-Greenplum-Data-Copy-Utility/index.html).
 -   The [VMware Greenplum Streaming Server](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Streaming-Server/index.html) utilities.
 
 Additionally, the [VMware Greenplum Clients](/vmware/client_tool_guides/about.html) package is a separate download from VMware Tanzu Network that includes selected utilities from the Greenplum Database server installation that you can install on a client system.
@@ -22,8 +22,8 @@ Greenplum Database provides the following utility programs. Superscripts identif
 - [dropuser](ref/dropuser.html)<sup>3</sup>
 - [gpactivatestandby](ref/gpactivatestandby.html)
 - [gpaddmirrors](ref/gpaddmirrors.html)
-- [gpbackup\_manager](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/index.html)<sup>1</sup>
-- [gpbackup](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/index.html)<sup>1</sup>
+- [gpbackup\_manager](https://docs.vmware.com/en/VMware-Greenplum-Backup-and-Restore/index.html)<sup>1</sup>
+- [gpbackup](https://docs.vmware.com/en/VMware-Greenplum-Backup-and-Restore/index.html)<sup>1</sup>
 - [gpcheckcat](ref/gpcheckcat.html)
 - [gpcheckperf](ref/gpcheckperf.html)
 - [gpconfig](ref/gpconfig.html)
@@ -44,7 +44,7 @@ Greenplum Database provides the following utility programs. Superscripts identif
 - [gpcr](https://docs.vmware.com/en/VMware-Greenplum-Cluster-Recovery/1.0/greenplum-cluster-recovery/GUID-ref-gpcr.html)
 - [gprecoverseg](ref/gprecoverseg.html)
 - [gpreload](ref/gpreload.html)
-- [gprestore](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/index.html)<sup>1</sup>
+- [gprestore](https://docs.vmware.com/en/VMware-Greenplum-Backup-and-Restore/index.html)<sup>1</sup>
 - [gpss](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Streaming-Server/index.html)<sup>4</sup>
 - [gpssh](ref/gpssh.html)
 - [gpssh-exkeys](ref/gpssh-exkeys.html)

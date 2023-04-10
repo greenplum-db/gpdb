@@ -3558,6 +3558,96 @@ where
 (0 rows)
 
 drop table t_13722;
+-- This test is introduced to verify incorrect result
+-- from hash join of char columns is fixed
+-- Notice when varchar/text is cast to bpchar and used for
+-- comparison, the trailing spaces are ignored
+-- When char is cast to varchar/text, it's considered
+-- comparison, and the trailing spaces are also ignored
+-- Prior to the fix, opclasses belonging to different
+-- opfamilies could be grouped as equivalent, and thence
+-- deriving incorrect equality hash join conditions
+create table foo (varchar_3 varchar(3)) distributed by (varchar_3);
+create table bar (char_3 char(3)) distributed by (char_3);
+create table baz (text_any text) distributed by (text_any);
+insert into foo values ('cd'); -- 0 trailing spaces
+insert into bar values ('cd '); -- 1 trailing space
+insert into baz values ('cd  '); -- 2 trailing spaces
+-- varchar cast to bpchar
+-- 'cd' matches 'cd', returns 1 row
+explain select varchar_3, char_3 from foo join bar on varchar_3=char_3;
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=567.25..155836.25 rows=5055210 width=32)
+   ->  Hash Join  (cost=567.25..88433.45 rows=1685070 width=32)
+         Hash Cond: ((foo.varchar_3)::bpchar = bar.char_3)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..745.00 rows=23700 width=16)
+               Hash Key: foo.varchar_3
+               ->  Seq Scan on foo  (cost=0.00..271.00 rows=23700 width=16)
+         ->  Hash  (cost=271.00..271.00 rows=23700 width=16)
+               ->  Seq Scan on bar  (cost=0.00..271.00 rows=23700 width=16)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select varchar_3, char_3 from foo join bar on varchar_3=char_3;
+ varchar_3 | char_3 
+-----------+--------
+ cd        | cd 
+(1 row)
+
+-- char cast to text
+-- 'cd' doesn't match 'cd  ', returns 0 rows
+explain select char_3, text_any from bar join baz on char_3=text_any;
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=430.00..168082.25 rows=3754080 width=48)
+   ->  Hash Join  (cost=430.00..118027.85 rows=1251360 width=48)
+         Hash Cond: ((bar.char_3)::text = baz.text_any)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..745.00 rows=23700 width=16)
+               Hash Key: (bar.char_3)::text
+               ->  Seq Scan on bar  (cost=0.00..271.00 rows=23700 width=16)
+         ->  Hash  (cost=210.00..210.00 rows=17600 width=32)
+               ->  Seq Scan on baz  (cost=0.00..210.00 rows=17600 width=32)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select char_3, text_any from bar join baz on char_3=text_any;
+ char_3 | text_any 
+--------+----------
+(0 rows)
+
+-- foo - bar join: varchar cast to bpchar
+-- 'cd' matches 'cd'
+-- foo - baz join: no cast
+-- 'cd' doesn't match 'cd  '
+-- returns 0 rows
+-- Notice ORCA changes join order to minimize motion
+explain select varchar_3, char_3, text_any from foo join bar on varchar_3=char_3
+join baz on varchar_3=text_any;
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=2141.25..15664266.93 rows=266915088 width=64)
+   ->  Hash Join  (cost=2141.25..12105399.09 rows=88971696 width=64)
+         Hash Cond: ((foo.varchar_3)::text = baz.text_any)
+         ->  Hash Join  (cost=567.25..88433.45 rows=1685070 width=32)
+               Hash Cond: ((foo.varchar_3)::bpchar = bar.char_3)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..745.00 rows=23700 width=16)
+                     Hash Key: foo.varchar_3
+                     ->  Seq Scan on foo  (cost=0.00..271.00 rows=23700 width=16)
+               ->  Hash  (cost=271.00..271.00 rows=23700 width=16)
+                     ->  Seq Scan on bar  (cost=0.00..271.00 rows=23700 width=16)
+         ->  Hash  (cost=914.00..914.00 rows=52800 width=32)
+               ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..914.00 rows=52800 width=32)
+                     ->  Seq Scan on baz  (cost=0.00..210.00 rows=17600 width=32)
+ Optimizer: Postgres query optimizer
+(14 rows)
+
+select varchar_3, char_3, text_any from foo join bar on varchar_3=char_3
+join baz on varchar_3=text_any;
+ varchar_3 | char_3 | text_any 
+-----------+--------+----------
+(0 rows)
+
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;
 set client_min_messages='warning';

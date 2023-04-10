@@ -2668,7 +2668,20 @@ http_setup(void)
 							  opt.p,
 							  saved_errno,
 							  strerror(saved_errno));
-				continue;
+
+#ifdef WIN32
+				if ( 1 )
+#else
+				if ( errno == EADDRINUSE )
+#endif
+				{
+					create_failed = true;
+					break;
+				}
+				else
+				{
+					gwarning(NULL, "%s (errno=%d), port: %d",strerror(errno), errno, opt.p);
+				}
 			}
 			gcb.listen_socks[gcb.listen_sock_count++] = f;
 
@@ -4753,7 +4766,7 @@ static int decompress_data(request_t* r, zstd_buffer *in, zstd_buffer *out){
 	ZSTD_outBuffer obuf = {out->buf, out->size, out->pos};
 	
 	if(!r->zstd_dctx) {
-		gwarning(stderr, "%s", "Out of memory when ZSTD_createDCtx");
+		gwarning(NULL, "%s", "Out of memory when ZSTD_createDCtx");
 		return -1;
 	}
 

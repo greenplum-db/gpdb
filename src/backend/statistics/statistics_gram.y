@@ -170,5 +170,3 @@ dependency_item:
 	}
 	;
 %%
-
-#include "statistics_scanner.c"

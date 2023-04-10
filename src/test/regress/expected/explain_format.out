@@ -577,7 +577,7 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=2197.59..3301.17 rows=77900 widt
   ->  Sort  (cost=2197.59..2262.51 rows=25967 width=12) (actual time=0.000..0.069 rows=0 loops=1)
         Output: id, apple_id, location_id
         Sort Key: boxes.apple_id
-        Sort Method:  quicksort  Memory: 75kB  Max Memory: 25kB  Avg Memory: 25kB (3 segments)
+        Sort Method:  quicksort  Memory: 75kB  Max Memory: 75kB  Peak Memory: 25kB  Avg Memory: 25kB (3 segments)
         Executor Memory: 177kB  Segments: 3  Max: 59kB (segment 0)
         work_mem: 177kB  Segments: 3  Max: 59kB (segment 0)  Workfile: (0 spilling)
         ->  Seq Scan on public.boxes  (cost=0.00..293.67 rows=25967 width=12) (actual time=0.000..0.010 rows=0 loops=1)

@@ -1,6 +1,6 @@
 # CLUSTER 
 
-Physically reorders a heap storage table on disk according to an index. Not a recommended operation in Greenplum Database.
+Physically reorders a table on disk according to an index. 
 
 ## <a id="section2"></a>Synopsis 
 
@@ -14,7 +14,7 @@ CLUSTER [VERBOSE]
 
 ## <a id="section3"></a>Description 
 
-`CLUSTER` orders a heap storage table based on an index. `CLUSTER` on non-B-tree indexes is not supported on append-optmized storage tables. Clustering an index means that the records are physically ordered on disk according to the index information. If the records you need are distributed randomly on disk, then the database has to seek across the disk to get the records requested. If those records are stored more closely together, then the fetching from disk is more sequential. A good example for a clustered index is on a date column where the data is ordered sequentially by date. A query against a specific date range will result in an ordered fetch from the disk, which leverages faster sequential access.
+`CLUSTER` orders a table based on an index. `CLUSTER` on non-B-tree indexes is not supported on append-optimized storage tables. Clustering an index means that the records are physically ordered on disk according to the index information. If the records you need are distributed randomly on disk, then the database has to seek across the disk to get the records requested. If those records are stored more closely together, then the fetching from disk is more sequential. A good example for a clustered index is on a date column where the data is ordered sequentially by date. A query against a specific date range will result in an ordered fetch from the disk, which leverages faster sequential access.
 
 Clustering is a one-time operation: when the table is subsequently updated, the changes are not clustered. That is, no attempt is made to store new or updated rows according to their index order. If you wish, you can periodically recluster by issuing the command again. Setting the table's `FILLFACTOR` storage parameter to less than 100% can aid in preserving cluster ordering during updates, because updated rows are kept on the same page if enough space is available there.
 

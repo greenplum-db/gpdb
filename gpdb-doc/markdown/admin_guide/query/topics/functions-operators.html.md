@@ -6,6 +6,7 @@ Description of user-defined and built-in functions and operators in Greenplum Da
 
 -   [Using Functions in Greenplum Database](#topic27)
 -   [User-Defined Functions](#topic28)
+-   [User-Defined Procedures](#topic28a)
 -   [Built-in Functions and Operators](#topic29)
 -   [Window Functions](#topic30)
 -   [Advanced Aggregate Functions](#topic31)
@@ -77,6 +78,18 @@ When you create user-defined functions, avoid using fatal errors or destructive 
 In Greenplum Database, the shared library files for user-created functions must reside in the same library path location on every host in the Greenplum Database array \(coordinators, segments, and mirrors\).
 
 You can also create and run anonymous code blocks that are written in a Greenplum Database procedural language such as PL/pgSQL. The anonymous blocks run as transient anonymous functions. For information about creating and running anonymous blocks, see the [`DO`](../../../ref_guide/sql_commands/DO.html) command.
+
+## <a id="topic28a"></a>User-Defined Procedures
+
+A procedure is a database object similar to a function. The key differences are:
+
+- You define a procedure with the [CREATE PROCEDURE](../../../ref_guide/sql_commands/CREATE_PROCEDURE.html) command, not `CREATE FUNCTION`.
+- Procedures do not return a function value; hence `CREATE PROCEDURE` lacks a `RETURNS` clause. However, procedures can instead return data to their callers via output parameters.
+- While a function is called as part of a query or DML command, you call a procedure in isolation using the [CALL](../../../ref_guide/sql_commands/CALL.html) command.
+- A procedure can commit or roll back transactions during its execution \(then automatically beginning a new transaction\), so long as the invoking `CALL` command is not part of an explicit transaction block. A function cannot do that.
+- Certain function attributes, such as strictness, don't apply to procedures. Those attributes control how the function is used in a query, which isn't relevant to procedures.
+
+Collectively, functions and procedures are also known as routines. There are commands such as [ALTER ROUTINE](../../../ref_guide/sql_commands/ALTER_ROUTINE.html) and [DROP ROUTINE](../../../ref_guide/sql_commands/DROP_ROUTINE.html) that can operate on functions and procedures without having to know which kind it is. Note, however, that there is no `CREATE ROUTINE` command.
 
 ## <a id="topic29"></a>Built-in Functions and Operators 
 
@@ -607,7 +620,7 @@ INSERT INTO mymatrix
    VALUES (array[[0,1],[1,0]]);
 SELECT sum(myvalue) FROM mymatrix;
  sum 
----------------
+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
  {{1,3},{4,4}}</code></pre>
                             </td>
                             <td class="entry" headers="topic31__in2073121__entry__4">Performs matrix summation. Can take as input a

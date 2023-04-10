@@ -1712,8 +1712,7 @@ heap_create_with_catalog(const char *relname,
 							  InvalidOid,
 							  InvalidOid,
 							  InvalidOid,
-							  InvalidOid,
-							  InvalidOid);
+							  AORelationVersion_GetLatest());
 	}
 
 	/*

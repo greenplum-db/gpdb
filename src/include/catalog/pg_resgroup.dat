@@ -16,7 +16,7 @@
   rsgname => 'default_group', parent => '0' },
 { oid => '6438', oid_symbol => 'ADMINRESGROUP_OID',
   rsgname => 'admin_group', parent => '0' },
-{ oid => '6441', oid_symbol => 'DEFAULTAUXILIARY_OID',
+{ oid => '6441', oid_symbol => 'SYSTEMRESGROUP_OID',
   rsgname => 'system_group', parent => '0' },
 
 ]

@@ -912,15 +912,15 @@ typedef struct WorkTableScan
 typedef struct ExternalScanInfo
 {
 	NodeTag		type;
-	List		*uriList;       /* data uri or null for each segment  */
-	char		fmtType;        /* data format type                   */
-	bool		isMasterOnly;   /* true for EXECUTE on master seg only */
-	int			rejLimit;       /* reject limit (-1 for no sreh)      */
-	bool		rejLimitInRows; /* true if ROWS false if PERCENT      */
-	char		logErrors;      /* 't', 'p' to log errors into file. 'p' makes persistent error log */
-	int			encoding;		/* encoding of external table data    */
-	uint32      scancounter;	/* counter incr per scan node created */
-	List	   *extOptions;		/* external options */
+	List		*uriList;            /* data uri or null for each segment  */
+	char		fmtType;             /* data format type                   */
+	bool		isCoordinatorOnly;   /* true for EXECUTE on coordinator seg only */
+	int			rejLimit;            /* reject limit (-1 for no sreh)      */
+	bool		rejLimitInRows;      /* true if ROWS false if PERCENT      */
+	char		logErrors;           /* 't', 'p' to log errors into file. 'p' makes persistent error log */
+	int			encoding;		     /* encoding of external table data    */
+	uint32      scancounter;	     /* counter incr per scan node created */
+	List	   *extOptions;		     /* external options */
 } ExternalScanInfo;
 
 /* ----------------
@@ -968,6 +968,33 @@ typedef struct ForeignScan
 	bool		fsSystemCol;	/* true if any "system column" is needed */
 } ForeignScan;
 
+/*
+ * DynamicForeignScan
+ *   Scan a list of tables that will be determined at run time.
+ */
+typedef struct DynamicForeignScan
+{
+	/* Fields shared with a normal ForeignScan. Must be first! */
+	ForeignScan		foreignscan;
+
+	/*
+	 * List of partition OIDs to scan.
+	 */
+	List	   *partOids;
+
+	/* Info for run-time subplan pruning; NULL if we're not doing that */
+	struct PartitionPruneInfo *part_prune_info;
+
+	/*
+	 * Info for run-time join pruning, using Partition Selector nodes.
+	 * These param IDs contain additional Bitmapsets containing selected
+	 * partitions.
+	 */
+	List	   *join_prune_paramids;
+
+	/* list of fdw_privates for each partition's foreign scan */
+	List	*fdw_private_list;
+} DynamicForeignScan;
 /* ----------------
  *	   CustomScan node
  *

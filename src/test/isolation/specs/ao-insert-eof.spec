@@ -10,9 +10,6 @@
 # written without serializable by using fault-injector, by suspending insert
 # statement after acquiring snapshot but before reaching segment file selection
 # logic for AO.
-# Without the fix for using SnapshotNow to read aoseg during inserts, it used to
-# overwrite and corrupt the data in some cases or error out inserts hiting the
-# sanity checks.
 
 setup
 {

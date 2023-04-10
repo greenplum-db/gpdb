@@ -52,10 +52,11 @@
 #define RESGROUP_MIN_CPU_HARD_QUOTA_LIMIT	(1)
 
 #define RESGROUP_MIN_CPU_SOFT_PRIORITY	(1)
+#define RESGROUP_MAX_CPU_SOFT_PRIORITY	(500)
 
 static int str2Int(const char *str, const char *prop);
 static ResGroupLimitType getResgroupOptionType(const char* defname);
-static ResGroupCap getResgroupOptionValue(DefElem *defel, int type);
+static ResGroupCap getResgroupOptionValue(DefElem *defel);
 static const char *getResgroupOptionName(ResGroupLimitType type);
 static void checkResgroupCapLimit(ResGroupLimitType type, ResGroupCap value);
 static void parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps);
@@ -288,7 +289,9 @@ DropResourceGroup(DropResourceGroupStmt *stmt)
 	groupid = ((Form_pg_resgroup) GETSTRUCT(tuple))->oid;
 
 	/* cannot DROP default resource groups  */
-	if (groupid == DEFAULTRESGROUP_OID || groupid == ADMINRESGROUP_OID)
+	if (groupid == DEFAULTRESGROUP_OID
+		|| groupid == ADMINRESGROUP_OID
+		|| groupid == SYSTEMRESGROUP_OID)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("cannot drop default resource group \"%s\"",
@@ -381,7 +384,7 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 	}
 	else
 	{
-		value = getResgroupOptionValue(defel, limitType);
+		value = getResgroupOptionValue(defel);
 		checkResgroupCapLimit(limitType, value);
 	}
 
@@ -435,6 +438,9 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 			StrNCpy(caps.cpuset, cpuset, sizeof(caps.cpuset));
 			caps.cpuHardQuotaLimit = CPU_HARD_QUOTA_LIMIT_DISABLED;
 			caps.cpuSoftPriority = RESGROUP_DEFAULT_CPU_SOFT_PRIORITY;
+			break;
+		case RESGROUP_LIMIT_TYPE_MEMORY_LIMIT:
+			caps.memory_limit = value;
 			break;
 		default:
 			break;
@@ -574,6 +580,10 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 				break;
 			case RESGROUP_LIMIT_TYPE_CPUSET:
 				StrNCpy(resgroupCaps->cpuset, value, sizeof(resgroupCaps->cpuset));
+				break;
+			case RESGROUP_LIMIT_TYPE_MEMORY_LIMIT:
+				resgroupCaps->memory_limit = str2Int(value,
+													getResgroupOptionName(type));
 				break;
 			default:
 				break;
@@ -747,6 +757,8 @@ getResgroupOptionType(const char* defname)
 		return RESGROUP_LIMIT_TYPE_CPUSET;
 	else if (strcmp(defname, "cpu_soft_priority") == 0)
 		return RESGROUP_LIMIT_TYPE_CPU_SHARES;
+	else if (strcmp(defname, "memory_limit") == 0)
+		return RESGROUP_LIMIT_TYPE_MEMORY_LIMIT;
 	else
 		return RESGROUP_LIMIT_TYPE_UNKNOWN;
 }
@@ -755,7 +767,7 @@ getResgroupOptionType(const char* defname)
  * Get capability value from DefElem, convert from int64 to int
  */
 static ResGroupCap
-getResgroupOptionValue(DefElem *defel, int type)
+getResgroupOptionValue(DefElem *defel)
 {
 	int64 value;
 
@@ -788,6 +800,8 @@ getResgroupOptionName(ResGroupLimitType type)
 			return "cpuset";
 		case RESGROUP_LIMIT_TYPE_CPU_SHARES:
 			return "cpu_soft_priority";
+		case RESGROUP_LIMIT_TYPE_MEMORY_LIMIT:
+			return "memory_limit";
 		default:
 			return "unknown";
 	}
@@ -821,11 +835,15 @@ checkResgroupCapLimit(ResGroupLimitType type, int value)
 				break;
 
 			case RESGROUP_LIMIT_TYPE_CPU_SHARES:
-				if (value < RESGROUP_MIN_CPU_SOFT_PRIORITY)
+				if (value < RESGROUP_MIN_CPU_SOFT_PRIORITY ||
+					value > RESGROUP_MAX_CPU_SOFT_PRIORITY)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-									errmsg("cpu_soft_priority range is [%d, +∞]",
-										   RESGROUP_MIN_CPU_SOFT_PRIORITY)));
+									errmsg("cpu_soft_priority range is [%d, %d]",
+										   RESGROUP_MIN_CPU_SOFT_PRIORITY, RESGROUP_MAX_CPU_SOFT_PRIORITY)));
+				break;
+
+			case RESGROUP_LIMIT_TYPE_MEMORY_LIMIT:
 				break;
 
 			default:
@@ -872,11 +890,10 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
       checkCpuSetByRole(cpuset);
 			caps->cpuHardQuotaLimit = CPU_HARD_QUOTA_LIMIT_DISABLED;
 			caps->cpuSoftPriority = RESGROUP_DEFAULT_CPU_SOFT_PRIORITY;
-
 		}
 		else 
 		{
-			value = getResgroupOptionValue(defel, type);
+			value = getResgroupOptionValue(defel);
 			checkResgroupCapLimit(type, value);
 
 			switch (type)
@@ -890,6 +907,9 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 					break;
 				case RESGROUP_LIMIT_TYPE_CPU_SHARES:
 					caps->cpuSoftPriority = value;
+					break;
+				case RESGROUP_LIMIT_TYPE_MEMORY_LIMIT:
+					caps->memory_limit = value;
 					break;
 				default:
 					break;
@@ -914,6 +934,9 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 
 	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_CONCURRENCY)))
 		caps->concurrency = RESGROUP_DEFAULT_CONCURRENCY;
+
+	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_MEMORY_LIMIT)))
+		caps->memory_limit = -1;
 
 	if ((mask & (1 << RESGROUP_LIMIT_TYPE_CPU)) &&
 		!(mask & (1 << RESGROUP_LIMIT_TYPE_CPU_SHARES)))
@@ -1003,6 +1026,10 @@ insertResgroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *caps)
 
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_CPUSET, caps->cpuset);
+
+	snprintf(value, sizeof(value), "%d", caps->memory_limit);
+	insertResgroupCapabilityEntry(rel, groupId,
+								  RESGROUP_LIMIT_TYPE_MEMORY_LIMIT, value);
 }
 
 /*

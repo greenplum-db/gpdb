@@ -317,37 +317,29 @@ Datum
 pg_resgroup_get_status_kv(PG_FUNCTION_ARGS)
 {
 	FuncCallContext *funcctx;
-	StringInfoData   str;
 	bool             do_dump;
 
-	do_dump = (strncmp(text_to_cstring(PG_GETARG_TEXT_P(0)), "dump", 4) == 0);
-	
-	if (do_dump)
+	do_dump = (!PG_ARGISNULL(0) &&
+			   strncmp(text_to_cstring(PG_GETARG_TEXT_P(0)), "dump", 4) == 0);
+
+	if (do_dump && !superuser())
 	{
 		/* Only super user can call this function with para=dump. */
-		if (!superuser())
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-					 errmsg("only superusers can call this function")));
-		}
-		
-		initStringInfo(&str);
-		/* dump info in QD and collect info from QEs to form str.*/
-		dumpResGroupInfo(&str);
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 errmsg("only superusers can call this function")));
 	}
 
 	if (SRF_IS_FIRSTCALL())
 	{
 		MemoryContext oldcontext;
 		TupleDesc	tupdesc;
-		int			nattr = 3;
 
 		funcctx = SRF_FIRSTCALL_INIT();
 
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
-		tupdesc = CreateTemplateTupleDesc(nattr);
+		tupdesc = CreateTemplateTupleDesc(3);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "groupid", OIDOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "prop", TEXTOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 3, "value", TEXTOID, -1, 0);
@@ -361,34 +353,25 @@ pg_resgroup_get_status_kv(PG_FUNCTION_ARGS)
 	/* stuff done on every call of the function */
 	funcctx = SRF_PERCALL_SETUP();
 
-	if (funcctx->call_cntr < funcctx->max_calls)
+	if (funcctx->call_cntr < funcctx->max_calls && do_dump)
 	{
-		if (do_dump)
-		{
-			Datum		values[3];
-			bool		nulls[3];
-			HeapTuple	tuple;
+		Datum			values[3] = {};
+		bool			nulls[3] = {true, true, false};
+		HeapTuple		tuple;
+		StringInfoData  str;
 
-			MemSet(values, 0, sizeof(values));
-			MemSet(nulls, 0, sizeof(nulls));
+		initStringInfo(&str);
+		/* dump info in QD and collect info from QEs to form str.*/
+		dumpResGroupInfo(&str);
+		values[2] = CStringGetTextDatum(str.data);
+		pfree(str.data);
 
-			nulls[0] = nulls[1] = true;
-			values[2] = CStringGetTextDatum(str.data);
-			
-			tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
-		
-			SRF_RETURN_NEXT(funcctx, HeapTupleGetDatum(tuple));
-		}
-		else
-		{
-			SRF_RETURN_DONE(funcctx);
-		}
+		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
+
+		SRF_RETURN_NEXT(funcctx, HeapTupleGetDatum(tuple));
 	}
-	else
-	{
-		/* nothing left */
-		SRF_RETURN_DONE(funcctx);
-	}
+
+	SRF_RETURN_DONE(funcctx);
 }
 
 static void

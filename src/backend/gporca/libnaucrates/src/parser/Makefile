@@ -32,6 +32,7 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerDirectDispatchInfo.o \
               CParseHandlerDistinctComp.o \
               CParseHandlerDummy.o \
+              CParseHandlerDynamicForeignScan.o \
               CParseHandlerDynamicIndexScan.o \
               CParseHandlerDynamicTableScan.o \
               CParseHandlerEnumeratorConfig.o \
@@ -154,12 +155,6 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerScalarOp.o \
               CParseHandlerScalarOpExpr.o \
               CParseHandlerScalarOpList.o \
-              CParseHandlerScalarPartBound.o \
-              CParseHandlerScalarPartBoundInclusion.o \
-              CParseHandlerScalarPartBoundOpen.o \
-              CParseHandlerScalarPartDefault.o \
-              CParseHandlerScalarPartListNullTest.o \
-              CParseHandlerScalarPartListValues.o \
               CParseHandlerScalarSubPlan.o \
               CParseHandlerScalarSubPlanParam.o \
               CParseHandlerScalarSubPlanParamList.o \

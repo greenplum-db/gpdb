@@ -124,7 +124,7 @@ typedef struct CdbExplain_NodeSummary
 	CdbExplain_Agg workmemused;
 	CdbExplain_Agg workmemwanted;
 	CdbExplain_Agg totalWorkfileCreated;
-	/* Used for DynamicSeqScan, DynamicIndexScan and DynamicBitmapHeapScan */
+	/* Used for DynamicSeqScan, DynamicIndexScan, DynamicBitmapHeapScan, and DynamicForeignScan */
 	CdbExplain_Agg totalPartTableScanned;
 	/* Summary of space used by sort */
 	CdbExplain_Agg sortSpaceUsed[NUM_SORT_SPACE_TYPE][NUM_SORT_METHOD];
@@ -1142,11 +1142,10 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	}
 
 	/*
-	 * If this is a HashState, construct a SharedHashInfo with the stats from
-	 * all the QEs. In PostgreSQL, SharedHashInfo is used to show stats of all
-	 * the worker processes, we use it to show stats from all the QEs instead.
-	 *
-	 * GPDB_12_MERGE_FIXME: Should we do the same for Sort stats nowadays?
+	 * If this is a HashState/SortState, construct a SharedHashInfo with the
+	 * stats from all the QEs. In PostgreSQL, SharedHashInfo is used to show
+	 * stats of all the worker processes, we use it to show stats from all
+	 * the QEs instead.
 	 */
 	if (IsA(planstate, HashState))
 	{
@@ -1172,6 +1171,28 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		}
 
 		hashstate->shared_info = shared_state;
+	}
+	else if (IsA(planstate, SortState))
+	{
+		/* GPDB: Collect the results from all QE processes */
+		SortState *sortstate = (SortState *) planstate;
+		size_t size = offsetof(SharedSortInfo, sinstrument) +
+			ctx->nmsgptr * sizeof(TuplesortInstrumentation);
+		SharedSortInfo *shared_state = palloc0(size);
+
+		shared_state->num_workers = ctx->nmsgptr;
+
+		/* Examine the statistics from each qExec. */
+		for (imsgptr = 0; imsgptr < ctx->nmsgptr; imsgptr++)
+		{
+			/* Locate PlanState node's StatInst received from this qExec. */
+			rsh = ctx->msgptrs[imsgptr];
+			rsi = &rsh->inst[ctx->iStatInst];
+
+			memcpy(&shared_state->sinstrument[imsgptr], &rsi->sortstats, sizeof(TuplesortInstrumentation));
+		}
+
+		sortstate->shared_info = shared_state;
 	}
 }								/* cdbexplain_depositStatsToNode */
 
@@ -1392,6 +1413,27 @@ cdbexplain_showExecStatsBegin(struct QueryDesc *queryDesc,
 }								/* cdbexplain_showExecStatsBegin */
 
 /*
+ * cdbexplain_showStatCtxFree
+ *	  Release memory allocated for CdbExplain_ShowStatCtx structure and its
+ *	  internals. Memory for insides of the slices array elements is allocated
+ *	  in ExplainPrintPlan(). If ExplainPrintPlan() is called from the
+ *	  auto_explain extension, then this memory is released in
+ *	  standard_ExecutorEnd() -> FreeExecutorState() to avoid memory leak in the
+ *	  case of queries with multiple call of SQL functions.
+ *	  If ExplainPrintPlan() is called from ExplainOnePlan(), then this memory
+ *	  is released in PortalDrop().
+ */
+void
+cdbexplain_showStatCtxFree(struct CdbExplain_ShowStatCtx *ctx)
+{
+	Assert(ctx != NULL);
+
+	pfree(ctx->extratextbuf.data);
+	pfree(ctx->slices);
+	pfree(ctx);
+}
+
+/*
  * nodeSupportWorkfileCaching
  *	 Return true if a given node supports workfile caching.
  */
@@ -1542,7 +1584,8 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 	 */
 	if (0 <= ns->totalPartTableScanned.vcnt && (T_DynamicSeqScanState == planstate->type
 												|| T_DynamicIndexScanState == planstate->type
-												|| T_DynamicBitmapHeapScanState == planstate->type))
+												|| T_DynamicBitmapHeapScanState == planstate->type
+												|| T_DynamicForeignScanState == planstate->type))
 	{
 		/*
 		 * FIXME: Only displayed in TEXT format
@@ -1639,7 +1682,7 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 				ExplainOpenGroup("Segment", NULL, true, es);
 				haveExtraText = true;
 			}
-			
+
 			resetStringInfo(&extraData);
 
 			cdbexplain_formatExtraText(&extraData,
@@ -1823,7 +1866,7 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
     {
         CdbExplain_SliceSummary *ss = &showstatctx->slices[sliceIndex];
         CdbExplain_DispatchSummary *ds = &ss->dispatchSummary;
-        
+
         flag = es->str->len;
         if (es->format == EXPLAIN_FORMAT_TEXT)
         {
@@ -1834,7 +1877,7 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
 
             appendStringInfoString(es->str, "  ");
         }
-        else 
+        else
         {
             ExplainOpenGroup("Slice", NULL, true, es);
             ExplainPropertyInteger("Slice", NULL, sliceIndex, es);

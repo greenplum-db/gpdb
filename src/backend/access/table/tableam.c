@@ -207,10 +207,10 @@ table_index_fetch_tuple_check(Relation rel,
 	/*
 	 * Optimized path for AO/CO relations as the aforementioned per-tuple
 	 * overhead is significant for AO/CO relations. For details, please refer to
-	 * table_index_fetch_tuple_exists().
+	 * table_index_unique_check().
 	 */
 	if (RelationIsAppendOptimized(rel))
-		return table_index_fetch_tuple_exists(rel, tid, snapshot, all_dead);
+		return table_index_unique_check(rel, tid, snapshot, all_dead);
 
 	slot = table_slot_create(rel, NULL);
 	scan = table_index_fetch_begin(rel);

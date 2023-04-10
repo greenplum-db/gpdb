@@ -32,8 +32,6 @@ ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
 
-SELECT * FROM rg_activity_status;
-
 11:END;
 11q:
 21<:

@@ -388,12 +388,12 @@ CREATE
 1: BEGIN;
 BEGIN
 1: COPY unique_index_ao_row FROM PROGRAM 'seq 1 10';
-COPY 30
+COPY 10
 -- concurrent tx inserting conflicting row should block.
 2&: COPY unique_index_ao_row FROM PROGRAM 'seq 1 1';  <waiting ...>
 -- concurrent tx inserting non-conflicting rows should be successful.
 3: COPY unique_index_ao_row FROM PROGRAM 'seq 11 20';
-COPY 30
+COPY 10
 -- inserting a conflicting row in the same transaction should ERROR out.
 1: COPY unique_index_ao_row FROM PROGRAM 'seq 1 1';
 ERROR:  duplicate key value violates unique constraint "unique_index_ao_row_a_key"
@@ -401,7 +401,7 @@ DETAIL:  Key (a)=(1) already exists.
 CONTEXT:  COPY unique_index_ao_row, line 1
 -- now that tx 1 was aborted, tx 2 is successful.
 2<:  <... completed>
-COPY 3
+COPY 1
 1: END;
 END
 

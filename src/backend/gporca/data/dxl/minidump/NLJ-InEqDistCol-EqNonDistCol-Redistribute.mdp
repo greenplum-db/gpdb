@@ -32,7 +32,7 @@ explain select * from a1,b1 where a1.a != b1.a and a1.a = b1.b;
         </dxl:CostParams>
       </dxl:CostModelConfig>
       <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="25" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
-      <dxl:TraceFlags Value="102001,102002,102003,102029,102046,102048,102053,102054,102120,102144,103001,103014,103015,103022,103033,104003,104004,104005,105000"/>
+      <dxl:TraceFlags Value="102001,102002,102003,103045,102046,102048,102053,102054,102120,102144,103001,103014,103015,103022,103033,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:GPDBScalarOp Mdid="0.518.1.0" Name="&lt;&gt;" ComparisonType="NEq" ReturnsNullOnNullInput="true">

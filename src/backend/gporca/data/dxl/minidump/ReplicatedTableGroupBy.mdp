@@ -956,7 +956,7 @@
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="100"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:GPDBAgg Mdid="0.2147.1.0" Name="count" IsSplittable="true" HashAggCapable="true">
+      <dxl:GPDBAgg Mdid="0.2147.1.0" Name="count" IsRepSafe="true" IsSplittable="true" HashAggCapable="true">
         <dxl:ResultType Mdid="0.20.1.0"/>
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>

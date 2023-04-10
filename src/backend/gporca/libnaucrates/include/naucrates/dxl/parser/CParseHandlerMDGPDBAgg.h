@@ -57,6 +57,9 @@ private:
 	// can we use hash aggregation to compute agg function
 	BOOL m_hash_agg_capable;
 
+	// is aggregate replicate slice safe for execution
+	BOOL m_is_repsafe;
+
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace

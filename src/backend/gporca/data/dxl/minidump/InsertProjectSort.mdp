@@ -173,7 +173,7 @@ explain insert into tbl_cds_buysell_orders_new (a,b,c)
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.29841831.1.1" Name="ext_tbl_cds_buysell_orders_new" Rows="1000000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.29841831.1.1" Name="ext_tbl_cds_buysell_orders_new" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="9,3">
+      <dxl:Relation Mdid="6.29841831.1.1" Name="ext_tbl_cds_buysell_orders_new" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="9,3" ForeignServer="0.91908.1.0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

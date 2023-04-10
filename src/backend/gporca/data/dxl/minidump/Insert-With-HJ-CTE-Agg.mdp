@@ -14,7 +14,7 @@
 	CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by(country_code);
 
 	Objective: For DMLs, ORCA generates a singleton requests on segment
-	instead of master. The following query tests that the Hash Join appearing
+	instead of coordinator. The following query tests that the Hash Join appearing
 	inside of a DML, correctly requests Singleton Segment distribution-spec on its
 	children. The final join picked is different (No Gather(segment) on HJ children).
 	However this test ensures that the propery enforcement framework correctly

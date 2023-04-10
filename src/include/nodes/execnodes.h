@@ -1862,7 +1862,7 @@ typedef struct DynamicBitmapHeapScanState
 
 	struct PartitionPruneState *as_prune_state; /* partition dynamic pruning state */
 	Bitmapset  *as_valid_subplans; /* used to determine partitions during dynamic pruning*/
-	bool 		did_pruning; /* flag that is set when */
+	bool 		did_pruning; /* flag that is set once dynamic pruning is performed */
 } DynamicBitmapHeapScanState;
 
 /* ----------------
@@ -2145,8 +2145,51 @@ typedef struct DynamicSeqScanState
 
 	struct PartitionPruneState *as_prune_state; /* partition dynamic pruning state */
 	Bitmapset  *as_valid_subplans; /* used to determine partitions during dynamic pruning*/
-	bool 		did_pruning; /* flag that is set when */
+	bool 		did_pruning; /* flag that is set once dynamic pruning is performed */
 } DynamicSeqScanState;
+
+/*
+ * DynamicForeignScanState
+ */
+typedef struct DynamicForeignScanState
+{
+	ScanState	ss;
+
+	int			scan_state; /* the stage of scanning */
+
+	int			eflags;
+	ForeignScanState *foreignScanState;
+
+	/*
+	 * lastRelOid is the last relation that corresponds to the
+	 * varattno mapping of qual and target list. Each time we open a new partition, we will
+	 * compare the last relation with current relation by using varattnos_map()
+	 * and then convert the varattno to the new varattno
+	 */
+	Oid			lastRelOid;
+
+	/*
+	 * scanrelid is the RTE index for this scan node. It will be used to select
+	 * varno whose varattno will be remapped, if necessary
+	 */
+	Index		scanrelid;
+
+	/*
+	 * This memory context will be reset per-partition to free
+	 * up previous partition's memory
+	 */
+	MemoryContext partitionMemoryContext;
+
+	int			nOids; /* number of oids to scan in partitioned table */
+	Oid		   *partOids; /* list of oids to scan in partitioned table */
+	int			whichPart; /* index of current partition in partOids */
+
+	struct PartitionPruneState *as_prune_state; /* partition dynamic pruning state */
+	Bitmapset  *as_valid_subplans; /* used to determine partitions during dynamic pruning*/
+	bool 		did_pruning; /* flag that is set once dynamic pruning is performed */
+	void 	**fdw_private_array; /* array of fdw_privates for each partition's foreign scan */
+
+} DynamicForeignScanState;
 
 /* ----------------
  *	 CustomScanState information
@@ -2414,7 +2457,7 @@ typedef struct SortState
 	int64		bound_Done;		/* value of bound we did the sort with */
 	void	   *tuplesortstate; /* private state of tuplesort.c */
 	bool		am_worker;		/* are we a worker? */
-	SharedSortInfo *shared_info;	/* one entry per worker */
+	SharedSortInfo *shared_info;	/* one entry per worker * Greenplum: per QE */
 
 	bool		delayEagerFree;		/* is it safe to free memory used by this node,
 									 * when this node has outputted its last row? */
@@ -2760,7 +2803,7 @@ typedef struct HashState
 	bool		hs_hashkeys_null;	/* found an instance wherein hashkeys are all null */
 	/* hashkeys is same as parent's hj_InnerHashKeys */
 
-	SharedHashInfo *shared_info;	/* one entry per worker */
+	SharedHashInfo *shared_info;	/* one entry per worker * Greenplum: per QE */
 	HashInstrumentation *hinstrument;	/* this worker's entry */
 
 	/* Parallel hash state. */

@@ -114,6 +114,19 @@ protected:
 	// create optimization requests
 	virtual void CreateOptRequests(CMemoryPool *mp);
 
+	CPartitionPropagationSpec *PppsRequiredForJoins(
+		CMemoryPool *mp, CExpressionHandle &exprhdl,
+		CPartitionPropagationSpec *pppsRequired, ULONG child_index,
+		CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq) const;
+
+	CExpression *PexprJoinPredOnPartKeys(CMemoryPool *mp,
+										 CExpression *pexprScalar,
+										 CPartKeysArray *pdrgppartkeys,
+										 CColRefSet *pcrsAllowedRefs) const;
+
+	CPartitionPropagationSpec *PppsDeriveForJoins(
+		CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+
 public:
 	CPhysicalHashJoin(const CPhysicalHashJoin &) = delete;
 

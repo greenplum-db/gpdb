@@ -125,6 +125,7 @@
 #include "executor/nodeAssertOp.h"
 #include "executor/nodeDynamicIndexscan.h"
 #include "executor/nodeDynamicSeqscan.h"
+#include "executor/nodeDynamicForeignscan.h"
 #include "executor/nodeMotion.h"
 #include "executor/nodePartitionSelector.h"
 #include "executor/nodeSequence.h"
@@ -370,6 +371,11 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 		case T_ForeignScan:
 			result = (PlanState *) ExecInitForeignScan((ForeignScan *) node,
 														estate, eflags);
+			break;
+
+		case T_DynamicForeignScan:
+			result = (PlanState *) ExecInitDynamicForeignScan((DynamicForeignScan *) node,
+												   estate, eflags);
 			break;
 
 		case T_CustomScan:
@@ -904,6 +910,10 @@ ExecEndNode(PlanState *node)
 
 		case T_ForeignScanState:
 			ExecEndForeignScan((ForeignScanState *) node);
+			break;
+
+		case T_DynamicForeignScanState:
+			ExecEndDynamicForeignScan((DynamicForeignScanState *) node);
 			break;
 
 		case T_CustomScanState:

@@ -17,13 +17,6 @@
 
 #include "postgres.h"
 
-/*
- * The pre-occupied group OID, do not change this!
- */
-#define GPDB_DEFAULT_CGROUP 	6437
-#define GPDB_ADMIN_CGROUP 		6438
-#define GPDB_SYSTEM_CGROUP 		6441
-
 #define MAX_CGROUP_PATHLEN 256
 #define MAX_CGROUP_CONTENTLEN 1024  
 
@@ -93,6 +86,39 @@ typedef struct CGroupSystemInfo
 
 } CGroupSystemInfo;
 
+/*
+ * For permission check
+ */
+typedef struct PermItem PermItem;
+typedef struct PermList PermList;
+
+struct PermItem
+{
+	CGroupComponentType comp;
+	/* file name, "" means parent directory */
+	const char			*prop;
+	/* permission, R_OK | W_OK | X_OK */
+	int					perm;
+};
+
+struct PermList
+{
+	const PermItem	*items;
+	bool			optional;
+	bool			*presult;
+};
+
+#define foreach_perm_list(i, lists) \
+	for ((i) = 0; (lists)[(i)].items; (i)++)
+
+#define foreach_perm_item(i, items) \
+	for ((i) = 0; (items)[(i)].comp != CGROUP_COMPONENT_UNKNOWN; (i)++)
+
+#define foreach_comp_type(comp) \
+	for ((comp) = CGROUP_COMPONENT_FIRST; \
+		 (comp) < CGROUP_COMPONENT_COUNT; \
+		 (comp)++)
+
 /* Read at most datasize bytes from a file. */
 extern size_t readData(const char *path, char *data, size_t datasize);
 /* Write datasize bytes to a file. */
@@ -104,6 +130,13 @@ extern int64 readInt64(Oid group, BaseDirType base, CGroupComponentType componen
 /* Write an int64 value to a cgroup interface file. */
 extern void writeInt64(Oid group, BaseDirType base, CGroupComponentType component,
 					   const char *filename, int64 x);
+
+/* Read an int32 value from a cgroup interface file. */
+extern int32 readInt32(Oid group, BaseDirType base, CGroupComponentType component,
+					   const char *filename);
+/* Write an int32 value to a cgroup interface file. */
+extern void writeInt32(Oid group, BaseDirType base, CGroupComponentType component,
+					   const char *filename, int32 x);
 
 /* Read a string value from a cgroup interface file. */
 extern void readStr(Oid group, BaseDirType base, CGroupComponentType component,
@@ -118,6 +151,11 @@ extern bool buildPathSafe(Oid group, BaseDirType base, CGroupComponentType compo
 						  const char *filename, char *pathBuffer, size_t pathBufferSize);
 
 extern bool validateComponentDir(CGroupComponentType component);
+
+/* Permission check */
+extern bool permListCheck(const PermList *permlist, Oid group, bool report);
+extern bool normalPermissionCheck(const PermList *permlists, Oid group, bool report);
+extern bool cpusetPermissionCheck(const PermList *cpusetPermList, Oid group, bool report);
 
 extern const char * getComponentName(CGroupComponentType component);
 extern CGroupComponentType getComponentType(const char *name);

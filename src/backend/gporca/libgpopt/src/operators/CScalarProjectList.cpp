@@ -259,13 +259,7 @@ CScalarProjectList::FContainsOnlyReplicationSafeAggFuncs(
 		}
 		CScalarAggFunc *popScAggFunc =
 			CScalarAggFunc::PopConvert(pexprAggFunc->Pop());
-		OID safe_oid = CMDIdGPDB::CastMdid(popScAggFunc->MDId())->Oid();
-
-		// We use an allow-list approach here. While there are other functions that can be
-		// safely replicated, users could create custom agg funcs that could lead to wrong results
-		if (!(safe_oid == GPDB_INT4_AGG_MIN || safe_oid == GPDB_INT4_AGG_MAX ||
-			  safe_oid == GPDB_INT4_AGG_AVG || safe_oid == GPDB_INT4_AGG_SUM ||
-			  safe_oid == GPDB_INT4_AGG_COUNT || safe_oid == GPDB_COUNT_STAR))
+		if (!popScAggFunc->FRepSafe())
 		{
 			return false;
 		}

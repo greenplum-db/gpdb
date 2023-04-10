@@ -1,0 +1,93 @@
+---
+title: Server Configuration Parameter Changes from Greenplum 5 to 6
+---
+
+Greenplum 6 includes new server configuration parameters, and removes or updates the default values of certain server configuration parameters as described below.
+
+## <a id="new"></a>New Parameters
+
+The following new server configuration parameters are available in Greenplum 6:
+
+-  `default_text_search_config` selects the text search configuration.
+-  `default_transaction_deferrable` controls the default deferrable status of each new transaction.
+-  `gp_enable_global_deadlock_detector` controls whether the Greenplum Database global deadlock detector is enabled.
+-  `gp_global_deadlock_detector_period` is the timeout period for the Greenplum Database global deadlock detector.
+-  `gp_use_legacy_hashops` controls whether the legacy or default hash functions are used when creating tables that are defined with a distribution column.
+-  `lock_timeout` identifies the amount of time for Greenplum Database to wait to acquire a lock.
+-  `optimizer_enable_dml` controls DML operations executed by GPORCA.
+-  `temp_tablespaces` specifies the tablespace in which Greenplum Database creates temporary objects.
+
+## <a id="removed"></a>Removed Parameters
+
+The following server configuration parameters are removed in Greenplum 6:
+
+-  `add_missing_from`
+-  `custom_variable_classes`
+-  `filerep_mirrorvalidation_during_resync`
+-  `gp_analyze_relative_error`
+-  `gp_backup_directIO`
+-  `gp_backup_directIO_read_chunk_mb`
+-  `gp_cancel_query_delay_time` (undocumented)
+-  `gp_cancel_query_print_log` (undocumented)
+-  `gp_connections_per_thread`
+-  `gp_email_from`
+-  `gp_email_smtp_password`
+-  `gp_email_smtp_server`
+-  `gp_email_smtp_userid`
+-  `gp_email_to`
+-  `gp_enable_fallback_plan`
+-  `gp_enable_sequential_window_plans`
+-  `gp_filerep_tcp_keepalives_count`
+-  `gp_filerep_tcp_keepalives_idle`
+-  `gp_filerep_tcp_keepalives_interval`
+-  `gp_fts_probe_threadcount`
+-  `gp_hadoop_home`
+-  `gp_hadoop_target_version`
+-  `gp_idf_deduplicate`
+-  `gp_interconnect_hash_multiplier`
+-  `gp_max_csv_line_length`
+-  `gp_max_databases`
+-  `gp_max_filespaces`
+-  `gp_max_tablespaces`
+-  `gp_num_contents_in_cluster`
+-  `gp_snmp_community`
+-  `gp_snmp_monitor_address`
+-  `gp_snmp_use_inform_or_trap`
+-  `gp_workfile_checksumming`
+-  `krb_srvname`
+-  `max_fsm_pages`
+-  `max_fsm_relations`
+
+## <a id="changed"></a>Changed Parameters
+
+These server configuration parameters are changed in Greenplum 6:
+
+-  These configuration parameter values are changed from strings to enums:
+    -  `backslash_quote`
+    -  `client_min_messages`
+    -  `default_transaction_isolation`
+    -  `IntervalStyle`
+    -  `log_error_verbosity`
+    -  `log_min_messages`
+    -  `log_statement`
+-  The `debug_pretty_print` parameter default value is changed from `off` to `on`.
+-  The `effective_cache_size` parameter default value is changed from `16384` pages to `524288` pages.
+-  The `gp_cached_segworkers_threshold` parameter minimum value is changed from `0` to `1`.
+-  The `gp_recursive_cte_prototype` configuration parameter name is changed to `gp_recursive_cte` and deprecated.
+-  The `gp_workfile_limit_per_query` parameter maximum value is changed from `SIZE_MAX/1024` to `INT_MAX`.
+-  The `gp_workfile_limit_per_segment` parameter maximum value is changed from `SIZE_MAX/1024` to `INT_MAX`.
+-  The `gp_workfile_compress_algorithm` configuration parameter name is changed to `gp_workfile_compression`. This server configuration parameter now enables or disables compression of temporary files. When workfile compression is enabled, Greenplum Database uses Zstandard compression.
+-  The default value of the `log_rotation_size` parameter is changed from `0` to `1GB`. This changes the default log rotation behavior so that a new log file is opened when more than 1GB has been written to the current log file, or when the current log file has been open for 24 hours.
+-  The `optimizer_force_multistage_agg` parameter default is changed from `true` to `false`.
+GPORCA will now by default choose between a one-stage or two-stage aggregate plan for a scalar distinct qualified aggregate based on cost.
+
+-  The `optimizer_penalize_skew` parameter default is changed from `false` to `true`.
+GPORCA will now by default choose between a one-stage or two-stage aggregate plan for a scalar distinct qualified aggregate based on cost.
+
+-  The `pgstat_track_activity_query_size` configuration parameter name is changed to `track_activity_query_size` and removed.
+-  The `server_version` parameter value is changed from `8.3.23` to `9.4.20`.
+-  The `server_version_num` parameter value is changed from `80323` to `90420`.
+-  When the resource group resource management scheme is enabled and you configure `MEMORY_SPILL_RATIO=0` for a resource group, Greenplum Database uses the `statement_mem` parameter setting to identify the initial amount of query operator memory.
+-  The `unix_socket_directory` configuration parameter name is changed to `unix_socket_directories` and now references one or more directories where Greenplum Database creates Unix-domain sockets.
+- The `bytea` representation changed to a hexadecimal format, by default. Use the server parameter `bytea_output` to select the 5.x output format for backward compatibility. After upgrading, set the `bytea_output` configuration parameter to `escape` by running `gpconfig -c bytea_output -v escape`.
+

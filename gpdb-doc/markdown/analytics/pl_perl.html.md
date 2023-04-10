@@ -8,10 +8,11 @@ This chapter includes the following information:
 -   [Greenplum Database PL/Perl Limitations](#topic3)
 -   [Trusted/Untrusted Language](#topic31)
 -   [Developing Functions with PL/Perl](#topic33)
+-   [About Developing PL/Perl Procedures](#topic35)
 
 ## <a id="topic2"></a>About Greenplum PL/Perl 
 
-With the Greenplum Database PL/Perl extension, you can write user-defined functions in Perl that take advantage of its advanced string manipulation operators and functions. PL/Perl provides both trusted and untrusted variants of the language.
+With the Greenplum Database PL/Perl extension, you can write user-defined functions and procedures in Perl that take advantage of its advanced string manipulation operators and functions. PL/Perl provides both trusted and untrusted variants of the language.
 
 PL/Perl is embedded in your Greenplum Database distribution. Greenplum Database PL/Perl requires Perl to be installed on the system of each database host.
 
@@ -204,4 +205,42 @@ Additional considerations when developing PL/Perl functions:
 -   Nesting named PL/Perl subroutines retains the same dangers as in Perl.
 -   Only the untrusted PL/Perl language variant supports module import. Use `plperlu` with care.
 -   Any module that you use in a `plperlu` function must be available from the same location on all Greenplum Database hosts.
+
+## <a id="topic35"></a>About Developing PL/Perl Procedures
+
+A PL/Perl procedure is similar to a PL/Perl function. Refer to [User-Defined Procedures](../admin_guide/query/topics/functions-operators.html#topic28a) for more information on procedures in Greenplum Database and how they differ from functions.
+
+In a PL/Perl procedure, any return value from the Perl code is ignored.
+
+Output arguments of PL/Perl procedures can be returned as a hash reference:
+
+``` sql
+CREATE PROCEDURE perl_triple(INOUT a integer, INOUT b integer) AS $$
+    my ($a, $b) = @_;
+    return {a => $a * 3, b => $b * 3};
+$$ LANGUAGE plperl;
+
+CALL perl_triple(5, 10);
+```
+
+`spi_commit()` and `spi_rollback()` can be called only from the top level in a procedure. (Note that it is not possible to run the SQL commands `COMMIT` or `ROLLBACK` via `spi_exec_query()` or similar. Commit and rollback must be done using these functions.) After a transaction is ended, a new transaction is automatically started, so there is no separate function for that.
+
+Here is an example:
+
+``` sql
+CREATE PROCEDURE transaction_test1()
+LANGUAGE plperl
+AS $$
+foreach my $i (0..9) {
+    spi_exec_query("INSERT INTO tbl1 (a) VALUES ($i)");
+    if ($i % 2 == 0) {
+        spi_commit();
+    } else {
+        spi_rollback();
+    }
+}
+$$;
+
+CALL transaction_test1();
+```
 

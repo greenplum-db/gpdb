@@ -42,6 +42,7 @@
 #include "catalog/pg_namespace.h"
 #include "commands/cluster.h"
 #include "commands/defrem.h"
+#include "commands/tablecmds.h"
 #include "commands/vacuum.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
@@ -52,8 +53,11 @@
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "utils/acl.h"
+#include "utils/builtins.h"
+#include "utils/elog.h"
 #include "utils/fmgroids.h"
 #include "utils/memutils.h"
+#include "utils/palloc.h"
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
 
@@ -124,11 +128,12 @@ ExecVacuum(ParseState *pstate, VacuumStmt *vacstmt, bool isTopLevel, bool auto_s
 	bool		skip_locked = false;
 	bool		analyze = false;
 	bool		freeze = false;
+	bool		ao_aux_only = false;
 	bool		full = false;
 	bool		disable_page_skipping = false;
 	bool		rootonly = false;
 	bool		fullscan = false;
-	int			ao_phase = 0;
+	int		ao_phase = 0;
 	ListCell   *lc;
 
 	/* Set default value */
@@ -162,6 +167,8 @@ ExecVacuum(ParseState *pstate, VacuumStmt *vacstmt, bool isTopLevel, bool auto_s
 			freeze = defGetBoolean(opt);
 		else if (strcmp(opt->defname, "full") == 0)
 			full = defGetBoolean(opt);
+		else if (strcmp(opt->defname, "ao_aux_only") == 0)
+			ao_aux_only = defGetBoolean(opt);
 		else if (strcmp(opt->defname, "disable_page_skipping") == 0)
 			disable_page_skipping = defGetBoolean(opt);
 		else if (strcmp(opt->defname, "index_cleanup") == 0)
@@ -188,6 +195,7 @@ ExecVacuum(ParseState *pstate, VacuumStmt *vacstmt, bool isTopLevel, bool auto_s
 		(analyze ? VACOPT_ANALYZE : 0) |
 		(freeze ? VACOPT_FREEZE : 0) |
 		(full ? VACOPT_FULL : 0) |
+		(ao_aux_only ? VACOPT_AO_AUX_ONLY : 0) |
 		(disable_page_skipping ? VACOPT_DISABLE_PAGE_SKIPPING : 0);
 
 	if (rootonly)
@@ -366,8 +374,8 @@ vacuum(List *relations, VacuumParams *params,
 	 */
 	if (relations != NIL)
 	{
-		List	   *newrels = NIL;
-		ListCell   *lc;
+		List		*newrels = NIL;
+		ListCell  *lc;
 
 		foreach(lc, relations)
 		{
@@ -741,6 +749,12 @@ vacuum_open_relation(Oid relid, RangeVar *relation, int options,
  * new VacuumRelation(s) to return.  (But note that they will reference
  * unmodified parts of the input, eg column lists.)  New data structures
  * are made in vac_context.
+ *
+ * GPDB: In addition to expanding a partitioned table to include its
+ * partitions, we also use this function to expand appendoptimized tables to
+ * their auxiliary tables if the AO_AUX_ONLY option is passed. This is
+ * something of a misnomer because we do not return the originally input AO
+ * table, so it's a replacement instead of strictly an expansion.
  */
 static List *
 expand_vacuum_rel(VacuumRelation *vrel, int options)
@@ -995,8 +1009,60 @@ expand_vacuum_rel(VacuumRelation *vrel, int options)
 				child_relid = parent_relid;
 			}
 		}
-	}
 
+		/*
+		 * If AO_AUX_ONLY option is passed, replace list of relations with the
+		 * auxiliary tables for each AO table in the list
+		 */
+		if ((options & VACOPT_AO_AUX_ONLY) != 0)
+		{
+			ListCell *lc;
+			List		*ao_aux_vacrels = NIL;
+			Oid		aoseg_relid = InvalidOid;
+			Oid		aoblkdir_relid = InvalidOid;
+			Oid		aovisimap_relid = InvalidOid;
+
+			foreach (lc, vacrels)
+			{
+				VacuumRelation *part_vrel = lfirst_node(VacuumRelation, lc);
+				tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(part_vrel->oid));
+				if (!HeapTupleIsValid(tuple))
+					elog(ERROR, "cache lookup failed for relation %u", relid);
+				classForm = (Form_pg_class) GETSTRUCT(tuple);
+				if (IsAccessMethodAO(classForm->relam))
+				{
+					Relation aorel = table_open(classForm->oid, AccessShareLock);
+					oldcontext = MemoryContextSwitchTo(vac_context);
+
+					GetAppendOnlyEntryAuxOids(aorel,
+											  &aoseg_relid,
+											  &aoblkdir_relid,
+											  &aovisimap_relid);
+
+					/* make new VacuumRelations for each valid member of the 3 auxiliary tables */
+					if (OidIsValid(aoseg_relid))
+						ao_aux_vacrels = lappend(ao_aux_vacrels, makeVacuumRelation(NULL, aoseg_relid, part_vrel->va_cols));
+					if (OidIsValid(aoblkdir_relid))
+						ao_aux_vacrels = lappend(ao_aux_vacrels, makeVacuumRelation(NULL, aoblkdir_relid, part_vrel->va_cols));
+					if (OidIsValid(aovisimap_relid))
+						ao_aux_vacrels = lappend(ao_aux_vacrels, makeVacuumRelation(NULL, aovisimap_relid, part_vrel->va_cols));
+
+					MemoryContextSwitchTo(oldcontext);
+					table_close(aorel, AccessShareLock);
+				}
+				else
+				{
+					ereport(classForm->relispartition ? LOG : WARNING,
+							(errmsg("skipping \"%s\" for VACUUM AO_AUX_ONLY --- it is not an append-optimized table",
+									NameStr(classForm->relname))),
+							errdetail("it will not have auxiliary tables to vacuum"));
+				}
+				ReleaseSysCache(tuple);
+			}
+			/* return only the AO AUX vacrels, dropping all heap and AO tables from the to-vacuum list */
+			vacrels = ao_aux_vacrels;
+		}
+	}
 	return vacrels;
 }
 
@@ -1030,9 +1096,20 @@ get_all_vacuum_rels(int options)
 		 * to be performed, caller will decide whether to process or ignore
 		 * them.
 		 */
-		if (classForm->relkind != RELKIND_RELATION &&
+		if ((options & VACOPT_AO_AUX_ONLY) == 0 &&
+			classForm->relkind != RELKIND_RELATION &&
 			classForm->relkind != RELKIND_MATVIEW &&
 			classForm->relkind != RELKIND_PARTITIONED_TABLE)
+			continue;
+
+		/*
+		 * If ao_aux_only option is given without a tablename, we only want all
+		 * AO AUX tables
+		 */
+		if ((options & VACOPT_AO_AUX_ONLY) != 0 &&
+			classForm->relkind != RELKIND_AOSEGMENTS &&
+			classForm->relkind != RELKIND_AOBLOCKDIR &&
+			classForm->relkind != RELKIND_AOVISIMAP)
 			continue;
 
 		/* skip mid-level partition tables if we have disabled collecting statistics for them */
@@ -1420,7 +1497,7 @@ vac_update_relstats(Relation relation,
 	 */
 	if (num_pages < 1.0)
 	{
-		/*
+		/* (1) For NOT foreign table
 		 * When running in utility mode in the QD node, we get the number of
 		 * tuples of an AO table from the pg_aoseg table, but we don't know
 		 * the file size, so that's always 0. Ignore the tuple count we got,
@@ -1432,8 +1509,20 @@ vac_update_relstats(Relation relation,
 		 * relpages/reltuples estimates in utility mode, but that's what we
 		 * do for heap tables, too, because we don't have even a tuple count
 		 * for them. At least this is consistent.
+		 *
+		 * (2) For foreign table
+		 * For many foreign tables, num_pages < 1.0 && num_tuples >= 1.0
+		 * might arise and is reasonable.
+		 *
+		 * For example, while ANALYZE kafka_fdw foreign tables, num_pages < 1.0
+		 * && num_tuples >= 1.0 always arises.
+		 * Because num_pages is meaningless for kafka, kafka_fdw won't compute it.
+		 *
+		 * To avoid the crash of GPDB and ensure the quality of query plan,
+		 * we won't reset num_tuples to 0 when num_pages < 1.0 && num_tuples >= 1.0
+		 * for foreign tables.
 		 */
-		if (num_tuples >= 1.0)
+		if (get_rel_relkind(relid) != RELKIND_FOREIGN_TABLE && num_tuples >= 1.0)
 		{
 			Assert(Gp_role == GP_ROLE_UTILITY);
 			Assert(!IsSystemRelation(relation));
@@ -1441,7 +1530,6 @@ vac_update_relstats(Relation relation,
 			num_tuples = 0;
 		}
 
-		Assert(num_tuples < 1.0);
 		num_pages = 1.0;
 	}
 
@@ -1987,22 +2075,26 @@ static bool
 vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 		   bool recursing)
 {
-	LOCKMODE	lmode;
-	Relation	onerel;
-	LockRelId	onerelid;
+	LOCKMODE		lmode;
+	Relation		onerel;
+	LockRelId		onerelid;
 	Oid			toast_relid;
 	Oid			aoseg_relid = InvalidOid;
-	Oid         aoblkdir_relid = InvalidOid;
-	Oid         aovisimap_relid = InvalidOid;
+	Oid			aoblkdir_relid = InvalidOid;
+	Oid			aovisimap_relid = InvalidOid;
 	Oid			save_userid;
-	RangeVar	*this_rangevar = NULL;
+	RangeVar		*this_rangevar = NULL;
 	int			ao_vacuum_phase;
 	int			save_sec_context;
 	int			save_nestlevel;
-	bool		is_appendoptimized;
-	bool		is_toast;
+	bool			is_appendoptimized;
+	bool			is_toast;
 
 	Assert(params != NULL);
+
+#ifdef FAULT_INJECTOR
+	char			onerelname[NAMEDATALEN];
+#endif
 
  	ao_vacuum_phase = (params->options & VACUUM_AO_PHASE_MASK);
 
@@ -2085,6 +2177,11 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 		CommitTransactionCommand();
 		return false;
 	}
+
+#ifdef FAULT_INJECTOR
+	// preserve relation name for us in fault tests
+	StrNCpy(onerelname, NameStr(onerel->rd_rel->relname), NAMEDATALEN);
+#endif
 
 	/*
 	 * Check if relation needs to be skipped based on ownership.  This check
@@ -2200,10 +2297,15 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 
 	if (RelationIsAppendOptimized(onerel))
 	{
-		GetAppendOnlyEntryAuxOids(RelationGetRelid(onerel), NULL,
+		/*
+		 * GPDB: AO tables should never be passed into vacuum_rel if the
+		 * AO_AUX_ONLY option is specified
+		 */
+		Assert(!(params->options & VACOPT_AO_AUX_ONLY));
+		GetAppendOnlyEntryAuxOids(onerel,
 								  &aoseg_relid,
-								  &aoblkdir_relid, NULL,
-								  &aovisimap_relid, NULL);
+								  &aoblkdir_relid,
+								  &aovisimap_relid);
 	}
 
 	/*
@@ -2370,7 +2472,7 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 
 	/* Restore userid and security context */
 	SetUserIdAndSecContext(save_userid, save_sec_context);
-
+	
 	/* all done with this class, but hold lock until commit */
 	if (onerel)
 		relation_close(onerel, NoLock);
@@ -2505,6 +2607,14 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 	 * Now release the session-level lock on the master table.
 	 */
 	UnlockRelationIdForSession(&onerelid, lmode);
+
+#ifdef FAULT_INJECTOR
+	FaultInjector_InjectFaultIfSet(
+		"vacuum_rel_finished_one_relation",
+		DDLNotSpecified,
+		"", /* databaseName */
+		onerelname); /* tableName */
+#endif
 
 	/* Report that we really did it. */
 	return true;
@@ -2704,6 +2814,11 @@ vacuum_params_to_options_list(VacuumParams *params)
 	{
 		options = lappend(options, makeDefElem("full", (Node *) makeInteger(1), -1));
 		optmask &= ~VACOPT_FULL;
+	}
+	if (optmask & VACOPT_AO_AUX_ONLY)
+	{
+		options = lappend(options, makeDefElem("ao_aux_only", (Node *) makeInteger(1), -1));
+		optmask &= ~VACOPT_AO_AUX_ONLY;
 	}
 	if (optmask & VACOPT_SKIP_LOCKED)
 	{

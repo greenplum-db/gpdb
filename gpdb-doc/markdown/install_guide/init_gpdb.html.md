@@ -230,7 +230,7 @@ These steps ensure that the environment variables are set for the `gpadmin` user
     export PGDATABASE=gpadmin
     ```
 
-4.  \(Optional\) If you use RHEL 7 or CentOS 7, add the following line to the end of the `.bashrc` file to enable using the `ps` command in the `greenplum_path.sh` environment:
+4.  \(Optional\) If you use RHEL/Oracle/Rocky Linux, add the following line to the end of the `.bashrc` file to enable using the `ps` command in the `greenplum_path.sh` environment:
 
     ```
     export LD_PRELOAD=/lib64/libz.so.1 ps

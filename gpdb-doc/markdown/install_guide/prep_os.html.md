@@ -33,7 +33,7 @@ The VMware Greenplum on vSphere virtualized environment ensures the enforcement 
 
 ## <a id="topic_sqj_lt1_nfb"></a>Deactivate or Configure SELinux 
 
-For all Greenplum Database host systems running RHEL or CentOS, SELinux must either be `Disabled` or configured to allow unconfined access to Greenplum processes, directories, and the gpadmin user.
+For all Greenplum Database host systems running RHEL/Oracle/Rocky Linux, SELinux must either be `Disabled` or configured to allow unconfined access to Greenplum processes, directories, and the gpadmin user.
 
 If you choose to deactivate SELinux:
 
@@ -62,31 +62,9 @@ If you choose to enable SELinux in `Enforcing` mode, then Greenplum processes an
 
 ## <a id="topic_et2_y22_4nb"></a>Deactivate or Configure Firewall Software 
 
-You should also deactivate firewall software such as `iptables` \(on systems such as RHEL 6.x and CentOS 6.x \), `firewalld` \(on systems such as RHEL 7.x and CentOS 7.x\), or `ufw` \(on Ubuntu systems, deactivated by default\). If firewall software is not deactivated, you must instead configure your software to allow required communication between Greenplum hosts.
+You should also deactivate firewall software such as `firewalld` \(on systems such as RHEL). If firewall software is not deactivated, you must instead configure your software to allow required communication between Greenplum hosts.
 
-To deactivate `iptables`:
-
-1.  As the root user, check the status of `iptables`:
-
-    ```
-    # /sbin/chkconfig --list iptables
-    ```
-
-    If `iptables` is deactivated, the command output is:
-
-    ```
-    iptables 0:off 1:off 2:off 3:off 4:off 5:off 6:off
-    ```
-
-2.  If necessary, run this command as root to deactivate `iptables`:
-
-    ```
-    /sbin/chkconfig iptables off
-    ```
-
-    You will need to reboot your system after applying the change.
-
-3.  For systems with `firewalld`, check the status of `firewalld` with the command:
+1. Check the status of `firewalld` with the command:
 
     ```
     # systemctl status firewalld
@@ -100,15 +78,12 @@ To deactivate `iptables`:
        Active: inactive (dead)
     ```
 
-4.  If necessary, run these commands as root to deactivate `firewalld`:
+2.  If necessary, run these commands as root to deactivate `firewalld`:
 
     ```
     # systemctl stop firewalld.service
     # systemctl deactivate firewalld.service
     ```
-
-
-If you decide to enable `iptables` with Greenplum Database for security purposes, see [Enabling iptables \(Optional\)](enable_iptables.html) for important considerations and example configurations.
 
 See the documentation for the firewall or your operating system for additional information.
 
@@ -300,7 +275,7 @@ Set the following parameters in the `/etc/security/limits.conf` file:
 * hard nproc 131072
 ```
 
-For Red Hat Enterprise Linux \(RHEL\) and CentOS systems, parameter values in the `/etc/security/limits.d/90-nproc.conf` file \(RHEL/CentOS 6\) or `/etc/security/limits.d/20-nproc.conf` file \(RHEL/CentOS 7\) override the values in the `limits.conf` file. Ensure that any parameters in the override file are set to the required value. The Linux module `pam_limits` sets user limits by reading the values from the `limits.conf` file and then from the override file. For information about PAM and user limits, see the documentation on PAM and `pam_limits`.
+For Red Hat Enterprise Linux \(RHEL\) systems, parameter values in the `/etc/security/limits.d/20-nproc.conf` file override the values in the `limits.conf` file. Ensure that any parameters in the override file are set to the required value. The Linux module `pam_limits` sets user limits by reading the values from the `limits.conf` file and then from the override file. For information about PAM and user limits, see the documentation on PAM and `pam_limits`.
 
 Run the `ulimit -u` command on each segment host to display the maximum number of processes that are available to each user. Validate that the return value is 131072.
 
@@ -327,13 +302,7 @@ To apply the changes to the live kernel, run the following command:
 
 ### <a id="xfs_mount"></a>XFS Mount Options 
 
-XFS is the preferred data storage file system on Linux platforms. Use the `mount` command with the following recommended XFS mount options for RHEL 7 and CentOS systems:
-
-```
-rw,nodev,noatime,nobarrier,inode64
-```
-
-The `nobarrier` option is not supported on RHEL 8 or Ubuntu systems. Use only the options:
+XFS is the preferred data storage file system on Linux platforms. Use the `mount` command with the following recommended XFS mount options for RHEL systems:
 
 ```
 rw,nodev,noatime,inode64
@@ -387,7 +356,7 @@ The XFS options can also be set in the `/etc/fstab` file. This example entry fro
     /sbin/blockdev --setra 16384 /dev/sdb
     ```
 
-    On systems that use systemd, you must also set the execute permissions on the `rc.local` file to enable it to run at startup. For example, on a RHEL/CentOS 7 system, this command sets execute permissions on the file.
+    On systems that use systemd, you must also set the execute permissions on the `rc.local` file to enable it to run at startup. For example, on a RHEL system, this command sets execute permissions on the file.
 
     ```
     # chmod +x /etc/rc.d/rc.local
@@ -450,7 +419,7 @@ The XFS options can also be set in the `/etc/fstab` file. This example entry fro
 
     > **Note** Using the `echo` command to set the disk I/O scheduler policy is not persistent; you must ensure that you run the command whenever the system reboots. How to run the command will vary based on your system.
 
-    To specify the I/O scheduler at boot time on systems that use `grub2` such as RHEL 7.x or CentOS 7.x, use the system utility `grubby`. This command adds the parameter when run as `root`:
+    To specify the I/O scheduler at boot time on systems that use `grub2`, use the system utility `grubby`. This command adds the parameter when run as `root`:
 
     ```
     # grubby --update-kernel=ALL --args="elevator=deadline"
@@ -464,9 +433,9 @@ The XFS options can also be set in the `/etc/fstab` file. This example entry fro
     # grubby --info=ALL
     ```
 
-    Refer to your operating system documentation for more information about the `grubby` utility. If you used the `grubby` command to configure the disk scheduler on a RHEL or CentOS 7.x system and it does not update the kernels, see the [Note](#grubby_note) at the end of the section.
+    Refer to your operating system documentation for more information about the `grubby` utility. If you used the `grubby` command to configure the disk scheduler on a RHEL system and it does not update the kernels, see the [Note](#grubby_note) at the end of the section.
 
-    For additional information about configuring the disk scheduler, refer to the RedHat Enterprise Linux documentation for [RHEL 7](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/performance_tuning_guide/sect-red_hat_enterprise_linux-performance_tuning_guide-storage_and_file_systems-configuration_tools#sect-Red_Hat_Enterprise_Linux-Performance_Tuning_Guide-Configuration_tools-Setting_the_default_IO_scheduler) or [RHEL 8](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/monitoring_and_managing_system_status_and_performance/setting-the-disk-scheduler_monitoring-and-managing-system-status-and-performance). The Ubuntu wiki [IOSchedulers](https://wiki.ubuntu.com/Kernel/Reference/IOSchedulers) topic describes the I/O schedulers available on Ubuntu systems.
+    For additional information about configuring the disk scheduler, refer to the RedHat Enterprise Linux documentation for [RHEL 8](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/monitoring_and_managing_system_status_and_performance/setting-the-disk-scheduler_monitoring-and-managing-system-status-and-performance).
 
 
 ### <a id="networking"></a>Networking
@@ -495,7 +464,7 @@ kernel /vmlinuz-2.6.18-274.3.1.el5 ro root=LABEL=/
            initrd /initrd-2.6.18-274.3.1.el5.img
 ```
 
-On systems that use `grub2` such as RHEL 7.x or CentOS 7.x, use the system utility `grubby`. This command adds the parameter when run as root.
+On systems that use `grub2`, use the system utility `grubby`. This command adds the parameter when run as root.
 
 ```
 # grubby --update-kernel=ALL --args="transparent_hugepage=never"
@@ -520,7 +489,7 @@ For more information about Transparent Huge Pages or the `grubby` utility, see y
 
 ### <a id="ipc_object_removal"></a>IPC Object Removal 
 
-Deactivate IPC object removal for RHEL 7.2 or CentOS 7.2, or Ubuntu. The default `systemd` setting `RemoveIPC=yes` removes IPC connections when non-system user accounts log out. This causes the Greenplum Database utility `gpinitsystem` to fail with semaphore errors. Perform one of the following to avoid this issue.
+Deactivate IPC object removal. The default `systemd` setting `RemoveIPC=yes` removes IPC connections when non-system user accounts log out. This causes the Greenplum Database utility `gpinitsystem` to fail with semaphore errors. Perform one of the following to avoid this issue.
 
 -   When you add the `gpadmin` operating system user account to the coordinator node in [Creating the Greenplum Administrative User](#topic23), create the user as a system account.
 -   Deactivate `RemoveIPC`. Set this parameter in `/etc/systemd/logind.conf` on the Greenplum Database host systems.

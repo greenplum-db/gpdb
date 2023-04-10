@@ -2230,7 +2230,7 @@ InvalidateOprProofCacheCallBack(Datum arg, int cacheid, uint32 hashvalue)
  * Process an AND clause -- this can do a INTERSECTION between sets learned from child clauses
  */
 static PossibleValueSet
-ProcessAndClauseForPossibleValues( PredIterInfoData *clauseInfo, Node *clause, Node *variable)
+ProcessAndClauseForPossibleValues( PredIterInfoData *clauseInfo, Node *clause, Node *variable, Oid opfamily)
 {
 	PossibleValueSet result;
 
@@ -2238,7 +2238,7 @@ ProcessAndClauseForPossibleValues( PredIterInfoData *clauseInfo, Node *clause, N
 
 	iterate_begin(child, clause, *clauseInfo)
 	{
-		PossibleValueSet childPossible = DeterminePossibleValueSet( child, variable );
+		PossibleValueSet childPossible = DeterminePossibleValueSet( child, variable, opfamily );
 		if ( childPossible.isAnyValuePossible)
 		{
 			/* any value possible, this AND member does not add any information */
@@ -2269,14 +2269,14 @@ ProcessAndClauseForPossibleValues( PredIterInfoData *clauseInfo, Node *clause, N
  * Process an OR clause -- this can do a UNION between sets learned from child clauses
  */
 static PossibleValueSet
-ProcessOrClauseForPossibleValues( PredIterInfoData *clauseInfo, Node *clause, Node *variable)
+ProcessOrClauseForPossibleValues( PredIterInfoData *clauseInfo, Node *clause, Node *variable, Oid opfamily)
 {
 	PossibleValueSet result;
 	InitPossibleValueSetData(&result);
 
 	iterate_begin(child, clause, *clauseInfo)
 	{
-		PossibleValueSet childPossible = DeterminePossibleValueSet( child, variable );
+		PossibleValueSet childPossible = DeterminePossibleValueSet( child, variable, opfamily);
 		if ( childPossible.isAnyValuePossible)
 		{
 			/* any value is possible for the entire AND */
@@ -2318,7 +2318,7 @@ ProcessOrClauseForPossibleValues( PredIterInfoData *clauseInfo, Node *clause, No
  *    possible values is within the cross-product of the two variables' sets
  */
 PossibleValueSet
-DeterminePossibleValueSet(Node *clause, Node *variable)
+DeterminePossibleValueSet(Node *clause, Node *variable, Oid opfamily)
 {
 	PredIterInfoData clauseInfo;
 	PossibleValueSet result;
@@ -2332,11 +2332,11 @@ DeterminePossibleValueSet(Node *clause, Node *variable)
 	switch (predicate_classify(clause, &clauseInfo))
 	{
 		case CLASS_AND:
-			return ProcessAndClauseForPossibleValues(&clauseInfo, clause, variable);
+			return ProcessAndClauseForPossibleValues(&clauseInfo, clause, variable, opfamily);
 		case CLASS_OR:
-			return ProcessOrClauseForPossibleValues(&clauseInfo, clause, variable);
+			return ProcessOrClauseForPossibleValues(&clauseInfo, clause, variable, opfamily);
 		case CLASS_ATOM:
-			if (TryProcessExprForPossibleValues(clause, variable, &result))
+			if (TryProcessExprForPossibleValues(clause, variable, opfamily, &result))
 			{
 				return result;
 			}

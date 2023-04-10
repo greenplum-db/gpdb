@@ -30,10 +30,14 @@ test: copy_eol
 # might not happen if other backends are holding transactions open, preventing
 # vacuum from removing dead tuples. And run gp_toolkit early to make some log
 # file related tests (like gp_log_system, etc) faster.
+# Also, gp_log_system could have issue reading partial log that's generated
+# from concurrent test. So anything that uses it needs to be run alone.
 test: disable_autovacuum
 test: gp_toolkit
 # test gp_fastsequence allocation (early in schedule as log grepping is expensive)
-test: uao_dml/gp_fastsequence_row uao_dml/gp_fastsequence_column
+test: uao_dml/gp_fastsequence_row
+test: uao_dml/gp_fastsequence_column
+
 test: python_processed64bit
 test: enable_autovacuum
 
@@ -44,10 +48,11 @@ test: instr_in_shmem_setup
 test: instr_in_shmem
 
 test: createdb
-test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp triggers_gp returning_gp resource_queue_with_rule gp_types gp_index cluster_gp combocid_gp gp_sort gp_prepared_xacts gp_backend_info
+test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp triggers_gp returning_gp gp_types gp_index cluster_gp combocid_gp gp_sort gp_prepared_xacts gp_backend_info
 test: spi_processed64bit
 test: gp_lock
 test: gp_tablespace_with_faults
+test: gp_check_files
 # below test(s) inject faults so each of them need to be in a separate group
 test: gp_tablespace
 
@@ -78,7 +83,7 @@ test: gp_connections
 # bitmap_index triggers recovery, run it seperately
 test: bitmap_index
 test: gp_dump_query_oids analyze gp_owner_permission incremental_analyze truncate_gp
-test: indexjoin as_alias regex_gp gpparams with_clause transient_types gp_rules dispatch_encoding motion_gp
+test: indexjoin as_alias regex_gp gpparams with_clause transient_types gp_rules dispatch_encoding motion_gp gp_pullup_expr
 
 # interconnect tests
 test: icudp/gp_interconnect_queue_depth icudp/gp_interconnect_queue_depth_longtime icudp/gp_interconnect_snd_queue_depth icudp/gp_interconnect_snd_queue_depth_longtime icudp/gp_interconnect_min_retries_before_timeout icudp/gp_interconnect_transmit_timeout icudp/gp_interconnect_cache_future_packets icudp/gp_interconnect_default_rtt icudp/gp_interconnect_fc_method icudp/gp_interconnect_min_rto icudp/gp_interconnect_timer_checking_period icudp/gp_interconnect_timer_period icudp/queue_depth_combination_loss icudp/queue_depth_combination_capacity
@@ -145,8 +150,6 @@ test: alter_table_set alter_table_gp alter_table_ao alter_table_set_am subtransa
 test: aocs
 test: ic
 
-test: resource_queue
-test: resource_queue_function
 test: disable_autovacuum
 # Check for shmem leak for instrumentation slots before gpdb restart
 test: instr_in_shmem_verify
@@ -154,7 +157,6 @@ test: instr_in_shmem_verify
 # hold locks.
 test: partition_locking
 test: vacuum_gp
-test: resource_queue_stat
 # background analyze may affect pgstat
 test: pg_stat
 test: bfv_partition qp_misc_rio
@@ -165,22 +167,19 @@ test: enable_autovacuum
 test: resource_group
 test: resource_group_cpuset
 test: resource_group_gucs
-test: wrkloadadmin
 
 # expand_table tests may affect the result of 'gp_explain', keep them below that
-test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation pg_stat_last_shoperation gp_numeric_agg partindex_test partition_pruning runtime_stats expand_table expand_table_ao expand_table_aoco expand_table_regression
+test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation pg_stat_last_shoperation gp_numeric_agg partindex_test partition_pruning runtime_stats expand_table expand_table_ao expand_table_aoco expand_table_regression sysviews_gp
 
 # direct dispatch tests
 test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types
 
-test: bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition_plans DML_over_joins bfv_statistic nested_case_null sort bb_mpph aggregate_with_groupingsets gporca gpsd catcache
+test: bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition_plans DML_over_joins bfv_statistic nested_case_null sort bb_mpph aggregate_with_groupingsets gporca gpsd catcache part_external_table
 # Run minirepro separately to avoid concurrent deletes erroring out the internal pg_dump call
 test: minirepro
 
 # NOTE: gporca_faults uses gp_fault_injector - so do not add to a parallel group
 test: gporca_faults
-
-test: bb_memory_quota
 
 # Tests for replicated table
 test: rpt rpt_joins rpt_tpch rpt_returning
@@ -190,15 +189,14 @@ test: rpt rpt_joins rpt_tpch rpt_returning
 # temp tables
 test: bfv_cte bfv_joins bfv_subquery bfv_planner bfv_legacy bfv_temp bfv_dml
 
-test: qp_olap_mdqa qp_misc gp_recursive_cte qp_dml_joins qp_skew
+test: qp_olap_mdqa qp_misc gp_recursive_cte qp_dml_joins qp_skew qp_select partition_prune_opfamily
 
 test: qp_misc_jiras qp_with_clause qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan qp_dropped_cols
 test: qp_with_functional_inlining qp_with_functional_noinlining
 test: qp_functions_in_contexts_setup
-# test: qp_misc_rio_join_small qp_misc_rio qp_correlated_query qp_targeted_dispatch qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4 qp_query_execution qp_functions_in_from qp_functions_in_select qp_functions_in_subquery qp_functions_in_subquery_column qp_functions_in_subquery_constant qp_functions_in_with
-test: qp_misc_rio_join_small qp_correlated_query qp_targeted_dispatch qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4 qp_query_execution qp_functions_in_from qp_functions_in_select qp_functions_in_subquery qp_functions_in_subquery_column qp_functions_in_with correlated_subquery
+test: qp_misc_rio_join_small qp_correlated_query qp_targeted_dispatch qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4 qp_query_execution qp_functions_in_from qp_functions_in_select qp_functions_in_subquery qp_functions_in_subquery_column qp_functions_in_subquery_constant qp_functions_in_with correlated_subquery
 
-test: dpe qp_dpe qp_subquery qp_left_anti_semi_join qp_union_intersect qp_functions qp_functions_idf qp_regexp qp_resource_queue qp_orca_fallback gp_sync_lc_gucs
+test: dpe qp_dpe qp_subquery qp_left_anti_semi_join qp_union_intersect qp_functions qp_functions_idf qp_regexp qp_orca_fallback gp_sync_lc_gucs
 
 test: olap_setup
 test: qp_olap_group qp_olap_group2
@@ -268,6 +266,7 @@ test: vacuum_full_ao
 test: vacuum_full_freeze_heap
 test: vacuum_full_heap
 test: vacuum_full_heap_bitmapindex
+test: vacuum_ao_aux_only
 # Check for shmem leak for instrumentation slots
 test: instr_in_shmem_verify
 # check autostats
@@ -296,6 +295,8 @@ test: mirror_replay
 test: autovacuum
 test: autovacuum-segment
 test: autovacuum-template0-segment
+test: autovacuum-catalog
+test: autovacuum-ao-aux
 
 # gpexpand introduce the partial tables, check them if they can run correctly
 test: gangsize gang_reuse
@@ -308,6 +309,9 @@ test: create_extension_fail
 
 # test if motion sockets are created with the gp_segment_configuration.address
 test: motion_socket
+
+# test invalid connection to ic proxy when gp_interconnect_type='proxy'
+test: ic_proxy_socket
 
 # subtransaction overflow test
 test: subtrx_overflow
@@ -322,5 +326,18 @@ test: uao_dml/ao_unique_index_build_row uao_dml/ao_unique_index_build_column
 
 # test column projection for various operations
 test: aoco_projection
+# test resource queue, can not put other test in resource queue.
+test: resource_manager_switch_to_queue
+test: resource_queue
+test: resource_queue_stat
+test: resource_queue_with_rule
+test: bb_memory_quota
+test: qp_resource_queue
+test: resource_queue_function
+test: gp_toolkit_resqueue
+test: resource_manager_restore_to_none
+
+# test dispatch and result handling of gp_log_memory_backend_contexts
+test: gp_log_mem_dispatch
 
 # end of tests

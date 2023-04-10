@@ -151,6 +151,34 @@ typedef void (*IndexBuildCallback) (Relation index,
 									void *state);
 
 /*
+ * GPDB: Tables in GPDB can be thought of a set of BlockSequences, each of which
+ * is a monotonically increasing sequence of tids. The tids may or may not be
+ * contiguous. For eg. in AO/CO tables, row number allocations are batched for
+ * each insert(-like) command and the row numbers may have holes.
+ *
+ * Furthermore, each sequence of tids is represented in terms of BlockNumbers,
+ * for brevity. The BlockNumbers inside a BlockSequence are contiguous.
+ * BlockSequences do not overlap with each other and need not be contiguous
+ * between themselves.
+ *
+ * This generalization helps to unify code for heap vs AO/CO tables (eg. BRIN).
+ *
+ * Heap tables can be thought of as having only one BlockSequence having range:
+ * [0,num_blocks]. AO/CO tables will have one such sequence for every segno:
+ * [0,blocks_seg0], [33554432,33554432+blocks_seg1], [67108864,67108864+blocks_seg2], ...
+ * where blocks_segi is the number of heap blocks represented in that segment.
+ *
+ * To be clear, this does NOT mean that there must be (blocks_segi * BLCKSZ)
+ * number of bytes in that segment. Please refer to how AOTupleIds can be
+ * treated as ItemPointers.
+ */
+typedef struct BlockSequence
+{
+	BlockNumber startblknum; /* starting block number in sequence */
+	BlockNumber nblocks; /* number of heap blocks represented in sequence */
+} BlockSequence;
+
+/*
  * API struct for a table AM.  Note this must be allocated in a
  * server-lifetime manner, typically as a static const struct, which then gets
  * returned by FormData_pg_am.amhandler.
@@ -215,6 +243,7 @@ typedef struct TableAmRoutine
 												  List *targetlist,
 												  List *qual,
 												  bool *proj,
+												  List *constraintList,
 												  uint32 flags);
 
 	/*
@@ -326,12 +355,17 @@ typedef struct TableAmRoutine
 									  Snapshot snapshot,
 									  TupleTableSlot *slot,
 									  bool *call_again, bool *all_dead);
+	
+	/* See table_index_tuple_visible() for details */
+	bool		(*index_fetch_tuple_visible) (struct IndexFetchTableData *scan,
+											  ItemPointer tid,
+											  Snapshot snapshot);
 
-	/* See table_index_fetch_tuple_exists() for details */
-	bool		(*index_fetch_tuple_exists) (Relation rel,
-											 ItemPointer tid,
-											 Snapshot snapshot,
-											 bool *all_dead);
+	/* See table_index_unique_check() for details */
+	bool		(*index_unique_check) (Relation rel,
+									   ItemPointer tid,
+									   Snapshot snapshot,
+									   bool *all_dead);
 
 	/* ------------------------------------------------------------------------
 	 * Callbacks for non-modifying operations on individual tuples
@@ -609,6 +643,18 @@ typedef struct TableAmRoutine
 	 */
 	uint64		(*relation_size) (Relation rel, ForkNumber forkNumber);
 
+	/*
+	 * See table_relation_get_block_sequences()
+	 */
+	BlockSequence		*(*relation_get_block_sequences) (Relation rel,
+														  int *numSequences);
+
+	/*
+	 * See table_relation_get_block_sequence()
+	 */
+	void		(*relation_get_block_sequence) (Relation rel,
+												BlockNumber blkNum,
+												BlockSequence *sequence);
 
 	/*
 	 * This callback should return true if the relation requires a TOAST table
@@ -787,14 +833,14 @@ table_beginscan(Relation rel, Snapshot snapshot,
  */
 static inline TableScanDesc
 table_beginscan_es(Relation rel, Snapshot snapshot,
-				   List *targetList, List *qual, bool *proj)
+				   List *targetList, List *qual, bool *proj, List *constraintList)
 {
 	uint32		flags = SO_TYPE_SEQSCAN |
 	SO_ALLOW_STRAT | SO_ALLOW_SYNC | SO_ALLOW_PAGEMODE;
 
 	if (rel->rd_tableam->scan_begin_extractcolumns)
 		return rel->rd_tableam->scan_begin_extractcolumns(rel, snapshot,
-														  targetList, qual, proj,
+														  targetList, qual, proj, constraintList,
 														  flags);
 
 	return rel->rd_tableam->scan_begin(rel, snapshot,
@@ -1097,6 +1143,18 @@ extern bool table_index_fetch_tuple_check(Relation rel,
 										  bool *all_dead);
 
 /*
+ * GPDB: Check if a tuple visible for a given tid obtained from an index.
+ * This is used to entertain index-only scan on AO/CO tables.
+ */
+static inline bool
+table_index_fetch_tuple_visible(struct IndexFetchTableData *scan,
+								ItemPointer tid,
+								Snapshot snapshot)
+{
+	return scan->rel->rd_tableam->index_fetch_tuple_visible(scan, tid, snapshot);
+}
+
+/*
  * GPDB: Check if a tuple exists for a given tid obtained from an index.
  * This is used to entertain unique index checks on AO/CO tables. For heap
  * tables, the regular method of beginindexscan..fetchtuple..endindexscan
@@ -1106,13 +1164,12 @@ extern bool table_index_fetch_tuple_check(Relation rel,
  * This has to have an identical signature to table_index_fetch_tuple_check().
  */
 static inline bool
-table_index_fetch_tuple_exists(Relation rel,
-							   ItemPointer tid,
-							   Snapshot snapshot,
-							   bool *all_dead)
+table_index_unique_check(Relation rel,
+						 ItemPointer tid,
+						 Snapshot snapshot,
+						 bool *all_dead)
 {
-	return rel->rd_tableam->index_fetch_tuple_exists(rel, tid, snapshot,
-														   all_dead);
+	return rel->rd_tableam->index_unique_check(rel, tid, snapshot, all_dead);
 }
 
 /* ------------------------------------------------------------------------
@@ -1736,6 +1793,28 @@ static inline uint64
 table_relation_size(Relation rel, ForkNumber forkNumber)
 {
 	return rel->rd_tableam->relation_size(rel, forkNumber);
+}
+
+/*
+ * GPDB: Returns the block sequences contained in this relation. See
+ * BlockSequence for details. Currently used by BRIN.
+ */
+static inline BlockSequence *
+table_relation_get_block_sequences(Relation rel, int *numSequences)
+{
+	return rel->rd_tableam->relation_get_block_sequences(rel, numSequences);
+}
+
+/*
+ * GPDB: Determines the block sequence in which the supplied block number falls.
+ * See BlockSequence for details. Currently used by BRIN.
+ */
+static inline void
+table_relation_get_block_sequence(Relation rel,
+								  BlockNumber blkNumber,
+								  BlockSequence *sequence)
+{
+	rel->rd_tableam->relation_get_block_sequence(rel, blkNumber, sequence);
 }
 
 /*

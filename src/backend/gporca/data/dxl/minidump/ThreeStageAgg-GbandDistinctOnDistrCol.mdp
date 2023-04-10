@@ -263,7 +263,7 @@
     <dxl:Plan Id="0" SpaceSize="11">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="507.148781" Rows="2.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="506.587091" Rows="2.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="10" Alias="sum">
@@ -274,7 +274,7 @@
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="507.148709" Rows="2.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="506.587019" Rows="2.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="10" Alias="sum">
@@ -285,7 +285,7 @@
           <dxl:OneTimeFilter/>
           <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="507.148709" Rows="2.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="506.587019" Rows="2.000000" Width="8"/>
             </dxl:Properties>
             <dxl:GroupingColumns>
               <dxl:GroupingColumn ColId="0"/>
@@ -308,7 +308,7 @@
             <dxl:Filter/>
             <dxl:Sort SortDiscardDuplicates="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="507.148701" Rows="2.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="506.587011" Rows="2.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">
@@ -321,9 +321,9 @@
               </dxl:SortingColumnList>
               <dxl:LimitCount/>
               <dxl:LimitOffset/>
-              <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
+              <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="507.148701" Rows="2.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="506.587011" Rows="2.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:GroupingColumns>
                   <dxl:GroupingColumn ColId="0"/>

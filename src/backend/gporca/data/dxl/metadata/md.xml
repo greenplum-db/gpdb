@@ -262,7 +262,7 @@
     <dxl:GPDBFunc Mdid="0.1781.1.0" Name="numeric" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
       <dxl:ResultType Mdid="0.1700.1.0"/>
     </dxl:GPDBFunc>
-    <dxl:Relation Mdid="6.35085.1.1" Name="m" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.35085.1.1" Name="m" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -449,7 +449,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.1607264.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.1607264.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="x" Attno="1" Mdid="0.25.1.0" Nullable="true">
           <dxl:DefaultValue/>
@@ -650,7 +650,7 @@
     </dxl:Relation>
     <!-- Query to DXL and back 64-bit tests END -->
     <!-- PlStmt to DXL and back 64-bit tests START -->
-    <dxl:Relation Mdid="6.17140.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.17140.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -797,7 +797,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.17281.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.17281.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="x" Attno="1" Mdid="0.25.1.0" Nullable="true">
           <dxl:DefaultValue/>
@@ -809,7 +809,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.17230.1.1" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.17230.1.1" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="x" Attno="1" Mdid="0.25.1.0" Nullable="true">
           <dxl:DefaultValue/>
@@ -1416,7 +1416,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.18452.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.18452.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -1428,7 +1428,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.17091.1.1" Name="s" IsTemporary="true" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.17091.1.1" Name="s" IsTemporary="true" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -1440,7 +1440,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.17136.1.1" Name="t" IsTemporary="true" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.17136.1.1" Name="t" IsTemporary="true" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="e" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -1452,7 +1452,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.1139398.1.1" Name="d" IsTemporary="true" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.1139398.1.1" Name="d" IsTemporary="true" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -1689,7 +1689,7 @@
       <dxl:Commutator Mdid="0.91.1.0"/>
       <dxl:InverseOp Mdid="0.85.1.0"/>
     </dxl:GPDBScalarOp>
-    <dxl:Relation Mdid="6.48716.1.0" Name="m" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.48716.1.0" Name="m" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -1779,7 +1779,7 @@
       <dxl:Commutator Mdid="0.1095.1.0"/>
       <dxl:InverseOp Mdid="0.1096.1.0"/>
     </dxl:GPDBScalarOp>
-    <dxl:Relation Mdid="6.18983.1.0" Name="lineitem" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.18983.1.0" Name="lineitem" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="l_orderkey" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           <dxl:DefaultValue/>
@@ -2265,7 +2265,7 @@
     <dxl:GPDBFunc Mdid="0.1740.1.0" Name="numeric" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
       <dxl:ResultType Mdid="0.1700.1.0"/>
     </dxl:GPDBFunc>
-    <dxl:Relation Mdid="6.57808.1.0" Name="m" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.57808.1.0" Name="m" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -2281,7 +2281,7 @@
       <dxl:ResultType Mdid="0.20.1.0"/>
       <dxl:IntermediateResultType Mdid="0.20.1.0"/>
     </dxl:GPDBAgg>
-    <dxl:Relation Mdid="6.58045.1.0" Name="basetable" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="0;0,1">
+    <dxl:Relation Mdid="6.58045.1.0" Name="basetable" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="0;0,1">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -2782,7 +2782,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.1846705.1.1" Name="rm" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.1846705.1.1" Name="rm" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="r1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -2818,7 +2818,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.1846728.1.1" Name="sm" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.1846728.1.1" Name="sm" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="s1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -2854,7 +2854,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.1846751.1.1" Name="tm" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.1846751.1.1" Name="tm" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="t1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>

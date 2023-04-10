@@ -26,7 +26,7 @@ explain SELECT * FROM s i1, t t2 where t2.c2 = i1.c2;
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:TraceFlags Value="102001,102002,102003,102027,102029,102144,103001,103014,103015,103027,103033"/>
+      <dxl:TraceFlags Value="102001,102002,102003,103046,103045,102144,103001,103014,103015,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.29842177.1.1" Name="s" Rows="0.000000" EmptyRelation="true"/>

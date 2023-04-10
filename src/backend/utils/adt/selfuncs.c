@@ -6068,7 +6068,7 @@ genericcostestimate(PlannerInfo *root,
 	}
 
 	/* Estimate the fraction of main-table tuples that will be visited */
-	indexSelectivity = clauselist_selectivity(root, selectivityQuals,
+	indexSelectivity = clauselist_selectivity_extended(root, selectivityQuals,
 											  index->rel->relid,
 											  JOIN_INNER,
 											  NULL,
@@ -6403,7 +6403,7 @@ btcostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 		 */
 		selectivityQuals = add_predicate_to_index_quals(index, indexBoundQuals);
 
-		btreeSelectivity = clauselist_selectivity(root, selectivityQuals,
+		btreeSelectivity = clauselist_selectivity_extended(root, selectivityQuals,
 												  index->rel->relid,
 												  JOIN_INNER,
 												  NULL,
@@ -7124,7 +7124,7 @@ gincostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 	selectivityQuals = add_predicate_to_index_quals(index, indexQuals);
 
 	/* Estimate the fraction of main-table tuples that will be visited */
-	*indexSelectivity = clauselist_selectivity(root, selectivityQuals,
+	*indexSelectivity = clauselist_selectivity_extended(root, selectivityQuals,
 											   index->rel->relid,
 											   JOIN_INNER,
 											   NULL,
@@ -7547,7 +7547,7 @@ brincostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 		ReleaseVariableStats(vardata);
 	}
 
-	qualSelectivity = clauselist_selectivity(root, indexQuals,
+	qualSelectivity = clauselist_selectivity_extended(root, indexQuals,
 											 baserel->relid,
 											 JOIN_INNER, NULL,
 											 false /* use_damping */);

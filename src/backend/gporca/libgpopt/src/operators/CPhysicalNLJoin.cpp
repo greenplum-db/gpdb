@@ -109,9 +109,11 @@ CPhysicalNLJoin::PrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	{
 		if (FFirstChildToOptimize(child_index))
 		{
-			// for index nested loop joins, inner child is optimized first
+			// for index nested loop joins, inner child is optimized first.
+			// we should not force materialize inner child, as we use index
+			// on inner relation and reference variables from outer relation.
 			return GPOS_NEW(mp) CRewindabilitySpec(
-				CRewindabilitySpec::ErtRewindable, prsRequired->Emht(), true);
+				CRewindabilitySpec::ErtRewindable, prsRequired->Emht(), false);
 		}
 
 		CRewindabilitySpec *prsOuter =

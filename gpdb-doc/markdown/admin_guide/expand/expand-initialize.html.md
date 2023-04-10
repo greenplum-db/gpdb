@@ -6,6 +6,8 @@ Use the `gpexpand` utility to create and initialize the new segment instances an
 
 The first time you run [gpexpand](../../utility_guide/ref/gpexpand.html) with a valid input file it creates and initializes segment instances and creates the expansion schema. After these steps are completed, running `gpexpand` detects if the expansion schema has been created and, if so, performs table redistribution.
 
+> **Note** To prevent catalog inconsistency across existing and new segments, be sure that no DDL operations are running during the initialization phase.
+
 -   [Creating an Input File for System Expansion](#topic23)
 -   [Running gpexpand to Initialize New Segments](#topic26)
 -   [Rolling Back a Failed Expansion Setup](#topic27)

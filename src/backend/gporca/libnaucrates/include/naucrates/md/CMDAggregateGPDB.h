@@ -63,6 +63,9 @@ class CMDAggregateGPDB : public IMDAggregate
 	// is aggregate hash capable
 	BOOL m_hash_agg_capable;
 
+	// is aggregate replication slice safe for execution
+	BOOL m_is_repsafe;
+
 public:
 	CMDAggregateGPDB(const CMDAggregateGPDB &) = delete;
 
@@ -70,7 +73,8 @@ public:
 	CMDAggregateGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 					 IMDId *result_type_mdid,
 					 IMDId *intermediate_result_type_mdid, BOOL is_ordered_agg,
-					 BOOL is_splittable, BOOL is_hash_agg_capable);
+					 BOOL is_splittable, BOOL is_hash_agg_capable,
+					 bool is_repsafe);
 
 	//dtor
 	~CMDAggregateGPDB() override;
@@ -116,6 +120,13 @@ public:
 	IsHashAggCapable() const override
 	{
 		return m_hash_agg_capable;
+	}
+
+	// is aggregate replicate slice execution safe
+	BOOL
+	IsAggRepSafe() const override
+	{
+		return m_is_repsafe;
 	}
 
 #ifdef GPOS_DEBUG

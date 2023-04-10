@@ -156,6 +156,7 @@ extern char func_data_access(Oid funcid);
 extern char func_exec_location(Oid funcid);
 extern Oid get_agg_transtype(Oid aggid);
 extern bool is_agg_ordered(Oid aggid);
+extern bool is_agg_repsafe(Oid aggid);
 extern bool is_agg_partial_capable(Oid aggid);
 extern RegProcedure get_func_support(Oid funcid);
 extern Oid	get_relname_relid(const char *relname, Oid relnamespace);
@@ -222,18 +223,10 @@ extern bool	get_index_isreplident(Oid index_oid);
 extern bool get_index_isvalid(Oid index_oid);
 extern bool get_index_isclustered(Oid index_oid);
 
-extern bool relation_is_partitioned(Oid oid);
-extern bool index_is_partitioned(Oid oid);
-extern List *relation_get_leaf_partitions(Oid oid);
-extern bool relation_exists(Oid oid);
-extern bool index_exists(Oid oid);
-extern bool type_exists(Oid oid);
 extern bool function_exists(Oid oid);
-extern bool operator_exists(Oid oid);
 extern bool aggregate_exists(Oid oid);
 extern Oid get_aggregate(const char *aggname, Oid oidType);
 extern List *get_relation_keys(Oid relid);
-extern bool trigger_exists(Oid oid);
 
 extern bool check_constraint_exists(Oid oidCheckconstraint);
 extern List *get_check_constraint_oids(Oid relid);
@@ -253,6 +246,7 @@ extern CmpType get_comparison_type(Oid oidOp);
 
 extern List *get_operator_opfamilies(Oid opno);
 extern List *get_index_opfamilies(Oid oidIndex);
+extern Oid default_partition_opfamily_for_type(Oid typeoid);
 
 #define type_is_array(typid)  (get_element_type(typid) != InvalidOid)
 /* type_is_array_domain accepts both plain arrays and domains over arrays */

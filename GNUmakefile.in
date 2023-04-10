@@ -27,6 +27,7 @@ all:
 	$(MAKE) -C contrib/pgcrypto all
 	$(MAKE) -C contrib/btree_gin all
 	$(MAKE) -C contrib/pg_trgm all
+	$(MAKE) -C contrib/isn all
 ifeq ($(with_openssl), yes)
 	$(MAKE) -C contrib/sslinfo all
 endif
@@ -72,6 +73,7 @@ install:
 	$(MAKE) -C contrib/pgcrypto $@
 	$(MAKE) -C contrib/btree_gin $@
 	$(MAKE) -C contrib/pg_trgm $@
+	$(MAKE) -C contrib/isn $@
 ifeq ($(with_openssl), yes)
 	$(MAKE) -C contrib/sslinfo $@
 endif
@@ -130,6 +132,9 @@ distclean maintainer-clean:
 installcheck-resgroup:
 	$(MAKE) -C src/test/isolation2 $@
 
+installcheck-resgroup-v2:
+	$(MAKE) -C src/test/isolation2 $@
+
 # Create or destroy a demo cluster.
 create-demo-cluster:
 	$(MAKE) -C gpAux/gpdemo create-demo-cluster
@@ -171,7 +176,7 @@ ICW_TARGETS  = src/test src/pl src/interfaces/gppc
 ICW_TARGETS += contrib/auto_explain contrib/citext contrib/btree_gin
 ICW_TARGETS += contrib/file_fdw contrib/postgres_fdw contrib/formatter_fixedwidth
 ICW_TARGETS += contrib/extprotocol contrib/dblink contrib/pg_trgm
-ICW_TARGETS += contrib/indexscan contrib/hstore contrib/ltree contrib/pgcrypto
+ICW_TARGETS += contrib/indexscan contrib/hstore contrib/ltree contrib/pgcrypto contrib/isn
 # sslinfo depends on openssl
 ifeq ($(with_openssl), yes)
 ICW_TARGETS += contrib/sslinfo

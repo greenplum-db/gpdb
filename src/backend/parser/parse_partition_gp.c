@@ -1530,9 +1530,12 @@ transformGpPartDefElemWithRangeSpec(ParseState *pstate, Relation parentrel, GpPa
 		param->paramcollid = part_col_collation;
 		param->location = -1;
 
-		/* Look up + operator */
+		/*
+		 * Look up the '+' operator in the current searching path (controlled by search_path parameter).
+		 * Just like what we do for the 'BETWEEN ... AND ...' clause.
+		 */
 		plusexpr = (Node *) make_op(pstate,
-									list_make2(makeString("pg_catalog"), makeString("+")),
+									list_make1(makeString("+")),
 									(Node *) param,
 									(Node *) transformExpr(pstate, every, EXPR_KIND_PARTITION_BOUND),
 									pstate->p_last_srf,
@@ -1597,7 +1600,7 @@ transformGpPartitionDefinition(Oid parentrelid, const char *queryString,
 	ParseState				*pstate;
 	List					*partDefElems = NIL;
 	List					*encClauses = NIL;
-	GpPartDefElem			*defaultPartDefElem = NULL;
+	bool					defaultPartDefElemFound = false;
 	PartitionKey 			partkey;
 
 	result = makeNode(GpPartitionDefinition);
@@ -1659,23 +1662,34 @@ transformGpPartitionDefinition(Oid parentrelid, const char *queryString,
 
 			if (elem->isDefault)
 			{
-				if (defaultPartDefElem)
+				if (defaultPartDefElemFound)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 							 errmsg("multiple default partitions are not allowed"),
 							 parser_errposition(pstate, elem->location)));
-				defaultPartDefElem = elem;
+				defaultPartDefElemFound = true;
 				partDefElems = lcons(elem, partDefElems);
 			}
 			else
+			{
+				switch (partkey->strategy)
+				{
+					case PARTITION_STRATEGY_RANGE:
+						transformGpPartDefElemWithRangeSpec(pstate, parentrel, elem);
+						break;
+					case PARTITION_STRATEGY_LIST:
+						transformGpPartDefElemWithListSpec(pstate, parentrel, elem);
+						break;
+					default:
+						ereport(ERROR,
+								(errcode(ERRCODE_SYNTAX_ERROR),
+								 errmsg("Not supported partition strategy")));
+				}
 				partDefElems = lappend(partDefElems, elem);
+			}
 		}
 		else
 		{
-			/*
-			 * GPDB_12_MERGE_FIXME: can we optimize grammar to create separate lists
-			 * for elems and encoding in encClauses.
-			 */
 			Assert(IsA(newnode, ColumnReferenceStorageDirective));
 			encClauses = lappend(encClauses, newnode);
 		}
@@ -1683,29 +1697,6 @@ transformGpPartitionDefinition(Oid parentrelid, const char *queryString,
 
 	result->partDefElems = partDefElems;
 	result->encClauses = encClauses;
-
-	foreach(lc, partDefElems)
-	{
-		Node			*n = lfirst(lc);
-		GpPartDefElem	*elem = (GpPartDefElem *) n;
-
-		if (!elem->isDefault)
-		{
-			switch (partkey->strategy)
-			{
-				case PARTITION_STRATEGY_RANGE:
-					transformGpPartDefElemWithRangeSpec(pstate, parentrel, elem);
-					break;
-				case PARTITION_STRATEGY_LIST:
-					transformGpPartDefElemWithListSpec(pstate, parentrel, elem);
-					break;
-				default:
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-								errmsg("Not supported partition strategy")));
-			}
-		}
-	}
 
 	free_parsestate(pstate);
 	table_close(parentrel, NoLock);
@@ -1759,7 +1750,7 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 
 	foreach(lc, gpPartSpec->encClauses)
 	{
-		Node	   *n = lfirst(lc);
+		Node	   *n PG_USED_FOR_ASSERTS_ONLY = lfirst(lc);
 
 		Assert(IsA(n, ColumnReferenceStorageDirective));
 		penc_cls = lappend(penc_cls, lfirst(lc));

@@ -189,8 +189,7 @@ initialize_reloptions_gp(void)
 /*
  * This is set whenever the GUC gp_default_storage_options is set.
  */
-static StdRdOptions ao_storage_opts;
-static bool ao_storage_opts_changed = false;
+static StdRdOptions *ao_storage_opts = NULL;
 
 /*
  * Accumulate a new datum for one AO storage option.
@@ -290,14 +289,14 @@ resetAOStorageOpts(StdRdOptions *ao_opts)
 void
 resetDefaultAOStorageOpts(void)
 {
-	resetAOStorageOpts(&ao_storage_opts);
-	ao_storage_opts_changed = false;
+	if (ao_storage_opts)
+		resetAOStorageOpts(ao_storage_opts);
 }
 
 const StdRdOptions *
 currentAOStorageOptions(void)
 {
-	return (const StdRdOptions *) &ao_storage_opts;
+	return (const StdRdOptions *) ao_storage_opts;
 }
 
 /*
@@ -308,14 +307,21 @@ setDefaultAOStorageOpts(StdRdOptions *copy)
 {
 	Assert(copy);
 
-	memcpy(&ao_storage_opts, copy, sizeof(ao_storage_opts));
+	/* If not allocated yet, do it now */
+	if (!ao_storage_opts)
+		ao_storage_opts = calloc(sizeof(*ao_storage_opts), 1);
+	if (!ao_storage_opts)
+		ereport(ERROR,
+			(errcode(ERRCODE_OUT_OF_MEMORY),
+				 errmsg("out of memory")));
+
+	memcpy(ao_storage_opts, copy, sizeof(*ao_storage_opts));
+
 	if (pg_strcasecmp(copy->compresstype, "none") == 0)
 	{
 		/* Represent compresstype=none as an empty string (MPP-25073). */
-		ao_storage_opts.compresstype[0] = '\0';
+		ao_storage_opts->compresstype[0] = '\0';
 	}
-
-	ao_storage_opts_changed = true;
 }
 
 static int	setDefaultCompressionLevel(char *compresstype);
@@ -323,7 +329,7 @@ static int	setDefaultCompressionLevel(char *compresstype);
 /*
  * Accept a string of the form "name=value,name=value,...".  Space
  * around ',' and '=' is allowed.  Parsed values are stored in
- * corresponding fields of StdRdOptions object.  The parser is a
+ * a text array and returned to caller.  The parser is a
  * finite state machine that changes states for each input character
  * scanned.
  */
@@ -831,6 +837,26 @@ validate_and_adjust_options(StdRdOptions *result,
 	relopt_value *complevel_opt;
 	relopt_value *checksum_opt;
 
+	/* 
+	 * Firstly, for AO/CO tables, if anything is not set in the options but has 
+	 * been specified by gp_default_storage_options before, use them. 
+	 */
+	if (ao_storage_opts &&
+		KIND_IS_APPENDOPTIMIZED(kind))
+	{
+		if (!(get_option_set(options, num_options, SOPT_BLOCKSIZE)))
+			result->blocksize = ao_storage_opts->blocksize;
+
+		if (!(get_option_set(options, num_options, SOPT_COMPLEVEL)))
+			result->compresslevel = ao_storage_opts->compresslevel;
+
+		if (!(get_option_set(options, num_options, SOPT_COMPTYPE)))
+			strlcpy(result->compresstype, ao_storage_opts->compresstype, sizeof(result->compresstype));
+
+		if (!(get_option_set(options, num_options, SOPT_CHECKSUM)))
+			result->checksum = ao_storage_opts->checksum;
+	}
+
 	/* blocksize */
 	blocksize_opt = get_option_set(options, num_options, SOPT_BLOCKSIZE);
 	if (blocksize_opt != NULL)
@@ -904,14 +930,6 @@ validate_and_adjust_options(StdRdOptions *result,
 
 			result->compresslevel = setDefaultCompressionLevel(result->compresstype);
 		}
-
-		/*
-		 * use the default compressor if compresslevel was indicated but not
-		 * compresstype. must make a copy otherwise str_tolower below will
-		 * crash.
-		 */
-		if (result->compresslevel > 0 && !result->compresstype[0])
-			strlcpy(result->compresstype, AO_DEFAULT_COMPRESSTYPE, sizeof(result->compresstype));
 
 		/* Check upper bound of compresslevel for each compression type */
 
@@ -1004,144 +1022,41 @@ validate_and_adjust_options(StdRdOptions *result,
 		result->checksum = checksum_opt->values.bool_val;
 	}
 
-	if (result->compresstype[0] &&
-		result->compresslevel == AO_DEFAULT_COMPRESSLEVEL)
+	/* More adjustment for compression settings: */
+	/*
+	 * use the default compressor if compresslevel was indicated but not
+	 * compresstype. must make a copy otherwise str_tolower below will
+	 * crash.
+	 */
+	if (result->compresslevel > 0 && !result->compresstype[0])
+		strlcpy(result->compresstype, AO_DEFAULT_USABLE_COMPRESSTYPE, sizeof(result->compresstype));
+	/*
+	 * use compresslevel=1 if the compresstype is not none
+	 */
+	if (result->compresstype[0] && result->compresslevel == 0)
 	{
 		result->compresslevel = setDefaultCompressionLevel(result->compresstype);
 	}
 }
 
-void
-validate_and_refill_options(StdRdOptions *result, relopt_value *options,
-							int numrelopts, relopt_kind kind, bool validate)
-{
-	if (validate &&
-		ao_storage_opts_changed &&
-		KIND_IS_APPENDOPTIMIZED(kind))
-	{
-		if (!(get_option_set(options, numrelopts, SOPT_BLOCKSIZE)))
-			result->blocksize = ao_storage_opts.blocksize;
-
-		if (!(get_option_set(options, numrelopts, SOPT_COMPLEVEL)))
-			result->compresslevel = ao_storage_opts.compresslevel;
-
-		if (!(get_option_set(options, numrelopts, SOPT_COMPTYPE)))
-			strlcpy(result->compresstype, ao_storage_opts.compresstype, sizeof(result->compresstype));
-
-		if (!(get_option_set(options, numrelopts, SOPT_CHECKSUM)))
-			result->checksum = ao_storage_opts.checksum;
-	}
-
-	validate_and_adjust_options(result, options, numrelopts, kind, validate);
-}
-
-void
-parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
-						  bool validate, relopt_kind kind)
-{
-	relopt_value *options;
-	int			num_options;
-
-	options = parseRelOptions(reloptions, validate, kind, &num_options);
-
-	validate_and_adjust_options(result, options, num_options, kind, validate);
-	free_options_deep(options, num_options);
-}
-
 /*
- * validateAppendOnlyRelOptions
+ * validateOrientationRelOptions
  *
- *		Various checks for validity of appendonly relation rules.
+ *		Checks validity of orientation-specific reloption rules, currently only one. 
+ * 		Other appendonly-specific rules should've been done in default_reloptions().
  */
 void
-validateAppendOnlyRelOptions(int blocksize,
-							 int complevel,
-							 char *comptype,
-							 bool checksum,
+validateOrientationRelOptions(char *comptype,
 							 bool co)
 {
-	if (comptype &&
-		(pg_strcasecmp(comptype, "quicklz") == 0 ||
-		 pg_strcasecmp(comptype, "zlib") == 0 ||
-		 pg_strcasecmp(comptype, "rle_type") == 0 ||
-		 pg_strcasecmp(comptype, "zstd") == 0))
+	if (!co &&
+		pg_strcasecmp(comptype, "rle_type") == 0)
 	{
-		if (!co &&
-			pg_strcasecmp(comptype, "rle_type") == 0)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("%s cannot be used with Append Only relations row orientation",
-							comptype)));
-		}
-
-		if (comptype && complevel == 0)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("compresstype cannot be used with compresslevel 0")));
-
-		if (comptype && (pg_strcasecmp(comptype, "zlib") == 0))
-		{
-#ifndef HAVE_LIBZ
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("zlib compression is not supported by this build"),
-					 errhint("Compile without --without-zlib to use zlib compression.")));
-#endif
-			if (complevel < 0 || complevel > 9)
-			{
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("compresslevel=%d is out of range (should be between 0 and 9)",
-								complevel)));
-			}
-		}
-
-		if (comptype && (pg_strcasecmp(comptype, "zstd") == 0))
-		{
-#ifndef USE_ZSTD
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("Zstandard library is not supported by this build"),
-					 errhint("Compile without --without-zstd to use Zstandard compression.")));
-#endif
-			if (complevel < 0 || complevel > 19)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("compresslevel=%d is out of range for zstd (should be in the range 1 to 19)",
-								complevel)));
-		}
-
-		if (comptype && (pg_strcasecmp(comptype, "quicklz") == 0))
-		{
-#ifndef HAVE_LIBQUICKLZ
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("QuickLZ library is not supported by this build"),
-					 errhint("Compile with --with-quicklz to use QuickLZ compression.")));
-#endif
-			if (complevel != 1)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("compresslevel=%d is out of range for quicklz (should be 1)",
-								complevel)));
-		}
-		if (comptype && (pg_strcasecmp(comptype, "rle_type") == 0) &&
-			(complevel < 0 || complevel > 4))
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("compresslevel=%d is out of range for rle_type (should be in the range 1 to 4)",
-							complevel)));
-		}
-	}
-
-	if (blocksize < MIN_APPENDONLY_BLOCK_SIZE ||
-		blocksize > MAX_APPENDONLY_BLOCK_SIZE ||
-		blocksize % MIN_APPENDONLY_BLOCK_SIZE != 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("block size must be between 8KB and 2MB and be an 8KB multiple, got %d", blocksize)));
+				 errmsg("%s cannot be used with Append Only relations row orientation",
+						comptype)));
+	}
 }
 
 /*
@@ -1152,9 +1067,9 @@ static int
 setDefaultCompressionLevel(char *compresstype)
 {
 	if (!compresstype || pg_strcasecmp(compresstype, "none") == 0)
-		return 0;
+		return AO_DEFAULT_COMPRESSLEVEL;
 	else
-		return 1;
+		return AO_DEFAULT_USABLE_COMPRESSLEVEL;
 }
 
 /*
@@ -1296,7 +1211,7 @@ fillin_encoding(List *aocoColumnEncoding)
 			}
 			else
 			{
-				arg = AO_DEFAULT_COMPRESSTYPE;
+				arg = AO_DEFAULT_USABLE_COMPRESSTYPE;
 			}
 			el = makeDefElem("compresstype", (Node *) makeString(arg), -1);
 			retList = lappend(retList, el);
@@ -1531,11 +1446,7 @@ validateColumnStorageEncodingClauses(List *aocoColumnEncoding,
 																	true,
 																	RELOPT_KIND_APPENDOPTIMIZED);
 
-		validateAppendOnlyRelOptions(stdRdOptions->blocksize,
-									 stdRdOptions->compresslevel,
-									 stdRdOptions->compresstype,
-									 stdRdOptions->checksum,
-									 true);
+		validateOrientationRelOptions(stdRdOptions->compresstype, true);
 	}
 }
 

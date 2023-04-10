@@ -83,6 +83,7 @@
 #define PARALLEL_KEY_TUPLESORT_SPOOL2	UINT64CONST(0xA000000000000003)
 #define PARALLEL_KEY_QUERY_TEXT			UINT64CONST(0xA000000000000004)
 #define PARALLEL_KEY_BUFFER_USAGE		UINT64CONST(0xA000000000000005)
+#define PARALLEL_KEY_WAL_USAGE			UINT64CONST(0xA000000000000006)
 
 /*
  * DISABLE_LEADER_PARTICIPATION disables the leader's participation in
@@ -206,6 +207,7 @@ typedef struct BTLeader
 	Sharedsort *sharedsort2;
 	Snapshot	snapshot;
 	BufferUsage *bufferusage;
+	WalUsage   *walusage;
 } BTLeader;
 
 /*
@@ -1341,6 +1343,7 @@ _bt_begin_parallel(BTBuildState *buildstate, bool isconcurrent, int request)
 	BTSpool    *btspool = buildstate->spool;
 	BTLeader   *btleader = (BTLeader *) palloc0(sizeof(BTLeader));
 	BufferUsage *bufferusage;
+	WalUsage   *walusage;
 	bool		leaderparticipates = true;
 	int			querylen;
 
@@ -1401,6 +1404,18 @@ _bt_begin_parallel(BTBuildState *buildstate, bool isconcurrent, int request)
 	 */
 	shm_toc_estimate_chunk(&pcxt->estimator,
 						   mul_size(sizeof(BufferUsage), pcxt->nworkers));
+	shm_toc_estimate_keys(&pcxt->estimator, 1);
+
+	/*
+	 * Estimate space for WalUsage -- PARALLEL_KEY_WAL_USAGE
+	 *
+	 * WalUsage during execution of maintenance command can be used by an
+	 * extension that reports the WAL usage, such as pg_stat_statements. We
+	 * have no way of knowing whether anyone's looking at pgWalUsage, so do it
+	 * unconditionally.
+	 */
+	shm_toc_estimate_chunk(&pcxt->estimator,
+						   mul_size(sizeof(WalUsage), pcxt->nworkers));
 	shm_toc_estimate_keys(&pcxt->estimator, 1);
 
 	/* Finally, estimate PARALLEL_KEY_QUERY_TEXT space */
@@ -1489,6 +1504,11 @@ _bt_begin_parallel(BTBuildState *buildstate, bool isconcurrent, int request)
 								   mul_size(sizeof(BufferUsage), pcxt->nworkers));
 	shm_toc_insert(pcxt->toc, PARALLEL_KEY_BUFFER_USAGE, bufferusage);
 
+	/* Allocate space for each worker's WalUsage; no need to initialize */
+	walusage = shm_toc_allocate(pcxt->toc,
+								mul_size(sizeof(WalUsage), pcxt->nworkers));
+	shm_toc_insert(pcxt->toc, PARALLEL_KEY_WAL_USAGE, walusage);
+
 	/* Launch workers, saving status for leader/caller */
 	LaunchParallelWorkers(pcxt);
 	btleader->pcxt = pcxt;
@@ -1500,6 +1520,7 @@ _bt_begin_parallel(BTBuildState *buildstate, bool isconcurrent, int request)
 	btleader->sharedsort2 = sharedsort2;
 	btleader->snapshot = snapshot;
 	btleader->bufferusage = bufferusage;
+	btleader->walusage = walusage;
 
 	/* If no workers were successfully launched, back out (do serial build) */
 	if (pcxt->nworkers_launched == 0)
@@ -1534,11 +1555,13 @@ _bt_end_parallel(BTLeader *btleader)
 	WaitForParallelWorkersToFinish(btleader->pcxt);
 
 	/*
-	 * Next, accumulate buffer usage.  (This must wait for the workers to
+	 * Next, accumulate buffer/WAL usage.  (This must wait for the workers to
 	 * finish, or we might get incomplete data.)
 	 */
 	for (i = 0; i < btleader->pcxt->nworkers_launched; i++)
-		InstrAccumParallelQuery(&btleader->bufferusage[i]);
+	{
+		InstrAccumParallelQuery(&btleader->bufferusage[i], &btleader->walusage[i]);
+	}
 
 	/* Free last reference to MVCC snapshot, if one was used */
 	if (IsMVCCSnapshot(btleader->snapshot))
@@ -1671,6 +1694,7 @@ _bt_parallel_build_main(dsm_segment *seg, shm_toc *toc)
 	LOCKMODE	heapLockmode;
 	LOCKMODE	indexLockmode;
 	BufferUsage *bufferusage;
+	WalUsage   *walusage;
 	int			sortmem;
 
 #ifdef BTREE_BUILD_STATS
@@ -1740,9 +1764,10 @@ _bt_parallel_build_main(dsm_segment *seg, shm_toc *toc)
 	_bt_parallel_scan_and_sort(btspool, btspool2, btshared, sharedsort,
 							   sharedsort2, sortmem, false);
 
-	/* Report buffer usage during parallel execution */
+	/* Report buffer/WAL usage during parallel execution */
 	bufferusage = shm_toc_lookup(toc, PARALLEL_KEY_BUFFER_USAGE, false);
-	InstrEndParallelQuery(&bufferusage[ParallelWorkerNumber]);
+	walusage = shm_toc_lookup(toc, PARALLEL_KEY_WAL_USAGE, false);
+	InstrEndParallelQuery(&bufferusage[ParallelWorkerNumber], &walusage[ParallelWorkerNumber]);
 
 #ifdef BTREE_BUILD_STATS
 	if (log_btree_build_stats)

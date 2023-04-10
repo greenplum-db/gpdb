@@ -64,6 +64,11 @@ extern Selectivity clauselist_selectivity(PlannerInfo *root,
 										  List *clauses,
 										  int varRelid,
 										  JoinType jointype,
+										  SpecialJoinInfo *sjinfo);									  
+extern Selectivity clauselist_selectivity_extended(PlannerInfo *root,
+										  List *clauses,
+										  int varRelid,
+										  JoinType jointype,
 										  SpecialJoinInfo *sjinfo,
 										  bool use_damping);
 extern Selectivity clauselist_selectivity_simple(PlannerInfo *root,

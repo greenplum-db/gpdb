@@ -38,7 +38,7 @@ $$ LANGUAGE plpgsql;
 -- Verify empty visimap for uao table
 create table uao_table_check_empty_visimap (i int, j varchar(20), k int ) with (appendonly=true) DISTRIBUTED BY (i);
 insert into uao_table_check_empty_visimap values(1,'test',2);
-SELECT 1 FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid='uao_table_check_empty_visimap'::regclass;
+SELECT count(i.indexrelid) FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND a.relid='uao_table_check_empty_visimap'::regclass;
 
 -- Verify GUC select_invisible=true for uao tables
 create table uao_table_check_select_invisible (i int, j varchar(20), k int ) with (appendonly=true) DISTRIBUTED BY (i);

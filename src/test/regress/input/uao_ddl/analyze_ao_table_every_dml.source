@@ -17,8 +17,8 @@ set gp_autostats_mode=on_change;
 
 select count(*)  from sto_uao_city_analyze_everydml;
 select relname, reltuples from pg_class where oid='sto_uao_city_analyze_everydml'::regclass;
-SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimaprelid is not NULL AND
- visimapidxid is not NULL AND relid='sto_uao_city_analyze_everydml'::regclass;
+SELECT count(i.indexrelid) = 1 AS VisimapPresent  FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND
+ a.relid='sto_uao_city_analyze_everydml'::regclass;
 
 -- Copy 7 rows in table sto_uao_city_analyze_everydml
 COPY sto_uao_city_analyze_everydml (id, name, countrycode, district, population) FROM stdin;

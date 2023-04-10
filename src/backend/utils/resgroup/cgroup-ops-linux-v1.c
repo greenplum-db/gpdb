@@ -37,7 +37,7 @@
 #include <stdio.h>
 #include <mntent.h>
 
-static CGroupSystemInfo cgroupSystemInfoAlpha = {
+static CGroupSystemInfo cgroupSystemInfoV1 = {
 		0,
 		""
 };
@@ -64,50 +64,17 @@ static CGroupSystemInfo cgroupSystemInfoAlpha = {
  */
 #define CGROUP_CPUSET_IS_OPTIONAL (GP_VERSION_NUM < 60000)
 
-
-typedef struct PermItem PermItem;
-typedef struct PermList PermList;
-
-struct PermItem
-{
-	CGroupComponentType comp;
-	const char			*prop;
-	int					perm;
-};
-
-struct PermList
-{
-	const PermItem	*items;
-	bool			optional;
-	bool			*presult;
-};
-
-#define foreach_perm_list(i, lists) \
-	for ((i) = 0; (lists)[(i)].items; (i)++)
-
-#define foreach_perm_item(i, items) \
-	for ((i) = 0; (items)[(i)].comp != CGROUP_COMPONENT_UNKNOWN; (i)++)
-
-#define foreach_comp_type(comp) \
-	for ((comp) = CGROUP_COMPONENT_FIRST; \
-		 (comp) < CGROUP_COMPONENT_COUNT; \
-		 (comp)++)
-
-
 /* The functions current file used */
-static void detect_component_dirs_alpha(void);
-static void dump_component_dirs_alpha(void);
+static void detect_component_dirs_v1(void);
+static void dump_component_dirs_v1(void);
 
-static bool perm_list_check_alpha(const PermList *permlist, Oid group, bool report);
-static bool check_permission_alpha(Oid group, bool report);
-static bool check_cpuset_permission_alpha(Oid group, bool report);
-static void check_component_hierarchy_alpha();
+static void check_component_hierarchy_v1();
 
-static void init_cpu_alpha(void);
-static void init_cpuset_alpha(void);
+static void init_cpu_v1(void);
+static void init_cpuset_v1(void);
 
-static void create_default_cpuset_group_alpha(void);
-static int64 get_cfs_period_us_alpha(CGroupComponentType component);
+static void create_default_cpuset_group_v1(void);
+static int64 get_cfs_period_us_v1(CGroupComponentType component);
 
 /*
  * currentGroupIdInCGroup & oldCaps are used for reducing redundant
@@ -213,7 +180,7 @@ static float convertcpuusage_v1(int64 usage, int64 duration);
  * 5X.
  */
 static void
-detect_component_dirs_alpha(void)
+detect_component_dirs_v1(void)
 {
 	CGroupComponentType component;
 	FILE	   *f;
@@ -324,7 +291,7 @@ fallback:
  * Dump comp dirs.
  */
 static void
-dump_component_dirs_alpha(void)
+dump_component_dirs_v1(void)
 {
 	CGroupComponentType component;
 	char		path[MAX_CGROUP_PATHLEN];
@@ -341,107 +308,12 @@ dump_component_dirs_alpha(void)
 
 
 /*
- * Check a list of permissions on group.
- *
- * - if all the permissions are met then return true;
- * - otherwise:
- *   - raise an error if report is true and permlist is not optional;
- *   - or return false;
- */
-static bool
-perm_list_check_alpha(const PermList *permlist, Oid group, bool report)
-{
-	char path[MAX_CGROUP_PATHLEN];
-	size_t path_size = sizeof(path);
-	int i;
-
-	if (group == CGROUP_ROOT_ID && permlist->presult)
-		*permlist->presult = false;
-
-	foreach_perm_item(i, permlist->items)
-	{
-		CGroupComponentType component = permlist->items[i].comp;
-		const char	*prop = permlist->items[i].prop;
-		int			perm = permlist->items[i].perm;
-
-		if (!buildPathSafe(group, BASEDIR_GPDB, component, prop, path, path_size))
-		{
-			/* Buffer is not large enough for the path */
-
-			if (report && !permlist->optional)
-			{
-				CGROUP_CONFIG_ERROR("invalid %s name '%s': %m",
-									prop[0] ? "file" : "directory",
-									path);
-			}
-			return false;
-		}
-
-		if (access(path, perm))
-		{
-			/* No such file or directory / Permission denied */
-
-			if (report && !permlist->optional)
-			{
-				CGROUP_CONFIG_ERROR("can't access %s '%s': %m",
-									prop[0] ? "file" : "directory",
-									path);
-			}
-			return false;
-		}
-	}
-
-	if (group == CGROUP_ROOT_ID && permlist->presult)
-		*permlist->presult = true;
-
-	return true;
-}
-
-/*
- * Check permissions on group's cgroup dir & interface files.
- *
- * - if report is true then raise an error if any mandatory permission
- *   is not met;
- */
-static bool
-check_permission_alpha(Oid group, bool report)
-{
-	int i;
-
-	foreach_perm_list(i, permlists)
-	{
-		const PermList *permList = &permlists[i];
-
-		if (!perm_list_check_alpha(permList, group, report) && !permList->optional)
-			return false;
-	}
-
-	return true;
-}
-
-/*
- * Same as check_permission, just check cpuset dir & interface files.
- */
-static bool
-check_cpuset_permission_alpha(Oid group, bool report)
-{
-	if (!gp_resource_group_enable_cgroup_cpuset)
-		return true;
-
-	if (!perm_list_check_alpha(&cpusetPermList, group, report) &&
-		!cpusetPermList.optional)
-		return false;
-
-	return true;
-}
-
-/*
  * Check the mount hierarchy of cpu and cpuset subsystem.
  *
  * Raise an error if cpu and cpuset are mounted on the same hierarchy.
  */
 static void
-check_component_hierarchy_alpha()
+check_component_hierarchy_v1()
 {
 	CGroupComponentType component;
 	FILE       *f;
@@ -514,7 +386,7 @@ check_component_hierarchy_alpha()
  * Init gpdb cpu settings.
  */
 static void
-init_cpu_alpha(void)
+init_cpu_v1(void)
 {
 	CGroupComponentType component = CGROUP_COMPONENT_CPU;
 	int64		cfs_quota_us;
@@ -565,7 +437,7 @@ init_cpu_alpha(void)
  * Init gpdb cpuset settings.
  */
 static void
-init_cpuset_alpha(void)
+init_cpuset_v1(void)
 {
 	CGroupComponentType component = CGROUP_COMPONENT_CPUSET;
 	char		buffer[MaxCpuSetLength];
@@ -588,11 +460,11 @@ init_cpuset_alpha(void)
 			buffer, sizeof(buffer));
 	writeStr(CGROUP_ROOT_ID, BASEDIR_GPDB, component, "cpuset.cpus", buffer);
 
-	create_default_cpuset_group_alpha();
+	create_default_cpuset_group_v1();
 }
 
 static int64
-get_cfs_period_us_alpha(CGroupComponentType component)
+get_cfs_period_us_v1(CGroupComponentType component)
 {
 	int64		cfs_period_us;
 
@@ -656,9 +528,9 @@ probecgroup_v1(void)
 	if (!getCgroupMountDir())
 		return false;
 
-	detect_component_dirs_alpha();
+	detect_component_dirs_v1();
 
-	if (!check_permission_alpha(CGROUP_ROOT_ID, false))
+	if (!normalPermissionCheck(permlists, CGROUP_ROOT_ID, false))
 		return false;
 
 	return true;
@@ -683,13 +555,13 @@ checkcgroup_v1(void)
 	 * we call checkcgroup() we know we want to make use of cgroup then we must
 	 * know the mount point, otherwise it's a critical error.
 	 */
-	if (!cgroupSystemInfoAlpha.cgroup_dir[0])
+	if (!cgroupSystemInfoV1.cgroup_dir[0])
 		CGROUP_CONFIG_ERROR("can not find cgroup mount point");
 
 	/*
 	 * Check again, this time we will fail on unmet requirements.
 	 */
-	check_permission_alpha(CGROUP_ROOT_ID, true);
+	normalPermissionCheck(permlists, CGROUP_ROOT_ID, true);
 
 	/*
  	 * Check if cpu and cpuset subsystems are mounted on the same hierarchy.
@@ -699,13 +571,13 @@ checkcgroup_v1(void)
  	 * out of control.
 	 */
 	if (!CGROUP_CPUSET_IS_OPTIONAL)
-		check_component_hierarchy_alpha();
+		check_component_hierarchy_v1();
 
 	/*
 	 * Dump the cgroup comp dirs to logs.
 	 * Check detect_component_dirs() to know why this is not done in that function.
 	 */
-	dump_component_dirs_alpha();
+	dump_component_dirs_v1();
 
 	/*
 	 * Get some necessary system information.
@@ -713,10 +585,10 @@ checkcgroup_v1(void)
 	 */
 
 	/* get system cpu cores */
-	cgroupSystemInfoAlpha.ncores = getCPUCores();
+	cgroupSystemInfoV1.ncores = getCPUCores();
 
-	cfs_period_us = get_cfs_period_us_alpha(component);
-	system_cfs_quota_us = cfs_period_us * cgroupSystemInfoAlpha.ncores;
+	cfs_period_us = get_cfs_period_us_v1(component);
+	system_cfs_quota_us = cfs_period_us * cgroupSystemInfoV1.ncores;
 
 	/* read cpu rate limit of parent cgroup */
 	parent_cfs_quota_us = readInt64(CGROUP_ROOT_ID, BASEDIR_PARENT,
@@ -727,8 +599,8 @@ checkcgroup_v1(void)
 static void
 initcgroup_v1(void)
 {
-	init_cpu_alpha();
-	init_cpuset_alpha();
+	init_cpu_v1();
+	init_cpuset_v1();
 
 	/* 
 	 * After basic controller inited, we need to create the SYSTEM CGROUP
@@ -739,8 +611,8 @@ initcgroup_v1(void)
 	 * the child process to limit the resource usage of the parent process
 	 * and all child processes.
 	 */
-	createcgroup_v1(GPDB_SYSTEM_CGROUP);
-	attachcgroup_v1(GPDB_SYSTEM_CGROUP, PostmasterPid, false);
+	createcgroup_v1(SYSTEMRESGROUP_OID);
+	attachcgroup_v1(SYSTEMRESGROUP_OID, PostmasterPid, false);
 }
 
 /* Adjust GUCs for this OS group implementation */
@@ -777,7 +649,7 @@ createcgroup_v1(Oid group)
 	 * although the group dir is created the interface files may not be
 	 * created yet, so we check them repeatedly until everything is ready.
 	 */
-	while (++retry <= MAX_RETRY && !check_permission_alpha(group, false))
+	while (++retry <= MAX_RETRY && !normalPermissionCheck(permlists, group, false))
 		pg_usleep(1000);
 
 	if (retry > MAX_RETRY)
@@ -786,7 +658,7 @@ createcgroup_v1(Oid group)
 		 * still not ready after MAX_RETRY retries, might be a real error,
 		 * raise the error.
 		 */
-		check_permission_alpha(group, true);
+		normalPermissionCheck(permlists, group, true);
 	}
 
 	if (gp_resource_group_enable_cgroup_cpuset)
@@ -812,7 +684,7 @@ createcgroup_v1(Oid group)
  * default cpuset group is a special group, only take effect in cpuset
  */
 static void
-create_default_cpuset_group_alpha(void)
+create_default_cpuset_group_v1(void)
 {
 	CGroupComponentType component = CGROUP_COMPONENT_CPUSET;
 	int retry = 0;
@@ -828,7 +700,7 @@ create_default_cpuset_group_alpha(void)
 	 * created yet, so we check them repeatedly until everything is ready.
 	 */
 	while (++retry <= MAX_RETRY &&
-		   !check_cpuset_permission_alpha(DEFAULT_CPUSET_GROUP_ID, false))
+		   !cpusetPermissionCheck(&cpusetPermList, DEFAULT_CPUSET_GROUP_ID, false))
 		pg_usleep(1000);
 
 	if (retry > MAX_RETRY)
@@ -837,7 +709,7 @@ create_default_cpuset_group_alpha(void)
 		 * still not ready after MAX_RETRY retries, might be a real error,
 		 * raise the error.
 		 */
-		check_cpuset_permission_alpha(DEFAULT_CPUSET_GROUP_ID, true);
+		cpusetPermissionCheck(&cpusetPermList, DEFAULT_CPUSET_GROUP_ID, true);
 	}
 
 	/*
@@ -976,7 +848,7 @@ detachcgroup_v1(Oid group, CGroupComponentType component, int fd_dir)
 	if (buf_len == 0)
 		return;
 
-	buildPath(GPDB_DEFAULT_CGROUP, BASEDIR_GPDB, component, "cgroup.procs",
+	buildPath(DEFAULTRESGROUP_OID, BASEDIR_GPDB, component, "cgroup.procs",
 			  path, path_size);
 
 	fdw = open(path, O_WRONLY);
@@ -1089,9 +961,9 @@ setcpulimit_v1(Oid group, int cpu_hard_limit)
 
 	if (cpu_hard_limit > 0)
 	{
-		int64 periods = get_cfs_period_us_alpha(component);
+		int64 periods = get_cfs_period_us_v1(component);
 		writeInt64(group, BASEDIR_GPDB, component, "cpu.cfs_quota_us",
-				   periods * cgroupSystemInfoAlpha.ncores * cpu_hard_limit / 100);
+				   periods * cgroupSystemInfoV1.ncores * cpu_hard_limit / 100);
 	}
 	else
 	{
@@ -1180,7 +1052,7 @@ convertcpuusage_v1(int64 usage, int64 duration)
 	Assert(duration > 0LL);
 
 	/* There should always be at least one core on the system */
-	Assert(cgroupSystemInfoAlpha.ncores > 0);
+	Assert(cgroupSystemInfoV1.ncores > 0);
 
 	/*
 	 * Usage is the cpu time (nano seconds) obtained by this group in the time
@@ -1193,7 +1065,7 @@ convertcpuusage_v1(int64 usage, int64 duration)
 	 *     usage / 1000 / duration / ncores * 100%
 	 *   = usage / 10 / duration / ncores
 	 */
-	percent = usage / 10.0 / duration / cgroupSystemInfoAlpha.ncores;
+	percent = usage / 10.0 / duration / cgroupSystemInfoV1.ncores;
 
 	/*
 	 * Now we have the system level percentage, however when running in a
@@ -1215,7 +1087,7 @@ convertcpuusage_v1(int64 usage, int64 duration)
 	return percent;
 }
 
-static CGroupOpsRoutine cGroupOpsRoutineAlpha = {
+static CGroupOpsRoutine cGroupOpsRoutineV1 = {
 		.getcgroupname = getcgroupname_v1,
 		.probecgroup = probecgroup_v1,
 		.checkcgroup = checkcgroup_v1,
@@ -1239,12 +1111,12 @@ static CGroupOpsRoutine cGroupOpsRoutineAlpha = {
 		.convertcpuusage = convertcpuusage_v1,
 };
 
-CGroupOpsRoutine *get_group_routine_alpha(void)
+CGroupOpsRoutine *get_group_routine_v1(void)
 {
-	return &cGroupOpsRoutineAlpha;
+	return &cGroupOpsRoutineV1;
 }
 
-CGroupSystemInfo *get_cgroup_sysinfo_alpha(void)
+CGroupSystemInfo *get_cgroup_sysinfo_v1(void)
 {
-	return &cgroupSystemInfoAlpha;
+	return &cgroupSystemInfoV1;
 }

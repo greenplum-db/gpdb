@@ -41,6 +41,7 @@ public:
 	enum EmdindexType
 	{
 		EmdindBtree,   // btree
+		EmdindHash,	   // hash
 		EmdindBitmap,  // bitmap
 		EmdindGist,	   // gist using btree or bitmap
 		EmdindGin,	   // gin using btree or bitmap
@@ -81,9 +82,6 @@ public:
 
 	// return the position of the included column
 	virtual ULONG GetIncludedColPos(ULONG column) const = 0;
-
-	// part constraint
-	virtual IMDPartConstraint *MDPartConstraint() const = 0;
 
 	// type id of items returned by the index
 	virtual IMDId *GetIndexRetItemTypeMdid() const = 0;

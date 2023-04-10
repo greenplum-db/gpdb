@@ -98,55 +98,19 @@ See the *Greenplum Database Reference Guide* for information about the Greenplum
 
 PL/Java requires a Java runtime environment on each Greenplum Database host. Ensure that the same Java environment is at the same location on all hosts: coordinators and segments. The command `java -version` displays the Java version.
 
-The commands that you use to install Java depend on the host system operating system and Java version. This list describes how to install OpenJDK 8 or 11 \(Java 8 JDK or Java 11 JDK\) on RHEL/CentOS or Ubuntu.
+The commands that you use to install Java depend on the host system operating system and Java version. To install OpenJDK 8 or 11 \(Java 8 JDK or Java 11 JDK\) on RHEL/Oracle/Rocky Linux:
 
--   RHEL 7/CentOS 7 - This `yum` command installs OpenJDK 8 or 11.
+```
+$ sudo yum install java-<version>-openjdk-devel
+```
 
-    ```
-    $ sudo yum install java-<version>-openjdk-devel
-    ```
+For OpenJDK 8 the version is `1.8.0`, for OpenJDK 11 the version is `11`.
 
-    For OpenJDK 8 the version is `1.8.0`, for OpenJDK 11 the version is `11`.
-
--   RHEL 6/CentOS 6
-    -   Java 8 - This `yum` command installs OpenJDK 8.
-
-        ```
-        $ sudo yum install java-1.8.0-openjdk-devel
-        ```
-
-    -   Java 11 - Download the OpenJDK 11 tar file from [http://jdk.java.net/archive/](http://jdk.java.net/archive/) and install and configure the operating system to use Java 11.
-        1.  This example `tar` command installs the OpenJDK 11 in `/usr/lib/jvm`.
-
-            ```
-            $ sudo tar xzf openjdk-11.0.2_linux-x64_bin.tar.gz --directory /usr/lib/jvm
-            ```
-        2.  Run these two commands to add OpenJDK 11 to the `update-alternatives` command. The `update-alternatives`command maintains symbolic links that determine the default version of operating system commands.
-
-            ```
-            $ sudo sh -c 'for bin in /usr/lib/jvm/jdk-11.0.2/bin/*; do update-alternatives --install /usr/bin/$(basename $bin) $(basename $bin) $bin 100; done'
-            $ sudo sh -c 'for bin in /usr/lib/jvm/jdk-11.0.2/bin/*; do update-alternatives --set $(basename $bin) $bin; done'
-            ```
-
-            The second command returns some `failed to read link` errors that can be ignored.
-
--   Ubuntu - These `apt` commands install OpenJDK 8 or 11.
-
-    ```
-    $ sudo apt update
-    $ sudo apt install openjdk-<version>-jdk
-    ```
-
-    For OpenJDK 8 the version is `8`, for OpenJDK 11 the version is `11`.
-
-
-After installing OpenJDK on a RHEL or CentOS system, run this `update-alternatives` command to change the default Java. Enter the number that represents the OpenJDK version to use as the default.
+After installing OpenJDK on a RHEL system, run this `update-alternatives` command to change the default Java. Enter the number that represents the OpenJDK version to use as the default.
 
 ```
 $ sudo update-alternatives --config java 
 ```
-
-The `update-alternatives` command is not required on Ubuntu systems.
 
 > **Note** When configuring host systems, you can use the [gpssh](../utility_guide/ref/gpssh.html) utility to run bash shell commands on multiple remote hosts.
 

@@ -4,7 +4,6 @@
 -- create a new user
 drop user if exists user_disallowed_via_local;
 create user user_disallowed_via_local with login;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 -- cleanup previous settings if any
 \! sed -i '/user_disallowed_via_local/d' $COORDINATOR_DATA_DIRECTORY/pg_hba.conf;
 -- allow it to login via the [tcp] protocol

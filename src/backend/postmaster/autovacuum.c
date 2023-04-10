@@ -176,6 +176,7 @@ double		autovacuum_vac_cost_delay;
 int			autovacuum_vac_cost_limit;
 
 int			Log_autovacuum_min_duration = 0;
+int			gp_autovacuum_scope;
 
 /* how long to keep pgstat data in the launcher, in milliseconds */
 #define STATS_READ_DELAY 1000
@@ -1764,7 +1765,7 @@ AutoVacWorkerMain(int argc, char *argv[])
 		InitPostgres(NULL, dbid, NULL, InvalidOid, dbname, false);
 		SetProcessingMode(NormalProcessing);
 		set_ps_display(dbname, false);
-		ereport(LOG,
+		ereport(DEBUG1,
 				(errmsg("autovacuum: processing database \"%s\"", dbname)));
 
 #ifdef FAULT_INJECTOR
@@ -3223,12 +3224,18 @@ relation_needs_vacanalyze(Oid relid,
 			*doanalyze = false;
 	}
 
-	/*
-	 * GPDB: Autovacuum VACUUM is only enabled for catalog tables. (But ignore
-	 * if at risk of wrap around and proceed to vacuum)
-	 */
-	if (!IsSystemClass(relid, classForm) && !force_vacuum)
-		*dovacuum = false;
+	if (!force_vacuum && gp_autovacuum_scope == AV_SCOPE_CATALOG)
+	{
+		/* GPDB: autovacuum on pg_catalog relations */
+		if (!IsCatalogRelationOid(relid))
+			*dovacuum = false;
+	}
+	else if (!force_vacuum && gp_autovacuum_scope == AV_SCOPE_CATALOG_AO_AUX)
+	{
+		/* GPDB: autovacuum only pg_catalog, pg_toast, and pg_aoseg relations */
+		if (!IsSystemClass(relid, classForm))
+			*dovacuum = false;
+	}
 }
 
 /*

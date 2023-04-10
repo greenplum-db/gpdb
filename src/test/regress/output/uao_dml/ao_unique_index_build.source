@@ -2,6 +2,7 @@
 SET default_table_access_method TO @amname@;
 -- To force index scans for smoke tests
 SET enable_seqscan TO off;
+SET enable_indexonlyscan TO off;
 SET optimizer TO off;
 -- Case 1: Build with no conflicting rows.
 CREATE TABLE unique_index_build_@amname@(i int) DISTRIBUTED REPLICATED;

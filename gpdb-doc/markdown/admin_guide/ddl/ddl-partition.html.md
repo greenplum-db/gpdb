@@ -322,8 +322,6 @@ WHERE tablename='sales';
 The following table and views also show information about partitioned tables.
 
 -   *[pg\_partition](../../ref_guide/system_catalogs/pg_partition.html)*- Tracks partitioned tables and their inheritance level relationships.
--   *[pg\_partition\_templates](../../ref_guide/system_catalogs/pg_partition_templates.html)*- Shows the subpartitions created using a subpartition template.
--   *[pg\_partition\_columns](../../ref_guide/system_catalogs/pg_partition_columns.html)* - Shows the partition key columns used in a partition design.
 
 ## <a id="topic77"></a>Maintaining Partitioned Tables 
 

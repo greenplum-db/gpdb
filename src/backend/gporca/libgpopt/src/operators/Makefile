@@ -62,6 +62,7 @@ OBJS        = CExpression.o \
               CLogicalLeftSemiJoin.o \
               CLogicalLimit.o \
               CLogicalMaxOneRow.o \
+              CLogicalDynamicForeignGet.o \
               CLogicalNAryJoin.o \
               CLogicalPartitionSelector.o \
               CLogicalProject.o \
@@ -119,6 +120,7 @@ OBJS        = CExpression.o \
               CPhysicalMotionHashDistribute.o \
               CPhysicalMotionRandom.o \
               CPhysicalMotionRoutedDistribute.o \
+              CPhysicalDynamicForeignScan.o \
               CPhysicalNLJoin.o \
               CPhysicalParallelUnionAll.o \
               CPhysicalPartitionSelector.o \
@@ -183,7 +185,8 @@ OBJS        = CExpression.o \
               CScalarWindowFunc.o \
               CStrictHashedDistributions.o \
               CWindowPreprocessor.o \
-              COrderedAggPreprocessor.o
+              COrderedAggPreprocessor.o \
+              CLeftJoinPruningPreprocessor.o
 
 include $(top_srcdir)/src/backend/common.mk
 

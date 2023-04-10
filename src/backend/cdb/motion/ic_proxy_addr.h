@@ -12,6 +12,13 @@
 #ifndef IC_PROXY_ADDR_H
 #define IC_PROXY_ADDR_H
 
+/*
+ * Some systems like FreeBSD or MacOS do not define HOST_NAME_MAX. In general,
+ * 255 seems to be a safe fallback value and is POSIX.
+ */
+#ifndef HOST_NAME_MAX
+#define HOST_NAME_MAX 255
+#endif
 
 typedef struct ICProxyAddr ICProxyAddr;
 

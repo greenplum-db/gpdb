@@ -25,6 +25,7 @@
 #define BITMAP_COMPRESSION_H
 
 #include "utils/bitstream.h"
+#include "nodes/bitmapset.h"
 
 /*
  * The compression type, which determines which compression
@@ -108,6 +109,16 @@ int Bitmap_Compress(
 		int bitmapDataSize,
 		unsigned char *outData,
 		int maxOutDataSize);
+
+void BitmapDecompress_CalculateBlockCounts(
+	BitmapDecompressState *decompressState,
+	int *onDiskBlockCount,
+	int *bmsWordCount);
+
+void BitmapCompress_CalculateBlockCounts(
+	Bitmapset *bitmap,
+	int *onDiskBlockCount,
+	int *bmsWordCount);
 
 #endif
 

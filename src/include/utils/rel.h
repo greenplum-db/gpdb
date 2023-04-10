@@ -192,6 +192,12 @@ typedef struct RelationData
 	void	   *rd_amcache;		/* available for use by index/table AM */
 
 	/*
+	 * AO table support info (used only for AO and AOCS relations)
+	 */
+	Form_pg_appendonly rd_appendonly;
+	struct HeapTupleData *rd_aotuple;		/* all of pg_appendonly tuple */
+
+	/*
 	 * foreign-table support
 	 *
 	 * rd_fdwroutine must point to a single memory chunk palloc'd in
@@ -409,10 +415,13 @@ typedef struct ViewOptions
 
 #define InvalidRelation ((Relation) NULL)
 
-/* GPDB_12_MERGE_FIXME: I hope we don't need these macros anymore, now that
- * everything should go through the table access method API.
+/*
+ * CAUTION: this macro is a violation of the absraction that table AM and
+ * index AM interfaces provide.  Use of this macro is discouraged.  If
+ * table/index AM API falls short for your use case, consider enhancing the
+ * interface.
+ *
  */
-
 #define RelationIsHeap(relation) \
 	((relation)->rd_rel->relam == HEAP_TABLE_AM_OID)
 
@@ -452,6 +461,15 @@ typedef struct ViewOptions
 #define RelationIsAppendOptimized(relation) \
 	((RelationIsAoRows(relation) || RelationIsAoCols(relation)) && \
 		relation->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
+
+/*
+ * Convenient macro for checking AO AMs
+ *
+ * RelationAMIsAO
+ * 		True iff relam is ao_row or or ao_column.
+ */
+#define RelationAMIsAO(relation) \
+	IsAccessMethodAO((relation)->rd_rel->relam)
 
 /*
  * RelationIsBitmapIndex

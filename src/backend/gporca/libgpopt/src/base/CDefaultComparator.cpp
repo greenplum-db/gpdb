@@ -124,7 +124,7 @@ CDefaultComparator::FUseInternalEvaluator(const IDatum *datum1,
 		return true;
 	}
 
-	if (!can_use_external_evaluator)
+	if (!*can_use_external_evaluator)
 	{
 		GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
 				   GPOS_WSZ_LIT("Unsupported comparator evaluator for types"));

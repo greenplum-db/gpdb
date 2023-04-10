@@ -337,6 +337,9 @@ select sum(distinct a) filter (where a in (select x from dqa_f2 where x = a)), s
 
 select count(distinct a) filter (where a > 3),count( distinct b) filter (where a > 4), sum(distinct b) filter( where a > 4) from dqa_f1;
 
+-- fix hang of multi-dqa with filter (https://github.com/greenplum-db/gpdb/issues/14728)
+select count(distinct a) filter (where a > 3), count(distinct b) from dqa_f1;
+
 explain select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1;
 
 explain select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1 group by b;
@@ -349,11 +352,29 @@ explain select sum(distinct a) filter (where a in (select x from dqa_f2 where x 
 
 explain select count(distinct a) filter (where a > 3),count( distinct b) filter (where a > 4), sum(distinct b) filter( where a > 4) from dqa_f1;
 
+-- MultiDQA with filter (enable_hashagg = off)
+-- Related issue: https://github.com/greenplum-db/gpdb/issues/14728#issuecomment-1422341729
+set enable_hashagg = off;
+set enable_groupagg = on;
+
+select count(distinct a) filter (where a > 3), count(distinct b) from dqa_f1;
+
+explain (verbose, costs off)select count(distinct a) filter (where a > 3), count(distinct b) from dqa_f1;
+
+set enable_hashagg = on;
+set enable_groupagg = off;
 
 -- single DQA with agg
 -- the following SQL should use two stage agg
 explain select count(distinct a), sum(b), sum(c) from dqa_f1;
 select count(distinct a), sum(b), sum(c) from dqa_f1;
+
+-- multi DQA with primary key
+create table dqa_unique(a int, b int, c int, d int, primary key(a, b));
+insert into dqa_unique select i%3, i%5, i%7, i%9 from generate_series(1, 10) i;
+
+explain(verbose on, costs off) select count(distinct a), count(distinct d), c from dqa_unique group by a, b;
+select count(distinct a), count(distinct d), c from dqa_unique group by a, b;
 
 -- multi DQA with type conversions
 create table dqa_f3(a character varying, b bigint) distributed by (a);
@@ -541,3 +562,13 @@ explain (verbose on, costs off) select sum(Distinct b), count(c) filter(where c 
 select sum(Distinct b), count(c) filter(where c > 1), sum(a) from dqa_f3;
 
 drop table dqa_f3;
+
+-- Test some corner case of dqa ex.NULL
+create table dqa_f4(a int, b int, c int);
+insert into dqa_f4 values(null, null, null);
+insert into dqa_f4 values(1, 1, 1);
+insert into dqa_f4 values(2, 2, 2);
+
+select count(distinct a), count(distinct b) from dqa_f4 group by c;
+
+drop table dqa_f4;

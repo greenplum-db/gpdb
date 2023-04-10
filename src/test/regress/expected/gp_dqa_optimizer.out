@@ -2168,6 +2168,15 @@ DETAIL:  Feature not supported: Aggregate functions with FILTER
     13 |     5 |  10
 (1 row)
 
+-- fix hang of multi-dqa with filter (https://github.com/greenplum-db/gpdb/issues/14728)
+select count(distinct a) filter (where a > 3), count(distinct b) from dqa_f1;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Aggregate functions with FILTER
+ count | count 
+-------+-------
+    13 |     5
+(1 row)
+
 explain select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Aggregate functions with FILTER
@@ -2303,6 +2312,33 @@ DETAIL:  Feature not supported: Aggregate functions with FILTER
  Optimizer: Postgres query optimizer
 (11 rows)
 
+-- MultiDQA with filter (enable_hashagg = off)
+-- Related issue: https://github.com/greenplum-db/gpdb/issues/14728#issuecomment-1422341729
+set enable_hashagg = off;
+set enable_groupagg = on;
+select count(distinct a) filter (where a > 3), count(distinct b) from dqa_f1;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Aggregate functions with FILTER
+ count | count 
+-------+-------
+    13 |     5
+(1 row)
+
+explain (verbose, costs off)select count(distinct a) filter (where a > 3), count(distinct b) from dqa_f1;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Aggregate functions with FILTER
+QUERY PLAN
+___________
+ Aggregate
+   Output: count(DISTINCT a) FILTER (WHERE (a > 3)), count(DISTINCT b)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: a, b
+         ->  Seq Scan on public.dqa_f1
+               Output: a, b
+GP_IGNORE:(8 rows)
+
+set enable_hashagg = on;
+set enable_groupagg = off;
 -- single DQA with agg
 -- the following SQL should use two stage agg
 explain select count(distinct a), sum(b), sum(c) from dqa_f1;
@@ -2320,6 +2356,58 @@ select count(distinct a), sum(b), sum(c) from dqa_f1;
 -------+------+------
     17 | 2000 | 1000
 (1 row)
+
+-- multi DQA with primary key
+create table dqa_unique(a int, b int, c int, d int, primary key(a, b));
+insert into dqa_unique select i%3, i%5, i%7, i%9 from generate_series(1, 10) i;
+explain(verbose on, costs off) select count(distinct a), count(distinct d), c from dqa_unique group by a, b;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Query-to-DXL Translation: No attribute entry found due to incorrect normalization of query
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Finalize HashAggregate
+   Output: count(a), count(d), c, a, b
+   Group Key: dqa_unique.a, dqa_unique.b
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: a, b, (PARTIAL count(a)), (PARTIAL count(d)), c
+         ->  Partial HashAggregate
+               Output: a, b, PARTIAL count(a), PARTIAL count(d), c
+               Group Key: dqa_unique.a, dqa_unique.b
+               ->  HashAggregate
+                     Output: a, b, d, c, (AggExprId)
+                     Group Key: (AggExprId), dqa_unique.d, dqa_unique.a, dqa_unique.b
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Output: a, b, d, c, (AggExprId)
+                           Hash Key: a, b, d, (AggExprId)
+                           ->  Streaming HashAggregate
+                                 Output: a, b, d, c, (AggExprId)
+                                 Group Key: AggExprId, dqa_unique.d, dqa_unique.a, dqa_unique.b
+                                 ->  TupleSplit
+                                       Output: a, b, d, c, AggExprId
+                                       Split by Col: (dqa_unique.a), (dqa_unique.d)
+                                       Group Key: dqa_unique.a, dqa_unique.b
+                                       ->  Seq Scan on public.dqa_unique
+                                             Output: a, b, c, d
+ Optimizer: Postgres query optimizer
+ Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1'
+(25 rows)
+
+select count(distinct a), count(distinct d), c from dqa_unique group by a, b;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Query-to-DXL Translation: No attribute entry found due to incorrect normalization of query
+ count | count | c 
+-------+-------+---
+     1 |     1 | 5
+     1 |     1 | 6
+     1 |     1 | 0
+     1 |     1 | 2
+     1 |     1 | 1
+     1 |     1 | 1
+     1 |     1 | 2
+     1 |     1 | 4
+     1 |     1 | 3
+     1 |     1 | 3
+(10 rows)
 
 -- multi DQA with type conversions
 create table dqa_f3(a character varying, b bigint) distributed by (a);
@@ -2715,7 +2803,7 @@ explain (verbose on, costs off)select sum(Distinct a), count(b), sum(c) from dqa
          ->  Redistribute Motion 3:3  (slice2; segments: 3)
                Output: a, e, (PARTIAL count(b)), (PARTIAL sum(c))
                Hash Key: e
-               ->  Streaming Partial HashAggregate
+               ->  Partial HashAggregate
                      Output: a, e, PARTIAL count(b), PARTIAL sum(c)
                      Group Key: dqa_f3.e, dqa_f3.a
                      ->  Seq Scan on public.dqa_f3
@@ -2744,7 +2832,7 @@ explain (verbose on, costs off) select sum(Distinct e), count(b), sum(c) from dq
    ->  Finalize HashAggregate
          Output: sum(e), count(b), sum(c)
          Group Key: dqa_f3.a
-         ->  Streaming Partial HashAggregate
+         ->  Partial HashAggregate
                Output: PARTIAL count(b), PARTIAL sum(c), a, e
                Group Key: dqa_f3.a, dqa_f3.e
                ->  Seq Scan on public.dqa_f3
@@ -3157,3 +3245,21 @@ DETAIL:  Feature not supported: Aggregate functions with FILTER
 (1 row)
 
 drop table dqa_f3;
+-- Test some corner case of dqa ex.NULL
+create table dqa_f4(a int, b int, c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into dqa_f4 values(null, null, null);
+insert into dqa_f4 values(1, 1, 1);
+insert into dqa_f4 values(2, 2, 2);
+select count(distinct a), count(distinct b) from dqa_f4 group by c;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+ count | count 
+-------+-------
+     0 |     0
+     1 |     1
+     1 |     1
+(3 rows)
+
+drop table dqa_f4;

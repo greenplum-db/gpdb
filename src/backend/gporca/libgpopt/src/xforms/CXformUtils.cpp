@@ -1919,8 +1919,9 @@ CXformUtils::FIndexApplicable(CMemoryPool *mp, const IMDIndex *pmdindex,
 	BOOL possible_ao_table = pmdrel->IsAORowOrColTable() ||
 							 pmdrel->RetrieveRelStorageType() ==
 								 IMDRelation::ErelstorageMixedPartitioned;
-	// GiST can match with either Btree or Bitmap indexes
+	// GiST and Hash can match with either Btree or Bitmap indexes
 	if (pmdindex->IndexType() == IMDIndex::EmdindGist ||
+		pmdindex->IndexType() == IMDIndex::EmdindHash ||
 		// GIN and BRIN can only match with Bitmap Indexes
 		(emdindtype == IMDIndex::EmdindBitmap &&
 		 (IMDIndex::EmdindGin == pmdindex->IndexType() ||
@@ -2019,8 +2020,8 @@ CXformUtils::PexprWindowWithRowNumber(CMemoryPool *mp,
 	}
 	else
 	{
-		pds = GPOS_NEW(mp)
-			CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
+		pds = GPOS_NEW(mp) CDistributionSpecSingleton(
+			CDistributionSpecSingleton::EstCoordinator);
 	}
 
 	// window frames
@@ -2432,7 +2433,8 @@ CXformUtils::PexprBuildBtreeIndexPlan(
 	IMdIdArray *partition_mdids = nullptr;
 
 	if (ptabdesc->RetrieveRelStorageType() != IMDRelation::ErelstorageHeap &&
-		pmdindex->IndexType() == IMDIndex::EmdindGist)
+		(pmdindex->IndexType() == IMDIndex::EmdindGist ||
+		 pmdindex->IndexType() == IMDIndex::EmdindHash))
 	{
 		// Non-heap tables not supported for GiST
 		return nullptr;
@@ -3610,13 +3612,14 @@ CXformUtils::PexprWinFuncAgg2ScalarAgg(CMemoryPool *mp,
 	mdid_func->AddRef();
 	return GPOS_NEW(mp) CExpression(
 		mp,
-		CUtils::PopAggFunc(mp, mdid_func,
-						   GPOS_NEW(mp) CWStringConst(
-							   mp, popScWinFunc->PstrFunc()->GetBuffer()),
-						   popScWinFunc->IsDistinct(), EaggfuncstageGlobal,
-						   false,	 // fSplit
-						   nullptr,	 // pmdidResolvedReturnType
-						   EaggfunckindNormal, GPOS_NEW(mp) ULongPtrArray(mp)),
+		CUtils::PopAggFunc(
+			mp, mdid_func,
+			GPOS_NEW(mp)
+				CWStringConst(mp, popScWinFunc->PstrFunc()->GetBuffer()),
+			popScWinFunc->IsDistinct(), EaggfuncstageGlobal,
+			false,	  // fSplit
+			nullptr,  // pmdidResolvedReturnType
+			EaggfunckindNormal, GPOS_NEW(mp) ULongPtrArray(mp), false),
 		pdrgpexprFullWinFuncArgs);
 }
 

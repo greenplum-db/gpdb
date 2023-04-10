@@ -22,13 +22,14 @@ PostgreSQL documentation
  <refsynopsisdiv>
 <synopsis>
 VACUUM [ ( <replaceable class="parameter">option</replaceable> [, ...] ) ] [ <replaceable class="parameter">table_and_columns</replaceable> [, ...] ]
-VACUUM [ FULL ] [ FREEZE ] [ VERBOSE ] [ ANALYZE ] [ <replaceable class="parameter">table_and_columns</replaceable> [, ...] ]
+VACUUM [ FULL ] [ FREEZE ] [ VERBOSE ] [ AO_AUX_ONLY ]  [ ANALYZE ] [ <replaceable class="parameter">table_and_columns</replaceable> [, ...] ]
 
 <phrase>where <replaceable class="parameter">option</replaceable> can be one of:</phrase>
 
     FULL [ <replaceable class="parameter">boolean</replaceable> ]
     FREEZE [ <replaceable class="parameter">boolean</replaceable> ]
     VERBOSE [ <replaceable class="parameter">boolean</replaceable> ]
+    AO_AUX_ONLY [ <replaceable class="parameter">boolean</replaceable> ]
     ANALYZE [ <replaceable class="parameter">boolean</replaceable> ]
     DISABLE_PAGE_SKIPPING [ <replaceable class="parameter">boolean</replaceable> ]
     SKIP_LOCKED [ <replaceable class="parameter">boolean</replaceable> ]
@@ -58,6 +59,16 @@ VACUUM [ FULL ] [ FREEZE ] [ VERBOSE ] [ ANALYZE ] [ <replaceable class="paramet
    list, <command>VACUUM</command> processes every table and materialized view
    in the current database that the current user has permission to vacuum.
    With a list, <command>VACUUM</command> processes only those table(s).
+  </para>
+
+  <para>
+   <command>VACUUM AO_AUX_ONLY</command> performs a <command>VACUUM</command>
+   on all auxiliary tables of an append-optimized table. It does not
+   run <command>VACUUM</command> on the append-optimized table. If no table is
+   indicated, it will <command>VACUUM</command> the auxiliary tables of all
+   append-optimized tables. If a partitioned table is indicated, it
+   will <command>VACUUM</command> the auxiliary tables of all append-optimized
+   partitions.
   </para>
 
   <para>

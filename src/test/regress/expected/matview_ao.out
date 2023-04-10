@@ -7,7 +7,7 @@ INSERT INTO t_matview_ao VALUES
   (3, 'y', 5),
   (4, 'y', 7),
   (5, 'z', 11);
-CREATE MATERIALIZED VIEW m_heap AS SELECT type, sum(amt) AS totamt FROM t_matview_ao GROUP BY type WITH NO DATA distributed by(type);
+CREATE MATERIALIZED VIEW IF NOT EXISTS m_heap AS SELECT type, sum(amt) AS totamt FROM t_matview_ao GROUP BY type WITH NO DATA distributed by(type);
 CREATE UNIQUE INDEX m_heap_index ON m_heap(type);
 SELECT * from m_heap;
 ERROR:  materialized view "m_heap" has not been populated
@@ -54,7 +54,7 @@ SELECT * FROM m_heap;
  z    |     11
 (3 rows)
 
-CREATE MATERIALIZED VIEW m_ao with (appendonly=true) AS SELECT type, sum(amt) AS totamt FROM t_matview_ao GROUP BY type WITH NO DATA  distributed by(type);
+CREATE MATERIALIZED VIEW IF NOT EXISTS m_ao with (appendonly=true) AS SELECT type, sum(amt) AS totamt FROM t_matview_ao GROUP BY type WITH NO DATA  distributed by(type);
 SELECT * from m_ao;
 ERROR:  materialized view "m_ao" has not been populated
 HINT:  Use the REFRESH MATERIALIZED VIEW command.
@@ -80,7 +80,7 @@ SELECT * FROM m_ao;
  z    |     11
 (3 rows)
 
-CREATE MATERIALIZED VIEW m_aocs with (appendonly=true, orientation=column) AS SELECT type, sum(amt) AS totamt FROM t_matview_ao GROUP BY type WITH NO DATA  distributed by(type);
+CREATE MATERIALIZED VIEW IF NOT EXISTS m_aocs with (appendonly=true, orientation=column) AS SELECT type, sum(amt) AS totamt FROM t_matview_ao GROUP BY type WITH NO DATA  distributed by(type);
 SELECT * from m_aocs;
 ERROR:  materialized view "m_aocs" has not been populated
 HINT:  Use the REFRESH MATERIALIZED VIEW command.

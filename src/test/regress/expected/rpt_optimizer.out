@@ -822,10 +822,11 @@ explain (costs off) select * from t_replicate_volatile, t_hashdist where t_repli
    ->  Nested Loop
          Join Filter: true
          ->  Seq Scan on t_hashdist
-         ->  Seq Scan on t_replicate_volatile
-               Filter: ((a)::double precision > random())
+         ->  Materialize
+               ->  Seq Scan on t_replicate_volatile
+                     Filter: ((a)::double precision > random())
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(8 rows)
 
 -- join qual
 explain (costs off) select * from t_hashdist, t_replicate_volatile x, t_replicate_volatile y where x.a + y.a > random();
@@ -950,15 +951,16 @@ explain (costs off) select * from t_hashdist cross join (select a, sum(b) as s f
    ->  Nested Loop
          Join Filter: true
          ->  Seq Scan on t_hashdist
-         ->  Result
-               Filter: (((sum(t_replicate_volatile.b)))::double precision > random())
-               ->  GroupAggregate
-                     Group Key: t_replicate_volatile.a
-                     ->  Sort
-                           Sort Key: t_replicate_volatile.a
-                           ->  Seq Scan on t_replicate_volatile
+         ->  Materialize
+               ->  Result
+                     Filter: (((sum(t_replicate_volatile.b)))::double precision > random())
+                     ->  GroupAggregate
+                           Group Key: t_replicate_volatile.a
+                           ->  Sort
+                                 Sort Key: t_replicate_volatile.a
+                                 ->  Seq Scan on t_replicate_volatile
  Optimizer: Pivotal Optimizer (GPORCA)
-(12 rows)
+(13 rows)
 
 -- insert
 explain (costs off) insert into t_replicate_volatile select random() from t_replicate_volatile;

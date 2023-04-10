@@ -29,9 +29,6 @@
 #define WORDNUM(x)	((x) / BITS_PER_BITMAPWORD)
 #define BITNUM(x)	((x) % BITS_PER_BITMAPWORD)
 
-#define BITMAPSET_SIZE(nwords)	\
-	(offsetof(Bitmapset, words) + (nwords) * sizeof(bitmapword))
-
 /*----------
  * This is a well-known cute trick for isolating the rightmost one-bit
  * in a word.  It assumes two's complement arithmetic.  Consider any

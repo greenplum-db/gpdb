@@ -4234,6 +4234,41 @@ AbortBufferIO(void)
 									  (buf_state & BM_TEMP) ?
 									  TempRelBackendId : InvalidBackendId,
 									  buf->tag.forkNum);
+				
+				/*
+				 * GPDB specific code, to tolerate a failure when flushing
+				 * a dirty shared_buffer without backing relfile on a temporary
+				 * AO AUX table.
+				 * 
+				 * The background story is, when the writer aborts the transaction
+				 * before any of readers in a multi-slices session, it drops the
+				 * shared_buffer and unlinks corresponding temporary relfilenodes.
+				 * But readers may be yet to receive the cancel signal from QD hence
+				 * continue executing their part of the plan. This makes a reader has
+				 * a chance to read previous unlinked relfilenode to shared_buffers
+				 * and re-marked it to dirty in the case of hintbit is set, which could
+				 * result to a permanent "could not open file" problem when other processes
+				 * (such like bgworker or readers) attempt to flush this buffer to disk.
+				 * This failure on a temporary Heap table could also block other session's
+				 * regular operations permanently hence leading to an unavailable state
+				 * of the current DB instance. This behavior doesn't make sense as a failure
+				 * on a temporary object should not break the the whole system's availability.
+				 * 
+				 * Here we clear the bad buffer dirty flag to prevent from getting serious.
+				 */
+				if ((buf_state & BM_TEMP) && access(path, F_OK) != 0 && errno == ENOENT)
+				{
+					ereport(WARNING,
+						(errcode(ERRCODE_IO_ERROR),
+						 errmsg("could not write block %u of %s",
+								buf->tag.blockNum, path),
+						 errdetail("Multiple failures --- write error is tolerable on this non-existent temporary table.")));
+
+					TerminateBufferIO(buf, true, 0);
+					pfree(path);
+					return;
+				}
+
 				ereport(WARNING,
 						(errcode(ERRCODE_IO_ERROR),
 						 errmsg("could not write block %u of %s",

@@ -293,6 +293,48 @@ execute p3(1);
 execute p3(1);
 drop table test_prepare;
 
+-- Tests to check direct dispatch if the table is randomly distributed and the
+-- filter has condition on gp_segment_id
+
+-- NOTE: Only EXPLAIN query included, output of SELECT query is not shown.
+-- Since the table is distributed randomly, the output of SELECT query
+-- will differ everytime new table is created, and hence the during comparision
+-- the tests will fail.
+
+drop table if exists bar_randDistr;
+create table bar_randDistr(col1 int, col2 int) distributed randomly;
+insert into bar_randDistr select i,i*2 from generate_series(1, 10)i;
+
+-- Case 1 : simple conditions on gp_segment_id
+explain (costs off) select gp_segment_id, * from bar_randDistr where gp_segment_id=0;
+explain (costs off) select gp_segment_id, * from bar_randDistr where gp_segment_id=1 or gp_segment_id=2;
+explain (costs off) select gp_segment_id, count(*) from bar_randDistr group by gp_segment_id;
+
+-- Case2: Conjunction scenario with filter condition on gp_segment_id and column
+explain (costs off) select gp_segment_id, * from bar_randDistr where gp_segment_id=0 and col1 between 1 and 10;
+
+-- Case3: Disjunction scenario with filter condition on gp_segment_id and column
+explain (costs off) select gp_segment_id, * from bar_randDistr where gp_segment_id=1 or (col1=6 and gp_segment_id=2);
+
+-- Case4: Scenario with constant/variable column and constant/variable gp_segment_id
+explain (costs off) select gp_segment_id, * from bar_randDistr where col1 =3 and gp_segment_id in (0,1);
+explain (costs off) select gp_segment_id, * from bar_randDistr where col1 =3 and gp_segment_id <>1;
+explain (costs off) select gp_segment_id, * from bar_randDistr where col1 between 1 and 5 and gp_segment_id =0;
+explain (costs off) select gp_segment_id, * from bar_randDistr where col1 in (1,5) and gp_segment_id <> 0;
+explain (costs off) select gp_segment_id, * from bar_randDistr where col1 in (1,5) and gp_segment_id in (0,1);
+
+-- Case5: Scenarios with special conditions
+create function afunc() returns integer as $$ begin return 42; end; $$ language plpgsql;
+create function immutable_func() returns integer as $$ begin return 42; end; $$ language plpgsql immutable;
+
+explain (costs off) select * from bar_randDistr where col1 = 1;
+explain (costs off) select * from bar_randDistr where gp_segment_id % 2 = 0;
+explain (costs off) select * from bar_randDistr where gp_segment_id=immutable_func();
+explain (costs off) select * from bar_randDistr where gp_segment_id=afunc();
+
+drop table if exists bar_randDistr;
+
+
 -- test direct dispatch via gp_segment_id qual
 create table t_test_dd_via_segid(id int);
 insert into t_test_dd_via_segid select * from generate_series(1, 6);
@@ -393,7 +435,11 @@ select gp_segment_id, * from t1_varchar where (col1_varchar = 'a' or col1_varcha
 explain (costs off) select gp_segment_id, * from t1_varchar where col1_varchar = 97::VARCHAR;
 select gp_segment_id, * from t1_varchar where col1_varchar = 97::VARCHAR;
 
--- explicit cast using "char", generates a scenario of cast function from Dist Colm to datum in CTranslatorExprToDXLUtils::FDirectDispatchable(,,)
+-- varchar hash and bpchar hash belong to different opfamilies
+-- hash distribution of col1_varchar and col1_varchar::bpchar
+-- could assign values to different segments. Therefore, the
+-- gather motion applies to all 3 segments, and no direct
+-- dispatch occurs.
 explain (costs off) select gp_segment_id,  * from t1_varchar where col1_varchar = 'c'::char;
 select gp_segment_id,  * from t1_varchar where col1_varchar = 'c'::char;
 
@@ -422,6 +468,10 @@ VALUES ('abb'),
        ('ABC'),
        ('abd');
 
+-- text hash/btree and citext hash/btree belong to different opfamilies
+-- hash distribution of name and name::text could assign values to
+-- different segments. Therefore, the gather motion applies to all 3
+-- segments, and no direct dispatch occurs.
 explain (costs off) select LOWER(name) as aba FROM srt_dd WHERE name = 'ABA'::text;
 select LOWER(name) as aba FROM srt_dd WHERE name = 'ABA'::text;
 
@@ -553,6 +603,34 @@ abort;
 set test_print_direct_dispatch_info=off;
 set allow_system_table_mods=off;
 
+-- https://github.com/greenplum-db/gpdb/issues/14887
+-- If opno of clause does not belong to opfamily of distributed key,
+-- do not use direct dispatch to resolve wrong result
+create table t_14887(a varchar);
+insert into t_14887 values('a   ');
+explain select * from t_14887 where a = 'a'::bpchar;
+select * from t_14887 where a = 'a'::bpchar;
+
+-- texteq does not belong to the hash opfamily of the table's citext distkey.
+-- But from the implementation can deduce: texteq ==> citext_eq, and we can
+-- do the direct dispatch.
+-- But we do not have the kind of implication rule in Postgres: texteq ==> citext_eq.
+-- Also partition table with citext as hash key and condition with text type
+-- does not do partition prune.
+CREATE EXTENSION if not exists citext;
+drop table t_14887;
+create table t_14887(a citext);
+insert into t_14887 values('A'),('a');
+explain select * from t_14887 where a = 'a'::text;
+select * from t_14887 where a = 'a'::text;
+
+drop table t_14887;
+create table t_14887 (a citext) partition by hash (a);
+create table t0_14887 partition of t_14887 for values with (modulus 3,remainder 0);
+create table t1_14887 partition of t_14887 for values with (modulus 3,remainder 1);
+create table t2_14887 partition of t_14887 for values with (modulus 3,remainder 2);
+explain select * from t_14887 where a = 'a'::text;
+
 begin;
 drop table if exists direct_test;
 drop table if exists direct_test_two_column;
@@ -569,5 +647,7 @@ drop table if exists t_sql_value_function1;
 drop table if exists t_sql_value_function2;
 
 drop table if exists t_hash_partition;
+drop table if exists t_14887;
+drop extension if exists citext cascade;
 
 commit;

@@ -5,11 +5,11 @@ Collects statistics about a database.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-ANALYZE [VERBOSE] [<table> [ (<column> [, ...] ) ]]
+ANALYZE [VERBOSE] [SKIP_LOCKED] [<table> [ (<column> [, ...] ) ]]
 
-ANALYZE [VERBOSE] {<root_partition_table_name>|<leaf_partition_table_name>} [ (<column> [, ...] )] 
+ANALYZE [VERBOSE] [SKIP_LOCKED] {<root_partition_table_name>|<leaf_partition_table_name>} [ (<column> [, ...] )] 
 
-ANALYZE [VERBOSE] ROOTPARTITION {ALL | <root_partition_table_name> [ (<column> [, ...] )]}
+ANALYZE [VERBOSE] [SKIP_LOCKED] ROOTPARTITION {ALL | <root_partition_table_name> [ (<column> [, ...] )]}
 ```
 
 ## <a id="section3"></a>Description 
@@ -71,6 +71,9 @@ VERBOSE
     -   The column for which statistics is being computed.
     -   The queries that are issued to collect the different statistics for a single column.
     -   The statistics that are collected.
+
+SKIP_LOCKED
+:   Specifies that `ANALYZE` should not wait for any conflicting locks to be released when beginning work on a relation: if it cannot lock a relation immediately without waiting, it skips the relation. Note that even with this option, `ANALYZE` may still block when opening the relation's indexes or when acquiring sample rows from partitions, table inheritance children, and some types of foreign tables. Also, while `ANALYZE` ordinarily processes all partitions of specified partitioned tables, this option will cause `ANALYZE` to skip all partitions if there is a conflicting lock on the partitioned table.
 
 table
 :   The name \(possibly schema-qualified\) of a specific table to analyze. If omitted, all regular tables \(but not foreign tables\) in the current database are analyzed.

@@ -7,11 +7,12 @@ This section contains an overview of the Greenplum Database PL/pgSQL language.
 -   [About Greenplum Database PL/pgSQL](#topic2)
 -   [PL/pgSQL Plan Caching](#topic67)
 -   [PL/pgSQL Examples](#topic6)
+-   [About Developing PL/pgSQL Procedures](#about_procs)
 -   [References](#topic10)
 
 ## <a id="topic2"></a>About Greenplum Database PL/pgSQL 
 
-Greenplum Database PL/pgSQL is a loadable procedural language that is installed and registered by default with Greenplum Database. You can create user-defined functions using SQL statements, functions, and operators.
+Greenplum Database PL/pgSQL is a loadable procedural language that is installed and registered by default with Greenplum Database. You can create user-defined functions and procedures using SQL statements, functions, and operators.
 
 With PL/pgSQL you can group a block of computation and a series of SQL queries inside the database server, thus having the power of a procedural language and the ease of use of SQL. Also, with PL/pgSQL you can use all the data types, operators and functions of Greenplum Database SQL.
 
@@ -355,6 +356,63 @@ BEGIN
     RAISE NOTICE 'calculated value is %', calc_int ;
 END $$ LANGUAGE plpgsql ;
 ```
+
+## <a id="about_procs"></a>About Developing PL/pgSQL Procedures
+
+A PL/pgSQL procedure is similar to a PL/pgSQL function. Refer to [User-Defined Procedures](../admin_guide/query/topics/functions-operators.html#topic28a) for more information on procedures in Greenplum Database and how they differ from functions.
+
+A PL/pgSQL procedure does not have a return value, and as such can end without a `RETURN` statement. If you wish to use a `RETURN` statement to exit the code early, write just `RETURN` with no expression.
+
+If the PL/pgSQL procedure has output parameters, the final values of the output parameter variables will be returned to the caller.
+
+A PL/pgSQL function, procedure, or `DO` block can call a procedure using `CALL`. Output parameters are handled differently from the way that `CALL` works in plain SQL. Each `INOUT` parameter of the procedure must correspond to a variable in the `CALL` statement, and whatever the procedure returns is assigned back to that variable after it returns. For example:
+
+``` sql
+CREATE PROCEDURE triple(INOUT x int)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    x := x * 3;
+END;
+$$;
+
+DO $$
+DECLARE myvar int := 5;
+BEGIN
+  CALL triple(myvar);
+  RAISE NOTICE 'myvar = %', myvar;  -- prints 15
+END;
+$$;
+```
+
+### <a id="proc_transmgmt"></a>About Transaction Management in Procedures
+
+In procedures invoked by the `CALL` command as well as in anonymous code blocks (`DO` command), it is possible to end transactions using the commands `COMMIT` and `ROLLBACK`. A new transaction is started automatically after a transaction is ended using these commands, so there is no separate `START TRANSACTION` command. (Note that `BEGIN` and `END` have different meanings in PL/pgSQL.)
+
+Here is a simple example:
+
+``` sql
+CREATE PROCEDURE transaction_test1()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    FOR i IN 0..9 LOOP
+        INSERT INTO test1 (a) VALUES (i);
+        IF i % 2 = 0 THEN
+            COMMIT;
+        ELSE
+            ROLLBACK;
+        END IF;
+    END LOOP;
+END;
+$$;
+
+CALL transaction_test1();
+```
+
+A new transaction starts out with default transaction characteristics such as transaction isolation level. In cases where transactions are committed in a loop, it might be desirable to start new transactions automatically with the same characteristics as the previous one. The commands COMMIT AND CHAIN and ROLLBACK AND CHAIN accomplish this.
+
+Transaction control is only possible in `CALL` or `DO` invocations from the top level or nested `CALL` or `DO` invocations without any other intervening command. For example, if the call stack is `CALL proc1()` → `CALL proc2()` → `CALL proc3()`, then the second and third procedures can perform transaction control actions. But if the call stack is `CALL proc1()` → `SELECT func2()` → `CALL proc3()`, the last procedure cannot perform transaction control because of the `SELECT` in between.
 
 ## <a id="topic10"></a>References 
 

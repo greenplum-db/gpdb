@@ -78,6 +78,7 @@
 #include "access/amapi.h"
 #include "access/htup_details.h"
 #include "access/tsmapi.h"
+#include "catalog/pg_am.h"
 #include "executor/executor.h"
 #include "executor/nodeAgg.h"
 #include "executor/nodeHash.h"
@@ -689,6 +690,14 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 	get_tablespace_page_costs(baserel->reltablespace,
 							  &spc_random_page_cost,
 							  &spc_seq_page_cost);
+	
+	/* 
+	 * GPDB: see appendonly_estimate_rel_size()/aoco_estimate_rel_size()
+	 *
+	 * FIXME: cost model may need to adapt to AO/CO auxiliary tables (such
+	 * like aoblkdir and aovisimap) lookups during index-only scan.
+	 */
+	AssertImply(IsAccessMethodAO(baserel_orig->relam), baserel->allvisfrac == 1);
 
 	/*----------
 	 * Estimate number of main-table pages fetched, and compute I/O cost.
@@ -715,6 +724,8 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 	 * We use the measured fraction of the entire heap that is all-visible,
 	 * which might not be particularly relevant to the subset of the heap
 	 * that this query will fetch; but it's not clear how to do better.
+	 * GPDB: For AO/CO tables, in an index-only scan, the base table never
+	 * has to be scanned. So we ensure that allvisfrac = 1.
 	 *----------
 	 */
 	if (loop_count > 1)
@@ -2521,7 +2532,7 @@ cost_agg(Path *path, PlannerInfo *root,
 		total_cost += qual_cost.startup + output_tuples * qual_cost.per_tuple;
 
 		output_tuples = clamp_row_est(output_tuples *
-									  clauselist_selectivity(root,
+									  clauselist_selectivity_extended(root,
 															 quals,
 															 0,
 															 JOIN_INNER,
@@ -2672,7 +2683,7 @@ cost_group(Path *path, PlannerInfo *root,
 		total_cost += qual_cost.startup + output_tuples * qual_cost.per_tuple;
 
 		output_tuples = clamp_row_est(output_tuples *
-									  clauselist_selectivity(root,
+									  clauselist_selectivity_extended(root,
 															 quals,
 															 0,
 															 JOIN_INNER,
@@ -4643,7 +4654,7 @@ compute_semi_anti_join_factors(PlannerInfo *root,
 	/*
 	 * Get the JOIN_SEMI or JOIN_ANTI selectivity of the join clauses.
 	 */
-	jselec = clauselist_selectivity(root,
+	jselec = clauselist_selectivity_extended(root,
 									joinquals,
 									0,
 									(jointype == JOIN_ANTI) ? JOIN_ANTI : JOIN_SEMI,
@@ -4667,7 +4678,7 @@ compute_semi_anti_join_factors(PlannerInfo *root,
 	norm_sjinfo.semi_operators = NIL;
 	norm_sjinfo.semi_rhs_exprs = NIL;
 
-	nselec = clauselist_selectivity(root,
+	nselec = clauselist_selectivity_extended(root,
 									joinquals,
 									0,
 									JOIN_INNER,
@@ -4874,7 +4885,7 @@ set_baserel_size_estimates(PlannerInfo *root, RelOptInfo *rel)
 	Assert(rel->relid > 0);
 
 	nrows = rel->tuples *
-		clauselist_selectivity(root,
+		clauselist_selectivity_extended(root,
 							   rel->baserestrictinfo,
 							   0,
 							   JOIN_INNER,
@@ -4994,7 +5005,7 @@ get_parameterized_baserel_size(PlannerInfo *root, RelOptInfo *rel,
 	allclauses = list_concat(list_copy(param_clauses),
 							 rel->baserestrictinfo);
 	nrows = rel->tuples *
-		clauselist_selectivity(root,
+		clauselist_selectivity_extended(root,
 							   allclauses,
 							   rel->relid,	/* do not use 0! */
 							   JOIN_INNER,
@@ -5165,13 +5176,13 @@ calc_joinrel_size_estimate(PlannerInfo *root,
 		}
 
 		/* Get the separate selectivities */
-		jselec = clauselist_selectivity(root,
+		jselec = clauselist_selectivity_extended(root,
 										joinquals,
 										0,
 										jointype,
 										sjinfo,
 										gp_selectivity_damping_for_joins);
-		pselec = clauselist_selectivity(root,
+		pselec = clauselist_selectivity_extended(root,
 										pushedquals,
 										0,
 										jointype,
@@ -5194,7 +5205,7 @@ calc_joinrel_size_estimate(PlannerInfo *root,
 	}
 	else
 	{
-		jselec = clauselist_selectivity(root,
+		jselec = clauselist_selectivity_extended(root,
 										restrictlist,
 										0,
 										jointype,
