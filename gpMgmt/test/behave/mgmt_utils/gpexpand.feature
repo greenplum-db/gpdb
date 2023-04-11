@@ -523,7 +523,7 @@ Feature: expand the cluster by adding more segments
         And the cluster is generated with "1" primaries only
         And database "gptest" exists
         And the user runs psql with "-c 'create table t(a int)'" against database "gptest"
-        And the user runs psql with "-c 'create or replace function notcie_ddl() returns event_trigger as $$ begin raise notice 'command % is executed.', tg_tag; end $$ language plpgsql'" against database "gptest"
+        And create event trigger function
 		And the user runs psql with "-c 'create event trigger log_alter on ddl_command_end execute function notcie_ddl()'" against database "gptest"
         And there are no gpexpand_inputfiles
         And the cluster is setup for an expansion on hosts "localhost"

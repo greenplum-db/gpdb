@@ -3995,3 +3995,12 @@ def impl(context, contentids):
 
      if not no_basebackup:
          raise Exception("pg_basebackup entry was found for contents %s in gp_stat_replication after %d retries" % (contentids, retries))
+
+
+@given("create event trigger function")
+def impl(context):
+    dbname = "gptest"
+    query = "create or replace function notcie_ddl() returns event_trigger as $$ begin raise notice 'command % is executed.', tg_tag; end $$ language plpgsql"
+
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname))) as conn:
+        dbconn.querySingleton(conn, query)
