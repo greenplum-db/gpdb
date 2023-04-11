@@ -12,6 +12,10 @@ m/^NOTICE:  extension "gp_inject_fault" already exists, skipping/
 # of the test. Ignore the NOTICE if it exists already.
 m/NOTICE:  extension "gp_debug_numsegments" already exists, skipping/
 
+# Some tests use the postgres_fdw extension, and create it at the beginning
+# of the test. Ignore the NOTICE if it exists already.
+m/NOTICE:  extension "postgres_fdw" already exists, skipping/
+
 m/^ Optimizer status:.*/
 m/^ Optimizer: Pivotal Optimizer \(GPORCA\).*/
 m/^ Optimizer: Postgres query optimizer/

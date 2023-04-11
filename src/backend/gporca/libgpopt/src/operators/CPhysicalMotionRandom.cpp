@@ -181,7 +181,6 @@ CPhysicalMotionRandom::OsPrint(IOstream &os) const
 	return os;
 }
 
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CPhysicalMotionRandom::PopConvert

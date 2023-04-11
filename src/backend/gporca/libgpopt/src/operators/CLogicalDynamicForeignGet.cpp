@@ -50,13 +50,13 @@ CLogicalDynamicForeignGet::CLogicalDynamicForeignGet(
 	CMemoryPool *mp, const CName *pnameAlias, CTableDescriptor *ptabdesc,
 	ULONG ulPartIndex, CColRefArray *pdrgpcrOutput,
 	CColRef2dArray *pdrgpdrgpcrPart, IMdIdArray *partition_mdids,
-	OID foreign_server_oid, BOOL is_coordinator_only)
+	OID foreign_server_oid, IMDRelation::Ereldistrpolicy dist)
 
 
 	: CLogicalDynamicGetBase(mp, pnameAlias, ptabdesc, ulPartIndex,
 							 pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids),
 	  m_foreign_server_oid(foreign_server_oid),
-	  m_is_coordinator_only(is_coordinator_only)
+	  m_dist(dist)
 {
 }
 
@@ -114,7 +114,7 @@ CLogicalDynamicForeignGet::PopCopyWithRemappedColumns(
 
 	return GPOS_NEW(mp) CLogicalDynamicForeignGet(
 		mp, pnameAlias, m_ptabdesc, m_scan_id, pdrgpcrOutput, pdrgpdrgpcrPart,
-		m_partition_mdids, m_foreign_server_oid, m_is_coordinator_only);
+		m_partition_mdids, m_foreign_server_oid, m_dist);
 }
 
 //---------------------------------------------------------------------------

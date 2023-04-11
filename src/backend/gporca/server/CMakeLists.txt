@@ -391,7 +391,7 @@ CoverintIndexTest:
 CoveringIndex-1 CoveringIndex-2 CoveringIndex-3;
 
 CForeignPartTest:
-ForeignPartUniform PartForeignMixed PartForeignDifferentServer PartForeignDifferentExecLocation PartForeignMixedDPE PartForeignMixedSPE PartForeignUniformSPE
+ForeignPartUniform PartForeignMixed PartForeignDifferentServer PartForeignDifferentExecLocation PartForeignMixedDPE PartForeignMixedSPE PartForeignUniformSPE ForeignScanExecLocAnySimpleScan ForeignScanExecLocAnyJoin
 ")
 
 set(mdp_dir "../data/dxl/minidump/")

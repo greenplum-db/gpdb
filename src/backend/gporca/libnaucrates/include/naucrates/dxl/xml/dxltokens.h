@@ -490,6 +490,7 @@ enum Edxltoken
 	EdxltokenRelDistrHash,
 	EdxltokenRelDistrRandom,
 	EdxltokenRelDistrReplicated,
+	EdxltokenRelDistrUniversal,
 	EdxltokenConvertHashToRandom,
 
 	EdxltokenRelDistrOpfamilies,

@@ -16,7 +16,6 @@
 extern "C" {
 #include "postgres.h"
 
-#include "access/external.h"
 #include "access/heapam.h"
 #include "catalog/heap.h"
 #include "catalog/namespace.h"
@@ -529,7 +528,16 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 
 	// get distribution policy
 	GpPolicy *gp_policy = gpdb::GetDistributionPolicy(rel.get());
-	dist = GetRelDistribution(gp_policy);
+	// If it's a foreign table, but not an external table
+	if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE && gp_policy == nullptr)
+	{
+		ForeignTable *ft = GetForeignTable(rel->rd_id);
+		dist = GetForeignRelDistribution(ft);
+	}
+	else
+	{
+		dist = GetRelDistribution(gp_policy);
+	}
 
 	// get distribution columns
 	if (IMDRelation::EreldistrHash == dist)
@@ -789,6 +797,33 @@ CTranslatorRelcacheToDXL::GetRelDistribution(GpPolicy *gp_policy)
 			   GPOS_WSZ_LIT("unrecognized distribution policy"));
 	return IMDRelation::EreldistrSentinel;
 }
+
+// Foreign relations don't store their distribution policy in GpPolicy,
+// so we need to extract it separately from the ForeignTable itself
+IMDRelation::Ereldistrpolicy
+CTranslatorRelcacheToDXL::GetForeignRelDistribution(ForeignTable *ft)
+{
+	IMDRelation::Ereldistrpolicy dist = IMDRelation::EreldistrSentinel;
+	switch (ft->exec_location)
+	{
+		case FTEXECLOCATION_COORDINATOR:
+			dist = IMDRelation::EreldistrCoordinatorOnly;
+			break;
+		case FTEXECLOCATION_ANY:
+			dist = IMDRelation::EreldistrUniversal;
+			break;
+		case FTEXECLOCATION_ALL_SEGMENTS:
+			dist = IMDRelation::EreldistrRandom;
+			break;
+		default:
+			GPOS_RAISE(
+				gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+				GPOS_WSZ_LIT("Unrecognized foreign distribution policy"));
+	}
+
+	return dist;
+}
+
 
 //---------------------------------------------------------------------------
 //	@function:
