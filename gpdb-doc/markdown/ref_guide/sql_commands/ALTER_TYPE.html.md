@@ -119,7 +119,7 @@ storage\_directive
 
 ## <a id="section4n"></a>Notes
 
-If `ALTER TYPE ... ADD VALUE` \(the form that adds a new value to an enum type\) is executed inside a transaction block, the new value cannot be used until after the transaction has been committed..
+If `ALTER TYPE ... ADD VALUE` \(the form that adds a new value to an enum type\) is executed inside a transaction block, the new value cannot be used until after the transaction has been committed.
  
 Comparisons involving an added enum value will sometimes be slower than comparisons involving only original members of the enum type. This will usually only occur if `BEFORE` or `AFTER` is used to set the new value's sort position somewhere other than at the end of the list. However, sometimes it will happen even though the new value is added at the end \(this occurs if the OID counter "wrapped around" since the original creation of the enum type\). The slowdown is usually insignificant; but if it matters, optimal performance can be regained by dropping and recreating the enum type, or by dumping and reloading the database.
 
