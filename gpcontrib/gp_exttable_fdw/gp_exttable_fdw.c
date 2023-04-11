@@ -810,6 +810,13 @@ static void exttable_EndForeignInsert(EState *estate,
 	external_insert_finish(extInsertDesc);
 }
 
+static void
+exttable_ErrorHandling(ForeignScanState *node)
+{
+	exttable_fdw_state *fdw_state = (exttable_fdw_state *) node->fdw_state;
+	extTableErrorHandling(fdw_state->ess_ScanDesc);
+}
+
 Datum
 gp_exttable_fdw_handler(PG_FUNCTION_ARGS)
 {
@@ -822,6 +829,7 @@ gp_exttable_fdw_handler(PG_FUNCTION_ARGS)
 	routine->IterateForeignScan = exttable_IterateForeignScan;
 	routine->ReScanForeignScan = exttable_ReScanForeignScan;
 	routine->EndForeignScan = exttable_EndForeignScan;
+	routine->ErrorHandle = exttable_ErrorHandling;
 
 	routine->IsForeignRelUpdatable = exttable_IsForeignRelUpdatable;
 	routine->BeginForeignModify = exttable_BeginForeignModify;

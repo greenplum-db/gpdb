@@ -52,6 +52,8 @@ typedef void (*ReScanForeignScan_function) (ForeignScanState *node);
 
 typedef void (*EndForeignScan_function) (ForeignScanState *node);
 
+typedef void (*ForeignScanErrorHandle_function) (ForeignScanState *node);
+
 typedef void (*GetForeignJoinPaths_function) (PlannerInfo *root,
 											  RelOptInfo *joinrel,
 											  RelOptInfo *outerrel,
@@ -200,6 +202,7 @@ typedef struct FdwRoutine
 	IterateForeignScan_function IterateForeignScan;
 	ReScanForeignScan_function ReScanForeignScan;
 	EndForeignScan_function EndForeignScan;
+	ForeignScanErrorHandle_function ErrorHandle;
 
 	/*
 	 * Remaining functions are optional.  Set the pointer to NULL for any that

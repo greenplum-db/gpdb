@@ -306,6 +306,7 @@ extern CopyState BeginCopyToForeignTable(Relation forrel, List *options);
 extern void EndCopyFrom(CopyState cstate);
 extern bool NextCopyFrom(CopyState cstate, ExprContext *econtext,
 						 Datum *values, bool *nulls);
+extern void HandleCopyError(CopyState cstate);
 extern bool NextCopyFromRawFields(CopyState cstate,
 								  char ***fields, int *nfields);
 extern void CopyFromErrorCallback(void *arg);

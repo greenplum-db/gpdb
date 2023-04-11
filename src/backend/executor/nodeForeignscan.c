@@ -112,9 +112,25 @@ ExecForeignScan(PlanState *pstate)
 {
 	ForeignScanState *node = castNode(ForeignScanState, pstate);
 
-	return ExecScan(&node->ss,
-					(ExecScanAccessMtd) ForeignNext,
-					(ExecScanRecheckMtd) ForeignRecheck);
+	TupleTableSlot *result = NULL;
+	int get_error = 0;
+	do 
+	{
+		PG_TRY();
+		{
+			result = ExecScan(&node->ss,
+							(ExecScanAccessMtd) ForeignNext,
+							(ExecScanRecheckMtd) ForeignRecheck);
+		}
+		PG_CATCH();
+		{
+			ExecForeignScanError(node);
+			get_error = 1;
+		}
+		PG_END_TRY();
+	} while (!result && get_error);
+
+	return result;
 }
 
 
@@ -396,4 +412,13 @@ ExecShutdownForeignScan(ForeignScanState *node)
 
 	if (fdwroutine->ShutdownForeignScan)
 		fdwroutine->ShutdownForeignScan(node);
+}
+
+void
+ExecForeignScanError(ForeignScanState *node)
+{
+	FdwRoutine *fdwroutine = node->fdwroutine;
+	if (fdwroutine->ErrorHandle)
+		fdwroutine->ErrorHandle(node);
+	return;
 }

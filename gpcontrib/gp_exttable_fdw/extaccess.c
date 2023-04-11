@@ -1581,3 +1581,10 @@ appendCopyEncodingOption(List *copyFmtOpts, int encoding)
 							   (Node *)makeString((char *)pg_encoding_to_char(encoding)),
 							   -1));
 }
+
+void
+extTableErrorHandling(FileScanDesc scan)
+{
+	CopyState	pstate = scan->fs_pstate;
+	HandleCopyError(pstate);
+}
