@@ -3672,3 +3672,61 @@ DROP EXTERNAL TABLE ext_false;
 DROP EXTERNAL TABLE ext_true;
 DROP EXTERNAL TABLE ext_persistently;
 
+-- test error handling for external table
+CREATE EXTERNAL TABLE ext_divzero (c INT) 
+location ('file://localhost.localdomain/home/gpadmin/workspace/gpdb/src/test/regress/data/eh_divzero.dat')
+FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 2;
+
+SELECT 6/(c-2) FROM ext_divzero;
+
+SELECT count(*) FROM gp_read_error_log('ext_divzero');
+
+DROP EXTERNAL TABLE ext_divzero;
+
+CREATE EXTERNAL TABLE ext_divzero (c INT) 
+location ('file://localhost.localdomain/home/gpadmin/workspace/gpdb/src/test/regress/data/eh_divzero.dat')
+FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 10;
+
+SELECT 6/(c-2) FROM ext_divzero;
+
+SELECT count(*) FROM gp_read_error_log('ext_divzero');
+
+DROP EXTERNAL TABLE ext_divzero;
+
+CREATE EXTERNAL TABLE ext_jsonerror (c json) 
+location ('file://localhost.localdomain/home/gpadmin/workspace/gpdb/src/test/regress/data/eh_json.dat')
+FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 3;
+
+SELECT (c->>'ip')::inet FROM ext_jsonerror;
+
+DROP EXTERNAL TABLE ext_jsonerror;
+
+CREATE EXTERNAL TABLE ext_jsonerror (c json) 
+location ('file://localhost.localdomain/home/gpadmin/workspace/gpdb/src/test/regress/data/eh_json.dat')
+FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 10;
+
+SELECT (c->>'ip')::inet FROM ext_jsonerror;
+
+SELECT COUNT(*) FROM gp_read_error_log('ext_jsonerror');
+
+DROP EXTERNAL TABLE ext_jsonerror;
+
+CREATE EXTERNAL TABLE ext_badjson(a json) 
+location ('file://localhost.localdomain/home/gpadmin/workspace/gpdb/src/test/regress/data/eh_badjson.dat') 
+FORMAT 'text' LOG ERRORS SEGMENT REJECT LIMIT 5;
+
+SELECT (a->>'9') FROM ext_badjson;
+
+SELECT count(*) FROM gp_read_error_log('ext_badjson');
+
+DROP EXTERNAL TABLE ext_badjson;
+
+CREATE EXTERNAL TABLE ext_badjson(a json) 
+location ('file://localhost.localdomain/home/gpadmin/workspace/gpdb/src/test/regress/data/eh_badjson.dat') 
+FORMAT 'text' LOG ERRORS SEGMENT REJECT LIMIT 10;
+
+SELECT (a->>'9') FROM ext_badjson;
+
+SELECT count(*) FROM gp_read_error_log('ext_badjson');
+
+DROP EXTERNAL TABLE ext_badjson;
