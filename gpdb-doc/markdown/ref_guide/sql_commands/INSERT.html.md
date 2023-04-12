@@ -158,7 +158,7 @@ If the specified table is a partitioned table, Greenplum Database routes each ro
 
 XXX For a partitioned table, all the child tables are locked during the `INSERT` operation when the Global Deadlock Detector is not enabled \(the default\). Only some of the leaf child tables are locked when the Global Deadlock Detector is enabled. For information about the Global Deadlock Detector, see [Global Deadlock Detector](../../admin_guide/dml.html#topic_gdd).
 
-XXX Greenplum Database supports a maximum of 127 concurrent `INSERT` transactions into a single append-optimized table.
+Greenplum Database supports a maximum of 127 concurrent `INSERT` transactions into a single append-optimized table.
 
 ## <a id="section7"></a>Examples 
 

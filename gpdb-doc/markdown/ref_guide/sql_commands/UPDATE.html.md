@@ -26,16 +26,16 @@ The optional `RETURNING` clause causes `UPDATE` to compute and return value\(s\)
 
 You must have the `UPDATE` privilege on the table, or at least on the column\(s\) that are listed to be updated. You must also have the `SELECT` privilege on any column whose values are read in the expressions or condition.
 
-XXX **Note:** As the default, Greenplum Database acquires an `EXCLUSIVE` lock on tables for `UPDATE` operations on heap tables. When the Global Deadlock Detector is enabled, the lock mode for `UPDATE` operations on heap tables is `ROW EXCLUSIVE`. See [Global Deadlock Detector](../../admin_guide/dml.html#topic_gdd).
+**Note:** As the default, Greenplum Database acquires an `EXCLUSIVE` lock on tables for `UPDATE` operations on heap tables. When the Global Deadlock Detector is enabled, the lock mode for `UPDATE` operations on heap tables is `ROW EXCLUSIVE`. See [Global Deadlock Detector](../../admin_guide/dml.html#topic_gdd).
 
 ## <a id="section5"></a>Parameters 
 
 with\_query
 :   The `WITH` clause allows you to specify one or more subqueries that can be referenced by name in the `UPDATE` query. See [WITH Queries \(Common Table Expressions\)](../../admin_guide/query/topics/CTE-query.html#topic_zhs_r1s_w1b) and [SELECT](SELECT.html) for details.
 
-:   XXX For an `UPDATE` command that includes a `WITH` clause, the clause can only contain `SELECT` commands, the `WITH` clause cannot contain a data-modifying command \(`INSERT`, `UPDATE`, or `DELETE`\).
+:   For an `UPDATE` command that includes a `WITH` clause, the clause can only contain `SELECT` commands, the `WITH` clause cannot contain a data-modifying command \(`INSERT`, `UPDATE`, or `DELETE`\).
 
-:   XXX It is possible for the query \(`SELECT` statement\) to also contain a `WITH` clause. In such a case both sets of with\_query can be referenced within the `UPDATE` query, but the second one takes precedence since it is more closely nested.
+:   It is possible for the query \(`SELECT` statement\) to also contain a `WITH` clause. In such a case both sets of with\_query can be referenced within the `UPDATE` query, but the second one takes precedence since it is more closely nested.
 
 table\_name
 :   The name \(optionally schema-qualified\) of the table to update. If `ONLY` is specified before the table name, matching rows are updated in the named table only. If `ONLY` is not specified, matching rows are also updated in any tables inheriting from the named table. Optionally, you can specify `*` after the table name to explicitly indicate that descendant tables are included.
@@ -64,7 +64,7 @@ condition
 cursor\_name
 :   The name of the cursor to use in a `WHERE CURRENT OF` condition. The row to be updated is the one most recently fetched from the cursor. The cursor must be a non-grouping query on the `UPDATE`'s target table. Note that `WHERE CURRENT OF` cannot be specified together with a Boolean condition. See [DECLARE](DECLARE.html) for more information about using cursors with `WHERE CURRENT OF`.
 
-:   XXX The `UPDATE...WHERE CURRENT OF` statement can only be run on the server, for example in an interactive psql session or a script. Language extensions such as PL/pgSQL do not have support for updatable cursors.
+:   The `UPDATE...WHERE CURRENT OF` statement can only be run on the server, for example in an interactive psql session or a script. Language extensions such as PL/pgSQL do not have support for updatable cursors.
 
 output\_expression
 :   An expression to be computed and returned by the `UPDATE` command after each row is updated. The expression may use any column names of the table named by table\_name or table\(s\) listed in `FROM`. Write `*` to return all columns.

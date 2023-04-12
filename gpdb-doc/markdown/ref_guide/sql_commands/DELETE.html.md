@@ -24,7 +24,7 @@ The optional `RETURNING` clause causes `DELETE` to compute and return value\(s\)
 
 You must have the `DELETE` privilege on the table to delete from it, as well as the `SELECT` privilege for any table in the `USING` clause or whose values are read in the condition.
 
-XXX **Note:** As the default, Greenplum Database acquires an `EXCLUSIVE` lock on tables for `DELETE` operations on heap tables. When the Global Deadlock Detector is enabled, the lock mode for `DELETE` operations on heap tables is `ROW EXCLUSIVE`. See [Global Deadlock Detector](../../admin_guide/dml.html#topic_gdd).
+**Note:** As the default, Greenplum Database acquires an `EXCLUSIVE` lock on tables for `DELETE` operations on heap tables. When the Global Deadlock Detector is enabled, the lock mode for `DELETE` operations on heap tables is `ROW EXCLUSIVE`. See [Global Deadlock Detector](../../admin_guide/dml.html#topic_gdd).
 
 ## <a id="section5"></a>Parameters 
 
@@ -50,7 +50,7 @@ condition
 cursor\_name
 :   The name of the cursor to use in a `WHERE CURRENT OF` condition. The row to be deleted is the one most recently fetched from this cursor. The cursor must be a non-grouping query on the `DELETE`'s target table. Note that `WHERE CURRENT OF` cannot be specified together with a Boolean condition. See [DECLARE](DECLARE.html) for more information about using cursors with `WHERE CURRENT OF`.
 
-:   XXX The `DELETE...WHERE CURRENT OF` cursor statement can only be run on the server, for example in an interactive psql session or a script. Language extensions such as PL/pgSQL do not have support for updatable cursors.
+:   The `DELETE...WHERE CURRENT OF` cursor statement can only be run on the server, for example in an interactive psql session or a script. Language extensions such as PL/pgSQL do not have support for updatable cursors.
 
 output\_expression
 :   An expression to be computed and returned by the `DELETE` command after each row is deleted. The expression can use any column names of the table named by table\_name or table\(s\) listed in `USING`. Write `*` to return all columns.
@@ -74,7 +74,7 @@ If the `DELETE` command contains a `RETURNING` clause, the result will be simila
 
 The `RETURNING` clause is not supported when deleting from append-optimized tables.
 
-XXX The `WHERE CURRENT OF` clause is not supported with replicated tables.
+The `WHERE CURRENT OF` clause is not supported with replicated tables.
 
 Greenplum Database lets you reference columns of other tables in the `WHERE` condition by specifying the other tables in the `USING` clause. For example, to delete all films produced by a given producer, one can run:
 

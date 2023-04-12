@@ -2,7 +2,7 @@
 
 Empties a table or set of tables of all rows.
 
-XXX **Note:** Greenplum Database does not enforce referential integrity syntax \(foreign key constraints\). `TRUNCATE` truncates a table that is referenced in a foreign key constraint even if the `CASCADE` option is omitted.
+**Note:** Greenplum Database does not enforce referential integrity syntax \(foreign key constraints\). `TRUNCATE` truncates a table that is referenced in a foreign key constraint even if the `CASCADE` option is omitted.
 
 ## <a id="section2"></a>Synopsis 
 
