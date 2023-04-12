@@ -43,7 +43,19 @@ value
 There are a few configuration parameters that can only be adjusted using the `SET` command or that have a special syntax:
 
 SCHEMA
-:    `SET SCHEMA '<value>'` is an alias for `SET <search_path> TO <value>`. Only one schema may be specified using this syntax.
+:   `SET SCHEMA '<value>'` is an alias for `SET <search_path> TO <value>`. Only one schema may be specified using this syntax.
+
+NAMES
+:   `SET NAMES <value>` is an alias for `SET client_encoding TO <value>`.
+
+SEED
+:   Sets the internal seed for the random number generator (the function `random()`). Allowed values are floating-point numbers between -1 and 1 inclusive.
+
+:   You can also set the seed by invoking the `setseed()` function:
+
+    ```
+    SELECT setseed(value);
+    ```
 
 TIME ZONE
 :   `SET TIME ZONE <value>` is an alias for `SET timezone TO <value>`. The syntax `SET TIME ZONE` allows special syntax for the time zone specification. Examples of valid values follow:
