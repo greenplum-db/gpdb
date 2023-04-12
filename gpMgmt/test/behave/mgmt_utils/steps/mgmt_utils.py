@@ -4003,4 +4003,4 @@ def impl(context):
     query = "create or replace function notcie_ddl() returns event_trigger as $$ begin raise notice 'command % is executed.', tg_tag; end $$ language plpgsql"
 
     with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
-        dbconn.querySingleton(conn, query)
+        dbconn.execSQL(conn, query)
