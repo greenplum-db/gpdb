@@ -722,7 +722,7 @@ shareinput_reader_waitready(void *ctxt, int share_id, PlanGenerator planGen)
 		else
 		{
 			int save_errno = errno;
-			elog(LOG, "SISC READER (shareid=%d, slice=%d): Wait ready try again, errno %d ... ",
+			elog(DEBUG1, "SISC READER (shareid=%d, slice=%d): Wait ready try again, errno %d ... ",
 					share_id, currentSliceId, save_errno);
 		}
 	}
@@ -834,7 +834,7 @@ writer_wait_for_acks(ShareInput_Lk_Context *pctxt, int share_id, int xslice)
 		else
 		{
 			int save_errno = errno;
-			elog(LOG, "SISC WRITER (shareid=%d, slice=%d): notify still wait for an answer, errno %d",
+			elog(DEBUG1, "SISC WRITER (shareid=%d, slice=%d): notify still wait for an answer, errno %d",
 					share_id, currentSliceId, save_errno);
 		}
 	}
@@ -922,7 +922,7 @@ shareinput_writer_waitdone(void *ctxt, int share_id, int nsharer_xslice)
 		else
 		{
 			int save_errno = errno;
-			elog(LOG, "SISC WRITER (shareid=%d, slice=%d): wait done time out once, errno %d",
+			elog(DEBUG1, "SISC WRITER (shareid=%d, slice=%d): wait done time out once, errno %d",
 					share_id, currentSliceId, save_errno);
 		}
 	}
