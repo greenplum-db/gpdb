@@ -2087,11 +2087,13 @@ CTranslatorRelcacheToDXL::RetrieveCast(CMemoryPool *mp, IMDId *mdid)
 	{
 		case COERCION_PATH_ARRAYCOERCE:
 		{
+			IMDId *src_elem_mdid = GPOS_NEW(mp)
+				CMDIdGPDB(IMDId::EmdidGeneral, gpdb::GetElementType(src_oid));
 			return GPOS_NEW(mp) CMDArrayCoerceCastGPDB(
 				mp, mdid, mdname, mdid_src, mdid_dest, is_binary_coercible,
 				GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, cast_fn_oid),
 				IMDCast::EmdtArrayCoerce, default_type_modifier, false,
-				EdxlcfImplicitCast, -1);
+				EdxlcfImplicitCast, -1, src_elem_mdid);
 		}
 		break;
 		case COERCION_PATH_FUNC:

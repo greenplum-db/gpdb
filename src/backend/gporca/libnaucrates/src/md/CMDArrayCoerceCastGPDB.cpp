@@ -26,13 +26,14 @@ CMDArrayCoerceCastGPDB::CMDArrayCoerceCastGPDB(
 	CMemoryPool *mp, IMDId *mdid, CMDName *mdname, IMDId *mdid_src,
 	IMDId *mdid_dest, BOOL is_binary_coercible, IMDId *mdid_cast_func,
 	EmdCoercepathType path_type, INT type_modifier, BOOL is_explicit,
-	EdxlCoercionForm dxl_coerce_format, INT location)
+	EdxlCoercionForm dxl_coerce_format, INT location, IMDId *mdid_src_elemtype)
 	: CMDCastGPDB(mp, mdid, mdname, mdid_src, mdid_dest, is_binary_coercible,
 				  mdid_cast_func, path_type),
 	  m_type_modifier(type_modifier),
 	  m_is_explicit(is_explicit),
 	  m_dxl_coerce_format(dxl_coerce_format),
-	  m_location(location)
+	  m_location(location),
+	  m_mdid_src_elemtype(mdid_src_elemtype)
 {
 	m_dxl_str = CDXLUtils::SerializeMDObj(mp, this, false /*fSerializeHeader*/,
 										  false /*indentation*/);
@@ -42,6 +43,7 @@ CMDArrayCoerceCastGPDB::CMDArrayCoerceCastGPDB(
 CMDArrayCoerceCastGPDB::~CMDArrayCoerceCastGPDB()
 {
 	GPOS_DELETE(m_dxl_str);
+	m_mdid_src_elemtype->Release();
 }
 
 // return type modifier
@@ -72,6 +74,13 @@ CMDArrayCoerceCastGPDB::Location() const
 	return m_location;
 }
 
+// return src basetype mdid
+IMDId *
+CMDArrayCoerceCastGPDB::GetSrcElemTypeMdId() const
+{
+	return m_mdid_src_elemtype;
+}
+
 // serialize function metadata in DXL format
 void
 CMDArrayCoerceCastGPDB::Serialize(CXMLSerializer *xml_serializer) const
@@ -99,6 +108,9 @@ CMDArrayCoerceCastGPDB::Serialize(CXMLSerializer *xml_serializer) const
 		xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenGPDBCastDestType));
 	m_mdid_cast_func->Serialize(
 		xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenGPDBCastFuncId));
+	m_mdid_src_elemtype->Serialize(
+		xml_serializer,
+		CDXLTokens::GetDXLTokenStr(EdxltokenGPDBCastSrcElemType));
 
 	if (default_type_modifier != TypeModifier())
 	{

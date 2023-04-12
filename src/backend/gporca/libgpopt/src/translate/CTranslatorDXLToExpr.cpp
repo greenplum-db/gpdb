@@ -797,14 +797,20 @@ CTranslatorDXLToExpr::PexprCastPrjElem(IMDId *pmdidSource, IMDId *mdid_dest,
 	{
 		CMDArrayCoerceCastGPDB *parrayCoerceCast =
 			(CMDArrayCoerceCastGPDB *) pmdcast;
+		IMDId *mdid_func = pmdcast->GetCastFuncMdId();
+		CExpression *pexprCastScalarFunc = CUtils::PexprFuncElemExpr(
+			m_mp, m_pmda, mdid_func, parrayCoerceCast->GetSrcElemTypeMdId(),
+			parrayCoerceCast->TypeModifier());
+
 		pexprCast = GPOS_NEW(m_mp) CExpression(
 			m_mp,
 			GPOS_NEW(m_mp) CScalarArrayCoerceExpr(
 				m_mp, mdid_dest, parrayCoerceCast->TypeModifier(),
 				(COperator::ECoercionForm) parrayCoerceCast->GetCoercionForm(),
 				parrayCoerceCast->Location()),
-			GPOS_NEW(m_mp) CExpression(
-				m_mp, GPOS_NEW(m_mp) CScalarIdent(m_mp, pcrToCast)));
+			GPOS_NEW(m_mp)
+				CExpression(m_mp, GPOS_NEW(m_mp) CScalarIdent(m_mp, pcrToCast)),
+			pexprCastScalarFunc);
 	}
 	else
 	{
@@ -3673,13 +3679,18 @@ CTranslatorDXLToExpr::PexprScalarCast(const CDXLNode *pdxlnCast)
 	{
 		CMDArrayCoerceCastGPDB *parrayCoerceCast =
 			(CMDArrayCoerceCastGPDB *) pmdcast;
+		IMDId *mdid_func = pmdcast->GetCastFuncMdId();
+		CExpression *pexprCastScalarFunc = CUtils::PexprFuncElemExpr(
+			m_mp, m_pmda, mdid_func, parrayCoerceCast->GetSrcElemTypeMdId(),
+			parrayCoerceCast->TypeModifier());
+
 		pexpr = GPOS_NEW(m_mp) CExpression(
 			m_mp,
 			GPOS_NEW(m_mp) CScalarArrayCoerceExpr(
 				m_mp, mdid_type, parrayCoerceCast->TypeModifier(),
 				(COperator::ECoercionForm) parrayCoerceCast->GetCoercionForm(),
 				parrayCoerceCast->Location()),
-			pexprChild);
+			pexprChild, pexprCastScalarFunc);
 	}
 	else
 	{

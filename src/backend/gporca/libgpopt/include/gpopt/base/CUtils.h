@@ -875,6 +875,12 @@ public:
 	static CExpression *PexprCast(CMemoryPool *mp, CMDAccessor *md_accessor,
 								  CExpression *pexpr, IMDId *mdid_dest);
 
+	// construct a func element expr for array coerce
+	static CExpression *PexprFuncElemExpr(CMemoryPool *mp,
+										  CMDAccessor *md_accessor,
+										  IMDId *mdid_func,
+										  IMDId *mdid_elem_type, INT typmod);
+
 	// construct a logical join expression of the given type, with the given children
 	static CExpression *PexprLogicalJoin(CMemoryPool *mp,
 										 EdxlJoinType edxljointype,
