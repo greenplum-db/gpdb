@@ -440,6 +440,11 @@ CConstraintInterval::PciIntervalFromScalarBooleanTest(CMemoryPool *mp,
 		case CScalarBooleanTest::EbtIsTrue:
 		case CScalarBooleanTest::EbtIsNotFalse:
 		{
+			if (pop->Ebt() == CScalarBooleanTest::EbtIsNotFalse)
+			{
+				fIncludesNull = true;
+			}
+
 			IDatumBool *datum =
 				pmdtypebool->CreateBoolDatum(mp, true, false /*is_null*/);
 			CRange *prange =
@@ -450,6 +455,11 @@ CConstraintInterval::PciIntervalFromScalarBooleanTest(CMemoryPool *mp,
 		case CScalarBooleanTest::EbtIsNotTrue:
 		case CScalarBooleanTest::EbtIsFalse:
 		{
+			if (pop->Ebt() == CScalarBooleanTest::EbtIsNotTrue)
+			{
+				fIncludesNull = true;
+			}
+
 			IDatumBool *datum =
 				pmdtypebool->CreateBoolDatum(mp, false, false /*is_null*/);
 			CRange *prange =

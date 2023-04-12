@@ -1195,9 +1195,9 @@ explain (costs off) select * from boolpart where not a = false;
 explain (costs off) select * from boolpart where a is true or a is not true;
                        QUERY PLAN                       
 --------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)
+ Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on boolpart
-         Number of partitions to scan: 2 (out of 3)
+         Number of partitions to scan: 3 (out of 3)
          Filter: ((a IS TRUE) OR (a IS NOT TRUE))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1207,7 +1207,7 @@ explain (costs off) select * from boolpart where a is not true;
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on boolpart
-         Number of partitions to scan: 1 (out of 3)
+         Number of partitions to scan: 2 (out of 3)
          Filter: (a IS NOT TRUE)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1215,8 +1215,10 @@ explain (costs off) select * from boolpart where a is not true;
 explain (costs off) select * from boolpart where a is not true and a is not false;
               QUERY PLAN               
 ---------------------------------------
- Result
-   One-Time Filter: false
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Dynamic Seq Scan on boolpart
+         Number of partitions to scan: 1 (out of 3)
+         Filter: ((a IS NOT TRUE) AND (a IS NOT FALSE))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
