@@ -88,7 +88,25 @@
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:ArrayCoerceCast Mdid="3.1007.1.0;1022.1.0" Name="float8" CoercePathType="3" BinaryCoercible="false" SourceTypeId="0.1007.1.0" DestinationTypeId="0.1022.1.0" CastFuncId="0.316.1.0" IsExplicit="false" CoercionForm="2" Location="-1"/>
+      <dxl:Type Mdid="0.701.1.0" Name="float8" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="8" PassByValue="true">
+        <dxl:EqualityOp Mdid="0.670.1.0"/>
+        <dxl:InequalityOp Mdid="0.671.1.0"/>
+        <dxl:LessThanOp Mdid="0.672.1.0"/>
+        <dxl:LessThanEqualsOp Mdid="0.673.1.0"/>
+        <dxl:GreaterThanOp Mdid="0.674.1.0"/>
+        <dxl:GreaterThanEqualsOp Mdid="0.675.1.0"/>
+        <dxl:ComparisonOp Mdid="0.355.1.0"/>
+        <dxl:ArrayType Mdid="0.1022.1.0"/>
+        <dxl:MinAgg Mdid="0.2136.1.0"/>
+        <dxl:MaxAgg Mdid="0.2120.1.0"/>
+        <dxl:AvgAgg Mdid="0.2105.1.0"/>
+        <dxl:SumAgg Mdid="0.2111.1.0"/>
+        <dxl:CountAgg Mdid="0.2147.1.0"/>
+      </dxl:Type>
+      <dxl:GPDBFunc Mdid="0.316.1.0" Name="float8" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+        <dxl:ResultType Mdid="0.701.1.0"/>
+      </dxl:GPDBFunc>
+      <dxl:ArrayCoerceCast Mdid="3.1007.1.0;1022.1.0" Name="float8" CoercePathType="3" BinaryCoercible="false" SourceTypeId="0.1007.1.0" DestinationTypeId="0.1022.1.0" CastFuncId="0.316.1.0" IsExplicit="false" CoercionForm="2" Location="-1" SourceElemTypeId="0.23.1.0"/>
       <dxl:Type Mdid="0.26.1.0" Name="oid" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
         <dxl:EqualityOp Mdid="0.607.1.0"/>
         <dxl:InequalityOp Mdid="0.608.1.0"/>
@@ -282,7 +300,10 @@
               <dxl:ProjElem ColId="11" Alias="cont_features">
                 <dxl:ArrayCoerceExpr ElementFunc="0.316.1.0" TypeMdid="0.1022.1.0" IsExplicit="false" CoercionForm="2" Location="-1">
                   <dxl:Ident ColId="10" ColName="cont_features" TypeMdid="0.1007.1.0"/>
-                </dxl:ArrayCoerceExpr>
+                  <dxl:FuncExpr FuncId="0.316.1.0" FuncRetSet="false" TypeMdid="0.701.1.0">
+                    <dxl:CaseTest TypeMdid="0.23.1.0"/>
+                  </dxl:FuncExpr>
+	        </dxl:ArrayCoerceExpr>
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>

@@ -3,7 +3,7 @@
   <dxl:Metadata>
     <dxl:MDCast Mdid="3.23.1.0;20.1.0" Name="int8" BinaryCoercible="false" SourceTypeId="0.23.1.0" DestinationTypeId="0.20.1.0" CastFuncId="0.481.1.0" CoercePathType="1"/>
     <dxl:MDCast Mdid="3.23.1.0;26.1.0" Name="int" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.26.1.0" CastFuncId="0.0.0.0" CoercePathType="0"/>
-    <dxl:ArrayCoerceCast Mdid="3.1007.1.0;1022.1.0" Name="float8" CoercePathType="3" BinaryCoercible="false" SourceTypeId="0.1007.1.0" DestinationTypeId="0.1022.1.0" CastFuncId="0.316.1.0" IsExplicit="false" CoercionForm="2" Location="-1"/>
+    <dxl:ArrayCoerceCast Mdid="3.1007.1.0;1022.1.0" Name="float8" CoercePathType="3" BinaryCoercible="false" SourceTypeId="0.1007.1.0" DestinationTypeId="0.1022.1.0" CastFuncId="0.316.1.0" SourceElemTypeId="0.23.1.0" IsExplicit="false" CoercionForm="2" Location="-1"/>
     <dxl:MDScalarComparison Mdid="4.23.1.0;20.1.0;0" Name="=" ComparisonType="Eq" LeftType="0.23.1.0" RightType="0.20.1.0" OperatorMdid="0.416.1.0"/>
     <dxl:RelationStatistics Mdid="2.1234.1.2" Name="T" Rows="1234.123400" RelPages="0" RelAllVisible="0" EmptyRelation="false"/>
     <dxl:ColumnStatistics Mdid="1.1234.1.2.1" Name="T.a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="false">
