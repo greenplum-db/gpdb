@@ -7,7 +7,7 @@ The `WITH` clause provides a way to write auxiliary statements for use in a larg
 > **Note** Limitations when using a `WITH` clause in Greenplum Database include:
 > 
 > -   For a `SELECT` command that includes a `WITH` clause, the clause can contain at most a single clause that modifies table data \(`INSERT`, `UPDATE`, or `DELETE` command\).
-> -   For a data-modifying command \(`INSERT`, `UPDATE`, or `DELETE`\) that includes a `WITH` clause, the clause can only contain a `SELECT` command, it cannot contain a data-modifying command.
+> -   For a data-modifying command \(`INSERT`, `UPDATE`, or `DELETE`\) that includes a `WITH` clause, the clause can only contain a `SELECT` command; it cannot contain a data-modifying command.
  
 By default, Greenplum Database enables the `RECURSIVE` keyword for the `WITH` clause. `RECURSIVE` can be deactivated by setting the server configuration parameter [gp\_recursive\_cte](../../../ref_guide/config_params/guc-list.html) to `false`.
 
