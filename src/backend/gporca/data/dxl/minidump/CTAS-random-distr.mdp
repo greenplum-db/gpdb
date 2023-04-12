@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
+  <dxl:Thread Id="0">
+    <dxl:Comment><![CDATA[
+	Objective: We should see an explicit redistribute before the CTAS if there is a one-time filter, otherwise rows will not be randomly distributed.
+
+	explain create table public.test_randomly_distributed as ( SELECT time, device_id, 100 as cpu_usage FROM generate_series( now() - INTERVAL '1 months', now(), INTERVAL '1 hour' ) as time, generate_series(1,10) device_id ) DISTRIBUTED RANDOMLY ;
+
+                                                   QUERY PLAN
+-----------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..0.00 rows=0 width=0)
+   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..485508.84 rows=1000000 width=16)
+         ->  Nested Loop  (cost=0.00..459439.64 rows=333334 width=12)
+               Join Filter: true
+               ->  Broadcast Motion 1:3  (slice2; segments: 1)  (cost=0.00..0.44 rows=1000 width=8)
+                     ->  Function Scan on generate_series generate_series_1  (cost=0.00..0.01 rows=1000 width=8)
+               ->  Materialize  (cost=0.00..0.02 rows=334 width=4)
+                     ->  Result  (cost=0.00..0.01 rows=334 width=4)
+                           One-Time Filter: (gp_execution_segment() = 2)
+                           ->  Function Scan on generate_series  (cost=0.00..0.00 rows=334 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(11 rows)
+
+    ]]>
+    </dxl:Comment>
+    <dxl:OptimizerConfig>
+      <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
+      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.000000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
+      <dxl:CTEConfig CTEInliningCutoff="0"/>
+      <dxl:WindowOids RowNumber="3100" Rank="3101"/>
+      <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="3">
+        <dxl:CostParams>
+          <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
+        </dxl:CostParams>
+      </dxl:CostModelConfig>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10" XformBindThreshold="0" SkewFactor="0"/>
+      <dxl:TraceFlags Value="102074,102120,102146,102155,102156,103001,103014,103022,103027,103029,103038,103041,104002,104003,104004,104005,105000,106000"/>
+    </dxl:OptimizerConfig>
+    <dxl:Metadata SystemIds="0.CTAS,0.GPDB">
+      <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="1" PassByValue="true">
+        <dxl:DistrOpfamily Mdid="0.2222.1.0"/>
+        <dxl:LegacyDistrOpfamily Mdid="0.7124.1.0"/>
+        <dxl:EqualityOp Mdid="0.91.1.0"/>
+        <dxl:InequalityOp Mdid="0.85.1.0"/>
+        <dxl:LessThanOp Mdid="0.58.1.0"/>
+        <dxl:LessThanEqualsOp Mdid="0.1694.1.0"/>
+        <dxl:GreaterThanOp Mdid="0.59.1.0"/>
+        <dxl:GreaterThanEqualsOp Mdid="0.1695.1.0"/>
+        <dxl:ComparisonOp Mdid="0.1693.1.0"/>
+        <dxl:ArrayType Mdid="0.1000.1.0"/>
+        <dxl:MinAgg Mdid="0.0.0.0"/>
+        <dxl:MaxAgg Mdid="0.0.0.0"/>
+        <dxl:AvgAgg Mdid="0.0.0.0"/>
+        <dxl:SumAgg Mdid="0.0.0.0"/>
+        <dxl:CountAgg Mdid="0.2147.1.0"/>
+      </dxl:Type>
+      <dxl:Type Mdid="0.23.1.0" Name="int4" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="4" PassByValue="true">
+        <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
+        <dxl:LegacyDistrOpfamily Mdid="0.7100.1.0"/>
+        <dxl:EqualityOp Mdid="0.96.1.0"/>
+        <dxl:InequalityOp Mdid="0.518.1.0"/>
+        <dxl:LessThanOp Mdid="0.97.1.0"/>
+        <dxl:LessThanEqualsOp Mdid="0.523.1.0"/>
+        <dxl:GreaterThanOp Mdid="0.521.1.0"/>
+        <dxl:GreaterThanEqualsOp Mdid="0.525.1.0"/>
+        <dxl:ComparisonOp Mdid="0.351.1.0"/>
+        <dxl:ArrayType Mdid="0.1007.1.0"/>
+        <dxl:MinAgg Mdid="0.2132.1.0"/>
+        <dxl:MaxAgg Mdid="0.2116.1.0"/>
+        <dxl:AvgAgg Mdid="0.2101.1.0"/>
+        <dxl:SumAgg Mdid="0.2108.1.0"/>
+        <dxl:CountAgg Mdid="0.2147.1.0"/>
+      </dxl:Type>
+      <dxl:Type Mdid="0.1184.1.0" Name="timestamptz" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="8" PassByValue="true">
+        <dxl:DistrOpfamily Mdid="0.1999.1.0"/>
+        <dxl:LegacyDistrOpfamily Mdid="0.7112.1.0"/>
+        <dxl:EqualityOp Mdid="0.1320.1.0"/>
+        <dxl:InequalityOp Mdid="0.1321.1.0"/>
+        <dxl:LessThanOp Mdid="0.1322.1.0"/>
+        <dxl:LessThanEqualsOp Mdid="0.1323.1.0"/>
+        <dxl:GreaterThanOp Mdid="0.1324.1.0"/>
+        <dxl:GreaterThanEqualsOp Mdid="0.1325.1.0"/>
+        <dxl:ComparisonOp Mdid="0.1314.1.0"/>
+        <dxl:ArrayType Mdid="0.1185.1.0"/>
+        <dxl:MinAgg Mdid="0.2143.1.0"/>
+        <dxl:MaxAgg Mdid="0.2127.1.0"/>
+        <dxl:AvgAgg Mdid="0.0.0.0"/>
+        <dxl:SumAgg Mdid="0.0.0.0"/>
+        <dxl:CountAgg Mdid="0.2147.1.0"/>
+      </dxl:Type>
+      <dxl:Type Mdid="0.1186.1.0" Name="interval" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="16" PassByValue="false">
+        <dxl:DistrOpfamily Mdid="0.1983.1.0"/>
+        <dxl:LegacyDistrOpfamily Mdid="0.7116.1.0"/>
+        <dxl:EqualityOp Mdid="0.1330.1.0"/>
+        <dxl:InequalityOp Mdid="0.1331.1.0"/>
+        <dxl:LessThanOp Mdid="0.1332.1.0"/>
+        <dxl:LessThanEqualsOp Mdid="0.1333.1.0"/>
+        <dxl:GreaterThanOp Mdid="0.1334.1.0"/>
+        <dxl:GreaterThanEqualsOp Mdid="0.1335.1.0"/>
+        <dxl:ComparisonOp Mdid="0.1315.1.0"/>
+        <dxl:ArrayType Mdid="0.1187.1.0"/>
+        <dxl:MinAgg Mdid="0.2144.1.0"/>
+        <dxl:MaxAgg Mdid="0.2128.1.0"/>
+        <dxl:AvgAgg Mdid="0.2106.1.0"/>
+        <dxl:SumAgg Mdid="0.2113.1.0"/>
+        <dxl:CountAgg Mdid="0.2147.1.0"/>
+      </dxl:Type>
+      <dxl:CTASRelation Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" HasOids="false" StorageType="Heap" VarTypeModList="-1,-1,-1" DistributionPolicy="Random">
+        <dxl:Columns>
+          <dxl:Column Name="time" Attno="1" Mdid="0.1184.1.0" Nullable="true">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="device_id" Attno="2" Mdid="0.23.1.0" Nullable="true">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cpu_usage" Attno="3" Mdid="0.23.1.0" Nullable="true">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:CTASOptions OnCommitAction="NOOP"/>
+        <dxl:DistrOpfamilies/>
+        <dxl:DistrOpclasses/>
+      </dxl:CTASRelation>
+      <dxl:GPDBFunc Mdid="0.1067.1.0" Name="generate_series" ReturnsSet="true" Stability="Immutable" DataAccess="ReadsSQLData" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
+        <dxl:ResultType Mdid="0.23.1.0"/>
+      </dxl:GPDBFunc>
+      <dxl:GPDBFunc Mdid="0.939.1.0" Name="generate_series" ReturnsSet="true" Stability="Stable" DataAccess="ReadsSQLData" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
+        <dxl:ResultType Mdid="0.1184.1.0"/>
+      </dxl:GPDBFunc>
+    </dxl:Metadata>
+    <dxl:Query>
+      <dxl:OutputColumns>
+        <dxl:Ident ColId="1" ColName="time" TypeMdid="0.1184.1.0"/>
+        <dxl:Ident ColId="2" ColName="device_id" TypeMdid="0.23.1.0"/>
+        <dxl:Ident ColId="3" ColName="cpu_usage" TypeMdid="0.23.1.0"/>
+      </dxl:OutputColumns>
+      <dxl:CTEList/>
+      <dxl:LogicalCTAS Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Random" InsertColumns="1,2,3" VarTypeModList="-1,-1,-1">
+        <dxl:Columns>
+          <dxl:Column ColId="4" Attno="1" ColName="time" TypeMdid="0.1184.1.0"/>
+          <dxl:Column ColId="5" Attno="2" ColName="device_id" TypeMdid="0.23.1.0"/>
+          <dxl:Column ColId="6" Attno="3" ColName="cpu_usage" TypeMdid="0.23.1.0"/>
+        </dxl:Columns>
+        <dxl:CTASOptions OnCommitAction="NOOP"/>
+        <dxl:DistrOpfamilies/>
+        <dxl:DistrOpclasses/>
+        <dxl:LogicalProject>
+          <dxl:ProjList>
+            <dxl:ProjElem ColId="3" Alias="cpu_usage">
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="100"/>
+            </dxl:ProjElem>
+          </dxl:ProjList>
+          <dxl:LogicalJoin JoinType="Inner">
+            <dxl:LogicalTVF FuncId="0.939.1.0" Name="generate_series" TypeMdid="0.1184.1.0">
+              <dxl:Columns>
+                <dxl:Column ColId="1" Attno="1" ColName="generate_series" TypeMdid="0.1184.1.0"/>
+              </dxl:Columns>
+              <dxl:ConstValue TypeMdid="0.1184.1.0" Value="YkKt77iZAgA=" DoubleValue="731969527562850.000000"/>
+              <dxl:ConstValue TypeMdid="0.1184.1.0" Value="YuLBjCicAgA=" DoubleValue="734647927562850.000000"/>
+              <dxl:ConstValue TypeMdid="0.1186.1.0" Value="AKST1gAAAAAAAAAAAAAAAA==" DoubleValue="3600000000.000000"/>
+            </dxl:LogicalTVF>
+            <dxl:LogicalTVF FuncId="0.1067.1.0" Name="generate_series" TypeMdid="0.23.1.0">
+              <dxl:Columns>
+                <dxl:Column ColId="2" Attno="1" ColName="generate_series" TypeMdid="0.23.1.0"/>
+              </dxl:Columns>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+            </dxl:LogicalTVF>
+            <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+          </dxl:LogicalJoin>
+        </dxl:LogicalProject>
+      </dxl:LogicalCTAS>
+    </dxl:Query>
+    <dxl:Plan Id="0" SpaceSize="11">
+      <dxl:PhysicalCTAS Name="fake ctas rel" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Random" InsertColumns="0,1,2" VarTypeModList="-1,-1,-1">
+        <dxl:Properties>
+          <dxl:Cost StartupCost="0" TotalCost="485508.841941" Rows="1000000.000000" Width="16"/>
+        </dxl:Properties>
+        <dxl:DistrOpclasses/>
+        <dxl:Columns>
+          <dxl:Column ColId="4" Attno="1" ColName="time" TypeMdid="0.1184.1.0"/>
+          <dxl:Column ColId="5" Attno="2" ColName="device_id" TypeMdid="0.23.1.0"/>
+          <dxl:Column ColId="6" Attno="3" ColName="cpu_usage" TypeMdid="0.23.1.0"/>
+        </dxl:Columns>
+        <dxl:CTASOptions OnCommitAction="NOOP"/>
+        <dxl:ProjList>
+          <dxl:ProjElem ColId="0" Alias="time">
+            <dxl:Ident ColId="0" ColName="generate_series" TypeMdid="0.1184.1.0"/>
+          </dxl:ProjElem>
+          <dxl:ProjElem ColId="1" Alias="device_id">
+            <dxl:Ident ColId="1" ColName="generate_series" TypeMdid="0.23.1.0"/>
+          </dxl:ProjElem>
+          <dxl:ProjElem ColId="2" Alias="cpu_usage">
+            <dxl:Ident ColId="2" ColName="cpu_usage" TypeMdid="0.23.1.0"/>
+          </dxl:ProjElem>
+        </dxl:ProjList>
+        <dxl:RandomMotion InputSegments="0,1,2" OutputSegments="0,1,2">
+          <dxl:Properties>
+            <dxl:Cost StartupCost="0" TotalCost="459467.175275" Rows="1000000.000000" Width="20"/>
+          </dxl:Properties>
+          <dxl:ProjList>
+            <dxl:ProjElem ColId="0" Alias="generate_series">
+              <dxl:Ident ColId="0" ColName="generate_series" TypeMdid="0.1184.1.0"/>
+            </dxl:ProjElem>
+            <dxl:ProjElem ColId="1" Alias="generate_series">
+              <dxl:Ident ColId="1" ColName="generate_series" TypeMdid="0.23.1.0"/>
+            </dxl:ProjElem>
+            <dxl:ProjElem ColId="2" Alias="cpu_usage">
+              <dxl:Ident ColId="2" ColName="cpu_usage" TypeMdid="0.23.1.0"/>
+            </dxl:ProjElem>
+            <dxl:ProjElem ColId="3" Alias="ColRef_0003">
+              <dxl:Ident ColId="3" ColName="ColRef_0003" TypeMdid="0.23.1.0"/>
+            </dxl:ProjElem>
+          </dxl:ProjList>
+          <dxl:Filter/>
+          <dxl:SortingColumnList/>
+          <dxl:Result>
+            <dxl:Properties>
+              <dxl:Cost StartupCost="0" TotalCost="459446.308608" Rows="1000000.000000" Width="20"/>
+            </dxl:Properties>
+            <dxl:ProjList>
+              <dxl:ProjElem ColId="0" Alias="generate_series">
+                <dxl:Ident ColId="0" ColName="generate_series" TypeMdid="0.1184.1.0"/>
+              </dxl:ProjElem>
+              <dxl:ProjElem ColId="1" Alias="generate_series">
+                <dxl:Ident ColId="1" ColName="generate_series" TypeMdid="0.23.1.0"/>
+              </dxl:ProjElem>
+              <dxl:ProjElem ColId="2" Alias="cpu_usage">
+                <dxl:ConstValue TypeMdid="0.23.1.0" Value="100"/>
+              </dxl:ProjElem>
+              <dxl:ProjElem ColId="3" Alias="ColRef_0003">
+                <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+              </dxl:ProjElem>
+            </dxl:ProjList>
+            <dxl:Filter/>
+            <dxl:OneTimeFilter/>
+            <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
+              <dxl:Properties>
+                <dxl:Cost StartupCost="0" TotalCost="459439.641941" Rows="1000000.000000" Width="12"/>
+              </dxl:Properties>
+              <dxl:ProjList>
+                <dxl:ProjElem ColId="0" Alias="generate_series">
+                  <dxl:Ident ColId="0" ColName="generate_series" TypeMdid="0.1184.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="1" Alias="generate_series">
+                  <dxl:Ident ColId="1" ColName="generate_series" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+              </dxl:ProjList>
+              <dxl:Filter/>
+              <dxl:JoinFilter>
+                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+              </dxl:JoinFilter>
+              <dxl:BroadcastMotion InputSegments="0" OutputSegments="0,1,2">
+                <dxl:Properties>
+                  <dxl:Cost StartupCost="0" TotalCost="0.437600" Rows="3000.000000" Width="8"/>
+                </dxl:Properties>
+                <dxl:ProjList>
+                  <dxl:ProjElem ColId="0" Alias="generate_series">
+                    <dxl:Ident ColId="0" ColName="generate_series" TypeMdid="0.1184.1.0"/>
+                  </dxl:ProjElem>
+                </dxl:ProjList>
+                <dxl:Filter/>
+                <dxl:SortingColumnList/>
+                <dxl:TableValuedFunction FuncId="0.939.1.0" Name="generate_series" TypeMdid="0.1184.1.0">
+                  <dxl:Properties>
+                    <dxl:Cost StartupCost="0" TotalCost="0.008000" Rows="1000.000000" Width="8"/>
+                  </dxl:Properties>
+                  <dxl:ProjList>
+                    <dxl:ProjElem ColId="0" Alias="generate_series">
+                      <dxl:Ident ColId="0" ColName="generate_series" TypeMdid="0.1184.1.0"/>
+                    </dxl:ProjElem>
+                  </dxl:ProjList>
+                  <dxl:ConstValue TypeMdid="0.1184.1.0" Value="YkKt77iZAgA=" DoubleValue="731969527562850.000000"/>
+                  <dxl:ConstValue TypeMdid="0.1184.1.0" Value="YuLBjCicAgA=" DoubleValue="734647927562850.000000"/>
+                  <dxl:ConstValue TypeMdid="0.1186.1.0" Value="AKST1gAAAAAAAAAAAAAAAA==" DoubleValue="3600000000.000000"/>
+                </dxl:TableValuedFunction>
+              </dxl:BroadcastMotion>
+              <dxl:Materialize Eager="true">
+                <dxl:Properties>
+                  <dxl:Cost StartupCost="0" TotalCost="0.015720" Rows="1000.000000" Width="4"/>
+                </dxl:Properties>
+                <dxl:ProjList>
+                  <dxl:ProjElem ColId="1" Alias="generate_series">
+                    <dxl:Ident ColId="1" ColName="generate_series" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                </dxl:ProjList>
+                <dxl:Filter/>
+                <dxl:RandomMotion InputSegments="0" OutputSegments="0,1,2" DuplicateSensitive="true">
+                  <dxl:Properties>
+                    <dxl:Cost StartupCost="0" TotalCost="0.014387" Rows="1000.000000" Width="4"/>
+                  </dxl:Properties>
+                  <dxl:ProjList>
+                    <dxl:ProjElem ColId="1" Alias="generate_series">
+                      <dxl:Ident ColId="1" ColName="generate_series" TypeMdid="0.23.1.0"/>
+                    </dxl:ProjElem>
+                  </dxl:ProjList>
+                  <dxl:Filter/>
+                  <dxl:SortingColumnList/>
+                  <dxl:TableValuedFunction FuncId="0.1067.1.0" Name="generate_series" TypeMdid="0.23.1.0">
+                    <dxl:Properties>
+                      <dxl:Cost StartupCost="0" TotalCost="0.004000" Rows="1000.000000" Width="4"/>
+                    </dxl:Properties>
+                    <dxl:ProjList>
+                      <dxl:ProjElem ColId="1" Alias="generate_series">
+                        <dxl:Ident ColId="1" ColName="generate_series" TypeMdid="0.23.1.0"/>
+                      </dxl:ProjElem>
+                    </dxl:ProjList>
+                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+                  </dxl:TableValuedFunction>
+                </dxl:RandomMotion>
+              </dxl:Materialize>
+            </dxl:NestedLoopJoin>
+          </dxl:Result>
+        </dxl:RandomMotion>
+      </dxl:PhysicalCTAS>
+    </dxl:Plan>
+  </dxl:Thread>
+</dxl:DXLMessage>
