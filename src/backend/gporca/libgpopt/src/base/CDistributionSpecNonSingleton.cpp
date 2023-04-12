@@ -76,15 +76,15 @@ CDistributionSpecNonSingleton::FSatisfies(const CDistributionSpec *	 // pds
 //
 //---------------------------------------------------------------------------
 void
-CDistributionSpecNonSingleton::AppendEnforcers(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl,	 // exprhdl
-	CReqdPropPlan *
+CDistributionSpecNonSingleton::AppendEnforcers(CMemoryPool *mp,
+											   CExpressionHandle &exprhdl,
+											   CReqdPropPlan *
 #ifdef GPOS_DEBUG
-		prpp
+												   prpp
 #endif	// GPOS_DEBUG
-	,
-	CExpressionArray *pdrgpexpr, CExpression *pexpr)
+											   ,
+											   CExpressionArray *pdrgpexpr,
+											   CExpression *pexpr)
 {
 	GPOS_ASSERT(nullptr != mp);
 	GPOS_ASSERT(nullptr != prpp);
@@ -108,7 +108,7 @@ CDistributionSpecNonSingleton::AppendEnforcers(
 
 	// random motions on top of universal specs are converted to hash filters,
 	// and shouldn't be strict random distributions or we may not properly distribute tuples.
-	//See comment in CDistributionSpecRandom::AppendEnforcers for details
+	// See comment in CDistributionSpecRandom::AppendEnforcers for details
 	if (CUtils::FDuplicateHazardDistributionSpec(expr_dist_spec))
 	{
 		// the motion node is enforced on top of a child
