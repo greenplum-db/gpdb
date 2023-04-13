@@ -1,5 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
+  <dxl:Comment><![CDATA[
+  Objective: Ensure ORCA doesn't fake an explicit cast inplace of an
+  implicit one.
+  In the below example the column b in foo has a different length than b.
+  While inserting data from bar into foo, ORCA should translate the cast
+  function as part of ArrayCoerceExpr.
+  This will error out while execution as the length of col b mismatches between
+  foo and bar.
+
+  create table foo (a int, b varchar(2)[]);
+  create table bar (a int, b varchar(10)[]);
+
+  insert into bar values (1, ARRAY['abcde']);
+  explain insert into foo select * from bar;
+  ]]>
+  </dxl:Comment>
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
