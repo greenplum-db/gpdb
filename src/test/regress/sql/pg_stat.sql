@@ -79,7 +79,7 @@ select c.relname from pg_statio_user_sequences s join pg_class c on s.relid = c.
 select c.relname from gp_statio_user_sequences s join pg_class c on s.relid = c.oid where c.relkind in ('o', 'b', 'M');
 
 -- "sys" views:
--- for cluster-wise views, just test output of one segment.
+-- for cluster-wide views, just test output of one segment.
 -- also take a fixed part of the aux table names to avoid different column length because of OIDs.
 select c.relname as aorelname, substring(s.relname, 1, 9) as aoauxrelname 
 from pg_stat_sys_tables s 
@@ -91,7 +91,7 @@ select c.relname as aorelname, substring(s.relname, 1, 9) as aoauxrelname
 from gp_stat_sys_tables s 
 join pg_appendonly a on s.relid = a.segrelid or s.relid = a.blkdirrelid or s.relid = a.visimaprelid 
 join pg_class c on a.relid = c.oid 
-where c.relname like 'pg_stat_%' and segment_id = 0;
+where c.relname like 'pg_stat_%' and gp_segment_id = 0;
 
 select c.relname as aorelname, substring(s.relname, 1, 9) as aoauxrelname 
 from pg_stat_xact_sys_tables s 
@@ -103,7 +103,7 @@ select c.relname as aorelname, substring(s.relname, 1, 9) as aoauxrelname
 from gp_stat_xact_sys_tables s 
 join pg_appendonly a on s.relid = a.segrelid or s.relid = a.blkdirrelid or s.relid = a.visimaprelid 
 join pg_class c on a.relid = c.oid 
-where c.relname like 'pg_stat_%' and segment_id = 0;
+where c.relname like 'pg_stat_%' and gp_segment_id = 0;
 
 select c.relname as aorelname, substring(s.relname, 1, 9) as aoauxrelname 
 from pg_statio_sys_tables s 
@@ -115,7 +115,7 @@ select c.relname as aorelname, substring(s.relname, 1, 9) as aoauxrelname
 from gp_statio_sys_tables s 
 join pg_appendonly a on s.relid = a.segrelid or s.relid = a.blkdirrelid or s.relid = a.visimaprelid 
 join pg_class c on a.relid = c.oid 
-where c.relname like 'pg_stat_%' and segment_id = 0;
+where c.relname like 'pg_stat_%' and gp_segment_id = 0;
 
 select c.relname as aorelname, substring(s.relname, 1, 9) as aoauxrelname 
 from pg_stat_sys_indexes s 
@@ -127,7 +127,7 @@ select c.relname as aorelname, substring(s.relname, 1, 9) as aoauxrelname
 from gp_stat_sys_indexes s 
 join pg_appendonly a on s.relid = a.segrelid or s.relid = a.blkdirrelid or s.relid = a.visimaprelid 
 join pg_class c on a.relid = c.oid 
-where c.relname like 'pg_stat_%' and segment_id = 0;
+where c.relname like 'pg_stat_%' and gp_segment_id = 0;
 
 select c.relname as aorelname, substring(s.relname, 1, 9) as aoauxrelname 
 from pg_statio_sys_indexes s 
@@ -139,7 +139,7 @@ select c.relname as aorelname, substring(s.relname, 1, 9) as aoauxrelname
 from gp_statio_sys_indexes s 
 join pg_appendonly a on s.relid = a.segrelid or s.relid = a.blkdirrelid or s.relid = a.visimaprelid 
 join pg_class c on a.relid = c.oid 
-where c.relname like 'pg_stat_%' and segment_id = 0;
+where c.relname like 'pg_stat_%' and gp_segment_id = 0;
 
 -- no AO/CO aux tables are sequence, but test it anyway 
 select c.relname from pg_statio_sys_sequences s join pg_class c on s.relid = c.oid where c.relkind in ('o', 'b', 'M');
