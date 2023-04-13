@@ -811,6 +811,11 @@ resources:
     regexp: ((pivotal-gp-internal-artifacts-gcs-bucket))/python-test-dependencies/behave-(1\.2\.6-.*).tar.gz
 {% endif %}
 
+- name: weekly-trigger
+  type: time
+  source:
+    interval: 168h
+    location: Asia/Shanghai
 ## ======================================================================
 ##                   _
 ##   __ _ _ __   ___| |__   ___  _ __ ___
@@ -1053,6 +1058,8 @@ jobs:
 - name: check_format
   plan:
     - get: gpdb_src
+      trigger: true
+    - get: weekly-trigger
       trigger: true
     - task: check_format
       file: gpdb_src/concourse/tasks/check_format.yml
@@ -2419,6 +2426,7 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_aws_gen_cluster_default_params
+      PLATFORM: centos6
     on_failure:
       <<: *dpm_ccp_destroy
   - task: gpinitsystem
@@ -2499,6 +2507,7 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_aws_gen_cluster_default_params
+      PLATFORM: centos6
     on_failure:
       <<: *dpm_ccp_destroy
   - task: gpinitsystem
@@ -2579,6 +2588,7 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_aws_gen_cluster_default_params
+      PLATFORM: centos6
     on_failure:
       <<: *dpm_ccp_destroy
   - task: gpinitsystem
