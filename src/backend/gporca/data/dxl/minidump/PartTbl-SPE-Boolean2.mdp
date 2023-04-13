@@ -6,7 +6,7 @@
     IS TRUE OR IS FALSE, then 2 table should be scanned.
 
     CREATE TABLE boolpart(a int, b bool) PARTITION BY LIST(b) (
-        PARTITION l1 values(true), PARTITION l2 values(false));
+        PARTITION l1 values(true), PARTITION l2 values(false), DEFAULT PARTITION def);
     INSERT INTO boolpart values (1,true);
     INSERT INTO boolpart values (2, false);
 
@@ -173,6 +173,30 @@
           <dxl:Partition Mdid="6.112489.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
+      <dxl:GPDBScalarOp Mdid="0.58.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
+        <dxl:LeftType Mdid="0.16.1.0"/>
+        <dxl:RightType Mdid="0.16.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.56.1.0"/>
+        <dxl:Commutator Mdid="0.59.1.0"/>
+        <dxl:InverseOp Mdid="0.1695.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.424.1.0"/>
+          <dxl:Opfamily Mdid="0.10002.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
+      <dxl:GPDBScalarOp Mdid="0.59.1.0" Name="&gt;" ComparisonType="GT" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
+        <dxl:LeftType Mdid="0.16.1.0"/>
+        <dxl:RightType Mdid="0.16.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.57.1.0"/>
+        <dxl:Commutator Mdid="0.58.1.0"/>
+        <dxl:InverseOp Mdid="0.1694.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.424.1.0"/>
+          <dxl:Opfamily Mdid="0.10002.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
       <dxl:GPDBScalarOp Mdid="0.85.1.0" Name="&lt;&gt;" ComparisonType="NEq" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
         <dxl:LeftType Mdid="0.16.1.0"/>
         <dxl:RightType Mdid="0.16.1.0"/>

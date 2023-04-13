@@ -1177,7 +1177,7 @@ explain (costs off) select * from boolpart where a = false;
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on boolpart
-         Number of partitions to scan: 3 (out of 3)
+         Number of partitions to scan: 1 (out of 3)
          Filter: (NOT a)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1187,7 +1187,7 @@ explain (costs off) select * from boolpart where not a = false;
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on boolpart
-         Number of partitions to scan: 3 (out of 3)
+         Number of partitions to scan: 1 (out of 3)
          Filter: a
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)

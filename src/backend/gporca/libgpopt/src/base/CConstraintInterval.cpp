@@ -78,7 +78,25 @@ CConstraintInterval::~CConstraintInterval()
 BOOL
 CConstraintInterval::FContradiction() const
 {
-	return (!m_fIncludesNull && 0 == m_pdrgprng->Size());
+	if (!m_fIncludesNull && 0 == m_pdrgprng->Size())
+	{
+		return true;
+	}
+
+	// Constraint on boolean column is special case because only 2 values exist
+	// in the domain space [0,1]. If both ends are exclude then the constraint
+	// is a contradiction.
+	if (m_pcr->RetrieveType()->GetDatumType() == IMDType::EtiBool &&
+		m_pdrgprng->Size() == 1 && !m_fIncludesNull)
+	{
+		if ((*m_pdrgprng)[0]->EriLeft() == CRange::EriExcluded &&
+			(*m_pdrgprng)[0]->EriRight() == CRange::EriExcluded)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 //---------------------------------------------------------------------------
@@ -183,6 +201,9 @@ CConstraintInterval::PciIntervalFromScalarExpr(
 		case COperator::EopScalarBoolOp:
 			pci = PciIntervalFromScalarBoolOp(mp, pexpr, colref, infer_nulls_as,
 											  access_method);
+			break;
+		case COperator::EopScalarIdent:
+			pci = PciIntervalFromScalarIdent(mp, colref, infer_nulls_as);
 			break;
 		case COperator::EopScalarCmp:
 			pci = PciIntervalFromScalarCmp(mp, pexpr, colref, infer_nulls_as,
@@ -487,8 +508,6 @@ CConstraintInterval::PciIntervalFromScalarBooleanTest(CMemoryPool *mp,
 
 	return GPOS_NEW(mp)
 		CConstraintInterval(mp, colref, pdrngprng, fIncludesNull);
-
-	return nullptr;
 }
 
 
@@ -701,6 +720,33 @@ CConstraintInterval::PciIntervalFromScalarBoolOp(
 		default:
 			return nullptr;
 	}
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CConstraintInterval::PciIntervalFromScalarIdent
+//
+//	@doc:
+//		Create interval from boolean scalar ident
+//
+//---------------------------------------------------------------------------
+CConstraintInterval *
+CConstraintInterval::PciIntervalFromScalarIdent(CMemoryPool *mp,
+												CColRef *colref,
+												BOOL infer_nulls_as)
+{
+	GPOS_ASSERT(colref->RetrieveType()->GetDatumType() == IMDType::EtiBool);
+
+	CRangeArray *pdrngprng = GPOS_NEW(mp) CRangeArray(mp);
+	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+	const IMDTypeBool *pmdtypebool = md_accessor->PtMDType<IMDTypeBool>();
+	IDatumBool *datum =
+		pmdtypebool->CreateBoolDatum(mp, true, false /*is_null*/);
+	pdrngprng->Append(GPOS_NEW(mp) CRange(COptCtxt::PoctxtFromTLS()->Pcomp(),
+										  IMDType::EcmptEq, datum));
+
+	return GPOS_NEW(mp) CConstraintInterval(mp, colref, pdrngprng,
+											infer_nulls_as /*fIncludesNull*/);
 }
 
 //---------------------------------------------------------------------------
@@ -1368,12 +1414,30 @@ CConstraintInterval::PciUnbounded(CMemoryPool *mp, const CColRef *colref,
 	}
 
 	mdid->AddRef();
-	CRange *prange = GPOS_NEW(mp) CRange(
-		mdid, COptCtxt::PoctxtFromTLS()->Pcomp(), nullptr /*ppointLeft*/,
-		CRange::EriExcluded, nullptr /*ppointRight*/, CRange::EriExcluded);
 
 	CRangeArray *pdrgprng = GPOS_NEW(mp) CRangeArray(mp);
-	pdrgprng->Append(prange);
+	if (colref->RetrieveType()->GetDatumType() == IMDType::EtiBool)
+	{
+		// valid boolean constraint values must map in the range [0, 1]
+		CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+		const IMDTypeBool *pmdtypebool = md_accessor->PtMDType<IMDTypeBool>();
+		CRange *prange = GPOS_NEW(mp)
+			CRange(mdid, COptCtxt::PoctxtFromTLS()->Pcomp(),
+				   pmdtypebool->CreateBoolDatum(
+					   mp, false, false /*is_null*/) /*ppointLeft*/,
+				   CRange::EriIncluded,
+				   pmdtypebool->CreateBoolDatum(
+					   mp, true, false /*is_null*/) /*ppointRight*/,
+				   CRange::EriIncluded);
+		pdrgprng->Append(prange);
+	}
+	else
+	{
+		CRange *prange = GPOS_NEW(mp) CRange(
+			mdid, COptCtxt::PoctxtFromTLS()->Pcomp(), nullptr /*ppointLeft*/,
+			CRange::EriExcluded, nullptr /*ppointRight*/, CRange::EriExcluded);
+		pdrgprng->Append(prange);
+	}
 
 	return GPOS_NEW(mp)
 		CConstraintInterval(mp, colref, pdrgprng, fIncludesNull);
