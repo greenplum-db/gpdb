@@ -27,7 +27,7 @@ class CMDArrayCoerceCastGPDB : public CMDCastGPDB
 {
 private:
 	// DXL for object
-	const CWStringDynamic *m_dxl_str;
+	const CWStringDynamic *m_dxl_str = nullptr;
 
 	// type mod
 	INT m_type_modifier;
@@ -58,12 +58,9 @@ public:
 	// dtor
 	~CMDArrayCoerceCastGPDB() override;
 
+
 	// accessors
-	virtual const CWStringDynamic *
-	Pstr() const
-	{
-		return m_dxl_str;
-	}
+	virtual const CWStringDynamic *Pstr();
 
 	// return type modifier
 	virtual INT TypeModifier() const;

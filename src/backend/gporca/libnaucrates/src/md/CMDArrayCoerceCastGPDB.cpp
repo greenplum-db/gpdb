@@ -35,17 +35,28 @@ CMDArrayCoerceCastGPDB::CMDArrayCoerceCastGPDB(
 	  m_location(location),
 	  m_mdid_src_elemtype(mdid_src_elemtype)
 {
-	m_dxl_str = CDXLUtils::SerializeMDObj(mp, this, false /*fSerializeHeader*/,
-										  false /*indentation*/);
 }
 
 // dtor
 CMDArrayCoerceCastGPDB::~CMDArrayCoerceCastGPDB()
 {
-	GPOS_DELETE(m_dxl_str);
+	if (nullptr != m_dxl_str)
+	{
+		GPOS_DELETE(m_dxl_str);
+	}
 	m_mdid_src_elemtype->Release();
 }
-
+// accessors
+const CWStringDynamic *
+CMDArrayCoerceCastGPDB::Pstr()
+{
+	if (nullptr == m_dxl_str)
+	{
+		m_dxl_str = CDXLUtils::SerializeMDObj(
+			m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
+	}
+	return m_dxl_str;
+}
 // return type modifier
 INT
 CMDArrayCoerceCastGPDB::TypeModifier() const

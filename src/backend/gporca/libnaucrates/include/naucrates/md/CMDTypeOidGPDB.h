@@ -102,7 +102,7 @@ private:
 	// count aggregate
 	IMDId *m_mdid_count;
 	// DXL for object
-	const CWStringDynamic *m_dxl_str;
+	const CWStringDynamic *m_dxl_str = nullptr;
 
 	// type name and type
 	static CWStringConst m_str;
@@ -124,11 +124,7 @@ public:
 							  BOOL is_null) const override;
 
 	// accessors
-	const CWStringDynamic *
-	GetStrRepr() const override
-	{
-		return m_dxl_str;
-	}
+	const CWStringDynamic *GetStrRepr() override;
 
 	IMDId *MDId() const override;
 

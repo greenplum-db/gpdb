@@ -45,9 +45,6 @@ CMDScCmpGPDB::CMDScCmpGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 	GPOS_ASSERT(m_mdid_right->IsValid());
 	GPOS_ASSERT(m_mdid_op->IsValid());
 	GPOS_ASSERT(IMDType::EcmptOther != m_comparision_type);
-
-	m_dxl_str = CDXLUtils::SerializeMDObj(
-		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
 }
 
 //---------------------------------------------------------------------------
@@ -65,9 +62,22 @@ CMDScCmpGPDB::~CMDScCmpGPDB()
 	m_mdid_right->Release();
 	m_mdid_op->Release();
 	GPOS_DELETE(m_mdname);
-	GPOS_DELETE(m_dxl_str);
+	if (nullptr != m_dxl_str)
+	{
+		GPOS_DELETE(m_dxl_str);
+	}
 }
 
+const CWStringDynamic *
+CMDScCmpGPDB::GetStrRepr()
+{
+	if (nullptr == m_dxl_str)
+	{
+		m_dxl_str = CDXLUtils::SerializeMDObj(
+			m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
+	}
+	return m_dxl_str;
+}
 
 //---------------------------------------------------------------------------
 //	@function:

@@ -70,7 +70,7 @@ private:
 	BOOL m_is_col_stats_missing;
 
 	// DXL string for object
-	CWStringDynamic *m_dxl_str;
+	CWStringDynamic *m_dxl_str = nullptr;
 
 public:
 	CDXLColStats(const CDXLColStats &) = delete;
@@ -92,7 +92,7 @@ public:
 	CMDName Mdname() const override;
 
 	// DXL string representation of cache object
-	const CWStringDynamic *GetStrRepr() const override;
+	const CWStringDynamic *GetStrRepr() override;
 
 	// number of buckets
 	ULONG Buckets() const override;

@@ -45,9 +45,6 @@ CMDAggregateGPDB::CMDAggregateGPDB(CMemoryPool *mp, IMDId *mdid,
 	  m_is_repsafe(is_repsafe)
 {
 	GPOS_ASSERT(mdid->IsValid());
-
-	m_dxl_str = CDXLUtils::SerializeMDObj(
-		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
 }
 
 //---------------------------------------------------------------------------
@@ -64,7 +61,21 @@ CMDAggregateGPDB::~CMDAggregateGPDB()
 	m_mdid_type_intermediate->Release();
 	m_mdid_type_result->Release();
 	GPOS_DELETE(m_mdname);
-	GPOS_DELETE(m_dxl_str);
+	if (nullptr != m_dxl_str)
+	{
+		GPOS_DELETE(m_dxl_str);
+	}
+}
+
+const CWStringDynamic *
+CMDAggregateGPDB::GetStrRepr()
+{
+	if (nullptr == m_dxl_str)
+	{
+		m_dxl_str = CDXLUtils::SerializeMDObj(
+			m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
+	}
+	return m_dxl_str;
 }
 
 //---------------------------------------------------------------------------
