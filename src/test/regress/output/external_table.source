@@ -5016,13 +5016,14 @@ CREATE EXTERNAL TABLE ext_divzero (c INT)
 location ('file://localhost.localdomain/home/gpadmin/workspace/gpdb/src/test/regress/data/eh_divzero.dat')
 FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 2;
 SELECT 6/(c-2) FROM ext_divzero;
-ERROR:  segment reject limit reached, aborting operation  (seg0 slice1 127.0.0.1:7000 pid=16238)
+ERROR:  segment reject limit reached, aborting operation  (seg0 slice1 127.0.0.1:7000 pid=19880)
 DETAIL:  Last error was: division by zero
-SELECT count(*) FROM gp_read_error_log('ext_divzero');
- count 
--------
-     2
-(1 row)
+SELECT errmsg FROM gp_read_error_log('ext_divzero');
+      errmsg      
+------------------
+ division by zero
+ division by zero
+(2 rows)
 
 DROP EXTERNAL TABLE ext_divzero;
 CREATE EXTERNAL TABLE ext_divzero (c INT) 
@@ -5042,18 +5043,21 @@ NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related
         6
 (8 rows)
 
-SELECT count(*) FROM gp_read_error_log('ext_divzero');
- count 
--------
-     4
-(1 row)
+SELECT errmsg FROM gp_read_error_log('ext_divzero');
+      errmsg      
+------------------
+ division by zero
+ division by zero
+ division by zero
+ division by zero
+(4 rows)
 
 DROP EXTERNAL TABLE ext_divzero;
 CREATE EXTERNAL TABLE ext_jsonerror (c json) 
 location ('file://localhost.localdomain/home/gpadmin/workspace/gpdb/src/test/regress/data/eh_json.dat')
 FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 3;
 SELECT (c->>'ip')::inet FROM ext_jsonerror;
-ERROR:  segment reject limit reached, aborting operation  (seg0 slice1 127.0.0.1:7000 pid=16238)
+ERROR:  segment reject limit reached, aborting operation  (seg0 slice1 127.0.0.1:7000 pid=19880)
 DETAIL:  Last error was: invalid input syntax for type inet: "12.3    4.56.78"
 DROP EXTERNAL TABLE ext_jsonerror;
 CREATE EXTERNAL TABLE ext_jsonerror (c json) 
@@ -5071,24 +5075,31 @@ NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related
  214.55.78.31
 (6 rows)
 
-SELECT COUNT(*) FROM gp_read_error_log('ext_jsonerror');
- count 
--------
-     4
-(1 row)
+SELECT errmsg FROM gp_read_error_log('ext_jsonerror');
+                          errmsg                          
+----------------------------------------------------------
+ invalid input syntax for type inet: "54.    198.104.230"
+ invalid input syntax for type inet: "33.7   8.125.1"
+ invalid input syntax for type inet: "12.3    4.56.78"
+ invalid input syntax for type inet: "255.255.255.0   "
+(4 rows)
 
 DROP EXTERNAL TABLE ext_jsonerror;
 CREATE EXTERNAL TABLE ext_badjson(a json) 
 location ('file://localhost.localdomain/home/gpadmin/workspace/gpdb/src/test/regress/data/eh_badjson.dat') 
 FORMAT 'text' LOG ERRORS SEGMENT REJECT LIMIT 5;
 SELECT (a->>'9') FROM ext_badjson;
-ERROR:  segment reject limit reached, aborting operation  (seg0 slice1 127.0.0.1:7000 pid=16238)
+ERROR:  segment reject limit reached, aborting operation  (seg0 slice1 127.0.0.1:7000 pid=19880)
 DETAIL:  Last error was: unsupported Unicode escape sequence
-SELECT count(*) FROM gp_read_error_log('ext_badjson');
- count 
--------
-     5
-(1 row)
+SELECT errmsg FROM gp_read_error_log('ext_badjson');
+               errmsg                
+-------------------------------------
+ unsupported Unicode escape sequence
+ unsupported Unicode escape sequence
+ unsupported Unicode escape sequence
+ unsupported Unicode escape sequence
+ unsupported Unicode escape sequence
+(5 rows)
 
 DROP EXTERNAL TABLE ext_badjson;
 CREATE EXTERNAL TABLE ext_badjson(a json) 
@@ -5101,10 +5112,58 @@ NOTICE:  found 9 data formatting errors (9 or more input rows), rejected related
  yes
 (1 row)
 
-SELECT count(*) FROM gp_read_error_log('ext_badjson');
- count 
--------
-     9
-(1 row)
+SELECT errmsg FROM gp_read_error_log('ext_badjson');
+               errmsg                
+-------------------------------------
+ unsupported Unicode escape sequence
+ unsupported Unicode escape sequence
+ unsupported Unicode escape sequence
+ unsupported Unicode escape sequence
+ unsupported Unicode escape sequence
+ unsupported Unicode escape sequence
+ unsupported Unicode escape sequence
+ unsupported Unicode escape sequence
+ unsupported Unicode escape sequence
+(9 rows)
 
 DROP EXTERNAL TABLE ext_badjson;
+CREATE EXTERNAL TABLE ext_fixed_width_table (
+    id INTEGER,
+    name TEXT,
+    value FLOAT
+)
+LOCATION ('file://localhost.localdomain//home/gpadmin/workspace/gpdb/src/test/regress/data/eh_fixed_width.dat')
+FORMAT 'CUSTOM' (formatter=fixedwidth_in, id='3', name='12', value='7')
+LOG ERRORS SEGMENT REJECT LIMIT 5;
+SELECT * FROM ext_fixed_width_table;
+NOTICE:  found 1 data formatting errors (1 or more input rows), rejected related input data
+ id |    name    | value  
+----+------------+--------
+  1 | JohnDoe    | 123.45
+  2 | JaneSmith  |  678.9
+  3 | AliceJohns |  246.8
+  4 | BobBrown   | 135.79
+(4 rows)
+
+SELECT errmsg FROM gp_read_error_log('ext_fixed_width_table');
+                                errmsg                                 
+-----------------------------------------------------------------------
+ expected line size from the formatting string is 22, actual size is 0
+(1 row)
+
+select name::json from ext_fixed_width_table;
+ERROR:  segment reject limit reached, aborting operation  (seg0 slice1 127.0.0.1:7000 pid=19880)
+DETAIL:  Last error was: expected line size from the formatting string is 22, actual size is 0
+CONTEXT:  External table ext_fixed_width_table
+SELECT errmsg FROM gp_read_error_log('ext_fixed_width_table');
+                                errmsg                                 
+-----------------------------------------------------------------------
+ expected line size from the formatting string is 22, actual size is 0
+ invalid input syntax for type json
+ invalid input syntax for type json
+ invalid input syntax for type json
+ invalid input syntax for type json
+ expected line size from the formatting string is 22, actual size is 0
+(6 rows)
+
+DROP EXTERNAL TABLE ext_fixed_width_table;

@@ -202,7 +202,7 @@ typedef struct FdwRoutine
 	IterateForeignScan_function IterateForeignScan;
 	ReScanForeignScan_function ReScanForeignScan;
 	EndForeignScan_function EndForeignScan;
-	ForeignScanErrorHandle_function ErrorHandle;
+	ForeignScanErrorHandle_function ScanErrorHandle;
 
 	/*
 	 * Remaining functions are optional.  Set the pointer to NULL for any that

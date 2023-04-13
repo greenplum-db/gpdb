@@ -829,7 +829,7 @@ gp_exttable_fdw_handler(PG_FUNCTION_ARGS)
 	routine->IterateForeignScan = exttable_IterateForeignScan;
 	routine->ReScanForeignScan = exttable_ReScanForeignScan;
 	routine->EndForeignScan = exttable_EndForeignScan;
-	routine->ErrorHandle = exttable_ErrorHandling;
+	routine->ScanErrorHandle = exttable_ErrorHandling;
 
 	routine->IsForeignRelUpdatable = exttable_IsForeignRelUpdatable;
 	routine->BeginForeignModify = exttable_BeginForeignModify;

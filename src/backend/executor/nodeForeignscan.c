@@ -116,6 +116,7 @@ ExecForeignScan(PlanState *pstate)
 	int get_error = 0;
 	do 
 	{
+		get_error = 0;
 		PG_TRY();
 		{
 			result = ExecScan(&node->ss,
@@ -418,7 +419,9 @@ void
 ExecForeignScanError(ForeignScanState *node)
 {
 	FdwRoutine *fdwroutine = node->fdwroutine;
-	if (fdwroutine->ErrorHandle)
-		fdwroutine->ErrorHandle(node);
+	if (fdwroutine->ScanErrorHandle)
+		fdwroutine->ScanErrorHandle(node);
+	else 
+		PG_RE_THROW();
 	return;
 }

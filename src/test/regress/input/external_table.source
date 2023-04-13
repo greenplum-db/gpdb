@@ -3679,7 +3679,7 @@ FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 2;
 
 SELECT 6/(c-2) FROM ext_divzero;
 
-SELECT count(*) FROM gp_read_error_log('ext_divzero');
+SELECT errmsg FROM gp_read_error_log('ext_divzero');
 
 DROP EXTERNAL TABLE ext_divzero;
 
@@ -3689,7 +3689,7 @@ FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 10;
 
 SELECT 6/(c-2) FROM ext_divzero;
 
-SELECT count(*) FROM gp_read_error_log('ext_divzero');
+SELECT errmsg FROM gp_read_error_log('ext_divzero');
 
 DROP EXTERNAL TABLE ext_divzero;
 
@@ -3707,7 +3707,7 @@ FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 10;
 
 SELECT (c->>'ip')::inet FROM ext_jsonerror;
 
-SELECT COUNT(*) FROM gp_read_error_log('ext_jsonerror');
+SELECT errmsg FROM gp_read_error_log('ext_jsonerror');
 
 DROP EXTERNAL TABLE ext_jsonerror;
 
@@ -3717,7 +3717,7 @@ FORMAT 'text' LOG ERRORS SEGMENT REJECT LIMIT 5;
 
 SELECT (a->>'9') FROM ext_badjson;
 
-SELECT count(*) FROM gp_read_error_log('ext_badjson');
+SELECT errmsg FROM gp_read_error_log('ext_badjson');
 
 DROP EXTERNAL TABLE ext_badjson;
 
@@ -3727,6 +3727,25 @@ FORMAT 'text' LOG ERRORS SEGMENT REJECT LIMIT 10;
 
 SELECT (a->>'9') FROM ext_badjson;
 
-SELECT count(*) FROM gp_read_error_log('ext_badjson');
+SELECT errmsg FROM gp_read_error_log('ext_badjson');
 
 DROP EXTERNAL TABLE ext_badjson;
+
+CREATE EXTERNAL TABLE ext_fixed_width_table (
+    id INTEGER,
+    name TEXT,
+    value FLOAT
+)
+LOCATION ('file://localhost.localdomain//home/gpadmin/workspace/gpdb/src/test/regress/data/eh_fixed_width.dat')
+FORMAT 'CUSTOM' (formatter=fixedwidth_in, id='3', name='12', value='7')
+LOG ERRORS SEGMENT REJECT LIMIT 5;
+
+SELECT * FROM ext_fixed_width_table;
+
+SELECT errmsg FROM gp_read_error_log('ext_fixed_width_table');
+
+select name::json from ext_fixed_width_table;
+
+SELECT errmsg FROM gp_read_error_log('ext_fixed_width_table');
+
+DROP EXTERNAL TABLE ext_fixed_width_table;
